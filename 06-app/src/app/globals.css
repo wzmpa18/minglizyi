@@ -1,0 +1,376 @@
+@import "tailwindcss";
+
+/* ============================================
+   言道 APP 全局样式
+   品牌色：#7B2FBE（紫色）
+   视觉基准：jishiyu移动端首页（像素级对齐）
+   编码方式：通过截图测量+浏览器DevTools像素检查独立编写，非源码复制
+   ============================================ */
+:root {
+  --yd-brand: #7B2FBE;
+  --yd-page-maxw: 100%;
+  --yd-wx-jin: #ffa500;
+  --yd-wx-shui: #0074e4;
+  --yd-wx-mu: #00a879;
+  --yd-wx-huo: #ed4d49;
+  --yd-wx-tu: #a64b00;
+  --yd-outer-bg: #8a8a8a;
+  --yd-main-bg: #ededed;
+  --yd-tabbar-bg: #fafafaaf;
+
+  /* ===== 主题色系统（可配置 UI 层颜色） ===== */
+  --theme-primary: #7B2FBE;
+  --theme-primary-light: #9B5ECF;
+  --theme-primary-bg: #F3EDF7;
+  --theme-bg: #f8f5fc;
+  --theme-card-bg: #ffffff;
+  --theme-text-primary: #1a1a1a;
+  --theme-text-secondary: #666666;
+  --theme-text-hint: #999999;
+  --theme-border: #f0f0f0;
+  --theme-success: #10B981;
+  --theme-error: #EF4444;
+  --theme-warning: #F59E0B;
+  --font-scale: 1;
+}
+
+/* ===== 深色主题变体 ===== */
+.dark-theme {
+  --theme-bg: #000000;
+  --theme-card-bg: #1a1a1a;
+  --theme-text-primary: #ffffff;
+  --theme-text-secondary: #aaaaaa;
+  --theme-text-hint: #666666;
+  --theme-border: #2a2a2a;
+}
+
+/* ===== 主题工具类 ===== */
+.theme-primary-color { color: var(--theme-primary); }
+.theme-primary-bg { background-color: var(--theme-primary); }
+.theme-bg { background-color: var(--theme-bg); }
+.theme-card-bg { background-color: var(--theme-card-bg); }
+.theme-text-primary { color: var(--theme-text-primary); }
+.theme-text-secondary { color: var(--theme-text-secondary); }
+.theme-text-hint { color: var(--theme-text-hint); }
+.theme-border { border-color: var(--theme-border); }
+
+::-webkit-scrollbar { display: none; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: var(--yd-page-maxw);
+  height: 100%;
+  background-color: var(--yd-outer-bg);
+  -webkit-text-size-adjust: 100% !important;
+  text-size-adjust: 100% !important;
+  -moz-text-size-adjust: 100% !important;
+  touch-action: manipulation;
+  font-family: "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  color: #000;
+}
+
+body {
+  margin: 0 auto;
+}
+
+ul, ol { list-style: none; margin: 0; padding: 0; }
+a { text-decoration: none; color: inherit; }
+img { border: 0; }
+p { margin: 0; padding: 0; }
+
+/* ============================================
+   首页布局系统（独立命名：yd-前缀）
+   盒模型：Tailwind preflight默认border-box导致偏移，
+   经实测验证需在容器内强制content-box才能与基准像素对齐
+   ============================================ */
+.yd-root, .yd-root *, .yd-root *::before, .yd-root *::after {
+  box-sizing: content-box !important;
+}
+
+.yd-root img {
+  display: inline !important;
+  max-width: none !important;
+  height: auto !important;
+}
+
+.yd-root {
+  width: var(--yd-page-maxw);
+  height: 100vh;
+  background-color: var(--yd-main-bg);
+  overflow: auto;
+  scroll-behavior: smooth;
+  margin: 0 auto;
+}
+
+/* ---- 顶部导航栏 ---- */
+.yd-topbar {
+  display: grid;
+  grid-template-columns: 40px 40px auto 40px 40px;
+  height: 40px;
+  background-color: var(--yd-brand);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: var(--yd-page-maxw) !important;
+  margin: 0 auto;
+  z-index: 999;
+}
+
+.yd-topbar-title {
+  text-align: center;
+  font-size: 18px;
+  font-weight: bold;
+  color: #fff;
+  line-height: 40px;
+}
+
+.yd-topbar-btn {
+  text-align: center;
+  vertical-align: middle;
+  font-size: 14px;
+  font-weight: bold;
+  color: #fff;
+  line-height: 40px;
+  cursor: pointer;
+}
+
+.yd-topbar-btn-refresh {
+  background-image: url(/images/refresh.png);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 22px;
+  cursor: pointer;
+}
+
+/* ---- 主体内容区 ---- */
+.yd-main {
+  display: block;
+  position: relative;
+  top: 40px;
+  width: var(--yd-page-maxw) !important;
+  padding-bottom: 50px;
+  background-color: var(--yd-main-bg);
+}
+
+.yd-page {
+  background-color: #fff;
+}
+
+/* ---- 日期信息栏 ---- */
+.yd-datebar {
+  display: grid;
+  grid-template-columns: 50% 12.5% 12.5% 12.5% 12.5%;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  width: 100%;
+  height: 80px;
+  line-height: 18px !important;
+  background-color: #eee;
+  color: #000;
+  box-sizing: border-box;
+}
+
+.yd-datebar-left {
+  display: grid;
+  grid-template-columns: 35% 65%;
+  width: 100%;
+  height: 100%;
+}
+
+.yd-datebar-num {
+  display: grid;
+  grid-template-rows: 30% 70%;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+}
+
+.yd-datebar-num-label {
+  width: 100%;
+  height: 20px;
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.yd-datebar-num-val {
+  width: 100%;
+  height: 50px;
+  font-size: 45px;
+  font-weight: bold;
+  line-height: 50px;
+  color: var(--yd-brand);
+}
+
+.yd-datebar-detail {
+  display: grid;
+  grid-template-rows: 30% 35% 35%;
+  width: 100%;
+  height: 100%;
+}
+
+.yd-datebar-month {
+  width: 100%;
+  height: 20px;
+  font-size: 12px;
+  line-height: 20px;
+}
+
+.yd-datebar-lunar {
+  width: 100%;
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.yd-datebar-week {
+  width: 100%;
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+/* ---- 四柱干支 ---- */
+.yd-pillar {
+  text-align: center;
+  line-height: 25px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.yd-pillar-label {
+  font-size: 12px;
+  line-height: 18px;
+  transform: scale(0.83, 0.83);
+  color: #000;
+}
+
+.yd-pillar-gan,
+.yd-pillar-zhi {
+  font-size: 18px;
+  font-weight: bold;
+  line-height: 22px;
+}
+
+/* ---- 标语横幅 ---- */
+.yd-slogan {
+  width: 80%;
+  font-size: 14px;
+  font-weight: 400;
+  text-align: center;
+  margin: 10px auto;
+  padding: 10px;
+  border-radius: 15px;
+  background-color: #eee;
+  color: #000;
+}
+
+/* ---- 工具网格 ---- */
+.yd-tools-grid {
+  display: block;
+  text-align: center;
+  margin-top: 20px;
+  padding: 0;
+}
+
+.yd-tool-card {
+  display: inline-block;
+  width: 70px;
+  height: 80px;
+  text-align: center;
+  vertical-align: top;
+  margin: 5px 3px;
+  background-color: #eee;
+  padding: 3px;
+  padding-top: 8px;
+  border-radius: 15px;
+  cursor: pointer;
+}
+
+.yd-tool-icon {
+  background-color: var(--yd-brand);
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  padding: 4px;
+}
+
+.yd-tool-name {
+  font-size: 14px;
+  color: #000;
+  margin-top: 5px;
+  line-height: 1em;
+}
+
+/* ---- 底部Tab栏 ---- */
+.yd-tabbar {
+  display: grid;
+  grid-template-columns: 20% 20% 20% 20% 20%;
+  position: fixed;
+  bottom: 0;
+  z-index: 969;
+  height: 65px;
+  width: var(--yd-page-maxw) !important;
+  line-height: 25px;
+  padding: 0;
+  box-shadow: -1px 0 4px rgb(0 0 0 / 12%);
+  background-color: var(--yd-tabbar-bg);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  margin: 0 auto;
+  left: 0;
+  right: 0;
+}
+
+.yd-tab-item {
+  color: #000;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  padding-top: 8px;
+  gap: 2px;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.yd-tab-item.active {
+  color: var(--yd-brand);
+  font-weight: 800;
+}
+
+.yd-tab-icon {
+  width: 20px;
+  height: 20px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+  display: inline-block;
+}
+
+.yd-tab-item.active .yd-tab-icon {
+  background-color: var(--yd-brand);
+  background-blend-mode: lighten;
+}
+
+/* ---- 五行颜色（命理内容色，严格保留传统色系） ---- */
+.wxjin { color: var(--yd-wx-jin); }
+.wxshui { color: var(--yd-wx-shui); }
+.wxmu { color: var(--yd-wx-mu); }
+.wxhuo { color: var(--yd-wx-huo); }
+.wxtu { color: var(--yd-wx-tu); }
+
+.wxjin-bg { background-color: var(--yd-wx-jin); color: #fff; }
+.wxshui-bg { background-color: var(--yd-wx-shui); color: #fff; }
+.wxmu-bg { background-color: var(--yd-wx-mu); color: #fff; }
+.wxhuo-bg { background-color: var(--yd-wx-huo); color: #fff; }
+.wxtu-bg { background-color: var(--yd-wx-tu); color: #fff; }
+
+.riyuan { border-bottom: 2px solid #4F46E5; }
+.shensha-color { color: #2e4487; }
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

@@ -1,0 +1,1050 @@
+{
+  "test_case": {
+    "solar_date": "1990-05-15",
+    "time": "14:30",
+    "true_solar_time": "14:14 (东经116°校正)",
+    "time_index": 7,
+    "time_name": "未时",
+    "gender": "男",
+    "longitude": "116°E"
+  },
+  "metadata": {
+    "solar_date": "1990-5-15",
+    "lunar_date": "一九九〇年四月廿一",
+    "chinese_date": "庚午 辛巳 庚辰 癸未",
+    "zodiac": "马",
+    "sign": "金牛座",
+    "gender": "男",
+    "time": "未时",
+    "time_range": "13:00~15:00",
+    "five_elements_class": "土五局",
+    "soul": "禄存",
+    "body": "火星",
+    "earthly_branch_of_soul_palace": "戌",
+    "earthly_branch_of_body_palace": "子",
+    "copyright": "copyright © 2023-2026 iztro (https://github.com/SylarLong/iztro)"
+  },
+  "palaces": [
+    {
+      "index": 0,
+      "name": "官禄",
+      "heavenly_stem": "戊",
+      "earthly_branch": "寅",
+      "is_body_palace": false,
+      "is_original_palace": false,
+      "major_stars": [
+        {
+          "name": "廉贞",
+          "type": "major",
+          "brightness": "庙",
+          "mutagen": ""
+        }
+      ],
+      "minor_stars": [],
+      "adjective_stars": [
+        {
+          "name": "天厨",
+          "type": "adjective",
+          "scope": "origin"
+        },
+        {
+          "name": "天月",
+          "type": "adjective",
+          "scope": "origin"
+        },
+        {
+          "name": "蜚廉",
+          "type": "adjective",
+          "scope": "origin"
+        }
+      ],
+      "changsheng12": "病",
+      "boshi12": "飞廉",
+      "decadal": {
+        "range": [
+          45,
+          54
+        ],
+        "heavenly_stem": "戊",
+        "earthly_branch": "寅"
+      },
+      "ages": [
+        11,
+        23,
+        35,
+        47,
+        59,
+        71,
+        83,
+        95,
+        107,
+        119
+      ]
+    },
+    {
+      "index": 1,
+      "name": "仆役",
+      "heavenly_stem": "己",
+      "earthly_branch": "卯",
+      "is_body_palace": false,
+      "is_original_palace": false,
+      "major_stars": [],
+      "minor_stars": [
+        {
+          "name": "文昌",
+          "type": "soft",
+          "brightness": "利",
+          "mutagen": ""
+        }
+      ],
+      "adjective_stars": [
+        {
+          "name": "天喜",
+          "type": "flower",
+          "scope": "origin"
+        },
+        {
+          "name": "咸池",
+          "type": "flower",
+          "scope": "origin"
+        },
+        {
+          "name": "三台",
+          "type": "adjective",
+          "scope": "origin"
+        },
+        {
+          "name": "天德",
+          "type": "adjective",
+          "scope": "origin"
+        },
+        {
+          "name": "天伤",
+          "type": "adjective",
+          "scope": "origin"
+        }
+      ],
+      "changsheng12": "死",
+      "boshi12": "喜神",
+      "decadal": {
+        "range": [
+          55,
+          64
+        ],
+        "heavenly_stem": "己",
+        "earthly_branch": "卯"
+      },
+      "ages": [
+        12,
+        24,
+        36,
+        48,
+        60,
+        72,
+        84,
+        96,
+        108,
+        120
+      ]
+    },
+    {
+      "index": 2,
+      "name": "迁移",
+      "heavenly_stem": "庚",
+      "earthly_branch": "辰",
+      "is_body_palace": false,
+      "is_original_palace": true,
+      "major_stars": [
+        {
+          "name": "破军",
+          "type": "major",
+          "brightness": "旺",
+          "mutagen": ""
+        }
+      ],
+      "minor_stars": [
+        {
+          "name": "地空",
+          "type": "tough",
+          "brightness": "",
+          "mutagen": ""
+        }
+      ],
+      "adjective_stars": [
+        {
+          "name": "天姚",
+          "type": "flower",
+          "scope": "origin"
+        },
+        {
+          "name": "凤阁",
+          "type": "adjective",
+          "scope": "origin"
+        },
+        {
+          "name": "天才",
+          "type": "adjective",
+          "scope": "origin"
+        },
+        {
+          "name": "寡宿",
+          "type": "adjective",
+          "scope": "origin"
+        },
+        {
+          "name": "年解",
+          "type": "helper",
+          "scope": "origin"
+        }
+      ],
+      "changsheng12": "墓",
+      "boshi12": "病符",
+      "decadal": {
+        "range": [
+          65,
+          74
+        ],
+        "heavenly_stem": "庚",
+        "earthly_branch": "辰"
+      },
+      "ages": [
+        1,
+        13,
+        25,
+        37,
+        49,
+        61,
+        73,
+        85,
+        97,
+        109
+      ]
+    },
+    {
+      "index": 3,
+      "name": "疾厄",
+      "heavenly_stem": "辛",
+      "earthly_branch": "巳",
+      "is_body_palace": false,
+      "is_original_palace": false,
+      "major_stars": [
+        {
+          "name": "天同",
+          "type": "major",
+          "brightness": "庙",
+          "mutagen": "忌"
+        }
+      ],
+      "minor_stars": [],
+      "adjective_stars": [
+        {
+          "name": "破碎",
+          "type": "adjective",
+          "scope": "origin"
+        },
+        {
+          "name": "天使",
+          "type": "adjective",
+          "scope": "origin"
+        }
+      ],
+      "changsheng12": "绝",
+      "boshi12": "大耗",
+      "decadal": {
+        "range": [
+          75,
+          84
+        ],
+        "heavenly_stem": "辛",
+        "earthly_branch": "巳"
+      },
+      "ages": [
+        2,
+        14,
+        26,
+        38,
+        50,
+        62,
+        74,
+        86,
+        98,
+        110
+      ]
+    },
+    {
+      "index": 4,
+      "name": "财帛",
+      "heavenly_stem": "壬",
+      "earthly_branch": "午",
+      "is_body_palace": false,
+      "is_original_palace": false,
+      "major_stars": [
+        {
+          "name": "武曲",
+          "type": "major",
+          "brightness": "旺",
+          "mutagen": "权"
+        },
+        {
+          "name": "天府",
+          "type": "major",
+          "brightness": "旺",
+          "mutagen": ""
+        }
+      ],
+      "minor_stars": [
+        {
+          "name": "地劫",
+          "type": "tough",
+          "brightness": "",
+          "mutagen": ""
+        }
+      ],
+      "adjective_stars": [
+        {
+          "name": "天贵",
+          "type": "adjective",
+          "scope": "origin"
+        },
+        {
+          "name": "天寿",
+          "type": "adjective",
+          "scope": "origin"
+        },
+        {
+          "name": "天福",
+          "type": "adjective",
+          "scope": "origin"
+        },
+        {
+          "name": "截路",
+          "type": "adjective",
+          "scope": "origin"
+        }
+      ],
+      "changsheng12": "胎",
+      "boshi12": "伏兵",
+      "decadal": {
+        "range": [
+          85,
+          94
+        ],
+        "heavenly_stem": "壬",
+        "earthly_branch": "午"
+      },
+      "ages": [
+        3,
+        15,
+        27,
+        39,
+        51,
+        63,
+        75,
+        87,
+        99,
+        111
+      ]
+    },
+    {
+      "index": 5,
+      "name": "子女",
+      "heavenly_stem": "癸",
+      "earthly_branch": "未",
+      "is_body_palace": false,
+      "is_original_palace": false,
+      "major_stars": [
+        {
+          "name": "太阳",
+          "type": "major",
+          "brightness": "得",
+          "mutagen": "禄"
+        },
+        {
+          "name": "太阴",
+          "type": "major",
+          "brightness": "不",
+          "mutagen": "科"
+        }
+      ],
+      "minor_stars": [
+        {
+          "name": "左辅",
+          "type": "soft",
+          "brightness": "",
+          "mutagen": ""
+        },
+        {
+          "name": "右弼",
+          "type": "soft",
+          "brightness": "",
+          "mutagen": ""
+        },
+        {
+          "name": "天钺",
+          "type": "soft",
+          "brightness": "",
+          "mutagen": ""
+        },
+        {
+          "name": "陀罗",
+          "type": "tough",
+          "brightness": "庙",
+          "mutagen": ""
+        }
+      ],
+      "adjective_stars": [
+        {
+          "name": "天空",
+          "type": "adjective",
+          "scope": "origin"
+        },
+        {
+          "name": "空亡",
+          "type": "adjective",
+          "scope": "origin"
+        }
+      ],
+      "changsheng12": "养",
+      "boshi12": "官府",
+      "decadal": {
+        "range": [
+          95,
+          104
+        ],
+        "heavenly_stem": "癸",
+        "earthly_branch": "未"
+      },
+      "ages": [
+        4,
+        16,
+        28,
+        40,
+        52,
+        64,
+        76,
+        88,
+        100,
+        112
+      ]
+    },
+    {
+      "index": 6,
+      "name": "夫妻",
+      "heavenly_stem": "甲",
+      "earthly_branch": "申",
+      "is_body_palace": false,
+      "is_original_palace": false,
+      "major_stars": [
+        {
+          "name": "贪狼",
+          "type": "major",
+          "brightness": "平",
+          "mutagen": ""
+        }
+      ],
+      "minor_stars": [
+        {
+          "name": "禄存",
+          "type": "lucun",
+          "brightness": "",
+          "mutagen": ""
+        },
+        {
+          "name": "天马",
+          "type": "tianma",
+          "brightness": "",
+          "mutagen": ""
+        },
+        {
+          "name": "火星",
+          "type": "tough",
+          "brightness": "陷",
+          "mutagen": ""
+        }
+      ],
+      "adjective_stars": [
+        {
+          "name": "孤辰",
+          "type": "adjective",
+          "scope": "origin"
+        },
+        {
+          "name": "阴煞",
+          "type": "adjective",
+          "scope": "origin"
+        }
+      ],
+      "changsheng12": "长生",
+      "boshi12": "博士",
+      "decadal": {
+        "range": [
+          105,
+          114
+        ],
+        "heavenly_stem": "甲",
+        "earthly_branch": "申"
+      },
+      "ages": [
+        5,
+        17,
+        29,
+        41,
+        53,
+        65,
+        77,
+        89,
+        101,
+        113
+      ]
+    },
+    {
+      "index": 7,
+      "name": "兄弟",
+      "heavenly_stem": "乙",
+      "earthly_branch": "酉",
+      "is_body_palace": false,
+      "is_original_palace": false,
+      "major_stars": [
+        {
+          "name": "天机",
+          "type": "major",
+          "brightness": "旺",
+          "mutagen": ""
+        },
+        {
+          "name": "巨门",
+          "type": "major",
+          "brightness": "庙",
+          "mutagen": ""
+        }
+      ],
+      "minor_stars": [
+        {
+          "name": "擎羊",
+          "type": "tough",
+          "brightness": "陷",
+          "mutagen": ""
+        }
+      ],
+      "adjective_stars": [
+        {
+          "name": "红鸾",
+          "type": "flower",
+          "scope": "origin"
+        },
+        {
+          "name": "封诰",
+          "type": "adjective",
+          "scope": "origin"
+        }
+      ],
+      "changsheng12": "沐浴",
+      "boshi12": "力士",
+      "decadal": {
+        "range": [
+          115,
+          124
+        ],
+        "heavenly_stem": "乙",
+        "earthly_branch": "酉"
+      },
+      "ages": [
+        6,
+        18,
+        30,
+        42,
+        54,
+        66,
+        78,
+        90,
+        102,
+        114
+      ]
+    },
+    {
+      "index": 8,
+      "name": "命宫",
+      "heavenly_stem": "丙",
+      "earthly_branch": "戌",
+      "is_body_palace": false,
+      "is_original_palace": false,
+      "major_stars": [
+        {
+          "name": "紫微",
+          "type": "major",
+          "brightness": "得",
+          "mutagen": ""
+        },
+        {
+          "name": "天相",
+          "type": "major",
+          "brightness": "得",
+          "mutagen": ""
+        }
+      ],
+      "minor_stars": [
+        {
+          "name": "铃星",
+          "type": "tough",
+          "brightness": "庙",
+          "mutagen": ""
+        }
+      ],
+      "adjective_stars": [
+        {
+          "name": "解神",
+          "type": "helper",
+          "scope": "origin"
+        },
+        {
+          "name": "恩光",
+          "type": "adjective",
+          "scope": "origin"
+        },
+        {
+          "name": "龙池",
+          "type": "adjective",
+          "scope": "origin"
+        },
+        {
+          "name": "华盖",
+          "type": "adjective",
+          "scope": "origin"
+        },
+        {
+          "name": "旬空",
+          "type": "adjective",
+          "scope": "origin"
+        }
+      ],
+      "changsheng12": "冠带",
+      "boshi12": "青龙",
+      "decadal": {
+        "range": [
+          5,
+          14
+        ],
+        "heavenly_stem": "丙",
+        "earthly_branch": "戌"
+      },
+      "ages": [
+        7,
+        19,
+        31,
+        43,
+        55,
+        67,
+        79,
+        91,
+        103,
+        115
+      ]
+    },
+    {
+      "index": 9,
+      "name": "父母",
+      "heavenly_stem": "丁",
+      "earthly_branch": "亥",
+      "is_body_palace": false,
+      "is_original_palace": false,
+      "major_stars": [
+        {
+          "name": "天梁",
+          "type": "major",
+          "brightness": "陷",
+          "mutagen": ""
+        }
+      ],
+      "minor_stars": [
+        {
+          "name": "文曲",
+          "type": "soft",
+          "brightness": "旺",
+          "mutagen": ""
+        }
+      ],
+      "adjective_stars": [
+        {
+          "name": "八座",
+          "type": "adjective",
+          "scope": "origin"
+        },
+        {
+          "name": "天巫",
+          "type": "adjective",
+          "scope": "origin"
+        },
+        {
+          "name": "天官",
+          "type": "adjective",
+          "scope": "origin"
+        },
+        {
+          "name": "月德",
+          "type": "adjective",
+          "scope": "origin"
+        }
+      ],
+      "changsheng12": "临官",
+      "boshi12": "小耗",
+      "decadal": {
+        "range": [
+          15,
+          24
+        ],
+        "heavenly_stem": "丁",
+        "earthly_branch": "亥"
+      },
+      "ages": [
+        8,
+        20,
+        32,
+        44,
+        56,
+        68,
+        80,
+        92,
+        104,
+        116
+      ]
+    },
+    {
+      "index": 10,
+      "name": "福德",
+      "heavenly_stem": "戊",
+      "earthly_branch": "子",
+      "is_body_palace": true,
+      "is_original_palace": false,
+      "major_stars": [
+        {
+          "name": "七杀",
+          "type": "major",
+          "brightness": "旺",
+          "mutagen": ""
+        }
+      ],
+      "minor_stars": [],
+      "adjective_stars": [
+        {
+          "name": "天刑",
+          "type": "adjective",
+          "scope": "origin"
+        },
+        {
+          "name": "天哭",
+          "type": "adjective",
+          "scope": "origin"
+        },
+        {
+          "name": "天虚",
+          "type": "adjective",
+          "scope": "origin"
+        }
+      ],
+      "changsheng12": "帝旺",
+      "boshi12": "将军",
+      "decadal": {
+        "range": [
+          25,
+          34
+        ],
+        "heavenly_stem": "戊",
+        "earthly_branch": "子"
+      },
+      "ages": [
+        9,
+        21,
+        33,
+        45,
+        57,
+        69,
+        81,
+        93,
+        105,
+        117
+      ]
+    },
+    {
+      "index": 11,
+      "name": "田宅",
+      "heavenly_stem": "己",
+      "earthly_branch": "丑",
+      "is_body_palace": false,
+      "is_original_palace": false,
+      "major_stars": [],
+      "minor_stars": [
+        {
+          "name": "天魁",
+          "type": "soft",
+          "brightness": "",
+          "mutagen": ""
+        }
+      ],
+      "adjective_stars": [
+        {
+          "name": "台辅",
+          "type": "adjective",
+          "scope": "origin"
+        }
+      ],
+      "changsheng12": "衰",
+      "boshi12": "奏书",
+      "decadal": {
+        "range": [
+          35,
+          44
+        ],
+        "heavenly_stem": "己",
+        "earthly_branch": "丑"
+      },
+      "ages": [
+        10,
+        22,
+        34,
+        46,
+        58,
+        70,
+        82,
+        94,
+        106,
+        118
+      ]
+    }
+  ],
+  "major_star_summary": [
+    {
+      "star": "廉贞",
+      "palace": "官禄",
+      "brightness": "庙",
+      "mutagen": "无"
+    },
+    {
+      "star": "破军",
+      "palace": "迁移",
+      "brightness": "旺",
+      "mutagen": "无"
+    },
+    {
+      "star": "天同",
+      "palace": "疾厄",
+      "brightness": "庙",
+      "mutagen": "忌"
+    },
+    {
+      "star": "武曲",
+      "palace": "财帛",
+      "brightness": "旺",
+      "mutagen": "权"
+    },
+    {
+      "star": "天府",
+      "palace": "财帛",
+      "brightness": "旺",
+      "mutagen": "无"
+    },
+    {
+      "star": "太阳",
+      "palace": "子女",
+      "brightness": "得",
+      "mutagen": "禄"
+    },
+    {
+      "star": "太阴",
+      "palace": "子女",
+      "brightness": "不",
+      "mutagen": "科"
+    },
+    {
+      "star": "贪狼",
+      "palace": "夫妻",
+      "brightness": "平",
+      "mutagen": "无"
+    },
+    {
+      "star": "天机",
+      "palace": "兄弟",
+      "brightness": "旺",
+      "mutagen": "无"
+    },
+    {
+      "star": "巨门",
+      "palace": "兄弟",
+      "brightness": "庙",
+      "mutagen": "无"
+    },
+    {
+      "star": "紫微",
+      "palace": "命宫",
+      "brightness": "得",
+      "mutagen": "无"
+    },
+    {
+      "star": "天相",
+      "palace": "命宫",
+      "brightness": "得",
+      "mutagen": "无"
+    },
+    {
+      "star": "天梁",
+      "palace": "父母",
+      "brightness": "陷",
+      "mutagen": "无"
+    },
+    {
+      "star": "七杀",
+      "palace": "福德",
+      "brightness": "旺",
+      "mutagen": "无"
+    }
+  ],
+  "brightness_summary": [
+    {
+      "star": "廉贞",
+      "palace": "官禄",
+      "brightness": "庙"
+    },
+    {
+      "star": "破军",
+      "palace": "迁移",
+      "brightness": "旺"
+    },
+    {
+      "star": "天同",
+      "palace": "疾厄",
+      "brightness": "庙"
+    },
+    {
+      "star": "武曲",
+      "palace": "财帛",
+      "brightness": "旺"
+    },
+    {
+      "star": "天府",
+      "palace": "财帛",
+      "brightness": "旺"
+    },
+    {
+      "star": "太阳",
+      "palace": "子女",
+      "brightness": "得"
+    },
+    {
+      "star": "太阴",
+      "palace": "子女",
+      "brightness": "不"
+    },
+    {
+      "star": "贪狼",
+      "palace": "夫妻",
+      "brightness": "平"
+    },
+    {
+      "star": "天机",
+      "palace": "兄弟",
+      "brightness": "旺"
+    },
+    {
+      "star": "巨门",
+      "palace": "兄弟",
+      "brightness": "庙"
+    },
+    {
+      "star": "紫微",
+      "palace": "命宫",
+      "brightness": "得"
+    },
+    {
+      "star": "天相",
+      "palace": "命宫",
+      "brightness": "得"
+    },
+    {
+      "star": "天梁",
+      "palace": "父母",
+      "brightness": "陷"
+    },
+    {
+      "star": "七杀",
+      "palace": "福德",
+      "brightness": "旺"
+    }
+  ],
+  "sihua_summary": [
+    {
+      "star": "天同",
+      "mutagen": "忌",
+      "palace": "疾厄"
+    },
+    {
+      "star": "武曲",
+      "mutagen": "权",
+      "palace": "财帛"
+    },
+    {
+      "star": "太阳",
+      "mutagen": "禄",
+      "palace": "子女"
+    },
+    {
+      "star": "太阴",
+      "mutagen": "科",
+      "palace": "子女"
+    }
+  ],
+  "changsheng12_summary": [
+    {
+      "palace": "官禄",
+      "changsheng": "病"
+    },
+    {
+      "palace": "仆役",
+      "changsheng": "死"
+    },
+    {
+      "palace": "迁移",
+      "changsheng": "墓"
+    },
+    {
+      "palace": "疾厄",
+      "changsheng": "绝"
+    },
+    {
+      "palace": "财帛",
+      "changsheng": "胎"
+    },
+    {
+      "palace": "子女",
+      "changsheng": "养"
+    },
+    {
+      "palace": "夫妻",
+      "changsheng": "长生"
+    },
+    {
+      "palace": "兄弟",
+      "changsheng": "沐浴"
+    },
+    {
+      "palace": "命宫",
+      "changsheng": "冠带"
+    },
+    {
+      "palace": "父母",
+      "changsheng": "临官"
+    },
+    {
+      "palace": "福德",
+      "changsheng": "帝旺"
+    },
+    {
+      "palace": "田宅",
+      "changsheng": "衰"
+    }
+  ],
+  "body_palace_info": {
+    "palace_name": "福德",
+    "palace_index": 10,
+    "heavenly_stem": "戊",
+    "earthly_branch": "子"
+  }
+}

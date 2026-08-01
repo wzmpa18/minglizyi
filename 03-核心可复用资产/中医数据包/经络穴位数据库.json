@@ -1,0 +1,333 @@
+{
+  "_metadata": {
+    "description": "经络穴位数据库 - 结构化JSON格式",
+    "source_project": "tcm-cli",
+    "license": "MIT License",
+    "original_license": "Copyright (c) 2026 TCM-CLI Contributors - MIT License",
+    "extraction_date": "2026-07-26",
+    "total_meridians": 12,
+    "total_acupoints": 20,
+    "data_source": "tcm-cli内置数据 + 针灸甲乙经等经典文献",
+    "note": "穴位定位数据为经典文献记载，仅供学习参考"
+  },
+  "_field_schema": {
+    "meridians": {
+      "name": "经络名称 (中文)",
+      "pinyin": "拼音",
+      "english": "英文名称",
+      "element": "五行属性 (木/火/土/金/水)",
+      "yin_yang": "阴阳属性 (Yin/Yang)",
+      "paired": "表里经络"
+    },
+    "acupoints": {
+      "name": "穴位名称 (中文)",
+      "pinyin": "拼音",
+      "code": "穴位编码 (国标)",
+      "meridian": "所属经络",
+      "location": "定位描述",
+      "location_detail": "定位详细说明",
+      "function": "功效",
+      "literature": "文献记载出处"
+    }
+  },
+  "meridians": [
+    {
+      "name": "肝经",
+      "pinyin": "Gān Jīng",
+      "english": "Liver Meridian",
+      "element": "木 (Wood)",
+      "yin_yang": "Yin",
+      "paired": "胆经"
+    },
+    {
+      "name": "心经",
+      "pinyin": "Xīn Jīng",
+      "english": "Heart Meridian",
+      "element": "火 (Fire)",
+      "yin_yang": "Yin",
+      "paired": "小肠经"
+    },
+    {
+      "name": "脾经",
+      "pinyin": "Pí Jīng",
+      "english": "Spleen Meridian",
+      "element": "土 (Earth)",
+      "yin_yang": "Yin",
+      "paired": "胃经"
+    },
+    {
+      "name": "肺经",
+      "pinyin": "Fèi Jīng",
+      "english": "Lung Meridian",
+      "element": "金 (Metal)",
+      "yin_yang": "Yin",
+      "paired": "大肠经"
+    },
+    {
+      "name": "肾经",
+      "pinyin": "Shèn Jīng",
+      "english": "Kidney Meridian",
+      "element": "水 (Water)",
+      "yin_yang": "Yin",
+      "paired": "膀胱经"
+    },
+    {
+      "name": "胆经",
+      "pinyin": "Dǎn Jīng",
+      "english": "Gallbladder Meridian",
+      "element": "木 (Wood)",
+      "yin_yang": "Yang",
+      "paired": "肝经"
+    },
+    {
+      "name": "小肠经",
+      "pinyin": "Xiǎo Cháng Jīng",
+      "english": "Small Intestine Meridian",
+      "element": "火 (Fire)",
+      "yin_yang": "Yang",
+      "paired": "心经"
+    },
+    {
+      "name": "胃经",
+      "pinyin": "Wèi Jīng",
+      "english": "Stomach Meridian",
+      "element": "土 (Earth)",
+      "yin_yang": "Yang",
+      "paired": "脾经"
+    },
+    {
+      "name": "大肠经",
+      "pinyin": "Dà Cháng Jīng",
+      "english": "Large Intestine Meridian",
+      "element": "金 (Metal)",
+      "yin_yang": "Yang",
+      "paired": "肺经"
+    },
+    {
+      "name": "膀胱经",
+      "pinyin": "Páng Guāng Jīng",
+      "english": "Bladder Meridian",
+      "element": "水 (Water)",
+      "yin_yang": "Yang",
+      "paired": "肾经"
+    },
+    {
+      "name": "心包经",
+      "pinyin": "Xīn Bāo Jīng",
+      "english": "Pericardium Meridian",
+      "element": "火 (Fire)",
+      "yin_yang": "Yin",
+      "paired": "三焦经"
+    },
+    {
+      "name": "三焦经",
+      "pinyin": "Sān Jiāo Jīng",
+      "english": "Triple Burner Meridian",
+      "element": "火 (Fire)",
+      "yin_yang": "Yang",
+      "paired": "心包经"
+    }
+  ],
+  "acupoints": [
+    {
+      "name": "百会",
+      "pinyin": "Bǎi Huì",
+      "code": "DU20",
+      "meridian": "督脉",
+      "location": "头顶正中，两耳尖连线中点",
+      "location_detail": "前发际正中直上5寸",
+      "function": "升阳举陷，醒脑开窍",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "风池",
+      "pinyin": "Fēng Chí",
+      "code": "GB20",
+      "meridian": "胆经",
+      "location": "项部，枕骨之下，胸锁乳突肌与斜方肌上端之间的凹陷中",
+      "location_detail": "与风府相平",
+      "function": "疏风清热，醒脑开窍",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "合谷",
+      "pinyin": "Hé Gǔ",
+      "code": "LI4",
+      "meridian": "大肠经",
+      "location": "手背，第1、2掌骨间，第2掌骨桡侧中点",
+      "location_detail": "以一手拇指指骨关节横纹放在另一手拇食指间指蹼缘上，拇指尖下即是",
+      "function": "疏风解表，通络镇痛",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "足三里",
+      "pinyin": "Zú Sān Lǐ",
+      "code": "ST36",
+      "meridian": "胃经",
+      "location": "小腿外侧，犊鼻下3寸，胫骨前嵴外一横指",
+      "location_detail": "犊鼻与解溪连线上",
+      "function": "健脾和胃，扶正培元",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "三阴交",
+      "pinyin": "Sān Yīn Jiāo",
+      "code": "SP6",
+      "meridian": "脾经",
+      "location": "小腿内侧，内踝尖上3寸，胫骨内侧缘后方",
+      "location_detail": "足内踝尖直上3寸",
+      "function": "健脾利湿，调补肝肾",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "太冲",
+      "pinyin": "Tài Chōng",
+      "code": "LR3",
+      "meridian": "肝经",
+      "location": "足背侧，第1、2趾骨结合部前方凹陷中",
+      "location_detail": "第1跖骨间隙后方凹陷处",
+      "function": "平肝熄风，疏肝理气",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "内关",
+      "pinyin": "Nèi Guān",
+      "code": "PC6",
+      "meridian": "心包经",
+      "location": "前臂掌侧，腕横纹上2寸，掌长肌腱与桡侧腕屈肌腱之间",
+      "location_detail": "曲泽与大陵连线上",
+      "function": "宁心安神，理气止痛",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "关元",
+      "pinyin": "Guān Yuán",
+      "code": "RN4",
+      "meridian": "任脉",
+      "location": "下腹部，前正中线上，脐下3寸",
+      "location_detail": "脐中下3寸",
+      "function": "培补元气，益肾固精",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "气海",
+      "pinyin": "Qì Hǎi",
+      "code": "RN6",
+      "meridian": "任脉",
+      "location": "下腹部，前正中线上，脐下1.5寸",
+      "location_detail": "脐中下1.5寸",
+      "function": "补气益肾，调经固精",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "涌泉",
+      "pinyin": "Yǒng Quán",
+      "code": "KI1",
+      "meridian": "肾经",
+      "location": "足底部，足前部凹陷处，第2、3趾趾缝纹头端与足跟连线前1/3处",
+      "location_detail": "卷足时足前部凹陷处",
+      "function": "滋阴益肾，醒脑开窍",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "曲池",
+      "pinyin": "Qū Chí",
+      "code": "LI11",
+      "meridian": "大肠经",
+      "location": "肘横纹外侧端，屈肘时尺泽与肱骨外上髁连线中点",
+      "location_detail": "屈肘成直角，肘横纹外端凹陷处",
+      "function": "清热解表，疏经通络",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "大椎",
+      "pinyin": "Dà Zhuī",
+      "code": "DU14",
+      "meridian": "督脉",
+      "location": "后正中线上，第7颈椎棘突下凹陷中",
+      "location_detail": "低头时颈部最突出骨头下方",
+      "function": "清热解表，通阳散寒",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "命门",
+      "pinyin": "Mìng Mén",
+      "code": "DU4",
+      "meridian": "督脉",
+      "location": "腰部，后正中线上，第2腰椎棘突下凹陷中",
+      "location_detail": "与脐相对",
+      "function": "温肾壮阳，强腰固精",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "太溪",
+      "pinyin": "Tài Xī",
+      "code": "KI3",
+      "meridian": "肾经",
+      "location": "足内侧，内踝后方，内踝尖与跟腱之间凹陷处",
+      "location_detail": "内踝尖与跟腱之间",
+      "function": "滋阴益肾，清热利湿",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "神门",
+      "pinyin": "Shén Mén",
+      "code": "HT7",
+      "meridian": "心经",
+      "location": "腕部，腕横纹尺侧端，尺侧腕屈肌腱桡侧凹陷处",
+      "location_detail": "腕掌侧横纹尺侧端",
+      "function": "宁心安神，清心调气",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "中脘",
+      "pinyin": "Zhōng Wǎn",
+      "code": "RN12",
+      "meridian": "任脉",
+      "location": "上腹部，前正中线上，脐上4寸",
+      "location_detail": "胸骨下端与脐连线中点",
+      "function": "健脾和胃，消食导滞",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "天枢",
+      "pinyin": "Tiān Shū",
+      "code": "ST25",
+      "meridian": "胃经",
+      "location": "腹部，脐旁2寸",
+      "location_detail": "脐中旁开2寸",
+      "function": "调理肠胃，理气消滞",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "阳陵泉",
+      "pinyin": "Yáng Líng Quán",
+      "code": "GB34",
+      "meridian": "胆经",
+      "location": "小腿外侧，腓骨小头前下方凹陷处",
+      "location_detail": "腓骨小头前下方",
+      "function": "疏肝利胆，舒筋活络",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "列缺",
+      "pinyin": "Liè Quē",
+      "code": "LU7",
+      "meridian": "肺经",
+      "location": "前臂桡侧，桡骨茎突上方，腕横纹上1.5寸",
+      "location_detail": "两手虎口交叉，食指指尖所至凹陷处",
+      "function": "宣肺解表，通经活络",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "丰隆",
+      "pinyin": "Fēng Lóng",
+      "code": "ST40",
+      "meridian": "胃经",
+      "location": "小腿前外侧，外踝尖上8寸，胫骨前嵴外二横指",
+      "location_detail": "条口外一横指",
+      "function": "化痰祛湿，和胃降逆",
+      "literature": "《针灸甲乙经》"
+    }
+  ]
+}

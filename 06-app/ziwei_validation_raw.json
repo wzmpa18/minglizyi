@@ -1,0 +1,2312 @@
+[
+  {
+    "testCase": {
+      "id": 1,
+      "name": "1990年男(阳男顺排)",
+      "year": 1990,
+      "month": 6,
+      "day": 15,
+      "hour": 0,
+      "gender": "male",
+      "genderStr": "男",
+      "solarDateStr": "1990-6-15",
+      "timeIndex": 0,
+      "expectedYinYang": "阳男顺排"
+    },
+    "iztro": {
+      "solarDate": "1990-6-15",
+      "lunarDate": "一九九〇年五月廿三",
+      "chineseDate": "庚午 壬午 辛亥 戊子",
+      "gender": "男",
+      "fiveElementsClass": "木三局",
+      "soulPalace": "午",
+      "bodyPalaceBranch": "午",
+      "zodiac": "马",
+      "sign": "双子座",
+      "rawDates": {
+        "lunarDate": {
+          "lunarYear": 1990,
+          "lunarMonth": 5,
+          "lunarDay": 23,
+          "isLeap": false
+        },
+        "chineseDate": {
+          "yearly": [
+            "庚",
+            "午"
+          ],
+          "monthly": [
+            "壬",
+            "午"
+          ],
+          "daily": [
+            "辛",
+            "亥"
+          ],
+          "hourly": [
+            "戊",
+            "子"
+          ]
+        }
+      },
+      "palaces": [
+        {
+          "index": 0,
+          "name": "财帛",
+          "heavenlyStem": "戊",
+          "earthlyBranch": "寅",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "七杀",
+              "brightness": "庙",
+              "mutagen": ""
+            }
+          ],
+          "decadal": {
+            "range": [
+              83,
+              92
+            ],
+            "heavenlyStem": "戊",
+            "earthlyBranch": "寅"
+          }
+        },
+        {
+          "index": 1,
+          "name": "子女",
+          "heavenlyStem": "己",
+          "earthlyBranch": "卯",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "天同",
+              "brightness": "平",
+              "mutagen": "忌"
+            }
+          ],
+          "decadal": {
+            "range": [
+              93,
+              102
+            ],
+            "heavenlyStem": "己",
+            "earthlyBranch": "卯"
+          }
+        },
+        {
+          "index": 2,
+          "name": "夫妻",
+          "heavenlyStem": "庚",
+          "earthlyBranch": "辰",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "武曲",
+              "brightness": "庙",
+              "mutagen": "权"
+            }
+          ],
+          "decadal": {
+            "range": [
+              103,
+              112
+            ],
+            "heavenlyStem": "庚",
+            "earthlyBranch": "辰"
+          }
+        },
+        {
+          "index": 3,
+          "name": "兄弟",
+          "heavenlyStem": "辛",
+          "earthlyBranch": "巳",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "太阳",
+              "brightness": "旺",
+              "mutagen": "禄"
+            }
+          ],
+          "decadal": {
+            "range": [
+              113,
+              122
+            ],
+            "heavenlyStem": "辛",
+            "earthlyBranch": "巳"
+          }
+        },
+        {
+          "index": 4,
+          "name": "命宫",
+          "heavenlyStem": "壬",
+          "earthlyBranch": "午",
+          "isBodyPalace": true,
+          "majorStars": [
+            {
+              "name": "破军",
+              "brightness": "庙",
+              "mutagen": ""
+            }
+          ],
+          "decadal": {
+            "range": [
+              3,
+              12
+            ],
+            "heavenlyStem": "壬",
+            "earthlyBranch": "午"
+          }
+        },
+        {
+          "index": 5,
+          "name": "父母",
+          "heavenlyStem": "癸",
+          "earthlyBranch": "未",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "天机",
+              "brightness": "陷",
+              "mutagen": ""
+            }
+          ],
+          "decadal": {
+            "range": [
+              13,
+              22
+            ],
+            "heavenlyStem": "癸",
+            "earthlyBranch": "未"
+          }
+        },
+        {
+          "index": 6,
+          "name": "福德",
+          "heavenlyStem": "甲",
+          "earthlyBranch": "申",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "紫微",
+              "brightness": "旺",
+              "mutagen": ""
+            },
+            {
+              "name": "天府",
+              "brightness": "得",
+              "mutagen": ""
+            }
+          ],
+          "decadal": {
+            "range": [
+              23,
+              32
+            ],
+            "heavenlyStem": "甲",
+            "earthlyBranch": "申"
+          }
+        },
+        {
+          "index": 7,
+          "name": "田宅",
+          "heavenlyStem": "乙",
+          "earthlyBranch": "酉",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "太阴",
+              "brightness": "不",
+              "mutagen": "科"
+            }
+          ],
+          "decadal": {
+            "range": [
+              33,
+              42
+            ],
+            "heavenlyStem": "乙",
+            "earthlyBranch": "酉"
+          }
+        },
+        {
+          "index": 8,
+          "name": "官禄",
+          "heavenlyStem": "丙",
+          "earthlyBranch": "戌",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "贪狼",
+              "brightness": "庙",
+              "mutagen": ""
+            }
+          ],
+          "decadal": {
+            "range": [
+              43,
+              52
+            ],
+            "heavenlyStem": "丙",
+            "earthlyBranch": "戌"
+          }
+        },
+        {
+          "index": 9,
+          "name": "仆役",
+          "heavenlyStem": "丁",
+          "earthlyBranch": "亥",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "巨门",
+              "brightness": "旺",
+              "mutagen": ""
+            }
+          ],
+          "decadal": {
+            "range": [
+              53,
+              62
+            ],
+            "heavenlyStem": "丁",
+            "earthlyBranch": "亥"
+          }
+        },
+        {
+          "index": 10,
+          "name": "迁移",
+          "heavenlyStem": "戊",
+          "earthlyBranch": "子",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "廉贞",
+              "brightness": "平",
+              "mutagen": ""
+            },
+            {
+              "name": "天相",
+              "brightness": "庙",
+              "mutagen": ""
+            }
+          ],
+          "decadal": {
+            "range": [
+              63,
+              72
+            ],
+            "heavenlyStem": "戊",
+            "earthlyBranch": "子"
+          }
+        },
+        {
+          "index": 11,
+          "name": "疾厄",
+          "heavenlyStem": "己",
+          "earthlyBranch": "丑",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "天梁",
+              "brightness": "旺",
+              "mutagen": ""
+            }
+          ],
+          "decadal": {
+            "range": [
+              73,
+              82
+            ],
+            "heavenlyStem": "己",
+            "earthlyBranch": "丑"
+          }
+        }
+      ]
+    },
+    "app06": {
+      "solarDate": "1990-06-15",
+      "lunarDate": "庚午年6月15日",
+      "yearGan": "庚",
+      "yearZhi": "午",
+      "fiveElementsClass": "金四局",
+      "fiveElementsValue": 4,
+      "soulPalace": "巳",
+      "bodyPalace": "命宫",
+      "bodyPalaceBranch": "巳",
+      "isForward": true,
+      "palaces": [
+        {
+          "index": 0,
+          "name": "夫妻",
+          "earthlyBranch": "寅",
+          "heavenlyStem": "戊",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "贪狼",
+              "brightness": "旺",
+              "mutagen": null
+            }
+          ],
+          "decadal": {
+            "range": [
+              94,
+              103
+            ],
+            "heavenlyStem": "戊",
+            "earthlyBranch": "寅"
+          },
+          "ages": [
+            11,
+            23,
+            35,
+            47,
+            59,
+            71,
+            83,
+            95,
+            107,
+            119
+          ]
+        },
+        {
+          "index": 1,
+          "name": "兄弟",
+          "earthlyBranch": "卯",
+          "heavenlyStem": "己",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "天机",
+              "brightness": "庙",
+              "mutagen": null
+            },
+            {
+              "name": "巨门",
+              "brightness": "庙",
+              "mutagen": null
+            }
+          ],
+          "decadal": {
+            "range": [
+              104,
+              113
+            ],
+            "heavenlyStem": "己",
+            "earthlyBranch": "卯"
+          },
+          "ages": [
+            12,
+            24,
+            36,
+            48,
+            60,
+            72,
+            84,
+            96,
+            108,
+            120
+          ]
+        },
+        {
+          "index": 2,
+          "name": "迁移",
+          "earthlyBranch": "辰",
+          "heavenlyStem": "庚",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "紫微",
+              "brightness": "得",
+              "mutagen": null
+            },
+            {
+              "name": "天相",
+              "brightness": "得",
+              "mutagen": null
+            }
+          ],
+          "decadal": {
+            "range": [
+              114,
+              123
+            ],
+            "heavenlyStem": "庚",
+            "earthlyBranch": "辰"
+          },
+          "ages": [
+            1,
+            13,
+            25,
+            37,
+            49,
+            61,
+            73,
+            85,
+            97,
+            109
+          ]
+        },
+        {
+          "index": 3,
+          "name": "命宫",
+          "earthlyBranch": "巳",
+          "heavenlyStem": "辛",
+          "isBodyPalace": true,
+          "majorStars": [
+            {
+              "name": "天梁",
+              "brightness": "得",
+              "mutagen": null
+            }
+          ],
+          "decadal": {
+            "range": [
+              4,
+              13
+            ],
+            "heavenlyStem": "辛",
+            "earthlyBranch": "巳"
+          },
+          "ages": [
+            2,
+            14,
+            26,
+            38,
+            50,
+            62,
+            74,
+            86,
+            98,
+            110
+          ]
+        },
+        {
+          "index": 4,
+          "name": "父母",
+          "earthlyBranch": "午",
+          "heavenlyStem": "壬",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "七杀",
+              "brightness": "旺",
+              "mutagen": null
+            }
+          ],
+          "decadal": {
+            "range": [
+              14,
+              23
+            ],
+            "heavenlyStem": "壬",
+            "earthlyBranch": "午"
+          },
+          "ages": [
+            3,
+            15,
+            27,
+            39,
+            51,
+            63,
+            75,
+            87,
+            99,
+            111
+          ]
+        },
+        {
+          "index": 5,
+          "name": "福德",
+          "earthlyBranch": "未",
+          "heavenlyStem": "癸",
+          "isBodyPalace": false,
+          "majorStars": [],
+          "decadal": {
+            "range": [
+              24,
+              33
+            ],
+            "heavenlyStem": "癸",
+            "earthlyBranch": "未"
+          },
+          "ages": [
+            4,
+            16,
+            28,
+            40,
+            52,
+            64,
+            76,
+            88,
+            100,
+            112
+          ]
+        },
+        {
+          "index": 6,
+          "name": "田宅",
+          "earthlyBranch": "申",
+          "heavenlyStem": "甲",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "廉贞",
+              "brightness": "得",
+              "mutagen": null
+            }
+          ],
+          "decadal": {
+            "range": [
+              34,
+              43
+            ],
+            "heavenlyStem": "甲",
+            "earthlyBranch": "申"
+          },
+          "ages": [
+            5,
+            17,
+            29,
+            41,
+            53,
+            65,
+            77,
+            89,
+            101,
+            113
+          ]
+        },
+        {
+          "index": 7,
+          "name": "官禄",
+          "earthlyBranch": "酉",
+          "heavenlyStem": "乙",
+          "isBodyPalace": false,
+          "majorStars": [],
+          "decadal": {
+            "range": [
+              44,
+              53
+            ],
+            "heavenlyStem": "乙",
+            "earthlyBranch": "酉"
+          },
+          "ages": [
+            6,
+            18,
+            30,
+            42,
+            54,
+            66,
+            78,
+            90,
+            102,
+            114
+          ]
+        },
+        {
+          "index": 8,
+          "name": "交友",
+          "earthlyBranch": "戌",
+          "heavenlyStem": "丙",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "破军",
+              "brightness": "旺",
+              "mutagen": null
+            }
+          ],
+          "decadal": {
+            "range": [
+              54,
+              63
+            ],
+            "heavenlyStem": "丙",
+            "earthlyBranch": "戌"
+          },
+          "ages": [
+            7,
+            19,
+            31,
+            43,
+            55,
+            67,
+            79,
+            91,
+            103,
+            115
+          ]
+        },
+        {
+          "index": 9,
+          "name": "疾厄",
+          "earthlyBranch": "亥",
+          "heavenlyStem": "丁",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "天同",
+              "brightness": "庙",
+              "mutagen": "化忌"
+            }
+          ],
+          "decadal": {
+            "range": [
+              64,
+              73
+            ],
+            "heavenlyStem": "丁",
+            "earthlyBranch": "亥"
+          },
+          "ages": [
+            8,
+            20,
+            32,
+            44,
+            56,
+            68,
+            80,
+            92,
+            104,
+            116
+          ]
+        },
+        {
+          "index": 10,
+          "name": "子女",
+          "earthlyBranch": "子",
+          "heavenlyStem": "戊",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "武曲",
+              "brightness": "得",
+              "mutagen": "化权"
+            },
+            {
+              "name": "天府",
+              "brightness": "庙",
+              "mutagen": null
+            }
+          ],
+          "decadal": {
+            "range": [
+              74,
+              83
+            ],
+            "heavenlyStem": "戊",
+            "earthlyBranch": "子"
+          },
+          "ages": [
+            9,
+            21,
+            33,
+            45,
+            57,
+            69,
+            81,
+            93,
+            105,
+            117
+          ]
+        },
+        {
+          "index": 11,
+          "name": "财帛",
+          "earthlyBranch": "丑",
+          "heavenlyStem": "己",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "太阳",
+              "brightness": "陷",
+              "mutagen": "化禄"
+            },
+            {
+              "name": "太阴",
+              "brightness": "旺",
+              "mutagen": "化科"
+            }
+          ],
+          "decadal": {
+            "range": [
+              84,
+              93
+            ],
+            "heavenlyStem": "己",
+            "earthlyBranch": "丑"
+          },
+          "ages": [
+            10,
+            22,
+            34,
+            46,
+            58,
+            70,
+            82,
+            94,
+            106,
+            118
+          ]
+        }
+      ],
+      "palaceNames": [
+        "夫妻",
+        "兄弟",
+        "迁移",
+        "命宫",
+        "父母",
+        "福德",
+        "田宅",
+        "官禄",
+        "交友",
+        "疾厄",
+        "子女",
+        "财帛"
+      ]
+    }
+  },
+  {
+    "testCase": {
+      "id": 2,
+      "name": "1985年女(阴女顺排)",
+      "year": 1985,
+      "month": 3,
+      "day": 20,
+      "hour": 12,
+      "gender": "female",
+      "genderStr": "女",
+      "solarDateStr": "1985-3-20",
+      "timeIndex": 6,
+      "expectedYinYang": "阴女顺排"
+    },
+    "iztro": {
+      "solarDate": "1985-3-20",
+      "lunarDate": "一九八五年正月廿九",
+      "chineseDate": "乙丑 戊寅 戊午 戊午",
+      "gender": "女",
+      "fiveElementsClass": "水二局",
+      "soulPalace": "申",
+      "bodyPalaceBranch": "申",
+      "zodiac": "牛",
+      "sign": "双鱼座",
+      "rawDates": {
+        "lunarDate": {
+          "lunarYear": 1985,
+          "lunarMonth": 1,
+          "lunarDay": 29,
+          "isLeap": false
+        },
+        "chineseDate": {
+          "yearly": [
+            "乙",
+            "丑"
+          ],
+          "monthly": [
+            "戊",
+            "寅"
+          ],
+          "daily": [
+            "戊",
+            "午"
+          ],
+          "hourly": [
+            "戊",
+            "午"
+          ]
+        }
+      },
+      "palaces": [
+        {
+          "index": 0,
+          "name": "迁移",
+          "heavenlyStem": "戊",
+          "earthlyBranch": "寅",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "天机",
+              "brightness": "得",
+              "mutagen": "禄"
+            },
+            {
+              "name": "太阴",
+              "brightness": "旺",
+              "mutagen": "忌"
+            }
+          ],
+          "decadal": {
+            "range": [
+              62,
+              71
+            ],
+            "heavenlyStem": "戊",
+            "earthlyBranch": "寅"
+          }
+        },
+        {
+          "index": 1,
+          "name": "疾厄",
+          "heavenlyStem": "己",
+          "earthlyBranch": "卯",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "紫微",
+              "brightness": "旺",
+              "mutagen": "科"
+            },
+            {
+              "name": "贪狼",
+              "brightness": "利",
+              "mutagen": ""
+            }
+          ],
+          "decadal": {
+            "range": [
+              72,
+              81
+            ],
+            "heavenlyStem": "己",
+            "earthlyBranch": "卯"
+          }
+        },
+        {
+          "index": 2,
+          "name": "财帛",
+          "heavenlyStem": "庚",
+          "earthlyBranch": "辰",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "巨门",
+              "brightness": "陷",
+              "mutagen": ""
+            }
+          ],
+          "decadal": {
+            "range": [
+              82,
+              91
+            ],
+            "heavenlyStem": "庚",
+            "earthlyBranch": "辰"
+          }
+        },
+        {
+          "index": 3,
+          "name": "子女",
+          "heavenlyStem": "辛",
+          "earthlyBranch": "巳",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "天相",
+              "brightness": "得",
+              "mutagen": ""
+            }
+          ],
+          "decadal": {
+            "range": [
+              92,
+              101
+            ],
+            "heavenlyStem": "辛",
+            "earthlyBranch": "巳"
+          }
+        },
+        {
+          "index": 4,
+          "name": "夫妻",
+          "heavenlyStem": "壬",
+          "earthlyBranch": "午",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "天梁",
+              "brightness": "庙",
+              "mutagen": "权"
+            }
+          ],
+          "decadal": {
+            "range": [
+              102,
+              111
+            ],
+            "heavenlyStem": "壬",
+            "earthlyBranch": "午"
+          }
+        },
+        {
+          "index": 5,
+          "name": "兄弟",
+          "heavenlyStem": "癸",
+          "earthlyBranch": "未",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "廉贞",
+              "brightness": "利",
+              "mutagen": ""
+            },
+            {
+              "name": "七杀",
+              "brightness": "庙",
+              "mutagen": ""
+            }
+          ],
+          "decadal": {
+            "range": [
+              112,
+              121
+            ],
+            "heavenlyStem": "癸",
+            "earthlyBranch": "未"
+          }
+        },
+        {
+          "index": 6,
+          "name": "命宫",
+          "heavenlyStem": "甲",
+          "earthlyBranch": "申",
+          "isBodyPalace": true,
+          "majorStars": [],
+          "decadal": {
+            "range": [
+              2,
+              11
+            ],
+            "heavenlyStem": "甲",
+            "earthlyBranch": "申"
+          }
+        },
+        {
+          "index": 7,
+          "name": "父母",
+          "heavenlyStem": "乙",
+          "earthlyBranch": "酉",
+          "isBodyPalace": false,
+          "majorStars": [],
+          "decadal": {
+            "range": [
+              12,
+              21
+            ],
+            "heavenlyStem": "乙",
+            "earthlyBranch": "酉"
+          }
+        },
+        {
+          "index": 8,
+          "name": "福德",
+          "heavenlyStem": "丙",
+          "earthlyBranch": "戌",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "天同",
+              "brightness": "平",
+              "mutagen": ""
+            }
+          ],
+          "decadal": {
+            "range": [
+              22,
+              31
+            ],
+            "heavenlyStem": "丙",
+            "earthlyBranch": "戌"
+          }
+        },
+        {
+          "index": 9,
+          "name": "田宅",
+          "heavenlyStem": "丁",
+          "earthlyBranch": "亥",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "武曲",
+              "brightness": "平",
+              "mutagen": ""
+            },
+            {
+              "name": "破军",
+              "brightness": "平",
+              "mutagen": ""
+            }
+          ],
+          "decadal": {
+            "range": [
+              32,
+              41
+            ],
+            "heavenlyStem": "丁",
+            "earthlyBranch": "亥"
+          }
+        },
+        {
+          "index": 10,
+          "name": "官禄",
+          "heavenlyStem": "戊",
+          "earthlyBranch": "子",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "太阳",
+              "brightness": "陷",
+              "mutagen": ""
+            }
+          ],
+          "decadal": {
+            "range": [
+              42,
+              51
+            ],
+            "heavenlyStem": "戊",
+            "earthlyBranch": "子"
+          }
+        },
+        {
+          "index": 11,
+          "name": "仆役",
+          "heavenlyStem": "己",
+          "earthlyBranch": "丑",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "天府",
+              "brightness": "庙",
+              "mutagen": ""
+            }
+          ],
+          "decadal": {
+            "range": [
+              52,
+              61
+            ],
+            "heavenlyStem": "己",
+            "earthlyBranch": "丑"
+          }
+        }
+      ]
+    },
+    "app06": {
+      "solarDate": "1985-03-20",
+      "lunarDate": "乙丑年3月20日",
+      "yearGan": "乙",
+      "yearZhi": "丑",
+      "fiveElementsClass": "水二局",
+      "fiveElementsValue": 2,
+      "soulPalace": "申",
+      "bodyPalace": "命宫",
+      "bodyPalaceBranch": "申",
+      "isForward": true,
+      "palaces": [
+        {
+          "index": 0,
+          "name": "疾厄",
+          "earthlyBranch": "寅",
+          "heavenlyStem": "戊",
+          "isBodyPalace": false,
+          "majorStars": [],
+          "decadal": {
+            "range": [
+              62,
+              71
+            ],
+            "heavenlyStem": "戊",
+            "earthlyBranch": "寅"
+          },
+          "ages": [
+            6,
+            18,
+            30,
+            42,
+            54,
+            66,
+            78,
+            90,
+            102,
+            114
+          ]
+        },
+        {
+          "index": 1,
+          "name": "子女",
+          "earthlyBranch": "卯",
+          "heavenlyStem": "己",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "廉贞",
+              "brightness": "得",
+              "mutagen": null
+            },
+            {
+              "name": "破军",
+              "brightness": "旺",
+              "mutagen": null
+            }
+          ],
+          "decadal": {
+            "range": [
+              72,
+              81
+            ],
+            "heavenlyStem": "己",
+            "earthlyBranch": "卯"
+          },
+          "ages": [
+            5,
+            17,
+            29,
+            41,
+            53,
+            65,
+            77,
+            89,
+            101,
+            113
+          ]
+        },
+        {
+          "index": 2,
+          "name": "财帛",
+          "earthlyBranch": "辰",
+          "heavenlyStem": "庚",
+          "isBodyPalace": false,
+          "majorStars": [],
+          "decadal": {
+            "range": [
+              82,
+              91
+            ],
+            "heavenlyStem": "庚",
+            "earthlyBranch": "辰"
+          },
+          "ages": [
+            4,
+            16,
+            28,
+            40,
+            52,
+            64,
+            76,
+            88,
+            100,
+            112
+          ]
+        },
+        {
+          "index": 3,
+          "name": "夫妻",
+          "earthlyBranch": "巳",
+          "heavenlyStem": "辛",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "天府",
+              "brightness": "旺",
+              "mutagen": null
+            }
+          ],
+          "decadal": {
+            "range": [
+              92,
+              101
+            ],
+            "heavenlyStem": "辛",
+            "earthlyBranch": "巳"
+          },
+          "ages": [
+            3,
+            15,
+            27,
+            39,
+            51,
+            63,
+            75,
+            87,
+            99,
+            111
+          ]
+        },
+        {
+          "index": 4,
+          "name": "兄弟",
+          "earthlyBranch": "午",
+          "heavenlyStem": "壬",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "天同",
+              "brightness": "陷",
+              "mutagen": null
+            },
+            {
+              "name": "太阴",
+              "brightness": "陷",
+              "mutagen": "化忌"
+            }
+          ],
+          "decadal": {
+            "range": [
+              102,
+              111
+            ],
+            "heavenlyStem": "壬",
+            "earthlyBranch": "午"
+          },
+          "ages": [
+            2,
+            14,
+            26,
+            38,
+            50,
+            62,
+            74,
+            86,
+            98,
+            110
+          ]
+        },
+        {
+          "index": 5,
+          "name": "迁移",
+          "earthlyBranch": "未",
+          "heavenlyStem": "癸",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "武曲",
+              "brightness": "得",
+              "mutagen": null
+            },
+            {
+              "name": "贪狼",
+              "brightness": "得",
+              "mutagen": null
+            }
+          ],
+          "decadal": {
+            "range": [
+              112,
+              121
+            ],
+            "heavenlyStem": "癸",
+            "earthlyBranch": "未"
+          },
+          "ages": [
+            1,
+            13,
+            25,
+            37,
+            49,
+            61,
+            73,
+            85,
+            97,
+            109
+          ]
+        },
+        {
+          "index": 6,
+          "name": "命宫",
+          "earthlyBranch": "申",
+          "heavenlyStem": "甲",
+          "isBodyPalace": true,
+          "majorStars": [
+            {
+              "name": "太阳",
+              "brightness": "得",
+              "mutagen": null
+            },
+            {
+              "name": "巨门",
+              "brightness": "得",
+              "mutagen": null
+            }
+          ],
+          "decadal": {
+            "range": [
+              2,
+              11
+            ],
+            "heavenlyStem": "甲",
+            "earthlyBranch": "申"
+          },
+          "ages": [
+            12,
+            24,
+            36,
+            48,
+            60,
+            72,
+            84,
+            96,
+            108,
+            120
+          ]
+        },
+        {
+          "index": 7,
+          "name": "父母",
+          "earthlyBranch": "酉",
+          "heavenlyStem": "乙",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "天相",
+              "brightness": "旺",
+              "mutagen": null
+            }
+          ],
+          "decadal": {
+            "range": [
+              12,
+              21
+            ],
+            "heavenlyStem": "乙",
+            "earthlyBranch": "酉"
+          },
+          "ages": [
+            11,
+            23,
+            35,
+            47,
+            59,
+            71,
+            83,
+            95,
+            107,
+            119
+          ]
+        },
+        {
+          "index": 8,
+          "name": "福德",
+          "earthlyBranch": "戌",
+          "heavenlyStem": "丙",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "天机",
+              "brightness": "利",
+              "mutagen": "化禄"
+            },
+            {
+              "name": "天梁",
+              "brightness": "庙",
+              "mutagen": "化权"
+            }
+          ],
+          "decadal": {
+            "range": [
+              22,
+              31
+            ],
+            "heavenlyStem": "丙",
+            "earthlyBranch": "戌"
+          },
+          "ages": [
+            10,
+            22,
+            34,
+            46,
+            58,
+            70,
+            82,
+            94,
+            106,
+            118
+          ]
+        },
+        {
+          "index": 9,
+          "name": "田宅",
+          "earthlyBranch": "亥",
+          "heavenlyStem": "丁",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "紫微",
+              "brightness": "庙",
+              "mutagen": "化科"
+            },
+            {
+              "name": "七杀",
+              "brightness": "得",
+              "mutagen": null
+            }
+          ],
+          "decadal": {
+            "range": [
+              32,
+              41
+            ],
+            "heavenlyStem": "丁",
+            "earthlyBranch": "亥"
+          },
+          "ages": [
+            9,
+            21,
+            33,
+            45,
+            57,
+            69,
+            81,
+            93,
+            105,
+            117
+          ]
+        },
+        {
+          "index": 10,
+          "name": "官禄",
+          "earthlyBranch": "子",
+          "heavenlyStem": "戊",
+          "isBodyPalace": false,
+          "majorStars": [],
+          "decadal": {
+            "range": [
+              42,
+              51
+            ],
+            "heavenlyStem": "戊",
+            "earthlyBranch": "子"
+          },
+          "ages": [
+            8,
+            20,
+            32,
+            44,
+            56,
+            68,
+            80,
+            92,
+            104,
+            116
+          ]
+        },
+        {
+          "index": 11,
+          "name": "交友",
+          "earthlyBranch": "丑",
+          "heavenlyStem": "己",
+          "isBodyPalace": false,
+          "majorStars": [],
+          "decadal": {
+            "range": [
+              52,
+              61
+            ],
+            "heavenlyStem": "己",
+            "earthlyBranch": "丑"
+          },
+          "ages": [
+            7,
+            19,
+            31,
+            43,
+            55,
+            67,
+            79,
+            91,
+            103,
+            115
+          ]
+        }
+      ],
+      "palaceNames": [
+        "疾厄",
+        "子女",
+        "财帛",
+        "夫妻",
+        "兄弟",
+        "迁移",
+        "命宫",
+        "父母",
+        "福德",
+        "田宅",
+        "官禄",
+        "交友"
+      ]
+    }
+  },
+  {
+    "testCase": {
+      "id": 3,
+      "name": "1995年男(阴男逆排)",
+      "year": 1995,
+      "month": 11,
+      "day": 8,
+      "hour": 6,
+      "gender": "male",
+      "genderStr": "男",
+      "solarDateStr": "1995-11-8",
+      "timeIndex": 3,
+      "expectedYinYang": "阴男逆排"
+    },
+    "iztro": {
+      "solarDate": "1995-11-8",
+      "lunarDate": "一九九五年九月十六",
+      "chineseDate": "乙亥 丙戌 癸卯 乙卯",
+      "gender": "男",
+      "fiveElementsClass": "木三局",
+      "soulPalace": "未",
+      "bodyPalaceBranch": "丑",
+      "zodiac": "猪",
+      "sign": "天蝎座",
+      "rawDates": {
+        "lunarDate": {
+          "lunarYear": 1995,
+          "lunarMonth": 9,
+          "lunarDay": 16,
+          "isLeap": false
+        },
+        "chineseDate": {
+          "yearly": [
+            "乙",
+            "亥"
+          ],
+          "monthly": [
+            "丙",
+            "戌"
+          ],
+          "daily": [
+            "癸",
+            "卯"
+          ],
+          "hourly": [
+            "乙",
+            "卯"
+          ]
+        }
+      },
+      "palaces": [
+        {
+          "index": 0,
+          "name": "疾厄",
+          "heavenlyStem": "戊",
+          "earthlyBranch": "寅",
+          "isBodyPalace": false,
+          "majorStars": [],
+          "decadal": {
+            "range": [
+              53,
+              62
+            ],
+            "heavenlyStem": "戊",
+            "earthlyBranch": "寅"
+          }
+        },
+        {
+          "index": 1,
+          "name": "财帛",
+          "heavenlyStem": "己",
+          "earthlyBranch": "卯",
+          "isBodyPalace": false,
+          "majorStars": [],
+          "decadal": {
+            "range": [
+              43,
+              52
+            ],
+            "heavenlyStem": "己",
+            "earthlyBranch": "卯"
+          }
+        },
+        {
+          "index": 2,
+          "name": "子女",
+          "heavenlyStem": "庚",
+          "earthlyBranch": "辰",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "天同",
+              "brightness": "平",
+              "mutagen": ""
+            }
+          ],
+          "decadal": {
+            "range": [
+              33,
+              42
+            ],
+            "heavenlyStem": "庚",
+            "earthlyBranch": "辰"
+          }
+        },
+        {
+          "index": 3,
+          "name": "夫妻",
+          "heavenlyStem": "辛",
+          "earthlyBranch": "巳",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "武曲",
+              "brightness": "平",
+              "mutagen": ""
+            },
+            {
+              "name": "破军",
+              "brightness": "平",
+              "mutagen": ""
+            }
+          ],
+          "decadal": {
+            "range": [
+              23,
+              32
+            ],
+            "heavenlyStem": "辛",
+            "earthlyBranch": "巳"
+          }
+        },
+        {
+          "index": 4,
+          "name": "兄弟",
+          "heavenlyStem": "壬",
+          "earthlyBranch": "午",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "太阳",
+              "brightness": "旺",
+              "mutagen": ""
+            }
+          ],
+          "decadal": {
+            "range": [
+              13,
+              22
+            ],
+            "heavenlyStem": "壬",
+            "earthlyBranch": "午"
+          }
+        },
+        {
+          "index": 5,
+          "name": "命宫",
+          "heavenlyStem": "癸",
+          "earthlyBranch": "未",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "天府",
+              "brightness": "庙",
+              "mutagen": ""
+            }
+          ],
+          "decadal": {
+            "range": [
+              3,
+              12
+            ],
+            "heavenlyStem": "癸",
+            "earthlyBranch": "未"
+          }
+        },
+        {
+          "index": 6,
+          "name": "父母",
+          "heavenlyStem": "甲",
+          "earthlyBranch": "申",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "天机",
+              "brightness": "得",
+              "mutagen": "禄"
+            },
+            {
+              "name": "太阴",
+              "brightness": "利",
+              "mutagen": "忌"
+            }
+          ],
+          "decadal": {
+            "range": [
+              113,
+              122
+            ],
+            "heavenlyStem": "甲",
+            "earthlyBranch": "申"
+          }
+        },
+        {
+          "index": 7,
+          "name": "福德",
+          "heavenlyStem": "乙",
+          "earthlyBranch": "酉",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "紫微",
+              "brightness": "旺",
+              "mutagen": "科"
+            },
+            {
+              "name": "贪狼",
+              "brightness": "利",
+              "mutagen": ""
+            }
+          ],
+          "decadal": {
+            "range": [
+              103,
+              112
+            ],
+            "heavenlyStem": "乙",
+            "earthlyBranch": "酉"
+          }
+        },
+        {
+          "index": 8,
+          "name": "田宅",
+          "heavenlyStem": "丙",
+          "earthlyBranch": "戌",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "巨门",
+              "brightness": "陷",
+              "mutagen": ""
+            }
+          ],
+          "decadal": {
+            "range": [
+              93,
+              102
+            ],
+            "heavenlyStem": "丙",
+            "earthlyBranch": "戌"
+          }
+        },
+        {
+          "index": 9,
+          "name": "官禄",
+          "heavenlyStem": "丁",
+          "earthlyBranch": "亥",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "天相",
+              "brightness": "得",
+              "mutagen": ""
+            }
+          ],
+          "decadal": {
+            "range": [
+              83,
+              92
+            ],
+            "heavenlyStem": "丁",
+            "earthlyBranch": "亥"
+          }
+        },
+        {
+          "index": 10,
+          "name": "仆役",
+          "heavenlyStem": "戊",
+          "earthlyBranch": "子",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "天梁",
+              "brightness": "庙",
+              "mutagen": "权"
+            }
+          ],
+          "decadal": {
+            "range": [
+              73,
+              82
+            ],
+            "heavenlyStem": "戊",
+            "earthlyBranch": "子"
+          }
+        },
+        {
+          "index": 11,
+          "name": "迁移",
+          "heavenlyStem": "己",
+          "earthlyBranch": "丑",
+          "isBodyPalace": true,
+          "majorStars": [
+            {
+              "name": "廉贞",
+              "brightness": "利",
+              "mutagen": ""
+            },
+            {
+              "name": "七杀",
+              "brightness": "庙",
+              "mutagen": ""
+            }
+          ],
+          "decadal": {
+            "range": [
+              63,
+              72
+            ],
+            "heavenlyStem": "己",
+            "earthlyBranch": "丑"
+          }
+        }
+      ]
+    },
+    "app06": {
+      "solarDate": "1995-11-08",
+      "lunarDate": "乙亥年11月8日",
+      "yearGan": "乙",
+      "yearZhi": "亥",
+      "fiveElementsClass": "木三局",
+      "fiveElementsValue": 3,
+      "soulPalace": "未",
+      "bodyPalace": "疾厄",
+      "bodyPalaceBranch": "丑",
+      "isForward": false,
+      "palaces": [
+        {
+          "index": 0,
+          "name": "子女",
+          "earthlyBranch": "寅",
+          "heavenlyStem": "戊",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "天机",
+              "brightness": "得",
+              "mutagen": "化禄"
+            },
+            {
+              "name": "太阴",
+              "brightness": "陷",
+              "mutagen": "化忌"
+            }
+          ],
+          "decadal": {
+            "range": [
+              53,
+              62
+            ],
+            "heavenlyStem": "戊",
+            "earthlyBranch": "寅"
+          },
+          "ages": [
+            2,
+            14,
+            26,
+            38,
+            50,
+            62,
+            74,
+            86,
+            98,
+            110
+          ]
+        },
+        {
+          "index": 1,
+          "name": "财帛",
+          "earthlyBranch": "卯",
+          "heavenlyStem": "己",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "紫微",
+              "brightness": "旺",
+              "mutagen": "化科"
+            },
+            {
+              "name": "贪狼",
+              "brightness": "庙",
+              "mutagen": null
+            }
+          ],
+          "decadal": {
+            "range": [
+              43,
+              52
+            ],
+            "heavenlyStem": "己",
+            "earthlyBranch": "卯"
+          },
+          "ages": [
+            3,
+            15,
+            27,
+            39,
+            51,
+            63,
+            75,
+            87,
+            99,
+            111
+          ]
+        },
+        {
+          "index": 2,
+          "name": "夫妻",
+          "earthlyBranch": "辰",
+          "heavenlyStem": "庚",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "巨门",
+              "brightness": "旺",
+              "mutagen": null
+            }
+          ],
+          "decadal": {
+            "range": [
+              33,
+              42
+            ],
+            "heavenlyStem": "庚",
+            "earthlyBranch": "辰"
+          },
+          "ages": [
+            4,
+            16,
+            28,
+            40,
+            52,
+            64,
+            76,
+            88,
+            100,
+            112
+          ]
+        },
+        {
+          "index": 3,
+          "name": "兄弟",
+          "earthlyBranch": "巳",
+          "heavenlyStem": "辛",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "天相",
+              "brightness": "得",
+              "mutagen": null
+            }
+          ],
+          "decadal": {
+            "range": [
+              23,
+              32
+            ],
+            "heavenlyStem": "辛",
+            "earthlyBranch": "巳"
+          },
+          "ages": [
+            5,
+            17,
+            29,
+            41,
+            53,
+            65,
+            77,
+            89,
+            101,
+            113
+          ]
+        },
+        {
+          "index": 4,
+          "name": "迁移",
+          "earthlyBranch": "午",
+          "heavenlyStem": "壬",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "天梁",
+              "brightness": "旺",
+              "mutagen": "化权"
+            }
+          ],
+          "decadal": {
+            "range": [
+              13,
+              22
+            ],
+            "heavenlyStem": "壬",
+            "earthlyBranch": "午"
+          },
+          "ages": [
+            6,
+            18,
+            30,
+            42,
+            54,
+            66,
+            78,
+            90,
+            102,
+            114
+          ]
+        },
+        {
+          "index": 5,
+          "name": "命宫",
+          "earthlyBranch": "未",
+          "heavenlyStem": "癸",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "廉贞",
+              "brightness": "得",
+              "mutagen": null
+            },
+            {
+              "name": "七杀",
+              "brightness": "得",
+              "mutagen": null
+            }
+          ],
+          "decadal": {
+            "range": [
+              3,
+              12
+            ],
+            "heavenlyStem": "癸",
+            "earthlyBranch": "未"
+          },
+          "ages": [
+            7,
+            19,
+            31,
+            43,
+            55,
+            67,
+            79,
+            91,
+            103,
+            115
+          ]
+        },
+        {
+          "index": 6,
+          "name": "父母",
+          "earthlyBranch": "申",
+          "heavenlyStem": "甲",
+          "isBodyPalace": false,
+          "majorStars": [],
+          "decadal": {
+            "range": [
+              113,
+              122
+            ],
+            "heavenlyStem": "甲",
+            "earthlyBranch": "申"
+          },
+          "ages": [
+            8,
+            20,
+            32,
+            44,
+            56,
+            68,
+            80,
+            92,
+            104,
+            116
+          ]
+        },
+        {
+          "index": 7,
+          "name": "福德",
+          "earthlyBranch": "酉",
+          "heavenlyStem": "乙",
+          "isBodyPalace": false,
+          "majorStars": [],
+          "decadal": {
+            "range": [
+              103,
+              112
+            ],
+            "heavenlyStem": "乙",
+            "earthlyBranch": "酉"
+          },
+          "ages": [
+            9,
+            21,
+            33,
+            45,
+            57,
+            69,
+            81,
+            93,
+            105,
+            117
+          ]
+        },
+        {
+          "index": 8,
+          "name": "田宅",
+          "earthlyBranch": "戌",
+          "heavenlyStem": "丙",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "天同",
+              "brightness": "平",
+              "mutagen": null
+            }
+          ],
+          "decadal": {
+            "range": [
+              93,
+              102
+            ],
+            "heavenlyStem": "丙",
+            "earthlyBranch": "戌"
+          },
+          "ages": [
+            10,
+            22,
+            34,
+            46,
+            58,
+            70,
+            82,
+            94,
+            106,
+            118
+          ]
+        },
+        {
+          "index": 9,
+          "name": "官禄",
+          "earthlyBranch": "亥",
+          "heavenlyStem": "丁",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "武曲",
+              "brightness": "得",
+              "mutagen": null
+            },
+            {
+              "name": "破军",
+              "brightness": "得",
+              "mutagen": null
+            }
+          ],
+          "decadal": {
+            "range": [
+              83,
+              92
+            ],
+            "heavenlyStem": "丁",
+            "earthlyBranch": "亥"
+          },
+          "ages": [
+            11,
+            23,
+            35,
+            47,
+            59,
+            71,
+            83,
+            95,
+            107,
+            119
+          ]
+        },
+        {
+          "index": 10,
+          "name": "交友",
+          "earthlyBranch": "子",
+          "heavenlyStem": "戊",
+          "isBodyPalace": false,
+          "majorStars": [
+            {
+              "name": "太阳",
+              "brightness": "陷",
+              "mutagen": null
+            }
+          ],
+          "decadal": {
+            "range": [
+              73,
+              82
+            ],
+            "heavenlyStem": "戊",
+            "earthlyBranch": "子"
+          },
+          "ages": [
+            12,
+            24,
+            36,
+            48,
+            60,
+            72,
+            84,
+            96,
+            108,
+            120
+          ]
+        },
+        {
+          "index": 11,
+          "name": "疾厄",
+          "earthlyBranch": "丑",
+          "heavenlyStem": "己",
+          "isBodyPalace": true,
+          "majorStars": [
+            {
+              "name": "天府",
+              "brightness": "庙",
+              "mutagen": null
+            }
+          ],
+          "decadal": {
+            "range": [
+              63,
+              72
+            ],
+            "heavenlyStem": "己",
+            "earthlyBranch": "丑"
+          },
+          "ages": [
+            1,
+            13,
+            25,
+            37,
+            49,
+            61,
+            73,
+            85,
+            97,
+            109
+          ]
+        }
+      ],
+      "palaceNames": [
+        "子女",
+        "财帛",
+        "夫妻",
+        "兄弟",
+        "迁移",
+        "命宫",
+        "父母",
+        "福德",
+        "田宅",
+        "官禄",
+        "交友",
+        "疾厄"
+      ]
+    }
+  }
+]

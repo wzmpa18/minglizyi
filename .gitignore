@@ -1,0 +1,81 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+.yarn/install-state.gz
+
+# Next.js build output
+.next/
+out/
+
+# Production build
+build/
+dist/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor directories and files
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+*~
+.DS_Store
+Thumbs.db
+
+# OS files
+Desktop.ini
+$RECYCLE.BIN/
+
+# Testing
+coverage/
+*.lcov
+
+# Misc
+*.log
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+
+# 临时工作目录（不提交参考源码，只提交自研代码）
+01-命理开源项目源码/
+02-中医开源项目源码/
+c:\Users\ZhuanZ\.trae-cn\work/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+*.egg-info/
+.pytest_cache/
+
+# 临时部署脚本
+deploy_check*.py
+deploy_*.py
+check_server.py
+verify_*.py
+debug_nginx.py
+fix_permission.py
+full_routes_test.py
+
+# 备份文件
+*.bak
+*.bak2
+*.bak_*
+_backup_*/
+out_backup_*/

@@ -1,0 +1,837 @@
+{
+  "test_case": {
+    "solar_date": "1990-05-15",
+    "time": "14:30",
+    "true_solar_time": "14:14 (东经116°校正)",
+    "gender": "男",
+    "longitude": "116°E"
+  },
+  "pillars": {
+    "year": {
+      "value": "庚午",
+      "gan": "庚",
+      "zhi": "午",
+      "hideGan": [
+        "丁",
+        "己"
+      ],
+      "wuXing": "金火",
+      "naYin": "路旁土",
+      "shiShenGan": "比肩",
+      "shiShenZhi": [
+        "正官",
+        "正印"
+      ],
+      "diShi": "沐浴",
+      "xun": "甲子",
+      "xunKong": "戌亥",
+      "hideGanAttr": [
+        {
+          "gan": "丁",
+          "qiLevel": "本气",
+          "wuXing": "火",
+          "shiShen": "正官"
+        },
+        {
+          "gan": "己",
+          "qiLevel": "余气",
+          "wuXing": "土",
+          "shiShen": "正印"
+        }
+      ],
+      "ziZuo": "胎",
+      "xingYunZhi": "胎"
+    },
+    "month": {
+      "value": "辛巳",
+      "gan": "辛",
+      "zhi": "巳",
+      "hideGan": [
+        "丙",
+        "庚",
+        "戊"
+      ],
+      "wuXing": "金火",
+      "naYin": "白蜡金",
+      "shiShenGan": "劫财",
+      "shiShenZhi": [
+        "七杀",
+        "比肩",
+        "偏印"
+      ],
+      "diShi": "长生",
+      "xun": "甲戌",
+      "xunKong": "申酉",
+      "hideGanAttr": [
+        {
+          "gan": "丙",
+          "qiLevel": "本气",
+          "wuXing": "火",
+          "shiShen": "七杀"
+        },
+        {
+          "gan": "戊",
+          "qiLevel": "中气",
+          "wuXing": "土",
+          "shiShen": "偏印"
+        },
+        {
+          "gan": "庚",
+          "qiLevel": "余气",
+          "wuXing": "金",
+          "shiShen": "比肩"
+        }
+      ],
+      "ziZuo": "胎",
+      "xingYunZhi": "绝"
+    },
+    "day": {
+      "value": "庚辰",
+      "gan": "庚",
+      "zhi": "辰",
+      "hideGan": [
+        "戊",
+        "乙",
+        "癸"
+      ],
+      "wuXing": "金土",
+      "naYin": "白蜡金",
+      "shiShenGan": "日主",
+      "shiShenZhi": [
+        "偏印",
+        "正财",
+        "伤官"
+      ],
+      "diShi": "养",
+      "xun": "甲戌",
+      "xunKong": "申酉",
+      "hideGanAttr": [
+        {
+          "gan": "戊",
+          "qiLevel": "本气",
+          "wuXing": "土",
+          "shiShen": "偏印"
+        },
+        {
+          "gan": "乙",
+          "qiLevel": "中气",
+          "wuXing": "木",
+          "shiShen": "正财"
+        },
+        {
+          "gan": "癸",
+          "qiLevel": "余气",
+          "wuXing": "水",
+          "shiShen": "伤官"
+        }
+      ],
+      "ziZuo": "墓",
+      "xingYunZhi": "墓",
+      "isKuiGangByDay": true
+    },
+    "time": {
+      "value": "癸未",
+      "gan": "癸",
+      "zhi": "未",
+      "hideGan": [
+        "己",
+        "丁",
+        "乙"
+      ],
+      "wuXing": "水土",
+      "naYin": "杨柳木",
+      "shiShenGan": "伤官",
+      "shiShenZhi": [
+        "正印",
+        "正官",
+        "正财"
+      ],
+      "diShi": "冠带",
+      "xun": "甲戌",
+      "xunKong": "申酉",
+      "hideGanAttr": [
+        {
+          "gan": "己",
+          "qiLevel": "本气",
+          "wuXing": "土",
+          "shiShen": "正印"
+        },
+        {
+          "gan": "丁",
+          "qiLevel": "余气",
+          "wuXing": "火",
+          "shiShen": "正官"
+        },
+        {
+          "gan": "乙",
+          "qiLevel": "中气",
+          "wuXing": "木",
+          "shiShen": "正财"
+        }
+      ],
+      "ziZuo": "墓",
+      "xingYunZhi": "养"
+    },
+    "day_master": "庚"
+  },
+  "shishen_summary": {
+    "year_gan": "比肩",
+    "year_zhi": [
+      "正官",
+      "正印"
+    ],
+    "month_gan": "劫财",
+    "month_zhi": [
+      "七杀",
+      "比肩",
+      "偏印"
+    ],
+    "day_gan": "日主",
+    "day_zhi": [
+      "偏印",
+      "正财",
+      "伤官"
+    ],
+    "time_gan": "伤官",
+    "time_zhi": [
+      "正印",
+      "正官",
+      "正财"
+    ]
+  },
+  "hidden_stems": {
+    "year": [
+      {
+        "gan": "丁",
+        "qiLevel": "本气",
+        "wuXing": "火",
+        "shiShen": "正官"
+      },
+      {
+        "gan": "己",
+        "qiLevel": "余气",
+        "wuXing": "土",
+        "shiShen": "正印"
+      }
+    ],
+    "month": [
+      {
+        "gan": "丙",
+        "qiLevel": "本气",
+        "wuXing": "火",
+        "shiShen": "七杀"
+      },
+      {
+        "gan": "戊",
+        "qiLevel": "中气",
+        "wuXing": "土",
+        "shiShen": "偏印"
+      },
+      {
+        "gan": "庚",
+        "qiLevel": "余气",
+        "wuXing": "金",
+        "shiShen": "比肩"
+      }
+    ],
+    "day": [
+      {
+        "gan": "戊",
+        "qiLevel": "本气",
+        "wuXing": "土",
+        "shiShen": "偏印"
+      },
+      {
+        "gan": "乙",
+        "qiLevel": "中气",
+        "wuXing": "木",
+        "shiShen": "正财"
+      },
+      {
+        "gan": "癸",
+        "qiLevel": "余气",
+        "wuXing": "水",
+        "shiShen": "伤官"
+      }
+    ],
+    "time": [
+      {
+        "gan": "己",
+        "qiLevel": "本气",
+        "wuXing": "土",
+        "shiShen": "正印"
+      },
+      {
+        "gan": "丁",
+        "qiLevel": "余气",
+        "wuXing": "火",
+        "shiShen": "正官"
+      },
+      {
+        "gan": "乙",
+        "qiLevel": "中气",
+        "wuXing": "木",
+        "shiShen": "正财"
+      }
+    ]
+  },
+  "dishi": {
+    "year": "沐浴",
+    "month": "长生",
+    "day": "养",
+    "time": "冠带"
+  },
+  "xunkong": {
+    "year": "戌亥",
+    "month": "申酉",
+    "day": "申酉",
+    "time": "申酉"
+  },
+  "nayin": {
+    "year": "路旁土",
+    "month": "白蜡金",
+    "day": "白蜡金",
+    "time": "杨柳木"
+  },
+  "dayun": {
+    "gender": 1,
+    "forward": true,
+    "direction": "顺排",
+    "start_year": 7,
+    "start_month": 2,
+    "start_day": 20,
+    "start_solar": "1997-08-04 14:14:00"
+  },
+  "dayun_arr": [
+    {
+      "start_year": 1990,
+      "gan_zhi": "",
+      "gan_shen": "",
+      "zhi_shen": "",
+      "liunian_count": 7
+    },
+    {
+      "start_year": 1997,
+      "gan_zhi": "壬午",
+      "gan_shen": "食",
+      "zhi_shen": "官",
+      "liunian_count": 10
+    },
+    {
+      "start_year": 2007,
+      "gan_zhi": "癸未",
+      "gan_shen": "伤",
+      "zhi_shen": "印",
+      "liunian_count": 10
+    },
+    {
+      "start_year": 2017,
+      "gan_zhi": "甲申",
+      "gan_shen": "才",
+      "zhi_shen": "比",
+      "liunian_count": 10
+    },
+    {
+      "start_year": 2027,
+      "gan_zhi": "乙酉",
+      "gan_shen": "财",
+      "zhi_shen": "劫",
+      "liunian_count": 10
+    },
+    {
+      "start_year": 2037,
+      "gan_zhi": "丙戌",
+      "gan_shen": "杀",
+      "zhi_shen": "枭",
+      "liunian_count": 10
+    },
+    {
+      "start_year": 2047,
+      "gan_zhi": "丁亥",
+      "gan_shen": "官",
+      "zhi_shen": "食",
+      "liunian_count": 10
+    },
+    {
+      "start_year": 2057,
+      "gan_zhi": "戊子",
+      "gan_shen": "枭",
+      "zhi_shen": "伤",
+      "liunian_count": 10
+    },
+    {
+      "start_year": 2067,
+      "gan_zhi": "己丑",
+      "gan_shen": "印",
+      "zhi_shen": "印",
+      "liunian_count": 10
+    },
+    {
+      "start_year": 2077,
+      "gan_zhi": "庚寅",
+      "gan_shen": "比",
+      "zhi_shen": "才",
+      "liunian_count": 10
+    },
+    {
+      "start_year": 2087,
+      "gan_zhi": "辛卯",
+      "gan_shen": "劫",
+      "zhi_shen": "财",
+      "liunian_count": 10
+    },
+    {
+      "start_year": 2097,
+      "gan_zhi": "壬辰",
+      "gan_shen": "食",
+      "zhi_shen": "枭",
+      "liunian_count": 10
+    },
+    {
+      "start_year": 2107,
+      "gan_zhi": "癸巳",
+      "gan_shen": "伤",
+      "zhi_shen": "杀",
+      "liunian_count": 10
+    },
+    {
+      "start_year": 2117,
+      "gan_zhi": "甲午",
+      "gan_shen": "才",
+      "zhi_shen": "官",
+      "liunian_count": 10
+    },
+    {
+      "start_year": 2127,
+      "gan_zhi": "乙未",
+      "gan_shen": "财",
+      "zhi_shen": "印",
+      "liunian_count": 10
+    }
+  ],
+  "current_yun": {
+    "daYun": {
+      "startYear": 2017,
+      "endYear": 2026,
+      "startAge": 28,
+      "endAge": 37,
+      "index": 3,
+      "ganZhi": [
+        "甲",
+        "申"
+      ],
+      "xun": "甲申",
+      "xunKong": "午未",
+      "shiShen": "偏财",
+      "zhiHideGanShiShen": [
+        {
+          "gan": "庚",
+          "qiLevel": "本气",
+          "shiShen": "比肩"
+        },
+        {
+          "gan": "戊",
+          "qiLevel": "中气",
+          "shiShen": "偏印"
+        },
+        {
+          "gan": "壬",
+          "qiLevel": "余气",
+          "shiShen": "食神"
+        }
+      ],
+      "ziZuo": "绝",
+      "xingYunZhi": "长生"
+    },
+    "liuNian": {
+      "year": 2026,
+      "age": 37,
+      "index": 9,
+      "ganZhi": [
+        "丙",
+        "午"
+      ],
+      "xun": "甲辰",
+      "xunKong": "寅卯",
+      "shiShen": "七杀",
+      "zhiHideGanShiShen": [
+        {
+          "gan": "丁",
+          "qiLevel": "本气",
+          "shiShen": "正官"
+        },
+        {
+          "gan": "己",
+          "qiLevel": "余气",
+          "shiShen": "正印"
+        }
+      ],
+      "ziZuo": "帝旺",
+      "xingYunZhi": "胎"
+    },
+    "xiaoYun": null,
+    "liuYue": {
+      "index": 6,
+      "monthCn": "六",
+      "ganZhi": [
+        "乙",
+        "未"
+      ],
+      "xun": "甲午",
+      "xunKong": "辰巳",
+      "shiShen": "正财",
+      "zhiHideGanShiShen": [
+        {
+          "gan": "己",
+          "qiLevel": "本气",
+          "shiShen": "正印"
+        },
+        {
+          "gan": "丁",
+          "qiLevel": "余气",
+          "shiShen": "正官"
+        },
+        {
+          "gan": "乙",
+          "qiLevel": "中气",
+          "shiShen": "正财"
+        }
+      ],
+      "ziZuo": "养",
+      "xingYunZhi": "养"
+    },
+    "liuRi": {
+      "ganZhi": [
+        "辛",
+        "丑"
+      ],
+      "xun": "甲午",
+      "xunKong": "辰巳",
+      "shiShen": "劫财",
+      "zhiHideGanShiShen": [
+        {
+          "gan": "己",
+          "qiLevel": "本气",
+          "shiShen": "正印"
+        },
+        {
+          "gan": "癸",
+          "qiLevel": "余气",
+          "shiShen": "伤官"
+        },
+        {
+          "gan": "辛",
+          "qiLevel": "中气",
+          "shiShen": "劫财"
+        }
+      ],
+      "ziZuo": "冠带",
+      "xingYunZhi": "衰"
+    }
+  },
+  "analysis": {
+    "rishi": [
+      "庚日癸未时生，有印、财库。庚金以乙木为财，未中入库，用丁火为官，己土为印，未中的己土，丁火却有明癸制之。命柱中有己土制癸水，不透出丁字，命主便居官显达。如果无己土，又透出丁字，那就为祸百端。如果通火土运气，命主显贵。",
+      "庚辰日癸未时生，是魁罡照临。逢辰土中有戊土制癸水，年月中无丁火，命主显贵。逢卯月生，行金水运，命主官至七品，贵显。"
+    ],
+    "SanMingTongHui": [
+      "【层次】[庚辰][上等]身坐正财、伤官、偏印，主人有财禄，聪明有学识，支中伤官带偏印有贵气，而戊癸化火为官杀，变成日坐财官，可做官，但隐含伤官，可能喜开杀戒。",
+      "【心性】积极进取,勇敢果决,自尊心强,有才能,善于结交各方面朋友,平衡、稳重,但过于操劳,防止被别人耍花样、弄权术而迷惑受骗受害。",
+      "【整体分析】春风和气，劳禄雪霜一生，利官近贵，名利双全，衣食足用；中年平顺，晚年大兴，女人勤俭，持家有方，受人敬仰，坎坷风波。个别命运身体衰弱，注意健康，平安为福。",
+      "【性格分析】庚是阳之金,意指藏在地中含有丰富金属的矿石,庚的人因此拥有如矿石般的刚直性格,此外经过锻炼,打铁成钢可制成刃的锋利快刀就是庚的特性,不过就像剃刀一样,虽然锋利却稍嫌单薄。或许因为如此,庚日生的人在人品上有其保守的一面,然而不可思义的是世人却给他超越实力的高评价。不过,庚的人熟知自己的缺点,为了配合世人的评价异常努力,所以实像和虚像之间并无很大的差距。庚的人在无意识中不断地锻炼自己可能是与生俱有的宿命使然吧!庚辰日生的人自信自满,会强制进行事物,由于精力过剩,往往引起无谓的冲突。不过由于运势够强,刚好足以克服这种缺点。",
+      "【爱情分析】命局中财星离日干远，代表和外地人结婚、或者在外地结婚，对你比较有利。你的另一半对你的生活影响较小，感情生活较为平淡。命局中日支为夫妻宫，日坐七杀为闲神，说明你个性强势，喜欢寻求刺激的感情关系，婚前感情机会多，感情情况较复杂。由于你和你的伴侣容易因为矛盾出现碰撞，你很可能因为争执而不堪其烦，移情别恋。为了维持感情幸福，你需要主动反思和改善自己强势偏执的性格。在婚姻中，您不太能融入两人的婚姻家庭生活，您比较容易遇到性格比较霸道，脾气比较大的配偶，与自己的年龄差距较大或心智较为成熟稳重，若日支五行为命局之病，还会出现厌恶配偶的情况，有一定年龄差的关系可调整自己，让感情变得更加充实，否则婚姻容易多争吵不和。因您有较多与异性接触的机会，即便在婚后，您也可能遇到来自感情方面的困扰，而且结婚以后或有与配偶父母不和的情况。女命容易克夫。您也是个浪漫的恋人，与别人约会或相处时总能制造绝妙的气氛，给对方带来很多欢乐和惊喜，这种特性使您在情场上无往不利。但是您推崇较为自由的恋爱观，这使您甚少有从一异性而终的心态，更希望自己的人生有经历几段轰轰烈烈的爱情，有了一定的而经历后才能安定下来。",
+      "【事业分析】庚日生的人反应灵敏，头脑敏锐，特别适合从事警察、检察官或与防卫相关的工作。从警戒完备这点来看，很容易令人联想到保镖。日本影视界有名的男演员丹哲郎和渡哲也都是庚日生的人，而他们所扮演的刑警或保镖角色使他们多年来一直深受影迷喜爱。由此看来，庚的人适合在官场，技术方面或金属工业界等特别坚实的行业中从事工作。庚属金性，因此可考虑以钢铁业为首的金属、造船、车辆、动力机械、电机等事业。就算不在上述关系的公司工作，也可适当的转职，例如原本在木材关系的职位，一旦调往钢铁部门，会开始有异于往常的活动。从金属的意味而言，刃物也包括在内，所以庚也适合从事外科医生或齿科医生等职业。甲年庚日生的人易成领导，会是个严厉的上司，就算当老板，也不是个温情主义的老板，一切会以军事化的方式统领。",
+      "【财运分析】庚虽属金性，却不爱死存钱，性格耿直，重视义气，就算倾囊付出，也要帮助他人，不为钱拘束。假设自己手头不便，也会向别处借钱以救人急。因此，与财运缘浅，如果自己不留意，根本不会拥有大量的金钱。不过这就是庚日生的人的特征，一旦压抑它，恐会失去性格上的一大优点，只要稍稍收敛一些过于勉强的交际应酬就无大碍。庚日生的人当中要属已年的人最幸运因已有财产的意味。丙年生的人不太会分好坏，火性不擅长储钱，所以没有财力。此外，经过实际的调查，发现辛年的人大多是吃、喝、赌、买游戏人间的人。",
+      "【健康分析】庚日生的人，由于金是主管肺脏、四肢、鼻、骨，一旦健康受损，立刻障凝四起，除了有肠膜炎、肠结核等暗示外，还有肺炎、风湿症等须要提防。"
+    ],
+    "XiYongShen": [
+      "顽金宜丁(火),旺土用甲(木),不用庚(金)劈。支火宜癸(水),干火宜壬(水)。"
+    ]
+  },
+  "yuan_haiziping": {
+    "yueLing": {
+      "summary": {
+        "year": {
+          "gods": [
+            "比肩",
+            [
+              "正官",
+              "正印"
+            ]
+          ],
+          "tags": [],
+          "note": "年为本，主根源与家世"
+        },
+        "month": {
+          "gods": [
+            "劫财",
+            [
+              "七杀",
+              "比肩",
+              "偏印"
+            ]
+          ],
+          "tags": [],
+          "note": "月为提纲，主中年与纲纪"
+        },
+        "time": {
+          "gods": [
+            "伤官",
+            [
+              "正印",
+              "正官",
+              "正财"
+            ]
+          ],
+          "tags": [
+            "带官星"
+          ],
+          "note": "时为辅佐，主平生操履与晚景"
+        }
+      },
+      "tips": [
+        "年月日有凶神，时宜归制伏之乡",
+        "时上有凶神，则宜取年月日之吉以制之"
+      ],
+      "yongShenSupport": {
+        "year": "不得力",
+        "month": "不得力",
+        "time": "不得力",
+        "matched": []
+      },
+      "config": {
+        "goodGods": [
+          "正官",
+          "正印",
+          "正财",
+          "偏财",
+          "食神"
+        ],
+        "badGods": [
+          "七杀",
+          "劫财",
+          "伤官",
+          "偏印"
+        ],
+        "includeZhi": true
+      }
+    },
+    "taiSui": {
+      "taiSui": {
+        "gan": "丙",
+        "zhi": "午"
+      },
+      "relation": "岁克日",
+      "riskLevel": "中",
+      "rescue": {
+        "metal": true,
+        "fire": false,
+        "combineJiJia": false,
+        "metalFrame": false,
+        "fireFrame": false,
+        "hasAny": true
+      },
+      "details": [
+        "日干庚(金) vs 太岁丙 午(火) → 岁克日"
+      ]
+    },
+    "shenQiang": {
+      "score": 35.5,
+      "threshold": 29,
+      "judge": "身强",
+      "breakdown": {
+        "dayGan": "庚",
+        "supportStems": [
+          "戊",
+          "己",
+          "庚",
+          "辛"
+        ],
+        "ganScores": {
+          "甲": 0,
+          "乙": 6,
+          "丙": 10,
+          "丁": 6.5,
+          "戊": 11,
+          "己": 6.5,
+          "庚": 13,
+          "辛": 5,
+          "壬": 0,
+          "癸": 6.5
+        },
+        "byPillar": {
+          "year": {
+            "gan": "庚",
+            "zhi": "午"
+          },
+          "month": {
+            "gan": "辛",
+            "zhi": "巳"
+          },
+          "day": {
+            "gan": "庚",
+            "zhi": "辰"
+          },
+          "time": {
+            "gan": "癸",
+            "zhi": "未"
+          }
+        }
+      },
+      "config": {
+        "directWeight": 5,
+        "qiLevelWeight": {
+          "本气": 5,
+          "中气": 3,
+          "余气": 1.5
+        },
+        "monthZhiFactor": 2
+      }
+    },
+    "shidu": {
+      "score": 2.5,
+      "judge": "暖燥",
+      "normalRange": [
+        -6,
+        6
+      ],
+      "breakdown": {
+        "pillars": {
+          "year": {
+            "gan": "庚",
+            "zhi": "午"
+          },
+          "month": {
+            "gan": "辛",
+            "zhi": "巳"
+          },
+          "day": {
+            "gan": "庚",
+            "zhi": "辰"
+          },
+          "time": {
+            "gan": "癸",
+            "zhi": "未"
+          }
+        },
+        "parts": {
+          "stemYear": -0.5,
+          "stemMonth": -0.5,
+          "stemDay": -0.5,
+          "stemTime": -2,
+          "branchYear": 2,
+          "branchMonth": 3,
+          "branchDay": 0,
+          "branchTime": 1
+        },
+        "stemTemps": {
+          "甲": 1,
+          "乙": 1,
+          "丙": 2,
+          "丁": 2,
+          "戊": 0.5,
+          "己": 0.5,
+          "庚": -0.5,
+          "辛": -0.5,
+          "壬": -2,
+          "癸": -2
+        },
+        "branchTemps": {
+          "子": -2,
+          "丑": -1.5,
+          "寅": 1.5,
+          "卯": 1.5,
+          "辰": 0,
+          "巳": 1.5,
+          "午": 2,
+          "未": 1,
+          "申": -0.5,
+          "酉": -0.5,
+          "戌": 0,
+          "亥": -1.5
+        }
+      }
+    },
+    "yinyang": {
+      "score": -1,
+      "judge": "平衡",
+      "normalRange": [
+        -3,
+        3
+      ],
+      "breakdown": {
+        "pillars": {
+          "year": {
+            "gan": "庚",
+            "zhi": "午"
+          },
+          "month": {
+            "gan": "辛",
+            "zhi": "巳"
+          },
+          "day": {
+            "gan": "庚",
+            "zhi": "辰"
+          },
+          "time": {
+            "gan": "癸",
+            "zhi": "未"
+          }
+        },
+        "parts": {
+          "stemYear": 1,
+          "stemMonth": -1,
+          "stemDay": 1,
+          "stemTime": -1,
+          "branchYear": 1,
+          "branchMonth": -2,
+          "branchDay": 1,
+          "branchTime": -1
+        },
+        "stemYinyang": {
+          "甲": 1,
+          "乙": -1,
+          "丙": 1,
+          "丁": -1,
+          "戊": 1,
+          "己": -1,
+          "庚": 1,
+          "辛": -1,
+          "壬": 1,
+          "癸": -1
+        },
+        "branchYinyang": {
+          "子": 1,
+          "丑": -1,
+          "寅": 1,
+          "卯": -1,
+          "辰": 1,
+          "巳": -1,
+          "午": 1,
+          "未": -1,
+          "申": 1,
+          "酉": -1,
+          "戌": 1,
+          "亥": -1
+        }
+      }
+    }
+  },
+  "wuxing_power": {
+    "木": 10.91,
+    "火": 20.91,
+    "土": 26.36,
+    "金": 30,
+    "水": 11.82
+  },
+  "ming_gong": "辛巳",
+  "ming_gong_nayin": "白蜡金",
+  "shen_gong": "丁丑",
+  "shen_gong_nayin": "涧下水",
+  "tai_yuan": "壬申",
+  "tai_xi": "乙酉",
+  "meta": {
+    "durationMs": 76,
+    "function": "getCurrentEightCharJSON"
+  }
+}

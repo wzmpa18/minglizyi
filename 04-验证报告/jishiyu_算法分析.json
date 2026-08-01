@@ -1,0 +1,173 @@
+{
+  "project": "jishiyu (吉时雨)",
+  "project_type": "静态HTML/JS应用 (基于layui框架)",
+  "license": "AGPL-3.0",
+  "author": "xianbo.chen@gmail.com",
+  "analysis_date": "2026-07-26",
+  "notes": "纯静态HTML项目，无法直接命令行调用，此为源码分析结果",
+
+  "tech_stack": {
+    "ui_framework": "layui",
+    "lunar_library": "js/3rd/lunar/lunar.js (lunar-javascript)",
+    "ziwei_library": "js/3rd/iztro/iztro.min.js (iztro紫微斗数库)",
+    "diagram_library": "js/3rd/gojs/go.js (GoJS图形库)"
+  },
+
+  "bazi_module": {
+    "description": "八字排盘模块，基于lunar-javascript库",
+    "core_file": "js/bazi.js",
+    "entry_function": "baziObj.paipan(year, month, day, hour, minute, second, isman, realsun, diqu, wanzishi, summertime)",
+    "init_function": "baziObj.init() [line 309]",
+    "key_functions": [
+      {
+        "name": "baziObj.paipan",
+        "file": "js/bazi.js",
+        "line": 380,
+        "description": "八字排盘主入口，调用init后构建完整的排盘结果（含四柱、大运、小运、神煞、起运信息等）"
+      },
+      {
+        "name": "baziObj.init",
+        "file": "js/bazi.js",
+        "line": 309,
+        "description": "初始化八字计算：处理夏令时校正、真太阳时校正、创建Solar/Lunar/EightChar对象"
+      },
+      {
+        "name": "buildPillarCol",
+        "file": "js/bazi.js",
+        "line": 26,
+        "description": "构建每柱的完整信息（天干、地支、十神、藏干、纳音、空亡、神煞）"
+      },
+      {
+        "name": "buildDayunList",
+        "file": "js/bazi.js",
+        "line": 89,
+        "description": "构建大运列表，包含每个大运的干支、十神、流年"
+      },
+      {
+        "name": "buildXiaoyunList",
+        "file": "js/bazi.js",
+        "line": 132,
+        "description": "构建小运列表"
+      },
+      {
+        "name": "buildQiyunInfo",
+        "file": "js/bazi.js",
+        "line": 161,
+        "description": "构建起运信息（起运年龄、交运日期）"
+      }
+    ],
+    "core_algorithm": {
+      "year_pillar": "基于lunar-javascript库的Solar/Lunar对象，以立春为年界",
+      "month_pillar": "基于lunar-javascript库，以节气为月界",
+      "day_pillar": "基于lunar-javascript库的干支纪日算法",
+      "hour_pillar": "基于lunar-javascript库的五鼠遁日起时法",
+      "true_solar_time": "layui.realsuntime.calcRealsuntime() - 真太阳时校正模块（js/realsuntime.js）",
+      "wanzi_shi": "bazi.setSect(!!wanzishi ? 2 : 1) - sect=1默认，sect=2晚子时",
+      "dayun_calculation": "基于lunar-javascript库的Yun对象，yun.getDaYun(DAYUN_NUM+1)",
+      "dayun_direction": "年干阴阳+性别决定顺逆排"
+    },
+    "shensha_module": {
+      "core_file": "js/shensha.js",
+      "entry_function": "shenshaObj.queryShenSha(ganzhi, bazi, isman, witch, niannayin)",
+      "line": 168,
+      "shensha_list": [
+        "天乙", "太极", "天德", "月德", "德秀", "天德合", "月德合",
+        "福星", "文昌", "学堂", "词馆", "魁罡", "国印", "驿马",
+        "华盖", "将星", "金舆", "金神", "五鬼", "天医", "禄神",
+        "天赦", "红鸾", "天喜", "流霞", "红艳", "天罗", "地网",
+        "羊刃", "飞刃", "血刃", "八专", "九丑", "劫煞", "灾煞",
+        "元辰", "空亡", "童子", "天厨", "孤辰", "寡宿", "亡神",
+        "十恶大败", "桃花", "孤鸾", "阴差阳错", "四废", "丧门",
+        "吊客", "披麻", "十灵"
+      ],
+      "total_count": 51
+    }
+  },
+
+  "ziwei_module": {
+    "description": "紫微斗数排盘模块，基于iztro库",
+    "core_file": "js/view_ui/view_ziwei.js",
+    "iztro_library": "js/3rd/iztro/iztro.min.js",
+    "entry_function": "zwpaipan(dateStr, timeIndex, isman, lunar)",
+    "line": 36,
+    "key_call": "iztro.astro.bySolar(dateStr, timeIndex, isman ? '男' : '女', true, 'zh-CN')",
+    "function_params": {
+      "dateStr": "阳历日期字符串 YYYY-M-D",
+      "timeIndex": "出生时辰序号 0~12（早子时到晚子时）",
+      "isman": "是否男性",
+      "lunar": "lunar-javascript的Lunar对象，用于获取大运数据"
+    },
+    "features": [
+      "14主星落宫（通过iztro库计算）",
+      "庙旺失陷等级（通过iztro库计算）",
+      "年干四化落宫（通过iztro库计算）",
+      "十二长生排布（通过iztro库计算）",
+      "身宫位置（通过iztro库计算）",
+      "大限/流年/流月/流日四化标注",
+      "GoJS图形化紫微盘面绘制",
+      "三方四正宫位高亮"
+    ],
+    "note": "与iztro项目使用相同的底层库(iztro)，因此排盘结果应与iztro项目一致"
+  },
+
+  "qimen_module_yinpan": {
+    "description": "阴盘奇门遁甲排盘模块",
+    "core_file": "js/qimen.js",
+    "exports_name": "qimen",
+    "key_data_structures": {
+      "三奇六仪": ["戊","己","庚","辛","壬","癸","丁","丙","乙"],
+      "九星": ["蓬","芮","冲","辅","禽","心","柱","任","英"],
+      "八门": ["休","死","伤","杜","","开","惊","生","景"],
+      "八神_阳遁": ["符","蛇","阴","六","白","玄","地","天"],
+      "八神_阴遁": ["符","天","地","玄","白","六","阴","蛇"],
+      "八卦宫位": ["坎","坤","震","巽","中","乾","兑","艮","离"]
+    },
+    "features": [
+      "十二长生在每个宫位的状态映射",
+      "月将（根据节气确定）",
+      "十二建除",
+      "二十四山向",
+      "72局度数表",
+      "黄泉煞",
+      "双山五行"
+    ]
+  },
+
+  "qimen_module_shijia": {
+    "description": "时家奇门遁甲排盘模块",
+    "core_file": "js/qimendunjia.js",
+    "exports_name": "qimendunjia",
+    "features": [
+      "拆补法定局",
+      "中五宫寄宫规则",
+      "八门九星落宫",
+      "驿马天马位置",
+      "值符值使确定"
+    ]
+  },
+
+  "liuyao_module": {
+    "description": "六爻排盘模块",
+    "core_file": "js/6yao.js",
+    "exports_name": "6yao",
+    "features": [
+      "纳甲干支",
+      "世应定位",
+      "六亲匹配",
+      "月破日破判定"
+    ]
+  },
+
+  "other_modules": {
+    "chenggu": "js/chenggu.js - 称骨算命",
+    "hehun": "js/hehun.js - 合婚",
+    "meihua": "js/meihua.js - 梅花易数",
+    "da6ren": "js/da6ren.js - 大六壬",
+    "x6ren": "js/x6ren.js - 小六壬",
+    "ninestar": "js/ninestar.js - 九星",
+    "taiyi": "js/taiyi.js - 太乙",
+    "yizhangjing": "js/yizhangjing.js - 一掌经",
+    "shizhudate": "js/shizhudate.js - 十柱日期",
+    "bazianalyzer": "js/bazianalyzer.js - 八字分析器"
+  }
+}

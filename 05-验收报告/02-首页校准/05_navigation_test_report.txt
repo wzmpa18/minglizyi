@@ -1,0 +1,35 @@
+============================================================
+首页全入口跳转测试报告
+测试时间: 2026-07-30 11:57:51
+测试地址: http://localhost:3000
+视口标准: 375px 移动端
+============================================================
+
+汇总: 通过 22/23, 失败 1
+
+--- 工具入口 (18个) ---
+[PASS] 八字排盘                 -> /yixue/bazi                    
+[PASS] 命理奇门(终身盘)            -> /yixue/mingli-qimen            
+[PASS] 阴盘奇门                 -> /yixue/yinpan-qimen            
+[PASS] 奇门遁甲                 -> /yixue/qimen                   
+[PASS] 紫微斗数                 -> /yixue/ziwei                   
+[PASS] 六爻                   -> /yixue/liuyao                  
+[PASS] 梅花易数                 -> /yixue/meihua                  
+[PASS] 大六壬                  -> /yixue/daliuren                
+[PASS] 小六壬                  -> /yixue/xiaoliuren              
+[PASS] 奇门穿壬                 -> /yixue/qimen-chuanren          
+[PASS] 太乙三式                 -> /yixue/taiyi-sanshi            
+[FAIL] 山向奇门                 -> /yixue/shanxiang-qimen         HTTP 500 页面内容为空(白屏) ConsoleErr:12
+[PASS] 玄空飞星                 -> /yixue/xuankong-feixing        
+[PASS] 达摩一掌经                -> /yixue/yizhangjing             
+[PASS] 万年历                  -> /yixue/wannianli               
+[PASS] 老黄历                  -> /yixue/huangli                 
+[PASS] 八字合婚                 -> /yixue/hehun                   
+[PASS] 手机号吉凶预测              -> /yixue/phone                   
+
+--- 底部Tab (5个) ---
+[PASS] 排盘(首页)               -> /                              
+[PASS] 档案                   -> /files                         
+[PASS] 万年历Tab               -> /calendar                      
+[PASS] 书库                   -> /books                         
+[PASS] 我的                   -> /profile                       

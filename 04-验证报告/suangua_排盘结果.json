@@ -1,0 +1,443 @@
+{
+  "test_case": {
+    "solar_date": "1990-05-15",
+    "time": "14:30",
+    "true_solar_time": "14:14 (东经116°校正)",
+    "gender": "男",
+    "longitude": "116°E"
+  },
+  "bazi": {
+    "birth_dt": "1990-05-15T14:14:00",
+    "day_master": "庚",
+    "day_master_wuxing": "金",
+    "pillars": {
+      "year": {
+        "label": "年柱",
+        "tiangan": "庚",
+        "dizhi": "午",
+        "nayin": "路旁土",
+        "canggan": [
+          "丁",
+          "己"
+        ],
+        "wuxing_gan": "金",
+        "wuxing_zhi": "火",
+        "shishen_gan": "比肩",
+        "shishen_zhi": "正官"
+      },
+      "month": {
+        "label": "月柱",
+        "tiangan": "辛",
+        "dizhi": "巳",
+        "nayin": "白蜡金",
+        "canggan": [
+          "丙",
+          "庚",
+          "戊"
+        ],
+        "wuxing_gan": "金",
+        "wuxing_zhi": "火",
+        "shishen_gan": "劫财",
+        "shishen_zhi": "七杀"
+      },
+      "day": {
+        "label": "日柱",
+        "tiangan": "庚",
+        "dizhi": "辰",
+        "nayin": "白蜡金",
+        "canggan": [
+          "戊",
+          "乙",
+          "癸"
+        ],
+        "wuxing_gan": "金",
+        "wuxing_zhi": "土",
+        "shishen_gan": "比肩",
+        "shishen_zhi": "偏印"
+      },
+      "hour": {
+        "label": "时柱",
+        "tiangan": "癸",
+        "dizhi": "未",
+        "nayin": "杨柳木",
+        "canggan": [
+          "己",
+          "丁",
+          "乙"
+        ],
+        "wuxing_gan": "水",
+        "wuxing_zhi": "土",
+        "shishen_gan": "伤官",
+        "shishen_zhi": "正印"
+      }
+    },
+    "pattern": "七杀格",
+    "pattern_desc": "",
+    "strength": "中和",
+    "strength_info": {
+      "strength": "中和",
+      "monthly_status": "囚",
+      "deling": false,
+      "help_score": 8,
+      "drain_score": 7
+    },
+    "shensha": [
+      {
+        "name": "天乙贵人",
+        "dizhi": "未",
+        "pillar": "时支"
+      }
+    ],
+    "shishen_summary": [
+      {
+        "shishen": "比肩",
+        "count": 3,
+        "stems": [
+          "庚",
+          "庚",
+          "庚"
+        ],
+        "strength": "囚"
+      },
+      {
+        "shishen": "正官",
+        "count": 2,
+        "stems": [
+          "丁",
+          "丁"
+        ],
+        "strength": "旺"
+      },
+      {
+        "shishen": "正印",
+        "count": 2,
+        "stems": [
+          "己",
+          "己"
+        ],
+        "strength": "相"
+      },
+      {
+        "shishen": "偏印",
+        "count": 2,
+        "stems": [
+          "戊",
+          "戊"
+        ],
+        "strength": "相"
+      },
+      {
+        "shishen": "正财",
+        "count": 2,
+        "stems": [
+          "乙",
+          "乙"
+        ],
+        "strength": "休"
+      },
+      {
+        "shishen": "伤官",
+        "count": 2,
+        "stems": [
+          "癸",
+          "癸"
+        ],
+        "strength": "死"
+      },
+      {
+        "shishen": "劫财",
+        "count": 1,
+        "stems": [
+          "辛"
+        ],
+        "strength": "囚"
+      },
+      {
+        "shishen": "七杀",
+        "count": 1,
+        "stems": [
+          "丙"
+        ],
+        "strength": "旺"
+      }
+    ],
+    "dayun": [
+      {
+        "index": 1,
+        "tiangan": "壬",
+        "dizhi": "午",
+        "start_age": 8.0,
+        "end_age": 18.0,
+        "start_year": 1998,
+        "end_year": 2008,
+        "quality": "凶",
+        "dm_shishen": "食神"
+      },
+      {
+        "index": 2,
+        "tiangan": "癸",
+        "dizhi": "未",
+        "start_age": 18.0,
+        "end_age": 28.0,
+        "start_year": 2008,
+        "end_year": 2018,
+        "quality": "凶",
+        "dm_shishen": "伤官"
+      },
+      {
+        "index": 3,
+        "tiangan": "甲",
+        "dizhi": "申",
+        "start_age": 28.0,
+        "end_age": 38.0,
+        "start_year": 2018,
+        "end_year": 2028,
+        "quality": "凶",
+        "dm_shishen": "偏财"
+      },
+      {
+        "index": 4,
+        "tiangan": "乙",
+        "dizhi": "酉",
+        "start_age": 38.0,
+        "end_age": 48.0,
+        "start_year": 2028,
+        "end_year": 2038,
+        "quality": "凶",
+        "dm_shishen": "正财"
+      },
+      {
+        "index": 5,
+        "tiangan": "丙",
+        "dizhi": "戌",
+        "start_age": 48.0,
+        "end_age": 58.0,
+        "start_year": 2038,
+        "end_year": 2048,
+        "quality": "吉",
+        "dm_shishen": "七杀"
+      },
+      {
+        "index": 6,
+        "tiangan": "丁",
+        "dizhi": "亥",
+        "start_age": 58.0,
+        "end_age": 68.0,
+        "start_year": 2048,
+        "end_year": 2058,
+        "quality": "吉",
+        "dm_shishen": "正官"
+      },
+      {
+        "index": 7,
+        "tiangan": "戊",
+        "dizhi": "子",
+        "start_age": 68.0,
+        "end_age": 78.0,
+        "start_year": 2058,
+        "end_year": 2068,
+        "quality": "平",
+        "dm_shishen": "偏印"
+      },
+      {
+        "index": 8,
+        "tiangan": "己",
+        "dizhi": "丑",
+        "start_age": 78.0,
+        "end_age": 88.0,
+        "start_year": 2068,
+        "end_year": 2078,
+        "quality": "平",
+        "dm_shishen": "正印"
+      },
+      {
+        "index": 9,
+        "tiangan": "庚",
+        "dizhi": "寅",
+        "start_age": 88.0,
+        "end_age": 98.0,
+        "start_year": 2078,
+        "end_year": 2088,
+        "quality": "吉",
+        "dm_shishen": "比肩"
+      },
+      {
+        "index": 10,
+        "tiangan": "辛",
+        "dizhi": "卯",
+        "start_age": 98.0,
+        "end_age": 108.0,
+        "start_year": 2088,
+        "end_year": 2098,
+        "quality": "吉",
+        "dm_shishen": "劫财"
+      }
+    ],
+    "day_master_profile": "{'element': '金', 'yin_yang': '阳', 'symbol': '千锻精钢', 'title': '庚金日主 · 千锻精钢', 'core_traits': '刚强果断，义气重，行动力极强，嫉恶如仇，具有军人气质', 'strengths': ['行动力强，雷厉风行', '义气深重，重情谊', '具有强烈正义感', '意志坚定，百折不挠'], 'weaknesses': ['脾气刚烈，容易冲突', '缺乏变通，过于强硬', '感情用事，容易冲动', '有时过于强势，不近人情'], 'personality_detail': '庚金为阳金，如百炼钢铁，刚强无比。性格直爽豪迈，义气当先。做事果断，有军人气质。但有时过于强硬，不懂变通，容易树敌。', 'career': {'best_fields': ['军警消防', '冶金机械', '法律律师', '外科手术', '竞技体育', '金融期货'], 'work_style': '适合需要决断力的岗位；执行力和行动力超强；不适合需要细心的文职', 'wealth_approach': '敢于投资，行动迅速；但需防冲动亏",
+    "yong_shen": "{'yong_shen_wx': '水', 'xi_shen_wx': '金', 'ji_shen_wx': '木', 'chou_shen_wx': '水', 'strength': '中和', 'analysis': '庚金身弱，喜戊己土（印星生金）、庚辛金（比劫）为用；忌丁火（克身）、甲木（财重）', 'tiao_hou': {'stem': '壬', 'wuxing': '水', 'desc': '壬水为主，戊为佐', 'source': '《穷通宝鉴》'}, 'gejv': {}, 'yong_source': '《穷通宝鉴》调候：壬水为主，戊为佐', 'shigan': {'jijue': '庚金带杀，刚健为最，得水而清，得火而锐，土润则生，土干则脆，若要物旺，宜助宜帮', 'xiji': '喜：丁火锻炼、甲木为砧、壬水淘洗；忌：土多埋金、木旺无火制杀'}, 'wuxing_colors': {'木': '#27ae60', '火': '#e74c3c', '土': '#f39c12', '金': '#95a5a6', '水': '#3498db'}, 'recommend"
+  },
+  "ziwei": null,
+  "qimen": {
+    "datetime": "1990-05-15T14:14:00",
+    "ju_type": "阴遁",
+    "ju_number": 1,
+    "yuan": "上元",
+    "hour_dizhi": "未",
+    "palaces": [
+      {
+        "position": 1,
+        "palace_name": "坎宫",
+        "star": "天英",
+        "door": "景门",
+        "deity": "值符",
+        "stem": "戊",
+        "is_auspicious": false,
+        "grid": [
+          2,
+          1
+        ],
+        "is_zhifu": true,
+        "is_zhishi": false
+      },
+      {
+        "position": 2,
+        "palace_name": "坤宫",
+        "star": "天任",
+        "door": "生门",
+        "deity": "九天",
+        "stem": "辛",
+        "is_auspicious": true,
+        "grid": [
+          0,
+          2
+        ],
+        "is_zhifu": false,
+        "is_zhishi": false
+      },
+      {
+        "position": 3,
+        "palace_name": "震宫",
+        "star": "天柱",
+        "door": "惊门",
+        "deity": "九地",
+        "stem": "庚",
+        "is_auspicious": false,
+        "grid": [
+          1,
+          0
+        ],
+        "is_zhifu": false,
+        "is_zhishi": false
+      },
+      {
+        "position": 4,
+        "palace_name": "巽宫",
+        "star": "天心",
+        "door": "开门",
+        "deity": "玄武",
+        "stem": "丁",
+        "is_auspicious": true,
+        "grid": [
+          0,
+          0
+        ],
+        "is_zhifu": false,
+        "is_zhishi": false
+      },
+      {
+        "position": 5,
+        "palace_name": "中宫",
+        "star": "天禽",
+        "door": "中",
+        "deity": "白虎",
+        "stem": "己",
+        "is_auspicious": false,
+        "grid": [
+          1,
+          1
+        ],
+        "is_zhifu": false,
+        "is_zhishi": false
+      },
+      {
+        "position": 6,
+        "palace_name": "乾宫",
+        "star": "天辅",
+        "door": "杜门",
+        "deity": "六合",
+        "stem": "丙",
+        "is_auspicious": false,
+        "grid": [
+          2,
+          2
+        ],
+        "is_zhifu": false,
+        "is_zhishi": false
+      },
+      {
+        "position": 7,
+        "palace_name": "兑宫",
+        "star": "天冲",
+        "door": "伤门",
+        "deity": "太阴",
+        "stem": "乙",
+        "is_auspicious": false,
+        "grid": [
+          1,
+          2
+        ],
+        "is_zhifu": false,
+        "is_zhishi": false
+      },
+      {
+        "position": 8,
+        "palace_name": "艮宫",
+        "star": "天芮",
+        "door": "死门",
+        "deity": "腾蛇",
+        "stem": "壬",
+        "is_auspicious": false,
+        "grid": [
+          2,
+          0
+        ],
+        "is_zhifu": false,
+        "is_zhishi": true
+      },
+      {
+        "position": 9,
+        "palace_name": "离宫",
+        "star": "天蓬",
+        "door": "休门",
+        "deity": "值符",
+        "stem": "甲",
+        "is_auspicious": true,
+        "grid": [
+          0,
+          1
+        ],
+        "is_zhifu": false,
+        "is_zhishi": false
+      }
+    ],
+    "auspicious_directions": [
+      "坤宫",
+      "巽宫",
+      "离宫"
+    ],
+    "inauspicious_directions": [
+      "坎宫",
+      "震宫",
+      "中宫",
+      "乾宫",
+      "兑宫",
+      "艮宫"
+    ]
+  },
+  "errors": [
+    {
+      "module": "ziwei",
+      "error": "紫微斗数排盘失败: No module named 'iztro_py'"
+    }
+  ]
+}

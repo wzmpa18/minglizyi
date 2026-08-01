@@ -1,0 +1,186 @@
+[
+  {
+    "name": "八字排盘",
+    "path": "/yixue/bazi",
+    "status": "PASS",
+    "http": 200,
+    "title": "吉时雨排盘",
+    "error": ""
+  },
+  {
+    "name": "命理奇门",
+    "path": "/yixue/mingli-qimen",
+    "status": "PASS",
+    "http": 200,
+    "title": "吉时雨排盘",
+    "error": ""
+  },
+  {
+    "name": "阴盘奇门",
+    "path": "/yixue/yinpan-qimen",
+    "status": "PASS",
+    "http": 200,
+    "title": "吉时雨排盘",
+    "error": ""
+  },
+  {
+    "name": "奇门遁甲",
+    "path": "/yixue/qimen",
+    "status": "PASS",
+    "http": 200,
+    "title": "吉时雨排盘",
+    "error": ""
+  },
+  {
+    "name": "紫微斗数",
+    "path": "/yixue/ziwei",
+    "status": "PASS",
+    "http": 200,
+    "title": "吉时雨排盘",
+    "error": ""
+  },
+  {
+    "name": "六爻",
+    "path": "/yixue/liuyao",
+    "status": "PASS",
+    "http": 200,
+    "title": "吉时雨排盘",
+    "error": ""
+  },
+  {
+    "name": "梅花易数",
+    "path": "/yixue/meihua",
+    "status": "PASS",
+    "http": 200,
+    "title": "吉时雨排盘",
+    "error": ""
+  },
+  {
+    "name": "大六壬",
+    "path": "/yixue/daliuren",
+    "status": "PASS",
+    "http": 200,
+    "title": "吉时雨排盘",
+    "error": ""
+  },
+  {
+    "name": "小六壬",
+    "path": "/yixue/xiaoliuren",
+    "status": "PASS",
+    "http": 200,
+    "title": "吉时雨排盘",
+    "error": ""
+  },
+  {
+    "name": "奇门穿壬",
+    "path": "/yixue/qimen-chuanren",
+    "status": "PASS",
+    "http": 200,
+    "title": "吉时雨排盘",
+    "error": ""
+  },
+  {
+    "name": "太乙三式",
+    "path": "/yixue/taiyi-sanshi",
+    "status": "PASS",
+    "http": 200,
+    "title": "吉时雨排盘",
+    "error": ""
+  },
+  {
+    "name": "山向奇门",
+    "path": "/yixue/shanxiang-qimen",
+    "status": "PASS",
+    "http": 200,
+    "title": "吉时雨排盘",
+    "error": ""
+  },
+  {
+    "name": "玄空飞星",
+    "path": "/yixue/xuankong-feixing",
+    "status": "PASS",
+    "http": 200,
+    "title": "吉时雨排盘",
+    "error": ""
+  },
+  {
+    "name": "达摩一掌经",
+    "path": "/yixue/yizhangjing",
+    "status": "PASS",
+    "http": 200,
+    "title": "吉时雨排盘",
+    "error": ""
+  },
+  {
+    "name": "万年历",
+    "path": "/yixue/wannianli",
+    "status": "PASS",
+    "http": 200,
+    "title": "吉时雨排盘",
+    "error": ""
+  },
+  {
+    "name": "老黄历",
+    "path": "/yixue/huangli",
+    "status": "PASS",
+    "http": 200,
+    "title": "吉时雨排盘",
+    "error": ""
+  },
+  {
+    "name": "八字合婚",
+    "path": "/yixue/hehun",
+    "status": "PASS",
+    "http": 200,
+    "title": "吉时雨排盘",
+    "error": ""
+  },
+  {
+    "name": "手机号吉凶预测",
+    "path": "/yixue/phone",
+    "status": "PASS",
+    "http": 200,
+    "title": "吉时雨排盘",
+    "error": ""
+  },
+  {
+    "name": "排盘(首页)",
+    "path": "/",
+    "status": "PASS",
+    "http": 200,
+    "title": "吉时雨排盘",
+    "error": ""
+  },
+  {
+    "name": "档案",
+    "path": "/files",
+    "status": "PASS",
+    "http": 200,
+    "title": "吉时雨排盘",
+    "error": ""
+  },
+  {
+    "name": "万年历Tab",
+    "path": "/calendar",
+    "status": "PASS",
+    "http": 200,
+    "title": "吉时雨排盘",
+    "error": ""
+  },
+  {
+    "name": "书库",
+    "path": "/books",
+    "status": "PASS",
+    "http": 200,
+    "title": "吉时雨排盘",
+    "error": ""
+  },
+  {
+    "name": "我的",
+    "path": "/profile",
+    "status": "PASS",
+    "http": 200,
+    "title": "吉时雨排盘",
+    "error": ""
+  }
+]
