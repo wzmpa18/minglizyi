@@ -6,6 +6,7 @@ import {
   solarToBazi,
   getCurrentJieQi,
 } from "@/algorithm-core";
+import { DatePickerInline, QuickBtnGroup } from "@/components/shared";
 
 // ============================================================================
 // 一掌经十二宫
@@ -104,36 +105,37 @@ const GRID_CELLS = [
 
 export default function YizhangjingPage() {
   const router = useRouter();
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth() + 1);
+  const [selectedDay, setSelectedDay] = useState(() => new Date().getDate());
+  const [selectedHour, setSelectedHour] = useState(() => new Date().getHours());
   const [hasResult, setHasResult] = useState(false);
   const [showInput, setShowInput] = useState(true);
 
-  const result = useMemo(() => calcYizhangJing(selectedDate), [selectedDate]);
+  const result = useMemo(() => calcYizhangJing(new Date(selectedYear, selectedMonth - 1, selectedDay, selectedHour)), [selectedYear, selectedMonth, selectedDay, selectedHour]);
 
   const bazi = useMemo(() => {
     try {
       return solarToBazi({
-        year: selectedDate.getFullYear(),
-        month: selectedDate.getMonth() + 1,
-        day: selectedDate.getDate(),
-        hour: selectedDate.getHours(),
+        year: selectedYear,
+        month: selectedMonth,
+        day: selectedDay,
+        hour: selectedHour,
         gender: "male" as const,
       });
     } catch {
       return null;
     }
-  }, [selectedDate]);
+  }, [selectedYear, selectedMonth, selectedDay, selectedHour]);
 
-  const jieqi = useMemo(() => getCurrentJieQi(selectedDate), [selectedDate]);
+  const jieqi = useMemo(() => getCurrentJieQi(new Date(selectedYear, selectedMonth - 1, selectedDay, selectedHour)), [selectedYear, selectedMonth, selectedDay, selectedHour]);
 
   const dateStr = useMemo(() => {
-    const y = selectedDate.getFullYear();
-    const mo = selectedDate.getMonth() + 1;
-    const d = selectedDate.getDate();
-    const h = String(selectedDate.getHours()).padStart(2, "0");
-    const mi = String(selectedDate.getMinutes()).padStart(2, "0");
-    return `${y}年${mo}月${d}日 ${h}:${mi}`;
-  }, [selectedDate]);
+    const mo = selectedMonth;
+    const d = selectedDay;
+    const h = String(selectedHour).padStart(2, "0");
+    return `${selectedYear}年${mo}月${d}日 ${h}:00`;
+  }, [selectedYear, selectedMonth, selectedDay, selectedHour]);
 
   const handleDoPaipan = useCallback(() => {
     setHasResult(true);
@@ -141,16 +143,22 @@ export default function YizhangjingPage() {
   }, []);
 
   const handlePrev = useCallback(() => {
-    const d = new Date(selectedDate);
+    const d = new Date(selectedYear, selectedMonth - 1, selectedDay, selectedHour);
     d.setHours(d.getHours() - 2);
-    setSelectedDate(d);
-  }, [selectedDate]);
+    setSelectedYear(d.getFullYear());
+    setSelectedMonth(d.getMonth() + 1);
+    setSelectedDay(d.getDate());
+    setSelectedHour(d.getHours());
+  }, [selectedYear, selectedMonth, selectedDay, selectedHour]);
 
   const handleNext = useCallback(() => {
-    const d = new Date(selectedDate);
+    const d = new Date(selectedYear, selectedMonth - 1, selectedDay, selectedHour);
     d.setHours(d.getHours() + 2);
-    setSelectedDate(d);
-  }, [selectedDate]);
+    setSelectedYear(d.getFullYear());
+    setSelectedMonth(d.getMonth() + 1);
+    setSelectedDay(d.getDate());
+    setSelectedHour(d.getHours());
+  }, [selectedYear, selectedMonth, selectedDay, selectedHour]);
 
   const getGongInfo = (zhi: string) => {
     return YIZHANG_PALACES[zhi] ?? null;
@@ -191,15 +199,19 @@ export default function YizhangjingPage() {
 
             <div style={{ marginBottom: "12px" }}>
               <div style={{ fontSize: "12px", color: "#999", marginBottom: "4px" }}>出生时间</div>
-              <input
-                type="datetime-local"
-                value={`${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}T${String(selectedDate.getHours()).padStart(2, "0")}:${String(selectedDate.getMinutes()).padStart(2, "0")}`}
-                onChange={(e) => setSelectedDate(new Date(e.target.value))}
-                style={{
-                  width: "100%", padding: "8px", borderRadius: "8px", border: "1px solid #ddd",
-                  fontSize: "14px", boxSizing: "border-box",
-                }}
+              <DatePickerInline
+                year={selectedYear} month={selectedMonth} day={selectedDay} hour={selectedHour}
+                onYearChange={setSelectedYear} onMonthChange={setSelectedMonth}
+                onDayChange={setSelectedDay} onHourChange={setSelectedHour}
               />
+              <div style={{ marginTop: "8px" }}>
+                <QuickBtnGroup items={[
+                  { label: "今年", onClick: () => setSelectedYear(new Date().getFullYear()) },
+                  { label: "去年", onClick: () => setSelectedYear(new Date().getFullYear() - 1) },
+                  { label: "1990年", onClick: () => setSelectedYear(1990) },
+                  { label: "2000年", onClick: () => setSelectedYear(2000) },
+                ]} />
+              </div>
             </div>
 
             <button

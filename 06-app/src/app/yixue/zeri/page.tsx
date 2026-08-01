@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { Solar } from "lunar-javascript";
+import { DatePickerInline, QuickBtnGroup } from "@/components/shared";
 import ClientSelector from "@/components/ClientSelector";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
@@ -230,8 +231,12 @@ export default function ZeriPage() {
   const defaultEnd = addDays(today, 30);
 
   const [eventType, setEventType] = useState("嫁娶");
-  const [startDate, setStartDate] = useState(formatDate(defaultStart));
-  const [endDate, setEndDate] = useState(formatDate(defaultEnd));
+  const [startYear, setStartYear] = useState(defaultStart.getFullYear());
+  const [startMonth, setStartMonth] = useState(defaultStart.getMonth() + 1);
+  const [startDay, setStartDay] = useState(defaultStart.getDate());
+  const [endYear, setEndYear] = useState(defaultEnd.getFullYear());
+  const [endMonth, setEndMonth] = useState(defaultEnd.getMonth() + 1);
+  const [endDay, setEndDay] = useState(defaultEnd.getDate());
   const [userShengXiao, setUserShengXiao] = useState("");
   const [loading, setLoading] = useState(false);
   const [hasResult, setHasResult] = useState(false);
@@ -240,8 +245,8 @@ export default function ZeriPage() {
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
 
   const handleSearch = useCallback(() => {
-    const start = parseDate(startDate);
-    const end = parseDate(endDate);
+    const start = new Date(startYear, startMonth - 1, startDay);
+    const end = new Date(endYear, endMonth - 1, endDay);
     if (start > end) {
       setError("开始日期不能晚于结束日期");
       return;
@@ -260,10 +265,10 @@ export default function ZeriPage() {
       setLoading(false);
       // 保存客户记录
       if(selectedClient && r.length > 0){
-        try{saveRecord({clientId:selectedClient.id,type:"zeri",data:{results:r,inputParams:{eventType,startDate,endDate,userShengXiao}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
+        try{saveRecord({clientId:selectedClient.id,type:"zeri",data:{results:r,inputParams:{eventType,startYear,startMonth,startDay,endYear,endMonth,endDay,userShengXiao}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
       }
     }, 200);
-  }, [eventType, startDate, endDate, userShengXiao, selectedClient]);
+  }, [eventType, startYear, startMonth, startDay, endYear, endMonth, endDay, userShengXiao, selectedClient]);
 
   // URL参数clientId + 回填检查
   useEffect(() => {
@@ -313,41 +318,28 @@ export default function ZeriPage() {
 
           {/* 日期范围 */}
           <div className="mb-3">
-            <label className="mb-1 block text-xs text-gray-500">日期范围</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="flex-1 rounded-lg border border-gray-200 px-2 py-2 text-xs outline-none focus:border-[#7B2FBE]"
-              />
-              <span className="text-xs text-gray-400">至</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="flex-1 rounded-lg border border-gray-200 px-2 py-2 text-xs outline-none focus:border-[#7B2FBE]"
-              />
-            </div>
-            <div className="mt-1 flex gap-1">
-              {[
-                { label: "近7天", days: 7 },
-                { label: "近15天", days: 15 },
-                { label: "近30天", days: 30 },
-                { label: "近60天", days: 60 },
-              ].map((p) => (
-                <button
-                  key={p.days}
-                  onClick={() => {
-                    setStartDate(formatDate(addDays(today, 1)));
-                    setEndDate(formatDate(addDays(today, p.days)));
-                  }}
-                  className="rounded-full border border-gray-200 px-2 py-0.5 text-[10px] text-gray-500 active:bg-gray-100"
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
+            <label className="mb-1 block text-xs text-gray-500">开始日期</label>
+            <DatePickerInline
+              year={startYear} month={startMonth} day={startDay} hour={0}
+              onYearChange={setStartYear} onMonthChange={setStartMonth}
+              onDayChange={setStartDay} onHourChange={() => {}}
+            />
+          </div>
+          <div className="mb-3">
+            <label className="mb-1 block text-xs text-gray-500">结束日期</label>
+            <DatePickerInline
+              year={endYear} month={endMonth} day={endDay} hour={0}
+              onYearChange={setEndYear} onMonthChange={setEndMonth}
+              onDayChange={setEndDay} onHourChange={() => {}}
+            />
+          </div>
+          <div style={{ marginTop: "6px" }}>
+            <QuickBtnGroup items={[
+              { label: "近7天", onClick: () => { setStartYear(today.getFullYear()); setStartMonth(today.getMonth() + 1); setStartDay(today.getDate() + 1); const e = addDays(today, 7); setEndYear(e.getFullYear()); setEndMonth(e.getMonth() + 1); setEndDay(e.getDate()); } },
+              { label: "近15天", onClick: () => { setStartYear(today.getFullYear()); setStartMonth(today.getMonth() + 1); setStartDay(today.getDate() + 1); const e = addDays(today, 15); setEndYear(e.getFullYear()); setEndMonth(e.getMonth() + 1); setEndDay(e.getDate()); } },
+              { label: "近30天", onClick: () => { setStartYear(today.getFullYear()); setStartMonth(today.getMonth() + 1); setStartDay(today.getDate() + 1); const e = addDays(today, 30); setEndYear(e.getFullYear()); setEndMonth(e.getMonth() + 1); setEndDay(e.getDate()); } },
+              { label: "近60天", onClick: () => { setStartYear(today.getFullYear()); setStartMonth(today.getMonth() + 1); setStartDay(today.getDate() + 1); const e = addDays(today, 60); setEndYear(e.getFullYear()); setEndMonth(e.getMonth() + 1); setEndDay(e.getDate()); } },
+            ]} />
           </div>
 
           {/* 生肖（可选） */}
@@ -423,7 +415,7 @@ export default function ZeriPage() {
                 {eventLabel} · 吉日查询
               </div>
               <div className="mt-1 text-xs text-gray-500">
-                {startDate} 至 {endDate}
+                {startYear}-{String(startMonth).padStart(2, "0")}-{String(startDay).padStart(2, "0")} 至 {endYear}-{String(endMonth).padStart(2, "0")}-{String(endDay).padStart(2, "0")}
                 {userShengXiao && ` · 生肖${userShengXiao}`}
               </div>
               <div className="mt-2 text-2xl font-bold" style={{ color: BRAND }}>

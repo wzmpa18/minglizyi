@@ -11,6 +11,7 @@ import {
   ZHI_WUXING,
 } from "@/algorithm-core";
 import type { HehunResult } from "@/algorithm-core";
+import { DatePickerInline, QuickBtnGroup } from "@/components/shared";
 import ClientSelector from "@/components/ClientSelector";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
@@ -252,8 +253,14 @@ function AnalysisItem({ item }: { item: HehunResult["items"][number] }) {
 export default function HehunPage() {
   const router = useRouter();
 
-  const [maleDate, setMaleDate] = useState<string>("");
-  const [femaleDate, setFemaleDate] = useState<string>("");
+  const [maleYear, setMaleYear] = useState(() => new Date().getFullYear() - 25);
+  const [maleMonth, setMaleMonth] = useState(1);
+  const [maleDay, setMaleDay] = useState(1);
+  const [maleHour, setMaleHour] = useState(12);
+  const [femaleYear, setFemaleYear] = useState(() => new Date().getFullYear() - 23);
+  const [femaleMonth, setFemaleMonth] = useState(1);
+  const [femaleDay, setFemaleDay] = useState(1);
+  const [femaleHour, setFemaleHour] = useState(12);
   const [loading, setLoading] = useState(false);
   const [hasResult, setHasResult] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
@@ -271,41 +278,35 @@ export default function HehunPage() {
 
   // 男方八字
   const maleBazi = useMemo(() => {
-    if (!maleDate) return null;
     try {
-      const d = new Date(maleDate);
-      if (isNaN(d.getTime())) return null;
       return solarToBazi({
-        year: d.getFullYear(),
-        month: d.getMonth() + 1,
-        day: d.getDate(),
-        hour: d.getHours(),
-        minute: d.getMinutes(),
+        year: maleYear,
+        month: maleMonth,
+        day: maleDay,
+        hour: maleHour,
+        minute: 0,
         gender: "male",
       });
     } catch {
       return null;
     }
-  }, [maleDate]);
+  }, [maleYear, maleMonth, maleDay, maleHour]);
 
   // 女方八字
   const femaleBazi = useMemo(() => {
-    if (!femaleDate) return null;
     try {
-      const d = new Date(femaleDate);
-      if (isNaN(d.getTime())) return null;
       return solarToBazi({
-        year: d.getFullYear(),
-        month: d.getMonth() + 1,
-        day: d.getDate(),
-        hour: d.getHours(),
-        minute: d.getMinutes(),
+        year: femaleYear,
+        month: femaleMonth,
+        day: femaleDay,
+        hour: femaleHour,
+        minute: 0,
         gender: "female",
       });
     } catch {
       return null;
     }
-  }, [femaleDate]);
+  }, [femaleYear, femaleMonth, femaleDay, femaleHour]);
 
   // 合婚结果（仅在点击按钮后才有）
   const hehunResult = useMemo(() => {
@@ -324,24 +325,16 @@ export default function HehunPage() {
       try {
         saveRecord({
           clientId: selectedClient.id, type: "hehun",
-          data: { ...hehunResult, inputParams: { maleDate, femaleDate } },
+          data: { ...hehunResult, inputParams: { maleYear, maleMonth, maleDay, maleHour, femaleYear, femaleMonth, femaleDay, femaleHour } },
           note: "", status: "pending"
         });
         setRecordSaved(true);
       } catch(e) { console.error("保存记录失败:", e); }
     }
-  }, [hasResult, hehunResult, selectedClient, recordSaved, maleDate, femaleDate]);
+  }, [hasResult, hehunResult, selectedClient, recordSaved, maleYear, maleMonth, maleDay, maleHour, femaleYear, femaleMonth, femaleDay, femaleHour]);
 
   /** 点击开始合婚 */
   const doHehun = useCallback(() => {
-    if (!maleDate) {
-      alert("请选择男方出生日期时间");
-      return;
-    }
-    if (!femaleDate) {
-      alert("请选择女方出生日期时间");
-      return;
-    }
     setLoading(true);
     setRecordSaved(false);
     setTimeout(() => {
@@ -353,18 +346,32 @@ export default function HehunPage() {
         if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
     }, 300);
-  }, [maleDate, femaleDate]);
+  }, []);
 
   /** 填充示例日期 */
   const fillExample = useCallback(() => {
-    setMaleDate(getDefaultDateStr(25));
-    setFemaleDate(getDefaultDateStr(23));
+    const d = new Date();
+    setMaleYear(d.getFullYear() - 25);
+    setMaleMonth(6);
+    setMaleDay(15);
+    setMaleHour(10);
+    setFemaleYear(d.getFullYear() - 23);
+    setFemaleMonth(3);
+    setFemaleDay(20);
+    setFemaleHour(14);
   }, []);
 
   /** 重置 */
   const doReset = useCallback(() => {
-    setMaleDate("");
-    setFemaleDate("");
+    const d = new Date();
+    setMaleYear(d.getFullYear() - 25);
+    setMaleMonth(1);
+    setMaleDay(1);
+    setMaleHour(12);
+    setFemaleYear(d.getFullYear() - 23);
+    setFemaleMonth(1);
+    setFemaleDay(1);
+    setFemaleHour(12);
     setHasResult(false);
   }, []);
 
@@ -427,12 +434,10 @@ export default function HehunPage() {
                 </span>
                 男方
               </label>
-              <input
-                type="datetime-local"
-                value={maleDate}
-                onChange={(e) => setMaleDate(e.target.value)}
-                className="w-full rounded-lg border px-2 py-2 text-sm outline-none"
-                style={{ borderColor: MALE_COLOR + "55", fontSize: "13px" }}
+              <DatePickerInline
+                year={maleYear} month={maleMonth} day={maleDay} hour={maleHour}
+                onYearChange={setMaleYear} onMonthChange={setMaleMonth}
+                onDayChange={setMaleDay} onHourChange={setMaleHour}
               />
             </div>
 
@@ -447,14 +452,28 @@ export default function HehunPage() {
                 </span>
                 女方
               </label>
-              <input
-                type="datetime-local"
-                value={femaleDate}
-                onChange={(e) => setFemaleDate(e.target.value)}
-                className="w-full rounded-lg border px-2 py-2 text-sm outline-none"
-                style={{ borderColor: FEMALE_COLOR + "55", fontSize: "13px" }}
+              <DatePickerInline
+                year={femaleYear} month={femaleMonth} day={femaleDay} hour={femaleHour}
+                onYearChange={setFemaleYear} onMonthChange={setFemaleMonth}
+                onDayChange={setFemaleDay} onHourChange={setFemaleHour}
               />
             </div>
+          </div>
+
+          {/* 快捷按钮 */}
+          <div className="mt-2 grid grid-cols-2 gap-3">
+            <QuickBtnGroup items={[
+              { label: "今年", onClick: () => { const y = new Date().getFullYear(); setMaleYear(y); } },
+              { label: "去年", onClick: () => { const y = new Date().getFullYear(); setMaleYear(y - 1); } },
+              { label: "25岁", onClick: () => setMaleYear(new Date().getFullYear() - 25) },
+              { label: "30岁", onClick: () => setMaleYear(new Date().getFullYear() - 30) },
+            ]} />
+            <QuickBtnGroup items={[
+              { label: "今年", onClick: () => { const y = new Date().getFullYear(); setFemaleYear(y); } },
+              { label: "去年", onClick: () => { const y = new Date().getFullYear(); setFemaleYear(y - 1); } },
+              { label: "23岁", onClick: () => setFemaleYear(new Date().getFullYear() - 23) },
+              { label: "28岁", onClick: () => setFemaleYear(new Date().getFullYear() - 28) },
+            ]} />
           </div>
 
           {/* 提示文字 */}

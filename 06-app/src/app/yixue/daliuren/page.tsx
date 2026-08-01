@@ -20,6 +20,7 @@ import {
 } from "@/algorithm-core";
 import type { TianGan, DiZhi, YinYang } from "@/algorithm-core";
 import ClientSelector from "@/components/ClientSelector";
+import { DatePickerInline, QuickBtnGroup } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 
@@ -133,7 +134,7 @@ const KE_720: Record<string, Record<string, string>> = {
   "辛巳": { "子": "寅辰午", "丑": "申亥寅", "寅": "酉丑巳", "卯": "卯申丑", "辰": "巳亥巳", "巳": "未寅酉", "午": "午寅戌", "未": "寅亥申", "申": "丑亥酉", "酉": "卯寅丑", "戌": "巳申寅", "亥": "午未申" },
   "壬午": { "子": "丑寅卯", "丑": "申戌子", "寅": "酉子卯", "卯": "未亥卯", "辰": "辰酉寅", "巳": "午子午", "午": "午丑申", "未": "戌午寅", "申": "巳寅亥", "酉": "寅子戌", "戌": "戌酉申", "亥": "亥午子" },
   "癸未": { "子": "巳辰卯", "丑": "丑戌未", "寅": "申寅申", "卯": "巳未酉", "辰": "辰未戌", "巳": "酉丑巳", "午": "巳戌卯", "未": "未丑未", "申": "卯戌巳", "酉": "卯亥未", "戌": "戌未辰", "亥": "巳卯丑" },
-  "甲申": { "子": "午辰寅", "丑": "子亥戌", "寅": "寅巳申", "卯": "辰巳午", "辰": "辰午申", "巳": "申亥寅", "申": "辰申子", "酉": "子巳戌", "戌": "寅申寅", "亥": "戌巳子" },
+  "甲申": { "子": "午辰寅", "丑": "子亥戌", "寅": "寅巳申", "卯": "辰巳午", "辰": "辰午申", "巳": "申亥寅", "午": "申亥寅", "未": "辰申子", "申": "辰申子", "酉": "子巳戌", "戌": "寅申寅", "亥": "戌巳子" },
   "乙酉": { "子": "巳丑酉", "丑": "丑戌未", "寅": "未巳卯", "卯": "申未午", "辰": "辰酉卯", "巳": "亥子丑", "午": "申戌子", "未": "未戌丑", "申": "申子辰", "酉": "未子巳", "戌": "卯酉卯", "亥": "亥午丑" },
   "丙戌": { "子": "子未寅", "丑": "酉巳丑", "寅": "亥申巳", "卯": "丑亥酉", "辰": "卯寅丑", "巳": "巳申寅", "午": "亥子丑", "未": "子寅辰", "申": "申亥寅", "酉": "酉丑巳", "戌": "申丑午", "亥": "巳亥巳" },
   "丁亥": { "子": "巳戌卯", "丑": "巳亥巳", "寅": "午丑申", "卯": "未卯亥", "辰": "巳亥寅", "巳": "酉未巳", "午": "戌酉申", "未": "亥未丑", "申": "申酉戌", "酉": "酉亥丑", "戌": "午戌寅", "亥": "未亥卯" },
@@ -565,14 +566,18 @@ function calculateDaLiuRen(
     }
   }
 
+  // 构建反向映射：天盘地支 → 地盘地支，用于三传天干查找
+  const tianPanToDiPan: PanMap = {};
+  for (let i = 0; i < 12; i++) {
+    const dp = DZ_DIPAN[i];
+    const tp = yueJiangMap[dp];
+    tianPanToDiPan[tp] = dp;
+  }
+
   const sanChuan: SanChuanItem[] = [];
   for (const scZhi of sanChuanZhi) {
-    let scDipanIdx = -1;
-    for (let i = 0; i < 12; i++) {
-      if (yueJiangMap[DZ_DIPAN[i]] === scZhi) { scDipanIdx = i; break; }
-    }
-    if (scDipanIdx === -1) scDipanIdx = 0;
-    const scDipan = DZ_DIPAN[scDipanIdx];
+    // 通过反向映射：传支(天盘) → 地盘地支 → 天干(遁干)
+    const scDipan = tianPanToDiPan[scZhi] ?? DZ_DIPAN[0];
     const scGan = tianGanMap[scDipan] ?? "";
     const scShen = guiShenMap[scDipan] ?? "";
     const scLiuqin = getLiuQin(dayGan, scZhi);
@@ -772,29 +777,27 @@ function InputPanel({
       {/* 占问时间 */}
       <div style={{ marginBottom: "10px" }}>
         <div style={{ fontSize: "13px", fontWeight: 600, marginBottom: "6px", color: "#333" }}>占问时辰</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5,1fr)", gap: "6px" }}>
-          {([
-            { label: "年", val: year, setter: setYear, min: 1900, max: 2100 },
-            { label: "月", val: month, setter: setMonth, min: 1, max: 12 },
-            { label: "日", val: day, setter: setDay, min: 1, max: 31 },
-            { label: "时", val: hour, setter: setHour, min: 0, max: 23 },
-            { label: "分", val: minute, setter: setMinute, min: 0, max: 59 },
-          ] as const).map((item, idx) => (
-            <div key={idx}>
-              <div style={labelStyle}>{item.label}</div>
-              <input
-                type="number"
-                min={item.min}
-                max={item.max}
-                value={item.val}
-                onChange={(e) => {
-                  const v = Math.max(item.min, Math.min(item.max, parseInt(e.target.value) || item.min));
-                  item.setter(v);
-                }}
-                style={inputStyle}
-              />
-            </div>
-          ))}
+        <DatePickerInline
+          year={year} month={month} day={day} hour={hour} minute={minute}
+          onYearChange={setYear} onMonthChange={setMonth}
+          onDayChange={setDay} onHourChange={setHour}
+          onMinuteChange={setMinute} showMinute
+        />
+        <div style={{ marginTop: "6px" }}>
+          <QuickBtnGroup items={[
+            { label: "1990年", onClick: () => setYear(1990) },
+            { label: "2000年", onClick: () => setYear(2000) },
+            { label: "2020年", onClick: () => setYear(2020) },
+            { label: "1月", onClick: () => setMonth(1) },
+            { label: "6月", onClick: () => setMonth(6) },
+            { label: "12月", onClick: () => setMonth(12) },
+            { label: "1日", onClick: () => setDay(1) },
+            { label: "15日", onClick: () => setDay(15) },
+            { label: "0时", onClick: () => setHour(0) },
+            { label: "12时", onClick: () => setHour(12) },
+            { label: "0分", onClick: () => setMinute(0) },
+            { label: "30分", onClick: () => setMinute(30) },
+          ]} />
         </div>
       </div>
 

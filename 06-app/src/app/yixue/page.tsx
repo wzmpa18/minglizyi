@@ -3,7 +3,6 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { solarToLunar, getLunarDateString } from "@/lib/lunar";
-import { getHuangliData } from "@/lib/huangli";
 import { solarToBazi, GAN, ZHI } from "@/algorithm-core";
 
 // 五行颜色映射
@@ -27,20 +26,16 @@ const ZHI_WUXING_MAP: Record<string, string> = {
   "午": "火", "未": "土", "申": "金", "酉": "金", "戌": "土", "亥": "水",
 };
 
-// 对标 jishiyu 的 18 个工具（按原顺序）
+// 对标 jishiyu 的 15 个工具（按原顺序）
 const TOOLS = [
   { href: "/yixue/bazi", label: "八字排盘", icon: "bazi" },
-  { href: "/yixue/mingli-qimen", label: "命理奇门", icon: "mingli" },
-  { href: "/yixue/yinpan-qimen", label: "阴盘奇门", icon: "yinpan" },
   { href: "/yixue/qimen", label: "奇门遁甲", icon: "qimen" },
   { href: "/yixue/ziwei", label: "紫微斗数", icon: "ziwei" },
   { href: "/yixue/liuyao", label: "六爻", icon: "6yao" },
   { href: "/yixue/meihua", label: "梅花易数", icon: "meihua" },
   { href: "/yixue/daliuren", label: "大六壬", icon: "6ren" },
   { href: "/yixue/xiaoliuren", label: "小六壬", icon: "x6ren" },
-  { href: "/yixue/qimen-chuanren", label: "奇门穿壬", icon: "qimen6ren" },
   { href: "/yixue/taiyi-sanshi", label: "太乙三式", icon: "qimen3shi" },
-  { href: "/yixue/shanxiang-qimen", label: "山向奇门", icon: "shanxiang" },
   { href: "/yixue/xuankong-feixing", label: "玄空飞星", icon: "xuankong" },
   { href: "/yixue/yizhangjing", label: "达摩一掌经", icon: "yizhangjing" },
   { href: "/yixue/wannianli", label: "万年历", icon: "gongli" },
@@ -135,19 +130,16 @@ export default function YixueHome() {
       { label: "时", gan: hourGan, zhi: hourZhi },
     ];
 
-    const huangli = getHuangliData(yearGan, yearZhi, `${dayGan}${dayZhi}`);
-
     return {
       gongliStr,
       dayNum,
       weekDay,
       nongliStr,
       pillars,
-      huangli,
     };
   }, []);
 
-  const { gongliStr, dayNum, weekDay, nongliStr, pillars, huangli } = todayData;
+  const { gongliStr, dayNum, weekDay, nongliStr, pillars } = todayData;
 
   return (
     <div className="mx-auto w-full" style={{ maxWidth: "375px" }}>
@@ -216,35 +208,7 @@ export default function YixueHome() {
         ))}
       </div>
 
-      {/* 黄历宜忌 */}
-      <div className="mx-3 rounded-xl bg-white p-3 shadow-sm">
-        <div className="mb-2 flex items-center justify-center gap-2">
-          <span className="rounded-full bg-[#7B2FBE]/10 px-2.5 py-0.5 text-xs font-medium text-[#7B2FBE]">
-            {huangli.dayGanZhi}日
-          </span>
-          <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700">
-            {huangli.jianChu}日
-          </span>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <p className="mb-1.5 text-center text-sm font-medium text-emerald-600">宜</p>
-            <ul className="space-y-0.5 text-center text-xs text-gray-600">
-              {huangli.yi.map((item: string) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <p className="mb-1.5 text-center text-sm font-medium text-red-500">忌</p>
-            <ul className="space-y-0.5 text-center text-xs text-gray-600">
-              {huangli.ji.map((item: string) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </div>
+      
 
       {/* 免责声明（对标 jishiyu 底部） */}
       <div className="mt-4 px-4 pb-4 text-center text-[11px] text-gray-400">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { DatePickerInline, QuickBtnGroup } from "@/components/shared";
 import ClientSelector from "@/components/ClientSelector";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
@@ -302,6 +303,9 @@ export default function XuankongFeixingPage() {
   const defaultYun = getYunFromYear(currentYear);
 
   const [buildYear, setBuildYear] = useState(currentYear);
+  const [month, setMonth] = useState(1);
+  const [day, setDay] = useState(1);
+  const [hour, setHour] = useState(12);
   const [zuoShan, setZuoShan] = useState("子");
   const [floor, setFloor] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -372,19 +376,28 @@ export default function XuankongFeixingPage() {
           </div>
 
           <div className="mb-3">
-            <label className="mb-1 block text-xs text-gray-500">建造年份（元运）</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                value={buildYear}
-                onChange={(e) => setBuildYear(parseInt(e.target.value) || currentYear)}
-                min={1864}
-                max={2100}
-                className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#7B2FBE]"
-              />
-              <span className="rounded-full px-2 py-1 text-xs font-medium text-white" style={{ backgroundColor: BRAND }}>
+            <label className="mb-1 block text-xs text-gray-500">
+              建造年份（元运）
+              <span className="ml-2 rounded-full px-2 py-0.5 text-xs font-medium text-white" style={{ backgroundColor: BRAND }}>
                 {getYunName(currentYun)}
               </span>
+            </label>
+            <DatePickerInline
+              year={buildYear} month={month} day={day} hour={hour}
+              onYearChange={setBuildYear} onMonthChange={setMonth}
+              onDayChange={setDay} onHourChange={setHour}
+            />
+            <div style={{ marginTop: "6px" }}>
+              <QuickBtnGroup items={[
+                { label: "1984年", onClick: () => setBuildYear(1984) },
+                { label: "1990年", onClick: () => setBuildYear(1990) },
+                { label: "2000年", onClick: () => setBuildYear(2000) },
+                { label: "2004年", onClick: () => setBuildYear(2004) },
+                { label: "2010年", onClick: () => setBuildYear(2010) },
+                { label: "2020年", onClick: () => setBuildYear(2020) },
+                { label: "2024年", onClick: () => setBuildYear(2024) },
+                { label: "今年", onClick: () => setBuildYear(new Date().getFullYear()) },
+              ]} />
             </div>
           </div>
 

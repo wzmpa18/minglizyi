@@ -5,6 +5,7 @@ import { Solar } from "lunar-javascript";
 import { calculateQimen } from "@/algorithm-core";
 import type { QimenResult } from "@/algorithm-core";
 import ClientSelector from "@/components/ClientSelector";
+import { DatePickerInline, QuickBtnGroup } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 
@@ -226,61 +227,26 @@ export default function QimenPage() {
           {/* 日期选择 */}
           <div style={{ marginBottom: "16px" }}>
             <label style={{ fontSize: "14px", color: "#333", marginBottom: "8px", display: "block" }}>日期选择</label>
-            <div style={{ display: "flex", gap: "8px" }}>
-              <input
-                type="number"
-                value={formData.year}
-                onChange={e => setFormData(prev => ({ ...prev, year: parseInt(e.target.value) || now.getFullYear() }))}
-                style={{ flex: 2, padding: "10px", border: "1px solid #ddd", borderRadius: "6px", fontSize: "14px", textAlign: "center" }}
-              />
-              <span style={{ display: "flex", alignItems: "center", fontSize: "14px", color: "#666" }}>年</span>
-              <input
-                type="number"
-                value={formData.month}
-                min={1}
-                max={12}
-                onChange={e => setFormData(prev => ({ ...prev, month: parseInt(e.target.value) || 1 }))}
-                style={{ flex: 1, padding: "10px", border: "1px solid #ddd", borderRadius: "6px", fontSize: "14px", textAlign: "center" }}
-              />
-              <span style={{ display: "flex", alignItems: "center", fontSize: "14px", color: "#666" }}>月</span>
-              <input
-                type="number"
-                value={formData.day}
-                min={1}
-                max={31}
-                onChange={e => setFormData(prev => ({ ...prev, day: parseInt(e.target.value) || 1 }))}
-                style={{ flex: 1, padding: "10px", border: "1px solid #ddd", borderRadius: "6px", fontSize: "14px", textAlign: "center" }}
-              />
-              <span style={{ display: "flex", alignItems: "center", fontSize: "14px", color: "#666" }}>日</span>
-            </div>
-          </div>
-
-          {/* 时辰选择 */}
-          <div style={{ marginBottom: "16px" }}>
-            <label style={{ fontSize: "14px", color: "#333", marginBottom: "8px", display: "block" }}>时辰选择</label>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "6px" }}>
-              {SHICHEN_LIST.map((sc, idx) => {
-                const hourVal = idx === 0 ? 0 : idx === 12 ? 23 : idx * 2 + 1;
-                const isActive = (formData.hour >= (idx === 0 ? 0 : idx * 2 - 1) && formData.hour < (idx === 12 ? 24 : idx * 2 + 1));
-                return (
-                  <button
-                    key={idx}
-                    onClick={() => setFormData(prev => ({ ...prev, hour: hourVal }))}
-                    style={{
-                      padding: "8px 4px",
-                      border: isActive ? "2px solid " + BRAND_PURPLE : "1px solid #ddd",
-                      borderRadius: "6px",
-                      backgroundColor: isActive ? BRAND_PURPLE_BG : "#fff",
-                      color: isActive ? BRAND_PURPLE : "#333",
-                      fontSize: "12px",
-                      fontWeight: isActive ? 700 : 400,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {sc.name}
-                  </button>
-                );
-              })}
+            <DatePickerInline
+              year={formData.year} month={formData.month} day={formData.day} hour={formData.hour}
+              onYearChange={(v) => setFormData(prev => ({ ...prev, year: v }))}
+              onMonthChange={(v) => setFormData(prev => ({ ...prev, month: v }))}
+              onDayChange={(v) => setFormData(prev => ({ ...prev, day: v }))}
+              onHourChange={(v) => setFormData(prev => ({ ...prev, hour: v }))}
+            />
+            <div style={{ marginTop: "8px" }}>
+              <QuickBtnGroup items={[
+                { label: "1990年", onClick: () => setFormData(prev => ({ ...prev, year: 1990 })) },
+                { label: "2000年", onClick: () => setFormData(prev => ({ ...prev, year: 2000 })) },
+                { label: "2020年", onClick: () => setFormData(prev => ({ ...prev, year: 2020 })) },
+                { label: "1月", onClick: () => setFormData(prev => ({ ...prev, month: 1 })) },
+                { label: "6月", onClick: () => setFormData(prev => ({ ...prev, month: 6 })) },
+                { label: "12月", onClick: () => setFormData(prev => ({ ...prev, month: 12 })) },
+                { label: "1日", onClick: () => setFormData(prev => ({ ...prev, day: 1 })) },
+                { label: "15日", onClick: () => setFormData(prev => ({ ...prev, day: 15 })) },
+                { label: "0时", onClick: () => setFormData(prev => ({ ...prev, hour: 0 })) },
+                { label: "12时", onClick: () => setFormData(prev => ({ ...prev, hour: 12 })) },
+              ]} />
             </div>
           </div>
 
@@ -310,17 +276,6 @@ export default function QimenPage() {
                 >{opt.label}</button>
               ))}
             </div>
-          </div>
-
-          {/* 快捷按钮 */}
-          <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
-            <button
-              onClick={() => {
-                const n = new Date();
-                setFormData(prev => ({ ...prev, year: n.getFullYear(), month: n.getMonth() + 1, day: n.getDate(), hour: n.getHours() }));
-              }}
-              style={{ flex: 1, padding: "10px", border: "1px solid " + BRAND_PURPLE, borderRadius: "6px", backgroundColor: "#fff", color: BRAND_PURPLE, fontSize: "14px", cursor: "pointer" }}
-            >当前时间</button>
           </div>
 
           {/* 客户选择 */}

@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import type { CSSProperties } from "react";
 import { calculateZiwei, solarToBazi } from "@/algorithm-core";
 import type { ZiweiResult, Gender } from "@/algorithm-core";
-import { ToggleSwitch, SegBtn, Card, QuickBtnGroup } from "@/components/shared";
+import { ToggleSwitch, SegBtn, Card, QuickBtnGroup, DatePickerInline } from "@/components/shared";
 import ClientSelector from "@/components/ClientSelector";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
@@ -431,8 +431,6 @@ function InputFormModal({
 }) {
   if (!show) return null;
 
-  const ds = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")} ${String(hour).padStart(2, "0")}:00`;
-
   return (
     <div className="fixed inset-0 z-[1000] bg-black/45 flex items-start justify-center pt-[12vh]">
       <div className="bg-white rounded-xl w-[92%] max-w-[420px] max-h-[80vh] overflow-auto shadow-[0_8px_32px_rgba(0,0,0,0.18)]">
@@ -493,11 +491,10 @@ function InputFormModal({
             <div className="flex items-start">
               <label className="w-16 shrink-0 text-[13px] text-gray-500 pt-1.5">日期</label>
               <div className="flex-1">
-                <input
-                  type="text"
-                  readOnly
-                  value={ds}
-                  className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-[13px] outline-none"
+                <DatePickerInline
+                  year={year} month={month} day={day} hour={hour}
+                  onYearChange={setYear} onMonthChange={setMonth}
+                  onDayChange={setDay} onHourChange={setHour}
                 />
                 <div className="mt-1.5">
                   <QuickBtnGroup

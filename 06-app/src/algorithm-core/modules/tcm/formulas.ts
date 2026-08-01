@@ -13,7 +13,7 @@
  *
  * 数据来源：《伤寒论》《金匮要略》《温病条辨》《太平惠民和剂局方》
  * 提取日期：2026-07-26
- * 总计方剂：100首（完整数据见 data/formulas.json）
+ * 总计方剂：316首（完整数据见 data/formulas.json）
  */
 
 import type { TcmFormula } from '../../types/tcm';
@@ -70,7 +70,7 @@ function mapRawFormulaToTcm(entry: RawFormulaEntry): TcmFormula {
 
 // ============================================================================
 // 方剂库（内嵌20首代表性方剂，覆盖各分类）
-// 完整100首数据见 data/formulas.json
+// 完整316首数据见 data/formulas.json
 // ============================================================================
 
 const RAW_FORMULAS_INLINE: RawFormulaEntry[] = [
@@ -526,32 +526,90 @@ export function getFormulasByCategory(category: string): TcmFormula[] {
 
 let fullFormulasLoaded = false;
 let fullFormulasDB: TcmFormula[] = [];
+let formulasLoading = false;
+let formulasLoadError: string | null = null;
 
 /**
- * 加载完整100首方剂数据库（从 data/formulas.json）
+ * 同步获取方剂数据加载状态（供 useEffect 使用）
+ */
+export function getFormulasLoadingState(): { loading: boolean; error: string | null } {
+  return { loading: formulasLoading, error: formulasLoadError };
+}
+
+/**
+ * 带重试的 fetch 包装
+ */
+async function fetchWithRetry(
+  url: string,
+  maxRetries: number = 3,
+  delayMs: number = 1000
+): Promise<Response> {
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      return response;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      if (attempt < maxRetries - 1) {
+        console.warn(
+          `[TCM formulas] 加载 ${url} 失败（第 ${attempt + 1}/${maxRetries} 次），${delayMs}ms 后重试...`,
+          `错误: ${lastError.message}`
+        );
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+  throw lastError!;
+}
+
+/**
+ * 加载完整316首方剂数据库（从 data/formulas.json）
  * 覆盖内嵌的20首方剂，提供完整数据
  *
  * 重要：此函数为异步加载，首次调用后会缓存结果
+ * 加载状态可通过 getFormulasLoadingState() 同步获取
  */
 export async function loadFullFormulasDatabase(): Promise<TcmFormula[]> {
-  if (fullFormulasLoaded && fullFormulasDB.length > 0) {
+  // 如果已加载完整数据库（>50首说明加载成功），直接返回
+  if (fullFormulasLoaded && fullFormulasDB.length > 50) {
     return fullFormulasDB;
   }
 
+  if (formulasLoading) {
+    // 如果正在加载中，等待当前加载完成
+    return new Promise((resolve) => {
+      const checkInterval = setInterval(() => {
+        if (!formulasLoading) {
+          clearInterval(checkInterval);
+          resolve(fullFormulasDB);
+        }
+      }, 100);
+    });
+  }
+
+  formulasLoading = true;
+  formulasLoadError = null;
+
   try {
-    const response = await fetch('/algorithm-core/modules/tcm/data/formulas.json');
+    const response = await fetch('/data/tcm/formulas.json');
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     const rawFormulas: RawFormulaEntry[] = data.formulas || [];
     fullFormulasDB = rawFormulas.map(mapRawFormulaToTcm);
     fullFormulasLoaded = true;
+    formulasLoading = false;
+    console.log(`[TCM formulas] 成功加载 ${fullFormulasDB.length} 首方剂数据。`);
     return fullFormulasDB;
   } catch (error) {
-    console.warn(
-      '[TCM formulas] 无法加载完整数据库，使用内嵌20首方剂数据。',
-      error
-    );
+    console.warn('[TCM formulas] 无法加载完整数据库，使用内嵌数据。', error);
+    formulasLoadError = error instanceof Error ? error.message : String(error);
     fullFormulasDB = FORMULAS_DB;
     fullFormulasLoaded = true;
+    formulasLoading = false;
     return fullFormulasDB;
   }
 }

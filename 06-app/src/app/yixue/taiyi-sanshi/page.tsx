@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { solarToBazi, GAN, ZHI } from "@/algorithm-core";
 import { solarToLunar, getLunarDateString } from "@/lib/lunar";
+import { DatePickerInline, QuickBtnGroup } from "@/components/shared";
 import ClientSelector from "@/components/ClientSelector";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
@@ -277,12 +278,10 @@ function calcTaiyi(year: number, month: number, day: number, hour: number): Taiy
 // ============================================================================
 export default function TaiyiSanshiPage() {
   const now = new Date();
-  const [dateStr, setDateStr] = useState(
-    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
-  );
-  const [timeStr, setTimeStr] = useState(
-    `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`
-  );
+  const [taiyiYear, setTaiyiYear] = useState(now.getFullYear());
+  const [taiyiMonth, setTaiyiMonth] = useState(now.getMonth() + 1);
+  const [taiyiDay, setTaiyiDay] = useState(now.getDate());
+  const [taiyiHour, setTaiyiHour] = useState(now.getHours());
   const [desc, setDesc] = useState("");
   const [loading, setLoading] = useState(false);
   const [hasResult, setHasResult] = useState(false);
@@ -292,18 +291,16 @@ export default function TaiyiSanshiPage() {
   const doPaipan = useCallback(() => {
     setLoading(true);
     setTimeout(() => {
-      const [y, m, d] = dateStr.split("-").map(Number);
-      const [h] = timeStr.split(":").map(Number);
-      const r = calcTaiyi(y, m, d, h);
+      const r = calcTaiyi(taiyiYear, taiyiMonth, taiyiDay, taiyiHour);
       setResult(r);
       setHasResult(true);
       setLoading(false);
       // 保存客户记录
       if(selectedClient && r){
-        try{saveRecord({clientId:selectedClient.id,type:"taiyi-sanshi",data:{...r,inputParams:{dateStr,timeStr,desc}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
+        try{saveRecord({clientId:selectedClient.id,type:"taiyi-sanshi",data:{...r,inputParams:{taiyiYear,taiyiMonth,taiyiDay,taiyiHour,desc}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
       }
     }, 200);
-  }, [dateStr, timeStr, selectedClient]);
+  }, [taiyiYear, taiyiMonth, taiyiDay, taiyiHour, selectedClient, desc]);
 
   // URL参数clientId + 回填检查
   useEffect(() => {
@@ -317,8 +314,10 @@ export default function TaiyiSanshiPage() {
 
   const handleNow = useCallback(() => {
     const n = new Date();
-    setDateStr(`${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-${String(n.getDate()).padStart(2, "0")}`);
-    setTimeStr(`${String(n.getHours()).padStart(2, "0")}:${String(n.getMinutes()).padStart(2, "0")}`);
+    setTaiyiYear(n.getFullYear());
+    setTaiyiMonth(n.getMonth() + 1);
+    setTaiyiDay(n.getDate());
+    setTaiyiHour(n.getHours());
     setTimeout(() => {
       const r = calcTaiyi(n.getFullYear(), n.getMonth() + 1, n.getDate(), n.getHours());
       setResult(r);
@@ -348,24 +347,21 @@ export default function TaiyiSanshiPage() {
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#7B2FBE]"
             />
           </div>
-          <div className="mb-3 grid grid-cols-2 gap-2">
-            <div>
-              <label className="mb-1 block text-xs text-gray-500">日期</label>
-              <input
-                type="date"
-                value={dateStr}
-                onChange={(e) => setDateStr(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 px-2 py-2 text-sm outline-none focus:border-[#7B2FBE]"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs text-gray-500">时间</label>
-              <input
-                type="time"
-                value={timeStr}
-                onChange={(e) => setTimeStr(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 px-2 py-2 text-sm outline-none focus:border-[#7B2FBE]"
-              />
+          <div className="mb-3">
+            <label className="mb-1 block text-xs text-gray-500">预测日期时间</label>
+            <DatePickerInline
+              year={taiyiYear} month={taiyiMonth} day={taiyiDay} hour={taiyiHour}
+              onYearChange={setTaiyiYear} onMonthChange={setTaiyiMonth}
+              onDayChange={setTaiyiDay} onHourChange={setTaiyiHour}
+            />
+            <div style={{ marginTop: "6px" }}>
+              <QuickBtnGroup items={[
+                { label: "今天", onClick: () => { const n = new Date(); setTaiyiYear(n.getFullYear()); setTaiyiMonth(n.getMonth() + 1); setTaiyiDay(n.getDate()); } },
+                { label: "明天", onClick: () => { const n = new Date(); n.setDate(n.getDate() + 1); setTaiyiYear(n.getFullYear()); setTaiyiMonth(n.getMonth() + 1); setTaiyiDay(n.getDate()); } },
+                { label: "2024年", onClick: () => setTaiyiYear(2024) },
+                { label: "2025年", onClick: () => setTaiyiYear(2025) },
+                { label: "2026年", onClick: () => setTaiyiYear(2026) },
+              ]} />
             </div>
           </div>
           {/* 客户选择 */}

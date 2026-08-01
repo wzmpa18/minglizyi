@@ -112,6 +112,15 @@ const ENTRIES = [
     bgColor: "#F3E5F5",
     Icon: ClassicIcon,
   },
+  {
+    key: "bianzheng",
+    title: "辨证学",
+    desc: "八纲·脏腑·六经",
+    href: "/zhongyi/bianzheng",
+    color: "#E65100",
+    bgColor: "#FFF3E0",
+    Icon: BianZhengIcon,
+  },
 ];
 
 function HerbIcon({ color }: { color: string }) {
@@ -155,6 +164,16 @@ function ClassicIcon({ color }: { color: string }) {
       <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
       <path d="M8 7h8" />
       <path d="M8 11h6" />
+    </svg>
+  );
+}
+
+function BianZhengIcon({ color }: { color: string }) {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2v20M2 12h20" />
+      <circle cx="12" cy="12" r="3" />
+      <circle cx="12" cy="12" r="9" />
     </svg>
   );
 }

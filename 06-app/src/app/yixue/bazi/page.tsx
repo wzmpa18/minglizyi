@@ -26,7 +26,8 @@ import {
   getZhiIndex,
 } from "@/algorithm-core";
 import type { TianGan, DiZhi, Gender, BaziResult } from "@/algorithm-core";
-import { ToggleSwitch, SegBtn, Card, QuickBtnGroup } from "@/components/shared";
+import { ToggleSwitch, SegBtn, Card, QuickBtnGroup, DatePicker, DatePickerInline } from "@/components/shared";
+import type { DatePickerValue, DatePickerOptions } from "@/components/shared";
 import ClientSelector from "@/components/ClientSelector";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
@@ -309,7 +310,7 @@ function calcBoneWeight(yearGanZhi: string, monthZhi: string, day: number, hourZ
   return {total: totalStr, details, poem, weightKey: totalStr};
 }
 
-// ===== 输入表单Modal =====
+// ===== 输入表单Modal（使用统一DatePicker） =====
 function InputFormModal({
   show,onClose,name,setName,year,setYear,month,setMonth,day,setDay,hour,setHour,
   gender,setGender,calType,setCalType,zaoWanZi,setZaoWanZi,
@@ -325,7 +326,6 @@ function InputFormModal({
   selectedClient:Client|null;onClientSelect:(c:Client|null)=>void;
 }){
   if(!show) return null;
-  const ds = `${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")} ${String(hour).padStart(2,"0")}:00`;
 
   return <div className="fixed inset-0 z-[1000] bg-black/45 flex items-start justify-center pt-[12vh]">
     <div className="bg-white rounded-xl w-[92%] max-w-[420px] max-h-[80vh] overflow-auto shadow-[0_8px_32px_rgba(0,0,0,0.18)]">
@@ -352,7 +352,10 @@ function InputFormModal({
           <div className="flex items-start">
             <label className="w-16 shrink-0 text-[13px] text-[#666] pt-1.5">日期</label>
             <div className="flex-1">
-              <input type="text" readOnly value={ds} className="w-full border border-[#d2d2d2] rounded px-2.5 py-1.5 text-[13px] outline-none box-border" />
+              <DatePickerInline
+                year={year} month={month} day={day} hour={hour}
+                onYearChange={setYear} onMonthChange={setMonth} onDayChange={setDay} onHourChange={setHour}
+              />
               <div className="mt-1.5">
                 <QuickBtnGroup items={[
                   {label:"1990年",onClick:()=>setYear(1990)},{label:"1985年",onClick:()=>setYear(1985)},{label:"2000年",onClick:()=>setYear(2000)},{label:"2020年",onClick:()=>setYear(2020)},
@@ -367,15 +370,15 @@ function InputFormModal({
         <div className="flex items-center mb-2.5">
           <label className="w-16 shrink-0 text-[13px] text-[#666]">早晚子时</label>
           <div className="flex gap-4">
-            <label className="flex items-center gap-1 text-[13px] cursor-pointer"><input type="radio" name="zwz" checked={zaoWanZi} onChange={()=>setZaoWanZi(true)} className="m-0" />是</label>
-            <label className="flex items-center gap-1 text-[13px] cursor-pointer"><input type="radio" name="zwz" checked={!zaoWanZi} onChange={()=>setZaoWanZi(false)} className="m-0" />否</label>
+            <label className="flex items-center gap-1 text-[13px] cursor-pointer"><input type="radio" name="zwz" checked={zaoWanZi} onChange={()=>setZaoWanZi(!zaoWanZi)} className="m-0" />是</label>
+            <label className="flex items-center gap-1 text-[13px] cursor-pointer"><input type="radio" name="zwz" checked={!zaoWanZi} onChange={()=>setZaoWanZi(!zaoWanZi)} className="m-0" />否</label>
           </div>
         </div>
         <div className="flex items-center mb-2.5">
           <label className="w-16 shrink-0 text-[13px] text-[#666]">真太阳时</label>
           <div className="flex-1 flex items-center gap-4">
-            <label className="flex items-center gap-1 text-[13px] cursor-pointer"><input type="radio" name="tys" checked={zhenTaiyang} onChange={()=>setZhenTaiyang(true)} className="m-0" />是</label>
-            <label className="flex items-center gap-1 text-[13px] cursor-pointer"><input type="radio" name="tys" checked={!zhenTaiyang} onChange={()=>setZhenTaiyang(false)} className="m-0" />否</label>
+            <label className="flex items-center gap-1 text-[13px] cursor-pointer"><input type="radio" name="tys" checked={zhenTaiyang} onChange={()=>setZhenTaiyang(!zhenTaiyang)} className="m-0" />是</label>
+            <label className="flex items-center gap-1 text-[13px] cursor-pointer"><input type="radio" name="tys" checked={!zhenTaiyang} onChange={()=>setZhenTaiyang(!zhenTaiyang)} className="m-0" />否</label>
             <div className="ml-auto flex items-center gap-1"><span className="text-xs text-[#399773]">夏令时</span><ToggleSwitch checked={xiaLing} onChange={()=>setXiaLing(!xiaLing)} /></div>
           </div>
         </div>

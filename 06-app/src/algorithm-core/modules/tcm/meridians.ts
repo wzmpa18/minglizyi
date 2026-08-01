@@ -12,7 +12,7 @@
  *
  * 数据来源：tcm-cli内置数据 + 针灸甲乙经等经典文献
  * 提取日期：2026-07-26
- * 总计经络：12条，穴位：20个（完整数据见 data/meridians.json）
+ * 总计经络：14条，穴位：361个（完整数据见 data/meridians.json）
  */
 
 import type { TcmMeridian, TcmAcupoint } from '../../types/tcm';
@@ -247,7 +247,7 @@ const RAW_ACUPOINTS: TcmAcupoint[] = [
 ];
 
 /**
- * 穴位库（20个常用穴位，全部内嵌）
+ * 穴位库（内嵌20个常用穴位，完整361个穴位数据见 loadFullMeridiansDatabase）
  * 免责声明：穴位定位为经典文献记载，仅供学习参考，不构成医疗操作指导
  */
 export const ACUPOINTS_DB: TcmAcupoint[] = RAW_ACUPOINTS;
@@ -340,6 +340,45 @@ export function getAcupointsByMeridian(meridianName: string): TcmAcupoint[] {
 // ============================================================================
 
 let fullMeridiansLoaded = false;
+let meridiansLoading = false;
+let meridiansLoadError: string | null = null;
+
+/**
+ * 同步获取经络穴位数据加载状态（供 useEffect 使用）
+ */
+export function getMeridiansLoadingState(): { loading: boolean; error: string | null } {
+  return { loading: meridiansLoading, error: meridiansLoadError };
+}
+
+/**
+ * 带重试的 fetch 包装
+ */
+async function fetchWithRetry(
+  url: string,
+  maxRetries: number = 3,
+  delayMs: number = 1000
+): Promise<Response> {
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      return response;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      if (attempt < maxRetries - 1) {
+        console.warn(
+          `[TCM meridians] 加载 ${url} 失败（第 ${attempt + 1}/${maxRetries} 次），${delayMs}ms 后重试...`,
+          `错误: ${lastError.message}`
+        );
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+  throw lastError!;
+}
 
 interface RawMeridianSource {
   name: string;
@@ -363,20 +402,38 @@ interface RawAcupointSource {
 
 /**
  * 加载完整经络穴位数据库（从 data/meridians.json）
- * 覆盖内嵌的12条经络和20个穴位，提供完整数据
+ * 覆盖内嵌的14条经络和20个穴位，提供完整361个穴位数据
  *
  * 重要：此函数为异步加载，首次调用后会缓存结果
+ * 加载状态可通过 getMeridiansLoadingState() 同步获取
  */
 export async function loadFullMeridiansDatabase(): Promise<{
   meridians: TcmMeridian[];
   acupoints: TcmAcupoint[];
 }> {
-  if (fullMeridiansLoaded) {
+  // 如果已加载完整数据库（>50个穴位说明加载成功），直接返回
+  if (fullMeridiansLoaded && ACUPOINTS_DB.length > 50) {
     return { meridians: MERIDIANS_DB, acupoints: ACUPOINTS_DB };
   }
 
+  if (meridiansLoading) {
+    // 如果正在加载中，等待当前加载完成
+    return new Promise((resolve) => {
+      const checkInterval = setInterval(() => {
+        if (!meridiansLoading) {
+          clearInterval(checkInterval);
+          resolve({ meridians: MERIDIANS_DB, acupoints: ACUPOINTS_DB });
+        }
+      }, 100);
+    });
+  }
+
+  meridiansLoading = true;
+  meridiansLoadError = null;
+
   try {
-    const response = await fetch('/algorithm-core/modules/tcm/data/meridians.json');
+    const response = await fetch('/data/tcm/meridians.json');
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     const rawMeridians: RawMeridianSource[] = data.meridians || [];
     const rawAcupoints: RawAcupointSource[] = data.acupoints || [];
@@ -409,13 +466,16 @@ export async function loadFullMeridiansDatabase(): Promise<{
     }
 
     fullMeridiansLoaded = true;
+    meridiansLoading = false;
+    console.log(
+      `[TCM meridians] 成功加载 ${updatedMeridians.length} 条经络、${rawAcupoints.length} 个穴位数据。`
+    );
     return { meridians: MERIDIANS_DB, acupoints: ACUPOINTS_DB };
   } catch (error) {
-    console.warn(
-      '[TCM meridians] 无法加载完整数据库，使用内嵌数据。',
-      error
-    );
+    console.warn('[TCM meridians] 无法加载完整数据库，使用内嵌数据。', error);
+    meridiansLoadError = error instanceof Error ? error.message : String(error);
     fullMeridiansLoaded = true;
+    meridiansLoading = false;
     return { meridians: MERIDIANS_DB, acupoints: ACUPOINTS_DB };
   }
 }

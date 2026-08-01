@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { BrandHeader } from "@/components/shared";
+import { BrandHeader, DatePickerInline, QuickBtnGroup } from "@/components/shared";
 import { calculateLiuyao } from "@/algorithm-core";
 import type { LiuyaoResult, YaoType } from "@/algorithm-core/types/liuyao";
 import ClientSelector from "@/components/ClientSelector";
@@ -236,6 +236,12 @@ export default function LiuyaoPage() {
   const [hour, setHour] = useState(now.getHours());
   const [minute, setMinute] = useState(now.getMinutes());
 
+  // 年份/月份/日期派生状态
+  const [parsedYear, parsedMonth, parsedDay] = dateStr.split("-").map(Number);
+  const setParsedYear = useCallback((v: number) => { setDateStr(`${v}-${pad2(parsedMonth)}-${pad2(parsedDay)}`); }, [parsedMonth, parsedDay]);
+  const setParsedMonth = useCallback((v: number) => { setDateStr(`${parsedYear}-${pad2(v)}-${pad2(parsedDay)}`); }, [parsedYear, parsedDay]);
+  const setParsedDay = useCallback((v: number) => { setDateStr(`${parsedYear}-${pad2(parsedMonth)}-${pad2(v)}`); }, [parsedYear, parsedMonth]);
+
   // 手动起卦：6个爻的值（index 0=初爻，index 5=上爻）
   const [manualYaos, setManualYaos] = useState<YaoType[]>(["1", "1", "1", "1", "1", "1"]);
 
@@ -365,39 +371,25 @@ export default function LiuyaoPage() {
               <label style={{ fontSize: "14px", fontWeight: "bold", color: BRAND, display: "block", marginBottom: "6px" }}>
                 起卦时间
               </label>
-              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                <input
-                  type="date"
-                  value={dateStr}
-                  onChange={e => setDateStr(e.target.value)}
-                  style={{
-                    flex: 1, padding: "8px 10px",
-                    border: "1px solid #ddd", borderRadius: "8px",
-                    fontSize: "14px", outline: "none",
-                  }}
-                />
-                <select
-                  value={hour}
-                  onChange={e => setHour(Number(e.target.value))}
-                  style={{
-                    padding: "8px 6px", border: "1px solid #ddd", borderRadius: "8px",
-                    fontSize: "14px", outline: "none", background: "#fff",
-                  }}
-                >
-                  {hourOptions.map(h => (
-                    <option key={h} value={h}>{pad2(h)}时</option>
-                  ))}
-                </select>
-                <button
-                  onClick={handleUseNow}
-                  style={{
-                    padding: "8px 12px", background: BRAND, color: "#fff",
-                    border: "none", borderRadius: "8px", fontSize: "12px",
-                    cursor: "pointer", whiteSpace: "nowrap",
-                  }}
-                >
-                  此刻
-                </button>
+              <DatePickerInline
+                year={parsedYear} month={parsedMonth} day={parsedDay} hour={hour}
+                onYearChange={setParsedYear} onMonthChange={setParsedMonth}
+                onDayChange={setParsedDay} onHourChange={setHour}
+              />
+              <div style={{ marginTop: "6px" }}>
+                <QuickBtnGroup items={[
+                  { label: "1990年", onClick: () => setParsedYear(1990) },
+                  { label: "2000年", onClick: () => setParsedYear(2000) },
+                  { label: "2020年", onClick: () => setParsedYear(2020) },
+                  { label: "1月", onClick: () => setParsedMonth(1) },
+                  { label: "6月", onClick: () => setParsedMonth(6) },
+                  { label: "12月", onClick: () => setParsedMonth(12) },
+                  { label: "1日", onClick: () => setParsedDay(1) },
+                  { label: "15日", onClick: () => setParsedDay(15) },
+                  { label: "0时", onClick: () => setHour(0) },
+                  { label: "12时", onClick: () => setHour(12) },
+                  { label: "此刻", onClick: handleUseNow },
+                ]} />
               </div>
             </div>
 

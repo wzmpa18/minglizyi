@@ -14,7 +14,7 @@
  * 数据来源：中国药典 + 神农本草经 (tcmoc)
  * 来源项目：https://github.com/lab99x/tcmoc
  * 提取日期：2026-07-26
- * 总计药材：347味（完整数据见 data/herbs.json）
+ * 总计药材：550味（完整数据见 data/herbs.json）
  */
 
 import type { TcmHerb } from '../../types/tcm';
@@ -125,7 +125,7 @@ function mapRawHerbToTcm(entry: RawHerbEntry): TcmHerb {
 
 // ============================================================================
 // 中药药材库（内嵌30味代表性药材，覆盖各分类）
-// 完整347味数据见 data/herbs.json
+// 完整550味数据见 data/herbs.json
 // ============================================================================
 
 const RAW_HERBS_INLINE: RawHerbEntry[] = [
@@ -545,32 +545,90 @@ export function getHerbsByCategory(category: string): TcmHerb[] {
 
 let fullHerbsLoaded = false;
 let fullHerbsDB: TcmHerb[] = [];
+let herbsLoading = false;
+let herbsLoadError: string | null = null;
 
 /**
- * 加载完整347味药材数据库（从 data/herbs.json）
+ * 同步获取药材数据加载状态（供 useEffect 使用）
+ */
+export function getHerbsLoadingState(): { loading: boolean; error: string | null } {
+  return { loading: herbsLoading, error: herbsLoadError };
+}
+
+/**
+ * 带重试的 fetch 包装
+ */
+async function fetchWithRetry(
+  url: string,
+  maxRetries: number = 3,
+  delayMs: number = 1000
+): Promise<Response> {
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      return response;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      if (attempt < maxRetries - 1) {
+        console.warn(
+          `[TCM herbs] 加载 ${url} 失败（第 ${attempt + 1}/${maxRetries} 次），${delayMs}ms 后重试...`,
+          `错误: ${lastError.message}`
+        );
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+  throw lastError!;
+}
+
+/**
+ * 加载完整550味药材数据库（从 data/herbs.json）
  * 覆盖内嵌的30味药材，提供完整数据
  *
  * 重要：此函数为异步加载，首次调用后会缓存结果
+ * 加载状态可通过 getHerbsLoadingState() 同步获取
  */
 export async function loadFullHerbsDatabase(): Promise<TcmHerb[]> {
-  if (fullHerbsLoaded && fullHerbsDB.length > 0) {
+  // 如果已加载完整数据库（>50条说明加载成功），直接返回
+  if (fullHerbsLoaded && fullHerbsDB.length > 50) {
     return fullHerbsDB;
   }
 
+  if (herbsLoading) {
+    // 如果正在加载中，等待当前加载完成
+    return new Promise((resolve) => {
+      const checkInterval = setInterval(() => {
+        if (!herbsLoading) {
+          clearInterval(checkInterval);
+          resolve(fullHerbsDB);
+        }
+      }, 100);
+    });
+  }
+
+  herbsLoading = true;
+  herbsLoadError = null;
+
   try {
-    const response = await fetch('/algorithm-core/modules/tcm/data/herbs.json');
+    const response = await fetch('/data/tcm/herbs.json');
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     const rawHerbs: RawHerbEntry[] = data.herbs || [];
     fullHerbsDB = rawHerbs.map(mapRawHerbToTcm);
     fullHerbsLoaded = true;
+    herbsLoading = false;
+    console.log(`[TCM herbs] 成功加载 ${fullHerbsDB.length} 味药材数据。`);
     return fullHerbsDB;
   } catch (error) {
-    console.warn(
-      '[TCM herbs] 无法加载完整数据库，使用内嵌30味药材数据。',
-      error
-    );
+    console.warn('[TCM herbs] 无法加载完整数据库，使用内嵌数据。', error);
+    herbsLoadError = error instanceof Error ? error.message : String(error);
     fullHerbsDB = HERBS_DB;
     fullHerbsLoaded = true;
+    herbsLoading = false;
     return fullHerbsDB;
   }
 }

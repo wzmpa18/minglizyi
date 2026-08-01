@@ -230,7 +230,7 @@ export async function searchClassicTexts(
   // 首次加载
   if (classicTextsDB.length === 0) {
     try {
-      const response = await fetch('/algorithm-core/modules/tcm/data/shanghan_texts.json');
+      const response = await fetch('/data/tcm/shanghan_texts.json');
       const data = await response.json();
       classicTextsDB = data.texts || [];
     } catch (error) {
@@ -278,7 +278,7 @@ export async function searchClassicTexts(
 export async function getClassicTextsCount(): Promise<number> {
   if (classicTextsDB.length === 0) {
     try {
-      const response = await fetch('/algorithm-core/modules/tcm/data/shanghan_texts.json');
+      const response = await fetch('/data/tcm/shanghan_texts.json');
       const data = await response.json();
       classicTextsDB = data.texts || [];
     } catch {
