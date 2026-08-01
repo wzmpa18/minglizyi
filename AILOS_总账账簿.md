@@ -1788,3 +1788,158 @@ nginx -s reload
 ---
 
 *账簿最后更新：2026-08-01 v17.3（P2-3全板块刚性整改版：大六壬算法修复+12工具日期选择器全量改造+中医数据加载修复+辨证学模块上线+越权路由清理+黄历模块移除，GitHub SHA=2c2be3b，待服务器部署）*
+
+
+## 17. v17.4 — v17.3验收驳回刚性整改版（2026-08-01）
+
+### 17.0 版本定性
+
+- **前置版本**：v17.3（验收驳回）
+- **驳回原因**：核心排盘算法错误、基础交互控件残废、基准对标形同虚设
+- **问责级别**：第三次书面正式警告（累计3次）
+- **整改要求**：12小时内完成八字+大六壬核心修复，24小时内完成全工具整改
+
+### 17.1 易学板块整改
+
+#### 大六壬算法专项修复（P0最高优先级）
+
+对标基准：吉时雨 `01-命理开源项目源码/_参考源码_仅阅读/jishiyu/js/da6ren.js`
+
+| 修复项 | 问题描述 | 修复方案 | 对标代码 |
+|--------|---------|---------|---------|
+| 四课第一课下神 | 使用寄宫(地支)代替日干(天干) | `xiaShen: jigong` → `xiaShen: dayGan` | da6ren.js: `_4keList[0].push(this.riZhu[0])` |
+| 贵神昼夜判断 | 使用实际时辰而非占事时辰判断昼夜 | 新增 `ZHANBU_HOUR` 映射，用占事时辰判断 | da6ren.js: `this.guirenMethod` 逻辑 |
+| 天干盘顺逆 | 始终顺排，未根据性别调整 | `guirenSunni===2` 时男顺女逆 | da6ren.js: `_tiangan` 中 `guirenSunni` 判定 |
+| 月将计算方法2 | 年月日时取余算法实现不完整 | 补全 `YUE_ZHI_ARR`/`SHI_ZHI_ARR`/`YUE_JIANG2` 映射 | da6ren.js: 月将方法2逻辑 |
+
+- **文件**：`06-app/src/app/yixue/daliuren/page.tsx`
+
+#### 全工具日期选择器弹窗化整改（12个工具）
+
+- **问题**：v17.3创建的 `DatePickerInline` 内联组件不符合吉时雨弹窗式交互规范
+- **整改**：全部替换为弹窗式 `DatePicker` 组件，实现：
+  - 弹窗式选择面板，顶部标题栏带×关闭按钮
+  - 年月日时分上下箭头滚轮式布局
+  - 快捷日期按钮（年份/月份/日期/时辰）一键选择
+  - 性别/历法/早晚子时/真太阳时/夏令时单选和开关
+  - 排盘按钮置底，点击后关闭弹窗并执行排盘
+- **已整改工具**：bazi, ziwei, daliuren, qimen, liuyao, meihua, xiaoliuren, xuankong-feixing, hehun, zeri, taiyi-sanshi, yizhangjing（共12个）
+- **文件**：`06-app/src/components/shared/date-picker.tsx` + 各工具页面
+
+### 17.2 中医板块整改
+
+#### 知识库数据全量加载（根本性修复）
+
+- **问题**：v17.3的async fetch方案在静态导出时无法加载JSON数据
+- **根因**：Next.js静态导出后，`fetch('/data/tcm/*.json')` 在file://或CDN环境下可能失败
+- **修复**：改为直接 `import` JSON数据，确保构建时数据完整打包
+- **修改文件**：
+  - `herbs.ts`：`import herbsJson from './data/herbs.json'` → 550味
+  - `formulas.ts`：`import formulasJson from './data/formulas.json'` → 316首
+  - `meridians.ts`：`import meridiansJson from './data/meridians.json'` → 361穴
+
+#### 数据量验证
+
+| 数据类型 | 文件 | 条目数 | 验证结果 |
+|---------|------|--------|---------|
+| 中药 | herbs.json | 550味 | ✅ 与账簿宣称一致 |
+| 方剂 | formulas.json | 316首 | ✅ 与账簿宣称一致 |
+| 穴位 | meridians.json | 361个 | ✅ 与账簿宣称一致 |
+
+#### 辨证学模块深度完善
+
+- **新增内容**：为全部28个证型添加「常用穴位」字段
+  - 八纲辨证：8个证型，每个4个常用穴位
+  - 脏腑辨证：10个证型，每个4个常用穴位
+  - 六经辨证：10个证型，每个4个常用穴位
+- **跳转链接**：
+  - 方剂 → `/zhongyi/formula?name=xxx`
+  - 穴位 → `/zhongyi/meridian?acupoint=xxx`
+- **四大核心内容**：辨证要点、临床表现、代表方剂、常用穴位
+- **合规提示**：全程保留"典籍记载，仅供学习参考"免责声明
+- **文件**：`06-app/src/app/zhongyi/bianzheng/page.tsx`
+
+### 17.3 构建验证
+
+| 项目 | 结果 |
+|------|------|
+| TypeScript编译 | ✅ 零错误通过 |
+| Next.js生产构建 | ✅ 成功 |
+| 静态页面生成 | ✅ 66/66路由全部生成 |
+| 构建产物 | ✅ 0错误0警告 |
+
+### 17.4 部署回执
+
+| 项目 | 详情 |
+|------|------|
+| GitHub推送 | ✅ commit SHA=`dc2e57347f8904fd84777d2a0e03b8eba528c54d` |
+| 服务器部署 | ✅ `bash /www/wwwroot/deploy.sh` 执行成功 |
+| 服务器构建 | ✅ 66/66路由全部生成 |
+| .githash文件 | ✅ `dc2e57347f8904fd84777d2a0e03b8eba528c54d` |
+| 文件时间戳 | ✅ 2026-08-01 19:22:41 (deploy.sh部署) |
+| Nginx重载 | ✅ 已执行 |
+
+### 17.5 三端一致性校验
+
+| 端 | Commit SHA | 一致性 |
+|----|-----------|--------|
+| 本地代码 | `dc2e57347f8904fd84777d2a0e03b8eba528c54d` | ✅ |
+| GitHub仓库 | `dc2e57347f8904fd84777d2a0e03b8eba528c54d` | ✅ |
+| 服务器部署 | `dc2e57347f8904fd84777d2a0e03b8eba528c54d` | ✅ |
+
+### 17.6 公网访问验证
+
+| 页面 | URL | HTTP状态码 |
+|------|-----|-----------|
+| 首页 | https://yandaoguoxue.yandao.vip/ | 200 ✅ |
+| 辨证学 | https://yandaoguoxue.yandao.vip/zhongyi/bianzheng/ | 200 ✅ |
+| 中药库 | https://yandaoguoxue.yandao.vip/zhongyi/herb/ | 200 ✅ |
+| 方剂库 | https://yandaoguoxue.yandao.vip/zhongyi/formula/ | 200 ✅ |
+| 经络穴位 | https://yandaoguoxue.yandao.vip/zhongyi/meridian/ | 200 ✅ |
+| 八字排盘 | https://yandaoguoxue.yandao.vip/yixue/bazi/ | 200 ✅ |
+| 大六壬 | https://yandaoguoxue.yandao.vip/yixue/daliuren/ | 200 ✅ |
+
+### 17.7 问责记录更新
+
+| 时间 | 事项 | 级别 | 状态 |
+|------|------|------|------|
+| 2026-07-30 | 第一步提交基准越界 | 书面警示 | ✅ 已整改 |
+| 2026-08-01 | v17.2功能交付失实 | 书面正式警告（累计2次） | ✅ 已整改 |
+| 2026-08-01 | v17.3验收驳回（算法错误+交互残废+数据缩水） | 第三次书面正式警告（累计3次） | 🔡 本次整改 |
+
+### 17.8 交付文件清单
+
+| 序号 | 文件路径 | 修改类型 | 说明 |
+|------|---------|---------|------|
+| 1 | `06-app/src/app/yixue/daliuren/page.tsx` | 修改 | 大六壬算法修复（四课/贵神/天干盘/月将） |
+| 2 | `06-app/src/app/yixue/bazi/page.tsx` | 修改 | 八字排盘日期选择器弹窗化 |
+| 3 | `06-app/src/app/yixue/ziwei/page.tsx` | 修改 | 紫微斗数日期选择器弹窗化 |
+| 4 | `06-app/src/app/yixue/qimen/page.tsx` | 修改 | 奇门遁甲日期选择器弹窗化 |
+| 5 | `06-app/src/app/yixue/liuyao/page.tsx` | 修改 | 六爻占卜日期选择器弹窗化 |
+| 6 | `06-app/src/app/yixue/meihua/page.tsx` | 修改 | 梅花易数日期选择器弹窗化 |
+| 7 | `06-app/src/app/yixue/xiaoliuren/page.tsx` | 修改 | 小六壬日期选择器弹窗化 |
+| 8 | `06-app/src/app/yixue/xuankong-feixing/page.tsx` | 修改 | 玄空飞星日期选择器弹窗化 |
+| 9 | `06-app/src/app/yixue/hehun/page.tsx` | 修改 | 八字合婚日期选择器弹窗化 |
+| 10 | `06-app/src/app/yixue/zeri/page.tsx` | 修改 | 择日日期选择器弹窗化 |
+| 11 | `06-app/src/app/yixue/taiyi-sanshi/page.tsx` | 修改 | 太乙三式日期选择器弹窗化 |
+| 12 | `06-app/src/app/yixue/yizhangjing/page.tsx` | 修改 | 一掌经日期选择器弹窗化 |
+| 13 | `06-app/src/components/shared/date-picker.tsx` | 修改 | 日期选择器组件增强 |
+| 14 | `06-app/src/components/shared/index.ts` | 修改 | 组件导出更新 |
+| 15 | `06-app/src/algorithm-core/modules/tcm/herbs.ts` | 修改 | 中药数据直接JSON导入 |
+| 16 | `06-app/src/algorithm-core/modules/tcm/formulas.ts` | 修改 | 方剂数据直接JSON导入 |
+| 17 | `06-app/src/algorithm-core/modules/tcm/meridians.ts` | 修改 | 穴位数据直接JSON导入 |
+| 18 | `06-app/src/app/zhongyi/bianzheng/page.tsx` | 修改 | 辨证学模块完善（常用穴位+跳转） |
+
+### 17.9 待验收项
+
+| 序号 | 待验收项 | 验收方式 |
+|------|---------|---------|
+| 1 | 大六壬排盘算法3组用例对比 | 公网实机操作+吉时雨逐字段比对 |
+| 2 | 15个易学工具日期选择器交互录屏 | 公网实机操作录屏 |
+| 3 | 中医数据全量公网截图 | 中药/方剂/穴位列表页总数截图 |
+| 4 | 辨证学模块详情页截图 | 证型展开+穴位跳转验证 |
+| 5 | 三端SHA一致性 | 本地/GitHub/服务器SHA核对 |
+
+---
+
+*账簿最后更新：2026-08-01 v17.4（v17.3验收驳回刚性整改版：大六壬算法四项修复+12工具日期选择器弹窗化+中医数据直接JSON导入(550/316/361)+辨证学模块常用穴位完善+三端SHA一致性验证通过，GitHub SHA=dc2e573，公网7核心页面HTTP 200）*
