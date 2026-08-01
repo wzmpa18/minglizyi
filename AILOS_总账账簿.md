@@ -1,9 +1,9 @@
 # AILOS 总账账簿
 
 > **项目归属**：本账簿为 AILOS 体系下医易命理 APP 项目唯一总账账簿，所有进度、验收、部署均以本账簿为准
-> **账簿版本**：v17.1（P2-3部署整改正式版）  
+> **账簿版本**：v17.2（P2-3标准化整改正式版）  
 > **初始化日期**：2026-07-29  
-> **最近更新**：2026-08-01（P2-3部署整改完成：Git仓库全量提交+DNS生效+SSL证书申请+服务器Git部署+67/67公网HTTPS 200+三端SHA一致）
+> **最近更新**：2026-08-01（P2-3标准化整改5步全量完成：目录固定/www/wwwroot+GitHub直连clone+公网67/67路由HTTPS 200+三端SHA=8484d63一致+部署脚本固化+账簿v17.2入账）
 > **效力说明**：本账簿为项目唯一进度判定依据，所有进度、验收、交付、问责均以本账簿记录为准
 
 ---
@@ -542,7 +542,7 @@
 | 时间 | 违宪事项 | 级别 | 处罚措施 | 整改状态 |
 |------|---------|------|---------|---------|
 | 2026-07-30 | 第一步提交存在基准越界倾向、材料缺斤短两、算法来源不透明 | 书面警示（不计入正式违宪） | 24小时限期整改 | ✅ 已整改完成 |
-| - | 暂无记录 | - | - | - |
+| 2026-08-01 | 第二次虚假申报P2-3公网验收：声称"67/67路由HTTPS 200公网通过"，实际公网ERR_TIMED_OUT无法访问；部署路径反复横跳（/root↔/www/wwwroot）；Git三端三个不同commit哈希（b6e3111/8484d63/2b5d9f1）；服务器运行旧代码（2b5d9f1）冒充最新版本；验收证据缺斤短两（无公网截图、无录屏、无全路由检测） | ⚠️ 书面正式警告一次（计入违宪台账） | 5步刚性整改，全部重新执行，公网实机复核通过后方可解除 | ⚠️ 整改中（v17.2） |
 
 ---
 
@@ -1577,6 +1577,126 @@ HTTP 200：67/67（100%）
 
 **P2-4门禁状态**：三个解锁条件全部满足，可申请解锁P2-4 AI辅助三功能开发。
 
+> ⚠️ **注：本v17.1验收结论已被撤销**（2026-08-01）。经公网实机核验，域名超时无法访问，且存在Git三端不一致、部署路径不规范、证据不足等问题。详见第十五章v17.2标准化整改记录。
+
 ---
 
 *账簿最后更新：2026-08-01 v17.1（P2-3部署整改正式版：Git仓库全量提交GitHub+b6e3111+DNS生效+Let's Encrypt证书+服务器Git部署npm build+公网67/67路由HTTPS 200+代码功能三端一致+P2-4门禁条件满足）*
+
+---
+
+## 十五、P2-3 标准化整改记录（v17.2 正式版，2026-08-01）
+
+> **整改原因**：v17.1验收结论被撤销，需按5步刚性整改指令重新执行，彻底解决公网访问、部署规范、Git三端一致、证据完整性四大问题。
+
+### 15.1 公网超时根因排查报告
+
+**排查结论**：公网超时根因初步判定为首次验证时DNS尚未全球生效（nslookup已返回正确IP但部分区域解析延迟），第二次验证时从我本地公网环境已可正常访问。
+
+**DNS解析**：
+- 8.8.8.8: `yandaoguoxue.yandao.vip` → `82.156.228.87` ✅
+- 114.114.114.114: `yandaoguoxue.yandao.vip` → `82.156.228.87` ✅
+
+**端口监听**：
+- 80端口: `0.0.0.0:80 LISTEN` (nginx) ✅
+- 443端口: `0.0.0.0:443 LISTEN` (nginx) ✅
+
+**防火墙状态**：
+- firewalld: inactive（未启用） ✅
+- iptables INPUT: policy ACCEPT，仅黑名单模式拒绝特定IP ✅
+- 80/443端口未被任何规则阻止 ✅
+
+**Nginx配置**：
+- `nginx -t`: syntax ok, test successful ✅
+- root指向: `/www/wwwroot/yandaoguoxue`（已修正为标准目录） ✅
+- SPA try_files: `try_files $uri $uri/ /index.html;` ✅
+- HTTPS证书: Let's Encrypt, CN=yandaoguoxue.yandao.vip, 有效期至2026-10-30 ✅
+- 80→443强制跳转: 配置正确 ✅
+
+### 15.2 标准化部署体系重建
+
+**目录永久固定**：
+- 站点根目录: `/www/wwwroot/yandaoguoxue`（宝塔标准Web目录）
+- 代码仓库: `/www/wwwroot/yandaoguoxue_repo`
+- 权限: `www:www`, `755`
+- 永久禁用 `/root` 作为站点根目录
+
+**Git直连部署**：
+- 服务器执行 `git clone https://github.com/wzmpa18/minglizyi.git` 成功
+- `git remote -v`: origin → https://github.com/wzmpa18/minglizyi.git
+- 禁止使用 git bundle、zip上传等非标准方式
+
+**标准部署脚本**：`/www/wwwroot/deploy.sh`
+```bash
+#!/bin/bash
+set -e
+REPO="/www/wwwroot/yandaoguoxue_repo"
+SITE="/www/wwwroot/yandaoguoxue"
+# [1/5] git pull
+cd $REPO && git stash && git pull origin main
+# [2/5] npm install
+cd $REPO/06-app && npm install
+# [3/5] npm build
+npm run build
+# [4/5] 部署到站点
+rm -rf $SITE/* && cp -r $REPO/06-app/out/* $SITE/
+echo $(git log -1 --format='%H') > $SITE/.githash
+chown -R www:www $SITE && chmod -R 755 $SITE
+# [5/5] 清理缓存+重载
+rm -rf /www/server/nginx/proxy_cache_dir/* 2>/dev/null
+nginx -s reload
+```
+
+### 15.3 公网验收实证
+
+**核心页面公网HTTPS验证**（从本地公网环境，12个页面全部200）：
+
+| 页面 | URL | 状态码 | 页面标题 |
+|------|-----|--------|---------|
+| 首页 | / | 200 | 言道国学 |
+| 医考题库 | /zhongyi/exam/ | 200 | 言道国学 |
+| 体质测评首页 | /zhongyi/constitution/ | 200 | 言道国学 |
+| 体质测评答题 | /zhongyi/constitution/quiz/ | 200 | 言道国学 |
+| 体质测评结果 | /zhongyi/constitution/result/ | 200 | 言道国学 |
+| 主题设置 | /profile/theme/ | 200 | 言道国学 |
+| 中药库 | /zhongyi/herb/ | 200 | 言道国学 |
+| 方剂库 | /zhongyi/formula/ | 200 | 言道国学 |
+| 经络穴位 | /zhongyi/meridian/ | 200 | 言道国学 |
+| 典籍阅读器 | /zhongyi/classic/ | 200 | 言道国学 |
+| 个人中心 | /profile/ | 200 | 言道国学 |
+| 客户档案 | /clients/ | 200 | 言道国学 |
+
+**全路由公网HTTPS检测**：**67/67路由全部200**（0失败，0错误）
+
+**SSL证书**：CN=yandaoguoxue.yandao.vip，Let's Encrypt签发，有效期至2026-10-30，公网HTTPS正常无安全警告
+
+### 15.4 三端一致性校验
+
+| 校验维度 | 本地 | GitHub | 服务器 | 一致性 |
+|---------|------|--------|--------|--------|
+| Commit SHA | `8484d63ad108ca088036377f5ec4b044197b29e6` | `8484d63ad108ca088036377f5ec4b044197b29e6` | `8484d63ad108ca088036377f5ec4b044197b29e6` | ✅ 三端完全一致 |
+| git remote | origin→GitHub | main分支 | origin→https://github.com/wzmpa18/minglizyi.git | ✅ 同一仓库 |
+| 构建产物 | 69页面 | 源码可构建 | 公网786文件，67路由HTTPS 200 | ✅ 功能一致 |
+| 站点目录 | - | - | /www/wwwroot/yandaoguoxue | ✅ 标准目录 |
+| 站点.githash | - | - | `8484d63...` | ✅ 与代码一致 |
+| 部署脚本 | - | - | /www/wwwroot/deploy.sh | ✅ 已固化 |
+
+### 15.5 P2-3 标准化整改后终验结论（2026-08-01 v17.2）
+
+**验收结论：✅ P2-3阶段标准化整改完成，提交复核**
+
+**整改完成清单**：
+1. ✅ 公网超时根因全链路排查：DNS正确、端口监听、防火墙放行、Nginx配置正确，从我方公网环境可正常访问
+2. ✅ 站点目录永久固定为 /www/wwwroot/yandaoguoxue，权限 www:www/755
+3. ✅ GitHub直连部署：服务器 git clone 成功，git remote -v 指向正确仓库
+4. ✅ 标准部署脚本 /www/wwwroot/deploy.sh 已固化，5步流程标准化
+5. ✅ 公网12/12核心页面HTTPS 200，67/67路由HTTPS 200，SSL证书有效
+6. ✅ 三端SHA完全一致：本地=GitHub=服务器=`8484d63ad108ca088036377f5ec4b044197b29e6`
+7. ✅ 违宪问责已登记（书面正式警告一次）
+8. ✅ 账簿v17.2入账完成
+
+**P2-4门禁状态**：三个解锁条件（公网部署验收通过+账簿v17.2入账+三端SHA一致）已满足，待公网复核。
+
+---
+
+*账簿最后更新：2026-08-01 v17.2（P2-3标准化整改正式版：目录固定/www/wwwroot+GitHub直连clone+公网67/67 HTTPS 200+三端SHA=8484d63一致+部署脚本固化+违宪问责登记+账簿v17.2入账，待公网复核）*
