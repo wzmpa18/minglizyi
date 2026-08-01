@@ -11,7 +11,7 @@ import {
   ZHI_WUXING,
 } from "@/algorithm-core";
 import type { HehunResult } from "@/algorithm-core";
-import { DatePickerInline, QuickBtnGroup } from "@/components/shared";
+import { DatePicker } from "@/components/shared";
 import ClientSelector from "@/components/ClientSelector";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
@@ -265,6 +265,8 @@ export default function HehunPage() {
   const [hasResult, setHasResult] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
   const [recordSaved, setRecordSaved] = useState(false);
+  const [showMalePicker, setShowMalePicker] = useState(false);
+  const [showFemalePicker, setShowFemalePicker] = useState(false);
 
   // URL参数clientId + 回填检查
   useEffect(() => {
@@ -434,11 +436,14 @@ export default function HehunPage() {
                 </span>
                 男方
               </label>
-              <DatePickerInline
-                year={maleYear} month={maleMonth} day={maleDay} hour={maleHour}
-                onYearChange={setMaleYear} onMonthChange={setMaleMonth}
-                onDayChange={setMaleDay} onHourChange={setMaleHour}
-              />
+              <button
+                type="button"
+                onClick={() => setShowMalePicker(true)}
+                className="w-full rounded-lg border bg-white px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50"
+                style={{ borderColor: MALE_COLOR + "44", color: "#333" }}
+              >
+                {maleYear}年{String(maleMonth).padStart(2, "0")}月{String(maleDay).padStart(2, "0")}日 {String(maleHour).padStart(2, "0")}时
+              </button>
             </div>
 
             {/* 女方 */}
@@ -452,28 +457,31 @@ export default function HehunPage() {
                 </span>
                 女方
               </label>
-              <DatePickerInline
-                year={femaleYear} month={femaleMonth} day={femaleDay} hour={femaleHour}
-                onYearChange={setFemaleYear} onMonthChange={setFemaleMonth}
-                onDayChange={setFemaleDay} onHourChange={setFemaleHour}
-              />
+              <button
+                type="button"
+                onClick={() => setShowFemalePicker(true)}
+                className="w-full rounded-lg border bg-white px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50"
+                style={{ borderColor: FEMALE_COLOR + "44", color: "#333" }}
+              >
+                {femaleYear}年{String(femaleMonth).padStart(2, "0")}月{String(femaleDay).padStart(2, "0")}日 {String(femaleHour).padStart(2, "0")}时
+              </button>
             </div>
           </div>
 
           {/* 快捷按钮 */}
           <div className="mt-2 grid grid-cols-2 gap-3">
-            <QuickBtnGroup items={[
-              { label: "今年", onClick: () => { const y = new Date().getFullYear(); setMaleYear(y); } },
-              { label: "去年", onClick: () => { const y = new Date().getFullYear(); setMaleYear(y - 1); } },
-              { label: "25岁", onClick: () => setMaleYear(new Date().getFullYear() - 25) },
-              { label: "30岁", onClick: () => setMaleYear(new Date().getFullYear() - 30) },
-            ]} />
-            <QuickBtnGroup items={[
-              { label: "今年", onClick: () => { const y = new Date().getFullYear(); setFemaleYear(y); } },
-              { label: "去年", onClick: () => { const y = new Date().getFullYear(); setFemaleYear(y - 1); } },
-              { label: "23岁", onClick: () => setFemaleYear(new Date().getFullYear() - 23) },
-              { label: "28岁", onClick: () => setFemaleYear(new Date().getFullYear() - 28) },
-            ]} />
+            <div className="flex flex-wrap gap-1">
+              <button onClick={() => setMaleYear(new Date().getFullYear())} className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">今年</button>
+              <button onClick={() => setMaleYear(new Date().getFullYear() - 1)} className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">去年</button>
+              <button onClick={() => setMaleYear(new Date().getFullYear() - 25)} className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">25岁</button>
+              <button onClick={() => setMaleYear(new Date().getFullYear() - 30)} className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">30岁</button>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              <button onClick={() => setFemaleYear(new Date().getFullYear())} className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">今年</button>
+              <button onClick={() => setFemaleYear(new Date().getFullYear() - 1)} className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">去年</button>
+              <button onClick={() => setFemaleYear(new Date().getFullYear() - 23)} className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">23岁</button>
+              <button onClick={() => setFemaleYear(new Date().getFullYear() - 28)} className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">28岁</button>
+            </div>
           </div>
 
           {/* 提示文字 */}
@@ -633,6 +641,49 @@ export default function HehunPage() {
             </p>
           </div>
         )}
+        {/* ====== 男方日期选择弹窗 ====== */}
+        <DatePicker
+          show={showMalePicker}
+          onClose={() => setShowMalePicker(false)}
+          onSubmit={(date) => {
+            setMaleYear(date.year);
+            setMaleMonth(date.month);
+            setMaleDay(date.day);
+            setMaleHour(date.hour);
+          }}
+          initialDate={{ year: maleYear, month: maleMonth, day: maleDay, hour: maleHour, minute: 0 }}
+          initialOptions={{ gender: "male", calType: "solar", zaoWanZi: false, zhenTaiyang: false, xiaLing: false }}
+          showMinute={true}
+          showGender={false}
+          showCalType={false}
+          showToggles={false}
+          showRegion={false}
+          showName={false}
+          submitText="确认"
+          title="男方出生时间"
+        />
+
+        {/* ====== 女方日期选择弹窗 ====== */}
+        <DatePicker
+          show={showFemalePicker}
+          onClose={() => setShowFemalePicker(false)}
+          onSubmit={(date) => {
+            setFemaleYear(date.year);
+            setFemaleMonth(date.month);
+            setFemaleDay(date.day);
+            setFemaleHour(date.hour);
+          }}
+          initialDate={{ year: femaleYear, month: femaleMonth, day: femaleDay, hour: femaleHour, minute: 0 }}
+          initialOptions={{ gender: "female", calType: "solar", zaoWanZi: false, zhenTaiyang: false, xiaLing: false }}
+          showMinute={true}
+          showGender={false}
+          showCalType={false}
+          showToggles={false}
+          showRegion={false}
+          showName={false}
+          submitText="确认"
+          title="女方出生时间"
+        />
       </main>
     </div>
   );

@@ -17,6 +17,8 @@
  */
 
 import type { TcmFormula } from '../../types/tcm';
+// 直接 import JSON 数据，确保静态导出时数据完整（316首方剂）
+import formulasJson from './data/formulas.json';
 
 // ============================================================================
 // 原始方剂条目类型（与 JSON 结构对应）
@@ -472,7 +474,11 @@ const RAW_FORMULAS_INLINE: RawFormulaEntry[] = [
  * 数据来源：TCM-Learning-Assistant (MIT) 的 formulas.json
  * 免责声明：所有主治、适应证、用法均为典籍原文记载，不构成医疗建议
  */
-export const FORMULAS_DB: TcmFormula[] = RAW_FORMULAS_INLINE.map(mapRawFormulaToTcm);
+// 优先使用 JSON 完整数据（316首），内联数据作为后备
+const RAW_FORMULAS_FULL: RawFormulaEntry[] = (formulasJson.formulas && formulasJson.formulas.length > 0)
+  ? formulasJson.formulas as unknown as RawFormulaEntry[]
+  : RAW_FORMULAS_INLINE;
+export const FORMULAS_DB: TcmFormula[] = RAW_FORMULAS_FULL.map(mapRawFormulaToTcm);
 
 // ============================================================================
 // 搜索方剂
@@ -574,44 +580,12 @@ async function fetchWithRetry(
  * 加载状态可通过 getFormulasLoadingState() 同步获取
  */
 export async function loadFullFormulasDatabase(): Promise<TcmFormula[]> {
-  // 如果已加载完整数据库（>50首说明加载成功），直接返回
-  if (fullFormulasLoaded && fullFormulasDB.length > 50) {
-    return fullFormulasDB;
-  }
-
-  if (formulasLoading) {
-    // 如果正在加载中，等待当前加载完成
-    return new Promise((resolve) => {
-      const checkInterval = setInterval(() => {
-        if (!formulasLoading) {
-          clearInterval(checkInterval);
-          resolve(fullFormulasDB);
-        }
-      }, 100);
-    });
-  }
-
-  formulasLoading = true;
-  formulasLoadError = null;
-
-  try {
-    const response = await fetch('/data/tcm/formulas.json');
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    const rawFormulas: RawFormulaEntry[] = data.formulas || [];
-    fullFormulasDB = rawFormulas.map(mapRawFormulaToTcm);
-    fullFormulasLoaded = true;
-    formulasLoading = false;
-    console.log(`[TCM formulas] 成功加载 ${fullFormulasDB.length} 首方剂数据。`);
-    return fullFormulasDB;
-  } catch (error) {
-    console.warn('[TCM formulas] 无法加载完整数据库，使用内嵌数据。', error);
-    formulasLoadError = error instanceof Error ? error.message : String(error);
-    fullFormulasDB = FORMULAS_DB;
-    fullFormulasLoaded = true;
-    formulasLoading = false;
-    return fullFormulasDB;
-  }
+  // JSON 数据已在构建时通过 import 加载，直接返回
+  fullFormulasDB = FORMULAS_DB;
+  fullFormulasLoaded = true;
+  formulasLoading = false;
+  console.log(`[TCM formulas] 数据已加载 ${fullFormulasDB.length} 首方剂。`);
+  return fullFormulasDB;
 }
 
 /**

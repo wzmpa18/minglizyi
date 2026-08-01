@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import type { CSSProperties } from "react";
 import {
   solarToBazi,
   GAN,
@@ -20,7 +19,7 @@ import {
 } from "@/algorithm-core";
 import type { TianGan, DiZhi, YinYang } from "@/algorithm-core";
 import ClientSelector from "@/components/ClientSelector";
-import { DatePickerInline, QuickBtnGroup } from "@/components/shared";
+import { DatePicker } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 
@@ -312,13 +311,28 @@ interface DaLiuRenResult {
   zixuanShensha: { label: string; value: string }[];
 }
 
+/** 大六壬起课输入参数 */
+interface DaLiuRenInputParams {
+  year: number; month: number; day: number; hour: number; minute: number;
+  isMan: boolean;
+  birthYear: number;
+  zhanbuTime?: string;        // 占事时辰，空则用当前时间
+  yueJiangMethod: number;     // 1=节气(默认), 2=年月日时取余
+  guirenMethod: number;       // 1=卯酉区分(默认), 2=白昼, 3=夜晚
+  guirenSunni: number;        // 1=自动(默认), 2=男顺女逆
+}
+
 // ============================================================================
 // 核心排盘算法（保留原样）
 // ============================================================================
 
 function calculateDaLiuRen(
   year: number, month: number, day: number, hour: number, minute: number,
-  isMan: boolean, birthYear?: number
+  isMan: boolean, birthYear: number,
+  zhanbuTime?: string,        // 占事时辰，空则用当前时间
+  yueJiangMethod?: number,    // 1=节气(默认), 2=年月日时取余
+  guirenMethod?: number,      // 1=卯酉区分(默认), 2=白昼, 3=夜晚
+  guirenSunni?: number        // 1=自动(默认), 2=男顺女逆
 ): DaLiuRenResult {
   const bazi = solarToBazi({ year, month, day, hour, minute, gender: isMan ? "male" : "female" });
   const pillars = bazi.pillars;
@@ -327,13 +341,51 @@ function calculateDaLiuRen(
   const dayZhi = siZhu[2][1] as DiZhi;
   const yearGanZhi = siZhu[0][0] + siZhu[0][1];
 
-  const yj = getYueJiang(year, month, day);
-  const yuejiangZhi = yj.zhi;
-  const yuejiangName = yj.name;
+  // 月将计算：1=节气(默认)，2=年月日时取余（对标吉时雨 da6ren.js）
+  let yuejiangZhi: string;
+  let yuejiangName: string;
+  if (yueJiangMethod === 2) {
+    const YUE_ZHI_ARR = ["寅","卯","辰","巳","午","未","申","酉","戌","亥","子","丑"];
+    const SHI_ZHI_ARR = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
+    const YUE_JIANG2: [string, string][] = [
+      ["亥","登明"],["戌","河魁"],["酉","从魁"],["申","传送"],["未","小吉"],["午","胜光"],
+      ["巳","太乙"],["辰","天罡"],["卯","太冲"],["寅","功曹"],["丑","大吉"],["子","神后"],
+    ];
+    const yearZhi = siZhu[0][1];
+    const monthZhi = siZhu[1][1];
+    const dayZhiStr = siZhu[2][1];
+    const hourZhi = siZhu[3][1];
+    const total =
+      (YUE_ZHI_ARR.indexOf(yearZhi) + 1) +
+      (SHI_ZHI_ARR.indexOf(monthZhi) + 1) +
+      (SHI_ZHI_ARR.indexOf(dayZhiStr) + 1) +
+      (SHI_ZHI_ARR.indexOf(hourZhi) + 1);
+    let mod: number;
+    if (total < 12) mod = 12 - total;
+    else { mod = total % 12; if (mod === 0) mod = 12; }
+    const yj2 = YUE_JIANG2[mod - 1];
+    yuejiangZhi = yj2[0];
+    yuejiangName = yj2[1];
+  } else {
+    const yj = getYueJiang(year, month, day);
+    yuejiangZhi = yj.zhi;
+    yuejiangName = yj.name;
+  }
 
-  const zhanbuTime = HOUR_TO_ZHI[hour] ?? "子";
-  // P0 Bug 2 修复：昼夜贵人分界——卯时(5:00)到申时(15-17点前)为昼贵，酉时(17:00)起为夜贵
-  const isDaytime = hour >= 5 && hour < 17;
+  // 占事时辰：空则用当前时间
+  const zhanbuTimeFinal = zhanbuTime ?? (HOUR_TO_ZHI[hour] ?? "子");
+
+  // 贵神类型：1=卯酉区分(默认)，2=白昼，3=夜晚
+  // 对标吉时雨 da6ren.js: 使用占时(zhanbuTime)对应小时判断昼夜，而非实际时间小时
+  const ZHANBU_HOUR: Record<string, number> = {
+    "子": 23, "丑": 1, "寅": 3, "卯": 5, "辰": 7, "巳": 9,
+    "午": 11, "未": 13, "申": 15, "酉": 17, "戌": 19, "亥": 21,
+  };
+  const zhanbuHour = ZHANBU_HOUR[zhanbuTimeFinal] ?? hour;
+  let isDaytime: boolean;
+  if (guirenMethod === 2) isDaytime = true;
+  else if (guirenMethod === 3) isDaytime = false;
+  else isDaytime = zhanbuHour >= 5 && zhanbuHour < 17;
 
   const currentJieQi = getCurrentJieQi(new Date(year, month - 1, day, hour, minute));
   const jieqiInfo = currentJieQi.name;
@@ -345,21 +397,18 @@ function calculateDaLiuRen(
   const benMingGanZhi = getYearGanZhi(by);
   const shengXiao = getShengXiao(benMingGanZhi[1] as DiZhi);
 
-  const age = year - by;
-  let xingYearGZ: string;
-  if (isMan) {
-    const gIdx = (GAN.indexOf("丙") + age) % 10;
-    const zIdx = (ZHI.indexOf("寅") + age) % 12;
-    xingYearGZ = GAN[gIdx] + ZHI[zIdx];
-  } else {
-    const gIdx = (GAN.indexOf("壬") + (120 - age) % 10) % 10;
-    const zIdx = (ZHI.indexOf("申") + (120 - age) % 12) % 12;
-    xingYearGZ = GAN[gIdx] + ZHI[zIdx];
-  }
+  // 行年计算 - 严格对标jishiyu da6ren.js _xingYear
+  // 男从丙寅(60甲子index=2)开始顺排，女从丙申(60甲子index=32)开始顺排
+  // 虚岁 = 当前年 - 出生年 + 1；jishiyu迭代age次(next先返回当前再前进)，等价于 index + age - 1
+  const jiaziTable60 = ["甲子","乙丑","丙寅","丁卯","戊辰","己巳","庚午","辛未","壬申","癸酉","甲戌","乙亥","丙子","丁丑","戊寅","己卯","庚辰","辛巳","壬午","癸未","甲申","乙酉","丙戌","丁亥","戊子","己丑","庚寅","辛卯","壬辰","癸巳","甲午","乙未","丙申","丁酉","戊戌","己亥","庚子","辛丑","壬寅","癸卯","甲辰","乙巳","丙午","丁未","戊申","己酉","庚戌","辛亥","壬子","癸丑","甲寅","乙卯","丙辰","丁巳","戊午","己未","庚申","辛酉","壬戌","癸亥"];
+  const xingAge = year - by + 1; // 虚岁
+  const xingStartIdx = isMan ? 2 : 32; // 男丙寅(2)，女丙申(32)
+  const xingYearIdx = (xingStartIdx + xingAge - 1) % 60;
+  const xingYearGZ = jiaziTable60[xingYearIdx] ?? "丙寅";
 
   const yjIdx = YUE_JIANG_LIST.indexOf(yuejiangZhi as DiZhi);
   const yjIter = circularList(YUE_JIANG_LIST, yjIdx, true);
-  const zhanbuIdx = DZ_DIPAN.indexOf(zhanbuTime as DiZhi);
+  const zhanbuIdx = DZ_DIPAN.indexOf(zhanbuTimeFinal as DiZhi);
   const yueJiangMap: PanMap = {};
   for (let i = zhanbuIdx; i < 12; i++) yueJiangMap[DZ_DIPAN[i]] = yjIter();
   for (let i = 0; i < zhanbuIdx; i++) yueJiangMap[DZ_DIPAN[i]] = yjIter();
@@ -371,7 +420,11 @@ function calculateDaLiuRen(
   }
   if (guirenDipanIdx === -1) guirenDipanIdx = 0;
   const guirenDipan = DZ_DIPAN[guirenDipanIdx];
-  const isShun = "亥子丑寅卯辰".includes(guirenDipan);
+  // 贵神顺逆：1=自动(默认)，2=男顺女逆
+  // 自动：贵人落在亥子丑寅卯辰 → 顺排；巳午未申酉戌 → 逆排
+  let isShun: boolean;
+  if (guirenSunni === 2) isShun = isMan;
+  else isShun = "亥子丑寅卯辰".includes(guirenDipan);
   const shenIter = circularList(SHI_ER_SHEN, 0, isShun);
   const guiShenMap: PanMap = {};
   for (let i = guirenDipanIdx; i < 12; i++) guiShenMap[DZ_DIPAN[i]] = shenIter();
@@ -384,7 +437,9 @@ function calculateDaLiuRen(
   if (riZhiDipanIdx === -1) riZhiDipanIdx = 0;
   const ganIdx = TIAN_GAN_LIST.indexOf(dayGan);
   const tianGanExt = [...TIAN_GAN_LIST, "〇", "〇"];
-  const ganIter = circularList(tianGanExt, ganIdx, true);
+  // 对标吉时雨 da6ren.js _tiangan: guirenSunni===1时顺排，===2时男顺女逆
+  const ganForward = guirenSunni === 2 ? isMan : true;
+  const ganIter = circularList(tianGanExt, ganIdx, ganForward);
   const tianGanMap: PanMap = {};
   for (let i = riZhiDipanIdx; i < 12; i++) tianGanMap[DZ_DIPAN[i]] = ganIter();
   for (let i = 0; i < riZhiDipanIdx; i++) tianGanMap[DZ_DIPAN[i]] = ganIter();
@@ -405,7 +460,7 @@ function calculateDaLiuRen(
   const zhiYinDG = tianGanMap[zhiYang];
 
   const siKe: SiKeItem[] = [
-    { xiaShen: jigong, shangShen: ganYang, tianJiang: ganYangTJ, dunGan: ganYangDG },
+    { xiaShen: dayGan, shangShen: ganYang, tianJiang: ganYangTJ, dunGan: ganYangDG },
     { xiaShen: ganYang, shangShen: ganYin, tianJiang: ganYinTJ, dunGan: ganYinDG },
     { xiaShen: dayZhi, shangShen: zhiYang, tianJiang: zhiYangTJ, dunGan: zhiYangDG },
     { xiaShen: zhiYang, shangShen: zhiYin, tianJiang: zhiYinTJ, dunGan: zhiYinDG },
@@ -448,10 +503,10 @@ function calculateDaLiuRen(
   }
 
   // ---- 1. 伏吟课：月将=占时，天地盘完全重合（天盘=地盘） ----
-  const isFuYin = (yuejiangZhi === zhanbuTime);
+  const isFuYin = (yuejiangZhi === zhanbuTimeFinal);
 
   // ---- 2. 反吟课：天盘与地盘对冲（月将与占时差6位，即对冲） ----
-  const isFanYin = (chongMap[yuejiangZhi] === zhanbuTime);
+  const isFanYin = (chongMap[yuejiangZhi] === zhanbuTimeFinal);
 
   // ---- 3. 八专课：干支同位（日干寄宫=日支），四课只有两课 ----
   const isBaZhuan = (jigong === dayZhi);
@@ -656,7 +711,7 @@ function calculateDaLiuRen(
     year, month, day, hour, minute,
     dateStr: formatDate(year, month, day, hour, minute),
     lunarDate: getLunarDateApprox(year, month, day),
-    zhanbuTime,
+    zhanbuTime: zhanbuTimeFinal,
     jieqiInfo,
     siZhu,
     yuejiangZhi,
@@ -708,147 +763,261 @@ function zhiColorRender(zhi: string, dayGan: string): string {
 }
 
 // ============================================================================
-// 输入表单（内嵌折叠面板，点击header编辑按钮展开）
+// 输入表单（底部弹窗，点击遮罩或关闭按钮收起）
 // ============================================================================
+
+/** 圆形单选按钮（紫色选中态） */
+function DLRRadioOption({
+  label, selected, onClick,
+}: {
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center cursor-pointer"
+    >
+      <span
+        className={`w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center transition-all ${
+          selected ? "border-[#7B2FBE]" : "border-gray-300"
+        }`}
+      >
+        {selected && <span className="w-[10px] h-[10px] rounded-full bg-[#7B2FBE]" />}
+      </span>
+      <span
+        className={`ml-1.5 text-sm ${
+          selected ? "text-[#7B2FBE] font-medium" : "text-gray-600"
+        }`}
+      >
+        {label}
+      </span>
+    </button>
+  );
+}
 
 function InputPanel({
   show, onClose, onSubmit, selectedClient, onClientSelect, initialValues,
 }: {
   show: boolean;
   onClose: () => void;
-  onSubmit: (params: { year: number; month: number; day: number; hour: number; minute: number; isMan: boolean; birthYear: number }) => void;
-  selectedClient: Client|null;
-  onClientSelect: (c: Client|null) => void;
-  initialValues?: { year: number; month: number; day: number; hour: number; minute: number; isMan: boolean; birthYear: number } | null;
+  onSubmit: (params: DaLiuRenInputParams) => void;
+  selectedClient: Client | null;
+  onClientSelect: (c: Client | null) => void;
+  initialValues?: DaLiuRenInputParams | null;
 }) {
   const now = new Date();
   const [year, setYear] = useState(initialValues?.year || now.getFullYear());
   const [month, setMonth] = useState(initialValues?.month || now.getMonth() + 1);
   const [day, setDay] = useState(initialValues?.day || now.getDate());
   const [hour, setHour] = useState(initialValues?.hour !== undefined ? initialValues.hour : now.getHours());
-  const [minute, setMinute] = useState(initialValues?.minute || 0);
+  const [minute, setMinute] = useState(initialValues?.minute !== undefined ? initialValues.minute : 0);
   const [isMan, setIsMan] = useState(initialValues?.isMan !== undefined ? initialValues.isMan : true);
   const [birthYear, setBirthYear] = useState(initialValues?.birthYear || 1980);
+  const [zhanbuTime, setZhanbuTime] = useState<string>(initialValues?.zhanbuTime ?? "");
+  const [yueJiangMethod, setYueJiangMethod] = useState<number>(initialValues?.yueJiangMethod ?? 1);
+  const [guirenMethod, setGuirenMethod] = useState<number>(initialValues?.guirenMethod ?? 1);
+  const [guirenSunni, setGuirenSunni] = useState<number>(initialValues?.guirenSunni ?? 1);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  // 弹窗从底部滑入动画
+  const [entered, setEntered] = useState(false);
+  useEffect(() => {
+    if (show) {
+      setEntered(false);
+      const r = requestAnimationFrame(() => setEntered(true));
+      return () => cancelAnimationFrame(r);
+    } else {
+      setEntered(false);
+    }
+  }, [show]);
 
   if (!show) return null;
 
+  const currentYear = new Date().getFullYear();
+  const SHI_CHEN_LIST = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"];
+
   const handleSubmit = () => {
-    onSubmit({ year, month, day, hour, minute, isMan, birthYear });
+    onSubmit({
+      year, month, day, hour, minute, isMan, birthYear,
+      zhanbuTime: zhanbuTime || undefined,
+      yueJiangMethod, guirenMethod, guirenSunni,
+    });
   };
 
-  const inputStyle: CSSProperties = {
-    width: "100%",
-    padding: "6px 4px",
-    borderRadius: "4px",
-    border: "1px solid #ddd",
-    textAlign: "center",
-    fontSize: "14px",
-    boxSizing: "border-box",
-    outline: "none",
+  const handleNow = () => {
+    const n = new Date();
+    setYear(n.getFullYear());
+    setMonth(n.getMonth() + 1);
+    setDay(n.getDate());
+    setHour(n.getHours());
+    setMinute(n.getMinutes());
   };
 
-  const labelStyle: CSSProperties = {
-    fontSize: "12px",
-    color: "#666",
-    marginBottom: "4px",
-    textAlign: "center",
-  };
+  const dateStr = `${year}年${String(month).padStart(2, "0")}月${String(day).padStart(2, "0")}日 ${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 
   return (
-    <div style={{ backgroundColor: "#fff", padding: "10px 12px", borderBottom: "1px solid #eee" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
-        <span style={{ fontSize: "15px", fontWeight: 700, color: "#333" }}>大六壬起课</span>
-        <button
-          onClick={onClose}
-          style={{
-            backgroundColor: "transparent",
-            border: "none",
-            fontSize: "20px",
-            color: "#999",
-            cursor: "pointer",
-            padding: "0 4px",
-            lineHeight: 1,
-          }}
+    <>
+      {/* 底部弹窗 */}
+      <div
+        className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 transition-opacity duration-200"
+        style={{ opacity: entered ? 1 : 0 }}
+        onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      >
+        <div
+          className="w-full max-w-[420px] rounded-t-2xl bg-white shadow-2xl transition-transform duration-300 ease-out"
+          style={{ maxHeight: "90vh", overflowY: "auto", transform: entered ? "translateY(0)" : "translateY(100%)" }}
+          onClick={(e) => e.stopPropagation()}
         >
-          ×
-        </button>
-      </div>
+          {/* 标题栏 */}
+          <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 sticky top-0 bg-white z-10">
+            <span className="text-base font-bold text-gray-800">大六壬起课</span>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 transition-colors"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
 
-      {/* 占问时间 */}
-      <div style={{ marginBottom: "10px" }}>
-        <div style={{ fontSize: "13px", fontWeight: 600, marginBottom: "6px", color: "#333" }}>占问时辰</div>
-        <DatePickerInline
-          year={year} month={month} day={day} hour={hour} minute={minute}
-          onYearChange={setYear} onMonthChange={setMonth}
-          onDayChange={setDay} onHourChange={setHour}
-          onMinuteChange={setMinute} showMinute
-        />
-        <div style={{ marginTop: "6px" }}>
-          <QuickBtnGroup items={[
-            { label: "1990年", onClick: () => setYear(1990) },
-            { label: "2000年", onClick: () => setYear(2000) },
-            { label: "2020年", onClick: () => setYear(2020) },
-            { label: "1月", onClick: () => setMonth(1) },
-            { label: "6月", onClick: () => setMonth(6) },
-            { label: "12月", onClick: () => setMonth(12) },
-            { label: "1日", onClick: () => setDay(1) },
-            { label: "15日", onClick: () => setDay(15) },
-            { label: "0时", onClick: () => setHour(0) },
-            { label: "12时", onClick: () => setHour(12) },
-            { label: "0分", onClick: () => setMinute(0) },
-            { label: "30分", onClick: () => setMinute(30) },
-          ]} />
+          <div className="px-4 py-3 space-y-4">
+            {/* 1. 起课时间 */}
+            <div>
+              <div className="text-sm font-medium text-gray-700 mb-1.5">起课时间</div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowDatePicker(true)}
+                  className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-left hover:border-[#7B2FBE] transition-colors"
+                >
+                  {dateStr}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNow}
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+                >
+                  当前时间
+                </button>
+              </div>
+            </div>
+
+            {/* 2. 出生年份 */}
+            <div>
+              <div className="text-sm font-medium text-gray-700 mb-1.5">出生年份</div>
+              <select
+                value={birthYear}
+                onChange={(e) => setBirthYear(parseInt(e.target.value, 10))}
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#7B2FBE]"
+              >
+                {Array.from({ length: currentYear - 1950 + 1 }, (_, i) => {
+                  const y = 1950 + i;
+                  const gz = getYearGanZhi(y);
+                  return (
+                    <option key={y} value={y}>{y}年({gz[0]}{gz[1]})</option>
+                  );
+                })}
+              </select>
+            </div>
+
+            {/* 3. 性别 */}
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700">性别</span>
+              <div className="flex gap-4">
+                <DLRRadioOption label="男" selected={isMan} onClick={() => setIsMan(true)} />
+                <DLRRadioOption label="女" selected={!isMan} onClick={() => setIsMan(false)} />
+              </div>
+            </div>
+
+            {/* 4. 占事时辰 */}
+            <div>
+              <div className="text-sm font-medium text-gray-700 mb-1.5">占事时辰</div>
+              <select
+                value={zhanbuTime}
+                onChange={(e) => setZhanbuTime(e.target.value)}
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#7B2FBE]"
+              >
+                <option value="">当前时间</option>
+                {SHI_CHEN_LIST.map((z) => (
+                  <option key={z} value={z}>{z}时</option>
+                ))}
+              </select>
+            </div>
+
+            {/* 5. 换将方式 */}
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700">换将方式</span>
+              <div className="flex gap-4">
+                <DLRRadioOption label="节气" selected={yueJiangMethod === 1} onClick={() => setYueJiangMethod(1)} />
+                <DLRRadioOption label="年月日时取余" selected={yueJiangMethod === 2} onClick={() => setYueJiangMethod(2)} />
+              </div>
+            </div>
+
+            {/* 6. 贵神类型 */}
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700">贵神类型</span>
+              <div className="flex gap-4 flex-wrap justify-end">
+                <DLRRadioOption label="卯酉区分" selected={guirenMethod === 1} onClick={() => setGuirenMethod(1)} />
+                <DLRRadioOption label="白昼" selected={guirenMethod === 2} onClick={() => setGuirenMethod(2)} />
+                <DLRRadioOption label="夜晚" selected={guirenMethod === 3} onClick={() => setGuirenMethod(3)} />
+              </div>
+            </div>
+
+            {/* 7. 贵神顺逆 */}
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700">贵神顺逆</span>
+              <div className="flex gap-4">
+                <DLRRadioOption label="自动" selected={guirenSunni === 1} onClick={() => setGuirenSunni(1)} />
+                <DLRRadioOption label="男顺女逆" selected={guirenSunni === 2} onClick={() => setGuirenSunni(2)} />
+              </div>
+            </div>
+
+            {/* 客户选择器（位于"开始起课"按钮上方） */}
+            <div>
+              <ClientSelector selectedClient={selectedClient} onSelect={onClientSelect} />
+            </div>
+
+            {/* 8. 开始起课按钮 */}
+            <button
+              type="button"
+              onClick={handleSubmit}
+              className="w-full rounded-full bg-[#7B2FBE] text-white font-bold text-lg py-2.5 shadow-lg active:bg-[#5B1A8A] transition-colors"
+            >
+              开始起课
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* 性别 + 出生年 */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: "10px" }}>
-        <span style={{ fontSize: "13px", color: "#666", flexShrink: 0 }}>性别：</span>
-        <label style={{ display: "flex", alignItems: "center", gap: 3, fontSize: "14px", cursor: "pointer" }}>
-          <input type="radio" name="gender" checked={isMan} onChange={() => setIsMan(true)} />
-          男
-        </label>
-        <label style={{ display: "flex", alignItems: "center", gap: 3, fontSize: "14px", cursor: "pointer" }}>
-          <input type="radio" name="gender" checked={!isMan} onChange={() => setIsMan(false)} />
-          女
-        </label>
-        <span style={{ fontSize: "13px", color: "#666", marginLeft: "8px", flexShrink: 0 }}>出生年：</span>
-        <input
-          type="number"
-          min={1900}
-          max={2100}
-          value={birthYear}
-          onChange={(e) => setBirthYear(Math.max(1900, Math.min(2100, parseInt(e.target.value) || 1980)))}
-          style={{ ...inputStyle, width: "70px", flexShrink: 0 }}
-        />
-      </div>
-
-      <div style={{ fontSize: "11px", color: "#999", marginBottom: "8px" }}>
-        月将自动根据节气推算（中气后换将），无需手动选择。
-      </div>
-
-      <div style={{ marginBottom: "10px" }}>
-        <ClientSelector selectedClient={selectedClient} onSelect={onClientSelect} />
-      </div>
-
-      <button
-        onClick={handleSubmit}
-        style={{
-          color: "#fff",
-          backgroundColor: "#7B2FBE",
-          border: "none",
-          borderRadius: "20px",
-          padding: "8px 0",
-          fontSize: "15px",
-          fontWeight: 700,
-          cursor: "pointer",
-          width: "100%",
-          textAlign: "center",
+      {/* DatePicker 弹窗（选择起课时间） */}
+      <DatePicker
+        show={showDatePicker}
+        onClose={() => setShowDatePicker(false)}
+        onSubmit={(date) => {
+          setYear(date.year);
+          setMonth(date.month);
+          setDay(date.day);
+          setHour(date.hour);
+          setMinute(date.minute);
+          setShowDatePicker(false);
         }}
-      >
-        开始起课
-      </button>
-    </div>
+        initialDate={{ year, month, day, hour, minute }}
+        showMinute
+        showOptions={false}
+        showGender={false}
+        showCalType={false}
+        showToggles={false}
+        showRegion={false}
+        showName={false}
+        title="选择起课时间"
+        submitText="确定"
+      />
+    </>
   );
 }
 
@@ -861,7 +1030,7 @@ export default function DaLiuRenPage() {
   const [activeTab, setActiveTab] = useState<"panmian" | "fuzhu" | "shensha" | "pingzhu" | "dangan">("panmian");
   const [data, setData] = useState<DaLiuRenResult | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
-  const [prefillParams, setPrefillParams] = useState<{ year: number; month: number; day: number; hour: number; minute: number; isMan: boolean; birthYear: number } | null>(null);
+  const [prefillParams, setPrefillParams] = useState<DaLiuRenInputParams | null>(null);
 
   // 监听header编辑按钮
   useEffect(() => {
@@ -894,8 +1063,12 @@ export default function DaLiuRenPage() {
     }
   }, []);
 
-  const handleSubmit = useCallback((params: { year: number; month: number; day: number; hour: number; minute: number; isMan: boolean; birthYear: number }) => {
-    const result = calculateDaLiuRen(params.year, params.month, params.day, params.hour, params.minute, params.isMan, params.birthYear);
+  const handleSubmit = useCallback((params: DaLiuRenInputParams) => {
+    const result = calculateDaLiuRen(
+      params.year, params.month, params.day, params.hour, params.minute,
+      params.isMan, params.birthYear,
+      params.zhanbuTime, params.yueJiangMethod, params.guirenMethod, params.guirenSunni
+    );
     setData(result);
     setShowForm(false);
     // 保存客户记录

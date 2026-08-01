@@ -29,8 +29,18 @@ export interface DatePickerProps {
   initialDate?: DatePickerValue;
   initialOptions?: DatePickerOptions;
   showMinute?: boolean;
-  showOptions?: boolean; // 是否显示性别/早晚子时/真太阳时/夏令时选项
+  showOptions?: boolean;  // 是否显示性别/早晚子时/真太阳时/夏令时选项
   showGender?: boolean;
+  showCalType?: boolean;  // 是否显示历法切换
+  showToggles?: boolean;  // 是否显示早晚子时/真太阳时/夏令时
+  showRegion?: boolean;   // 是否显示地区选择
+  showName?: boolean;     // 是否显示姓名输入
+  name?: string;
+  onNameChange?: (v: string) => void;
+  showSaveName?: boolean; // 是否显示保存开关
+  saveName?: boolean;
+  onSaveNameChange?: (v: boolean) => void;
+  submitText?: string;    // 自定义提交按钮文本
   title?: string;
 }
 
@@ -78,7 +88,107 @@ function daysInMonth(year: number, month: number): number {
 }
 
 // ============================================================================
-// 组件
+// 圆形单选按钮组件
+// ============================================================================
+
+function RadioOption({
+  label,
+  selected,
+  onClick,
+}: {
+  label: string;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center cursor-pointer"
+    >
+      <span
+        className={`w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center transition-all ${
+          selected ? "border-[#7B2FBE]" : "border-gray-300"
+        }`}
+      >
+        {selected && (
+          <span className="w-[10px] h-[10px] rounded-full bg-[#7B2FBE]" />
+        )}
+      </span>
+      <span
+        className={`ml-1.5 text-sm ${
+          selected ? "text-[#7B2FBE] font-medium" : "text-gray-600"
+        }`}
+      >
+        {label}
+      </span>
+    </button>
+  );
+}
+
+// ============================================================================
+// Tab 切换组件
+// ============================================================================
+
+function TabOption({
+  label,
+  active,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`px-4 py-2 text-sm font-medium border-b-[2px] transition-colors ${
+        active
+          ? "border-[#7B2FBE] text-[#7B2FBE]"
+          : "border-transparent text-gray-500 hover:text-gray-700"
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+// ============================================================================
+// 开关组件
+// ============================================================================
+
+function ToggleOption({
+  label,
+  checked,
+  onClick,
+}: {
+  label: string;
+  checked: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-sm text-gray-700">{label}</span>
+      <button
+        type="button"
+        onClick={onClick}
+        className={`relative h-6 w-11 rounded-full transition-colors ${
+          checked ? "bg-[#7B2FBE]" : "bg-gray-300"
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+            checked ? "left-[22px]" : "left-0.5"
+          }`}
+        />
+      </button>
+    </div>
+  );
+}
+
+// ============================================================================
+// 主组件
 // ============================================================================
 
 export default function DatePicker({
@@ -90,15 +200,30 @@ export default function DatePicker({
   showMinute = false,
   showOptions = true,
   showGender = true,
+  showCalType = true,
+  showToggles = true,
+  showRegion = false,
+  showName = false,
+  name = "",
+  onNameChange,
+  showSaveName = false,
+  saveName = false,
+  onSaveNameChange,
+  submitText = "确定",
   title = "选择日期",
 }: DatePickerProps) {
   const [date, setDate] = useState<DatePickerValue>(initialDate || DEFAULT_DATE);
   const [options, setOptions] = useState<DatePickerOptions>(initialOptions || DEFAULT_OPTIONS);
+  const [nameState, setNameState] = useState(name);
 
   // 编辑模式（手动输入）
   const [editField, setEditField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const editInputRef = useRef<HTMLInputElement>(null);
+
+  // 地区选择状态
+  const [province, setProvince] = useState("北京");
+  const [city, setCity] = useState("北京市");
 
   // 同步初始值
   useEffect(() => {
@@ -108,6 +233,10 @@ export default function DatePicker({
   useEffect(() => {
     if (initialOptions) setOptions(initialOptions);
   }, [initialOptions]);
+
+  useEffect(() => {
+    setNameState(name);
+  }, [name]);
 
   // 编辑模式自动聚焦
   useEffect(() => {
@@ -198,9 +327,10 @@ export default function DatePicker({
   // ============================================================
 
   const handleSubmit = useCallback(() => {
+    if (onNameChange) onNameChange(nameState);
     onSubmit(date, options);
     onClose();
-  }, [date, options, onSubmit, onClose]);
+  }, [date, options, nameState, onNameChange, onSubmit, onClose]);
 
   // ============================================================
   // 渲染
@@ -221,9 +351,9 @@ export default function DatePicker({
         <button
           type="button"
           onClick={() => handleScroll(field, 1)}
-          className="flex h-6 w-10 items-center justify-center text-gray-400 hover:text-gray-600"
+          className="flex h-7 w-10 items-center justify-center text-gray-400 hover:text-[#7B2FBE] active:bg-[#F3EDF7] rounded transition-colors"
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
             <path d="M18 15l-6-6-6 6" />
           </svg>
         </button>
@@ -246,7 +376,7 @@ export default function DatePicker({
           <button
             type="button"
             onClick={() => startEdit(field, value)}
-            className="w-14 rounded px-1 py-0.5 text-center text-lg font-bold hover:bg-gray-100"
+            className="w-14 rounded px-1 py-0.5 text-center text-lg font-bold hover:bg-[#F3EDF7] transition-colors"
             style={{ color: color || "#333" }}
           >
             {display}
@@ -256,9 +386,9 @@ export default function DatePicker({
         <button
           type="button"
           onClick={() => handleScroll(field, -1)}
-          className="flex h-6 w-10 items-center justify-center text-gray-400 hover:text-gray-600"
+          className="flex h-7 w-10 items-center justify-center text-gray-400 hover:text-[#7B2FBE] active:bg-[#F3EDF7] rounded transition-colors"
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
             <path d="M6 9l6 6 6-6" />
           </svg>
         </button>
@@ -278,39 +408,62 @@ export default function DatePicker({
         style={{ maxHeight: "90vh", overflowY: "auto" }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* 标题栏 */}
-        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+        {/* 标题栏 - 带关闭按钮 */}
+        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 sticky top-0 bg-white z-10">
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 transition-colors"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
           </button>
           <span className="text-base font-bold text-gray-800">{title}</span>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            className="rounded-full bg-[#7B2FBE] px-5 py-1.5 text-sm font-bold text-white"
-          >
-            确定
-          </button>
+          <div className="w-8" />
         </div>
 
-        {/* 日期滚动选择区 */}
+        {/* 姓名输入（可选） */}
+        {showName && (
+          <div className="px-4 pt-3">
+            <div className="flex items-center">
+              <label className="w-16 shrink-0 text-sm text-gray-700">姓名</label>
+              <input
+                type="text"
+                value={nameState}
+                onChange={(e) => setNameState(e.target.value)}
+                placeholder="如需保存，请输入姓名"
+                className="flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:border-[#7B2FBE]"
+              />
+              {showSaveName && (
+                <div className="ml-2 flex items-center gap-1 text-xs text-gray-500">
+                  <span>{saveName ? "保存" : "不存"}</span>
+                  <button
+                    type="button"
+                    onClick={() => onSaveNameChange?.(!saveName)}
+                    className={`relative h-5 w-9 rounded-full transition-colors ${
+                      saveName ? "bg-[#7B2FBE]" : "bg-gray-300"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                        saveName ? "left-[18px]" : "left-0.5"
+                      }`}
+                    />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 日期滚动选择区 - 上下箭头+中间数字 */}
         <div className="px-4 py-4">
           <div className="flex items-center justify-center gap-1">
-            {/* 年 */}
             {renderEditableCell("year", date.year, `${date.year}年`, "#7B2FBE")}
-            {/* 月 */}
             {renderEditableCell("month", date.month, `${date.month}月`, "#333")}
-            {/* 日 */}
             {renderEditableCell("day", date.day, `${date.day}日`, "#333")}
-            {/* 时 */}
             {renderEditableCell("hour", date.hour, `${date.hour}时`, "#333")}
-            {/* 分（可选） */}
             {showMinute && renderEditableCell("minute", date.minute, `${date.minute}分`, "#999")}
           </div>
         </div>
@@ -326,7 +479,7 @@ export default function DatePicker({
                   key={y}
                   type="button"
                   onClick={() => setYear(y)}
-                  className={`rounded border px-2 py-0.5 text-xs ${
+                  className={`rounded border px-2 py-1 text-xs transition-all ${
                     date.year === y
                       ? "border-[#7B2FBE] bg-[#7B2FBE]/10 text-[#7B2FBE] font-medium"
                       : "border-gray-200 text-gray-600 hover:bg-gray-50"
@@ -347,7 +500,7 @@ export default function DatePicker({
                   key={m}
                   type="button"
                   onClick={() => setMonth(m)}
-                  className={`rounded border px-2 py-0.5 text-xs ${
+                  className={`rounded border px-2 py-1 text-xs transition-all ${
                     date.month === m
                       ? "border-[#7B2FBE] bg-[#7B2FBE]/10 text-[#7B2FBE] font-medium"
                       : "border-gray-200 text-gray-600 hover:bg-gray-50"
@@ -368,7 +521,7 @@ export default function DatePicker({
                   key={d}
                   type="button"
                   onClick={() => setDay(d)}
-                  className={`rounded border px-2 py-0.5 text-xs ${
+                  className={`rounded border px-2 py-1 text-xs transition-all ${
                     date.day === d
                       ? "border-[#7B2FBE] bg-[#7B2FBE]/10 text-[#7B2FBE] font-medium"
                       : "border-gray-200 text-gray-600 hover:bg-gray-50"
@@ -389,7 +542,7 @@ export default function DatePicker({
                   key={h}
                   type="button"
                   onClick={() => setHour(h)}
-                  className={`rounded border px-2 py-0.5 text-xs ${
+                  className={`rounded border px-2 py-1 text-xs transition-all ${
                     date.hour === h
                       ? "border-[#7B2FBE] bg-[#7B2FBE]/10 text-[#7B2FBE] font-medium"
                       : "border-gray-200 text-gray-600 hover:bg-gray-50"
@@ -404,117 +557,130 @@ export default function DatePicker({
 
         {/* 选项区 */}
         {showOptions && (
-          <div className="border-t border-gray-100 px-4 py-3">
-            {/* 性别 */}
+          <div className="border-t border-gray-100 px-4 py-3 space-y-3">
+            {/* 性别 - 圆形单选按钮 */}
             {showGender && (
-              <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-700">性别</span>
-                <div className="flex rounded-lg border border-gray-200 overflow-hidden">
-                  <button
-                    type="button"
+                <div className="flex gap-4">
+                  <RadioOption
+                    label="男"
+                    selected={options.gender === "male"}
                     onClick={() => setOptions(prev => ({ ...prev, gender: "male" }))}
-                    className={`px-4 py-1.5 text-sm font-medium transition-colors ${
-                      options.gender === "male"
-                        ? "bg-[#7B2FBE] text-white"
-                        : "bg-white text-gray-600 hover:bg-gray-50"
-                    }`}
-                  >
-                    男
-                  </button>
-                  <button
-                    type="button"
+                  />
+                  <RadioOption
+                    label="女"
+                    selected={options.gender === "female"}
                     onClick={() => setOptions(prev => ({ ...prev, gender: "female" }))}
-                    className={`px-4 py-1.5 text-sm font-medium transition-colors ${
-                      options.gender === "female"
-                        ? "bg-[#7B2FBE] text-white"
-                        : "bg-white text-gray-600 hover:bg-gray-50"
-                    }`}
-                  >
-                    女
-                  </button>
+                  />
                 </div>
               </div>
             )}
 
-            {/* 历法类型 */}
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-sm text-gray-700">历法</span>
-              <div className="flex rounded-lg border border-gray-200 overflow-hidden">
-                {(["solar", "lunar", "sizhu"] as const).map(t => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setOptions(prev => ({ ...prev, calType: t }))}
-                    className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                      options.calType === t
-                        ? "bg-[#7B2FBE] text-white"
-                        : "bg-white text-gray-600 hover:bg-gray-50"
-                    }`}
-                  >
-                    {{ solar: "公历", lunar: "农历", sizhu: "四柱" }[t]}
-                  </button>
-                ))}
+            {/* 历法类型 - Tab式切换 */}
+            {showCalType && (
+              <div>
+                <span className="mb-1.5 block text-sm text-gray-700">历法</span>
+                <div className="flex border-b border-gray-200">
+                  {(["solar", "lunar", "sizhu"] as const).map(t => (
+                    <TabOption
+                      key={t}
+                      label={{ solar: "公历", lunar: "农历", sizhu: "四柱" }[t]}
+                      active={options.calType === t}
+                      onClick={() => setOptions(prev => ({ ...prev, calType: t }))}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* 早晚子时 */}
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-sm text-gray-700">早晚子时</span>
-              <button
-                type="button"
-                onClick={() => setOptions(prev => ({ ...prev, zaoWanZi: !prev.zaoWanZi }))}
-                className={`relative h-6 w-11 rounded-full transition-colors ${
-                  options.zaoWanZi ? "bg-[#7B2FBE]" : "bg-gray-300"
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                    options.zaoWanZi ? "left-[22px]" : "left-0.5"
-                  }`}
+            {/* 早晚子时 / 真太阳时 / 夏令时 - 开关控件 */}
+            {showToggles && (
+              <div className="space-y-2.5">
+                <ToggleOption
+                  label="早晚子时"
+                  checked={options.zaoWanZi}
+                  onClick={() => setOptions(prev => ({ ...prev, zaoWanZi: !prev.zaoWanZi }))}
                 />
-              </button>
-            </div>
+                <ToggleOption
+                  label="真太阳时"
+                  checked={options.zhenTaiyang}
+                  onClick={() => setOptions(prev => ({ ...prev, zhenTaiyang: !prev.zhenTaiyang }))}
+                />
+                <ToggleOption
+                  label="夏令时"
+                  checked={options.xiaLing}
+                  onClick={() => setOptions(prev => ({ ...prev, xiaLing: !prev.xiaLing }))}
+                />
+              </div>
+            )}
 
-            {/* 真太阳时 */}
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-sm text-gray-700">真太阳时</span>
-              <button
-                type="button"
-                onClick={() => setOptions(prev => ({ ...prev, zhenTaiyang: !prev.zhenTaiyang }))}
-                className={`relative h-6 w-11 rounded-full transition-colors ${
-                  options.zhenTaiyang ? "bg-[#7B2FBE]" : "bg-gray-300"
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                    options.zhenTaiyang ? "left-[22px]" : "left-0.5"
-                  }`}
-                />
-              </button>
-            </div>
-
-            {/* 夏令时 */}
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-700">夏令时</span>
-              <button
-                type="button"
-                onClick={() => setOptions(prev => ({ ...prev, xiaLing: !prev.xiaLing }))}
-                className={`relative h-6 w-11 rounded-full transition-colors ${
-                  options.xiaLing ? "bg-[#7B2FBE]" : "bg-gray-300"
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
-                    options.xiaLing ? "left-[22px]" : "left-0.5"
-                  }`}
-                />
-              </button>
-            </div>
+            {/* 地区选择 - 下拉选择器 */}
+            {showRegion && (
+              <div>
+                <span className="mb-1.5 block text-sm text-gray-700">地区</span>
+                <div className="flex gap-2">
+                  <select
+                    value={province}
+                    onChange={(e) => setProvince(e.target.value)}
+                    className="flex-1 rounded-lg border border-gray-200 px-2 py-1.5 text-sm outline-none focus:border-[#7B2FBE]"
+                  >
+                    <option>北京</option>
+                    <option>上海</option>
+                    <option>广东</option>
+                    <option>浙江</option>
+                    <option>江苏</option>
+                    <option>四川</option>
+                    <option>湖北</option>
+                    <option>湖南</option>
+                    <option>山东</option>
+                    <option>河南</option>
+                    <option>河北</option>
+                    <option>福建</option>
+                    <option>重庆</option>
+                    <option>陕西</option>
+                    <option>辽宁</option>
+                    <option>吉林</option>
+                    <option>黑龙江</option>
+                    <option>安徽</option>
+                    <option>江西</option>
+                    <option>云南</option>
+                    <option>贵州</option>
+                    <option>甘肃</option>
+                    <option>山西</option>
+                    <option>广西</option>
+                    <option>海南</option>
+                    <option>天津</option>
+                    <option>内蒙古</option>
+                    <option>新疆</option>
+                    <option>西藏</option>
+                    <option>宁夏</option>
+                    <option>青海</option>
+                  </select>
+                  <select
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    className="flex-1 rounded-lg border border-gray-200 px-2 py-1.5 text-sm outline-none focus:border-[#7B2FBE]"
+                  >
+                    <option>{province}</option>
+                    <option>其他</option>
+                  </select>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {/* 底部安全区 */}
-        <div className="h-4" />
+        {/* 排盘/起课按钮 - 醒目置底 */}
+        <div className="px-4 pb-5 pt-2">
+          <button
+            type="button"
+            onClick={handleSubmit}
+            className="w-full rounded-full bg-[#7B2FBE] text-white font-bold text-lg py-2.5 shadow-lg active:bg-[#5B1A8A] transition-colors"
+          >
+            {submitText}
+          </button>
+        </div>
       </div>
     </div>
   );

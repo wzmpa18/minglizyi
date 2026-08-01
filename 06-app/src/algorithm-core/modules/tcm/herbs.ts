@@ -18,6 +18,8 @@
  */
 
 import type { TcmHerb } from '../../types/tcm';
+// 直接 import JSON 数据，确保静态导出时数据完整（550味中药）
+import herbsJson from './data/herbs.json';
 
 // ============================================================================
 // 辅助函数：从功效推导分类
@@ -487,11 +489,15 @@ const RAW_HERBS_INLINE: RawHerbEntry[] = [
 ];
 
 /**
- * 中药药材库（内嵌30味代表性药材，完整数据见 loadFullHerbsDatabase）
+ * 中药药材库（直接加载 JSON 完整数据，550味）
  * 数据来源：TCM-Learning-Assistant (MIT) 的 herbs.json
  * 免责声明：所有主治、适应证、用法用量均为典籍原文记载，不构成医疗建议
  */
-export const HERBS_DB: TcmHerb[] = RAW_HERBS_INLINE.map(mapRawHerbToTcm);
+// 优先使用 JSON 完整数据（550味），内联数据作为后备
+const RAW_HERBS_FULL: RawHerbEntry[] = (herbsJson.herbs && herbsJson.herbs.length > 0)
+  ? herbsJson.herbs as unknown as RawHerbEntry[]
+  : RAW_HERBS_INLINE;
+export const HERBS_DB: TcmHerb[] = RAW_HERBS_FULL.map(mapRawHerbToTcm);
 
 // ============================================================================
 // 搜索药材
@@ -593,44 +599,12 @@ async function fetchWithRetry(
  * 加载状态可通过 getHerbsLoadingState() 同步获取
  */
 export async function loadFullHerbsDatabase(): Promise<TcmHerb[]> {
-  // 如果已加载完整数据库（>50条说明加载成功），直接返回
-  if (fullHerbsLoaded && fullHerbsDB.length > 50) {
-    return fullHerbsDB;
-  }
-
-  if (herbsLoading) {
-    // 如果正在加载中，等待当前加载完成
-    return new Promise((resolve) => {
-      const checkInterval = setInterval(() => {
-        if (!herbsLoading) {
-          clearInterval(checkInterval);
-          resolve(fullHerbsDB);
-        }
-      }, 100);
-    });
-  }
-
-  herbsLoading = true;
-  herbsLoadError = null;
-
-  try {
-    const response = await fetch('/data/tcm/herbs.json');
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    const rawHerbs: RawHerbEntry[] = data.herbs || [];
-    fullHerbsDB = rawHerbs.map(mapRawHerbToTcm);
-    fullHerbsLoaded = true;
-    herbsLoading = false;
-    console.log(`[TCM herbs] 成功加载 ${fullHerbsDB.length} 味药材数据。`);
-    return fullHerbsDB;
-  } catch (error) {
-    console.warn('[TCM herbs] 无法加载完整数据库，使用内嵌数据。', error);
-    herbsLoadError = error instanceof Error ? error.message : String(error);
-    fullHerbsDB = HERBS_DB;
-    fullHerbsLoaded = true;
-    herbsLoading = false;
-    return fullHerbsDB;
-  }
+  // JSON 数据已在构建时通过 import 加载，直接返回
+  fullHerbsDB = HERBS_DB;
+  fullHerbsLoaded = true;
+  herbsLoading = false;
+  console.log(`[TCM herbs] 数据已加载 ${fullHerbsDB.length} 味药材。`);
+  return fullHerbsDB;
 }
 
 /**

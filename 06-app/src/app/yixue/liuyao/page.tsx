@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { BrandHeader, DatePickerInline, QuickBtnGroup } from "@/components/shared";
+import { BrandHeader, DatePicker } from "@/components/shared";
 import { calculateLiuyao } from "@/algorithm-core";
 import type { LiuyaoResult, YaoType } from "@/algorithm-core/types/liuyao";
-import ClientSelector from "@/components/ClientSelector";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 
@@ -254,6 +253,7 @@ export default function LiuyaoPage() {
   const [result, setResult] = useState<LiuyaoResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
+  const [showForm, setShowForm] = useState(true);
 
   // URL参数clientId + 回填检查
   useEffect(() => {
@@ -262,7 +262,7 @@ export default function LiuyaoPage() {
     const cid = params.get("clientId");
     if (cid) { const c = getClient(cid); if (c) setSelectedClient(c); }
     const prefill = getPrefillData("liuyao");
-    if (prefill) { try { setResult(prefill); clearPrefillData("liuyao"); } catch(e){} }
+    if (prefill) { try { setResult(prefill); setShowForm(false); clearPrefillData("liuyao"); } catch(e){} }
   }, []);
 
   // 解析日期
@@ -272,10 +272,14 @@ export default function LiuyaoPage() {
   }, [dateStr]);
 
   // 起卦
-  const handleQigua = useCallback(() => {
+  const handleQigua = useCallback((override?: {year: number; month: number; day: number; hour: number; minute: number}) => {
     setError(null);
     try {
-      const { year, month: m, day: d } = parsedDate;
+      const year = override?.year ?? parsedDate.year;
+      const m = override?.month ?? parsedDate.month;
+      const d = override?.day ?? parsedDate.day;
+      const h = override?.hour ?? hour;
+      const mi = override?.minute ?? minute;
       if (!year || !m || !d) {
         setError("请选择有效的日期");
         return;
@@ -290,7 +294,7 @@ export default function LiuyaoPage() {
       } = {
         method,
         year, month: m, day: d,
-        hour, minute,
+        hour: h, minute: mi,
         question: question.trim(),
       };
 
@@ -302,6 +306,7 @@ export default function LiuyaoPage() {
 
       const r = calculateLiuyao(input);
       setResult(r);
+      setShowForm(false);
       // 保存客户记录
       if(selectedClient){
         try{saveRecord({clientId:selectedClient.id,type:"liuyao",data:{...r,inputParams:input},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
@@ -323,6 +328,7 @@ export default function LiuyaoPage() {
   const handleReset = useCallback(() => {
     setResult(null);
     setError(null);
+    setShowForm(true);
   }, []);
 
   // 更新手动爻值
@@ -343,210 +349,21 @@ export default function LiuyaoPage() {
         {/* 紫色标题栏 */}
         <BrandHeader title="言道六爻占卜" showBack />
 
-        {/* ======= 未排盘时显示输入表单 ======= */}
-        {!result && (
-          <div style={{ padding: "12px 16px" }}>
-            {/* 事项输入 */}
-            <div style={{ marginBottom: "14px" }}>
-              <label style={{ fontSize: "14px", fontWeight: "bold", color: BRAND, display: "block", marginBottom: "6px" }}>
-                预测事项
-              </label>
-              <input
-                type="text"
-                value={question}
-                onChange={e => setQuestion(e.target.value)}
-                placeholder="请输入您想预测的事项..."
-                maxLength={50}
-                style={{
-                  width: "100%", padding: "10px 12px",
-                  border: `1px solid ${BRAND_LIGHT}`, borderRadius: "8px",
-                  fontSize: "14px", outline: "none",
-                  boxSizing: "border-box",
-                }}
-              />
-            </div>
-
-            {/* 日期时间 */}
-            <div style={{ marginBottom: "14px" }}>
-              <label style={{ fontSize: "14px", fontWeight: "bold", color: BRAND, display: "block", marginBottom: "6px" }}>
-                起卦时间
-              </label>
-              <DatePickerInline
-                year={parsedYear} month={parsedMonth} day={parsedDay} hour={hour}
-                onYearChange={setParsedYear} onMonthChange={setParsedMonth}
-                onDayChange={setParsedDay} onHourChange={setHour}
-              />
-              <div style={{ marginTop: "6px" }}>
-                <QuickBtnGroup items={[
-                  { label: "1990年", onClick: () => setParsedYear(1990) },
-                  { label: "2000年", onClick: () => setParsedYear(2000) },
-                  { label: "2020年", onClick: () => setParsedYear(2020) },
-                  { label: "1月", onClick: () => setParsedMonth(1) },
-                  { label: "6月", onClick: () => setParsedMonth(6) },
-                  { label: "12月", onClick: () => setParsedMonth(12) },
-                  { label: "1日", onClick: () => setParsedDay(1) },
-                  { label: "15日", onClick: () => setParsedDay(15) },
-                  { label: "0时", onClick: () => setHour(0) },
-                  { label: "12时", onClick: () => setHour(12) },
-                  { label: "此刻", onClick: handleUseNow },
-                ]} />
-              </div>
-            </div>
-
-            {/* 起卦方式 */}
-            <div style={{ marginBottom: "14px" }}>
-              <label style={{ fontSize: "14px", fontWeight: "bold", color: BRAND, display: "block", marginBottom: "6px" }}>
-                起卦方式
-              </label>
-              <div style={{ display: "flex", gap: "8px" }}>
-                {([
-                  { v: "time", l: "时间起卦" },
-                  { v: "manual", l: "手动起卦" },
-                  { v: "number", l: "数字起卦" },
-                ] as const).map(opt => (
-                  <button
-                    key={opt.v}
-                    onClick={() => setMethod(opt.v)}
-                    style={{
-                      flex: 1, padding: "8px 0",
-                      border: `2px solid ${method === opt.v ? BRAND : "#ddd"}`,
-                      borderRadius: "8px", background: method === opt.v ? BRAND : "#fff",
-                      color: method === opt.v ? "#fff" : "#333",
-                      fontSize: "13px", fontWeight: method === opt.v ? "bold" : "normal",
-                      cursor: "pointer", transition: "all 0.2s",
-                    }}
-                  >
-                    {opt.l}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 手动起卦爻位选择 */}
-            {method === "manual" && (
-              <div style={{
-                marginBottom: "14px", padding: "12px",
-                background: BG_COLOR, borderRadius: "10px",
-              }}>
-                <div style={{ fontSize: "13px", color: "#666", marginBottom: "10px", textAlign: "center" }}>
-                  请从初爻到上爻依次选择每爻的阴阳动静
-                </div>
-                {[5, 4, 3, 2, 1, 0].map(i => (
-                  <div key={i} style={{
-                    display: "flex", alignItems: "center", gap: "8px",
-                    marginBottom: i > 0 ? "6px" : 0,
-                  }}>
-                    <span style={{
-                      width: "42px", fontSize: "12px", color: "#666",
-                      textAlign: "right", fontWeight: "bold",
-                    }}>
-                      {YAO_NAMES[i]}
-                    </span>
-                    <div style={{ display: "flex", gap: "4px", flex: 1 }}>
-                      {YAO_OPTIONS.map(opt => (
-                        <button
-                          key={opt.value}
-                          onClick={() => setYaoValue(i, opt.value)}
-                          style={{
-                            flex: 1, padding: "5px 0", fontSize: "11px",
-                            border: `1.5px solid ${manualYaos[i] === opt.value ? BRAND : "#ccc"}`,
-                            borderRadius: "6px",
-                            background: manualYaos[i] === opt.value ? `${BRAND}22` : "#fff",
-                            color: manualYaos[i] === opt.value ? BRAND : "#666",
-                            fontWeight: manualYaos[i] === opt.value ? "bold" : "normal",
-                            cursor: "pointer",
-                          }}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-                <div style={{ fontSize: "11px", color: "#999", marginTop: "8px", textAlign: "center" }}>
-                  ○老阳动变阴　×老阴动变阳　━少阳静　━ ━少阴静
-                </div>
-              </div>
-            )}
-
-            {/* 数字起卦 */}
-            {method === "number" && (
-              <div style={{
-                marginBottom: "14px", padding: "12px",
-                background: BG_COLOR, borderRadius: "10px",
-              }}>
-                <div style={{ fontSize: "13px", color: "#666", marginBottom: "10px", textAlign: "center" }}>
-                  请输入三个数字（1-999），分别对应上卦、下卦、动爻
-                </div>
-                <div style={{ display: "flex", gap: "8px" }}>
-                  {[
-                    { label: "上卦数", val: numUpper, set: setNumUpper },
-                    { label: "下卦数", val: numLower, set: setNumLower },
-                    { label: "动爻", val: numDong, set: setNumDong },
-                  ].map(f => (
-                    <div key={f.label} style={{ flex: 1 }}>
-                      <div style={{ fontSize: "11px", color: "#888", marginBottom: "4px", textAlign: "center" }}>{f.label}</div>
-                      <input
-                        type="number"
-                        min={1}
-                        max={999}
-                        value={f.val}
-                        onChange={e => f.set(Math.max(1, Math.min(999, Number(e.target.value) || 1)))}
-                        style={{
-                          width: "100%", padding: "8px", textAlign: "center",
-                          border: "1px solid #ddd", borderRadius: "6px",
-                          fontSize: "16px", fontWeight: "bold", color: BRAND,
-                          boxSizing: "border-box", outline: "none",
-                        }}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 时间起卦说明 */}
-            {method === "time" && (
-              <div style={{
-                marginBottom: "14px", padding: "10px 12px",
-                background: BG_COLOR, borderRadius: "8px",
-                fontSize: "12px", color: "#888", lineHeight: 1.6,
-              }}>
-                梅花易数时间起卦：以年月日时之和取卦。年取地支序数（子1丑2...亥12），月日取农历数，时取时辰序数。
-              </div>
-            )}
-
-            {/* 客户选择 */}
-            <div style={{ marginBottom: "12px" }}>
-              <ClientSelector selectedClient={selectedClient} onSelect={setSelectedClient} />
-            </div>
-
-            {/* 起卦按钮 */}
-            <button
-              onClick={handleQigua}
-              style={{
-                width: "100%", padding: "14px 0",
-                background: `linear-gradient(135deg, ${BRAND}, ${BRAND_LIGHT})`,
-                color: "#fff", border: "none", borderRadius: "12px",
-                fontSize: "17px", fontWeight: "bold", cursor: "pointer",
-                boxShadow: `0 4px 14px ${BRAND}44`,
-                letterSpacing: "2px",
-              }}
-            >
-              开 始 起 卦
-            </button>
-
-            {error && (
-              <div style={{
-                marginTop: "10px", padding: "10px",
-                background: "#FFEBEE", color: "#C62828",
-                borderRadius: "8px", fontSize: "13px", textAlign: "center",
-              }}>
-                {error}
-              </div>
-            )}
-          </div>
-        )}
+        {/* ======= 日期时间选择弹窗 ======= */}
+        <DatePicker
+          show={showForm}
+          onClose={() => { if (result) setShowForm(false); }}
+          onSubmit={(dateVal) => {
+            setDateStr(`${dateVal.year}-${pad2(dateVal.month)}-${pad2(dateVal.day)}`);
+            setHour(dateVal.hour);
+            setMinute(dateVal.minute);
+            handleQigua({year: dateVal.year, month: dateVal.month, day: dateVal.day, hour: dateVal.hour, minute: dateVal.minute});
+          }}
+          initialDate={{year: parsedDate.year, month: parsedDate.month, day: parsedDate.day, hour, minute}}
+          showMinute={true}
+          showGender={false} showCalType={false} showToggles={false} showRegion={false} showName={false}
+          submitText="起卦" title="六爻排盘"
+        />
 
         {/* ======= 排盘结果 ======= */}
         {result && (

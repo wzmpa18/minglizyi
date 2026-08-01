@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { DatePickerInline, QuickBtnGroup } from "@/components/shared";
+import { DatePicker } from "@/components/shared";
 import ClientSelector from "@/components/ClientSelector";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
@@ -310,6 +310,7 @@ export default function XuankongFeixingPage() {
   const [floor, setFloor] = useState(1);
   const [loading, setLoading] = useState(false);
   const [hasResult, setHasResult] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [result, setResult] = useState<ReturnType<typeof calcXuankong> | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
 
@@ -317,19 +318,21 @@ export default function XuankongFeixingPage() {
   const xiangShan = ER_SHI_SI_SHAN[(ER_SHI_SI_SHAN.indexOf(zuoShan) + 12) % 24];
   const currentYun = getYunFromYear(buildYear);
 
-  const doPaipan = useCallback(() => {
+  const doPaipan = useCallback((overrideYear?: number) => {
+    const effYear = overrideYear ?? buildYear;
+    const yun = getYunFromYear(effYear);
     setLoading(true);
     setTimeout(() => {
-      const r = calcXuankong(zuoShan, xiangShan, currentYun, floor);
+      const r = calcXuankong(zuoShan, xiangShan, yun, floor);
       setResult(r);
       setHasResult(true);
       setLoading(false);
       // 保存客户记录
       if(selectedClient && r){
-        try{saveRecord({clientId:selectedClient.id,type:"xuankong-feixing",data:{...r,inputParams:{zuoShan,xiangShan,buildYear,floor}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
+        try{saveRecord({clientId:selectedClient.id,type:"xuankong-feixing",data:{...r,inputParams:{zuoShan,xiangShan,buildYear:effYear,floor}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
       }
     }, 200);
-  }, [zuoShan, xiangShan, currentYun, floor, selectedClient]);
+  }, [zuoShan, xiangShan, buildYear, floor, selectedClient]);
 
   // URL参数clientId + 回填检查
   useEffect(() => {
@@ -349,6 +352,24 @@ export default function XuankongFeixingPage() {
 
   return (
     <div className="mx-auto w-full bg-[#ededed]" style={{ maxWidth: "375px", minHeight: "100vh" }}>
+      {/* 建造日期选择弹窗 */}
+      <DatePicker
+        show={showForm}
+        onClose={() => setShowForm(false)}
+        onSubmit={(dateVal) => {
+          setBuildYear(dateVal.year);
+          setMonth(dateVal.month);
+          setDay(dateVal.day);
+          setHour(dateVal.hour);
+          setShowForm(false);
+          doPaipan(dateVal.year);
+        }}
+        initialDate={{ year: buildYear, month, day, hour, minute: 0 }}
+        showMinute={false}
+        showGender={false} showCalType={false} showToggles={false} showRegion={false} showName={false}
+        submitText="排盘" title="玄空飞星排盘"
+      />
+
       {/* 输入表单 */}
       {!hasResult && (
         <div className="bg-white px-3 py-3">
@@ -382,23 +403,16 @@ export default function XuankongFeixingPage() {
                 {getYunName(currentYun)}
               </span>
             </label>
-            <DatePickerInline
-              year={buildYear} month={month} day={day} hour={hour}
-              onYearChange={setBuildYear} onMonthChange={setMonth}
-              onDayChange={setDay} onHourChange={setHour}
-            />
-            <div style={{ marginTop: "6px" }}>
-              <QuickBtnGroup items={[
-                { label: "1984年", onClick: () => setBuildYear(1984) },
-                { label: "1990年", onClick: () => setBuildYear(1990) },
-                { label: "2000年", onClick: () => setBuildYear(2000) },
-                { label: "2004年", onClick: () => setBuildYear(2004) },
-                { label: "2010年", onClick: () => setBuildYear(2010) },
-                { label: "2020年", onClick: () => setBuildYear(2020) },
-                { label: "2024年", onClick: () => setBuildYear(2024) },
-                { label: "今年", onClick: () => setBuildYear(new Date().getFullYear()) },
-              ]} />
-            </div>
+            <button
+              type="button"
+              onClick={() => setShowForm(true)}
+              className="flex w-full items-center justify-between rounded-lg border border-gray-200 px-3 py-2.5 text-left text-sm transition-colors active:bg-gray-50"
+            >
+              <span className="font-medium text-gray-700">
+                {buildYear}年{month}月{day}日 {hour}时
+              </span>
+              <span className="text-xs text-gray-400">点击修改</span>
+            </button>
           </div>
 
           <div className="mb-3">
@@ -420,7 +434,7 @@ export default function XuankongFeixingPage() {
 
           <div className="flex gap-2">
             <button
-              onClick={doPaipan}
+              onClick={() => doPaipan()}
               disabled={loading}
               className="flex-1 rounded-full py-2.5 text-sm font-semibold text-white transition-all active:scale-[0.98] disabled:opacity-50"
               style={{ backgroundColor: BRAND }}
@@ -564,7 +578,7 @@ export default function XuankongFeixingPage() {
           {/* 排盘按钮 */}
           <div className="mt-3 flex gap-2 px-1">
             <button
-              onClick={doPaipan}
+              onClick={() => doPaipan()}
               disabled={loading}
               className="flex-1 rounded-full py-2 text-sm font-semibold text-white transition-all active:scale-[0.98] disabled:opacity-50"
               style={{ backgroundColor: BRAND }}

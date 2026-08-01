@@ -3,6 +3,6 @@ export { ToggleSwitch } from "./toggle-switch";
 export { SegBtn } from "./seg-btn";
 export { Card, LabelValue, QuickBtnGroup } from "./card";
 export { default as DatePicker } from "./date-picker";
-export type { DatePickerValue, DatePickerOptions } from "./date-picker";
+export type { DatePickerValue, DatePickerOptions, DatePickerProps } from "./date-picker";
 export { DatePickerInline } from "./date-picker-inline";
 export type { DatePickerInlineProps } from "./date-picker-inline";

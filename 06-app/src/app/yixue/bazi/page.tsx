@@ -26,9 +26,7 @@ import {
   getZhiIndex,
 } from "@/algorithm-core";
 import type { TianGan, DiZhi, Gender, BaziResult } from "@/algorithm-core";
-import { ToggleSwitch, SegBtn, Card, QuickBtnGroup, DatePicker, DatePickerInline } from "@/components/shared";
-import type { DatePickerValue, DatePickerOptions } from "@/components/shared";
-import ClientSelector from "@/components/ClientSelector";
+import { DatePicker } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 
@@ -308,92 +306,6 @@ function calcBoneWeight(yearGanZhi: string, monthZhi: string, day: number, hourZ
   const commentary = BONE_COMMENTARY[totalStr];
   const poem = commentary ? (gender==="male" ? commentary.male : commentary.female) : "暂无批语";
   return {total: totalStr, details, poem, weightKey: totalStr};
-}
-
-// ===== 输入表单Modal（使用统一DatePicker） =====
-function InputFormModal({
-  show,onClose,name,setName,year,setYear,month,setMonth,day,setDay,hour,setHour,
-  gender,setGender,calType,setCalType,zaoWanZi,setZaoWanZi,
-  zhenTaiyang,setZhenTaiyang,xiaLing,setXiaLing,saveName,setSaveName,onSubmit,
-  selectedClient,onClientSelect,
-}:{
-  show:boolean;onClose:()=>void;name:string;setName:(v:string)=>void;
-  year:number;setYear:(v:number)=>void;month:number;setMonth:(v:number)=>void;
-  day:number;setDay:(v:number)=>void;hour:number;setHour:(v:number)=>void;
-  gender:Gender;setGender:(v:Gender)=>void;calType:string;setCalType:(v:"gongli"|"nongli"|"sizhu")=>void;
-  zaoWanZi:boolean;setZaoWanZi:(v:boolean)=>void;zhenTaiyang:boolean;setZhenTaiyang:(v:boolean)=>void;
-  xiaLing:boolean;setXiaLing:(v:boolean)=>void;saveName:boolean;setSaveName:(v:boolean)=>void;onSubmit:()=>void;
-  selectedClient:Client|null;onClientSelect:(c:Client|null)=>void;
-}){
-  if(!show) return null;
-
-  return <div className="fixed inset-0 z-[1000] bg-black/45 flex items-start justify-center pt-[12vh]">
-    <div className="bg-white rounded-xl w-[92%] max-w-[420px] max-h-[80vh] overflow-auto shadow-[0_8px_32px_rgba(0,0,0,0.18)]">
-      <div className="flex items-center justify-center px-4 py-3 relative border-b border-[#f0f0f0]">
-        <span className="text-base font-bold text-[#333]">八字排盘</span>
-        <button onClick={onClose} className="absolute right-3 top-2.5 bg-none border-none text-lg text-[#999] cursor-pointer px-1.5 py-0.5">&#x2715;</button>
-      </div>
-      <div className="px-4 py-3">
-        <div className="flex items-center mb-2.5">
-          <label className="w-16 shrink-0 text-[13px] text-[#666]">福主姓名</label>
-          <div className="flex-1 flex items-center gap-2">
-            <input type="text" value={name} onChange={e=>setName(e.target.value)} placeholder="如需保存，请输入姓名" className="flex-1 border border-[#d2d2d2] rounded px-2.5 py-1.5 text-[13px] outline-none box-border" />
-            <div className="flex items-center gap-1 text-xs text-[#999]"><span>不存</span><ToggleSwitch checked={saveName} onChange={()=>setSaveName(!saveName)} /></div>
-          </div>
-        </div>
-        <div className="flex items-center mb-2.5">
-          <label className="w-16 shrink-0 text-[13px] text-[#666]">性别</label>
-          <SegBtn options={[{label:"男",value:"male",active:gender==="male"},{label:"女",value:"female",active:gender==="female"}]} onClick={v=>setGender(v as Gender)} />
-        </div>
-        <div className="mb-2.5">
-          <SegBtn options={[{label:"公历",value:"gongli",active:calType==="gongli"},{label:"农历",value:"nongli",active:calType==="nongli"},{label:"四柱",value:"sizhu",active:calType==="sizhu"}]} onClick={v=>setCalType(v as any)} />
-        </div>
-        <div className="mb-2.5">
-          <div className="flex items-start">
-            <label className="w-16 shrink-0 text-[13px] text-[#666] pt-1.5">日期</label>
-            <div className="flex-1">
-              <DatePickerInline
-                year={year} month={month} day={day} hour={hour}
-                onYearChange={setYear} onMonthChange={setMonth} onDayChange={setDay} onHourChange={setHour}
-              />
-              <div className="mt-1.5">
-                <QuickBtnGroup items={[
-                  {label:"1990年",onClick:()=>setYear(1990)},{label:"1985年",onClick:()=>setYear(1985)},{label:"2000年",onClick:()=>setYear(2000)},{label:"2020年",onClick:()=>setYear(2020)},
-                  {label:"1月",onClick:()=>setMonth(1)},{label:"6月",onClick:()=>setMonth(6)},{label:"12月",onClick:()=>setMonth(12)},
-                  {label:"1日",onClick:()=>setDay(1)},{label:"15日",onClick:()=>setDay(15)},{label:"28日",onClick:()=>setDay(28)},
-                  {label:"0时",onClick:()=>setHour(0)},{label:"6时",onClick:()=>setHour(6)},{label:"12时",onClick:()=>setHour(12)},{label:"18时",onClick:()=>setHour(18)},
-                ]} />
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center mb-2.5">
-          <label className="w-16 shrink-0 text-[13px] text-[#666]">早晚子时</label>
-          <div className="flex gap-4">
-            <label className="flex items-center gap-1 text-[13px] cursor-pointer"><input type="radio" name="zwz" checked={zaoWanZi} onChange={()=>setZaoWanZi(!zaoWanZi)} className="m-0" />是</label>
-            <label className="flex items-center gap-1 text-[13px] cursor-pointer"><input type="radio" name="zwz" checked={!zaoWanZi} onChange={()=>setZaoWanZi(!zaoWanZi)} className="m-0" />否</label>
-          </div>
-        </div>
-        <div className="flex items-center mb-2.5">
-          <label className="w-16 shrink-0 text-[13px] text-[#666]">真太阳时</label>
-          <div className="flex-1 flex items-center gap-4">
-            <label className="flex items-center gap-1 text-[13px] cursor-pointer"><input type="radio" name="tys" checked={zhenTaiyang} onChange={()=>setZhenTaiyang(!zhenTaiyang)} className="m-0" />是</label>
-            <label className="flex items-center gap-1 text-[13px] cursor-pointer"><input type="radio" name="tys" checked={!zhenTaiyang} onChange={()=>setZhenTaiyang(!zhenTaiyang)} className="m-0" />否</label>
-            <div className="ml-auto flex items-center gap-1"><span className="text-xs text-[#399773]">夏令时</span><ToggleSwitch checked={xiaLing} onChange={()=>setXiaLing(!xiaLing)} /></div>
-          </div>
-        </div>
-        <div className="flex items-center mb-3.5">
-          <label className="w-16 shrink-0 text-[13px] text-[#666]">地区</label>
-          <select className="border border-[#d2d2d2] rounded px-2 py-1.5 text-[13px] mr-1.5 outline-none"><option>北京</option></select>
-          <select className="border border-[#d2d2d2] rounded px-2 py-1.5 text-[13px] outline-none"><option>东城区</option></select>
-        </div>
-        <div className="px-1">
-          <ClientSelector selectedClient={selectedClient} onSelect={onClientSelect} />
-        </div>
-        <div className="text-center"><button onClick={onSubmit} className="bg-[#7B2FBE] text-white border-none rounded-3xl h-[35px] leading-[35px] text-lg font-bold cursor-pointer text-center mx-auto" style={{width:"40%"}}>排盘</button></div>
-      </div>
-    </div>
-  </div>;
 }
 
 // ===== TabChart - 核心命盘 - 严格对标jishiyu =====
@@ -1574,13 +1486,16 @@ export default function BaziPage(){
     }
   }, []);
 
-  const handleSubmit=useCallback(()=>{
-    try{const bz=solarToBazi({year,month,day,hour,gender}) as BaziResult;setResult(bz);
-      const ss=calculateAllShenSha({yearGan:bz.pillars[0].gan as TianGan,yearZhi:bz.pillars[0].zhi as DiZhi,monthGan:bz.pillars[1].gan as TianGan,monthZhi:bz.pillars[1].zhi as DiZhi,dayGan:bz.dayGan as TianGan,dayZhi:bz.dayZhi as DiZhi,hourGan:bz.pillars[3].gan as TianGan,hourZhi:bz.pillars[3].zhi as DiZhi,gender});
+  const handleSubmit=useCallback((override?:{year:number;month:number;day:number;hour:number;gender:Gender})=>{
+    const y=override?.year??year; const m=override?.month??month;
+    const d=override?.day??day; const h=override?.hour??hour;
+    const g=override?.gender??gender;
+    try{const bz=solarToBazi({year:y,month:m,day:d,hour:h,gender:g}) as BaziResult;setResult(bz);
+      const ss=calculateAllShenSha({yearGan:bz.pillars[0].gan as TianGan,yearZhi:bz.pillars[0].zhi as DiZhi,monthGan:bz.pillars[1].gan as TianGan,monthZhi:bz.pillars[1].zhi as DiZhi,dayGan:bz.dayGan as TianGan,dayZhi:bz.dayZhi as DiZhi,hourGan:bz.pillars[3].gan as TianGan,hourZhi:bz.pillars[3].zhi as DiZhi,gender:g});
       setShensha(ss);setShowForm(false);
       // 保存客户记录
       if(selectedClient){
-        try{saveRecord({clientId:selectedClient.id,type:"bazi",data:{...bz,inputParams:{year,month,day,hour,gender}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
+        try{saveRecord({clientId:selectedClient.id,type:"bazi",data:{...bz,inputParams:{year:y,month:m,day:d,hour:h,gender:g}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
       }
     }catch(e){console.error("排盘失败:",e);}
   },[year,month,day,hour,gender,selectedClient]);
@@ -1619,7 +1534,28 @@ export default function BaziPage(){
 
   return <div className="bg-[#ededed] min-h-screen flex justify-center">
     <div className="w-full" style={{maxWidth:"375px",paddingBottom:"10px"}}>
-    <InputFormModal show={showForm} onClose={()=>result?setShowForm(false):null} name={name} setName={setName} year={year} setYear={setYear} month={month} setMonth={setMonth} day={day} setDay={setDay} hour={hour} setHour={setHour} gender={gender} setGender={setGender} calType={calType} setCalType={setCalType} zaoWanZi={zaoWanZi} setZaoWanZi={setZaoWanZi} zhenTaiyang={zhenTaiyang} setZhenTaiyang={setZhenTaiyang} xiaLing={xiaLing} setXiaLing={setXiaLing} saveName={saveName} setSaveName={setSaveName} onSubmit={handleSubmit} selectedClient={selectedClient} onClientSelect={setSelectedClient}/>
+    <DatePicker
+      show={showForm}
+      onClose={() => { if (result) setShowForm(false); }}
+      onSubmit={(dateVal, opts) => {
+        setYear(dateVal.year); setMonth(dateVal.month); setDay(dateVal.day); setHour(dateVal.hour);
+        setGender(opts.gender as Gender);
+        setCalType(opts.calType === "solar" ? "gongli" : opts.calType === "lunar" ? "nongli" : "sizhu");
+        setZaoWanZi(opts.zaoWanZi); setZhenTaiyang(opts.zhenTaiyang); setXiaLing(opts.xiaLing);
+        handleSubmit({year: dateVal.year, month: dateVal.month, day: dateVal.day, hour: dateVal.hour, gender: opts.gender as Gender});
+      }}
+      initialDate={{year, month, day, hour, minute: 0}}
+      initialOptions={{
+        gender,
+        calType: calType === "gongli" ? "solar" : calType === "nongli" ? "lunar" : "sizhu",
+        zaoWanZi, zhenTaiyang, xiaLing,
+      }}
+      showName={true} name={name} onNameChange={setName}
+      showSaveName={true} saveName={saveName} onSaveNameChange={setSaveName}
+      showGender={true} showCalType={true} showToggles={true} showRegion={true}
+      showMinute={true}
+      submitText="排盘" title="八字排盘"
+    />
     {result&&<div>
       {/* Tab导航 - 紫色选中态 */}
       <div className="flex border-b border-[#eee] bg-white/95 sticky top-10 z-30 overflow-x-auto">

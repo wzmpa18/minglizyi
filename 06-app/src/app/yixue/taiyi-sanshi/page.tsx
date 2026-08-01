@@ -3,8 +3,7 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { solarToBazi, GAN, ZHI } from "@/algorithm-core";
 import { solarToLunar, getLunarDateString } from "@/lib/lunar";
-import { DatePickerInline, QuickBtnGroup } from "@/components/shared";
-import ClientSelector from "@/components/ClientSelector";
+import { DatePicker } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 
@@ -287,17 +286,23 @@ export default function TaiyiSanshiPage() {
   const [hasResult, setHasResult] = useState(false);
   const [result, setResult] = useState<TaiyiResult | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
+  const [showForm, setShowForm] = useState(true);
 
-  const doPaipan = useCallback(() => {
+  const doPaipan = useCallback((override?: {year: number; month: number; day: number; hour: number}) => {
+    const y = override?.year ?? taiyiYear;
+    const mo = override?.month ?? taiyiMonth;
+    const d = override?.day ?? taiyiDay;
+    const h = override?.hour ?? taiyiHour;
     setLoading(true);
     setTimeout(() => {
-      const r = calcTaiyi(taiyiYear, taiyiMonth, taiyiDay, taiyiHour);
+      const r = calcTaiyi(y, mo, d, h);
       setResult(r);
       setHasResult(true);
+      setShowForm(false);
       setLoading(false);
       // 保存客户记录
       if(selectedClient && r){
-        try{saveRecord({clientId:selectedClient.id,type:"taiyi-sanshi",data:{...r,inputParams:{taiyiYear,taiyiMonth,taiyiDay,taiyiHour,desc}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
+        try{saveRecord({clientId:selectedClient.id,type:"taiyi-sanshi",data:{...r,inputParams:{taiyiYear:y,taiyiMonth:mo,taiyiDay:d,taiyiHour:h,desc}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
       }
     }, 200);
   }, [taiyiYear, taiyiMonth, taiyiDay, taiyiHour, selectedClient, desc]);
@@ -312,91 +317,43 @@ export default function TaiyiSanshiPage() {
     if (prefill) { try { setResult(prefill); setHasResult(true); clearPrefillData("taiyi-sanshi"); } catch(e){} }
   }, []);
 
-  const handleNow = useCallback(() => {
-    const n = new Date();
-    setTaiyiYear(n.getFullYear());
-    setTaiyiMonth(n.getMonth() + 1);
-    setTaiyiDay(n.getDate());
-    setTaiyiHour(n.getHours());
-    setTimeout(() => {
-      const r = calcTaiyi(n.getFullYear(), n.getMonth() + 1, n.getDate(), n.getHours());
-      setResult(r);
-      setHasResult(true);
-    }, 50);
-  }, []);
-
   // 监听layout的edit按钮事件
   useEffect(() => {
-    const handler = () => setHasResult(false);
+    const handler = () => setShowForm(true);
     window.addEventListener("yixue-edit", handler);
     return () => window.removeEventListener("yixue-edit", handler);
   }, []);
 
+  // ==================== 输入表单 ====================
+  if (showForm) {
+    return (
+      <div style={{ maxWidth: "375px", margin: "0 auto", backgroundColor: "#fff", minHeight: "100vh" }}>
+        <DatePicker
+          show={true}
+          onClose={() => { if (result) setShowForm(false); }}
+          onSubmit={(dateVal) => {
+            setTaiyiYear(dateVal.year);
+            setTaiyiMonth(dateVal.month);
+            setTaiyiDay(dateVal.day);
+            setTaiyiHour(dateVal.hour);
+            doPaipan({year: dateVal.year, month: dateVal.month, day: dateVal.day, hour: dateVal.hour});
+          }}
+          initialDate={{year: taiyiYear, month: taiyiMonth, day: taiyiDay, hour: taiyiHour, minute: 0}}
+          showMinute={true}
+          showGender={false} showCalType={false} showToggles={false} showRegion={false} showName={false}
+          submitText="排盘" title="太乙三式排盘"
+        />
+      </div>
+    );
+  }
+
+  // ==================== 排盘结果 ====================
+  if (!result) return null;
+
   return (
     <div className="mx-auto w-full bg-[#ededed]" style={{ maxWidth: "375px", minHeight: "100vh" }}>
-      {/* 输入表单区 */}
-      {!hasResult && (
-        <div className="bg-white px-3 py-3">
-          <div className="mb-3">
-            <label className="mb-1 block text-xs text-gray-500">预测事项（选填）</label>
-            <input
-              value={desc}
-              onChange={(e) => setDesc(e.target.value)}
-              placeholder="请输入预测事项"
-              maxLength={30}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#7B2FBE]"
-            />
-          </div>
-          <div className="mb-3">
-            <label className="mb-1 block text-xs text-gray-500">预测日期时间</label>
-            <DatePickerInline
-              year={taiyiYear} month={taiyiMonth} day={taiyiDay} hour={taiyiHour}
-              onYearChange={setTaiyiYear} onMonthChange={setTaiyiMonth}
-              onDayChange={setTaiyiDay} onHourChange={setTaiyiHour}
-            />
-            <div style={{ marginTop: "6px" }}>
-              <QuickBtnGroup items={[
-                { label: "今天", onClick: () => { const n = new Date(); setTaiyiYear(n.getFullYear()); setTaiyiMonth(n.getMonth() + 1); setTaiyiDay(n.getDate()); } },
-                { label: "明天", onClick: () => { const n = new Date(); n.setDate(n.getDate() + 1); setTaiyiYear(n.getFullYear()); setTaiyiMonth(n.getMonth() + 1); setTaiyiDay(n.getDate()); } },
-                { label: "2024年", onClick: () => setTaiyiYear(2024) },
-                { label: "2025年", onClick: () => setTaiyiYear(2025) },
-                { label: "2026年", onClick: () => setTaiyiYear(2026) },
-              ]} />
-            </div>
-          </div>
-          {/* 客户选择 */}
-          <div className="mb-2">
-            <ClientSelector selectedClient={selectedClient} onSelect={setSelectedClient} />
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={doPaipan}
-              disabled={loading}
-              className="flex-1 rounded-full py-2.5 text-sm font-semibold text-white transition-all active:scale-[0.98] disabled:opacity-50"
-              style={{ backgroundColor: BRAND }}
-            >
-              {loading ? "排盘中..." : "开始排盘"}
-            </button>
-            <button
-              onClick={handleNow}
-              className="rounded-full border border-gray-300 px-4 py-2.5 text-sm text-gray-600 active:bg-gray-50"
-            >
-              当前时间
-            </button>
-          </div>
-
-          <div className="mt-6 flex flex-col items-center justify-center py-10 text-gray-400">
-            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" />
-            </svg>
-            <p className="mt-3 text-sm">选择日期时间后点击"开始排盘"</p>
-            <p className="mt-1 text-xs text-gray-300">太乙三式 · 古代帝王之学</p>
-          </div>
-        </div>
-      )}
-
       {/* 排盘结果 */}
-      {hasResult && result && (
+      {result && (
         <div className="bg-white px-2 py-2">
           {/* 基本信息表 */}
           <table className="w-full border-collapse text-center text-sm" style={{ tableLayout: "fixed" }}>
@@ -550,7 +507,7 @@ export default function TaiyiSanshiPage() {
           {/* 排盘按钮 */}
           <div className="mt-3 flex gap-2 px-1">
             <button
-              onClick={doPaipan}
+              onClick={() => doPaipan()}
               disabled={loading}
               className="flex-1 rounded-full py-2 text-sm font-semibold text-white transition-all active:scale-[0.98] disabled:opacity-50"
               style={{ backgroundColor: BRAND }}

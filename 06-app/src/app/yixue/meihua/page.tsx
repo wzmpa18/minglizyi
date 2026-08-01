@@ -16,8 +16,7 @@ import {
   ZHI_WUXING,
 } from "@/algorithm-core";
 import type { TrigramName, TianGan, DiZhi } from "@/algorithm-core";
-import ClientSelector from "@/components/ClientSelector";
-import { DatePickerInline, QuickBtnGroup } from "@/components/shared";
+import { DatePicker } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 
@@ -347,11 +346,11 @@ export default function MeihuaPage() {
   const methodLabel = divMethod === "time" ? "时间起卦" : divMethod === "number" ? "数字起卦" : "手动起卦";
 
   // ---- 排盘 ----
-  const handleDivination = useCallback(() => {
-    const y = selectedDate.getFullYear();
-    const mo = selectedDate.getMonth() + 1;
-    const d = selectedDate.getDate();
-    const h = selectedDate.getHours();
+  const handleDivination = useCallback((override?: {year: number; month: number; day: number; hour: number}) => {
+    const y = override?.year ?? selectedDate.getFullYear();
+    const mo = override?.month ?? selectedDate.getMonth() + 1;
+    const d = override?.day ?? selectedDate.getDate();
+    const h = override?.hour ?? selectedDate.getHours();
     const r = buildMeihuaResult(y, mo, d, h);
     setResult(r);
     setActiveGua("ben");
@@ -416,212 +415,19 @@ export default function MeihuaPage() {
     <div className="min-h-screen flex justify-center bg-[#ededed]">
       <div className="w-full" style={{maxWidth:"375px", paddingBottom:"10px"}}>
 
-      {/* ====== 弹窗输入 (对标 jishiyu popup-meihua-box) ====== */}
-      {showPopup && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 1000,
-            backgroundColor: "rgba(0,0,0,0.45)",
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "center",
-            paddingTop: "12vh",
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: "#fff",
-              width: "92%",
-              maxWidth: "420px",
-              overflow: "hidden",
-            }}
-          >
-            {/* 弹窗标题 */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "12px 16px",
-                position: "relative",
-                borderBottom: "1px solid #f0f0f0",
-              }}
-            >
-              <span style={{ fontSize: "16px", fontWeight: "bold", color: "#333" }}>梅花易数</span>
-              <button
-                onClick={() => setShowPopup(false)}
-                style={{
-                  position: "absolute",
-                  right: "12px",
-                  top: "10px",
-                  background: "none",
-                  border: "none",
-                  fontSize: "18px",
-                  color: "#999",
-                  cursor: "pointer",
-                  padding: "2px 6px",
-                }}
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* 弹窗内容 */}
-            <div style={{ padding: "16px" }}>
-              {/* 起卦方式 */}
-              <div style={{ marginBottom: "16px" }}>
-                <div style={{ fontSize: "13px", color: "#666", marginBottom: "8px" }}>起卦方式</div>
-                <div style={{ display: "flex", gap: "8px" }}>
-                  {[
-                    { value: "time" as const, label: "时间起卦" },
-                    { value: "number" as const, label: "数字起卦" },
-                    { value: "manual" as const, label: "手动起卦" },
-                  ].map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => setDivMethod(opt.value)}
-                      style={{
-                        flex: 1,
-                        padding: "8px 0",
-                        borderRadius: "6px",
-                        border: divMethod === opt.value ? "2px solid #7B2FBE" : "1px solid #d2d2d2",
-                        backgroundColor: divMethod === opt.value ? "#fef0f0" : "#fff",
-                        color: divMethod === opt.value ? "#7B2FBE" : "#666",
-                        fontSize: "13px",
-                        fontWeight: divMethod === opt.value ? "bold" : "normal",
-                        cursor: "pointer",
-                      }}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* 时间选择 */}
-              <div style={{ marginBottom: "16px" }}>
-                <div style={{ fontSize: "13px", color: "#666", marginBottom: "8px" }}>当前时间</div>
-                <DatePickerInline
-                  year={selectedDate.getFullYear()}
-                  month={selectedDate.getMonth() + 1}
-                  day={selectedDate.getDate()}
-                  hour={selectedDate.getHours()}
-                  onYearChange={(v) => setSelectedDate(prev => { const d = new Date(prev); d.setFullYear(v); return d; })}
-                  onMonthChange={(v) => setSelectedDate(prev => { const d = new Date(prev); d.setMonth(v - 1); return d; })}
-                  onDayChange={(v) => setSelectedDate(prev => { const d = new Date(prev); d.setDate(v); return d; })}
-                  onHourChange={(v) => setSelectedDate(prev => { const d = new Date(prev); d.setHours(v); return d; })}
-                />
-                <div style={{ marginTop: "6px" }}>
-                  <QuickBtnGroup items={[
-                    { label: "1990年", onClick: () => setSelectedDate(prev => { const d = new Date(prev); d.setFullYear(1990); return d; }) },
-                    { label: "2000年", onClick: () => setSelectedDate(prev => { const d = new Date(prev); d.setFullYear(2000); return d; }) },
-                    { label: "2020年", onClick: () => setSelectedDate(prev => { const d = new Date(prev); d.setFullYear(2020); return d; }) },
-                    { label: "1月", onClick: () => setSelectedDate(prev => { const d = new Date(prev); d.setMonth(0); return d; }) },
-                    { label: "6月", onClick: () => setSelectedDate(prev => { const d = new Date(prev); d.setMonth(5); return d; }) },
-                    { label: "12月", onClick: () => setSelectedDate(prev => { const d = new Date(prev); d.setMonth(11); return d; }) },
-                    { label: "1日", onClick: () => setSelectedDate(prev => { const d = new Date(prev); d.setDate(1); return d; }) },
-                    { label: "15日", onClick: () => setSelectedDate(prev => { const d = new Date(prev); d.setDate(15); return d; }) },
-                    { label: "0时", onClick: () => setSelectedDate(prev => { const d = new Date(prev); d.setHours(0); return d; }) },
-                    { label: "12时", onClick: () => setSelectedDate(prev => { const d = new Date(prev); d.setHours(12); return d; }) },
-                  ]} />
-                </div>
-              </div>
-
-              {/* 数字起卦输入 */}
-              {divMethod === "number" && (
-                <div style={{ marginBottom: "16px" }}>
-                  <div style={{ fontSize: "13px", color: "#666", marginBottom: "8px" }}>输入三个数字（1-999）</div>
-                  <div style={{ display: "flex", gap: "8px" }}>
-                    {manualNumbers.map((n, i) => (
-                      <input
-                        key={i}
-                        type="number"
-                        min="1"
-                        max="999"
-                        value={n}
-                        onChange={(e) => {
-                          const arr = [...manualNumbers];
-                          arr[i] = e.target.value;
-                          setManualNumbers(arr);
-                        }}
-                        placeholder={`数字${i + 1}`}
-                        style={{
-                          flex: 1,
-                          padding: "8px",
-                          borderRadius: "6px",
-                          border: "1px solid #d2d2d2",
-                          fontSize: "14px",
-                          textAlign: "center",
-                          outline: "none",
-                          boxSizing: "border-box",
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 起卦说明 */}
-              <div
-                style={{
-                  fontSize: "12px",
-                  color: "#999",
-                  textAlign: "center",
-                  marginBottom: "16px",
-                  lineHeight: "1.6",
-                }}
-              >
-                {divMethod === "time"
-                  ? "以当前时间起卦，年月日时分别对应上卦、下卦、动爻"
-                  : divMethod === "number"
-                  ? "三个数字分别对应上卦、下卦、动爻"
-                  : "手动选择上卦、下卦和动爻位置"}
-              </div>
-
-              {/* 客户选择 */}
-              <div style={{ marginBottom: "12px" }}>
-                <ClientSelector selectedClient={selectedClient} onSelect={setSelectedClient} />
-              </div>
-
-              {/* 按钮组 */}
-              <div style={{ display: "flex", gap: "8px" }}>
-                <button
-                  onClick={handleDivination}
-                  style={{
-                    flex: 1,
-                    padding: "12px 0",
-                    borderRadius: "8px",
-                    border: "none",
-                    backgroundColor: "#7B2FBE",
-                    color: "#fff",
-                    fontSize: "16px",
-                    fontWeight: "bold",
-                    cursor: "pointer",
-                  }}
-                >
-                  开始排盘
-                </button>
-                <button
-                  onClick={() => setShowPopup(false)}
-                  style={{
-                    padding: "12px 24px",
-                    borderRadius: "8px",
-                    border: "1px solid #7B2FBE",
-                    backgroundColor: "#fff",
-                    color: "#7B2FBE",
-                    fontSize: "14px",
-                    cursor: "pointer",
-                  }}
-                >
-                  排盘记录
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ====== 日期时间选择弹窗 ====== */}
+      <DatePicker
+        show={showPopup}
+        onClose={() => { if (result) setShowPopup(false); }}
+        onSubmit={(dateVal) => {
+          setSelectedDate(new Date(dateVal.year, dateVal.month - 1, dateVal.day, dateVal.hour, dateVal.minute));
+          handleDivination({year: dateVal.year, month: dateVal.month, day: dateVal.day, hour: dateVal.hour});
+        }}
+        initialDate={{year: selectedDate.getFullYear(), month: selectedDate.getMonth() + 1, day: selectedDate.getDate(), hour: selectedDate.getHours(), minute: selectedDate.getMinutes()}}
+        showMinute={true}
+        showGender={false} showCalType={false} showToggles={false} showRegion={false} showName={false}
+        submitText="起卦" title="梅花易数"
+      />
 
       {/* ====== 结果页：严格对标 jishiyu view_meihuayishu.html 表格结构 ====== */}
       {!showPopup && result && (

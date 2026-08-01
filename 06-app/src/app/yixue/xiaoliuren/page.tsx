@@ -16,7 +16,7 @@ import {
 } from "@/algorithm-core";
 import type { TianGan, DiZhi, PalmPosition } from "@/algorithm-core";
 import ClientSelector from "@/components/ClientSelector";
-import { DatePickerInline, QuickBtnGroup } from "@/components/shared";
+import { DatePicker } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 
@@ -156,6 +156,7 @@ export default function XiaoliurenPage() {
   const [desc, setDesc] = useState("");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [divMethod, setDivMethod] = useState<"time" | "number">("time");
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   // ---- 结果状态 ----
   const [showResult, setShowResult] = useState(false);
@@ -375,29 +376,21 @@ export default function XiaoliurenPage() {
               {/* 时间选择 */}
               <div style={{ marginBottom: "16px" }}>
                 <div style={{ fontSize: "13px", color: "#666", marginBottom: "8px" }}>当前时间</div>
-                <DatePickerInline
-                  year={selectedDate.getFullYear()}
-                  month={selectedDate.getMonth() + 1}
-                  day={selectedDate.getDate()}
-                  hour={selectedDate.getHours()}
-                  onYearChange={(v) => setSelectedDate(prev => { const d = new Date(prev); d.setFullYear(v); return d; })}
-                  onMonthChange={(v) => setSelectedDate(prev => { const d = new Date(prev); d.setMonth(v - 1); return d; })}
-                  onDayChange={(v) => setSelectedDate(prev => { const d = new Date(prev); d.setDate(v); return d; })}
-                  onHourChange={(v) => setSelectedDate(prev => { const d = new Date(prev); d.setHours(v); return d; })}
-                />
-                <div style={{ marginTop: "6px" }}>
-                  <QuickBtnGroup items={[
-                    { label: "1990年", onClick: () => setSelectedDate(prev => { const d = new Date(prev); d.setFullYear(1990); return d; }) },
-                    { label: "2000年", onClick: () => setSelectedDate(prev => { const d = new Date(prev); d.setFullYear(2000); return d; }) },
-                    { label: "2020年", onClick: () => setSelectedDate(prev => { const d = new Date(prev); d.setFullYear(2020); return d; }) },
-                    { label: "1月", onClick: () => setSelectedDate(prev => { const d = new Date(prev); d.setMonth(0); return d; }) },
-                    { label: "6月", onClick: () => setSelectedDate(prev => { const d = new Date(prev); d.setMonth(5); return d; }) },
-                    { label: "12月", onClick: () => setSelectedDate(prev => { const d = new Date(prev); d.setMonth(11); return d; }) },
-                    { label: "1日", onClick: () => setSelectedDate(prev => { const d = new Date(prev); d.setDate(1); return d; }) },
-                    { label: "15日", onClick: () => setSelectedDate(prev => { const d = new Date(prev); d.setDate(15); return d; }) },
-                    { label: "0时", onClick: () => setSelectedDate(prev => { const d = new Date(prev); d.setHours(0); return d; }) },
-                    { label: "12时", onClick: () => setSelectedDate(prev => { const d = new Date(prev); d.setHours(12); return d; }) },
-                  ]} />
+                <div
+                  onClick={() => setShowDatePicker(true)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "10px 12px",
+                    borderRadius: "6px",
+                    border: "1px solid #d2d2d2",
+                    backgroundColor: "#fff",
+                    cursor: "pointer",
+                  }}
+                >
+                  <span style={{ fontSize: "15px", color: "#333" }}>{dateStr}</span>
+                  <span style={{ fontSize: "13px", color: "#7B2FBE" }}>点击修改</span>
                 </div>
               </div>
 
@@ -456,6 +449,29 @@ export default function XiaoliurenPage() {
               </div>
             </div>
           </div>
+          <DatePicker
+            show={showDatePicker}
+            onClose={() => setShowDatePicker(false)}
+            onSubmit={(dateVal) => {
+              setSelectedDate(new Date(dateVal.year, dateVal.month - 1, dateVal.day, dateVal.hour, dateVal.minute));
+              setShowDatePicker(false);
+            }}
+            initialDate={{
+              year: selectedDate.getFullYear(),
+              month: selectedDate.getMonth() + 1,
+              day: selectedDate.getDate(),
+              hour: selectedDate.getHours(),
+              minute: selectedDate.getMinutes(),
+            }}
+            showMinute={true}
+            showGender={false}
+            showCalType={false}
+            showToggles={false}
+            showRegion={false}
+            showName={false}
+            submitText="确认时间"
+            title="小六壬"
+          />
         </div>
       )}
 

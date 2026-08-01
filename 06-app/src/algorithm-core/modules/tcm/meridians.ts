@@ -16,6 +16,8 @@
  */
 
 import type { TcmMeridian, TcmAcupoint } from '../../types/tcm';
+// 直接 import JSON 数据，确保静态导出时数据完整（14经络361穴位）
+import meridiansJson from './data/meridians.json';
 
 // ============================================================================
 // 经络分类映射
@@ -247,10 +249,14 @@ const RAW_ACUPOINTS: TcmAcupoint[] = [
 ];
 
 /**
- * 穴位库（内嵌20个常用穴位，完整361个穴位数据见 loadFullMeridiansDatabase）
+ * 穴位库（直接加载 JSON 完整数据，361个穴位）
  * 免责声明：穴位定位为经典文献记载，仅供学习参考，不构成医疗操作指导
  */
-export const ACUPOINTS_DB: TcmAcupoint[] = RAW_ACUPOINTS;
+// 优先使用 JSON 完整数据（361个穴位），内联数据作为后备
+const FULL_ACUPOINTS: TcmAcupoint[] = (meridiansJson.acupoints && meridiansJson.acupoints.length > 0)
+  ? meridiansJson.acupoints as unknown as TcmAcupoint[]
+  : RAW_ACUPOINTS;
+export const ACUPOINTS_DB: TcmAcupoint[] = FULL_ACUPOINTS;
 
 // ============================================================================
 // 搜索经络
@@ -411,71 +417,11 @@ export async function loadFullMeridiansDatabase(): Promise<{
   meridians: TcmMeridian[];
   acupoints: TcmAcupoint[];
 }> {
-  // 如果已加载完整数据库（>50个穴位说明加载成功），直接返回
-  if (fullMeridiansLoaded && ACUPOINTS_DB.length > 50) {
-    return { meridians: MERIDIANS_DB, acupoints: ACUPOINTS_DB };
-  }
-
-  if (meridiansLoading) {
-    // 如果正在加载中，等待当前加载完成
-    return new Promise((resolve) => {
-      const checkInterval = setInterval(() => {
-        if (!meridiansLoading) {
-          clearInterval(checkInterval);
-          resolve({ meridians: MERIDIANS_DB, acupoints: ACUPOINTS_DB });
-        }
-      }, 100);
-    });
-  }
-
-  meridiansLoading = true;
-  meridiansLoadError = null;
-
-  try {
-    const response = await fetch('/data/tcm/meridians.json');
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    const rawMeridians: RawMeridianSource[] = data.meridians || [];
-    const rawAcupoints: RawAcupointSource[] = data.acupoints || [];
-
-    // 更新经络
-    const updatedMeridians = rawMeridians.map((m, idx) => ({
-      id: `m${String(idx + 1).padStart(2, '0')}`,
-      name: m.name,
-      pinyin: m.pinyin,
-      category: getMeridianCategory(m.name),
-      element: m.element,
-      yin_yang: m.yin_yang,
-      paired: m.paired,
-      points: rawAcupoints
-        .filter((pt) => pt.meridian === m.name)
-        .map((pt) => ({
-          name: pt.name,
-          location: pt.location,
-          function: pt.function,
-        })),
-      pathway: MERIDIAN_PATHWAYS[m.name] || '详见经典文献记载',
-    }));
-
-    // 合并到全局数据库
-    if (updatedMeridians.length > 0) {
-      (MERIDIANS_DB as TcmMeridian[]).splice(0, MERIDIANS_DB.length, ...updatedMeridians);
-    }
-    if (rawAcupoints.length > 0) {
-      (ACUPOINTS_DB as TcmAcupoint[]).splice(0, ACUPOINTS_DB.length, ...rawAcupoints);
-    }
-
-    fullMeridiansLoaded = true;
-    meridiansLoading = false;
-    console.log(
-      `[TCM meridians] 成功加载 ${updatedMeridians.length} 条经络、${rawAcupoints.length} 个穴位数据。`
-    );
-    return { meridians: MERIDIANS_DB, acupoints: ACUPOINTS_DB };
-  } catch (error) {
-    console.warn('[TCM meridians] 无法加载完整数据库，使用内嵌数据。', error);
-    meridiansLoadError = error instanceof Error ? error.message : String(error);
-    fullMeridiansLoaded = true;
-    meridiansLoading = false;
-    return { meridians: MERIDIANS_DB, acupoints: ACUPOINTS_DB };
-  }
+  // JSON 数据已在构建时通过 import 加载，直接返回
+  fullMeridiansLoaded = true;
+  meridiansLoading = false;
+  console.log(
+    `[TCM meridians] 数据已加载 ${MERIDIANS_DB.length} 条经络、${ACUPOINTS_DB.length} 个穴位。`
+  );
+  return { meridians: MERIDIANS_DB, acupoints: ACUPOINTS_DB };
 }

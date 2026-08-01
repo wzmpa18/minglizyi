@@ -4,8 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Solar } from "lunar-javascript";
 import { calculateQimen } from "@/algorithm-core";
 import type { QimenResult } from "@/algorithm-core";
-import ClientSelector from "@/components/ClientSelector";
-import { DatePickerInline, QuickBtnGroup } from "@/components/shared";
+import { DatePicker } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 
@@ -103,13 +102,17 @@ export default function QimenPage() {
   });
 
   // 执行排盘
-  const doPaipan = useCallback(() => {
+  const doPaipan = useCallback((override?: {year: number; month: number; day: number; hour: number}) => {
+    const y = override?.year ?? formData.year;
+    const mo = override?.month ?? formData.month;
+    const d = override?.day ?? formData.day;
+    const h = override?.hour ?? formData.hour;
     try {
       const r = calculateQimen({
-        year: formData.year,
-        month: formData.month,
-        day: formData.day,
-        hour: formData.hour,
+        year: y,
+        month: mo,
+        day: d,
+        hour: h,
         panMethod: formData.panMethod,
         anganType: "zhishi" as const,
       });
@@ -117,7 +120,7 @@ export default function QimenPage() {
       setShowForm(false);
       // 保存客户记录
       if(selectedClient){
-        try{saveRecord({clientId:selectedClient.id,type:"qimen",data:{...r,inputParams:{...formData}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
+        try{saveRecord({clientId:selectedClient.id,type:"qimen",data:{...r,inputParams:{...formData, year: y, month: mo, day: d, hour: h}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
       }
     } catch (e) {
       console.error("排盘错误:", e);
@@ -204,105 +207,19 @@ export default function QimenPage() {
   // ==================== 输入表单 ====================
   if (showForm) {
     return (
-      <div style={{ maxWidth: "375px", margin: "0 auto", backgroundColor: "#fff", minHeight: "100vh", paddingBottom: "20px" }}>
-        {/* 标题栏 */}
-        <div style={{ backgroundColor: BRAND_PURPLE, color: "#fff", padding: "12px 16px", textAlign: "center", fontSize: "18px", fontWeight: 700 }}>
-          言道奇门遁甲
-        </div>
-
-        <div style={{ padding: "16px" }}>
-          {/* 事项输入 */}
-          <div style={{ marginBottom: "16px" }}>
-            <label style={{ fontSize: "14px", color: "#333", marginBottom: "6px", display: "block" }}>预测事项</label>
-            <input
-              type="text"
-              value={formData.desc}
-              onChange={e => setFormData(prev => ({ ...prev, desc: e.target.value }))}
-              placeholder="请输入预测事项（选填）"
-              maxLength={30}
-              style={{ width: "100%", padding: "10px 12px", border: "1px solid #ddd", borderRadius: "6px", fontSize: "14px", boxSizing: "border-box" }}
-            />
-          </div>
-
-          {/* 日期选择 */}
-          <div style={{ marginBottom: "16px" }}>
-            <label style={{ fontSize: "14px", color: "#333", marginBottom: "8px", display: "block" }}>日期选择</label>
-            <DatePickerInline
-              year={formData.year} month={formData.month} day={formData.day} hour={formData.hour}
-              onYearChange={(v) => setFormData(prev => ({ ...prev, year: v }))}
-              onMonthChange={(v) => setFormData(prev => ({ ...prev, month: v }))}
-              onDayChange={(v) => setFormData(prev => ({ ...prev, day: v }))}
-              onHourChange={(v) => setFormData(prev => ({ ...prev, hour: v }))}
-            />
-            <div style={{ marginTop: "8px" }}>
-              <QuickBtnGroup items={[
-                { label: "1990年", onClick: () => setFormData(prev => ({ ...prev, year: 1990 })) },
-                { label: "2000年", onClick: () => setFormData(prev => ({ ...prev, year: 2000 })) },
-                { label: "2020年", onClick: () => setFormData(prev => ({ ...prev, year: 2020 })) },
-                { label: "1月", onClick: () => setFormData(prev => ({ ...prev, month: 1 })) },
-                { label: "6月", onClick: () => setFormData(prev => ({ ...prev, month: 6 })) },
-                { label: "12月", onClick: () => setFormData(prev => ({ ...prev, month: 12 })) },
-                { label: "1日", onClick: () => setFormData(prev => ({ ...prev, day: 1 })) },
-                { label: "15日", onClick: () => setFormData(prev => ({ ...prev, day: 15 })) },
-                { label: "0时", onClick: () => setFormData(prev => ({ ...prev, hour: 0 })) },
-                { label: "12时", onClick: () => setFormData(prev => ({ ...prev, hour: 12 })) },
-              ]} />
-            </div>
-          </div>
-
-          {/* 排盘方式 */}
-          <div style={{ marginBottom: "16px" }}>
-            <label style={{ fontSize: "14px", color: "#333", marginBottom: "8px", display: "block" }}>排盘方式</label>
-            <div style={{ display: "flex", gap: "8px" }}>
-              {[
-                { v: "chaibu", label: "拆补法" },
-                { v: "zhirun", label: "置闰法" },
-                { v: "maoshan", label: "茅山法" },
-              ].map(opt => (
-                <button
-                  key={opt.v}
-                  onClick={() => setFormData(prev => ({ ...prev, panMethod: opt.v as any }))}
-                  style={{
-                    flex: 1,
-                    padding: "8px",
-                    border: formData.panMethod === opt.v ? "2px solid " + BRAND_PURPLE : "1px solid #ddd",
-                    borderRadius: "6px",
-                    backgroundColor: formData.panMethod === opt.v ? BRAND_PURPLE_BG : "#fff",
-                    color: formData.panMethod === opt.v ? BRAND_PURPLE : "#333",
-                    fontSize: "13px",
-                    fontWeight: formData.panMethod === opt.v ? 700 : 400,
-                    cursor: "pointer",
-                  }}
-                >{opt.label}</button>
-              ))}
-            </div>
-          </div>
-
-          {/* 客户选择 */}
-          <div style={{ marginBottom: "12px" }}>
-            <ClientSelector selectedClient={selectedClient} onSelect={setSelectedClient} />
-          </div>
-
-          {/* 排盘按钮 */}
-          <button
-            onClick={doPaipan}
-            style={{
-              width: "100%",
-              padding: "14px",
-              backgroundColor: BRAND_PURPLE,
-              color: "#fff",
-              border: "none",
-              borderRadius: "8px",
-              fontSize: "16px",
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >开始排盘</button>
-
-          <div style={{ marginTop: "16px", fontSize: "11px", color: "#999", textAlign: "center", lineHeight: 1.6 }}>
-            免责声明：奇门遁甲排盘仅供传统文化学习参考，不构成任何决策依据
-          </div>
-        </div>
+      <div style={{ maxWidth: "375px", margin: "0 auto", backgroundColor: "#fff", minHeight: "100vh" }}>
+        <DatePicker
+          show={true}
+          onClose={() => { if (result) setShowForm(false); }}
+          onSubmit={(dateVal) => {
+            setFormData(prev => ({ ...prev, year: dateVal.year, month: dateVal.month, day: dateVal.day, hour: dateVal.hour }));
+            doPaipan({year: dateVal.year, month: dateVal.month, day: dateVal.day, hour: dateVal.hour});
+          }}
+          initialDate={{year: formData.year, month: formData.month, day: formData.day, hour: formData.hour, minute: 0}}
+          showMinute={true}
+          showGender={false} showCalType={false} showToggles={false} showRegion={false} showName={false}
+          submitText="排盘" title="奇门遁甲排盘"
+        />
       </div>
     );
   }

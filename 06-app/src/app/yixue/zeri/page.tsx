@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { Solar } from "lunar-javascript";
-import { DatePickerInline, QuickBtnGroup } from "@/components/shared";
+import { DatePicker } from "@/components/shared";
 import ClientSelector from "@/components/ClientSelector";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
@@ -243,6 +243,8 @@ export default function ZeriPage() {
   const [results, setResults] = useState<AuspiciousDay[]>([]);
   const [error, setError] = useState("");
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
 
   const handleSearch = useCallback(() => {
     const start = new Date(startYear, startMonth - 1, startDay);
@@ -292,6 +294,38 @@ export default function ZeriPage() {
 
   return (
     <div className="mx-auto w-full bg-[#ededed]" style={{ maxWidth: "375px", minHeight: "100vh" }}>
+      {/* 开始日期选择弹窗 */}
+      <DatePicker
+        show={showStartPicker}
+        onClose={() => setShowStartPicker(false)}
+        onSubmit={(dateVal) => {
+          setStartYear(dateVal.year);
+          setStartMonth(dateVal.month);
+          setStartDay(dateVal.day);
+          setShowStartPicker(false);
+        }}
+        initialDate={{ year: startYear, month: startMonth, day: startDay, hour: 0, minute: 0 }}
+        showMinute={false}
+        showGender={false} showCalType={false} showToggles={false} showRegion={false} showName={false}
+        submitText="确认开始日期" title="选择开始日期"
+      />
+
+      {/* 结束日期选择弹窗 */}
+      <DatePicker
+        show={showEndPicker}
+        onClose={() => setShowEndPicker(false)}
+        onSubmit={(dateVal) => {
+          setEndYear(dateVal.year);
+          setEndMonth(dateVal.month);
+          setEndDay(dateVal.day);
+          setShowEndPicker(false);
+        }}
+        initialDate={{ year: endYear, month: endMonth, day: endDay, hour: 0, minute: 0 }}
+        showMinute={false}
+        showGender={false} showCalType={false} showToggles={false} showRegion={false} showName={false}
+        submitText="确认结束日期" title="选择结束日期"
+      />
+
       {/* 输入表单 */}
       {!hasResult && (
         <div className="bg-white px-3 py-3">
@@ -319,27 +353,57 @@ export default function ZeriPage() {
           {/* 日期范围 */}
           <div className="mb-3">
             <label className="mb-1 block text-xs text-gray-500">开始日期</label>
-            <DatePickerInline
-              year={startYear} month={startMonth} day={startDay} hour={0}
-              onYearChange={setStartYear} onMonthChange={setStartMonth}
-              onDayChange={setStartDay} onHourChange={() => {}}
-            />
+            <button
+              type="button"
+              onClick={() => setShowStartPicker(true)}
+              className="flex w-full items-center justify-between rounded-lg border border-gray-200 px-3 py-2.5 text-left text-sm transition-colors active:bg-gray-50"
+            >
+              <span className="font-medium text-gray-700">
+                {startYear}-{String(startMonth).padStart(2, "0")}-{String(startDay).padStart(2, "0")}
+              </span>
+              <span className="text-xs text-gray-400">点击修改</span>
+            </button>
           </div>
           <div className="mb-3">
             <label className="mb-1 block text-xs text-gray-500">结束日期</label>
-            <DatePickerInline
-              year={endYear} month={endMonth} day={endDay} hour={0}
-              onYearChange={setEndYear} onMonthChange={setEndMonth}
-              onDayChange={setEndDay} onHourChange={() => {}}
-            />
+            <button
+              type="button"
+              onClick={() => setShowEndPicker(true)}
+              className="flex w-full items-center justify-between rounded-lg border border-gray-200 px-3 py-2.5 text-left text-sm transition-colors active:bg-gray-50"
+            >
+              <span className="font-medium text-gray-700">
+                {endYear}-{String(endMonth).padStart(2, "0")}-{String(endDay).padStart(2, "0")}
+              </span>
+              <span className="text-xs text-gray-400">点击修改</span>
+            </button>
           </div>
-          <div style={{ marginTop: "6px" }}>
-            <QuickBtnGroup items={[
-              { label: "近7天", onClick: () => { setStartYear(today.getFullYear()); setStartMonth(today.getMonth() + 1); setStartDay(today.getDate() + 1); const e = addDays(today, 7); setEndYear(e.getFullYear()); setEndMonth(e.getMonth() + 1); setEndDay(e.getDate()); } },
-              { label: "近15天", onClick: () => { setStartYear(today.getFullYear()); setStartMonth(today.getMonth() + 1); setStartDay(today.getDate() + 1); const e = addDays(today, 15); setEndYear(e.getFullYear()); setEndMonth(e.getMonth() + 1); setEndDay(e.getDate()); } },
-              { label: "近30天", onClick: () => { setStartYear(today.getFullYear()); setStartMonth(today.getMonth() + 1); setStartDay(today.getDate() + 1); const e = addDays(today, 30); setEndYear(e.getFullYear()); setEndMonth(e.getMonth() + 1); setEndDay(e.getDate()); } },
-              { label: "近60天", onClick: () => { setStartYear(today.getFullYear()); setStartMonth(today.getMonth() + 1); setStartDay(today.getDate() + 1); const e = addDays(today, 60); setEndYear(e.getFullYear()); setEndMonth(e.getMonth() + 1); setEndDay(e.getDate()); } },
-            ]} />
+          <div className="mb-3">
+            <span className="mb-1 block text-xs text-gray-400">快捷日期范围</span>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { label: "近7天", days: 7 },
+                { label: "近15天", days: 15 },
+                { label: "近30天", days: 30 },
+                { label: "近60天", days: 60 },
+              ].map((q) => (
+                <button
+                  key={q.label}
+                  type="button"
+                  onClick={() => {
+                    setStartYear(today.getFullYear());
+                    setStartMonth(today.getMonth() + 1);
+                    setStartDay(today.getDate() + 1);
+                    const e = addDays(today, q.days);
+                    setEndYear(e.getFullYear());
+                    setEndMonth(e.getMonth() + 1);
+                    setEndDay(e.getDate());
+                  }}
+                  className="border border-[#e8e8e8] rounded px-2 py-0.5 text-xs text-[#888] bg-white cursor-pointer hover:bg-gray-50"
+                >
+                  {q.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* 生肖（可选） */}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ScrollText, BookOpen, AlertTriangle } from "lucide-react";
+import { ScrollText, BookOpen, AlertTriangle, Activity } from "lucide-react";
 import { SHANGHAN_SYNDROMES } from "@/algorithm-core";
 import { BrandHeader } from "@/components/shared";
 
@@ -11,23 +11,25 @@ import { BrandHeader } from "@/components/shared";
 // 典籍记载，仅供学习参考
 // ============================================================================
 
-interface SyndromeCard {
+interface SyndromeCardData {
   id: string;
   name: string;
   description: string;
   symptoms: string[];
   formulas: string[];
+  acupoints: string[];
   source: string;
 }
 
 // ---- 八纲辨证 ----
-const BAGANG_SYNDROMES: SyndromeCard[] = [
+const BAGANG_SYNDROMES: SyndromeCardData[] = [
   {
     id: "bg-1",
     name: "表证",
     description: "外邪侵犯肌表，病位浅，病程短，起病急。恶寒发热并见，头身疼痛，脉浮。",
     symptoms: ["恶寒发热", "头身疼痛", "鼻塞流涕", "咽喉痒痛", "脉浮"],
     formulas: ["麻黄汤", "桂枝汤"],
+    acupoints: ["风池", "合谷", "列缺", "大椎"],
     source: "《景岳全书·传忠录》",
   },
   {
@@ -36,6 +38,7 @@ const BAGANG_SYNDROMES: SyndromeCard[] = [
     description: "病位深在脏腑、气血、骨髓，病程长。不恶寒反恶热，脏腑功能失调。",
     symptoms: ["壮热口渴", "烦躁不安", "腹痛便秘", "或泄泻", "脉沉"],
     formulas: ["白虎汤", "大承气汤"],
+    acupoints: ["足三里", "中脘", "天枢", "合谷"],
     source: "《景岳全书·传忠录》",
   },
   {
@@ -44,6 +47,7 @@ const BAGANG_SYNDROMES: SyndromeCard[] = [
     description: "阴盛阳衰，机体功能活动减退。恶寒喜暖，口淡不渴，肢冷蜷卧。",
     symptoms: ["恶寒喜暖", "四肢不温", "口淡不渴", "小便清长", "脉沉迟"],
     formulas: ["理中汤", "四逆汤"],
+    acupoints: ["关元", "气海", "命门", "神阙"],
     source: "《景岳全书·传忠录》",
   },
   {
@@ -52,6 +56,7 @@ const BAGANG_SYNDROMES: SyndromeCard[] = [
     description: "阳盛阴虚，机体功能活动亢进。发热喜凉，口渴饮冷，面红目赤。",
     symptoms: ["发热喜凉", "口渴饮冷", "面红目赤", "小便短黄", "脉数"],
     formulas: ["白虎汤", "黄连解毒汤"],
+    acupoints: ["大椎", "曲池", "合谷", "少商"],
     source: "《景岳全书·传忠录》",
   },
   {
@@ -60,6 +65,7 @@ const BAGANG_SYNDROMES: SyndromeCard[] = [
     description: "正气不足，机体功能减退。神疲乏力，面色无华，声低气怯。",
     symptoms: ["神疲乏力", "少气懒言", "自汗盗汗", "头晕目眩", "脉虚无力"],
     formulas: ["四君子汤", "四物汤", "六味地黄丸"],
+    acupoints: ["足三里", "关元", "气海", "三阴交"],
     source: "《景岳全书·传忠录》",
   },
   {
@@ -68,6 +74,7 @@ const BAGANG_SYNDROMES: SyndromeCard[] = [
     description: "邪气亢盛，正气未衰，正邪交争剧烈。声高气粗，腹痛拒按。",
     symptoms: ["声高气粗", "胸腹胀满", "疼痛拒按", "大便秘结", "脉实有力"],
     formulas: ["大承气汤", "桃核承气汤"],
+    acupoints: ["合谷", "太冲", "曲池", "丰隆"],
     source: "《景岳全书·传忠录》",
   },
   {
@@ -76,6 +83,7 @@ const BAGANG_SYNDROMES: SyndromeCard[] = [
     description: "阴盛阳衰，机能衰退，脏腑功能下降。面色苍白或暗淡，身重蜷卧。",
     symptoms: ["面色苍白", "畏寒肢冷", "语声低微", "大便溏泄", "脉沉微细"],
     formulas: ["四逆汤", "理中汤"],
+    acupoints: ["关元", "气海", "命门", "肾俞"],
     source: "《景岳全书·传忠录》",
   },
   {
@@ -84,18 +92,20 @@ const BAGANG_SYNDROMES: SyndromeCard[] = [
     description: "阳盛阴衰，机能亢进，邪热壅盛。面红目赤，躁动不安，发热口渴。",
     symptoms: ["面红目赤", "躁动不安", "发热口渴", "大便秘结", "脉洪数"],
     formulas: ["白虎汤", "黄连解毒汤"],
+    acupoints: ["大椎", "曲池", "合谷", "百会"],
     source: "《景岳全书·传忠录》",
   },
 ];
 
 // ---- 脏腑辨证 ----
-const ZANGFU_SYNDROMES: SyndromeCard[] = [
+const ZANGFU_SYNDROMES: SyndromeCardData[] = [
   {
     id: "zf-1",
     name: "心气虚",
     description: "心气不足，鼓动无力，心神失养。心悸怔忡，胸闷气短，活动后加重。",
     symptoms: ["心悸怔忡", "胸闷气短", "神疲乏力", "自汗", "面色淡白"],
     formulas: ["养心汤", "炙甘草汤"],
+    acupoints: ["神门", "内关", "心俞", "膻中"],
     source: "《中医诊断学》",
   },
   {
@@ -104,6 +114,7 @@ const ZANGFU_SYNDROMES: SyndromeCard[] = [
     description: "心血不足，心失所养。心悸失眠，健忘多梦，面色无华。",
     symptoms: ["心悸失眠", "多梦易醒", "健忘", "面色淡白无华", "唇舌色淡"],
     formulas: ["归脾汤", "天王补心丹"],
+    acupoints: ["神门", "内关", "足三里", "三阴交"],
     source: "《中医诊断学》",
   },
   {
@@ -112,6 +123,7 @@ const ZANGFU_SYNDROMES: SyndromeCard[] = [
     description: "肝失疏泄，气机郁滞。情志抑郁，胸胁胀痛，善太息。",
     symptoms: ["情志抑郁", "胸胁胀痛", "善太息", "咽中如有物阻", "脉弦"],
     formulas: ["逍遥散", "柴胡疏肝散"],
+    acupoints: ["太冲", "阳陵泉", "期门", "膻中"],
     source: "《中医诊断学》",
   },
   {
@@ -120,6 +132,7 @@ const ZANGFU_SYNDROMES: SyndromeCard[] = [
     description: "肝阴不足，肝阳偏亢。眩晕耳鸣，头目胀痛，面红目赤，急躁易怒。",
     symptoms: ["眩晕耳鸣", "头目胀痛", "面红目赤", "急躁易怒", "失眠多梦"],
     formulas: ["天麻钩藤饮", "镇肝熄风汤"],
+    acupoints: ["太冲", "风池", "百会", "太溪"],
     source: "《中医诊断学》",
   },
   {
@@ -128,6 +141,7 @@ const ZANGFU_SYNDROMES: SyndromeCard[] = [
     description: "脾气不足，运化失职。食少便溏，腹胀，神疲乏力。",
     symptoms: ["食少纳呆", "腹胀便溏", "肢体倦怠", "面色萎黄", "脉缓弱"],
     formulas: ["四君子汤", "补中益气汤"],
+    acupoints: ["足三里", "三阴交", "脾俞", "中脘"],
     source: "《中医诊断学》",
   },
   {
@@ -136,6 +150,7 @@ const ZANGFU_SYNDROMES: SyndromeCard[] = [
     description: "脾阳不足，虚寒内生。腹中冷痛，喜温喜按，下利清谷。",
     symptoms: ["腹中冷痛", "喜温喜按", "下利清谷", "四肢不温", "脉沉迟无力"],
     formulas: ["理中汤", "附子理中汤"],
+    acupoints: ["足三里", "中脘", "关元", "脾俞"],
     source: "《中医诊断学》",
   },
   {
@@ -144,6 +159,7 @@ const ZANGFU_SYNDROMES: SyndromeCard[] = [
     description: "肺气不足，卫外不固。咳喘无力，少气短息，自汗畏风。",
     symptoms: ["咳喘无力", "少气短息", "自汗畏风", "易感冒", "声音低怯"],
     formulas: ["玉屏风散", "补肺汤"],
+    acupoints: ["肺俞", "太渊", "足三里", "列缺"],
     source: "《中医诊断学》",
   },
   {
@@ -152,6 +168,7 @@ const ZANGFU_SYNDROMES: SyndromeCard[] = [
     description: "肺阴不足，虚热内生。干咳少痰，口干咽燥，午后潮热。",
     symptoms: ["干咳无痰", "口干咽燥", "声音嘶哑", "午后潮热", "舌红少苔"],
     formulas: ["百合固金汤", "沙参麦冬汤"],
+    acupoints: ["太溪", "肺俞", "列缺", "三阴交"],
     source: "《中医诊断学》",
   },
   {
@@ -160,6 +177,7 @@ const ZANGFU_SYNDROMES: SyndromeCard[] = [
     description: "肾阳不足，温煦失职。腰膝酸冷，畏寒肢冷，夜尿频多。",
     symptoms: ["腰膝酸冷", "畏寒肢冷", "面色晄白", "夜尿频多", "脉沉迟无力"],
     formulas: ["金匮肾气丸", "右归丸"],
+    acupoints: ["关元", "命门", "太溪", "肾俞"],
     source: "《中医诊断学》",
   },
   {
@@ -168,9 +186,24 @@ const ZANGFU_SYNDROMES: SyndromeCard[] = [
     description: "肾阴不足，虚火内扰。腰膝酸软，眩晕耳鸣，潮热盗汗。",
     symptoms: ["腰膝酸软", "眩晕耳鸣", "潮热盗汗", "五心烦热", "舌红少苔"],
     formulas: ["六味地黄丸", "左归丸"],
+    acupoints: ["太溪", "三阴交", "肾俞", "照海"],
     source: "《中医诊断学》",
   },
 ];
+
+// ---- 六经辨证常用穴位映射 ----
+const LIUJING_ACUPOINTS: Record<string, string[]> = {
+  "太阳病·中风证（桂枝汤证）": ["风池", "风门", "合谷", "列缺"],
+  "太阳病·伤寒证（麻黄汤证）": ["大椎", "风门", "合谷", "列缺"],
+  "阳明病·经证（白虎汤证）": ["曲池", "合谷", "足三里", "内庭"],
+  "阳明病·腑实证（承气汤证）": ["足三里", "天枢", "上巨虚", "合谷"],
+  "少阳病·半表半里证（小柴胡汤证）": ["阳陵泉", "外关", "足临泣", "丘墟"],
+  "太阴病·脾虚寒湿证（理中汤证）": ["足三里", "中脘", "天枢", "脾俞"],
+  "少阴病·寒化证（四逆汤证）": ["神门", "太溪", "关元", "命门"],
+  "少阴病·热化证（黄连阿胶汤证）": ["神门", "太溪", "三阴交", "心俞"],
+  "厥阴病·寒热错杂证（乌梅丸证）": ["太冲", "内关", "期门", "中脘"],
+  "厥阴病·血虚寒厥证（当归四逆汤证）": ["太冲", "三阴交", "关元", "足三里"],
+};
 
 // 三大辨证体系
 const TABS = [
@@ -191,7 +224,7 @@ const BRAND = "#7B2FBE";
 export default function BianZhengPage() {
   const [activeTab, setActiveTab] = useState<TabKey>("bagang");
 
-  const currentSyndromes =
+  const currentSyndromes: SyndromeCardData[] =
     activeTab === "bagang"
       ? BAGANG_SYNDROMES
       : activeTab === "liujing"
@@ -201,6 +234,7 @@ export default function BianZhengPage() {
             description: s.description || "",
             symptoms: s.symptoms,
             formulas: s.formulas,
+            acupoints: LIUJING_ACUPOINTS[s.name] || [],
             source: "《伤寒论》",
           }))
         : ZANGFU_SYNDROMES;
@@ -292,7 +326,7 @@ function SyndromeCard({
   syndrome,
   index,
 }: {
-  syndrome: SyndromeCard;
+  syndrome: SyndromeCardData;
   index: number;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -351,20 +385,20 @@ function SyndromeCard({
           className="px-4 pb-4 space-y-3"
           style={{ borderTop: "1px solid rgba(123, 47, 190, 0.08)" }}
         >
-          {/* 证型描述 */}
+          {/* 辨证要点 */}
           <div className="pt-3">
             <p className="text-xs font-medium mb-1" style={{ color: "#6b7a6b" }}>
-              证型描述
+              辨证要点
             </p>
             <p className="text-sm leading-relaxed" style={{ color: "#c8d0c8" }}>
               {syndrome.description}
             </p>
           </div>
 
-          {/* 主要症状 */}
+          {/* 临床表现 */}
           <div>
             <p className="text-xs font-medium mb-1" style={{ color: "#6b7a6b" }}>
-              主要症状
+              临床表现
             </p>
             <div className="flex flex-wrap gap-1.5">
               {syndrome.symptoms.map((s, i) => (
@@ -382,12 +416,12 @@ function SyndromeCard({
             </div>
           </div>
 
-          {/* 对应方剂 */}
+          {/* 代表方剂 */}
           {syndrome.formulas.length > 0 && (
             <div>
               <p className="text-xs font-medium mb-1" style={{ color: "#6b7a6b" }}>
                 <BookOpen className="h-3 w-3 inline mr-1" style={{ color: "#d4a84b" }} />
-                对应方剂（典籍记载）
+                代表方剂（典籍记载）
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {syndrome.formulas.map((f, i) => (
@@ -402,6 +436,32 @@ function SyndromeCard({
                     }}
                   >
                     {f}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 常用穴位 */}
+          {syndrome.acupoints.length > 0 && (
+            <div>
+              <p className="text-xs font-medium mb-1" style={{ color: "#6b7a6b" }}>
+                <Activity className="h-3 w-3 inline mr-1" style={{ color: "#5cb85c" }} />
+                常用穴位（典籍记载）
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {syndrome.acupoints.map((a, i) => (
+                  <Link
+                    key={i}
+                    href={`/zhongyi/meridian?acupoint=${encodeURIComponent(a)}`}
+                    className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs transition-colors"
+                    style={{
+                      backgroundColor: "rgba(92, 184, 92, 0.1)",
+                      color: "#5cb85c",
+                      border: "1px solid rgba(92, 184, 92, 0.2)",
+                    }}
+                  >
+                    {a}
                   </Link>
                 ))}
               </div>

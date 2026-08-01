@@ -6,7 +6,7 @@ import {
   solarToBazi,
   getCurrentJieQi,
 } from "@/algorithm-core";
-import { DatePickerInline, QuickBtnGroup } from "@/components/shared";
+import { DatePicker } from "@/components/shared";
 
 // ============================================================================
 // 一掌经十二宫
@@ -111,6 +111,7 @@ export default function YizhangjingPage() {
   const [selectedHour, setSelectedHour] = useState(() => new Date().getHours());
   const [hasResult, setHasResult] = useState(false);
   const [showInput, setShowInput] = useState(true);
+  const [showForm, setShowForm] = useState(true);
 
   const result = useMemo(() => calcYizhangJing(new Date(selectedYear, selectedMonth - 1, selectedDay, selectedHour)), [selectedYear, selectedMonth, selectedDay, selectedHour]);
 
@@ -171,6 +172,32 @@ export default function YizhangjingPage() {
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#ededed" }}>
+      <DatePicker
+        show={showForm}
+        onClose={() => setShowForm(false)}
+        onSubmit={(dateVal) => {
+          setSelectedYear(dateVal.year);
+          setSelectedMonth(dateVal.month);
+          setSelectedDay(dateVal.day);
+          setSelectedHour(dateVal.hour);
+          setShowForm(false);
+        }}
+        initialDate={{
+          year: selectedYear,
+          month: selectedMonth,
+          day: selectedDay,
+          hour: selectedHour,
+          minute: 0,
+        }}
+        showMinute={false}
+        showGender={false}
+        showCalType={false}
+        showToggles={false}
+        showRegion={false}
+        showName={false}
+        submitText="排盘"
+        title="一掌经排盘"
+      />
       {/* Header */}
       <div style={{
         backgroundColor: "#7B2FBE", height: "40px", display: "flex",
@@ -199,18 +226,21 @@ export default function YizhangjingPage() {
 
             <div style={{ marginBottom: "12px" }}>
               <div style={{ fontSize: "12px", color: "#999", marginBottom: "4px" }}>出生时间</div>
-              <DatePickerInline
-                year={selectedYear} month={selectedMonth} day={selectedDay} hour={selectedHour}
-                onYearChange={setSelectedYear} onMonthChange={setSelectedMonth}
-                onDayChange={setSelectedDay} onHourChange={setSelectedHour}
-              />
-              <div style={{ marginTop: "8px" }}>
-                <QuickBtnGroup items={[
-                  { label: "今年", onClick: () => setSelectedYear(new Date().getFullYear()) },
-                  { label: "去年", onClick: () => setSelectedYear(new Date().getFullYear() - 1) },
-                  { label: "1990年", onClick: () => setSelectedYear(1990) },
-                  { label: "2000年", onClick: () => setSelectedYear(2000) },
-                ]} />
+              <div
+                onClick={() => setShowForm(true)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "10px 12px",
+                  borderRadius: "8px",
+                  border: "1px solid #ddd",
+                  backgroundColor: "#fff",
+                  cursor: "pointer",
+                }}
+              >
+                <span style={{ fontSize: "15px", color: "#333" }}>{dateStr}</span>
+                <span style={{ fontSize: "13px", color: "#7B2FBE" }}>点击修改</span>
               </div>
             </div>
 

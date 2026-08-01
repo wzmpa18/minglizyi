@@ -4,8 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import type { CSSProperties } from "react";
 import { calculateZiwei, solarToBazi } from "@/algorithm-core";
 import type { ZiweiResult, Gender } from "@/algorithm-core";
-import { ToggleSwitch, SegBtn, Card, QuickBtnGroup, DatePickerInline } from "@/components/shared";
-import ClientSelector from "@/components/ClientSelector";
+import { DatePicker } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 
@@ -413,158 +412,6 @@ function getAuxStars(palaceIdx: number, ziweiIdx: number, tianfuIdx: number, yea
   return { ji, sha, other, changsheng, boshi, suiqian };
 }
 
-/** 输入表单 Modal */
-function InputFormModal({
-  show, onClose, name, setName, year, setYear, month, setMonth, day, setDay, hour, setHour,
-  gender, setGender, calType, setCalType, zaoWanZi, setZaoWanZi,
-  zhenTaiyang, setZhenTaiyang, xiaLing, setXiaLing, saveName, setSaveName, onSubmit,
-  selectedClient, onClientSelect,
-}: {
-  show: boolean; onClose: () => void; name: string; setName: (v: string) => void;
-  year: number; setYear: (v: number) => void; month: number; setMonth: (v: number) => void;
-  day: number; setDay: (v: number) => void; hour: number; setHour: (v: number) => void;
-  gender: Gender; setGender: (v: Gender) => void; calType: string; setCalType: (v: "gongli" | "nongli" | "sizhu") => void;
-  zaoWanZi: boolean; setZaoWanZi: (v: boolean) => void; zhenTaiyang: boolean; setZhenTaiyang: (v: boolean) => void;
-  xiaLing: boolean; setXiaLing: (v: boolean) => void; saveName: boolean; setSaveName: (v: boolean) => void;
-  onSubmit: () => void;
-  selectedClient: Client|null; onClientSelect: (c: Client|null) => void;
-}) {
-  if (!show) return null;
-
-  return (
-    <div className="fixed inset-0 z-[1000] bg-black/45 flex items-start justify-center pt-[12vh]">
-      <div className="bg-white rounded-xl w-[92%] max-w-[420px] max-h-[80vh] overflow-auto shadow-[0_8px_32px_rgba(0,0,0,0.18)]">
-        <div className="flex items-center justify-center px-4 py-3 relative border-b border-gray-100">
-          <span className="text-base font-bold text-gray-800">紫微排盘</span>
-          <button
-            onClick={onClose}
-            className="absolute right-3 top-2.5 bg-transparent border-0 text-lg text-gray-400 cursor-pointer px-1.5 py-0.5"
-          >
-            &#x2715;
-          </button>
-        </div>
-
-        <div className="px-4 py-3">
-          <div className="flex items-center mb-2.5">
-            <label className="w-16 shrink-0 text-[13px] text-gray-500">福主姓名</label>
-            <div className="flex-1 flex items-center gap-2">
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="如需保存，请输入姓名"
-                className="flex-1 border border-gray-300 rounded px-2.5 py-1.5 text-[13px] outline-none transition-colors"
-                style={{}}
-                onFocus={(e) => e.currentTarget.style.borderColor = BRAND_PURPLE}
-                onBlur={(e) => e.currentTarget.style.borderColor = ""}
-              />
-              <div className="flex items-center gap-1 text-xs text-gray-400">
-                <span>不存</span>
-                <ToggleSwitch checked={saveName} onChange={() => setSaveName(!saveName)} />
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center mb-2.5">
-            <label className="w-16 shrink-0 text-[13px] text-gray-500">性别</label>
-            <SegBtn
-              options={[
-                { label: "男", value: "male", active: gender === "male" },
-                { label: "女", value: "female", active: gender === "female" },
-              ]}
-              onClick={(v) => setGender(v as Gender)}
-            />
-          </div>
-
-          <div className="mb-2.5">
-            <SegBtn
-              options={[
-                { label: "公历", value: "gongli", active: calType === "gongli" },
-                { label: "农历", value: "nongli", active: calType === "nongli" },
-                { label: "四柱", value: "sizhu", active: calType === "sizhu" },
-              ]}
-              onClick={(v) => setCalType(v as any)}
-            />
-          </div>
-
-          <div className="mb-2.5">
-            <div className="flex items-start">
-              <label className="w-16 shrink-0 text-[13px] text-gray-500 pt-1.5">日期</label>
-              <div className="flex-1">
-                <DatePickerInline
-                  year={year} month={month} day={day} hour={hour}
-                  onYearChange={setYear} onMonthChange={setMonth}
-                  onDayChange={setDay} onHourChange={setHour}
-                />
-                <div className="mt-1.5">
-                  <QuickBtnGroup
-                    items={[
-                      { label: "1990年", onClick: () => setYear(1990) },
-                      { label: "1985年", onClick: () => setYear(1985) },
-                      { label: "2000年", onClick: () => setYear(2000) },
-                      { label: "2020年", onClick: () => setYear(2020) },
-                      { label: "1月", onClick: () => setMonth(1) },
-                      { label: "6月", onClick: () => setMonth(6) },
-                      { label: "12月", onClick: () => setMonth(12) },
-                      { label: "1日", onClick: () => setDay(1) },
-                      { label: "15日", onClick: () => setDay(15) },
-                      { label: "28日", onClick: () => setDay(28) },
-                      { label: "0时", onClick: () => setHour(0) },
-                      { label: "6时", onClick: () => setHour(6) },
-                      { label: "12时", onClick: () => setHour(12) },
-                      { label: "18时", onClick: () => setHour(18) },
-                    ]}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center mb-2.5">
-            <label className="w-16 shrink-0 text-[13px] text-gray-500">早晚子时</label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-1 text-[13px] cursor-pointer">
-                <input type="radio" name="zwz" checked={zaoWanZi} onChange={() => setZaoWanZi(true)} className="m-0" />是
-              </label>
-              <label className="flex items-center gap-1 text-[13px] cursor-pointer">
-                <input type="radio" name="zwz" checked={!zaoWanZi} onChange={() => setZaoWanZi(false)} className="m-0" />否
-              </label>
-            </div>
-          </div>
-
-          <div className="flex items-center mb-2.5">
-            <label className="w-16 shrink-0 text-[13px] text-gray-500">真太阳时</label>
-            <div className="flex-1 flex items-center gap-4">
-              <label className="flex items-center gap-1 text-[13px] cursor-pointer">
-                <input type="radio" name="tys" checked={zhenTaiyang} onChange={() => setZhenTaiyang(true)} className="m-0" />是
-              </label>
-              <label className="flex items-center gap-1 text-[13px] cursor-pointer">
-                <input type="radio" name="tys" checked={!zhenTaiyang} onChange={() => setZhenTaiyang(false)} className="m-0" />否
-              </label>
-              <div className="ml-auto flex items-center gap-1">
-                <span className="text-xs text-emerald-600">夏令时</span>
-                <ToggleSwitch checked={xiaLing} onChange={() => setXiaLing(!xiaLing)} />
-              </div>
-            </div>
-          </div>
-
-          <div className="px-1">
-            <ClientSelector selectedClient={selectedClient} onSelect={onClientSelect} />
-          </div>
-
-          <button
-            onClick={onSubmit}
-            className="text-white border-0 rounded-3xl py-2.5 text-base font-bold cursor-pointer w-full text-center hover:opacity-90 transition-opacity"
-            style={{ backgroundColor: BRAND_PURPLE }}
-          >
-            排盘
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ====================================================================
 // 主组件
 // ====================================================================
@@ -602,15 +449,18 @@ export default function ZiweiPage() {
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
 
   // ---- 提交 ----
-  const handleSubmit = () => {
+  const handleSubmit = (override?:{year:number;month:number;day:number;hour:number;gender:Gender}) => {
     setError(null);
+    const y=override?.year??year; const m=override?.month??month;
+    const d=override?.day??day; const h=override?.hour??hour;
+    const g=override?.gender??gender;
     try {
-      const res = calculateZiwei({ year, month, day, hour, gender });
+      const res = calculateZiwei({ year:y, month:m, day:d, hour:h, gender:g });
       setResult(res);
       setShowForm(false);
       // 保存客户记录
       if(selectedClient){
-        try{saveRecord({clientId:selectedClient.id,type:"ziwei",data:{...res,inputParams:{year,month,day,hour,gender}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
+        try{saveRecord({clientId:selectedClient.id,type:"ziwei",data:{...res,inputParams:{year:y,month:m,day:d,hour:h,gender:g}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "计算失败");
@@ -827,23 +677,28 @@ export default function ZiweiPage() {
   return (
     <div className="bg-[#ededed] min-h-screen flex justify-center">
       <div className="w-full" style={{ maxWidth: "375px", paddingBottom: "10px" }}>
-      {/* 输入表单 Modal */}
-      <InputFormModal
+      {/* 输入表单 DatePicker 弹窗 */}
+      <DatePicker
         show={showForm}
-        onClose={() => setShowForm(false)}
-        name={name} setName={setName}
-        year={year} setYear={setYear}
-        month={month} setMonth={setMonth}
-        day={day} setDay={setDay}
-        hour={hour} setHour={setHour}
-        gender={gender} setGender={setGender}
-        calType={calType} setCalType={setCalType}
-        zaoWanZi={zaoWanZi} setZaoWanZi={setZaoWanZi}
-        zhenTaiyang={zhenTaiyang} setZhenTaiyang={setZhenTaiyang}
-        xiaLing={xiaLing} setXiaLing={setXiaLing}
-        saveName={saveName} setSaveName={setSaveName}
-        onSubmit={handleSubmit}
-        selectedClient={selectedClient} onClientSelect={setSelectedClient}
+        onClose={() => { if (result) setShowForm(false); }}
+        onSubmit={(dateVal, opts) => {
+          setYear(dateVal.year); setMonth(dateVal.month); setDay(dateVal.day); setHour(dateVal.hour);
+          setGender(opts.gender as Gender);
+          setCalType(opts.calType === "solar" ? "gongli" : opts.calType === "lunar" ? "nongli" : "sizhu");
+          setZaoWanZi(opts.zaoWanZi); setZhenTaiyang(opts.zhenTaiyang); setXiaLing(opts.xiaLing);
+          handleSubmit({year: dateVal.year, month: dateVal.month, day: dateVal.day, hour: dateVal.hour, gender: opts.gender as Gender});
+        }}
+        initialDate={{year, month, day, hour, minute: 0}}
+        initialOptions={{
+          gender,
+          calType: calType === "gongli" ? "solar" : calType === "nongli" ? "lunar" : "sizhu",
+          zaoWanZi, zhenTaiyang, xiaLing,
+        }}
+        showName={true} name={name} onNameChange={setName}
+        showSaveName={true} saveName={saveName} onSaveNameChange={setSaveName}
+        showGender={true} showCalType={true} showToggles={true} showRegion={true}
+        showMinute={true}
+        submitText="排盘" title="紫微斗数排盘"
       />
 
       {/* 错误提示 */}
