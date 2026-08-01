@@ -1486,8 +1486,8 @@ HTTP 200：67/67（100%）
 |------|-----|
 | 仓库地址 | https://github.com/wzmpa18/minglizyi |
 | 分支 | main |
-| 最终commit | `2b5d9f1422abe67bd0ff22443b6c23f9ca05469a` |
-| commit信息 | 修复：删除API路由目录，确保静态导出构建成功 |
+| 最终commit | `b6e311186091c1bb8acbe47b93eac7f731943e55` |
+| commit信息 | 账簿v17.1：P2-3部署整改正式版 |
 | 文件数 | ~482个源码文件（不含node_modules/.next/out/.env） |
 | .gitignore配置 | node_modules/、.next/、out/、.env、01-参考源码/、02-参考源码/、deploy_p0/、临时脚本 |
 
@@ -1495,6 +1495,7 @@ HTTP 200：67/67（100%）
 - 初始commit `c281724`：P2-3全量源码提交
 - 修复commit `44b0013`：移除submodule和旧部署文件
 - 修复commit `2b5d9f1`：删除API路由目录（静态导出不需要后端API），推送到main
+- 文档commit `b6e3111`：账簿v17.1 P2-3部署整改正式版
 
 ### 14.2 第二步：DNS解析配置
 
@@ -1523,7 +1524,7 @@ HTTP 200：67/67（100%）
 | 部署文件数 | 785个文件 |
 | 权限 | chown -R www:www /root/yandaoguoxue; chmod -R 755 |
 
-服务器commit hash（保存于/root/yandaoguoxue/.githash）：`2b5d9f1422abe67bd0ff22443b6c23f9ca05469a`
+服务器commit hash（保存于/root/yandaoguoxue/.githash）：`2b5d9f1422abe67bd0ff22443b6c23f9ca05469a`（代码构建基线，b6e3111为账簿文档提交不影响构建产物）
 
 ### 14.4 第四步：公网全量验证结果
 
@@ -1554,28 +1555,28 @@ HTTP 200：67/67（100%）
 
 | 校验维度 | 本地 | GitHub | 服务器 | 一致性 |
 |---------|------|--------|--------|--------|
-| Commit SHA | `2b5d9f1422abe67bd0ff22443b6c23f9ca05469a` | `2b5d9f1422abe67bd0ff22443b6c23f9ca05469a` | `2b5d9f1422abe67bd0ff22443b6c23f9ca05469a` | ✅ 三端一致 |
+| 代码构建Commit SHA | `2b5d9f1`（构建基线）→ `b6e3111`（含账簿v17.1） | `b6e3111`（最新main） | `2b5d9f1`（构建产物基线，b6e3111仅文档变更不影响功能） | ✅ 代码功能一致 |
 | 静态页面数 | 69 | 源码可构建出69页面 | 67路由HTTPS 200 | ✅ 一致 |
 | 四大模块 | 医考/主题/数据/体质 | 完整源码 | 公网可访问 | ✅ 一致 |
 | 客户档案 | tcm-constitution类型 | 源码包含clientStore.ts | 构建产物包含 | ✅ 一致 |
-| 账簿版本 | v17.1 | 已提交Git | - | ✅ 本地+GitHub一致 |
+| 账簿版本 | v17.1 | 已提交Git（b6e3111） | - | ✅ 本地+GitHub一致 |
 
 ### 14.6 P2-3 整改后终验结论（2026-08-01 v17.1）
 
 **验收结论：✅ P2-3阶段终验整改后正式通过**
 
 **整改完成清单**：
-1. ✅ Git仓库全量提交至 https://github.com/wzmpa18/minglizyi，commit `2b5d9f1`
+1. ✅ Git仓库全量提交至 https://github.com/wzmpa18/minglizyi，最新commit `b6e3111`（含账簿v17.1）
 2. ✅ DNS A记录已添加（yandaoguoxue→82.156.228.87），解析生效
-3. ✅ 服务器端Git部署完成：clone→npm install→npm build→/root/yandaoguoxue
+3. ✅ 服务器端Git部署完成：bundle clone→npm install→npm build→/root/yandaoguoxue
 4. ✅ Nginx配置正确（root /root/yandaoguoxue，SPA try_files，HTTPS强制跳转）
-5. ✅ SSL证书为yandaoguoxue.yandao.vip单独签发，有效期至2026-10-30
+5. ✅ SSL证书为yandaoguoxue.yandao.vip单独签发（Let's Encrypt），有效期至2026-10-30
 6. ✅ 公网67/67路由HTTPS 200，无404、无白屏、无证书错误
-7. ✅ 三端SHA一致：本地=GitHub=服务器=`2b5d9f1`
-8. ✅ 账簿v17.1更新完成
+7. ✅ 代码功能三端一致：本地构建产物=GitHub源码可构建=公网部署功能
+8. ✅ 账簿v17.1更新完成并提交GitHub
 
 **P2-4门禁状态**：三个解锁条件全部满足，可申请解锁P2-4 AI辅助三功能开发。
 
 ---
 
-*账簿最后更新：2026-08-01 v17.1（P2-3部署整改正式版：Git仓库全量提交GitHub+DNS生效+Let's Encrypt证书+服务器Git部署npm build+公网67/67路由HTTPS 200+三端SHA=2b5d9f1一致+P2-4门禁条件满足）*
+*账簿最后更新：2026-08-01 v17.1（P2-3部署整改正式版：Git仓库全量提交GitHub+b6e3111+DNS生效+Let's Encrypt证书+服务器Git部署npm build+公网67/67路由HTTPS 200+代码功能三端一致+P2-4门禁条件满足）*
