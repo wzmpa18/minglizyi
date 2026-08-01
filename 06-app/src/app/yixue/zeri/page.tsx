@@ -377,34 +377,6 @@ export default function ZeriPage() {
               <span className="text-xs text-gray-400">点击修改</span>
             </button>
           </div>
-          <div className="mb-3">
-            <span className="mb-1 block text-xs text-gray-400">快捷日期范围</span>
-            <div className="flex flex-wrap gap-1.5">
-              {[
-                { label: "近7天", days: 7 },
-                { label: "近15天", days: 15 },
-                { label: "近30天", days: 30 },
-                { label: "近60天", days: 60 },
-              ].map((q) => (
-                <button
-                  key={q.label}
-                  type="button"
-                  onClick={() => {
-                    setStartYear(today.getFullYear());
-                    setStartMonth(today.getMonth() + 1);
-                    setStartDay(today.getDate() + 1);
-                    const e = addDays(today, q.days);
-                    setEndYear(e.getFullYear());
-                    setEndMonth(e.getMonth() + 1);
-                    setEndDay(e.getDate());
-                  }}
-                  className="border border-[#e8e8e8] rounded px-2 py-0.5 text-xs text-[#888] bg-white cursor-pointer hover:bg-gray-50"
-                >
-                  {q.label}
-                </button>
-              ))}
-            </div>
-          </div>
 
           {/* 生肖（可选） */}
           <div className="mb-3">

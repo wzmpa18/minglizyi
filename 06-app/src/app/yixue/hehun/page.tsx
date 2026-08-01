@@ -468,22 +468,6 @@ export default function HehunPage() {
             </div>
           </div>
 
-          {/* 快捷按钮 */}
-          <div className="mt-2 grid grid-cols-2 gap-3">
-            <div className="flex flex-wrap gap-1">
-              <button onClick={() => setMaleYear(new Date().getFullYear())} className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">今年</button>
-              <button onClick={() => setMaleYear(new Date().getFullYear() - 1)} className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">去年</button>
-              <button onClick={() => setMaleYear(new Date().getFullYear() - 25)} className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">25岁</button>
-              <button onClick={() => setMaleYear(new Date().getFullYear() - 30)} className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">30岁</button>
-            </div>
-            <div className="flex flex-wrap gap-1">
-              <button onClick={() => setFemaleYear(new Date().getFullYear())} className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">今年</button>
-              <button onClick={() => setFemaleYear(new Date().getFullYear() - 1)} className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">去年</button>
-              <button onClick={() => setFemaleYear(new Date().getFullYear() - 23)} className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">23岁</button>
-              <button onClick={() => setFemaleYear(new Date().getFullYear() - 28)} className="rounded border border-gray-200 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50">28岁</button>
-            </div>
-          </div>
-
           {/* 提示文字 */}
           <p className="text-center text-gray-400 mt-2 mb-1" style={{ fontSize: "11px" }}>
             请准确选择出生年月日时（真太阳时最佳）
