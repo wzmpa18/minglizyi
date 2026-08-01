@@ -66,15 +66,6 @@ const DEFAULT_OPTIONS: DatePickerOptions = {
 };
 
 // ============================================================================
-// 快捷日期按钮数据
-// ============================================================================
-
-const QUICK_YEARS = [1990, 1985, 2000, 2020, 1995, 2010, 1980, 1970, 1960];
-const QUICK_MONTHS = [1, 6, 12, 3, 9, 2, 5, 8, 11, 4, 7, 10];
-const QUICK_DAYS = [1, 15, 28, 10, 20, 5, 25, 8, 18, 12, 22, 3];
-const QUICK_HOURS = [0, 6, 12, 18, 8, 14, 20, 2, 10, 16, 22, 4];
-
-// ============================================================================
 // 月份天数
 // ============================================================================
 
@@ -127,10 +118,10 @@ function RadioOption({
 }
 
 // ============================================================================
-// Tab 切换组件
+// 历法类型按钮组件（对标吉时雨 rolldate-button-date2）
 // ============================================================================
 
-function TabOption({
+function CalTypeButton({
   label,
   active,
   onClick,
@@ -143,10 +134,10 @@ function TabOption({
     <button
       type="button"
       onClick={onClick}
-      className={`px-4 py-2 text-sm font-medium border-b-[2px] transition-colors ${
+      className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${
         active
-          ? "border-[#7B2FBE] text-[#7B2FBE]"
-          : "border-transparent text-gray-500 hover:text-gray-700"
+          ? "bg-[#7B2FBE] text-white shadow-sm"
+          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
       }`}
     >
       {label}
@@ -209,7 +200,7 @@ export default function DatePicker({
   showSaveName = false,
   saveName = false,
   onSaveNameChange,
-  submitText = "确定",
+  submitText = "排盘",
   title = "选择日期",
 }: DatePickerProps) {
   const [date, setDate] = useState<DatePickerValue>(initialDate || DEFAULT_DATE);
@@ -280,6 +271,21 @@ export default function DatePicker({
 
   const setMinute = useCallback((v: number) => {
     setDate(prev => ({ ...prev, minute: Math.max(0, Math.min(59, v)) }));
+  }, []);
+
+  // ============================================================
+  // 当前时间（对标吉时雨 app-time-btn）
+  // ============================================================
+
+  const handleNow = useCallback(() => {
+    const n = new Date();
+    setDate({
+      year: n.getFullYear(),
+      month: n.getMonth() + 1,
+      day: n.getDate(),
+      hour: n.getHours(),
+      minute: n.getMinutes(),
+    });
   }, []);
 
   // ============================================================
@@ -457,6 +463,29 @@ export default function DatePicker({
           </div>
         )}
 
+        {/* 历法类型切换 - 公历/农历/四柱（对标吉时雨 rolldate-button-date2） */}
+        {showCalType && (
+          <div className="px-4 pt-3">
+            <div className="flex gap-2">
+              <CalTypeButton
+                label="公历"
+                active={options.calType === "solar"}
+                onClick={() => setOptions(prev => ({ ...prev, calType: "solar" }))}
+              />
+              <CalTypeButton
+                label="农历"
+                active={options.calType === "lunar"}
+                onClick={() => setOptions(prev => ({ ...prev, calType: "lunar" }))}
+              />
+              <CalTypeButton
+                label="四柱"
+                active={options.calType === "sizhu"}
+                onClick={() => setOptions(prev => ({ ...prev, calType: "sizhu" }))}
+              />
+            </div>
+          </div>
+        )}
+
         {/* 日期滚动选择区 - 上下箭头+中间数字 */}
         <div className="px-4 py-4">
           <div className="flex items-center justify-center gap-1">
@@ -466,92 +495,15 @@ export default function DatePicker({
             {renderEditableCell("hour", date.hour, `${date.hour}时`, "#333")}
             {showMinute && renderEditableCell("minute", date.minute, `${date.minute}分`, "#999")}
           </div>
-        </div>
-
-        {/* 快捷选择按钮 */}
-        <div className="px-4 pb-3">
-          {/* 年份快捷 */}
-          <div className="mb-2">
-            <span className="mb-1 block text-xs text-gray-400">年份</span>
-            <div className="flex flex-wrap gap-1.5">
-              {QUICK_YEARS.map(y => (
-                <button
-                  key={y}
-                  type="button"
-                  onClick={() => setYear(y)}
-                  className={`rounded border px-2 py-1 text-xs transition-all ${
-                    date.year === y
-                      ? "border-[#7B2FBE] bg-[#7B2FBE]/10 text-[#7B2FBE] font-medium"
-                      : "border-gray-200 text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  {y}年
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* 月份快捷 */}
-          <div className="mb-2">
-            <span className="mb-1 block text-xs text-gray-400">月份</span>
-            <div className="flex flex-wrap gap-1.5">
-              {QUICK_MONTHS.map(m => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setMonth(m)}
-                  className={`rounded border px-2 py-1 text-xs transition-all ${
-                    date.month === m
-                      ? "border-[#7B2FBE] bg-[#7B2FBE]/10 text-[#7B2FBE] font-medium"
-                      : "border-gray-200 text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  {m}月
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* 日期快捷 */}
-          <div className="mb-2">
-            <span className="mb-1 block text-xs text-gray-400">日期</span>
-            <div className="flex flex-wrap gap-1.5">
-              {QUICK_DAYS.map(d => (
-                <button
-                  key={d}
-                  type="button"
-                  onClick={() => setDay(d)}
-                  className={`rounded border px-2 py-1 text-xs transition-all ${
-                    date.day === d
-                      ? "border-[#7B2FBE] bg-[#7B2FBE]/10 text-[#7B2FBE] font-medium"
-                      : "border-gray-200 text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  {d}日
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* 时辰快捷 */}
-          <div className="mb-2">
-            <span className="mb-1 block text-xs text-gray-400">时辰</span>
-            <div className="flex flex-wrap gap-1.5">
-              {QUICK_HOURS.map(h => (
-                <button
-                  key={h}
-                  type="button"
-                  onClick={() => setHour(h)}
-                  className={`rounded border px-2 py-1 text-xs transition-all ${
-                    date.hour === h
-                      ? "border-[#7B2FBE] bg-[#7B2FBE]/10 text-[#7B2FBE] font-medium"
-                      : "border-gray-200 text-gray-600 hover:bg-gray-50"
-                  }`}
-                >
-                  {h}时
-                </button>
-              ))}
-            </div>
+          {/* 当前时间按钮（对标吉时雨 app-time-btn） */}
+          <div className="mt-3 flex justify-center">
+            <button
+              type="button"
+              onClick={handleNow}
+              className="rounded-full border border-[#7B2FBE] bg-[#F3EDF7] px-4 py-1.5 text-sm font-medium text-[#7B2FBE] transition-colors hover:bg-[#C9A8DC]"
+            >
+              当前时间
+            </button>
           </div>
         </div>
 
@@ -573,23 +525,6 @@ export default function DatePicker({
                     selected={options.gender === "female"}
                     onClick={() => setOptions(prev => ({ ...prev, gender: "female" }))}
                   />
-                </div>
-              </div>
-            )}
-
-            {/* 历法类型 - Tab式切换 */}
-            {showCalType && (
-              <div>
-                <span className="mb-1.5 block text-sm text-gray-700">历法</span>
-                <div className="flex border-b border-gray-200">
-                  {(["solar", "lunar", "sizhu"] as const).map(t => (
-                    <TabOption
-                      key={t}
-                      label={{ solar: "公历", lunar: "农历", sizhu: "四柱" }[t]}
-                      active={options.calType === t}
-                      onClick={() => setOptions(prev => ({ ...prev, calType: t }))}
-                    />
-                  ))}
                 </div>
               </div>
             )}
@@ -616,7 +551,7 @@ export default function DatePicker({
             )}
 
             {/* 地区选择 - 下拉选择器 */}
-            {showRegion && (
+            {showRegion && options.zhenTaiyang && (
               <div>
                 <span className="mb-1.5 block text-sm text-gray-700">地区</span>
                 <div className="flex gap-2">
@@ -671,7 +606,7 @@ export default function DatePicker({
           </div>
         )}
 
-        {/* 排盘/起课按钮 - 醒目置底 */}
+        {/* 排盘按钮 - 醒目置底（对标吉时雨 submitFormBtn "排盘"） */}
         <div className="px-4 pb-5 pt-2">
           <button
             type="button"

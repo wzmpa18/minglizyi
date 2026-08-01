@@ -425,7 +425,7 @@ export default function MeihuaPage() {
         }}
         initialDate={{year: selectedDate.getFullYear(), month: selectedDate.getMonth() + 1, day: selectedDate.getDate(), hour: selectedDate.getHours(), minute: selectedDate.getMinutes()}}
         showMinute={true}
-        showGender={false} showCalType={false} showToggles={false} showRegion={false} showName={false}
+        showGender={false} showCalType={true} showToggles={false} showRegion={false} showName={false}
         submitText="起卦" title="梅花易数"
       />
 

@@ -655,11 +655,11 @@ export default function HehunPage() {
           initialOptions={{ gender: "male", calType: "solar", zaoWanZi: false, zhenTaiyang: false, xiaLing: false }}
           showMinute={true}
           showGender={false}
-          showCalType={false}
+          showCalType={true}
           showToggles={false}
           showRegion={false}
           showName={false}
-          submitText="确认"
+          submitText="排盘"
           title="男方出生时间"
         />
 
@@ -677,11 +677,11 @@ export default function HehunPage() {
           initialOptions={{ gender: "female", calType: "solar", zaoWanZi: false, zhenTaiyang: false, xiaLing: false }}
           showMinute={true}
           showGender={false}
-          showCalType={false}
+          showCalType={true}
           showToggles={false}
           showRegion={false}
           showName={false}
-          submitText="确认"
+          submitText="排盘"
           title="女方出生时间"
         />
       </main>

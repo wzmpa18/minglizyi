@@ -217,7 +217,7 @@ export default function QimenPage() {
           }}
           initialDate={{year: formData.year, month: formData.month, day: formData.day, hour: formData.hour, minute: 0}}
           showMinute={true}
-          showGender={false} showCalType={false} showToggles={false} showRegion={false} showName={false}
+          showGender={false} showCalType={true} showToggles={false} showRegion={false} showName={false}
           submitText="排盘" title="奇门遁甲排盘"
         />
       </div>

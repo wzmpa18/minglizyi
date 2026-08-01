@@ -682,7 +682,7 @@ function calculateDaLiuRen(
       const dingMap: Record<string, string> = { "甲":"未","乙":"酉","丙":"亥","丁":"丑","戊":"未","己":"酉","庚":"亥","辛":"丑","壬":"未","癸":"酉" };
       return dingMap[dayGan] ?? "";
     })() },
-    { label: "生氣", value: (() => {
+    { label: "生气", value: (() => {
       const shengQiMap: Record<string, string> = { "子":"午","丑":"未","寅":"申","卯":"酉","辰":"戌","巳":"亥","午":"子","未":"丑","申":"寅","酉":"卯","戌":"辰","亥":"巳" };
       return shengQiMap[yueJianZhi] ?? "";
     })() },
@@ -998,7 +998,7 @@ function InputPanel({
       <DatePicker
         show={showDatePicker}
         onClose={() => setShowDatePicker(false)}
-        onSubmit={(date) => {
+        onSubmit={(date, opts) => {
           setYear(date.year);
           setMonth(date.month);
           setDay(date.day);
@@ -1010,12 +1010,12 @@ function InputPanel({
         showMinute
         showOptions={false}
         showGender={false}
-        showCalType={false}
+        showCalType={true}
         showToggles={false}
         showRegion={false}
         showName={false}
         title="选择起课时间"
-        submitText="确定"
+        submitText="排盘"
       />
     </>
   );
@@ -1087,11 +1087,11 @@ export default function DaLiuRenPage() {
   }
 
   const tabs = [
-    { key: "panmian" as const, label: "盤面" },
-    { key: "fuzhu" as const, label: "輔助" },
+    { key: "panmian" as const, label: "盘面" },
+    { key: "fuzhu" as const, label: "辅助" },
     { key: "shensha" as const, label: "神煞" },
-    { key: "pingzhu" as const, label: "評註" },
-    { key: "dangan" as const, label: "檔案" },
+    { key: "pingzhu" as const, label: "评注" },
+    { key: "dangan" as const, label: "档案" },
   ];
 
   // ------ 渲染辅助 ------

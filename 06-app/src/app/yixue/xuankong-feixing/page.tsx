@@ -366,7 +366,7 @@ export default function XuankongFeixingPage() {
         }}
         initialDate={{ year: buildYear, month, day, hour, minute: 0 }}
         showMinute={false}
-        showGender={false} showCalType={false} showToggles={false} showRegion={false} showName={false}
+        showGender={false} showCalType={true} showToggles={false} showRegion={false} showName={false}
         submitText="排盘" title="玄空飞星排盘"
       />
 

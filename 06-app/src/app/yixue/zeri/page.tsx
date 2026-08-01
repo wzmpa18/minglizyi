@@ -306,7 +306,7 @@ export default function ZeriPage() {
         }}
         initialDate={{ year: startYear, month: startMonth, day: startDay, hour: 0, minute: 0 }}
         showMinute={false}
-        showGender={false} showCalType={false} showToggles={false} showRegion={false} showName={false}
+        showGender={false} showCalType={true} showToggles={false} showRegion={false} showName={false}
         submitText="确认开始日期" title="选择开始日期"
       />
 
@@ -322,7 +322,7 @@ export default function ZeriPage() {
         }}
         initialDate={{ year: endYear, month: endMonth, day: endDay, hour: 0, minute: 0 }}
         showMinute={false}
-        showGender={false} showCalType={false} showToggles={false} showRegion={false} showName={false}
+        showGender={false} showCalType={true} showToggles={false} showRegion={false} showName={false}
         submitText="确认结束日期" title="选择结束日期"
       />
 

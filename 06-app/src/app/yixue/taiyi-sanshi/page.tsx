@@ -340,7 +340,7 @@ export default function TaiyiSanshiPage() {
           }}
           initialDate={{year: taiyiYear, month: taiyiMonth, day: taiyiDay, hour: taiyiHour, minute: 0}}
           showMinute={true}
-          showGender={false} showCalType={false} showToggles={false} showRegion={false} showName={false}
+          showGender={false} showCalType={true} showToggles={false} showRegion={false} showName={false}
           submitText="排盘" title="太乙三式排盘"
         />
       </div>

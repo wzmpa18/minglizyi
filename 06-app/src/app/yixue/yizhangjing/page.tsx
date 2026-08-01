@@ -191,7 +191,7 @@ export default function YizhangjingPage() {
         }}
         showMinute={false}
         showGender={false}
-        showCalType={false}
+        showCalType={true}
         showToggles={false}
         showRegion={false}
         showName={false}

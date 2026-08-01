@@ -465,11 +465,11 @@ export default function XiaoliurenPage() {
             }}
             showMinute={true}
             showGender={false}
-            showCalType={false}
+            showCalType={true}
             showToggles={false}
             showRegion={false}
             showName={false}
-            submitText="确认时间"
+            submitText="排盘"
             title="小六壬"
           />
         </div>

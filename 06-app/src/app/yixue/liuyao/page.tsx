@@ -361,7 +361,7 @@ export default function LiuyaoPage() {
           }}
           initialDate={{year: parsedDate.year, month: parsedDate.month, day: parsedDate.day, hour, minute}}
           showMinute={true}
-          showGender={false} showCalType={false} showToggles={false} showRegion={false} showName={false}
+          showGender={false} showCalType={true} showToggles={false} showRegion={false} showName={false}
           submitText="起卦" title="六爻排盘"
         />
 
