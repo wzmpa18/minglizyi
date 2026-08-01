@@ -79,3 +79,12 @@ full_routes_test.py
 *.bak_*
 _backup_*/
 out_backup_*/
+
+# 旧部署文件
+deploy_p0/
+
+# 根目录临时脚本
+capture_*.py
+make_comparisons.py
+preview_server.js
+统一执行账簿_LEDGER.md
