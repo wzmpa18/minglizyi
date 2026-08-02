@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import {
@@ -16,7 +16,7 @@ import {
 } from "@/algorithm-core";
 import type { TianGan, DiZhi, PalmPosition } from "@/algorithm-core";
 import ClientSelector from "@/components/ClientSelector";
-import { DatePicker } from "@/components/shared";
+import { DatePicker, BrandHeader } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 
@@ -205,8 +205,9 @@ export default function XiaoliurenPage() {
   const kongwangData = useMemo(() => {
     if (!bazi) return { year: "", month: "", day: "", hour: "" };
     const pillars = bazi.pillars;
-    const getKw = (p: { gan: string; zhi: string }) => {
+    const getKw = (p?: { gan?: string; zhi?: string }) => {
       try {
+        if (!p?.gan || !p?.zhi) return "";
         return calcKongwang(p.gan as TianGan, p.zhi as DiZhi) || "";
       } catch {
         return "";
@@ -293,6 +294,7 @@ export default function XiaoliurenPage() {
   return (
     <div className="min-h-screen flex justify-center bg-[#ededed]">
       <div className="w-full" style={{maxWidth:"375px", paddingBottom:"10px"}}>
+      <BrandHeader title="言道小六壬" showBack={true} backUrl="/yixue" />
       {/* ====== 弹窗输入 (对标 jishiyu popup) ====== */}
       {showPopup && (
         <div

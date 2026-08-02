@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { DatePicker } from "@/components/shared";
+import { DatePicker, BrandHeader } from "@/components/shared";
 import ClientSelector from "@/components/ClientSelector";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
@@ -356,6 +356,7 @@ export default function XuankongFeixingPage() {
 
   return (
     <div className="mx-auto w-full bg-[#ededed]" style={{ maxWidth: "375px", minHeight: "100vh" }}>
+      <BrandHeader title="言道玄空飞星" showBack={true} backUrl="/yixue" />
       {/* 建造日期选择弹窗 */}
       <DatePicker
         show={showForm}

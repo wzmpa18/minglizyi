@@ -52,6 +52,18 @@ const MUTAGEN_MAP: Record<string, string> = {
 };
 
 // ============================================================================
+// 宫名映射（iztro 默认 "仆役" → 标准名 "交友"）
+// ============================================================================
+const PALACE_NAME_MAP: Record<string, string> = {
+  '仆役': '交友',
+};
+
+/** 将 iztro 宫名映射为标准十二宫名 */
+function mapPalaceName(name: string): string {
+  return PALACE_NAME_MAP[name] || name;
+}
+
+// ============================================================================
 // 三、星耀类型分类（iztro type → 页面分类）
 // ============================================================================
 // iztro star types:
@@ -120,6 +132,9 @@ export function calculateZiwei(input: ZiweiInput): ZiweiResult {
   };
 
   astrolabe.palaces.forEach((p: any, i: number) => {
+    // 宫名映射（仆役 → 交友）
+    const palaceName = mapPalaceName(p.name);
+
     // 4a. 收集主星（major）
     const majorStarNames: string[] = [];
     p.majorStars.forEach((s: any) => {
@@ -127,12 +142,12 @@ export function calculateZiwei(input: ZiweiInput): ZiweiResult {
       stars.push({
         name: s.name,
         type: 'major',
-        palace: p.name,
+        palace: palaceName,
         brightness: s.brightness || '平',
         mutagen: s.mutagen || undefined,
       });
       if (s.mutagen && MUTAGEN_MAP[s.mutagen]) {
-        sihuaMap[MUTAGEN_MAP[s.mutagen]] = { star: s.name, palace: p.name };
+        sihuaMap[MUTAGEN_MAP[s.mutagen]] = { star: s.name, palace: palaceName };
       }
     });
 
@@ -147,12 +162,12 @@ export function calculateZiwei(input: ZiweiInput): ZiweiResult {
       stars.push({
         name: s.name,
         type: s.type || 'adjective',
-        palace: p.name,
+        palace: palaceName,
         brightness: s.brightness || '',
         mutagen: s.mutagen || undefined,
       });
       if (s.mutagen && MUTAGEN_MAP[s.mutagen]) {
-        sihuaMap[MUTAGEN_MAP[s.mutagen]] = { star: s.name, palace: p.name };
+        sihuaMap[MUTAGEN_MAP[s.mutagen]] = { star: s.name, palace: palaceName };
       }
       if (isAuspiciousStar(s.name, s.type)) {
         auspiciousStars.push(s.name);
@@ -168,12 +183,20 @@ export function calculateZiwei(input: ZiweiInput): ZiweiResult {
     // adjectiveStars 包含其他杂曜（长生博士除外）
     p.adjectiveStars.forEach((s: any) => processStar(s));
 
-    // 4c. 大限干支和年龄范围
-    const decadalGanZhi = `${p.decadal.heavenlyStem}${p.decadal.earthlyBranch}`;
-    const ageRange: [number, number] = [p.decadal.range[0], p.decadal.range[1]];
+    // 4c. 大限干支和年龄范围（添加 null 安全检查）
+    const decadalData = p.decadal || {};
+    const decadalGan = decadalData.heavenlyStem || '';
+    const decadalZhi = decadalData.earthlyBranch || '';
+    const decadalRange: [number, number] = decadalData.range
+      ? [decadalData.range[0] || 0, decadalData.range[1] || 0]
+      : [0, 0];
+    const decadalGanZhi = `${decadalGan}${decadalZhi}`;
+
+    // 4d. 小限年龄列表
+    const ages: number[] = Array.isArray(p.ages) ? [...p.ages] : [];
 
     palaces.push({
-      name: p.name,
+      name: palaceName,
       index: i,
       heavenlyStem: p.heavenlyStem as TianGan,
       earthlyBranch: p.earthlyBranch as DiZhi,
@@ -182,12 +205,14 @@ export function calculateZiwei(input: ZiweiInput): ZiweiResult {
       auspiciousStars,
       shaStars,
       otherStars,
-      changsheng: p.changsheng12,
-      boshi: p.boshi12,
-      jiangqian: p.jiangqian12,
-      suiqian: p.suiqian12,
+      changsheng: p.changsheng12 || '',
+      boshi: p.boshi12 || '',
+      jiangqian: p.jiangqian12 || '',
+      suiqian: p.suiqian12 || '',
       decadal: decadalGanZhi,
-      ageRange: ageRange,
+      ageRange: decadalRange,
+      ages,
+      isBodyPalace: !!p.isBodyPalace,
     });
   });
 
@@ -203,15 +228,16 @@ export function calculateZiwei(input: ZiweiInput): ZiweiResult {
   const decadalAgeRanges: number[] = [];
   const decadalPalaces: string[] = [];
   astrolabe.palaces.forEach((p: any) => {
-    decadalAgeRanges.push(p.decadal.range[0]);
-    decadalPalaces.push(p.name);
+    const dr = p.decadal || {};
+    decadalAgeRanges.push(dr.range ? dr.range[0] : 0);
+    decadalPalaces.push(mapPalaceName(p.name));
   });
 
-  // 7. 身宫名称（isBodyPalace 为 true 的宫位）
+  // 7. 身宫名称（isBodyPalace 为 true 的宫位，使用映射后的宫名）
   let bodyPalace = '';
   for (const p of astrolabe.palaces as any[]) {
     if (p.isBodyPalace) {
-      bodyPalace = p.name;
+      bodyPalace = mapPalaceName(p.name);
       break;
     }
   }
@@ -226,6 +252,12 @@ export function calculateZiwei(input: ZiweiInput): ZiweiResult {
     fiveElementsClass: astrolabe.fiveElementsClass,
     soulStar: astrolabe.soul,
     bodyStar: astrolabe.body,
+    time: astrolabe.time,
+    timeRange: astrolabe.timeRange,
+    sign: astrolabe.sign,
+    zodiac: astrolabe.zodiac,
+    earthlyBranchOfSoulPalace: astrolabe.earthlyBranchOfSoulPalace,
+    earthlyBranchOfBodyPalace: astrolabe.earthlyBranchOfBodyPalace,
     palaces,
     stars,
     sihua,

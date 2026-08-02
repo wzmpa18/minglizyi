@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { Solar, SolarMonth } from "lunar-javascript";
 import ClientSelector from "@/components/ClientSelector";
+import { BrandHeader } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 import { useClientDate } from "@/lib/useClientDate";
@@ -158,6 +159,7 @@ export default function WannianliPage() {
 
   return (
     <div className="min-h-screen bg-[#ededed] pb-[80px]">
+      <BrandHeader title="言道万年历" showBack={true} backUrl="/yixue" />
       {/* ===== 顶部紫色导航条 ===== */}
       <div
         className="flex items-center justify-between px-4 py-3 text-white"

@@ -18,6 +18,10 @@ declare module 'lunar-javascript' {
     toYmdHms(): string;
     toFullString(): string;
     next(days: number): Solar;
+    nextYear(n: number): Solar;
+    nextMonth(n: number): Solar;
+    nextHour(n: number): Solar;
+    subtractMinute(minutes: number): number;
   }
 
   export class SolarMonth {
@@ -40,22 +44,120 @@ declare module 'lunar-javascript' {
     toString(): string;
   }
 
+  /** 流年 */
+  export class LiuNian {
+    getGanZhi(): string;
+    getYear(): number;
+    getAge(): number;
+  }
+
+  /** 小运 */
+  export class XiaoYun {
+    getGanZhi(): string;
+    getYear(): number;
+    getAge(): number;
+  }
+
+  /** 大运 */
+  export class DaYun {
+    getStartYear(): number;
+    getEndYear(): number;
+    getStartAge(): number;
+    getEndAge(): number;
+    getIndex(): number;
+    getGanZhi(): string;
+    getXun(): string;
+    getXunKong(): string;
+    getLunar(): Lunar;
+    getLiuNian(n?: number): LiuNian[];
+    getXiaoYun(n?: number): XiaoYun[];
+  }
+
+  /** 运 */
+  export class Yun {
+    getGender(): number;
+    getStartYear(): number;
+    getStartMonth(): number;
+    getStartDay(): number;
+    getStartHour(): number;
+    isForward(): boolean;
+    getLunar(): Lunar;
+    getStartSolar(): Solar;
+    getDaYun(n?: number): DaYun[];
+  }
+
   export class EightChar {
+    setSect(sect: number): void;
+    getSect(): number;
     getYear(): string;
     getMonth(): string;
     getDay(): string;
     getTime(): string;
+    // 天干
     getYearGan(): string;
-    getYearZhi(): string;
     getMonthGan(): string;
-    getMonthZhi(): string;
     getDayGan(): string;
-    getDayZhi(): string;
     getTimeGan(): string;
+    // 地支
+    getYearZhi(): string;
+    getMonthZhi(): string;
+    getDayZhi(): string;
     getTimeZhi(): string;
+    // 藏干
+    getYearHideGan(): string[];
+    getMonthHideGan(): string[];
+    getDayHideGan(): string[];
+    getTimeHideGan(): string[];
+    // 天干十神
     getYearShiShenGan(): string;
     getMonthShiShenGan(): string;
+    getDayShiShenGan(): string;
     getTimeShiShenGan(): string;
+    // 地支藏干十神
+    getYearShiShenZhi(): string[];
+    getMonthShiShenZhi(): string[];
+    getDayShiShenZhi(): string[];
+    getTimeShiShenZhi(): string[];
+    // 地势(十二长生)
+    getYearDiShi(): string;
+    getMonthDiShi(): string;
+    getDayDiShi(): string;
+    getTimeDiShi(): string;
+    // 空亡
+    getYearXun(): string;
+    getMonthXun(): string;
+    getDayXun(): string;
+    getTimeXun(): string;
+    getYearXunKong(): string;
+    getMonthXunKong(): string;
+    getDayXunKong(): string;
+    getTimeXunKong(): string;
+    // 纳音
+    getYearNaYin(): string;
+    getMonthNaYin(): string;
+    getDayNaYin(): string;
+    getTimeNaYin(): string;
+    // 五行
+    getYearWuXing(): string;
+    getMonthWuXing(): string;
+    getDayWuXing(): string;
+    getTimeWuXing(): string;
+    // 索引
+    getDayGanIndex(): number;
+    getDayZhiIndex(): number;
+    // 胎元/胎息/命宫/身宫
+    getTaiYuan(): string;
+    getTaiYuanNaYin(): string;
+    getTaiXi(): string;
+    getTaiXiNaYin(): string;
+    getMingGong(): string;
+    getMingGongNaYin(): string;
+    getShenGong(): string;
+    getShenGongNaYin(): string;
+    // 运
+    getYun(gender: number, sect: number): Yun;
+    getLunar(): Lunar;
+    // 通用
     getXun(ganZhi: string): string;
     getXunKong(ganZhi: string): string;
   }
@@ -87,6 +189,7 @@ declare module 'lunar-javascript' {
     getYear(): number;
     getMonth(): number;
     getDay(): number;
+    // 干支(非精确)
     getTimeZhi(): string;
     getTimeGan(): string;
     getYearGan(): string;
@@ -99,14 +202,53 @@ declare module 'lunar-javascript' {
     getMonthInGanZhi(): string;
     getDayInGanZhi(): string;
     getTimeInGanZhi(): string;
+    // 干支(精确,按节气)
+    getYearInGanZhiExact(): string;
+    getMonthInGanZhiExact(): string;
+    getYearGanExact(): string;
+    getYearZhiExact(): string;
+    getMonthGanExact(): string;
+    getMonthZhiExact(): string;
+    getDayGanExact(): string;
+    getDayZhiExact(): string;
+    getDayGanExact2(): string;
+    getDayZhiExact2(): string;
+    getYearGanIndexExact(): number;
+    getYearZhiIndexExact(): number;
+    getMonthGanIndexExact(): number;
+    getMonthZhiIndexExact(): number;
+    getDayGanIndexExact(): number;
+    getDayZhiIndexExact(): number;
+    getDayGanIndexExact2(): number;
+    getDayZhiIndexExact2(): number;
+    getTimeZhiIndex(): number;
+    // 空亡(精确)
+    getYearXunExact(): string;
+    getMonthXunExact(): string;
+    getDayXunExact(): string;
+    getDayXunExact2(): string;
+    getYearXunKongExact(): string;
+    getMonthXunKongExact(): string;
+    getDayXunKongExact(): string;
+    getDayXunKongExact2(): string;
+    // 八字
     getEightChar(): EightChar;
-    /** 返回当天节气名称，当天不是交节日返回空字符串 '' */
+    // 节气
     getJieQi(): string;
     getJieQiTable(): Record<string, Solar>;
     getCurrentJieQi(): JieQi | null;
     getPrevJieQi(wholeDay?: boolean): JieQi | null;
     getNextJieQi(wholeDay?: boolean): JieQi | null;
+    getPrevJie(): JieQi;
+    getNextJie(): JieQi;
+    getPrevJieQi(wholeDay?: boolean): JieQi | null;
+    getNextJieQi(wholeDay?: boolean): JieQi | null;
+    // 生肖
     getYearShengXiao(): string;
+    getYearShengXiaoByLiChun(): string;
+    getMonthShengXiaoExact(): string;
+    // 中文日期
+    getYearInChinese(): string;
     getMonthInChinese(): string;
     getDayInChinese(): string;
     getWeek(): number;

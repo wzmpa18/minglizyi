@@ -39,6 +39,10 @@ export interface ZiweiPalace {
   decadal: string;
   /** 大限年龄范围 [起始年龄, 截止年龄] */
   ageRange: [number, number];
+  /** 小限年龄列表（如 [6,18,30,42,54,66,78,90,102,114]） */
+  ages: number[];
+  /** 是否身宫 */
+  isBodyPalace: boolean;
 }
 
 export interface ZiweiStar {
@@ -69,6 +73,18 @@ export interface ZiweiResult {
   soulStar: string;
   /** 身主星 */
   bodyStar: string;
+  /** 时辰名（如 "午时"） */
+  time: string;
+  /** 时辰范围（如 "11:00-13:00"） */
+  timeRange: string;
+  /** 星座（如 "双子座"） */
+  sign: string;
+  /** 属相/生肖（如 "马"） */
+  zodiac: string;
+  /** 命宫地支（如 "午"） */
+  earthlyBranchOfSoulPalace: string;
+  /** 身宫地支（如 "戌"） */
+  earthlyBranchOfBodyPalace: string;
   palaces: ZiweiPalace[];
   stars: ZiweiStar[];
   sihua: ZiweiSihua;

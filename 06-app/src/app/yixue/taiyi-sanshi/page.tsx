@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { solarToBazi, GAN, ZHI } from "@/algorithm-core";
 import { solarToLunar, getLunarDateString } from "@/lib/lunar";
-import { DatePicker } from "@/components/shared";
+import { DatePicker, BrandHeader } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 
@@ -369,6 +369,7 @@ export default function TaiyiSanshiPage() {
 
   return (
     <div className="mx-auto w-full bg-[#ededed]" style={{ maxWidth: "375px", minHeight: "100vh" }}>
+      <BrandHeader title="言道太乙神数" showBack={true} backUrl="/yixue" />
       {/* 排盘结果 */}
       {result && (
         <div className="bg-white px-2 py-2">

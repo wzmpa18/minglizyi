@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { Solar } from "lunar-javascript";
 import { calculateQimen } from "@/algorithm-core";
 import type { QimenResult } from "@/algorithm-core";
-import { DatePicker } from "@/components/shared";
+import { DatePicker, BrandHeader } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 
@@ -285,6 +285,7 @@ export default function QimenPage() {
 
   return (
     <div style={{ maxWidth: "375px", margin: "0 auto", backgroundColor: "#fff", minHeight: "100vh", paddingBottom: "60px" }}>
+      <BrandHeader title="言道奇门遁甲" showBack={true} backUrl="/yixue" />
       {/* 操作栏 */}
       <div style={{ display: "flex", padding: "8px", gap: "6px", borderBottom: "1px solid #eee", alignItems: "center" }}>
         <button onClick={() => shiftTime(-1)} style={{ flex: 1, padding: "6px", border: "1px solid #ddd", borderRadius: "4px", backgroundColor: "#fff", fontSize: "12px", cursor: "pointer" }}>上一局</button>

@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import ClientSelector from "@/components/ClientSelector";
+import { BrandHeader } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 
@@ -301,6 +302,7 @@ export default function CarplatePage() {
 
   return (
     <div className="mx-auto w-full bg-[#ededed]" style={{ maxWidth: "375px", minHeight: "100vh" }}>
+      <BrandHeader title="言道车牌号" showBack={true} backUrl="/yixue" />
       {/* 输入表单 */}
       {!hasResult && (
         <div className="bg-white px-3 py-3">

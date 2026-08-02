@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { Solar } from "lunar-javascript";
-import { DatePicker } from "@/components/shared";
+import { DatePicker, BrandHeader } from "@/components/shared";
 import ClientSelector from "@/components/ClientSelector";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
@@ -301,6 +301,7 @@ export default function ZeriPage() {
 
   return (
     <div className="mx-auto w-full bg-[#ededed]" style={{ maxWidth: "375px", minHeight: "100vh" }}>
+      <BrandHeader title="言道择日" showBack={true} backUrl="/yixue" />
       {/* 开始日期选择弹窗 */}
       <DatePicker
         show={showStartPicker}

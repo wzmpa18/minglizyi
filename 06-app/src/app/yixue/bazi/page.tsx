@@ -26,7 +26,7 @@ import {
   getZhiIndex,
 } from "@/algorithm-core";
 import type { TianGan, DiZhi, Gender, BaziResult } from "@/algorithm-core";
-import { DatePicker } from "@/components/shared";
+import { DatePicker, BrandHeader } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 
@@ -1534,6 +1534,7 @@ export default function BaziPage(){
 
   return <div className="bg-[#ededed] min-h-screen flex justify-center">
     <div className="w-full" style={{maxWidth:"375px",paddingBottom:"10px"}}>
+    <BrandHeader title="言道八字排盘" showBack={true} backUrl="/yixue" />
     <DatePicker
       show={showForm}
       onClose={() => setShowForm(false)}

@@ -7,7 +7,7 @@
  * 用法: npx tsx scripts/verify_daliuren_cases.js
  */
 
-import { solarToBazi, getCurrentJieQi, getKongwang, getYearGanZhi, getShengXiao } from '../src/algorithm-core/index.ts';
+import { solarToBazi, getCurrentJieQi, getKongwang, getYearGanZhi, getShengXiao } from '../src/algorithm-core/index';
 
 // ============================================================================
 // 大六壬核心算法（从 src/app/yixue/daliuren/page.tsx 提取）
@@ -358,10 +358,6 @@ for (const tc of testCases) {
   let panStr = "    地盘: ";
   for (const dz of DZ_DIPAN) panStr += dz + " ";
   console.log(panStr);
-  panStr = "    天盘: ";
-  for (const dz of DZ_DIPAN) panStr += (result.yueJiangMap?.[dz] || dz) + " ";
-  // Wait, we don't have yueJiangMap in the result. Let me fix this.
-  // Actually, we can reconstruct it from tianPan
   panStr = "    天盘: ";
   for (const dz of DZ_DIPAN) {
     panStr += (result.tianPan[dz]?.zhi || dz) + " ";

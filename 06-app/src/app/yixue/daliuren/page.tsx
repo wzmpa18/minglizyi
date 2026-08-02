@@ -19,7 +19,7 @@ import {
 } from "@/algorithm-core";
 import type { TianGan, DiZhi, YinYang } from "@/algorithm-core";
 import ClientSelector from "@/components/ClientSelector";
-import { DatePicker } from "@/components/shared";
+import { DatePicker, BrandHeader } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 
@@ -109,6 +109,22 @@ const HOUR_TO_ZHI: Record<number, string> = {
 /** 六亲映射 */
 const LIU_QIN_SHORT: Record<string, string> = {
   "同我": "兄", "我生": "子", "克我": "官", "我克": "财", "生我": "父",
+};
+
+/** 九宗门课体吉凶定性/判断说明（对标大六壬经典九宗门，用于中宫判断说明） */
+const KE_TI_DESC: Record<string, string> = {
+  "元首课": "上克下·凡事顺成吉",
+  "重审课": "下克上·事反复初难后易",
+  "比用课": "比和·兄弟同谋亲疏相济",
+  "涉害课": "涉害深·艰难争讼周折",
+  "蒿矢课": "神克日·远事虚惊力微",
+  "弹射课": "日克神·远谋力轻难中",
+  "虎视课": "昴星阳日·惊恐关梁",
+  "冬蛇掩目课": "昴星阴日·暗昧惊伏",
+  "别责课": "课不全·依傍借助难独成",
+  "八专课": "干支同位·同谋私密",
+  "伏吟课": "伏吟·静伏阻滞不动",
+  "反吟课": "反吟·动而反复有来回",
 };
 
 /** 720课三传查找表 */
@@ -307,6 +323,7 @@ interface DaLiuRenResult {
   sanChuan: SanChuanItem[];
   sanChuanMethod: string;
   keTi: string;
+  keTiDesc: string;
   shensha: { label: string; value: string }[];
   zixuanShensha: { label: string; value: string }[];
 }
@@ -572,54 +589,69 @@ function calculateDaLiuRen(
     sanChuanMethod = "八专";
     keTi = "八专课";
   } else {
-    // 检查四课不全（别责）：第一课=第三课 或 第二课=第四课（有重复但非八专）
-    const isBieZe = (
-      (siKe[0].shangShen === siKe[2].shangShen && siKe[0].xiaShen === siKe[2].xiaShen) ||
-      (siKe[1].shangShen === siKe[3].shangShen && siKe[1].xiaShen === siKe[3].xiaShen)
-    );
-
-    if (isBieZe) {
-      sanChuanMethod = "别责";
-      keTi = "别责课";
-    } else if (zeiList.length === 0 && keList.length === 0) {
-      // 四课无克
-      if (yaoKeList.length > 0) {
-        sanChuanMethod = "遥克";
-        // 判断蒿矢/弹射
-        const hasShenKeRi = yaoKeList.some(y => y.type === "shenKeRi");
-        keTi = hasShenKeRi ? "蒿矢课" : "弹射课";
+    // 九宗门判定顺序：贼克 → 遥克 → 别责 → 昴星
+    if (zeiList.length >= 1 || keList.length >= 1) {
+      // 有克贼 → 贼克法（含比用/涉害）
+      // 贼（下克上）优先于克（上克下）：有贼则只看贼，无贼才看克
+      if (zeiList.length > 0) {
+        if (zeiList.length === 1) {
+          // 只有一个下克上 → 重审课
+          sanChuanMethod = "贼克";
+          keTi = "重审课";
+        } else {
+          // 多个下克上 → 比用/涉害
+          const biList = zeiList.filter(k => isBi(k.shangShen));
+          if (biList.length === 1) {
+            sanChuanMethod = "比用";
+            keTi = "比用课";
+          } else {
+            sanChuanMethod = "涉害";
+            keTi = "涉害课";
+          }
+        }
       } else {
+        // 无贼有克（上克下）
+        if (keList.length === 1) {
+          // 只有一个上克下 → 元首课
+          sanChuanMethod = "贼克";
+          keTi = "元首课";
+        } else {
+          // 多个上克下 → 比用/涉害
+          const biList = keList.filter(k => isBi(k.shangShen));
+          if (biList.length === 1) {
+            sanChuanMethod = "比用";
+            keTi = "比用课";
+          } else {
+            sanChuanMethod = "涉害";
+            keTi = "涉害课";
+          }
+        }
+      }
+    } else if (yaoKeList.length > 0) {
+      // 无克贼，有遥克 → 遥克法
+      sanChuanMethod = "遥克";
+      const hasShenKeRi = yaoKeList.some(y => y.type === "shenKeRi");
+      keTi = hasShenKeRi ? "蒿矢课" : "弹射课";
+    } else {
+      // 无克贼，无遥克
+      // 检查四课不全（别责）：第一课=第三课 或 第二课=第四课
+      const isBieZe = (
+        (siKe[0].shangShen === siKe[2].shangShen && siKe[0].xiaShen === siKe[2].xiaShen) ||
+        (siKe[1].shangShen === siKe[3].shangShen && siKe[1].xiaShen === siKe[3].xiaShen)
+      );
+      if (isBieZe) {
+        sanChuanMethod = "别责";
+        keTi = "别责课";
+      } else {
+        // 四课全，无克无遥 → 昴星法
         sanChuanMethod = "昴星";
         keTi = dayGanYy === "阳" ? "虎视课" : "冬蛇掩目课";
       }
-    } else if (zeiList.length >= 1 || keList.length >= 1) {
-      // 有克贼
-      if (zeiList.length === 1 && keList.length === 0) {
-        // 只有一个下克上 → 重审
-        sanChuanMethod = "贼克";
-        keTi = "重审课";
-      } else if (zeiList.length === 0 && keList.length === 1) {
-        // 只有一个上克下 → 元首
-        sanChuanMethod = "贼克";
-        keTi = "元首课";
-      } else {
-        // 多个克贼，用比用/涉害
-        // 贼(下克上)优先于克(上克下)
-        const priorityList = zeiList.length > 0 ? zeiList : keList;
-        // 取与日干阴阳比和者
-        const biList = priorityList.filter(k => isBi(k.shangShen));
-
-        if (biList.length === 1) {
-          sanChuanMethod = "比用";
-          keTi = "第一课";
-        } else {
-          // 多个比和或无比和 → 涉害
-          sanChuanMethod = "涉害";
-          keTi = "涉害课";
-        }
-      }
     }
   }
+
+  // 课体吉凶定性/判断说明（对标大六壬九宗门，用于中宫判断说明）
+  const keTiDesc = KE_TI_DESC[keTi] ?? "";
 
   // 构建反向映射：天盘地支 → 地盘地支，用于三传天干查找
   const tianPanToDiPan: PanMap = {};
@@ -659,7 +691,7 @@ function calculateDaLiuRen(
     })() },
     { label: "旬首", value: xunSW.shou },
     { label: "旬尾", value: xunSW.wei },
-    { label: "太歲", value: yearGanZhi },
+    { label: "太岁", value: yearGanZhi },
     { label: "月建", value: siZhu[1][0] + siZhu[1][1] },
     { label: "日建", value: dayGan + dayZhi },
     { label: "月破", value: (() => {
@@ -733,6 +765,7 @@ function calculateDaLiuRen(
     sanChuan,
     sanChuanMethod,
     keTi,
+    keTiDesc,
     shensha,
     zixuanShensha,
   };
@@ -1095,6 +1128,7 @@ export default function DaLiuRenPage() {
   if (!data) {
     return (
       <div style={{ backgroundColor: "#fff", minHeight: "100vh", margin: 0, padding: 0 }}>
+        <BrandHeader title="言道大六壬" showBack={true} backUrl="/yixue" />
         <InputPanel show={true} onClose={() => {}} onSubmit={handleSubmit} selectedClient={selectedClient} onClientSelect={setSelectedClient} initialValues={prefillParams} />
       </div>
     );
@@ -1160,6 +1194,7 @@ export default function DaLiuRenPage() {
 
   return (
     <div style={{ backgroundColor: "#fff", minHeight: "100vh", margin: 0, padding: 0, paddingBottom: "48px" }}>
+      <BrandHeader title="言道大六壬" showBack={true} backUrl="/yixue" />
       {/* 输入面板（点击编辑按钮展开） */}
       <InputPanel show={showForm} onClose={() => setShowForm(false)} onSubmit={handleSubmit} selectedClient={selectedClient} onClientSelect={setSelectedClient} initialValues={prefillParams} />
 
@@ -1602,7 +1637,7 @@ export default function DaLiuRenPage() {
                   );
                 })}
 
-                {/* 中宫：行2-3, 列2-3 */}
+                {/* 中宫：行2-3, 列2-3 —— 日干日支+课体全称+三传方法名+判断说明 */}
                 <div style={{
                   gridRow: "2 / span 2",
                   gridColumn: "2 / span 2",
@@ -1612,17 +1647,23 @@ export default function DaLiuRenPage() {
                   justifyContent: "center",
                   border: "1px solid #ccc",
                   boxSizing: "border-box",
-                  padding: "4px",
+                  padding: "3px 4px",
                   minHeight: "104px",
-                  lineHeight: 1.3,
+                  lineHeight: 1.25,
+                  gap: "1px",
                 }}>
+                  {/* 第1行：日干(红) + 日支(红) + "日"字 —— 对标吉时雨：日干日支均为红色 */}
                   <div style={{ fontSize: "16px", fontWeight: 700, lineHeight: 1.2 }}>
                     <span style={{ color: BRAND_RED }}>{data.dayGan}</span>
-                    <span style={{ color: zhiColorRender(data.dayZhi, data.dayGan) }}>{data.dayZhi}</span>
-                    <span style={{ color: "#000", fontSize: "13px" }}>日</span>
+                    <span style={{ color: BRAND_RED }}>{data.dayZhi}</span>
+                    <span style={{ color: "#000", fontSize: "12px" }}>日</span>
                   </div>
-                  <div style={{ fontSize: "11px", color: "#333", marginTop: "2px" }}>{data.keTi}</div>
-                  <div style={{ fontSize: "10px", color: "#666" }}>{data.sanChuanMethod}</div>
+                  {/* 第2行：课体全称（加粗） */}
+                  <div style={{ fontSize: "12px", fontWeight: 700, color: "#000", marginTop: "2px" }}>{data.keTi}</div>
+                  {/* 第3行：三传方法名 */}
+                  <div style={{ fontSize: "10px", color: "#444" }}>三传：{data.sanChuanMethod}法</div>
+                  {/* 第4行：课体吉凶定性/判断说明 */}
+                  <div style={{ fontSize: "9px", color: "#666", textAlign: "center", marginTop: "1px", lineHeight: 1.3 }}>{data.keTiDesc}</div>
                 </div>
               </div>
             </div>
@@ -1690,7 +1731,8 @@ export default function DaLiuRenPage() {
               <div>贵人：{data.isDaytime ? "昼贵" : "夜贵"}方（{tianYiGuiRen(data.dayGan, data.isDaytime)}）</div>
               <div>空亡：{data.kongwang[0]}{data.kongwang[1]}</div>
               <div>日干：{data.dayGan}（{GAN_WUXING[data.dayGan]}） 日支：{data.dayZhi}（{ZHI_WUXING[data.dayZhi]}）</div>
-              <div>课体：{data.keTi}</div>
+              <div>课体：{data.keTi}（{data.sanChuanMethod}法）</div>
+              <div>判断：{data.keTiDesc}</div>
               <div>三传：{data.sanChuan.map(sc => sc.zhi).join(" → ")}</div>
             </div>
           )}

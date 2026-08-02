@@ -11,7 +11,7 @@ import {
   ZHI_WUXING,
 } from "@/algorithm-core";
 import type { HehunResult } from "@/algorithm-core";
-import { DatePicker } from "@/components/shared";
+import { DatePicker, BrandHeader } from "@/components/shared";
 import ClientSelector from "@/components/ClientSelector";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
@@ -389,6 +389,7 @@ export default function HehunPage() {
       className="mx-auto flex min-h-screen flex-col"
       style={{ maxWidth: "420px", backgroundColor: "#f5f0fa" }}
     >
+      <BrandHeader title="言道合婚" showBack={true} backUrl="/yixue" />
       {/* ====== 顶部导航栏 ====== */}
       <header
         className="sticky top-0 z-50 flex items-center h-11 w-full px-2"

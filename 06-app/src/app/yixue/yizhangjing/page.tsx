@@ -6,7 +6,7 @@ import {
   solarToBazi,
   getCurrentJieQi,
 } from "@/algorithm-core";
-import { DatePicker } from "@/components/shared";
+import { DatePicker, BrandHeader } from "@/components/shared";
 
 // ============================================================================
 // 一掌经十二宫
@@ -179,6 +179,7 @@ export default function YizhangjingPage() {
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#ededed" }}>
+      <BrandHeader title="言道一掌经" showBack={true} backUrl="/yixue" />
       <DatePicker
         show={showForm}
         onClose={() => setShowForm(false)}

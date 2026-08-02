@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import type { CSSProperties } from "react";
 import { calculateZiwei, solarToBazi } from "@/algorithm-core";
 import type { ZiweiResult, Gender } from "@/algorithm-core";
-import { DatePicker } from "@/components/shared";
+import { DatePicker, BrandHeader } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 
@@ -680,6 +680,7 @@ export default function ZiweiPage() {
   return (
     <div className="bg-[#ededed] min-h-screen flex justify-center">
       <div className="w-full" style={{ maxWidth: "375px", paddingBottom: "10px" }}>
+      <BrandHeader title="言道紫微斗数" showBack={true} backUrl="/yixue" />
       {/* 输入表单 DatePicker 弹窗 */}
       <DatePicker
         show={showForm}
@@ -725,7 +726,7 @@ export default function ZiweiPage() {
           <div className="bg-white rounded-lg overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08)] mb-2 mt-2">
             {/* 方位标签 - 上方（对应巳午未申） */}
             <div className="flex text-[9px] text-gray-500" style={{ height: "14px", lineHeight: "14px" }}>
-              <div style={{ width: "25%", textAlign: "center" }}>南偏東</div>
+              <div style={{ width: "25%", textAlign: "center" }}>南偏东</div>
               <div style={{ width: "25%", textAlign: "center", fontWeight: "bold", color: "#333" }}>正南方</div>
               <div style={{ width: "25%", textAlign: "center" }}>南偏西</div>
               <div style={{ width: "25%", textAlign: "center" }}>西偏南</div>
@@ -734,9 +735,9 @@ export default function ZiweiPage() {
             <div style={{ display: "flex" }}>
               {/* 方位标签 - 左侧 */}
               <div style={{ width: "14px", display: "flex", flexDirection: "column", fontSize: "9px", color: "#555", writingMode: "vertical-rl", textOrientation: "mixed", justifyContent: "center", alignItems: "center", letterSpacing: "2px" }}>
-                <span style={{ marginBottom: "8px" }}>東偏南</span>
-                <span style={{ fontWeight: "bold", color: "#333" }}>正東方</span>
-                <span style={{ marginTop: "8px" }}>東偏北</span>
+                <span style={{ marginBottom: "8px" }}>东偏南</span>
+                <span style={{ fontWeight: "bold", color: "#333" }}>正东方</span>
+                <span style={{ marginTop: "8px" }}>东偏北</span>
               </div>
 
               {/* 4x4 网格区域（含SVG叠加） */}
@@ -784,13 +785,13 @@ export default function ZiweiPage() {
                           onClick={() => setFocusedPalace(null)}
                           style={{ gridRow: "2/4", gridColumn: "2/4", border: "1px solid #ccc", display: "flex", flexDirection: "column", padding: "3px 4px", overflow: "hidden", backgroundColor: "#fafafa", position: "relative", cursor: "pointer", zIndex: 3 }}
                         >
-                          {/* 标题 */}
+                          {/* Row 0: 标题 */}
                           <div className="text-center font-bold" style={{ color: BRAND_PURPLE, fontSize: "13px", lineHeight: 1.2, marginBottom: "1px", position: "relative" }}>
-                            言道紫微
+                            言道•紫微斗数
                             <span style={{ position: "absolute", right: 0, top: 0, fontSize: "7px", color: "#999", fontWeight: "normal" }}>v1.0</span>
                           </div>
 
-                          {/* 性别阴阳 + 五行局 */}
+                          {/* Row 1: 阴阳性别 + 五行局 */}
                           {(() => {
                             const isYangGan = ["甲","丙","戊","庚","壬"].includes(result.heavenlyStem);
                             const yyLabel = gender === "male" ? (isYangGan ? "阳男" : "阴男") : (isYangGan ? "阳女" : "阴女");
@@ -801,60 +802,75 @@ export default function ZiweiPage() {
                             );
                           })()}
 
-                          {/* 公历日期 */}
-                          <div style={{ fontSize: "8px", color: "#666", lineHeight: 1.3, textAlign: "center" }}>
-                            公历：{result.solarDate || "-"}
-                          </div>
-                          <div style={{ fontSize: "8px", color: "#666", lineHeight: 1.3, textAlign: "center" }}>
-                            农历：{result.lunarDate || "-"}
+                          {/* Row 2: 公历 + 时辰范围 */}
+                          <div style={{ fontSize: "8px", color: "#666", lineHeight: 1.3, display: "flex", justifyContent: "space-between", padding: "0 2px" }}>
+                            <span>公历：{result.solarDate || "-"}</span>
+                            <span>{result.timeRange || ""}</span>
                           </div>
 
-                          {/* 命主 + 身主 + 子斗 */}
-                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "8px", color: "#666", lineHeight: 1.3, marginTop: "1px", marginBottom: "1px" }}>
+                          {/* Row 3: 农历 + 时辰名 */}
+                          <div style={{ fontSize: "8px", color: "#666", lineHeight: 1.3, display: "flex", justifyContent: "space-between", padding: "0 2px" }}>
+                            <span>农历：{result.lunarDate || "-"}</span>
+                            <span>{result.time || ""}</span>
+                          </div>
+
+                          {/* Row 4: 属相 + 星座 */}
+                          <div style={{ fontSize: "8px", color: "#666", lineHeight: 1.3, display: "flex", justifyContent: "space-between", padding: "0 2px", marginTop: "1px" }}>
+                            <span>属相：{result.zodiac || "-"}</span>
+                            <span>星座：{result.sign || "-"}</span>
+                          </div>
+
+                          {/* Row 5: 身宫 + 命宫（地支） */}
+                          <div style={{ fontSize: "8px", color: "#666", lineHeight: 1.3, display: "flex", justifyContent: "space-between", padding: "0 2px" }}>
+                            <span>身宫：<span style={{ color: "#000", fontWeight: "bold" }}>{result.earthlyBranchOfBodyPalace || "-"}</span></span>
+                            <span>命宫：<span style={{ color: "#000", fontWeight: "bold" }}>{result.earthlyBranchOfSoulPalace || "-"}</span></span>
+                          </div>
+
+                          {/* Row 6: 命主 + 身主 */}
+                          <div style={{ fontSize: "8px", color: "#666", lineHeight: 1.3, display: "flex", justifyContent: "space-between", padding: "0 2px" }}>
                             <span>命主：<span style={{ color: "#000", fontWeight: "bold" }}>{result.soulStar || mingZhu}</span></span>
                             <span>身主：<span style={{ color: "#000", fontWeight: "bold" }}>{result.bodyStar || shenZhu}</span></span>
-                            <span>子斗：<span style={{ color: "#000", fontWeight: "bold" }}>{ziDou || "-"}</span></span>
                           </div>
 
-                          {/* 八字四柱 - 竖排：每柱天干在上、地支在下 */}
-                          {baziPillars && (
-                            <div className="flex gap-0.5" style={{ marginBottom: "1px" }}>
-                              {[
-                                { label: "年", gz: baziPillars.pillars?.[0]?.ganzhi || `${result.heavenlyStem}${result.earthlyBranch}` },
-                                { label: "月", gz: baziPillars.pillars?.[1]?.ganzhi || "-" },
-                                { label: "日", gz: baziPillars.pillars?.[2]?.ganzhi || "-" },
-                                { label: "时", gz: baziPillars.pillars?.[3]?.ganzhi || "-" },
-                              ].map((p, pi) => {
-                                const gan = p.gz.charAt(0);
-                                const zhi = p.gz.charAt(1);
-                                const ganColor = GAN_WUXING[gan] ? WUXING_COLORS[GAN_WUXING[gan]] : BRAND_PURPLE_DARK;
-                                const zhiColor = ZHI_WUXING[zhi] ? WUXING_COLORS[ZHI_WUXING[zhi]] : BRAND_PURPLE_DARK;
-                                return (
-                                  <div key={pi} className="flex-1 text-center rounded" style={{ backgroundColor: BRAND_PURPLE_BG, padding: "1px 0", display: "flex", flexDirection: "column", alignItems: "center" }}>
-                                    <div style={{ fontSize: "7px", color: "#999", lineHeight: 1.1 }}>{p.label}</div>
-                                    <div style={{ fontSize: "10px", fontWeight: "bold", lineHeight: 1.2, color: ganColor }}>{gan}</div>
-                                    <div style={{ fontSize: "10px", fontWeight: "bold", lineHeight: 1.2, color: zhiColor }}>{zhi}</div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
+                          {/* Row 7a: 四柱（天干地支竖排，五行颜色）- 数据来自 iztro chineseDate */}
+                          {(() => {
+                            const parts = result.chineseDate ? result.chineseDate.split(/\s+/) : [];
+                            const labels = ["年", "月", "日", "时"];
+                            return (
+                              <div className="flex gap-0.5" style={{ marginBottom: "1px", marginTop: "1px" }}>
+                                {labels.map((label, pi) => {
+                                  const gz = parts[pi] || "--";
+                                  const gan = gz.charAt(0);
+                                  const zhi = gz.charAt(1);
+                                  const ganColor = GAN_WUXING[gan] ? WUXING_COLORS[GAN_WUXING[gan]] : BRAND_PURPLE_DARK;
+                                  const zhiColor = ZHI_WUXING[zhi] ? WUXING_COLORS[ZHI_WUXING[zhi]] : BRAND_PURPLE_DARK;
+                                  return (
+                                    <div key={pi} className="flex-1 text-center rounded" style={{ backgroundColor: BRAND_PURPLE_BG, padding: "1px 0", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                      <div style={{ fontSize: "7px", color: "#999", lineHeight: 1.1 }}>{label}</div>
+                                      <div style={{ fontSize: "10px", fontWeight: "bold", lineHeight: 1.2, color: ganColor }}>{gan}</div>
+                                      <div style={{ fontSize: "10px", fontWeight: "bold", lineHeight: 1.2, color: zhiColor }}>{zhi}</div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })()}
 
-                          {/* 起运信息 */}
+                          {/* Row 7b: 起运信息 */}
                           {baziPillars?.dayun && (
                             <div style={{ fontSize: "7px", color: "#888", lineHeight: 1.2, textAlign: "center", marginBottom: "1px" }}>
                               {baziPillars.dayun.qiyunText || ""}
                             </div>
                           )}
 
-                          {/* 大限年龄段（简版，显示前几个大运干支和起始年龄） */}
-                          {decadalData && decadalData.length > 0 && (
+                          {/* Row 7c: 大运列表（八字大运，干支五行色，对标jishiyu） */}
+                          {baziPillars?.dayun?.dayunList && baziPillars.dayun.dayunList.length > 0 && (
                             <div style={{ display: "flex", gap: "1px", marginBottom: "1px" }}>
-                              {decadalData.slice(0, 8).map((d, i) => (
+                              {baziPillars.dayun.dayunList.slice(0, 8).map((d, i) => (
                                 <div key={i} style={{ flex: 1, textAlign: "center", fontSize: "6px", lineHeight: 1.1, color: "#666" }}>
-                                  <span style={{ color: "#333", fontWeight: "bold", fontSize: "7px" }}>{d.ageRange?.[0]}岁</span>
+                                  <span style={{ color: "#333", fontWeight: "bold", fontSize: "7px" }}>{Math.round(d.startAge)}岁</span>
                                   <br />
-                                  <span>{d.decadalGan}</span><span>{d.decadalZhi}</span>
+                                  <span style={{ color: getGanZhiColor(d.gan), fontWeight: "bold" }}>{d.gan}</span><span style={{ color: getGanZhiColor(d.zhi), fontWeight: "bold" }}>{d.zhi}</span>
                                 </div>
                               ))}
                             </div>
@@ -886,7 +902,7 @@ export default function ZiweiPage() {
                       );
                     }
 
-                    const isShen = palace.name === result.bodyPalace;
+                    const isShen = palace.isBodyPalace || palace.name === result.bodyPalace;
                     const majorStars = palace.majorStars || [];
                     const palaceZhiIdx = palace.index !== undefined ? palace.index : ZHI_NAMES.indexOf(palace.earthlyBranch);
 
@@ -1081,14 +1097,23 @@ export default function ZiweiPage() {
                           )}
                         </div>
 
-                        {/* 底部信息行：年龄 + 大限/身宫 */}
-                        <div style={{ marginTop: "auto", paddingTop: "1px", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-                          <span style={{ fontSize: "9px", color: "#585858", lineHeight: "1.2" }}>
-                            {palace.ageRange && palace.ageRange[0] !== undefined ? `${palace.ageRange[0]}~${palace.ageRange[1]}` : ""}
-                          </span>
-                          <span style={{ fontSize: "9px", color: "#585858", lineHeight: "1.2" }}>
-                            {palace.decadal || ""}{isShen ? <span style={{ color: "#fa0000", fontWeight: "bold", marginLeft: "2px" }}>身宫</span> : null}
-                          </span>
+                        {/* 底部信息行：小限年龄 + 大限年龄范围 + 大限干支/身宫（对标吉时雨） */}
+                        <div style={{ marginTop: "auto", paddingTop: "1px" }}>
+                          {/* 小限年龄列表（对标吉时雨：6px，居中，前7个年龄） */}
+                          {palace.ages && palace.ages.length > 0 && (
+                            <div style={{ fontSize: "6px", color: "#999", lineHeight: 1.1, textAlign: "center", marginBottom: "0px", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
+                              {palace.ages.slice(0, 7).join(",")}
+                            </div>
+                          )}
+                          {/* 大限年龄范围 + 大限干支/身宫 */}
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                            <span style={{ fontSize: "9px", color: "#585858", lineHeight: "1.2" }}>
+                              {palace.ageRange && palace.ageRange[0] !== undefined ? `${palace.ageRange[0]}-${palace.ageRange[1]}` : ""}
+                            </span>
+                            <span style={{ fontSize: "9px", color: "#585858", lineHeight: "1.2" }}>
+                              {palace.decadal || ""}{isShen ? <span style={{ color: "#fa0000", fontWeight: "bold", marginLeft: "2px" }}>身</span> : null}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     );
@@ -1108,8 +1133,8 @@ export default function ZiweiPage() {
             <div className="flex text-[9px] text-gray-500" style={{ height: "14px", lineHeight: "14px" }}>
               <div style={{ width: "14px" }}></div>
               <div style={{ flex: 1, display: "flex" }}>
-                <div style={{ width: "25%", textAlign: "center" }}>東偏北</div>
-                <div style={{ width: "25%", textAlign: "center" }}>北偏東</div>
+                <div style={{ width: "25%", textAlign: "center" }}>东偏北</div>
+                <div style={{ width: "25%", textAlign: "center" }}>北偏东</div>
                 <div style={{ width: "25%", textAlign: "center", fontWeight: "bold", color: "#333" }}>正北方</div>
                 <div style={{ width: "25%", textAlign: "center" }}>北偏西</div>
               </div>

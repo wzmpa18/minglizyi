@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { Solar, LunarTime } from "lunar-javascript";
 import ClientSelector from "@/components/ClientSelector";
+import { BrandHeader } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 import { useClientDate } from "@/lib/useClientDate";
@@ -146,6 +147,7 @@ export default function HuangliPage() {
 
   return (
     <div className="min-h-screen bg-[#ededed] pb-[80px]">
+      <BrandHeader title="言道万年历" showBack={true} backUrl="/yixue" />
       {/* ===== 顶部日期导航栏 ===== */}
       <div
         className="flex items-center justify-between px-4 py-3 text-white"

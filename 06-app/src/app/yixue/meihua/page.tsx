@@ -16,7 +16,7 @@ import {
   ZHI_WUXING,
 } from "@/algorithm-core";
 import type { TrigramName, TianGan, DiZhi } from "@/algorithm-core";
-import { DatePicker } from "@/components/shared";
+import { DatePicker, BrandHeader } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 
@@ -417,6 +417,7 @@ export default function MeihuaPage() {
   return (
     <div className="min-h-screen flex justify-center bg-[#ededed]">
       <div className="w-full" style={{maxWidth:"375px", paddingBottom:"10px"}}>
+      <BrandHeader title="言道梅花易数" showBack={true} backUrl="/yixue" />
 
       {/* ====== 日期时间选择弹窗 ====== */}
       <DatePicker

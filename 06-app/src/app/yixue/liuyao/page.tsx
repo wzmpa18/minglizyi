@@ -351,7 +351,7 @@ export default function LiuyaoPage() {
     <div className="min-h-screen flex justify-center" style={{ background: "#ededed" }}>
       <div className="w-full" style={{ maxWidth: "375px", minHeight: "100vh", background: "#fff" }}>
         {/* 紫色标题栏 */}
-        <BrandHeader title="言道六爻占卜" showBack />
+        <BrandHeader title="言道六爻占卜" showBack={true} backUrl="/yixue" />
 
         {/* ======= 日期时间选择弹窗 ======= */}
         <DatePicker

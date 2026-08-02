@@ -15,6 +15,7 @@
 // @ts-nocheck
 
 import { calculateDayun, determinePattern, calculateShenQiangRuo } from './advanced';
+import { Solar as LunarSolar } from 'lunar-javascript';
 
 // ============================================================================
 // 一、基础常量
@@ -1065,13 +1066,23 @@ export function buildBazi(params) {
 }
 
 // ============================================================================
-// 二十二、公历转八字（V3.1 新增: 完整排盘入口）
+// 二十二、公历转八字（v17.7 根因重写: 直接使用 lunar-javascript 对标吉时雨）
 // ============================================================================
 
 /**
- * 公历日期转八字四柱（V3.1 完整排盘）
+ * 公历日期转八字四柱（v17.7 根因重写）
  *
- * 支持独立计算年月日时四柱，无需外部农历库依赖。
+ * 算法源: 直接复用 lunar-javascript 库的 Solar/Lunar/EightChar 类，
+ * 与吉时雨 (jishiyu) bazi.js 的 init()/paipan() 完全同源。
+ * 禁止任何自主实现的节气/四柱/十神/藏干/地势/空亡/大运计算逻辑。
+ *
+ * 对标吉时雨关键代码:
+ *   this.solar = Solar.fromYmdHms(year, month, day, hour, minute, 0);
+ *   this.lunar = this.solar.getLunar();
+ *   this.bazi = this.lunar.getEightChar();
+ *   this.bazi.setSect(!!wanzishi ? 2 : 1);
+ *   this.yun = this.bazi.getYun(isman ? 1 : 0, 2);
+ *   this.dayun = this.yun.getDaYun(DAYUN_NUM + 1);
  *
  * @param {Object} params
  * @param {number} params.year   - 公历年份
@@ -1080,6 +1091,7 @@ export function buildBazi(params) {
  * @param {number} params.hour   - 小时 (0-23)
  * @param {number} [params.minute] - 分钟 (0-59)
  * @param {string} params.gender  - 性别 'male'/'female'
+ * @param {number} [params.sect]  - 1=普通, 2=晚子时 (默认1)
  * @returns {Object} 完整八字排盘数据
  */
 export function solarToBazi(params) {
@@ -1087,129 +1099,284 @@ export function solarToBazi(params) {
   var month = params.month;
   var day = params.day;
   var hour = params.hour;
+  var minute = params.minute || 0;
   var gender = params.gender;
+  var sect = params.sect || 1; // 默认普通模式，晚子时需传 sect=2
 
   // ============================================================
-  // 0. 晚子时处理：23:00后日柱、月柱、年柱均按次日计算
+  // 1. 使用 lunar-javascript 创建 Solar/Lunar/EightChar —— 对标吉时雨
   // ============================================================
-  if (hour === 23) {
-    // 晚子时：日期加1天
-    var dim = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-    var isLeapYear = function(y) { return (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0); };
-    if (isLeapYear(year)) dim[1] = 29;
-    day += 1;
-    if (day > dim[month - 1]) {
-      day = 1;
-      month += 1;
-      if (month > 12) {
-        month = 1;
-        year += 1;
-      }
+  var solar = LunarSolar.fromYmdHms(year, month, day, hour, minute, 0);
+  var lunar = solar.getLunar();
+  var ec = lunar.getEightChar();
+  ec.setSect(sect);
+
+  // ============================================================
+  // 2. 从 EightChar 获取四柱核心数据 —— 对标吉时雨 buildPillarCol
+  // ============================================================
+  var yearGan = ec.getYearGan();
+  var yearZhi = ec.getYearZhi();
+  var monthGan = ec.getMonthGan();
+  var monthZhi = ec.getMonthZhi();
+  var dayGan = ec.getDayGan();
+  var dayZhi = ec.getDayZhi();
+  var hourGan = ec.getTimeGan();
+  var hourZhi = ec.getTimeZhi();
+
+  // 辅助函数: 从 EightChar 构建单柱数据 (对标吉时雨 buildPillarCol)
+  function buildPillarFromEC(pillarIndex) {
+    var gan, zhi, ganShishen, zhiCanggan, zhiShishen, dishi, kongwang, nayin;
+    switch (pillarIndex) {
+      case 1: // 年柱
+        gan = ec.getYearGan(); zhi = ec.getYearZhi();
+        ganShishen = ec.getYearShiShenGan();
+        zhiCanggan = ec.getYearHideGan();
+        zhiShishen = ec.getYearShiShenZhi();
+        dishi = ec.getYearDiShi();
+        kongwang = ec.getYearXunKong();
+        nayin = ec.getYearNaYin();
+        break;
+      case 2: // 月柱
+        gan = ec.getMonthGan(); zhi = ec.getMonthZhi();
+        ganShishen = ec.getMonthShiShenGan();
+        zhiCanggan = ec.getMonthHideGan();
+        zhiShishen = ec.getMonthShiShenZhi();
+        dishi = ec.getMonthDiShi();
+        kongwang = ec.getMonthXunKong();
+        nayin = ec.getMonthNaYin();
+        break;
+      case 3: // 日柱
+        gan = ec.getDayGan(); zhi = ec.getDayZhi();
+        ganShishen = '日主'; // EightChar getDayShiShenGan() 返回 '日主'
+        zhiCanggan = ec.getDayHideGan();
+        zhiShishen = ec.getDayShiShenZhi();
+        dishi = ec.getDayDiShi();
+        kongwang = ec.getDayXunKong();
+        nayin = ec.getDayNaYin();
+        break;
+      case 4: // 时柱
+        gan = ec.getTimeGan(); zhi = ec.getTimeZhi();
+        ganShishen = ec.getTimeShiShenGan();
+        zhiCanggan = ec.getTimeHideGan();
+        zhiShishen = ec.getTimeShiShenZhi();
+        dishi = ec.getTimeDiShi();
+        kongwang = ec.getTimeXunKong();
+        nayin = ec.getTimeNaYin();
+        break;
     }
+    var ganzhi = gan + zhi;
+    return {
+      name: ['年柱', '月柱', '日柱', '时柱'][pillarIndex - 1],
+      gan: gan,
+      zhi: zhi,
+      ganzhi: ganzhi,
+      wuxing: {
+        gan: GAN_WUXING[gan],
+        zhi: ZHI_WUXING[zhi]
+      },
+      nayin: nayin,
+      canggan: zhiCanggan || [],
+      xunkong: kongwang || '',
+      shishen: {
+        gan: ganShishen,
+        zhi: zhiShishen || []
+      },
+      shishenShort: {
+        gan: getShiShenShort(ganShishen === '日主' ? '比肩' : ganShishen),
+        zhi: (zhiShishen || []).map(function(ss) { return getShiShenShort(ss); })
+      },
+      changsheng: dishi || ''
+    };
   }
 
+  var pillars = [
+    buildPillarFromEC(1),
+    buildPillarFromEC(2),
+    buildPillarFromEC(3),
+    buildPillarFromEC(4)
+  ];
+
   // ============================================================
-  // 1. 年柱计算
+  // 3. 大运计算 —— 对标吉时雨 buildDayunList + buildQiyunInfo
   // ============================================================
-  // 以立春为界，立春前归上一年
-  var liChunDate = getJieQiDate(year, '立春');
-  var effectiveYear = year;
-  if (liChunDate && (month < liChunDate.month || (month === liChunDate.month && day < liChunDate.day))) {
-    effectiveYear = year - 1;
+  var isman = gender === 'male' ? 1 : 0;
+  var yun = ec.getYun(isman, 2); // sect=2 精确计算
+  var DAYUN_NUM = 10;
+  var dayunArr = yun.getDaYun(DAYUN_NUM + 1); // 11个元素，第0个是小运期
+
+  // 起运信息 (对标吉时雨 buildQiyunInfo)
+  var startSolar = yun.getStartSolar();
+  var startYear = yun.getStartYear();
+  var startMonth = yun.getStartMonth();
+  var startDay = yun.getStartDay();
+  var startHour = yun.getStartHour();
+  var forward = yun.isForward();
+
+  // 节气名称
+  var startLunar = startSolar.getLunar();
+  var curJieqi = startLunar.getCurrentJieQi();
+  var jieName = '';
+  if (curJieqi && curJieqi.isJie && curJieqi.isJie()) {
+    jieName = curJieqi.getName();
+  } else {
+    var yunJie = startLunar.getPrevJie();
+    jieName = yunJie.getName();
   }
 
-  // 年干 = (effectiveYear - 4) % 10
-  var yearGanIdx = (effectiveYear - 4) % 10;
-  if (yearGanIdx < 0) yearGanIdx += 10;
-  var yearGan = GAN[yearGanIdx];
+  // 构建大运列表 (对标吉时雨 buildDayunList)
+  var dayunList = [];
+  for (var i = 1; i < dayunArr.length; i++) {
+    var dy = dayunArr[i];
+    var dyGanZhi = dy.getGanZhi();
+    var dyGan = dyGanZhi.charAt(0);
+    var dyZhi = dyGanZhi.charAt(1);
+    var dyStartYear = dy.getStartYear();
+    var dyStartAge = dy.getStartAge();
 
-  // 年支 = (effectiveYear - 4) % 12
-  var yearZhiIdx = (effectiveYear - 4) % 12;
-  if (yearZhiIdx < 0) yearZhiIdx += 12;
-  var yearZhi = ZHI[yearZhiIdx];
+    // 十神
+    var dyGanShen = getShiShen(dayGan, dyGan);
+    var dyZhiCanggan = CANGGAN[dyZhi] || [];
+    var dyZhiShen = dyZhiCanggan.map(function(cg) { return getShiShen(dayGan, cg); });
 
-  // ============================================================
-  // 2. 月柱计算
-  // ============================================================
-  // 根据节气确定月支
-  // 从年初到年末遍历，以最后一个已过的"节"为准
-  var JIE_ORDER = ['立春', '惊蛰', '清明', '立夏', '芒种', '小暑', '立秋', '白露', '寒露', '立冬', '大雪', '小寒'];
-  var monthZhiOrder = ['寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥', '子', '丑'];
+    // 流年 (对标吉时雨 buildDayunList liunianList)
+    var liunians = dy.getLiuNian();
+    var liunianList = [];
+    for (var j = 0; j < liunians.length; j++) {
+      var ln = liunians[j];
+      var lnGanZhi = ln.getGanZhi();
+      var lnGan = lnGanZhi.charAt(0);
+      var lnZhi = lnGanZhi.charAt(1);
+      var lnGanShen = getShiShen(dayGan, lnGan);
+      var lnZhiCanggan = CANGGAN[lnZhi] || [];
+      var lnZhiShen = lnZhiCanggan.map(function(cg) { return getShiShen(dayGan, cg); });
 
-  var monthZhi = '丑'; // 默认丑月（立春前）
-  var monthJieName = '小寒';
-
-  // 从年初开始遍历，找到最后一个已过的节
-  for (var j = 0; j < JIE_ORDER.length; j++) {
-    var jieDate = getJieQiDate(year, JIE_ORDER[j]);
-    if (!jieDate) continue;
-
-    if (month > jieDate.month || (month === jieDate.month && day >= jieDate.day)) {
-      monthZhi = monthZhiOrder[j];
-      monthJieName = JIE_ORDER[j];
-    } else {
-      // 当前节在出生日期之后，后续的节都在之后，停止遍历
-      break;
+      liunianList.push({
+        ganzhi: lnGanZhi,
+        gan: lnGan,
+        zhi: lnZhi,
+        year: ln.getYear(),
+        age: ln.getAge(),
+        wuxing: { gan: GAN_WUXING[lnGan], zhi: ZHI_WUXING[lnZhi] },
+        nayin: getNaYin(lnGanZhi),
+        shengxiao: SHENGXIAO_MAP[lnZhi] || '',
+        shishenGan: lnGanShen,
+        canggan: lnZhiCanggan
+      });
     }
+
+    dayunList.push({
+      ganzhi: dyGanZhi,
+      gan: dyGan,
+      zhi: dyZhi,
+      order: i,
+      startAge: dyStartAge,
+      startYear: dyStartYear,
+      wuxing: { gan: GAN_WUXING[dyGan], zhi: ZHI_WUXING[dyZhi] },
+      shishenGan: dyGanShen,
+      canggan: dyZhiCanggan,
+      nayin: getNaYin(dyGanZhi),
+      liunian: liunianList
+    });
   }
 
-  var monthGan = getMonthGan(yearGan, monthZhi);
+  // 起运信息文本
+  var startAgeRaw = dayunArr[1] ? dayunArr[1].getStartAge() : 0;
+  var qiyunText = '起运: ' + startAgeRaw + '岁, ' + (forward ? '顺行' : '逆行') + ', ' + jieName + '后' + Math.round((startYear - year) * 365.25 / 3) + '天';
 
-  // ============================================================
-  // 3. 日柱计算
-  // ============================================================
-  // 使用参考日期法：以1900年1月1日（甲戌日，JIAZI索引=10）为基准
-  // 利用JavaScript Date计算天数差（公历日期差，准确可靠）
-  var refDate = new Date(1900, 0, 1);  // 1900-1-1
-  var targetDate = new Date(year, month - 1, day);
-  var dayDiff = Math.round((targetDate.getTime() - refDate.getTime()) / 86400000);
-  var dayIdx = (10 + dayDiff) % 60;
-  if (dayIdx < 0) dayIdx += 60;
-  var dayGanZhi = JIAZI[dayIdx];
-  var dayGan = dayGanZhi.charAt(0);
-  var dayZhi = dayGanZhi.charAt(1);
-
-  // ============================================================
-  // 4. 时柱计算
-  // ============================================================
-  var hourZhi = hourToZhi(hour);
-  var hourGan = getHourGan(dayGan, hourZhi);
-
-  // ============================================================
-  // 5. 节气信息
-  // ============================================================
-  var jieQiInfo = getNearestJieQi(year, month, day);
-
-  // ============================================================
-  // 6. 组装八字
-  // ============================================================
-  var bazi = buildBazi({
-    yearGan: yearGan,
-    yearZhi: yearZhi,
-    monthGan: monthGan,
-    monthZhi: monthZhi,
-    dayGan: dayGan,
-    dayZhi: dayZhi,
-    hourGan: hourGan,
-    hourZhi: hourZhi,
-    gender: gender,
-    birthYear: year,
-    birthMonth: month,
-    birthDay: day,
-    daysToNextJie: jieQiInfo.daysToNextJie,
-    daysToPrevJie: jieQiInfo.daysToPrevJie,
-    nextJieName: jieQiInfo.nextJie,
-    prevJieName: jieQiInfo.prevJie
-  });
-
-  // 附加原始输入信息
-  bazi.input = {
-    solarDate: year + '-' + (month < 10 ? '0' + month : month) + '-' + (day < 10 ? '0' + day : day),
-    time: hour + ':00',
-    gender: gender
+  var dayunResult = {
+    forward: forward,
+    direction: forward ? '顺排' : '逆排',
+    daysToJie: 0,
+    jieName: jieName,
+    startAge: startAgeRaw,
+    startAgeRaw: startAgeRaw,
+    startDate: startYear + '-' + (startMonth < 10 ? '0' + startMonth : startMonth) + '-' + (startDay < 10 ? '0' + startDay : startDay),
+    startYear: startYear,
+    dayunList: dayunList,
+    qiyunText: qiyunText
   };
 
-  bazi.jieQiInfo = jieQiInfo;
+  // ============================================================
+  // 4. 格局判定 (保留, 不依赖节气精度)
+  // ============================================================
+  var patternResult = determinePattern({
+    dayGan: dayGan,
+    monthZhi: monthZhi
+  });
 
-  return bazi;
+  // ============================================================
+  // 5. 身强身弱判定 (保留, 不依赖节气精度)
+  // ============================================================
+  var shenQiangRuo = calculateShenQiangRuo({
+    dayGan: dayGan,
+    monthZhi: monthZhi,
+    yearZhi: yearZhi,
+    dayZhi: dayZhi,
+    hourZhi: hourZhi,
+    yearGan: yearGan,
+    monthGan: monthGan,
+    hourGan: hourGan
+  });
+
+  // ============================================================
+  // 6. 神煞
+  // ============================================================
+  var allGanZhi = [yearGan + yearZhi, monthGan + monthZhi, dayGan + dayZhi, hourGan + hourZhi];
+  var shensha = calculateShenSha({
+    dayGan: dayGan,
+    yearGan: yearGan,
+    yearZhi: yearZhi,
+    monthZhi: monthZhi,
+    dayZhi: dayZhi,
+    allGanZhi: allGanZhi
+  });
+
+  // ============================================================
+  // 7. 节气信息 (使用 lunar-javascript 精确节气)
+  // ============================================================
+  var prevJie = lunar.getPrevJie();
+  var nextJie = lunar.getNextJie();
+  var prevJieSolar = prevJie.getSolar();
+  var nextJieSolar = nextJie.getSolar();
+  var birthDate = new Date(year, month - 1, day);
+  var prevJieDate = new Date(prevJieSolar.getYear(), prevJieSolar.getMonth() - 1, prevJieSolar.getDay());
+  var nextJieDate = new Date(nextJieSolar.getYear(), nextJieSolar.getMonth() - 1, nextJieSolar.getDay());
+  var daysToPrevJie = Math.round((birthDate.getTime() - prevJieDate.getTime()) / 86400000);
+  var daysToNextJie = Math.round((nextJieDate.getTime() - birthDate.getTime()) / 86400000);
+
+  var jieQiInfo = {
+    prevJie: prevJie.getName(),
+    daysToPrevJie: daysToPrevJie,
+    nextJie: nextJie.getName(),
+    daysToNextJie: daysToNextJie
+  };
+
+  // ============================================================
+  // 8. 组装返回结果
+  // ============================================================
+  return {
+    pillars: pillars,
+    dayGan: dayGan,
+    dayZhi: dayZhi,
+    dayun: dayunResult,
+    patterns: patternResult.patterns,
+    patternDetail: patternResult.detail,
+    mainPattern: patternResult.mainPattern,
+    patternType: patternResult.patternType,
+    shenQiangRuo: shenQiangRuo,
+    shensha: shensha,
+    input: {
+      solarDate: year + '-' + (month < 10 ? '0' + month : month) + '-' + (day < 10 ? '0' + day : day),
+      time: hour + ':00',
+      gender: gender
+    },
+    jieQiInfo: jieQiInfo
+  };
 }
+
+// 生肖映射表
+var SHENGXIAO_MAP = {
+  '子': '鼠', '丑': '牛', '寅': '虎', '卯': '兔',
+  '辰': '龙', '巳': '蛇', '午': '马', '未': '羊',
+  '申': '猴', '酉': '鸡', '戌': '狗', '亥': '猪'
+};
