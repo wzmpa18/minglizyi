@@ -298,7 +298,10 @@ export default function MeihuaPage() {
   // ---- 输入状态 ----
   const [showPopup, setShowPopup] = useState(true);
   const [desc, setDesc] = useState("");
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date(2026, 0, 1, 12, 0, 0));
+  useEffect(() => {
+    setSelectedDate(new Date());
+  }, []);
   const [divMethod, setDivMethod] = useState<"time" | "number" | "manual">("time");
   const [manualNumbers, setManualNumbers] = useState<string[]>(["", "", ""]);
 
@@ -418,7 +421,7 @@ export default function MeihuaPage() {
       {/* ====== 日期时间选择弹窗 ====== */}
       <DatePicker
         show={showPopup}
-        onClose={() => { if (result) setShowPopup(false); }}
+        onClose={() => setShowPopup(false)}
         onSubmit={(dateVal) => {
           setSelectedDate(new Date(dateVal.year, dateVal.month - 1, dateVal.day, dateVal.hour, dateVal.minute));
           handleDivination({year: dateVal.year, month: dateVal.month, day: dateVal.day, hour: dateVal.hour});
@@ -428,6 +431,12 @@ export default function MeihuaPage() {
         showGender={false} showCalType={true} showToggles={false} showRegion={false} showName={false}
         submitText="起卦" title="梅花易数"
       />
+
+      {!showPopup && !result && (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+          <button onClick={() => setShowPopup(true)} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">开始排盘</button>
+        </div>
+      )}
 
       {/* ====== 结果页：严格对标 jishiyu view_meihuayishu.html 表格结构 ====== */}
       {!showPopup && result && (

@@ -225,18 +225,25 @@ function getScoreLabel(score: number): string {
 // 主组件
 // ============================================================================
 export default function ZeriPage() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const defaultStart = addDays(today, 1);
-  const defaultEnd = addDays(today, 30);
-
   const [eventType, setEventType] = useState("嫁娶");
-  const [startYear, setStartYear] = useState(defaultStart.getFullYear());
-  const [startMonth, setStartMonth] = useState(defaultStart.getMonth() + 1);
-  const [startDay, setStartDay] = useState(defaultStart.getDate());
-  const [endYear, setEndYear] = useState(defaultEnd.getFullYear());
-  const [endMonth, setEndMonth] = useState(defaultEnd.getMonth() + 1);
-  const [endDay, setEndDay] = useState(defaultEnd.getDate());
+  const [startYear, setStartYear] = useState(2026);
+  const [startMonth, setStartMonth] = useState(1);
+  const [startDay, setStartDay] = useState(2);
+  const [endYear, setEndYear] = useState(2026);
+  const [endMonth, setEndMonth] = useState(1);
+  const [endDay, setEndDay] = useState(31);
+  useEffect(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const ds = addDays(today, 1);
+    const de = addDays(today, 30);
+    setStartYear(ds.getFullYear());
+    setStartMonth(ds.getMonth() + 1);
+    setStartDay(ds.getDate());
+    setEndYear(de.getFullYear());
+    setEndMonth(de.getMonth() + 1);
+    setEndDay(de.getDate());
+  }, []);
   const [userShengXiao, setUserShengXiao] = useState("");
   const [loading, setLoading] = useState(false);
   const [hasResult, setHasResult] = useState(false);

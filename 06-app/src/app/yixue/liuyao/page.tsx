@@ -227,13 +227,17 @@ export default function LiuyaoPage() {
   const [question, setQuestion] = useState("");
   const [method, setMethod] = useState<"manual" | "time" | "number">("time");
 
-  // 日期时间
-  const now = new Date();
-  const [dateStr, setDateStr] = useState(
-    `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`,
-  );
-  const [hour, setHour] = useState(now.getHours());
-  const [minute, setMinute] = useState(now.getMinutes());
+  // 日期时间（固定默认值，避免 hydration mismatch；mounted 后更新为真实时间）
+  const [dateStr, setDateStr] = useState("2026-01-01");
+  const [hour, setHour] = useState(12);
+  const [minute, setMinute] = useState(0);
+
+  useEffect(() => {
+    const n = new Date();
+    setDateStr(`${n.getFullYear()}-${pad2(n.getMonth() + 1)}-${pad2(n.getDate())}`);
+    setHour(n.getHours());
+    setMinute(n.getMinutes());
+  }, []);
 
   // 年份/月份/日期派生状态
   const [parsedYear, parsedMonth, parsedDay] = dateStr.split("-").map(Number);
@@ -352,7 +356,7 @@ export default function LiuyaoPage() {
         {/* ======= 日期时间选择弹窗 ======= */}
         <DatePicker
           show={showForm}
-          onClose={() => { if (result) setShowForm(false); }}
+          onClose={() => setShowForm(false)}
           onSubmit={(dateVal) => {
             setDateStr(`${dateVal.year}-${pad2(dateVal.month)}-${pad2(dateVal.day)}`);
             setHour(dateVal.hour);
@@ -364,6 +368,12 @@ export default function LiuyaoPage() {
           showGender={false} showCalType={true} showToggles={false} showRegion={false} showName={false}
           submitText="起卦" title="六爻排盘"
         />
+
+        {!showForm && !result && (
+          <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+            <button onClick={() => setShowForm(true)} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">开始排盘</button>
+          </div>
+        )}
 
         {/* ======= 排盘结果 ======= */}
         {result && (

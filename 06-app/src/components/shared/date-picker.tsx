@@ -45,17 +45,19 @@ export interface DatePickerProps {
 }
 
 // ============================================================================
-// 默认值
+// 默认值 - 使用工厂函数避免模块级 new Date() 导致 hydration mismatch
 // ============================================================================
 
-const now = new Date();
-const DEFAULT_DATE: DatePickerValue = {
-  year: now.getFullYear(),
-  month: now.getMonth() + 1,
-  day: now.getDate(),
-  hour: now.getHours(),
-  minute: 0,
-};
+function createDefaultDate(): DatePickerValue {
+  const n = new Date();
+  return {
+    year: n.getFullYear(),
+    month: n.getMonth() + 1,
+    day: n.getDate(),
+    hour: n.getHours(),
+    minute: 0,
+  };
+}
 
 const DEFAULT_OPTIONS: DatePickerOptions = {
   gender: "male",
@@ -103,7 +105,7 @@ export default function DatePicker({
   submitText = "排盘",
   title = "选择日期",
 }: DatePickerProps) {
-  const [date, setDate] = useState<DatePickerValue>(initialDate || DEFAULT_DATE);
+  const [date, setDate] = useState<DatePickerValue>(initialDate || createDefaultDate());
   const [options, setOptions] = useState<DatePickerOptions>(initialOptions || DEFAULT_OPTIONS);
   const [nameState, setNameState] = useState(name);
 
@@ -169,14 +171,15 @@ export default function DatePicker({
   const selectClass = "flex-1 rounded-lg border border-gray-200 px-2 py-2 text-sm text-center outline-none focus:border-[#7B2FBE] bg-white cursor-pointer";
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
+    <div className="fixed inset-0 z-[9999] flex items-end justify-center">
+      {/* 遮罩层 - 独立div确保点击可关闭 */}
       <div
-        className="w-full max-w-[420px] rounded-t-2xl bg-white shadow-2xl"
+        className="absolute inset-0 bg-black/50"
+        onClick={onClose}
+      />
+      {/* 弹窗内容 */}
+      <div
+        className="relative w-full max-w-[420px] rounded-t-2xl bg-white shadow-2xl"
         style={{ maxHeight: "90vh", overflowY: "auto" }}
         onClick={(e) => e.stopPropagation()}
       >

@@ -154,7 +154,10 @@ export default function XiaoliurenPage() {
   // ---- 输入状态 ----
   const [showPopup, setShowPopup] = useState(true);
   const [desc, setDesc] = useState("");
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date(2026, 0, 1, 12, 0, 0));
+  useEffect(() => {
+    setSelectedDate(new Date());
+  }, []);
   const [divMethod, setDivMethod] = useState<"time" | "number">("time");
   const [showDatePicker, setShowDatePicker] = useState(false);
 

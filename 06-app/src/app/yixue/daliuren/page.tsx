@@ -808,11 +808,10 @@ function InputPanel({
   onClientSelect: (c: Client | null) => void;
   initialValues?: DaLiuRenInputParams | null;
 }) {
-  const now = new Date();
-  const [year, setYear] = useState(initialValues?.year || now.getFullYear());
-  const [month, setMonth] = useState(initialValues?.month || now.getMonth() + 1);
-  const [day, setDay] = useState(initialValues?.day || now.getDate());
-  const [hour, setHour] = useState(initialValues?.hour !== undefined ? initialValues.hour : now.getHours());
+  const [year, setYear] = useState(initialValues?.year || 2026);
+  const [month, setMonth] = useState(initialValues?.month || 1);
+  const [day, setDay] = useState(initialValues?.day || 1);
+  const [hour, setHour] = useState(initialValues?.hour !== undefined ? initialValues.hour : 12);
   const [minute, setMinute] = useState(initialValues?.minute !== undefined ? initialValues.minute : 0);
   const [isMan, setIsMan] = useState(initialValues?.isMan !== undefined ? initialValues.isMan : true);
   const [birthYear, setBirthYear] = useState(initialValues?.birthYear || 1980);
@@ -834,9 +833,19 @@ function InputPanel({
     }
   }, [show]);
 
+  useEffect(() => {
+    if (!initialValues?.year) {
+      const n = new Date();
+      setYear(n.getFullYear());
+      setMonth(n.getMonth() + 1);
+      setDay(n.getDate());
+      setHour(n.getHours());
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (!show) return null;
 
-  const currentYear = new Date().getFullYear();
+  const currentYear = 2026;
   const SHI_CHEN_LIST = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"];
 
   const handleSubmit = () => {
@@ -862,12 +871,17 @@ function InputPanel({
     <>
       {/* 底部弹窗 */}
       <div
-        className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 transition-opacity duration-200"
+        className="fixed inset-0 z-[9999] flex items-end justify-center transition-opacity duration-200"
         style={{ opacity: entered ? 1 : 0 }}
-        onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       >
+        {/* 遮罩层 */}
         <div
-          className="w-full max-w-[420px] rounded-t-2xl bg-white shadow-2xl transition-transform duration-300 ease-out"
+          className="absolute inset-0 bg-black/50"
+          onClick={onClose}
+        />
+        {/* 弹窗内容 */}
+        <div
+          className="relative w-full max-w-[420px] rounded-t-2xl bg-white shadow-2xl transition-transform duration-300 ease-out"
           style={{ maxHeight: "90vh", overflowY: "auto", transform: entered ? "translateY(0)" : "translateY(100%)" }}
           onClick={(e) => e.stopPropagation()}
         >

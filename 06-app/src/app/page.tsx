@@ -170,11 +170,12 @@ export default function HomePage(){
   const[showBaziInput,setShowBaziInput]=useState(false);
   const[userDayGan,setUserDayGan]=useState<string|null>(null);
   const[userDayZhi,setUserDayZhi]=useState<string|null>(null);
+  const[mounted,setMounted]=useState(false);
 
-  useEffect(()=>{try{const s=localStorage.getItem("yandao_user_bazi");if(s){const o=JSON.parse(s);setUserDayGan(o.dayGan||null);setUserDayZhi(o.dayZhi||null);}}catch{}},[]);
+  useEffect(()=>{setMounted(true);try{const s=localStorage.getItem("yandao_user_bazi");if(s){const o=JSON.parse(s);setUserDayGan(o.dayGan||null);setUserDayZhi(o.dayZhi||null);}}catch{}},[]);
 
   const today=useMemo(()=>{
-    const now=new Date();
+    const now=mounted?new Date():new Date(2026,0,1,12,0,0);
     const solar=Solar.fromDate(now);
     const lunar=solar.getLunar();
     const weekNames=["星期日","星期一","星期二","星期三","星期四","星期五","星期六"];
@@ -214,7 +215,7 @@ export default function HomePage(){
       pillars:[{label:"年",ganzhi:yearGZ},{label:"月",ganzhi:monthGZ},{label:"日",ganzhi:dayGZ},{label:"时",ganzhi:timeGZ}],
       yi,ji,chong,sha,jianxing,tianshenType:tsType,tianshen:ts,nayin,pengzuGan:pzg,pengzuZhi:pzz,taiXin:tx,xingxiu:xx,jiShen:js,xiongSha:xs,
       xiShen:xshen,caiShen:cshen,fuShen:fshen,jieqi:cJQ,prevJQ,nextJQ,yangsheng:ys,dimu:dm,baziAdvice:ba,dayGan,dayZhi};
-  },[userDayGan]);
+  },[userDayGan,mounted]);
 
   const saveBazi=(gan:string,zhi:string)=>{setUserDayGan(gan);setUserDayZhi(zhi);localStorage.setItem("yandao_user_bazi",JSON.stringify({dayGan:gan,dayZhi:zhi}));setShowBaziInput(false);};
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { solarToLunar, getLunarDateString } from "@/lib/lunar";
 import { solarToBazi, GAN, ZHI } from "@/algorithm-core";
@@ -82,8 +82,11 @@ function ToolIcon({ icon }: { icon: string }) {
 }
 
 export default function YixueHome() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
   const todayData = useMemo(() => {
-    const now = new Date();
+    const now = mounted ? new Date() : new Date(2026, 0, 1, 12, 0, 0);
     const year = now.getFullYear();
     const month = now.getMonth() + 1;
     const day = now.getDate();
@@ -137,7 +140,7 @@ export default function YixueHome() {
       nongliStr,
       pillars,
     };
-  }, []);
+  }, [mounted]);
 
   const { gongliStr, dayNum, weekDay, nongliStr, pillars } = todayData;
 

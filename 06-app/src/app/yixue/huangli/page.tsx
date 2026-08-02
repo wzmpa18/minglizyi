@@ -5,6 +5,7 @@ import { Solar, LunarTime } from "lunar-javascript";
 import ClientSelector from "@/components/ClientSelector";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
+import { useClientDate } from "@/lib/useClientDate";
 
 const BRAND = "#7B2FBE";
 
@@ -25,10 +26,13 @@ const SHICHEN_LIST = [
 ];
 
 export default function HuangliPage() {
-  const today = new Date();
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date(today));
+  const [selectedDate, setSelectedDate] = useState<Date>(() => new Date(2026, 0, 1));
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
   const [saveTip, setSaveTip] = useState("");
+  const today = useClientDate();
+  useEffect(() => {
+    setSelectedDate(new Date());
+  }, []);
 
   // URL参数clientId
   useEffect(() => {
@@ -67,8 +71,8 @@ export default function HuangliPage() {
     setSelectedDate((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1));
   }, []);
   const goToday = useCallback(() => {
-    setSelectedDate(new Date(today));
-  }, [today]);
+    setSelectedDate(new Date());
+  }, []);
 
   const y = solar.getYear();
   const m = solar.getMonth();

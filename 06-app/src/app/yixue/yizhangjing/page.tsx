@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   solarToBazi,
@@ -105,10 +105,17 @@ const GRID_CELLS = [
 
 export default function YizhangjingPage() {
   const router = useRouter();
-  const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth() + 1);
-  const [selectedDay, setSelectedDay] = useState(() => new Date().getDate());
-  const [selectedHour, setSelectedHour] = useState(() => new Date().getHours());
+  const [selectedYear, setSelectedYear] = useState(2026);
+  const [selectedMonth, setSelectedMonth] = useState(1);
+  const [selectedDay, setSelectedDay] = useState(1);
+  const [selectedHour, setSelectedHour] = useState(12);
+  useEffect(() => {
+    const n = new Date();
+    setSelectedYear(n.getFullYear());
+    setSelectedMonth(n.getMonth() + 1);
+    setSelectedDay(n.getDate());
+    setSelectedHour(n.getHours());
+  }, []);
   const [hasResult, setHasResult] = useState(false);
   const [showInput, setShowInput] = useState(true);
   const [showForm, setShowForm] = useState(true);

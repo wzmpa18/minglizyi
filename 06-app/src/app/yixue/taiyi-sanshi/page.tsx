@@ -276,11 +276,18 @@ function calcTaiyi(year: number, month: number, day: number, hour: number): Taiy
 // 主组件
 // ============================================================================
 export default function TaiyiSanshiPage() {
-  const now = new Date();
-  const [taiyiYear, setTaiyiYear] = useState(now.getFullYear());
-  const [taiyiMonth, setTaiyiMonth] = useState(now.getMonth() + 1);
-  const [taiyiDay, setTaiyiDay] = useState(now.getDate());
-  const [taiyiHour, setTaiyiHour] = useState(now.getHours());
+  const [taiyiYear, setTaiyiYear] = useState(2026);
+  const [taiyiMonth, setTaiyiMonth] = useState(1);
+  const [taiyiDay, setTaiyiDay] = useState(1);
+  const [taiyiHour, setTaiyiHour] = useState(12);
+
+  useEffect(() => {
+    const n = new Date();
+    setTaiyiYear(n.getFullYear());
+    setTaiyiMonth(n.getMonth() + 1);
+    setTaiyiDay(n.getDate());
+    setTaiyiHour(n.getHours());
+  }, []);
   const [desc, setDesc] = useState("");
   const [loading, setLoading] = useState(false);
   const [hasResult, setHasResult] = useState(false);
@@ -330,7 +337,7 @@ export default function TaiyiSanshiPage() {
       <div style={{ maxWidth: "375px", margin: "0 auto", backgroundColor: "#fff", minHeight: "100vh" }}>
         <DatePicker
           show={true}
-          onClose={() => { if (result) setShowForm(false); }}
+          onClose={() => setShowForm(false)}
           onSubmit={(dateVal) => {
             setTaiyiYear(dateVal.year);
             setTaiyiMonth(dateVal.month);
@@ -348,7 +355,17 @@ export default function TaiyiSanshiPage() {
   }
 
   // ==================== 排盘结果 ====================
-  if (!result) return null;
+  if (!result) {
+    return (
+      <div className="bg-[#ededed] min-h-screen flex justify-center">
+        <div className="w-full" style={{ maxWidth: "375px" }}>
+          <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+            <button onClick={() => setShowForm(true)} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">开始排盘</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full bg-[#ededed]" style={{ maxWidth: "375px", minHeight: "100vh" }}>

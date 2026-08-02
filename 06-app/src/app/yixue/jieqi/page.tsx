@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { JIEQI_NAMES, JIE_NAMES, getJieQiDate } from "@/algorithm-core";
 import { BrandHeader } from "@/components/shared";
 
@@ -43,7 +43,10 @@ const SEASON_COLORS: Record<string, string> = {
 const MONTH_NAMES = ['寅月', '卯月', '辰月', '巳月', '午月', '未月', '申月', '酉月', '戌月', '亥月', '子月', '丑月'];
 
 export default function JieQiPage() {
-  const [year, setYear] = useState(new Date().getFullYear());
+  const [year, setYear] = useState(2026);
+  useEffect(() => {
+    setYear(new Date().getFullYear());
+  }, []);
 
   const jieQiList = useMemo(() => {
     return JIEQI_NAMES.map((name, idx) => {

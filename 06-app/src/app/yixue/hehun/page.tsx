@@ -253,11 +253,11 @@ function AnalysisItem({ item }: { item: HehunResult["items"][number] }) {
 export default function HehunPage() {
   const router = useRouter();
 
-  const [maleYear, setMaleYear] = useState(() => new Date().getFullYear() - 25);
+  const [maleYear, setMaleYear] = useState(2001);
   const [maleMonth, setMaleMonth] = useState(1);
   const [maleDay, setMaleDay] = useState(1);
   const [maleHour, setMaleHour] = useState(12);
-  const [femaleYear, setFemaleYear] = useState(() => new Date().getFullYear() - 23);
+  const [femaleYear, setFemaleYear] = useState(2003);
   const [femaleMonth, setFemaleMonth] = useState(1);
   const [femaleDay, setFemaleDay] = useState(1);
   const [femaleHour, setFemaleHour] = useState(12);
@@ -267,6 +267,13 @@ export default function HehunPage() {
   const [recordSaved, setRecordSaved] = useState(false);
   const [showMalePicker, setShowMalePicker] = useState(false);
   const [showFemalePicker, setShowFemalePicker] = useState(false);
+
+  // 初始化男女方出生年份（客户端挂载后更新为真实当前年份）
+  useEffect(() => {
+    const cy = new Date().getFullYear();
+    setMaleYear(cy - 25);
+    setFemaleYear(cy - 23);
+  }, []);
 
   // URL参数clientId + 回填检查
   useEffect(() => {

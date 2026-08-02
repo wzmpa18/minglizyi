@@ -88,18 +88,28 @@ export default function QimenPage() {
   const [result, setResult] = useState<QimenResult | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
 
-  // 表单状态
-  const now = new Date();
+  // 表单状态（固定默认值，避免 hydration mismatch；mounted 后更新为真实时间）
   const [formData, setFormData] = useState({
-    year: now.getFullYear(),
-    month: now.getMonth() + 1,
-    day: now.getDate(),
-    hour: now.getHours(),
+    year: 2026,
+    month: 1,
+    day: 1,
+    hour: 12,
     desc: "",
     panMethod: "chaibu" as "chaibu" | "zhirun" | "maoshan",
     showDiShen: false,
     showZhangSheng: false,
   });
+
+  useEffect(() => {
+    const n = new Date();
+    setFormData(prev => ({
+      ...prev,
+      year: n.getFullYear(),
+      month: n.getMonth() + 1,
+      day: n.getDate(),
+      hour: n.getHours(),
+    }));
+  }, []);
 
   // 执行排盘
   const doPaipan = useCallback((override?: {year: number; month: number; day: number; hour: number}) => {
@@ -210,7 +220,7 @@ export default function QimenPage() {
       <div style={{ maxWidth: "375px", margin: "0 auto", backgroundColor: "#fff", minHeight: "100vh" }}>
         <DatePicker
           show={true}
-          onClose={() => { if (result) setShowForm(false); }}
+          onClose={() => setShowForm(false)}
           onSubmit={(dateVal) => {
             setFormData(prev => ({ ...prev, year: dateVal.year, month: dateVal.month, day: dateVal.day, hour: dateVal.hour }));
             doPaipan({year: dateVal.year, month: dateVal.month, day: dateVal.day, hour: dateVal.hour});
@@ -225,7 +235,17 @@ export default function QimenPage() {
   }
 
   // ==================== 排盘结果 ====================
-  if (!result) return null;
+  if (!result) {
+    return (
+      <div className="bg-[#ededed] min-h-screen flex justify-center">
+        <div className="w-full" style={{ maxWidth: "375px" }}>
+          <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+            <button onClick={() => setShowForm(true)} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">开始排盘</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const getGanColor = (g: string) => GAN_COLORS[g] || COLOR_BLACK;
   const getShenColor = (s: string) => SHEN_COLORS[s] || COLOR_BLACK;

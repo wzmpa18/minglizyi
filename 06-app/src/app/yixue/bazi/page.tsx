@@ -1536,7 +1536,7 @@ export default function BaziPage(){
     <div className="w-full" style={{maxWidth:"375px",paddingBottom:"10px"}}>
     <DatePicker
       show={showForm}
-      onClose={() => { if (result) setShowForm(false); }}
+      onClose={() => setShowForm(false)}
       onSubmit={(dateVal, opts) => {
         setYear(dateVal.year); setMonth(dateVal.month); setDay(dateVal.day); setHour(dateVal.hour);
         setGender(opts.gender as Gender);
@@ -1556,6 +1556,11 @@ export default function BaziPage(){
       showMinute={true}
       submitText="排盘" title="八字排盘"
     />
+    {!showForm && !result && (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+        <button onClick={() => setShowForm(true)} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">开始排盘</button>
+      </div>
+    )}
     {result&&<div>
       {/* Tab导航 - 紫色选中态 */}
       <div className="flex border-b border-[#eee] bg-white/95 sticky top-10 z-30 overflow-x-auto">

@@ -635,7 +635,10 @@ export default function ZiweiPage() {
   }, []);
 
   // 当前年份
-  const currentYear = new Date().getFullYear();
+  const [currentYear, setCurrentYear] = useState(2026);
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear());
+  }, []);
 
   // 监听 layout 的编辑按钮事件
   useEffect(() => {
@@ -680,7 +683,7 @@ export default function ZiweiPage() {
       {/* 输入表单 DatePicker 弹窗 */}
       <DatePicker
         show={showForm}
-        onClose={() => { if (result) setShowForm(false); }}
+        onClose={() => setShowForm(false)}
         onSubmit={(dateVal, opts) => {
           setYear(dateVal.year); setMonth(dateVal.month); setDay(dateVal.day); setHour(dateVal.hour);
           setGender(opts.gender as Gender);
@@ -711,6 +714,11 @@ export default function ZiweiPage() {
       {/* ================================================================ */}
       {/* 排盘结果 */}
       {/* ================================================================ */}
+      {!showForm && !result && (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+          <button onClick={() => setShowForm(true)} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">开始排盘</button>
+        </div>
+      )}
       {result && (
         <div className="px-2">
           {/* ---- 4x4 宫格盘（带方位标签和SVG连线） ---- */}

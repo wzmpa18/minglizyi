@@ -5,6 +5,7 @@ import { Solar, SolarMonth } from "lunar-javascript";
 import ClientSelector from "@/components/ClientSelector";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
+import { useClientDate } from "@/lib/useClientDate";
 
 const BRAND = "#7B2FBE";
 const WEEKDAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
@@ -25,17 +26,23 @@ interface DayCell {
 }
 
 export default function WannianliPage() {
-  const today = new Date();
-  const [viewYear, setViewYear] = useState(today.getFullYear());
-  const [viewMonth, setViewMonth] = useState(today.getMonth() + 1);
+  const [viewYear, setViewYear] = useState(2026);
+  const [viewMonth, setViewMonth] = useState(1);
   const [selectedYmd, setSelectedYmd] = useState<{ y: number; m: number; d: number }>({
-    y: today.getFullYear(),
-    m: today.getMonth() + 1,
-    d: today.getDate(),
+    y: 2026,
+    m: 1,
+    d: 1,
   });
   const [showPicker, setShowPicker] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
   const [saveTip, setSaveTip] = useState("");
+  const today = useClientDate();
+  useEffect(() => {
+    const t = new Date();
+    setViewYear(t.getFullYear());
+    setViewMonth(t.getMonth() + 1);
+    setSelectedYmd({ y: t.getFullYear(), m: t.getMonth() + 1, d: t.getDate() });
+  }, []);
 
   // URL参数clientId
   useEffect(() => {
@@ -131,10 +138,11 @@ export default function WannianliPage() {
   }, [viewMonth]);
 
   const goToday = useCallback(() => {
-    setViewYear(today.getFullYear());
-    setViewMonth(today.getMonth() + 1);
-    setSelectedYmd({ y: today.getFullYear(), m: today.getMonth() + 1, d: today.getDate() });
-  }, [today]);
+    const t = new Date();
+    setViewYear(t.getFullYear());
+    setViewMonth(t.getMonth() + 1);
+    setSelectedYmd({ y: t.getFullYear(), m: t.getMonth() + 1, d: t.getDate() });
+  }, []);
 
   const isSelected = (y: number, m: number, d: number) =>
     selectedYmd.y === y && selectedYmd.m === m && selectedYmd.d === d;

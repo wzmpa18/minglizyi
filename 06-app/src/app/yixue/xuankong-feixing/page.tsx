@@ -298,11 +298,15 @@ function getJiXiongColor(jx: string): { bg: string; text: string } {
 // 主组件
 // ============================================================================
 export default function XuankongFeixingPage() {
-  const now = new Date();
-  const currentYear = now.getFullYear();
+  const currentYear = 2026;
   const defaultYun = getYunFromYear(currentYear);
 
   const [buildYear, setBuildYear] = useState(currentYear);
+
+  useEffect(() => {
+    const n = new Date();
+    setBuildYear(n.getFullYear());
+  }, []);
   const [month, setMonth] = useState(1);
   const [day, setDay] = useState(1);
   const [hour, setHour] = useState(12);
