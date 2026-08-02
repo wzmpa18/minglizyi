@@ -832,7 +832,7 @@ function DLRRadioOption({
 }
 
 function InputPanel({
-  show, onClose, onSubmit, selectedClient, onClientSelect, initialValues,
+  show, onClose, onSubmit, selectedClient, onClientSelect, initialValues, showTitle = true,
 }: {
   show: boolean;
   onClose: () => void;
@@ -840,6 +840,7 @@ function InputPanel({
   selectedClient: Client | null;
   onClientSelect: (c: Client | null) => void;
   initialValues?: DaLiuRenInputParams | null;
+  showTitle?: boolean;
 }) {
   const [year, setYear] = useState(initialValues?.year || 2026);
   const [month, setMonth] = useState(initialValues?.month || 1);
@@ -918,7 +919,8 @@ function InputPanel({
           style={{ maxHeight: "90vh", overflowY: "auto", transform: entered ? "translateY(0)" : "translateY(100%)" }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* 标题栏 */}
+          {/* 标题栏（仅模态模式显示，避免与BrandHeader形成双层标题） */}
+          {showTitle && (
           <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 sticky top-0 bg-white z-10">
             <span className="text-base font-bold text-gray-800">大六壬起课</span>
             <button
@@ -931,6 +933,7 @@ function InputPanel({
               </svg>
             </button>
           </div>
+          )}
 
           <div className="px-4 py-3 space-y-4">
             {/* 1. 起课时间 */}
@@ -1129,7 +1132,7 @@ export default function DaLiuRenPage() {
     return (
       <div style={{ backgroundColor: "#fff", minHeight: "100vh", margin: 0, padding: 0 }}>
         <BrandHeader title="言道大六壬" showBack={true} backUrl="/yixue" />
-        <InputPanel show={true} onClose={() => {}} onSubmit={handleSubmit} selectedClient={selectedClient} onClientSelect={setSelectedClient} initialValues={prefillParams} />
+        <InputPanel show={true} showTitle={false} onClose={() => {}} onSubmit={handleSubmit} selectedClient={selectedClient} onClientSelect={setSelectedClient} initialValues={prefillParams} />
       </div>
     );
   }
@@ -1196,7 +1199,7 @@ export default function DaLiuRenPage() {
     <div style={{ backgroundColor: "#fff", minHeight: "100vh", margin: 0, padding: 0, paddingBottom: "48px" }}>
       <BrandHeader title="言道大六壬" showBack={true} backUrl="/yixue" />
       {/* 输入面板（点击编辑按钮展开） */}
-      <InputPanel show={showForm} onClose={() => setShowForm(false)} onSubmit={handleSubmit} selectedClient={selectedClient} onClientSelect={setSelectedClient} initialValues={prefillParams} />
+      <InputPanel show={showForm} showTitle={false} onClose={() => setShowForm(false)} onSubmit={handleSubmit} selectedClient={selectedClient} onClientSelect={setSelectedClient} initialValues={prefillParams} />
 
       {/* ====== 1. 顶部信息栏 ====== */}
       <div style={{ display: "flex", padding: "8px 10px", borderBottom: "1px solid #eee", backgroundColor: "#fff" }}>

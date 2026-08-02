@@ -25,7 +25,7 @@ import {
   getGanIndex,
   getZhiIndex,
 } from "@/algorithm-core";
-import type { TianGan, DiZhi, Gender, BaziResult } from "@/algorithm-core";
+import type { TianGan, DiZhi, Gender, BaziResult, BaziPillar } from "@/algorithm-core";
 import { DatePicker, BrandHeader } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
@@ -135,8 +135,9 @@ function calcMingGua(yGan: TianGan, yZhi: DiZhi, gender: Gender): string {
   const idx = (parseInt(String(yGan)+String(yZhi),10)-1)%9;
   return gender==="male"?(baGua[mG[idx]-1]||"坎"):(baGua[fG[idx]-1]||"离");
 }
-function getZuoChangSheng(dayGan: TianGan, zhi: DiZhi): string {
-  return getChangSheng(dayGan, zhi) || "-";
+function getZuoChangSheng(p: { changsheng?: string }): string {
+  // v17.7 修复：直接使用算法层预计算的 changsheng，禁止中间层重新计算
+  return p.changsheng || "-";
 }
 function getGanLiuYi(result: BaziResult): {text:string; type:"he"|"chong"|null}[] {
   const tips: {text:string; type:"he"|"chong"|null}[] = [];
@@ -318,27 +319,25 @@ function TabChart({result,shensha,shengxiao,gender,lunarDateStr,solarDateStr,tru
   const colLabels=["年柱","月柱","日柱","时柱"];
   const dayGan = result.dayGan as TianGan;
 
-  // 计算每个柱的藏干+十神(全称)
-  const getCangGanWithShiShen = (p: typeof pillars[0], pillarIdx: number) => {
-    const cg = p.canggan || getCangGan(p.zhi as DiZhi) || [];
+  // 计算每个柱的藏干+十神(全称) - v17.7 直接使用算法层预计算值
+  const getCangGanWithShiShen = (p: BaziPillar, pillarIdx: number) => {
+    const cg = p.canggan || [];
     return cg.map((g, idx) => {
       const wx = getGanWuxing(g as TianGan);
       let ssName = "";
       if (pillarIdx !== 2) {
-        const ss = getShiShen(dayGan, g as TianGan);
-        ssName = ss || "";
+        ssName = (p.shishen.zhi && p.shishen.zhi[idx]) || "";
       } else {
-        ssName = idx === 0 ? (gender === "male" ? "元男" : "元女") : "";
+        ssName = idx === 0 ? (gender === "male" ? "元男" : "元女") : ((p.shishen.zhi && p.shishen.zhi[idx]) || "");
       }
       return { gan: g, wx, shishen: ssName, isDayMaster: pillarIdx === 2 && idx === 0 };
     });
   };
 
-  // 天干十神(全称)
-  const getGanShishen = (gan: TianGan, pillarIdx: number) => {
+  // 天干十神(全称) - v17.7 直接使用算法层预计算值
+  const getGanShishen = (p: BaziPillar, pillarIdx: number) => {
     if (pillarIdx === 2) return gender === "male" ? "元男" : "元女";
-    const ss = getShiShen(dayGan, gan);
-    return ss || "";
+    return p.shishen.gan || "";
   };
 
   // 留意标签样式 - 粉色边框(参考jishiyu)
@@ -397,7 +396,7 @@ function TabChart({result,shensha,shengxiao,gender,lunarDateStr,solarDateStr,tru
           <tr style={{backgroundColor:"#ffffff"}}>
             <td className="py-[5px] px-1 text-[14px] text-[#666]">十神</td>
             {pillars.map((p,i)=>{
-              const ss = getGanShishen(p.gan as TianGan, i);
+              const ss = getGanShishen(p, i);
               const isDay = i === 2;
               return <td key={i} className="py-[5px] px-1 text-[15px] text-[#333]">
                 {isDay
@@ -450,14 +449,14 @@ function TabChart({result,shensha,shengxiao,gender,lunarDateStr,solarDateStr,tru
           <tr style={{backgroundColor:"#f8f8f8"}}>
             <td className="py-[5px] px-1 text-[14px] text-[#666]">地势</td>
             {pillars.map((p,i)=><td key={i} className="py-[5px] px-1 text-[15px] text-[#333]">
-              {getZuoChangSheng(dayGan, p.zhi as DiZhi)}
+              {getZuoChangSheng(p)}
             </td>)}
           </tr>
           {/* 自坐(同是长生十二神) */}
           <tr style={{backgroundColor:"#ffffff"}}>
             <td className="py-[5px] px-1 text-[14px] text-[#666]">自坐</td>
             {pillars.map((p,i)=><td key={i} className="py-[5px] px-1 text-[15px] text-[#333]">
-              {getZuoChangSheng(p.gan as TianGan, p.zhi as DiZhi)}
+              {getChangSheng(p.gan as TianGan, p.zhi as DiZhi)}
             </td>)}
           </tr>
           {/* 空亡 - 仅日柱加红色虚线框 */}
@@ -623,22 +622,21 @@ function TabDetail({result,gender}:{
   const curLnList = curDy?.liunian || [];
   const curLn = curLnList[selectedLn];
 
-  // 天干十神
-  const getGanShishen = (gan: TianGan, pillarIdx: number) => {
+  // 天干十神 - v17.7 直接使用算法层预计算值
+  const getGanShishen = (p: BaziPillar, pillarIdx: number) => {
     if (pillarIdx === 2) return gender === "male" ? "元男" : "元女";
-    const ss = getShiShen(dayGan, gan);
-    return ss || "";
+    return p.shishen.gan || "";
   };
-  // 藏干十神
-  const getCangGanWithShiShen = (p: typeof pillars[0], pillarIdx: number) => {
-    const cg = p.canggan || getCangGan(p.zhi as DiZhi) || [];
+  // 藏干十神 - v17.7 直接使用算法层预计算值
+  const getCangGanWithShiShen = (p: BaziPillar, pillarIdx: number) => {
+    const cg = p.canggan || [];
     return cg.map((g, idx) => {
       const wx = getGanWuxing(g as TianGan);
       let ssName = "";
       if (pillarIdx !== 2) {
-        ssName = getShiShen(dayGan, g as TianGan) || "";
+        ssName = (p.shishen.zhi && p.shishen.zhi[idx]) || "";
       } else {
-        ssName = idx === 0 ? (gender === "male" ? "元男" : "元女") : "";
+        ssName = idx === 0 ? (gender === "male" ? "元男" : "元女") : ((p.shishen.zhi && p.shishen.zhi[idx]) || "");
       }
       return { gan: g, wx, shishen: ssName };
     });
@@ -708,6 +706,7 @@ function TabDetail({result,gender}:{
     zhi: DiZhi;
     ganzhi: string;
     shishenGan: string;
+    shishenZhi: string[];
     canggan: TianGan[];
     nayin: string;
     xunkong: string;
@@ -724,11 +723,12 @@ function TabDetail({result,gender}:{
       gan: p.gan as TianGan,
       zhi: p.zhi as DiZhi,
       ganzhi: p.ganzhi,
-      shishenGan: getGanShishen(p.gan as TianGan, i),
-      canggan: p.canggan || getCangGan(p.zhi as DiZhi) || [],
+      shishenGan: getGanShishen(p, i),
+      shishenZhi: p.shishenShort?.zhi || [],
+      canggan: p.canggan || [],
       nayin: p.nayin || getNaYin(p.ganzhi) || "-",
       xunkong: p.xunkong || getXunKong(p.ganzhi) || "",
-      zuo: getZuoChangSheng(dayGan, p.zhi as DiZhi),
+      zuo: getZuoChangSheng(p),
       isDayPillar: i === 2,
     }));
 
@@ -742,10 +742,11 @@ function TabDetail({result,gender}:{
         zhi: curDy.zhi as DiZhi,
         ganzhi: dyGanzhi,
         shishenGan: curDy.shishenGan || getShiShen(dayGan, curDy.gan as TianGan) || "",
+        shishenZhi: [],
         canggan: curDy.canggan || getCangGan(curDy.zhi as DiZhi) || [],
         nayin: curDy.nayin || getNaYin(dyGanzhi) || "",
         xunkong: getXunKong(dyGanzhi) || "",
-        zuo: getZuoChangSheng(dayGan, curDy.zhi as DiZhi),
+        zuo: getChangSheng(dayGan, curDy.zhi as DiZhi),
         isDayPillar: false,
         isDayun: true,
       });
@@ -761,10 +762,11 @@ function TabDetail({result,gender}:{
         zhi: curLn.zhi as DiZhi,
         ganzhi: lnGanzhi,
         shishenGan: curLn.shishenGan || getShiShen(dayGan, curLn.gan as TianGan) || "",
+        shishenZhi: [],
         canggan: curLn.canggan || getCangGan(curLn.zhi as DiZhi) || [],
         nayin: curLn.nayin || getNaYin(lnGanzhi) || "",
         xunkong: getXunKong(lnGanzhi) || "",
-        zuo: getZuoChangSheng(dayGan, curLn.zhi as DiZhi),
+        zuo: getChangSheng(dayGan, curLn.zhi as DiZhi),
         isDayPillar: false,
         isLiunian: true,
       });
@@ -780,10 +782,11 @@ function TabDetail({result,gender}:{
         zhi: curLy.zhi as DiZhi,
         ganzhi: lyGanzhi,
         shishenGan: curLy.shishenGan || getShiShen(dayGan, curLy.gan as TianGan) || "",
+        shishenZhi: [],
         canggan: getCangGan(curLy.zhi as DiZhi) || [],
         nayin: getNaYin(lyGanzhi) || "",
         xunkong: getXunKong(lyGanzhi) || "",
-        zuo: getZuoChangSheng(dayGan, curLy.zhi as DiZhi),
+        zuo: getChangSheng(dayGan, curLy.zhi as DiZhi),
         isDayPillar: false,
         isLiuyue: true,
       });
@@ -792,15 +795,17 @@ function TabDetail({result,gender}:{
     return base;
   }, [pillars, curDy, curLn, curLy, dayGan, gender]);
 
-  // 藏干+十神（统一用于基础柱/大运/流年）
+  // 藏干+十神（统一用于基础柱/大运/流年）- v17.7 基础柱使用预计算值
   const getCgSs = (dp: DisplayPillar) => {
     return dp.canggan.map((g, idx) => {
       const wx = getGanWuxing(g as TianGan);
       let ssName = "";
       if (dp.isDayPillar) {
-        ssName = idx === 0 ? (gender === "male" ? "元男" : "元女") : "";
-      } else {
+        ssName = idx === 0 ? (gender === "male" ? "元男" : "元女") : ((dp.shishenZhi && dp.shishenZhi[idx]) || "");
+      } else if (dp.isDayun || dp.isLiunian || dp.isLiuyue) {
         ssName = getShiShen(dayGan, g as TianGan) || "";
+      } else {
+        ssName = (dp.shishenZhi && dp.shishenZhi[idx]) || "";
       }
       return { gan: g, wx, shishen: ssName };
     });

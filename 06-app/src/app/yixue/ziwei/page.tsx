@@ -986,6 +986,12 @@ export default function ZiweiPage() {
                             {palace.heavenlyStem}{palace.earthlyBranch}
                           </span>
                         </div>
+                        {/* 宫度年龄区间（对标jishiyu） */}
+                        {palace.ageRange && palace.ageRange[0] > 0 && (
+                          <div style={{ fontSize: "9px", color: "#888", textAlign: "center", marginBottom: "1px", lineHeight: 1.2 }}>
+                            {palace.ageRange[0]}-{palace.ageRange[1]}
+                          </div>
+                        )}
 
                         {/* 星曜区域 - 水平排列 */}
                         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
