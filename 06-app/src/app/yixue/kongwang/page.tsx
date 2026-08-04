@@ -6,7 +6,6 @@ import {
   getKongwang, calcKongwang, getJiaziIndex,
 } from "@/algorithm-core";
 import type { TianGan, DiZhi } from "@/algorithm-core";
-import { BrandHeader } from "@/components/shared";
 
 const XUN_NAMES = ['甲子旬', '甲戌旬', '甲申旬', '甲午旬', '甲辰旬', '甲寅旬'];
 const XUN_RANGES = [
@@ -61,7 +60,6 @@ export default function KongWangPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-4">
-      <BrandHeader title="空亡查询" showBack={true} backUrl="/yixue" />
       <h1 className="text-xl font-bold text-primary mb-4">空亡查询</h1>
 
       {/* 输入区域 */}

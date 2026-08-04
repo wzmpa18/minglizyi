@@ -7,7 +7,6 @@ import {
   getBianGua,
   analyzeTiYong,
   getTrigramInfo,
-  TRIGRAM_SYMBOLS,
   HEXAGRAM_GUACI,
   HEXAGRAM_NAMES,
   solarToBazi,
@@ -16,15 +15,24 @@ import {
   ZHI_WUXING,
 } from "@/algorithm-core";
 import type { TrigramName, TianGan, DiZhi } from "@/algorithm-core";
-import { DatePicker, BrandHeader } from "@/components/shared";
+import { DatePicker } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
+import { getMeihuaHexagramInterpretation, getMeihuaTiYongInterpretation, type MeihuaInterpretItem } from "@/lib/meihua-interpretations";
 
 // ============================================================================
 // 五行颜色 (与 jishiyu 完全一致)
 // ============================================================================
 const WX_COLORS: Record<string, string> = {
   "金": "#ffa500", "木": "#00a879", "水": "#0074e4", "火": "#9B5ECF", "土": "#a64b00",
+};
+
+/** 解读类型标签颜色 */
+const INTERPRET_TYPE_COLORS: Record<string, { bg: string; fg: string; label: string }> = {
+  gua: { bg: "#EDE7F6", fg: "#7B2FBE", label: "卦象" },
+  bagua: { bg: "#E8F5E9", fg: "#2E7D32", label: "八卦" },
+  tiyong: { bg: "#FFF3E0", fg: "#E65100", label: "体用" },
+  dongyao: { bg: "#FFEBEE", fg: "#C62828", label: "动爻" },
 };
 
 // ============================================================================
@@ -310,6 +318,45 @@ export default function MeihuaPage() {
   const [activeGua, setActiveGua] = useState<ActiveGua>("ben");
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
 
+  // 解读面板
+  const [interpretPanel, setInterpretPanel] = useState<{
+    title: string;
+    items: MeihuaInterpretItem[];
+  } | null>(null);
+
+  // 卦象点击 → 切换卦并显示解读
+  const handleGuaClick = useCallback((guaType: ActiveGua) => {
+    setActiveGua(guaType);
+    if (!result) return;
+
+    // 卦象解读
+    const activeHexagram = guaType === "ben" ? result.benGua : guaType === "hu" ? result.huGua : result.bianGua;
+    const guaItems = getMeihuaHexagramInterpretation(
+      activeHexagram.num,
+      activeHexagram.name,
+      activeHexagram.guaCi,
+    );
+
+    // 体用解读（仅本卦显示）
+    const allItems = [...guaItems.items];
+    if (guaType === "ben") {
+      const tiYongItems = getMeihuaTiYongInterpretation(
+        result.tiYong.tiGua,
+        result.tiYong.yongGua,
+        result.tiYong.tiWuxing,
+        result.tiYong.yongWuxing,
+        result.tiYong.relation,
+        result.tiYong.description,
+      );
+      allItems.push(...tiYongItems.items);
+    }
+
+    setInterpretPanel({
+      title: activeHexagram.name + " · " + (guaType === "ben" ? "本卦" : guaType === "hu" ? "互卦" : "变卦") + "解读",
+      items: allItems,
+    });
+  }, [result]);
+
   // URL参数clientId + 回填检查
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -364,45 +411,19 @@ export default function MeihuaPage() {
     }
   }, [selectedDate, selectedClient, divMethod]);
 
+  // ---- 自动显示初始解读 ----
+  useEffect(() => {
+    if (result) {
+      handleGuaClick("ben");
+    }
+  }, [result]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ---- 返回弹窗 ----
   const handleBackToPopup = useCallback(() => {
     setShowPopup(true);
     setResult(null);
+    setInterpretPanel(null);
   }, []);
-
-  // ---- 详情文本 ----
-  const detailText = useMemo(() => {
-    if (!result) return "";
-
-    const { benGua, huGua, bianGua, changeYao, tiYong } = result;
-    const activeHexagram = activeGua === "ben" ? benGua : activeGua === "hu" ? huGua : bianGua;
-
-    const lines: string[] = [
-      "卦名：" + activeHexagram.name,
-      "卦序：第" + activeHexagram.num + "卦",
-      "",
-      "卦辞：",
-      activeHexagram.guaCi,
-      "",
-      "上卦：" + activeHexagram.upper + "（" + TRIGRAM_SYMBOLS[activeHexagram.upper] + "）",
-      "下卦：" + activeHexagram.lower + "（" + TRIGRAM_SYMBOLS[activeHexagram.lower] + "）",
-    ];
-
-    if (activeGua === "ben") {
-      lines.push("", "动爻：第" + changeYao + "爻动");
-    }
-
-    lines.push(
-      "",
-      "【体用分析】",
-      "体卦：" + tiYong.tiGua + "（" + tiYong.tiWuxing + "）",
-      "用卦：" + tiYong.yongGua + "（" + tiYong.yongWuxing + "）",
-      "关系：" + tiYong.relation,
-      "断语：" + tiYong.description,
-    );
-
-    return lines.join("\n");
-  }, [result, activeGua]);
 
   // ---- datetime-local ----
   const dateInputValue = useMemo(() => {
@@ -417,7 +438,6 @@ export default function MeihuaPage() {
   return (
     <div className="min-h-screen flex justify-center bg-[#ededed]">
       <div className="w-full" style={{maxWidth:"375px", paddingBottom:"10px"}}>
-      <BrandHeader title="言道梅花易数" showBack={true} backUrl="/yixue" />
 
       {/* ====== 日期时间选择弹窗 ====== */}
       <DatePicker
@@ -626,7 +646,7 @@ export default function MeihuaPage() {
                       guaType="【本卦】"
                       changeYao={result.changeYao}
                       isActive={activeGua === "ben"}
-                      onClick={() => setActiveGua("ben")}
+                      onClick={() => handleGuaClick("ben")}
                     />
 
                     {/* 动爻标记 */}
@@ -640,7 +660,7 @@ export default function MeihuaPage() {
                       guaType="【互卦】"
                       changeYao={0}
                       isActive={activeGua === "hu"}
-                      onClick={() => setActiveGua("hu")}
+                      onClick={() => handleGuaClick("hu")}
                     />
 
                     {/* 空位 */}
@@ -662,7 +682,7 @@ export default function MeihuaPage() {
                       guaType="【变卦】"
                       changeYao={0}
                       isActive={activeGua === "bian"}
-                      onClick={() => setActiveGua("bian")}
+                      onClick={() => handleGuaClick("bian")}
                     />
 
                     {/* 空位 */}
@@ -694,28 +714,95 @@ export default function MeihuaPage() {
                 </td>
               </tr>
 
-              {/* 详情区: meihua-detail */}
-              <tr>
-                <td colSpan={5} style={{ padding: "0" }}>
-                  <div style={{ width: "100%", height: "100%", overflow: "auto", maxHeight: "400px" }}>
-                    <pre
-                      style={{
-                        textAlign: "left",
-                        padding: "5px",
-                        fontSize: "14px",
-                        wordBreak: "break-word",
-                        margin: 0,
-                        whiteSpace: "pre-wrap",
-                        lineHeight: "1.6",
-                        color: "#555",
-                        fontFamily: "inherit",
-                      }}
-                    >
-                      {detailText}
-                    </pre>
-                  </div>
-                </td>
-              </tr>
+              {/* 解读抽屉面板 */}
+              {interpretPanel && (
+                <tr>
+                  <td colSpan={5} style={{ padding: "6px 8px" }}>
+                    <div style={{
+                      border: "1px solid #7B2FBE",
+                      borderRadius: "8px",
+                      overflow: "hidden",
+                      boxShadow: "0 2px 8px rgba(123, 47, 190, 0.12)",
+                    }}>
+                      {/* 标题栏 */}
+                      <div style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "8px 12px",
+                        background: "linear-gradient(135deg, #7B2FBE, #9B5ECF)",
+                        color: "white",
+                      }}>
+                        <span style={{ fontSize: "15px", fontWeight: "bold" }}>
+                          {interpretPanel.title}
+                        </span>
+                        <button
+                          onClick={() => setInterpretPanel(null)}
+                          style={{
+                            background: "rgba(255,255,255,0.2)",
+                            border: "none",
+                            color: "white",
+                            width: "26px",
+                            height: "26px",
+                            borderRadius: "50%",
+                            cursor: "pointer",
+                            fontSize: "14px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      {/* 内容区 */}
+                      <div style={{ padding: "10px 12px", maxHeight: "360px", overflowY: "auto" }}>
+                        {interpretPanel.items.map((item, idx) => {
+                          const tc = INTERPRET_TYPE_COLORS[item.type] || INTERPRET_TYPE_COLORS["gua"];
+                          return (
+                            <div key={idx} style={{ marginBottom: idx < interpretPanel.items.length - 1 ? "10px" : 0 }}>
+                              <div style={{ display: "flex", alignItems: "center", marginBottom: "4px" }}>
+                                <span style={{
+                                  fontSize: "10px",
+                                  fontWeight: "bold",
+                                  padding: "1px 6px",
+                                  borderRadius: "3px",
+                                  background: tc.bg,
+                                  color: tc.fg,
+                                  marginRight: "8px",
+                                  flexShrink: 0,
+                                }}>
+                                  {tc.label}
+                                </span>
+                                <span style={{ fontSize: "13px", fontWeight: "bold", color: "#333" }}>{item.title}</span>
+                              </div>
+                              <div style={{ fontSize: "12px", color: "#555", lineHeight: "1.7", whiteSpace: "pre-line" }}>
+                                {item.content}
+                              </div>
+                              <div style={{ fontSize: "10px", color: "#999", marginTop: "4px", fontStyle: "italic" }}>
+                                —— {item.source}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* 底部提示 */}
+                      <div style={{
+                        padding: "6px 12px",
+                        background: "#fafafa",
+                        borderTop: "1px solid #eee",
+                        fontSize: "10px",
+                        color: "#999",
+                        textAlign: "center",
+                      }}>
+                        点击卦象查看不同解读 · 引经据典，仅供参考
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

@@ -16,9 +16,21 @@ import {
 } from "@/algorithm-core";
 import type { TianGan, DiZhi, PalmPosition } from "@/algorithm-core";
 import ClientSelector from "@/components/ClientSelector";
-import { DatePicker, BrandHeader } from "@/components/shared";
+import { DatePicker } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
+import { getXiaoliurenInterpretation } from "@/lib/xiaoliuren-interpretations";
+import type { XiaoliurenInterpretItem } from "@/lib/xiaoliuren-interpretations";
+
+// ============================================================================
+// 解读类型标签颜色
+// ============================================================================
+const INTERPRET_TYPE_COLORS: Record<string, { bg: string; fg: string; label: string }> = {
+  palm: { bg: "#f3e8ff", fg: "#7B2FBE", label: "掌诀" },
+  jiXiong: { bg: "#fef2f2", fg: "#dc2626", label: "吉凶" },
+  wuxing: { bg: "#eff6ff", fg: "#1e6fbf", label: "五行" },
+  direction: { bg: "#f0faf0", fg: "#16a34a", label: "方位" },
+};
 
 // ============================================================================
 // 五行颜色 (与 jishiyu 完全一致)
@@ -46,16 +58,19 @@ function PalmCell({
   pos,
   isActive,
   stepNumber,
+  onClick,
 }: {
   pos: PalmPosition;
   isActive: boolean;
   stepNumber: number | null;
+  onClick?: () => void;
 }) {
   const ji = isJi(pos.jiXiong);
   const wxColor = WX_COLORS[pos.wuxing] ?? "#999";
 
   return (
     <div
+      onClick={onClick}
       style={{
         display: "grid",
         gridTemplateColumns: "50% 50%",
@@ -67,6 +82,7 @@ function PalmCell({
         transition: "background-color 0.2s",
         textAlign: "left",
         fontSize: "12px",
+        cursor: onClick ? "pointer" : "default",
       }}
     >
       {/* 1. 吉凶 (神位, row1 col1) */}
@@ -166,6 +182,12 @@ export default function XiaoliurenPage() {
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
   const [recordSaved, setRecordSaved] = useState(false);
 
+  // ---- 解读面板 ----
+  const [interpretPanel, setInterpretPanel] = useState<{
+    title: string;
+    items: XiaoliurenInterpretItem[];
+  } | null>(null);
+
   // URL参数clientId + 回填检查
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -258,6 +280,7 @@ export default function XiaoliurenPage() {
   // ---- 排盘 ----
   const handleDivination = useCallback(() => {
     setRecordSaved(false);
+    setInterpretPanel(null);
     setShowResult(true);
     setShowPopup(false);
   }, []);
@@ -266,6 +289,15 @@ export default function XiaoliurenPage() {
   const handleBackToPopup = useCallback(() => {
     setShowPopup(true);
     setShowResult(false);
+    setInterpretPanel(null);
+  }, []);
+
+  // ---- 点击掌诀宫格 ----
+  const handlePalmClick = useCallback((palmName: string) => {
+    const interp = getXiaoliurenInterpretation(palmName);
+    if (interp) {
+      setInterpretPanel(interp);
+    }
   }, []);
 
   // ---- datetime-local ----
@@ -294,7 +326,6 @@ export default function XiaoliurenPage() {
   return (
     <div className="min-h-screen flex justify-center bg-[#ededed]">
       <div className="w-full" style={{maxWidth:"375px", paddingBottom:"10px"}}>
-      <BrandHeader title="言道小六壬" showBack={true} backUrl="/yixue" />
       {/* ====== 弹窗输入 (对标 jishiyu popup) ====== */}
       {showPopup && (
         <div
@@ -696,12 +727,103 @@ export default function XiaoliurenPage() {
                           pos={pos}
                           isActive={isActive}
                           stepNumber={stepNum}
+                          onClick={() => handlePalmClick(pos.name)}
                         />
                       );
                     })}
                   </div>
                 </td>
               </tr>
+
+              {/* === 解读抽屉 (点击宫格后显示) === */}
+              {interpretPanel && (
+                <tr>
+                  <td colSpan={5} style={{ padding: "6px 8px" }}>
+                    <div style={{
+                      border: "1px solid #7B2FBE",
+                      borderRadius: "8px",
+                      overflow: "hidden",
+                      boxShadow: "0 2px 8px rgba(123, 47, 190, 0.12)",
+                    }}>
+                      {/* 标题栏 */}
+                      <div style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "8px 12px",
+                        background: "linear-gradient(135deg, #7B2FBE, #9B5ECF)",
+                        color: "white",
+                      }}>
+                        <span style={{ fontSize: "15px", fontWeight: "bold" }}>
+                          {interpretPanel.title}
+                        </span>
+                        <button
+                          onClick={() => setInterpretPanel(null)}
+                          style={{
+                            background: "rgba(255,255,255,0.2)",
+                            border: "none",
+                            color: "white",
+                            width: "26px",
+                            height: "26px",
+                            borderRadius: "50%",
+                            cursor: "pointer",
+                            fontSize: "14px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      {/* 内容区 */}
+                      <div style={{ padding: "10px 12px", maxHeight: "360px", overflowY: "auto" }}>
+                        {interpretPanel.items.map((item, idx) => {
+                          const tc = INTERPRET_TYPE_COLORS[item.type] || INTERPRET_TYPE_COLORS["palm"];
+                          return (
+                            <div key={idx} style={{ marginBottom: idx < interpretPanel.items.length - 1 ? "10px" : 0 }}>
+                              <div style={{ display: "flex", alignItems: "center", marginBottom: "4px" }}>
+                                <span style={{
+                                  fontSize: "10px",
+                                  fontWeight: "bold",
+                                  padding: "1px 6px",
+                                  borderRadius: "3px",
+                                  background: tc.bg,
+                                  color: tc.fg,
+                                  marginRight: "8px",
+                                  flexShrink: 0,
+                                }}>
+                                  {tc.label}
+                                </span>
+                                <span style={{ fontSize: "13px", fontWeight: "bold", color: "#333" }}>{item.title}</span>
+                              </div>
+                              <div style={{ fontSize: "12px", color: "#555", lineHeight: "1.7", whiteSpace: "pre-line" }}>
+                                {item.content}
+                              </div>
+                              <div style={{ fontSize: "10px", color: "#999", marginTop: "4px", fontStyle: "italic" }}>
+                                —— {item.source}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* 底部提示 */}
+                      <div style={{
+                        padding: "6px 12px",
+                        background: "#fafafa",
+                        borderTop: "1px solid #eee",
+                        fontSize: "10px",
+                        color: "#999",
+                        textAlign: "center",
+                      }}>
+                        点击六宫格查看不同掌诀解读 · 引经据典，仅供参考
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
 
@@ -765,13 +887,17 @@ export default function XiaoliurenPage() {
           {/* 最终结果卡片 */}
           {result && (
             <div
+              onClick={() => handlePalmClick(result.finalPosition.name)}
               style={{
                 margin: "10px 8px",
                 backgroundColor: "#fff",
                 padding: "16px",
                 border: "1px solid #e6e6e6",
                 textAlign: "center",
+                cursor: "pointer",
+                transition: "box-shadow 0.2s",
               }}
+              title="点击查看掌诀详解"
             >
               <div style={{ fontSize: "14px", color: "#666", marginBottom: "4px" }}>最终掌诀</div>
               <div
@@ -786,6 +912,9 @@ export default function XiaoliurenPage() {
               </div>
               <div style={{ fontSize: "13px", color: "#888", lineHeight: "1.5" }}>
                 {result.finalPosition.description}
+              </div>
+              <div style={{ fontSize: "10px", color: "#7B2FBE", marginTop: "6px" }}>
+                点击查看掌诀详解 →
               </div>
             </div>
           )}

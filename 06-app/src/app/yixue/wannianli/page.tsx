@@ -3,13 +3,21 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { Solar, SolarMonth } from "lunar-javascript";
 import ClientSelector from "@/components/ClientSelector";
-import { BrandHeader } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 import { useClientDate } from "@/lib/useClientDate";
+import { getCalendarGanzhiInterpretation, getCalendarJieqiInterpretation } from "@/lib/calendar-interpretations";
+import type { CalendarInterpretItem } from "@/lib/calendar-interpretations";
 
 const BRAND = "#7B2FBE";
 const WEEKDAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
+
+// 解读类型颜色
+const INTERPRET_TYPE_COLORS: Record<string, { bg: string; fg: string; label: string }> = {
+  ganzhi: { bg: "#f3e8ff", fg: "#7B2FBE", label: "干支" },
+  jieqi: { bg: "#e0f2fe", fg: "#0284c7", label: "节气" },
+  shichen: { bg: "#fef3c7", fg: "#d97706", label: "时辰" },
+};
 
 interface DayCell {
   solar: Solar;
@@ -37,6 +45,7 @@ export default function WannianliPage() {
   const [showPicker, setShowPicker] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
   const [saveTip, setSaveTip] = useState("");
+  const [interpretPanel, setInterpretPanel] = useState<{title: string; items: CalendarInterpretItem[]} | null>(null);
   const today = useClientDate();
   useEffect(() => {
     const t = new Date();
@@ -64,6 +73,20 @@ export default function WannianliPage() {
       setTimeout(() => setSaveTip(""), 2000);
     } catch(e) { console.error("保存失败:", e); }
   };
+
+  // 点击干支解读
+  const handleGanzhiClick = useCallback((gz: string, label: string) => {
+    const interp = getCalendarGanzhiInterpretation(gz);
+    if (interp) {
+      setInterpretPanel({ title: `${label} · ${gz}`, items: interp.items });
+    }
+  }, []);
+
+  // 点击节气解读
+  const handleJieqiClick = useCallback((jieqi: string) => {
+    const interp = getCalendarJieqiInterpretation(jieqi);
+    if (interp) setInterpretPanel(interp);
+  }, []);
 
   // ===== 月历数据 =====
   const calendarData = useMemo(() => {
@@ -159,7 +182,6 @@ export default function WannianliPage() {
 
   return (
     <div className="min-h-screen bg-[#ededed] pb-[80px]">
-      <BrandHeader title="言道万年历" showBack={true} backUrl="/yixue" />
       {/* ===== 顶部紫色导航条 ===== */}
       <div
         className="flex items-center justify-between px-4 py-3 text-white"
@@ -353,8 +375,10 @@ export default function WannianliPage() {
               </div>
               {selectedDetail.jieQi && (
                 <span
-                  className="mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold text-white"
+                  onClick={(e) => { e.stopPropagation(); handleJieqiClick(selectedDetail.jieQi!); }}
+                  className="mt-1 inline-block cursor-pointer rounded-full px-2 py-0.5 text-[11px] font-semibold text-white hover:opacity-80"
                   style={{ backgroundColor: BRAND }}
+                  title="点击查看节气详解"
                 >
                   {selectedDetail.jieQi}
                 </span>
@@ -369,7 +393,11 @@ export default function WannianliPage() {
                 </div>
               )}
             </div>
-            <div className="text-right">
+            <div
+              className="cursor-pointer text-right"
+              onClick={() => handleGanzhiClick(selectedDetail.dayGZ, "日干支")}
+              title="点击查看干支详解"
+            >
               <div className="text-2xl font-bold tracking-wider" style={{ color: BRAND }}>
                 {selectedDetail.dayGZ}
               </div>
@@ -384,7 +412,12 @@ export default function WannianliPage() {
               { label: "月柱", gz: selectedDetail.monthGZ },
               { label: "日柱", gz: selectedDetail.dayGZ },
             ].map((p) => (
-              <div key={p.label} className="rounded-lg border border-gray-200 py-1.5 text-center">
+              <div
+                key={p.label}
+                onClick={() => handleGanzhiClick(p.gz, p.label)}
+                className="cursor-pointer rounded-lg border border-gray-200 py-1.5 text-center hover:border-purple-300 hover:bg-purple-50/50 transition-colors"
+                title="点击查看干支详解"
+              >
                 <div className="text-[10px] text-gray-400">{p.label}</div>
                 <div className="text-sm font-bold" style={{ color: BRAND }}>
                   {p.gz}
@@ -436,6 +469,90 @@ export default function WannianliPage() {
               <span className="font-semibold" style={{ color: BRAND }}>{selectedDetail.zhiXing}日</span>
             </div>
           </div>
+
+          {/* ===== 解读抽屉 ===== */}
+          {interpretPanel && (
+            <div className="mt-3">
+              <div style={{
+                border: "1px solid #7B2FBE",
+                borderRadius: "8px",
+                overflow: "hidden",
+                boxShadow: "0 2px 8px rgba(123, 47, 190, 0.12)",
+                backgroundColor: "#fff",
+              }}>
+                <div style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "8px 12px",
+                  background: "linear-gradient(135deg, #7B2FBE, #9B5ECF)",
+                  color: "white",
+                }}>
+                  <span style={{ fontSize: "15px", fontWeight: "bold" }}>
+                    {interpretPanel.title}
+                  </span>
+                  <button
+                    onClick={() => setInterpretPanel(null)}
+                    style={{
+                      background: "rgba(255,255,255,0.2)",
+                      border: "none",
+                      color: "white",
+                      width: "26px",
+                      height: "26px",
+                      borderRadius: "50%",
+                      cursor: "pointer",
+                      fontSize: "14px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div style={{ padding: "10px 12px", maxHeight: "360px", overflowY: "auto" }}>
+                  {interpretPanel.items.map((item, idx) => {
+                    const tc = INTERPRET_TYPE_COLORS[item.type] || INTERPRET_TYPE_COLORS["ganzhi"];
+                    return (
+                      <div key={idx} style={{ marginBottom: idx < interpretPanel.items.length - 1 ? "10px" : 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", marginBottom: "4px" }}>
+                          <span style={{
+                            fontSize: "10px",
+                            fontWeight: "bold",
+                            padding: "1px 6px",
+                            borderRadius: "3px",
+                            background: tc.bg,
+                            color: tc.fg,
+                            marginRight: "8px",
+                            flexShrink: 0,
+                          }}>
+                            {tc.label}
+                          </span>
+                          <span style={{ fontSize: "13px", fontWeight: "bold", color: "#333" }}>{item.title}</span>
+                        </div>
+                        <div style={{ fontSize: "12px", color: "#555", lineHeight: "1.7", whiteSpace: "pre-line" }}>
+                          {item.content}
+                        </div>
+                        <div style={{ fontSize: "10px", color: "#999", marginTop: "4px", fontStyle: "italic" }}>
+                          —— {item.source}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{
+                  padding: "6px 12px",
+                  background: "#fafafa",
+                  borderTop: "1px solid #eee",
+                  fontSize: "10px",
+                  color: "#999",
+                  textAlign: "center",
+                }}>
+                  点击干支或节气查看经典解读 · 引经据典，仅供参考
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ===== 图例 ===== */}

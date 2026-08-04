@@ -1,8 +1,7 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import { ShoppingBag } from "lucide-react";
-import { BrandHeader } from "@/components/shared";
 
 // ==================== 类型定义 ====================
 
@@ -34,23 +33,6 @@ const PRODUCTS: ShopProduct[] = [
 export default function ZhongyiShopPage() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#0f1419", color: "#e7e9ea" }}>
-      <BrandHeader title="中医商城" showBack={true} backUrl="/zhongyi" />
-
-      {/* ========== Header - 深色主题 ========== */}
-      <header
-        className="sticky top-0 z-40 flex items-center px-4 border-b"
-        style={{
-          backgroundColor: "#15202b",
-          height: "48px",
-          borderColor: "#2f3336",
-        }}
-      >
-        <div className="flex items-center gap-2">
-          <ShoppingBag className="h-5 w-5 text-emerald-400" />
-          <h1 className="text-lg font-bold" style={{ color: "#e7e9ea" }}>中医商城</h1>
-        </div>
-      </header>
-
       {/* ========== Banner ========== */}
       <div
         className="mx-4 mt-4 rounded-xl p-4 text-center"
@@ -107,7 +89,10 @@ export default function ZhongyiShopPage() {
       {/* ========== 底部免责声明 ========== */}
       <div className="px-4 py-4 pb-8">
         <p className="text-center text-xs" style={{ color: "#536471" }}>
-          商城功能开发中，所有商品敬请期待。本页面内容仅供展示参考。
+          商城功能开发中，所有商品敬请期待。
+        </p>
+        <p className="text-center text-xs mt-2" style={{ color: "#fbbf24" }}>
+          ⚠️ 本页面内容仅供学习参考，不构成医疗建议。涉及中药、针灸、艾灸等产品，请在专业医师指导下使用。
         </p>
       </div>
     </div>

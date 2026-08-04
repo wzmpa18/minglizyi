@@ -7,7 +7,6 @@ import {
   getNayinWuxing, getKongwang, calcKongwang, getNayinElement,
 } from "@/algorithm-core";
 import type { TianGan, DiZhi } from "@/algorithm-core";
-import { BrandHeader } from "@/components/shared";
 
 const GAN_WUXING_MAP: Record<string, string> = {
   '甲': '木', '乙': '木', '丙': '火', '丁': '火', '戊': '土',
@@ -106,7 +105,6 @@ export default function GanZhiPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-4">
-      <BrandHeader title="干支查询" showBack={true} backUrl="/yixue" />
       <h1 className="text-xl font-bold text-primary mb-4">干支查询</h1>
 
       {/* 模式切换 */}

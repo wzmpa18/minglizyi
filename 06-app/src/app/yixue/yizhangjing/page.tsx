@@ -6,7 +6,9 @@ import {
   solarToBazi,
   getCurrentJieQi,
 } from "@/algorithm-core";
-import { DatePicker, BrandHeader } from "@/components/shared";
+import { DatePicker } from "@/components/shared";
+import { getYizhangPalaceInterpretation } from "@/lib/yizhang-interpretations";
+import type { YizhangInterpretItem } from "@/lib/yizhang-interpretations";
 
 // ============================================================================
 // 一掌经十二宫
@@ -31,6 +33,12 @@ const ZHI_LIST = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申",
 const LIUDAO_COLORS: Record<string, string> = {
   "佛道": "#ffa500", "鬼道": "#0074e4", "人道": "#00a879",
   "畜生道": "#a64b00", "修罗道": "#9B5ECF", "仙道": "#8b5cf6",
+};
+
+const INTERPRET_TYPE_COLORS: Record<string, { bg: string; fg: string; label: string }> = {
+  palace: { bg: "#f3e8ff", fg: "#7B2FBE", label: "宫位" },
+  liudao: { bg: "#fef3c7", fg: "#d97706", label: "六道" },
+  sizhu: { bg: "#e0f2fe", fg: "#0284c7", label: "四柱" },
 };
 
 // ============================================================================
@@ -119,6 +127,7 @@ export default function YizhangjingPage() {
   const [hasResult, setHasResult] = useState(false);
   const [showInput, setShowInput] = useState(true);
   const [showForm, setShowForm] = useState(true);
+  const [interpretPanel, setInterpretPanel] = useState<{title: string; items: YizhangInterpretItem[]} | null>(null);
 
   const result = useMemo(() => calcYizhangJing(new Date(selectedYear, selectedMonth - 1, selectedDay, selectedHour)), [selectedYear, selectedMonth, selectedDay, selectedHour]);
 
@@ -168,6 +177,11 @@ export default function YizhangjingPage() {
     setSelectedHour(d.getHours());
   }, [selectedYear, selectedMonth, selectedDay, selectedHour]);
 
+  const handlePalaceClick = useCallback((zhi: string) => {
+    const interp = getYizhangPalaceInterpretation(zhi);
+    if (interp) setInterpretPanel(interp);
+  }, []);
+
   const getGongInfo = (zhi: string) => {
     return YIZHANG_PALACES[zhi] ?? null;
   };
@@ -179,7 +193,6 @@ export default function YizhangjingPage() {
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#ededed" }}>
-      <BrandHeader title="言道一掌经" showBack={true} backUrl="/yixue" />
       <DatePicker
         show={showForm}
         onClose={() => setShowForm(false)}
@@ -206,26 +219,6 @@ export default function YizhangjingPage() {
         submitText="排盘"
         title="一掌经排盘"
       />
-      {/* Header */}
-      <div style={{
-        backgroundColor: "#7B2FBE", height: "40px", display: "flex",
-        alignItems: "center", justifyContent: "center", position: "relative",
-      }}>
-        <button
-          onClick={() => router.back()}
-          style={{
-            position: "absolute", left: "0", width: "40px", height: "40px",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            background: "none", border: "none", cursor: "pointer",
-          }}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M15 18l-6-6 6-6" />
-          </svg>
-        </button>
-        <span style={{ color: "white", fontSize: "17px", fontWeight: "bold" }}>言道一掌经</span>
-      </div>
-
       <div style={{ maxWidth: "375px", margin: "0 auto", padding: "12px" }}>
         {/* 输入区 */}
         {showInput && (
@@ -337,6 +330,7 @@ export default function YizhangjingPage() {
                           <div
                             key={cell.zhi}
                             data-name={cell.zhi}
+                            onClick={() => handlePalaceClick(cell.zhi)}
                             style={{
                               gridRow: cell.row, gridColumn: cell.col,
                               display: "flex", flexDirection: "column",
@@ -344,6 +338,7 @@ export default function YizhangjingPage() {
                               border: isActive ? "2px solid #7B2FBE" : "1px solid #ddd",
                               backgroundColor: isActive ? "#fff5f5" : "white",
                               padding: "2px",
+                              cursor: "pointer",
                             }}
                           >
                             <div style={{ fontWeight: "bold", fontSize: "12px" }}>{cell.zhi}</div>
@@ -389,6 +384,111 @@ export default function YizhangjingPage() {
                   </div>
                 </td>
               </tr>
+
+              {/* 点击宫位查看解释 */}
+              <tr style={{ borderBottom: "1px solid #eee" }}>
+                <td
+                  colSpan={5}
+                  style={{
+                    color: "#939393",
+                    fontStyle: "italic",
+                    fontSize: "13px",
+                    padding: "6px",
+                  }}
+                >
+                  点击上方宫位查看解释
+                </td>
+              </tr>
+
+              {/* 解读抽屉面板 */}
+              {interpretPanel && (
+                <tr>
+                  <td colSpan={5} style={{ padding: "6px 8px" }}>
+                    <div style={{
+                      border: "1px solid #7B2FBE",
+                      borderRadius: "8px",
+                      overflow: "hidden",
+                      boxShadow: "0 2px 8px rgba(123, 47, 190, 0.12)",
+                    }}>
+                      {/* 标题栏 */}
+                      <div style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "8px 12px",
+                        background: "linear-gradient(135deg, #7B2FBE, #9B5ECF)",
+                        color: "white",
+                      }}>
+                        <span style={{ fontSize: "15px", fontWeight: "bold" }}>
+                          {interpretPanel.title}
+                        </span>
+                        <button
+                          onClick={() => setInterpretPanel(null)}
+                          style={{
+                            background: "rgba(255,255,255,0.2)",
+                            border: "none",
+                            color: "white",
+                            width: "26px",
+                            height: "26px",
+                            borderRadius: "50%",
+                            cursor: "pointer",
+                            fontSize: "14px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      {/* 内容区 */}
+                      <div style={{ padding: "10px 12px", maxHeight: "360px", overflowY: "auto" }}>
+                        {interpretPanel.items.map((item, idx) => {
+                          const tc = INTERPRET_TYPE_COLORS[item.type] || INTERPRET_TYPE_COLORS["palace"];
+                          return (
+                            <div key={idx} style={{ marginBottom: idx < interpretPanel.items.length - 1 ? "10px" : 0 }}>
+                              <div style={{ display: "flex", alignItems: "center", marginBottom: "4px" }}>
+                                <span style={{
+                                  fontSize: "10px",
+                                  fontWeight: "bold",
+                                  padding: "1px 6px",
+                                  borderRadius: "3px",
+                                  background: tc.bg,
+                                  color: tc.fg,
+                                  marginRight: "8px",
+                                  flexShrink: 0,
+                                }}>
+                                  {tc.label}
+                                </span>
+                                <span style={{ fontSize: "13px", fontWeight: "bold", color: "#333" }}>{item.title}</span>
+                              </div>
+                              <div style={{ fontSize: "12px", color: "#555", lineHeight: "1.7", whiteSpace: "pre-line" }}>
+                                {item.content}
+                              </div>
+                              <div style={{ fontSize: "10px", color: "#999", marginTop: "4px", fontStyle: "italic" }}>
+                                —— {item.source}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* 底部提示 */}
+                      <div style={{
+                        padding: "6px 12px",
+                        background: "#fafafa",
+                        borderTop: "1px solid #eee",
+                        fontSize: "10px",
+                        color: "#999",
+                        textAlign: "center",
+                      }}>
+                        点击宫位查看不同解读 · 引经据典，仅供参考
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              )}
 
               {/* 导航按钮 */}
               <tr style={{ borderBottom: "1px solid #eee" }}>

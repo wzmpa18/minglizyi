@@ -1,4 +1,4 @@
-/**
+﻿/**
  * ============================================================================
  * algorithm-core 统一算法核心包 —— 统一导出层
  * ============================================================================
@@ -9,7 +9,7 @@
  *   modules/      → 单模块算法层（按来源分文件，逐模块标注协议）
  *
  * 使用方式:
- *   import { buildBazi, calculateShenQiangRuo } from '@/algorithm-core';
+ *   import { solarToBazi, calculateShenQiangRuo } from '@/algorithm-core';
  *   import { calculateZiwei } from '@/algorithm-core';
  *   import { calculateQimen } from '@/algorithm-core';
  *   import { calculateLiuyao } from '@/algorithm-core';
@@ -246,7 +246,6 @@ export {
   getHourGan,
   hourToZhi,
   getYueLingWangShuai,
-  buildBazi,
   solarToBazi,
 } from './modules/bazi/base';
 

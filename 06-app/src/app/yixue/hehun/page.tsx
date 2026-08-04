@@ -11,10 +11,28 @@ import {
   ZHI_WUXING,
 } from "@/algorithm-core";
 import type { HehunResult } from "@/algorithm-core";
-import { DatePicker, BrandHeader } from "@/components/shared";
+import { DatePicker } from "@/components/shared";
 import ClientSelector from "@/components/ClientSelector";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
+import {
+  getHehunGradeInterpretation,
+  getHehunShengxiaoInterpretation,
+  getHehunNayinInterpretation,
+} from "@/lib/hehun-interpretations";
+import type { HehunInterpretItem } from "@/lib/hehun-interpretations";
+
+// ============================================================================
+// 解读类型标签颜色
+// ============================================================================
+const INTERPRET_TYPE_COLORS: Record<string, { bg: string; fg: string; label: string }> = {
+  grade: { bg: "#fdf2f8", fg: "#D427B5", label: "等级" },
+  shengxiao: { bg: "#fef3c7", fg: "#d97706", label: "生肖" },
+  nayin: { bg: "#e0f2fe", fg: "#0284c7", label: "纳音" },
+  tiangan: { bg: "#f3e8ff", fg: "#7B2FBE", label: "天干" },
+  dizhi: { bg: "#f0faf0", fg: "#16a34a", label: "地支" },
+  bazi: { bg: "#fef2f2", fg: "#dc2626", label: "八字" },
+};
 
 // ============================================================================
 // 常量配置
@@ -211,15 +229,27 @@ function BaziCard({
 // 子组件：分析项展示
 // ============================================================================
 
-function AnalysisItem({ item }: { item: HehunResult["items"][number] }) {
+function AnalysisItem({
+  item,
+  onClick,
+}: {
+  item: HehunResult["items"][number];
+  onClick?: () => void;
+}) {
   const iconColor = item.pass ? "#3E9B3E" : "#D93030";
   const iconText = item.pass ? "✓" : "✗";
   const bgColor = item.pass ? "#f0faf0" : "#fef2f2";
 
   return (
     <div
+      onClick={onClick}
       className="rounded-xl p-2.5 mb-2"
-      style={{ backgroundColor: bgColor, borderLeft: "3px solid " + (item.pass ? "#3E9B3E" : "#D93030") }}
+      style={{
+        backgroundColor: bgColor,
+        borderLeft: "3px solid " + (item.pass ? "#3E9B3E" : "#D93030"),
+        cursor: onClick ? "pointer" : "default",
+        transition: "box-shadow 0.2s",
+      }}
     >
       <div className="flex items-center justify-between mb-1">
         <span className="font-bold text-sm" style={{ color: "#333" }}>
@@ -242,6 +272,11 @@ function AnalysisItem({ item }: { item: HehunResult["items"][number] }) {
       </div>
       <div className="text-xs text-gray-500 mt-1">{item.detail}</div>
       <div className="text-xs text-gray-400 mt-0.5">{item.desc}</div>
+      {onClick && (
+        <div style={{ fontSize: "10px", color: "#7B2FBE", marginTop: "4px", textAlign: "right" }}>
+          点击查看详解 →
+        </div>
+      )}
     </div>
   );
 }
@@ -267,6 +302,12 @@ export default function HehunPage() {
   const [recordSaved, setRecordSaved] = useState(false);
   const [showMalePicker, setShowMalePicker] = useState(false);
   const [showFemalePicker, setShowFemalePicker] = useState(false);
+
+  // ---- 解读面板 ----
+  const [interpretPanel, setInterpretPanel] = useState<{
+    title: string;
+    items: HehunInterpretItem[];
+  } | null>(null);
 
   // 初始化男女方出生年份（客户端挂载后更新为真实当前年份）
   useEffect(() => {
@@ -346,6 +387,7 @@ export default function HehunPage() {
   const doHehun = useCallback(() => {
     setLoading(true);
     setRecordSaved(false);
+    setInterpretPanel(null);
     setTimeout(() => {
       setHasResult(true);
       setLoading(false);
@@ -382,6 +424,55 @@ export default function HehunPage() {
     setFemaleDay(1);
     setFemaleHour(12);
     setHasResult(false);
+    setInterpretPanel(null);
+  }, []);
+
+  /** 点击合婚等级 → 显示等级解读 */
+  const handleGradeClick = useCallback(() => {
+    if (!hehunResult) return;
+    const interp = getHehunGradeInterpretation(hehunResult.grade);
+    if (interp) setInterpretPanel(interp);
+  }, [hehunResult]);
+
+  /** 点击分析项 → 显示对应解读 */
+  const handleItemClick = useCallback((item: HehunResult["items"][number]) => {
+    // 根据分析项名称匹配解读类型
+    let interp = null;
+    if (item.name.includes("生肖") || item.name.includes("属相")) {
+      interp = getHehunShengxiaoInterpretation(item.passDesc);
+      if (!interp) interp = getHehunShengxiaoInterpretation("一般");
+    } else if (item.name.includes("纳音")) {
+      if (item.passDesc.includes("相生")) interp = getHehunNayinInterpretation("相生");
+      else if (item.passDesc.includes("比和") || item.passDesc.includes("相同")) interp = getHehunNayinInterpretation("比和");
+      else if (item.passDesc.includes("相克")) interp = getHehunNayinInterpretation("相克");
+    } else if (item.name.includes("天干")) {
+      // 天干解读
+      if (!interp) {
+        interp = {
+          title: item.name + " · 天干合婚",
+          items: [{
+            type: "tiangan" as const,
+            title: item.name,
+            content: item.detail + "\n" + item.desc + "\n\n天干五合：甲己合土、乙庚合金、丙辛合水、丁壬合木、戊癸合火。天干相合为吉，相冲为凶，需结合五行生克综合判断。",
+            source: "《渊海子平·天干合化论》"
+          }]
+        };
+      }
+    } else if (item.name.includes("地支")) {
+      // 地支解读
+      if (!interp) {
+        interp = {
+          title: item.name + " · 地支合婚",
+          items: [{
+            type: "dizhi" as const,
+            title: item.name,
+            content: item.detail + "\n" + item.desc + "\n\n地支六合：子丑合、寅亥合、卯戌合、辰酉合、巳申合、午未合。地支三合：申子辰水局、巳酉丑金局、寅午戌火局、亥卯未木局。地支六冲：子午冲、丑未冲、寅申冲、卯酉冲、辰戌冲、巳亥冲。",
+            source: "《渊海子平·地支合冲论》"
+          }]
+        };
+      }
+    }
+    if (interp) setInterpretPanel(interp);
   }, []);
 
   return (
@@ -389,7 +480,6 @@ export default function HehunPage() {
       className="mx-auto flex min-h-screen flex-col"
       style={{ maxWidth: "420px", backgroundColor: "#f5f0fa" }}
     >
-      <BrandHeader title="言道合婚" showBack={true} backUrl="/yixue" />
       {/* ====== 顶部导航栏 ====== */}
       <header
         className="sticky top-0 z-50 flex items-center h-11 w-full px-2"
@@ -544,10 +634,13 @@ export default function HehunPage() {
 
             {/* 合婚评分大字 */}
             <div
+              onClick={handleGradeClick}
               className="rounded-2xl mt-3 p-5 text-center text-white shadow-lg"
               style={{
                 background: "linear-gradient(135deg, #7B2FBE 0%, #A855F7 50%, #7B2FBE 100%)",
+                cursor: "pointer",
               }}
+              title="点击查看合婚等级详解"
             >
               <div className="text-sm opacity-90 mb-1">合婚评分</div>
               <div className="flex items-baseline justify-center">
@@ -566,6 +659,9 @@ export default function HehunPage() {
                 {hehunResult.grade}
               </div>
               <div className="text-sm mt-2 opacity-90 px-2">{hehunResult.gradeDesc}</div>
+              <div style={{ fontSize: "10px", opacity: 0.7, marginTop: "6px" }}>
+                点击查看等级详解 →
+              </div>
             </div>
 
             {/* 各项分析 */}
@@ -574,9 +670,102 @@ export default function HehunPage() {
                 合婚详析
               </div>
               {hehunResult.items.map((item, i) => (
-                <AnalysisItem key={i} item={item} />
+                <AnalysisItem
+                  key={i}
+                  item={item}
+                  onClick={() => handleItemClick(item)}
+                />
               ))}
             </div>
+
+            {/* === 解读抽屉 === */}
+            {interpretPanel && (
+              <div className="mt-3">
+                <div style={{
+                  border: "1px solid #7B2FBE",
+                  borderRadius: "8px",
+                  overflow: "hidden",
+                  boxShadow: "0 2px 8px rgba(123, 47, 190, 0.12)",
+                  backgroundColor: "#fff",
+                }}>
+                  {/* 标题栏 */}
+                  <div style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "8px 12px",
+                    background: "linear-gradient(135deg, #7B2FBE, #9B5ECF)",
+                    color: "white",
+                  }}>
+                    <span style={{ fontSize: "15px", fontWeight: "bold" }}>
+                      {interpretPanel.title}
+                    </span>
+                    <button
+                      onClick={() => setInterpretPanel(null)}
+                      style={{
+                        background: "rgba(255,255,255,0.2)",
+                        border: "none",
+                        color: "white",
+                        width: "26px",
+                        height: "26px",
+                        borderRadius: "50%",
+                        cursor: "pointer",
+                        fontSize: "14px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  {/* 内容区 */}
+                  <div style={{ padding: "10px 12px", maxHeight: "360px", overflowY: "auto" }}>
+                    {interpretPanel.items.map((item, idx) => {
+                      const tc = INTERPRET_TYPE_COLORS[item.type] || INTERPRET_TYPE_COLORS["bazi"];
+                      return (
+                        <div key={idx} style={{ marginBottom: idx < interpretPanel.items.length - 1 ? "10px" : 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", marginBottom: "4px" }}>
+                            <span style={{
+                              fontSize: "10px",
+                              fontWeight: "bold",
+                              padding: "1px 6px",
+                              borderRadius: "3px",
+                              background: tc.bg,
+                              color: tc.fg,
+                              marginRight: "8px",
+                              flexShrink: 0,
+                            }}>
+                              {tc.label}
+                            </span>
+                            <span style={{ fontSize: "13px", fontWeight: "bold", color: "#333" }}>{item.title}</span>
+                          </div>
+                          <div style={{ fontSize: "12px", color: "#555", lineHeight: "1.7", whiteSpace: "pre-line" }}>
+                            {item.content}
+                          </div>
+                          <div style={{ fontSize: "10px", color: "#999", marginTop: "4px", fontStyle: "italic" }}>
+                            —— {item.source}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* 底部提示 */}
+                  <div style={{
+                    padding: "6px 12px",
+                    background: "#fafafa",
+                    borderTop: "1px solid #eee",
+                    fontSize: "10px",
+                    color: "#999",
+                    textAlign: "center",
+                  }}>
+                    点击合婚评分或分析项查看经典解读 · 引经据典，仅供参考
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* 总评 */}
             <div

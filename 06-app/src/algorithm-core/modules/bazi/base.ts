@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 原始来源：mystilight-8char (ISC License)
  * 原始版本：v1.0
  * 修改记录：2026-07-26 按V3.1手册修正身强身弱、大运起运逻辑、格局判定
@@ -954,118 +954,10 @@ export function getNearestJieQi(year, month, day) {
  *   shensha: {...}           // 神煞
  * }
  */
-export function buildBazi(params) {
-  var yearGan = params.yearGan;
-  var yearZhi = params.yearZhi;
-  var monthGan = params.monthGan;
-  var monthZhi = params.monthZhi;
-  var dayGan = params.dayGan;
-  var dayZhi = params.dayZhi;
-  var hourGan = params.hourGan;
-  var hourZhi = params.hourZhi;
-
-  var pillars = [
-    { name: '年柱', gan: yearGan, zhi: yearZhi, ganzhi: yearGan + yearZhi },
-    { name: '月柱', gan: monthGan, zhi: monthZhi, ganzhi: monthGan + monthZhi },
-    { name: '日柱', gan: dayGan, zhi: dayZhi, ganzhi: dayGan + dayZhi },
-    { name: '时柱', gan: hourGan, zhi: hourZhi, ganzhi: hourGan + hourZhi }
-  ];
-
-  var allGanZhi = [yearGan + yearZhi, monthGan + monthZhi, dayGan + dayZhi, hourGan + hourZhi];
-
-  // 丰富每柱信息
-  pillars.forEach(function(pillar) {
-    pillar.wuxing = {
-      gan: GAN_WUXING[pillar.gan],
-      zhi: ZHI_WUXING[pillar.zhi]
-    };
-    pillar.nayin = getNaYin(pillar.ganzhi);
-    pillar.canggan = CANGGAN[pillar.zhi] || [];
-    pillar.xunkong = getXunKong(pillar.ganzhi);
-
-    // 十神（以日干为基准）
-    pillar.shishen = {
-      gan: getShiShen(dayGan, pillar.gan),
-      zhi: (CANGGAN[pillar.zhi] || []).map(function(cg) {
-        return getShiShen(dayGan, cg);
-      })
-    };
-    pillar.shishenShort = {
-      gan: getShiShenShort(pillar.shishen.gan),
-      zhi: pillar.shishen.zhi.map(function(ss) { return getShiShenShort(ss); })
-    };
-
-    // 十二长生（日干对各支）
-    pillar.changsheng = getChangSheng(dayGan, pillar.zhi);
-  });
-
-  // ============================================================
-  // 大运计算（V3.1 精确版 - 来自 advanced.ts）
-  // ============================================================
-  var dayun = calculateDayun({
-    yearGan: yearGan,
-    yearZhi: yearZhi,
-    monthGanZhi: monthGan + monthZhi,
-    gender: params.gender,
-    birthYear: params.birthYear,
-    birthMonth: params.birthMonth || 1,
-    birthDay: params.birthDay || 1,
-    daysToNextJie: params.daysToNextJie || 0,
-    daysToPrevJie: params.daysToPrevJie || 0,
-    nextJieName: params.nextJieName || '',
-    prevJieName: params.prevJieName || '',
-    dayGan: dayGan
-  });
-
-  // ============================================================
-  // 格局判定（V3.1 子平格局法 - 来自 advanced.ts）
-  // ============================================================
-  var patternResult = determinePattern({
-    dayGan: dayGan,
-    monthZhi: monthZhi
-  });
-
-  // ============================================================
-  // 身强身弱判定（V3.1 新增 - 来自 advanced.ts）
-  // ============================================================
-  var shenQiangRuo = calculateShenQiangRuo({
-    dayGan: dayGan,
-    monthZhi: monthZhi,
-    yearZhi: yearZhi,
-    dayZhi: dayZhi,
-    hourZhi: hourZhi,
-    yearGan: yearGan,
-    monthGan: monthGan,
-    hourGan: hourGan
-  });
-
-  // ============================================================
-  // 神煞
-  // ============================================================
-  var shensha = calculateShenSha({
-    dayGan: dayGan,
-    yearGan: yearGan,
-    yearZhi: yearZhi,
-    monthZhi: monthZhi,
-    dayZhi: dayZhi,
-    allGanZhi: allGanZhi
-  });
-
-  return {
-    pillars: pillars,
-    dayGan: dayGan,
-    dayZhi: dayZhi,
-    dayun: dayun,
-    patterns: patternResult.patterns,
-    patternDetail: patternResult.detail,
-    mainPattern: patternResult.mainPattern,
-    patternType: patternResult.patternType,
-    shenQiangRuo: shenQiangRuo,
-    shensha: shensha
-  };
-}
-
 // ============================================================================
+// 二十二、公历转八字（v17.8 根因修复: 仅保留吉时雨同源 solarToBazi，旧版 buildBazi 已删除）
+// ============================================================================
+
 // 二十二、公历转八字（v17.7 根因重写: 直接使用 lunar-javascript 对标吉时雨）
 // ============================================================================
 
@@ -1174,6 +1066,8 @@ export function solarToBazi(params) {
         gan: GAN_WUXING[gan],
         zhi: ZHI_WUXING[zhi]
       },
+      ganYinyang: GAN_YINYANG[gan] || '',
+      zhiYinyang: ZHI_YINYANG[zhi] || '',
       nayin: nayin,
       canggan: zhiCanggan || [],
       xunkong: kongwang || '',
@@ -1185,7 +1079,8 @@ export function solarToBazi(params) {
         gan: getShiShenShort(ganShishen === '日主' ? '比肩' : ganShishen),
         zhi: (zhiShishen || []).map(function(ss) { return getShiShenShort(ss); })
       },
-      changsheng: dishi || ''
+      changsheng: dishi || '',
+      zizuo: SHENGWANG_TABLE[gan] ? (SHENGWANG_TABLE[gan][zhi] || '') : ''
     };
   }
 
@@ -1286,13 +1181,18 @@ export function solarToBazi(params) {
   var dayunResult = {
     forward: forward,
     direction: forward ? '顺排' : '逆排',
-    daysToJie: 0,
+    daysToJie: Math.round((startYear - year) * 365.25 / 3),
     jieName: jieName,
     startAge: startAgeRaw,
     startAgeRaw: startAgeRaw,
+    startMonth: startMonth,
+    startDay: startDay,
+    startHour: startHour,
     startDate: startYear + '-' + (startMonth < 10 ? '0' + startMonth : startMonth) + '-' + (startDay < 10 ? '0' + startDay : startDay),
     startYear: startYear,
     dayunList: dayunList,
+    jiaoyunGan1: dayunArr[1] && dayunArr[1].getLiuNian()[0] ? dayunArr[1].getLiuNian()[0].getGanZhi().charAt(0) : '',
+    jiaoyunGan2: dayunArr[1] && dayunArr[1].getLiuNian()[5] ? dayunArr[1].getLiuNian()[5].getGanZhi().charAt(0) : '',
     qiyunText: qiyunText
   };
 
@@ -1370,6 +1270,7 @@ export function solarToBazi(params) {
       time: hour + ':00',
       gender: gender
     },
+    lunarDate: lunar.getYearInChinese() + '年' + lunar.getMonthInChinese() + '月' + lunar.getDayInChinese() + ' ' + lunar.getTimeZhi() + '时',
     jieQiInfo: jieQiInfo
   };
 }

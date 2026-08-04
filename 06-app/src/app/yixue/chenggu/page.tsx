@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { getYearGanZhi, hourToZhi } from "@/algorithm-core";
 import type { Gender } from "@/algorithm-core";
-import { BrandHeader } from "@/components/shared";
 
 // ============================================================================
 // 称骨数据
@@ -374,7 +373,6 @@ export default function ChengguPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6 space-y-6">
-      <BrandHeader title="称骨算命" showBack={true} backUrl="/yixue" />
       <h1 className="text-2xl font-bold text-center">称骨算命</h1>
       <p className="text-center text-sm text-muted-foreground">
         称骨算命法，又称袁天罡称骨法，相传为唐代著名相士袁天罡所创。根据出生年、月、日、时对应的骨重来推算命运。

@@ -235,6 +235,34 @@ function main() {
       hour: 10,
       gender: 'male',
     },
+    // === 边界用例 ===
+    {
+      name: '边界1',
+      desc: '晚子时: 2024-07-29 23:00 男',
+      year: 2024,
+      month: 7,
+      day: 29,
+      hour: 23,
+      gender: 'male',
+    },
+    {
+      name: '边界2',
+      desc: '立春当日: 2025-02-03 12:00 男',
+      year: 2025,
+      month: 2,
+      day: 3,
+      hour: 12,
+      gender: 'male',
+    },
+    {
+      name: '边界3',
+      desc: '闰月: 2023-04-20 12:00 男 (2023年闰二月)',
+      year: 2023,
+      month: 4,
+      day: 20,
+      hour: 12,
+      gender: 'male',
+    },
   ];
 
   let grandTotal = 0;

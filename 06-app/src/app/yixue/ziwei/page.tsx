@@ -1,12 +1,13 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo, useEffect } from "react";
 import type { CSSProperties } from "react";
 import { calculateZiwei, solarToBazi } from "@/algorithm-core";
 import type { ZiweiResult, Gender } from "@/algorithm-core";
-import { DatePicker, BrandHeader } from "@/components/shared";
+import { DatePicker } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
+import { getPalaceInterpretation, getPalaceAllStarInterpretations } from "@/lib/ziwei-interpretations";
 
 // ====================================================================
 // 品牌色 & 常量
@@ -442,6 +443,7 @@ export default function ZiweiPage() {
   // ---- 大限/流年选中状态 ----
   const [selectedDaxian, setSelectedDaxian] = useState<number>(0);
   const [selectedLiunian, setSelectedLiunian] = useState<number>(0);
+  const [interpretPanel, setInterpretPanel] = useState<{palaceName: string; palaceGanZhi: string; interpretations: Array<{type: string; title: string; content: string; source: string}>} | null>(null);
 
   // ---- 结果状态 ----
   const [result, setResult] = useState<ZiweiResult | null>(null);
@@ -680,7 +682,6 @@ export default function ZiweiPage() {
   return (
     <div className="bg-[#ededed] min-h-screen flex justify-center">
       <div className="w-full" style={{ maxWidth: "375px", paddingBottom: "10px" }}>
-      <BrandHeader title="言道紫微斗数" showBack={true} backUrl="/yixue" />
       {/* 输入表单 DatePicker 弹窗 */}
       <DatePicker
         show={showForm}
@@ -960,7 +961,7 @@ export default function ZiweiPage() {
                     return (
                       <div
                         key={idx}
-                        onClick={() => { if (viewMode === "sanhe") setFocusedPalace(palaceZhiIdx); }}
+                        onClick={() => { if (viewMode === "sanhe") setFocusedPalace(palaceZhiIdx); const palaceInterp = getPalaceInterpretation(palace.name); const starInterps = getPalaceAllStarInterpretations(palace.majorStars || [], palace.name, result.sihua); const allInterps = []; if (palaceInterp) { allInterps.push({ type: "palace" as const, title: palaceInterp.title, content: palaceInterp.summary + "\n" + palaceInterp.details.join("\n"), source: palaceInterp.source }); } allInterps.push(...starInterps); setInterpretPanel({ palaceName: palace.name, palaceGanZhi: (palace.heavenlyStem || "") + (palace.earthlyBranch || ""), interpretations: allInterps }); }}
                         style={{
                           border: "1px solid #ccc",
                           padding: "2px 3px",
@@ -969,7 +970,7 @@ export default function ZiweiPage() {
                           overflow: "hidden",
                           position: "relative",
                           backgroundColor: palaceBg,
-                          cursor: viewMode === "sanhe" ? "pointer" : "default",
+                          cursor: "pointer",
                         }}
                       >
                         {/* 化忌红色印章（右上角） */}
@@ -1147,6 +1148,33 @@ export default function ZiweiPage() {
               <div style={{ width: "14px" }}></div>
             </div>
           </div>
+
+
+          {/* ---- 宫位解读面板（引经据典） ---- */}
+          {interpretPanel && (
+            <div className="bg-white rounded-lg overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08)] mb-2" style={{ border: "1px solid #7B2FBE" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "linear-gradient(135deg, #7B2FBE, #9B5ECF)", color: "white" }}>
+                <div>
+                  <span style={{ fontSize: "16px", fontWeight: "bold" }}>{interpretPanel.palaceName}</span>
+                  <span style={{ fontSize: "12px", marginLeft: "8px", opacity: 0.9 }}>{interpretPanel.palaceGanZhi}</span>
+                </div>
+                <button onClick={() => setInterpretPanel(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "white", width: "28px", height: "28px", borderRadius: "50%", cursor: "pointer", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>x</button>
+              </div>
+              <div style={{ padding: "10px 12px" }}>
+                {interpretPanel.interpretations.map((item, idx) => (
+                  <div key={idx} style={{ marginBottom: idx < interpretPanel.interpretations.length - 1 ? "10px" : 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", marginBottom: "4px" }}>
+                      <span style={{ fontSize: "10px", fontWeight: "bold", padding: "1px 6px", borderRadius: "3px", background: item.type === "star" ? "#fef3c7" : item.type === "sihua" ? "#e0e7ff" : "#f3e8ff", color: item.type === "star" ? "#92400e" : item.type === "sihua" ? "#3730a3" : "#6b21a8", marginRight: "8px" }}>{item.type === "star" ? "星曜" : item.type === "sihua" ? "四化" : "宫位"}</span>
+                      <span style={{ fontSize: "13px", fontWeight: "bold", color: "#333" }}>{item.title}</span>
+                    </div>
+                    <div style={{ fontSize: "12px", color: "#555", lineHeight: "1.6", whiteSpace: "pre-line" }}>{item.content}</div>
+                    <div style={{ fontSize: "10px", color: "#999", marginTop: "4px", fontStyle: "italic" }}>—— {item.source}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ padding: "6px 12px", background: "#fafafa", borderTop: "1px solid #eee", fontSize: "10px", color: "#999", textAlign: "center" }}>点击其他宫位可查看不同解读 · 引经据典，仅供参考</div>
+            </div>
+          )}
 
           {/* ---- 底部时间表格（对标jishiyu：大限12宫、流年10年、流月12月，干支五行色） ---- */}
           {decadalData.length > 0 && (

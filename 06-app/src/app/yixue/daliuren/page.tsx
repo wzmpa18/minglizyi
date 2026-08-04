@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import {
@@ -19,9 +19,10 @@ import {
 } from "@/algorithm-core";
 import type { TianGan, DiZhi, YinYang } from "@/algorithm-core";
 import ClientSelector from "@/components/ClientSelector";
-import { DatePicker, BrandHeader } from "@/components/shared";
+import { DatePicker } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
+import { getSanChuanInterpretation, getSiKeInterpretation, getKeTiInterpretation } from "@/lib/daliuren-interpretations";
 
 // ============================================================================
 // 颜色常量（严格对标截图）
@@ -149,7 +150,7 @@ const KE_720: Record<string, Record<string, string>> = {
   "辛巳": { "子": "寅辰午", "丑": "申亥寅", "寅": "酉丑巳", "卯": "卯申丑", "辰": "巳亥巳", "巳": "未寅酉", "午": "午寅戌", "未": "寅亥申", "申": "丑亥酉", "酉": "卯寅丑", "戌": "巳申寅", "亥": "午未申" },
   "壬午": { "子": "丑寅卯", "丑": "申戌子", "寅": "酉子卯", "卯": "未亥卯", "辰": "辰酉寅", "巳": "午子午", "午": "午丑申", "未": "戌午寅", "申": "巳寅亥", "酉": "寅子戌", "戌": "戌酉申", "亥": "亥午子" },
   "癸未": { "子": "巳辰卯", "丑": "丑戌未", "寅": "申寅申", "卯": "巳未酉", "辰": "辰未戌", "巳": "酉丑巳", "午": "巳戌卯", "未": "未丑未", "申": "卯戌巳", "酉": "卯亥未", "戌": "戌未辰", "亥": "巳卯丑" },
-  "甲申": { "子": "午辰寅", "丑": "子亥戌", "寅": "寅巳申", "卯": "辰巳午", "辰": "辰午申", "巳": "申亥寅", "午": "申亥寅", "未": "辰申子", "申": "辰申子", "酉": "子巳戌", "戌": "寅申寅", "亥": "戌巳子" },
+  "甲申": { "子": "午辰寅", "丑": "子亥戌", "寅": "寅巳申", "卯": "辰巳午", "辰": "辰午申", "巳": "申亥寅", "申": "辰申子", "酉": "子巳戌", "戌": "寅申寅", "亥": "戌巳子" },
   "乙酉": { "子": "巳丑酉", "丑": "丑戌未", "寅": "未巳卯", "卯": "申未午", "辰": "辰酉卯", "巳": "亥子丑", "午": "申戌子", "未": "未戌丑", "申": "申子辰", "酉": "未子巳", "戌": "卯酉卯", "亥": "亥午丑" },
   "丙戌": { "子": "子未寅", "丑": "酉巳丑", "寅": "亥申巳", "卯": "丑亥酉", "辰": "卯寅丑", "巳": "巳申寅", "午": "亥子丑", "未": "子寅辰", "申": "申亥寅", "酉": "酉丑巳", "戌": "申丑午", "亥": "巳亥巳" },
   "丁亥": { "子": "巳戌卯", "丑": "巳亥巳", "寅": "午丑申", "卯": "未卯亥", "辰": "巳亥寅", "巳": "酉未巳", "午": "戌酉申", "未": "亥未丑", "申": "申酉戌", "酉": "酉亥丑", "戌": "午戌寅", "亥": "未亥卯" },
@@ -374,8 +375,8 @@ function calculateDaLiuRen(
     const hourZhi = siZhu[3][1];
     const total =
       (YUE_ZHI_ARR.indexOf(yearZhi) + 1) +
-      (SHI_ZHI_ARR.indexOf(monthZhi) + 1) +
-      (SHI_ZHI_ARR.indexOf(dayZhiStr) + 1) +
+      (YUE_ZHI_ARR.indexOf(monthZhi) + 1) +
+      (YUE_ZHI_ARR.indexOf(dayZhiStr) + 1) +
       (SHI_ZHI_ARR.indexOf(hourZhi) + 1);
     let mod: number;
     if (total < 12) mod = 12 - total;
@@ -484,15 +485,8 @@ function calculateDaLiuRen(
   ];
 
   const ganZhi = dayGan + dayZhi;
-  const ke720 = KE_720[ganZhi];
-  let sanChuanZhi: string[] = [];
-
-  // P0 Bug 1 修复：使用720课查找表（以干阳/第一课上神为键），不再随机
-  if (ke720 && ke720[ganYang]) {
-    sanChuanZhi = ke720[ganYang].split("");
-  } else {
-    sanChuanZhi = [ganYang, ganYin, zhiYang];
-  }
+  // 对标吉时雨 da6ren.js 第485行：var sanchuan = _720KE[ganzhi][this._4keList[0][1]].split("");
+  const sanChuanZhi = KE_720[ganZhi][ganYang].split("");
 
   // ============================================================================
   // P0 Bug 1 修复：九宗门课体判定（不再随机，根据四课天地盘实际关系判定）
@@ -585,9 +579,6 @@ function calculateDaLiuRen(
   } else if (isFanYin) {
     sanChuanMethod = "反吟";
     keTi = "反吟课";
-  } else if (isBaZhuan) {
-    sanChuanMethod = "八专";
-    keTi = "八专课";
   } else {
     // 九宗门判定顺序：贼克 → 遥克 → 别责 → 昴星
     if (zeiList.length >= 1 || keList.length >= 1) {
@@ -635,11 +626,8 @@ function calculateDaLiuRen(
     } else {
       // 无克贼，无遥克
       // 检查四课不全（别责）：第一课=第三课 或 第二课=第四课
-      const isBieZe = (
-        (siKe[0].shangShen === siKe[2].shangShen && siKe[0].xiaShen === siKe[2].xiaShen) ||
-        (siKe[1].shangShen === siKe[3].shangShen && siKe[1].xiaShen === siKe[3].xiaShen)
-      );
-      if (isBieZe) {
+      if (isBaZhuan) {
+        // 八专 + 无克贼 + 无遥克 → 别责课（四课不全的特殊形态）
         sanChuanMethod = "别责";
         keTi = "别责课";
       } else {
@@ -1081,6 +1069,7 @@ export default function DaLiuRenPage() {
   const [data, setData] = useState<DaLiuRenResult | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
   const [prefillParams, setPrefillParams] = useState<DaLiuRenInputParams | null>(null);
+  const [interpretPanel, setInterpretPanel] = useState<{title:string; items:Array<{type:string;title:string;content:string;source:string}>} | null>(null);
 
   // 监听header编辑按钮
   useEffect(() => {
@@ -1130,9 +1119,10 @@ export default function DaLiuRenPage() {
   // 不自动排盘，用户必须点击排盘按钮
   if (!data) {
     return (
-      <div style={{ backgroundColor: "#fff", minHeight: "100vh", margin: 0, padding: 0 }}>
-        <BrandHeader title="言道大六壬" showBack={true} backUrl="/yixue" />
-        <InputPanel show={true} showTitle={false} onClose={() => {}} onSubmit={handleSubmit} selectedClient={selectedClient} onClientSelect={setSelectedClient} initialValues={prefillParams} />
+      <div className="bg-[#ededed] min-h-screen flex justify-center">
+        <div className="w-full" style={{ maxWidth: "375px", paddingBottom: "10px" }}>
+          <InputPanel show={true} showTitle={false} onClose={() => {}} onSubmit={handleSubmit} selectedClient={selectedClient} onClientSelect={setSelectedClient} initialValues={prefillParams} />
+        </div>
       </div>
     );
   }
@@ -1196,8 +1186,8 @@ export default function DaLiuRenPage() {
   const SIKE_LABELS = ["四", "三", "二", "一"];
 
   return (
-    <div style={{ backgroundColor: "#fff", minHeight: "100vh", margin: 0, padding: 0, paddingBottom: "48px" }}>
-      <BrandHeader title="言道大六壬" showBack={true} backUrl="/yixue" />
+    <div className="bg-[#ededed] min-h-screen flex justify-center">
+      <div className="w-full" style={{ maxWidth: "375px", paddingBottom: "10px" }}>
       {/* 输入面板（点击编辑按钮展开） */}
       <InputPanel show={showForm} showTitle={false} onClose={() => setShowForm(false)} onSubmit={handleSubmit} selectedClient={selectedClient} onClientSelect={setSelectedClient} initialValues={prefillParams} />
 
@@ -1405,7 +1395,10 @@ export default function DaLiuRenPage() {
                 const isKW = kwSet.has(sc.zhi);
                 const labels = ["初", "中", "末"];
                 return (
-                  <div key={rowIdx} style={{ display: "contents" }}>
+                  <div key={rowIdx} style={{ display: "contents", cursor: "pointer" }} onClick={() => {
+                    const interp = getSanChuanInterpretation(labels[rowIdx], sc.zhi, sc.liuqin, sc.shen, dg);
+                    setInterpretPanel({ title: `${labels[rowIdx]}传 · ${sc.zhi}`, items: interp.items });
+                  }}>
                     {/* 列1：六亲/十神 */}
                     <div style={{
                       display: "flex",
@@ -1513,7 +1506,12 @@ export default function DaLiuRenPage() {
                   const isXS_KW = kwSet.has(ke.xiaShen);
                   const xiaIsGan = GAN.includes(ke.xiaShen as TianGan);
                   return (
-                    <div key={`ke-${idx}`} style={{ display: "flex", flexDirection: "column", alignItems: "center", lineHeight: 1.2 }}>
+                    <div key={`ke-${idx}`} style={{ display: "flex", flexDirection: "column", alignItems: "center", lineHeight: 1.2, cursor: "pointer" }} onClick={() => {
+                      const ke = data.siKe[idx];
+                      const dg = ke.dunGan && ke.dunGan !== "〇" ? ke.dunGan : "";
+                      const siKeInterp = getSiKeInterpretation(SIKE_LABELS[idx], ke.shangShen, ke.xiaShen, ke.tianJiang, dg);
+                      setInterpretPanel({ title: `第${SIKE_LABELS[idx]}课`, items: siKeInterp.items });
+                    }}>
                       {/* 天将 */}
                       <span style={{
                         fontSize: "11px",
@@ -1654,6 +1652,12 @@ export default function DaLiuRenPage() {
                   minHeight: "104px",
                   lineHeight: 1.25,
                   gap: "1px",
+                  cursor: "pointer",
+                }} onClick={() => {
+                  const keTiInterp = getKeTiInterpretation(data.keTi);
+                  if (keTiInterp) {
+                    setInterpretPanel({ title: `课体：${data.keTi}`, items: [{ type: "keti", title: keTiInterp.title, content: keTiInterp.summary + "\n" + keTiInterp.details.join("\n"), source: keTiInterp.source }] });
+                  }
                 }}>
                   {/* 第1行：日干(红) + 日支(红) + "日"字 —— 对标吉时雨：日干日支均为红色 */}
                   <div style={{ fontSize: "16px", fontWeight: 700, lineHeight: 1.2 }}>
@@ -1675,6 +1679,31 @@ export default function DaLiuRenPage() {
             <div style={{ textAlign: "center", fontSize: "10px", color: "#999", marginTop: "4px", lineHeight: 1.4 }}>
               {data.yuejiangName}加{data.zhanbuTime}时 · {data.isDaytime ? "昼占" : "夜占"} · 空亡:{data.kongwang[0]}{data.kongwang[1]}
             </div>
+
+            {/* ---- 解读面板（引经据典） ---- */}
+            {interpretPanel && (
+              <div className="bg-white rounded-lg overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08)] mx-1 mt-2" style={{ border: "1px solid #d93025" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "linear-gradient(135deg, #d93025, #e85045)", color: "white" }}>
+                  <div>
+                    <span style={{ fontSize: "16px", fontWeight: "bold" }}>{interpretPanel.title}</span>
+                  </div>
+                  <button onClick={() => setInterpretPanel(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "white", width: "28px", height: "28px", borderRadius: "50%", cursor: "pointer", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>x</button>
+                </div>
+                <div style={{ padding: "10px 12px" }}>
+                  {interpretPanel.items.map((item, idx) => (
+                    <div key={idx} style={{ marginBottom: idx < interpretPanel.items.length - 1 ? "10px" : 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", marginBottom: "4px" }}>
+                        <span style={{ fontSize: "10px", fontWeight: "bold", padding: "1px 6px", borderRadius: "3px", background: item.type === "zhi" ? "#e0e7ff" : item.type === "liuqin" ? "#f3e8ff" : item.type === "shen" ? "#fef3c7" : item.type === "position" ? "#d1fae5" : item.type === "dungan" ? "#fce7f3" : item.type === "shangshen" ? "#e0f2fe" : item.type === "xiashen" ? "#f0fdf4" : item.type === "keti" ? "#fef2f2" : "#f3f4f6", color: item.type === "zhi" ? "#3730a3" : item.type === "liuqin" ? "#6b21a8" : item.type === "shen" ? "#92400e" : item.type === "position" ? "#065f46" : item.type === "dungan" ? "#9d174d" : item.type === "shangshen" ? "#0369a1" : item.type === "xiashen" ? "#166534" : item.type === "keti" ? "#991b1b" : "#374151", marginRight: "8px" }}>{item.type === "zhi" ? "地支" : item.type === "liuqin" ? "六亲" : item.type === "shen" ? "天将" : item.type === "position" ? "位置" : item.type === "dungan" ? "遁干" : item.type === "shangshen" ? "上神" : item.type === "xiashen" ? "下神" : item.type === "keti" ? "课体" : "其他"}</span>
+                        <span style={{ fontSize: "13px", fontWeight: "bold", color: "#333" }}>{item.title}</span>
+                      </div>
+                      <div style={{ fontSize: "12px", color: "#555", lineHeight: "1.6", whiteSpace: "pre-line" }}>{item.content}</div>
+                      <div style={{ fontSize: "10px", color: "#999", marginTop: "4px", fontStyle: "italic" }}>—— {item.source}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ padding: "6px 12px", background: "#fafafa", borderTop: "1px solid #eee", fontSize: "10px", color: "#999", textAlign: "center" }}>点击三传/四课/中宫可查看解读 · 引经据典，仅供参考</div>
+              </div>
+            )}
         </div>
       </div>
 
@@ -1766,6 +1795,8 @@ export default function DaLiuRenPage() {
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }
+

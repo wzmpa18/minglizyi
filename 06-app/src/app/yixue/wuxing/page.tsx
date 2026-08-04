@@ -11,7 +11,6 @@ import {
   getGanHePartner, getZhiHePartner, getZhiChongPartner,
 } from "@/algorithm-core";
 import type { TianGan, DiZhi } from "@/algorithm-core";
-import { BrandHeader } from "@/components/shared";
 
 const WUXING_COLORS: Record<string, string> = {
   '金': 'bg-yellow-100 text-yellow-800 border-yellow-300',
@@ -111,7 +110,6 @@ export default function WuXingPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-4">
-      <BrandHeader title="五行查询" showBack={true} backUrl="/yixue" />
       <h1 className="text-xl font-bold text-primary mb-4">五行查询</h1>
 
       {/* 标签切换 */}

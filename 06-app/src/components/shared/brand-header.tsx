@@ -22,7 +22,7 @@ export function BrandHeader({ title = "言道排盘", showBack = false, backUrl,
   };
 
   return (
-    <div className="bg-[#7B2FBE] h-10 flex items-center justify-center relative shrink-0">
+    <div className="bg-[#7B2FBE] h-10 flex items-center justify-center relative shrink-0 z-[10000]">
       {showBack && (
         <button
           onClick={handleBack}

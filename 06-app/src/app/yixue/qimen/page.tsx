@@ -4,9 +4,11 @@ import { useState, useEffect, useCallback } from "react";
 import { Solar } from "lunar-javascript";
 import { calculateQimen } from "@/algorithm-core";
 import type { QimenResult } from "@/algorithm-core";
-import { DatePicker, BrandHeader } from "@/components/shared";
+import { DatePicker } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
+import { getQimenPalaceInterpretation } from "@/lib/qimen-interpretations";
+import type { QimenInterpretItem } from "@/lib/qimen-interpretations";
 
 // ============================================================================
 // 常量
@@ -79,6 +81,15 @@ const SHICHEN_LIST = [
   { name: "夜子时", zhi: "子", range: "23:00-24:00" },
 ];
 
+// 解读标签颜色
+const INTERPRET_TYPE_COLORS: Record<string, { bg: string; fg: string; label: string }> = {
+  "gong": { bg: "#e0e7ff", fg: "#3730a3", label: "九宫" },
+  "xing": { bg: "#fef3c7", fg: "#92400e", label: "九星" },
+  "men": { bg: "#d1fae5", fg: "#065f46", label: "八门" },
+  "shen": { bg: "#f3e8ff", fg: "#6b21a8", label: "八神" },
+  "ganying": { bg: "#fce7f3", fg: "#9d174d", label: "克应" },
+};
+
 // ============================================================================
 // 主组件
 // ============================================================================
@@ -87,6 +98,10 @@ export default function QimenPage() {
   const [showForm, setShowForm] = useState(true);
   const [result, setResult] = useState<QimenResult | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
+  const [interpretPanel, setInterpretPanel] = useState<{
+    palaceLabel: string;
+    items: QimenInterpretItem[];
+  } | null>(null);
 
   // 表单状态（固定默认值，避免 hydration mismatch；mounted 后更新为真实时间）
   const [formData, setFormData] = useState({
@@ -128,6 +143,7 @@ export default function QimenPage() {
       });
       setResult(r);
       setShowForm(false);
+      setInterpretPanel(null);
       // 保存客户记录
       if(selectedClient){
         try{saveRecord({clientId:selectedClient.id,type:"qimen",data:{...r,inputParams:{...formData, year: y, month: mo, day: d, hour: h}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
@@ -171,6 +187,7 @@ export default function QimenPage() {
           anganType: "zhishi" as const,
         });
         setResult(r);
+        setInterpretPanel(null);
       } catch (e) { /* ignore */ }
     }, 50);
   }, [result, formData]);
@@ -267,7 +284,7 @@ export default function QimenPage() {
   const lunarStr = `农历${lunarObj.getMonthInChinese()}月${lunarObj.getDayInChinese()}`;
 
   // 宫格样式辅助函数
-  const getPalaceStyle = (gongNum: number) => {
+  const getPalaceStyle = (gongNum: number, isZhong: boolean) => {
     const p = result.palaces[gongNum];
     const bg = p.jixing ? "#ffe0e0" : p.rumu ? "#fff3cd" : p.menpo ? "#e0f0ff" : "#fff";
     return {
@@ -280,12 +297,29 @@ export default function QimenPage() {
       alignItems: "center",
       justifyContent: "center",
       position: "relative" as const,
+      cursor: isZhong ? "default" : "pointer",
+      transition: "background-color 0.15s",
     };
+  };
+
+  // 点击宫格
+  const handlePalaceClick = (gongNum: number) => {
+    if (gongNum === 5) return; // 中宫不响应
+    const p = result.palaces[gongNum];
+    const gongName = BAGUA[gongNum];
+    const interp = getQimenPalaceInterpretation(
+      gongName,
+      p.star,
+      p.door,
+      p.tianShen,
+      p.tianPanGan,
+      p.diPanGan,
+    );
+    setInterpretPanel(interp);
   };
 
   return (
     <div style={{ maxWidth: "375px", margin: "0 auto", backgroundColor: "#fff", minHeight: "100vh", paddingBottom: "60px" }}>
-      <BrandHeader title="言道奇门遁甲" showBack={true} backUrl="/yixue" />
       {/* 操作栏 */}
       <div style={{ display: "flex", padding: "8px", gap: "6px", borderBottom: "1px solid #eee", alignItems: "center" }}>
         <button onClick={() => shiftTime(-1)} style={{ flex: 1, padding: "6px", border: "1px solid #ddd", borderRadius: "4px", backgroundColor: "#fff", fontSize: "12px", cursor: "pointer" }}>上一局</button>
@@ -372,7 +406,21 @@ export default function QimenPage() {
             const p = result.palaces[gongNum];
             const isZhong = gongNum === 5;
             return (
-              <div key={gongNum} style={getPalaceStyle(gongNum)}>
+              <div
+                key={gongNum}
+                style={getPalaceStyle(gongNum, isZhong)}
+                onClick={() => handlePalaceClick(gongNum)}
+                onMouseEnter={(e) => {
+                  if (!isZhong) e.currentTarget.style.backgroundColor = "#f3ebfa";
+                }}
+                onMouseLeave={(e) => {
+                  if (!isZhong) {
+                    const p2 = result.palaces[gongNum];
+                    const bg = p2.jixing ? "#ffe0e0" : p2.rumu ? "#fff3cd" : p2.menpo ? "#e0f0ff" : "#fff";
+                    e.currentTarget.style.backgroundColor = bg;
+                  }
+                }}
+              >
                 {/* 宫位标记（左上） */}
                 <div style={{ position: "absolute", top: "1px", left: "2px", fontSize: "8px", color: "#999", lineHeight: 1 }}>
                   {BAGUA[gongNum]}{DIR[gongNum]}
@@ -431,6 +479,10 @@ export default function QimenPage() {
                         {p.tianPan12ZhangSheng}
                       </div>
                     )}
+                    {/* 点击提示 */}
+                    <div style={{ position: "absolute", bottom: "1px", right: "2px", fontSize: "7px", color: "#ccc", lineHeight: 1 }}>
+                      ◷
+                    </div>
                   </>
                 )}
               </div>
@@ -438,6 +490,91 @@ export default function QimenPage() {
           })}
         </div>
       </div>
+
+      {/* 宫位解读面板 */}
+      {interpretPanel && (
+        <div style={{
+          margin: "6px 8px",
+          border: "1px solid " + BRAND_PURPLE,
+          borderRadius: "8px",
+          overflow: "hidden",
+          boxShadow: "0 2px 8px rgba(123, 47, 190, 0.12)",
+        }}>
+          {/* 头部 */}
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "8px 12px",
+            background: "linear-gradient(135deg, #7B2FBE, #9B5ECF)",
+            color: "white",
+          }}>
+            <span style={{ fontSize: "15px", fontWeight: "bold" }}>
+              {interpretPanel.palaceLabel}
+            </span>
+            <button
+              onClick={() => setInterpretPanel(null)}
+              style={{
+                background: "rgba(255,255,255,0.2)",
+                border: "none",
+                color: "white",
+                width: "26px",
+                height: "26px",
+                borderRadius: "50%",
+                cursor: "pointer",
+                fontSize: "14px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >✕</button>
+          </div>
+
+          {/* 内容区 */}
+          <div style={{ padding: "10px 12px", maxHeight: "360px", overflowY: "auto" }}>
+            {interpretPanel.items.map((item, idx) => {
+              const tc = INTERPRET_TYPE_COLORS[item.type] || INTERPRET_TYPE_COLORS["gong"];
+              return (
+                <div key={idx} style={{ marginBottom: idx < interpretPanel.items.length - 1 ? "10px" : 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", marginBottom: "4px" }}>
+                    <span style={{
+                      fontSize: "10px",
+                      fontWeight: "bold",
+                      padding: "1px 6px",
+                      borderRadius: "3px",
+                      background: tc.bg,
+                      color: tc.fg,
+                      marginRight: "8px",
+                      flexShrink: 0,
+                    }}>
+                      {tc.label}
+                    </span>
+                    <span style={{ fontSize: "13px", fontWeight: "bold", color: "#333" }}>{item.title}</span>
+                  </div>
+                  <div style={{ fontSize: "12px", color: "#555", lineHeight: "1.7", whiteSpace: "pre-line" }}>
+                    {item.content}
+                  </div>
+                  <div style={{ fontSize: "10px", color: "#999", marginTop: "4px", fontStyle: "italic" }}>
+                    —— {item.source}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* 底部提示 */}
+          <div style={{
+            padding: "6px 12px",
+            background: "#fafafa",
+            borderTop: "1px solid #eee",
+            fontSize: "10px",
+            color: "#999",
+            textAlign: "center",
+          }}>
+            点击其他宫格查看不同解读 · 引经据典，仅供参考
+          </div>
+        </div>
+      )}
 
       {/* 颜色图例 */}
       <div style={{ padding: "4px 8px", fontSize: "10px", color: "#999", display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "center" }}>

@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from "react";
 import { SHENSHA_DEFINITIONS } from "@/algorithm-core";
-import { BrandHeader } from "@/components/shared";
 
 type CategoryTab = "全部" | "吉" | "凶" | "中性";
 
@@ -76,7 +75,6 @@ export default function ShenShaPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-4">
-      <BrandHeader title="神煞查询" showBack={true} backUrl="/yixue" />
       <h1 className="text-xl font-bold text-primary mb-4">神煞查询</h1>
 
       {/* 统计概览 */}

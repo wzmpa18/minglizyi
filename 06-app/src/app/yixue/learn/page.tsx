@@ -1,9 +1,7 @@
-import { BrandHeader } from "@/components/shared";
 
 export default function YixueLearnPage() {
   return (
     <div className="mx-auto max-w-lg px-4 py-8">
-      <BrandHeader title="学习" showBack={true} backUrl="/yixue" />
       <h2 className="text-lg font-semibold mb-4">典籍库</h2>
       <p className="text-sm text-muted-foreground mb-4">命理相关古籍原文，按分类收纳，仅供学习研究。</p>
       <div className="grid grid-cols-2 gap-3">

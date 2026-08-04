@@ -309,9 +309,13 @@ function calculateDaLiuRen(year: number, month: number, day: number, hour: numbe
 // ============================================================================
 
 const testCases = [
-  { year: 1990, month: 5, day: 15, hour: 12, isMan: true, birthYear: 1990, label: "1990-05-15 12时 男" },
-  { year: 2026, month: 8, day: 2, hour: 8, isMan: true, birthYear: 1990, label: "2026-08-02 8时 男（本命1990）" },
-  { year: 1980, month: 1, day: 1, hour: 0, isMan: true, birthYear: 1980, label: "1980-01-01 0时 男" },
+  { year: 2026, month: 8, day: 2, hour: 17, isMan: true, birthYear: 1980, label: "2026-08-02 17:00 男（本命1980）" },
+  { year: 1990, month: 5, day: 15, hour: 12, isMan: true, birthYear: 1990, label: "1990-05-15 12:00 男" },
+  { year: 1980, month: 1, day: 1, hour: 0, isMan: true, birthYear: 1980, label: "1980-01-01 00:00 男" },
+  // === 边界用例 ===
+  { year: 2024, month: 7, day: 29, hour: 23, isMan: true, birthYear: 1990, label: "晚子时: 2024-07-29 23:00 男" },
+  { year: 2025, month: 2, day: 3, hour: 12, isMan: true, birthYear: 1990, label: "立春当日: 2025-02-03 12:00 男" },
+  { year: 2023, month: 4, day: 20, hour: 12, isMan: true, birthYear: 1990, label: "闰月: 2023-04-20 12:00 男 (2023年闰二月)" },
 ];
 
 console.log("=".repeat(70));

@@ -1,8 +1,7 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import { ShoppingBag } from "lucide-react";
-import { BrandHeader } from "@/components/shared";
 
 // ==================== 类型定义 ====================
 
@@ -34,7 +33,6 @@ const PRODUCTS: ShopProduct[] = [
 export default function YixueShopPage() {
   return (
     <div className="flex min-h-screen flex-col bg-[#ededed]">
-      <BrandHeader title="商城" showBack={true} backUrl="/yixue" />
 
       {/* ========== 红色 Header ========== */}
       <header

@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { JIEQI_NAMES, JIE_NAMES, getJieQiDate } from "@/algorithm-core";
-import { BrandHeader } from "@/components/shared";
 
 const JIE_SET = new Set(JIE_NAMES);
 
@@ -70,7 +69,6 @@ export default function JieQiPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-4">
-      <BrandHeader title="节气查询" showBack={true} backUrl="/yixue" />
       <h1 className="text-xl font-bold text-primary mb-4">节气查询</h1>
 
       {/* 年份选择器 */}

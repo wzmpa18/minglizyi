@@ -3,9 +3,11 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { solarToBazi, GAN, ZHI } from "@/algorithm-core";
 import { solarToLunar, getLunarDateString } from "@/lib/lunar";
-import { DatePicker, BrandHeader } from "@/components/shared";
+import { DatePicker } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
+import { getTaiyiPalaceInterpretation, getTaiyiShenInterpretation } from "@/lib/taiyi-interpretations";
+import type { TaiyiInterpretItem } from "@/lib/taiyi-interpretations";
 
 // ============================================================================
 // 常量
@@ -14,6 +16,14 @@ const BRAND = "#7B2FBE";
 
 const WUXING_COLORS: Record<string, string> = {
   "金": "#ffa500", "水": "#0074e4", "木": "#00a879", "火": "#ed4d49", "土": "#a64b00",
+};
+
+const INTERPRET_TYPE_COLORS: Record<string, { bg: string; fg: string; label: string }> = {
+  palace: { bg: "#f3e8ff", fg: "#7B2FBE", label: "宫位" },
+  star: { bg: "#fef3c7", fg: "#d97706", label: "星神" },
+  sishen: { bg: "#e0f2fe", fg: "#0284c7", label: "四神" },
+  jijun: { bg: "#f0faf0", fg: "#16a34a", label: "基" },
+  zhuke: { bg: "#fef2f2", fg: "#dc2626", label: "主客" },
 };
 
 // 太乙九宫（洛书排列）
@@ -161,7 +171,7 @@ function calcTaiyi(year: number, month: number, day: number, hour: number): Taiy
   const jishenGong = ((jishenShenIdx % 9) + 1);
 
   // 始击：从计神对位的天目出发（客目之对位）
-  // 简化：始击 = (计神位置 + 天目偏移) % 16
+  // 简化：始击 = (计神位置 + 天目偏移 + 8) % 16
   const shijiShenIdx = (jishenShenIdx + tianmuOffset + 8) % 16;
   const shijiShen = TAIYI_SHEN[shijiShenIdx];
   const shijiGong = ((shijiShenIdx % 9) + 1);
@@ -294,6 +304,7 @@ export default function TaiyiSanshiPage() {
   const [result, setResult] = useState<TaiyiResult | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
   const [showForm, setShowForm] = useState(true);
+  const [interpretPanel, setInterpretPanel] = useState<{title: string; items: TaiyiInterpretItem[]} | null>(null);
 
   const doPaipan = useCallback((override?: {year: number; month: number; day: number; hour: number}) => {
     const y = override?.year ?? taiyiYear;
@@ -307,6 +318,7 @@ export default function TaiyiSanshiPage() {
       setHasResult(true);
       setShowForm(false);
       setLoading(false);
+      setInterpretPanel(null);
       // 保存客户记录
       if(selectedClient && r){
         try{saveRecord({clientId:selectedClient.id,type:"taiyi-sanshi",data:{...r,inputParams:{taiyiYear:y,taiyiMonth:mo,taiyiDay:d,taiyiHour:h,desc}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
@@ -329,6 +341,11 @@ export default function TaiyiSanshiPage() {
     const handler = () => setShowForm(true);
     window.addEventListener("yixue-edit", handler);
     return () => window.removeEventListener("yixue-edit", handler);
+  }, []);
+
+  const handlePalaceClick = useCallback((gong: number) => {
+    const interp = getTaiyiPalaceInterpretation(gong);
+    if (interp) setInterpretPanel(interp);
   }, []);
 
   // ==================== 输入表单 ====================
@@ -369,7 +386,6 @@ export default function TaiyiSanshiPage() {
 
   return (
     <div className="mx-auto w-full bg-[#ededed]" style={{ maxWidth: "375px", minHeight: "100vh" }}>
-      <BrandHeader title="言道太乙神数" showBack={true} backUrl="/yixue" />
       {/* 排盘结果 */}
       {result && (
         <div className="bg-white px-2 py-2">
@@ -493,7 +509,10 @@ export default function TaiyiSanshiPage() {
                         borderColor: isTaiyi ? BRAND : "#333",
                         borderWidth: isTaiyi ? "2px" : "1px",
                         backgroundColor: isTaiyi ? "#f3edf7" : "white",
+                        cursor: "pointer",
                       }}
+                      onClick={() => handlePalaceClick(pos)}
+                      title={`点击查看${p.bagua}宫解读`}
                     >
                       <div className="text-[10px] font-bold" style={{ color: WUXING_COLORS[p.wuxing] }}>
                         {p.bagua}({pos})
@@ -507,7 +526,95 @@ export default function TaiyiSanshiPage() {
                 })}
               </div>
             </div>
+            <div style={{ textAlign: "center", marginTop: "6px", fontSize: "10px", color: "#999" }}>
+              点击宫格查看解读
+            </div>
           </div>
+
+          {/* 解读抽屉面板 */}
+          {interpretPanel && (
+            <div className="mt-3 rounded-lg" style={{
+              border: "1px solid #7B2FBE",
+              overflow: "hidden",
+              boxShadow: "0 2px 8px rgba(123, 47, 190, 0.12)",
+            }}>
+              {/* 标题栏 */}
+              <div style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "8px 12px",
+                background: "linear-gradient(135deg, #7B2FBE, #9B5ECF)",
+                color: "white",
+              }}>
+                <span style={{ fontSize: "15px", fontWeight: "bold" }}>
+                  {interpretPanel.title}
+                </span>
+                <button
+                  onClick={() => setInterpretPanel(null)}
+                  style={{
+                    background: "rgba(255,255,255,0.2)",
+                    border: "none",
+                    color: "white",
+                    width: "26px",
+                    height: "26px",
+                    borderRadius: "50%",
+                    cursor: "pointer",
+                    fontSize: "14px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {"\u2715"}
+                </button>
+              </div>
+
+              {/* 内容区 */}
+              <div style={{ padding: "10px 12px", maxHeight: "360px", overflowY: "auto", background: "white" }}>
+                {interpretPanel.items.map((item, idx) => {
+                  const tc = INTERPRET_TYPE_COLORS[item.type] || INTERPRET_TYPE_COLORS["palace"];
+                  return (
+                    <div key={idx} style={{ marginBottom: idx < interpretPanel.items.length - 1 ? "10px" : 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", marginBottom: "4px" }}>
+                        <span style={{
+                          fontSize: "10px",
+                          fontWeight: "bold",
+                          padding: "1px 6px",
+                          borderRadius: "3px",
+                          background: tc.bg,
+                          color: tc.fg,
+                          marginRight: "8px",
+                          flexShrink: 0,
+                        }}>
+                          {tc.label}
+                        </span>
+                        <span style={{ fontSize: "13px", fontWeight: "bold", color: "#333" }}>{item.title}</span>
+                      </div>
+                      <div style={{ fontSize: "12px", color: "#555", lineHeight: "1.7", whiteSpace: "pre-line" }}>
+                        {item.content}
+                      </div>
+                      <div style={{ fontSize: "10px", color: "#999", marginTop: "4px", fontStyle: "italic" }}>
+                        —— {item.source}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* 底部提示 */}
+              <div style={{
+                padding: "6px 12px",
+                background: "#fafafa",
+                borderTop: "1px solid #eee",
+                fontSize: "10px",
+                color: "#999",
+                textAlign: "center",
+              }}>
+                点击宫格查看解读 · 引经据典，仅供参考
+              </div>
+            </div>
+          )}
 
           {/* 格局判定 */}
           <div className="mt-4 rounded-lg border border-gray-200 bg-white p-3">

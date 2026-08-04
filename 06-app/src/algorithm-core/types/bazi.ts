@@ -18,7 +18,10 @@ export interface BaziPillar {
   xunkong: string;
   shishen: { gan: ShiShen; zhi: ShiShen[] };
   shishenShort: { gan: string; zhi: string[] };
+  ganYinyang: string;
+  zhiYinyang: string;
   changsheng: ShengWangStage;
+  zizuo: string;
 }
 
 export interface ShenQiangRuoResult {
@@ -64,9 +67,14 @@ export interface DayunResult {
   jieName: string;
   startAge: number;
   startAgeRaw: number;
+  startMonth: number;
+  startDay: number;
+  startHour: number;
   startDate: string;
   startYear: number;
   dayunList: DayunItem[];
+  jiaoyunGan1: string;
+  jiaoyunGan2: string;
   qiyunText: string;
 }
 
@@ -89,6 +97,7 @@ export interface BaziResult {
   shenQiangRuo: ShenQiangRuoResult;
   shensha: Record<string, string[]>;
   input?: { solarDate: string; time: string; gender: Gender };
+  lunarDate?: string;
   jieQiInfo?: { prevJie: string; daysToPrevJie: number; nextJie: string; daysToNextJie: number };
 }
 

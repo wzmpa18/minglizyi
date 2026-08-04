@@ -359,7 +359,23 @@ function FormulaDetailPage({ formulaId }: { formulaId: string }) {
 function FormulaPageInner() {
   const searchParams = useSearchParams();
   const formulaId = searchParams.get("id");
-  return formulaId ? <FormulaDetailPage formulaId={formulaId} /> : <FormulaListPage />;
+  const formulaName = searchParams.get("name");
+
+  // 支持 ?name= 参数（从辨证页跳转），通过名称查找方剂ID
+  const resolvedId = useMemo(() => {
+    if (formulaId) return formulaId;
+    if (formulaName) {
+      const allFormulas = searchFullFormulas('');
+      const found = allFormulas.find(f => f.name === formulaName);
+      if (found) return found.id;
+      // 模糊匹配
+      const fuzzy = allFormulas.find(f => f.name.includes(formulaName) || formulaName.includes(f.name));
+      if (fuzzy) return fuzzy.id;
+    }
+    return null;
+  }, [formulaId, formulaName]);
+
+  return resolvedId ? <FormulaDetailPage formulaId={resolvedId} /> : <FormulaListPage />;
 }
 
 export default function FormulaPage() {

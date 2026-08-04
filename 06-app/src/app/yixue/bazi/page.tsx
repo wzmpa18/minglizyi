@@ -26,9 +26,10 @@ import {
   getZhiIndex,
 } from "@/algorithm-core";
 import type { TianGan, DiZhi, Gender, BaziResult, BaziPillar } from "@/algorithm-core";
-import { DatePicker, BrandHeader } from "@/components/shared";
+import { DatePicker } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
+import { getPillarInterpretation, getShenshaInterpretation } from "@/lib/bazi-interpretations";
 
 // ===== 五行颜色 - 严格对标jishiyu =====
 // 注意: 五行颜色为传统命理数据色(火=红)，品牌紫色(#7B2FBE)仅用于UI chrome
@@ -310,10 +311,11 @@ function calcBoneWeight(yearGanZhi: string, monthZhi: string, day: number, hourZ
 }
 
 // ===== TabChart - 核心命盘 - 严格对标jishiyu =====
-function TabChart({result,shensha,shengxiao,gender,lunarDateStr,solarDateStr,trueSolarStr,wangshuaiArr}:{
+function TabChart({result,shensha,shengxiao,gender,lunarDateStr,solarDateStr,trueSolarStr,wangshuaiArr,onPillarClick}:{
   result:BaziResult;shensha:ReturnType<typeof calculateAllShenSha>|null;shengxiao:string;
   gender:Gender;lunarDateStr:string;solarDateStr:string;trueSolarStr:string;
   wangshuaiArr:{label:string;wx:string;bg:string}[]|null;
+  onPillarClick:(label:string,gan:string,zhi:string,shishenGan:string,nayin:string,canggan:string[])=>void;
 }){
   const pillars=result.pillars;
   const colLabels=["年柱","月柱","日柱","时柱"];
@@ -389,12 +391,18 @@ function TabChart({result,shensha,shengxiao,gender,lunarDateStr,solarDateStr,tru
         <tbody>
           {/* 标题行 */}
           <tr>
-            <td className="py-[6px] px-1 text-[14px] text-[#666] font-medium">四柱</td>
-            {colLabels.map((l,i)=><td key={i} className="py-[6px] px-1 text-[14px] text-[#666] font-medium">{l}</td>)}
+            <td className="py-[6px] px-1 text-[14px] text-[#666] font-medium align-middle">四柱</td>
+            {colLabels.map((l,i)=>{
+              const p = pillars[i];
+              const ss = getGanShishen(p, i);
+              const ny = p.nayin || getNaYin(p.ganzhi) || "-";
+              const cg = p.canggan || [];
+              return <td key={i} className="py-[6px] px-1 text-[14px] text-[#666] font-medium align-middle cursor-pointer hover:bg-[#F3EDF7]" style={{cursor:"pointer"}} onClick={()=>onPillarClick(l,p.gan,p.zhi,ss,ny,cg)}>{l}</td>;
+            })}
           </tr>
           {/* 十神 - 黑色文字 */}
           <tr style={{backgroundColor:"#ffffff"}}>
-            <td className="py-[5px] px-1 text-[14px] text-[#666]">十神</td>
+            <td className="py-[5px] px-1 text-[14px] text-[#666] align-middle">十神</td>
             {pillars.map((p,i)=>{
               const ss = getGanShishen(p, i);
               const isDay = i === 2;
@@ -447,23 +455,23 @@ function TabChart({result,shensha,shengxiao,gender,lunarDateStr,solarDateStr,tru
           </tr>
           {/* 地势(长生十二神) */}
           <tr style={{backgroundColor:"#f8f8f8"}}>
-            <td className="py-[5px] px-1 text-[14px] text-[#666]">地势</td>
-            {pillars.map((p,i)=><td key={i} className="py-[5px] px-1 text-[15px] text-[#333]">
+            <td className="py-[5px] px-1 text-[14px] text-[#666] align-middle">地势</td>
+            {pillars.map((p,i)=><td key={i} className="py-[5px] px-1 text-[15px] text-[#333] align-middle">
               {getZuoChangSheng(p)}
             </td>)}
           </tr>
-          {/* 自坐(同是长生十二神) */}
+          {/* 自坐(同是长生十二神) - v17.9 直接使用算法层预计算值 */}
           <tr style={{backgroundColor:"#ffffff"}}>
-            <td className="py-[5px] px-1 text-[14px] text-[#666]">自坐</td>
-            {pillars.map((p,i)=><td key={i} className="py-[5px] px-1 text-[15px] text-[#333]">
-              {getChangSheng(p.gan as TianGan, p.zhi as DiZhi)}
+            <td className="py-[5px] px-1 text-[14px] text-[#666] align-middle">自坐</td>
+            {pillars.map((p,i)=><td key={i} className="py-[5px] px-1 text-[15px] text-[#333] align-middle">
+              {(p as any).zizuo || getChangSheng(p.gan as TianGan, p.zhi as DiZhi)}
             </td>)}
           </tr>
           {/* 空亡 - 仅日柱加红色虚线框 */}
           <tr style={{backgroundColor:"#f8f8f8"}}>
-            <td className="py-[5px] px-1 text-[14px] text-[#666]">空亡</td>
+            <td className="py-[5px] px-1 text-[14px] text-[#666] align-middle">空亡</td>
             {pillars.map((p,i)=>{
-              const xk = p.xunkong || getXunKong(p.gan as TianGan);
+              const xk = p.xunkong || getXunKong(p.ganzhi) || "";
               const isDay = i === 2;
               return <td key={i} className="py-[5px] px-1 text-[15px]">
                 {xk
@@ -477,12 +485,12 @@ function TabChart({result,shensha,shengxiao,gender,lunarDateStr,solarDateStr,tru
           </tr>
           {/* 纳音 */}
           <tr style={{backgroundColor:"#ffffff"}}>
-            <td className="py-[5px] px-1 text-[14px] text-[#666]">纳音</td>
+            <td className="py-[5px] px-1 text-[14px] text-[#666] align-middle">纳音</td>
             {pillars.map((p,i)=>{
-              const ny = p.nayin || getNaYin(p.gan as TianGan) || "-";
+              const ny = p.nayin || getNaYin(p.ganzhi) || "-";
               // 纳音五行取最后一个字
               const wx = ["金","木","水","火","土"].find(w => ny.includes(w));
-              return <td key={i} className="py-[5px] px-1 text-[15px]" style={{color: wx ? WX_COLORS[wx] : "#333"}}>{ny}</td>;
+              return <td key={i} className="py-[5px] px-1 text-[15px] align-middle" style={{color: wx ? WX_COLORS[wx] : "#333"}}>{ny}</td>;
             })}
           </tr>
           {/* 神煞 */}
@@ -529,15 +537,15 @@ function TabChart({result,shensha,shengxiao,gender,lunarDateStr,solarDateStr,tru
 }
 
 // ===== TabBasic =====
-function TabBasic({result,shengxiao,dateStr,taiYuan,taiXi,mingGong,shenGong,mingGua,wuxingStats,boneWeight,gender}:{
-  result:BaziResult;shengxiao:string;dateStr:string;taiYuan:string;taiXi:string;mingGong:string;shenGong:string;mingGua:string;
+function TabBasic({result,shengxiao,dateStr,lunarDateStr,solarDateStr,trueSolarStr,taiYuan,taiXi,mingGong,shenGong,mingGua,wuxingStats,boneWeight,gender}:{
+  result:BaziResult;shengxiao:string;dateStr:string;lunarDateStr:string;solarDateStr:string;trueSolarStr:string;taiYuan:string;taiXi:string;mingGong:string;shenGong:string;mingGua:string;
   wuxingStats:Record<string,number>|null;boneWeight:ReturnType<typeof calcBoneWeight>;gender:Gender;
 }){
-  const rows:[string,string][]=[["农历",dateStr],["北京时间",dateStr],["真太阳时",dateStr],["出生节气",result.jieQiInfo?.prevJie||"立春"],["出生地区","北京地区"],["胎元",taiYuan],["胎息",taiXi],["命宫",mingGong],["身宫",shenGong],["命卦",mingGua]];
+  const rows:[string,string][]=[["农历",lunarDateStr],["北京时间",solarDateStr],["真太阳时",trueSolarStr],["出生节气",result.jieQiInfo?.prevJie||"立春"],["出生地区","北京地区"],["胎元",taiYuan],["胎息",taiXi],["命宫",mingGong],["身宫",shenGong],["命卦",mingGua]];
   return <div className="px-2 pt-2">
     <div className="bg-white mb-2 px-3 py-3">
       <table className="w-full border-collapse"><colgroup><col width="22%"/><col width="78%"/></colgroup><tbody>
-        <tr><td rowSpan={10} className="text-center align-top pr-2 pt-1"><ShengxiaoIcon name={shengxiao} /></td><td className="text-[17px] text-[#333] pb-1">农历：{dateStr}</td></tr>
+        <tr><td rowSpan={10} className="text-center align-top pr-2 pt-1"><ShengxiaoIcon name={shengxiao} /></td><td className="text-[17px] text-[#333] pb-1">农历：{lunarDateStr}</td></tr>
         {rows.slice(0,0).map(([l,v],i)=><tr key={i}><td className="text-[13px] text-[#999] text-right pr-1 align-top">{l}：</td><td className="text-[13px] text-[#333]">{v}</td></tr>)}
         <tr><td className="text-[13px] text-[#999] text-right pr-1 align-top">胎元：</td><td className="text-[13px] text-[#333]">{taiYuan}</td></tr>
         <tr><td className="text-[13px] text-[#999] text-right pr-1 align-top">胎息：</td><td className="text-[13px] text-[#333]">{taiXi}</td></tr>
@@ -1455,6 +1463,7 @@ export default function BaziPage(){
   const [shensha,setShensha]=useState<ReturnType<typeof calculateAllShenSha>|null>(null);
   const [activeTab,setActiveTab]=useState<"basic"|"chart"|"detail"|"jingpi"|"xingge"|"notes">("chart");
   const [selectedClient,setSelectedClient]=useState<Client|null>(null);
+  const [interpretPanel, setInterpretPanel] = useState<{pillarLabel:string; items:Array<{type:string;title:string;content:string;source:string}>} | null>(null);
 
   // 监听layout的edit事件
   useEffect(() => {
@@ -1507,7 +1516,7 @@ export default function BaziPage(){
 
   const pillars=result?.pillars||[]; const shengxiao=pillars[0]?getShengXiao(pillars[0].zhi as DiZhi):"";
   const dateStr=`${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")} ${String(hour).padStart(2,"0")}:00`;
-  const lunarDateStr = `二〇二六年六月十五 午时`; // 简化，实际应由算法计算
+  const lunarDateStr = result?.lunarDate || (result ? `${result.input?.solarDate} ${result.input?.time}` : '');
 
   const wuxingStats=useMemo(()=>{if(!result) return null;const s:Record<string,number>={"金":0,"木":0,"水":0,"火":0,"土":0};
     result.pillars.forEach(p=>{const gWx=GAN_WUXING[p.gan as TianGan];const zWx=ZHI_WUXING[p.zhi as DiZhi];if(gWx)s[gWx]=(s[gWx]||0)+1;if(zWx)s[zWx]=(s[zWx]||0)+1;const cg=getCangGan(p.zhi as DiZhi);if(cg)cg.forEach(g=>{const w=getGanWuxing(g as TianGan);if(w)s[w]=(s[w]||0)+0.5;});});return s;},[result]);
@@ -1539,7 +1548,6 @@ export default function BaziPage(){
 
   return <div className="bg-[#ededed] min-h-screen flex justify-center">
     <div className="w-full" style={{maxWidth:"375px",paddingBottom:"10px"}}>
-    <BrandHeader title="言道八字排盘" showBack={true} backUrl="/yixue" />
     <DatePicker
       show={showForm}
       onClose={() => setShowForm(false)}
@@ -1572,8 +1580,36 @@ export default function BaziPage(){
       <div className="flex border-b border-[#eee] bg-white/95 sticky top-10 z-30 overflow-x-auto">
         {tabOrder.map(tab=><button key={tab} onClick={()=>setActiveTab(tab)} className={`shrink-0 px-3 py-2.5 text-center text-[15px] font-bold border-none bg-transparent cursor-pointer transition-colors duration-200 border-b-[3px]`} style={{color: activeTab===tab ? BRAND_PURPLE : "#666", borderBottomColor: activeTab===tab ? BRAND_PURPLE : "transparent", borderBottomStyle:"solid"}}>{tabLabels[tab]}</button>)}
       </div>
-      {activeTab==="basic"&&<TabBasic result={result} shengxiao={shengxiao} dateStr={dateStr} taiYuan={taiYuan} taiXi={taiXi} mingGong={mingGong} shenGong={shenGong} mingGua={mingGua} wuxingStats={wuxingStats} boneWeight={boneWeight} gender={gender}/>}
-      {activeTab==="chart"&&<TabChart result={result} shensha={shensha} shengxiao={shengxiao} gender={gender} lunarDateStr={lunarDateStr} solarDateStr={dateStr} trueSolarStr={dateStr} wangshuaiArr={wangshuaiArr}/>}
+      {activeTab==="basic"&&<TabBasic result={result} shengxiao={shengxiao} dateStr={dateStr} lunarDateStr={lunarDateStr} solarDateStr={dateStr} trueSolarStr={dateStr} taiYuan={taiYuan} taiXi={taiXi} mingGong={mingGong} shenGong={shenGong} mingGua={mingGua} wuxingStats={wuxingStats} boneWeight={boneWeight} gender={gender}/>}
+      {activeTab==="chart"&&<>
+      <TabChart result={result} shensha={shensha} shengxiao={shengxiao} gender={gender} lunarDateStr={lunarDateStr} solarDateStr={dateStr} trueSolarStr={dateStr} wangshuaiArr={wangshuaiArr} onPillarClick={(label,gan,zhi,shishenGan,nayin,canggan)=>{
+        const interp = getPillarInterpretation(label,gan,zhi,shishenGan,nayin,canggan);
+        setInterpretPanel(interp);
+      }}/>
+      {interpretPanel && (
+        <div className="bg-white rounded-lg overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08)] mx-2 mb-2" style={{ border: "1px solid #7B2FBE" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "linear-gradient(135deg, #7B2FBE, #9B5ECF)", color: "white" }}>
+            <div>
+              <span style={{ fontSize: "16px", fontWeight: "bold" }}>{interpretPanel.pillarLabel}</span>
+            </div>
+            <button onClick={() => setInterpretPanel(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "white", width: "28px", height: "28px", borderRadius: "50%", cursor: "pointer", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>x</button>
+          </div>
+          <div style={{ padding: "10px 12px" }}>
+            {interpretPanel.items.map((item, idx) => (
+              <div key={idx} style={{ marginBottom: idx < interpretPanel.items.length - 1 ? "10px" : 0 }}>
+                <div style={{ display: "flex", alignItems: "center", marginBottom: "4px" }}>
+                  <span style={{ fontSize: "10px", fontWeight: "bold", padding: "1px 6px", borderRadius: "3px", background: item.type === "gan" ? "#fef3c7" : item.type === "zhi" ? "#e0e7ff" : item.type === "shishen" ? "#f3e8ff" : item.type === "nayin" ? "#d1fae5" : "#fce7f3", color: item.type === "gan" ? "#92400e" : item.type === "zhi" ? "#3730a3" : item.type === "shishen" ? "#6b21a8" : item.type === "nayin" ? "#065f46" : "#9d174d", marginRight: "8px" }}>{item.type === "gan" ? "天干" : item.type === "zhi" ? "地支" : item.type === "shishen" ? "十神" : item.type === "nayin" ? "纳音" : "藏干"}</span>
+                  <span style={{ fontSize: "13px", fontWeight: "bold", color: "#333" }}>{item.title}</span>
+                </div>
+                <div style={{ fontSize: "12px", color: "#555", lineHeight: "1.6", whiteSpace: "pre-line" }}>{item.content}</div>
+                <div style={{ fontSize: "10px", color: "#999", marginTop: "4px", fontStyle: "italic" }}>—— {item.source}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ padding: "6px 12px", background: "#fafafa", borderTop: "1px solid #eee", fontSize: "10px", color: "#999", textAlign: "center" }}>点击其他四柱可查看不同解读 · 引经据典，仅供参考</div>
+        </div>
+      )}
+    </>}
       {activeTab==="detail"&&<TabDetail result={result} gender={gender}/>}
       {activeTab==="jingpi"&&<TabJingpi result={result} gender={gender} wuxingStats={wuxingStats}/>}
       {activeTab==="xingge"&&<TabXingge result={result}/>}

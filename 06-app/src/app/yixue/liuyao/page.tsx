@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { BrandHeader, DatePicker } from "@/components/shared";
+import { DatePicker } from "@/components/shared";
 import { calculateLiuyao } from "@/algorithm-core";
-import type { LiuyaoResult, YaoType } from "@/algorithm-core/types/liuyao";
+import type { LiuyaoResult, YaoType, LiuyaoYao } from "@/algorithm-core/types/liuyao";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
+import { getGuaInterpretation, getYaoInterpretation, type LiuyaoInterpretItem } from "@/lib/liuyao-interpretations";
 
 // ============================================================================
 // 品牌色 & 常量
@@ -43,6 +44,15 @@ const YAO_OPTIONS: { value: YaoType; label: string; symbol: string }[] = [
   { value: "0", label: "少阴━ ━", symbol: "╋" },
   { value: "0x", label: "老阴×", symbol: "×" },
 ];
+
+/** 解读类型标签颜色 */
+const INTERPRET_TYPE_COLORS: Record<string, { bg: string; fg: string; label: string }> = {
+  gua: { bg: "#EDE7F6", fg: "#7B2FBE", label: "卦象" },
+  shen: { bg: "#E8F5E9", fg: "#2E7D32", label: "六神" },
+  qin: { bg: "#FFF3E0", fg: "#E65100", label: "六亲" },
+  shiyin: { bg: "#E3F2FD", fg: "#1565C0", label: "世应" },
+  dongyao: { bg: "#FFEBEE", fg: "#C62828", label: "动爻" },
+};
 
 // ============================================================================
 // 工具函数
@@ -121,6 +131,7 @@ function YaoRow({
   isBianGua,
   isDongLine,
   bianYang,
+  onClick,
 }: {
   yao: {
     gan: string; zhi: string; liuQinShort: string;
@@ -133,6 +144,7 @@ function YaoRow({
   isBianGua?: boolean;
   isDongLine?: boolean;
   bianYang?: boolean;
+  onClick?: () => void;
 }) {
   // 左侧：本卦显示六亲干支，变卦显示动变标记
   const leftContent = isBianGua ? (
@@ -189,12 +201,19 @@ function YaoRow({
   const lineIsYang = isBianGua && isDongLine ? (bianYang ?? yao.isYang) : yao.isYang;
 
   return (
-    <div>
+    <div
+      onClick={onClick}
+      style={onClick ? { cursor: "pointer" } : undefined}
+    >
       {fushen}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "2px 4px", gap: "4px", minHeight: "22px",
-      }}>
+        transition: onClick ? "background 0.15s" : undefined,
+      }}
+      onMouseEnter={onClick ? (e) => { (e.currentTarget as HTMLDivElement).style.background = "#f5f0fa"; } : undefined}
+      onMouseLeave={onClick ? (e) => { (e.currentTarget as HTMLDivElement).style.background = ""; } : undefined}
+      >
         <div style={{ width: "70px", textAlign: "right", minHeight: "14px", display: "flex", justifyContent: "flex-end", alignItems: "center" }}>
           {leftContent}
         </div>
@@ -258,6 +277,38 @@ export default function LiuyaoPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
   const [showForm, setShowForm] = useState(true);
+
+  // 解读面板
+  const [interpretPanel, setInterpretPanel] = useState<{
+    title: string;
+    items: LiuyaoInterpretItem[];
+  } | null>(null);
+
+  // 卦名点击 → 显示卦象解读
+  const handleGuaNameClick = useCallback((guaName: string) => {
+    const interp = getGuaInterpretation(guaName);
+    if (interp) {
+      setInterpretPanel({ title: guaName + " · 卦象解读", items: interp.items });
+    }
+  }, []);
+
+  // 爻位点击 → 显示爻位解读
+  const handleYaoClick = useCallback((yao: LiuyaoYao) => {
+    const interp = getYaoInterpretation(
+      yao.position - 1,
+      yao.liuQin,
+      yao.liuShen,
+      yao.isShi,
+      yao.isYing,
+      yao.isDong,
+      yao.gan,
+      yao.zhi,
+    );
+    setInterpretPanel({
+      title: YAO_NAMES[yao.position - 1] + "解读",
+      items: interp.items,
+    });
+  }, []);
 
   // URL参数clientId + 回填检查
   useEffect(() => {
@@ -351,7 +402,6 @@ export default function LiuyaoPage() {
     <div className="min-h-screen flex justify-center" style={{ background: "#ededed" }}>
       <div className="w-full" style={{ maxWidth: "375px", minHeight: "100vh", background: "#fff" }}>
         {/* 紫色标题栏 */}
-        <BrandHeader title="言道六爻占卜" showBack={true} backUrl="/yixue" />
 
         {/* ======= 日期时间选择弹窗 ======= */}
         <DatePicker
@@ -488,8 +538,15 @@ export default function LiuyaoPage() {
                 </div>
                 <div style={{
                   fontSize: "13px", fontWeight: "bold", color: "#333",
-                  marginBottom: "4px",
-                }}>
+                  marginBottom: "4px", cursor: "pointer",
+                  padding: "2px 6px", borderRadius: "4px",
+                  transition: "background 0.15s",
+                }}
+                onClick={() => handleGuaNameClick(result.benGua.name)}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#f5f0fa"; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = ""; }}
+                title="点击查看卦象解读"
+                >
                   {result.benGua.name}
                   <span style={{ fontSize: "11px", color: "#888", fontWeight: "normal" }}>
                     （{result.benGua.gong}）
@@ -505,7 +562,7 @@ export default function LiuyaoPage() {
                 </div>
                 {/* 爻从上到下显示（上爻在最上） */}
                 {[5, 4, 3, 2, 1, 0].map(i => (
-                  <YaoRow key={i} yao={result.benGua.yaos[i]} />
+                  <YaoRow key={i} yao={result.benGua.yaos[i]} onClick={() => handleYaoClick(result.benGua.yaos[i])} />
                 ))}
               </div>
 
@@ -567,6 +624,93 @@ export default function LiuyaoPage() {
                 fontSize: "12px", color: "#555", textAlign: "center",
               }}>
                 <span style={{ color: BRAND, fontWeight: "bold" }}>用神参考：</span>{result.yongShen}
+              </div>
+            )}
+
+            {/* ======= 解读抽屉面板 ======= */}
+            {interpretPanel && (
+              <div style={{
+                margin: "6px 8px",
+                border: "1px solid " + BRAND,
+                borderRadius: "8px",
+                overflow: "hidden",
+                boxShadow: "0 2px 8px rgba(123, 47, 190, 0.12)",
+              }}>
+                {/* 标题栏 */}
+                <div style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "8px 12px",
+                  background: "linear-gradient(135deg, #7B2FBE, #9B5ECF)",
+                  color: "white",
+                }}>
+                  <span style={{ fontSize: "15px", fontWeight: "bold" }}>
+                    {interpretPanel.title}
+                  </span>
+                  <button
+                    onClick={() => setInterpretPanel(null)}
+                    style={{
+                      background: "rgba(255,255,255,0.2)",
+                      border: "none",
+                      color: "white",
+                      width: "26px",
+                      height: "26px",
+                      borderRadius: "50%",
+                      cursor: "pointer",
+                      fontSize: "14px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* 内容区 */}
+                <div style={{ padding: "10px 12px", maxHeight: "360px", overflowY: "auto" }}>
+                  {interpretPanel.items.map((item, idx) => {
+                    const tc = INTERPRET_TYPE_COLORS[item.type] || INTERPRET_TYPE_COLORS["gua"];
+                    return (
+                      <div key={idx} style={{ marginBottom: idx < interpretPanel.items.length - 1 ? "10px" : 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", marginBottom: "4px" }}>
+                          <span style={{
+                            fontSize: "10px",
+                            fontWeight: "bold",
+                            padding: "1px 6px",
+                            borderRadius: "3px",
+                            background: tc.bg,
+                            color: tc.fg,
+                            marginRight: "8px",
+                            flexShrink: 0,
+                          }}>
+                            {tc.label}
+                          </span>
+                          <span style={{ fontSize: "13px", fontWeight: "bold", color: "#333" }}>{item.title}</span>
+                        </div>
+                        <div style={{ fontSize: "12px", color: "#555", lineHeight: "1.7", whiteSpace: "pre-line" }}>
+                          {item.content}
+                        </div>
+                        <div style={{ fontSize: "10px", color: "#999", marginTop: "4px", fontStyle: "italic" }}>
+                          —— {item.source}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* 底部提示 */}
+                <div style={{
+                  padding: "6px 12px",
+                  background: "#fafafa",
+                  borderTop: "1px solid #eee",
+                  fontSize: "10px",
+                  color: "#999",
+                  textAlign: "center",
+                }}>
+                  点击卦名或爻位查看不同解读 · 引经据典，仅供参考
+                </div>
               </div>
             )}
 

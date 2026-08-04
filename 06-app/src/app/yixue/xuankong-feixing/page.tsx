@@ -1,15 +1,25 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { DatePicker, BrandHeader } from "@/components/shared";
+import { DatePicker } from "@/components/shared";
 import ClientSelector from "@/components/ClientSelector";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
+import { getXuankongGongInterpretation, getXuankongStarInterpretation, getXuankongYunInterpretation } from "@/lib/xuankong-interpretations";
+import type { XuankongInterpretItem } from "@/lib/xuankong-interpretations";
 
 // ============================================================================
 // 常量
 // ============================================================================
 const BRAND = "#7B2FBE";
+
+/** 解读类型标签颜色 */
+const INTERPRET_TYPE_COLORS: Record<string, { bg: string; fg: string; label: string }> = {
+  palace: { bg: "#f3e8ff", fg: "#7B2FBE", label: "宫位" },
+  star: { bg: "#fef3c7", fg: "#d97706", label: "飞星" },
+  zuhe: { bg: "#e0f2fe", fg: "#0284c7", label: "组合" },
+  yun: { bg: "#f0faf0", fg: "#16a34a", label: "元运" },
+};
 
 // 二十四山（坐山）
 const ER_SHI_SI_SHAN = [
@@ -317,6 +327,7 @@ export default function XuankongFeixingPage() {
   const [showForm, setShowForm] = useState(false);
   const [result, setResult] = useState<ReturnType<typeof calcXuankong> | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
+  const [interpretPanel, setInterpretPanel] = useState<{title: string; items: XuankongInterpretItem[]} | null>(null);
 
   // 向山自动计算（坐山对宫）
   const xiangShan = ER_SHI_SI_SHAN[(ER_SHI_SI_SHAN.indexOf(zuoShan) + 12) % 24];
@@ -338,6 +349,12 @@ export default function XuankongFeixingPage() {
     }, 200);
   }, [zuoShan, xiangShan, buildYear, floor, selectedClient]);
 
+  // 宫位点击处理
+  const handleGongClick = useCallback((gong: number) => {
+    const interp = getXuankongGongInterpretation(gong);
+    if (interp) setInterpretPanel(interp);
+  }, []);
+
   // URL参数clientId + 回填检查
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -356,7 +373,6 @@ export default function XuankongFeixingPage() {
 
   return (
     <div className="mx-auto w-full bg-[#ededed]" style={{ maxWidth: "375px", minHeight: "100vh" }}>
-      <BrandHeader title="言道玄空飞星" showBack={true} backUrl="/yixue" />
       {/* 建造日期选择弹窗 */}
       <DatePicker
         show={showForm}
@@ -503,12 +519,14 @@ export default function XuankongFeixingPage() {
                   return (
                     <div
                       key={idx}
+                      onClick={() => handleGongClick(gong)}
                       className={`flex flex-col border text-center ${jxColor.bg}`}
                       style={{
                         marginLeft: "-1px",
                         marginTop: "-1px",
                         borderColor: isZuo || isXiang ? BRAND : "#999",
                         borderWidth: isZuo || isXiang ? "2px" : "1px",
+                        cursor: "pointer",
                       }}
                     >
                       {/* 宫名 */}
@@ -534,8 +552,96 @@ export default function XuankongFeixingPage() {
                 })}
               </div>
             </div>
-            <p className="mt-1 text-center text-[10px] text-gray-400">格式：山星(左上) 向星(右上) 运星(中)</p>
+            <p className="mt-1 text-center text-[10px] text-gray-400">格式：山星(左上) 向星(右上) 运星(中) · 点击宫位查看解读</p>
           </div>
+
+          {/* 解读抽屉面板 */}
+          {interpretPanel && (
+            <div className="mt-3 px-0.5">
+              <div style={{
+                border: "1px solid #7B2FBE",
+                borderRadius: "8px",
+                overflow: "hidden",
+                boxShadow: "0 2px 8px rgba(123, 47, 190, 0.12)",
+              }}>
+                {/* 标题栏 */}
+                <div style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "8px 12px",
+                  background: "linear-gradient(135deg, #7B2FBE, #9B5ECF)",
+                  color: "white",
+                }}>
+                  <span style={{ fontSize: "15px", fontWeight: "bold" }}>
+                    {interpretPanel.title}
+                  </span>
+                  <button
+                    onClick={() => setInterpretPanel(null)}
+                    style={{
+                      background: "rgba(255,255,255,0.2)",
+                      border: "none",
+                      color: "white",
+                      width: "26px",
+                      height: "26px",
+                      borderRadius: "50%",
+                      cursor: "pointer",
+                      fontSize: "14px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {/* 内容区 */}
+                <div style={{ padding: "10px 12px", maxHeight: "360px", overflowY: "auto", background: "white" }}>
+                  {interpretPanel.items.map((item, idx) => {
+                    const tc = INTERPRET_TYPE_COLORS[item.type] || INTERPRET_TYPE_COLORS["palace"];
+                    return (
+                      <div key={idx} style={{ marginBottom: idx < interpretPanel.items.length - 1 ? "10px" : 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", marginBottom: "4px" }}>
+                          <span style={{
+                            fontSize: "10px",
+                            fontWeight: "bold",
+                            padding: "1px 6px",
+                            borderRadius: "3px",
+                            background: tc.bg,
+                            color: tc.fg,
+                            marginRight: "8px",
+                            flexShrink: 0,
+                          }}>
+                            {tc.label}
+                          </span>
+                          <span style={{ fontSize: "13px", fontWeight: "bold", color: "#333" }}>{item.title}</span>
+                        </div>
+                        <div style={{ fontSize: "12px", color: "#555", lineHeight: "1.7", whiteSpace: "pre-line" }}>
+                          {item.content}
+                        </div>
+                        <div style={{ fontSize: "10px", color: "#999", marginTop: "4px", fontStyle: "italic" }}>
+                          —— {item.source}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* 底部提示 */}
+                <div style={{
+                  padding: "6px 12px",
+                  background: "#fafafa",
+                  borderTop: "1px solid #eee",
+                  fontSize: "10px",
+                  color: "#999",
+                  textAlign: "center",
+                }}>
+                  点击宫位查看解读 · 引经据典，仅供参考
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* 各宫详解 */}
           <div className="mt-4 space-y-2">

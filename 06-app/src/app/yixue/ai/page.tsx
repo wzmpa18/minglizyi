@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { BrandHeader } from "@/components/shared";
 
 export default function YixueAIPage() {
   const [input, setInput] = useState("");
@@ -24,7 +23,6 @@ export default function YixueAIPage() {
 
   return (
     <div className="mx-auto flex max-w-lg flex-col px-4 py-4" style={{ height: "calc(100vh - 8rem)" }}>
-      <BrandHeader title="AI助手" showBack={true} backUrl="/yixue" />
       <div className="flex-1 overflow-y-auto space-y-3 mb-4">
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
