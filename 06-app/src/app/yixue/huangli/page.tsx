@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { Solar, LunarTime } from "lunar-javascript";
@@ -8,6 +8,7 @@ import type { Client } from "@/lib/clientStore";
 import { useClientDate } from "@/lib/useClientDate";
 import { getCalendarGanzhiInterpretation, getCalendarJieqiInterpretation, getCalendarShichenInterpretation } from "@/lib/calendar-interpretations";
 import type { CalendarInterpretItem } from "@/lib/calendar-interpretations";
+import { savePaipanState, loadPaipanState } from "@/lib/paipanPersistence";
 
 const BRAND = "#7B2FBE";
 
@@ -53,6 +54,20 @@ export default function HuangliPage() {
     const prefill = getPrefillData("huangli");
     if (prefill) { clearPrefillData("huangli"); }
   }, []);
+
+  // localStorage 持久化：恢复黄历状态
+  useEffect(() => {
+    const saved = loadPaipanState("huangli");
+    if (saved && saved.input) {
+      const inp = saved.input as any;
+      if (inp.selectedDate) setSelectedDate(new Date(inp.selectedDate));
+    }
+  }, []);
+
+  // localStorage 持久化：保存黄历状态
+  useEffect(() => {
+    savePaipanState("huangli",{input:{selectedDate:selectedDate.toISOString()},showForm:false,_ts:Date.now()});
+  }, [selectedDate]);
 
   const handleSaveRecord = () => {
     if (!selectedClient) { alert("请先选择客户"); return; }

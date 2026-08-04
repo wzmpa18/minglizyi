@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { Solar, SolarMonth } from "lunar-javascript";
@@ -8,6 +8,7 @@ import type { Client } from "@/lib/clientStore";
 import { useClientDate } from "@/lib/useClientDate";
 import { getCalendarGanzhiInterpretation, getCalendarJieqiInterpretation } from "@/lib/calendar-interpretations";
 import type { CalendarInterpretItem } from "@/lib/calendar-interpretations";
+import { savePaipanState, loadPaipanState } from "@/lib/paipanPersistence";
 
 const BRAND = "#7B2FBE";
 const WEEKDAY_NAMES = ["日", "一", "二", "三", "四", "五", "六"];
@@ -63,6 +64,22 @@ export default function WannianliPage() {
     const prefill = getPrefillData("wannianli");
     if (prefill) { clearPrefillData("wannianli"); }
   }, []);
+
+  // localStorage 持久化：恢复万年历状态
+  useEffect(() => {
+    const saved = loadPaipanState("wannianli");
+    if (saved && saved.input) {
+      const inp = saved.input as any;
+      if (inp.viewYear) setViewYear(inp.viewYear);
+      if (inp.viewMonth) setViewMonth(inp.viewMonth);
+      if (inp.selectedYmd) setSelectedYmd(inp.selectedYmd);
+    }
+  }, []);
+
+  // localStorage 持久化：保存万年历状态
+  useEffect(() => {
+    savePaipanState("wannianli",{input:{viewYear,viewMonth,selectedYmd},showForm:false,_ts:Date.now()});
+  }, [viewYear, viewMonth, selectedYmd]);
 
   const handleSaveRecord = () => {
     if (!selectedClient) { alert("请先选择客户"); return; }

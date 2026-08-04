@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import {
@@ -19,6 +19,7 @@ import { DatePicker } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 import { getMeihuaHexagramInterpretation, getMeihuaTiYongInterpretation, type MeihuaInterpretItem } from "@/lib/meihua-interpretations";
+import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
 
 // ============================================================================
 // 五行颜色 (与 jishiyu 完全一致)
@@ -367,6 +368,23 @@ export default function MeihuaPage() {
     if (prefill) { try { setResult(prefill); setShowPopup(false); clearPrefillData("meihua"); } catch(e){} }
   }, []);
 
+  // localStorage 持久化：恢复排盘状态
+  useEffect(() => {
+    const saved = loadPaipanState("meihua");
+    if (saved && saved.input) {
+      const inp = saved.input as any;
+      if (inp.year && inp.month && inp.day) {
+        setSelectedDate(new Date(inp.year, inp.month - 1, inp.day, inp.hour || 12, inp.minute || 0));
+      }
+      if (inp.desc) setDesc(inp.desc);
+      if (inp.divMethod) setDivMethod(inp.divMethod);
+      if (inp.manualNumbers) setManualNumbers(inp.manualNumbers);
+      if (saved.showForm === false) {
+        handleDivination({year: inp.year, month: inp.month, day: inp.day, hour: inp.hour});
+      }
+    }
+  }, []);
+
   // ---- 派生数据 ----
   const bazi = useMemo(() => {
     try {
@@ -405,6 +423,7 @@ export default function MeihuaPage() {
     setResult(r);
     setActiveGua("ben");
     setShowPopup(false);
+    savePaipanState("meihua",{input:{year:y,month:mo,day:d,hour:h,desc,divMethod,manualNumbers},showForm:false,_ts:Date.now()});
     // 保存客户记录
     if(selectedClient){
       try{saveRecord({clientId:selectedClient.id,type:"meihua",data:{...r,inputParams:{year:y,month:mo,day:d,hour:h,method:divMethod}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
@@ -455,7 +474,7 @@ export default function MeihuaPage() {
 
       {!showPopup && !result && (
         <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
-          <button onClick={() => setShowPopup(true)} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">开始排盘</button>
+          <button onClick={() => { clearPaipanState("meihua"); setShowPopup(true); }} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">开始排盘</button>
         </div>
       )}
 

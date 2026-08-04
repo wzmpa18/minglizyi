@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { Lunar } from "lunar-javascript";
 
 // ============================================================================
 // 类型定义
@@ -81,6 +82,32 @@ function daysInMonth(year: number, month: number): number {
 }
 
 // ============================================================================
+// v18.1: 农历→公历转换工具函数
+// ============================================================================
+
+/**
+ * 将农历日期转换为公历日期
+ * 使用 lunar-javascript (MIT) 库进行精确转换
+ * 转换失败时返回原始日期（降级处理）
+ */
+function lunarToSolarDate(date: DatePickerValue): DatePickerValue {
+  try {
+    const lunar = (Lunar as any).fromYmd(date.year, date.month, date.day);
+    const solar = lunar.getSolar();
+    return {
+      year: solar.getYear(),
+      month: solar.getMonth(),
+      day: solar.getDay(),
+      hour: date.hour,
+      minute: date.minute,
+    };
+  } catch (e) {
+    console.error('农历→公历转换失败:', e);
+    return date;
+  }
+}
+
+// ============================================================================
 // 主组件 - 完全对标吉时雨 component_basic_data.html
 // ============================================================================
 
@@ -149,10 +176,12 @@ export default function DatePicker({
     });
   }, []);
 
-  // 提交
+  // 提交（v18.1: 农历模式自动转换为公历后再传给算法）
   const handleSubmit = useCallback(() => {
     if (onNameChange) onNameChange(nameState);
-    onSubmit(date, options);
+    // 农历模式：将农历日期转换为公历日期，确保算法层始终接收公历
+    const finalDate = options.calType === "lunar" ? lunarToSolarDate(date) : date;
+    onSubmit(finalDate, options);
     onClose();
   }, [date, options, nameState, onNameChange, onSubmit, onClose]);
 

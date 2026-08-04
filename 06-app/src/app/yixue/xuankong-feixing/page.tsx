@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useCallback, useEffect } from "react";
 import { DatePicker } from "@/components/shared";
@@ -7,6 +7,7 @@ import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/c
 import type { Client } from "@/lib/clientStore";
 import { getXuankongGongInterpretation, getXuankongStarInterpretation, getXuankongYunInterpretation } from "@/lib/xuankong-interpretations";
 import type { XuankongInterpretItem } from "@/lib/xuankong-interpretations";
+import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
 
 // ============================================================================
 // 常量
@@ -342,6 +343,7 @@ export default function XuankongFeixingPage() {
       setResult(r);
       setHasResult(true);
       setLoading(false);
+      savePaipanState("xuankong",{input:{buildYear:effYear,month,day,hour,zuoShan,floor},showForm:false,_ts:Date.now()});
       // 保存客户记录
       if(selectedClient && r){
         try{saveRecord({clientId:selectedClient.id,type:"xuankong-feixing",data:{...r,inputParams:{zuoShan,xiangShan,buildYear:effYear,floor}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
@@ -369,6 +371,20 @@ export default function XuankongFeixingPage() {
     const handler = () => setHasResult(false);
     window.addEventListener("yixue-edit", handler);
     return () => window.removeEventListener("yixue-edit", handler);
+  }, []);
+
+  // localStorage 持久化：恢复排盘状态
+  useEffect(() => {
+    const saved = loadPaipanState("xuankong");
+    if (saved && saved.input) {
+      const inp = saved.input as any;
+      if (inp.buildYear) setBuildYear(inp.buildYear);
+      if (inp.month) setMonth(inp.month);
+      if (inp.day) setDay(inp.day);
+      if (inp.hour) setHour(inp.hour);
+      if (inp.zuoShan) setZuoShan(inp.zuoShan);
+      if (inp.floor) setFloor(inp.floor);
+    }
   }, []);
 
   return (
@@ -426,7 +442,7 @@ export default function XuankongFeixingPage() {
             </label>
             <button
               type="button"
-              onClick={() => setShowForm(true)}
+              onClick={() => { clearPaipanState("xuankong"); setShowForm(true); }}
               className="flex w-full items-center justify-between rounded-lg border border-gray-200 px-3 py-2.5 text-left text-sm transition-colors active:bg-gray-50"
             >
               <span className="font-medium text-gray-700">

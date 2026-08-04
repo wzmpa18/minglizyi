@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { solarToBazi, GAN, ZHI } from "@/algorithm-core";
@@ -8,6 +8,7 @@ import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/c
 import type { Client } from "@/lib/clientStore";
 import { getTaiyiPalaceInterpretation, getTaiyiShenInterpretation } from "@/lib/taiyi-interpretations";
 import type { TaiyiInterpretItem } from "@/lib/taiyi-interpretations";
+import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
 
 // ============================================================================
 // 常量
@@ -319,6 +320,7 @@ export default function TaiyiSanshiPage() {
       setShowForm(false);
       setLoading(false);
       setInterpretPanel(null);
+      savePaipanState("taiyi",{input:{taiyiYear:y,taiyiMonth:mo,taiyiDay:d,taiyiHour:h,desc},showForm:false,_ts:Date.now()});
       // 保存客户记录
       if(selectedClient && r){
         try{saveRecord({clientId:selectedClient.id,type:"taiyi-sanshi",data:{...r,inputParams:{taiyiYear:y,taiyiMonth:mo,taiyiDay:d,taiyiHour:h,desc}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
@@ -334,6 +336,22 @@ export default function TaiyiSanshiPage() {
     if (cid) { const c = getClient(cid); if (c) setSelectedClient(c); }
     const prefill = getPrefillData("taiyi-sanshi");
     if (prefill) { try { setResult(prefill); setHasResult(true); clearPrefillData("taiyi-sanshi"); } catch(e){} }
+  }, []);
+
+  // localStorage 持久化：恢复排盘状态
+  useEffect(() => {
+    const saved = loadPaipanState("taiyi");
+    if (saved && saved.input) {
+      const inp = saved.input as any;
+      if (inp.taiyiYear) setTaiyiYear(inp.taiyiYear);
+      if (inp.taiyiMonth) setTaiyiMonth(inp.taiyiMonth);
+      if (inp.taiyiDay) setTaiyiDay(inp.taiyiDay);
+      if (inp.taiyiHour) setTaiyiHour(inp.taiyiHour);
+      if (inp.desc) setDesc(inp.desc);
+      if (saved.showForm === false) {
+        doPaipan({year: inp.taiyiYear, month: inp.taiyiMonth, day: inp.taiyiDay, hour: inp.taiyiHour});
+      }
+    }
   }, []);
 
   // 监听layout的edit按钮事件
@@ -377,7 +395,7 @@ export default function TaiyiSanshiPage() {
       <div className="bg-[#ededed] min-h-screen flex justify-center">
         <div className="w-full" style={{ maxWidth: "375px" }}>
           <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
-            <button onClick={() => setShowForm(true)} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">开始排盘</button>
+            <button onClick={() => { clearPaipanState("taiyi"); setShowForm(true); }} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">开始排盘</button>
           </div>
         </div>
       </div>

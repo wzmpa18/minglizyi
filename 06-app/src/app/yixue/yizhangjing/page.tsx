@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -9,6 +9,7 @@ import {
 import { DatePicker } from "@/components/shared";
 import { getYizhangPalaceInterpretation } from "@/lib/yizhang-interpretations";
 import type { YizhangInterpretItem } from "@/lib/yizhang-interpretations";
+import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
 
 // ============================================================================
 // 一掌经十二宫
@@ -124,6 +125,22 @@ export default function YizhangjingPage() {
     setSelectedDay(n.getDate());
     setSelectedHour(n.getHours());
   }, []);
+
+  // localStorage 持久化：恢复排盘状态
+  useEffect(() => {
+    const saved = loadPaipanState("yizhangjing");
+    if (saved && saved.input) {
+      const inp = saved.input as any;
+      if (inp.selectedYear) setSelectedYear(inp.selectedYear);
+      if (inp.selectedMonth) setSelectedMonth(inp.selectedMonth);
+      if (inp.selectedDay) setSelectedDay(inp.selectedDay);
+      if (inp.selectedHour) setSelectedHour(inp.selectedHour);
+      if (saved.showForm === false) {
+        handleDoPaipan();
+      }
+    }
+  }, []);
+
   const [hasResult, setHasResult] = useState(false);
   const [showInput, setShowInput] = useState(true);
   const [showForm, setShowForm] = useState(true);
@@ -157,7 +174,8 @@ export default function YizhangjingPage() {
   const handleDoPaipan = useCallback(() => {
     setHasResult(true);
     setShowInput(false);
-  }, []);
+    savePaipanState("yizhangjing",{input:{selectedYear,selectedMonth,selectedDay,selectedHour},showForm:false,_ts:Date.now()});
+  }, [selectedYear, selectedMonth, selectedDay, selectedHour]);
 
   const handlePrev = useCallback(() => {
     const d = new Date(selectedYear, selectedMonth - 1, selectedDay, selectedHour);

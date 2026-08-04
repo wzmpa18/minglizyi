@@ -23,6 +23,7 @@ import { DatePicker } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 import { getSanChuanInterpretation, getSiKeInterpretation, getKeTiInterpretation } from "@/lib/daliuren-interpretations";
+import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
 
 // ============================================================================
 // 颜色常量（严格对标截图）
@@ -1102,6 +1103,18 @@ export default function DaLiuRenPage() {
     }
   }, []);
 
+  // localStorage 持久化：恢复排盘状态
+  useEffect(() => {
+    const saved = loadPaipanState("daliuren");
+    if (saved && saved.input) {
+      const inp = saved.input as any;
+      if (inp) setPrefillParams(inp);
+      if (saved.showForm === false && inp) {
+        handleSubmit(inp as DaLiuRenInputParams);
+      }
+    }
+  }, []);
+
   const handleSubmit = useCallback((params: DaLiuRenInputParams) => {
     const result = calculateDaLiuRen(
       params.year, params.month, params.day, params.hour, params.minute,
@@ -1110,6 +1123,7 @@ export default function DaLiuRenPage() {
     );
     setData(result);
     setShowForm(false);
+    savePaipanState("daliuren",{input:params as any,showForm:false,_ts:Date.now()});
     // 保存客户记录
     if(selectedClient){
       try{saveRecord({clientId:selectedClient.id,type:"daliuren",data:{...result,inputParams:params},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
@@ -1192,7 +1206,7 @@ export default function DaLiuRenPage() {
       <InputPanel show={showForm} showTitle={false} onClose={() => setShowForm(false)} onSubmit={handleSubmit} selectedClient={selectedClient} onClientSelect={setSelectedClient} initialValues={prefillParams} />
 
       {/* ====== 1. 顶部信息栏 ====== */}
-      <div style={{ display: "flex", padding: "8px 10px", borderBottom: "1px solid #eee", backgroundColor: "#fff" }}>
+      <div style={{ display: "flex", padding: "6px 10px", borderBottom: "1px solid #eee", backgroundColor: "#fff" }}>
         {/* 左侧：四柱 */}
         <div style={{ display: "flex", gap: "6px", flex: "0 0 auto" }}>
           {(["年", "月", "日", "时"] as const).map((label, idx) => {
@@ -1244,7 +1258,7 @@ export default function DaLiuRenPage() {
           flexShrink: 0,
           borderRight: "1px solid #ccc",
           backgroundColor: "#fff",
-          padding: "6px 4px",
+          padding: "4px 4px",
           fontSize: "11px",
           boxSizing: "border-box",
         }}>
@@ -1376,7 +1390,7 @@ export default function DaLiuRenPage() {
         </div>
 
         {/* ---- 右侧主盘面 ---- */}
-        <div style={{ flex: 1, minWidth: 0, padding: "6px 5px", boxSizing: "border-box" }}>
+        <div style={{ flex: 1, minWidth: 0, padding: "4px 5px", boxSizing: "border-box" }}>
 
           {/* ===== a. 三传区域（在四课上方，5列竖排：六亲列 | 天干列 | 地支列(灰底大字) | 天将列 | 标签列(灰块)） ===== */}
           <div style={{ marginBottom: "4px" }}>
@@ -1405,7 +1419,7 @@ export default function DaLiuRenPage() {
                       alignItems: "center",
                       justifyContent: "center",
                       padding: "2px 4px",
-                      fontSize: "18px",
+                      fontSize: "16px",
                       fontWeight: 500,
                       color: "#000",
                       lineHeight: 1.2,
@@ -1418,7 +1432,7 @@ export default function DaLiuRenPage() {
                       alignItems: "center",
                       justifyContent: "center",
                       padding: "2px 4px",
-                      fontSize: "22px",
+                      fontSize: "20px",
                       fontWeight: 500,
                       color: dg ? ganColorRender(dg, data.dayGan) : "transparent",
                       lineHeight: 1.2,
@@ -1431,7 +1445,7 @@ export default function DaLiuRenPage() {
                       alignItems: "center",
                       justifyContent: "center",
                       padding: "2px 6px",
-                      fontSize: "28px",
+                      fontSize: "26px",
                       fontWeight: 700,
                       color: zhiColorRender(sc.zhi, data.dayGan),
                       backgroundColor: "#e8e8e8",
@@ -1446,7 +1460,7 @@ export default function DaLiuRenPage() {
                       alignItems: "center",
                       justifyContent: "center",
                       padding: "2px 4px",
-                      fontSize: "18px",
+                      fontSize: "16px",
                       fontWeight: 500,
                       color: shenColor(sc.shen),
                       lineHeight: 1.2,
@@ -1460,7 +1474,7 @@ export default function DaLiuRenPage() {
                       justifyContent: "center",
                       backgroundColor: COLOR_GRAY_LABEL,
                       color: "#fff",
-                      fontSize: "13px",
+                      fontSize: "12px",
                       fontWeight: 500,
                       lineHeight: 1.2,
                       minHeight: "44px",
@@ -1556,7 +1570,7 @@ export default function DaLiuRenPage() {
 
             {/* ===== c. 天地盘区域（4x4 grid，灰色边框） ===== */}
             <div style={{
-              border: "1px solid #999",
+              border: "2px solid #777",
               borderRadius: "2px",
               margin: "0 auto",
               position: "relative",

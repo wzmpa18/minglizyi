@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -21,6 +21,7 @@ import {
   getHehunNayinInterpretation,
 } from "@/lib/hehun-interpretations";
 import type { HehunInterpretItem } from "@/lib/hehun-interpretations";
+import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
 
 // ============================================================================
 // 解读类型标签颜色
@@ -391,12 +392,32 @@ export default function HehunPage() {
     setTimeout(() => {
       setHasResult(true);
       setLoading(false);
+      savePaipanState("hehun",{input:{maleYear,maleMonth,maleDay,maleHour,femaleYear,femaleMonth,femaleDay,femaleHour},showForm:false,_ts:Date.now()});
       // 滚动到结果区
       setTimeout(() => {
         const el = document.getElementById("hehun-result");
         if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
     }, 300);
+  }, []);
+
+  // localStorage 持久化：恢复排盘状态
+  useEffect(() => {
+    const saved = loadPaipanState("hehun");
+    if (saved && saved.input) {
+      const inp = saved.input as any;
+      if (inp.maleYear) setMaleYear(inp.maleYear);
+      if (inp.maleMonth) setMaleMonth(inp.maleMonth);
+      if (inp.maleDay) setMaleDay(inp.maleDay);
+      if (inp.maleHour) setMaleHour(inp.maleHour);
+      if (inp.femaleYear) setFemaleYear(inp.femaleYear);
+      if (inp.femaleMonth) setFemaleMonth(inp.femaleMonth);
+      if (inp.femaleDay) setFemaleDay(inp.femaleDay);
+      if (inp.femaleHour) setFemaleHour(inp.femaleHour);
+      if (saved.showForm === false) {
+        doHehun();
+      }
+    }
   }, []);
 
   /** 填充示例日期 */
@@ -425,6 +446,7 @@ export default function HehunPage() {
     setFemaleHour(12);
     setHasResult(false);
     setInterpretPanel(null);
+    clearPaipanState("hehun");
   }, []);
 
   /** 点击合婚等级 → 显示等级解读 */

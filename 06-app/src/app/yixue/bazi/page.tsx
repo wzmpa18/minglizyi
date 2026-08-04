@@ -30,6 +30,7 @@ import { DatePicker } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 import { getPillarInterpretation, getShenshaInterpretation } from "@/lib/bazi-interpretations";
+import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
 
 // ===== 五行颜色 - 严格对标jishiyu =====
 // 注意: 五行颜色为传统命理数据色(火=红)，品牌紫色(#7B2FBE)仅用于UI chrome
@@ -1500,13 +1501,30 @@ export default function BaziPage(){
     }
   }, []);
 
+  // localStorage 持久化：恢复排盘状态
+  useEffect(() => {
+    const saved = loadPaipanState("bazi");
+    if (saved && saved.input) {
+      const inp = saved.input as any;
+      if (inp.year) setYear(inp.year);
+      if (inp.month) setMonth(inp.month);
+      if (inp.day) setDay(inp.day);
+      if (inp.hour) setHour(inp.hour);
+      if (inp.gender) setGender(inp.gender);
+      if (inp.calType) setCalType(inp.calType);
+      if (saved.showForm === false) {
+        handleSubmit({ year: inp.year, month: inp.month, day: inp.day, hour: inp.hour, gender: inp.gender });
+      }
+    }
+  }, []);
+
   const handleSubmit=useCallback((override?:{year:number;month:number;day:number;hour:number;gender:Gender})=>{
     const y=override?.year??year; const m=override?.month??month;
     const d=override?.day??day; const h=override?.hour??hour;
     const g=override?.gender??gender;
     try{const bz=solarToBazi({year:y,month:m,day:d,hour:h,gender:g}) as BaziResult;setResult(bz);
       const ss=calculateAllShenSha({yearGan:bz.pillars[0].gan as TianGan,yearZhi:bz.pillars[0].zhi as DiZhi,monthGan:bz.pillars[1].gan as TianGan,monthZhi:bz.pillars[1].zhi as DiZhi,dayGan:bz.dayGan as TianGan,dayZhi:bz.dayZhi as DiZhi,hourGan:bz.pillars[3].gan as TianGan,hourZhi:bz.pillars[3].zhi as DiZhi,gender:g});
-      setShensha(ss);setShowForm(false);
+      setShensha(ss);setShowForm(false);savePaipanState("bazi",{input:{year:y,month:m,day:d,hour:h,gender:g,calType},showForm:false,_ts:Date.now()});
       // 保存客户记录
       if(selectedClient){
         try{saveRecord({clientId:selectedClient.id,type:"bazi",data:{...bz,inputParams:{year:y,month:m,day:d,hour:h,gender:g}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
@@ -1572,7 +1590,7 @@ export default function BaziPage(){
     />
     {!showForm && !result && (
       <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
-        <button onClick={() => setShowForm(true)} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">开始排盘</button>
+        <button onClick={() => { clearPaipanState("bazi"); setShowForm(true); }} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">开始排盘</button>
       </div>
     )}
     {result&&<div>

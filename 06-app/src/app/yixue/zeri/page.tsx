@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { Solar } from "lunar-javascript";
@@ -8,6 +8,7 @@ import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/c
 import type { Client } from "@/lib/clientStore";
 import { getZeriJianchuInterpretation, getZeriShenshaInterpretation, getZeriYijiInterpretation } from "@/lib/zeri-interpretations";
 import type { ZeriInterpretItem } from "@/lib/zeri-interpretations";
+import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
 
 // ============================================================================
 // 常量
@@ -283,6 +284,7 @@ export default function ZeriPage() {
       setResults(r);
       setHasResult(true);
       setLoading(false);
+      savePaipanState("zeri",{input:{eventType,startYear,startMonth,startDay,endYear,endMonth,endDay,userShengXiao},showForm:false,_ts:Date.now()});
       // 保存客户记录
       if(selectedClient && r.length > 0){
         try{saveRecord({clientId:selectedClient.id,type:"zeri",data:{results:r,inputParams:{eventType,startYear,startMonth,startDay,endYear,endMonth,endDay,userShengXiao}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
@@ -309,6 +311,22 @@ export default function ZeriPage() {
     const handler = () => setHasResult(false);
     window.addEventListener("yixue-edit", handler);
     return () => window.removeEventListener("yixue-edit", handler);
+  }, []);
+
+  // localStorage 持久化：恢复排盘状态
+  useEffect(() => {
+    const saved = loadPaipanState("zeri");
+    if (saved && saved.input) {
+      const inp = saved.input as any;
+      if (inp.eventType) setEventType(inp.eventType);
+      if (inp.startYear) setStartYear(inp.startYear);
+      if (inp.startMonth) setStartMonth(inp.startMonth);
+      if (inp.startDay) setStartDay(inp.startDay);
+      if (inp.endYear) setEndYear(inp.endYear);
+      if (inp.endMonth) setEndMonth(inp.endMonth);
+      if (inp.endDay) setEndDay(inp.endDay);
+      if (inp.userShengXiao) setUserShengXiao(inp.userShengXiao);
+    }
   }, []);
 
   const eventLabel = useMemo(() => {
@@ -650,7 +668,7 @@ export default function ZeriPage() {
 
           <div className="mt-3 flex gap-2 px-1">
             <button
-              onClick={() => setHasResult(false)}
+              onClick={() => { clearPaipanState("zeri"); setHasResult(false); }}
               className="flex-1 rounded-full py-2 text-sm font-semibold text-white transition-all active:scale-[0.98]"
               style={{ backgroundColor: BRAND }}
             >

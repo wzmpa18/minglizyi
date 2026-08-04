@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { DatePicker } from "@/components/shared";
@@ -7,6 +7,7 @@ import type { LiuyaoResult, YaoType, LiuyaoYao } from "@/algorithm-core/types/li
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 import { getGuaInterpretation, getYaoInterpretation, type LiuyaoInterpretItem } from "@/lib/liuyao-interpretations";
+import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
 
 // ============================================================================
 // 品牌色 & 常量
@@ -320,6 +321,23 @@ export default function LiuyaoPage() {
     if (prefill) { try { setResult(prefill); setShowForm(false); clearPrefillData("liuyao"); } catch(e){} }
   }, []);
 
+  // localStorage 持久化：恢复排盘状态
+  useEffect(() => {
+    const saved = loadPaipanState("liuyao");
+    if (saved && saved.input) {
+      const inp = saved.input as any;
+      if (inp.dateStr) setDateStr(inp.dateStr);
+      if (inp.hour !== undefined) setHour(inp.hour);
+      if (inp.minute !== undefined) setMinute(inp.minute);
+      if (inp.method) setMethod(inp.method);
+      if (inp.question) setQuestion(inp.question);
+      if (inp.manualYaos) setManualYaos(inp.manualYaos);
+      if (inp.numUpper) setNumUpper(inp.numUpper);
+      if (inp.numLower) setNumLower(inp.numLower);
+      if (inp.numDong) setNumDong(inp.numDong);
+    }
+  }, []);
+
   // 解析日期
   const parsedDate = useMemo(() => {
     const [y, m, d] = dateStr.split("-").map(Number);
@@ -362,6 +380,7 @@ export default function LiuyaoPage() {
       const r = calculateLiuyao(input);
       setResult(r);
       setShowForm(false);
+      savePaipanState("liuyao",{input:{dateStr,hour,minute,method,question,manualYaos,numUpper,numLower,numDong},showForm:false,_ts:Date.now()});
       // 保存客户记录
       if(selectedClient){
         try{saveRecord({clientId:selectedClient.id,type:"liuyao",data:{...r,inputParams:input},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
@@ -384,6 +403,7 @@ export default function LiuyaoPage() {
     setResult(null);
     setError(null);
     setShowForm(true);
+    clearPaipanState("liuyao");
   }, []);
 
   // 更新手动爻值

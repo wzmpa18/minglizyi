@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { Solar } from "lunar-javascript";
@@ -8,6 +8,7 @@ import { DatePicker } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 import { getQimenPalaceInterpretation } from "@/lib/qimen-interpretations";
+import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
 import type { QimenInterpretItem } from "@/lib/qimen-interpretations";
 
 // ============================================================================
@@ -144,6 +145,7 @@ export default function QimenPage() {
       setResult(r);
       setShowForm(false);
       setInterpretPanel(null);
+      savePaipanState("qimen",{input:{...formData, year: y, month: mo, day: d, hour: h},showForm:false,_ts:Date.now()});
       // 保存客户记录
       if(selectedClient){
         try{saveRecord({clientId:selectedClient.id,type:"qimen",data:{...r,inputParams:{...formData, year: y, month: mo, day: d, hour: h}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
@@ -231,6 +233,18 @@ export default function QimenPage() {
     }
   }, []);
 
+  // localStorage 持久化：恢复排盘状态
+  useEffect(() => {
+    const saved = loadPaipanState("qimen");
+    if (saved && saved.input) {
+      const inp = saved.input as any;
+      setFormData(prev => ({...prev, year: inp.year || prev.year, month: inp.month || prev.month, day: inp.day || prev.day, hour: inp.hour !== undefined ? inp.hour : prev.hour, panMethod: inp.panMethod || prev.panMethod}));
+      if (saved.showForm === false) {
+        doPaipan({year: inp.year, month: inp.month, day: inp.day, hour: inp.hour});
+      }
+    }
+  }, []);
+
   // ==================== 输入表单 ====================
   if (showForm) {
     return (
@@ -257,7 +271,7 @@ export default function QimenPage() {
       <div className="bg-[#ededed] min-h-screen flex justify-center">
         <div className="w-full" style={{ maxWidth: "375px" }}>
           <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
-            <button onClick={() => setShowForm(true)} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">开始排盘</button>
+            <button onClick={() => { clearPaipanState("qimen"); setShowForm(true); }} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">开始排盘</button>
           </div>
         </div>
       </div>

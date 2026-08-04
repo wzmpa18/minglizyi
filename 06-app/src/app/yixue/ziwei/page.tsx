@@ -8,6 +8,7 @@ import { DatePicker } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 import { getPalaceInterpretation, getPalaceAllStarInterpretations } from "@/lib/ziwei-interpretations";
+import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
 
 // ====================================================================
 // 品牌色 & 常量
@@ -90,12 +91,12 @@ const BRIGHTNESS_COLORS: Record<string, string> = {
   "陷": "#dc2626",
 };
 
-// 四化小徽章样式（彩色背景白色文字，忌为绝对定位红色印章）
+// 四化小徽章样式（彩色背景白色文字，全行内显示）
 const SIHUA_BADGE_STYLE: Record<string, CSSProperties> = {
   "化禄": { background: "#009029", color: "white", border: "none", padding: "1px 3px", fontSize: "9px", fontWeight: "bold", borderRadius: "1px", lineHeight: "1.1", display: "inline-block" },
   "化权": { background: "#9900a9", color: "white", border: "none", padding: "1px 3px", fontSize: "9px", fontWeight: "bold", borderRadius: "1px", lineHeight: "1.1", display: "inline-block" },
   "化科": { background: "#0462d7", color: "white", border: "none", padding: "1px 3px", fontSize: "9px", fontWeight: "bold", borderRadius: "1px", lineHeight: "1.1", display: "inline-block" },
-  "化忌": { position: "absolute", top: "2px", right: "2px", padding: "2px 4px", fontSize: "11px", fontWeight: "bold", background: "#f20010", color: "white", zIndex: 5, borderRadius: "2px", border: "none", lineHeight: "1.1" },
+  "化忌": { background: "#f20010", color: "white", border: "none", padding: "1px 3px", fontSize: "9px", fontWeight: "bold", borderRadius: "1px", lineHeight: "1.1", display: "inline-block" },
 };
 
 // 四化徽章-行内样式（忌在列表中也使用行内样式，不用绝对定位）
@@ -460,6 +461,7 @@ export default function ZiweiPage() {
       const res = calculateZiwei({ year:y, month:m, day:d, hour:h, gender:g });
       setResult(res);
       setShowForm(false);
+      savePaipanState("ziwei",{input:{year:y,month:m,day:d,hour:h,gender:g,calType},showForm:false,_ts:Date.now()});
       // 保存客户记录
       if(selectedClient){
         try{saveRecord({clientId:selectedClient.id,type:"ziwei",data:{...res,inputParams:{year:y,month:m,day:d,hour:h,gender:g}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
@@ -505,6 +507,23 @@ export default function ZiweiPage() {
       return () => clearTimeout(t);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // localStorage 持久化：恢复排盘状态
+  useEffect(() => {
+    const saved = loadPaipanState("ziwei");
+    if (saved && saved.input) {
+      const inp = saved.input as any;
+      if (inp.year) setYear(inp.year);
+      if (inp.month) setMonth(inp.month);
+      if (inp.day) setDay(inp.day);
+      if (inp.hour) setHour(inp.hour);
+      if (inp.gender) setGender(inp.gender);
+      if (inp.calType) setCalType(inp.calType);
+      if (saved.showForm === false) {
+        handleSubmit({ year: inp.year, month: inp.month, day: inp.day, hour: inp.hour, gender: inp.gender });
+      }
+    }
   }, []);
 
   // ---- 派生数据 ----
@@ -718,7 +737,7 @@ export default function ZiweiPage() {
       {/* ================================================================ */}
       {!showForm && !result && (
         <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
-          <button onClick={() => setShowForm(true)} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">开始排盘</button>
+          <button onClick={() => { clearPaipanState("ziwei"); setShowForm(true); }} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">开始排盘</button>
         </div>
       )}
       {result && (
@@ -749,17 +768,17 @@ export default function ZiweiPage() {
                   viewBox="0 0 100 100"
                   preserveAspectRatio="none"
                 >
-                  {/* 点击宫位时显示三方四正连线（仅三合模式显示，对标jishiyu：灰色虚线，沿宫位锚点）*/}
-                  {focusedPalace !== null && viewMode === "sanhe" && (() => {
-                    const ben = ANCHOR_POINTS[focusedPalace];
-                    const duiIdx = (focusedPalace + 6) % 12;
-                    const sf1Idx = (focusedPalace + 4) % 12;
-                    const sf2Idx = (focusedPalace + 8) % 12;
+                  {/* 三方四正虚线三角辅助标识（三合模式默认显示命宫三方四正，点击宫位切换） */}
+                  {viewMode === "sanhe" && (() => {
+                    const target = focusedPalace !== null ? focusedPalace : ZHI_NAMES.indexOf(result.earthlyBranchOfSoulPalace || "寅");
+                    const ben = ANCHOR_POINTS[target];
+                    const duiIdx = (target + 6) % 12;
+                    const sf1Idx = (target + 4) % 12;
+                    const sf2Idx = (target + 8) % 12;
                     const dui = ANCHOR_POINTS[duiIdx];
                     const sf1 = ANCHOR_POINTS[sf1Idx];
                     const sf2 = ANCHOR_POINTS[sf2Idx];
                     if (!ben || !dui || !sf1 || !sf2) return null;
-                    // jishiyu path: M对宫 L本宫 L三方1 L三方2 L本宫 Z
                     const d = `M${dui[0]},${dui[1]} L${ben[0]},${ben[1]} L${sf1[0]},${sf1[1]} L${sf2[0]},${sf2[1]} L${ben[0]},${ben[1]} Z`;
                     return (
                       <path
@@ -947,14 +966,6 @@ export default function ZiweiPage() {
                       boshiStars = [];
                     }
 
-                    // 检查是否有化忌（用于右上角印章）
-                    const hasHuaJi = majorStars.some(s => getSihuaType(result.sihua, s) === "化忌")
-                      || auspiciousStars.some(s => getSihuaType(result.sihua, s) === "化忌")
-                      || shaStars.some(s => getSihuaType(result.sihua, s) === "化忌")
-                      || otherMinorStars.some(s => getSihuaType(result.sihua, s) === "化忌")
-                      || changshengStars.some(s => getSihuaType(result.sihua, s) === "化忌")
-                      || boshiStars.some(s => getSihuaType(result.sihua, s) === "化忌");
-
                     // 宫位背景色（仅三合模式显示三方四正高亮）
                     const palaceBg = viewMode === "sanhe" ? getPalaceBg(palaceZhiIdx) : "#fff";
 
@@ -973,11 +984,6 @@ export default function ZiweiPage() {
                           cursor: "pointer",
                         }}
                       >
-                        {/* 化忌红色印章（右上角） */}
-                        {hasHuaJi && (
-                          <span style={SIHUA_BADGE_STYLE["化忌"]}>忌</span>
-                        )}
-
                         {/* 宫位名 + 干支 行 */}
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1px" }}>
                           <span style={{ fontSize: "12px", fontWeight: "bold", color: "#fa0000" }}>
@@ -987,12 +993,6 @@ export default function ZiweiPage() {
                             {palace.heavenlyStem}{palace.earthlyBranch}
                           </span>
                         </div>
-                        {/* 宫度年龄区间（对标jishiyu） */}
-                        {palace.ageRange && palace.ageRange[0] > 0 && (
-                          <div style={{ fontSize: "9px", color: "#888", textAlign: "center", marginBottom: "1px", lineHeight: 1.2 }}>
-                            {palace.ageRange[0]}-{palace.ageRange[1]}
-                          </div>
-                        )}
 
                         {/* 星曜区域 - 水平排列 */}
                         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -1004,7 +1004,7 @@ export default function ZiweiPage() {
                                 return (
                                   <span key={`maj-${j}`} style={{ display: "inline-flex", alignItems: "center", gap: "1px" }}>
                                     <span style={{ fontSize: getStarFontSize(starName), fontWeight: "bold", color: MAJOR_STAR_COLOR, lineHeight: "1.2" }}>{starName}</span>
-                                    {sihuaType && sihuaType !== "化忌" && (
+                                    {sihuaType && (
                                       <span style={SIHUA_BADGE_STYLE[sihuaType]}>{SIHUA_BADGE_CHAR[sihuaType]}</span>
                                     )}
                                   </span>
@@ -1021,7 +1021,7 @@ export default function ZiweiPage() {
                                 return (
                                   <span key={`aus-${j}`} style={{ display: "inline-flex", alignItems: "center", gap: "1px" }}>
                                     <span style={{ fontSize: "10px", color: AUSPICIOUS_COLOR, lineHeight: "1.2" }}>{sn}</span>
-                                    {sihuaType && sihuaType !== "化忌" && (
+                                    {sihuaType && (
                                       <span style={SIHUA_BADGE_STYLE[sihuaType]}>{SIHUA_BADGE_CHAR[sihuaType]}</span>
                                     )}
                                   </span>
@@ -1038,7 +1038,7 @@ export default function ZiweiPage() {
                                 return (
                                   <span key={`sha-${j}`} style={{ display: "inline-flex", alignItems: "center", gap: "1px" }}>
                                     <span style={{ fontSize: "10px", color: INAUSPICIOUS_COLOR, lineHeight: "1.2" }}>{sn}</span>
-                                    {sihuaType && sihuaType !== "化忌" && (
+                                    {sihuaType && (
                                       <span style={SIHUA_BADGE_STYLE[sihuaType]}>{SIHUA_BADGE_CHAR[sihuaType]}</span>
                                     )}
                                   </span>
@@ -1055,7 +1055,7 @@ export default function ZiweiPage() {
                                 return (
                                   <span key={`blk-${j}`} style={{ display: "inline-flex", alignItems: "center", gap: "1px" }}>
                                     <span style={{ fontSize: "9px", color: MINOR_STAR_COLOR, lineHeight: "1.2" }}>{sn}</span>
-                                    {sihuaType && sihuaType !== "化忌" && (
+                                    {sihuaType && (
                                       <span style={SIHUA_BADGE_STYLE[sihuaType]}>{SIHUA_BADGE_CHAR[sihuaType]}</span>
                                     )}
                                   </span>
@@ -1103,6 +1103,13 @@ export default function ZiweiPage() {
                             </div>
                           )}
                         </div>
+
+                        {/* 宫度年龄区间（文墨天机风格：主星→辅星→四化→宫度→大限） */}
+                        {palace.ageRange && palace.ageRange[0] > 0 && (
+                          <div style={{ fontSize: "9px", color: "#888", textAlign: "center", marginBottom: "1px", lineHeight: 1.2 }}>
+                            {palace.ageRange[0]}-{palace.ageRange[1]}
+                          </div>
+                        )}
 
                         {/* 底部信息行：小限年龄 + 大限年龄范围 + 大限干支/身宫（对标吉时雨） */}
                         <div style={{ marginTop: "auto", paddingTop: "1px" }}>

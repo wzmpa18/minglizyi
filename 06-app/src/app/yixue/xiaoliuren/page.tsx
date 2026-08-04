@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import {
@@ -21,6 +21,7 @@ import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/c
 import type { Client } from "@/lib/clientStore";
 import { getXiaoliurenInterpretation } from "@/lib/xiaoliuren-interpretations";
 import type { XiaoliurenInterpretItem } from "@/lib/xiaoliuren-interpretations";
+import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
 
 // ============================================================================
 // 解读类型标签颜色
@@ -198,6 +199,22 @@ export default function XiaoliurenPage() {
     if (prefill) { try { setShowResult(true); setShowPopup(false); clearPrefillData("xiaoliuren"); } catch(e){} }
   }, []);
 
+  // localStorage 持久化：恢复排盘状态
+  useEffect(() => {
+    const saved = loadPaipanState("xiaoliuren");
+    if (saved && saved.input) {
+      const inp = saved.input as any;
+      if (inp.year && inp.month && inp.day) {
+        setSelectedDate(new Date(inp.year, inp.month - 1, inp.day, inp.hour || 12, inp.minute || 0));
+      }
+      if (inp.desc) setDesc(inp.desc);
+      if (inp.divMethod) setDivMethod(inp.divMethod);
+      if (saved.showForm === false) {
+        handleDivination();
+      }
+    }
+  }, []);
+
   // ---- 派生数据 ----
   const bazi = useMemo(() => {
     try {
@@ -283,10 +300,17 @@ export default function XiaoliurenPage() {
     setInterpretPanel(null);
     setShowResult(true);
     setShowPopup(false);
+    const y = selectedDate.getFullYear();
+    const mo = selectedDate.getMonth() + 1;
+    const d = selectedDate.getDate();
+    const h = selectedDate.getHours();
+    const mi = selectedDate.getMinutes();
+    savePaipanState("xiaoliuren",{input:{year:y,month:mo,day:d,hour:h,minute:mi,desc,divMethod},showForm:false,_ts:Date.now()});
   }, []);
 
   // ---- 返回弹窗 ----
   const handleBackToPopup = useCallback(() => {
+    clearPaipanState("xiaoliuren");
     setShowPopup(true);
     setShowResult(false);
     setInterpretPanel(null);
