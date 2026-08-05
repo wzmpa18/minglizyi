@@ -1,0 +1,14 @@
+﻿{
+  "name": "06-app-ai-proxy",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AI API 代理服务器 - 安全转发前端 AI 请求到第三方 API，密钥仅存服务端",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0"
+  }
+}

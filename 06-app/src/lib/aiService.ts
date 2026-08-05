@@ -1,19 +1,10 @@
 ﻿/**
- * 客户端 AI 服务层 v18.2
- * 统一入口，所有AI调用通过此模块
- * 集成 localStorage 双层缓存机制
- * 降级机制：API失败时自动返回降级内容，保证基础功能100%可用
- * 
- * 注意：本项目为静态导出（output:export），AI密钥通过构建时环境变量注入。
- * 生产环境建议通过 Nginx 反向代理或独立后端服务保护密钥。
- * TokenHub API 已配置 IP 白名单（82.156.228.87），需确保白名单包含实际调用来源 IP。
+ * 客户端 AI 服务层 v18.2 安全整改
+ * 所有 AI 调用通过本地 /api/ai/chat 服务端代理转发
+ * 前端代码零密钥、零第三方 API 地址暴露
+ * 双层缓存机制（localStorage + 服务端文件）+ 降级机制保持不变
  */
-
-// ==================== 配置 ====================
-// 注：静态导出模式下密钥内置于构建产物，生产环境应通过服务端代理保护
-const AI_API_URL = "https://tokenhub.tencentmaas.com/v1/chat/completions";
-const AI_API_KEY = "sk-sl6H1ymXeRmQ6yYsTaIftAN358vCfMfK162evzXLmef7V1vG";
-const AI_MODEL = "hy3";
+"use client";
 
 // ==================== 类型定义 ====================
 export interface AIRequest {
@@ -80,10 +71,12 @@ const FALLBACK_MESSAGES: Record<string, string> = {
 };
 
 // ==================== 核心调用 ====================
+// 所有请求通过本地 /api/ai/chat 服务端代理转发，密钥仅存服务端环境变量
 export async function callAI(request: AIRequest): Promise<AIResponse> {
   const { systemPrompt, userPrompt, cacheKey, forceRefresh } = request;
   const key = cacheKey || `${systemPrompt?.slice(0, 30) || ""}_${userPrompt.slice(0, 50)}`;
 
+  // 1. 检查本地缓存
   if (!forceRefresh) {
     const localCached = getLocalCache(key);
     if (localCached) {
@@ -91,39 +84,26 @@ export async function callAI(request: AIRequest): Promise<AIResponse> {
     }
   }
 
+  // 2. 调用本地服务端代理（服务端持有密钥，安全转发到第三方 AI）
   try {
-    const res = await fetch(AI_API_URL, {
+    const res = await fetch("/api/ai/chat", {
       method: "POST",
-      headers: {
-        "Authorization": `Bearer ${AI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: AI_MODEL,
-        messages: [
-          { role: "system", content: systemPrompt || "你是一个专业的中医/易学助手，请用中文回答，内容准确、专业、简洁。" },
-          { role: "user", content: userPrompt },
-        ],
-        stream: false,
-        max_tokens: 2000,
-        temperature: 0.7,
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ systemPrompt, userPrompt, cacheKey: key, forceRefresh }),
     });
 
     if (!res.ok) {
-      const errText = await res.text().catch(() => "");
-      throw new Error(`AI API error ${res.status}: ${errText.slice(0, 200)}`);
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || `HTTP ${res.status}`);
     }
 
-    const json = await res.json();
-    const content = json.choices?.[0]?.message?.content || "";
-    const usage = {
-      promptTokens: json.usage?.prompt_tokens || 0,
-      completionTokens: json.usage?.completion_tokens || 0,
-    };
+    const data = await res.json();
+    if (data.success) {
+      setLocalCache(key, data.content);
+      return { success: true, content: data.content, cached: data.cached, usage: data.usage };
+    }
 
-    setLocalCache(key, content);
-    return { success: true, content, cached: false, usage };
+    throw new Error(data.error || "AI返回失败");
   } catch (error: any) {
     console.warn("AI call failed:", error.message);
     const category = cacheKey?.includes("zhongyi") ? "zhongyi"
