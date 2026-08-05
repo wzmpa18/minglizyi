@@ -8,6 +8,7 @@ import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/c
 import type { Client } from "@/lib/clientStore";
 import { getGuaInterpretation, getYaoInterpretation, type LiuyaoInterpretItem } from "@/lib/liuyao-interpretations";
 import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
+import { useToolBack } from "@/lib/useToolBack";
 
 // ============================================================================
 // 品牌色 & 常量
@@ -243,6 +244,7 @@ function YaoRow({
 // ============================================================================
 
 export default function LiuyaoPage() {
+  const pageKey = "yixue_liuyao"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   // 输入状态
   const [question, setQuestion] = useState("");
   const [method, setMethod] = useState<"manual" | "time" | "number">("time");

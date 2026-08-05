@@ -1,16 +1,18 @@
 "use client";
 
 import { useState, useEffect, useMemo, Suspense } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FORMULAS_DB, searchFormulas, getFormulaById, getFormulaCategories, getFormulasByCategory, loadFullFormulasDatabase, searchFullFormulas } from "@/algorithm-core/modules/tcm/formulas";
 import { HERBS_DB, searchFullHerbs, loadFullHerbsDatabase } from "@/algorithm-core/modules/tcm/herbs";
 import { addRecentItem } from "@/lib/tcmRecent";
 import type { TcmFormula } from "@/algorithm-core/types/tcm";
+import { useToolBack } from "@/lib/useToolBack";
 
 const BRAND = "#7B2FBE";
 const BRAND_LIGHT = "#9B5ECF";
 const BRAND_BG = "#F3EDF7";
-const COMPLIANCE_TEXT = "经典方剂仅供学习研究，不构成临床用药指导，用药需遵医嘱";
+const COMPLIANCE_TEXT = "本APP内容仅供传统文化研究参考，不构成医疗建议。如有身体不适，请及时就医。";
 
 // 分类标签颜色配置
 const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
@@ -106,12 +108,10 @@ function FormulaListPage() {
       {/* 顶部导航 */}
       <div style={{ position: "sticky", top: 0, zIndex: 100, background: `linear-gradient(135deg, ${BRAND} 0%, ${BRAND_LIGHT} 100%)`, padding: "12px 16px", color: "white" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
-          <button onClick={() => router.back()} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "white" }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
-          </button>
+          
           <div>
             <h1 style={{ fontSize: "18px", fontWeight: "bold", margin: 0 }}>经典方剂库</h1>
-          <p style={{ fontSize: "10px", opacity: 0.7, margin: "2px 0 0 0", color: "rgba(255,255,255,0.8)" }}>yandao.vip 分享下载有礼</p>
+          
             <p style={{ fontSize: "11px", opacity: 0.8, margin: 0 }}>共 {totalCount} 首经典方剂</p>
           </div>
         </div>
@@ -270,9 +270,7 @@ function FormulaDetailPage({ formulaId }: { formulaId: string }) {
       {/* 顶部导航 */}
       <div style={{ position: "sticky", top: 0, zIndex: 100, background: `linear-gradient(135deg, ${BRAND} 0%, ${BRAND_LIGHT} 100%)`, padding: "12px 16px", color: "white" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <button onClick={() => router.back()} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "white" }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
-          </button>
+          
           <h1 style={{ fontSize: "16px", fontWeight: "bold", margin: 0, flex: 1 }}>{formula.name}</h1>
           <span style={{ fontSize: "11px", padding: "3px 8px", borderRadius: "4px", backgroundColor: "rgba(255,255,255,0.2)" }}>{formula.category}</span>
         </div>
@@ -300,18 +298,18 @@ function FormulaDetailPage({ formulaId }: { formulaId: string }) {
             {formula.composition.map((c, i) => {
               const herb = findHerbByName(c.herb);
               return herb ? (
-                <button
+                <Link
                   key={i}
-                  onClick={() => router.push(`/zhongyi/herb?id=${herb.id}`)}
+                  href={`/zhongyi/herb?id=${herb.id}`}
                   style={{
                     padding: "4px 10px", borderRadius: "6px", fontSize: "12px",
                     backgroundColor: "#E8F5E9", color: "#2E7D32", border: "none", cursor: "pointer",
-                    display: "flex", alignItems: "center", gap: "4px",
+                    display: "flex", alignItems: "center", gap: "4px", textDecoration: "none",
                   }}
                 >
                   {c.herb}
                   {c.dosage && <span style={{ color: "#666", fontSize: "11px" }}>{c.dosage}</span>}
-                </button>
+                </Link>
               ) : (
                 <span key={i} style={{ padding: "4px 10px", borderRadius: "6px", fontSize: "12px", backgroundColor: "#f5f5f5", color: "#666" }}>
                   {c.herb}{c.dosage && ` ${c.dosage}`}
@@ -380,6 +378,7 @@ function FormulaPageInner() {
 }
 
 export default function FormulaPage() {
+  useToolBack({ pageKey: "zhongyi_formula", eventName: "zhongyi-back", globalFlag: "__zhongyiBackHandled" });
   return (
     <Suspense fallback={
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FAFAFA' }}>
@@ -390,3 +389,4 @@ export default function FormulaPage() {
     </Suspense>
   );
 }
+

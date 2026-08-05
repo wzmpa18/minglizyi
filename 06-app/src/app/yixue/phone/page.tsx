@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import ClientSelector from "@/components/ClientSelector";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
+import { useToolBack } from "@/lib/useToolBack";
 
 // ============================================================================
 // 常量
@@ -303,6 +304,7 @@ function getScoreColor(grade: string): string {
 // 主组件
 // ============================================================================
 export default function PhonePage() {
+  const pageKey = "yixue_phone"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   const [phoneNumber, setPhoneNumber] = useState("");
   const [loading, setLoading] = useState(false);
   const [hasResult, setHasResult] = useState(false);
@@ -354,7 +356,7 @@ export default function PhonePage() {
   }, [hasResult]);
 
   return (
-    <div className="mx-auto w-full bg-[#ededed]" style={{ maxWidth: "375px", minHeight: "100vh" }}>
+    <div className="mx-auto w-full bg-[#ededed]" style={{ maxWidth: "420px", minHeight: "100vh" }}>
       {/* 输入表单 */}
       {!hasResult && (
         <div className="bg-white px-3 py-3">

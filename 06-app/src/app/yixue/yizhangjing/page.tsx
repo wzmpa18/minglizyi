@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -10,6 +10,8 @@ import { DatePicker } from "@/components/shared";
 import { getYizhangPalaceInterpretation } from "@/lib/yizhang-interpretations";
 import type { YizhangInterpretItem } from "@/lib/yizhang-interpretations";
 import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
+import { useToolBack } from "@/lib/useToolBack";
+import { calcYizhangJing } from "@/algorithm-core/modules/yizhangjing";
 
 // ============================================================================
 // 一掌经十二宫
@@ -29,8 +31,6 @@ const YIZHANG_PALACES: Record<string, { name: string; type: string; desc: string
   "亥": { name: "天寿", type: "仙道", desc: "长寿健康，晚年安乐" },
 };
 
-const ZHI_LIST = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"];
-
 const LIUDAO_COLORS: Record<string, string> = {
   "佛道": "#ffa500", "鬼道": "#0074e4", "人道": "#00a879",
   "畜生道": "#a64b00", "修罗道": "#9B5ECF", "仙道": "#8b5cf6",
@@ -41,56 +41,6 @@ const INTERPRET_TYPE_COLORS: Record<string, { bg: string; fg: string; label: str
   liudao: { bg: "#fef3c7", fg: "#d97706", label: "六道" },
   sizhu: { bg: "#e0f2fe", fg: "#0284c7", label: "四柱" },
 };
-
-// ============================================================================
-// 一掌经排盘
-// ============================================================================
-function calcYizhangJing(date: Date) {
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-  const hour = date.getHours();
-
-  const base = year - 4;
-  const yearGanIdx = ((base % 10) + 10) % 10;
-  const yearZhiIdx = ((base % 12) + 12) % 12;
-  const GAN = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"];
-  const yearGan = GAN[yearGanIdx];
-  const yearZhi = ZHI_LIST[yearZhiIdx];
-
-  const monthGanStartMap: Record<string, number> = {
-    "甲": 2, "己": 2, "乙": 4, "庚": 4, "丙": 6, "辛": 6, "丁": 8, "壬": 8, "戊": 0, "癸": 0,
-  };
-  const monthGanIdx = (monthGanStartMap[yearGan] + (month - 1)) % 10;
-  const monthZhiIdx = (2 + (month - 1)) % 12;
-  const monthGan = GAN[monthGanIdx];
-  const monthZhi = ZHI_LIST[monthZhiIdx];
-
-  const dayGzIdx = ((year - 1900) * 365 + Math.floor((year - 1900) / 4) + [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334][month - 1] + day + 9) % 60;
-  const dayGan = GAN[dayGzIdx % 10];
-  const dayZhi = ZHI_LIST[dayGzIdx % 12];
-
-  const hourGanStartMap: Record<string, number> = {
-    "甲": 0, "己": 0, "乙": 2, "庚": 2, "丙": 4, "辛": 4, "丁": 6, "壬": 6, "戊": 8, "癸": 8,
-  };
-  const hourZhiIdx = Math.floor(((hour + 1) % 24) / 2);
-  const hourGanIdx = (hourGanStartMap[dayGan] + hourZhiIdx) % 10;
-  const hourGan = GAN[hourGanIdx];
-  const hourZhi = ZHI_LIST[hourZhiIdx];
-
-  return {
-    pillars: [
-      { label: "年柱", gan: yearGan, zhi: yearZhi, ganzhi: yearGan + yearZhi },
-      { label: "月柱", gan: monthGan, zhi: monthZhi, ganzhi: monthGan + monthZhi },
-      { label: "日柱", gan: dayGan, zhi: dayZhi, ganzhi: dayGan + dayZhi },
-      { label: "时柱", gan: hourGan, zhi: hourZhi, ganzhi: hourGan + hourZhi },
-    ],
-    yearZhi,
-    monthZhi,
-    dayZhi,
-    hourZhi,
-  };
-}
 
 // jishiyu 12宫 grid 布局: 巳午未申(行1) / 辰[中]酉(行2) / 卯[中]戌(行3) / 寅丑子亥(行4)
 const GRID_CELLS = [
@@ -113,6 +63,7 @@ const GRID_CELLS = [
 // ============================================================================
 
 export default function YizhangjingPage() {
+  const pageKey = "yixue_yizhangjing"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   const router = useRouter();
   const [selectedYear, setSelectedYear] = useState(2026);
   const [selectedMonth, setSelectedMonth] = useState(1);

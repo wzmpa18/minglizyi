@@ -14,6 +14,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import {
+import { useToolBack } from "@/lib/useToolBack";
   getSubjects,
   getAllQuestions,
   getLearningStats,
@@ -31,6 +32,7 @@ const BRAND_LIGHT = "#9B5ECF";
 const BRAND_BG = "#F3EDF7";
 
 export default function ExamHomePage() {
+  useToolBack({ pageKey: "zhongyi_exam", eventName: "zhongyi-back", globalFlag: "__zhongyiBackHandled" });
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<ExamQuestion[]>([]);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { callAI } from "@/lib/aiService";
 
 export default function YixueAIPage() {
   const [input, setInput] = useState("");
@@ -8,17 +9,26 @@ export default function YixueAIPage() {
     { role: "assistant", content: "你好！我是易学学习助手，可以解答命理基础问题、排盘疑问。请问有什么可以帮助你的？" },
   ]);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    setMessages((prev) => [...prev, { role: "user", content: input }]);
-    setMessages((prev) => [
-      ...prev,
-      {
-        role: "assistant",
-        content: "感谢你的提问。关于命理基础知识，建议参考《渊海子平》《三命通会》等典籍。\n\n仅供娱乐学习参考，不构成决策建议。",
-      },
-    ]);
+  const [loading, setLoading] = useState(false);
+
+  const handleSend = async () => {
+    if (!input.trim() || loading) return;
+    const userInput = input;
     setInput("");
+    setMessages((prev) => [...prev, { role: "user", content: userInput }]);
+    setLoading(true);
+    try {
+      const result = await callAI({
+        systemPrompt: "你是专业易学助手，精通八字、紫微斗数、奇门遁甲等传统术数。请用中文回答，内容准确、专业。",
+        userPrompt: userInput,
+        cacheKey: `yixue_ai_${userInput.slice(0, 50)}`,
+      });
+      setMessages((prev) => [...prev, { role: "assistant", content: result.content }]);
+    } catch {
+      setMessages((prev) => [...prev, { role: "assistant", content: "AI服务暂时不可用，请稍后重试。" }]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -41,7 +51,7 @@ export default function YixueAIPage() {
           placeholder="输入你的问题..."
           className="flex-1 rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary/50"
         />
-        <button onClick={handleSend} className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground">
+        <button onClick={handleSend} disabled={loading} className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50">
           发送
         </button>
       </div>

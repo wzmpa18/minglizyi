@@ -3,22 +3,8 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { useTheme, PRESET_THEMES, FontSize } from "@/components/ThemeProvider";
+import { ToggleSwitch } from "@/components/shared";
 
-// ==================== Toggle Switch ====================
-function ToggleSwitch({ checked, onChange, activeColor }: { checked: boolean; onChange: (v: boolean) => void; activeColor?: string }) {
-  return (
-    <button
-      onClick={() => onChange(!checked)}
-      className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors"
-      style={{ backgroundColor: checked ? activeColor || "#7B2FBE" : "#ddd" }}
-    >
-      <span
-        className="inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform"
-        style={{ transform: checked ? "translateX(22px)" : "translateX(2px)" }}
-      />
-    </button>
-  );
-}
 
 // ==================== 主页面 ====================
 export default function ThemeSettingsPage() {
@@ -93,6 +79,45 @@ export default function ThemeSettingsPage() {
                     </div>
                   </div>
                   <span className="text-xs" style={{ color: isSelected ? preset.primaryColor : "var(--theme-text-secondary)" }}>
+                    {preset.name}
+                  </span>
+                </button>
+              );
+            })}
+            {/* v18.3 新增4套主题 */}
+            {[
+              { key: "brand-purple", name: "品牌紫", color: "#7B2FBE", bg: "#f8f5fc", cardBg: "#ffffff", textPrimary: "#1a1a1a", isDark: false },
+              { key: "pure-white", name: "纯白", color: "#7B2FBE", bg: "#FFFFFF", cardBg: "#ffffff", textPrimary: "#1a1a1a", isDark: false },
+              { key: "dark-night", name: "暗夜", color: "#9C5CF0", bg: "#1a1a2e", cardBg: "#16213e", textPrimary: "#e0e0e0", isDark: true },
+              { key: "eye-green", name: "护眼绿", color: "#2E7D32", bg: "#E8F5E9", cardBg: "#FAFFF5", textPrimary: "#1B5E20", isDark: false },
+            ].map((preset) => {
+              const isSelected = theme.mode === "preset" && theme.preset === preset.key;
+              return (
+                <button
+                  key={preset.key}
+                  onClick={() => applyPreset(preset.key)}
+                  className="flex flex-col items-center gap-1.5 py-2 rounded-lg transition-all"
+                  style={{
+                    backgroundColor: isSelected ? "var(--theme-primary-bg)" : "transparent",
+                    border: isSelected ? `2px solid ${preset.color}` : "2px solid transparent",
+                  }}
+                >
+                  <div className="relative">
+                    <div
+                      className="h-10 w-10 rounded-full shadow-sm flex items-center justify-center"
+                      style={{
+                        background: `linear-gradient(135deg, ${preset.color} 0%, ${preset.color} 50%, ${preset.bg} 50%, ${preset.bg} 100%)`,
+                        border: `2px solid ${preset.cardBg}`,
+                      }}
+                    >
+                      {isSelected && (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="white" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      )}
+                    </div>
+                  </div>
+                  <span className="text-xs" style={{ color: isSelected ? preset.color : "var(--theme-text-secondary)" }}>
                     {preset.name}
                   </span>
                 </button>

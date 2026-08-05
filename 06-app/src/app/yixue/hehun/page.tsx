@@ -22,6 +22,7 @@ import {
 } from "@/lib/hehun-interpretations";
 import type { HehunInterpretItem } from "@/lib/hehun-interpretations";
 import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
+import { useToolBack } from "@/lib/useToolBack";
 
 // ============================================================================
 // 解读类型标签颜色
@@ -287,6 +288,7 @@ function AnalysisItem({
 // ============================================================================
 
 export default function HehunPage() {
+  const pageKey = "yixue_hehun"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   const router = useRouter();
 
   const [maleYear, setMaleYear] = useState(2001);

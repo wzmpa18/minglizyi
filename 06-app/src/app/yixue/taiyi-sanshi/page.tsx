@@ -9,6 +9,7 @@ import type { Client } from "@/lib/clientStore";
 import { getTaiyiPalaceInterpretation, getTaiyiShenInterpretation } from "@/lib/taiyi-interpretations";
 import type { TaiyiInterpretItem } from "@/lib/taiyi-interpretations";
 import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
+import { useToolBack } from "@/lib/useToolBack";
 
 // ============================================================================
 // 常量
@@ -287,6 +288,7 @@ function calcTaiyi(year: number, month: number, day: number, hour: number): Taiy
 // 主组件
 // ============================================================================
 export default function TaiyiSanshiPage() {
+  const pageKey = "yixue_taiyi_sanshi"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   const [taiyiYear, setTaiyiYear] = useState(2026);
   const [taiyiMonth, setTaiyiMonth] = useState(1);
   const [taiyiDay, setTaiyiDay] = useState(1);

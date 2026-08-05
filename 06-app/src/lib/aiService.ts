@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 客户端 AI 服务层 v18.2 安全整改
  * 所有 AI 调用通过本地 /api/ai/chat 服务端代理转发
  * 前端代码零密钥、零第三方 API 地址暴露
@@ -23,7 +23,7 @@ export interface AIResponse {
 }
 
 // ==================== localStorage 缓存 ====================
-const LOCAL_CACHE_PREFIX = "ai_cache_";
+const LOCAL_CACHE_PREFIX = "yandao_ai_cache_";
 
 function getLocalCacheKey(key: string): string {
   return LOCAL_CACHE_PREFIX + key.replace(/[^a-zA-Z0-9\u4e00-\u9fff_-]/g, "_").slice(0, 80);
@@ -35,7 +35,7 @@ function getLocalCache(key: string): string | null {
     const raw = localStorage.getItem(fullKey);
     if (!raw) return null;
     const entry = JSON.parse(raw);
-    if (Date.now() - entry.timestamp > 86400000) {
+    if (Date.now() - entry.timestamp > 604800000) {
       localStorage.removeItem(fullKey);
       return null;
     }
@@ -74,7 +74,7 @@ const FALLBACK_MESSAGES: Record<string, string> = {
 // 所有请求通过本地 /api/ai/chat 服务端代理转发，密钥仅存服务端环境变量
 export async function callAI(request: AIRequest): Promise<AIResponse> {
   const { systemPrompt, userPrompt, cacheKey, forceRefresh } = request;
-  const key = cacheKey || `${systemPrompt?.slice(0, 30) || ""}_${userPrompt.slice(0, 50)}`;
+  const key = cacheKey || `${systemPrompt?.slice(0, 50) || ""}_${userPrompt.slice(0, 50)}`;
 
   // 1. 检查本地缓存
   if (!forceRefresh) {
@@ -207,4 +207,47 @@ export function getCacheStats(): { localCount: number; localSize: number } {
   } catch {
     return { localCount: 0, localSize: 0 };
   }
+}
+// ==================== AI 鍔╂墜鑱婂ぉ璁板綍涓庝綅缃寔涔呭寲 ====================
+const LS_KEY_CHAT = "ai_assistant_chat";
+const LS_KEY_POS = "ai_assistant_pos";
+
+export interface ChatMessage {
+  id: string;
+  role: "user" | "ai";
+  content: string;
+  time: string;
+  screenshot?: string;
+}
+
+export function loadAssistantChat(): ChatMessage[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(LS_KEY_CHAT);
+    if (raw) return JSON.parse(raw) as ChatMessage[];
+  } catch { /* ignore */ }
+  return [];
+}
+
+export function saveAssistantChat(msgs: ChatMessage[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(LS_KEY_CHAT, JSON.stringify(msgs));
+  } catch { /* ignore */ }
+}
+
+export function loadAssistantPos(): { x: number; y: number } {
+  if (typeof window === "undefined") return { x: 0, y: 0 };
+  try {
+    const raw = localStorage.getItem(LS_KEY_POS);
+    if (raw) return JSON.parse(raw);
+  } catch { /* ignore */ }
+  return { x: 0, y: 0 };
+}
+
+export function saveAssistantPos(pos: { x: number; y: number }): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(LS_KEY_POS, JSON.stringify(pos));
+  } catch { /* ignore */ }
 }

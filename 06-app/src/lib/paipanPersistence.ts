@@ -11,7 +11,7 @@
  * @enhanced v18.2
  */
 
-const STORAGE_PREFIX = 'yixue_paipan_';
+const STORAGE_PREFIX = 'yandao_paipan_';
 
 /** 排盘输入参数 */
 export interface PaipanInput {

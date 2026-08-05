@@ -10,6 +10,7 @@ import type { Client } from "@/lib/clientStore";
 import { getQimenPalaceInterpretation } from "@/lib/qimen-interpretations";
 import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
 import type { QimenInterpretItem } from "@/lib/qimen-interpretations";
+import { useToolBack } from "@/lib/useToolBack";
 
 // ============================================================================
 // 常量
@@ -96,6 +97,7 @@ const INTERPRET_TYPE_COLORS: Record<string, { bg: string; fg: string; label: str
 // ============================================================================
 
 export default function QimenPage() {
+  const pageKey = "yixue_qimen"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   const [showForm, setShowForm] = useState(true);
   const [result, setResult] = useState<QimenResult | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);

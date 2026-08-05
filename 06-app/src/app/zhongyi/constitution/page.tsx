@@ -9,6 +9,7 @@ import {
   COMPLIANCE_TEXT,
 } from "@/algorithm-core/modules/tcm/constitution";
 import type { ConstitutionType, ConstitutionResult } from "@/algorithm-core/modules/tcm/constitution";
+import { useToolBack } from "@/lib/useToolBack";
 
 const BRAND = "#7B2FBE";
 const BRAND_LIGHT = "#9B5ECF";
@@ -28,6 +29,7 @@ const SHORT_DESC: Record<string, string> = {
 };
 
 export default function ConstitutionHome() {
+  useToolBack({ pageKey: "zhongyi_constitution", eventName: "zhongyi-back", globalFlag: "__zhongyiBackHandled" });
   const router = useRouter();
   const [types, setTypes] = useState<ConstitutionType[]>([]);
   const [history, setHistory] = useState<ConstitutionResult[]>([]);
@@ -75,28 +77,10 @@ export default function ConstitutionHome() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <button
-            onClick={() => router.back()}
-            style={{
-              background: "rgba(255,255,255,0.2)",
-              border: "none",
-              borderRadius: "50%",
-              width: "32px",
-              height: "32px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              color: "white",
-            }}
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M15 18l-6-6 6-6" />
-            </svg>
-          </button>
+          
           <div>
             <h1 style={{ fontSize: "18px", fontWeight: "bold", margin: 0 }}>中医体质测评</h1>
-          <p style={{ fontSize: "10px", opacity: 0.7, margin: "2px 0 0 0", color: "rgba(255,255,255,0.8)" }}>yandao.vip 分享下载有礼</p>
+          
             <p style={{ fontSize: "11px", opacity: 0.8, margin: 0 }}>九种体质辨识 · 国家标准</p>
           </div>
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { getThemeConfig, saveThemeConfig } from "@/lib/themeStore";
 
 // ==================== 类型定义 ====================
 export type ThemeMode = "preset" | "custom";
@@ -74,6 +75,42 @@ export const PRESET_THEMES: PresetTheme[] = [
     textPrimary: "#000000",
     isDark: false,
   },
+  {
+    key: "brand-purple",
+    name: "品牌紫",
+    primaryColor: "#7B2FBE",
+    bgColor: "#f8f5fc",
+    cardBg: "#ffffff",
+    textPrimary: "#1a1a1a",
+    isDark: false,
+  },
+  {
+    key: "pure-white",
+    name: "纯白",
+    primaryColor: "#7B2FBE",
+    bgColor: "#FFFFFF",
+    cardBg: "#ffffff",
+    textPrimary: "#1a1a1a",
+    isDark: false,
+  },
+  {
+    key: "dark-night",
+    name: "暗夜",
+    primaryColor: "#9C5CF0",
+    bgColor: "#1a1a2e",
+    cardBg: "#16213e",
+    textPrimary: "#e0e0e0",
+    isDark: true,
+  },
+  {
+    key: "eye-green",
+    name: "护眼绿",
+    primaryColor: "#2E7D32",
+    bgColor: "#E8F5E9",
+    cardBg: "#FAFFF5",
+    textPrimary: "#1B5E20",
+    isDark: false,
+  },
 ];
 
 // 默认配置
@@ -88,7 +125,7 @@ const DEFAULT_CONFIG: ThemeConfig = {
   fontSize: "normal",
 };
 
-const STORAGE_KEY = "app_theme_config";
+const STORAGE_KEY = "yandao_theme_config";
 
 // ==================== 颜色工具函数 ====================
 /** 将 hex 颜色转为 RGB 数组 */
@@ -224,7 +261,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (!mounted) return;
     applyToDOM(theme);
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(theme));
+      saveThemeConfig(theme);
     } catch {
       // ignore storage errors
     }
@@ -326,3 +363,4 @@ export function useTheme(): ThemeContextValue {
   }
   return ctx;
 }
+

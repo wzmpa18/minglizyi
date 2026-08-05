@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import ClientSelector from "@/components/ClientSelector";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
+import { useToolBack } from "@/lib/useToolBack";
 
 // ============================================================================
 // 常量
@@ -250,6 +251,7 @@ function getScoreColor(grade: string): string {
 // 主组件
 // ============================================================================
 export default function CarplatePage() {
+  const pageKey = "yixue_carplate"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   const [plateNumber, setPlateNumber] = useState("");
   const [loading, setLoading] = useState(false);
   const [hasResult, setHasResult] = useState(false);

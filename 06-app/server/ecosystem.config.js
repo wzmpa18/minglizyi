@@ -12,6 +12,8 @@ module.exports = {
     autorestart: true,
     max_memory_restart: "500M",
     log_date_format: "YYYY-MM-DD HH:mm:ss",
+    max_size: "10M",
+    retain: 5,
     error_file: "../logs/ai-proxy-error.log",
     out_file: "../logs/ai-proxy-out.log",
   }],

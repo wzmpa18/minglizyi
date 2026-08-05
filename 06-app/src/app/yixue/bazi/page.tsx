@@ -31,6 +31,7 @@ import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/c
 import type { Client } from "@/lib/clientStore";
 import { getPillarInterpretation, getShenshaInterpretation } from "@/lib/bazi-interpretations";
 import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
+import { useToolBack } from "@/lib/useToolBack";
 
 // ===== 五行颜色 - 严格对标jishiyu =====
 // 注意: 五行颜色为传统命理数据色(火=红)，品牌紫色(#7B2FBE)仅用于UI chrome
@@ -1420,14 +1421,14 @@ function TabNotes({storageKey}:{storageKey:string}){
 
   useEffect(()=>{
     if(typeof window!=="undefined"){
-      const savedNote = localStorage.getItem("bazi_note_"+storageKey);
+      const savedNote = localStorage.getItem("yandao_bazi_note"+storageKey);
       if(savedNote) setNote(savedNote);
     }
   },[storageKey]);
 
   const handleSave=()=>{
     if(typeof window!=="undefined"){
-      localStorage.setItem("bazi_note_"+storageKey, note);
+      localStorage.setItem("yandao_bazi_note"+storageKey, note);
       setSaved(true);
       setTimeout(()=>setSaved(false),1500);
     }
@@ -1455,6 +1456,7 @@ function TabNotes({storageKey}:{storageKey:string}){
 
 // ===== main =====
 export default function BaziPage(){
+  const pageKey = "yixue_bazi"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   const [name,setName]=useState(""); const [year,setYear]=useState(1990); const [month,setMonth]=useState(5);
   const [day,setDay]=useState(15); const [hour,setHour]=useState(12); const [gender,setGender]=useState<Gender>("male");
   const [calType,setCalType]=useState<"gongli"|"nongli"|"sizhu">("gongli");

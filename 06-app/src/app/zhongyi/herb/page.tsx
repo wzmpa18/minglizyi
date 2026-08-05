@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
@@ -6,10 +6,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { HERBS_DB, searchHerbs, getHerbById, getHerbCategories, getHerbsByCategory, loadFullHerbsDatabase, searchFullHerbs } from "@/algorithm-core/modules/tcm/herbs";
 import { addRecentItem } from "@/lib/tcmRecent";
 import type { TcmHerb } from "@/algorithm-core/types/tcm";
+import { useToolBack } from "@/lib/useToolBack";
 
 const BRAND = "#7B2FBE";
 const BRAND_LIGHT = "#9B5ECF";
-const COMPLIANCE_TEXT = "内容仅供中医学习参考，不构成用药建议，用药请遵医嘱";
+const COMPLIANCE_TEXT = "本APP内容仅供传统文化研究参考，不构成医疗建议。如有身体不适，请及时就医。";
 const TOXIC_WARNING = "⚠️ 有毒，需专业医师指导使用";
 
 // 分类标签颜色配置
@@ -92,12 +93,10 @@ function HerbListPage() {
       {/* 顶部导航 */}
       <div style={{ position: "sticky", top: 0, zIndex: 100, background: `linear-gradient(135deg, ${BRAND} 0%, ${BRAND_LIGHT} 100%)`, padding: "12px 16px", color: "white" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
-          <button onClick={() => router.back()} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "white" }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
-          </button>
+          
           <div>
             <h1 style={{ fontSize: "18px", fontWeight: "bold", margin: 0 }}>中药库</h1>
-          <p style={{ fontSize: "10px", opacity: 0.7, margin: "2px 0 0 0", color: "rgba(255,255,255,0.8)" }}>yandao.vip 分享下载有礼</p>
+          
             <p style={{ fontSize: "11px", opacity: 0.8, margin: 0 }}>共 {totalCount} 味常用中药材</p>
           </div>
         </div>
@@ -254,9 +253,7 @@ function HerbDetailPage({ herbId }: { herbId: string }) {
       {/* 顶部导航 */}
       <div style={{ position: "sticky", top: 0, zIndex: 100, background: `linear-gradient(135deg, ${BRAND} 0%, ${BRAND_LIGHT} 100%)`, padding: "12px 16px", color: "white" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <button onClick={() => router.back()} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "white" }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
-          </button>
+          
           <h1 style={{ fontSize: "16px", fontWeight: "bold", margin: 0, flex: 1 }}>{herb.name}</h1>
           <span style={{ fontSize: "11px", padding: "3px 8px", borderRadius: "4px", backgroundColor: "rgba(255,255,255,0.2)" }}>{herb.category}</span>
         </div>
@@ -339,6 +336,7 @@ function HerbPageInner() {
 }
 
 export default function HerbPage() {
+  useToolBack({ pageKey: "zhongyi_herb", eventName: "zhongyi-back", globalFlag: "__zhongyiBackHandled" });
   return (
     <Suspense fallback={
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FAFAFA' }}>
@@ -351,3 +349,4 @@ export default function HerbPage() {
 }
 
 const BRAND_BG = "#F3EDF7";
+

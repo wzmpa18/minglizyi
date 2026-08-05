@@ -19,6 +19,7 @@ import {
 } from "@/algorithm-core";
 import type { TcmSyndrome } from "@/algorithm-core";
 import { BrandHeader } from "@/components/shared";
+import { useToolBack } from "@/lib/useToolBack";
 
 // ============================================================
 // 类型定义
@@ -40,6 +41,7 @@ interface ClassicTextResult {
 // ============================================================
 
 export default function ShanghanPage() {
+  useToolBack({ pageKey: "zhongyi_shanghan", eventName: "zhongyi-back", globalFlag: "__zhongyiBackHandled" });
   const [symptomsInput, setSymptomsInput] = useState("");
   const [symptomTags, setSymptomTags] = useState<string[]>([]);
   const [matchedSyndromes, setMatchedSyndromes] = useState<TcmSyndrome[]>([]);
@@ -624,10 +626,10 @@ export default function ShanghanPage() {
       )}
 
       {/* ======================================== */}
-      {/* 免责声明 */}
+      {/* 本APP内容仅供传统文化研究参考，不构成医疗建议。如有身体不适，请及时就医。 */}
       {/* ======================================== */}
       <p className="text-center text-xs pb-4" style={{ color: "#6b7a6b" }}>
-        免责声明：本页面内容仅供中医学习参考，不构成医疗建议。六经辨证为中医经典辨证方法，本工具仅展示症状与证型的典籍对照关系，非诊断工具。如有健康问题请及时就医。
+        本APP内容仅供传统文化研究参考，不构成医疗建议。如有身体不适，请及时就医。
       </p>
     </div>
   );

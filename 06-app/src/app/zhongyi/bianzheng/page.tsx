@@ -5,10 +5,11 @@ import Link from "next/link";
 import { ScrollText, BookOpen, AlertTriangle, Activity } from "lucide-react";
 import { SHANGHAN_SYNDROMES } from "@/algorithm-core";
 import { BrandHeader } from "@/components/shared";
+import { useToolBack } from "@/lib/useToolBack";
 
 // ============================================================================
 // 辨证学数据
-// 典籍记载，仅供学习参考
+// 本APP内容仅供传统文化研究参考，不构成医疗建议。如有身体不适，请及时就医。
 // ============================================================================
 
 interface SyndromeCardData {
@@ -222,6 +223,7 @@ const BRAND = "#7B2FBE";
 // ============================================================================
 
 export default function BianZhengPage() {
+  useToolBack({ pageKey: "zhongyi_bianzheng", eventName: "zhongyi-back", globalFlag: "__zhongyiBackHandled" });
   const [activeTab, setActiveTab] = useState<TabKey>("bagang");
 
   const currentSyndromes: SyndromeCardData[] =
@@ -249,7 +251,7 @@ export default function BianZhengPage() {
           辨证学
         </h1>
         <p className="text-xs mt-1" style={{ color: "#8b9a8b" }}>
-          中医辨证论治体系学习，典籍记载，仅供学习参考
+          中医辨证论治体系学习，本APP内容仅供传统文化研究参考，不构成医疗建议。如有身体不适，请及时就医。
         </p>
       </div>
 
@@ -309,9 +311,7 @@ export default function BianZhengPage() {
       {/* 底部免责声明 */}
       <div className="px-4 pb-8">
         <p className="text-center text-xs" style={{ color: "#6b7a6b" }}>
-          免责声明：本页面内容仅供中医学习参考，不构成医疗建议。
-          所有证型、方剂、症状描述均来源于《伤寒论》《景岳全书》《中医诊断学》等典籍记载，非诊断工具。
-          如有健康问题请及时前往正规医疗机构就诊。
+          本APP内容仅供传统文化研究参考，不构成医疗建议。如有身体不适，请及时就医。
         </p>
       </div>
     </div>
@@ -481,7 +481,7 @@ function SyndromeCard({
 
           {/* 免责声明 */}
           <p className="text-xs italic" style={{ color: "#6b7a6b" }}>
-            典籍记载，仅供学习参考
+            本APP内容仅供传统文化研究参考，不构成医疗建议。如有身体不适，请及时就医。
           </p>
         </div>
       )}

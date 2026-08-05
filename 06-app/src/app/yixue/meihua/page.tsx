@@ -20,6 +20,7 @@ import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/c
 import type { Client } from "@/lib/clientStore";
 import { getMeihuaHexagramInterpretation, getMeihuaTiYongInterpretation, type MeihuaInterpretItem } from "@/lib/meihua-interpretations";
 import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
+import { useToolBack } from "@/lib/useToolBack";
 
 // ============================================================================
 // 五行颜色 (与 jishiyu 完全一致)
@@ -304,6 +305,7 @@ function buildMeihuaResult(year: number, month: number, day: number, hour: numbe
 // 主组件
 // ============================================================================
 export default function MeihuaPage() {
+  const pageKey = "yixue_meihua"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   // ---- 输入状态 ----
   const [showPopup, setShowPopup] = useState(true);
   const [desc, setDesc] = useState("");

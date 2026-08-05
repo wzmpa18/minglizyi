@@ -9,6 +9,7 @@ import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/c
 import type { Client } from "@/lib/clientStore";
 import { getPalaceInterpretation, getPalaceAllStarInterpretations } from "@/lib/ziwei-interpretations";
 import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
+import { useToolBack } from "@/lib/useToolBack";
 
 // ====================================================================
 // 品牌色 & 常量
@@ -419,6 +420,7 @@ function getAuxStars(palaceIdx: number, ziweiIdx: number, tianfuIdx: number, yea
 // ====================================================================
 
 export default function ZiweiPage() {
+  const pageKey = "yixue_ziwei"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   // ---- 表单状态 ----
   const [name, setName] = useState("");
   // URL参数预设（用于自动验证）：?y=1990&m=6&d=15&h=0&g=male&auto=1

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { Solar } from "lunar-javascript";
@@ -9,6 +9,7 @@ import type { Client } from "@/lib/clientStore";
 import { getZeriJianchuInterpretation, getZeriShenshaInterpretation, getZeriYijiInterpretation } from "@/lib/zeri-interpretations";
 import type { ZeriInterpretItem } from "@/lib/zeri-interpretations";
 import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
+import { useToolBack } from "@/lib/useToolBack";
 
 // ============================================================================
 // 常量
@@ -236,6 +237,7 @@ function getScoreLabel(score: number): string {
 // 主组件
 // ============================================================================
 export default function ZeriPage() {
+  const pageKey = "yixue_zeri"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   const [eventType, setEventType] = useState("嫁娶");
   const [startYear, setStartYear] = useState(2026);
   const [startMonth, setStartMonth] = useState(1);

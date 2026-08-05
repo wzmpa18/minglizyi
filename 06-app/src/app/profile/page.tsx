@@ -3,24 +3,9 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ToggleSwitch } from "@/components/shared";
 
 const BRAND = "#7B2FBE";
-
-// ==================== Toggle Switch组件 ====================
-function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button
-      onClick={() => onChange(!checked)}
-      className="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors"
-      style={{ backgroundColor: checked ? BRAND : "#ddd" }}
-    >
-      <span
-        className="inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform"
-        style={{ transform: checked ? "translateX(22px)" : "translateX(2px)" }}
-      />
-    </button>
-  );
-}
 
 // ==================== 列表项组件 ====================
 function ListItem({

@@ -22,6 +22,7 @@ import type { Client } from "@/lib/clientStore";
 import { getXiaoliurenInterpretation } from "@/lib/xiaoliuren-interpretations";
 import type { XiaoliurenInterpretItem } from "@/lib/xiaoliuren-interpretations";
 import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
+import { useToolBack } from "@/lib/useToolBack";
 
 // ============================================================================
 // 解读类型标签颜色
@@ -168,6 +169,7 @@ function PalmCell({
 // 主组件
 // ============================================================================
 export default function XiaoliurenPage() {
+  const pageKey = "yixue_xiaoliuren"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   // ---- 输入状态 ----
   const [showPopup, setShowPopup] = useState(true);
   const [desc, setDesc] = useState("");
@@ -179,7 +181,6 @@ export default function XiaoliurenPage() {
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   // ---- 结果状态 ----
-  const [showResult, setShowResult] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
   const [recordSaved, setRecordSaved] = useState(false);
 
@@ -196,7 +197,7 @@ export default function XiaoliurenPage() {
     const cid = params.get("clientId");
     if (cid) { const c = getClient(cid); if (c) setSelectedClient(c); }
     const prefill = getPrefillData("xiaoliuren");
-    if (prefill) { try { setShowResult(true); setShowPopup(false); clearPrefillData("xiaoliuren"); } catch(e){} }
+    if (prefill) { try { goToResult(); setShowPopup(false); clearPrefillData("xiaoliuren"); } catch(e){} }
   }, []);
 
   // localStorage 持久化：恢复排盘状态
@@ -298,7 +299,7 @@ export default function XiaoliurenPage() {
   const handleDivination = useCallback(() => {
     setRecordSaved(false);
     setInterpretPanel(null);
-    setShowResult(true);
+    goToResult();
     setShowPopup(false);
     const y = selectedDate.getFullYear();
     const mo = selectedDate.getMonth() + 1;

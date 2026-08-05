@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { getAllBooks, getBookById, getChapterById, searchClassics } from '@/algorithm-core/modules/tcm/classics';
 import type { ClassicBook, ClassicChapter } from '@/algorithm-core/modules/tcm/classics';
 import { addRecentItem } from '@/lib/tcmRecent';
+import { useToolBack } from "@/lib/useToolBack";
 
 // 阅读设置类型
 interface ReaderSettings {
@@ -42,6 +43,7 @@ function ClassicPageInner() {
 }
 
 export default function ClassicPage() {
+  useToolBack({ pageKey: "zhongyi_classic", eventName: "zhongyi-back", globalFlag: "__zhongyiBackHandled" });
   return (
     <Suspense fallback={
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FAFAFA' }}>
@@ -62,7 +64,7 @@ function ClassicHomePage() {
   const [searchText, setSearchText] = useState('');
 
   useEffect(() => {
-    const saved = localStorage.getItem('tcm_classic_bookmarks');
+    const saved = localStorage.getItem('yandao_zhongyi_classic_bookmarks');
     if (saved) setBookmarks(JSON.parse(saved));
   }, []);
 
@@ -76,9 +78,9 @@ function ClassicHomePage() {
     <div style={{ minHeight: '100vh', backgroundColor: '#FAFAFA', paddingBottom: '80px' }}>
       <div style={{ backgroundColor: '#7B1FA2', padding: '16px', color: '#fff' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-          <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '20px', cursor: 'pointer', padding: 0 }}>←</button>
+          
           <h1 style={{ fontSize: '18px', fontWeight: 600, margin: 0 }}>中医典籍</h1>
-          <p style={{ fontSize: '10px', opacity: 0.7, margin: '2px 0 0 0', color: 'rgba(255,255,255,0.8)' }}>yandao.vip 分享下载有礼</p>
+          
           <div style={{ flex: 1 }} />
           <button onClick={() => setShowBookmarks(!showBookmarks)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '20px', cursor: 'pointer' }}>⭐</button>
         </div>
@@ -182,7 +184,7 @@ function BookTocPage({ bookId }: { bookId: string }) {
     <div style={{ minHeight: '100vh', backgroundColor: '#FAFAFA', paddingBottom: '80px' }}>
       <div style={{ backgroundColor: '#7B1FA2', padding: '16px', color: '#fff' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-          <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '20px', cursor: 'pointer', padding: 0 }}>←</button>
+          
           <h1 style={{ fontSize: '18px', fontWeight: 600, margin: 0, flex: 1 }}>{book.name}</h1>
         </div>
         <div style={{ fontSize: '12px', opacity: 0.8, marginBottom: '12px' }}>{book.dynasty} · {book.author} · 共{book.chapters.length}篇</div>
@@ -238,9 +240,9 @@ function ReaderPage({ bookId, chapterId }: { bookId: string; chapterId: string }
 
   // 加载设置和书签
   useEffect(() => {
-    const savedSettings = localStorage.getItem('tcm_classic_settings');
+    const savedSettings = localStorage.getItem('yandao_zhongyi_classic_settings');
     if (savedSettings) setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(savedSettings) });
-    const savedBookmarks = localStorage.getItem('tcm_classic_bookmarks');
+    const savedBookmarks = localStorage.getItem('yandao_zhongyi_classic_bookmarks');
     if (savedBookmarks) {
       const bms: Bookmark[] = JSON.parse(savedBookmarks);
       setBookmarks(bms);
@@ -255,7 +257,7 @@ function ReaderPage({ bookId, chapterId }: { bookId: string; chapterId: string }
   // 保存设置
   const saveSettings = (newSettings: ReaderSettings) => {
     setSettings(newSettings);
-    localStorage.setItem('tcm_classic_settings', JSON.stringify(newSettings));
+    localStorage.setItem('yandao_zhongyi_classic_settings', JSON.stringify(newSettings));
   };
 
   // 切换书签
@@ -272,7 +274,7 @@ function ReaderPage({ bookId, chapterId }: { bookId: string; chapterId: string }
     }
     setBookmarks(newBookmarks);
     setIsBookmarked(!isBookmarked);
-    localStorage.setItem('tcm_classic_bookmarks', JSON.stringify(newBookmarks));
+    localStorage.setItem('yandao_zhongyi_classic_bookmarks', JSON.stringify(newBookmarks));
   };
 
   // 章节导航
@@ -316,17 +318,17 @@ function ReaderPage({ bookId, chapterId }: { bookId: string; chapterId: string }
 
   return (
     <div style={{
-      minHeight: '100vh', backgroundColor: theme.bg, paddingTop: '56px', paddingBottom: '120px',
+      minHeight: '100vh', backgroundColor: theme.bg, paddingBottom: '120px',
       transition: 'background-color 0.3s',
     }}>
       {/* 顶部导航 */}
       <div style={{
-        position: 'fixed', top: 0, left: 0, right: 0, height: '56px',
+        position: 'static', height: '56px',
         backgroundColor: settings.nightMode ? '#2a2a2a' : '#7B1FA2',
         display: 'flex', alignItems: 'center', padding: '0 12px', zIndex: 100,
         gap: '4px',
       }}>
-        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '22px', cursor: 'pointer', padding: '8px' }}>←</button>
+        
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ color: '#fff', fontSize: '15px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chapter.title}</div>
           <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '11px' }}>{book.name}</div>
@@ -434,7 +436,7 @@ function ReaderPage({ bookId, chapterId }: { bookId: string; chapterId: string }
 
       {/* 章节导航 */}
       <div style={{
-        position: 'fixed', bottom: '60px', left: 0, right: 0, padding: '12px 16px',
+        position: 'static', left: 0, right: 0, padding: '12px 16px',
         backgroundColor: theme.cardBg, borderTop: `1px solid ${theme.border}`,
         display: 'flex', gap: '12px',
       }}>
@@ -487,7 +489,7 @@ function ClassicSearchPage({ keyword }: { keyword: string }) {
     <div style={{ minHeight: '100vh', backgroundColor: '#FAFAFA', paddingBottom: '80px' }}>
       <div style={{ backgroundColor: '#7B1FA2', padding: '16px', color: '#fff' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-          <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '20px', cursor: 'pointer', padding: 0 }}>←</button>
+          
           <h1 style={{ fontSize: '18px', fontWeight: 600, margin: 0, flex: 1 }}>全文检索</h1>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>

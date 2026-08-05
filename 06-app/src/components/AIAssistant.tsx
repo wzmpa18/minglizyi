@@ -1,61 +1,12 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
+import { loadAssistantChat, saveAssistantChat, loadAssistantPos, saveAssistantPos, type ChatMessage } from "@/lib/aiService";
 
 const BRAND = "#7B2FBE";
 
-interface ChatMessage {
-  id: string;
-  role: "user" | "ai";
-  content: string;
-  time: string;
-  screenshot?: string; // base64 data URL
-}
 
-// localStorage keys
-const LS_KEY_CHAT = "ai_assistant_chat";
-const LS_KEY_POS = "ai_assistant_pos";
-
-function loadChat(): ChatMessage[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(LS_KEY_CHAT);
-    if (raw) return JSON.parse(raw) as ChatMessage[];
-  } catch {
-    // ignore
-  }
-  return [];
-}
-
-function saveChat(msgs: ChatMessage[]) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(LS_KEY_CHAT, JSON.stringify(msgs));
-  } catch {
-    // ignore
-  }
-}
-
-function loadPos(): { x: number; y: number } {
-  if (typeof window === "undefined") return { x: 0, y: 0 };
-  try {
-    const raw = localStorage.getItem(LS_KEY_POS);
-    if (raw) return JSON.parse(raw);
-  } catch {
-    // ignore
-  }
-  return { x: 0, y: 0 };
-}
-
-function savePos(pos: { x: number; y: number }) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(LS_KEY_POS, JSON.stringify(pos));
-  } catch {
-    // ignore
-  }
-}
 
 function genId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -98,8 +49,8 @@ export default function AIAssistant() {
   // 初始化位置和聊天记录
   useEffect(() => {
     setMounted(true);
-    const saved = loadPos();
-    const savedChat = loadChat();
+    const saved = loadAssistantPos();
+    const savedChat = loadAssistantChat();
     if (savedChat.length > 0) {
       setMessages(savedChat);
     } else {
@@ -110,7 +61,7 @@ export default function AIAssistant() {
         time: now(),
       };
       setMessages([welcome]);
-      saveChat([welcome]);
+      saveAssistantChat([welcome]);
     }
     // 初始位置：右下角
     if (saved.x && saved.y) {
@@ -175,7 +126,7 @@ export default function AIAssistant() {
       const snappedX = centerX < vw / 2 ? MARGIN : vw - BTN_SIZE - MARGIN;
       const newPos = { x: snappedX, y: pos.y };
       setPos(newPos);
-      savePos(newPos);
+      saveAssistantPos(newPos);
     },
     [isDragging, pos]
   );
@@ -235,7 +186,7 @@ export default function AIAssistant() {
 
     const nextMsgs = [...messages, userMsg];
     setMessages(nextMsgs);
-    saveChat(nextMsgs);
+    saveAssistantChat(nextMsgs);
     setInput("");
     setScreenshotPreview(null);
     setIsReplying(true);
@@ -251,7 +202,7 @@ export default function AIAssistant() {
       };
       const updated = [...nextMsgs, aiMsg];
       setMessages(updated);
-      saveChat(updated);
+      saveAssistantChat(updated);
       setIsReplying(false);
     }, 800);
   };
@@ -277,7 +228,7 @@ export default function AIAssistant() {
       time: now(),
     };
     setMessages([welcome]);
-    saveChat([welcome]);
+    saveAssistantChat([welcome]);
   };
 
   // 计算按钮位置 - SSR安全：未mounted时使用默认右下角位置
@@ -744,3 +695,4 @@ export default function AIAssistant() {
     </>
   );
 }
+

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import { ShoppingBag } from "lucide-react";
@@ -92,7 +92,7 @@ export default function ZhongyiShopPage() {
           商城功能开发中，所有商品敬请期待。
         </p>
         <p className="text-center text-xs mt-2" style={{ color: "#fbbf24" }}>
-          ⚠️ 本页面内容仅供学习参考，不构成医疗建议。涉及中药、针灸、艾灸等产品，请在专业医师指导下使用。
+          本APP内容仅供传统文化研究参考，不构成医疗建议。如有身体不适，请及时就医。
         </p>
       </div>
     </div>

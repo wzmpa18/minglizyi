@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from "next";
+﻿import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
 import AIAssistant from "@/components/AIAssistant";
@@ -26,6 +26,10 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="言道国学" />
         <meta name="format-detection" content="telephone=no" />
         <meta name="theme-color" content="#7B2FBE" />
       </head>
@@ -40,3 +44,4 @@ export default function RootLayout({
     </html>
   );
 }
+

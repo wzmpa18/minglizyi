@@ -1,25 +1,35 @@
 "use client";
 
 import { useState } from "react";
+import { callAI } from "@/lib/aiService";
 import { BrandHeader } from "@/components/shared";
 
 export default function ZhongyiAIPage() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([
-    { role: "assistant", content: "你好！我是中医学习助手，可以解答中药、方剂、典籍相关学习问题。以下为中医典籍记载内容，仅供学习参考，不构成医疗建议。" },
+    { role: "assistant", content: "你好！我是中医学习助手，可以解答中药、方剂、典籍相关学习问题。本APP内容仅供传统文化研究参考，不构成医疗建议。如有身体不适，请及时就医。" },
   ]);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    setMessages((prev) => [...prev, { role: "user", content: input }]);
-    setMessages((prev) => [
-      ...prev,
-      {
-        role: "assistant",
-        content: "根据《神农本草经》记载……\n\n以下为中医典籍记载内容，仅供学习参考，不构成医疗建议。",
-      },
-    ]);
+  const [loading, setLoading] = useState(false);
+
+  const handleSend = async () => {
+    if (!input.trim() || loading) return;
+    const userInput = input;
     setInput("");
+    setMessages((prev) => [...prev, { role: "user", content: userInput }]);
+    setLoading(true);
+    try {
+      const result = await callAI({
+        systemPrompt: "你是专业的中医助手，请用中文回答中医相关问题，内容准确、专业。",
+        userPrompt: userInput,
+        cacheKey: `zhongyi_ai_${userInput.slice(0, 50)}`,
+      });
+      setMessages((prev) => [...prev, { role: "assistant", content: result.content }]);
+    } catch {
+      setMessages((prev) => [...prev, { role: "assistant", content: "AI服务暂时不可用，请稍后重试。" }]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -43,12 +53,12 @@ export default function ZhongyiAIPage() {
           placeholder="输入你的问题..."
           className="flex-1 rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-emerald-500/50"
         />
-        <button onClick={handleSend} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white">
+        <button onClick={handleSend} disabled={loading} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white disabled:opacity-50">
           发送
         </button>
       </div>
       <p className="mt-2 text-center text-xs text-muted-foreground">
-        以下为中医典籍记载内容，仅供学习参考，不构成医疗建议
+        本APP内容仅供传统文化研究参考，不构成医疗建议。如有身体不适，请及时就医
       </p>
     </div>
   );

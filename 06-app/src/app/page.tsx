@@ -360,7 +360,12 @@ export default function HomePage(){
         </div>
       )}
 
-      {/* 底部安全区 */}
+      {/* 合规提示 */}
+<div style={{fontSize:"12px",color:"#999",textAlign:"center",padding:"12px 16px"}}>
+  {"本APP内容仅供传统文化研究参考，不构成医疗建议。如有身体不适，请及时就医。"}
+</div>
+
+{/* 底部安全区 */}
       <div style={{height:"72px",paddingBottom:"env(safe-area-inset-bottom)"}}/>
     </div>
   );

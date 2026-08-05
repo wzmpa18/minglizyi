@@ -10,7 +10,7 @@ import type { TcmHerb, TcmFormula } from "@/algorithm-core/types/tcm";
 const BRAND = "#7B2FBE";
 const BRAND_LIGHT = "#9B5ECF";
 const BRAND_BG = "#F3EDF7";
-const COMPLIANCE_TEXT = "内容仅供中医学习参考，不作为诊疗依据";
+const COMPLIANCE_TEXT = "本APP内容仅供传统文化研究参考，不构成医疗建议。如有身体不适，请及时就医。";
 
 // ==================== 每日推荐数据 ====================
 const DAILY_HERBS = [
@@ -49,7 +49,7 @@ interface RecentItem {
   time: string;
 }
 
-const RECENT_KEY = "zhongyi_recent_items";
+const RECENT_KEY = "yandao_zhongyi_recent_items";
 
 function getRecentItems(): RecentItem[] {
   if (typeof window === "undefined") return [];
