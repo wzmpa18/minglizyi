@@ -368,10 +368,15 @@ export default function XuankongFeixingPage() {
   }, []);
 
   useEffect(() => {
-    const handler = () => setHasResult(false);
-    window.addEventListener("yixue-edit", handler);
-    return () => window.removeEventListener("yixue-edit", handler);
-  }, []);
+    const editHandler = () => setHasResult(false);
+    const backHandler = () => { if (hasResult) { setHasResult(false); window.__yixueBackHandled = true; } };
+    window.addEventListener("yixue-edit", editHandler);
+    window.addEventListener("yixue-back", backHandler);
+    return () => {
+      window.removeEventListener("yixue-edit", editHandler);
+      window.removeEventListener("yixue-back", backHandler);
+    };
+  }, [hasResult]);
 
   // localStorage 持久化：恢复排盘状态
   useEffect(() => {

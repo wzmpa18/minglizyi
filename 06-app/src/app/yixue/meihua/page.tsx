@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import {
@@ -423,12 +423,24 @@ export default function MeihuaPage() {
     setResult(r);
     setActiveGua("ben");
     setShowPopup(false);
-    savePaipanState("meihua",{input:{year:y,month:mo,day:d,hour:h,desc,divMethod,manualNumbers},showForm:false,_ts:Date.now()});
+    savePaipanState("meihua",{input:{year:y,month:mo,day:d,hour:h,desc,divMethod,manualNumbers},result:result,showForm:false,_ts:Date.now()});
     // 保存客户记录
     if(selectedClient){
       try{saveRecord({clientId:selectedClient.id,type:"meihua",data:{...r,inputParams:{year:y,month:mo,day:d,hour:h,method:divMethod}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
     }
   }, [selectedDate, selectedClient, divMethod]);
+
+  // v18.2: 监听编辑/返回事件，实现逐级返回
+  useEffect(() => {
+    const editHandler = () => { setResult(null); setShowPopup(true); };
+    const backHandler = () => { if (result) { setResult(null); setShowPopup(true); window.__yixueBackHandled = true; } };
+    window.addEventListener("yixue-edit", editHandler);
+    window.addEventListener("yixue-back", backHandler);
+    return () => {
+      window.removeEventListener("yixue-edit", editHandler);
+      window.removeEventListener("yixue-back", backHandler);
+    };
+  }, [result]);
 
   // ---- 自动显示初始解读 ----
   useEffect(() => {

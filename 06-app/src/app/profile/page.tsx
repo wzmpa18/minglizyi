@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -53,8 +53,33 @@ function ListItem({
   );
 }
 
-// ==================== 二维码弹窗 ====================
-function QRModal({ onClose }: { onClose: () => void }) {
+// ==================== 二维码弹窗（真实二维码 + 下载 + 浏览器打开） ====================
+function QRModal({ onClose, userId }: { onClose: () => void; userId: string }) {
+  const shareUrl = `https://yandao.vip/friend?ref=${userId}`;
+  const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}&bgcolor=ffffff&color=7B2FBE`;
+
+  const handleDownload = () => {
+    // 创建下载链接
+    const link = document.createElement("a");
+    link.href = qrApiUrl;
+    link.download = `yandao-qrcode-${userId}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      alert("链接已复制到剪贴板！分享给好友即可添加");
+    }).catch(() => {
+      prompt("复制此链接分享给好友：", shareUrl);
+    });
+  };
+
+  const handleOpenBrowser = () => {
+    window.open(shareUrl, "_blank");
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6" onClick={onClose}>
       <div
@@ -63,27 +88,58 @@ function QRModal({ onClose }: { onClose: () => void }) {
       >
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-gray-800">我的二维码</h3>
-          <button onClick={onClose} className="text-gray-400">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
             </svg>
           </button>
         </div>
-        {/* 二维码占位 */}
-        <div className="mx-auto flex h-52 w-52 items-center justify-center rounded-xl" style={{ backgroundColor: "#f5f0fa" }}>
-          <div className="text-center">
-            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke={BRAND} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" />
-              <rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" />
-              <line x1="10" y1="3" x2="14" y2="3" /><line x1="10" y1="21" x2="14" y2="21" />
-              <line x1="3" y1="10" x2="3" y2="14" /><line x1="21" y1="10" x2="21" y2="14" />
-            </svg>
-            <p className="mt-2 text-xs text-gray-400">二维码占位</p>
-          </div>
+
+        {/* 真实二维码图片 */}
+        <div className="mx-auto flex h-52 w-52 items-center justify-center rounded-xl border-2 overflow-hidden" style={{ borderColor: BRAND }}>
+          <img
+            src={qrApiUrl}
+            alt="我的二维码"
+            className="h-full w-full object-contain"
+            onError={(e) => {
+              // 备用：显示占位
+              const target = e.target as HTMLImageElement;
+              target.style.display = "none";
+            }}
+          />
         </div>
-        <p className="mt-4 text-center text-sm" style={{ color: BRAND }}>
+
+        <p className="mt-3 text-center text-sm font-medium" style={{ color: BRAND }}>
           扫码添加好友，邀请享佣金
         </p>
+        <p className="mt-1 text-center text-xs text-gray-400">
+          我的邀请码：{userId}
+        </p>
+
+        {/* 操作按钮区 */}
+        <div className="mt-4 flex gap-2">
+          <button
+            onClick={handleDownload}
+            className="flex-1 rounded-lg py-2.5 text-xs font-semibold text-white transition-colors hover:opacity-90"
+            style={{ backgroundColor: BRAND }}
+          >
+            保存二维码
+          </button>
+          <button
+            onClick={handleCopyLink}
+            className="flex-1 rounded-lg py-2.5 text-xs font-semibold transition-colors hover:opacity-90"
+            style={{ backgroundColor: "#f5f0fa", color: BRAND, border: `1px solid ${BRAND}` }}
+          >
+            复制链接
+          </button>
+        </div>
+        <button
+          onClick={handleOpenBrowser}
+          className="mt-2 w-full rounded-lg py-2 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+          style={{ backgroundColor: "transparent" }}
+        >
+          在浏览器中打开 →
+        </button>
       </div>
     </div>
   );
@@ -398,7 +454,7 @@ export default function ProfilePage() {
       </div>
 
       {/* ===== 弹窗 ===== */}
-      {showQR && <QRModal onClose={() => setShowQR(false)} />}
+      {showQR && <QRModal onClose={() => setShowQR(false)} userId={userId} />}
       {placeholder && <PlaceholderModal title={placeholder} onClose={() => setPlaceholder(null)} />}
       {showLogoutConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6" onClick={() => setShowLogoutConfirm(false)}>

@@ -78,7 +78,7 @@ export default function WannianliPage() {
 
   // localStorage 持久化：保存万年历状态
   useEffect(() => {
-    savePaipanState("wannianli",{input:{viewYear,viewMonth,selectedYmd},showForm:false,_ts:Date.now()});
+    savePaipanState("wannianli",{input:{viewYear,viewMonth,selectedYmd},result:calendarData,showForm:false,_ts:Date.now()});
   }, [viewYear, viewMonth, selectedYmd]);
 
   const handleSaveRecord = () => {

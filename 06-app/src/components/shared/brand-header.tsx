@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -32,7 +32,10 @@ export function BrandHeader({ title = "言道排盘", showBack = false, backUrl,
           <ArrowLeft className="w-5 h-5" />
         </button>
       )}
-      <span className="text-white text-[18px] font-bold">{title}</span>
+      <div style={{ textAlign: "center" }}>
+        <span className="text-white text-[18px] font-bold">{title}</span>
+        <div style={{ fontSize: "10px", fontWeight: "normal", opacity: 0.65, lineHeight: "1.4", color: "white" }}>yandao.vip 分享下载有礼</div>
+      </div>
       {onEdit && (
         <button
           onClick={onEdit}

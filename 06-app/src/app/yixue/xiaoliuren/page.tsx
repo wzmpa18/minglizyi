@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import {
@@ -305,7 +305,7 @@ export default function XiaoliurenPage() {
     const d = selectedDate.getDate();
     const h = selectedDate.getHours();
     const mi = selectedDate.getMinutes();
-    savePaipanState("xiaoliuren",{input:{year:y,month:mo,day:d,hour:h,minute:mi,desc,divMethod},showForm:false,_ts:Date.now()});
+    savePaipanState("xiaoliuren",{input:{year:y,month:mo,day:d,hour:h,minute:mi,desc,divMethod},result:result,showForm:false,_ts:Date.now()});
   }, []);
 
   // ---- 返回弹窗 ----
@@ -315,6 +315,18 @@ export default function XiaoliurenPage() {
     setShowResult(false);
     setInterpretPanel(null);
   }, []);
+
+  // v18.2: 监听编辑/返回事件，实现逐级返回
+  useEffect(() => {
+    const editHandler = () => { setShowPopup(true); setShowResult(false); };
+    const backHandler = () => { if (showResult) { setShowPopup(true); setShowResult(false); window.__yixueBackHandled = true; } };
+    window.addEventListener("yixue-edit", editHandler);
+    window.addEventListener("yixue-back", backHandler);
+    return () => {
+      window.removeEventListener("yixue-edit", editHandler);
+      window.removeEventListener("yixue-back", backHandler);
+    };
+  }, [showResult]);
 
   // ---- 点击掌诀宫格 ----
   const handlePalmClick = useCallback((palmName: string) => {

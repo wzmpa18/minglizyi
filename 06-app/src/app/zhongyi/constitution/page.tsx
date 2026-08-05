@@ -76,7 +76,7 @@ export default function ConstitutionHome() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           <button
-            onClick={() => router.push("/zhongyi")}
+            onClick={() => router.back()}
             style={{
               background: "rgba(255,255,255,0.2)",
               border: "none",
@@ -96,6 +96,7 @@ export default function ConstitutionHome() {
           </button>
           <div>
             <h1 style={{ fontSize: "18px", fontWeight: "bold", margin: 0 }}>中医体质测评</h1>
+          <p style={{ fontSize: "10px", opacity: 0.7, margin: "2px 0 0 0", color: "rgba(255,255,255,0.8)" }}>yandao.vip 分享下载有礼</p>
             <p style={{ fontSize: "11px", opacity: 0.8, margin: 0 }}>九种体质辨识 · 国家标准</p>
           </div>
         </div>

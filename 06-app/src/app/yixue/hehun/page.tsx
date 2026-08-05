@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -392,7 +392,7 @@ export default function HehunPage() {
     setTimeout(() => {
       setHasResult(true);
       setLoading(false);
-      savePaipanState("hehun",{input:{maleYear,maleMonth,maleDay,maleHour,femaleYear,femaleMonth,femaleDay,femaleHour},showForm:false,_ts:Date.now()});
+      savePaipanState("hehun",{input:{maleYear,maleMonth,maleDay,maleHour,femaleYear,femaleMonth,femaleDay,femaleHour},result:hehunResult,showForm:false,_ts:Date.now()});
       // 滚动到结果区
       setTimeout(() => {
         const el = document.getElementById("hehun-result");
@@ -448,6 +448,18 @@ export default function HehunPage() {
     setInterpretPanel(null);
     clearPaipanState("hehun");
   }, []);
+
+  // v18.2: 监听编辑/返回事件，实现逐级返回
+  useEffect(() => {
+    const editHandler = () => setHasResult(false);
+    const backHandler = () => { if (hasResult) { setHasResult(false); window.__yixueBackHandled = true; } };
+    window.addEventListener("yixue-edit", editHandler);
+    window.addEventListener("yixue-back", backHandler);
+    return () => {
+      window.removeEventListener("yixue-edit", editHandler);
+      window.removeEventListener("yixue-back", backHandler);
+    };
+  }, [hasResult]);
 
   /** 点击合婚等级 → 显示等级解读 */
   const handleGradeClick = useCallback(() => {

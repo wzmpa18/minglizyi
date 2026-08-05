@@ -76,8 +76,9 @@ function ClassicHomePage() {
     <div style={{ minHeight: '100vh', backgroundColor: '#FAFAFA', paddingBottom: '80px' }}>
       <div style={{ backgroundColor: '#7B1FA2', padding: '16px', color: '#fff' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-          <Link href="/zhongyi" style={{ color: '#fff', textDecoration: 'none', fontSize: '20px' }}>←</Link>
+          <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '20px', cursor: 'pointer', padding: 0 }}>←</button>
           <h1 style={{ fontSize: '18px', fontWeight: 600, margin: 0 }}>中医典籍</h1>
+          <p style={{ fontSize: '10px', opacity: 0.7, margin: '2px 0 0 0', color: 'rgba(255,255,255,0.8)' }}>yandao.vip 分享下载有礼</p>
           <div style={{ flex: 1 }} />
           <button onClick={() => setShowBookmarks(!showBookmarks)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '20px', cursor: 'pointer' }}>⭐</button>
         </div>
@@ -181,7 +182,7 @@ function BookTocPage({ bookId }: { bookId: string }) {
     <div style={{ minHeight: '100vh', backgroundColor: '#FAFAFA', paddingBottom: '80px' }}>
       <div style={{ backgroundColor: '#7B1FA2', padding: '16px', color: '#fff' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-          <button onClick={() => router.push('/zhongyi/classic')} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '20px', cursor: 'pointer', padding: 0 }}>←</button>
+          <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '20px', cursor: 'pointer', padding: 0 }}>←</button>
           <h1 style={{ fontSize: '18px', fontWeight: 600, margin: 0, flex: 1 }}>{book.name}</h1>
         </div>
         <div style={{ fontSize: '12px', opacity: 0.8, marginBottom: '12px' }}>{book.dynasty} · {book.author} · 共{book.chapters.length}篇</div>
@@ -292,7 +293,7 @@ function ReaderPage({ bookId, chapterId }: { bookId: string; chapterId: string }
     return (
       <div style={{ padding: '40px 20px', textAlign: 'center' }}>
         <p>章节不存在</p>
-        <button onClick={() => router.push(`/zhongyi/classic?book=${bookId}`)} style={{ color: '#7B1FA2', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}>返回目录</button>
+        <button onClick={() => router.back()} style={{ color: '#7B1FA2', background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px' }}>返回目录</button>
       </div>
     );
   }
@@ -325,7 +326,7 @@ function ReaderPage({ bookId, chapterId }: { bookId: string; chapterId: string }
         display: 'flex', alignItems: 'center', padding: '0 12px', zIndex: 100,
         gap: '4px',
       }}>
-        <button onClick={() => router.push(`/zhongyi/classic?book=${bookId}`)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '22px', cursor: 'pointer', padding: '8px' }}>←</button>
+        <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '22px', cursor: 'pointer', padding: '8px' }}>←</button>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ color: '#fff', fontSize: '15px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chapter.title}</div>
           <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '11px' }}>{book.name}</div>
@@ -486,7 +487,7 @@ function ClassicSearchPage({ keyword }: { keyword: string }) {
     <div style={{ minHeight: '100vh', backgroundColor: '#FAFAFA', paddingBottom: '80px' }}>
       <div style={{ backgroundColor: '#7B1FA2', padding: '16px', color: '#fff' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-          <button onClick={() => router.push('/zhongyi/classic')} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '20px', cursor: 'pointer', padding: 0 }}>←</button>
+          <button onClick={() => router.back()} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '20px', cursor: 'pointer', padding: 0 }}>←</button>
           <h1 style={{ fontSize: '18px', fontWeight: 600, margin: 0, flex: 1 }}>全文检索</h1>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -551,7 +552,7 @@ function ComplianceFooter({ text, darkMode, fixed }: { text: string; darkMode?: 
 
   return (
     <div style={{
-      ...(fixed ? { position: 'fixed', bottom: 0, left: 0, right: 0 } : {}),
+      ...(fixed ? {} : {}),
       padding: '10px 16px', backgroundColor: bgColor, borderTop: `2px solid ${borderColor}`,
       textAlign: 'center', zIndex: 50,
     }}>

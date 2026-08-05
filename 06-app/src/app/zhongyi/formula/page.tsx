@@ -106,11 +106,12 @@ function FormulaListPage() {
       {/* 顶部导航 */}
       <div style={{ position: "sticky", top: 0, zIndex: 100, background: `linear-gradient(135deg, ${BRAND} 0%, ${BRAND_LIGHT} 100%)`, padding: "12px 16px", color: "white" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
-          <button onClick={() => router.push("/zhongyi")} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "white" }}>
+          <button onClick={() => router.back()} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "white" }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
           </button>
           <div>
             <h1 style={{ fontSize: "18px", fontWeight: "bold", margin: 0 }}>经典方剂库</h1>
+          <p style={{ fontSize: "10px", opacity: 0.7, margin: "2px 0 0 0", color: "rgba(255,255,255,0.8)" }}>yandao.vip 分享下载有礼</p>
             <p style={{ fontSize: "11px", opacity: 0.8, margin: 0 }}>共 {totalCount} 首经典方剂</p>
           </div>
         </div>
@@ -208,7 +209,7 @@ function FormulaListPage() {
       </div>
 
       {/* 底部合规提示 */}
-      <div style={{ position: "fixed", bottom: "56px", left: 0, right: 0, padding: "8px 12px", background: "rgba(255,248,225,0.95)", backdropFilter: "blur(8px)", borderTop: "1px solid #ffecb3", zIndex: 50 }}>
+      <div style={{ marginTop: "20px", left: 0, right: 0, padding: "8px 12px", background: "rgba(255,248,225,0.95)", borderTop: "1px solid #ffecb3",  }}>
         <p style={{ margin: 0, fontSize: "11px", color: "#f57f17", textAlign: "center" }}>⚠️ {COMPLIANCE_TEXT}</p>
       </div>
     </div>
@@ -241,7 +242,7 @@ function FormulaDetailPage({ formulaId }: { formulaId: string }) {
     return (
       <div style={{ maxWidth: "420px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f8f5fc", padding: "80px 20px", textAlign: "center" }}>
         <p style={{ color: "#999", marginBottom: "20px" }}>未找到该方剂</p>
-        <button onClick={() => router.push("/zhongyi/formula")} style={{ padding: "8px 20px", borderRadius: "20px", backgroundColor: BRAND, color: "white", border: "none", cursor: "pointer" }}>返回列表</button>
+        <button onClick={() => router.back()} style={{ padding: "8px 20px", borderRadius: "20px", backgroundColor: BRAND, color: "white", border: "none", cursor: "pointer" }}>返回列表</button>
       </div>
     );
   }
@@ -269,7 +270,7 @@ function FormulaDetailPage({ formulaId }: { formulaId: string }) {
       {/* 顶部导航 */}
       <div style={{ position: "sticky", top: 0, zIndex: 100, background: `linear-gradient(135deg, ${BRAND} 0%, ${BRAND_LIGHT} 100%)`, padding: "12px 16px", color: "white" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <button onClick={() => router.push("/zhongyi/formula")} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "white" }}>
+          <button onClick={() => router.back()} style={{ background: "rgba(255,255,255,0.2)", border: "none", borderRadius: "50%", width: "32px", height: "32px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "white" }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
           </button>
           <h1 style={{ fontSize: "16px", fontWeight: "bold", margin: 0, flex: 1 }}>{formula.name}</h1>
@@ -340,7 +341,7 @@ function FormulaDetailPage({ formulaId }: { formulaId: string }) {
       {/* 返回按钮 */}
       <div style={{ padding: "0 12px" }}>
         <button
-          onClick={() => router.push("/zhongyi/formula")}
+          onClick={() => router.back()}
           style={{ width: "100%", padding: "12px", borderRadius: "12px", border: "none", fontSize: "14px", cursor: "pointer", backgroundColor: BRAND_BG, color: BRAND, fontWeight: "500" }}
         >
           返回方剂列表
@@ -348,7 +349,7 @@ function FormulaDetailPage({ formulaId }: { formulaId: string }) {
       </div>
 
       {/* 底部合规提示 */}
-      <div style={{ position: "fixed", bottom: "56px", left: 0, right: 0, padding: "8px 12px", background: "rgba(255,248,225,0.95)", backdropFilter: "blur(8px)", borderTop: "1px solid #ffecb3", zIndex: 50 }}>
+      <div style={{ marginTop: "20px", left: 0, right: 0, padding: "8px 12px", background: "rgba(255,248,225,0.95)", borderTop: "1px solid #ffecb3",  }}>
         <p style={{ margin: 0, fontSize: "11px", color: "#f57f17", textAlign: "center" }}>⚠️ {COMPLIANCE_TEXT}</p>
       </div>
     </div>

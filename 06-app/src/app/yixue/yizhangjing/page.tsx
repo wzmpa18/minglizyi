@@ -174,8 +174,20 @@ export default function YizhangjingPage() {
   const handleDoPaipan = useCallback(() => {
     setHasResult(true);
     setShowInput(false);
-    savePaipanState("yizhangjing",{input:{selectedYear,selectedMonth,selectedDay,selectedHour},showForm:false,_ts:Date.now()});
+    savePaipanState("yizhangjing",{input:{selectedYear,selectedMonth,selectedDay,selectedHour},result:result,showForm:false,_ts:Date.now()});
   }, [selectedYear, selectedMonth, selectedDay, selectedHour]);
+
+  // v18.2: 监听编辑/返回事件，实现逐级返回
+  useEffect(() => {
+    const editHandler = () => setShowForm(true);
+    const backHandler = () => { if (!showForm) { setShowForm(true); window.__yixueBackHandled = true; } };
+    window.addEventListener("yixue-edit", editHandler);
+    window.addEventListener("yixue-back", backHandler);
+    return () => {
+      window.removeEventListener("yixue-edit", editHandler);
+      window.removeEventListener("yixue-back", backHandler);
+    };
+  }, [showForm]);
 
   const handlePrev = useCallback(() => {
     const d = new Date(selectedYear, selectedMonth - 1, selectedDay, selectedHour);

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
@@ -223,7 +223,7 @@ export default function HomePage(){
     <div className="mx-auto min-h-screen w-full" style={{maxWidth:"420px",backgroundColor:"#f5f5f5"}}>
       {/* 顶部品牌区 */}
       <div className="flex items-center justify-between px-4 py-3 bg-white">
-        <div className="flex items-center gap-2"><span className="font-bold" style={{fontSize:"24px",color:BRAND}}>言道</span></div>
+        <div className="flex items-center gap-2"><div><span className="font-bold" style={{fontSize:"24px",color:BRAND}}>言道</span><div style={{fontSize:"10px",fontWeight:"normal",opacity:0.65,lineHeight:"1.4",color:BRAND}}>yandao.vip 分享下载有礼</div></div></div>
         <div className="flex items-center gap-3">
           <button onClick={()=>window.location.reload()} className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-gray-100"><RefreshIcon/></button>
           <button className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-gray-100"><SettingsIcon/></button>

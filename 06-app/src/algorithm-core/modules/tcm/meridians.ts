@@ -338,7 +338,9 @@ export function getAcupointByName(name: string): TcmAcupoint | undefined {
  * 获取指定经络的所有穴位
  */
 export function getAcupointsByMeridian(meridianName: string): TcmAcupoint[] {
-  return ACUPOINTS_DB.filter((pt) => pt.meridian === meridianName);
+  return ACUPOINTS_DB.filter((pt) =>
+    pt.meridian === meridianName || pt.meridian.endsWith(meridianName)
+  );
 }
 
 // ============================================================================

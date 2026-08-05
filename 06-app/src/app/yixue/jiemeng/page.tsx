@@ -240,13 +240,18 @@ export default function JiemengPage() {
   }, []);
 
   useEffect(() => {
-    const handler = () => {
+    const editHandler = () => {
       setHasResult(false);
       setQuery("");
     };
-    window.addEventListener("yixue-edit", handler);
-    return () => window.removeEventListener("yixue-edit", handler);
-  }, []);
+    const backHandler = () => { if (hasResult) { setHasResult(false); window.__yixueBackHandled = true; } };
+    window.addEventListener("yixue-edit", editHandler);
+    window.addEventListener("yixue-back", backHandler);
+    return () => {
+      window.removeEventListener("yixue-edit", editHandler);
+      window.removeEventListener("yixue-back", backHandler);
+    };
+  }, [hasResult]);
 
   return (
     <div className="mx-auto w-full bg-[#ededed]" style={{ maxWidth: "375px", minHeight: "100vh" }}>

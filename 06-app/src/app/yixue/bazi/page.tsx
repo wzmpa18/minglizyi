@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import {
@@ -1466,12 +1466,22 @@ export default function BaziPage(){
   const [selectedClient,setSelectedClient]=useState<Client|null>(null);
   const [interpretPanel, setInterpretPanel] = useState<{pillarLabel:string; items:Array<{type:string;title:string;content:string;source:string}>} | null>(null);
 
-  // 监听layout的edit事件
+  // 监听layout的edit事件和back事件（v18.2：返回时从结果页切回输入页）
   useEffect(() => {
-    const handler = () => setShowForm(true);
-    window.addEventListener("yixue-edit", handler);
-    return () => window.removeEventListener("yixue-edit", handler);
-  }, []);
+    const editHandler = () => setShowForm(true);
+    const backHandler = () => {
+      if (!showForm) {
+        setShowForm(true);
+        window.__yixueBackHandled = true;
+      }
+    };
+    window.addEventListener("yixue-edit", editHandler);
+    window.addEventListener("yixue-back", backHandler);
+    return () => {
+      window.removeEventListener("yixue-edit", editHandler);
+      window.removeEventListener("yixue-back", backHandler);
+    };
+  }, [showForm]);
 
   // URL参数clientId自动选中客户 + 回填数据检查
   useEffect(() => {
@@ -1524,7 +1534,7 @@ export default function BaziPage(){
     const g=override?.gender??gender;
     try{const bz=solarToBazi({year:y,month:m,day:d,hour:h,gender:g}) as BaziResult;setResult(bz);
       const ss=calculateAllShenSha({yearGan:bz.pillars[0].gan as TianGan,yearZhi:bz.pillars[0].zhi as DiZhi,monthGan:bz.pillars[1].gan as TianGan,monthZhi:bz.pillars[1].zhi as DiZhi,dayGan:bz.dayGan as TianGan,dayZhi:bz.dayZhi as DiZhi,hourGan:bz.pillars[3].gan as TianGan,hourZhi:bz.pillars[3].zhi as DiZhi,gender:g});
-      setShensha(ss);setShowForm(false);savePaipanState("bazi",{input:{year:y,month:m,day:d,hour:h,gender:g,calType},showForm:false,_ts:Date.now()});
+      setShensha(ss);setShowForm(false);savePaipanState("bazi",{input:{year:y,month:m,day:d,hour:h,gender:g,calType},result:bz,showForm:false,_ts:Date.now()});
       // 保存客户记录
       if(selectedClient){
         try{saveRecord({clientId:selectedClient.id,type:"bazi",data:{...bz,inputParams:{year:y,month:m,day:d,hour:h,gender:g}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}

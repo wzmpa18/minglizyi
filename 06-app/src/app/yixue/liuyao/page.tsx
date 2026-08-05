@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { DatePicker } from "@/components/shared";
@@ -380,7 +380,7 @@ export default function LiuyaoPage() {
       const r = calculateLiuyao(input);
       setResult(r);
       setShowForm(false);
-      savePaipanState("liuyao",{input:{dateStr,hour,minute,method,question,manualYaos,numUpper,numLower,numDong},showForm:false,_ts:Date.now()});
+      savePaipanState("liuyao",{input:{dateStr,hour,minute,method,question,manualYaos,numUpper,numLower,numDong},result:result,showForm:false,_ts:Date.now()});
       // 保存客户记录
       if(selectedClient){
         try{saveRecord({clientId:selectedClient.id,type:"liuyao",data:{...r,inputParams:input},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
@@ -405,6 +405,18 @@ export default function LiuyaoPage() {
     setShowForm(true);
     clearPaipanState("liuyao");
   }, []);
+
+  // v18.2: 监听编辑/返回事件，实现逐级返回
+  useEffect(() => {
+    const editHandler = () => setShowForm(true);
+    const backHandler = () => { if (!showForm) { setShowForm(true); window.__yixueBackHandled = true; } };
+    window.addEventListener("yixue-edit", editHandler);
+    window.addEventListener("yixue-back", backHandler);
+    return () => {
+      window.removeEventListener("yixue-edit", editHandler);
+      window.removeEventListener("yixue-back", backHandler);
+    };
+  }, [showForm]);
 
   // 更新手动爻值
   const setYaoValue = useCallback((index: number, value: YaoType) => {

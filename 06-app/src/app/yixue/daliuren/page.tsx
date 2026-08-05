@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import {
@@ -1074,9 +1074,16 @@ export default function DaLiuRenPage() {
 
   // 监听header编辑按钮
   useEffect(() => {
-    const handler = () => setShowForm(true);
-    window.addEventListener("yixue-edit", handler);
-    return () => window.removeEventListener("yixue-edit", handler);
+    const editHandler = () => setShowForm(true);
+    const backHandler = () => {
+      if (!showForm) { setShowForm(true); window.__yixueBackHandled = true; }
+    };
+    window.addEventListener("yixue-edit", editHandler);
+    window.addEventListener("yixue-back", backHandler);
+    return () => {
+      window.removeEventListener("yixue-edit", editHandler);
+      window.removeEventListener("yixue-back", backHandler);
+    };
   }, []);
 
   // URL参数clientId自动选中客户 + 回填数据检查
@@ -1499,8 +1506,8 @@ export default function DaLiuRenPage() {
                     <span style={{
                       backgroundColor: COLOR_GRAY_LABEL,
                       color: "#fff",
-                      fontSize: "9px",
-                      padding: "1px 4px",
+                      fontSize: "11px",
+                      padding: "2px 5px",
                       borderRadius: "2px",
                       lineHeight: 1.3,
                     }}>{lbl}</span>

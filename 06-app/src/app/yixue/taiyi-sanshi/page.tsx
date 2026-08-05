@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { solarToBazi, GAN, ZHI } from "@/algorithm-core";
@@ -356,9 +356,16 @@ export default function TaiyiSanshiPage() {
 
   // 监听layout的edit按钮事件
   useEffect(() => {
-    const handler = () => setShowForm(true);
-    window.addEventListener("yixue-edit", handler);
-    return () => window.removeEventListener("yixue-edit", handler);
+    const editHandler = () => setShowForm(true);
+    const backHandler = () => {
+      if (!showForm) { setShowForm(true); window.__yixueBackHandled = true; }
+    };
+    window.addEventListener("yixue-edit", editHandler);
+    window.addEventListener("yixue-back", backHandler);
+    return () => {
+      window.removeEventListener("yixue-edit", editHandler);
+      window.removeEventListener("yixue-back", backHandler);
+    };
   }, []);
 
   const handlePalaceClick = useCallback((gong: number) => {

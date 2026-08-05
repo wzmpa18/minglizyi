@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { Solar } from "lunar-javascript";
@@ -196,9 +196,16 @@ export default function QimenPage() {
 
   // 监听编辑事件
   useEffect(() => {
-    const handler = () => setShowForm(true);
-    window.addEventListener("yixue-edit", handler);
-    return () => window.removeEventListener("yixue-edit", handler);
+    const editHandler = () => setShowForm(true);
+    const backHandler = () => {
+      if (!showForm) { setShowForm(true); window.__yixueBackHandled = true; }
+    };
+    window.addEventListener("yixue-edit", editHandler);
+    window.addEventListener("yixue-back", backHandler);
+    return () => {
+      window.removeEventListener("yixue-edit", editHandler);
+      window.removeEventListener("yixue-back", backHandler);
+    };
   }, []);
 
   // URL参数clientId自动选中客户 + 回填数据检查

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useMemo, useEffect } from "react";
 import type { CSSProperties } from "react";
@@ -93,10 +93,10 @@ const BRIGHTNESS_COLORS: Record<string, string> = {
 
 // 四化小徽章样式（彩色背景白色文字，全行内显示）
 const SIHUA_BADGE_STYLE: Record<string, CSSProperties> = {
-  "化禄": { background: "#009029", color: "white", border: "none", padding: "1px 3px", fontSize: "9px", fontWeight: "bold", borderRadius: "1px", lineHeight: "1.1", display: "inline-block" },
-  "化权": { background: "#9900a9", color: "white", border: "none", padding: "1px 3px", fontSize: "9px", fontWeight: "bold", borderRadius: "1px", lineHeight: "1.1", display: "inline-block" },
-  "化科": { background: "#0462d7", color: "white", border: "none", padding: "1px 3px", fontSize: "9px", fontWeight: "bold", borderRadius: "1px", lineHeight: "1.1", display: "inline-block" },
-  "化忌": { background: "#f20010", color: "white", border: "none", padding: "1px 3px", fontSize: "9px", fontWeight: "bold", borderRadius: "1px", lineHeight: "1.1", display: "inline-block" },
+  "化禄": { background: "#009029", color: "white", border: "none", padding: "2px 4px", fontSize: "11px", fontWeight: "bold", borderRadius: "2px", lineHeight: "1.2", display: "inline-block" },
+  "化权": { background: "#9900a9", color: "white", border: "none", padding: "2px 4px", fontSize: "11px", fontWeight: "bold", borderRadius: "2px", lineHeight: "1.2", display: "inline-block" },
+  "化科": { background: "#0462d7", color: "white", border: "none", padding: "2px 4px", fontSize: "11px", fontWeight: "bold", borderRadius: "2px", lineHeight: "1.2", display: "inline-block" },
+  "化忌": { background: "#f20010", color: "white", border: "none", padding: "2px 4px", fontSize: "11px", fontWeight: "bold", borderRadius: "2px", lineHeight: "1.2", display: "inline-block" },
 };
 
 // 四化徽章-行内样式（忌在列表中也使用行内样式，不用绝对定位）
@@ -104,7 +104,7 @@ const SIHUA_BADGE_INLINE: Record<string, CSSProperties> = {
   "化禄": SIHUA_BADGE_STYLE["化禄"],
   "化权": SIHUA_BADGE_STYLE["化权"],
   "化科": SIHUA_BADGE_STYLE["化科"],
-  "化忌": { background: "#f20010", color: "white", border: "none", padding: "1px 3px", fontSize: "9px", fontWeight: "bold", borderRadius: "1px", lineHeight: "1.1", display: "inline-block" },
+  "化忌": { background: "#f20010", color: "white", border: "none", padding: "2px 4px", fontSize: "11px", fontWeight: "bold", borderRadius: "2px", lineHeight: "1.2", display: "inline-block" },
 };
 
 const SIHUA_BADGE_CHAR: Record<string, string> = {
@@ -663,9 +663,16 @@ export default function ZiweiPage() {
 
   // 监听 layout 的编辑按钮事件
   useEffect(() => {
-    const handler = () => setShowForm(true);
-    window.addEventListener("yixue-edit", handler);
-    return () => window.removeEventListener("yixue-edit", handler);
+    const editHandler = () => setShowForm(true);
+    const backHandler = () => {
+      if (!showForm) { setShowForm(true); window.__yixueBackHandled = true; }
+    };
+    window.addEventListener("yixue-edit", editHandler);
+    window.addEventListener("yixue-back", backHandler);
+    return () => {
+      window.removeEventListener("yixue-edit", editHandler);
+      window.removeEventListener("yixue-back", backHandler);
+    };
   }, []);
 
   // 当大限变化时重置流年
