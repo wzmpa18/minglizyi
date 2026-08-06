@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -352,12 +352,12 @@ export default function ProfilePage() {
           <ListItem
             icon={<span className="text-sm text-gray-600 w-0" />}
             label="允许被搜索"
-            right={<ToggleSwitch checked={allowSearch} onChange={setAllowSearch} />}
+            right={<ToggleSwitch checked={allowSearch} onChange={() => setAllowSearch(!allowSearch)} />}
           />
           <ListItem
             icon={<span className="text-sm text-gray-600 w-0" />}
             label="允许附近展示"
-            right={<ToggleSwitch checked={allowNearby} onChange={setAllowNearby} />}
+            right={<ToggleSwitch checked={allowNearby} onChange={() => setAllowNearby(!allowNearby)} />}
           />
         </div>
 
@@ -369,7 +369,7 @@ export default function ProfilePage() {
           <ListItem
             icon={<span className="text-sm text-gray-600 w-0" />}
             label="接收推送通知"
-            right={<ToggleSwitch checked={notifyEnabled} onChange={setNotifyEnabled} />}
+            right={<ToggleSwitch checked={notifyEnabled} onChange={() => setNotifyEnabled(!notifyEnabled)} />}
           />
         </div>
 

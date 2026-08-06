@@ -66,16 +66,16 @@ const GONG_TO_GUA: Record<number, string> = {
 };
 
 // 飞星名称
-const STAR_NAMES = ["", "一白", "二黑", "三碧", "四绿", "五黄", "六白", "七赤", "八白", "九紫"];
+export const STAR_NAMES = ["", "一白", "二黑", "三碧", "四绿", "五黄", "六白", "七赤", "八白", "九紫"];
 const STAR_FULL = ["", "一白贪狼", "二黑巨门", "三碧禄存", "四绿文曲", "五黄廉贞", "六白武曲", "七赤破军", "八白左辅", "九紫右弼"];
 
 // 九星五行
-const STAR_WUXING: Record<number, string> = {
+export const STAR_WUXING: Record<number, string> = {
   1: "水", 2: "土", 3: "木", 4: "木", 5: "土", 6: "金", 7: "金", 8: "土", 9: "火",
 };
 
 // 三元九运
-function getYunFromYear(year: number): number {
+export function getYunFromYear(year: number): number {
   if (year >= 1864 && year <= 1883) return 1;
   if (year >= 1884 && year <= 1903) return 2;
   if (year >= 1904 && year <= 1923) return 3;
@@ -89,7 +89,7 @@ function getYunFromYear(year: number): number {
   return 9;
 }
 
-function getYunName(yun: number): string {
+export function getYunName(yun: number): string {
   const names = ["", "上元一运", "上元二运", "上元三运", "中元四运", "中元五运", "中元六运", "下元七运", "下元八运", "下元九运"];
   return names[yun] || "下元九运";
 }

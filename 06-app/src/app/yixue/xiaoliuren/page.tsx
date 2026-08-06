@@ -169,7 +169,7 @@ function PalmCell({
 // 主组件
 // ============================================================================
 export default function XiaoliurenPage() {
-  const pageKey = "yixue_xiaoliuren"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
+  const pageKey = "yixue_xiaoliuren"; const { showResult, setShowResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   // ---- 输入状态 ----
   const [showPopup, setShowPopup] = useState(true);
   const [desc, setDesc] = useState("");

@@ -26,7 +26,7 @@ import { getSanChuanInterpretation, getSiKeInterpretation, getKeTiInterpretation
 import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
 import { useToolBack } from "@/lib/useToolBack";
 
-import { calculateDaLiuRen, type DaLiuRenResult, type SanChuanItem, type SiKeItem, type PanMap, type DaLiuRenInputParams } from "@/algorithm-core/modules/daliuren";
+import { calculateDaLiuRen, tianYiGuiRen, type DaLiuRenResult, type SanChuanItem, type SiKeItem, type PanMap, type DaLiuRenInputParams } from "@/algorithm-core/modules/daliuren";
 // ============================================================================
 // 颜色常量（严格对标截图）
 // ============================================================================

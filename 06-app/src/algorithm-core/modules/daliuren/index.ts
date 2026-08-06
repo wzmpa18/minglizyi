@@ -196,7 +196,7 @@ function getYueJiang(year: number, month: number, day: number): { zhi: string; n
   return { zhi: "丑", name: "大吉", zhongQi: "冬至" };
 }
 
-function tianYiGuiRen(dayGan: TianGan, isDaytime: boolean): string {
+export function tianYiGuiRen(dayGan: TianGan, isDaytime: boolean): string {
   const map: Record<string, [string, string]> = {
     "甲": ["丑", "未"], "戊": ["丑", "未"], "庚": ["丑", "未"],
     "乙": ["子", "申"], "己": ["子", "申"],

@@ -200,7 +200,7 @@ export default function ThemeSettingsPage() {
               </div>
               <span className="text-sm" style={{ color: "var(--theme-text-primary)" }}>深色模式</span>
             </div>
-            <ToggleSwitch checked={theme.isDark} onChange={setDarkMode} activeColor={primary} />
+            <ToggleSwitch checked={theme.isDark} onChange={() => setDarkMode(!theme.isDark)} />
           </div>
         </div>
 
