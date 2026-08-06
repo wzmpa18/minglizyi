@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { getThemeConfig, saveThemeConfig } from "@/lib/themeStore";
@@ -261,7 +261,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (!mounted) return;
     applyToDOM(theme);
     try {
-      saveThemeConfig(theme);
+      saveThemeConfig(theme as unknown as Record<string, unknown>);
     } catch {
       // ignore storage errors
     }
