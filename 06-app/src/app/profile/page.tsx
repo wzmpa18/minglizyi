@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ToggleSwitch } from "@/components/shared";
+import { clearLoginState, getLoginState } from "@/lib/auth";
 
 const BRAND = "#7B2FBE";
 
@@ -38,13 +39,12 @@ function ListItem({
   );
 }
 
-// ==================== 二维码弹窗（真实二维码 + 下载 + 浏览器打开） ====================
+// ==================== 二维码弹窗 ====================
 function QRModal({ onClose, userId }: { onClose: () => void; userId: string }) {
   const shareUrl = `https://yandao.vip/friend?ref=${userId}`;
   const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}&bgcolor=ffffff&color=7B2FBE`;
 
   const handleDownload = () => {
-    // 创建下载链接
     const link = document.createElement("a");
     link.href = qrApiUrl;
     link.download = `yandao-qrcode-${userId}.png`;
@@ -80,14 +80,12 @@ function QRModal({ onClose, userId }: { onClose: () => void; userId: string }) {
           </button>
         </div>
 
-        {/* 真实二维码图片 */}
         <div className="mx-auto flex h-52 w-52 items-center justify-center rounded-xl border-2 overflow-hidden" style={{ borderColor: BRAND }}>
           <img
             src={qrApiUrl}
             alt="我的二维码"
             className="h-full w-full object-contain"
             onError={(e) => {
-              // 备用：显示占位
               const target = e.target as HTMLImageElement;
               target.style.display = "none";
             }}
@@ -101,7 +99,6 @@ function QRModal({ onClose, userId }: { onClose: () => void; userId: string }) {
           我的邀请码：{userId}
         </p>
 
-        {/* 操作按钮区 */}
         <div className="mt-4 flex gap-2">
           <button
             onClick={handleDownload}
@@ -154,26 +151,85 @@ function PlaceholderModal({ title, onClose }: { title: string; onClose: () => vo
   );
 }
 
+// ==================== 退出登录确认弹窗 ====================
+function LogoutConfirmModal({ onClose }: { onClose: () => void }) {
+  const router = useRouter();
+
+  const handleConfirmLogout = () => {
+    // v18.3 整改：真实清除登录状态
+    clearLoginState();
+    // 同时清除 profile 页面自身的 localStorage 数据
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("profile_userid");
+      localStorage.removeItem("privacy_search");
+      localStorage.removeItem("privacy_nearby");
+      localStorage.removeItem("notify_enabled");
+    }
+    onClose();
+    // 返回首页，以游客模式浏览
+    router.push("/");
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6" onClick={onClose}>
+      <div className="w-full max-w-xs rounded-2xl bg-white shadow-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div className="p-6 text-center">
+          <h3 className="text-base font-bold text-gray-800">确认退出登录？</h3>
+          <p className="mt-2 text-sm text-gray-500">退出后需要重新登录</p>
+        </div>
+        <div className="flex border-t border-gray-100">
+          <button
+            onClick={onClose}
+            className="flex-1 py-3 text-sm text-gray-600 active:bg-gray-50"
+            style={{ borderRight: "1px solid #f5f5f5" }}
+          >
+            取消
+          </button>
+          <button
+            onClick={handleConfirmLogout}
+            className="flex-1 py-3 text-sm font-medium text-red-500 active:bg-gray-50"
+          >
+            退出
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ==================== 主页面组件 ====================
 export default function ProfilePage() {
   const router = useRouter();
-  // 开关状态
   const [allowSearch, setAllowSearch] = useState(true);
   const [allowNearby, setAllowNearby] = useState(true);
   const [notifyEnabled, setNotifyEnabled] = useState(true);
 
-  // 弹窗状态
   const [showQR, setShowQR] = useState(false);
   const [placeholder, setPlaceholder] = useState<string | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
-  // 生成随机用户ID
+  // v18.3 整改：使用统一规范的 userId 生成逻辑
   const [userId] = useState(() => {
-    const stored = typeof window !== "undefined" ? localStorage.getItem("profile_userid") : null;
+    if (typeof window === "undefined") return "YD000000";
+    const stored = localStorage.getItem("yandao_user_id");
     if (stored) return stored;
+    // 兼容旧版 profile_userid
+    const oldStored = localStorage.getItem("profile_userid");
+    if (oldStored) {
+      localStorage.setItem("yandao_user_id", oldStored);
+      return oldStored;
+    }
     const id = "YD" + Math.floor(100000 + Math.random() * 900000);
-    if (typeof window !== "undefined") localStorage.setItem("profile_userid", id);
+    localStorage.setItem("yandao_user_id", id);
+    // 兼容旧版
+    localStorage.setItem("profile_userid", id);
     return id;
+  });
+
+  // v18.3 整改：登录状态初始化
+  const [loginState] = useState(() => {
+    if (typeof window === "undefined") return { isLoggedIn: false };
+    return getLoginState();
   });
 
   // 持久化开关状态
@@ -194,17 +250,10 @@ export default function ProfilePage() {
     if (nf !== null) setNotifyEnabled(nf === "true");
   }, []);
 
-  const handleLogout = () => {
-    setShowLogoutConfirm(false);
-    // 模拟退出登录
-    alert("已退出登录（模拟）");
-  };
-
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#f5f5f5", maxWidth: "420px", margin: "0 auto", paddingBottom: "72px" }}>
       {/* ===== 1. 用户信息区 ===== */}
       <div className="flex flex-col items-center px-4 pt-8 pb-6" style={{ backgroundColor: BRAND }}>
-        {/* 大圆形头像 */}
         <div
           className="flex h-20 w-20 items-center justify-center rounded-full"
           style={{ backgroundColor: "rgba(255,255,255,0.2)" }}
@@ -214,22 +263,24 @@ export default function ProfilePage() {
             <circle cx="12" cy="7" r="4" />
           </svg>
         </div>
-        {/* 昵称 */}
-        <h2 className="mt-3 text-lg font-bold text-white">言道用户</h2>
-        {/* 用户ID */}
+        <h2 className="mt-3 text-lg font-bold text-white">
+          {loginState.isLoggedIn && loginState.profile
+            ? loginState.profile.nickname
+            : "言道用户"}
+        </h2>
         <p className="mt-1 text-xs text-white/70">ID: {userId}</p>
-        {/* 普通会员标签 */}
         <div
           className="mt-2 rounded-full px-3 py-0.5 text-xs font-medium text-white"
           style={{ backgroundColor: "rgba(255,255,255,0.25)", border: "1px solid rgba(255,255,255,0.4)" }}
         >
-          普通会员
+          {loginState.isLoggedIn && loginState.profile
+            ? loginState.profile.memberLevel === "premium" ? "高级会员" : "普通会员"
+            : "普通会员"}
         </div>
       </div>
 
-      {/* ===== 2. 核心功能区（卡片） ===== */}
+      {/* ===== 2. 核心功能区 ===== */}
       <div className="mx-3 -mt-4 rounded-xl bg-white shadow-sm overflow-hidden">
-        {/* 我的二维码 */}
         <button
           onClick={() => setShowQR(true)}
           className="flex w-full items-center gap-3 px-4 py-4 text-left active:bg-gray-50"
@@ -248,7 +299,6 @@ export default function ProfilePage() {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2"><polyline points="9 18 15 12 9 6" /></svg>
         </button>
 
-        {/* 我的客户 */}
         <button
           onClick={() => router.push("/clients")}
           className="flex w-full items-center gap-3 px-4 py-4 text-left active:bg-gray-50"
@@ -269,7 +319,6 @@ export default function ProfilePage() {
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2"><polyline points="9 18 15 12 9 6" /></svg>
         </button>
 
-        {/* 我的小店 */}
         <button
           onClick={() => setPlaceholder("我的小店")}
           className="flex w-full items-center gap-3 px-4 py-4 text-left active:bg-gray-50"
@@ -344,7 +393,6 @@ export default function ProfilePage() {
           <p className="text-xs font-medium text-gray-400">设置</p>
         </div>
 
-        {/* 隐私设置 */}
         <div style={{ borderBottom: "1px solid #f5f5f5" }}>
           <div className="px-4 pt-3">
             <p className="text-sm text-gray-500">隐私设置</p>
@@ -361,7 +409,6 @@ export default function ProfilePage() {
           />
         </div>
 
-        {/* 通知设置 */}
         <div style={{ borderBottom: "1px solid #f5f5f5" }}>
           <div className="px-4 pt-3">
             <p className="text-sm text-gray-500">通知设置</p>
@@ -424,7 +471,7 @@ export default function ProfilePage() {
         />
       </div>
 
-      {/* 退出登录 */}
+      {/* 退出登录（v18.3 整改：真实清除登录态） */}
       <div className="mx-3 mt-3 rounded-xl bg-white shadow-sm overflow-hidden">
         <button
           onClick={() => setShowLogoutConfirm(true)}
@@ -441,31 +488,7 @@ export default function ProfilePage() {
       {/* ===== 弹窗 ===== */}
       {showQR && <QRModal onClose={() => setShowQR(false)} userId={userId} />}
       {placeholder && <PlaceholderModal title={placeholder} onClose={() => setPlaceholder(null)} />}
-      {showLogoutConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6" onClick={() => setShowLogoutConfirm(false)}>
-          <div className="w-full max-w-xs rounded-2xl bg-white shadow-xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="p-6 text-center">
-              <h3 className="text-base font-bold text-gray-800">确认退出登录？</h3>
-              <p className="mt-2 text-sm text-gray-500">退出后需要重新登录</p>
-            </div>
-            <div className="flex border-t border-gray-100">
-              <button
-                onClick={() => setShowLogoutConfirm(false)}
-                className="flex-1 py-3 text-sm text-gray-600 active:bg-gray-50"
-                style={{ borderRight: "1px solid #f5f5f5" }}
-              >
-                取消
-              </button>
-              <button
-                onClick={handleLogout}
-                className="flex-1 py-3 text-sm font-medium text-red-500 active:bg-gray-50"
-              >
-                退出
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {showLogoutConfirm && <LogoutConfirmModal onClose={() => setShowLogoutConfirm(false)} />}
     </div>
   );
 }

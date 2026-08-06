@@ -1,7 +1,12 @@
 /**
- * 服务端用户身份管理
- * P1.5整改：服务端从cookie获取userId，用于数据隔离
- * 此文件仅供Server Components和API Routes使用
+ * 服务端用户身份管理（v18.3 登录态持久化整改）
+ * 
+ * 服务端从 cookie 获取 userId，用于数据隔离
+ * 此文件仅供 Server Components 和 API Routes 使用
+ * 
+ * 注意：服务端 cookie 存储的是匿名 userId（游客模式），
+ * 真实登录的 Token 仅在客户端 localStorage 存储，
+ * 服务端不做身份校验（核心权限校验由后端 API 完成）
  */
 
 import { cookies } from "next/headers";
@@ -12,9 +17,6 @@ function generateUserId(): string {
   return "u_" + Date.now().toString(36) + Math.random().toString(36).substr(2, 12);
 }
 
-/**
- * 服务端：从cookie获取userId，如无则生成新的
- */
 export async function getServerUserId(): Promise<string> {
   try {
     const cookieStore = await cookies();
