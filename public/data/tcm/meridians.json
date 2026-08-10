@@ -1,0 +1,3759 @@
+{
+  "_metadata": {
+    "description": "经络穴位数据库 - 结构化JSON格式",
+    "source_project": "tcm-cli",
+    "license": "MIT License",
+    "original_license": "Copyright (c) 2026 TCM-CLI Contributors - MIT License",
+    "extraction_date": "2026-07-26",
+    "total_meridians": 14,
+    "total_acupoints": 361,
+    "data_source": "tcm-cli内置数据 + 针灸甲乙经等经典文献",
+    "note": "穴位定位数据为经典文献记载，仅供学习参考"
+  },
+  "_field_schema": {
+    "meridians": {
+      "name": "经络名称 (中文)",
+      "pinyin": "拼音",
+      "english": "英文名称",
+      "element": "五行属性 (木/火/土/金/水)",
+      "yin_yang": "阴阳属性 (Yin/Yang)",
+      "paired": "表里经络"
+    },
+    "acupoints": {
+      "name": "穴位名称 (中文)",
+      "pinyin": "拼音",
+      "code": "穴位编码 (国标)",
+      "meridian": "所属经络",
+      "location": "定位描述",
+      "location_detail": "定位详细说明",
+      "function": "功效",
+      "literature": "文献记载出处"
+    }
+  },
+  "meridians": [
+    {
+      "name": "手太阴肺经",
+      "pinyin": "shou tai yin fei jing",
+      "english": "Lung Meridian",
+      "element": "金",
+      "yin_yang": "阴",
+      "paired": ""
+    },
+    {
+      "name": "手阳明大肠经",
+      "pinyin": "shou yang ming da chang jing",
+      "english": "Large Intestine Meridian",
+      "element": "金",
+      "yin_yang": "阳",
+      "paired": ""
+    },
+    {
+      "name": "足阳明胃经",
+      "pinyin": "zu yang ming wei jing",
+      "english": "Stomach Meridian",
+      "element": "土",
+      "yin_yang": "阳",
+      "paired": ""
+    },
+    {
+      "name": "足太阴脾经",
+      "pinyin": "zu tai yin pi jing",
+      "english": "Spleen Meridian",
+      "element": "土",
+      "yin_yang": "阴",
+      "paired": ""
+    },
+    {
+      "name": "手少阴心经",
+      "pinyin": "shou shao yin xin jing",
+      "english": "Heart Meridian",
+      "element": "火",
+      "yin_yang": "阴",
+      "paired": ""
+    },
+    {
+      "name": "手太阳小肠经",
+      "pinyin": "shou tai yang xiao chang jing",
+      "english": "Small Intestine Meridian",
+      "element": "火",
+      "yin_yang": "阳",
+      "paired": ""
+    },
+    {
+      "name": "足太阳膀胱经",
+      "pinyin": "zu tai yang pang guang jing",
+      "english": "Bladder Meridian",
+      "element": "水",
+      "yin_yang": "阳",
+      "paired": ""
+    },
+    {
+      "name": "足少阴肾经",
+      "pinyin": "zu shao yin shen jing",
+      "english": "Kidney Meridian",
+      "element": "水",
+      "yin_yang": "阴",
+      "paired": ""
+    },
+    {
+      "name": "手厥阴心包经",
+      "pinyin": "shou jue yin xin bao jing",
+      "english": "Pericardium Meridian",
+      "element": "火",
+      "yin_yang": "阴",
+      "paired": ""
+    },
+    {
+      "name": "手少阳三焦经",
+      "pinyin": "shou shao yang san jiao jing",
+      "english": "Triple Energizer Meridian",
+      "element": "火",
+      "yin_yang": "阳",
+      "paired": ""
+    },
+    {
+      "name": "足少阳胆经",
+      "pinyin": "zu shao yang dan jing",
+      "english": "Gallbladder Meridian",
+      "element": "木",
+      "yin_yang": "阳",
+      "paired": ""
+    },
+    {
+      "name": "足厥阴肝经",
+      "pinyin": "zu jue yin gan jing",
+      "english": "Liver Meridian",
+      "element": "木",
+      "yin_yang": "阴",
+      "paired": ""
+    },
+    {
+      "name": "督脉",
+      "pinyin": "du mai",
+      "english": "Governor Vessel",
+      "element": "奇经八脉",
+      "yin_yang": "阳",
+      "paired": ""
+    },
+    {
+      "name": "任脉",
+      "pinyin": "ren mai",
+      "english": "Conception Vessel",
+      "element": "奇经八脉",
+      "yin_yang": "阴",
+      "paired": ""
+    }
+  ],
+  "acupoints": [
+    {
+      "name": "中府",
+      "pinyin": "zhong fu",
+      "code": "LU1",
+      "meridian": "手太阴肺经",
+      "location": "中府穴",
+      "location_detail": "中府穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "云门",
+      "pinyin": "yun men",
+      "code": "LU2",
+      "meridian": "手太阴肺经",
+      "location": "云门穴",
+      "location_detail": "云门穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "天府",
+      "pinyin": "tian fu",
+      "code": "LU3",
+      "meridian": "手太阴肺经",
+      "location": "天府穴",
+      "location_detail": "天府穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "侠白",
+      "pinyin": "xia bai",
+      "code": "LU4",
+      "meridian": "手太阴肺经",
+      "location": "侠白穴",
+      "location_detail": "侠白穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "尺泽",
+      "pinyin": "chi ze",
+      "code": "LU5",
+      "meridian": "手太阴肺经",
+      "location": "尺泽穴",
+      "location_detail": "尺泽穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "孔最",
+      "pinyin": "kong zui",
+      "code": "LU6",
+      "meridian": "手太阴肺经",
+      "location": "孔最穴",
+      "location_detail": "孔最穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "列缺",
+      "pinyin": "Liè Quē",
+      "code": "LU7",
+      "meridian": "手太阴肺经",
+      "location": "前臂桡侧，桡骨茎突上方，腕横纹上1.5寸",
+      "location_detail": "两手虎口交叉，食指指尖所至凹陷处",
+      "function": "宣肺解表，通经活络",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "经渠",
+      "pinyin": "jing qu",
+      "code": "LU8",
+      "meridian": "手太阴肺经",
+      "location": "经渠穴",
+      "location_detail": "经渠穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "太渊",
+      "pinyin": "tai yuan",
+      "code": "LU9",
+      "meridian": "手太阴肺经",
+      "location": "太渊穴",
+      "location_detail": "太渊穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "鱼际",
+      "pinyin": "yu ji",
+      "code": "LU10",
+      "meridian": "手太阴肺经",
+      "location": "鱼际穴",
+      "location_detail": "鱼际穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "少商",
+      "pinyin": "shao shang",
+      "code": "LU11",
+      "meridian": "手太阴肺经",
+      "location": "少商穴",
+      "location_detail": "少商穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "商阳",
+      "pinyin": "shang yang",
+      "code": "LI1",
+      "meridian": "手阳明大肠经",
+      "location": "商阳穴",
+      "location_detail": "商阳穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "二间",
+      "pinyin": "er jian",
+      "code": "LI2",
+      "meridian": "手阳明大肠经",
+      "location": "二间穴",
+      "location_detail": "二间穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "三间",
+      "pinyin": "san jian",
+      "code": "LI3",
+      "meridian": "手阳明大肠经",
+      "location": "三间穴",
+      "location_detail": "三间穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "合谷",
+      "pinyin": "Hé Gǔ",
+      "code": "LI4",
+      "meridian": "手阳明大肠经",
+      "location": "手背，第1、2掌骨间，第2掌骨桡侧中点",
+      "location_detail": "以一手拇指指骨关节横纹放在另一手拇食指间指蹼缘上，拇指尖下即是",
+      "function": "疏风解表，通络镇痛",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "阳溪",
+      "pinyin": "yang xi",
+      "code": "LI5",
+      "meridian": "手阳明大肠经",
+      "location": "阳溪穴",
+      "location_detail": "阳溪穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "偏历",
+      "pinyin": "pian li",
+      "code": "LI6",
+      "meridian": "手阳明大肠经",
+      "location": "偏历穴",
+      "location_detail": "偏历穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "温溜",
+      "pinyin": "wen liu",
+      "code": "LI7",
+      "meridian": "手阳明大肠经",
+      "location": "温溜穴",
+      "location_detail": "温溜穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "下廉",
+      "pinyin": "xia lian",
+      "code": "LI8",
+      "meridian": "手阳明大肠经",
+      "location": "下廉穴",
+      "location_detail": "下廉穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "上廉",
+      "pinyin": "shang lian",
+      "code": "LI9",
+      "meridian": "手阳明大肠经",
+      "location": "上廉穴",
+      "location_detail": "上廉穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "手三里",
+      "pinyin": "shou san li",
+      "code": "LI10",
+      "meridian": "手阳明大肠经",
+      "location": "手三里穴",
+      "location_detail": "手三里穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "曲池",
+      "pinyin": "Qū Chí",
+      "code": "LI11",
+      "meridian": "手阳明大肠经",
+      "location": "肘横纹外侧端，屈肘时尺泽与肱骨外上髁连线中点",
+      "location_detail": "屈肘成直角，肘横纹外端凹陷处",
+      "function": "清热解表，疏经通络",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "肘髎",
+      "pinyin": "zhou liao",
+      "code": "LI12",
+      "meridian": "手阳明大肠经",
+      "location": "肘髎穴",
+      "location_detail": "肘髎穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "手五里",
+      "pinyin": "shou wu li",
+      "code": "LI13",
+      "meridian": "手阳明大肠经",
+      "location": "手五里穴",
+      "location_detail": "手五里穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "臂臑",
+      "pinyin": "bi nao",
+      "code": "LI14",
+      "meridian": "手阳明大肠经",
+      "location": "臂臑穴",
+      "location_detail": "臂臑穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "肩髃",
+      "pinyin": "jian yu",
+      "code": "LI15",
+      "meridian": "手阳明大肠经",
+      "location": "肩髃穴",
+      "location_detail": "肩髃穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "巨骨",
+      "pinyin": "ju gu",
+      "code": "LI16",
+      "meridian": "手阳明大肠经",
+      "location": "巨骨穴",
+      "location_detail": "巨骨穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "天鼎",
+      "pinyin": "tian ding",
+      "code": "LI17",
+      "meridian": "手阳明大肠经",
+      "location": "天鼎穴",
+      "location_detail": "天鼎穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "扶突",
+      "pinyin": "fu tu",
+      "code": "LI18",
+      "meridian": "手阳明大肠经",
+      "location": "扶突穴",
+      "location_detail": "扶突穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "口禾髎",
+      "pinyin": "kou he liao",
+      "code": "LI19",
+      "meridian": "手阳明大肠经",
+      "location": "口禾髎穴",
+      "location_detail": "口禾髎穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "迎香",
+      "pinyin": "ying xiang",
+      "code": "LI20",
+      "meridian": "手阳明大肠经",
+      "location": "迎香穴",
+      "location_detail": "迎香穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "承泣",
+      "pinyin": "cheng qi",
+      "code": "ST1",
+      "meridian": "足阳明胃经",
+      "location": "承泣穴",
+      "location_detail": "承泣穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "四白",
+      "pinyin": "si bai",
+      "code": "ST2",
+      "meridian": "足阳明胃经",
+      "location": "四白穴",
+      "location_detail": "四白穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "巨髎",
+      "pinyin": "ju liao",
+      "code": "ST3",
+      "meridian": "足阳明胃经",
+      "location": "巨髎穴",
+      "location_detail": "巨髎穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "地仓",
+      "pinyin": "di cang",
+      "code": "ST4",
+      "meridian": "足阳明胃经",
+      "location": "地仓穴",
+      "location_detail": "地仓穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "大迎",
+      "pinyin": "da ying",
+      "code": "ST5",
+      "meridian": "足阳明胃经",
+      "location": "大迎穴",
+      "location_detail": "大迎穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "颊车",
+      "pinyin": "jia che",
+      "code": "ST6",
+      "meridian": "足阳明胃经",
+      "location": "颊车穴",
+      "location_detail": "颊车穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "下关",
+      "pinyin": "xia guan",
+      "code": "ST7",
+      "meridian": "足阳明胃经",
+      "location": "下关穴",
+      "location_detail": "下关穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "头维",
+      "pinyin": "tou wei",
+      "code": "ST8",
+      "meridian": "足阳明胃经",
+      "location": "头维穴",
+      "location_detail": "头维穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "人迎",
+      "pinyin": "ren ying",
+      "code": "ST9",
+      "meridian": "足阳明胃经",
+      "location": "人迎穴",
+      "location_detail": "人迎穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "水突",
+      "pinyin": "shui tu",
+      "code": "ST10",
+      "meridian": "足阳明胃经",
+      "location": "水突穴",
+      "location_detail": "水突穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "气舍",
+      "pinyin": "qi she",
+      "code": "ST11",
+      "meridian": "足阳明胃经",
+      "location": "气舍穴",
+      "location_detail": "气舍穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "缺盆",
+      "pinyin": "que pen",
+      "code": "ST12",
+      "meridian": "足阳明胃经",
+      "location": "缺盆穴",
+      "location_detail": "缺盆穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "气户",
+      "pinyin": "qi hu",
+      "code": "ST13",
+      "meridian": "足阳明胃经",
+      "location": "气户穴",
+      "location_detail": "气户穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "库房",
+      "pinyin": "ku fang",
+      "code": "ST14",
+      "meridian": "足阳明胃经",
+      "location": "库房穴",
+      "location_detail": "库房穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "屋翳",
+      "pinyin": "wu yi",
+      "code": "ST15",
+      "meridian": "足阳明胃经",
+      "location": "屋翳穴",
+      "location_detail": "屋翳穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "膺窗",
+      "pinyin": "ying chuang",
+      "code": "ST16",
+      "meridian": "足阳明胃经",
+      "location": "膺窗穴",
+      "location_detail": "膺窗穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "乳中",
+      "pinyin": "ru zhong",
+      "code": "ST17",
+      "meridian": "足阳明胃经",
+      "location": "乳中穴",
+      "location_detail": "乳中穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "乳根",
+      "pinyin": "ru gen",
+      "code": "ST18",
+      "meridian": "足阳明胃经",
+      "location": "乳根穴",
+      "location_detail": "乳根穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "不容",
+      "pinyin": "bu rong",
+      "code": "ST19",
+      "meridian": "足阳明胃经",
+      "location": "不容穴",
+      "location_detail": "不容穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "承满",
+      "pinyin": "cheng man",
+      "code": "ST20",
+      "meridian": "足阳明胃经",
+      "location": "承满穴",
+      "location_detail": "承满穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "梁门",
+      "pinyin": "liang men",
+      "code": "ST21",
+      "meridian": "足阳明胃经",
+      "location": "梁门穴",
+      "location_detail": "梁门穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "关门",
+      "pinyin": "guan men",
+      "code": "ST22",
+      "meridian": "足阳明胃经",
+      "location": "关门穴",
+      "location_detail": "关门穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "太乙",
+      "pinyin": "tai yi",
+      "code": "ST23",
+      "meridian": "足阳明胃经",
+      "location": "太乙穴",
+      "location_detail": "太乙穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "滑肉门",
+      "pinyin": "hua rou men",
+      "code": "ST24",
+      "meridian": "足阳明胃经",
+      "location": "滑肉门穴",
+      "location_detail": "滑肉门穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "天枢",
+      "pinyin": "Tiān Shū",
+      "code": "ST25",
+      "meridian": "足阳明胃经",
+      "location": "腹部，脐旁2寸",
+      "location_detail": "脐中旁开2寸",
+      "function": "调理肠胃，理气消滞",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "外陵",
+      "pinyin": "wai ling",
+      "code": "ST26",
+      "meridian": "足阳明胃经",
+      "location": "外陵穴",
+      "location_detail": "外陵穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "大巨",
+      "pinyin": "da ju",
+      "code": "ST27",
+      "meridian": "足阳明胃经",
+      "location": "大巨穴",
+      "location_detail": "大巨穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "水道",
+      "pinyin": "shui dao",
+      "code": "ST28",
+      "meridian": "足阳明胃经",
+      "location": "水道穴",
+      "location_detail": "水道穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "归来",
+      "pinyin": "gui lai",
+      "code": "ST29",
+      "meridian": "足阳明胃经",
+      "location": "归来穴",
+      "location_detail": "归来穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "气冲",
+      "pinyin": "qi chong",
+      "code": "ST30",
+      "meridian": "足阳明胃经",
+      "location": "气冲穴",
+      "location_detail": "气冲穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "髀关",
+      "pinyin": "bi guan",
+      "code": "ST31",
+      "meridian": "足阳明胃经",
+      "location": "髀关穴",
+      "location_detail": "髀关穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "伏兔",
+      "pinyin": "fu tu",
+      "code": "ST32",
+      "meridian": "足阳明胃经",
+      "location": "伏兔穴",
+      "location_detail": "伏兔穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "阴市",
+      "pinyin": "yin shi",
+      "code": "ST33",
+      "meridian": "足阳明胃经",
+      "location": "阴市穴",
+      "location_detail": "阴市穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "梁丘",
+      "pinyin": "liang qiu",
+      "code": "ST34",
+      "meridian": "足阳明胃经",
+      "location": "梁丘穴",
+      "location_detail": "梁丘穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "犊鼻",
+      "pinyin": "du bi",
+      "code": "ST35",
+      "meridian": "足阳明胃经",
+      "location": "犊鼻穴",
+      "location_detail": "犊鼻穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "足三里",
+      "pinyin": "Zú Sān Lǐ",
+      "code": "ST36",
+      "meridian": "足阳明胃经",
+      "location": "小腿外侧，犊鼻下3寸，胫骨前嵴外一横指",
+      "location_detail": "犊鼻与解溪连线上",
+      "function": "健脾和胃，扶正培元",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "上巨虚",
+      "pinyin": "shang ju xu",
+      "code": "ST37",
+      "meridian": "足阳明胃经",
+      "location": "上巨虚穴",
+      "location_detail": "上巨虚穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "条口",
+      "pinyin": "tiao kou",
+      "code": "ST38",
+      "meridian": "足阳明胃经",
+      "location": "条口穴",
+      "location_detail": "条口穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "下巨虚",
+      "pinyin": "xia ju xu",
+      "code": "ST39",
+      "meridian": "足阳明胃经",
+      "location": "下巨虚穴",
+      "location_detail": "下巨虚穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "丰隆",
+      "pinyin": "Fēng Lóng",
+      "code": "ST40",
+      "meridian": "足阳明胃经",
+      "location": "小腿前外侧，外踝尖上8寸，胫骨前嵴外二横指",
+      "location_detail": "条口外一横指",
+      "function": "化痰祛湿，和胃降逆",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "解溪",
+      "pinyin": "jie xi",
+      "code": "ST41",
+      "meridian": "足阳明胃经",
+      "location": "解溪穴",
+      "location_detail": "解溪穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "冲阳",
+      "pinyin": "chong yang",
+      "code": "ST42",
+      "meridian": "足阳明胃经",
+      "location": "冲阳穴",
+      "location_detail": "冲阳穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "陷谷",
+      "pinyin": "xian gu",
+      "code": "ST43",
+      "meridian": "足阳明胃经",
+      "location": "陷谷穴",
+      "location_detail": "陷谷穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "内庭",
+      "pinyin": "nei ting",
+      "code": "ST44",
+      "meridian": "足阳明胃经",
+      "location": "内庭穴",
+      "location_detail": "内庭穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "厉兑",
+      "pinyin": "li dui",
+      "code": "ST45",
+      "meridian": "足阳明胃经",
+      "location": "厉兑穴",
+      "location_detail": "厉兑穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "隐白",
+      "pinyin": "yin bai",
+      "code": "SP1",
+      "meridian": "足太阴脾经",
+      "location": "隐白穴",
+      "location_detail": "隐白穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "大都",
+      "pinyin": "da du",
+      "code": "SP2",
+      "meridian": "足太阴脾经",
+      "location": "大都穴",
+      "location_detail": "大都穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "太白",
+      "pinyin": "tai bai",
+      "code": "SP3",
+      "meridian": "足太阴脾经",
+      "location": "太白穴",
+      "location_detail": "太白穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "公孙",
+      "pinyin": "gong sun",
+      "code": "SP4",
+      "meridian": "足太阴脾经",
+      "location": "公孙穴",
+      "location_detail": "公孙穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "商丘",
+      "pinyin": "shang qiu",
+      "code": "SP5",
+      "meridian": "足太阴脾经",
+      "location": "商丘穴",
+      "location_detail": "商丘穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "三阴交",
+      "pinyin": "Sān Yīn Jiāo",
+      "code": "SP6",
+      "meridian": "足太阴脾经",
+      "location": "小腿内侧，内踝尖上3寸，胫骨内侧缘后方",
+      "location_detail": "足内踝尖直上3寸",
+      "function": "健脾利湿，调补肝肾",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "漏谷",
+      "pinyin": "lou gu",
+      "code": "SP7",
+      "meridian": "足太阴脾经",
+      "location": "漏谷穴",
+      "location_detail": "漏谷穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "地机",
+      "pinyin": "di ji",
+      "code": "SP8",
+      "meridian": "足太阴脾经",
+      "location": "地机穴",
+      "location_detail": "地机穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "阴陵泉",
+      "pinyin": "yin ling quan",
+      "code": "SP9",
+      "meridian": "足太阴脾经",
+      "location": "阴陵泉穴",
+      "location_detail": "阴陵泉穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "血海",
+      "pinyin": "xue hai",
+      "code": "SP10",
+      "meridian": "足太阴脾经",
+      "location": "血海穴",
+      "location_detail": "血海穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "箕门",
+      "pinyin": "ji men",
+      "code": "SP11",
+      "meridian": "足太阴脾经",
+      "location": "箕门穴",
+      "location_detail": "箕门穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "冲门",
+      "pinyin": "chong men",
+      "code": "SP12",
+      "meridian": "足太阴脾经",
+      "location": "冲门穴",
+      "location_detail": "冲门穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "府舍",
+      "pinyin": "fu she",
+      "code": "SP13",
+      "meridian": "足太阴脾经",
+      "location": "府舍穴",
+      "location_detail": "府舍穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "腹结",
+      "pinyin": "fu jie",
+      "code": "SP14",
+      "meridian": "足太阴脾经",
+      "location": "腹结穴",
+      "location_detail": "腹结穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "大横",
+      "pinyin": "da heng",
+      "code": "SP15",
+      "meridian": "足太阴脾经",
+      "location": "大横穴",
+      "location_detail": "大横穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "腹哀",
+      "pinyin": "fu ai",
+      "code": "SP16",
+      "meridian": "足太阴脾经",
+      "location": "腹哀穴",
+      "location_detail": "腹哀穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "食窦",
+      "pinyin": "shi dou",
+      "code": "SP17",
+      "meridian": "足太阴脾经",
+      "location": "食窦穴",
+      "location_detail": "食窦穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "天溪",
+      "pinyin": "tian xi",
+      "code": "SP18",
+      "meridian": "足太阴脾经",
+      "location": "天溪穴",
+      "location_detail": "天溪穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "胸乡",
+      "pinyin": "xiong xiang",
+      "code": "SP19",
+      "meridian": "足太阴脾经",
+      "location": "胸乡穴",
+      "location_detail": "胸乡穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "周荣",
+      "pinyin": "zhou rong",
+      "code": "SP20",
+      "meridian": "足太阴脾经",
+      "location": "周荣穴",
+      "location_detail": "周荣穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "大包",
+      "pinyin": "da bao",
+      "code": "SP21",
+      "meridian": "足太阴脾经",
+      "location": "大包穴",
+      "location_detail": "大包穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "极泉",
+      "pinyin": "ji quan",
+      "code": "HT1",
+      "meridian": "手少阴心经",
+      "location": "极泉穴",
+      "location_detail": "极泉穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "青灵",
+      "pinyin": "qing ling",
+      "code": "HT2",
+      "meridian": "手少阴心经",
+      "location": "青灵穴",
+      "location_detail": "青灵穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "少海",
+      "pinyin": "shao hai",
+      "code": "HT3",
+      "meridian": "手少阴心经",
+      "location": "少海穴",
+      "location_detail": "少海穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "灵道",
+      "pinyin": "ling dao",
+      "code": "HT4",
+      "meridian": "手少阴心经",
+      "location": "灵道穴",
+      "location_detail": "灵道穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "通里",
+      "pinyin": "tong li",
+      "code": "HT5",
+      "meridian": "手少阴心经",
+      "location": "通里穴",
+      "location_detail": "通里穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "阴郄",
+      "pinyin": "yin xi",
+      "code": "HT6",
+      "meridian": "手少阴心经",
+      "location": "阴郄穴",
+      "location_detail": "阴郄穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "神门",
+      "pinyin": "Shén Mén",
+      "code": "HT7",
+      "meridian": "手少阴心经",
+      "location": "腕部，腕横纹尺侧端，尺侧腕屈肌腱桡侧凹陷处",
+      "location_detail": "腕掌侧横纹尺侧端",
+      "function": "宁心安神，清心调气",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "少府",
+      "pinyin": "shao fu",
+      "code": "HT8",
+      "meridian": "手少阴心经",
+      "location": "少府穴",
+      "location_detail": "少府穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "少冲",
+      "pinyin": "shao chong",
+      "code": "HT9",
+      "meridian": "手少阴心经",
+      "location": "少冲穴",
+      "location_detail": "少冲穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "少泽",
+      "pinyin": "shao ze",
+      "code": "SI1",
+      "meridian": "手太阳小肠经",
+      "location": "少泽穴",
+      "location_detail": "少泽穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "前谷",
+      "pinyin": "qian gu",
+      "code": "SI2",
+      "meridian": "手太阳小肠经",
+      "location": "前谷穴",
+      "location_detail": "前谷穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "后溪",
+      "pinyin": "hou xi",
+      "code": "SI3",
+      "meridian": "手太阳小肠经",
+      "location": "后溪穴",
+      "location_detail": "后溪穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "腕骨",
+      "pinyin": "wan gu",
+      "code": "SI4",
+      "meridian": "手太阳小肠经",
+      "location": "腕骨穴",
+      "location_detail": "腕骨穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "阳谷",
+      "pinyin": "yang gu",
+      "code": "SI5",
+      "meridian": "手太阳小肠经",
+      "location": "阳谷穴",
+      "location_detail": "阳谷穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "养老",
+      "pinyin": "yang lao",
+      "code": "SI6",
+      "meridian": "手太阳小肠经",
+      "location": "养老穴",
+      "location_detail": "养老穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "支正",
+      "pinyin": "zhi zheng",
+      "code": "SI7",
+      "meridian": "手太阳小肠经",
+      "location": "支正穴",
+      "location_detail": "支正穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "小海",
+      "pinyin": "xiao hai",
+      "code": "SI8",
+      "meridian": "手太阳小肠经",
+      "location": "小海穴",
+      "location_detail": "小海穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "肩贞",
+      "pinyin": "jian zhen",
+      "code": "SI9",
+      "meridian": "手太阳小肠经",
+      "location": "肩贞穴",
+      "location_detail": "肩贞穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "臑俞",
+      "pinyin": "nao shu",
+      "code": "SI10",
+      "meridian": "手太阳小肠经",
+      "location": "臑俞穴",
+      "location_detail": "臑俞穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "天宗",
+      "pinyin": "tian zong",
+      "code": "SI11",
+      "meridian": "手太阳小肠经",
+      "location": "天宗穴",
+      "location_detail": "天宗穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "秉风",
+      "pinyin": "bing feng",
+      "code": "SI12",
+      "meridian": "手太阳小肠经",
+      "location": "秉风穴",
+      "location_detail": "秉风穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "曲垣",
+      "pinyin": "qu yuan",
+      "code": "SI13",
+      "meridian": "手太阳小肠经",
+      "location": "曲垣穴",
+      "location_detail": "曲垣穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "肩外俞",
+      "pinyin": "jian wai shu",
+      "code": "SI14",
+      "meridian": "手太阳小肠经",
+      "location": "肩外俞穴",
+      "location_detail": "肩外俞穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "肩中俞",
+      "pinyin": "jian zhong shu",
+      "code": "SI15",
+      "meridian": "手太阳小肠经",
+      "location": "肩中俞穴",
+      "location_detail": "肩中俞穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "天窗",
+      "pinyin": "tian chuang",
+      "code": "SI16",
+      "meridian": "手太阳小肠经",
+      "location": "天窗穴",
+      "location_detail": "天窗穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "天容",
+      "pinyin": "tian rong",
+      "code": "SI17",
+      "meridian": "手太阳小肠经",
+      "location": "天容穴",
+      "location_detail": "天容穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "颧髎",
+      "pinyin": "quan liao",
+      "code": "SI18",
+      "meridian": "手太阳小肠经",
+      "location": "颧髎穴",
+      "location_detail": "颧髎穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "听宫",
+      "pinyin": "ting gong",
+      "code": "SI19",
+      "meridian": "手太阳小肠经",
+      "location": "听宫穴",
+      "location_detail": "听宫穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "睛明",
+      "pinyin": "jing ming",
+      "code": "BL1",
+      "meridian": "足太阳膀胱经",
+      "location": "睛明穴",
+      "location_detail": "睛明穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "攒竹",
+      "pinyin": "zan zhu",
+      "code": "BL2",
+      "meridian": "足太阳膀胱经",
+      "location": "攒竹穴",
+      "location_detail": "攒竹穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "眉冲",
+      "pinyin": "mei chong",
+      "code": "BL3",
+      "meridian": "足太阳膀胱经",
+      "location": "眉冲穴",
+      "location_detail": "眉冲穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "曲差",
+      "pinyin": "qu cha",
+      "code": "BL4",
+      "meridian": "足太阳膀胱经",
+      "location": "曲差穴",
+      "location_detail": "曲差穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "五处",
+      "pinyin": "wu chu",
+      "code": "BL5",
+      "meridian": "足太阳膀胱经",
+      "location": "五处穴",
+      "location_detail": "五处穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "承光",
+      "pinyin": "cheng guang",
+      "code": "BL6",
+      "meridian": "足太阳膀胱经",
+      "location": "承光穴",
+      "location_detail": "承光穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "通天",
+      "pinyin": "tong tian",
+      "code": "BL7",
+      "meridian": "足太阳膀胱经",
+      "location": "通天穴",
+      "location_detail": "通天穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "络却",
+      "pinyin": "luo que",
+      "code": "BL8",
+      "meridian": "足太阳膀胱经",
+      "location": "络却穴",
+      "location_detail": "络却穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "玉枕",
+      "pinyin": "yu zhen",
+      "code": "BL9",
+      "meridian": "足太阳膀胱经",
+      "location": "玉枕穴",
+      "location_detail": "玉枕穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "天柱",
+      "pinyin": "tian zhu",
+      "code": "BL10",
+      "meridian": "足太阳膀胱经",
+      "location": "天柱穴",
+      "location_detail": "天柱穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "大杼",
+      "pinyin": "da zhu",
+      "code": "BL11",
+      "meridian": "足太阳膀胱经",
+      "location": "大杼穴",
+      "location_detail": "大杼穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "风门",
+      "pinyin": "feng men",
+      "code": "BL12",
+      "meridian": "足太阳膀胱经",
+      "location": "风门穴",
+      "location_detail": "风门穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "肺俞",
+      "pinyin": "fei shu",
+      "code": "BL13",
+      "meridian": "足太阳膀胱经",
+      "location": "肺俞穴",
+      "location_detail": "肺俞穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "厥阴俞",
+      "pinyin": "jue yin shu",
+      "code": "BL14",
+      "meridian": "足太阳膀胱经",
+      "location": "厥阴俞穴",
+      "location_detail": "厥阴俞穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "心俞",
+      "pinyin": "xin shu",
+      "code": "BL15",
+      "meridian": "足太阳膀胱经",
+      "location": "心俞穴",
+      "location_detail": "心俞穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "督俞",
+      "pinyin": "du shu",
+      "code": "BL16",
+      "meridian": "足太阳膀胱经",
+      "location": "督俞穴",
+      "location_detail": "督俞穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "膈俞",
+      "pinyin": "ge shu",
+      "code": "BL17",
+      "meridian": "足太阳膀胱经",
+      "location": "膈俞穴",
+      "location_detail": "膈俞穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "肝俞",
+      "pinyin": "gan shu",
+      "code": "BL18",
+      "meridian": "足太阳膀胱经",
+      "location": "肝俞穴",
+      "location_detail": "肝俞穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "胆俞",
+      "pinyin": "dan shu",
+      "code": "BL19",
+      "meridian": "足太阳膀胱经",
+      "location": "胆俞穴",
+      "location_detail": "胆俞穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "脾俞",
+      "pinyin": "pi shu",
+      "code": "BL20",
+      "meridian": "足太阳膀胱经",
+      "location": "脾俞穴",
+      "location_detail": "脾俞穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "胃俞",
+      "pinyin": "wei shu",
+      "code": "BL21",
+      "meridian": "足太阳膀胱经",
+      "location": "胃俞穴",
+      "location_detail": "胃俞穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "三焦俞",
+      "pinyin": "san jiao shu",
+      "code": "BL22",
+      "meridian": "足太阳膀胱经",
+      "location": "三焦俞穴",
+      "location_detail": "三焦俞穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "肾俞",
+      "pinyin": "shen shu",
+      "code": "BL23",
+      "meridian": "足太阳膀胱经",
+      "location": "肾俞穴",
+      "location_detail": "肾俞穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "气海俞",
+      "pinyin": "qi hai shu",
+      "code": "BL24",
+      "meridian": "足太阳膀胱经",
+      "location": "气海俞穴",
+      "location_detail": "气海俞穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "大肠俞",
+      "pinyin": "da chang shu",
+      "code": "BL25",
+      "meridian": "足太阳膀胱经",
+      "location": "大肠俞穴",
+      "location_detail": "大肠俞穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "关元俞",
+      "pinyin": "guan yuan shu",
+      "code": "BL26",
+      "meridian": "足太阳膀胱经",
+      "location": "关元俞穴",
+      "location_detail": "关元俞穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "小肠俞",
+      "pinyin": "xiao chang shu",
+      "code": "BL27",
+      "meridian": "足太阳膀胱经",
+      "location": "小肠俞穴",
+      "location_detail": "小肠俞穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "膀胱俞",
+      "pinyin": "pang guang shu",
+      "code": "BL28",
+      "meridian": "足太阳膀胱经",
+      "location": "膀胱俞穴",
+      "location_detail": "膀胱俞穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "中膂俞",
+      "pinyin": "zhong lv shu",
+      "code": "BL29",
+      "meridian": "足太阳膀胱经",
+      "location": "中膂俞穴",
+      "location_detail": "中膂俞穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "白环俞",
+      "pinyin": "bai huan shu",
+      "code": "BL30",
+      "meridian": "足太阳膀胱经",
+      "location": "白环俞穴",
+      "location_detail": "白环俞穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "上髎",
+      "pinyin": "shang liao",
+      "code": "BL31",
+      "meridian": "足太阳膀胱经",
+      "location": "上髎穴",
+      "location_detail": "上髎穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "次髎",
+      "pinyin": "ci liao",
+      "code": "BL32",
+      "meridian": "足太阳膀胱经",
+      "location": "次髎穴",
+      "location_detail": "次髎穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "中髎",
+      "pinyin": "zhong liao",
+      "code": "BL33",
+      "meridian": "足太阳膀胱经",
+      "location": "中髎穴",
+      "location_detail": "中髎穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "下髎",
+      "pinyin": "xia liao",
+      "code": "BL34",
+      "meridian": "足太阳膀胱经",
+      "location": "下髎穴",
+      "location_detail": "下髎穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "会阳",
+      "pinyin": "hui yang",
+      "code": "BL35",
+      "meridian": "足太阳膀胱经",
+      "location": "会阳穴",
+      "location_detail": "会阳穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "承扶",
+      "pinyin": "cheng fu",
+      "code": "BL36",
+      "meridian": "足太阳膀胱经",
+      "location": "承扶穴",
+      "location_detail": "承扶穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "殷门",
+      "pinyin": "yin men",
+      "code": "BL37",
+      "meridian": "足太阳膀胱经",
+      "location": "殷门穴",
+      "location_detail": "殷门穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "浮郄",
+      "pinyin": "fu xi",
+      "code": "BL38",
+      "meridian": "足太阳膀胱经",
+      "location": "浮郄穴",
+      "location_detail": "浮郄穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "委阳",
+      "pinyin": "wei yang",
+      "code": "BL39",
+      "meridian": "足太阳膀胱经",
+      "location": "委阳穴",
+      "location_detail": "委阳穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "委中",
+      "pinyin": "wei zhong",
+      "code": "BL40",
+      "meridian": "足太阳膀胱经",
+      "location": "委中穴",
+      "location_detail": "委中穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "附分",
+      "pinyin": "fu fen",
+      "code": "BL41",
+      "meridian": "足太阳膀胱经",
+      "location": "附分穴",
+      "location_detail": "附分穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "魄户",
+      "pinyin": "po hu",
+      "code": "BL42",
+      "meridian": "足太阳膀胱经",
+      "location": "魄户穴",
+      "location_detail": "魄户穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "膏肓",
+      "pinyin": "gao huang",
+      "code": "BL43",
+      "meridian": "足太阳膀胱经",
+      "location": "膏肓穴",
+      "location_detail": "膏肓穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "神堂",
+      "pinyin": "shen tang",
+      "code": "BL44",
+      "meridian": "足太阳膀胱经",
+      "location": "神堂穴",
+      "location_detail": "神堂穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "譩譆",
+      "pinyin": "yi xi",
+      "code": "BL45",
+      "meridian": "足太阳膀胱经",
+      "location": "譩譆穴",
+      "location_detail": "譩譆穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "膈关",
+      "pinyin": "ge guan",
+      "code": "BL46",
+      "meridian": "足太阳膀胱经",
+      "location": "膈关穴",
+      "location_detail": "膈关穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "魂门",
+      "pinyin": "hun men",
+      "code": "BL47",
+      "meridian": "足太阳膀胱经",
+      "location": "魂门穴",
+      "location_detail": "魂门穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "阳纲",
+      "pinyin": "yang gang",
+      "code": "BL48",
+      "meridian": "足太阳膀胱经",
+      "location": "阳纲穴",
+      "location_detail": "阳纲穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "意舍",
+      "pinyin": "yi she",
+      "code": "BL49",
+      "meridian": "足太阳膀胱经",
+      "location": "意舍穴",
+      "location_detail": "意舍穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "胃仓",
+      "pinyin": "wei cang",
+      "code": "BL50",
+      "meridian": "足太阳膀胱经",
+      "location": "胃仓穴",
+      "location_detail": "胃仓穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "肓门",
+      "pinyin": "huang men",
+      "code": "BL51",
+      "meridian": "足太阳膀胱经",
+      "location": "肓门穴",
+      "location_detail": "肓门穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "志室",
+      "pinyin": "zhi shi",
+      "code": "BL52",
+      "meridian": "足太阳膀胱经",
+      "location": "志室穴",
+      "location_detail": "志室穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "胞肓",
+      "pinyin": "bao huang",
+      "code": "BL53",
+      "meridian": "足太阳膀胱经",
+      "location": "胞肓穴",
+      "location_detail": "胞肓穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "秩边",
+      "pinyin": "zhi bian",
+      "code": "BL54",
+      "meridian": "足太阳膀胱经",
+      "location": "秩边穴",
+      "location_detail": "秩边穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "合阳",
+      "pinyin": "he yang",
+      "code": "BL55",
+      "meridian": "足太阳膀胱经",
+      "location": "合阳穴",
+      "location_detail": "合阳穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "承筋",
+      "pinyin": "cheng jin",
+      "code": "BL56",
+      "meridian": "足太阳膀胱经",
+      "location": "承筋穴",
+      "location_detail": "承筋穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "承山",
+      "pinyin": "cheng shan",
+      "code": "BL57",
+      "meridian": "足太阳膀胱经",
+      "location": "承山穴",
+      "location_detail": "承山穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "飞扬",
+      "pinyin": "fei yang",
+      "code": "BL58",
+      "meridian": "足太阳膀胱经",
+      "location": "飞扬穴",
+      "location_detail": "飞扬穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "跗阳",
+      "pinyin": "fu yang",
+      "code": "BL59",
+      "meridian": "足太阳膀胱经",
+      "location": "跗阳穴",
+      "location_detail": "跗阳穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "昆仑",
+      "pinyin": "kun lun",
+      "code": "BL60",
+      "meridian": "足太阳膀胱经",
+      "location": "昆仑穴",
+      "location_detail": "昆仑穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "仆参",
+      "pinyin": "pu can",
+      "code": "BL61",
+      "meridian": "足太阳膀胱经",
+      "location": "仆参穴",
+      "location_detail": "仆参穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "申脉",
+      "pinyin": "shen mai",
+      "code": "BL62",
+      "meridian": "足太阳膀胱经",
+      "location": "申脉穴",
+      "location_detail": "申脉穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "金门",
+      "pinyin": "jin men",
+      "code": "BL63",
+      "meridian": "足太阳膀胱经",
+      "location": "金门穴",
+      "location_detail": "金门穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "京骨",
+      "pinyin": "jing gu",
+      "code": "BL64",
+      "meridian": "足太阳膀胱经",
+      "location": "京骨穴",
+      "location_detail": "京骨穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "束骨",
+      "pinyin": "shu gu",
+      "code": "BL65",
+      "meridian": "足太阳膀胱经",
+      "location": "束骨穴",
+      "location_detail": "束骨穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "足通谷",
+      "pinyin": "zu tong gu",
+      "code": "BL66",
+      "meridian": "足太阳膀胱经",
+      "location": "足通谷穴",
+      "location_detail": "足通谷穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "至阴",
+      "pinyin": "zhi yin",
+      "code": "BL67",
+      "meridian": "足太阳膀胱经",
+      "location": "至阴穴",
+      "location_detail": "至阴穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "涌泉",
+      "pinyin": "Yǒng Quán",
+      "code": "KI1",
+      "meridian": "足少阴肾经",
+      "location": "足底部，足前部凹陷处，第2、3趾趾缝纹头端与足跟连线前1/3处",
+      "location_detail": "卷足时足前部凹陷处",
+      "function": "滋阴益肾，醒脑开窍",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "然谷",
+      "pinyin": "ran gu",
+      "code": "KI2",
+      "meridian": "足少阴肾经",
+      "location": "然谷穴",
+      "location_detail": "然谷穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "太溪",
+      "pinyin": "Tài Xī",
+      "code": "KI3",
+      "meridian": "足少阴肾经",
+      "location": "足内侧，内踝后方，内踝尖与跟腱之间凹陷处",
+      "location_detail": "内踝尖与跟腱之间",
+      "function": "滋阴益肾，清热利湿",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "大钟",
+      "pinyin": "da zhong",
+      "code": "KI4",
+      "meridian": "足少阴肾经",
+      "location": "大钟穴",
+      "location_detail": "大钟穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "水泉",
+      "pinyin": "shui quan",
+      "code": "KI5",
+      "meridian": "足少阴肾经",
+      "location": "水泉穴",
+      "location_detail": "水泉穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "照海",
+      "pinyin": "zhao hai",
+      "code": "KI6",
+      "meridian": "足少阴肾经",
+      "location": "照海穴",
+      "location_detail": "照海穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "复溜",
+      "pinyin": "fu liu",
+      "code": "KI7",
+      "meridian": "足少阴肾经",
+      "location": "复溜穴",
+      "location_detail": "复溜穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "交信",
+      "pinyin": "jiao xin",
+      "code": "KI8",
+      "meridian": "足少阴肾经",
+      "location": "交信穴",
+      "location_detail": "交信穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "筑宾",
+      "pinyin": "zhu bin",
+      "code": "KI9",
+      "meridian": "足少阴肾经",
+      "location": "筑宾穴",
+      "location_detail": "筑宾穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "阴谷",
+      "pinyin": "yin gu",
+      "code": "KI10",
+      "meridian": "足少阴肾经",
+      "location": "阴谷穴",
+      "location_detail": "阴谷穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "横骨",
+      "pinyin": "heng gu",
+      "code": "KI11",
+      "meridian": "足少阴肾经",
+      "location": "横骨穴",
+      "location_detail": "横骨穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "大赫",
+      "pinyin": "da he",
+      "code": "KI12",
+      "meridian": "足少阴肾经",
+      "location": "大赫穴",
+      "location_detail": "大赫穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "气穴",
+      "pinyin": "qi xue",
+      "code": "KI13",
+      "meridian": "足少阴肾经",
+      "location": "气穴穴",
+      "location_detail": "气穴穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "四满",
+      "pinyin": "si man",
+      "code": "KI14",
+      "meridian": "足少阴肾经",
+      "location": "四满穴",
+      "location_detail": "四满穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "中注",
+      "pinyin": "zhong zhu",
+      "code": "KI15",
+      "meridian": "足少阴肾经",
+      "location": "中注穴",
+      "location_detail": "中注穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "肓俞",
+      "pinyin": "huang shu",
+      "code": "KI16",
+      "meridian": "足少阴肾经",
+      "location": "肓俞穴",
+      "location_detail": "肓俞穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "商曲",
+      "pinyin": "shang qu",
+      "code": "KI17",
+      "meridian": "足少阴肾经",
+      "location": "商曲穴",
+      "location_detail": "商曲穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "石关",
+      "pinyin": "shi guan",
+      "code": "KI18",
+      "meridian": "足少阴肾经",
+      "location": "石关穴",
+      "location_detail": "石关穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "阴都",
+      "pinyin": "yin du",
+      "code": "KI19",
+      "meridian": "足少阴肾经",
+      "location": "阴都穴",
+      "location_detail": "阴都穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "腹通谷",
+      "pinyin": "fu tong gu",
+      "code": "KI20",
+      "meridian": "足少阴肾经",
+      "location": "腹通谷穴",
+      "location_detail": "腹通谷穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "幽门",
+      "pinyin": "you men",
+      "code": "KI21",
+      "meridian": "足少阴肾经",
+      "location": "幽门穴",
+      "location_detail": "幽门穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "步廊",
+      "pinyin": "bu lang",
+      "code": "KI22",
+      "meridian": "足少阴肾经",
+      "location": "步廊穴",
+      "location_detail": "步廊穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "神封",
+      "pinyin": "shen feng",
+      "code": "KI23",
+      "meridian": "足少阴肾经",
+      "location": "神封穴",
+      "location_detail": "神封穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "灵墟",
+      "pinyin": "ling xu",
+      "code": "KI24",
+      "meridian": "足少阴肾经",
+      "location": "灵墟穴",
+      "location_detail": "灵墟穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "神藏",
+      "pinyin": "shen cang",
+      "code": "KI25",
+      "meridian": "足少阴肾经",
+      "location": "神藏穴",
+      "location_detail": "神藏穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "彧中",
+      "pinyin": "yu zhong",
+      "code": "KI26",
+      "meridian": "足少阴肾经",
+      "location": "彧中穴",
+      "location_detail": "彧中穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "俞府",
+      "pinyin": "shu fu",
+      "code": "KI27",
+      "meridian": "足少阴肾经",
+      "location": "俞府穴",
+      "location_detail": "俞府穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "天池",
+      "pinyin": "tian chi",
+      "code": "PC1",
+      "meridian": "手厥阴心包经",
+      "location": "天池穴",
+      "location_detail": "天池穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "天泉",
+      "pinyin": "tian quan",
+      "code": "PC2",
+      "meridian": "手厥阴心包经",
+      "location": "天泉穴",
+      "location_detail": "天泉穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "曲泽",
+      "pinyin": "qu ze",
+      "code": "PC3",
+      "meridian": "手厥阴心包经",
+      "location": "曲泽穴",
+      "location_detail": "曲泽穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "郄门",
+      "pinyin": "xi men",
+      "code": "PC4",
+      "meridian": "手厥阴心包经",
+      "location": "郄门穴",
+      "location_detail": "郄门穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "间使",
+      "pinyin": "jian shi",
+      "code": "PC5",
+      "meridian": "手厥阴心包经",
+      "location": "间使穴",
+      "location_detail": "间使穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "内关",
+      "pinyin": "Nèi Guān",
+      "code": "PC6",
+      "meridian": "手厥阴心包经",
+      "location": "前臂掌侧，腕横纹上2寸，掌长肌腱与桡侧腕屈肌腱之间",
+      "location_detail": "曲泽与大陵连线上",
+      "function": "宁心安神，理气止痛",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "大陵",
+      "pinyin": "da ling",
+      "code": "PC7",
+      "meridian": "手厥阴心包经",
+      "location": "大陵穴",
+      "location_detail": "大陵穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "劳宫",
+      "pinyin": "lao gong",
+      "code": "PC8",
+      "meridian": "手厥阴心包经",
+      "location": "劳宫穴",
+      "location_detail": "劳宫穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "中冲",
+      "pinyin": "zhong chong",
+      "code": "PC9",
+      "meridian": "手厥阴心包经",
+      "location": "中冲穴",
+      "location_detail": "中冲穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "关冲",
+      "pinyin": "guan chong",
+      "code": "TE1",
+      "meridian": "手少阳三焦经",
+      "location": "关冲穴",
+      "location_detail": "关冲穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "液门",
+      "pinyin": "ye men",
+      "code": "TE2",
+      "meridian": "手少阳三焦经",
+      "location": "液门穴",
+      "location_detail": "液门穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "中渚",
+      "pinyin": "zhong zhu",
+      "code": "TE3",
+      "meridian": "手少阳三焦经",
+      "location": "中渚穴",
+      "location_detail": "中渚穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "阳池",
+      "pinyin": "yang chi",
+      "code": "TE4",
+      "meridian": "手少阳三焦经",
+      "location": "阳池穴",
+      "location_detail": "阳池穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "外关",
+      "pinyin": "wai guan",
+      "code": "TE5",
+      "meridian": "手少阳三焦经",
+      "location": "外关穴",
+      "location_detail": "外关穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "支沟",
+      "pinyin": "zhi gou",
+      "code": "TE6",
+      "meridian": "手少阳三焦经",
+      "location": "支沟穴",
+      "location_detail": "支沟穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "会宗",
+      "pinyin": "hui zong",
+      "code": "TE7",
+      "meridian": "手少阳三焦经",
+      "location": "会宗穴",
+      "location_detail": "会宗穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "三阳络",
+      "pinyin": "san yang luo",
+      "code": "TE8",
+      "meridian": "手少阳三焦经",
+      "location": "三阳络穴",
+      "location_detail": "三阳络穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "四渎",
+      "pinyin": "si du",
+      "code": "TE9",
+      "meridian": "手少阳三焦经",
+      "location": "四渎穴",
+      "location_detail": "四渎穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "天井",
+      "pinyin": "tian jing",
+      "code": "TE10",
+      "meridian": "手少阳三焦经",
+      "location": "天井穴",
+      "location_detail": "天井穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "清冷渊",
+      "pinyin": "qing leng yuan",
+      "code": "TE11",
+      "meridian": "手少阳三焦经",
+      "location": "清冷渊穴",
+      "location_detail": "清冷渊穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "消泺",
+      "pinyin": "xiao luo",
+      "code": "TE12",
+      "meridian": "手少阳三焦经",
+      "location": "消泺穴",
+      "location_detail": "消泺穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "臑会",
+      "pinyin": "nao hui",
+      "code": "TE13",
+      "meridian": "手少阳三焦经",
+      "location": "臑会穴",
+      "location_detail": "臑会穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "肩髎",
+      "pinyin": "jian liao",
+      "code": "TE14",
+      "meridian": "手少阳三焦经",
+      "location": "肩髎穴",
+      "location_detail": "肩髎穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "天髎",
+      "pinyin": "tian liao",
+      "code": "TE15",
+      "meridian": "手少阳三焦经",
+      "location": "天髎穴",
+      "location_detail": "天髎穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "天牖",
+      "pinyin": "tian you",
+      "code": "TE16",
+      "meridian": "手少阳三焦经",
+      "location": "天牖穴",
+      "location_detail": "天牖穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "翳风",
+      "pinyin": "yi feng",
+      "code": "TE17",
+      "meridian": "手少阳三焦经",
+      "location": "翳风穴",
+      "location_detail": "翳风穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "瘈脉",
+      "pinyin": "chi mai",
+      "code": "TE18",
+      "meridian": "手少阳三焦经",
+      "location": "瘈脉穴",
+      "location_detail": "瘈脉穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "颅息",
+      "pinyin": "lu xi",
+      "code": "TE19",
+      "meridian": "手少阳三焦经",
+      "location": "颅息穴",
+      "location_detail": "颅息穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "角孙",
+      "pinyin": "jiao sun",
+      "code": "TE20",
+      "meridian": "手少阳三焦经",
+      "location": "角孙穴",
+      "location_detail": "角孙穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "耳门",
+      "pinyin": "er men",
+      "code": "TE21",
+      "meridian": "手少阳三焦经",
+      "location": "耳门穴",
+      "location_detail": "耳门穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "耳和髎",
+      "pinyin": "er he liao",
+      "code": "TE22",
+      "meridian": "手少阳三焦经",
+      "location": "耳和髎穴",
+      "location_detail": "耳和髎穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "丝竹空",
+      "pinyin": "si zhu kong",
+      "code": "TE23",
+      "meridian": "手少阳三焦经",
+      "location": "丝竹空穴",
+      "location_detail": "丝竹空穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "瞳子髎",
+      "pinyin": "tong zi liao",
+      "code": "GB1",
+      "meridian": "足少阳胆经",
+      "location": "瞳子髎穴",
+      "location_detail": "瞳子髎穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "听会",
+      "pinyin": "ting hui",
+      "code": "GB2",
+      "meridian": "足少阳胆经",
+      "location": "听会穴",
+      "location_detail": "听会穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "上关",
+      "pinyin": "shang guan",
+      "code": "GB3",
+      "meridian": "足少阳胆经",
+      "location": "上关穴",
+      "location_detail": "上关穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "颔厌",
+      "pinyin": "han yan",
+      "code": "GB4",
+      "meridian": "足少阳胆经",
+      "location": "颔厌穴",
+      "location_detail": "颔厌穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "悬颅",
+      "pinyin": "xuan lu",
+      "code": "GB5",
+      "meridian": "足少阳胆经",
+      "location": "悬颅穴",
+      "location_detail": "悬颅穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "悬厘",
+      "pinyin": "xuan li",
+      "code": "GB6",
+      "meridian": "足少阳胆经",
+      "location": "悬厘穴",
+      "location_detail": "悬厘穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "曲鬓",
+      "pinyin": "qu bin",
+      "code": "GB7",
+      "meridian": "足少阳胆经",
+      "location": "曲鬓穴",
+      "location_detail": "曲鬓穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "率谷",
+      "pinyin": "shuai gu",
+      "code": "GB8",
+      "meridian": "足少阳胆经",
+      "location": "率谷穴",
+      "location_detail": "率谷穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "天冲",
+      "pinyin": "tian chong",
+      "code": "GB9",
+      "meridian": "足少阳胆经",
+      "location": "天冲穴",
+      "location_detail": "天冲穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "浮白",
+      "pinyin": "fu bai",
+      "code": "GB10",
+      "meridian": "足少阳胆经",
+      "location": "浮白穴",
+      "location_detail": "浮白穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "头窍阴",
+      "pinyin": "tou qiao yin",
+      "code": "GB11",
+      "meridian": "足少阳胆经",
+      "location": "头窍阴穴",
+      "location_detail": "头窍阴穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "完骨",
+      "pinyin": "wan gu",
+      "code": "GB12",
+      "meridian": "足少阳胆经",
+      "location": "完骨穴",
+      "location_detail": "完骨穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "本神",
+      "pinyin": "ben shen",
+      "code": "GB13",
+      "meridian": "足少阳胆经",
+      "location": "本神穴",
+      "location_detail": "本神穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "阳白",
+      "pinyin": "yang bai",
+      "code": "GB14",
+      "meridian": "足少阳胆经",
+      "location": "阳白穴",
+      "location_detail": "阳白穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "头临泣",
+      "pinyin": "tou lin qi",
+      "code": "GB15",
+      "meridian": "足少阳胆经",
+      "location": "头临泣穴",
+      "location_detail": "头临泣穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "目窗",
+      "pinyin": "mu chuang",
+      "code": "GB16",
+      "meridian": "足少阳胆经",
+      "location": "目窗穴",
+      "location_detail": "目窗穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "正营",
+      "pinyin": "zheng ying",
+      "code": "GB17",
+      "meridian": "足少阳胆经",
+      "location": "正营穴",
+      "location_detail": "正营穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "承灵",
+      "pinyin": "cheng ling",
+      "code": "GB18",
+      "meridian": "足少阳胆经",
+      "location": "承灵穴",
+      "location_detail": "承灵穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "脑空",
+      "pinyin": "nao kong",
+      "code": "GB19",
+      "meridian": "足少阳胆经",
+      "location": "脑空穴",
+      "location_detail": "脑空穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "风池",
+      "pinyin": "Fēng Chí",
+      "code": "GB20",
+      "meridian": "足少阳胆经",
+      "location": "项部，枕骨之下，胸锁乳突肌与斜方肌上端之间的凹陷中",
+      "location_detail": "与风府相平",
+      "function": "疏风清热，醒脑开窍",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "肩井",
+      "pinyin": "jian jing",
+      "code": "GB21",
+      "meridian": "足少阳胆经",
+      "location": "肩井穴",
+      "location_detail": "肩井穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "渊腋",
+      "pinyin": "yuan ye",
+      "code": "GB22",
+      "meridian": "足少阳胆经",
+      "location": "渊腋穴",
+      "location_detail": "渊腋穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "辄筋",
+      "pinyin": "zhe jin",
+      "code": "GB23",
+      "meridian": "足少阳胆经",
+      "location": "辄筋穴",
+      "location_detail": "辄筋穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "日月",
+      "pinyin": "ri yue",
+      "code": "GB24",
+      "meridian": "足少阳胆经",
+      "location": "日月穴",
+      "location_detail": "日月穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "京门",
+      "pinyin": "jing men",
+      "code": "GB25",
+      "meridian": "足少阳胆经",
+      "location": "京门穴",
+      "location_detail": "京门穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "带脉",
+      "pinyin": "dai mai",
+      "code": "GB26",
+      "meridian": "足少阳胆经",
+      "location": "带脉穴",
+      "location_detail": "带脉穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "五枢",
+      "pinyin": "wu shu",
+      "code": "GB27",
+      "meridian": "足少阳胆经",
+      "location": "五枢穴",
+      "location_detail": "五枢穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "维道",
+      "pinyin": "wei dao",
+      "code": "GB28",
+      "meridian": "足少阳胆经",
+      "location": "维道穴",
+      "location_detail": "维道穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "居髎",
+      "pinyin": "ju liao",
+      "code": "GB29",
+      "meridian": "足少阳胆经",
+      "location": "居髎穴",
+      "location_detail": "居髎穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "环跳",
+      "pinyin": "huan tiao",
+      "code": "GB30",
+      "meridian": "足少阳胆经",
+      "location": "环跳穴",
+      "location_detail": "环跳穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "风市",
+      "pinyin": "feng shi",
+      "code": "GB31",
+      "meridian": "足少阳胆经",
+      "location": "风市穴",
+      "location_detail": "风市穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "中渎",
+      "pinyin": "zhong du",
+      "code": "GB32",
+      "meridian": "足少阳胆经",
+      "location": "中渎穴",
+      "location_detail": "中渎穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "膝阳关",
+      "pinyin": "xi yang guan",
+      "code": "GB33",
+      "meridian": "足少阳胆经",
+      "location": "膝阳关穴",
+      "location_detail": "膝阳关穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "阳陵泉",
+      "pinyin": "Yáng Líng Quán",
+      "code": "GB34",
+      "meridian": "足少阳胆经",
+      "location": "小腿外侧，腓骨小头前下方凹陷处",
+      "location_detail": "腓骨小头前下方",
+      "function": "疏肝利胆，舒筋活络",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "阳交",
+      "pinyin": "yang jiao",
+      "code": "GB35",
+      "meridian": "足少阳胆经",
+      "location": "阳交穴",
+      "location_detail": "阳交穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "外丘",
+      "pinyin": "wai qiu",
+      "code": "GB36",
+      "meridian": "足少阳胆经",
+      "location": "外丘穴",
+      "location_detail": "外丘穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "光明",
+      "pinyin": "guang ming",
+      "code": "GB37",
+      "meridian": "足少阳胆经",
+      "location": "光明穴",
+      "location_detail": "光明穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "阳辅",
+      "pinyin": "yang fu",
+      "code": "GB38",
+      "meridian": "足少阳胆经",
+      "location": "阳辅穴",
+      "location_detail": "阳辅穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "悬钟",
+      "pinyin": "xuan zhong",
+      "code": "GB39",
+      "meridian": "足少阳胆经",
+      "location": "悬钟穴",
+      "location_detail": "悬钟穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "丘墟",
+      "pinyin": "qiu xu",
+      "code": "GB40",
+      "meridian": "足少阳胆经",
+      "location": "丘墟穴",
+      "location_detail": "丘墟穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "足临泣",
+      "pinyin": "zu lin qi",
+      "code": "GB41",
+      "meridian": "足少阳胆经",
+      "location": "足临泣穴",
+      "location_detail": "足临泣穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "地五会",
+      "pinyin": "di wu hui",
+      "code": "GB42",
+      "meridian": "足少阳胆经",
+      "location": "地五会穴",
+      "location_detail": "地五会穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "侠溪",
+      "pinyin": "xia xi",
+      "code": "GB43",
+      "meridian": "足少阳胆经",
+      "location": "侠溪穴",
+      "location_detail": "侠溪穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "足窍阴",
+      "pinyin": "zu qiao yin",
+      "code": "GB44",
+      "meridian": "足少阳胆经",
+      "location": "足窍阴穴",
+      "location_detail": "足窍阴穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "大敦",
+      "pinyin": "da dun",
+      "code": "LR1",
+      "meridian": "足厥阴肝经",
+      "location": "大敦穴",
+      "location_detail": "大敦穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "行间",
+      "pinyin": "xing jian",
+      "code": "LR2",
+      "meridian": "足厥阴肝经",
+      "location": "行间穴",
+      "location_detail": "行间穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "太冲",
+      "pinyin": "Tài Chōng",
+      "code": "LR3",
+      "meridian": "足厥阴肝经",
+      "location": "足背侧，第1、2趾骨结合部前方凹陷中",
+      "location_detail": "第1跖骨间隙后方凹陷处",
+      "function": "平肝熄风，疏肝理气",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "中封",
+      "pinyin": "zhong feng",
+      "code": "LR4",
+      "meridian": "足厥阴肝经",
+      "location": "中封穴",
+      "location_detail": "中封穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "蠡沟",
+      "pinyin": "li gou",
+      "code": "LR5",
+      "meridian": "足厥阴肝经",
+      "location": "蠡沟穴",
+      "location_detail": "蠡沟穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "中都",
+      "pinyin": "zhong du",
+      "code": "LR6",
+      "meridian": "足厥阴肝经",
+      "location": "中都穴",
+      "location_detail": "中都穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "膝关",
+      "pinyin": "xi guan",
+      "code": "LR7",
+      "meridian": "足厥阴肝经",
+      "location": "膝关穴",
+      "location_detail": "膝关穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "曲泉",
+      "pinyin": "qu quan",
+      "code": "LR8",
+      "meridian": "足厥阴肝经",
+      "location": "曲泉穴",
+      "location_detail": "曲泉穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "阴包",
+      "pinyin": "yin bao",
+      "code": "LR9",
+      "meridian": "足厥阴肝经",
+      "location": "阴包穴",
+      "location_detail": "阴包穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "足五里",
+      "pinyin": "zu wu li",
+      "code": "LR10",
+      "meridian": "足厥阴肝经",
+      "location": "足五里穴",
+      "location_detail": "足五里穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "阴廉",
+      "pinyin": "yin lian",
+      "code": "LR11",
+      "meridian": "足厥阴肝经",
+      "location": "阴廉穴",
+      "location_detail": "阴廉穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "急脉",
+      "pinyin": "ji mai",
+      "code": "LR12",
+      "meridian": "足厥阴肝经",
+      "location": "急脉穴",
+      "location_detail": "急脉穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "章门",
+      "pinyin": "zhang men",
+      "code": "LR13",
+      "meridian": "足厥阴肝经",
+      "location": "章门穴",
+      "location_detail": "章门穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "期门",
+      "pinyin": "qi men",
+      "code": "LR14",
+      "meridian": "足厥阴肝经",
+      "location": "期门穴",
+      "location_detail": "期门穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "长强",
+      "pinyin": "chang qiang",
+      "code": "GV1",
+      "meridian": "督脉",
+      "location": "长强穴",
+      "location_detail": "长强穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "腰俞",
+      "pinyin": "yao shu",
+      "code": "GV2",
+      "meridian": "督脉",
+      "location": "腰俞穴",
+      "location_detail": "腰俞穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "腰阳关",
+      "pinyin": "yao yang guan",
+      "code": "GV3",
+      "meridian": "督脉",
+      "location": "腰阳关穴",
+      "location_detail": "腰阳关穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "命门",
+      "pinyin": "Mìng Mén",
+      "code": "DU4",
+      "meridian": "督脉",
+      "location": "腰部，后正中线上，第2腰椎棘突下凹陷中",
+      "location_detail": "与脐相对",
+      "function": "温肾壮阳，强腰固精",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "悬枢",
+      "pinyin": "xuan shu",
+      "code": "GV5",
+      "meridian": "督脉",
+      "location": "悬枢穴",
+      "location_detail": "悬枢穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "脊中",
+      "pinyin": "ji zhong",
+      "code": "GV6",
+      "meridian": "督脉",
+      "location": "脊中穴",
+      "location_detail": "脊中穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "中枢",
+      "pinyin": "zhong shu",
+      "code": "GV7",
+      "meridian": "督脉",
+      "location": "中枢穴",
+      "location_detail": "中枢穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "筋缩",
+      "pinyin": "jin suo",
+      "code": "GV8",
+      "meridian": "督脉",
+      "location": "筋缩穴",
+      "location_detail": "筋缩穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "至阳",
+      "pinyin": "zhi yang",
+      "code": "GV9",
+      "meridian": "督脉",
+      "location": "至阳穴",
+      "location_detail": "至阳穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "灵台",
+      "pinyin": "ling tai",
+      "code": "GV10",
+      "meridian": "督脉",
+      "location": "灵台穴",
+      "location_detail": "灵台穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "神道",
+      "pinyin": "shen dao",
+      "code": "GV11",
+      "meridian": "督脉",
+      "location": "神道穴",
+      "location_detail": "神道穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "身柱",
+      "pinyin": "shen zhu",
+      "code": "GV12",
+      "meridian": "督脉",
+      "location": "身柱穴",
+      "location_detail": "身柱穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "陶道",
+      "pinyin": "tao dao",
+      "code": "GV13",
+      "meridian": "督脉",
+      "location": "陶道穴",
+      "location_detail": "陶道穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "大椎",
+      "pinyin": "Dà Zhuī",
+      "code": "DU14",
+      "meridian": "督脉",
+      "location": "后正中线上，第7颈椎棘突下凹陷中",
+      "location_detail": "低头时颈部最突出骨头下方",
+      "function": "清热解表，通阳散寒",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "哑门",
+      "pinyin": "ya men",
+      "code": "GV15",
+      "meridian": "督脉",
+      "location": "哑门穴",
+      "location_detail": "哑门穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "风府",
+      "pinyin": "feng fu",
+      "code": "GV16",
+      "meridian": "督脉",
+      "location": "风府穴",
+      "location_detail": "风府穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "脑户",
+      "pinyin": "nao hu",
+      "code": "GV17",
+      "meridian": "督脉",
+      "location": "脑户穴",
+      "location_detail": "脑户穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "强间",
+      "pinyin": "qiang jian",
+      "code": "GV18",
+      "meridian": "督脉",
+      "location": "强间穴",
+      "location_detail": "强间穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "后顶",
+      "pinyin": "hou ding",
+      "code": "GV19",
+      "meridian": "督脉",
+      "location": "后顶穴",
+      "location_detail": "后顶穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "百会",
+      "pinyin": "Bǎi Huì",
+      "code": "DU20",
+      "meridian": "督脉",
+      "location": "头顶正中，两耳尖连线中点",
+      "location_detail": "前发际正中直上5寸",
+      "function": "升阳举陷，醒脑开窍",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "前顶",
+      "pinyin": "qian ding",
+      "code": "GV21",
+      "meridian": "督脉",
+      "location": "前顶穴",
+      "location_detail": "前顶穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "囟会",
+      "pinyin": "xin hui",
+      "code": "GV22",
+      "meridian": "督脉",
+      "location": "囟会穴",
+      "location_detail": "囟会穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "上星",
+      "pinyin": "shang xing",
+      "code": "GV23",
+      "meridian": "督脉",
+      "location": "上星穴",
+      "location_detail": "上星穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "神庭",
+      "pinyin": "shen ting",
+      "code": "GV24",
+      "meridian": "督脉",
+      "location": "神庭穴",
+      "location_detail": "神庭穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "素髎",
+      "pinyin": "su liao",
+      "code": "GV25",
+      "meridian": "督脉",
+      "location": "素髎穴",
+      "location_detail": "素髎穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "水沟",
+      "pinyin": "shui gou",
+      "code": "GV26",
+      "meridian": "督脉",
+      "location": "水沟穴",
+      "location_detail": "水沟穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "兑端",
+      "pinyin": "dui duan",
+      "code": "GV27",
+      "meridian": "督脉",
+      "location": "兑端穴",
+      "location_detail": "兑端穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "龈交",
+      "pinyin": "yin jiao",
+      "code": "GV28",
+      "meridian": "督脉",
+      "location": "龈交穴",
+      "location_detail": "龈交穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "会阴",
+      "pinyin": "hui yin",
+      "code": "CV1",
+      "meridian": "任脉",
+      "location": "会阴穴",
+      "location_detail": "会阴穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "曲骨",
+      "pinyin": "qu gu",
+      "code": "CV2",
+      "meridian": "任脉",
+      "location": "曲骨穴",
+      "location_detail": "曲骨穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "中极",
+      "pinyin": "zhong ji",
+      "code": "CV3",
+      "meridian": "任脉",
+      "location": "中极穴",
+      "location_detail": "中极穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "关元",
+      "pinyin": "Guān Yuán",
+      "code": "RN4",
+      "meridian": "任脉",
+      "location": "下腹部，前正中线上，脐下3寸",
+      "location_detail": "脐中下3寸",
+      "function": "培补元气，益肾固精",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "石门",
+      "pinyin": "shi men",
+      "code": "CV5",
+      "meridian": "任脉",
+      "location": "石门穴",
+      "location_detail": "石门穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "气海",
+      "pinyin": "Qì Hǎi",
+      "code": "RN6",
+      "meridian": "任脉",
+      "location": "下腹部，前正中线上，脐下1.5寸",
+      "location_detail": "脐中下1.5寸",
+      "function": "补气益肾，调经固精",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "阴交",
+      "pinyin": "yin jiao",
+      "code": "CV7",
+      "meridian": "任脉",
+      "location": "阴交穴",
+      "location_detail": "阴交穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "神阙",
+      "pinyin": "shen que",
+      "code": "CV8",
+      "meridian": "任脉",
+      "location": "神阙穴",
+      "location_detail": "神阙穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "水分",
+      "pinyin": "shui fen",
+      "code": "CV9",
+      "meridian": "任脉",
+      "location": "水分穴",
+      "location_detail": "水分穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "下脘",
+      "pinyin": "xia wan",
+      "code": "CV10",
+      "meridian": "任脉",
+      "location": "下脘穴",
+      "location_detail": "下脘穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "建里",
+      "pinyin": "jian li",
+      "code": "CV11",
+      "meridian": "任脉",
+      "location": "建里穴",
+      "location_detail": "建里穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "中脘",
+      "pinyin": "Zhōng Wǎn",
+      "code": "RN12",
+      "meridian": "任脉",
+      "location": "上腹部，前正中线上，脐上4寸",
+      "location_detail": "胸骨下端与脐连线中点",
+      "function": "健脾和胃，消食导滞",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "上脘",
+      "pinyin": "shang wan",
+      "code": "CV13",
+      "meridian": "任脉",
+      "location": "上脘穴",
+      "location_detail": "上脘穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "巨阙",
+      "pinyin": "ju que",
+      "code": "CV14",
+      "meridian": "任脉",
+      "location": "巨阙穴",
+      "location_detail": "巨阙穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "鸠尾",
+      "pinyin": "jiu wei",
+      "code": "CV15",
+      "meridian": "任脉",
+      "location": "鸠尾穴",
+      "location_detail": "鸠尾穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "中庭",
+      "pinyin": "zhong ting",
+      "code": "CV16",
+      "meridian": "任脉",
+      "location": "中庭穴",
+      "location_detail": "中庭穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "膻中",
+      "pinyin": "shan zhong",
+      "code": "CV17",
+      "meridian": "任脉",
+      "location": "膻中穴",
+      "location_detail": "膻中穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "玉堂",
+      "pinyin": "yu tang",
+      "code": "CV18",
+      "meridian": "任脉",
+      "location": "玉堂穴",
+      "location_detail": "玉堂穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "紫宫",
+      "pinyin": "zi gong",
+      "code": "CV19",
+      "meridian": "任脉",
+      "location": "紫宫穴",
+      "location_detail": "紫宫穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "华盖",
+      "pinyin": "hua gai",
+      "code": "CV20",
+      "meridian": "任脉",
+      "location": "华盖穴",
+      "location_detail": "华盖穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "璇玑",
+      "pinyin": "xuan ji",
+      "code": "CV21",
+      "meridian": "任脉",
+      "location": "璇玑穴",
+      "location_detail": "璇玑穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "天突",
+      "pinyin": "tian tu",
+      "code": "CV22",
+      "meridian": "任脉",
+      "location": "天突穴",
+      "location_detail": "天突穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "廉泉",
+      "pinyin": "lian quan",
+      "code": "CV23",
+      "meridian": "任脉",
+      "location": "廉泉穴",
+      "location_detail": "廉泉穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    },
+    {
+      "name": "承浆",
+      "pinyin": "cheng jiang",
+      "code": "CV24",
+      "meridian": "任脉",
+      "location": "承浆穴",
+      "location_detail": "承浆穴",
+      "function": "",
+      "literature": "《针灸甲乙经》"
+    }
+  ]
+}

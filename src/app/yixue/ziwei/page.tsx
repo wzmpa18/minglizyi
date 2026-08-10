@@ -1,0 +1,1754 @@
+"use client";
+
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import type { CSSProperties } from "react";
+import { calculateZiwei, solarToBazi } from "@/algorithm-core";
+import type { ZiweiResult, Gender } from "@/algorithm-core";
+import { DatePicker } from "@/components/shared";
+import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
+import type { Client } from "@/lib/clientStore";
+import { getPalaceInterpretation, getPalaceAllStarInterpretations } from "@/lib/ziwei-interpretations";
+import { callAI, checkAIQuota, incrementAIUsage, getPermissionStatus } from "@/lib/aiService";
+import { useRequireLogin } from "@/lib/useRequireLogin";
+import { LoginPromptModal } from "@/components/LoginPromptModal";
+import EventDivinationPanel from "@/components/EventDivinationPanel";
+import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
+import { useToolBack } from "@/lib/useToolBack";
+import { ShareButton } from "@/components/ShareButton";
+
+// ====================================================================
+// 品牌色 & 常量
+// ====================================================================
+
+const BRAND_PURPLE = "#7B2FBE";
+const BRAND_PURPLE_LIGHT = "#9B5ECF";
+const BRAND_PURPLE_DARK = "#5B1A8A";
+const BRAND_PURPLE_BG = "#F3EDF7";
+
+// 五行颜色（传统配色）
+const WUXING_COLORS: Record<string, string> = {
+  "木": "#00a879",
+  "火": "#ed4d49",
+  "土": "#a64b00",
+  "金": "#ffa500",
+  "水": "#0074e4",
+};
+
+// 天干地支五行归属
+const GAN_WUXING: Record<string, string> = {
+  "甲": "木", "乙": "木",
+  "丙": "火", "丁": "火",
+  "戊": "土", "己": "土",
+  "庚": "金", "辛": "金",
+  "壬": "水", "癸": "水",
+};
+const ZHI_WUXING: Record<string, string> = {
+  "寅": "木", "卯": "木",
+  "巳": "火", "午": "火",
+  "辰": "土", "戌": "土", "丑": "土", "未": "土",
+  "申": "金", "酉": "金",
+  "亥": "水", "子": "水",
+};
+
+// 14主星（全部深红色）
+const MAJOR_STARS = ["紫微", "天机", "太阳", "武曲", "天同", "廉贞", "天府", "太阴", "贪狼", "巨门", "天相", "天梁", "七杀", "破军"];
+const MAJOR_STAR_COLOR = "#b90000";
+
+// 六吉星 + 禄存天马（辅星，紫色）
+const AUSPICIOUS_AUX = ["左辅", "右弼", "天魁", "天钺", "文昌", "文曲", "禄存", "天马"];
+const AUSPICIOUS_COLOR = "#7804a6";
+
+// 六煞星（同辅星紫色）
+const INAUSPICIOUS_AUX = ["擎羊", "陀罗", "火星", "铃星", "地空", "地劫"];
+const INAUSPICIOUS_COLOR = "#7804a6";
+
+// 杂曜/流年星（蓝色）
+const MINOR_STAR_COLOR = "#014fab";
+
+// 三合模式下显示的常用杂曜
+const SANHE_COMMON_MINOR = ["红鸾", "天喜", "天刑", "天姚", "天月", "阴煞", "孤辰", "寡宿", "天哭", "天虚", "龙池", "凤阁", "咸池", "华盖", "解神", "天巫"];
+
+// 飞星模式下显示的完整杂曜
+const FEIXING_EXTRA_MINOR = ["天刑", "天姚", "红鸾", "天喜", "孤辰", "寡宿", "天哭", "天虚", "解神", "天巫", "天月", "阴煞"];
+
+// 天干四化表（宫干飞化）
+// 格式: { 天干: { 禄: 星名, 权: 星名, 科: 星名, 忌: 星名 } }
+const TIANGAN_SIHUA: Record<string, { lu: string; quan: string; ke: string; ji: string }> = {
+  "甲": { lu: "廉贞", quan: "破军", ke: "武曲", ji: "太阳" },
+  "乙": { lu: "天机", quan: "天梁", ke: "紫微", ji: "太阴" },
+  "丙": { lu: "天同", quan: "天机", ke: "文昌", ji: "廉贞" },
+  "丁": { lu: "太阴", quan: "天同", ke: "天机", ji: "巨门" },
+  "戊": { lu: "贪狼", quan: "太阴", ke: "右弼", ji: "天机" },
+  "己": { lu: "武曲", quan: "贪狼", ke: "天梁", ji: "文曲" },
+  "庚": { lu: "太阳", quan: "武曲", ke: "太阴", ji: "天同" },
+  "辛": { lu: "巨门", quan: "太阳", ke: "文曲", ji: "文昌" },
+  "壬": { lu: "天梁", quan: "紫微", ke: "左辅", ji: "武曲" },
+  "癸": { lu: "破军", quan: "巨门", ke: "太阴", ji: "贪狼" },
+};
+
+// 七级庙旺亮度色标
+const BRIGHTNESS_COLORS: Record<string, string> = {
+  "庙": "#22c55e",
+  "旺": "#16a34a",
+  "得": "#0d9488",
+  "利": "#0284c7",
+  "平": "#6b7280",
+  "不": "#ea580c",
+  "陷": "#dc2626",
+};
+
+// 四化小徽章样式（彩色背景白色文字，全行内显示）
+const SIHUA_BADGE_STYLE: Record<string, CSSProperties> = {
+  "化禄": { background: "#009029", color: "white", border: "none", padding: "2px 4px", fontSize: "11px", fontWeight: "bold", borderRadius: "2px", lineHeight: "1.2", display: "inline-block" },
+  "化权": { background: "#9900a9", color: "white", border: "none", padding: "2px 4px", fontSize: "11px", fontWeight: "bold", borderRadius: "2px", lineHeight: "1.2", display: "inline-block" },
+  "化科": { background: "#0462d7", color: "white", border: "none", padding: "2px 4px", fontSize: "11px", fontWeight: "bold", borderRadius: "2px", lineHeight: "1.2", display: "inline-block" },
+  "化忌": { background: "#f20010", color: "white", border: "none", padding: "2px 4px", fontSize: "11px", fontWeight: "bold", borderRadius: "2px", lineHeight: "1.2", display: "inline-block" },
+};
+
+// 四化徽章-行内样式（忌在列表中也使用行内样式，不用绝对定位）
+const SIHUA_BADGE_INLINE: Record<string, CSSProperties> = {
+  "化禄": SIHUA_BADGE_STYLE["化禄"],
+  "化权": SIHUA_BADGE_STYLE["化权"],
+  "化科": SIHUA_BADGE_STYLE["化科"],
+  "化忌": { background: "#f20010", color: "white", border: "none", padding: "2px 4px", fontSize: "11px", fontWeight: "bold", borderRadius: "2px", lineHeight: "1.2", display: "inline-block" },
+};
+
+const SIHUA_BADGE_CHAR: Record<string, string> = {
+  "化禄": "禄(A)",
+  "化权": "权(B)",
+  "化科": "科(C)",
+  "化忌": "忌(D)",
+};
+
+// v18.9: 四化单字母标记（对标文墨天机，仅四化星带ABCD后缀）
+const SIHUA_LETTER: Record<string, string> = {
+  "化禄": "A",
+  "化权": "B",
+  "化科": "C",
+  "化忌": "D",
+};
+
+const SIHUA_COLORS: Record<string, string> = {
+  "化禄": "#009029",
+  "化权": "#9900a9",
+  "化科": "#0462d7",
+  "化忌": "#f20010",
+};
+
+// 4x4 宫格布局
+const GRID_4X4: (number | null)[][] = [
+  [3, 4, 5, 6],
+  [2, null, null, 7],
+  [1, null, null, 8],
+  [0, 11, 10, 9],
+];
+
+// 地支名称
+const ZHI_NAMES = ["寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥", "子", "丑"];
+
+// 天干名称
+const GAN_NAMES = ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"];
+
+// 地支索引 -> 网格坐标 (col, row)
+const ZHI_TO_GRID: Record<number, [number, number]> = {};
+for (let r = 0; r < 4; r++) {
+  for (let c = 0; c < 4; c++) {
+    const idx = GRID_4X4[r][c];
+    if (idx !== null) {
+      ZHI_TO_GRID[idx] = [c, r];
+    }
+  }
+}
+
+// 各宫位面向中心的锚点坐标（百分比viewBox 0-100），对标jishiyu anchorPoint
+// 四角宫锚点=内角点；四边宫锚点=内边中点
+const ANCHOR_POINTS: Record<number, [number, number]> = {
+  3:  [25,    25],    // 巳 (col0,row0): 右下角
+  4:  [37.5,  25],    // 午 (col1,row0): 下边中点
+  5:  [62.5,  25],    // 未 (col2,row0): 下边中点
+  6:  [75,    25],    // 申 (col3,row0): 左下角
+  2:  [25,    37.5],  // 辰 (col0,row1): 右边中点
+  7:  [75,    37.5],  // 酉 (col3,row1): 左边中点
+  1:  [25,    62.5],  // 卯 (col0,row2): 右边中点
+  8:  [75,    62.5],  // 戌 (col3,row2): 左边中点
+  0:  [25,    75],    // 寅 (col0,row3): 右上角
+  11: [37.5,  75],    // 丑 (col1,row3): 上边中点
+  10: [62.5,  75],    // 子 (col2,row3): 上边中点
+  9:  [75,    75],    // 亥 (col3,row3): 左上角
+};
+
+// 六吉星
+const LIU_JI = ["左辅", "右弼", "天魁", "天钺", "文昌", "文曲"];
+// 六煞星
+const LIU_SHA = ["擎羊", "陀罗", "火星", "铃星", "地空", "地劫"];
+// 其他常用星曜
+const OTHER_STARS = ["禄存", "天马", "天刑", "天姚", "解神", "天巫", "天月", "阴煞", "天官", "天福", "台辅", "封诰", "天哭", "天虚", "龙池", "凤阁", "红鸾", "天喜", "孤辰", "寡宿", "咸池", "华盖"];
+// 长生十二神
+const CHANGSHENG = ["长生", "沐浴", "冠带", "临官", "帝旺", "衰", "病", "死", "墓", "绝", "胎", "养"];
+// 博士十二神
+const BOSHI = ["博士", "力士", "青龙", "小耗", "将军", "奏书", "飞廉", "喜神", "病符", "大耗", "伏兵", "官府"];
+// 岁前十二神
+const SUIQIAN = ["太岁", "太阳", "丧门", "太阴", "官符", "死符", "岁破", "龙德", "白虎", "福德", "吊客", "病符"];
+// v19.2: 将前十二神（流年杂煞，从寅宫起将星顺行）
+const JIANGQIAN = ["将星", "攀鞍", "岁驿", "息神", "华盖", "劫煞", "灾煞", "天煞", "指背", "咸池", "月煞", "亡神"];
+
+// 月份干支简化计算
+const MONTH_GAN_START: Record<string, string> = {
+  "甲": "丙", "己": "丙",
+  "乙": "戊", "庚": "戊",
+  "丙": "庚", "辛": "庚",
+  "丁": "壬", "壬": "壬",
+  "戊": "甲", "癸": "甲",
+};
+
+// ====================================================================
+// 工具函数
+// ====================================================================
+
+/** 根据命宫地支获取命主星（v2.0 修正：与 iztro 一致） */
+function getMingZhu(earthlyBranch: string): string {
+  const map: Record<string, string> = {
+    "子": "贪狼", "丑": "巨门", "寅": "禄存", "卯": "文曲",
+    "辰": "廉贞", "巳": "武曲", "午": "破军", "未": "武曲",
+    "申": "廉贞", "酉": "文曲", "戌": "禄存", "亥": "巨门",
+  };
+  return map[earthlyBranch] || "-";
+}
+
+/** 根据年支获取身主星（v2.0 修正：与 iztro 一致，修正原多处映射错误）
+ *  正确歌诀：子午火星、丑未天相、寅申天梁、卯酉天同、辰戌文昌、巳亥天机 */
+function getShenZhu(earthlyBranch: string): string {
+  const map: Record<string, string> = {
+    "子": "火星", "丑": "天相", "寅": "天梁", "卯": "天同",
+    "辰": "文昌", "巳": "天机", "午": "火星", "未": "天相",
+    "申": "天梁", "酉": "天同", "戌": "文昌", "亥": "天机",
+  };
+  return map[earthlyBranch] || "-";
+}
+
+/** 计算子斗：寅宫起正月顺数至生月，再生月宫起子时逆数至生时 */
+function getZiDou(lunarMonth: number, hourZhiIdx: number): string {
+  // ZHI_NAMES = ["寅","卯","辰","巳","午","未","申","酉","戌","亥","子","丑"] (index 0-11)
+  // Step 1: 从寅(0)起正月，顺数到农历月份（1月=0寅, 2月=1卯, ...）
+  const monthPos = (lunarMonth - 1) % 12;
+  // Step 2: 从该宫起子时(0)，逆数到生时地支index
+  // 逆数：子=0→monthPos, 丑=1→monthPos-1, 寅=2→monthPos-2, ...
+  const ziDouIdx = (monthPos - hourZhiIdx + 12 * 3) % 12;
+  return ZHI_NAMES[ziDouIdx];
+}
+
+/** 从lunarDate字符串解析农历月份 */
+function parseLunarMonth(lunarDate: string): number {
+  if (!lunarDate) return 1;
+  const cn = ["正","一","二","三","四","五","六","七","八","九","十","冬","腊"];
+  for (let i = 0; i < cn.length; i++) {
+    if (lunarDate.includes(cn[i] + "月")) return i === 0 ? 1 : i;
+  }
+  // 处理"十一月""十二月"
+  if (lunarDate.includes("十一月")) return 11;
+  if (lunarDate.includes("十二月") || lunarDate.includes("腊月")) return 12;
+  return 1;
+}
+
+/** 将小时数(0-23)转换为时辰地支索引(子=0,丑=1,...,亥=11) */
+function hourToZhiIdx(hour: number): number {
+  // 23-1:子(0), 1-3:丑(1), 3-5:寅(2), 5-7:卯(3), 7-9:辰(4), 9-11:巳(5)
+  // 11-13:午(6), 13-15:未(7), 15-17:申(8), 17-19:酉(9), 19-21:戌(10), 21-23:亥(11)
+  const map = [0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11];
+  return map[hour] ?? 0;
+}
+
+/** 获取宫位四化信息 */
+function getSihuaType(sihua: ZiweiResult["sihua"], starName: string): string {
+  if (!sihua) return "";
+  if (sihua.huaLu?.star === starName) return "化禄";
+  if (sihua.huaQuan?.star === starName) return "化权";
+  if (sihua.huaKe?.star === starName) return "化科";
+  if (sihua.huaJi?.star === starName) return "化忌";
+  return "";
+}
+
+/** 获取星曜亮度 */
+function getStarBrightness(result: ZiweiResult, starName: string, palaceName: string): string {
+  const starObj = result.stars.find(
+    (s) => s.name === starName && s.palace === palaceName
+  );
+  return starObj?.brightness || "平";
+}
+
+/** 判断是否为主星 */
+function isMajorStar(starName: string): boolean {
+  return MAJOR_STARS.includes(starName);
+}
+
+/** 获取星曜颜色 */
+function getStarColor(starName: string): string {
+  if (MAJOR_STARS.includes(starName)) return MAJOR_STAR_COLOR;
+  if (AUSPICIOUS_AUX.includes(starName)) return AUSPICIOUS_COLOR;
+  if (INAUSPICIOUS_AUX.includes(starName)) return INAUSPICIOUS_COLOR;
+  return MINOR_STAR_COLOR; // 杂曜蓝色
+}
+
+/** 获取星曜字号 - v19.3: 放大基准字号确保清晰可读 */
+function getStarFontSize(starName: string): string {
+  if (MAJOR_STARS.includes(starName)) return "12px";
+  if (AUSPICIOUS_AUX.includes(starName) || INAUSPICIOUS_AUX.includes(starName)) return "10px";
+  return "8px";
+}
+
+/** v18.9: 计算来因宫地支索引
+ * 来因宫 = 生年天干所落宫位，从寅宫起甲顺数到生年天干
+ * 甲→寅(0), 乙→卯(1), 丙→辰(2), 丁→巳(3), 戊→午(4), 己→未(5), 庚→申(6), 辛→酉(7), 壬→戌(8), 癸→亥(9)
+ */
+function getLaiyinPalaceIdx(yearStem: string): number {
+  const stemIdx = GAN_NAMES.indexOf(yearStem);
+  if (stemIdx < 0 || stemIdx > 9) return -1;
+  return stemIdx; // 0-9 对应 ZHI_NAMES[0-9] = 寅卯辰巳午未申酉戌亥
+}
+
+/** 获取干支五行颜色 */
+function getGanZhiColor(char: string): string {
+  const wx = GAN_WUXING[char] || ZHI_WUXING[char];
+  return wx ? WUXING_COLORS[wx] : "#585858";
+}
+
+/** 根据公历年获取年干支（天干+地支） */
+function getYearGanZhi(year: number): { gan: string; zhi: string } {
+  const ganIdx = (year - 4) % 10;
+  const zhiIdx = (year - 4) % 12;
+  return {
+    gan: GAN_NAMES[(ganIdx + 10) % 10],
+    zhi: ZHI_NAMES[(zhiIdx + 12) % 12],
+  };
+}
+
+/** 根据年干和月份(1-12)获取月干支 */
+function getMonthGanZhi(yearGan: string, month: number): { gan: string; zhi: string } {
+  // 月支固定：正月寅、二月卯...十二月丑
+  const monthZhi = ["寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥", "子", "丑"];
+  const zhi = monthZhi[(month - 1) % 12];
+  // 五虎遁年起月法
+  const startGan = MONTH_GAN_START[yearGan] || "丙";
+  const startGanIdx = GAN_NAMES.indexOf(startGan);
+  const gan = GAN_NAMES[(startGanIdx + month - 1) % 10];
+  return { gan, zhi };
+}
+
+/**
+ * 根据宫位和生年干计算辅星/煞星分布
+ */
+function getAuxStars(palaceIdx: number, ziweiIdx: number, tianfuIdx: number, yearStem: string, yearZhi: string, mingIdx: number, month: number): {ji: string[]; sha: string[]; other: string[]; changsheng: string; boshi: string; suiqian: string} {
+  const ji: string[] = [];
+  const sha: string[] = [];
+  const other: string[] = [];
+
+  // 文昌固定在巳(3)，文曲固定在酉(7)
+  if (palaceIdx === 3) ji.push("文昌");
+  if (palaceIdx === 7) ji.push("文曲");
+
+  // 左辅从辰(2)起正月顺行，右弼从戌(8)起正月逆行
+  const fuoIdx = (2 + (month - 1)) % 12;
+  const biIdx = (8 - (month - 1) + 12 * 3) % 12;
+  if (palaceIdx === fuoIdx) ji.push("左辅");
+  if (palaceIdx === biIdx) ji.push("右弼");
+
+  // 天魁天钺
+  const kuiYue: Record<string, [number, number]> = {
+    "甲": [3, 1], "乙": [11, 9], "丙": [10, 8], "丁": [10, 8], "戊": [3, 1],
+    "己": [11, 9], "庚": [8, 10], "辛": [4, 2], "壬": [6, 4], "癸": [6, 4]
+  };
+  if (kuiYue[yearStem]) {
+    if (palaceIdx === kuiYue[yearStem][0]) ji.push("天魁");
+    if (palaceIdx === kuiYue[yearStem][1]) ji.push("天钺");
+  }
+
+  // 禄存
+  const luCun: Record<string, number> = { "甲": 2, "乙": 3, "丙": 5, "丁": 6, "戊": 5, "己": 6, "庚": 8, "辛": 9, "壬": 0, "癸": 1 };
+  if (luCun[yearStem] === palaceIdx) other.push("禄存");
+
+  // 擎羊（禄存前一位）、陀罗（禄存后一位）
+  if (luCun[yearStem] !== undefined) {
+    if ((luCun[yearStem] + 1) % 12 === palaceIdx) sha.push("擎羊");
+    if ((luCun[yearStem] + 11) % 12 === palaceIdx) sha.push("陀罗");
+  }
+
+  // 天马
+  const tianMa: Record<string, number> = { "寅": 6, "午": 6, "戌": 6, "申": 0, "子": 0, "辰": 0, "巳": 9, "酉": 9, "丑": 9, "亥": 3, "卯": 3, "未": 3 };
+  if (tianMa[yearZhi] === palaceIdx) other.push("天马");
+
+  // 火星铃星
+  const huoIdx = (mingIdx + 3) % 12;
+  const lingIdx = (mingIdx + 7) % 12;
+  if (palaceIdx === huoIdx) sha.push("火星");
+  if (palaceIdx === lingIdx) sha.push("铃星");
+
+  // 地空地劫
+  const kongIdx = (mingIdx + 6) % 12;
+  const jieIdx = (kongIdx + 1) % 12;
+  if (palaceIdx === kongIdx) sha.push("地空");
+  if (palaceIdx === jieIdx) sha.push("地劫");
+
+  // 红鸾天喜
+  const zhiIdx0 = ZHI_NAMES.indexOf(yearZhi);
+  const hongluan = (2 + 12 - zhiIdx0) % 12;
+  const tianxi = (hongluan + 6) % 12;
+  if (palaceIdx === hongluan) other.push("红鸾");
+  if (palaceIdx === tianxi) other.push("天喜");
+
+  // 天刑天姚天月解神天巫阴煞
+  if (palaceIdx === (mingIdx + 5) % 12) other.push("天刑");
+  if (palaceIdx === (mingIdx + 9) % 12) other.push("天姚");
+  if (palaceIdx === (mingIdx + 4) % 12) other.push("天月");
+  if (palaceIdx === (mingIdx + 8) % 12) other.push("解神");
+  if (palaceIdx === (mingIdx + 1) % 12) other.push("天巫");
+  if (palaceIdx === (mingIdx + 11) % 12) other.push("阴煞");
+
+  // 孤辰寡宿
+  const guChenMap: Record<string, number> = { "寅": 3, "卯": 3, "辰": 3, "巳": 6, "午": 6, "未": 6, "申": 9, "酉": 9, "戌": 9, "亥": 0, "子": 0, "丑": 0 };
+  const guaSuMap: Record<string, number> = { "寅": 11, "卯": 11, "辰": 11, "巳": 2, "午": 2, "未": 2, "申": 5, "酉": 5, "戌": 5, "亥": 8, "子": 8, "丑": 8 };
+  if (guChenMap[yearZhi] === palaceIdx) other.push("孤辰");
+  if (guaSuMap[yearZhi] === palaceIdx) other.push("寡宿");
+
+  // 咸池
+  const xianChiMap: Record<string, number> = { "寅": 8, "卯": 9, "辰": 6, "巳": 1, "午": 2, "未": 0, "申": 3, "酉": 4, "戌": 1, "亥": 6, "子": 7, "丑": 5 };
+  if (xianChiMap[yearZhi] === palaceIdx) other.push("咸池");
+
+  // 华盖
+  const huaGaiMap: Record<string, number> = { "寅": 10, "卯": 11, "辰": 2, "巳": 10, "午": 11, "未": 2, "申": 10, "酉": 11, "戌": 2, "亥": 10, "子": 11, "丑": 2 };
+  if (huaGaiMap[yearZhi] === palaceIdx) other.push("华盖");
+
+  // 天哭天虚
+  if (palaceIdx === (mingIdx + 2) % 12) other.push("天哭");
+  if (palaceIdx === (mingIdx + 10) % 12) other.push("天虚");
+
+  // 龙池凤阁
+  const longChi = (3 + (mingIdx % 6)) % 12; // 简化
+  const fengGe = (11 - (mingIdx % 6) + 12) % 12;
+  if (palaceIdx === longChi) other.push("龙池");
+  if (palaceIdx === fengGe) other.push("凤阁");
+
+  // 长生十二神（从命宫起长生，顺行）
+  const changsheng = CHANGSHENG[(palaceIdx - mingIdx + 12) % 12];
+
+  // 博士十二神（从禄存起博士，顺行）
+  const luIdx = luCun[yearStem] ?? 0;
+  const boshi = BOSHI[(palaceIdx - luIdx + 12) % 12];
+
+  // 岁前十二神（从年支起太岁，顺行）
+  const suiqian = SUIQIAN[(palaceIdx - zhiIdx0 + 12) % 12];
+
+  return { ji, sha, other, changsheng, boshi, suiqian };
+}
+
+// ====================================================================
+// 主组件
+// ====================================================================
+
+export default function ZiweiPage() {
+  const pageKey = "yixue_ziwei"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
+
+  // v20.1: 登录守卫
+  const { requireLogin, showLoginPrompt, setShowLoginPrompt } = useRequireLogin();
+
+  // ---- 表单状态 ----
+  const [name, setName] = useState("");
+  // URL参数预设（用于自动验证）：?y=1990&m=6&d=15&h=0&g=male&auto=1
+  const sp = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+  const [year, setYear] = useState(sp ? parseInt(sp.get("y") || "1990") : 1990);
+  const [month, setMonth] = useState(sp ? parseInt(sp.get("m") || "5") : 5);
+  const [day, setDay] = useState(sp ? parseInt(sp.get("d") || "15") : 15);
+  const [hour, setHour] = useState(sp ? parseInt(sp.get("h") || "12") : 12);
+  const [gender, setGender] = useState<Gender>((sp?.get("g") as Gender) || "male");
+  const [calType, setCalType] = useState<"gongli" | "nongli" | "sizhu">("gongli");
+  const [zaoWanZi, setZaoWanZi] = useState(false);
+  const [zhenTaiyang, setZhenTaiyang] = useState(false);
+  const [xiaLing, setXiaLing] = useState(false);
+  const [saveName, setSaveName] = useState(false);
+  const [showForm, setShowForm] = useState(true);
+
+  // ---- 视图模式 ----
+  const [viewMode, setViewMode] = useState<"sihua" | "sanhe" | "feixing">("sanhe");
+
+  // ---- 三方四正高亮宫位（地支索引 0-11，null 表示无高亮） ----
+  const [focusedPalace, setFocusedPalace] = useState<number | null>(null);
+
+  // ---- 大限/流年/流月选中状态 ----
+  const [selectedDaxian, setSelectedDaxian] = useState<number>(0);
+  const [selectedLiunian, setSelectedLiunian] = useState<number>(0);
+  const [selectedLiuyue, setSelectedLiuyue] = useState<number>(-1);
+  const [interpretPanel, setInterpretPanel] = useState<{palaceName: string; palaceGanZhi: string; interpretations: Array<{type: string; title: string; content: string; source: string}>} | null>(null);
+  // v18.6: 宫位大运名称展开状态（点击宫位展开/收起大运宫名）
+  const [expandedPalaceIdx, setExpandedPalaceIdx] = useState<number | null>(null);
+  // v18.6: 解读面板收起状态（避免遮挡命盘）
+  const [panelCollapsed, setPanelCollapsed] = useState(false);
+  // v19.2: 流日/流时选中状态
+  const [selectedLiuri, setSelectedLiuri] = useState<number>(-1);
+  const [selectedLiushi, setSelectedLiushi] = useState<number>(-1);
+  // v18.9: AI解读状态
+  const [aiInterpreting, setAiInterpreting] = useState(false);
+  const [aiContent, setAiContent] = useState("");
+  const [aiScope, setAiScope] = useState<"overall" | "palace" | "daxian" | "liunian" | "liuyue" | "liuri" | "liushi" | null>(null);
+
+  // ---- 结果状态 ----
+  const [result, setResult] = useState<ZiweiResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedClient, setSelectedClient] = useState<Client|null>(null);
+
+  // ---- 提交 ----
+  const handleSubmit = (override?:{year:number;month:number;day:number;hour:number;gender:Gender}) => {
+    setError(null);
+    const y=override?.year??year; const m=override?.month??month;
+    const d=override?.day??day; const h=override?.hour??hour;
+    const g=override?.gender??gender;
+    try {
+      const res = calculateZiwei({ year:y, month:m, day:d, hour:h, gender:g });
+      setResult(res);
+      setShowForm(false);
+      savePaipanState("ziwei",{input:{year:y,month:m,day:d,hour:h,gender:g,calType},showForm:false,_ts:Date.now()});
+      // 保存客户记录
+      if(selectedClient){
+        try{saveRecord({clientId:selectedClient.id,type:"ziwei",data:{...res,inputParams:{year:y,month:m,day:d,hour:h,gender:g}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "计算失败");
+    }
+  };
+
+  // URL参数clientId自动选中客户 + 回填数据检查
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const cid = params.get("clientId");
+    if (cid) {
+      const c = getClient(cid);
+      if (c) setSelectedClient(c);
+    }
+    const prefill = getPrefillData("ziwei");
+    if (prefill) {
+      try {
+        // 回填排盘结果
+        setResult(prefill);
+        // 回填输入参数
+        if (prefill.inputParams) {
+          const ip = prefill.inputParams;
+          if (ip.year) setYear(ip.year);
+          if (ip.month) setMonth(ip.month);
+          if (ip.day) setDay(ip.day);
+          if (ip.hour !== undefined) setHour(ip.hour);
+          if (ip.gender) setGender(ip.gender);
+        }
+        setShowForm(false);
+        clearPrefillData("ziwei");
+      } catch (e) { console.error("回填失败:", e); }
+    }
+  }, []);
+
+  // URL参数auto=1时自动排盘（用于验证）
+  useEffect(() => {
+    if (sp?.get("auto") === "1") {
+      const t = setTimeout(() => handleSubmit(), 300);
+      return () => clearTimeout(t);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // localStorage 持久化：恢复排盘状态
+  useEffect(() => {
+    const saved = loadPaipanState("ziwei");
+    if (saved && saved.input) {
+      const inp = saved.input as any;
+      if (inp.year) setYear(inp.year);
+      if (inp.month) setMonth(inp.month);
+      if (inp.day) setDay(inp.day);
+      if (inp.hour) setHour(inp.hour);
+      if (inp.gender) setGender(inp.gender);
+      if (inp.calType) setCalType(inp.calType);
+    }
+  }, []);
+
+  // ---- 派生数据 ----
+  const mingPalace = result?.palaces?.find((p) => p.name === "命宫");
+  const mingPalaceEarthlyBranch = mingPalace?.earthlyBranch || "";
+  const mingZhu = getMingZhu(mingPalaceEarthlyBranch);
+  const shenZhu = getShenZhu(result?.earthlyBranch || "");
+
+  // v19.6: 排盘数据摘要（用于事情断法面板的 chartContext）
+  const chartContextSummary = useMemo(() => {
+    if (!result) return "";
+    const mingStars = (mingPalace?.majorStars || []).join(",");
+    const sihua = result.sihua ?
+      `化禄:${result.sihua.huaLu?.star||""} 化权:${result.sihua.huaQuan?.star||""} 化科:${result.sihua.huaKe?.star||""} 化忌:${result.sihua.huaJi?.star||""}` : "";
+    return `生年干支：${result.heavenlyStem}${result.earthlyBranch}\n命宫：${result.earthlyBranchOfSoulPalace} 主星[${mingStars}]\n身宫：${result.earthlyBranchOfBodyPalace}\n命主：${result.soulStar || mingZhu}\n身主：${result.bodyStar || shenZhu}\n五行局：${result.fiveElementsClass}\n四化：${sihua}`;
+  }, [result, mingPalace, mingZhu, shenZhu]);
+  const ziDou = useMemo(() => {
+    if (!result) return "";
+    const lm = parseLunarMonth(result.lunarDate);
+    const hIdx = hourToZhiIdx(hour);
+    return getZiDou(lm, hIdx);
+  }, [result, hour]);
+
+  // 八字四柱（用于中心面板）
+  const baziPillars = useMemo(() => {
+    if (!result) return null;
+    try {
+      const baziRes = solarToBazi({ year, month, day, hour, gender });
+      return baziRes;
+    } catch {
+      return null;
+    }
+  }, [result, year, month, day, hour, gender]);
+
+  // 找紫微/天府/命宫索引（在 ZHI_NAMES 中的位置）
+  const palaceIndices = useMemo(() => {
+    if (!result) return { ziweiIdx: 0, tianfuIdx: 0, mingIdx: 0 };
+    let ziweiIdx = 0, tianfuIdx = 0, mingIdx = 0;
+    for (let i = 0; i < result.palaces.length; i++) {
+      const p = result.palaces[i];
+      const zhiIdx = p.index !== undefined ? p.index : ZHI_NAMES.indexOf(p.earthlyBranch);
+      if (p.majorStars.includes("紫微")) ziweiIdx = zhiIdx;
+      if (p.majorStars.includes("天府")) tianfuIdx = zhiIdx;
+      if (p.name === "命宫") mingIdx = zhiIdx;
+    }
+    return { ziweiIdx, tianfuIdx, mingIdx };
+  }, [result]);
+
+  // 大限数据（从命宫开始，阳男阴女顺行，阴男阳女逆行，对标jishiyu）
+  const decadalData = useMemo(() => {
+    if (!result) return [];
+    // 找命宫索引（按地支顺序0-11:寅卯辰巳午未申酉戌亥子丑）
+    let mingIdx = -1;
+    for (let i = 0; i < result.palaces.length; i++) {
+      if (result.palaces[i].name === "命宫") { mingIdx = i; break; }
+    }
+    if (mingIdx < 0) return [];
+
+    // 判断顺逆：阳男阴女顺行，阴男阳女逆行
+    const yearGan = result.heavenlyStem;
+    const isYangGan = ["甲", "丙", "戊", "庚", "壬"].includes(yearGan);
+    const isShun = (gender === "male" && isYangGan) || (gender === "female" && !isYangGan);
+
+    const list: Array<{
+      name: string;
+      decadalGan: string;
+      decadalZhi: string;
+      ageRange: [number, number];
+      ganzhi: string;
+    }> = [];
+
+    for (let i = 0; i < 12; i++) {
+      const idx = isShun ? (mingIdx + i) % 12 : (mingIdx - i + 12 * 3) % 12;
+      const p = result.palaces.find(pp => pp.index === idx || ZHI_NAMES.indexOf(pp.earthlyBranch) === idx);
+      if (!p) continue;
+      const dGan = p.decadal?.[0] || "";
+      const dZhi = p.decadal?.[1] || "";
+      list.push({
+        name: p.name,
+        decadalGan: dGan,
+        decadalZhi: dZhi,
+        ageRange: p.ageRange || [0, 0],
+        ganzhi: p.decadal || "",
+      });
+    }
+    return list;
+  }, [result, gender]);
+
+  // v18.6: 大运宫名映射（根据宫位名称查找其在decadalData中的位置，得到大运宫名）
+  const PALACE_NAMES_12 = ["命宫", "兄弟宫", "夫妻宫", "子女宫", "财帛宫", "疾厄宫", "迁移宫", "交友宫", "官禄宫", "田宅宫", "福德宫", "父母宫"];
+  const getDaxianPalaceName = (palaceName: string): string => {
+    if (!decadalData.length) return "";
+    const pos = decadalData.findIndex(d => d.name === palaceName);
+    return pos >= 0 ? `大运${PALACE_NAMES_12[pos]}` : "";
+  };
+
+  // 流年数据（当前选中大限对应的10年，对标jishiyu，显示年份+干支）
+  const liunianYears = useMemo(() => {
+    if (!decadalData.length || !result) return [];
+    const curDaxian = decadalData[selectedDaxian];
+    if (!curDaxian) return [];
+    const startAge = curDaxian.ageRange[0];
+    const startYear = year + startAge - 1;
+    const years = [];
+    for (let i = 0; i < 10; i++) {
+      const y = startYear + i;
+      const gz = getYearGanZhi(y);
+      years.push({
+        year: y,
+        age: startAge + i,
+        gan: gz.gan,
+        zhi: gz.zhi,
+      });
+    }
+    return years;
+  }, [decadalData, selectedDaxian, year, result]);
+
+  // 流月数据（当前选中年份的12个月干支，对标jishiyu）
+  const liuyueMonths = useMemo(() => {
+    if (!liunianYears.length) return [];
+    const curYear = liunianYears[selectedLiunian]?.year || year;
+    const yearGan = getYearGanZhi(curYear).gan;
+    const months = [];
+    for (let m = 1; m <= 12; m++) {
+      const gz = getMonthGanZhi(yearGan, m);
+      months.push({ label: `${m}月`, gan: gz.gan, zhi: gz.zhi });
+    }
+    return months;
+  }, [liunianYears, selectedLiunian, year]);
+
+  // v19.5: 流日数据（选中流月的30天，干支五行色，农历日名）
+  const liuriDays = useMemo(() => {
+    if (!liuyueMonths.length || selectedLiuyue < 0) return [];
+    const curMonth = liuyueMonths[selectedLiuyue];
+    if (!curMonth) return [];
+    // v19.5: 农历日名
+    const lunarDayNames = [
+      "初一","初二","初三","初四","初五","初六","初七","初八","初九","初十",
+      "十一","十二","十三","十四","十五","十六","十七","十八","十九","二十",
+      "廿一","廿二","廿三","廿四","廿五","廿六","廿七","廿八","廿九","三十"
+    ];
+    const days = [];
+    const startZhiIdx = ZHI_NAMES.indexOf(curMonth.zhi);
+    const startGan = curMonth.gan;
+    const startGanIdx = GAN_NAMES.indexOf(startGan);
+    for (let d = 1; d <= 30; d++) {
+      const ganIdx = (startGanIdx + d - 1) % 10;
+      const zhiIdx = (startZhiIdx + d - 1) % 12;
+      days.push({ day: d, lunarName: lunarDayNames[d - 1], gan: GAN_NAMES[ganIdx], zhi: ZHI_NAMES[zhiIdx] });
+    }
+    return days;
+  }, [liuyueMonths, selectedLiuyue]);
+
+  // v19.2: 流时数据（12个时辰，地支固定子~亥）
+  const liushiHours = useMemo(() => {
+    const curDay = selectedLiuri >= 0 ? liuriDays[selectedLiuri] : null;
+    if (!curDay) return [];
+    const hours = [];
+    const dayGanIdx = GAN_NAMES.indexOf(curDay.gan);
+    // 日上起时：甲己还加甲，乙庚丙作初...
+    const startHourGan: Record<number, number> = { 0: 0, 5: 0, 1: 2, 6: 2, 2: 4, 7: 4, 3: 6, 8: 6, 4: 8, 9: 8 };
+    const startGanIdx = startHourGan[dayGanIdx] ?? 0;
+    for (let h = 0; h < 12; h++) {
+      const ganIdx = (startGanIdx + h) % 10;
+      // 时辰地支从子(10)开始
+      const zhiIdx = (10 + h) % 12;
+      hours.push({ hour: h, gan: GAN_NAMES[ganIdx], zhi: ZHI_NAMES[zhiIdx] });
+    }
+    return hours;
+  }, [liuriDays, selectedLiuri]);
+
+  // 流月数据（正月~十二月）
+  const months = useMemo(() => {
+    return ["正月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "冬月", "腊月"];
+  }, []);
+
+  // 流日数据
+  const days1 = useMemo(() => {
+    return Array.from({ length: 15 }, (_, i) => `初${i + 1}`.replace("初10", "初十").replace("初11", "十一").replace("初12", "十二").replace("初13", "十三").replace("初14", "十四").replace("初15", "十五"));
+  }, []);
+  const days2 = useMemo(() => {
+    return ["十六", "十七", "十八", "十九", "二十", "廿一", "廿二", "廿三", "廿四", "廿五", "廿六", "廿七", "廿八", "廿九", "三十"];
+  }, []);
+
+  // 流时数据（子時~亥時）
+  const shichen = useMemo(() => {
+    return ["子時", "丑時", "寅時", "卯時", "辰時", "巳時", "午時", "未時", "申時", "酉時", "戌時", "亥時"];
+  }, []);
+
+  // 当前年份
+  const [currentYear, setCurrentYear] = useState(2026);
+  useEffect(() => {
+    setCurrentYear(new Date().getFullYear());
+  }, []);
+
+  // 监听 layout 的编辑按钮事件
+  useEffect(() => {
+    const editHandler = () => setShowForm(true);
+    const backHandler = () => {
+      if (!showForm) { setShowForm(true); window.__yixueBackHandled = true; }
+    };
+    window.addEventListener("yixue-edit", editHandler);
+    window.addEventListener("yixue-back", backHandler);
+    return () => {
+      window.removeEventListener("yixue-edit", editHandler);
+      window.removeEventListener("yixue-back", backHandler);
+    };
+  }, []);
+
+  // 当大限变化时重置流年
+  useEffect(() => {
+    setSelectedLiunian(0);
+  }, [selectedDaxian]);
+
+  // 默认无连线，点击宫位才显示三方四正
+  useEffect(() => {
+    setFocusedPalace(null);
+  }, [result]);
+
+  // v18.9: 来因宫索引
+  const laiyinPalaceIdx = useMemo(() => {
+    if (!result?.heavenlyStem) return -1;
+    return getLaiyinPalaceIdx(result.heavenlyStem);
+  }, [result]);
+
+  // v18.9: AI解读请求函数（流式输出）
+  const handleAIInterpret = async (scope: "overall" | "palace" | "daxian" | "liunian" | "liuyue" | "liuri" | "liushi", contextData?: string) => {
+    if (aiInterpreting) return;
+
+    // v20.1: 三级权限检查 - 未登录弹出登录引导
+    if (!requireLogin()) return;
+    const perm = getPermissionStatus();
+    if (!perm.canUseAI) {
+      setAiContent(perm.message || "今日AI解读次数已用完，开通会员继续使用");
+      setAiScope(scope);
+      return;
+    }
+
+    // v19.6: 配额检查
+    const quota = checkAIQuota();
+    if (!quota.canUse) {
+      setAiContent(quota.message || "今日AI解读次数已用完");
+      setAiScope(scope);
+      return;
+    }
+    setAiInterpreting(true);
+    setAiScope(scope);
+    setAiContent("");
+    try {
+      const scopeText = {
+        overall: "整体命盘",
+        palace: "单宫解读",
+        daxian: "大运解读",
+        liunian: "流年解读",
+        liuyue: "流月解读",
+        liuri: "流日解读",
+        liushi: "流时解读",
+      }[scope];
+
+      const systemPrompt = `你是资深紫微斗数解读师，精通三合派与四化派理论。请基于提供的命盘数据进行专业解读。
+要求：
+1. 内容结构清晰，分段落阐述
+2. 语言通俗易懂，避免过于玄乎的表述
+3. 避免绝对化、宿命论表述
+4. 不涉及医疗、投资、法律等违规建议
+5. 结尾必须标注：「以上内容由AI生成，仅供传统文化学习参考，不构成人生决策建议」`;
+
+      const baseContext = contextData || (() => {
+        if (!result) return "";
+        const palaceSummary = result.palaces.map(p => 
+          `${p.name}(${p.heavenlyStem}${p.earthlyBranch}): 主星[${(p.majorStars||[]).join(",")}] 辅星[${(p.auspiciousStars||[]).join(",")}] 煞星[${(p.shaStars||[]).join(",")}]`
+        ).join("\n");
+        const sihua = result.sihua ? 
+          `化禄:${result.sihua.huaLu?.star||""} 化权:${result.sihua.huaQuan?.star||""} 化科:${result.sihua.huaKe?.star||""} 化忌:${result.sihua.huaJi?.star||""}` : "";
+        return `生年干支：${result.heavenlyStem}${result.earthlyBranch}\n命宫：${result.earthlyBranchOfSoulPalace}\n身宫：${result.earthlyBranchOfBodyPalace}\n五行局：${result.fiveElementsClass}\n四化：${sihua}\n十二宫星曜分布：\n${palaceSummary}`;
+      })();
+
+      const userPrompt = `请对以下紫微斗数命盘进行${scopeText}：\n${baseContext}\n\n请从性格天赋、事业财运、感情婚恋、健康注意等方面进行分析。`;
+
+      const aiResult = await callAI({
+        systemPrompt,
+        userPrompt,
+        cacheKey: `ziwei_${scope}_${baseContext.slice(0, 80)}`,
+      });
+
+      if (aiResult.success) {
+        let text = aiResult.content || "";
+        if (!text.includes("仅供传统文化学习参考")) {
+          text += "\n\n以上内容由AI生成，仅供传统文化学习参考，不构成人生决策建议";
+        }
+        setAiContent(text);
+        // v19.6: AI调用成功后增加使用次数
+        incrementAIUsage();
+      } else {
+        setAiContent("AI解读服务暂时不可用，请稍后重试。\n\n以上内容由AI生成，仅供传统文化学习参考，不构成人生决策建议");
+      }
+    } catch {
+      setAiContent("AI解读服务暂时不可用，请稍后重试。\n\n以上内容由AI生成，仅供传统文化学习参考，不构成人生决策建议");
+    } finally {
+      setAiInterpreting(false);
+    }
+  };
+
+  // 计算宫位中心在SVG中的百分比坐标
+  const getPalaceCenter = (zhiIdx: number): [number, number] => {
+    const grid = ZHI_TO_GRID[zhiIdx];
+    if (!grid) return [50, 50];
+    const [col, row] = grid;
+    return [(col + 0.5) * 25, (row + 0.5) * 25];
+  };
+
+  // 获取宫位背景色（三方四正高亮，统一浅紫色）
+  const getPalaceBg = (palaceZhiIdx: number): string => {
+    if (focusedPalace === null) return "#fff";
+    if (palaceZhiIdx === focusedPalace) return "#f4eefa"; // 本宫
+    const dui = (focusedPalace + 6) % 12;
+    if (palaceZhiIdx === dui) return "#f4eefa"; // 对宫
+    const sf1 = (focusedPalace + 4) % 12;
+    const sf2 = (focusedPalace + 8) % 12;
+    if (palaceZhiIdx === sf1 || palaceZhiIdx === sf2) return "#f4eefa"; // 三方
+    return "#fff";
+  };
+
+  return (
+    <div className="bg-[#ededed] min-h-screen flex justify-center">
+      <div className="w-full" style={{ maxWidth: "420px", paddingBottom: "10px" }}>
+      {/* 输入表单 DatePicker 弹窗 */}
+      <DatePicker
+        show={showForm}
+        onClose={() => setShowForm(false)}
+        onSubmit={(dateVal, opts) => {
+          setYear(dateVal.year); setMonth(dateVal.month); setDay(dateVal.day); setHour(dateVal.hour);
+          setGender(opts.gender as Gender);
+          setCalType(opts.calType === "solar" ? "gongli" : opts.calType === "lunar" ? "nongli" : "sizhu");
+          setZaoWanZi(opts.zaoWanZi); setZhenTaiyang(opts.zhenTaiyang); setXiaLing(opts.xiaLing);
+          handleSubmit({year: dateVal.year, month: dateVal.month, day: dateVal.day, hour: dateVal.hour, gender: opts.gender as Gender});
+        }}
+        initialDate={{year, month, day, hour, minute: 0}}
+        initialOptions={{
+          gender,
+          calType: calType === "gongli" ? "solar" : calType === "nongli" ? "lunar" : "sizhu",
+          zaoWanZi, zhenTaiyang, xiaLing,
+        }}
+        showName={true} name={name} onNameChange={setName}
+        showSaveName={true} saveName={saveName} onSaveNameChange={setSaveName}
+        showGender={true} showCalType={true} showToggles={true} showRegion={true}
+        showMinute={true}
+        submitText="排盘" title="紫微斗数排盘"
+      />
+
+      {/* 错误提示 */}
+      {error && (
+        <div className="px-4 py-2 text-center text-[13px] text-red-600">
+          {error}
+        </div>
+      )}
+
+      {/* ================================================================ */}
+      {/* 排盘结果 */}
+      {/* ================================================================ */}
+      {!showForm && !result && (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+          <button onClick={() => { clearPaipanState("ziwei"); setShowForm(true); }} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">开始排盘</button>
+        </div>
+      )}
+      {result && (
+        <div className="px-2">
+          {/* ---- 4x4 宫格盘（带方位标签和SVG连线，v19.2支持缩放拖拽） ---- */}
+          <div className="bg-white rounded-lg overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08)] mb-2 mt-2">
+            {/* 方位标签 - 上方（对应巳午未申） */}
+            <div className="flex text-[9px] text-gray-500" style={{ height: "14px", lineHeight: "14px" }}>
+              <div style={{ width: "25%", textAlign: "center" }}>南偏东</div>
+              <div style={{ width: "25%", textAlign: "center", fontWeight: "bold", color: "#333" }}>正南方</div>
+              <div style={{ width: "25%", textAlign: "center" }}>南偏西</div>
+              <div style={{ width: "25%", textAlign: "center" }}>西偏南</div>
+            </div>
+
+            <div style={{ display: "flex" }}>
+              {/* 方位标签 - 左侧 */}
+              <div style={{ width: "14px", display: "flex", flexDirection: "column", fontSize: "9px", color: "#555", writingMode: "vertical-rl", textOrientation: "mixed", justifyContent: "center", alignItems: "center", letterSpacing: "2px" }}>
+                <span style={{ marginBottom: "8px" }}>东偏南</span>
+                <span style={{ fontWeight: "bold", color: "#333" }}>正东方</span>
+                <span style={{ marginTop: "8px" }}>东偏北</span>
+              </div>
+
+              {/* 4x4 网格区域（含SVG叠加） */}
+              <div
+                style={{
+                  flex: 1,
+                  position: "relative",
+                  overflow: "hidden",
+                }}
+              >
+                {/* SVG 叠加层 */}
+                <svg
+                  style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 2 }}
+                  viewBox="0 0 100 100"
+                  preserveAspectRatio="none"
+                >
+                  {/* 三方四正虚线三角辅助标识（三合模式默认显示命宫三方四正，点击宫位切换） */}
+                  {(() => {
+                    const target = focusedPalace !== null ? focusedPalace : ZHI_NAMES.indexOf(result.earthlyBranchOfSoulPalace || "寅");
+                    const ben = ANCHOR_POINTS[target];
+                    const duiIdx = (target + 6) % 12;
+                    const sf1Idx = (target + 4) % 12;
+                    const sf2Idx = (target + 8) % 12;
+                    const dui = ANCHOR_POINTS[duiIdx];
+                    const sf1 = ANCHOR_POINTS[sf1Idx];
+                    const sf2 = ANCHOR_POINTS[sf2Idx];
+                    if (!ben || !dui || !sf1 || !sf2) return null;
+                    const d = `M${dui[0]},${dui[1]} L${ben[0]},${ben[1]} L${sf1[0]},${sf1[1]} L${sf2[0]},${sf2[1]} L${ben[0]},${ben[1]} Z`;
+                    return (
+                      <path
+                        d={d}
+                        fill="transparent"
+                        stroke="#c8c8c8"
+                        strokeWidth="0.3"
+                        strokeDasharray="1.2,1.2"
+                      />
+                    );
+                  })()}
+                </svg>
+
+                {/* 4x4 CSS Grid - 正方形，对标jishiyu（v19.3: 移除内部scale，由外层容器统一缩放） */}
+                <div className="grid grid-cols-4 grid-rows-4" style={{ aspectRatio: "0.95", position: "relative", zIndex: 1, minHeight: "400px" }}>
+                  {/* 12宫位卡片 */}
+                  {GRID_4X4.flat().map((idx, pos) => {
+                    // 中心 4 格合并为命宫详情
+                    if (idx === null) {
+                      if (pos !== 5) return null;
+                      return (
+                        <div
+                          key="center"
+                          onClick={() => setFocusedPalace(null)}
+                          style={{ gridRow: "2/4", gridColumn: "2/4", border: "1px solid #ccc", display: "flex", flexDirection: "column", padding: "3px 4px", overflow: "hidden", backgroundColor: "#fafafa", position: "relative", cursor: "pointer", zIndex: 3 }}
+                        >
+                          {/* Row 0: 标题 */}
+                          <div className="text-center font-bold" style={{ color: BRAND_PURPLE, fontSize: "13px", lineHeight: 1.2, marginBottom: "1px", position: "relative" }}>
+                            言道•紫微斗数
+                            <span style={{ position: "absolute", right: 0, top: 0, fontSize: "7px", color: "#999", fontWeight: "normal" }}>v1.0</span>
+                          </div>
+
+                          {/* Row 1: 阴阳性别 + 五行局 */}
+                          {(() => {
+                            const isYangGan = ["甲","丙","戊","庚","壬"].includes(result.heavenlyStem);
+                            const yyLabel = gender === "male" ? (isYangGan ? "阳男" : "阴男") : (isYangGan ? "阳女" : "阴女");
+                            return (
+                              <div className="text-center" style={{ fontSize: "10px", color: "#333", marginBottom: "1px" }}>
+                                {yyLabel} <span className="font-bold" style={{ color: BRAND_PURPLE_DARK }}>{result.fiveElementsClass || "-"}</span>
+                              </div>
+                            );
+                          })()}
+
+                          {/* Row 2: 公历 + 时辰范围 */}
+                          <div style={{ fontSize: "8px", color: "#666", lineHeight: 1.3, display: "flex", justifyContent: "space-between", padding: "0 2px" }}>
+                            <span>公历：{result.solarDate || "-"}</span>
+                            <span>{result.timeRange || ""}</span>
+                          </div>
+
+                          {/* Row 3: 农历 + 时辰名 */}
+                          <div style={{ fontSize: "8px", color: "#666", lineHeight: 1.3, display: "flex", justifyContent: "space-between", padding: "0 2px" }}>
+                            <span>农历：{result.lunarDate || "-"}</span>
+                            <span>{result.time || ""}</span>
+                          </div>
+
+                          {/* Row 4: 属相 + 星座 */}
+                          <div style={{ fontSize: "8px", color: "#666", lineHeight: 1.3, display: "flex", justifyContent: "space-between", padding: "0 2px", marginTop: "1px" }}>
+                            <span>属相：{result.zodiac || "-"}</span>
+                            <span>星座：{result.sign || "-"}</span>
+                          </div>
+
+                          {/* Row 5: 身宫 + 命宫（地支） */}
+                          <div style={{ fontSize: "8px", color: "#666", lineHeight: 1.3, display: "flex", justifyContent: "space-between", padding: "0 2px" }}>
+                            <span>身宫：<span style={{ color: "#000", fontWeight: "bold" }}>{result.earthlyBranchOfBodyPalace || "-"}</span></span>
+                            <span>命宫：<span style={{ color: "#000", fontWeight: "bold" }}>{result.earthlyBranchOfSoulPalace || "-"}</span></span>
+                          </div>
+
+                          {/* Row 6: 命主 + 身主 */}
+                          <div style={{ fontSize: "8px", color: "#666", lineHeight: 1.3, display: "flex", justifyContent: "space-between", padding: "0 2px" }}>
+                            <span>命主：<span style={{ color: "#000", fontWeight: "bold" }}>{result.soulStar || mingZhu}</span></span>
+                            <span>身主：<span style={{ color: "#000", fontWeight: "bold" }}>{result.bodyStar || shenZhu}</span></span>
+                          </div>
+
+                          {/* Row 7a: 四柱（天干地支竖排，五行颜色）- 数据来自 iztro chineseDate */}
+                          {(() => {
+                            const parts = result.chineseDate ? result.chineseDate.split(/\s+/) : [];
+                            const labels = ["年", "月", "日", "时"];
+                            return (
+                              <div className="flex gap-0.5" style={{ marginBottom: "1px", marginTop: "1px" }}>
+                                {labels.map((label, pi) => {
+                                  const gz = parts[pi] || "--";
+                                  const gan = gz.charAt(0);
+                                  const zhi = gz.charAt(1);
+                                  const ganColor = GAN_WUXING[gan] ? WUXING_COLORS[GAN_WUXING[gan]] : BRAND_PURPLE_DARK;
+                                  const zhiColor = ZHI_WUXING[zhi] ? WUXING_COLORS[ZHI_WUXING[zhi]] : BRAND_PURPLE_DARK;
+                                  return (
+                                    <div key={pi} className="flex-1 text-center rounded" style={{ backgroundColor: BRAND_PURPLE_BG, padding: "1px 0", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                                      <div style={{ fontSize: "7px", color: "#999", lineHeight: 1.1 }}>{label}</div>
+                                      <div style={{ fontSize: "10px", fontWeight: "bold", lineHeight: 1.2, color: ganColor }}>{gan}</div>
+                                      <div style={{ fontSize: "10px", fontWeight: "bold", lineHeight: 1.2, color: zhiColor }}>{zhi}</div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })()}
+
+                          {/* Row 7b: 起运信息 */}
+                          {baziPillars?.dayun && (
+                            <div style={{ fontSize: "7px", color: "#888", lineHeight: 1.2, textAlign: "center", marginBottom: "1px" }}>
+                              {baziPillars.dayun.qiyunText || ""}
+                            </div>
+                          )}
+
+                          {/* Row 7c: 大运列表（八字大运，干支五行色，对标jishiyu） */}
+                          {baziPillars?.dayun?.dayunList && baziPillars.dayun.dayunList.length > 0 && (
+                            <div style={{ display: "flex", gap: "1px", marginBottom: "1px" }}>
+                              {baziPillars.dayun.dayunList.slice(0, 8).map((d, i) => (
+                                <div key={i} style={{ flex: 1, textAlign: "center", fontSize: "6px", lineHeight: 1.1, color: "#666" }}>
+                                  <span style={{ color: "#333", fontWeight: "bold", fontSize: "7px" }}>{Math.round(d.startAge)}岁</span>
+                                  <br />
+                                  <span style={{ color: getGanZhiColor(d.gan), fontWeight: "bold" }}>{d.gan}</span><span style={{ color: getGanZhiColor(d.zhi), fontWeight: "bold" }}>{d.zhi}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* 紫色按钮组 */}
+                          <div className="flex gap-1" style={{ marginTop: "1px", justifyContent: "center" }}>
+                            <button className="px-1.5 py-0.5 text-white font-bold rounded cursor-pointer border-0" style={{ background: BRAND_PURPLE, fontSize: "9px" }}>學紫微</button>
+                            <button className="px-1.5 py-0.5 text-white font-bold rounded cursor-pointer border-0" style={{ background: BRAND_PURPLE_LIGHT, fontSize: "9px" }}>時↑</button>
+                            <button className="px-1.5 py-0.5 text-white font-bold rounded cursor-pointer border-0" style={{ background: BRAND_PURPLE_LIGHT, fontSize: "9px" }}>時↓</button>
+                            <button className="px-1.5 py-0.5 text-white font-bold rounded cursor-pointer border-0" style={{ background: BRAND_PURPLE, fontSize: "9px" }}>解命盤</button>
+                          </div>
+
+                          {/* 自化图示 */}
+                          <div className="text-center" style={{ fontSize: "8px", color: "#888", marginTop: "1px", lineHeight: 1.2 }}>
+                            自化圖示: <span style={{ color: "#009029" }}>→祿</span><span style={{ color: "#9900a9" }}>→權</span><span style={{ color: "#0462d7" }}>→科</span><span style={{ color: "#f20010" }}>→忌</span>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    const palace = result.palaces?.[idx];
+                    if (!palace) {
+                      return (
+                        <div
+                          key={`empty-${idx}`}
+                          style={{ border: "1px solid #ccc", position: "relative" }}
+                        />
+                      );
+                    }
+
+                    const isShen = palace.isBodyPalace || palace.name === result.bodyPalace;
+                    const majorStars = palace.majorStars || [];
+                    const palaceZhiIdx = palace.index !== undefined ? palace.index : ZHI_NAMES.indexOf(palace.earthlyBranch);
+
+                    // === 辅星/煞星/杂曜数据来自 iztro 核心引擎（v2.0），不再使用 getAuxStars buggy计算 ===
+                    // palace.auspiciousStars = 六吉 + 禄存 + 天马（iztro 按生年天干/地支/农历月精确安星）
+                    // palace.shaStars = 六煞（擎羊陀罗火星铃星地空地劫）
+                    // palace.otherStars = 其他杂曜（红鸾天喜天刑天姚等）
+                    // palace.changsheng = 长生十二神（单名）
+                    // palace.boshi = 博士十二神（单名）
+                    const allAuspicious = palace.auspiciousStars || [];
+                    const allSha = palace.shaStars || [];
+                    const allOther = palace.otherStars || [];
+
+                    // 根据模式决定显示哪些星曜
+                    let auspiciousStars: string[] = [];
+                    let shaStars: string[] = [];
+                    let otherMinorStars: string[] = [];
+                    let changshengStars: string[] = [];
+                    let boshiStars: string[] = [];
+                    let jiangqianStars: string[] = [];
+                    let suiqianStars: string[] = [];
+
+                    if (viewMode === "sihua") {
+                      // 四化模式：14主星 + 六吉 + 六煞 + 禄存天马 + 杂曜
+                      auspiciousStars = [...allAuspicious];
+                      shaStars = [...allSha];
+                      otherMinorStars = [...allOther];
+                      changshengStars = [];
+                      boshiStars = [];
+                      jiangqianStars = [];
+                      suiqianStars = [];
+                    } else if (viewMode === "sanhe") {
+                      // 三合模式：全量星曜——14主星+六吉+六煞+禄存天马+杂曜 + 神煞(博士/将前/岁前)
+                      auspiciousStars = [...allAuspicious];
+                      shaStars = [...allSha];
+                      otherMinorStars = [...allOther];
+                      changshengStars = palace.changsheng ? [palace.changsheng] : [];
+                      boshiStars = palace.boshi ? [palace.boshi] : [];
+                      jiangqianStars = palace.jiangqian ? [palace.jiangqian] : [];
+                      suiqianStars = palace.suiqian ? [palace.suiqian] : [];
+                    } else if (viewMode === "feixing") {
+                      // 飞星模式：极简——14主星 + 禄存
+                      auspiciousStars = allAuspicious.filter(s => s === "禄存");
+                      shaStars = [];
+                      otherMinorStars = [];
+                      changshengStars = [];
+                      boshiStars = [];
+                      jiangqianStars = [];
+                      suiqianStars = [];
+                    }
+
+                    // 宫位背景色（仅三合模式显示三方四正高亮）
+                    const palaceBg = viewMode === "sanhe" ? getPalaceBg(palaceZhiIdx) : "#fff";
+                    // v18.9: 来因宫标记
+                    const isLaiyin = palaceZhiIdx === laiyinPalaceIdx;
+
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => { setExpandedPalaceIdx(prev => prev === idx ? null : idx); if (viewMode === "sanhe") setFocusedPalace(palaceZhiIdx); const palaceInterp = getPalaceInterpretation(palace.name); const starInterps = getPalaceAllStarInterpretations(palace.majorStars || [], palace.name, result.sihua); const allInterps = []; if (palaceInterp) { allInterps.push({ type: "palace" as const, title: palaceInterp.title, content: palaceInterp.summary + "\n" + palaceInterp.details.join("\n"), source: palaceInterp.source }); } allInterps.push(...starInterps); setInterpretPanel({ palaceName: palace.name, palaceGanZhi: (palace.heavenlyStem || "") + (palace.earthlyBranch || ""), interpretations: allInterps }); }}
+                        style={{
+                          border: isLaiyin ? "2px solid #ff6600" : "1px solid #ccc",
+                          padding: "1px 1px",
+                          display: "flex",
+                          flexDirection: "column",
+                          overflow: "hidden",
+                          position: "relative",
+                          backgroundColor: isLaiyin ? "#fff8f0" : palaceBg,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {/* v19.4: 移除顶部干支行，释放空间给星曜；来因宫标记改为右侧绝对定位 */}
+                        {isLaiyin && (
+                          <span style={{ position: "absolute", right: "1px", top: "50%", transform: "translateY(-50%)", fontSize: "7px", color: "#ff6600", fontWeight: "bold", background: "#fff0e0", padding: "1px 2px", borderRadius: "2px", lineHeight: "1", zIndex: 4, writingMode: "vertical-rl", textOrientation: "upright" }}>来因</span>
+                        )}
+
+                        {/* v19.2: 星曜区域 - 主星+辅星+煞星+杂曜全部在上半区排布，左下角仅放神煞(博士/将前/岁前)；动态字号自适应 */}
+                        <div style={{ flex: 1, display: "flex", flexDirection: "row", flexWrap: "wrap", alignContent: "flex-start", gap: "0px 0px", overflow: "hidden", padding: "0px", position: "relative", zIndex: 1 }}>
+                          {(() => {
+                            // v19.2: 星曜全部在上半区——主星→六吉→六煞→杂曜→禄存天马
+                            const mainAndAuxStars: Array<{name: string; isMajor: boolean; color: string; weight: string; category: "major" | "aux" | "minor"}> = [
+                              ...majorStars.map(s => ({ name: s, isMajor: true, color: MAJOR_STAR_COLOR, weight: "bold", category: "major" as const })),
+                              ...auspiciousStars.map(s => ({ name: s, isMajor: false, color: AUSPICIOUS_COLOR, weight: "normal", category: "aux" as const })),
+                              ...shaStars.map(s => ({ name: s, isMajor: false, color: INAUSPICIOUS_COLOR, weight: "normal", category: "aux" as const })),
+                              // v19.2: 杂曜也放在星曜区，蓝色字号最小
+                              ...otherMinorStars.map(s => ({ name: s, isMajor: false, color: MINOR_STAR_COLOR, weight: "normal", category: "minor" as const })),
+                            ];
+                            const totalCount = mainAndAuxStars.length;
+                            // v19.3: 放大字号 - 主星：11-14px，辅星：9-11px，杂曜：7-8px
+                            const majorFs = totalCount > 12 ? "11px" : totalCount > 8 ? "12px" : totalCount > 5 ? "13px" : "14px";
+                            const auxFs = totalCount > 12 ? "9px" : totalCount > 8 ? "10px" : "11px";
+                            const minorFs = totalCount > 12 ? "7px" : "8px";
+                            const majorColW = totalCount > 12 ? "11px" : totalCount > 8 ? "12px" : totalCount > 5 ? "13px" : "14px";
+                            const auxColW = totalCount > 12 ? "9px" : totalCount > 8 ? "10px" : "11px";
+                            const minorColW = totalCount > 12 ? "7px" : "8px";
+                            return mainAndAuxStars.map((star, j) => {
+                              const brightness = getStarBrightness(result, star.name, palace.name);
+                              const st = getSihuaType(result.sihua, star.name);
+                              const fs = star.isMajor ? majorFs : star.category === "minor" ? minorFs : auxFs;
+                              const colW = star.isMajor ? majorColW : star.category === "minor" ? minorColW : auxColW;
+                              return (
+                                <div key={`star-${j}`} style={{ display: "flex", flexDirection: "column", alignItems: "center", lineHeight: "1", width: colW, flexShrink: 0 }}>
+                                  {star.name.split("").map((char, ci) => (
+                                    <span key={ci} style={{ fontSize: fs, fontWeight: star.weight as any, color: star.color, lineHeight: "1", display: "block", textAlign: "center" }}>{char}</span>
+                                  ))}
+                                  {/* v19.3: 四化标记 - 仅四化星显示A/B/C/D字母，7px彩色 */}
+                                  {st && (
+                                    <span style={{ fontSize: "7px", fontWeight: "bold", color: SIHUA_COLORS[st], lineHeight: "1" }}>{SIHUA_LETTER[st]}</span>
+                                  )}
+                                  {/* v19.3: 庙旺状态 - 仅主星显示，7px */}
+                                  {star.isMajor && brightness && brightness !== "-" && (
+                                    <span style={{ fontSize: "7px", color: BRIGHTNESS_COLORS[brightness] || "#888", lineHeight: "1" }}>{brightness}</span>
+                                  )}
+                                </div>
+                              );
+                            });
+                          })()}
+                        </div>
+
+                        {/* v19.4: 中部 - 小限年龄 + 大限岁数（缩小字号，降低z-index，减少对星曜的遮挡） */}
+                        <div style={{ flexShrink: 0, lineHeight: "1", position: "relative", zIndex: 1, backgroundColor: isLaiyin ? "#fff8f0" : palaceBg }}>
+                          {palace.ages && palace.ages.length > 0 && (
+                            <div style={{ fontSize: "6px", color: "#bbb", lineHeight: "1", textAlign: "center", whiteSpace: "nowrap", overflow: "hidden" }}>
+                              {palace.ages.slice(0, 4).join(",")}
+                            </div>
+                          )}
+                          {palace.ageRange && palace.ageRange[0] > 0 && (
+                            <div style={{ fontSize: "6px", color: "#aaa", textAlign: "center", lineHeight: "1" }}>
+                              {palace.ageRange[0]}-{palace.ageRange[1]}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* v19.3: 底部 - 神煞区(博士+将前+岁前)纵排左下角 | 长生+大限干支竖排右 | 宫名红色居中 */}
+                        <div style={{ flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: "1px", position: "relative", zIndex: 2, backgroundColor: isLaiyin ? "#fff8f0" : palaceBg }}>
+                          {/* 左下：神煞区（博士十二神+将前十二神+岁前十二神，纵向排列，无星曜混入） */}
+                          <div style={{ display: "flex", flexDirection: "column", gap: "0px", maxWidth: "60%", lineHeight: "1", alignContent: "flex-end" }}>
+                            {boshiStars.map((sn, j) => (
+                              <span key={`bs-${j}`} style={{ fontSize: "7px", color: "#666", lineHeight: "1.1", textAlign: "left" }}>{sn}</span>
+                            ))}
+                            {jiangqianStars.map((sn, j) => (
+                              <span key={`jq-${j}`} style={{ fontSize: "7px", color: "#8B4513", lineHeight: "1.1", textAlign: "left" }}>{sn}</span>
+                            ))}
+                            {suiqianStars.map((sn, j) => (
+                              <span key={`sq-${j}`} style={{ fontSize: "7px", color: "#556B2F", lineHeight: "1.1", textAlign: "left" }}>{sn}</span>
+                            ))}
+                          </div>
+                          {/* 右下：长生竖排 + 大限干支竖排 */}
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", lineHeight: "1" }}>
+                            {changshengStars.length > 0 && (
+                              <span style={{ fontSize: "7px", color: "#2fae8e", lineHeight: "1.1", writingMode: "vertical-rl", textOrientation: "upright" }}>
+                                {changshengStars.join("")}
+                              </span>
+                            )}
+                            {palace.decadal && (
+                              <span style={{ fontSize: "7px", color: "#585858", lineHeight: "1.1", writingMode: "vertical-rl", textOrientation: "upright" }}>
+                                {palace.decadal}{isShen ? "身" : ""}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {/* 底部居中：宫位名称红色 + 大运宫名展开（z-index最高防止星曜遮挡） */}
+                        <div style={{ textAlign: "center", flexShrink: 0, lineHeight: "1.2", position: "relative", zIndex: 3, backgroundColor: isLaiyin ? "#fff8f0" : palaceBg, paddingBottom: "1px" }}>
+                          <span style={{ fontSize: "10px", fontWeight: "bold", color: "#fa0000", lineHeight: "1.2" }}>
+                            {palace.name}
+                          </span>
+                          {expandedPalaceIdx === idx && (
+                            <span style={{ fontSize: "7px", color: "#999", marginLeft: "1px" }}>
+                              {getDaxianPalaceName(palace.name)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 方位标签 - 右侧 */}
+              <div style={{ width: "14px", display: "flex", flexDirection: "column", fontSize: "9px", color: "#555", writingMode: "vertical-rl", textOrientation: "mixed", justifyContent: "center", alignItems: "center", letterSpacing: "2px", transform: "rotate(180deg)" }}>
+                <span style={{ marginBottom: "8px" }}>西偏南</span>
+                <span style={{ fontWeight: "bold", color: "#333", transform: "rotate(180deg)" }}>正西方</span>
+                <span style={{ marginTop: "8px" }}>西偏北</span>
+              </div>
+            </div>
+
+            {/* 方位标签 - 下方（对应寅丑子亥） */}
+            <div className="flex text-[9px] text-gray-500" style={{ height: "14px", lineHeight: "14px" }}>
+              <div style={{ width: "14px" }}></div>
+              <div style={{ flex: 1, display: "flex" }}>
+                <div style={{ width: "25%", textAlign: "center" }}>东偏北</div>
+                <div style={{ width: "25%", textAlign: "center" }}>北偏东</div>
+                <div style={{ width: "25%", textAlign: "center", fontWeight: "bold", color: "#333" }}>正北方</div>
+                <div style={{ width: "25%", textAlign: "center" }}>北偏西</div>
+              </div>
+              <div style={{ width: "14px" }}></div>
+            </div>
+          </div>
+
+
+          {/* ---- 宫位解读面板（引经据典 + AI解读） ---- */}
+          {interpretPanel && (
+            <div className="bg-white rounded-lg overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08)] mb-2" style={{ border: "1px solid #7B2FBE" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "linear-gradient(135deg, #7B2FBE, #9B5ECF)", color: "white" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }} onClick={() => setPanelCollapsed(!panelCollapsed)}>
+                  <span style={{ fontSize: "12px" }}>{panelCollapsed ? "▶" : "▼"}</span>
+                  <span style={{ fontSize: "16px", fontWeight: "bold" }}>{interpretPanel.palaceName}</span>
+                  <span style={{ fontSize: "12px", marginLeft: "4px", opacity: 0.9 }}>{interpretPanel.palaceGanZhi}</span>
+                </div>
+                <button onClick={() => setInterpretPanel(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "white", width: "28px", height: "28px", borderRadius: "50%", cursor: "pointer", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>x</button>
+              </div>
+              {!panelCollapsed && (
+                <>
+                  <div style={{ padding: "10px 12px", maxHeight: "200px", overflowY: "auto" }}>
+                    {interpretPanel.interpretations.map((item, idx) => (
+                      <div key={idx} style={{ marginBottom: idx < interpretPanel.interpretations.length - 1 ? "10px" : 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", marginBottom: "4px" }}>
+                          <span style={{ fontSize: "10px", fontWeight: "bold", padding: "1px 6px", borderRadius: "3px", background: item.type === "star" ? "#fef3c7" : item.type === "sihua" ? "#e0e7ff" : "#f3e8ff", color: item.type === "star" ? "#92400e" : item.type === "sihua" ? "#3730a3" : "#6b21a8", marginRight: "8px" }}>{item.type === "star" ? "星曜" : item.type === "sihua" ? "四化" : "宫位"}</span>
+                          <span style={{ fontSize: "13px", fontWeight: "bold", color: "#333" }}>{item.title}</span>
+                        </div>
+                        <div style={{ fontSize: "12px", color: "#555", lineHeight: "1.6", whiteSpace: "pre-line" }}>{item.content}</div>
+                        <div style={{ fontSize: "10px", color: "#999", marginTop: "4px", fontStyle: "italic" }}>—— {item.source}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* v18.9: AI解读此宫按钮 */}
+                  <div style={{ padding: "6px 12px", borderTop: "1px solid #eee" }}>
+                    <button
+                      onClick={() => {
+                        const ctx = `${interpretPanel.palaceName}(${interpretPanel.palaceGanZhi})\n` + interpretPanel.interpretations.map(i => `${i.title}: ${i.content}`).join("\n");
+                        handleAIInterpret("palace", ctx);
+                      }}
+                      disabled={aiInterpreting}
+                      className="w-full py-2 rounded-lg font-bold text-sm cursor-pointer border-0 text-white disabled:opacity-60"
+                      style={{ background: aiInterpreting ? "#999" : BRAND_PURPLE }}
+                    >
+                      {aiInterpreting && aiScope === "palace" ? "AI解读中..." : "🤖 AI解读此宫"}
+                    </button>
+                  </div>
+                  <div style={{ padding: "6px 12px", background: "#fafafa", borderTop: "1px solid #eee", fontSize: "10px", color: "#999", textAlign: "center" }}>点击其他宫位可查看不同解读 · 引经据典，仅供参考</div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ---- 底部时间表格（对标jishiyu：大限12宫、流年10年、流月12月，干支五行色） ---- */}
+          {decadalData.length > 0 && (
+            <div className="bg-white mb-2 border border-gray-300 overflow-hidden">
+              <div style={{ display: "flex", borderBottom: "1px solid #ccc", background: "#fafafa" }}>
+                {/* 大限标签 */}
+                <div style={{ width: "22px", display: "flex", alignItems: "center", justifyContent: "center", borderRight: "1px solid #ccc", fontSize: "10px", color: "#333", fontWeight: "bold", writingMode: "vertical-rl", textOrientation: "upright", letterSpacing: "2px", padding: "4px 1px", lineHeight: "1" }}>大限</div>
+                {/* 大限12格 */}
+                <div style={{ flex: 1, display: "flex", overflowX: "auto" }}>
+                  {decadalData.map((d, i) => {
+                    const isActive = i === selectedDaxian;
+                    return (
+                      <div
+                        key={`dy-${i}`}
+                        onClick={() => {
+                          setSelectedDaxian(i);
+                          // 虚线三角形移动到大限对应宫位
+                          const palaceName = decadalData[i]?.name;
+                          const palace = result?.palaces.find(p => p.name === palaceName);
+                          if (palace) {
+                            const zhiIdx = palace.index !== undefined ? palace.index : ZHI_NAMES.indexOf(palace.earthlyBranch);
+                            setFocusedPalace(zhiIdx);
+                          }
+                        }}
+                        style={{
+                          flex: "0 0 auto",
+                          width: `${100/12}%`,
+                          minWidth: "28px",
+                          borderLeft: i > 0 ? "1px solid #ccc" : "none",
+                          padding: "3px 1px",
+                          textAlign: "center",
+                          cursor: "pointer",
+                          background: isActive ? "#eee" : "#fff",
+                          fontWeight: isActive ? "bold" : "normal",
+                          lineHeight: "1.3",
+                        }}
+                      >
+                        <div style={{ fontSize: "9px", color: "#666" }}>{d.ageRange[0]}-{d.ageRange[1]}</div>
+                        <div style={{ fontSize: "12px", fontWeight: "bold" }}>
+                          <span style={{ color: getGanZhiColor(d.decadalGan) }}>{d.decadalGan}</span>
+                          <span style={{ color: getGanZhiColor(d.decadalZhi) }}>{d.decadalZhi}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 流年行 */}
+              <div style={{ display: "flex", borderBottom: "1px solid #ccc", background: "#fafafa" }}>
+                <div style={{ width: "22px", display: "flex", alignItems: "center", justifyContent: "center", borderRight: "1px solid #ccc", fontSize: "10px", color: "#333", fontWeight: "bold", writingMode: "vertical-rl", textOrientation: "upright", letterSpacing: "2px", padding: "4px 1px", lineHeight: "1" }}>流年</div>
+                <div style={{ flex: 1, display: "flex", overflowX: "auto" }}>
+                  {liunianYears.map((y, i) => {
+                    const isCurrent = y.year === currentYear;
+                    const isActive = i === selectedLiunian;
+                    return (
+                      <div
+                        key={`ln-${i}`}
+                        onClick={() => {
+                          setSelectedLiunian(i);
+                          // 虚线三角形移动到流年地支对应宫位
+                          const zhi = liunianYears[i]?.zhi;
+                          if (zhi) {
+                            const zhiIdx = ZHI_NAMES.indexOf(zhi);
+                            if (zhiIdx >= 0) setFocusedPalace(zhiIdx);
+                          }
+                        }}
+                        style={{
+                          flex: "0 0 auto",
+                          width: "10%",
+                          minWidth: "30px",
+                          borderLeft: i > 0 ? "1px solid #ccc" : "none",
+                          padding: "3px 1px",
+                          textAlign: "center",
+                          cursor: "pointer",
+                          background: isCurrent ? BRAND_PURPLE : (isActive ? "#eee" : "#fff"),
+                          fontWeight: isCurrent || isActive ? "bold" : "normal",
+                          lineHeight: "1.3",
+                        }}
+                      >
+                        <div style={{ fontSize: "9px", color: isCurrent ? "#fff" : "#666" }}>{y.year % 100}</div>
+                        <div style={{ fontSize: "12px", fontWeight: "bold" }}>
+                          <span style={{ color: isCurrent ? "#fff" : getGanZhiColor(y.gan) }}>{y.gan}</span>
+                          <span style={{ color: isCurrent ? "#fff" : getGanZhiColor(y.zhi) }}>{y.zhi}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 流月行 */}
+              <div style={{ display: "flex", borderBottom: "1px solid #ccc", background: "#fafafa" }}>
+                <div style={{ width: "22px", display: "flex", alignItems: "center", justifyContent: "center", borderRight: "1px solid #ccc", fontSize: "10px", color: "#333", fontWeight: "bold", writingMode: "vertical-rl", textOrientation: "upright", letterSpacing: "2px", padding: "4px 1px", lineHeight: "1" }}>流月</div>
+                <div style={{ flex: 1, display: "flex" }}>
+                  {liuyueMonths.map((m, i) => {
+                    const isActive = i === selectedLiuyue;
+                    return (
+                      <div
+                        key={`ly-${i}`}
+                        onClick={() => {
+                          // v19.0: 流月可点击，虚线三角形移动到流月地支对应宫位
+                          setSelectedLiuyue(i);
+                          const zhi = m.zhi;
+                          if (zhi) {
+                            const zhiIdx = ZHI_NAMES.indexOf(zhi);
+                            if (zhiIdx >= 0) setFocusedPalace(zhiIdx);
+                          }
+                        }}
+                        style={{
+                          flex: 1,
+                          borderLeft: i > 0 ? "1px solid #ccc" : "none",
+                          padding: "3px 1px",
+                          textAlign: "center",
+                          cursor: "pointer",
+                          background: isActive ? "#eee" : "#fff",
+                          fontWeight: isActive ? "bold" : "normal",
+                          lineHeight: "1.3",
+                        }}
+                      >
+                        <div style={{ fontSize: "9px", color: "#666" }}>{i + 1}</div>
+                        <div style={{ fontSize: "11px" }}>
+                          <span style={{ color: getGanZhiColor(m.gan) }}>{m.gan}</span>
+                          <span style={{ color: getGanZhiColor(m.zhi) }}>{m.zhi}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* v19.3: 流日流时提示（未选流月时显示） */}
+              {liuriDays.length === 0 && (
+                <div style={{ padding: "4px 8px", background: "#fffbe6", fontSize: "10px", color: "#d4a017", textAlign: "center", borderBottom: "1px solid #ccc" }}>
+                  👆 点击上方流月格子，查看对应流日、流时
+                </div>
+              )}
+
+              {/* v19.5: 流日行 - 30天分两行，农历日名 */}
+              {liuriDays.length > 0 && (
+                <>
+                  {/* 第一行：初一到十五 */}
+                  <div style={{ display: "flex", borderBottom: "1px solid #ddd", background: "#fafafa" }}>
+                    <div style={{ width: "22px", display: "flex", alignItems: "center", justifyContent: "center", borderRight: "1px solid #ccc", fontSize: "10px", color: "#333", fontWeight: "bold", writingMode: "vertical-rl", textOrientation: "upright", letterSpacing: "2px", padding: "4px 1px", lineHeight: "1" }}>流日</div>
+                    <div style={{ flex: 1, display: "flex" }}>
+                      {liuriDays.slice(0, 15).map((d, i) => {
+                        const actualIdx = i;
+                        const isActive = actualIdx === selectedLiuri;
+                        return (
+                          <div
+                            key={`lr1-${i}`}
+                            onClick={() => {
+                              setSelectedLiuri(actualIdx);
+                              setSelectedLiushi(-1);
+                              const zhiIdx = ZHI_NAMES.indexOf(d.zhi);
+                              if (zhiIdx >= 0) setFocusedPalace(zhiIdx);
+                            }}
+                            style={{
+                              flex: 1,
+                              minWidth: "0",
+                              borderLeft: i > 0 ? "1px solid #ddd" : "none",
+                              padding: "2px 0",
+                              textAlign: "center",
+                              cursor: "pointer",
+                              background: isActive ? "#e8e0f0" : "#fff",
+                              fontWeight: isActive ? "bold" : "normal",
+                              lineHeight: "1.2",
+                            }}
+                          >
+                            <div style={{ fontSize: "7px", color: "#999" }}>{d.lunarName}</div>
+                            <div style={{ fontSize: "9px" }}>
+                              <span style={{ color: getGanZhiColor(d.gan) }}>{d.gan}</span>
+                              <span style={{ color: getGanZhiColor(d.zhi) }}>{d.zhi}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  {/* 第二行：十六到三十 */}
+                  <div style={{ display: "flex", borderBottom: "1px solid #ccc", background: "#fafafa" }}>
+                    <div style={{ width: "22px", borderRight: "1px solid #ccc" }}></div>
+                    <div style={{ flex: 1, display: "flex" }}>
+                      {liuriDays.slice(15, 30).map((d, i) => {
+                        const actualIdx = i + 15;
+                        const isActive = actualIdx === selectedLiuri;
+                        return (
+                          <div
+                            key={`lr2-${i}`}
+                            onClick={() => {
+                              setSelectedLiuri(actualIdx);
+                              setSelectedLiushi(-1);
+                              const zhiIdx = ZHI_NAMES.indexOf(d.zhi);
+                              if (zhiIdx >= 0) setFocusedPalace(zhiIdx);
+                            }}
+                            style={{
+                              flex: 1,
+                              minWidth: "0",
+                              borderLeft: i > 0 ? "1px solid #ddd" : "none",
+                              padding: "2px 0",
+                              textAlign: "center",
+                              cursor: "pointer",
+                              background: isActive ? "#e8e0f0" : "#fff",
+                              fontWeight: isActive ? "bold" : "normal",
+                              lineHeight: "1.2",
+                            }}
+                          >
+                            <div style={{ fontSize: "7px", color: "#999" }}>{d.lunarName}</div>
+                            <div style={{ fontSize: "9px" }}>
+                              <span style={{ color: getGanZhiColor(d.gan) }}>{d.gan}</span>
+                              <span style={{ color: getGanZhiColor(d.zhi) }}>{d.zhi}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* v19.2: 流时行 */}
+              {liushiHours.length > 0 && (
+                <div style={{ display: "flex", background: "#fafafa" }}>
+                  <div style={{ width: "22px", display: "flex", alignItems: "center", justifyContent: "center", borderRight: "1px solid #ccc", fontSize: "10px", color: "#333", fontWeight: "bold", writingMode: "vertical-rl", textOrientation: "upright", letterSpacing: "2px", padding: "4px 1px", lineHeight: "1" }}>流时</div>
+                  <div style={{ flex: 1, display: "flex" }}>
+                    {liushiHours.map((h, i) => {
+                      const isActive = i === selectedLiushi;
+                      return (
+                        <div
+                          key={`ls-${i}`}
+                          onClick={() => {
+                            setSelectedLiushi(i);
+                            // 虚线三角形移动到流时地支对应宫位
+                            const zhiIdx = ZHI_NAMES.indexOf(h.zhi);
+                            if (zhiIdx >= 0) setFocusedPalace(zhiIdx);
+                          }}
+                          style={{
+                            flex: 1,
+                            borderLeft: i > 0 ? "1px solid #ccc" : "none",
+                            padding: "3px 1px",
+                            textAlign: "center",
+                            cursor: "pointer",
+                            background: isActive ? "#eee" : "#fff",
+                            fontWeight: isActive ? "bold" : "normal",
+                            lineHeight: "1.3",
+                          }}
+                        >
+                          <div style={{ fontSize: "8px", color: "#666" }}>{["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"][i]}</div>
+                          <div style={{ fontSize: "10px" }}>
+                            <span style={{ color: getGanZhiColor(h.gan) }}>{h.gan}</span>
+                            <span style={{ color: getGanZhiColor(h.zhi) }}>{h.zhi}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ---- 四化/三合/飞星 切换栏 ---- */}
+          <div className="bg-white rounded-lg p-2 mb-2 flex gap-2">
+            {[
+              { key: "sihua", label: "四化" },
+              { key: "sanhe", label: "三合" },
+              { key: "feixing", label: "飞星" },
+            ].map(m => (
+              <button
+                key={m.key}
+                onClick={() => { setViewMode(m.key as any); setFocusedPalace(null); }}
+                className="flex-1 py-2 rounded text-sm font-bold cursor-pointer border-0"
+                style={{
+                  backgroundColor: viewMode === m.key ? BRAND_PURPLE : BRAND_PURPLE_BG,
+                  color: viewMode === m.key ? "white" : BRAND_PURPLE,
+                }}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+
+          {/* v19.2: 大运/流年/流日/流时 AI解读按钮 */}
+          {decadalData.length > 0 && (
+            <div className="bg-white rounded-lg p-2 mb-2 flex gap-2 flex-wrap">
+              <button
+                onClick={() => {
+                  const cur = decadalData[selectedDaxian];
+                  if (!cur) return;
+                  const ctx = `大运：${cur.name} ${cur.decadalGan}${cur.decadalZhi} ${cur.ageRange[0]}-${cur.ageRange[1]}岁\n` +
+                    result.palaces.map(p => `${p.name}(${p.heavenlyStem}${p.earthlyBranch}): 主星[${(p.majorStars||[]).join(",")}]`).join("\n");
+                  handleAIInterpret("daxian", ctx);
+                }}
+                disabled={aiInterpreting}
+                className="flex-1 min-w-[120px] py-2 rounded-lg font-bold text-sm cursor-pointer border-0 text-white disabled:opacity-60"
+                style={{ background: aiInterpreting ? "#999" : BRAND_PURPLE }}
+              >
+                {aiInterpreting && aiScope === "daxian" ? "AI解读中..." : "🤖 AI解读此大运"}
+              </button>
+              <button
+                onClick={() => {
+                  const cur = liunianYears[selectedLiunian];
+                  if (!cur) return;
+                  const ctx = `流年：${cur.year}年 ${cur.gan}${cur.zhi} ${cur.age}岁\n当前大运：${decadalData[selectedDaxian]?.name || ""}`;
+                  handleAIInterpret("liunian", ctx);
+                }}
+                disabled={aiInterpreting}
+                className="flex-1 min-w-[120px] py-2 rounded-lg font-bold text-sm cursor-pointer border-0 text-white disabled:opacity-60"
+                style={{ background: aiInterpreting ? "#999" : BRAND_PURPLE_LIGHT }}
+              >
+                {aiInterpreting && aiScope === "liunian" ? "AI解读中..." : "🤖 AI解读此流年"}
+              </button>
+              {selectedLiuyue >= 0 && liuyueMonths[selectedLiuyue] && (
+                <button
+                  onClick={() => {
+                    const cur = liuyueMonths[selectedLiuyue];
+                    const ln = liunianYears[selectedLiunian];
+                    const ctx = `流月：${cur.label} ${cur.gan}${cur.zhi}\n当前流年：${ln?.year || ""}年 ${ln?.gan || ""}${ln?.zhi || ""}`;
+                    handleAIInterpret("liuyue", ctx);
+                  }}
+                  disabled={aiInterpreting}
+                  className="flex-1 min-w-[120px] py-2 rounded-lg font-bold text-sm cursor-pointer border-0 text-white disabled:opacity-60"
+                  style={{ background: aiInterpreting ? "#999" : BRAND_PURPLE_LIGHT }}
+                >
+                  {aiInterpreting && aiScope === "liuyue" ? "AI解读中..." : "🤖 AI解读此流月"}
+                </button>
+              )}
+              {selectedLiuri >= 0 && liuriDays[selectedLiuri] && (
+                <button
+                  onClick={() => {
+                    const cur = liuriDays[selectedLiuri];
+                    const ctx = `流日：${cur.lunarName} ${cur.gan}${cur.zhi}\n当前流年：${liunianYears[selectedLiunian]?.year || ""}年`;
+                    handleAIInterpret("liuri", ctx);
+                  }}
+                  disabled={aiInterpreting}
+                  className="flex-1 min-w-[120px] py-2 rounded-lg font-bold text-sm cursor-pointer border-0 text-white disabled:opacity-60"
+                  style={{ background: aiInterpreting ? "#999" : "#5B1A8A" }}
+                >
+                  {aiInterpreting && aiScope === "liuri" ? "AI解读中..." : "🤖 AI解读此流日"}
+                </button>
+              )}
+              {selectedLiushi >= 0 && liushiHours[selectedLiushi] && (
+                <button
+                  onClick={() => {
+                    const cur = liushiHours[selectedLiushi];
+                    const ctx = `流时：${cur.gan}${cur.zhi}\n当前流日：${liuriDays[selectedLiuri]?.gan || ""}${liuriDays[selectedLiuri]?.zhi || ""}`;
+                    handleAIInterpret("liushi", ctx);
+                  }}
+                  disabled={aiInterpreting}
+                  className="flex-1 min-w-[120px] py-2 rounded-lg font-bold text-sm cursor-pointer border-0 text-white disabled:opacity-60"
+                  style={{ background: aiInterpreting ? "#999" : "#4a148c" }}
+                >
+                  {aiInterpreting && aiScope === "liushi" ? "AI解读中..." : "🤖 AI解读此流时"}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* ---- 免责声明 ---- */}
+          <div className="rounded-lg px-3 py-2.5 text-xs mb-2" style={{ backgroundColor: BRAND_PURPLE_BG, color: BRAND_PURPLE_LIGHT }}>
+            以上内容由AI生成，仅供传统文化学习参考，不构成人生决策建议。命运掌握在自己手中，积极面对生活每一天。
+          </div>
+
+          {/* ---- 底部品牌 ---- */}
+          <div className="py-4 text-center text-xs text-gray-300">
+            言道 · 传统文化学习平台
+          </div>
+
+          {/* v19.6: 事情断法面板（AI解读统一沉底） */}
+          <EventDivinationPanel toolName="紫微斗数" chartContext={chartContextSummary} />
+
+          {/* 分享排盘结果 */}
+          <div className="px-3 py-2">
+            <ShareButton
+              type="tool"
+              title="紫微斗数排盘结果"
+              description={`${name || ''} 紫微斗数命盘`}
+              variant="block"
+              label="分享排盘结果"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* v20.1: 登录提示弹窗 */}
+      <LoginPromptModal show={showLoginPrompt} onClose={() => setShowLoginPrompt(false)} />
+      </div>
+    </div>
+  );
+}

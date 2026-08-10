@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 小组件预览图：紫色圆角底 + 白色日历图标 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportHeight="108"
+    android:viewportWidth="108">
+
+    <!-- 紫色圆角背景 -->
+    <path
+        android:fillColor="#7B2FBE"
+        android:pathData="M16,8 h76 a8,8 0 0 1 8,8 v76 a8,8 0 0 1 -8,8 h-76 a8,8 0 0 1 -8,-8 v-76 a8,8 0 0 1 8,-8 z" />
+
+    <!-- 日历顶部装订条 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M30,30 h48 v8 h-48 z" />
+
+    <!-- 日历两个挂钩 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M38,22 h5 v12 h-5 z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M65,22 h5 v12 h-5 z" />
+
+    <!-- 日历主体 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M30,40 h48 v44 h-48 z" />
+
+    <!-- 网格分隔线 (用紫色镂空) -->
+    <path
+        android:fillColor="#7B2FBE"
+        android:pathData="M30,52 h48 v2 h-48 z" />
+    <path
+        android:fillColor="#7B2FBE"
+        android:pathData="M46,40 v44 h-2 v-44 z" />
+    <path
+        android:fillColor="#7B2FBE"
+        android:pathData="M64,40 v44 h-2 v-44 z" />
+    <path
+        android:fillColor="#7B2FBE"
+        android:pathData="M30,68 h48 v2 h-48 z" />
+
+    <!-- 中间强调日期点 (紫色实心) -->
+    <path
+        android:fillColor="#7B2FBE"
+        android:pathData="M53,58 m-4,0 a4,4 0 1 0 8,0 a4,4 0 1 0 -8,0" />
+</vector>

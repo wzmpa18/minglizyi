@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportHeight="108"
+    android:viewportWidth="108">
+    <!-- White circle background -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,54m-30,0a30,30 0,1 1,60 0a30,30 0,1 1,-60 0" />
+    <!-- Simplified "言" character - horizontal lines representing strokes -->
+    <path
+        android:fillColor="#7B2FBE"
+        android:pathData="M40,38L68,38L68,42L40,42Z" />
+    <path
+        android:fillColor="#7B2FBE"
+        android:pathData="M48,44L60,44L60,48L48,48Z" />
+    <path
+        android:fillColor="#7B2FBE"
+        android:pathData="M40,50L68,50L68,54L40,54Z" />
+    <path
+        android:fillColor="#7B2FBE"
+        android:pathData="M52,56L56,56L56,72L52,72Z" />
+    <path
+        android:fillColor="#7B2FBE"
+        android:pathData="M44,68L64,68L64,72L44,72Z" />
+</vector>

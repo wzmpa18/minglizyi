@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">言道国学</string>
+    <string name="title_activity_main">言道国学</string>
+    <string name="package_name">com.yandao.guoxue</string>
+    <string name="custom_url_scheme">com.yandao.guoxue</string>
+
+    <!-- 黄历桌面小组件 -->
+    <string name="widget_huangli_desc">言道黄历 - 每日宜忌查询</string>
+    <string name="widget_huangli_small_label">言道黄历(小)</string>
+    <string name="widget_huangli_large_label">言道黄历(大)</string>
+</resources>

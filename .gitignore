@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+
+# Build cache and output (can be regenerated from source)
+.next/
+out/
+www/
+
+# SDK and JDK (too large, not needed in repo)
+android-sdk/
+jdk21/
+jdk21.zip
+
+# Test directories
+aapt2_test/
+aapt2_test2/
+aapt2_test3/
+
+# Large archives
+*.tar
+*.tar.gz
+*.zip
+*.apk
+
+# Build info cache
+tsconfig.tsbuildinfo
+
+# Deployment/verification scripts contain cloud secrets - excluded from repo
+# (these are local-only deployment tools, not source code)
+*.py
+deploy_v20.1_full.sh
+deploy_v20_1_final_server.sh
+
+# Certificate files (sensitive, local only)
+*.der
+*.pem
+*.keystore
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# IDE
+.vscode/
+.idea/

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 言道黄历 小组件 4x1 横向布局 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root_small"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:minHeight="40dp"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:padding="10dp"
+    android:background="@drawable/widget_bg">
+
+    <!-- 左侧紫色装饰条 -->
+    <ImageView
+        android:layout_width="4dp"
+        android:layout_height="match_parent"
+        android:layout_marginEnd="10dp"
+        android:background="@drawable/widget_accent_bar"
+        android:contentDescription="@string/widget_huangli_desc" />
+
+    <!-- 左：公历 + 农历 -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tv_solar_small"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="8月9日"
+            android:textColor="#333333"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:singleLine="true" />
+
+        <TextView
+            android:id="@+id/tv_lunar_small"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="六月廿七"
+            android:textColor="#8E8E93"
+            android:textSize="12sp"
+            android:singleLine="true" />
+    </LinearLayout>
+
+    <!-- 右：宜 / 忌 -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1.4"
+        android:orientation="vertical"
+        android:layout_marginStart="6dp">
+
+        <TextView
+            android:id="@+id/tv_yi_small"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="宜 祭祀、祈福"
+            android:textColor="#2E7D32"
+            android:textSize="12sp"
+            android:singleLine="true"
+            android:ellipsize="end" />
+
+        <TextView
+            android:id="@+id/tv_ji_small"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="忌 登高、出行"
+            android:textColor="#C62828"
+            android:textSize="12sp"
+            android:singleLine="true"
+            android:ellipsize="end" />
+    </LinearLayout>
+
+</LinearLayout>
