@@ -19,13 +19,13 @@ export type PointsSource =
   | "daily_signin"       // 每日登录打卡
   | "daily_group_active" // 每日3群发言
   | "content_featured"   // 内容被加精
-  | "daily_share"        // 每日首次分享
   | "deduct_bad_review_2" // 师父收到2星差评
   | "deduct_bad_review_1" // 师父收到1星差评
   | "deduct_malicious"    // 恶意差评/刷分
   | "deduct_violation"    // 违规内容
   | "exchange"            // 兑换消耗
   | "admin_adjust";       // 管理员调整
+// v20.5: 已移除 daily_share 积分获取渠道（易造假刷分）
 
 export interface PointsRecord {
   id: string;
@@ -42,7 +42,6 @@ export interface PointsRecord {
 export interface PointsBalance {
   total: number;
   todayEarned: number;
-  todayShareCount: number;
 }
 
 // ==================== 积分获取规则 ====================
@@ -63,7 +62,7 @@ export const POINTS_RULES: Record<string, EarnRule> = {
   daily_signin: { amount: 0.5, dailyLimit: 1, desc: "每日登录打卡" },
   daily_group_active: { amount: 0.5, dailyLimit: 1, desc: "每日3群发言活跃" },
   content_featured: { amount: 5, dailyLimit: Infinity, desc: "内容被平台加精" },
-  daily_share: { amount: 5, dailyLimit: 1, desc: "每日首次分享" },
+  // v20.5: daily_share 已移除（易造假刷分，不再作为积分获取渠道）
 };
 
 // ==================== 积分扣除规则 ====================
@@ -184,7 +183,6 @@ export function getPointsBalance(): PointsBalance {
   return {
     total: Math.round(total * 10) / 10,
     todayEarned: Math.round(todayEarned * 10) / 10,
-    todayShareCount: getDailyShareCount(),
   };
 }
 
@@ -235,12 +233,14 @@ function isDailyCapReached(): boolean {
 
 // ==================== 分享次数管理 ====================
 
+// v20.5: daily_share 积分渠道已移除，分享不再获得积分
+// 分享次数仍可追踪（用于运营数据），但不发放积分
 function getDailyShareCount(): number {
   const data = safeGet<{ date: string; count: number }>(DAILY_SHARE_KEY, { date: "", count: 0 });
   return data.date === getToday() ? data.count : 0;
 }
 
-function incrementDailyShareCount(): void {
+export function incrementDailyShareCount(): void {
   const count = getDailyShareCount() + 1;
   safeSet(DAILY_SHARE_KEY, { date: getToday(), count });
 }
@@ -459,10 +459,10 @@ export function contentFeaturedReward(): ReturnType<typeof earnPoints> {
   return earnPoints("content_featured", "发布内容被平台加精");
 }
 
-/** 每日首次分享奖励 */
-export function dailyShareReward(): { success: boolean; amount: number; message: string } {
+/** v20.5: 每日分享不再获得积分（已移除此积分渠道） */
+export function dailyShareReward(): { success: boolean; amount: 0; message: string } {
   incrementDailyShareCount();
-  return earnPoints("daily_share", "每日首次分享");
+  return { success: true, amount: 0, message: "分享成功（分享不再获得积分）" };
 }
 
 // ==================== 兑换管理 ====================

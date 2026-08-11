@@ -231,24 +231,16 @@ function isWechatBrowser(): boolean {
 }
 
 /**
- * 触发每日首次分享奖励
- * 每日首次分享获得5积分，重复分享不重复发放
+ * 触发每日分享奖励
+ * v20.5: 分享不再获得积分（已移除刷分漏洞），仅记录分享次数用于运营数据
  */
 function triggerShareReward(): ShareResult {
   const result = dailyShareReward();
-  if (result.success) {
-    return {
-      success: true,
-      message: `分享成功！获得${result.amount}积分`,
-      rewarded: true,
-      rewardAmount: result.amount,
-    };
-  }
-  // 分享成功但今日已获得奖励
   return {
     success: true,
-    message: "分享成功！",
+    message: result.message,
     rewarded: false,
+    rewardAmount: 0,
   };
 }
 
