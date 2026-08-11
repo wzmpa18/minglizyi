@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // output: "export", // v20.5: 移除静态导出，支持动态API路由
+  output: "export", // 静态导出部署，构建时需使用 build.sh 临时移除API路由
   images: {
     unoptimized: true,
   },
