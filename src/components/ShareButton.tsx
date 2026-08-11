@@ -112,12 +112,11 @@ export function ShareButton({
       const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(shareUrl)}`;
 
       const posterUrl = await generatePoster({
-        template: type === "invite" ? "invite" : type === "tool" ? "tool" : type === "article" ? "community" : "study",
+        size: "vertical",
         userId,
         userName,
         inviteCode,
         qrCodeUrl: qrUrl,
-        extraText: description || title,
       });
 
       // 下载海报

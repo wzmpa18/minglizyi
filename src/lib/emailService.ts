@@ -6,7 +6,7 @@
 // ============================================================================
 
 /** 后端 API 基础地址 */
-const API_BASE_URL = "https://yandaoguoxue.vip";
+const API_BASE_URL = "https://yandaoguoxue.yandao.vip";
 
 export interface EmailResult {
   success: boolean;

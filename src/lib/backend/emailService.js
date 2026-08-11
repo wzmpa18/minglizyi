@@ -3,7 +3,7 @@
 // 言道国学注册验证码邮件
 // 使用腾讯云SES API（TC3-HMAC-SHA256签名）
 // 发件地址：noreply@yandao.vip  模板ID：186641  发件人名称：言道国学
-// 地区：ap-guangzhou
+// 地区：ap-hongkong（腾讯云SES仅支持香港区域）
 // 注意：腾讯云SES默认仅支持使用模板发送邮件，Simple参数已废弃
 // ============================================================================
 
@@ -29,7 +29,7 @@ const SES_ENDPOINT = 'ses.tencentcloudapi.com';
 const SES_SERVICE = 'ses';
 const SES_VERSION = '2020-10-02';
 const SES_ACTION = 'SendEmail';
-const SES_REGION = 'ap-guangzhou';
+const SES_REGION = 'ap-hongkong';
 
 /**
  * 腾讯云 TC3-HMAC-SHA256 签名算法
@@ -267,7 +267,7 @@ async function sendEmailCode(email, code) {
       TemplateData: templateData,
     },
     TriggerType: 1, // 触发类邮件（验证码等即时发送）
-    Unsubscribe: 0, // 不加入退订链接
+    Unsubscribe: "0", // 不加入退订链接（腾讯云SES要求字符串类型）
   };
 
   const payload = JSON.stringify(params);

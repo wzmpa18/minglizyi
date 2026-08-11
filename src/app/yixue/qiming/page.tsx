@@ -20,6 +20,8 @@ import {
 import qimingData from "@/data/qiming_chars.json";
 import { ShareButton } from "@/components/ShareButton";
 import { Lunar, LunarYear, LunarMonth } from "lunar-javascript";
+import SolarDatePicker from "@/components/shared/SolarDatePicker";
+import { syncRecordToBackend } from "@/lib/recordSync";
 
 // ============================================================================
 // 常量
@@ -188,17 +190,20 @@ interface BaziAnalysis {
 function analyzeBazi(
   birthDate: string,
   birthHour: number,
+  birthMinute: number,
   gender: "male" | "female"
 ): BaziAnalysis | null {
   try {
     const [year, month, day] = birthDate.split("-").map(Number);
     if (!year || !month || !day) return null;
 
+    // birthHour 已是实际小时数(0-23)，与八字排盘页一致
     const baziResult = solarToBazi({
       year,
       month,
       day,
       hour: birthHour,
+      minute: birthMinute,
       gender: gender as Gender,
     });
 
@@ -707,6 +712,7 @@ export default function QimingPage() {
   // v20.1: 八字驱动起名
   const [birthDate, setBirthDate] = useState("");
   const [birthHour, setBirthHour] = useState<number>(12);
+  const [birthMinute, setBirthMinute] = useState<number>(0);
   const [customRequirement, setCustomRequirement] = useState("");
   const [baziAnalysis, setBaziAnalysis] = useState<BaziAnalysis | null>(null);
   // 公历/农历切换
@@ -743,6 +749,7 @@ export default function QimingPage() {
       // v20.1: 恢复八字信息
       if (inp.birthDate) setBirthDate(inp.birthDate);
       if (inp.birthHour !== undefined) setBirthHour(inp.birthHour);
+      if (inp.birthMinute !== undefined) setBirthMinute(inp.birthMinute);
       if (inp.customRequirement) setCustomRequirement(inp.customRequirement);
       if (inp.calType) setCalType(inp.calType);
       if (inp.lunarYear) setLunarYear(inp.lunarYear);
@@ -754,12 +761,12 @@ export default function QimingPage() {
   // v20.1: 出生时间变化时自动排八字（公历/农历均自动转换为公历后排盘）
   useEffect(() => {
     if (effectiveBirthDate) {
-      const result = analyzeBazi(effectiveBirthDate, birthHour, gender);
+      const result = analyzeBazi(effectiveBirthDate, birthHour, birthMinute, gender);
       setBaziAnalysis(result);
     } else {
       setBaziAnalysis(null);
     }
-  }, [effectiveBirthDate, birthHour, gender]);
+  }, [effectiveBirthDate, birthHour, birthMinute, gender]);
 
   // 编辑事件
   useEffect(() => {
@@ -773,6 +780,27 @@ export default function QimingPage() {
     window.addEventListener("yixue-edit", editHandler);
     return () => window.removeEventListener("yixue-edit", editHandler);
   }, [showDetail]);
+
+  // v21.2: 拦截浏览器返回键 - 排盘结果页按返回应回到输入页
+  useEffect(() => {
+    if (!hasResult && !showDetail) return;
+
+    // 向 history 推入一个状态，使返回键先回到这个状态
+    window.history.pushState({ qimingResult: true }, "");
+
+    const handlePopState = (e: PopStateEvent) => {
+      if (showDetail) {
+        setShowDetail(false);
+      } else {
+        setHasResult(false);
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [hasResult, showDetail]);
 
   // 获取姓氏笔画
   const surnameInfo = useMemo(() => {
@@ -835,6 +863,7 @@ export default function QimingPage() {
           nameLength,
           birthDate, // v20.1
           birthHour, // v20.1
+          birthMinute, // v20.1
           customRequirement, // v20.1
           calType, // 公历/农历
           lunarYear,
@@ -845,6 +874,29 @@ export default function QimingPage() {
         showForm: false,
         _ts: Date.now(),
       });
+
+      // v21.3: 同步记录到后端（跨设备查看）
+      syncRecordToBackend("qiming", {
+        surname,
+        isCompound,
+        gender,
+        preferredWuxing,
+        zodiac,
+        nameLength,
+        birthDate: effectiveBirthDate,
+        birthHour,
+        birthMinute,
+        calType,
+        customRequirement,
+        suggestions: results.slice(0, 5),
+        baziAnalysis: baziAnalysis ? {
+          dayMaster: baziAnalysis.dayMaster,
+          dayMasterWuxing: baziAnalysis.dayMasterWuxing,
+          isStrong: baziAnalysis.isStrong,
+          favorableElements: baziAnalysis.favorableElements,
+          baziText: baziAnalysis.baziText,
+        } : null,
+      }, `智能起名: ${surname}姓${gender === "male" ? "男" : "女"}宝`).catch(() => {});
 
       setTimeout(() => {
         const el = document.getElementById("qiming-result");
@@ -1096,26 +1148,32 @@ export default function QimingPage() {
 
               {/* 公历模式 */}
               {calType === "solar" ? (
-                <div className="flex gap-2">
-                  <input
-                    type="date"
-                    value={birthDate}
-                    onChange={(e) => setBirthDate(e.target.value)}
-                    className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#7B2FBE]"
-                    min="1900-01-01"
-                    max="2099-12-31"
-                  />
-                  <select
-                    value={birthHour}
-                    onChange={(e) => setBirthHour(parseInt(e.target.value))}
-                    className="w-24 rounded-lg border border-gray-200 px-2 py-2 text-sm outline-none focus:border-[#7B2FBE]"
-                  >
-                    {Array.from({ length: 12 }, (_, i) => i).map((h) => (
-                      <option key={h} value={h}>
-                        {["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"][h]}时
-                      </option>
-                    ))}
-                  </select>
+                <div className="space-y-1.5">
+                  <SolarDatePicker value={birthDate} onChange={setBirthDate} />
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={birthHour}
+                      onChange={(e) => setBirthHour(parseInt(e.target.value))}
+                      className="w-20 rounded-lg border border-gray-200 px-1 py-2 text-sm outline-none focus:border-[#7B2FBE]"
+                    >
+                      {Array.from({ length: 24 }, (_, i) => i).map((h) => (
+                        <option key={h} value={h}>
+                          {String(h).padStart(2, "0")}时
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={birthMinute}
+                      onChange={(e) => setBirthMinute(parseInt(e.target.value))}
+                      className="w-20 rounded-lg border border-gray-200 px-1 py-2 text-sm outline-none focus:border-[#7B2FBE]"
+                    >
+                      {Array.from({ length: 60 }, (_, i) => i).map((m) => (
+                        <option key={m} value={m}>
+                          {String(m).padStart(2, "0")}分
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               ) : (
                 /* 农历模式 */
@@ -1168,11 +1226,22 @@ export default function QimingPage() {
                     <select
                       value={birthHour}
                       onChange={(e) => setBirthHour(parseInt(e.target.value))}
-                      className="w-24 rounded-lg border border-gray-200 px-2 py-2 text-sm outline-none focus:border-[#7B2FBE]"
+                      className="w-20 rounded-lg border border-gray-200 px-1 py-2 text-sm outline-none focus:border-[#7B2FBE]"
                     >
-                      {Array.from({ length: 12 }, (_, i) => i).map((h) => (
+                      {Array.from({ length: 24 }, (_, i) => i).map((h) => (
                         <option key={h} value={h}>
-                          {["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"][h]}时
+                          {String(h).padStart(2, "0")}时
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={birthMinute}
+                      onChange={(e) => setBirthMinute(parseInt(e.target.value))}
+                      className="w-20 rounded-lg border border-gray-200 px-1 py-2 text-sm outline-none focus:border-[#7B2FBE]"
+                    >
+                      {Array.from({ length: 60 }, (_, i) => i).map((m) => (
+                        <option key={m} value={m}>
+                          {String(m).padStart(2, "0")}分
                         </option>
                       ))}
                     </select>
@@ -1275,10 +1344,10 @@ export default function QimingPage() {
           {/* 生成按钮 */}
           <button
             onClick={handleGenerate}
-            disabled={!surname || !surnameInfo || loading}
+            disabled={loading}
             className="w-full rounded-full py-2.5 text-sm font-semibold text-white transition-all active:scale-[0.98] disabled:opacity-50"
             style={{
-              backgroundColor: surname && surnameInfo && !loading ? BRAND : "#ccc",
+              backgroundColor: !loading ? BRAND : "#ccc",
             }}
           >
             {loading ? "生成中..." : "智能生成名字"}

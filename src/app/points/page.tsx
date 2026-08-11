@@ -63,12 +63,14 @@ export default function PointsPage() {
   };
 
   const ruleIcons: Record<string, string> = {
-    signin: "\u{1F4C5}",
-    study: "\u{1F4D6}",
-    share: "\u{1F4E4}",
-    invite: "\u{1F465}",
-    community: "\u{1F4AC}",
-    content: "\u270D\uFE0F",
+    daily_signin: "\u{1F4C5}",
+    daily_group_active: "\u{1F4AC}",
+    daily_share: "\u{1F4E4}",
+    invite_register: "\u{1F465}",
+    invite_pay: "\u{1F4B0}",
+    invite_review: "\u{1F44D}",
+    invite_active_7d: "\u{1F525}",
+    content_featured: "\u270D\uFE0F",
   };
 
   if (loading) {
@@ -123,7 +125,7 @@ export default function PointsPage() {
             boxShadow: signedInToday ? "none" : "0 4px 12px rgba(243, 156, 18, 0.3)",
           }}
         >
-          {signingIn ? "签到中..." : signedInToday ? "今日已签到" : "每日签到 +5 积分"}
+          {signingIn ? "签到中..." : signedInToday ? "今日已签到" : "每日签到 +0.5 积分（会员翻倍）"}
         </button>
 
         {/* 获取积分方式 */}
@@ -154,7 +156,7 @@ export default function PointsPage() {
                     {rule.desc}
                   </div>
                   <div style={{ fontSize: "12px", color: "#999" }}>
-                    每日上限 {rule.daily} 次
+                    每日上限 {rule.dailyLimit === Infinity ? "无限" : rule.dailyLimit + " 次"}
                   </div>
                 </div>
                 <div style={{ textAlign: "right" }}>

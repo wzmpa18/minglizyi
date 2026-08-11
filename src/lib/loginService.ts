@@ -11,7 +11,7 @@ import { setLoginState, clearLoginState, getLoginState, getClientUserId, type Us
 import { saveTokenPair, clearAllTokens } from './authInterceptor';
 
 // v20.2: 后端 API 基础地址（ai-proxy-server.js）
-const API_BASE_URL = "https://yandaoguoxue.vip";
+const API_BASE_URL = "https://yandaoguoxue.yandao.vip";
 
 // --- 类型 ---
 export interface SmsSendResult {
@@ -396,6 +396,7 @@ export async function checkUserExist(phone?: string, email?: string): Promise<bo
     const resp = await fetch(`${API_BASE_URL}/api/auth/check-duplicate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ phone: phone || null, email: email || null }),
     });
     if (resp.status === 429) {
@@ -425,11 +426,12 @@ export async function registerToServer(phone?: string, email?: string): Promise<
 export async function registerWithPhone(params: RegisterParams): Promise<LoginResult> {
   const { phone, smsCode, password, inviteCode } = params;
 
-  // v20.2: 优先调用后端 /api/auth/register 接口
+  // v21.0: 调用后端 /api/auth/register 接口（含 httpOnly cookie）
   try {
     const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 携带/接收 httpOnly cookie
       body: JSON.stringify({ phone, code: smsCode, password, inviteCode: inviteCode || null }),
     });
     const data = await res.json();
@@ -438,28 +440,28 @@ export async function registerWithPhone(params: RegisterParams): Promise<LoginRe
       // 后端注册成功
       const backendUser = data.data.user;
       const user: UserProfile = {
-        userId: backendUser.userId,
+        userId: String(backendUser.userId),
         nickname: backendUser.nickname || `国学爱好者${phone.slice(-4)}`,
-        avatar: '',
+        avatar: backendUser.avatar || '',
+        bio: backendUser.bio || '',
+        gender: backendUser.gender || undefined,
+        birthday: backendUser.birthday || undefined,
+        tags: backendUser.tags || [],
         memberLevel: backendUser.memberLevel || 'basic',
         phone,
-        numberId: backendUser.numberId,
+        inviteCode: backendUser.inviteCode,
         loginTime: Date.now(),
       };
 
-      // 保存密码到本地（用于离线登录兼容）
-      const store = loadPasswordStore();
-      store[phone] = hashPassword(password);
-      savePasswordStore(store);
-
-      // 保存用户信息到 localStorage
+      // v21.0: 不再在前端存储密码（后端 SQLite + bcrypt 已持久化）
+      // 保存用户信息到 localStorage（供离线展示）
       localStorage.setItem(`yandao_user_${phone}`, JSON.stringify(user));
 
-      // 设置登录态（使用后端返回的 token）
-      const accessToken = data.data.accessToken || `token_${user.userId}_${Date.now()}`;
-      const refreshToken = data.data.refreshToken || `rt_${user.userId}_${Date.now()}_reg`;
+      // 设置登录态（使用后端返回的 JWT access token）
+      const accessToken = data.data.accessToken;
       setLoginState(accessToken, user);
-      saveTokenPair(accessToken, refreshToken);
+      // refresh token 在 httpOnly cookie 中，前端不可读
+      saveTokenPair(accessToken, '');
 
       // 处理邀请码
       if (inviteCode) {
@@ -616,7 +618,9 @@ export async function loginWithPhone(phone: string, code: string, inviteCode?: s
 }
 
 // ============================================================================
-// v20.1: 统一密码登录（支持手机号 / 邮箱 / 数字ID）
+// v21.0: 统一密码登录（支持手机号 / 邮箱 / 纯数字ID）
+// 走后端 SQLite + bcrypt 校验，不再依赖 localStorage
+// 无痕模式下可正常登录：账号持久化在服务端，不依赖本地存储
 // ============================================================================
 
 export async function loginWithPassword(account: string, password: string): Promise<LoginResult> {
@@ -628,114 +632,65 @@ export async function loginWithPassword(account: string, password: string): Prom
     return { success: false, message: '请输入密码' };
   }
 
-  // 检测账号类型
-  const accountType = detectAccountType(trimmed);
+  // v21.0: 优先调用后端 /api/auth/login 接口（走 SQLite + bcrypt 校验）
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 携带/接收 httpOnly cookie
+      body: JSON.stringify({ account: trimmed, password }),
+    });
+    const data = await res.json();
 
-  if (accountType === "unknown") {
-    return { success: false, message: '请输入正确的手机号、邮箱或数字ID' };
-  }
+    if (data.success && data.data) {
+      // 后端登录成功
+      const backendUser = data.data.user;
+      const user: UserProfile = {
+        userId: String(backendUser.userId),
+        nickname: backendUser.nickname || '国学爱好者',
+        avatar: backendUser.avatar || '',
+        bio: backendUser.bio || '',
+        gender: backendUser.gender || undefined,
+        birthday: backendUser.birthday || undefined,
+        tags: backendUser.tags || [],
+        memberLevel: backendUser.memberLevel || 'basic',
+        phone: backendUser.phone || undefined,
+        email: backendUser.email || undefined,
+        inviteCode: backendUser.inviteCode,
+        loginTime: Date.now(),
+      };
 
-  // 根据类型查找账号 key
-  let accountKey = "";
-  let userInfo: UserProfile | null = null;
-
-  if (accountType === "phone") {
-    accountKey = trimmed;
-    const userStr = localStorage.getItem(`yandao_user_${trimmed}`);
-    if (userStr) {
-      try { userInfo = JSON.parse(userStr); } catch {}
-    }
-  } else if (accountType === "email") {
-    accountKey = trimmed;
-    const emailKey = trimmed.replace(/[^a-zA-Z0-9]/g, '_');
-    const userStr = localStorage.getItem(`yandao_email_${emailKey}`);
-    if (userStr) {
-      try { userInfo = JSON.parse(userStr); } catch {}
-    }
-  } else if (accountType === "numberId") {
-    // 通过数字ID查找对应账号
-    const foundKey = findAccountByNumberId(trimmed);
-    if (!foundKey) {
-      return { success: false, message: '该数字ID不存在，请检查后重试' };
-    }
-    accountKey = foundKey;
-    // 尝试从手机号或邮箱存储中加载用户信息
-    const phoneUserStr = localStorage.getItem(`yandao_user_${foundKey}`);
-    if (phoneUserStr) {
-      try { userInfo = JSON.parse(phoneUserStr); } catch {}
-    }
-    if (!userInfo) {
-      const emailKey = foundKey.replace(/[^a-zA-Z0-9]/g, '_');
-      const emailUserStr = localStorage.getItem(`yandao_email_${emailKey}`);
-      if (emailUserStr) {
-        try { userInfo = JSON.parse(emailUserStr); } catch {}
+      // 保存用户信息到 localStorage（供离线展示）
+      if (user.phone) {
+        localStorage.setItem(`yandao_user_${user.phone}`, JSON.stringify(user));
       }
+      if (user.email) {
+        const emailKey = user.email.replace(/[^a-zA-Z0-9]/g, '_');
+        localStorage.setItem(`yandao_email_${emailKey}`, JSON.stringify(user));
+      }
+
+      // 设置登录态（使用后端返回的 JWT access token）
+      const accessToken = data.data.accessToken;
+      const refreshToken = ''; // refresh token 在 httpOnly cookie 中，前端不可读
+      setLoginState(accessToken, user);
+      saveTokenPair(accessToken, refreshToken);
+
+      syncLocalData(user.userId);
+
+      return { success: true, message: '登录成功', user, isNewUser: false };
     }
-  }
 
-  // 验证密码
-  const store = loadPasswordStore();
-  const storedHash = store[accountKey];
-
-  if (!storedHash) {
-    return { success: false, message: '该账号尚未设置密码，请先注册或使用验证码登录' };
-  }
-
-  if (hashPassword(password) !== storedHash) {
-    return { success: false, message: '密码错误，请重试' };
-  }
-
-  // 验证通过，生成/读取用户信息
-  if (userInfo) {
-    userInfo.loginTime = Date.now();
-  } else {
-    // 降级生成用户信息
-    userInfo = {
-      userId: `YD${accountKey.slice(-4)}${Date.now().toString(36).slice(-4)}`.toUpperCase(),
-      nickname: `国学爱好者${accountKey.slice(-4)}`,
-      avatar: '',
-      memberLevel: 'basic',
-      loginTime: Date.now(),
-    };
-    if (accountType === "phone") userInfo.phone = accountKey;
-    if (accountType === "email") userInfo.email = accountKey;
-    // 确保数字ID存在
-    if (!userInfo.numberId) {
-      userInfo.numberId = bindNumberId(accountKey);
+    // 后端返回业务错误
+    if (!data.success) {
+      return { success: false, message: data.message || '登录失败' };
     }
+  } catch (err: any) {
+    console.error('[LOGIN] 后端登录请求失败:', err);
+    // 网络错误时不降级到本地（因为本地无法安全校验密码）
+    return { success: false, message: '网络异常，请检查网络后重试' };
   }
 
-  // 确保数字ID存在
-  if (!userInfo.numberId) {
-    userInfo.numberId = bindNumberId(accountKey);
-  }
-
-  // 保存用户信息
-  if (accountType === "phone" || (userInfo.phone && userInfo.phone === accountKey)) {
-    localStorage.setItem(`yandao_user_${accountKey}`, JSON.stringify(userInfo));
-  } else if (accountType === "email" || (userInfo.email && userInfo.email === accountKey)) {
-    const emailKey = accountKey.replace(/[^a-zA-Z0-9]/g, '_');
-    localStorage.setItem(`yandao_email_${emailKey}`, JSON.stringify(userInfo));
-  } else {
-    // 数字ID登录时，根据找到的 accountKey 存储
-    if (/^1[3-9]\d{9}$/.test(accountKey)) {
-      localStorage.setItem(`yandao_user_${accountKey}`, JSON.stringify(userInfo));
-    } else {
-      const emailKey = accountKey.replace(/[^a-zA-Z0-9]/g, '_');
-      localStorage.setItem(`yandao_email_${emailKey}`, JSON.stringify(userInfo));
-    }
-  }
-
-  // 设置登录态
-  const token = `token_${userInfo.userId}_${Date.now()}`;
-  setLoginState(token, userInfo);
-
-  // v20.1: 保存 token 双轨用于自动续期
-  saveTokenPair(token, `rt_${userInfo.userId}_${Date.now()}_pwd`);
-
-  syncLocalData(userInfo.userId);
-
-  return { success: true, message: '登录成功', user: userInfo, isNewUser: false };
+  return { success: false, message: '登录失败' };
 }
 
 // ============================================================================
@@ -781,11 +736,12 @@ export async function loginWithEmail(email: string, code: string): Promise<Login
 export async function registerWithEmail(params: RegisterEmailParams): Promise<LoginResult> {
   const { email, emailCode, password, inviteCode } = params;
 
-  // v20.2: 优先调用后端 /api/auth/register 接口
+  // v21.0: 调用后端 /api/auth/register 接口（含 httpOnly cookie）
   try {
     const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // 携带/接收 httpOnly cookie
       body: JSON.stringify({ email, code: emailCode, password, inviteCode: inviteCode || null }),
     });
     const data = await res.json();
@@ -795,28 +751,27 @@ export async function registerWithEmail(params: RegisterEmailParams): Promise<Lo
       const backendUser = data.data.user;
       const emailKey = email.replace(/[^a-zA-Z0-9]/g, '_');
       const user: UserProfile = {
-        userId: backendUser.userId,
+        userId: String(backendUser.userId),
         nickname: backendUser.nickname || email.split('@')[0],
-        avatar: '',
+        avatar: backendUser.avatar || '',
+        bio: backendUser.bio || '',
+        gender: backendUser.gender || undefined,
+        birthday: backendUser.birthday || undefined,
+        tags: backendUser.tags || [],
         memberLevel: backendUser.memberLevel || 'basic',
         email,
-        numberId: backendUser.numberId,
+        inviteCode: backendUser.inviteCode,
         loginTime: Date.now(),
       };
 
-      // 保存密码到本地（用于离线登录兼容）
-      const store = loadPasswordStore();
-      store[email] = hashPassword(password);
-      savePasswordStore(store);
-
-      // 保存用户信息到 localStorage
+      // v21.0: 不再在前端存储密码（后端 SQLite + bcrypt 已持久化）
+      // 保存用户信息到 localStorage（供离线展示）
       localStorage.setItem(`yandao_email_${emailKey}`, JSON.stringify(user));
 
-      // 设置登录态（使用后端返回的 token）
-      const accessToken = data.data.accessToken || `token_${user.userId}_${Date.now()}`;
-      const refreshToken = data.data.refreshToken || `rt_${user.userId}_${Date.now()}_regemail`;
+      // 设置登录态（使用后端返回的 JWT access token）
+      const accessToken = data.data.accessToken;
       setLoginState(accessToken, user);
-      saveTokenPair(accessToken, refreshToken);
+      saveTokenPair(accessToken, '');
 
       // 处理邀请码
       if (inviteCode) {
@@ -1045,5 +1000,142 @@ export function updateProfile(updates: Partial<UserProfile>): void {
   if (state.isLoggedIn && state.profile && state.token) {
     const updated = { ...state.profile, ...updates };
     setLoginState(state.token, updated);
+  }
+}
+
+// ============================================================================
+// v21.0: 调用后端 API 更新用户资料（持久化到 SQLite 数据库）
+// ============================================================================
+
+export interface UpdateProfileParams {
+  nickname?: string;
+  avatar?: string;
+  bio?: string;
+  gender?: string;
+  birthday?: string;
+  tags?: string[];
+}
+
+export async function updateProfileToServer(params: UpdateProfileParams): Promise<{ success: boolean; message: string; user?: UserProfile }> {
+  const state = getLoginState();
+  if (!state.isLoggedIn || !state.token) {
+    return { success: false, message: '请先登录' };
+  }
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/auth/profile/update`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.token}`,
+      },
+      credentials: 'include',
+      body: JSON.stringify(params),
+    });
+    const data = await res.json();
+
+    if (data.success && data.data) {
+      const backendUser = data.data;
+      // 合并更新后的用户信息
+      const updatedUser: UserProfile = {
+        ...(state.profile as UserProfile),
+        userId: String(backendUser.userId),
+        nickname: backendUser.nickname || state.profile?.nickname || '',
+        avatar: backendUser.avatar || state.profile?.avatar || '',
+        bio: backendUser.bio || '',
+        gender: (backendUser.gender as any) || state.profile?.gender,
+        birthday: backendUser.birthday || state.profile?.birthday,
+        tags: backendUser.tags || state.profile?.tags || [],
+        memberLevel: backendUser.memberLevel || state.profile?.memberLevel || 'basic',
+        inviteCode: backendUser.inviteCode || state.profile?.inviteCode,
+        loginTime: state.profile?.loginTime || Date.now(),
+      };
+
+      // 更新本地登录态
+      setLoginState(state.token, updatedUser);
+
+      // 同步到 localStorage
+      if (updatedUser.phone) {
+        localStorage.setItem(`yandao_user_${updatedUser.phone}`, JSON.stringify(updatedUser));
+      }
+      if (updatedUser.email) {
+        const emailKey = updatedUser.email.replace(/[^a-zA-Z0-9]/g, '_');
+        localStorage.setItem(`yandao_email_${emailKey}`, JSON.stringify(updatedUser));
+      }
+
+      return { success: true, message: '保存成功', user: updatedUser };
+    }
+
+    // 后端返回业务错误
+    if (data.success === false) {
+      // 401 表示登录已过期
+      if (res.status === 401) {
+        clearLoginState();
+        clearAllTokens();
+      }
+      return { success: false, message: data.message || '保存失败' };
+    }
+
+    return { success: false, message: '保存失败' };
+  } catch (err: any) {
+    console.error('[PROFILE_UPDATE] 请求失败:', err);
+    return { success: false, message: '网络异常，请稍后重试' };
+  }
+}
+
+// ============================================================================
+// v21.0: 从后端获取用户资料（用于页面加载时同步最新数据）
+// ============================================================================
+
+export async function fetchProfileFromServer(): Promise<{ success: boolean; user?: UserProfile; message?: string }> {
+  const state = getLoginState();
+  if (!state.isLoggedIn || !state.token) {
+    return { success: false, message: '未登录' };
+  }
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/auth/profile`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${state.token}`,
+      },
+      credentials: 'include',
+    });
+    const data = await res.json();
+
+    if (data.success && data.data) {
+      const backendUser = data.data;
+      const user: UserProfile = {
+        userId: String(backendUser.userId),
+        nickname: backendUser.nickname || '',
+        avatar: backendUser.avatar || '',
+        bio: backendUser.bio || '',
+        gender: (backendUser.gender as any) || undefined,
+        birthday: backendUser.birthday || undefined,
+        tags: backendUser.tags || [],
+        phone: backendUser.phone || state.profile?.phone,
+        email: backendUser.email || state.profile?.email,
+        memberLevel: backendUser.memberLevel || 'basic',
+        inviteCode: backendUser.inviteCode || state.profile?.inviteCode,
+        loginTime: state.profile?.loginTime || Date.now(),
+      };
+
+      // 更新本地登录态
+      setLoginState(state.token, user);
+
+      return { success: true, user };
+    }
+
+    if (res.status === 401) {
+      // 登录已过期
+      clearLoginState();
+      clearAllTokens();
+      return { success: false, message: '登录已过期，请重新登录' };
+    }
+
+    return { success: false, message: data.message || '获取资料失败' };
+  } catch (err: any) {
+    console.error('[PROFILE_FETCH] 请求失败:', err);
+    return { success: false, message: '网络异常' };
   }
 }

@@ -125,21 +125,22 @@ const ENTRIES = [
   {
     key: "bianzheng",
     title: "辨证学",
-    desc: "八纲·脏腑·六经",
+    desc: "八纲·脏腑·六经·智能问诊",
     href: "/zhongyi/bianzheng",
     color: "#E65100",
     bgColor: "#FFF3E0",
     Icon: BianZhengIcon,
   },
-  {
-    key: "wenzhen",
-    title: "智能问诊",
-    desc: "（学习）历代名家医案AI模拟辨证",
-    href: "/zhongyi/wenzhen",
-    color: "#7B2FBE",
-    bgColor: "#F3EDF7",
-    Icon: WenzhenIcon,
-  },
+  // 智能问诊已合并到辨证学中，移除独立入口
+  // {
+  //   key: "wenzhen",
+  //   title: "智能问诊",
+  //   desc: "（学习）历代名家医案AI模拟辨证",
+  //   href: "/zhongyi/wenzhen",
+  //   color: "#7B2FBE",
+  //   bgColor: "#F3EDF7",
+  //   Icon: WenzhenIcon,
+  // },
   {
     key: "yangsheng",
     title: "养生",

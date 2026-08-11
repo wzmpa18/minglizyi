@@ -28,6 +28,13 @@ tsconfig.tsbuildinfo
 # Deployment/verification scripts contain cloud secrets - excluded from repo
 # (these are local-only deployment tools, not source code)
 *.py
+
+# Environment variables with secrets
+.env
+.env.local
+.env.production
+test_sms_direct.js
+query_templates.js
 deploy_v20.1_full.sh
 deploy_v20_1_final_server.sh
 

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ToggleSwitch } from "@/components/shared";
 import { clearLoginState, getLoginState, setLoginState, updateUserProfile, type LoginState } from "@/lib/auth";
 import { clearAllTokens } from "@/lib/authInterceptor";
+import { updateProfileToServer, fetchProfileFromServer } from "@/lib/loginService";
 import { ensureCurrentUserInDirectory, getCurrentUserEntry, getUserById, setAllowNearby as setUserStoreAllowNearby, getAllowNearby as getUserStoreAllowNearby } from "@/lib/userStore";
 import { getBlacklist, removeFromBlacklist } from "@/lib/socialStore";
 
@@ -374,6 +375,12 @@ export default function ProfilePage() {
   const [editTags, setEditTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [editAvatar, setEditAvatar] = useState("");
+  // v21.0: 新增性别、生日字段
+  const [editGender, setEditGender] = useState("");
+  const [editBirthday, setEditBirthday] = useState("");
+  // v21.0: 保存状态
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
 
   // v20.1: 缓存管理状态
   const [cacheSize, setCacheSize] = useState("0 KB");
@@ -469,29 +476,43 @@ export default function ProfilePage() {
     calculateCacheSize();
   }, [calculateCacheSize]);
 
-  // v18.3 整改：使用统一规范的 userId 生成逻辑
-  const [userId] = useState(() => {
-    if (typeof window === "undefined") return "YD000000";
-    const stored = localStorage.getItem("yandao_user_id");
-    if (stored) return stored;
-    // 兼容旧版 profile_userid
-    const oldStored = localStorage.getItem("profile_userid");
-    if (oldStored) {
-      localStorage.setItem("yandao_user_id", oldStored);
-      return oldStored;
-    }
-    const id = "YD" + Math.floor(100000 + Math.random() * 900000);
-    localStorage.setItem("yandao_user_id", id);
-    // 兼容旧版
-    localStorage.setItem("profile_userid", id);
-    return id;
-  });
-
-  // v18.3 整改：登录状态初始化
-  const [loginState] = useState<LoginState>(() => {
+  // v21.2: 登录状态初始化（可更新，支持从服务器同步最新数据）
+  const [loginState, setLoginStateLocal] = useState<LoginState>(() => {
     if (typeof window === "undefined") return { isLoggedIn: false, token: null, profile: null };
     return getLoginState();
   });
+
+  // v21.2: 页面加载时从后端获取最新用户资料（解决跨设备数据不同步问题）
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!loginState.isLoggedIn || !loginState.token) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const result = await fetchProfileFromServer();
+        if (!cancelled && result.success && result.user) {
+          // 用后端返回的最新数据更新组件状态
+          setLoginStateLocal({
+            isLoggedIn: true,
+            token: loginState.token,
+            profile: result.user,
+          });
+        }
+      } catch (err) {
+        console.error('[Profile] 从服务器获取资料失败:', err);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, []); // 仅在组件挂载时执行一次
+
+  // v21.2: userId 优先使用后端返回的数字ID，其次回退到localStorage
+  const userId = loginState.isLoggedIn && loginState.profile?.userId
+    ? loginState.profile.userId
+    : (typeof window !== "undefined"
+        ? (localStorage.getItem("yandao_user_id") || "YD000000")
+        : "YD000000");
 
   // 持久化开关状态
   useEffect(() => {
@@ -566,24 +587,68 @@ export default function ProfilePage() {
     setEditBio(profile?.bio || "");
     setEditAvatar(profile?.avatar || "");
     setEditTags(profile?.tags || []);
+    // v21.0: 新增性别和生日
+    setEditGender(profile?.gender || "");
+    setEditBirthday(profile?.birthday || "");
+    setSaveMessage("");
     setShowEditModal(true);
   };
 
-  // 头像文件上传
+  // 头像文件上传（v21.2: 添加压缩逻辑，避免base64过大导致后端拒绝）
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const handleAvatarFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      alert("图片大小不能超过2MB");
+    if (file.size > 5 * 1024 * 1024) {
+      alert("图片大小不能超过5MB");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      setEditAvatar(reader.result as string);
+
+    // v21.2: 使用 Canvas 压缩图片，最大尺寸 256x256，JPEG 质量 0.8
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+
+      const maxSize = 256;
+      let { width, height } = img;
+      if (width > height) {
+        if (width > maxSize) {
+          height = Math.round((height * maxSize) / width);
+          width = maxSize;
+        }
+      } else {
+        if (height > maxSize) {
+          width = Math.round((width * maxSize) / height);
+          height = maxSize;
+        }
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        // 降级：直接用 FileReader
+        const reader = new FileReader();
+        reader.onload = () => setEditAvatar(reader.result as string);
+        reader.readAsDataURL(file);
+        return;
+      }
+      ctx.drawImage(img, 0, 0, width, height);
+      // PNG 保留透明度，其他用 JPEG 压缩
+      const mimeType = file.type === "image/png" ? "image/png" : "image/jpeg";
+      const quality = mimeType === "image/jpeg" ? 0.8 : 1.0;
+      const compressedBase64 = canvas.toDataURL(mimeType, quality);
+      setEditAvatar(compressedBase64);
     };
-    reader.readAsDataURL(file);
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      alert("图片加载失败，请重试");
+    };
+    img.src = objectUrl;
+
     e.target.value = "";
   }, []);
 
@@ -594,7 +659,13 @@ export default function ProfilePage() {
         <div
           className="relative flex h-20 w-20 items-center justify-center rounded-full cursor-pointer"
           style={{ backgroundColor: "rgba(255,255,255,0.2)" }}
-          onClick={openEditModal}
+          onClick={() => {
+            if (!loginState.isLoggedIn) {
+              router.push("/login");
+              return;
+            }
+            openEditModal();
+          }}
         >
           {loginState.profile?.avatar ? (
             <img src={loginState.profile.avatar} className="h-20 w-20 rounded-full object-cover" alt="头像" />
@@ -615,7 +686,7 @@ export default function ProfilePage() {
         <h2 className="mt-3 text-lg font-bold text-white">
           {loginState.isLoggedIn && loginState.profile
             ? loginState.profile.nickname
-            : "言道用户"}
+            : "未登录"}
         </h2>
         <div className="flex items-center gap-2 mt-1">
           <button
@@ -655,15 +726,34 @@ export default function ProfilePage() {
             : "普通会员"}
         </div>
         <button
-          onClick={openEditModal}
+          onClick={() => {
+            if (!loginState.isLoggedIn) {
+              router.push("/login");
+              return;
+            }
+            openEditModal();
+          }}
           className="mt-2 flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium text-white"
           style={{ backgroundColor: "rgba(255,255,255,0.25)", border: "1px solid rgba(255,255,255,0.4)" }}
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-          </svg>
-          编辑资料
+          {loginState.isLoggedIn ? (
+            <>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+              编辑资料
+            </>
+          ) : (
+            <>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                <polyline points="10 17 15 12 10 7" />
+                <line x1="15" y1="12" x2="3" y2="12" />
+              </svg>
+              点击登录
+            </>
+          )}
         </button>
       </div>
 
@@ -820,7 +910,7 @@ export default function ProfilePage() {
             </svg>
           }
           label="我的记录"
-          onClick={() => router.push("/orders")}
+          onClick={() => router.push("/records")}
           noBorder
         />
       </div>
@@ -967,6 +1057,16 @@ export default function ProfilePage() {
           right={<span className="text-xs text-gray-400">v19.0</span>}
           onClick={() => setShowAbout(true)}
         />
+        {/* 问题反馈入口 */}
+        <ListItem
+          icon={
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+          }
+          label="问题反馈"
+          onClick={() => router.push("/profile/feedback")}
+        />
         {/* 下载APP入口 */}
         <ListItem
           icon={
@@ -982,14 +1082,33 @@ export default function ProfilePage() {
         />
       </div>
 
-      {/* 退出登录（v18.3 整改：真实清除登录态） */}
+      {/* 登录/注册 或 退出登录 */}
       <div className="mx-3 mt-3 rounded-xl bg-white shadow-sm overflow-hidden">
-        <button
-          onClick={() => setShowLogoutConfirm(true)}
-          className="w-full py-4 text-center text-sm font-medium text-red-500 active:bg-gray-50"
-        >
-          退出登录
-        </button>
+        {loginState.isLoggedIn ? (
+          <button
+            onClick={() => setShowLogoutConfirm(true)}
+            className="w-full py-4 text-center text-sm font-medium text-red-500 active:bg-gray-50"
+          >
+            退出登录
+          </button>
+        ) : (
+          <div className="flex">
+            <button
+              onClick={() => router.push("/login")}
+              className="flex-1 py-4 text-center text-sm font-medium active:bg-gray-50"
+              style={{ color: BRAND, borderRight: "1px solid #f5f5f5" }}
+            >
+              登录
+            </button>
+            <button
+              onClick={() => router.push("/register")}
+              className="flex-1 py-4 text-center text-sm font-medium text-white active:opacity-90"
+              style={{ backgroundColor: BRAND }}
+            >
+              注册
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="py-4 text-center text-xs text-gray-400">
@@ -1141,45 +1260,110 @@ export default function ProfilePage() {
               <div className="mt-1 text-xs text-gray-400">最多5个标签</div>
             </div>
 
+            {/* 性别 */}
+            <div className="mb-4">
+              <label className="mb-2 block text-sm font-medium text-gray-700">性别</label>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setEditGender("male")}
+                  className={`flex-1 rounded-xl py-2 text-sm font-medium border transition-colors ${
+                    editGender === "male"
+                      ? "bg-purple-50 text-purple-600 border-purple-300"
+                      : "bg-gray-50 text-gray-600 border-gray-200"
+                  }`}
+                >
+                  男
+                </button>
+                <button
+                  onClick={() => setEditGender("female")}
+                  className={`flex-1 rounded-xl py-2 text-sm font-medium border transition-colors ${
+                    editGender === "female"
+                      ? "bg-purple-50 text-purple-600 border-purple-300"
+                      : "bg-gray-50 text-gray-600 border-gray-200"
+                  }`}
+                >
+                  女
+                </button>
+                <button
+                  onClick={() => setEditGender("secret")}
+                  className={`flex-1 rounded-xl py-2 text-sm font-medium border transition-colors ${
+                    editGender === "secret" || editGender === ""
+                      ? "bg-purple-50 text-purple-600 border-purple-300"
+                      : "bg-gray-50 text-gray-600 border-gray-200"
+                  }`}
+                >
+                  保密
+                </button>
+              </div>
+            </div>
+
+            {/* 生日 */}
+            <div className="mb-4">
+              <label className="mb-2 block text-sm font-medium text-gray-700">生日</label>
+              <input
+                type="date"
+                value={editBirthday}
+                onChange={(e) => setEditBirthday(e.target.value)}
+                className="w-full rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
+              />
+            </div>
+
+            {/* 保存提示消息 */}
+            {saveMessage && (
+              <div className={`mb-3 rounded-lg px-3 py-2 text-center text-sm ${saveMessage.includes("成功") ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"}`}>
+                {saveMessage}
+              </div>
+            )}
+
             {/* 按钮区 */}
             <div className="flex gap-3">
               <button
                 onClick={() => setShowEditModal(false)}
-                className="flex-1 rounded-xl py-2.5 text-sm font-semibold text-gray-600 bg-gray-100"
+                disabled={saveLoading}
+                className="flex-1 rounded-xl py-2.5 text-sm font-semibold text-gray-600 bg-gray-100 disabled:opacity-50"
               >
                 取消
               </button>
               <button
-                onClick={() => {
-                  const success = updateUserProfile({ nickname: editNickname, bio: editBio, avatar: editAvatar, tags: editTags });
-                  if (!success) {
-                    // 没有现存的 profile，尝试创建一个
-                    const newProfile = {
-                      userId: userId,
-                      nickname: editNickname || "言道用户",
-                      avatar: editAvatar,
-                      memberLevel: "basic" as const,
-                      loginTime: Date.now(),
-                      bio: editBio,
-                      tags: editTags,
-                    };
-                    const token = "guest_" + userId;
-                    const loginSuccess = setLoginState(token, newProfile);
-                    if (!loginSuccess) {
-                      // 最终兜底：直接写入 localStorage
-                      try {
-                        localStorage.setItem("yandao_user_profile", JSON.stringify({ ...newProfile, loginTime: Date.now() }));
-                      } catch {}
+                onClick={async () => {
+                setSaveLoading(true);
+                setSaveMessage("");
+                try {
+                  const result = await updateProfileToServer({
+                    nickname: editNickname,
+                    avatar: editAvatar,
+                    bio: editBio,
+                    gender: editGender,
+                    birthday: editBirthday,
+                    tags: editTags,
+                  });
+                  if (result.success) {
+                    // v21.2: 用服务器返回的数据直接更新组件状态，不再依赖页面刷新
+                    if (result.user) {
+                      setLoginStateLocal({
+                        isLoggedIn: true,
+                        token: loginState.token,
+                        profile: result.user,
+                      });
                     }
+                    setSaveMessage("保存成功");
+                    setTimeout(() => {
+                      setShowEditModal(false);
+                    }, 800);
+                  } else {
+                    setSaveMessage(result.message);
                   }
-                  setShowEditModal(false);
-                  // 刷新页面以显示更新
-                  window.location.reload();
-                }}
-                className="flex-1 rounded-xl py-2.5 text-sm font-semibold text-white"
+                } catch (error) {
+                  setSaveMessage("保存失败，请稍后重试");
+                } finally {
+                  setSaveLoading(false);
+                }
+              }}
+                disabled={saveLoading}
+                className="flex-1 rounded-xl py-2.5 text-sm font-semibold text-white disabled:opacity-50"
                 style={{ backgroundColor: BRAND }}
               >
-                保存
+                {saveLoading ? "保存中..." : "保存"}
               </button>
             </div>
           </div>

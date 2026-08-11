@@ -8,3 +8,4 @@ export { DatePickerInline } from "./date-picker-inline";
 export type { DatePickerInlineProps } from "./date-picker-inline";
 export { default as InterpretationDrawer } from "./InterpretationDrawer";
 export type { InterpretationItem, InterpretationDrawerProps } from "./InterpretationDrawer";
+export { default as SolarDatePicker } from "./SolarDatePicker";

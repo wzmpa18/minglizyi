@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "export",
   images: {
     unoptimized: true,
   },
@@ -10,7 +9,7 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  generateBuildId: () => `v20.1_full_deploy_0810`,
+  generateBuildId: () => `v21.3_records_sync_0811`,
 };
 
 export default nextConfig;

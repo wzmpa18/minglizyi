@@ -12,6 +12,11 @@ import {
   getLevelName,
   getLevelColor,
   getOrders,
+  getBToolFreeRemaining,
+  B_TOOLS,
+  B_TOOL_BENEFITS,
+  AI_QUOTA_CONFIG,
+  COMPLIANCE_PAYMENT_LABEL,
   MemberLevel,
   MembershipStatus,
   OrderRecord,
@@ -274,6 +279,98 @@ export default function MembershipPage() {
             </div>
           )}
         </div>
+
+        {/* ===== B类高价值工具定价 ===== */}
+        <div style={{ margin: "12px", padding: "16px", borderRadius: "14px", backgroundColor: "#fff", border: "1px solid #eee", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
+          <div style={{ fontSize: "15px", fontWeight: 600, color: "#333", marginBottom: "4px" }}>
+            B类高价值工具定价
+          </div>
+          <div style={{ fontSize: "12px", color: "#999", marginBottom: "12px" }}>
+            单独计费，不占用通用AI次数，禁止用积分兑换
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            {Object.values(B_TOOLS).map((tool) => (
+              <div key={tool.type} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", borderRadius: "8px", backgroundColor: "#fafafa" }}>
+                <div>
+                  <div style={{ fontSize: "13px", fontWeight: 600, color: "#333" }}>{tool.name}</div>
+                  <div style={{ fontSize: "11px", color: "#bbb", marginTop: "2px" }}>{tool.description}</div>
+                </div>
+                <div style={{ fontSize: "16px", fontWeight: 700, color: "#e67e22" }}>¥{tool.price}<span style={{ fontSize: "11px", color: "#bbb", fontWeight: 400 }}>/次</span></div>
+              </div>
+            ))}
+          </div>
+          {/* B类工具权益 */}
+          <div style={{ marginTop: "12px", paddingTop: "10px", borderTop: "1px solid #f5f5f5" }}>
+            <div style={{ fontSize: "12px", color: "#999", marginBottom: "6px" }}>会员B类工具权益</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
+              <div style={{ padding: "6px 8px", borderRadius: "6px", backgroundColor: "#e8f4fd", fontSize: "11px", color: "#3498db" }}>
+                月度会员：月赠3次，超出8折
+              </div>
+              <div style={{ padding: "6px 8px", borderRadius: "6px", backgroundColor: "#f0e6f6", fontSize: "11px", color: BRAND }}>
+                年度会员：月赠15次，超出7折
+              </div>
+              <div style={{ padding: "6px 8px", borderRadius: "6px", backgroundColor: "#fff8e1", fontSize: "11px", color: "#FF9800", gridColumn: "span 2" }}>
+                终身会员：B类工具无限次免费使用
+              </div>
+            </div>
+          </div>
+          {/* 当前剩余免费次数 */}
+          {status.level !== "basic" && (
+            <div style={{ marginTop: "8px", padding: "8px 12px", borderRadius: "8px", backgroundColor: "#f6fff6", border: "1px solid #c8e6c9", fontSize: "12px", color: "#27ae60", textAlign: "center" }}>
+              本月B类工具剩余免费次数：{getBToolFreeRemaining() === Infinity ? "无限" : getBToolFreeRemaining()}次
+            </div>
+          )}
+        </div>
+
+        {/* ===== 完整权益对比表 ===== */}
+        <div style={{ margin: "12px", padding: "16px", borderRadius: "14px", backgroundColor: "#fff", border: "1px solid #eee", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", overflowX: "auto" }}>
+          <div style={{ fontSize: "15px", fontWeight: 600, color: "#333", marginBottom: "12px" }}>
+            会员权益对比
+          </div>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px", minWidth: "320px" }}>
+            <thead>
+              <tr style={{ borderBottom: "2px solid #f0f0f0" }}>
+                <th style={{ padding: "8px 4px", textAlign: "left", color: "#999", fontWeight: 600 }}>权益项</th>
+                <th style={{ padding: "8px 4px", textAlign: "center", color: "#999", fontWeight: 600 }}>免费</th>
+                <th style={{ padding: "8px 4px", textAlign: "center", color: "#3498db", fontWeight: 600 }}>月度</th>
+                <th style={{ padding: "8px 4px", textAlign: "center", color: BRAND, fontWeight: 600 }}>年度</th>
+                <th style={{ padding: "8px 4px", textAlign: "center", color: "#FFD700", fontWeight: 600 }}>终身</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { name: "排盘工具", vals: ["✓", "✓", "✓", "✓"] },
+                { name: "通用AI问答", vals: ["3次/天", "50次/天", "无限", "无限"] },
+                { name: "B类高价值工具", vals: ["原价", "月赠3次", "月赠15次", "无限免费"] },
+                { name: "中医学习库", vals: ["初级", "全部", "全部", "全部"] },
+                { name: "模拟考试题库", vals: ["初级", "全等级", "全等级", "全等级"] },
+                { name: "签到积分倍率", vals: ["1x", "2x", "3x", "5x"] },
+                { name: "无广告体验", vals: ["-", "✓", "✓", "✓"] },
+                { name: "专属标识", vals: ["-", "✓", "✓", "✓"] },
+                { name: "导出排盘报告", vals: ["-", "✓", "✓", "✓"] },
+                { name: "专属客服", vals: ["-", "-", "✓", "✓"] },
+                { name: "新功能优先体验", vals: ["-", "-", "-", "✓"] },
+              ].map((row) => (
+                <tr key={row.name} style={{ borderBottom: "1px solid #f8f8f8" }}>
+                  <td style={{ padding: "8px 4px", color: "#666", fontWeight: 500 }}>{row.name}</td>
+                  {row.vals.map((v, i) => (
+                    <td key={i} style={{ padding: "8px 4px", textAlign: "center", color: v === "✓" ? "#27ae60" : v === "-" ? "#ddd" : "#666", fontSize: "11px" }}>
+                      {v}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* ===== 合规免责声明 ===== */}
+        <div style={{ margin: "8px 12px 16px", padding: "10px 14px", borderRadius: "8px", backgroundColor: "#fafafa", border: "1px solid #f0f0f0" }}>
+          <div style={{ fontSize: "11px", color: "#bbb", lineHeight: 1.6 }}>
+            所有付费服务统一标注「{COMPLIANCE_PAYMENT_LABEL}」，内容仅供传统文化学习与学术交流参考，不构成任何决策建议。会员状态、积分、购买记录均云端持久化保存，支持跨设备同步。购买记录永久保存，会员有效期内已解锁内容可永久查看。
+          </div>
+        </div>
+
         {/* ===== 支付方式 ===== */}
         <div style={{ padding: "16px 16px 4px", fontSize: "15px", fontWeight: 600, color: "#333" }}>
           支付方式

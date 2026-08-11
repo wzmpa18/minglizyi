@@ -23,6 +23,8 @@ import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { solarToBazi } from "@/algorithm-core";
 import type { Gender } from "@/algorithm-core";
 import { Lunar, LunarYear, LunarMonth } from "lunar-javascript";
+import SolarDatePicker from "@/components/shared/SolarDatePicker";
+import { syncRecordToBackend } from "@/lib/recordSync";
 
 // ============================================================================
 // 常量
@@ -144,17 +146,20 @@ interface BaziAnalysis {
 function analyzeBazi(
   birthDate: string,
   birthHour: number,
+  birthMinute: number,
   gender: "male" | "female"
 ): BaziAnalysis | null {
   try {
     const [year, month, day] = birthDate.split("-").map(Number);
     if (!year || !month || !day) return null;
 
+    // birthHour 已是实际小时数(0-23)，与八字排盘页一致
     const baziResult = solarToBazi({
       year,
       month,
       day,
       hour: birthHour,
+      minute: birthMinute,
       gender: gender as Gender,
     });
 
@@ -371,6 +376,7 @@ export default function NameAnalysisPage() {
   // 八字排盘相关状态
   const [birthDate, setBirthDate] = useState("");
   const [birthHour, setBirthHour] = useState<number>(12);
+  const [birthMinute, setBirthMinute] = useState<number>(0);
   const [calType, setCalType] = useState<"solar" | "lunar">("solar");
   const [lunarYear, setLunarYear] = useState<number>(new Date().getFullYear());
   const [lunarMonthValue, setLunarMonthValue] = useState<string>("1");
@@ -417,6 +423,7 @@ export default function NameAnalysisPage() {
       if (inp.gender) setGender(inp.gender);
       if (inp.birthDate) setBirthDate(inp.birthDate);
       if (inp.birthHour !== undefined) setBirthHour(inp.birthHour);
+      if (inp.birthMinute !== undefined) setBirthMinute(inp.birthMinute);
       if (inp.calType) setCalType(inp.calType);
       if (inp.lunarYear) setLunarYear(inp.lunarYear);
       if (inp.lunarMonthValue) setLunarMonthValue(inp.lunarMonthValue);
@@ -433,12 +440,12 @@ export default function NameAnalysisPage() {
   // 出生时间变化时自动排八字（公历/农历均自动转换为公历后排盘）
   useEffect(() => {
     if (effectiveBirthDate) {
-      const result = analyzeBazi(effectiveBirthDate, birthHour, gender);
+      const result = analyzeBazi(effectiveBirthDate, birthHour, birthMinute, gender);
       setBaziAnalysis(result);
     } else {
       setBaziAnalysis(null);
     }
-  }, [effectiveBirthDate, birthHour, gender]);
+  }, [effectiveBirthDate, birthHour, birthMinute, gender]);
 
   // 编辑事件：返回输入模式
   useEffect(() => {
@@ -449,9 +456,28 @@ export default function NameAnalysisPage() {
     return () => window.removeEventListener("yixue-edit", editHandler);
   }, []);
 
+  // v21.2: 拦截浏览器返回键 - 排盘结果页按返回应回到输入页
+  useEffect(() => {
+    if (!hasResult) return;
+
+    // 向 history 推入一个状态，使返回键先回到这个状态
+    window.history.pushState({ nameResult: true }, "");
+
+    const handlePopState = (e: PopStateEvent) => {
+      // 如果当前在结果页，按返回键回到输入页
+      setHasResult(false);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [hasResult]);
+
   const handleAnalyze = useCallback(() => {
     if (!requireLogin()) return;
-    const trimmed = fullName.trim();
+    // v21.2: 提交时过滤非中文字符，解决移动端输入法兼容性问题
+    const trimmed = fullName.trim().replace(/[^\u4e00-\u9fa5]/g, "");
     if (!trimmed || trimmed.length < 2) {
       setError("请输入至少2个字的姓名");
       return;
@@ -460,6 +486,8 @@ export default function NameAnalysisPage() {
       setError("名字字数必须大于姓氏字数");
       return;
     }
+    // 同步过滤后的值到 state
+    setFullName(trimmed);
 
     setError("");
     setLoading(true);
@@ -520,6 +548,7 @@ export default function NameAnalysisPage() {
             gender,
             birthDate,
             birthHour,
+            birthMinute,
             calType,
             lunarYear,
             lunarMonthValue,
@@ -529,6 +558,25 @@ export default function NameAnalysisPage() {
           showForm: false,
           _ts: Date.now(),
         });
+
+        // v21.3: 同步记录到后端（跨设备查看）
+        syncRecordToBackend("name", {
+          fullName: trimmed,
+          surnameLength,
+          gender,
+          birthDate: effectiveBirthDate,
+          birthHour,
+          birthMinute,
+          calType,
+          result: r,
+          baziAnalysis: baziAnalysis ? {
+            dayMaster: baziAnalysis.dayMaster,
+            dayMasterWuxing: baziAnalysis.dayMasterWuxing,
+            isStrong: baziAnalysis.isStrong,
+            favorableElements: baziAnalysis.favorableElements,
+            baziText: baziAnalysis.baziText,
+          } : null,
+        }, `姓名解析: ${trimmed}`).catch(() => {});
 
         // 保存客户记录
         if (selectedClient) {
@@ -556,7 +604,7 @@ export default function NameAnalysisPage() {
         setLoading(false);
       }
     }, 300);
-  }, [fullName, surnameLength, gender, selectedClient, requireLogin, baziAnalysis, birthDate, birthHour, calType, lunarYear, lunarMonthValue, lunarDay]);
+  }, [fullName, surnameLength, gender, selectedClient, requireLogin, baziAnalysis, birthDate, birthHour, birthMinute, calType, lunarYear, lunarMonthValue, lunarDay]);
 
   // 生肖喜忌分析（从八字年柱推导生肖）
   const derivedZodiac = useMemo(() => {
@@ -620,29 +668,20 @@ export default function NameAnalysisPage() {
               type="text"
               value={fullName}
               onChange={(e) => {
-                if (isComposingRef.current) {
-                  // IME组合输入中，不进行字符过滤，直接更新值
-                  setFullName(e.target.value);
-                } else {
-                  // 非组合状态，过滤非中文字符
-                  const val = e.target.value.replace(/[^\u4e00-\u9fa5]/g, "");
-                  setFullName(val);
-                }
+                // v21.2: 移除IME组合状态追踪，直接更新值
+                // 非中文字符在提交时过滤，避免移动端输入法兼容性问题
+                setFullName(e.target.value);
                 setError("");
               }}
-              onCompositionStart={() => {
-                isComposingRef.current = true;
-              }}
-              onCompositionEnd={(e) => {
-                isComposingRef.current = false;
-                // 组合输入结束，过滤非中文字符
-                const val = (e.target as HTMLInputElement).value.replace(/[^\u4e00-\u9fa5]/g, "");
+              onBlur={() => {
+                // 失焦时过滤非中文字符
+                const val = fullName.replace(/[^\u4e00-\u9fa5]/g, "");
                 setFullName(val);
-                setError("");
               }}
               placeholder="请输入中文姓名"
               maxLength={6}
               className="w-full rounded-lg border border-gray-200 px-3 py-3 text-center text-xl font-bold outline-none focus:border-[#7B2FBE]"
+              style={{ fontSize: "20px" }}
             />
             {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
           </div>
@@ -735,26 +774,32 @@ export default function NameAnalysisPage() {
 
             {/* 公历模式 */}
             {calType === "solar" ? (
-              <div className="flex gap-2">
-                <input
-                  type="date"
-                  value={birthDate}
-                  onChange={(e) => setBirthDate(e.target.value)}
-                  className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#7B2FBE]"
-                  min="1900-01-01"
-                  max="2099-12-31"
-                />
-                <select
-                  value={birthHour}
-                  onChange={(e) => setBirthHour(parseInt(e.target.value))}
-                  className="w-24 rounded-lg border border-gray-200 px-2 py-2 text-sm outline-none focus:border-[#7B2FBE]"
-                >
-                  {Array.from({ length: 12 }, (_, i) => i).map((h) => (
-                    <option key={h} value={h}>
-                      {["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"][h]}时
-                    </option>
-                  ))}
-                </select>
+              <div className="space-y-1.5">
+                <SolarDatePicker value={birthDate} onChange={setBirthDate} />
+                <div className="flex items-center gap-2">
+                  <select
+                    value={birthHour}
+                    onChange={(e) => setBirthHour(parseInt(e.target.value))}
+                    className="w-20 rounded-lg border border-gray-200 px-1 py-2 text-sm outline-none focus:border-[#7B2FBE]"
+                  >
+                    {Array.from({ length: 24 }, (_, i) => i).map((h) => (
+                      <option key={h} value={h}>
+                        {String(h).padStart(2, "0")}时
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={birthMinute}
+                    onChange={(e) => setBirthMinute(parseInt(e.target.value))}
+                    className="w-20 rounded-lg border border-gray-200 px-1 py-2 text-sm outline-none focus:border-[#7B2FBE]"
+                  >
+                    {Array.from({ length: 60 }, (_, i) => i).map((m) => (
+                      <option key={m} value={m}>
+                        {String(m).padStart(2, "0")}分
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             ) : (
               /* 农历模式 */
@@ -804,11 +849,22 @@ export default function NameAnalysisPage() {
                   <select
                     value={birthHour}
                     onChange={(e) => setBirthHour(parseInt(e.target.value))}
-                    className="w-24 rounded-lg border border-gray-200 px-2 py-2 text-sm outline-none focus:border-[#7B2FBE]"
+                    className="w-20 rounded-lg border border-gray-200 px-1 py-2 text-sm outline-none focus:border-[#7B2FBE]"
                   >
-                    {Array.from({ length: 12 }, (_, i) => i).map((h) => (
+                    {Array.from({ length: 24 }, (_, i) => i).map((h) => (
                       <option key={h} value={h}>
-                        {["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"][h]}时
+                        {String(h).padStart(2, "0")}时
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={birthMinute}
+                    onChange={(e) => setBirthMinute(parseInt(e.target.value))}
+                    className="w-20 rounded-lg border border-gray-200 px-1 py-2 text-sm outline-none focus:border-[#7B2FBE]"
+                  >
+                    {Array.from({ length: 60 }, (_, i) => i).map((m) => (
+                      <option key={m} value={m}>
+                        {String(m).padStart(2, "0")}分
                       </option>
                     ))}
                   </select>
@@ -861,10 +917,10 @@ export default function NameAnalysisPage() {
           {/* 分析按钮 */}
           <button
             onClick={handleAnalyze}
-            disabled={!fullName.trim() || fullName.trim().length < 2 || loading}
+            disabled={loading}
             className="w-full rounded-full py-2.5 text-sm font-semibold text-white transition-all active:scale-[0.98] disabled:opacity-50"
             style={{
-              backgroundColor: fullName.trim().length >= 2 && !loading ? BRAND : "#ccc",
+              backgroundColor: !loading ? BRAND : "#ccc",
             }}
           >
             {loading ? "解析中..." : "开始解析"}

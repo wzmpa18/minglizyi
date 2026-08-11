@@ -36,6 +36,7 @@ export interface UserProfile {
   birthday?: string;
   bio?: string;
   tags?: string[];
+  inviteCode?: string; // v21.2: 邀请码
   // v20.2: 双轨制 - 星级与积分完全独立
   starRating?: number;    // 星级（1.0-5.0），仅师父账号拥有，用户评价算术平均分
   starRatingCount?: number; // 有效评价数量

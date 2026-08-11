@@ -39,10 +39,10 @@ import { usePathname, useRouter } from "next/navigation";
 // ==================== 常量配置 ====================
 
 /** 左边缘触发范围（px），触摸起始点 x 坐标需 <= 此值 */
-const EDGE_THRESHOLD = 20;
+const EDGE_THRESHOLD = 30;
 
 /** 触发返回的最小水平滑动距离（px） */
-const SWIPE_THRESHOLD = 80;
+const SWIPE_THRESHOLD = 60;
 
 /** 最大允许垂直移动距离（px），超过则视为滚动并取消手势 */
 const VERTICAL_THRESHOLD = 50;
@@ -87,7 +87,7 @@ interface SwipeState {
 // ==================== 工具函数 ====================
 
 /**
- * 检查触摸目标是否为交互元素（表单输入、对话框等），
+ * 检查触摸目标是否为交互元素（表单输入、对话框、抽屉等），
  * 防止在输入或弹窗操作时误触返回手势。
  */
 function isInteractiveElement(el: HTMLElement | null): boolean {
@@ -102,13 +102,39 @@ function isInteractiveElement(el: HTMLElement | null): boolean {
     return true;
   }
 
-  // 对话框 / 弹窗 / 明确禁用滑动返回的区域
+  // 对话框 / 弹窗 / 抽屉 / 明确禁用滑动返回的区域
   if (
-    el.closest('[role="dialog"], [data-modal], [data-swipeback-disabled]')
+    el.closest(
+      '[role="dialog"], [data-modal], [data-drawer], [data-swipeback-disabled], ' +
+      '.modal-open, .drawer-open, .drawer, .ant-drawer-open, .show'
+    )
   ) {
     return true;
   }
 
+  return false;
+}
+
+/**
+ * 检查触摸目标是否在横向滚动容器内（如标签栏、轮播图）。
+ * 如果用户正在横向滚动某个容器，则不触发右滑返回。
+ */
+function isInsideHorizontalScroll(el: HTMLElement | null): boolean {
+  if (!el) return false;
+
+  let current: HTMLElement | null = el;
+  // 向上遍历 DOM 树，最多检查 10 层
+  for (let i = 0; i < 10 && current; i++) {
+    const style = window.getComputedStyle(current);
+    const overflowX = style.overflowX;
+    const isScrollable =
+      (overflowX === "auto" || overflowX === "scroll") &&
+      current.scrollWidth > current.clientWidth;
+    if (isScrollable) {
+      return true;
+    }
+    current = current.parentElement;
+  }
   return false;
 }
 
@@ -352,9 +378,12 @@ export function useSwipeBack(
       // 仅左边缘 EDGE_THRESHOLD 范围内开始
       if (touch.clientX > EDGE_THRESHOLD) return;
 
-      // 排除表单输入、对话框等交互元素
+      // 排除表单输入、对话框、抽屉等交互元素
       const target = e.target as HTMLElement | null;
       if (isInteractiveElement(target)) return;
+
+      // 排除横向滚动组件（标签栏、轮播图等）
+      if (isInsideHorizontalScroll(target)) return;
 
       // 记录起始位置
       s.startX = touch.clientX;

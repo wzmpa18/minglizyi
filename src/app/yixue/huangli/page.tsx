@@ -585,6 +585,9 @@ export default function HuangliPage() {
         />
       </div>
 
+      {/* ===== 添加到手机桌面 ===== */}
+      <AddToHomeScreen />
+
 
         {/* ===== 免责声明 ===== */}
         <div className="rounded-lg bg-[#f9f9f9] p-3 text-center border border-gray-200">
@@ -616,5 +619,135 @@ function MiniCell({ label, value }: { label: string; value: string }) {
       <div className="text-[11px] text-gray-400">{label}</div>
       <div className="mt-0.5 text-sm font-semibold text-gray-700">{value}</div>
     </div>
+  );
+}
+
+// ===== 添加到手机桌面组件 =====
+function AddToHomeScreen() {
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(false);
+
+  useEffect(() => {
+    // 检测是否已在独立模式（已添加到桌面）
+    const standalone = window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone === true;
+    setIsStandalone(standalone);
+
+    // 检测 iOS
+    const ua = navigator.userAgent;
+    const ios = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
+    setIsIOS(ios);
+
+    // 监听 beforeinstallprompt 事件（Android Chrome）
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  // 已添加到桌面时不显示
+  if (isStandalone) return null;
+
+  const handleAddClick = async () => {
+    if (deferredPrompt) {
+      // Android Chrome：触发安装提示
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === "accepted") {
+        setDeferredPrompt(null);
+      }
+    } else {
+      // iOS 或不支持 beforeinstallprompt 的浏览器：显示手动指引
+      setShowModal(true);
+    }
+  };
+
+  return (
+    <>
+      <div className="mx-3 mb-2">
+        <button
+          onClick={handleAddClick}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed py-3 text-sm font-semibold transition-colors active:opacity-80"
+          style={{ borderColor: BRAND, color: BRAND, backgroundColor: "#F3EDF7" }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          添加黄历到手机桌面
+        </button>
+      </div>
+
+      {showModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6"
+          onClick={() => setShowModal(false)}
+        >
+          <div
+            className="w-full max-w-xs rounded-2xl bg-white p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-base font-bold text-gray-800">添加到桌面</h3>
+              <button onClick={() => setShowModal(false)} className="text-gray-400">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+
+            {isIOS ? (
+              <div className="space-y-3">
+                <p className="text-sm text-gray-600">iOS 设备请按以下步骤操作：</p>
+                <div className="space-y-2 text-xs text-gray-500">
+                  <div className="flex items-start gap-2">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white text-[10px] font-bold" style={{ backgroundColor: BRAND }}>1</span>
+                    <span>点击 Safari 底部的<span className="font-semibold" style={{ color: BRAND }}> 分享 </span>按钮</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white text-[10px] font-bold" style={{ backgroundColor: BRAND }}>2</span>
+                    <span>选择<span className="font-semibold" style={{ color: BRAND }}> 添加到主屏幕</span></span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white text-[10px] font-bold" style={{ backgroundColor: BRAND }}>3</span>
+                    <span>点击右上角<span className="font-semibold" style={{ color: BRAND }}> 添加</span> 即可</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-gray-600">Android 设备请按以下步骤操作：</p>
+                <div className="space-y-2 text-xs text-gray-500">
+                  <div className="flex items-start gap-2">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white text-[10px] font-bold" style={{ backgroundColor: BRAND }}>1</span>
+                    <span>点击浏览器菜单（右上角 <span className="font-semibold" style={{ color: BRAND }}>⋮</span>）</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white text-[10px] font-bold" style={{ backgroundColor: BRAND }}>2</span>
+                    <span>选择<span className="font-semibold" style={{ color: BRAND }}> 添加到主屏幕</span> 或<span className="font-semibold" style={{ color: BRAND }}> 安装应用</span></span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white text-[10px] font-bold" style={{ backgroundColor: BRAND }}>3</span>
+                    <span>确认添加即可在桌面查看黄历</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-4 rounded-lg bg-purple-50 p-2.5">
+              <p className="text-[11px] text-gray-500 leading-relaxed">
+                添加到桌面后，可以像原生 APP 一样全屏使用黄历功能，无需打开浏览器输入网址。
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
