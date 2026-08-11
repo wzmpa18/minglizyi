@@ -523,7 +523,7 @@ export default function EventDivinationPanel({
             <div style={{ padding: "16px", background: "linear-gradient(135deg, #7B2FBE, #9B5ECF)", borderRadius: "12px 12px 0 0", color: "white" }}>
               <div style={{ fontSize: "16px", fontWeight: "bold" }}>开通AI解读</div>
               <div style={{ fontSize: "12px", opacity: 0.9, marginTop: "4px" }}>
-                {isPaidTool ? "此工具AI解读需付费使用" : "免费次数已用完，选择套餐继续"}
+                {isPaidTool ? "此工具AI解读需付费使用" : "AI解读需单次付费或开通会员"}
               </div>
             </div>
 

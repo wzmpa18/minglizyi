@@ -35,18 +35,24 @@ const BRAND_LIGHT = "#9B5ECF";
 const BRAND_URL = "yandao.vip";
 const DOWNLOAD_URL = "https://www.yandao.vip/download";
 
-/** 3个核心价值点 */
+/** 3个核心价值点（零成本权益，与实际免费范围一致） */
 const VALUE_POINTS = [
-  { icon: "chart", title: "专业排盘", desc: "八字紫微奇门，一键精准排盘" },
-  { icon: "ai", title: "AI解读", desc: "多流派思路，传统文化深度参考" },
-  { icon: "community", title: "同道交流", desc: "同好交流学习，师父一对一咨询" },
+  { icon: "chart", title: "专业排盘", desc: "八字、紫微、奇门等14款工具，基础排盘永久免费" },
+  { icon: "book", title: "典籍学习", desc: "中医经典、易学古籍、方剂经络，免费查阅初级库" },
+  { icon: "community", title: "同道交流", desc: "同好社区互动，师父一对一咨询通道" },
 ];
 
-/** 统一分享文案 */
-export const SHARE_TEXT = "国学随身查，AI深度解！14款专业排盘、名家中医问诊、同道交流学习，新人注册赠3次AI解读";
+/** 统一分享文案（已移除所有AI免费赠送表述） */
+export const SHARE_TEXT = "国学随身查，典籍全收录！14款专业排盘工具、中医典籍知识库、同好交流学习社区";
+
+/** 备选分享文案 */
+export const SHARE_TEXT_ALT = "一直在用的国学学习工具，基础排盘永久免费，还有同道交流社区，扫码就能下载。";
 
 /** 合规分享文案 */
 export const SHARE_COMPLIANCE_TEXT = "传统文化学习交流工具";
+
+/** 品牌主体 */
+const BRAND_ENTITY = "东莞言道科技有限公司";
 
 /**
  * 生成海报（返回 base64 data URL）
@@ -80,18 +86,24 @@ export async function generatePoster(config: PosterConfig): Promise<string> {
   ctx.arc(40, 120, 60, 0, Math.PI * 2);
   ctx.fill();
 
+  // ==================== 顶部品牌标识 ====================
+  ctx.fillStyle = "rgba(255,255,255,0.6)";
+  ctx.font = `11px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
+  ctx.textAlign = "center";
+  ctx.fillText(BRAND_ENTITY, w / 2, 22);
+
   // ==================== 主标题 ====================
   ctx.fillStyle = "white";
   ctx.textAlign = "center";
   const titleSize = config.size === "weibo" ? 28 : config.size === "square" ? 32 : 36;
   ctx.font = `bold ${titleSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
-  ctx.fillText("国学随身查，AI深度解", w / 2, config.size === "weibo" ? 50 : 80);
+  ctx.fillText("国学随身查，典籍全收录", w / 2, config.size === "weibo" ? 55 : 85);
 
   // ==================== 副标题 ====================
-  const subSize = config.size === "weibo" ? 13 : 16;
+  const subSize = config.size === "weibo" ? 12 : 15;
   ctx.font = `${subSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
-  ctx.fillStyle = "rgba(255,255,255,0.9)";
-  ctx.fillText("14款专业排盘 · 名家中医问诊 · 同道交流学习", w / 2, config.size === "weibo" ? 78 : 115);
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.fillText("14 款专业排盘工具・中医典籍知识库・同好交流学习社区", w / 2, config.size === "weibo" ? 78 : 118);
 
   // 微博横版特殊布局
   if (config.size === "weibo") {
@@ -144,19 +156,19 @@ export async function generatePoster(config: PosterConfig): Promise<string> {
     ctx.fillText(vp.desc, iconX + 35, y + 16);
   });
 
-  // ==================== 福利钩子 ====================
-  const hookY = cardStartY + cardHeight + 30;
+  // ==================== 福利钩子（零成本权益，无AI赠送） ====================
+  const hookY = cardStartY + cardHeight + 25;
   ctx.fillStyle = "rgba(255,255,255,0.95)";
-  ctx.font = `bold 15px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
+  ctx.font = `bold 14px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
   ctx.textAlign = "center";
-  ctx.fillText("新人注册赠 3 次 AI 解读", w / 2, hookY);
+  ctx.fillText("新人专享：免费解锁全部基础排盘 + 5 部易学典籍电子版", w / 2, hookY);
 
   // ==================== 底部二维码区 ====================
   const qrSize = h < 700 ? 100 : 130;
   const qrX = (w - qrSize) / 2;
   const qrY = hookY + 25;
 
-  // 二维码背景
+  // 二维码背景 + 官方正版标识
   ctx.fillStyle = "#f9f5fc";
   roundRect(ctx, qrX - 10, qrY - 10, qrSize + 20, qrSize + 20, 10);
   ctx.fill();
@@ -176,22 +188,39 @@ export async function generatePoster(config: PosterConfig): Promise<string> {
     ctx.fillText("二维码", w / 2, qrY + qrSize / 2);
   }
 
-  // 扫码引导文案
+  // 官方正版标识
   ctx.fillStyle = BRAND;
-  ctx.font = `bold 16px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
+  ctx.font = `bold 11px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
   ctx.textAlign = "center";
-  ctx.fillText("长按扫码 免费体验", w / 2, qrY + qrSize + 35);
+  ctx.fillText("官方正版・安全下载", w / 2, qrY - 18);
+
+  // 行动指令
+  ctx.fillStyle = BRAND;
+  ctx.font = `bold 15px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
+  ctx.textAlign = "center";
+  ctx.fillText("长按识别二维码，立即下载安卓版", w / 2, qrY + qrSize + 32);
+
+  // iOS 提示
+  ctx.fillStyle = "#999";
+  ctx.font = `12px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
+  ctx.fillText("iOS 版本・敬请期待", w / 2, qrY + qrSize + 52);
 
   // ==================== 底部合规小字 ====================
   ctx.fillStyle = "#ccc";
   ctx.font = `10px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
-  ctx.fillText("内容仅供传统文化学习参考，不构成任何决策建议", w / 2, h - 20);
+  ctx.textAlign = "center";
+  ctx.fillText("内容仅供传统文化学习参考，不构成任何决策建议。", w / 2, h - 15);
 
-  // 品牌标识
+  // 品牌主体
+  ctx.fillStyle = "#bbb";
+  ctx.font = `10px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
+  ctx.fillText(BRAND_ENTITY, w / 2, h - 30);
+
+  // 邀请码
   if (config.inviteCode) {
     ctx.fillStyle = "#999";
-    ctx.font = `12px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
-    ctx.fillText(`邀请码：${config.inviteCode}`, w / 2, h - 40);
+    ctx.font = `11px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
+    ctx.fillText(`邀请码：${config.inviteCode}`, w / 2, h - 45);
   }
 
   return canvas.toDataURL("image/png", 0.9);
@@ -246,15 +275,25 @@ function drawWeiboLayout(ctx: CanvasRenderingContext2D, w: number, h: number, co
   ctx.textAlign = "center";
   ctx.fillText("扫码体验", qrX + qrSize / 2, qrY + qrSize + 20);
 
-  // 福利
+  // 福利（零成本权益）
   ctx.fillStyle = "rgba(255,255,255,0.95)";
   ctx.font = 'bold 12px "Noto Sans CJK SC", sans-serif';
-  ctx.fillText("新人注册赠3次AI解读", w / 2, 240);
+  ctx.fillText("新人专享：免费解锁全部基础排盘 + 5 部易学典籍电子版", w / 2, 240);
+
+  // 行动指令
+  ctx.fillStyle = BRAND;
+  ctx.font = 'bold 11px "Noto Sans CJK SC", sans-serif';
+  ctx.fillText("长按识别二维码，立即下载安卓版", w / 2, 260);
+  ctx.fillStyle = "#999";
+  ctx.font = '10px "Noto Sans CJK SC", sans-serif';
+  ctx.fillText("iOS 版本・敬请期待", w / 2, 275);
 
   // 合规
   ctx.fillStyle = "#ccc";
   ctx.font = '9px "Noto Sans CJK SC", sans-serif';
-  ctx.fillText("内容仅供传统文化学习参考，不构成任何决策建议", w / 2, h - 12);
+  ctx.fillText("内容仅供传统文化学习参考，不构成任何决策建议。", w / 2, h - 12);
+  ctx.fillStyle = "#bbb";
+  ctx.fillText(BRAND_ENTITY, w / 2, h - 24);
 }
 
 /**
@@ -281,16 +320,20 @@ function drawValueIcon(ctx: CanvasRenderingContext2D, type: string, cx: number, 
       ctx.lineTo(cx, cy + s * 0.5);
       ctx.stroke();
       break;
-    case "ai":
-      // AI图标 - 闪电
+    case "book":
+      // 典籍图标 - 书本
       ctx.beginPath();
-      ctx.moveTo(cx - s * 0.2, cy - s * 0.6);
-      ctx.lineTo(cx + s * 0.3, cy - s * 0.1);
-      ctx.lineTo(cx, cy - s * 0.1);
-      ctx.lineTo(cx + s * 0.2, cy + s * 0.6);
-      ctx.lineTo(cx - s * 0.3, cy + s * 0.1);
-      ctx.lineTo(cx, cy + s * 0.1);
+      ctx.moveTo(cx - s * 0.5, cy - s * 0.4);
+      ctx.lineTo(cx - s * 0.5, cy + s * 0.4);
+      ctx.lineTo(cx, cy + s * 0.3);
+      ctx.lineTo(cx + s * 0.5, cy + s * 0.4);
+      ctx.lineTo(cx + s * 0.5, cy - s * 0.4);
+      ctx.lineTo(cx, cy - s * 0.3);
       ctx.closePath();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - s * 0.3);
+      ctx.lineTo(cx, cy + s * 0.3);
       ctx.stroke();
       break;
     case "community":

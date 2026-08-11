@@ -1,15 +1,21 @@
 "use client";
 
 // ============================================================================
-// 多平台分享服务 - v20.4
+// 多平台分享服务 - v20.5
 // 支持渠道：微信好友、微信朋友圈、QQ、QQ空间、新浪微博、小红书、复制链接、保存海报
+// v20.5: 移除所有AI免费赠送表述，分享不奖励积分，保存海报直接到本地
 // ============================================================================
 
 import { SHARE_TEXT, SHARE_COMPLIANCE_TEXT } from "./sharePoster";
-import { dailyShareReward } from "./pointsStore";
 
 const BRAND = "#7B2FBE";
 const DOWNLOAD_URL = "https://www.yandao.vip/download";
+const APK_DOWNLOAD_URL = "https://www.yandao.vip/app-download/guoxue-chuancheng-v1.0-release.apk";
+
+/** 默认社交媒体分享文案（已移除所有AI免费赠送表述） */
+const SHARE_DEFAULT_TEXT = "发现一个实用的传统文化学习平台，排盘工具、典籍知识库都有，分享给你一起看看。";
+/** 备选分享文案 */
+const SHARE_ALT_TEXT = "一直在用的国学学习工具，基础排盘永久免费，还有同道交流社区，扫码就能下载。";
 
 export type ShareChannel =
   | "wechat_friend"
@@ -108,7 +114,8 @@ async function shareWechat(title: string, text: string, url: string, type: numbe
         url,
         dialogTitle: "分享到微信",
       });
-      return triggerShareReward();
+      logShareEvent(type === 1 ? "wechat_moments" : "wechat_friend");
+      return shareDone();
     } catch {
       // SDK不可用时降级
     }
@@ -116,12 +123,14 @@ async function shareWechat(title: string, text: string, url: string, type: numbe
 
   // 网页端：引导用户使用微信内置分享
   if (isWechatBrowser()) {
+    logShareEvent(type === 1 ? "wechat_moments" : "wechat_friend");
     return {
       success: true,
       message: "请点击右上角「...」→「发送给朋友」或「分享到朋友圈」进行分享",
     };
   }
 
+  logShareEvent(type === 1 ? "wechat_moments" : "wechat_friend");
   return {
     success: true,
     message: "请在微信中打开本页面后使用微信分享，或复制链接发送给好友",
@@ -139,7 +148,8 @@ async function shareQQ(title: string, text: string, url: string, type: "friend" 
     window.open(shareUrl, "_blank", "width=600,height=500");
   }
 
-  return triggerShareReward();
+  logShareEvent(type === "qzone" ? "qzone" : "qq");
+  return shareDone();
 }
 
 // ==================== 微博分享 ====================
@@ -152,7 +162,8 @@ async function shareWeibo(title: string, text: string, url: string): Promise<Sha
     window.open(shareUrl, "_blank", "width=600,height=500");
   }
 
-  return triggerShareReward();
+  logShareEvent("weibo");
+  return shareDone();
 }
 
 // ==================== 小红书分享 ====================
@@ -163,6 +174,7 @@ async function shareXiaohongshu(posterDataUrl?: string): Promise<ShareResult> {
     await savePoster(posterDataUrl);
   }
 
+  logShareEvent("xiaohongshu");
   return {
     success: true,
     message: "海报已保存到相册，请打开小红书APP发布图文笔记",
@@ -178,7 +190,8 @@ async function copyLink(url: string, text: string): Promise<ShareResult> {
   if (typeof navigator !== "undefined" && navigator.clipboard) {
     try {
       await navigator.clipboard.writeText(fullText);
-      return triggerShareReward();
+      logShareEvent("copy_link");
+      return shareDone();
     } catch {
       // 降级
     }
@@ -195,7 +208,8 @@ async function copyLink(url: string, text: string): Promise<ShareResult> {
     try {
       document.execCommand("copy");
       document.body.removeChild(textarea);
-      return triggerShareReward();
+      logShareEvent("copy_link");
+      return shareDone();
     } catch {
       document.body.removeChild(textarea);
     }
@@ -204,22 +218,40 @@ async function copyLink(url: string, text: string): Promise<ShareResult> {
   return { success: false, message: "复制失败，请手动复制链接" };
 }
 
-// ==================== 保存海报 ====================
+// ==================== 保存海报（直接保存到本地，不跳转浏览器） ====================
 
 async function savePoster(posterDataUrl?: string): Promise<ShareResult> {
   if (!posterDataUrl) {
     return { success: false, message: "海报尚未生成" };
   }
 
-  // 创建下载链接
+  // 创建下载链接，直接触发保存到本地
   if (typeof document !== "undefined") {
-    const link = document.createElement("a");
-    link.download = `言道国学_分享海报_${Date.now()}.png`;
-    link.href = posterDataUrl;
-    link.click();
+    try {
+      const link = document.createElement("a");
+      link.download = `言道国学_分享海报_${Date.now()}.png`;
+      link.href = posterDataUrl;
+      // 不设置 target，避免打开新窗口
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // 记录保存到后端统计
+      logShareEvent("save_poster");
+
+      return {
+        success: true,
+        message: "海报已保存到相册",
+        rewarded: false,
+        rewardAmount: 0,
+      };
+    } catch (e) {
+      return { success: false, message: "保存失败，请开启存储权限后重试" };
+    }
   }
 
-  return triggerShareReward();
+  return { success: false, message: "保存失败，请重试" };
 }
 
 // ==================== 工具函数 ====================
@@ -231,21 +263,43 @@ function isWechatBrowser(): boolean {
 }
 
 /**
- * 触发每日分享奖励
- * v20.5: 分享不再获得积分（已移除刷分漏洞），仅记录分享次数用于运营数据
+ * 记录分享行为到后端统计
  */
-function triggerShareReward(): ShareResult {
-  const result = dailyShareReward();
+async function logShareEvent(channel: string): Promise<void> {
+  try {
+    if (typeof fetch !== "undefined") {
+      const userId = typeof localStorage !== "undefined"
+        ? localStorage.getItem("yandao_user_id") || ""
+        : "";
+      let inviteCode = "";
+      try {
+        const { getInviteCode } = await import("@/lib/inviteStore");
+        inviteCode = getInviteCode(userId);
+      } catch {}
+
+      await fetch("/api/share/log", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channel, userId, inviteCode }),
+      }).catch(() => {});
+    }
+  } catch {}
+}
+
+/**
+ * 分享完成后的通用返回（v20.5: 不再奖励积分）
+ */
+function shareDone(): ShareResult {
   return {
     success: true,
-    message: result.message,
+    message: "分享成功",
     rewarded: false,
     rewardAmount: 0,
   };
 }
 
 /**
- * 获取默认分享参数
+ * 获取默认分享参数（v20.5: 已移除AI免费赠送表述，文案合规）
  */
 export function getDefaultShareParams(inviteCode?: string): {
   title: string;
@@ -258,7 +312,26 @@ export function getDefaultShareParams(inviteCode?: string): {
 
   return {
     title: SHARE_TEXT,
-    text: `${SHARE_TEXT} | ${SHARE_COMPLIANCE_TEXT}`,
+    text: `${SHARE_DEFAULT_TEXT}\n${SHARE_COMPLIANCE_TEXT}`,
+    url,
+  };
+}
+
+/**
+ * 获取备选分享参数
+ */
+export function getAltShareParams(inviteCode?: string): {
+  title: string;
+  text: string;
+  url: string;
+} {
+  const url = inviteCode
+    ? `${DOWNLOAD_URL}?ref=${encodeURIComponent(inviteCode)}`
+    : DOWNLOAD_URL;
+
+  return {
+    title: SHARE_TEXT,
+    text: `${SHARE_ALT_TEXT}\n${SHARE_COMPLIANCE_TEXT}`,
     url,
   };
 }

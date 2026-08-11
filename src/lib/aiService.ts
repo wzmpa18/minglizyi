@@ -154,7 +154,7 @@ export const AI_PAID_PLANS: PaidPlan[] = [
 // 检查用户AI配额
 export function checkAIQuota(): AIQuotaStatus {
   if (typeof window === "undefined") {
-    return { dailyUsed: 0, dailyLimit: 3, remaining: 3, level: "basic", canUse: true, needPayment: false, message: "" };
+    return { dailyUsed: 0, dailyLimit: 0, remaining: 0, level: "basic", canUse: false, needPayment: true, message: "" };
   }
 
   try {
@@ -178,9 +178,9 @@ export function checkAIQuota(): AIQuotaStatus {
       }
     }
 
-    // 配额限制
+    // 配额限制（v20.5: 免费用户零AI门槛，必须付费或开通会员）
     const limits: Record<string, number> = {
-      basic: 3,
+      basic: 0,
       monthly: 50,
       yearly: Infinity,
       lifetime: Infinity,
@@ -208,15 +208,15 @@ export function checkAIQuota(): AIQuotaStatus {
       message = "会员特权：无限AI解读";
     } else if (hasPaidPlan) {
       message = "付费套餐有效中：无限解读";
-    } else if (remaining <= 5 && remaining > 0) {
+    } else if (level === "monthly") {
       message = `今日剩余${remaining}次AI解读机会`;
     } else if (!canUse) {
-      message = "今日免费次数已用完，开通会员或购买套餐继续使用";
+      message = "AI解读需单次付费或开通会员后使用";
     }
 
     return { dailyUsed, dailyLimit, remaining, level, canUse, needPayment, message };
   } catch {
-    return { dailyUsed: 0, dailyLimit: 3, remaining: 3, level: "basic", canUse: true, needPayment: false, message: "" };
+    return { dailyUsed: 0, dailyLimit: 0, remaining: 0, level: "basic", canUse: false, needPayment: true, message: "" };
   }
 }
 
@@ -350,7 +350,7 @@ export function getPermissionStatus(): PermissionStatus {
       canUseAI: false,
       needLogin: true,
       needPayment: false,
-      message: "注册登录后即可免费体验基础AI解读",
+      message: "登录后可使用AI解读（需单次付费或开通会员）",
     };
   }
 
@@ -363,7 +363,7 @@ export function getPermissionStatus(): PermissionStatus {
       canUseAI: quota.canUse,
       needLogin: false,
       needPayment: !quota.canUse,
-      message: quota.message || `今日剩余${quota.remaining}次AI解读机会`,
+      message: quota.canUse ? quota.message : "AI解读需单次付费或开通会员后使用",
     };
   }
 

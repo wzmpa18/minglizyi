@@ -5,15 +5,15 @@ import { BrandHeader } from "@/components/shared";
 
 const BRAND = "#7B2FBE";
 const DOWNLOAD_URL = "https://www.yandao.vip/download";
-const APK_URL = "https://www.yandao.vip/app-release.apk";
+const APK_URL = "https://www.yandao.vip/app-download/guoxue-chuancheng-v1.0-release.apk";
 
 /** 功能亮点列表 */
 const FEATURES: { icon: string; title: string; desc: string }[] = [
-  { icon: "🩺", title: "智能问诊", desc: "7大门派体系" },
-  { icon: "🧘", title: "养生功法", desc: "养生功法模块" },
-  { icon: "⭐", title: "社交评分", desc: "社交评分体系" },
-  { icon: "📅", title: "黄历小组件", desc: "桌面黄历小组件" },
-  { icon: "👈", title: "手势返回", desc: "右滑手势返回" },
+  { icon: "🔮", title: "专业排盘", desc: "14款排盘工具，基础永久免费" },
+  { icon: "📚", title: "典籍学习", desc: "中医经典古籍免费查阅" },
+  { icon: "🤝", title: "同道交流", desc: "同好社区，师父咨询通道" },
+  { icon: "🧘", title: "养生功法", desc: "养生功法学习模块" },
+  { icon: "👈", title: "手势返回", desc: "右滑手势返回全局生效" },
   { icon: "🔐", title: "永久登录", desc: "登录态永久持久化" },
 ];
 
@@ -106,6 +106,30 @@ export default function DownloadPage() {
         <p className="mt-2 text-center text-xs text-gray-400">
           支持 Android 8.0 及以上系统
         </p>
+
+        {/* iOS 占位按钮 */}
+        <button
+          disabled
+          className="w-full mt-3 rounded-xl py-3.5 text-sm font-bold text-gray-400 flex items-center justify-center gap-2"
+          style={{ backgroundColor: "#e5e5e5", cursor: "not-allowed" }}
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M12 19l7-7 3 3-7 7-3-3z" />
+            <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+            <path d="M2 2l7.586 7.586" />
+            <circle cx="11" cy="11" r="2" />
+          </svg>
+          iOS 版本 · 敬请期待
+        </button>
       </div>
 
       {/* ===== 扫码下载区域 ===== */}
@@ -147,7 +171,8 @@ export default function DownloadPage() {
         </p>
         <div className="mt-3 pt-3 text-center" style={{ borderTop: "1px solid #e5e5e5" }}>
           <p className="text-xs text-gray-400">© 2026 言道国学</p>
-          <p className="text-xs text-gray-400 mt-0.5">版权所有 · yandao.vip</p>
+          <p className="text-xs text-gray-400 mt-0.5">东莞言道科技有限公司 · 版权所有</p>
+          <p className="text-xs text-gray-400 mt-0.5">yandao.vip</p>
         </div>
       </div>
     </div>

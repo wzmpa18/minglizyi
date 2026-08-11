@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "export",
+  // output: "export", // v20.5: 移除静态导出，支持动态API路由
   images: {
     unoptimized: true,
   },
@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  generateBuildId: () => `v20.4_hunyuan_feedback_0811`,
+  generateBuildId: () => `v20.5_poster_share_calibration_0811`,
 };
 
 export default nextConfig;
