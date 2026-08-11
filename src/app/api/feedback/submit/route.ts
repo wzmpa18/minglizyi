@@ -16,8 +16,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
 
-export const dynamic = "force-dynamic";
-
 const FEEDBACK_DIR = path.join(process.cwd(), "data", "feedback");
 const FEEDBACK_FILE = path.join(FEEDBACK_DIR, "feedbacks.json");
 

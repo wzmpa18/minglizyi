@@ -25,8 +25,6 @@ import {
 } from "@/lib/hunyuanAI";
 import { saveImportedContent } from "@/lib/contentImportService";
 
-export const dynamic = "force-dynamic";
-
 const ADMIN_KEY = process.env.ADMIN_API_KEY || "WUzhimin123";
 
 /** 验证管理员权限 */

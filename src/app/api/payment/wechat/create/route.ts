@@ -33,7 +33,6 @@ import {
 
 // 使用 Node.js 运行时（需要 crypto / fs 模块）
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
 
 // ==================== 类型定义 ====================
 

@@ -34,7 +34,6 @@ import path from "path";
 
 // 使用 Node.js 运行时
 export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
 
 // ==================== 事务日志 ====================
 
