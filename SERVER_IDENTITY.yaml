@@ -1,0 +1,21 @@
+project: minglizyi
+environment: production
+server_role: production
+server_ip: 82.156.228.87
+instance_id: ins-gvpvo1op
+ssh_port: 22
+domain: yandaoguoxue.yandao.vip
+frontend_root: /root/yandaoguoxue
+backend_root: /www/yandaoguoxue-backend
+backend_entry: server.js
+pm2_name: yandaoguoxue-backend
+nginx_config: /www/server/panel/vhost/nginx/yandaoguoxue.vip.conf
+database_type: sqlite
+database_path: /root/backend-auth/data/yandao_users.db
+release_root: /root/yandaoguoxue/releases
+current_link: /root/yandaoguoxue/current
+protected_projects:
+  - /www/xuewaiyu
+  - /www/xuewaiyu-backend
+forbidden_servers:
+  - 111.230.121.189

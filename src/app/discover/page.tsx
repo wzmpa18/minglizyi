@@ -482,9 +482,6 @@ export default function DiscoverPage() {
   const [aiComments, setAiComments] = useState<Record<string, string>>({});
   const [aiLoading, setAiLoading] = useState<string | null>(null);
 
-  // 下载APP Banner 显示状态（sessionStorage 控制本次会话不再显示）
-  const [showDownloadBanner, setShowDownloadBanner] = useState(false);
-
   // ==================== 加载站内动态 ====================
   const loadPosts = useCallback((page: number, refresh: boolean) => {
     setRefreshing(refresh);
@@ -571,21 +568,7 @@ export default function DiscoverPage() {
     setIsMember(membership.isActive && membership.level !== "basic");
   }, [loadPosts]);
 
-  // ==================== 下载APP Banner：检查 sessionStorage ====================
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const dismissed = sessionStorage.getItem("yandao_download_banner_dismissed");
-    if (!dismissed) {
-      setShowDownloadBanner(true);
-    }
-  }, []);
-
-  const handleCloseBanner = useCallback(() => {
-    setShowDownloadBanner(false);
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem("yandao_download_banner_dismissed", "1");
-    }
-  }, []);
+  // 下载APP Banner 已移除 - 用户通过分享海报二维码下载APP
 
   // ==================== Tab 切换 ====================
   const handleTabSwitch = (tab: TabType) => {
@@ -865,39 +848,6 @@ export default function DiscoverPage() {
       style={{ backgroundColor: "#f5f5f5", maxWidth: "420px", margin: "0 auto", paddingBottom: "72px" }}
     >
       <BrandHeader title="发现" />
-
-      {/* 下载APP轻量Banner */}
-      {showDownloadBanner && (
-        <div
-          className="mx-3 mt-3 rounded-xl overflow-hidden relative"
-          style={{ background: `linear-gradient(135deg, ${BRAND}, #9B5ECF)` }}
-        >
-          <div className="flex items-center gap-2 px-4 py-3">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white leading-snug">
-                下载言道国学APP，随时随地学习传统文化
-              </p>
-            </div>
-            <button
-              onClick={() => window.open("https://www.yandao.vip/download", "_blank")}
-              className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-bold active:scale-95 transition-transform"
-              style={{ color: BRAND }}
-            >
-              立即下载
-            </button>
-            <button
-              onClick={handleCloseBanner}
-              className="shrink-0 flex items-center justify-center text-white/70 active:text-white"
-              aria-label="关闭"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* 附近用户入口 */}
       <div className="flex gap-2 px-3 pt-3 overflow-x-auto" style={{ marginBottom: "0" }}>

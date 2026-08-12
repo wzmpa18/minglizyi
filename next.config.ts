@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "export", // 静态导出部署，构建时需使用 build.sh 临时移除API路由
   images: {
     unoptimized: true,
   },
@@ -10,7 +9,7 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  generateBuildId: () => `v20.5_poster_share_calibration_0811`,
+  generateBuildId: () => `v24.0_p0_rebuild_D20260812_002`,
 };
 
 export default nextConfig;

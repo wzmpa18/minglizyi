@@ -192,6 +192,66 @@ export function ensureCurrentUserInDirectory(): void {
   } catch { /* ignore */ }
 }
 
+// ==================== 后端API用户查找 ====================
+/**
+ * 通过后端API查找用户（用于扫码添加好友、搜索ID添加等场景）
+ * 先查后端数据库，成功后同步到本地目录缓存
+ * @param userId 用户ID（纯数字）
+ * @returns 用户信息，查找失败返回null
+ */
+export async function lookupUserViaApi(userId: string): Promise<UserDirectoryEntry | null> {
+  if (!userId || !userId.trim()) return null;
+  const id = userId.trim();
+
+  try {
+    const resp = await fetch(`https://yandaoguoxue.yandao.vip/api/user/lookup?userId=${encodeURIComponent(id)}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    if (!data.success || !data.user) return null;
+
+    const user = data.user;
+    // 构造本地目录条目
+    const entry: UserDirectoryEntry = {
+      userId: String(user.userId),
+      nickname: user.nickname || '言道用户',
+      avatar: user.avatar || (user.nickname || '言').slice(0, 1),
+      bio: user.bio || '',
+      gender: 'unknown',
+      tags: [],
+      followCount: 0,
+      fanCount: 0,
+      postCount: 0,
+      allowSearch: true,
+      allowViewPosts: true,
+      registeredAt: new Date().toISOString(),
+      lastActiveAt: new Date().toISOString(),
+    };
+
+    // 同步到本地目录缓存
+    addToDirectory(entry);
+
+    return entry;
+  } catch (err) {
+    console.error('[lookupUserViaApi] 查找失败:', err);
+    return null;
+  }
+}
+
+/**
+ * 先查后端API，失败再查本地缓存
+ */
+export async function findUserById(userId: string): Promise<UserDirectoryEntry | null> {
+  // 先尝试后端API查找
+  const apiResult = await lookupUserViaApi(userId);
+  if (apiResult) return apiResult;
+
+  // API失败时回退到本地缓存
+  return getUserById(userId);
+}
+
 // ==================== 推荐用户 ====================
 export function getRecommendedUsers(limit: number = 6): UserDirectoryEntry[] {
   const dir = getDirectory();

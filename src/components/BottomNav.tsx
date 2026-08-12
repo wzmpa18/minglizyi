@@ -125,6 +125,7 @@ export default function BottomNav() {
 
   return (
     <nav
+      id="app-bottom-nav"
       style={{
         position: "fixed",
         bottom: 0,

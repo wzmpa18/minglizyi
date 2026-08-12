@@ -23,6 +23,7 @@
     "echarts": "^6.1.0",
     "echarts-for-react": "^3.0.6",
     "html2canvas": "^1.4.1",
+    "html2canvas-pro": "^2.3.3",
     "iztro": "^2.5.8",
     "lucide-react": "^1.26.0",
     "lunar-javascript": "^1.7.7",
@@ -39,6 +40,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
+    "ssh2": "^1.17.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   },

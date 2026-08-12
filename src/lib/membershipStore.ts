@@ -2,7 +2,7 @@
 
 // ============================================================================
 // 会员体系 Store - v20.4
-// 4档会员：普通(免费) / 月度(39元) / 年度(198元) / 终身(698元)
+// 4档会员：普通(免费) / 月度(39元) / 年度(366元) / 终身(3600元)
 // 工具分级：A类基础排盘 / 通用AI解读 / B类高价值付费工具 / C类学习内容库
 // B类工具独立管控，不占用通用AI次数，保障营收不亏损
 // ============================================================================
@@ -118,8 +118,8 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
   {
     level: "yearly",
     name: "年度会员",
-    price: 198,
-    originalPrice: 396,
+    price: 366,
+    originalPrice: 458,
     duration: "365天",
     features: [
       "全部14款排盘工具",
@@ -137,8 +137,8 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
   {
     level: "lifetime",
     name: "终身会员",
-    price: 698,
-    originalPrice: 1298,
+    price: 3600,
+    originalPrice: 4500,
     duration: "永久有效",
     features: [
       "全部14款排盘工具",

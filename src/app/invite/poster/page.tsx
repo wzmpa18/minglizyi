@@ -77,7 +77,7 @@ export default function PosterPage() {
 
       const shareUrl =
         typeof window !== "undefined"
-          ? `${window.location.origin}/register?code=${code}`
+          ? `${window.location.origin}/friend?ref=${userId}`
           : "";
       const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
         shareUrl

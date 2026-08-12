@@ -36,6 +36,7 @@ export interface RegisterParams {
   smsCode: string;
   password: string;
   inviteCode?: string;
+  referrer_id?: string;
 }
 
 export interface ResetPasswordParams {
@@ -49,6 +50,7 @@ export interface RegisterEmailParams {
   emailCode: string;
   password: string;
   inviteCode?: string;
+  referrer_id?: string;
 }
 
 export interface ResetPasswordEmailParams {
@@ -424,7 +426,7 @@ export async function registerToServer(phone?: string, email?: string): Promise<
 // ============================================================================
 
 export async function registerWithPhone(params: RegisterParams): Promise<LoginResult> {
-  const { phone, smsCode, password, inviteCode } = params;
+  const { phone, smsCode, password, inviteCode, referrer_id } = params;
 
   // v21.0: 调用后端 /api/auth/register 接口（含 httpOnly cookie）
   try {
@@ -432,7 +434,7 @@ export async function registerWithPhone(params: RegisterParams): Promise<LoginRe
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include', // 携带/接收 httpOnly cookie
-      body: JSON.stringify({ phone, code: smsCode, password, inviteCode: inviteCode || null }),
+      body: JSON.stringify({ phone, code: smsCode, password, inviteCode: inviteCode || null, referrer_id: referrer_id || null }),
     });
     const data = await res.json();
 
@@ -734,7 +736,7 @@ export async function loginWithEmail(email: string, code: string): Promise<Login
 // ============================================================================
 
 export async function registerWithEmail(params: RegisterEmailParams): Promise<LoginResult> {
-  const { email, emailCode, password, inviteCode } = params;
+  const { email, emailCode, password, inviteCode, referrer_id } = params;
 
   // v21.0: 调用后端 /api/auth/register 接口（含 httpOnly cookie）
   try {
@@ -742,7 +744,7 @@ export async function registerWithEmail(params: RegisterEmailParams): Promise<Lo
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include', // 携带/接收 httpOnly cookie
-      body: JSON.stringify({ email, code: emailCode, password, inviteCode: inviteCode || null }),
+      body: JSON.stringify({ email, code: emailCode, password, inviteCode: inviteCode || null, referrer_id: referrer_id || null }),
     });
     const data = await res.json();
 

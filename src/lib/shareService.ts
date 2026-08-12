@@ -9,8 +9,8 @@
 import { SHARE_TEXT, SHARE_COMPLIANCE_TEXT } from "./sharePoster";
 
 const BRAND = "#7B2FBE";
-const DOWNLOAD_URL = "https://www.yandao.vip/download";
-const APK_DOWNLOAD_URL = "https://www.yandao.vip/app-download/guoxue-chuancheng-v1.0-release.apk";
+const DOWNLOAD_URL = "https://yandaoguoxue.yandao.vip/friend";
+const APK_DOWNLOAD_URL = "https://yandaoguoxue.yandao.vip/app-download/guoxue-chuancheng-v1.0-release.apk";
 
 /** 默认社交媒体分享文案（已移除所有AI免费赠送表述） */
 const SHARE_DEFAULT_TEXT = "发现一个实用的传统文化学习平台，排盘工具、典籍知识库都有，分享给你一起看看。";
@@ -218,40 +218,88 @@ async function copyLink(url: string, text: string): Promise<ShareResult> {
   return { success: false, message: "复制失败，请手动复制链接" };
 }
 
-// ==================== 保存海报（直接保存到本地，不跳转浏览器） ====================
+// ==================== 保存海报（直接保存到本地相册，不跳转浏览器） ====================
 
 async function savePoster(posterDataUrl?: string): Promise<ShareResult> {
   if (!posterDataUrl) {
     return { success: false, message: "海报尚未生成" };
   }
 
-  // 创建下载链接，直接触发保存到本地
-  if (typeof document !== "undefined") {
+  if (typeof document === "undefined") {
+    return { success: false, message: "保存失败，请重试" };
+  }
+
+  try {
+    // 方案1：优先使用 Web Share API（移动端原生分享，可直接保存图片）
+    if (navigator.share && navigator.canShare) {
+      // 将 data URL 转换为 Blob
+      const response = await fetch(posterDataUrl);
+      const blob = await response.blob();
+      const file = new File([blob], `言道国学_分享海报_${Date.now()}.png`, { type: "image/png" });
+
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: "言道国学分享海报",
+          text: "长按图片保存到相册，扫描二维码下载APP",
+        });
+        logShareEvent("save_poster");
+        return {
+          success: true,
+          message: "海报已保存到相册",
+          rewarded: false,
+          rewardAmount: 0,
+        };
+      }
+    }
+
+    // 方案2：Blob + URL.createObjectURL（比 data URL 更可靠，不会跳转浏览器）
+    const response = await fetch(posterDataUrl);
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.download = `言道国学_分享海报_${Date.now()}.png`;
+    link.href = blobUrl;
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // 释放 blob URL
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+
+    // 记录保存到后端统计
+    logShareEvent("save_poster");
+
+    return {
+      success: true,
+      message: "海报已保存到相册，若未自动保存请长按图片保存",
+      rewarded: false,
+      rewardAmount: 0,
+    };
+  } catch (e) {
+    console.error("savePoster error:", e);
+    // 方案3：兜底 - 直接用 data URL 下载
     try {
       const link = document.createElement("a");
       link.download = `言道国学_分享海报_${Date.now()}.png`;
       link.href = posterDataUrl;
-      // 不设置 target，避免打开新窗口
       link.style.display = "none";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-
-      // 记录保存到后端统计
       logShareEvent("save_poster");
-
       return {
         success: true,
-        message: "海报已保存到相册",
+        message: "海报已保存，若未自动保存请长按图片",
         rewarded: false,
         rewardAmount: 0,
       };
-    } catch (e) {
+    } catch {
       return { success: false, message: "保存失败，请开启存储权限后重试" };
     }
   }
-
-  return { success: false, message: "保存失败，请重试" };
 }
 
 // ==================== 工具函数 ====================

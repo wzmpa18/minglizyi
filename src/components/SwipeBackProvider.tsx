@@ -34,16 +34,20 @@ export default function SwipeBackProvider({
     <div
       ref={contentRef}
       style={{
-        // position: relative 使该元素成为定位上下文，
-        // 但不设置 z-index（保持 z-index: auto），
-        // 避免创建额外的层叠上下文而影响子元素（如弹窗）的 z-index 行为。
-        // 手势滑动时动态添加的 transform 会临时创建层叠上下文，
-        // 结束后移除即恢复正常。
         position: "relative",
-        // 确保容器有背景色，使遮罩（z-index: -1）在非滑动状态下被完全遮盖
+        // 确保容器有背景色，使遮罩在非滑动状态下被完全遮盖
         backgroundColor: "var(--theme-bg, #f8f5fc)",
         // 最小高度占满视口
         minHeight: "100dvh",
+        // 关键：touch-action: pan-y 告诉浏览器只处理垂直滚动，
+        // 水平方向的触摸交给 JavaScript 处理（右滑返回手势）
+        touchAction: "pan-y",
+        // 优化位移动画性能
+        willChange: "transform",
+        // 防止水平滚动链式传播，避免与右滑手势冲突
+        overscrollBehaviorX: "contain",
+        // 确保内容在遮罩之上
+        zIndex: 1,
       }}
     >
       {children}

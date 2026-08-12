@@ -33,7 +33,7 @@ export const POSTER_SIZES: Record<PosterSize, SizeConfig> = {
 const BRAND = "#7B2FBE";
 const BRAND_LIGHT = "#9B5ECF";
 const BRAND_URL = "yandao.vip";
-const DOWNLOAD_URL = "https://www.yandao.vip/download";
+const DOWNLOAD_URL = "https://yandaoguoxue.yandao.vip/friend";
 
 /** 3个核心价值点（零成本权益，与实际免费范围一致） */
 const VALUE_POINTS = [
@@ -173,8 +173,11 @@ export async function generatePoster(config: PosterConfig): Promise<string> {
   roundRect(ctx, qrX - 10, qrY - 10, qrSize + 20, qrSize + 20, 10);
   ctx.fill();
 
-  // 尝试加载二维码
-  const qrUrl = config.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(DOWNLOAD_URL)}`;
+  // 尝试加载二维码 - 包含邀请码以实现自动添加好友
+  const posterQrData = config.inviteCode
+    ? `${DOWNLOAD_URL}?ref=${config.inviteCode}`
+    : DOWNLOAD_URL;
+  const qrUrl = config.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(posterQrData)}`;
   try {
     const img = await loadImage(qrUrl);
     ctx.drawImage(img, qrX, qrY, qrSize, qrSize);

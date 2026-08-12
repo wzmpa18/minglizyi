@@ -60,13 +60,25 @@ export default function RegisterPage() {
   const [phoneChecking, setPhoneChecking] = useState(false);
   const [emailChecking, setEmailChecking] = useState(false);
 
-  // v18.6: 从URL参数自动填充邀请码（/register?code=XXX）
+  // v18.6: 从URL参数自动填充邀请码（/register?code=XXX 或 /register?ref=userId）
+  // ref 参数也被存储为 referrer_id，注册时传给后端
+  const [referrerId, setReferrerId] = useState("");
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
+    const ref = params.get("ref");
     if (code) {
       setInviteCode(code);
+    }
+    if (ref) {
+      // ref 是数字 userId，直接传给后端
+      setReferrerId(ref);
+    }
+    // 也检查 localStorage 中 friend 页存储的 referrer_id
+    const storedRef = localStorage.getItem("yandao_referrer_id");
+    if (storedRef && !ref) {
+      setReferrerId(storedRef);
     }
   }, []);
 
@@ -251,6 +263,7 @@ export default function RegisterPage() {
         smsCode,
         password,
         inviteCode: inviteCode.trim() || undefined,
+        referrer_id: referrerId || undefined,
       });
       if (!result.success || !result.user) {
         setError(result.message || "注册失败，请重试");
@@ -262,7 +275,7 @@ export default function RegisterPage() {
     } finally {
       setLoading(false);
     }
-  }, [phone, smsCode, password, confirmPassword, inviteCode, router, phoneExistMsg]);
+  }, [phone, smsCode, password, confirmPassword, inviteCode, referrerId, router, phoneExistMsg]);
 
   // 邮箱注册
   const handleEmailRegister = useCallback(async () => {
@@ -297,6 +310,7 @@ export default function RegisterPage() {
         emailCode,
         password,
         inviteCode: inviteCode.trim() || undefined,
+        referrer_id: referrerId || undefined,
       });
       if (!result.success || !result.user) {
         setError(result.message || "注册失败，请重试");
@@ -308,7 +322,7 @@ export default function RegisterPage() {
     } finally {
       setLoading(false);
     }
-  }, [email, emailCode, password, confirmPassword, inviteCode, router, emailExistMsg]);
+  }, [email, emailCode, password, confirmPassword, inviteCode, referrerId, router, emailExistMsg]);
 
   // 统一提交入口
   const handleSubmit = useCallback(() => {

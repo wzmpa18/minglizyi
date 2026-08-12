@@ -364,7 +364,7 @@ export default function LoginPage() {
         <div style={{ textAlign: "center", marginBottom: 16 }}>
           <span style={{ fontSize: 12, color: "#999" }}>还没有APP？</span>
           <button
-            onClick={() => window.open("https://www.yandao.vip/download", "_blank")}
+            onClick={() => window.open("https://yandaoguoxue.yandao.vip/friend", "_blank")}
             style={{
               border: "none",
               background: "transparent",

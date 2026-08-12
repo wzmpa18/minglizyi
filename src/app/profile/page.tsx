@@ -9,6 +9,7 @@ import { clearAllTokens } from "@/lib/authInterceptor";
 import { updateProfileToServer, fetchProfileFromServer } from "@/lib/loginService";
 import { ensureCurrentUserInDirectory, getCurrentUserEntry, getUserById, setAllowNearby as setUserStoreAllowNearby, getAllowNearby as getUserStoreAllowNearby } from "@/lib/userStore";
 import { getBlacklist, removeFromBlacklist } from "@/lib/socialStore";
+import { captureAndSavePoster, preloadImageAsDataUrl } from "@/lib/posterCapture";
 
 const BRAND = "#7B2FBE";
 
@@ -43,18 +44,47 @@ function ListItem({
   );
 }
 
-// ==================== 二维码弹窗 ====================
-function QRModal({ onClose, userId, nickname }: { onClose: () => void; userId: string; nickname?: string }) {
-  const shareUrl = `https://yandao.vip/friend?ref=${userId}`;
-  const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}&bgcolor=ffffff&color=7B2FBE`;
+// ==================== 二维码弹窗（完整海报版） ====================
+function QRModal({ onClose, userId, nickname, avatar }: { onClose: () => void; userId: string; nickname?: string; avatar?: string }) {
+  const shareUrl = `https://yandaoguoxue.yandao.vip/friend?ref=${userId}`;
+  const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(shareUrl)}&bgcolor=ffffff&color=7B2FBE`;
 
-  const handleDownload = () => {
-    const link = document.createElement("a");
-    link.href = qrApiUrl;
-    link.download = `yandao-qrcode-${userId}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const posterRef = useRef<HTMLDivElement>(null);
+  const [qrSaving, setQrSaving] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string>("");
+  const [avatarDataUrl, setAvatarDataUrl] = useState<string>("");
+  const [saveMsg, setSaveMsg] = useState("");
+
+  // 预加载二维码为 data URL，避免 html2canvas 跨域污染
+  useEffect(() => {
+    preloadImageAsDataUrl(qrApiUrl).then(setQrDataUrl);
+  }, [qrApiUrl]);
+
+  // 预加载头像为 data URL
+  useEffect(() => {
+    if (avatar) {
+      preloadImageAsDataUrl(avatar).then(setAvatarDataUrl);
+    }
+  }, [avatar]);
+
+  const handleDownload = async () => {
+    if (!posterRef.current) return;
+    setQrSaving(true);
+    setSaveMsg("正在生成海报...");
+    try {
+      const result = await captureAndSavePoster(
+        posterRef.current,
+        `yandao-qr-${userId}-${Date.now()}.png`,
+        2
+      );
+      setSaveMsg(result.message);
+      setTimeout(() => setSaveMsg(""), 3000);
+    } catch {
+      setSaveMsg("保存失败，请重试");
+      setTimeout(() => setSaveMsg(""), 3000);
+    } finally {
+      setQrSaving(false);
+    }
   };
 
   const handleCopyLink = () => {
@@ -65,75 +95,201 @@ function QRModal({ onClose, userId, nickname }: { onClose: () => void; userId: s
     });
   };
 
-  const handleOpenBrowser = () => {
-    window.open(shareUrl, "_blank");
-  };
+  const qrSrc = qrDataUrl || qrApiUrl;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6" onClick={onClose}>
+    <>
+      {/* ===== 隐藏的海报容器（用于截图） ===== */}
       <div
-        className="w-full max-w-xs rounded-2xl bg-white p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
+        ref={posterRef}
+        style={{
+          position: "absolute",
+          left: "-9999px",
+          top: 0,
+          width: 375,
+          backgroundColor: "#ffffff",
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif",
+        }}
       >
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-gray-800">我的二维码</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
+        {/* 顶部：渐变背景 + 用户信息 */}
+        <div style={{
+          background: `linear-gradient(135deg, ${BRAND} 0%, #9B59B6 100%)`,
+          padding: "32px 24px 28px",
+          textAlign: "center",
+          color: "#fff",
+        }}>
+          <div style={{
+            width: 64, height: 64, borderRadius: "50%", margin: "0 auto 10px",
+            overflow: "hidden", border: "3px solid rgba(255,255,255,0.4)",
+            backgroundColor: "rgba(255,255,255,0.15)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 28, fontWeight: 700,
+          }}>
+            {avatarDataUrl ? (
+              <img src={avatarDataUrl} alt="头像" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              <span>{(nickname || "言").charAt(0)}</span>
+            )}
+          </div>
+          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>
+            {nickname || "言道用户"}
+          </div>
+          <div style={{ fontSize: 13, opacity: 0.8, fontFamily: "monospace" }}>
+            ID: {userId}
+          </div>
         </div>
 
-        <div className="mx-auto flex h-52 w-52 items-center justify-center rounded-xl border-2 overflow-hidden" style={{ borderColor: BRAND }}>
-          <img
-            src={qrApiUrl}
-            alt="我的二维码"
-            className="h-full w-full object-contain"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.style.display = "none";
-            }}
-          />
+        {/* 中部：专属邀请二维码 */}
+        <div style={{ padding: "28px 24px 20px", textAlign: "center" }}>
+          <div style={{
+            display: "inline-block", padding: 10,
+            border: `2px solid ${BRAND}`, borderRadius: 12, backgroundColor: "#fff",
+          }}>
+            <img src={qrSrc} alt="邀请二维码" style={{ width: 200, height: 200, display: "block" }} />
+          </div>
         </div>
 
-        <div className="text-center mt-3">
-          <p className="text-sm font-bold text-gray-800">{nickname || '言道用户'}</p>
-          <p className="text-xs text-gray-500 font-mono mt-0.5">ID: {userId}</p>
-          <p className="text-xs text-gray-400 mt-1">扫一扫，加我为好友</p>
+        {/* 文案区 */}
+        <div style={{ padding: "0 24px 16px", textAlign: "center" }}>
+          <div style={{ fontSize: 17, fontWeight: 700, color: "#333", lineHeight: 1.5 }}>
+            扫码加我为好友
+          </div>
+          <div style={{ fontSize: 15, color: "#555", marginTop: 4, lineHeight: 1.5 }}>
+            同研习国学文化
+          </div>
+          <div style={{
+            fontSize: 13, color: BRAND, marginTop: 12,
+            padding: "8px 16px", backgroundColor: "#f5f0fa", borderRadius: 8,
+            display: "inline-block",
+          }}>
+            邀请好友开通会员，享两级分销佣金
+          </div>
+          <div style={{ marginTop: 14, fontSize: 13, color: "#999" }}>专属邀请码</div>
+          <div style={{
+            fontSize: 22, fontWeight: 700, color: BRAND,
+            fontFamily: "monospace", letterSpacing: 2, marginTop: 4,
+          }}>
+            {userId}
+          </div>
         </div>
 
-        <p className="mt-3 text-center text-sm font-medium" style={{ color: BRAND }}>
-          扫码添加好友，邀请享佣金
-        </p>
-        <p className="mt-1 text-center text-xs text-gray-400">
-          我的邀请码：{userId}
-        </p>
-
-        <div className="mt-4 flex gap-2">
-          <button
-            onClick={handleDownload}
-            className="flex-1 rounded-lg py-2.5 text-xs font-semibold text-white transition-colors hover:opacity-90"
-            style={{ backgroundColor: BRAND }}
-          >
-            保存二维码
-          </button>
-          <button
-            onClick={handleCopyLink}
-            className="flex-1 rounded-lg py-2.5 text-xs font-semibold transition-colors hover:opacity-90"
-            style={{ backgroundColor: "#f5f0fa", color: BRAND, border: `1px solid ${BRAND}` }}
-          >
-            复制链接
-          </button>
+        {/* 底部：品牌标识 + 合规声明 */}
+        <div style={{ padding: "16px 24px 20px", borderTop: "1px solid #f0f0f0", textAlign: "center" }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+            <div style={{
+              width: 24, height: 24, borderRadius: 6, backgroundColor: BRAND,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "#fff", fontSize: 12, fontWeight: 700,
+            }}>言</div>
+            <span style={{ fontSize: 14, fontWeight: 600, color: "#333" }}>言道国学</span>
+          </div>
+          <div style={{ fontSize: 10, color: "#bbb", marginTop: 8, lineHeight: 1.5 }}>
+            内容仅供传统文化学习参考，不构成任何决策建议
+          </div>
         </div>
-        <button
-          onClick={handleOpenBrowser}
-          className="mt-2 w-full rounded-lg py-2 text-xs text-gray-500 hover:text-gray-700 transition-colors"
-          style={{ backgroundColor: "transparent" }}
-        >
-          在浏览器中打开 →
-        </button>
       </div>
-    </div>
+
+      {/* ===== 可见的弹窗 ===== */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6" onClick={onClose}>
+        <div
+          className="w-full max-w-xs rounded-2xl bg-white p-6 shadow-xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-gray-800">我的二维码</h3>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+
+          {/* 海报预览 */}
+          <div style={{ borderRadius: 12, overflow: "hidden", border: "1px solid #f0f0f0" }}>
+            <div style={{
+              background: `linear-gradient(135deg, ${BRAND} 0%, #9B59B6 100%)`,
+              padding: "20px 16px 16px", textAlign: "center", color: "#fff",
+            }}>
+              <div style={{
+                width: 48, height: 48, borderRadius: "50%", margin: "0 auto 8px",
+                overflow: "hidden", border: "2px solid rgba(255,255,255,0.4)",
+                backgroundColor: "rgba(255,255,255,0.15)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 20, fontWeight: 700,
+              }}>
+                {avatarDataUrl ? (
+                  <img src={avatarDataUrl} alt="头像" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  <span>{(nickname || "言").charAt(0)}</span>
+                )}
+              </div>
+              <div style={{ fontSize: 15, fontWeight: 700 }}>{nickname || "言道用户"}</div>
+              <div style={{ fontSize: 11, opacity: 0.8, fontFamily: "monospace", marginTop: 2 }}>ID: {userId}</div>
+            </div>
+
+            <div style={{ padding: "16px", textAlign: "center" }}>
+              <div style={{
+                display: "inline-block", padding: 6,
+                border: `2px solid ${BRAND}`, borderRadius: 10,
+              }}>
+                <img
+                  src={qrSrc}
+                  alt="我的二维码"
+                  style={{ width: 150, height: 150, display: "block" }}
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                />
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: "#333", marginTop: 10 }}>
+                扫码加我为好友，同研习国学文化
+              </div>
+              <div style={{ fontSize: 12, color: BRAND, marginTop: 6 }}>
+                邀请好友开通会员，享两级分销佣金
+              </div>
+              <div style={{ fontSize: 12, color: "#999", marginTop: 8 }}>
+                专属邀请码：<span style={{ color: BRAND, fontWeight: 700, fontFamily: "monospace" }}>{userId}</span>
+              </div>
+            </div>
+
+            <div style={{ padding: "10px 16px 12px", borderTop: "1px solid #f0f0f0", textAlign: "center" }}>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <div style={{
+                  width: 18, height: 18, borderRadius: 4, backgroundColor: BRAND,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: "#fff", fontSize: 9, fontWeight: 700,
+                }}>言</div>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#333" }}>言道国学</span>
+              </div>
+              <div style={{ fontSize: 9, color: "#bbb", marginTop: 4 }}>
+                内容仅供传统文化学习参考，不构成任何决策建议
+              </div>
+            </div>
+          </div>
+
+          {saveMsg && (
+            <div style={{ textAlign: "center", fontSize: 12, color: BRAND, marginTop: 8 }}>
+              {saveMsg}
+            </div>
+          )}
+          <div className="mt-4 flex gap-2">
+            <button
+              onClick={handleDownload}
+              disabled={qrSaving}
+              className="flex-1 rounded-lg py-2.5 text-xs font-semibold text-white transition-colors hover:opacity-90"
+              style={{ backgroundColor: BRAND, opacity: qrSaving ? 0.5 : 1 }}
+            >
+              {qrSaving ? "保存中..." : "保存海报"}
+            </button>
+            <button
+              onClick={handleCopyLink}
+              className="flex-1 rounded-lg py-2.5 text-xs font-semibold transition-colors hover:opacity-90"
+              style={{ backgroundColor: "#f5f0fa", color: BRAND, border: `1px solid ${BRAND}` }}
+            >
+              复制链接
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -568,16 +724,17 @@ export default function ProfilePage() {
   };
 
   // ===== 我的二维码：复用 QRModal 的二维码生成逻辑 =====
-  const shareUrl = `https://yandao.vip/friend?ref=${userId}`;
+  const shareUrl = `https://yandaoguoxue.yandao.vip/friend?ref=${userId}`;
   const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareUrl)}&bgcolor=ffffff&color=7B2FBE`;
 
-  const handleSaveQR = () => {
-    const link = document.createElement("a");
-    link.href = qrApiUrl;
-    link.download = `yandao-qrcode-${userId}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const [qrSavingMain, setQrSavingMain] = useState(false);
+  const handleSaveQR = async () => {
+    setQrSavingMain(true);
+    try {
+      await saveImageFromUrl(qrApiUrl, `yandao-qrcode-${userId}.png`);
+    } finally {
+      setQrSavingMain(false);
+    }
   };
 
   // 打开编辑资料弹窗（即使没有正式登录也能编辑，使用默认资料）
@@ -794,10 +951,11 @@ export default function ProfilePage() {
         <div className="flex gap-2 px-4 pb-4">
           <button
             onClick={handleSaveQR}
+            disabled={qrSavingMain}
             className="flex-1 rounded-lg py-2 text-xs font-semibold text-white transition-colors hover:opacity-90 active:opacity-80"
-            style={{ backgroundColor: BRAND }}
+            style={{ backgroundColor: BRAND, opacity: qrSavingMain ? 0.5 : 1 }}
           >
-            保存二维码
+            {qrSavingMain ? "保存中..." : "保存二维码"}
           </button>
           <button
             onClick={() => setShowQR(true)}
@@ -1067,19 +1225,7 @@ export default function ProfilePage() {
           label="问题反馈"
           onClick={() => router.push("/profile/feedback")}
         />
-        {/* 下载APP入口 */}
-        <ListItem
-          icon={
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={BRAND} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-          }
-          label="下载APP"
-          onClick={() => window.open("https://www.yandao.vip/download", "_blank")}
-          noBorder
-        />
+        {/* 下载APP入口已移除 - 用户通过分享海报二维码下载APP */}
       </div>
 
       {/* 登录/注册 或 退出登录 */}
@@ -1369,7 +1515,7 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
-      {showQR && <QRModal onClose={() => setShowQR(false)} userId={userId} nickname={loginState.isLoggedIn && loginState.profile ? loginState.profile.nickname : undefined} />}
+      {showQR && <QRModal onClose={() => setShowQR(false)} userId={userId} nickname={loginState.isLoggedIn && loginState.profile ? loginState.profile.nickname : undefined} avatar={loginState.isLoggedIn && loginState.profile ? loginState.profile.avatar : undefined} />}
       {showLogoutConfirm && <LogoutConfirmModal onClose={() => setShowLogoutConfirm(false)} />}
       {showBlacklist && <BlacklistModal onClose={() => setShowBlacklist(false)} />}
       {showAbout && <AboutUsModal onClose={() => setShowAbout(false)} />}

@@ -4,8 +4,8 @@ import React from "react";
 import { BrandHeader } from "@/components/shared";
 
 const BRAND = "#7B2FBE";
-const DOWNLOAD_URL = "https://www.yandao.vip/download";
-const APK_URL = "https://www.yandao.vip/app-download/guoxue-chuancheng-v1.0-release.apk";
+const DOWNLOAD_URL = "https://yandaoguoxue.yandao.vip/friend";
+const APK_URL = "https://yandaoguoxue.yandao.vip/app-download/guoxue-chuancheng-v1.0-release.apk";
 
 /** 功能亮点列表 */
 const FEATURES: { icon: string; title: string; desc: string }[] = [
@@ -18,7 +18,7 @@ const FEATURES: { icon: string; title: string; desc: string }[] = [
 ];
 
 export default function DownloadPage() {
-  const downloadQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(DOWNLOAD_URL)}&bgcolor=ffffff&color=7B2FBE`;
+  const downloadQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(APK_URL)}&bgcolor=ffffff&color=7B2FBE`;
 
   const handleDownloadAPK = () => {
     window.location.href = APK_URL;

@@ -24,12 +24,13 @@ import {
 import {
   searchUsers,
   getUserById,
+  findUserById,
   toggleFollowUser,
   isFollowing as checkFollowing,
   getNearbyUsers,
   type UserDirectoryEntry,
 } from "@/lib/userStore";
-import { getCurrentUserId } from "@/lib/auth";
+import { getCurrentUserId, getLoginState } from "@/lib/auth";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 
@@ -322,6 +323,7 @@ function AddFriendView({
   const [manualId, setManualId] = useState("");
   const [scanResult, setScanResult] = useState<UserDirectoryEntry | null>(null);
   const [scanError, setScanError] = useState("");
+  const [lookingUp, setLookingUp] = useState(false);
 
   // 相机扫码状态
   const [cameraActive, setCameraActive] = useState(false);
@@ -336,7 +338,11 @@ function AddFriendView({
   // 关注状态刷新触发器
   const [followTick, setFollowTick] = useState(0);
 
-  const currentUserId = getCurrentUserId();
+  // 获取真实用户ID（登录后为数字ID，未登录为匿名ID）
+  const loginState = getLoginState();
+  const currentUserId = loginState.isLoggedIn && loginState.profile?.userId
+    ? loginState.profile.userId
+    : getCurrentUserId();
 
   const handleBack = () => {
     // 退出时关闭相机
@@ -390,22 +396,56 @@ function AddFriendView({
   }, [mode]);
 
   // ==================== 搜索用户 ====================
-  const handleSearch = () => {
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState("");
+
+  const handleSearch = async () => {
     const q = searchQuery.trim();
     if (!q) return;
-    const results = searchUsers(q, { currentUserId });
-    setSearchResults(results);
     setHasSearched(true);
+    setSearchError("");
+    setSearchLoading(true);
+    setSearchResults([]);
+
+    try {
+      // 纯数字ID → 调用后端API精确查找
+      if (/^\d+$/.test(q)) {
+        const user = await findUserById(q);
+        if (user) {
+          if (user.userId === currentUserId) {
+            setSearchError("不能添加自己为好友");
+          } else {
+            setSearchResults([user]);
+          }
+        } else {
+          setSearchError("未找到该用户，请检查ID是否正确");
+        }
+      } else {
+        // 非纯数字 → 本地模糊搜索（昵称）
+        const results = searchUsers(q, { currentUserId });
+        if (results.length === 0) {
+          setSearchError("未找到匹配的用户，试试搜索用户ID");
+        } else {
+          setSearchResults(results);
+        }
+      }
+    } catch {
+      setSearchError("查找失败，请检查网络后重试");
+    } finally {
+      setSearchLoading(false);
+    }
   };
 
   // ==================== 发送好友申请 ====================
   const handleSendRequest = (user: UserDirectoryEntry, message: string) => {
+    const myName = loginState.profile?.nickname || "当前用户";
+    const myAvatar = loginState.profile?.nickname?.slice(0, 1) || "我";
     addFriendRequest({
       id: `req_${Date.now()}`,
       fromId: currentUserId,
-      fromName: "当前用户",
-      fromAvatar: "我",
-      message: message || `我是${currentUserId}，想加你为好友`,
+      fromName: myName,
+      fromAvatar: myAvatar,
+      message: message || `我是${myName}，想加你为好友`,
       status: "pending",
       createdAt: new Date().toISOString(),
     });
@@ -421,54 +461,74 @@ function AddFriendView({
   };
 
   // ==================== 扫码模式：手动查找 ====================
-  const handleManualLookup = () => {
+  const handleManualLookup = async () => {
     const id = manualId.trim();
     if (!id) return;
-    const user = getUserById(id);
-    if (user) {
-      if (user.userId === currentUserId) {
-        setScanResult(null);
-        setScanError("不能添加自己为好友");
+    setScanResult(null);
+    setScanError("");
+    setLookingUp(true);
+    try {
+      const user = await findUserById(id);
+      if (user) {
+        if (user.userId === currentUserId) {
+          setScanResult(null);
+          setScanError("不能添加自己为好友");
+        } else {
+          setScanResult(user);
+          setScanError("");
+        }
       } else {
-        setScanResult(user);
-        setScanError("");
+        setScanResult(null);
+        setScanError("未找到该用户，请检查ID是否正确");
       }
-    } else {
+    } catch {
       setScanResult(null);
-      setScanError("未找到该用户，请检查ID是否正确");
+      setScanError("查找失败，请检查网络后重试");
+    } finally {
+      setLookingUp(false);
     }
   };
 
   // ==================== 处理扫码结果 ====================
-  const handleScanResult = (rawText: string) => {
-    // 从扫码结果中提取 uid 参数
+  const handleScanResult = async (rawText: string) => {
+    // 从扫码结果中提取 uid 或 ref 参数
     let uid = rawText.trim();
     try {
-      // 如果是 URL，尝试解析 uid 参数
-      if (uid.includes("uid=")) {
+      // 如果是 URL，尝试解析 uid 或 ref 参数
+      if (uid.includes("uid=") || uid.includes("ref=")) {
         const url = new URL(uid);
-        uid = url.searchParams.get("uid") || uid;
+        uid = url.searchParams.get("uid") || url.searchParams.get("ref") || uid;
       } else if (uid.startsWith("http")) {
         const url = new URL(uid);
-        uid = url.searchParams.get("uid") || uid;
+        uid = url.searchParams.get("uid") || url.searchParams.get("ref") || uid;
       }
     } catch {
       // 不是 URL，直接当作用户ID处理
     }
 
     stopCameraScan();
-    const user = getUserById(uid);
-    if (user) {
-      if (user.userId === currentUserId) {
-        setScanResult(null);
-        setScanError("不能添加自己为好友");
+    setScanResult(null);
+    setScanError("");
+    setLookingUp(true);
+    try {
+      const user = await findUserById(uid);
+      if (user) {
+        if (user.userId === currentUserId) {
+          setScanResult(null);
+          setScanError("不能添加自己为好友");
+        } else {
+          setScanResult(user);
+          setScanError("");
+        }
       } else {
-        setScanResult(user);
-        setScanError("");
+        setScanResult(null);
+        setScanError(`未找到ID为「${uid}」的用户，请检查二维码是否正确`);
       }
-    } else {
+    } catch {
       setScanResult(null);
-      setScanError(`未找到ID为「${uid}」的用户，请检查二维码是否正确`);
+      setScanError("查找失败，请检查网络后重试");
+    } finally {
+      setLookingUp(false);
     }
   };
 
@@ -619,8 +679,9 @@ function AddFriendView({
     );
   };
 
-  // 二维码 URL
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://yandaoguoxue.yandao.vip/friends?uid=${encodeURIComponent(currentUserId)}`;
+  // 二维码 URL - 指向 /friend?ref= 实现自动添加好友
+  const friendInviteUrl = `https://yandaoguoxue.yandao.vip/friend?ref=${currentUserId}`;
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(friendInviteUrl)}&bgcolor=ffffff&color=7B2FBE`;
 
   return (
     <div
@@ -825,7 +886,7 @@ function AddFriendView({
                 type="text"
                 value={manualId}
                 onChange={(e) => setManualId(e.target.value)}
-                placeholder="输入用户ID（如 YD100001）"
+                placeholder="输入用户ID（纯数字，如 100000）"
                 className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm focus:outline-none"
                 style={{ outline: "none" }}
                 onKeyDown={(e) => {
@@ -834,10 +895,11 @@ function AddFriendView({
               />
               <button
                 onClick={handleManualLookup}
-                className="rounded-xl px-5 text-sm font-semibold text-white active:opacity-80 transition-opacity"
+                disabled={lookingUp}
+                className="rounded-xl px-5 text-sm font-semibold text-white active:opacity-80 transition-opacity disabled:opacity-50"
                 style={{ backgroundColor: BRAND }}
               >
-                查找
+                {lookingUp ? "查找中..." : "查找"}
               </button>
             </div>
 
@@ -865,7 +927,7 @@ function AddFriendView({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="输入昵称或用户 ID"
+              placeholder="输入用户ID（纯数字）或昵称"
               className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm focus:outline-none"
               style={{ outline: "none" }}
               onKeyDown={(e) => {
@@ -874,44 +936,49 @@ function AddFriendView({
             />
             <button
               onClick={handleSearch}
-              className="rounded-xl px-5 text-sm font-semibold text-white active:opacity-80 transition-opacity"
+              disabled={searchLoading}
+              className="rounded-xl px-5 text-sm font-semibold text-white active:opacity-80 transition-opacity disabled:opacity-50"
               style={{ backgroundColor: BRAND }}
             >
-              搜索
+              {searchLoading ? "查找中..." : "搜索"}
             </button>
           </div>
 
+          {/* 搜索错误提示 */}
+          {searchError && (
+            <p className="mt-3 text-center text-sm text-red-500">{searchError}</p>
+          )}
+
           {/* 搜索结果 */}
-          {hasSearched && (
+          {hasSearched && !searchLoading && searchResults.length > 0 && (
             <div className="mt-4">
-              {searchResults.length === 0 ? (
-                <div className="py-12 text-center">
-                  <svg
-                    className="mx-auto mb-3"
-                    width="48"
-                    height="48"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#ccc"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <circle cx="11" cy="11" r="8" />
-                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                  </svg>
-                  <p className="text-sm text-gray-400">
-                    未找到匹配的用户，试试其他关键词
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <p className="mb-2 text-xs text-gray-500">
-                    找到 {searchResults.length} 位用户
-                  </p>
-                  {searchResults.map((user) => renderUserCard(user))}
-                </>
-              )}
+              <p className="mb-2 text-xs text-gray-500">
+                找到 {searchResults.length} 位用户
+              </p>
+              {searchResults.map((user) => renderUserCard(user))}
+            </div>
+          )}
+
+          {/* 空结果提示（无错误时） */}
+          {hasSearched && !searchLoading && !searchError && searchResults.length === 0 && (
+            <div className="py-12 text-center">
+              <svg
+                className="mx-auto mb-3"
+                width="48"
+                height="48"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#ccc"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <p className="text-sm text-gray-400">
+                未找到匹配的用户，试试搜索用户ID
+              </p>
             </div>
           )}
 
@@ -932,9 +999,9 @@ function AddFriendView({
                 <circle cx="11" cy="11" r="8" />
                 <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
-              <p className="text-sm text-gray-400">输入用户ID或昵称开始搜索</p>
+              <p className="text-sm text-gray-400">输入用户ID（纯数字）或昵称开始搜索</p>
               <p className="mt-1 text-xs text-gray-400">
-                示例：YD100001、易经行者、中医
+                示例：100000、易经行者、中医
               </p>
             </div>
           )}

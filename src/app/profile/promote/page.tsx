@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { BrandHeader } from "@/components/shared";
-import { getInviteCode, getInviteStats, getInvitees, type InviteRelation, type InviteStats } from "@/lib/inviteStore";
+import { getTeamMembers, getTeamStats, getMyInviteCode, type TeamMember, type TeamStats } from "@/lib/teamApi";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
+import { captureAndSavePoster, preloadImageAsDataUrl } from "@/lib/posterCapture";
 
 const BRAND = "#7B2FBE";
 
@@ -30,8 +31,8 @@ export default function PromotePage() {
   const router = useRouter();
   const [userId, setUserId] = useState("");
   const [inviteCode, setInviteCode] = useState("");
-  const [stats, setStats] = useState<InviteStats | null>(null);
-  const [invitees, setInvitees] = useState<InviteRelation[]>([]);
+  const [stats, setStats] = useState<TeamStats | null>(null);
+  const [invitees, setInvitees] = useState<TeamMember[]>([]);
   const [copiedType, setCopiedType] = useState<"code" | "link" | null>(null);
   const [showPoster, setShowPoster] = useState(false);
   const [toast, setToast] = useState("");
@@ -41,12 +42,33 @@ export default function PromotePage() {
     requireLogin();
   }, []);
 
-  const loadData = useCallback(() => {
+  const loadData = useCallback(async () => {
     const uid = getUserId();
     setUserId(uid);
-    setInviteCode(getInviteCode(uid));
-    setStats(getInviteStats(uid));
-    setInvitees(getInvitees(uid));
+    
+    // 从后端获取邀请码
+    try {
+      const codeRes = await getMyInviteCode();
+      if (codeRes.success && codeRes.data) {
+        setInviteCode(codeRes.data.inviteCode);
+      }
+    } catch {}
+    
+    // 从后端获取团队统计
+    try {
+      const statsRes = await getTeamStats();
+      if (statsRes.success && statsRes.data) {
+        setStats(statsRes.data);
+      }
+    } catch {}
+    
+    // 从后端获取团队列表
+    try {
+      const membersRes = await getTeamMembers();
+      if (membersRes.success && membersRes.data) {
+        setInvitees(membersRes.data.members);
+      }
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -54,9 +76,20 @@ export default function PromotePage() {
   }, [loadData]);
 
   // 邀请链接
-  const inviteLink = `https://yandao.vip/friend?ref=${userId}`;
+  const inviteLink = `https://yandaoguoxue.yandao.vip/friend?ref=${userId}`;
   // 海报二维码
   const posterQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(inviteLink)}&bgcolor=ffffff&color=7B2FBE`;
+
+  // 海报截图 ref 和预加载状态
+  const posterRef = useRef<HTMLDivElement>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string>("");
+
+  // 预加载二维码为 data URL，避免 html2canvas 跨域污染
+  useEffect(() => {
+    if (posterQrUrl) {
+      preloadImageAsDataUrl(posterQrUrl).then(setQrDataUrl);
+    }
+  }, [posterQrUrl]);
 
   // 显示轻提示
   const showToast = (msg: string) => {
@@ -90,16 +123,28 @@ export default function PromotePage() {
     }
   };
 
-  // 保存海报图片
-  const handleSavePoster = () => {
-    const link = document.createElement("a");
-    link.href = posterQrUrl;
-    link.download = `yandao-invite-poster-${userId}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast("海报已开始下载");
+  // 保存海报图片（DOM 截图方式，不跳转浏览器）
+  const [savingPoster, setSavingPoster] = useState(false);
+  const handleSavePoster = async () => {
+    if (!posterRef.current) return;
+    setSavingPoster(true);
+    showToast("正在生成完整海报...");
+    try {
+      const result = await captureAndSavePoster(
+        posterRef.current,
+        `yandao-poster-${userId}-${Date.now()}.png`,
+        2
+      );
+      showToast(result.message);
+    } catch {
+      showToast("保存失败，请重试");
+    } finally {
+      setSavingPoster(false);
+    }
   };
+
+  // 二维码图片源（优先使用预加载的 data URL）
+  const qrSrc = qrDataUrl || posterQrUrl;
 
   return (
     <div style={{ maxWidth: "420px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f5f5f5", display: "flex", flexDirection: "column" }}>
@@ -140,7 +185,7 @@ export default function PromotePage() {
           </div>
           <div style={{ fontSize: 12, opacity: 0.8, marginTop: 10, lineHeight: 1.6 }}>
             好友通过你的邀请码注册，即建立邀请关系<br />
-            好友消费你享 15% 佣金，二级好友消费享 8% 分成
+            好友消费你享 15% 佣金，二级好友消费享 5% 分成
           </div>
         </div>
 
@@ -257,7 +302,7 @@ export default function PromotePage() {
           ) : (
             invitees.map((r, idx) => (
               <div
-                key={r.id}
+                key={r.relation_id}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -281,12 +326,12 @@ export default function PromotePage() {
                     fontWeight: 700,
                   }}
                 >
-                  {(r.inviteeName || "匿").charAt(0)}
+                  {(r.nickname || "匿").charAt(0)}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     <span style={{ fontSize: 14, fontWeight: 500, color: "#333", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {r.inviteeName || "匿名用户"}
+                      {r.nickname || "匿名用户"}
                     </span>
                     <span
                       style={{
@@ -301,11 +346,11 @@ export default function PromotePage() {
                       {r.level === 1 ? "一级" : "二级"}
                     </span>
                   </div>
-                  <div style={{ fontSize: 12, color: "#bbb", marginTop: 3 }}>注册时间 {formatTime(r.createdAt)}</div>
+                  <div style={{ fontSize: 12, color: "#bbb", marginTop: 3 }}>注册时间 {formatTime(r.invite_time)}</div>
                 </div>
-                {r.rewardAmount ? (
+                {r.accumulated_points ? (
                   <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#27ae60" }}>+{r.rewardAmount}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#27ae60" }}>+{r.accumulated_points}</div>
                     <div style={{ fontSize: 10, color: "#bbb", marginTop: 2 }}>积分奖励</div>
                   </div>
                 ) : null}
@@ -319,36 +364,203 @@ export default function PromotePage() {
         </p>
       </div>
 
-      {/* ===== 邀请海报弹窗 ===== */}
+      {/* ===== 隐藏的完整海报容器（用于截图） ===== */}
+      <div
+        ref={posterRef}
+        style={{
+          position: "absolute",
+          left: "-9999px",
+          top: 0,
+          width: 375,
+          backgroundColor: "#ffffff",
+          fontFamily: "-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif",
+        }}
+      >
+        {/* 顶部：渐变背景 + 主标题 */}
+        <div style={{
+          background: `linear-gradient(135deg, ${BRAND} 0%, #9B59B6 100%)`,
+          padding: "36px 24px 28px",
+          textAlign: "center",
+          color: "#fff",
+        }}>
+          <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.4 }}>
+            排盘・习医・会同道
+          </div>
+          <div style={{ fontSize: 18, fontWeight: 700, marginTop: 6 }}>
+            边学边赚两不误
+          </div>
+          <div style={{ fontSize: 13, opacity: 0.85, marginTop: 10 }}>
+            一站式传统文化学习平台
+          </div>
+        </div>
+
+        {/* 三大核心卖点 */}
+        <div style={{ padding: "20px 24px 12px" }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "#333", marginBottom: 10 }}>
+            三大核心卖点
+          </div>
+          {[
+            { icon: "✓", text: "14款专业排盘工具，基础功能永久免费" },
+            { icon: "✓", text: "中医典籍全库，随时查阅研习" },
+            { icon: "✓", text: "同道交流社区，同好互动学习" },
+          ].map((item, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <span style={{
+                width: 20, height: 20, borderRadius: "50%", backgroundColor: BRAND,
+                color: "#fff", fontSize: 11, fontWeight: 700,
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+              }}>{item.icon}</span>
+              <span style={{ fontSize: 13, color: "#555" }}>{item.text}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* 新人福利钩子 */}
+        <div style={{ margin: "8px 24px", padding: "12px 16px", backgroundColor: "#FFF8E1", borderRadius: 10, border: "1px solid #FFE082" }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#E65100", marginBottom: 4 }}>
+            🎁 新人福利
+          </div>
+          <div style={{ fontSize: 12, color: "#795548", lineHeight: 1.5 }}>
+            免费解锁全部基础排盘 + 5部易学典籍电子版
+          </div>
+        </div>
+
+        {/* 裂变利益点 */}
+        <div style={{ margin: "8px 24px", padding: "12px 16px", backgroundColor: "#F3E5F5", borderRadius: 10, border: `1px solid ${BRAND}33` }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: BRAND, marginBottom: 4 }}>
+            💰 邀请赚佣金
+          </div>
+          <div style={{ fontSize: 12, color: "#555", lineHeight: 1.5 }}>
+            邀请好友开通会员，享一级 <b style={{ color: BRAND }}>15%</b>、二级 <b style={{ color: BRAND }}>5%</b> 分销收益
+          </div>
+          <div style={{ fontSize: 11, color: "#999", marginTop: 4 }}>
+            多邀多得上不封顶
+          </div>
+        </div>
+
+        {/* 专属二维码 */}
+        <div style={{ padding: "16px 24px 12px", textAlign: "center" }}>
+          <div style={{
+            display: "inline-block", padding: 10,
+            border: `2px solid ${BRAND}`, borderRadius: 12, backgroundColor: "#fff",
+          }}>
+            <img src={qrSrc} alt="下载二维码" style={{ width: 160, height: 160, display: "block" }} />
+          </div>
+        </div>
+
+        {/* 行动指令 */}
+        <div style={{ padding: "0 24px 16px", textAlign: "center" }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "#333" }}>
+            长按识别二维码，立即下载安卓版
+          </div>
+          <div style={{ fontSize: 12, color: "#999", marginTop: 4 }}>
+            iOS 版本 敬请期待
+          </div>
+        </div>
+
+        {/* 底部：品牌主体 + 合规免责声明 */}
+        <div style={{ padding: "14px 24px 18px", borderTop: "1px solid #f0f0f0", textAlign: "center" }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+            <div style={{
+              width: 24, height: 24, borderRadius: 6, backgroundColor: BRAND,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "#fff", fontSize: 12, fontWeight: 700,
+            }}>言</div>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#333" }}>东莞言道科技有限公司</span>
+          </div>
+          <div style={{ fontSize: 10, color: "#bbb", lineHeight: 1.5 }}>
+            内容仅供传统文化学习参考，不构成任何决策建议
+          </div>
+        </div>
+      </div>
+
+      {/* ===== 邀请海报弹窗（可见预览） ===== */}
       {showPoster && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.7)", padding: 24 }} onClick={() => setShowPoster(false)}>
-          <div style={{ width: "100%", maxWidth: 300, backgroundColor: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 24px rgba(0,0,0,0.3)" }} onClick={(e) => e.stopPropagation()}>
-            {/* 海报顶部 */}
-            <div style={{ background: `linear-gradient(135deg, ${BRAND} 0%, #9B59B6 100%)`, padding: "24px 20px", color: "#fff", textAlign: "center" }}>
-              <div style={{ fontSize: 20, fontWeight: 700 }}>言道 · 传统文化学习平台</div>
-              <div style={{ fontSize: 13, opacity: 0.85, marginTop: 6 }}>扫码加入，邀请有礼</div>
+        <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.7)", padding: 16 }} onClick={() => setShowPoster(false)}>
+          <div style={{ width: "100%", maxWidth: 340, backgroundColor: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 24px rgba(0,0,0,0.3)" }} onClick={(e) => e.stopPropagation()}>
+            {/* 海报预览 */}
+            <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
+              {/* 顶部 */}
+              <div style={{
+                background: `linear-gradient(135deg, ${BRAND} 0%, #9B59B6 100%)`,
+                padding: "28px 20px 22px", color: "#fff", textAlign: "center",
+              }}>
+                <div style={{ fontSize: 18, fontWeight: 800 }}>排盘・习医・会同道</div>
+                <div style={{ fontSize: 15, fontWeight: 700, marginTop: 4 }}>边学边赚两不误</div>
+                <div style={{ fontSize: 12, opacity: 0.85, marginTop: 8 }}>一站式传统文化学习平台</div>
+              </div>
+
+              {/* 三大卖点 */}
+              <div style={{ padding: "16px 20px 8px" }}>
+                {[
+                  "14款专业排盘工具，基础功能永久免费",
+                  "中医典籍全库，随时查阅研习",
+                  "同道交流社区，同好互动学习",
+                ].map((text, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                    <span style={{
+                      width: 16, height: 16, borderRadius: "50%", backgroundColor: BRAND,
+                      color: "#fff", fontSize: 9, fontWeight: 700,
+                      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                    }}>✓</span>
+                    <span style={{ fontSize: 12, color: "#555" }}>{text}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* 福利区 */}
+              <div style={{ margin: "4px 20px 6px", padding: "10px 12px", backgroundColor: "#FFF8E1", borderRadius: 8, border: "1px solid #FFE082" }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#E65100" }}>🎁 新人福利</div>
+                <div style={{ fontSize: 11, color: "#795548", marginTop: 2 }}>
+                  免费解锁全部基础排盘 + 5部易学典籍电子版
+                </div>
+              </div>
+
+              <div style={{ margin: "4px 20px 6px", padding: "10px 12px", backgroundColor: "#F3E5F5", borderRadius: 8, border: `1px solid ${BRAND}33` }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: BRAND }}>💰 邀请赚佣金</div>
+                <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>
+                  一级 <b style={{ color: BRAND }}>15%</b>、二级 <b style={{ color: BRAND }}>5%</b>，多邀多得上不封顶
+                </div>
+              </div>
+
+              {/* 二维码 */}
+              <div style={{ padding: "12px 20px 8px", textAlign: "center" }}>
+                <div style={{
+                  display: "inline-block", padding: 6,
+                  border: `2px solid ${BRAND}`, borderRadius: 10,
+                }}>
+                  <img
+                    src={qrSrc}
+                    alt="邀请海报二维码"
+                    style={{ width: 120, height: 120, display: "block" }}
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                  />
+                </div>
+                <div style={{ marginTop: 8, fontSize: 12, fontWeight: 700, color: "#333" }}>
+                  长按识别二维码，立即下载安卓版
+                </div>
+                <div style={{ fontSize: 11, color: "#999", marginTop: 2 }}>
+                  iOS 版本 敬请期待
+                </div>
+              </div>
+
+              {/* 底部品牌 */}
+              <div style={{ padding: "10px 20px 12px", borderTop: "1px solid #f0f0f0", textAlign: "center" }}>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+                  <div style={{
+                    width: 18, height: 18, borderRadius: 4, backgroundColor: BRAND,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "#fff", fontSize: 9, fontWeight: 700,
+                  }}>言</div>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: "#333" }}>东莞言道科技有限公司</span>
+                </div>
+                <div style={{ fontSize: 9, color: "#bbb", marginTop: 4 }}>
+                  内容仅供传统文化学习参考，不构成任何决策建议
+                </div>
+              </div>
             </div>
-            {/* 海报正文 */}
-            <div style={{ padding: "20px", textAlign: "center" }}>
-              <div style={{ display: "inline-block", padding: 8, border: `2px solid ${BRAND}`, borderRadius: 12 }}>
-                <img
-                  src={posterQrUrl}
-                  alt="邀请海报二维码"
-                  style={{ width: 180, height: 180, display: "block" }}
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                />
-              </div>
-              <div style={{ marginTop: 14, fontSize: 14, color: "#333", fontWeight: 600 }}>
-                扫一扫，立即加入言道
-              </div>
-              <div style={{ marginTop: 6, fontSize: 13, color: "#999" }}>
-                邀请码：<span style={{ color: BRAND, fontWeight: 700, fontFamily: "monospace" }}>{inviteCode}</span>
-              </div>
-              <div style={{ marginTop: 4, fontSize: 11, color: "#bbb" }}>
-                易学排盘 · 中医知识库 · 智能问诊
-              </div>
-            </div>
-            {/* 海报操作 */}
+
+            {/* 操作按钮 */}
             <div style={{ display: "flex", borderTop: "1px solid #f0f0f0" }}>
               <button
                 onClick={() => setShowPoster(false)}
@@ -358,9 +570,10 @@ export default function PromotePage() {
               </button>
               <button
                 onClick={handleSavePoster}
-                style={{ flex: 1, padding: "12px 0", border: "none", backgroundColor: "transparent", color: BRAND, fontSize: 15, fontWeight: 600, cursor: "pointer" }}
+                disabled={savingPoster}
+                style={{ flex: 1, padding: "12px 0", border: "none", backgroundColor: "transparent", color: BRAND, fontSize: 15, fontWeight: 600, cursor: savingPoster ? "not-allowed" : "pointer", opacity: savingPoster ? 0.5 : 1 }}
               >
-                保存海报
+                {savingPoster ? "保存中..." : "保存海报"}
               </button>
             </div>
           </div>
