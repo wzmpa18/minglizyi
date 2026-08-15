@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 // 工具页面路径
 const TOOL_PATHS = [
@@ -51,11 +51,15 @@ export default function YixueLayout({ children }: { children: React.ReactNode })
     setPageTitle("言道易学");
   }, [pathname]);
 
-  // 返回按钮处理：v18.2 关键修复
-  // 工具页：先派发 yixue-back 事件，子页面如正在显示结果则切换回输入模式
-  // 子页面切换回输入后会设置 window.__yixueBackHandled = true
-  // 如子页面已在输入模式（未处理事件），则跳转到工具列表
+  // v21.6: 防抖锁，防止快速双击返回按钮导致循环跳转
+  const backLockRef = useRef(false);
+
+  // 返回按钮处理：v18.2 关键修复 + v21.6 防抖加固
   const handleBack = useCallback(() => {
+    if (backLockRef.current) return;
+    backLockRef.current = true;
+    setTimeout(() => { backLockRef.current = false; }, 400);
+
     if (isHome) {
       router.push("/");
       return;
@@ -64,19 +68,16 @@ export default function YixueLayout({ children }: { children: React.ReactNode })
       // 先尝试让子页面自己处理返回（从结果→输入）
       window.__yixueBackHandled = false;
       window.dispatchEvent(new CustomEvent("yixue-back"));
-      // 给子页面一个微任务时间处理
-      setTimeout(() => {
+      // 使用微任务取代 setTimeout，更可靠
+      Promise.resolve().then(() => {
         if (window.__yixueBackHandled) {
-          // 子页面已处理（从结果切换回输入），不跳转
           window.__yixueBackHandled = false;
         } else {
-          // 子页面未处理（已在输入模式），跳转到工具列表
-          router.push("/yixue");
+          router.replace("/yixue");
         }
-      }, 50);
+      });
       return;
     }
-    // 非工具页：使用浏览器返回
     router.back();
   }, [isHome, isToolPage, router]);
 
@@ -85,8 +86,8 @@ export default function YixueLayout({ children }: { children: React.ReactNode })
   return (
     <div className="flex min-h-screen flex-col" style={{ backgroundColor: "#ededed", maxWidth: "420px", margin: "0 auto" }}>
       <header
-        className="sticky top-0 z-50 grid h-10 w-full items-center"
-        style={{ gridTemplateColumns: "40px 40px auto 40px 40px", backgroundColor: "#7B2FBE" }}
+        className="sticky top-0 z-50 grid w-full items-center"
+        style={{ gridTemplateColumns: "40px 40px auto 40px 40px", backgroundColor: "#7B2FBE", minHeight: "52px", padding: "2px 0" }}
       >
         <button onClick={handleBack} className="flex h-10 w-10 items-center justify-center" title="返回">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -153,7 +154,7 @@ export default function YixueLayout({ children }: { children: React.ReactNode })
         )}
       </header>
 
-      <main className="flex-1" style={{ paddingBottom: "72px" }}>
+      <main className="flex-1" style={{ paddingTop: "52px", paddingBottom: "72px" }}>
         {children}
       </main>
     </div>

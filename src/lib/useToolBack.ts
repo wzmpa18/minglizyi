@@ -11,7 +11,7 @@
  * 1. 如果正在显示结果 → 切换回输入模式，参数完整保留
  * 2. 如果已在输入模式 → 通知layout跳转到工具列表
  */
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { getUserInput, saveUserInput, clearUserInput } from "./userInputStore";
 
 declare global { interface Window { __yixueBackHandled?: boolean; __zhongyiBackHandled?: boolean; } }
@@ -30,6 +30,10 @@ export function useToolBack(options?: UseToolBackOptions) {
   const [showResult, setShowResult] = useState(false);
   const [savedParams, setSavedParams] = useState<Record<string, any> | null>(null);
 
+  // v21.6: ref 确保事件处理器始终读取最新 showResult，避免闭包陷阱导致循环跳转
+  const showResultRef = useRef(showResult);
+  useEffect(() => { showResultRef.current = showResult; }, [showResult]);
+
   // 初始化时从 localStorage 恢复参数
   useEffect(() => {
     if (!pageKey || pageKey === "__default__") return;
@@ -37,18 +41,18 @@ export function useToolBack(options?: UseToolBackOptions) {
     if (saved) setSavedParams(saved);
   }, [pageKey]);
 
-  // 监听返回事件
+  // 监听返回事件 - v21.6: 使用 ref 避免闭包捕获旧值
   useEffect(() => {
     if (!pageKey || pageKey === "__default__") return;
     const handler = () => {
-      if (showResult) {
+      if (showResultRef.current) {
         setShowResult(false);
         window[globalFlag] = true;
       }
     };
     window.addEventListener(eventName, handler);
     return () => window.removeEventListener(eventName, handler);
-  }, [showResult, eventName, globalFlag, pageKey]);
+  }, [eventName, globalFlag, pageKey]);
 
   // 保存参数
   const saveParams = useCallback((params: Record<string, any>) => {
