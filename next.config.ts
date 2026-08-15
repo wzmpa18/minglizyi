@@ -10,7 +10,11 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  generateBuildId: () => `v25.0.7_D20260815`,
+  generateBuildId: () => {
+    const now = new Date();
+    const d = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+    return `v25.0.8_D${d}`;
+  },
 };
 
 export default nextConfig;
