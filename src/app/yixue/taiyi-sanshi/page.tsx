@@ -367,7 +367,7 @@ export default function TaiyiSanshiPage() {
       window.removeEventListener("yixue-edit", editHandler);
       window.removeEventListener("yixue-back", backHandler);
     };
-  }, []);
+  }, [showForm, result]);
 
   const handlePalaceClick = useCallback((gong: number) => {
     const interp = getTaiyiPalaceInterpretation(gong);

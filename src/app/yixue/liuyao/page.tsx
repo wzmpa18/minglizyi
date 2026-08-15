@@ -465,7 +465,7 @@ export default function LiuyaoPage() {
       window.removeEventListener("yixue-edit", editHandler);
       window.removeEventListener("yixue-back", backHandler);
     };
-  }, [showForm]);
+  }, [showForm, result]);
 
   // 更新手动爻值
   const setYaoValue = useCallback((index: number, value: YaoType) => {

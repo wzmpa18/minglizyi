@@ -60,9 +60,24 @@ export default function YixueLayout({ children }: { children: React.ReactNode })
     backLockRef.current = true;
     setTimeout(() => { backLockRef.current = false; }, 400);
 
-    // 弹窗打开时设置 __skipPopupCleanup，防止 usePopupBackHandler 的 history.back() 清理撤销 router.push 导航
+    // v25.0.15: 弹窗打开时，返回键 = 关闭弹窗并返回上级。
+    // 先用 history.back() 消费弹窗垫层历史记录（usePopupBackHandler 开弹窗时 pushState 的那条），
+    // 等 popstate 触发后再导航，避免留下幽灵历史条目导致"返回后又跳回本页弹窗"。
     if (typeof document !== "undefined" && document.body.classList.contains("modal-open")) {
       window.__skipPopupCleanup = true;
+      const target = isHome ? "/" : "/yixue";
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        window.removeEventListener("popstate", finish);
+        clearTimeout(guard);
+        router.push(target);
+      };
+      const guard = setTimeout(finish, 250);
+      window.addEventListener("popstate", finish);
+      window.history.back();
+      return;
     }
 
     if (isHome) {

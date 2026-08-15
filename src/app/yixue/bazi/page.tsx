@@ -1496,7 +1496,7 @@ export default function BaziPage(){
       window.removeEventListener("yixue-edit", editHandler);
       window.removeEventListener("yixue-back", backHandler);
     };
-  }, [showForm]);
+  }, [showForm, result]);
 
   // URL参数clientId自动选中客户 + 回填数据检查
   useEffect(() => {

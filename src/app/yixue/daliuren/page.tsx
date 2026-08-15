@@ -405,7 +405,7 @@ export default function DaLiuRenPage() {
       window.removeEventListener("yixue-edit", editHandler);
       window.removeEventListener("yixue-back", backHandler);
     };
-  }, []);
+  }, [showForm, data]);
 
   // URL参数clientId自动选中客户 + 回填数据检查
   useEffect(() => {

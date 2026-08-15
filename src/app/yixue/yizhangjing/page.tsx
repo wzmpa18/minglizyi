@@ -185,7 +185,7 @@ export default function YizhangjingPage() {
       window.removeEventListener("yixue-edit", editHandler);
       window.removeEventListener("yixue-back", backHandler);
     };
-  }, [showForm, dateType]);
+  }, [showForm, hasResult, dateType]);
 
   const handlePrev = useCallback(() => {
     const d = new Date(selectedYear, selectedMonth - 1, selectedDay, selectedHour);

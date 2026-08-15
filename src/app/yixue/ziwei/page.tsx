@@ -771,7 +771,7 @@ export default function ZiweiPage() {
       window.removeEventListener("yixue-edit", editHandler);
       window.removeEventListener("yixue-back", backHandler);
     };
-  }, []);
+  }, [showForm, result]);
 
   // 当大限变化时重置流年
   useEffect(() => {
