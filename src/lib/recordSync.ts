@@ -1,36 +1,19 @@
 "use client";
 
 /**
- * 排盘记录后端同步工具 (v21.3)
+ * 排盘记录后端同步工具 (v21.4)
+ * v21.4: 修复 token 读取键错误 - 使用 getUserToken() 统一读取
  * 
  * 功能：将排盘记录同步到后端服务器，支持跨设备查看历史记录
  * 依赖：用户需登录，否则仅保存到 localStorage
  */
 
+import { getUserToken } from "./auth";
+
 const API_BASE_URL = "https://yandaoguoxue.yandao.vip";
 
-/**
- * 获取当前用户的 access token
- */
 function getAccessToken(): string | null {
-  try {
-    if (typeof window === "undefined") return null;
-    // 尝试从 localStorage 获取 token
-    const tokenData = localStorage.getItem("yandao_token_pair");
-    if (tokenData) {
-      const parsed = JSON.parse(tokenData);
-      if (parsed.accessToken) return parsed.accessToken;
-    }
-    // 也检查 loginState
-    const loginState = localStorage.getItem("yandao_login_state");
-    if (loginState) {
-      const parsed = JSON.parse(loginState);
-      if (parsed.accessToken) return parsed.accessToken;
-    }
-    return null;
-  } catch {
-    return null;
-  }
+  return getUserToken();
 }
 
 /**

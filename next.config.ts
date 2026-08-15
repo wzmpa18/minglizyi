@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  generateBuildId: () => `v25.0.6_D20260815`,
+  generateBuildId: () => `v25.0.7_D20260815`,
 };
 
 export default nextConfig;
