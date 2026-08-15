@@ -42,9 +42,9 @@ export default function SwipeBackProvider({
         // 关键：touch-action: pan-y 告诉浏览器只处理垂直滚动，
         // 水平方向的触摸交给 JavaScript 处理（右滑返回手势）
         touchAction: "pan-y",
-        // 优化位移动画性能
-        willChange: "transform",
-        // 防止水平滚动链式传播，避免与右滑手势冲突
+        // 注意：禁止在此容器上设置 willChange: transform 或常驻 transform，
+        // 否则会为所有 position:fixed 后代创建 containing block，
+        // 导致弹窗的 fixed inset-0 相对整页而非视口定位（P0-1 事故根因）
         overscrollBehaviorX: "contain",
       }}
     >

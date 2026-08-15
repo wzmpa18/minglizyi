@@ -206,7 +206,7 @@ export default function DatePicker({
   const selectClass = "flex-1 rounded-lg border border-gray-200 px-2 py-2 text-sm text-center outline-none focus:border-[#7B2FBE] bg-white cursor-pointer";
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-end justify-center" style={{ paddingBottom: "calc(56px + env(safe-area-inset-bottom, 0px))" }}>
+    <div className="fixed inset-0 z-[9999] flex items-end justify-center" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
       {/* 遮罩层 - 独立div确保点击可关闭 */}
       <div
         className="absolute inset-0 bg-black/50"

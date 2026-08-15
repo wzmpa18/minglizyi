@@ -216,7 +216,7 @@ function InputPanel({
       {/* 底部弹窗 */}
       <div
         className="fixed inset-0 z-[9999] flex items-end justify-center transition-opacity duration-200"
-        style={{ opacity: entered ? 1 : 0, paddingBottom: "calc(56px + env(safe-area-inset-bottom, 0px))" }}
+        style={{ opacity: entered ? 1 : 0, paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       >
         {/* 遮罩层 */}
         <div
