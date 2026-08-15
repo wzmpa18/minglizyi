@@ -203,7 +203,7 @@ export default function QimenPage() {
   useEffect(() => {
     const editHandler = () => setShowForm(true);
     const backHandler = () => {
-      if (!showForm) { setShowForm(true); window.__yixueBackHandled = true; }
+      if (!showForm && result) { setShowForm(true); window.__yixueBackHandled = true; }
     };
     window.addEventListener("yixue-edit", editHandler);
     window.addEventListener("yixue-back", backHandler);

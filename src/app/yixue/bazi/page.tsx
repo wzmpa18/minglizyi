@@ -1485,7 +1485,7 @@ export default function BaziPage(){
   useEffect(() => {
     const editHandler = () => setShowForm(true);
     const backHandler = () => {
-      if (!showForm) {
+      if (!showForm && result) {
         setShowForm(true);
         window.__yixueBackHandled = true;
       }

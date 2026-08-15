@@ -54,21 +54,24 @@ export default function YixueLayout({ children }: { children: React.ReactNode })
   // v21.6: 防抖锁，防止快速双击返回按钮导致循环跳转
   const backLockRef = useRef(false);
 
-  // 返回按钮处理：v18.2 关键修复 + v21.6 防抖加固
+  // 返回按钮处理：v18.2 关键修复 + v21.6 防抖加固 + v25.0.14 弹窗导航冲突修复
   const handleBack = useCallback(() => {
     if (backLockRef.current) return;
     backLockRef.current = true;
     setTimeout(() => { backLockRef.current = false; }, 400);
+
+    // 弹窗打开时设置 __skipPopupCleanup，防止 usePopupBackHandler 的 history.back() 清理撤销 router.push 导航
+    if (typeof document !== "undefined" && document.body.classList.contains("modal-open")) {
+      window.__skipPopupCleanup = true;
+    }
 
     if (isHome) {
       router.push("/");
       return;
     }
     if (isToolPage) {
-      // 先尝试让子页面自己处理返回（从结果→输入）
       window.__yixueBackHandled = false;
       window.dispatchEvent(new CustomEvent("yixue-back"));
-      // 使用微任务取代 setTimeout，更可靠
       Promise.resolve().then(() => {
         if (window.__yixueBackHandled) {
           window.__yixueBackHandled = false;

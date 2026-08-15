@@ -169,7 +169,7 @@ export default function YizhangjingPage() {
       }
     };
     const backHandler = () => {
-      if (!showForm) {
+      if (!showForm && hasResult) {
         if (dateType === "sizhu") {
           setShowInput(true);
           setHasResult(false);

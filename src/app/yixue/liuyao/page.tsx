@@ -458,7 +458,7 @@ export default function LiuyaoPage() {
   // v18.2: 监听编辑/返回事件，实现逐级返回
   useEffect(() => {
     const editHandler = () => setShowForm(true);
-    const backHandler = () => { if (!showForm) { setShowForm(true); window.__yixueBackHandled = true; } };
+    const backHandler = () => { if (!showForm && result) { setShowForm(true); window.__yixueBackHandled = true; } };
     window.addEventListener("yixue-edit", editHandler);
     window.addEventListener("yixue-back", backHandler);
     return () => {
