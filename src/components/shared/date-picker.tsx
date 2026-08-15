@@ -2,6 +2,8 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { Lunar } from "lunar-javascript";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
 // ============================================================================
 // 类型定义
@@ -185,6 +187,10 @@ export default function DatePicker({
     onClose();
   }, [date, options, nameState, onNameChange, onSubmit, onClose]);
 
+  // P1-6: 统一滚动锁 + P1-7: 弹窗返回拦截
+  useBodyScrollLock(show);
+  usePopupBackHandler(onClose, show);
+
   if (!show) return null;
 
   // 生成选项数组
@@ -200,7 +206,7 @@ export default function DatePicker({
   const selectClass = "flex-1 rounded-lg border border-gray-200 px-2 py-2 text-sm text-center outline-none focus:border-[#7B2FBE] bg-white cursor-pointer";
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-end justify-center">
+    <div className="fixed inset-0 z-[9999] flex items-end justify-center" style={{ paddingBottom: "calc(56px + env(safe-area-inset-bottom, 0px))" }}>
       {/* 遮罩层 - 独立div确保点击可关闭 */}
       <div
         className="absolute inset-0 bg-black/50"
@@ -209,7 +215,7 @@ export default function DatePicker({
       {/* 弹窗内容 */}
       <div
         className="relative w-full max-w-[420px] rounded-t-2xl bg-white shadow-2xl"
-        style={{ maxHeight: "90vh", overflowY: "auto" }}
+        style={{ maxHeight: "85vh", overflowY: "auto" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* 标题栏 - 右上角×关闭按钮（对标吉时雨 closeBtn: 1） */}

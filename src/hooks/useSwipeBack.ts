@@ -87,8 +87,10 @@ interface SwipeState {
 // ==================== 工具函数 ====================
 
 /**
- * 检查触摸目标是否为交互元素（表单输入、对话框、抽屉等），
- * 防止在输入或弹窗操作时误触返回手势。
+ * 检查触摸目标是否为交互元素（表单输入等），
+ * 防止在输入操作时误触返回手势。
+ *
+ * P1-8: 弹窗打开时允许右滑，右滑会关闭弹窗而非返回页面。
  */
 function isInteractiveElement(el: HTMLElement | null): boolean {
   if (!el) return false;
@@ -102,11 +104,10 @@ function isInteractiveElement(el: HTMLElement | null): boolean {
     return true;
   }
 
-  // 对话框 / 弹窗 / 抽屉 / 明确禁用滑动返回的区域
+  // 明确禁用滑动返回的区域
   if (
     el.closest(
-      '[role="dialog"], [data-modal], [data-drawer], [data-swipeback-disabled], ' +
-      '.modal-open, .drawer-open, .drawer, .ant-drawer-open, .show'
+      '[role="dialog"], [data-modal], [data-drawer], [data-swipeback-disabled]'
     )
   ) {
     return true;

@@ -18,6 +18,7 @@ import {
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
 export interface InterpretationItem {
   type: string;
@@ -124,6 +125,8 @@ export default function InterpretationDrawer({
 
   // P1-6: 统一滚动锁
   useBodyScrollLock(show);
+  // P1-7: 弹窗返回拦截
+  usePopupBackHandler(onClose, show);
 
   if (!show) return null;
 

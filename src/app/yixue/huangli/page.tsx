@@ -11,6 +11,7 @@ import type { CalendarInterpretItem } from "@/lib/calendar-interpretations";
 import { savePaipanState, loadPaipanState } from "@/lib/paipanPersistence";
 
 import { ShareButton } from "@/components/ShareButton";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 const BRAND = "#7B2FBE";
 
 // 解读类型颜色
@@ -626,6 +627,7 @@ function MiniCell({ label, value }: { label: string; value: string }) {
 function AddToHomeScreen() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
+  useBodyScrollLock(showModal);
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
 

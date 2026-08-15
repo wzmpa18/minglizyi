@@ -42,7 +42,7 @@ export default function LoginPage() {
   useEffect(() => {
     const state = getLoginState();
     if (state.isLoggedIn) {
-      router.replace("/");
+      router.push("/");
     }
   }, [router]);
 

@@ -403,6 +403,11 @@ body.modal-open {
   touch-action: none;
 }
 
+/* P0-1 根治：弹窗打开时隐藏底部导航栏，彻底杜绝层叠遮挡 */
+body.modal-open #app-bottom-nav {
+  display: none !important;
+}
+
 /* 底部弹窗容器（BottomSheet/Drawer） */
 .modal-bottom-sheet {
   position: relative;

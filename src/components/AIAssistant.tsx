@@ -6,6 +6,7 @@ import { loadAssistantChat, saveAssistantChat, loadAssistantPos, saveAssistantPo
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
 const BRAND = "#7B2FBE";
 
@@ -43,6 +44,8 @@ export default function AIAssistant() {
 
   // P1-6: 统一滚动锁
   useBodyScrollLock(isOpen);
+  // P1-7: 弹窗返回拦截
+  usePopupBackHandler(() => setIsOpen(false), isOpen);
 
   // v20.1: 登录守卫
   const { requireLogin, showLoginPrompt, setShowLoginPrompt } = useRequireLogin();

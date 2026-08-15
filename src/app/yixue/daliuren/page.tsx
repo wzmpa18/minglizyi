@@ -27,6 +27,8 @@ import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipan
 import { useToolBack } from "@/lib/useToolBack";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { ShareButton } from "@/components/ShareButton";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
 import { calculateDaLiuRen, tianYiGuiRen, type DaLiuRenResult, type SanChuanItem, type SiKeItem, type PanMap, type DaLiuRenInputParams } from "@/algorithm-core/modules/daliuren";
 // ============================================================================
@@ -181,6 +183,10 @@ function InputPanel({
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // P1-6: 统一滚动锁 + P1-7: 弹窗返回拦截
+  useBodyScrollLock(show);
+  usePopupBackHandler(onClose, show);
+
   if (!show) return null;
 
   const currentYear = 2026;
@@ -210,7 +216,7 @@ function InputPanel({
       {/* 底部弹窗 */}
       <div
         className="fixed inset-0 z-[9999] flex items-end justify-center transition-opacity duration-200"
-        style={{ opacity: entered ? 1 : 0 }}
+        style={{ opacity: entered ? 1 : 0, paddingBottom: "calc(56px + env(safe-area-inset-bottom, 0px))" }}
       >
         {/* 遮罩层 */}
         <div
@@ -220,7 +226,7 @@ function InputPanel({
         {/* 弹窗内容 */}
         <div
           className="relative w-full max-w-[420px] rounded-t-2xl bg-white shadow-2xl transition-transform duration-300 ease-out"
-          style={{ maxHeight: "90vh", overflowY: "auto", transform: entered ? "translateY(0)" : "translateY(100%)" }}
+          style={{ maxHeight: "85vh", overflowY: "auto", transform: entered ? "translateY(0)" : "translateY(100%)" }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* 标题栏（仅模态模式显示，避免与BrandHeader形成双层标题） */}

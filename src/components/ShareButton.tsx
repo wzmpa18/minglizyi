@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from "react";
 import { generatePoster } from "@/lib/sharePoster";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import { shareReward } from "@/lib/pointsStore";
 import { getInviteCode } from "@/lib/inviteStore";
 
@@ -238,6 +239,7 @@ function ShareMenu({
   onClose: () => void;
 }) {
   useBodyScrollLock(true);
+  usePopupBackHandler(onClose, true);
 
   return (
     <>

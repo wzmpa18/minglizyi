@@ -73,7 +73,7 @@ export default function YixueLayout({ children }: { children: React.ReactNode })
         if (window.__yixueBackHandled) {
           window.__yixueBackHandled = false;
         } else {
-          router.replace("/yixue");
+          router.push("/yixue");
         }
       });
       return;

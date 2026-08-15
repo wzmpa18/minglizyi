@@ -46,8 +46,6 @@ export default function SwipeBackProvider({
         willChange: "transform",
         // 防止水平滚动链式传播，避免与右滑手势冲突
         overscrollBehaviorX: "contain",
-        // 确保内容在遮罩之上
-        zIndex: 1,
       }}
     >
       {children}

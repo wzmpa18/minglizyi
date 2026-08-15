@@ -8,6 +8,7 @@
 
 import { useRouter } from "next/navigation";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
 const BRAND = "#7B2FBE";
 
@@ -21,6 +22,7 @@ export function LoginPromptModal({
   const router = useRouter();
 
   useBodyScrollLock(show);
+  usePopupBackHandler(onClose, show);
 
   if (!show) return null;
 

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 export default function SocialRedirect() {
   const router = useRouter();
   useEffect(() => {
-    router.replace("/discover");
+    router.push("/discover");
   }, [router]);
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50">

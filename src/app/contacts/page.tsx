@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 export default function ContactsRedirect() {
   const router = useRouter();
   useEffect(() => {
-    router.replace("/friends");
+    router.push("/friends");
   }, [router]);
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
