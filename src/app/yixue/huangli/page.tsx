@@ -12,6 +12,7 @@ import { savePaipanState, loadPaipanState } from "@/lib/paipanPersistence";
 
 import { ShareButton } from "@/components/ShareButton";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 const BRAND = "#7B2FBE";
 
 // 解读类型颜色
@@ -628,6 +629,7 @@ function AddToHomeScreen() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
   useBodyScrollLock(showModal);
+  usePopupBackHandler(() => setShowModal(false), showModal);
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
 

@@ -2,6 +2,12 @@
 
 import { useEffect, useRef } from "react";
 
+declare global {
+  interface Window {
+    __skipPopupCleanup?: boolean;
+  }
+}
+
 /**
  * 弹窗返回拦截 Hook
  *
@@ -12,6 +18,8 @@ import { useEffect, useRef } from "react";
  *   2. 用户按返回键 → popstate 事件 → 关闭弹窗（跳过 history.back 清理）
  *   3. 弹窗正常关闭（点击关闭按钮）→ 自动 history.back() 清理历史状态
  *   4. 组件卸载时（如条件渲染移除）→ 自动清理历史状态
+ *   5. 页面主动导航离开时 → 设置 __skipPopupCleanup=true 跳过 history.back 清理，
+ *      避免 cleanup 的 history.back() 撤销 router.push 导航
  *
  * 用法：
  *   usePopupBackHandler(handleClose, isOpen);
@@ -29,7 +37,11 @@ export function usePopupBackHandler(onClose: () => void, isOpen: boolean) {
       backHandledRef.current = false;
     } else if (!isOpen && pushedRef.current && !backHandledRef.current) {
       pushedRef.current = false;
-      window.history.back();
+      if (!window.__skipPopupCleanup) {
+        window.history.back();
+      } else {
+        window.__skipPopupCleanup = false;
+      }
     }
   }, [isOpen]);
 
@@ -45,13 +57,16 @@ export function usePopupBackHandler(onClose: () => void, isOpen: boolean) {
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
-  // 组件卸载时清理历史状态（条件渲染移除场景）
   useEffect(() => {
     return () => {
       if (pushedRef.current) {
         pushedRef.current = false;
         backHandledRef.current = true;
-        window.history.back();
+        if (!window.__skipPopupCleanup) {
+          window.history.back();
+        } else {
+          window.__skipPopupCleanup = false;
+        }
       }
     };
   }, []);

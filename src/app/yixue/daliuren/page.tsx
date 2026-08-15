@@ -397,7 +397,7 @@ export default function DaLiuRenPage() {
   useEffect(() => {
     const editHandler = () => setShowForm(true);
     const backHandler = () => {
-      if (!showForm) { setShowForm(true); window.__yixueBackHandled = true; }
+      if (!showForm && data) { setShowForm(true); window.__yixueBackHandled = true; }
     };
     window.addEventListener("yixue-edit", editHandler);
     window.addEventListener("yixue-back", backHandler);
@@ -405,7 +405,7 @@ export default function DaLiuRenPage() {
       window.removeEventListener("yixue-edit", editHandler);
       window.removeEventListener("yixue-back", backHandler);
     };
-  }, []);
+  }, [showForm, data]);
 
   // URL参数clientId自动选中客户 + 回填数据检查
   useEffect(() => {

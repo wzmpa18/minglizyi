@@ -54,21 +54,39 @@ export default function YixueLayout({ children }: { children: React.ReactNode })
   // v21.6: 防抖锁，防止快速双击返回按钮导致循环跳转
   const backLockRef = useRef(false);
 
-  // 返回按钮处理：v18.2 关键修复 + v21.6 防抖加固
+  // 返回按钮处理：v18.2 关键修复 + v21.6 防抖加固 + v25.0.14 弹窗导航冲突修复
   const handleBack = useCallback(() => {
     if (backLockRef.current) return;
     backLockRef.current = true;
     setTimeout(() => { backLockRef.current = false; }, 400);
+
+    // v25.0.15: 弹窗打开时，返回键 = 关闭弹窗并返回上级。
+    // 先用 history.back() 消费弹窗垫层历史记录（usePopupBackHandler 开弹窗时 pushState 的那条），
+    // 等 popstate 触发后再导航，避免留下幽灵历史条目导致"返回后又跳回本页弹窗"。
+    if (typeof document !== "undefined" && document.body.classList.contains("modal-open")) {
+      window.__skipPopupCleanup = true;
+      const target = isHome ? "/" : "/yixue";
+      let done = false;
+      const finish = () => {
+        if (done) return;
+        done = true;
+        window.removeEventListener("popstate", finish);
+        clearTimeout(guard);
+        router.push(target);
+      };
+      const guard = setTimeout(finish, 250);
+      window.addEventListener("popstate", finish);
+      window.history.back();
+      return;
+    }
 
     if (isHome) {
       router.push("/");
       return;
     }
     if (isToolPage) {
-      // 先尝试让子页面自己处理返回（从结果→输入）
       window.__yixueBackHandled = false;
       window.dispatchEvent(new CustomEvent("yixue-back"));
-      // 使用微任务取代 setTimeout，更可靠
       Promise.resolve().then(() => {
         if (window.__yixueBackHandled) {
           window.__yixueBackHandled = false;

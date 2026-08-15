@@ -874,17 +874,27 @@ export async function registerWithEmail(params: RegisterEmailParams): Promise<Lo
 export async function resetPassword(params: ResetPasswordParams): Promise<LoginResult> {
   const { phone, smsCode, newPassword } = params;
 
-  const valid = await verifySmsCode(phone, smsCode);
-  if (!valid) {
-    return { success: false, message: '验证码错误或已过期' };
+  if (!phone || !smsCode || !newPassword) {
+    return { success: false, message: '请输入手机号、验证码和新密码' };
   }
 
-  // 更新持久化密码存储
-  const store = loadPasswordStore();
-  store[phone] = hashPassword(newPassword);
-  savePasswordStore(store);
-
-  return { success: true, message: '密码重置成功' };
+  // v25.0.15: 调用后端接口更新 SQLite 密码哈希（登录以后端为权威，本地存储不再生效）
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ account: phone, smsCode, newPassword }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      return { success: true, message: '密码重置成功' };
+    }
+    return { success: false, message: data.message || '密码重置失败' };
+  } catch (err) {
+    console.error('[RESET] 后端重置密码请求失败:', err);
+    return { success: false, message: '网络异常，请检查网络后重试' };
+  }
 }
 
 // ============================================================================
@@ -894,17 +904,27 @@ export async function resetPassword(params: ResetPasswordParams): Promise<LoginR
 export async function resetPasswordWithEmail(params: ResetPasswordEmailParams): Promise<LoginResult> {
   const { email, emailCode, newPassword } = params;
 
-  const valid = await verifyEmailCode(email, emailCode);
-  if (!valid) {
-    return { success: false, message: '邮箱验证码错误或已过期' };
+  if (!email || !emailCode || !newPassword) {
+    return { success: false, message: '请输入邮箱、验证码和新密码' };
   }
 
-  // 更新持久化密码存储
-  const store = loadPasswordStore();
-  store[email] = hashPassword(newPassword);
-  savePasswordStore(store);
-
-  return { success: true, message: '密码重置成功' };
+  // v25.0.15: 调用后端接口更新 SQLite 密码哈希
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ account: email, emailCode, newPassword }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      return { success: true, message: '密码重置成功' };
+    }
+    return { success: false, message: data.message || '密码重置失败' };
+  } catch (err) {
+    console.error('[RESET] 后端重置密码（邮箱）请求失败:', err);
+    return { success: false, message: '网络异常，请检查网络后重试' };
+  }
 }
 
 // ============================================================================

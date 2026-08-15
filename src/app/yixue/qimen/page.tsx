@@ -203,7 +203,7 @@ export default function QimenPage() {
   useEffect(() => {
     const editHandler = () => setShowForm(true);
     const backHandler = () => {
-      if (!showForm) { setShowForm(true); window.__yixueBackHandled = true; }
+      if (!showForm && result) { setShowForm(true); window.__yixueBackHandled = true; }
     };
     window.addEventListener("yixue-edit", editHandler);
     window.addEventListener("yixue-back", backHandler);
@@ -211,7 +211,7 @@ export default function QimenPage() {
       window.removeEventListener("yixue-edit", editHandler);
       window.removeEventListener("yixue-back", backHandler);
     };
-  }, []);
+  }, [showForm, result]);
 
   // URL参数clientId自动选中客户 + 回填数据检查
   useEffect(() => {

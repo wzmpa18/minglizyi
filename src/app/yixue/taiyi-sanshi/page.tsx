@@ -359,7 +359,7 @@ export default function TaiyiSanshiPage() {
   useEffect(() => {
     const editHandler = () => setShowForm(true);
     const backHandler = () => {
-      if (!showForm) { setShowForm(true); window.__yixueBackHandled = true; }
+      if (!showForm && result) { setShowForm(true); window.__yixueBackHandled = true; }
     };
     window.addEventListener("yixue-edit", editHandler);
     window.addEventListener("yixue-back", backHandler);
@@ -367,7 +367,7 @@ export default function TaiyiSanshiPage() {
       window.removeEventListener("yixue-edit", editHandler);
       window.removeEventListener("yixue-back", backHandler);
     };
-  }, []);
+  }, [showForm, result]);
 
   const handlePalaceClick = useCallback((gong: number) => {
     const interp = getTaiyiPalaceInterpretation(gong);

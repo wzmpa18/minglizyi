@@ -1485,7 +1485,7 @@ export default function BaziPage(){
   useEffect(() => {
     const editHandler = () => setShowForm(true);
     const backHandler = () => {
-      if (!showForm) {
+      if (!showForm && result) {
         setShowForm(true);
         window.__yixueBackHandled = true;
       }
@@ -1496,7 +1496,7 @@ export default function BaziPage(){
       window.removeEventListener("yixue-edit", editHandler);
       window.removeEventListener("yixue-back", backHandler);
     };
-  }, [showForm]);
+  }, [showForm, result]);
 
   // URL参数clientId自动选中客户 + 回填数据检查
   useEffect(() => {
