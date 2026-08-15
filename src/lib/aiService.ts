@@ -311,7 +311,7 @@ export function getUserPermissionLevel(): PermissionLevel {
   if (typeof window === "undefined") return "visitor";
   try {
     // 检查是否登录
-    const token = localStorage.getItem("yandao_access_token") || localStorage.getItem("yandao_token");
+    const token = localStorage.getItem("yandao_user_token");
     if (!token) return "visitor";
 
     // 检查会员状态

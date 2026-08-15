@@ -1,9 +1,12 @@
 "use client";
 
 // ============================================================================
-// 团队/分销 API 客户端 - v21.1
+// 团队/分销 API 客户端 - v21.2
 // 从后端获取真实的邀请关系数据，替代 localStorage 模拟
+// v21.2: 修复 token 读取键错误 - 使用 getUserToken() 统一读取
 // ============================================================================
+
+import { getUserToken } from "./auth";
 
 const API_BASE_URL = typeof window !== "undefined"
   ? window.location.origin
@@ -28,23 +31,8 @@ export interface TeamStats {
   totalRewards: number;
 }
 
-/**
- * 获取 JWT access token
- */
 function getAccessToken(): string | null {
-  if (typeof window === "undefined") return null;
-  
-  // 从 localStorage 获取（优先从 loginState 对象）
-  try {
-    const state = localStorage.getItem("yandao_login_state");
-    if (state) {
-      const parsed = JSON.parse(state);
-      if (parsed.accessToken) return parsed.accessToken;
-    }
-  } catch {}
-  
-  // 备用：直接读取 token 键
-  return localStorage.getItem("yandao_access_token");
+  return getUserToken();
 }
 
 /**
