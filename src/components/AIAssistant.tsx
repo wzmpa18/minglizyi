@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { loadAssistantChat, saveAssistantChat, loadAssistantPos, saveAssistantPos, callAI, getPermissionStatus, type ChatMessage } from "@/lib/aiService";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 
 const BRAND = "#7B2FBE";
 
@@ -39,6 +40,9 @@ export default function AIAssistant() {
   const [isCapturing, setIsCapturing] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  // P1-6: 统一滚动锁
+  useBodyScrollLock(isOpen);
 
   // v20.1: 登录守卫
   const { requireLogin, showLoginPrompt, setShowLoginPrompt } = useRequireLogin();
@@ -340,35 +344,11 @@ export default function AIAssistant() {
 
       {/* 对话面板 */}
       {isOpen && (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 2000,
-            backgroundColor: "rgba(0,0,0,0.5)",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "flex-end",
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) handleClose();
-          }}
-        >
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) handleClose(); }}>
           <div
             ref={panelRef}
-            style={{
-              width: "100%",
-              maxWidth: "420px",
-              margin: "0 auto",
-              height: panelHeight,
-              backgroundColor: "#f5f5f5",
-              borderTopLeftRadius: "16px",
-              borderTopRightRadius: "16px",
-              display: "flex",
-              flexDirection: "column",
-              boxShadow: "0 -4px 20px rgba(0,0,0,0.15)",
-              transition: "height 0.3s ease",
-            }}
+            className="modal-bottom-sheet"
+            style={{ height: panelHeight, boxShadow: "0 -4px 20px rgba(0,0,0,0.15)", transition: "height 0.3s ease", backgroundColor: "#f5f5f5" }}
           >
             {/* 顶部标题栏 */}
             <div

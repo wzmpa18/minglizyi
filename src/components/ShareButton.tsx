@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useRef } from "react";
 import { generatePoster } from "@/lib/sharePoster";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { shareReward } from "@/lib/pointsStore";
 import { getInviteCode } from "@/lib/inviteStore";
 
@@ -236,12 +237,14 @@ function ShareMenu({
   onSystemShare: () => void;
   onClose: () => void;
 }) {
+  useBodyScrollLock(true);
+
   return (
     <>
-      <div className="fixed inset-0 z-[90]" onClick={onClose} />
+      <div className="fixed inset-0 z-[90]" onClick={onClose} style={{ backgroundColor: "rgba(0,0,0,0.4)" }} />
       <div
         className="fixed bottom-0 left-1/2 -translate-x-1/2 z-[100] w-full max-w-[420px] rounded-t-2xl bg-white shadow-xl"
-        style={{ animation: "shareSlideUp 0.2s ease-out" }}
+        style={{ animation: "shareSlideUp 0.2s ease-out", paddingBottom: "calc(56px + env(safe-area-inset-bottom, 0px))" }}
       >
         <div className="px-4 pt-4 pb-2 text-center">
           <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-gray-200" />

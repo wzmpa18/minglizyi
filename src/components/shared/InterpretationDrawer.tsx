@@ -8,7 +8,6 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   callAI,
-  // v20.1: 三级权限
   getUserPermissionLevel,
   truncateContentForFreeUser,
   isSingleUnlocked,
@@ -18,6 +17,7 @@ import {
 } from "@/lib/aiService";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 
 export interface InterpretationItem {
   type: string;
@@ -122,19 +122,22 @@ export default function InterpretationDrawer({
     return () => { document.body.style.overflow = ""; };
   }, [show]);
 
+  // P1-6: 统一滚动锁
+  useBodyScrollLock(show);
+
   if (!show) return null;
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
-      <div onClick={onClose} style={{ position: "absolute", inset: 0, backgroundColor: "rgba(0,0,0,0.4)" }} />
-      <div style={{ position: "relative", width: "100%", maxWidth: "420px", maxHeight: "75vh", backgroundColor: "#fff", borderTopLeftRadius: "16px", borderTopRightRadius: "16px", display: "flex", flexDirection: "column", overflow: "hidden", animation: "slideUp18 0.3s ease-out" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 16px", borderBottom: "1px solid #f0f0f0", flexShrink: 0 }}>
-          <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#1a1a1a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, marginRight: "12px" }}>{title}</h3>
-          <button onClick={onClose} style={{ width: "32px", height: "32px", borderRadius: "50%", border: "none", backgroundColor: "#f5f5f5", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0 }} title="关闭">
+    <div className="modal-overlay">
+      <div className="modal-backdrop" onClick={onClose} />
+      <div className="modal-bottom-sheet modal-slide-up">
+        <div className="modal-header">
+          <h3 className="modal-header-title">{title}</h3>
+          <button className="modal-close-btn" onClick={onClose} title="关闭">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
           </button>
         </div>
-        <div style={{ flex: 1, overflowY: "auto", padding: "16px", WebkitOverflowScrolling: "touch" }}>
+        <div className="modal-bottom-sheet-body">
           {items.map((item, idx) => {
             const tc = colors[item.type] || colors["default"];
             return (
@@ -231,8 +234,7 @@ export default function InterpretationDrawer({
             </div>
           )}
         </div>
-        <div style={{ height: "env(safe-area-inset-bottom, 0px)", flexShrink: 0 }} />
-        <style>{`@keyframes slideUp18{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
+        <div className="modal-safe-bottom" />
       </div>
 
       {/* v20.1: 单次解锁支付弹窗 */}

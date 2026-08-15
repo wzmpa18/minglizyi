@@ -387,3 +387,137 @@ p { margin: 0; padding: 0; }
   from { transform: translate(-50%, 100%); opacity: 0; }
   to { transform: translate(-50%, 0); opacity: 1; }
 }
+
+/* ============================================
+   P1-6: 全站弹窗/弹层统一适配规范 v2.0
+   统一规则：
+   1. max-height: 85vh（适配所有屏幕）
+   2. overflow-y: auto（内容区可滚动）
+   3. padding-bottom: 底部导航栏(56px) + safe-area
+   4. body scroll lock（弹窗打开时禁止背景滚动）
+   ============================================ */
+
+/* Body 滚动锁定 */
+body.modal-open {
+  overflow: hidden;
+  touch-action: none;
+}
+
+/* 底部弹窗容器（BottomSheet/Drawer） */
+.modal-bottom-sheet {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  max-height: 85vh;
+  background-color: #fff;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 底部弹窗内容滚动区 */
+.modal-bottom-sheet-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 底部安全区：底部导航栏高度 + 系统安全区 */
+.modal-safe-bottom {
+  height: calc(56px + env(safe-area-inset-bottom, 0px));
+  flex-shrink: 0;
+}
+
+/* 居中弹窗容器（Modal/Dialog） */
+.modal-center {
+  position: relative;
+  width: 100%;
+  max-width: 320px;
+  max-height: 85vh;
+  background-color: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-center-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 弹窗遮罩层 */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.modal-overlay-center {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+/* 弹窗背景遮罩 */
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+/* 弹窗标题栏 */
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  flex-shrink: 0;
+}
+
+.modal-header-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a1a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  margin-right: 12px;
+}
+
+.modal-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background-color: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* 弹窗滑入动画 */
+@keyframes modalSlideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.modal-slide-up {
+  animation: modalSlideUp 0.3s ease-out;
+}
