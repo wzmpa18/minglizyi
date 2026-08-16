@@ -17,6 +17,7 @@ import {
   TrendingUp,
   ArrowRight,
   Activity,
+  GraduationCap,
 } from "lucide-react";
 import { THEME, AdminCard, StatCard, LoadingSpinner, useMounted, Badge } from "./_shared";
 import { fetchDashboardStats } from "@/lib/admin/client";
@@ -108,6 +109,14 @@ export default function AdminOverviewPage() {
       icon: <Crown size={24} />,
       color: THEME.warning,
       items: ["等级权益", "价格调整", "套餐上下架", "合规口径"],
+    },
+    {
+      href: "/admin/loc",
+      title: "学习运营中心",
+      desc: "学堂配置可视化后台（P6-J）",
+      icon: <GraduationCap size={24} />,
+      color: THEME.success,
+      items: ["考试规则配置", "积分分佣规则", "机构档位与审核", "全覆盖出题任务", "AI 调用监控", "操作日志留痕"],
     },
   ];
 

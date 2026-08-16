@@ -19,6 +19,7 @@ const ENTRIES = [
   { key: "cert", emoji: "🏅", name: "我的证书", desc: "电子证书查验与复核", url: "/academy/certificates" },
   { key: "wrong", emoji: "📕", name: "错题本", desc: "错题回顾消灭薄弱点", url: "/academy/wrong-book" },
   { key: "factory", emoji: "🏭", name: "知识工厂", desc: "上传资料 · AI 解析入库", url: "/academy/factory" },
+  { key: "orgs", emoji: "🏛️", name: "机构专区", desc: "入驻开班 · 专属学习空间", url: "/academy/orgs" },
 ];
 
 export default function AcademyPage() {

@@ -103,6 +103,7 @@ export interface MaterialVo {
 export async function uploadMaterial(data: {
   title: string; track: string; category?: string; format?: string; textContent?: string;
   fileBase64?: string; fileName?: string; grade?: string;
+  visibility?: "PUBLIC" | "PRIVATE" | "ORG"; orgId?: string;
 }) {
   return api<{ success: boolean; materialId?: string; message?: string; error?: string }>(`/api/academy/materials`, {
     method: "POST",
@@ -259,4 +260,114 @@ export async function fetchProgress(track?: string) {
 
 export async function fetchWrongAnswers() {
   return api<{ success: boolean; wrongs?: Array<{ id: string; questionId: string; myAnswer: string; type: string; track: string; stem: string; options: string[]; answer: string; analysis: string; createdAt: string }> }>(`/api/academy/wrong-answers`);
+}
+
+// ==================== v25.0.22 全覆盖出题任务（P6-B 原则1/2） ====================
+
+export interface GenTaskVo {
+  id: string; track: string; category: string; level: number;
+  totalGroups: number; doneGroups: number; totalKp: number; coveredKp: number;
+  createdQ: number; skippedCached: number; status: string; error: string;
+  createdAt: string; updatedAt: string;
+}
+
+export async function startFullGenQuestions(data: { track: string; category?: string; level?: number }) {
+  return adminApi<{ success: boolean; taskId?: string; message?: string; error?: string }>(`/api/academy/questions/generate-full`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function fetchGenTasks() {
+  return adminApi<{ success: boolean; tasks?: GenTaskVo[] }>(`/api/academy/gen-tasks`);
+}
+
+// ==================== v25.0.22 P6-I 机构学习空间 SaaS ====================
+
+export interface OrgVo {
+  id: string; name: string; type: string; logo: string; intro: string; notice: string;
+  ownerId: string; status: string; tier: string; memberLimit: string;
+  expireAt: string; createdAt: string;
+  memberCount?: number; materialCount?: number; myRole?: string;
+}
+
+export async function applyOrg(data: { name: string; type: "public" | "commercial"; intro?: string; logo?: string }) {
+  return api<{ success: boolean; orgId?: string; message?: string; error?: string }>(`/api/academy/orgs/apply`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function reviewOrg(id: string, action: "approve" | "reject", tier?: string) {
+  return adminApi<{ success: boolean; error?: string }>(`/api/academy/orgs/${id}/review`, {
+    method: "POST",
+    body: JSON.stringify({ action, tier }),
+  });
+}
+
+export async function fetchOrgs(mine = false, all = false) {
+  const q = mine ? "?mine=1" : all ? "?all=1" : "";
+  return api<{ success: boolean; orgs?: OrgVo[] }>(`/api/academy/orgs${q}`);
+}
+
+/** LOC 运营中心：全量机构列表（含待审核，需管理员密钥） */
+export async function fetchAllOrgsForAdmin() {
+  return adminApi<{ success: boolean; orgs?: OrgVo[]; error?: string }>(`/api/academy/orgs?all=1`);
+}
+
+export async function fetchOrgDetail(id: string) {
+  return api<{ success: boolean; org?: OrgVo; error?: string }>(`/api/academy/orgs/${id}`);
+}
+
+export async function createOrgInviteCode(orgId: string) {
+  return api<{ success: boolean; code?: string; error?: string }>(`/api/academy/orgs/${orgId}/invite-code`, { method: "POST" });
+}
+
+export async function joinOrgByCode(code: string) {
+  return api<{ success: boolean; message?: string; error?: string }>(`/api/academy/orgs/join`, {
+    method: "POST",
+    body: JSON.stringify({ code }),
+  });
+}
+
+export async function fetchOrgMembers(orgId: string) {
+  return api<{ success: boolean; members?: Array<{ userId: string; role: string; joinedAt: string; checkins: number; passes: number }>; error?: string }>(`/api/academy/orgs/${orgId}/members`);
+}
+
+export async function fetchOrgRanking(orgId: string) {
+  return api<{ success: boolean; ranking?: Array<{ user_id: string; checkins: number; avgScore: number; passes: number }>; error?: string }>(`/api/academy/orgs/${orgId}/ranking`);
+}
+
+export async function fetchOrgEarnings(orgId: string) {
+  return api<{ success: boolean; total?: number; earnings?: Array<{ id: string; userId: string; source: string; amount: number; note: string; createdAt: string }>; error?: string }>(`/api/academy/orgs/${orgId}/earnings`);
+}
+
+// ==================== v25.0.22 P6-J 学习运营中心 LOC ====================
+
+export interface LocDashboard {
+  materials: number; knowledgePoints: number; questions: number; exams: number;
+  examPasses: number; certificates: number; checkins: number;
+  orgs: number; orgMembers: number;
+  aiCalls: number; aiTokensIn: number; aiTokensOut: number;
+  aiByScene: Array<{ scene: string; calls: number; tokens: number }>;
+  aiByDay: Array<{ day: string; calls: number }>;
+}
+
+export async function fetchLocDashboard() {
+  return adminApi<{ success: boolean; dashboard?: LocDashboard; error?: string }>(`/api/academy/loc/dashboard`);
+}
+
+export async function fetchLocConfig() {
+  return adminApi<{ success: boolean; config?: Record<string, unknown>; editableKeys?: string[]; error?: string }>(`/api/academy/loc/config`);
+}
+
+export async function updateLocConfig(key: string, value: unknown) {
+  return adminApi<{ success: boolean; message?: string; error?: string }>(`/api/academy/loc/config`, {
+    method: "PUT",
+    body: JSON.stringify({ key, value }),
+  });
+}
+
+export async function fetchLocOpLogs() {
+  return adminApi<{ success: boolean; logs?: Array<{ id: string; adminId: string; action: string; target: string; detail: string; createdAt: string }>; error?: string }>(`/api/academy/loc/op-logs`);
 }

@@ -70,11 +70,23 @@ const PRESET_CATEGORIES = [
 ];
 
 // 组卷配置：题量 / 分值 / 及格线 / 限时（分钟）/ 难度配比
-const EXAM_CONFIG = {
+// P6-J：考试配置默认值。实际运行时实时读取 loc_configs（key=exam_config），后台修改即时生效
+const EXAM_CONFIG_DEFAULT = {
   1: { total: 10, easy: 6, medium: 4, hard: 0, single: 6, multi: 2, judge: 2, minutes: 15, passScore: 60 },
   2: { total: 15, easy: 5, medium: 6, hard: 4, single: 8, multi: 3, judge: 2, fill: 2, minutes: 25, passScore: 70 },
   3: { total: 20, easy: 4, medium: 8, hard: 8, single: 8, multi: 4, judge: 2, fill: 3, qa: 2, case: 1, minutes: 40, passScore: 75 },
 };
+
+function getExamConfig() {
+  try {
+    const row = getDb().prepare(`SELECT value_json FROM loc_configs WHERE key='exam_config'`).get();
+    if (row) {
+      const cfg = JSON.parse(row.value_json);
+      if (cfg && cfg['1'] && cfg['2'] && cfg['3']) return cfg;
+    }
+  } catch { /* 配置缺失/损坏时回退默认值 */ }
+  return EXAM_CONFIG_DEFAULT;
+}
 
 let db = null;
 function getDb() {
@@ -203,6 +215,127 @@ function initTables(d) {
   ensureColumn('knowledge_points', 'track', "track TEXT DEFAULT ''");
   ensureColumn('knowledge_points', 'category', "category TEXT DEFAULT ''");
   ensureColumn('questions', 'category', "category TEXT DEFAULT ''");
+  // P6-I 原则4：三层权限（PUBLIC/PRIVATE/ORG），禁止新增其他类型
+  ensureColumn('materials', 'visibility', "visibility TEXT DEFAULT 'PUBLIC'");
+  ensureColumn('materials', 'org_id', 'org_id INTEGER DEFAULT 0');
+
+  // P6-A/P6-B：全覆盖出题批量任务（知识点分组遍历，进度可查）
+  d.exec(`
+    CREATE TABLE IF NOT EXISTS gen_tasks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      track TEXT NOT NULL,
+      category TEXT DEFAULT '',
+      level INTEGER DEFAULT 1,
+      total_groups INTEGER DEFAULT 0,
+      done_groups INTEGER DEFAULT 0,
+      total_kp INTEGER DEFAULT 0,
+      covered_kp INTEGER DEFAULT 0,
+      created_q INTEGER DEFAULT 0,
+      skipped_cached INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'running',
+      error TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now','localtime')),
+      updated_at TEXT DEFAULT (datetime('now','localtime'))
+    );
+  `);
+
+  // P6-I 原则2：AI 调用日志（一次生成永久复用，重复访问零消耗，全量可追溯）
+  d.exec(`
+    CREATE TABLE IF NOT EXISTS ai_call_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      scene TEXT NOT NULL,
+      material_id INTEGER,
+      kp_id INTEGER,
+      task_id INTEGER,
+      tokens_in INTEGER DEFAULT 0,
+      tokens_out INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now','localtime'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_aicall_scene ON ai_call_logs(scene, created_at);
+  `);
+
+  // P6-I 原则3：机构学习空间 SaaS
+  d.exec(`
+    CREATE TABLE IF NOT EXISTS organizations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      type TEXT DEFAULT 'commercial',
+      logo TEXT DEFAULT '',
+      intro TEXT DEFAULT '',
+      notice TEXT DEFAULT '',
+      owner_id TEXT NOT NULL,
+      status TEXT DEFAULT 'pending',
+      tier TEXT DEFAULT 'free',
+      member_limit INTEGER DEFAULT 50,
+      expire_at TEXT,
+      created_at TEXT DEFAULT (datetime('now','localtime'))
+    );
+    CREATE TABLE IF NOT EXISTS org_members (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL,
+      user_id TEXT NOT NULL,
+      role TEXT DEFAULT 'member',
+      joined_at TEXT DEFAULT (datetime('now','localtime')),
+      UNIQUE(org_id, user_id)
+    );
+    CREATE TABLE IF NOT EXISTS org_invite_codes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL,
+      code TEXT NOT NULL UNIQUE,
+      uses INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now','localtime'))
+    );
+    CREATE TABLE IF NOT EXISTS org_earnings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL,
+      user_id TEXT DEFAULT '',
+      source TEXT NOT NULL,
+      amount REAL DEFAULT 0,
+      note TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now','localtime'))
+    );
+  `);
+
+  // P6-J：学习运营中心配置（实时生效，禁止改代码调规则）+ 操作留痕
+  d.exec(`
+    CREATE TABLE IF NOT EXISTS loc_configs (
+      key TEXT PRIMARY KEY,
+      value_json TEXT NOT NULL,
+      updated_by TEXT DEFAULT '',
+      updated_at TEXT DEFAULT (datetime('now','localtime'))
+    );
+    CREATE TABLE IF NOT EXISTS loc_op_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      admin_id TEXT NOT NULL,
+      action TEXT NOT NULL,
+      target TEXT DEFAULT '',
+      detail TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now','localtime'))
+    );
+  `);
+
+  // LOC 默认配置初始化（幂等）：机构档位 / 分佣规则 / 积分规则
+  const defaultCfg = [
+    ['org_tiers', JSON.stringify([
+      { key: 'free', name: '公益基础版', price: 0, memberLimit: 50, features: ['资料', '题库', '考试'] },
+      { key: 'biz50', name: '商业版·50人', price: 299, memberLimit: 50, features: ['全功能'] },
+      { key: 'biz100', name: '商业版·100人', price: 599, memberLimit: 100, features: ['全功能'] },
+      { key: 'biz300', name: '商业版·300人', price: 999, memberLimit: 300, features: ['全功能'] },
+    ])],
+    ['commission_rules', JSON.stringify({
+      inviteRegisterPoints: 100,
+      memberFirstPayRate: 0.2,
+      memberRenewPayRate: 0.1,
+    })],
+    ['points_rules', JSON.stringify({
+      studyCheckin: 5, questionCorrect: 2, examPass: 50, inviteRegister: 100, materialApproved: 200,
+    })],
+  ];
+  const cfgExist = d.prepare('SELECT key FROM loc_configs WHERE key=?');
+  const cfgIns = d.prepare('INSERT INTO loc_configs (key, value_json, updated_by) VALUES (?,?,?)');
+  for (const [k, v] of defaultCfg) {
+    if (!cfgExist.get(k)) cfgIns.run(k, v, 'system_init');
+  }
 
   // 预置类目（幂等：缺一条补一条，v25.0.21 起每次启动确保齐全）
   const existCat = d.prepare('SELECT id FROM categories WHERE track=? AND name=?');
@@ -239,9 +372,18 @@ function adminRequired(req, res, next) {
   next();
 }
 
-// ==================== AI 通道（复用 /api/ai/chat 同款配置） ====================
+// P6-I 原则4：用户已加入的机构 id 列表（用于 ORG 资料可见性判断）
+function myOrgIds(req) {
+  try {
+    const uid = String(req.user.userId);
+    return getDb().prepare(`SELECT org_id FROM org_members WHERE user_id=?`).all(uid).map(r => r.org_id);
+  } catch { return []; }
+}
 
-async function callAI(systemPrompt, userPrompt) {
+// ==================== AI 通道（复用 /api/ai/chat 同款配置） ====================
+// P6-I 原则2：所有 AI 调用写入 ai_call_logs（场景/关联对象/token 估算），重复内容走库缓存不调 AI
+
+async function callAI(systemPrompt, userPrompt, scene = 'other', refs = {}) {
   const deepseekKey = process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY || '';
   const hunyuanKey = process.env.HUNYUAN_API_KEY || '';
   const apiKey = deepseekKey || hunyuanKey;
@@ -266,7 +408,15 @@ async function callAI(systemPrompt, userPrompt) {
   });
   if (!resp.ok) throw new Error(`AI 接口返回 ${resp.status}`);
   const data = await resp.json();
-  return (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+  const content = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+  try {
+    const usage = data.usage || {};
+    getDb().prepare(`INSERT INTO ai_call_logs (scene, material_id, kp_id, task_id, tokens_in, tokens_out) VALUES (?,?,?,?,?,?)`)
+      .run(scene, refs.materialId || null, refs.kpId || null, refs.taskId || null,
+        usage.prompt_tokens || Math.ceil((systemPrompt.length + userPrompt.length) / 2),
+        usage.completion_tokens || Math.ceil(content.length / 2));
+  } catch { /* 日志失败不阻断业务 */ }
+  return content;
 }
 
 function extractJson(text) {
@@ -290,6 +440,7 @@ function materialVo(r) {
     id: String(r.id), title: r.title, track: r.track, trackName: trackName(r.track),
     category: r.category || '', format: r.format, grade: r.grade, status: r.status, parseNote: r.parse_note,
     uploaderId: r.uploader_id, uploaderName: r.uploader_name,
+    visibility: r.visibility || 'PUBLIC', orgId: String(r.org_id || 0),
     textPreview: (r.text_content || '').slice(0, 200), createdAt: r.created_at, updatedAt: r.updated_at,
   };
 }
@@ -373,7 +524,7 @@ async function runParseTask(materialId, text) {
   let n = 0;
   try {
     for (let i = 0; i < chunks.length; i++) {
-      const content = await callAI(PARSE_SYSTEM, `赛道资料内容（第${i + 1}/${chunks.length}段）：\n${chunks[i]}`);
+      const content = await callAI(PARSE_SYSTEM, `赛道资料内容（第${i + 1}/${chunks.length}段）：\n${chunks[i]}`, 'parse_material', { materialId });
       const list = extractJson(content);
       const arr = Array.isArray(list) ? list : [];
       for (const kp of arr.slice(0, 200)) {
@@ -404,7 +555,7 @@ function runGenQuestionsTask(track, level, count, category = '') {
     .all(...(category ? [track, track, category, category] : [track, track]));
   const material = kps.length ? kps.map(k => `- ${k.title}：${k.content}`).join('\n') : `赛道「${trackName(track)}」基础常识`;
   const diffMap = { 1: 'easy 为主', 2: 'easy/medium 均衡', 3: 'medium/hard 为主' };
-  return callAI(GENQ_SYSTEM, `目标等级：${level}级（${diffMap[level] || '均衡'}）\n生成 ${count} 道题\n知识点依据：\n${material}`)
+  return callAI(GENQ_SYSTEM, `目标等级：${level}级（${diffMap[level] || '均衡'}）\n生成 ${count} 道题\n知识点依据：\n${material}`, 'gen_questions', { taskId: null })
     .then(content => {
       const list = extractJson(content);
       const arr = Array.isArray(list) ? list : [];
@@ -426,6 +577,71 @@ function runGenQuestionsTask(track, level, count, category = '') {
       }
       return n;
     });
+}
+
+// ==================== P6-B 全覆盖出题引擎（v25.0.22） ====================
+// 设计：把类目下【全部】已审核知识点按 8 个/组遍历，逐组调 AI 出题；
+//       已有题目的知识点直接跳过（原则2 AI 永久缓存：一次生成永久复用，重复生成=0 消耗）
+//       题目逐条绑定 knowledge_id → 知识点全覆盖可追溯，任务进度实时可查
+
+const FULLGEN_GROUP_SIZE = 8;
+
+async function runFullGenTask(taskId) {
+  const d = getDb();
+  const task = d.prepare('SELECT * FROM gen_tasks WHERE id=?').get(taskId);
+  if (!task) return;
+  const bump = d.prepare(`UPDATE gen_tasks SET done_groups=done_groups+1, covered_kp=covered_kp+?, created_q=created_q+?, skipped_cached=skipped_cached+?, updated_at=datetime('now','localtime') WHERE id=?`);
+  const finish = d.prepare(`UPDATE gen_tasks SET status=?, error=?, updated_at=datetime('now','localtime') WHERE id=?`);
+  try {
+    const all = d.prepare(`SELECT * FROM knowledge_points WHERE status='approved'
+        AND (track=? OR material_id IN (SELECT id FROM materials WHERE track=?))
+        ${task.category ? 'AND (category=? OR material_id IN (SELECT id FROM materials WHERE category=?))' : ''}
+        ORDER BY id`).all(...(task.category ? [task.track, task.track, task.category, task.category] : [task.track, task.track]));
+    // 缓存查重：已有题目（未驳回）的知识点不重复生成
+    const hasQ = new Set(d.prepare(`SELECT DISTINCT knowledge_id FROM questions WHERE knowledge_id IS NOT NULL AND status != 'rejected'`).all().map(r => r.knowledge_id));
+    const pending = all.filter(k => !hasQ.has(k.id));
+    const groups = [];
+    for (let i = 0; i < pending.length; i += FULLGEN_GROUP_SIZE) groups.push(pending.slice(i, i + FULLGEN_GROUP_SIZE));
+    d.prepare('UPDATE gen_tasks SET total_groups=?, total_kp=?, skipped_cached=? WHERE id=?')
+      .run(groups.length, all.length, all.length - pending.length, taskId);
+    if (groups.length === 0) { finish.run('done', '全部知识点已有题目（缓存命中，0 次 AI 调用）', taskId); return; }
+
+    const insert = d.prepare('INSERT INTO questions (knowledge_id, track, type, stem, options, answer, keywords, analysis, difficulty, status, category) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
+    const diffMap = { 1: 'easy 为主', 2: 'easy/medium 均衡', 3: 'medium/hard 为主' };
+    for (let gi = 0; gi < groups.length; gi++) {
+      const group = groups[gi];
+      const kpText = group.map((k, idx) => `${gi + 1}.${idx + 1} [${k.title}] ${k.content}`).join('\n');
+      const per = Math.max(4, Math.min(10, group.length + 2));
+      const content = await callAI(
+        GENQ_SYSTEM,
+        `目标等级：${task.level}级（${diffMap[task.level] || '均衡'}）\n逐个知识点出题：以下 ${group.length} 个知识点，每个知识点至少 1 道题，共生成 ${per} 道题，题目顺序与知识点顺序对应\n知识点依据：\n${kpText}`,
+        'gen_full', { taskId });
+      const list = extractJson(content);
+      const arr = Array.isArray(list) ? list : [];
+      let created = 0;
+      for (let qi = 0; qi < arr.length; qi++) {
+        const q = arr[qi];
+        if (!q || !q.stem || !q.type) continue;
+        if (!['single', 'multi', 'judge', 'fill', 'qa', 'case'].includes(q.type)) continue;
+        const kp = group[Math.min(qi, group.length - 1)];
+        insert.run(kp.id, task.track, q.type, String(q.stem).slice(0, 1000),
+          JSON.stringify(Array.isArray(q.options) ? q.options.slice(0, 6).map(o => String(o).slice(0, 200)) : []),
+          String(q.answer ?? '').slice(0, 2000),
+          JSON.stringify(Array.isArray(q.keywords) ? q.keywords.slice(0, 10).map(k => String(k).slice(0, 30)) : []),
+          String(q.analysis || '').slice(0, 600),
+          ['easy', 'medium', 'hard'].includes(q.difficulty) ? q.difficulty : 'easy', 'pending',
+          task.category || kp.category || '');
+        created++;
+      }
+      const covered = created > 0 ? group.length : 0;
+      bump.run(covered, created, 0, taskId);
+    }
+    finish.run('done', '', taskId);
+    console.log(`[Academy] 全覆盖出题任务#${taskId} 完成`);
+  } catch (err) {
+    finish.run('failed', String(err.message || err).slice(0, 300), taskId);
+    console.error(`[Academy] 全覆盖出题任务#${taskId} 失败:`, err.message);
+  }
 }
 
 // ==================== 判分 ====================
@@ -552,14 +768,32 @@ function createRouter() {
   // ---------- P6-A 资料 ----------
   router.post('/materials', authRequired, (req, res) => {
     try {
-      const { title, track, category = '', format = 'text', textContent = '', fileBase64 = '', fileName = '', grade = 'C' } = req.body;
+      const { title, track, category = '', format = 'text', textContent = '', fileBase64 = '', fileName = '', grade = 'C', visibility = 'PUBLIC', orgId = 0 } = req.body;
       if (!title || !String(title).trim()) return res.status(400).json({ success: false, error: '请填写资料标题' });
       const t = normTrack(track);
       if (!t) return res.status(400).json({ success: false, error: '请选择有效板块' });
+      // v25.0.22：仅接受记事本类文件（txt/md/text/markdown），PDF/Word/图片一律拒绝（识别稳定、成本可控）
+      const ALLOWED_EXT = ['.txt', '.md', '.text', '.markdown'];
+      if (fileName) {
+        const ext = String(fileName).toLowerCase().match(/\.[a-z0-9]+$/);
+        if (!ext || !ALLOWED_EXT.includes(ext[0])) {
+          return res.status(400).json({ success: false, error: `仅支持记事本类文件（${ALLOWED_EXT.join(' / ')}）。PDF/Word/图片请先另存为 txt 再上传` });
+        }
+      }
       let cat = String(category).trim().slice(0, 40);
       if (cat) {
         const ok = getDb().prepare(`SELECT id FROM categories WHERE track=? AND name=? AND status='active'`).get(t, cat);
         if (!ok) return res.status(400).json({ success: false, error: '类目不存在，请先在类目管理中创建' });
+      }
+      // P6-I 原则4：三层权限校验（ORG 需为该机构管理员/成员）
+      const vis = ['PUBLIC', 'PRIVATE', 'ORG'].includes(visibility) ? visibility : 'PUBLIC';
+      let orgIdVal = 0;
+      if (vis === 'ORG') {
+        const d = getDb();
+        const org = d.prepare(`SELECT o.* FROM organizations o JOIN org_members m ON m.org_id=o.id WHERE o.id=? AND o.status='active' AND m.user_id=? AND m.role IN ('owner','admin')`)
+          .get(parseInt(orgId, 10) || 0, String(req.user.userId));
+        if (!org) return res.status(403).json({ success: false, error: '无权上传机构资料：需为机构管理员' });
+        orgIdVal = org.id;
       }
       let filePath = '';
       if (fileBase64) {
@@ -569,9 +803,9 @@ function createRouter() {
         fs.writeFileSync(filePath, Buffer.from(fileBase64.replace(/^data:[^;]+;base64,/, ''), 'base64'));
       }
       if (!textContent && !filePath) return res.status(400).json({ success: false, error: '请提供文本内容或上传文件' });
-      const result = getDb().prepare('INSERT INTO materials (title, track, category, format, file_path, text_content, grade, status, uploader_id, uploader_name) VALUES (?,?,?,?,?,?,?,?,?,?)')
-        .run(String(title).trim().slice(0, 100), t, cat, format, filePath, String(textContent).slice(0, 200000),
-          ['S', 'A', 'B', 'C'].includes(grade) ? grade : 'C', 'pending', String(req.user.userId), req.user.nickname || `用户${req.user.userId}`);
+      const result = getDb().prepare('INSERT INTO materials (title, track, category, format, file_path, text_content, grade, status, uploader_id, uploader_name, visibility, org_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)')
+        .run(String(title).trim().slice(0, 100), t, cat, 'text', filePath, String(textContent).slice(0, 200000),
+          ['S', 'A', 'B', 'C'].includes(grade) ? grade : 'C', 'pending', String(req.user.userId), req.user.nickname || `用户${req.user.userId}`, vis, orgIdVal);
       res.json({ success: true, materialId: String(result.lastInsertRowid), message: '资料已提交，等待解析与审核' });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
@@ -594,7 +828,17 @@ function createRouter() {
       if (category) { sql += ' AND category = ?'; params.push(category); }
       if (mine === '1') { sql += ' AND uploader_id = ?'; params.push(me); }
       else if (isAdmin(req)) { if (status) { sql += ' AND status = ?'; params.push(status); } }
-      else { sql += ` AND (status = 'approved' OR uploader_id = ?)`; params.push(me); }
+      else {
+        // P6-I 原则4：PUBLIC 已审核 + 自己的私有 + 本机构资料
+        const orgs = myOrgIds(req);
+        sql += ` AND (status = 'approved' OR uploader_id = ?) AND (visibility = 'PUBLIC' OR uploader_id = ?`;
+        params.push(me, me);
+        if (orgs.length) {
+          sql += ` OR (visibility = 'ORG' AND org_id IN (${orgs.map(() => '?').join(',')}))`;
+          params.push(...orgs);
+        }
+        sql += ')';
+      }
       sql += ' ORDER BY id DESC LIMIT 200';
       res.json({ success: true, materials: d.prepare(sql).all(...params).map(materialVo) });
     } catch (e) {
@@ -707,6 +951,37 @@ function createRouter() {
     }
   });
 
+  // v25.0.22 P6-B：全覆盖出题（遍历类目全部知识点，分组出题，缓存命中不重复生成）
+  router.post('/questions/generate-full', adminRequired, (req, res) => {
+    try {
+      const { track = 'zhongyi', category = '', level = 1 } = req.body;
+      const t = normTrack(track);
+      if (!t) return res.status(400).json({ success: false, error: '请选择有效板块' });
+      const info = getDb().prepare('INSERT INTO gen_tasks (track, category, level, status) VALUES (?,?,?,?)')
+        .run(t, String(category).trim(), Math.min(3, Math.max(1, parseInt(level, 10) || 1)), 'running');
+      runFullGenTask(Number(info.lastInsertRowid));
+      res.json({ success: true, taskId: String(info.lastInsertRowid), message: '全覆盖出题任务已启动，可轮询进度' });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  router.get('/gen-tasks', adminRequired, (req, res) => {
+    try {
+      const rows = getDb().prepare('SELECT * FROM gen_tasks ORDER BY id DESC LIMIT 50').all();
+      res.json({
+        success: true, tasks: rows.map(t => ({
+          id: String(t.id), track: t.track, category: t.category, level: t.level,
+          totalGroups: t.total_groups, doneGroups: t.done_groups, totalKp: t.total_kp,
+          coveredKp: t.covered_kp, createdQ: t.created_q, skippedCached: t.skipped_cached,
+          status: t.status, error: t.error, createdAt: t.created_at, updatedAt: t.updated_at,
+        })),
+      });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
   router.get('/questions', authRequired, (req, res) => {
     try {
       const d = getDb();
@@ -754,7 +1029,7 @@ function createRouter() {
       const { track, level: levelStr } = req.body;
       if (!TRACKS[track]) return res.status(400).json({ success: false, error: '请选择有效赛道' });
       const level = Math.min(3, Math.max(1, parseInt(levelStr, 10) || 1));
-      const cfg = EXAM_CONFIG[level];
+      const cfg = getExamConfig()[level];
       const picked = [];
       const pickBy = (type, difficulty, n) => {
         if (n <= 0) return;
@@ -811,7 +1086,7 @@ function createRouter() {
           score, full: g.full, ratio: Math.round(g.ratio * 100) / 100,
         });
       }
-      const passed = got >= EXAM_CONFIG[exam.level].passScore;
+      const passed = got >= getExamConfig()[exam.level].passScore;
       d.prepare('UPDATE exams SET answers=?, score=?, detail=?, passed=?, submitted_at=datetime(\'now\',\'localtime\') WHERE id=?')
         .run(JSON.stringify(answers), got, JSON.stringify(detail), passed ? 1 : 0, exam.id);
 
@@ -828,7 +1103,7 @@ function createRouter() {
           .run(certNo, String(req.user.userId), req.user.nickname || `用户${req.user.userId}`, exam.track, exam.level, track.titles[exam.level] || '', exam.id, expireAt);
         certificate = certVo(d.prepare('SELECT * FROM certificates WHERE id = ?').get(info.lastInsertRowid));
       }
-      res.json({ success: true, passed, score: got, totalScore: total, passScore: EXAM_CONFIG[exam.level].passScore, detail, certificate });
+      res.json({ success: true, passed, score: got, totalScore: total, passScore: getExamConfig()[exam.level].passScore, detail, certificate });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
     }
@@ -915,6 +1190,252 @@ function createRouter() {
           track: r.track, stem: r.stem, options: JSON.parse(r.options || '[]'), answer: r.answer,
           analysis: r.analysis, createdAt: r.created_at,
         })),
+      });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // ---------- P6-I 机构学习空间 SaaS（v25.0.22） ----------
+  function orgVo(o, extra = {}) {
+    return {
+      id: String(o.id), name: o.name, type: o.type, logo: o.logo, intro: o.intro, notice: o.notice,
+      ownerId: o.owner_id, status: o.status, tier: o.tier, memberLimit: o.member_limit,
+      expireAt: o.expire_at, createdAt: o.created_at, ...extra,
+    };
+  }
+
+  function myOrgRole(d, orgId, userId) {
+    const m = d.prepare('SELECT role FROM org_members WHERE org_id=? AND user_id=?').get(orgId, String(userId));
+    return m ? m.role : '';
+  }
+
+  // 机构入驻申请
+  router.post('/orgs/apply', authRequired, (req, res) => {
+    try {
+      const { name, type = 'commercial', intro = '', logo = '' } = req.body;
+      if (!name || !String(name).trim()) return res.status(400).json({ success: false, error: '请填写机构名称' });
+      if (!['public', 'commercial'].includes(type)) return res.status(400).json({ success: false, error: '机构类型无效' });
+      const d = getDb();
+      const dup = d.prepare(`SELECT id FROM organizations WHERE name=? AND status != 'rejected'`).get(String(name).trim());
+      if (dup) return res.status(400).json({ success: false, error: '该机构名称已存在' });
+      const tiers = JSON.parse((d.prepare(`SELECT value_json FROM loc_configs WHERE key='org_tiers'`).get() || { value_json: '[]' }).value_json);
+      const tier = type === 'public' ? 'free' : 'biz50';
+      const limit = (tiers.find(x => x.key === tier) || {}).memberLimit || 50;
+      const info = d.prepare('INSERT INTO organizations (name, type, logo, intro, owner_id, status, tier, member_limit) VALUES (?,?,?,?,?,?,?,?)')
+        .run(String(name).trim().slice(0, 50), type, String(logo).slice(0, 500), String(intro).slice(0, 1000),
+          String(req.user.userId), 'pending', tier, limit);
+      d.prepare('INSERT INTO org_members (org_id, user_id, role) VALUES (?,?,?)').run(Number(info.lastInsertRowid), String(req.user.userId), 'owner');
+      res.json({ success: true, orgId: String(info.lastInsertRowid), message: '入驻申请已提交，等待平台审核' });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 平台审核机构（通过/驳回 + 档位配置）
+  router.post('/orgs/:id/review', adminRequired, (req, res) => {
+    try {
+      const { action, tier = '' } = req.body;
+      if (!['approve', 'reject'].includes(action)) return res.status(400).json({ success: false, error: '未知操作' });
+      const d = getDb();
+      const org = d.prepare('SELECT * FROM organizations WHERE id=?').get(parseInt(req.params.id, 10));
+      if (!org) return res.status(404).json({ success: false, error: '机构不存在' });
+      let memberLimit = org.member_limit;
+      if (action === 'approve' && tier) {
+        const tiers = JSON.parse((d.prepare(`SELECT value_json FROM loc_configs WHERE key='org_tiers'`).get() || { value_json: '[]' }).value_json);
+        const t = tiers.find(x => x.key === tier);
+        if (t) memberLimit = t.memberLimit;
+      }
+      d.prepare(`UPDATE organizations SET status=?, tier=?, member_limit=? WHERE id=?`)
+        .run(action === 'approve' ? 'active' : 'rejected', tier || org.tier, memberLimit, org.id);
+      d.prepare('INSERT INTO loc_op_logs (admin_id, action, target, detail) VALUES (?,?,?,?)')
+        .run('admin', `org_${action}`, `org#${org.id}`, `${org.name} tier=${tier || org.tier}`);
+      res.json({ success: true });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 我管理的机构 / 公开机构列表（管理员 ?all=1 可见全部含待审核，供 LOC 机构审核）
+  router.get('/orgs', authRequired, (req, res) => {
+    try {
+      const d = getDb();
+      const { mine = '', all = '' } = req.query;
+      const me = String(req.user.userId);
+      let rows;
+      if (mine === '1') {
+        rows = d.prepare(`SELECT o.*, (SELECT COUNT(*) FROM org_members m WHERE m.org_id=o.id) member_count FROM organizations o JOIN org_members m ON m.org_id=o.id WHERE m.user_id=? AND m.role IN ('owner','admin') ORDER BY o.id DESC`).all(me);
+      } else if (all === '1' && isAdmin(req)) {
+        rows = d.prepare(`SELECT o.*, (SELECT COUNT(*) FROM org_members m WHERE m.org_id=o.id) member_count FROM organizations o ORDER BY o.id DESC LIMIT 200`).all();
+      } else {
+        rows = d.prepare(`SELECT o.*, (SELECT COUNT(*) FROM org_members m WHERE m.org_id=o.id) member_count FROM organizations o WHERE o.status='active' ORDER BY o.id DESC LIMIT 50`).all();
+      }
+      res.json({ success: true, orgs: rows.map(o => orgVo(o, { memberCount: o.member_count })) });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 机构详情（成员可见完整信息）
+  router.get('/orgs/:id', authRequired, (req, res) => {
+    try {
+      const d = getDb();
+      const org = d.prepare('SELECT * FROM organizations WHERE id=?').get(parseInt(req.params.id, 10));
+      if (!org) return res.status(404).json({ success: false, error: '机构不存在' });
+      const role = myOrgRole(d, org.id, req.user.userId);
+      if (org.status !== 'active' && !role && !isAdmin(req)) return res.status(403).json({ success: false, error: '机构未开放' });
+      const memberCount = d.prepare('SELECT COUNT(*) c FROM org_members WHERE org_id=?').get(org.id).c;
+      const materialCount = d.prepare(`SELECT COUNT(*) c FROM materials WHERE org_id=? AND visibility='ORG'`).get(org.id).c;
+      res.json({ success: true, org: orgVo(org, { memberCount, materialCount, myRole: role || (isAdmin(req) ? 'admin' : '') }) });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 生成邀请码（机构管理员）
+  router.post('/orgs/:id/invite-code', authRequired, (req, res) => {
+    try {
+      const d = getDb();
+      const orgId = parseInt(req.params.id, 10);
+      const role = myOrgRole(d, orgId, req.user.userId);
+      if (!['owner', 'admin'].includes(role) && !isAdmin(req)) return res.status(403).json({ success: false, error: '需要机构管理员权限' });
+      const code = `YD${orgId}${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+      d.prepare('INSERT INTO org_invite_codes (org_id, code) VALUES (?,?)').run(orgId, code);
+      res.json({ success: true, code });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 凭邀请码加入机构
+  router.post('/orgs/join', authRequired, (req, res) => {
+    try {
+      const { code = '' } = req.body;
+      const d = getDb();
+      const inv = d.prepare(`SELECT i.* FROM org_invite_codes i JOIN organizations o ON o.id=i.org_id WHERE i.code=? AND o.status='active'`).get(String(code).trim().toUpperCase());
+      if (!inv) return res.status(400).json({ success: false, error: '邀请码无效' });
+      const org = d.prepare('SELECT * FROM organizations WHERE id=?').get(inv.org_id);
+      const count = d.prepare('SELECT COUNT(*) c FROM org_members WHERE org_id=?').get(inv.org_id).c;
+      if (count >= org.member_limit) return res.status(400).json({ success: false, error: '机构成员已满' });
+      d.prepare('INSERT OR IGNORE INTO org_members (org_id, user_id, role) VALUES (?,?,?)').run(inv.org_id, String(req.user.userId), 'member');
+      d.prepare('UPDATE org_invite_codes SET uses=uses+1 WHERE id=?').run(inv.id);
+      res.json({ success: true, orgId: String(inv.org_id), message: `已加入「${org.name}」` });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 机构成员列表（管理员）
+  router.get('/orgs/:id/members', authRequired, (req, res) => {
+    try {
+      const d = getDb();
+      const orgId = parseInt(req.params.id, 10);
+      const role = myOrgRole(d, orgId, req.user.userId);
+      if (!['owner', 'admin'].includes(role) && !isAdmin(req)) return res.status(403).json({ success: false, error: '需要机构管理员权限' });
+      const rows = d.prepare(`SELECT m.*, (SELECT COUNT(*) FROM study_progress p WHERE p.user_id=m.user_id) checkins,
+        (SELECT COUNT(*) FROM exams e WHERE e.user_id=m.user_id AND e.passed=1) passes FROM org_members m WHERE m.org_id=? ORDER BY m.joined_at DESC`).all(orgId);
+      res.json({ success: true, members: rows.map(m => ({ userId: m.user_id, role: m.role, joinedAt: m.joined_at, checkins: m.checkins, passes: m.passes })) });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 机构内部排行榜（学习时长/考试/打卡）
+  router.get('/orgs/:id/ranking', authRequired, (req, res) => {
+    try {
+      const d = getDb();
+      const orgId = parseInt(req.params.id, 10);
+      const role = myOrgRole(d, orgId, req.user.userId);
+      if (!role && !isAdmin(req)) return res.status(403).json({ success: false, error: '仅机构成员可见' });
+      const rows = d.prepare(`SELECT m.user_id,
+        (SELECT COUNT(*) FROM study_progress p WHERE p.user_id=m.user_id) checkins,
+        (SELECT COALESCE(AVG(e.score),0) FROM exams e WHERE e.user_id=m.user_id) avgScore,
+        (SELECT COUNT(*) FROM exams e WHERE e.user_id=m.user_id AND e.passed=1) passes
+        FROM org_members m WHERE m.org_id=? ORDER BY checkins DESC, avgScore DESC LIMIT 100`).all(orgId);
+      res.json({ success: true, ranking: rows });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 机构收益明细（管理员）
+  router.get('/orgs/:id/earnings', authRequired, (req, res) => {
+    try {
+      const d = getDb();
+      const orgId = parseInt(req.params.id, 10);
+      const role = myOrgRole(d, orgId, req.user.userId);
+      if (!['owner', 'admin'].includes(role) && !isAdmin(req)) return res.status(403).json({ success: false, error: '需要机构管理员权限' });
+      const rows = d.prepare('SELECT * FROM org_earnings WHERE org_id=? ORDER BY id DESC LIMIT 200').all(orgId);
+      const total = d.prepare('SELECT COALESCE(SUM(amount),0) s FROM org_earnings WHERE org_id=?').get(orgId).s;
+      res.json({ success: true, total, earnings: rows.map(e => ({ id: String(e.id), userId: e.user_id, source: e.source, amount: e.amount, note: e.note, createdAt: e.created_at })) });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // ---------- P6-J 学习运营中心 LOC（v25.0.22，配置实时生效+操作留痕） ----------
+  const LOC_KEYS = ['exam_config', 'org_tiers', 'commission_rules', 'points_rules', 'learning_paths', 'track_titles'];
+
+  router.get('/loc/config', adminRequired, (req, res) => {
+    try {
+      const rows = getDb().prepare('SELECT * FROM loc_configs').all();
+      const cfg = {};
+      for (const r of rows) { try { cfg[r.key] = JSON.parse(r.value_json); } catch { cfg[r.key] = r.value_json; } }
+      if (!cfg.exam_config) cfg.exam_config = EXAM_CONFIG_DEFAULT;
+      res.json({ success: true, config: cfg, editableKeys: LOC_KEYS });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  router.put('/loc/config', adminRequired, (req, res) => {
+    try {
+      const { key, value } = req.body;
+      if (!LOC_KEYS.includes(key)) return res.status(400).json({ success: false, error: `不支持的配置项：${key}` });
+      const d = getDb();
+      d.prepare(`INSERT INTO loc_configs (key, value_json, updated_by, updated_at) VALUES (?,?,?,datetime('now','localtime'))
+        ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json, updated_by=excluded.updated_by, updated_at=excluded.updated_at`)
+        .run(key, JSON.stringify(value), String(req.user ? req.user.userId : 'admin'));
+      d.prepare('INSERT INTO loc_op_logs (admin_id, action, target, detail) VALUES (?,?,?,?)')
+        .run(String(req.user ? req.user.userId : 'admin'), 'loc_config_update', key, JSON.stringify(value).slice(0, 500));
+      res.json({ success: true, message: '配置已保存，实时生效' });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  router.get('/loc/op-logs', adminRequired, (req, res) => {
+    try {
+      const rows = getDb().prepare('SELECT * FROM loc_op_logs ORDER BY id DESC LIMIT 100').all();
+      res.json({ success: true, logs: rows.map(l => ({ id: String(l.id), adminId: l.admin_id, action: l.action, target: l.target, detail: l.detail, createdAt: l.created_at })) });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 数据看板：学习/题库/考试/AI 调用统计
+  router.get('/loc/dashboard', adminRequired, (req, res) => {
+    try {
+      const d = getDb();
+      const one = (sql, ...p) => d.prepare(sql).get(...p);
+      res.json({
+        success: true,
+        dashboard: {
+          materials: one('SELECT COUNT(*) c FROM materials').c,
+          knowledgePoints: one('SELECT COUNT(*) c FROM knowledge_points').c,
+          questions: one(`SELECT COUNT(*) c FROM questions WHERE status='approved'`).c,
+          exams: one('SELECT COUNT(*) c FROM exams').c,
+          examPasses: one('SELECT COUNT(*) c FROM exams WHERE passed=1').c,
+          certificates: one('SELECT COUNT(*) c FROM certificates').c,
+          checkins: one('SELECT COUNT(*) c FROM study_progress').c,
+          orgs: one(`SELECT COUNT(*) c FROM organizations WHERE status='active'`).c,
+          orgMembers: one('SELECT COUNT(*) c FROM org_members').c,
+          aiCalls: one('SELECT COUNT(*) c FROM ai_call_logs').c,
+          aiTokensIn: one('SELECT COALESCE(SUM(tokens_in),0) s FROM ai_call_logs').s,
+          aiTokensOut: one('SELECT COALESCE(SUM(tokens_out),0) s FROM ai_call_logs').s,
+          aiByScene: d.prepare(`SELECT scene, COUNT(*) calls, SUM(tokens_in+tokens_out) tokens FROM ai_call_logs GROUP BY scene ORDER BY calls DESC`).all(),
+          aiByDay: d.prepare(`SELECT date(created_at) day, COUNT(*) calls FROM ai_call_logs WHERE created_at >= datetime('now','localtime','-30 days') GROUP BY day ORDER BY day`).all(),
+        },
       });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });

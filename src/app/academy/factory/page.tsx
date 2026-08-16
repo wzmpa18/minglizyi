@@ -7,14 +7,19 @@ import {
   uploadMaterial,
   fetchMaterials,
   fetchCategories,
+  fetchOrgs,
   TRACK_LIST,
   GRADE_NAMES,
   type MaterialVo,
   type CategoryVo,
+  type OrgVo,
 } from "@/lib/academyApi";
 import { PageLoginGuard } from "@/components/PageLoginGuard";
 
 const BRAND = "#7B2FBE";
+
+// v25.0.22：仅接受记事本类文件（与后端 ALLOWED_EXT 一致），PDF/Word/图片一律拒绝
+const ALLOWED_EXTS = [".txt", ".md", ".text", ".markdown"];
 
 const STATUS_NAMES: Record<string, { text: string; color: string }> = {
   pending: { text: "待审核", color: "#f59e0b" },
@@ -42,6 +47,22 @@ export default function FactoryPage() {
   const [fileName, setFileName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // P6-I 原则4：三层权限（PUBLIC / PRIVATE / ORG）
+  const [visibility, setVisibility] = useState<"PUBLIC" | "PRIVATE" | "ORG">("PUBLIC");
+  const [myOrgs, setMyOrgs] = useState<OrgVo[]>([]);
+  const [orgId, setOrgId] = useState("");
+
+  useEffect(() => {
+    fetchOrgs(true)
+      .then((r) => {
+        const list = r && r.success && r.orgs ? r.orgs.filter((o) => o.status === "active") : [];
+        setMyOrgs(list);
+        if (list.length === 0 && visibility === "ORG") setVisibility("PUBLIC");
+      })
+      .catch(() => setMyOrgs([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -71,6 +92,12 @@ export default function FactoryPage() {
 
   const handleFile = (f: File | null) => {
     if (!f) return;
+    const ext = `.${(f.name.split(".").pop() || "").toLowerCase()}`;
+    if (!ALLOWED_EXTS.includes(ext)) {
+      showToast(`仅支持记事本类文件（${ALLOWED_EXTS.join(" / ")}），PDF/Word/图片请先另存为 txt`);
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
     if (f.size > 2 * 1024 * 1024) {
       showToast("文件不能超过 2MB");
       return;
@@ -88,6 +115,7 @@ export default function FactoryPage() {
     if (!t) { showToast("请填写资料标题"); return; }
     if (format === "text" && !textContent.trim()) { showToast("请粘贴文本内容"); return; }
     if (format === "file" && !fileBase64) { showToast("请选择文件"); return; }
+    if (visibility === "ORG" && !orgId) { showToast("请选择归属机构"); return; }
     setSubmitting(true);
     try {
       const r = await uploadMaterial({
@@ -98,6 +126,8 @@ export default function FactoryPage() {
         textContent: format === "text" ? textContent.trim() : undefined,
         fileBase64: format === "file" ? fileBase64 : undefined,
         fileName: format === "file" ? fileName : undefined,
+        visibility,
+        orgId: visibility === "ORG" ? orgId : undefined,
       });
       if (r && r.success) {
         showToast("上传成功，等待 AI 解析与人工审核");
@@ -220,7 +250,7 @@ export default function FactoryPage() {
                 <input
                   ref={fileRef}
                   type="file"
-                  accept=".txt,.md,.csv,.json"
+                  accept=".txt,.md,.text,.markdown"
                   onChange={(e) => handleFile(e.target.files?.[0] || null)}
                   className="hidden"
                 />
@@ -229,10 +259,55 @@ export default function FactoryPage() {
                   className="w-full rounded-xl border-2 border-dashed py-6 text-xs text-gray-500"
                   style={{ borderColor: "#e0d4f0" }}
                 >
-                  {fileName ? `已选择：${fileName}` : "点击选择文件（.txt / .md / .csv / .json，≤2MB）"}
+                  {fileName ? `已选择：${fileName}` : "点击选择记事本文件（.txt / .md，≤2MB）"}
                 </button>
+                <p className="mt-2 text-[10px] leading-relaxed text-gray-400">
+                  仅支持 .txt / .md / .text / .markdown 记事本类文件；PDF、Word、图片请先复制文字另存为 txt 再上传
+                </p>
               </div>
             )}
+          </div>
+
+          <div className="rounded-2xl bg-white p-4 shadow-sm">
+            <p className="text-sm font-semibold text-gray-700">可见范围 *</p>
+            <div className="mt-2 flex gap-2">
+              {([
+                ["PUBLIC", "公开"],
+                ["PRIVATE", "仅自己"],
+                ["ORG", "机构内部"],
+              ] as const).map(([k, label]) => {
+                const disabled = k === "ORG" && myOrgs.length === 0;
+                return (
+                  <button
+                    key={k}
+                    disabled={disabled}
+                    onClick={() => setVisibility(k)}
+                    className="flex-1 rounded-xl py-2.5 text-xs font-semibold disabled:opacity-40"
+                    style={{ backgroundColor: visibility === k ? BRAND : "#f5f5f5", color: visibility === k ? "#fff" : "#666" }}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+            {visibility === "ORG" && (
+              <select
+                value={orgId}
+                onChange={(e) => setOrgId(e.target.value)}
+                className="mt-3 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm"
+                style={{ outline: "none" }}
+              >
+                <option value="">选择归属机构</option>
+                {myOrgs.map((o) => (
+                  <option key={o.id} value={o.id}>{o.name}</option>
+                ))}
+              </select>
+            )}
+            <p className="mt-2 text-[10px] leading-relaxed text-gray-400">
+              {visibility === "PUBLIC" && "公开资料：审核通过后进入公共知识库，全平台可见"}
+              {visibility === "PRIVATE" && "私有资料：仅自己可见可用，AI 解析内容独立缓存"}
+              {visibility === "ORG" && "机构资料：仅机构内部成员可见，归属机构独立缓存（需为机构管理员）"}
+            </p>
           </div>
 
           <div className="rounded-xl bg-amber-50 px-3 py-2.5">
