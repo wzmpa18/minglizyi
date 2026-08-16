@@ -23,8 +23,10 @@ declare global { interface Window { __zhongyiBackHandled?: boolean; } }
 export default function ZhongyiLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const isHome = pathname === "/zhongyi";
-  const isDetailPage = DETAIL_PATHS.some(p => pathname.startsWith(p) && pathname !== p);
+  // v25.0.16: trailingSlash:true 下 pathname 带尾斜杠("/zhongyi/")，需规范化后再比较
+  const normPathname = pathname !== "/" && pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
+  const isHome = normPathname === "/zhongyi";
+  const isDetailPage = DETAIL_PATHS.some(p => normPathname.startsWith(p) && normPathname !== p);
 
   // 返回处理：详情页先派发事件让子页面处理，其他用 router.back()
   const handleBack = useCallback(() => {
@@ -100,7 +102,7 @@ export default function ZhongyiLayout({ children }: { children: React.ReactNode 
 
         <nav className="hidden sm:flex items-center gap-1">
           {topNavLinks.map((link) => {
-            const isActive = link.href === "/zhongyi" ? pathname === "/zhongyi" : pathname.startsWith(link.href);
+            const isActive = link.href === "/zhongyi" ? normPathname === "/zhongyi" : normPathname.startsWith(link.href);
             return (
               <Link key={link.href} href={link.href}
                 className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200"

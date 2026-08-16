@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
   generateBuildId: () => {
     const now = new Date();
     const d = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
-    return `v25.0.15_D${d}`;
+    return `v25.0.16_D${d}`;
   },
 };
 

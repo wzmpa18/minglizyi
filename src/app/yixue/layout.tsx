@@ -23,8 +23,11 @@ declare global { interface Window { __yixueBackHandled?: boolean; } }
 export default function YixueLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const isHome = pathname === "/yixue";
-  const isToolPage = TOOL_PATHS.some(p => pathname.startsWith(p));
+  // v25.0.16: trailingSlash:true 下 pathname 带尾斜杠("/yixue/")，全等比较恒为 false，
+  // 列表页返回键退化为 router.back()，从工具页返回列表后再按返回会跳回工具页
+  const normPathname = pathname !== "/" && pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
+  const isHome = normPathname === "/yixue";
+  const isToolPage = TOOL_PATHS.some(p => normPathname.startsWith(p));
 
   const [pageTitle, setPageTitle] = useState("言道易学");
   useEffect(() => {
