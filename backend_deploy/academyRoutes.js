@@ -497,9 +497,10 @@ const GENQ_SYSTEM = `你是国学考试出题引擎。基于给定知识点生�
 [{"type":"single|multi|judge|fill|qa|case","stem":"题干","options":["A选项","B选项","C选项","D选项"],"answer":"答案(single填选项序号0-3;multi填序号数组字符串如\"0,2\";judge填对|错;fill填标准答案文本;qa/case填参考答案要点)","keywords":["评分关键词"],"analysis":"解析(100字内)","difficulty":"easy|medium|hard"}]
 single/multi 必须给 4 个选项；judge 无需 options（输出 []）；qa/case options 输出 []。只输出 JSON。`;
 
-// v25.0.21：全文分段解析（每段约 11k 字，最多 14 段 ≈ 15 万字，保证长篇典籍全覆盖）
+// v25.0.21：全文分段解析（每段约 11k 字）；v25.0.23：上限 14→20 段（22 万字），
+// 覆盖人纪系列单部 18 万字典籍，杜绝神农本草经式的尾部截断（全覆盖出题前提）
 const PARSE_CHUNK = 11000;
-const PARSE_MAX_CHUNKS = 14;
+const PARSE_MAX_CHUNKS = 20;
 
 function splitForParse(text) {
   const chunks = [];
