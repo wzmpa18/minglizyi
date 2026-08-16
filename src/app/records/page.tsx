@@ -6,6 +6,7 @@ import { useToolBack } from "@/lib/useToolBack";
 import { fetchRecordsFromBackend, deleteRecordFromBackend, isLoggedIn } from "@/lib/recordSync";
 import { useRouter } from "next/navigation";
 
+import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
 
 interface BackendRecord {
@@ -93,6 +94,7 @@ export default function RecordsPage() {
 
   return (
     <div style={{ maxWidth: "420px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f5f5f5", display: "flex", flexDirection: "column" }}>
+  <PageLoginGuard />
       <BrandHeader title="我的排盘记录" showBack />
 
       {/* 筛选标签 */}

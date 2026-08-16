@@ -72,6 +72,8 @@ export interface Post {
   liked: boolean;
   isAd: boolean;
   createdAt: string;
+  /** P1 收敛：动态一级标签（八字/奇门/六爻/紫微/风水/中医/感情/事业/财运/生活/国学杂谈） */
+  tags?: string[];
 }
 
 export interface Comment {

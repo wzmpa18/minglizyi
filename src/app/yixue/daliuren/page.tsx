@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { leaveToolPage, isManagedBackNavigation } from "@/lib/leaveToolPage";
 import {
   solarToBazi,
   GAN,
@@ -27,6 +29,7 @@ import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipan
 import { useToolBack } from "@/lib/useToolBack";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { ShareButton } from "@/components/ShareButton";
+import { PostToSquareButton } from "@/components/PostToSquareButton";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
@@ -387,6 +390,8 @@ function InputPanel({
 export default function DaLiuRenPage() {
   const pageKey = "yixue_daliuren"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   const [showForm, setShowForm] = useState(true);
+  // P1-REOPEN: 返回键关闭排盘弹窗且无结果时直接返回工具列表
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<"panmian" | "fuzhu" | "shensha" | "pingzhu" | "dangan">("panmian");
   const [data, setData] = useState<DaLiuRenResult | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
@@ -527,8 +532,8 @@ export default function DaLiuRenPage() {
   return (
     <div className="bg-[#ededed] min-h-screen flex justify-center">
       <div className="w-full" style={{ maxWidth: "420px", paddingBottom: "10px" }}>
-      {/* 输入面板（点击编辑按钮展开） */}
-      <InputPanel show={showForm} showTitle={false} onClose={() => setShowForm(false)} onSubmit={handleSubmit} selectedClient={selectedClient} onClientSelect={setSelectedClient} initialValues={prefillParams} />
+      {/* 输入面板（点击编辑按钮展开）；P1-REOPEN: 返回键关闭且无结果时直接返回工具列表 */}
+      <InputPanel show={showForm} showTitle={false} onClose={(reason?: "back") => { setShowForm(false); if (reason === "back" && !data && !isManagedBackNavigation()) leaveToolPage(router); }} onSubmit={handleSubmit} selectedClient={selectedClient} onClientSelect={setSelectedClient} initialValues={prefillParams} />
 
       {/* ====== 1. 顶部信息栏 ====== */}
       <div style={{ display: "flex", padding: "6px 10px", borderBottom: "1px solid #eee", backgroundColor: "#fff" }}>
@@ -1152,6 +1157,9 @@ export default function DaLiuRenPage() {
           variant="block"
           label="分享排盘结果"
         />
+        <div className="mt-2">
+          <PostToSquareButton tool="大六壬" summary="大六壬课式已排出，四课三传格局清晰" />
+        </div>
       </div>
       </div>
     </div>

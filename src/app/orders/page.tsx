@@ -5,6 +5,7 @@ import { BrandHeader } from "@/components/shared";
 import { useToolBack } from "@/lib/useToolBack";
 import { getOrders, OrderRecord } from "@/lib/membershipStore";
 
+import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
 
 const STATUS_MAP: Record<OrderRecord["status"], { label: string; color: string; bg: string }> = {
@@ -34,6 +35,7 @@ export default function OrdersPage() {
 
   return (
     <div style={{ maxWidth: "420px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f5f5f5", display: "flex", flexDirection: "column" }}>
+  <PageLoginGuard />
       <BrandHeader title="我的订单" showBack />
 
       <div style={{ flex: 1, overflowY: "auto", padding: "12px" }}>

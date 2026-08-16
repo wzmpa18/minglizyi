@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { BrandHeader } from "@/components/shared";
 import { createGroup, type GroupInfo } from "@/lib/socialStore";
 
+import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
 
 const GROUP_LEVELS = [
@@ -98,6 +99,7 @@ function NormalCreate({
       className="flex min-h-screen flex-col bg-[#ededed]"
       style={{ maxWidth: "420px", margin: "0 auto" }}
     >
+  <PageLoginGuard />
       <BrandHeader title="普通建群" showBack />
 
       <div className="flex-1 overflow-y-auto px-3 pt-3 space-y-4">

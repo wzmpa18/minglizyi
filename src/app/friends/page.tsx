@@ -33,6 +33,8 @@ import {
 import { getCurrentUserId, getLoginState } from "@/lib/auth";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
 // ==================== 常量 ====================
 const BRAND = "#7B2FBE";
@@ -78,6 +80,9 @@ function ConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  useBodyScrollLock(true);
+  usePopupBackHandler(onCancel, true);
+
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center"
@@ -127,6 +132,9 @@ function NoteEditDialog({
 }) {
   const [note, setNote] = useState(initialNote);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useBodyScrollLock(true);
+  usePopupBackHandler(onCancel, true);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -211,6 +219,8 @@ function ActionMenu({
 }) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ left: 0, top: 0 });
+
+  usePopupBackHandler(onClose, true);
 
   useEffect(() => {
     if (menuRef.current) {
@@ -318,6 +328,13 @@ function AddFriendView({
   const [requestingUser, setRequestingUser] = useState<UserDirectoryEntry | null>(null);
   const [requestMessage, setRequestMessage] = useState("");
   const [requestedIds, setRequestedIds] = useState<Set<string>>(new Set());
+
+  // P1 弹窗规范：好友申请验证弹窗（内联渲染）滚动锁 + 返回键优先关闭弹窗
+  useBodyScrollLock(!!requestingUser);
+  usePopupBackHandler(() => {
+    setRequestingUser(null);
+    setRequestMessage("");
+  }, !!requestingUser);
 
   // 扫码模式状态
   const [manualId, setManualId] = useState("");
@@ -1469,6 +1486,9 @@ export default function FriendsPage() {
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // 长按是否已触发（用于区分点击与长按，避免长按弹出菜单后误触发跳转）
   const longPressTriggered = useRef(false);
+
+  // P1 弹窗规范：添加菜单展开层返回键优先关闭
+  usePopupBackHandler(() => setShowAddMenu(false), showAddMenu);
 
   // ==================== 登录守卫（进入页面时校验） ====================
   useEffect(() => {

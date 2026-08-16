@@ -25,6 +25,7 @@ import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipan
 import { useToolBack } from "@/lib/useToolBack";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { ShareButton } from "@/components/ShareButton";
+import { PostToSquareButton } from "@/components/PostToSquareButton";
 
 // ============================================================================
 // 解读类型标签颜色
@@ -807,6 +808,9 @@ export default function HehunPage() {
                 variant="block"
                 label="分享合婚结果"
               />
+        <div className="mt-2">
+          <PostToSquareButton tool="八字合婚" summary="合婚分析已完成，双方八字匹配度已出" />
+        </div>
             </div>
 
             {/* 免责声明 */}

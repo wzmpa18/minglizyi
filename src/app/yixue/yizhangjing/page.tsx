@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { leaveToolPage, isManagedBackNavigation } from "@/lib/leaveToolPage";
 import {
   solarToBazi,
   getCurrentJieQi,
@@ -15,6 +16,7 @@ import { calcYizhangJing } from "@/algorithm-core/modules/yizhangjing";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
 
 import { ShareButton } from "@/components/ShareButton";
+import { PostToSquareButton } from "@/components/PostToSquareButton";
 // ============================================================================
 // 一掌经十二宫
 // ============================================================================
@@ -233,7 +235,7 @@ export default function YizhangjingPage() {
     <div style={{ minHeight: "100vh", backgroundColor: "#ededed" }}>
       <DatePicker
         show={showForm}
-        onClose={() => setShowForm(false)}
+        onClose={(reason?: "back") => { setShowForm(false); if (reason === "back" && !hasResult && !isManagedBackNavigation()) leaveToolPage(router); }}
         onSubmit={(dateVal, opts) => {
           setSelectedYear(dateVal.year);
           setSelectedMonth(dateVal.month);
@@ -747,6 +749,9 @@ export default function YizhangjingPage() {
           variant="block"
           label="分享排盘结果"
         />
+        <div className="mt-2">
+          <PostToSquareButton tool="达摩一掌经" summary="一掌经推算已完成，十二宫位落位清晰" />
+        </div>
       </div>
 
 

@@ -13,6 +13,7 @@ import { calcXuankong, getYunFromYear, getYunName, STAR_NAMES, STAR_WUXING } fro
 import EventDivinationPanel from "@/components/EventDivinationPanel";
 
 import { ShareButton } from "@/components/ShareButton";
+import { PostToSquareButton } from "@/components/PostToSquareButton";
 // ============================================================================
 // 常量
 // ============================================================================
@@ -531,6 +532,9 @@ export default function XuankongFeixingPage() {
           variant="block"
           label="分享排盘结果"
         />
+        <div className="mt-2">
+          <PostToSquareButton tool="玄空飞星" summary="玄空飞星盘已排出，山向星组合格局清晰" />
+        </div>
       </div>
 
 

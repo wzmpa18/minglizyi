@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { BrandHeader } from "@/components/shared";
 import { getCurrentUser, updateProfile } from "@/lib/loginService";
 
+import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
 
 interface UserProfile {
@@ -129,6 +130,7 @@ export default function EditProfilePage() {
           flexDirection: "column",
         }}
       >
+  <PageLoginGuard />
         <BrandHeader title="编辑资料" showBack />
         <div
           style={{

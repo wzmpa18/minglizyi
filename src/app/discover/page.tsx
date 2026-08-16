@@ -44,11 +44,14 @@ import { getUserProfile } from "@/lib/auth";
 import { getCurrentUser } from "@/lib/loginService";
 import { communityActivity } from "@/lib/pointsStore";
 import { getMembershipStatus } from "@/lib/membershipStore";
+import { FEED_TAGS, TAG_COLORS } from "@/lib/feedTags";
 import { callAI } from "@/lib/aiService";
 import NewsCard from "@/components/NewsCard";
 import { ShareButton } from "@/components/ShareButton";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
 const BRAND = "#7B2FBE";
 
@@ -94,6 +97,9 @@ function PublishPanel({
   const [text, setText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  useBodyScrollLock(true);
+  usePopupBackHandler(onClose, true);
+
   useEffect(() => {
     textareaRef.current?.focus();
   }, []);
@@ -109,7 +115,7 @@ function PublishPanel({
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50" onClick={onClose}>
       <div
         className="w-full rounded-t-2xl bg-white shadow-xl"
-        style={{ maxWidth: "420px" }}
+        style={{ maxWidth: "420px", maxHeight: "85vh", overflowY: "auto" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
@@ -141,6 +147,7 @@ function PublishPanel({
             发布
           </button>
         </div>
+        <div className="modal-safe-bottom" />
       </div>
     </div>
   );
@@ -159,6 +166,9 @@ function VideoSubmitPanel({
   const [description, setDescription] = useState("");
   const [error, setError] = useState("");
   const urlRef = useRef<HTMLTextAreaElement>(null);
+
+  useBodyScrollLock(true);
+  usePopupBackHandler(onClose, true);
 
   useEffect(() => {
     urlRef.current?.focus();
@@ -241,6 +251,7 @@ function VideoSubmitPanel({
             提交
           </button>
         </div>
+        <div className="modal-safe-bottom" />
       </div>
     </div>
   );
@@ -453,6 +464,8 @@ export default function DiscoverPage() {
   const [postPage, setPostPage] = useState(1);
   const [hasMorePosts, setHasMorePosts] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  // P1 收敛：动态一级标签筛选
+  const [activeTag, setActiveTag] = useState<string>("");
 
   // 行业资讯状态
   const [news, setNews] = useState<NewsItem[]>([]);
@@ -485,7 +498,7 @@ export default function DiscoverPage() {
   // ==================== 加载站内动态 ====================
   const loadPosts = useCallback((page: number, refresh: boolean) => {
     setRefreshing(refresh);
-    const { posts: newPosts, hasMore } = getQualityPosts(page, 20);
+    const { posts: newPosts, hasMore } = getQualityPosts(page, 20, activeTag || undefined);
 
     if (refresh) {
       setPosts(newPosts);
@@ -507,6 +520,11 @@ export default function DiscoverPage() {
     setLiked(getLikedPosts());
     setFollows(new Set(getFollows()));
     setRefreshing(false);
+  }, [activeTag]);
+
+  // P1 收敛：标签筛选（点击已选标签取消筛选）
+  const handleTagFilter = useCallback((tag: string) => {
+    setActiveTag((prev) => (prev === tag ? "" : tag));
   }, []);
 
   // ==================== 加载行业资讯（含错误降级，支持分类过滤） ====================
@@ -977,6 +995,41 @@ export default function DiscoverPage() {
             </button>
           </div>
 
+          {/* 标签筛选栏（P1 收敛：一级标签体系） */}
+          <div
+            className="sticky top-[89px] z-20 flex gap-2 overflow-x-auto border-b border-gray-100 bg-white px-4 py-2.5"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          >
+            <button
+              onClick={() => handleTagFilter("")}
+              className="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all active:scale-95"
+              style={{
+                backgroundColor: activeTag === "" ? BRAND : "#f5f5f5",
+                color: activeTag === "" ? "#fff" : "#666",
+              }}
+            >
+              全部
+            </button>
+            {FEED_TAGS.map((t) => {
+              const active = activeTag === t;
+              const color = TAG_COLORS[t];
+              return (
+                <button
+                  key={t}
+                  onClick={() => handleTagFilter(t)}
+                  className="shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium transition-all active:scale-95"
+                  style={{
+                    backgroundColor: active ? color.bg : "#f5f5f5",
+                    color: active ? color.fg : "#666",
+                    border: active ? `1px solid ${color.fg}55` : "1px solid #eee",
+                  }}
+                >
+                  #{t}
+                </button>
+              );
+            })}
+          </div>
+
           {/* 动态列表 */}
           <div className="px-3 py-3 space-y-3">
             {filteredPosts.map((post) => (
@@ -1009,6 +1062,25 @@ export default function DiscoverPage() {
                 >
                   <p className="mt-3 text-sm leading-relaxed text-gray-700">{post.content}</p>
                 </div>
+
+                {/* 动态标签（P1 收敛） */}
+                {Array.isArray(post.tags) && post.tags.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {post.tags.map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => handleTagFilter(t)}
+                        className="rounded-full px-2 py-0.5 text-[10px]"
+                        style={{
+                          backgroundColor: TAG_COLORS[t]?.bg || "#f5f5f5",
+                          color: TAG_COLORS[t]?.fg || "#999",
+                        }}
+                      >
+                        #{t}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
                 {/* 操作栏 */}
                 <div className="mt-3 flex items-center gap-5 border-t border-gray-100 pt-3">

@@ -3,6 +3,8 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import type { CSSProperties } from "react";
 import { calculateZiwei, solarToBazi, calcTrueSolarTime } from "@/algorithm-core";
+import { useRouter } from "next/navigation";
+import { leaveToolPage, isManagedBackNavigation } from "@/lib/leaveToolPage";
 import type { ZiweiResult, Gender } from "@/algorithm-core";
 import { DatePicker } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
@@ -15,6 +17,7 @@ import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
 import { useToolBack } from "@/lib/useToolBack";
 import { ShareButton } from "@/components/ShareButton";
+import { PostToSquareButton } from "@/components/PostToSquareButton";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
@@ -470,6 +473,8 @@ export default function ZiweiPage() {
   const [longitude, setLongitude] = useState(116.4);
   const [saveName, setSaveName] = useState(false);
   const [showForm, setShowForm] = useState(true);
+  // P1-REOPEN: 返回键关闭排盘弹窗且无结果时直接返回工具列表
+  const router = useRouter();
 
   // ---- 视图模式 ----
   const [viewMode, setViewMode] = useState<"sihua" | "sanhe" | "feixing">("sanhe");
@@ -899,7 +904,7 @@ export default function ZiweiPage() {
       {/* 输入表单 DatePicker 弹窗 */}
       <DatePicker
         show={showForm}
-        onClose={() => setShowForm(false)}
+        onClose={(reason?: "back") => { setShowForm(false); if (reason === "back" && !result && !isManagedBackNavigation()) leaveToolPage(router); }}
         onSubmit={(dateVal, opts) => {
           setYear(dateVal.year); setMonth(dateVal.month); setDay(dateVal.day); setHour(dateVal.hour);
           setGender(opts.gender as Gender);
@@ -1772,6 +1777,9 @@ export default function ZiweiPage() {
               variant="block"
               label="分享排盘结果"
             />
+        <div className="mt-2">
+          <PostToSquareButton tool="紫微斗数" summary="紫微命盘已排出，星曜布局与命宫格局清晰" />
+        </div>
           </div>
         </div>
       )}

@@ -1,6 +1,10 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { leaveToolPage, isManagedBackNavigation } from "@/lib/leaveToolPage";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import {
   calculateXiaoLiuRen,
   PALM_POSITIONS,
@@ -25,6 +29,7 @@ import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipan
 import { useToolBack } from "@/lib/useToolBack";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { ShareButton } from "@/components/ShareButton";
+import { PostToSquareButton } from "@/components/PostToSquareButton";
 
 // ============================================================================
 // 解读类型标签颜色
@@ -181,6 +186,13 @@ export default function XiaoliurenPage() {
   }, []);
   const [divMethod, setDivMethod] = useState<"time" | "number">("time");
   const [showDatePicker, setShowDatePicker] = useState(false);
+  // P1-REOPEN: 主输入弹窗统一挂滚动锁+返回拦截；返回关闭且无结果时直接回工具列表
+  const router = useRouter();
+  useBodyScrollLock(showPopup);
+  usePopupBackHandler((reason?: "back") => {
+    setShowPopup(false);
+    if (reason === "back" && !showResult && !isManagedBackNavigation()) leaveToolPage(router);
+  }, showPopup);
 
   // ---- 结果状态 ----
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
@@ -992,6 +1004,9 @@ export default function XiaoliurenPage() {
           variant="block"
           label="分享排盘结果"
         />
+        <div className="mt-2">
+          <PostToSquareButton tool="小六壬" summary="小六壬掐算已完成，掌上定位结果明确" />
+        </div>
       </div>
       </div>
     </div>

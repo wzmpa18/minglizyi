@@ -69,9 +69,15 @@ const QUALITY_KEYWORDS = [
 
 export function getQualityPosts(
   page: number = 1,
-  pageSize: number = 20
+  pageSize: number = 20,
+  tag?: string
 ): QualityPostResult {
   let posts = getPosts();
+
+  // 0. P1 收敛：按一级标签筛选（帖子无 tags 的旧数据在"全部"标签下仍可见）
+  if (tag) {
+    posts = posts.filter(p => Array.isArray(p.tags) && p.tags.includes(tag));
+  }
 
   // 1. 过滤广告帖
   posts = posts.filter(p => !p.isAd);

@@ -24,6 +24,7 @@ import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipan
 import { useToolBack } from "@/lib/useToolBack";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { ShareButton } from "@/components/ShareButton";
+import { PostToSquareButton } from "@/components/PostToSquareButton";
 
 // ============================================================================
 // 五行颜色 (与 jishiyu 完全一致)
@@ -1033,6 +1034,9 @@ export default function MeihuaPage() {
               variant="block"
               label="分享排盘结果"
             />
+        <div className="mt-2">
+          <PostToSquareButton tool="梅花易数" summary="梅花易数已起卦，体用生克关系清晰" />
+        </div>
           </div>
         </div>
       )}

@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { leaveToolPage } from "@/lib/leaveToolPage";
 
 // 工具页面路径
 const TOOL_PATHS = [
@@ -66,16 +67,24 @@ export default function YixueLayout({ children }: { children: React.ReactNode })
     // v25.0.15: 弹窗打开时，返回键 = 关闭弹窗并返回上级。
     // 先用 history.back() 消费弹窗垫层历史记录（usePopupBackHandler 开弹窗时 pushState 的那条），
     // 等 popstate 触发后再导航，避免留下幽灵历史条目导致"返回后又跳回本页弹窗"。
+    // P1-REOPEN: finish 改用 leaveToolPage（idx 守卫 back），不再 push 重复条目，
+    // 杜绝"列表→工具弹窗"历史栈 ping-pong；并复位 __skipPopupCleanup 防止残留
+    // 污染后续弹窗关闭时的历史清理。
     if (typeof document !== "undefined" && document.body.classList.contains("modal-open")) {
       window.__skipPopupCleanup = true;
-      const target = isHome ? "/" : "/yixue";
       let done = false;
       const finish = () => {
         if (done) return;
         done = true;
         window.removeEventListener("popstate", finish);
         clearTimeout(guard);
-        router.push(target);
+        window.__skipPopupCleanup = false;
+        // back() 落地判断：若已到列表/首页（说明消费的是真实导航条目，弹窗无垫层），
+        // 不再二次导航防止多退一级；仍停在工具页（消费的是弹窗垫层）才离页
+        const raw = window.location.pathname;
+        const norm = raw.length > 1 && raw.endsWith("/") ? raw.slice(0, -1) : raw;
+        if (norm === "/yixue" || norm === "/") return;
+        leaveToolPage(router);
       };
       const guard = setTimeout(finish, 250);
       window.addEventListener("popstate", finish);
@@ -88,15 +97,9 @@ export default function YixueLayout({ children }: { children: React.ReactNode })
       return;
     }
     if (isToolPage) {
-      window.__yixueBackHandled = false;
-      window.dispatchEvent(new CustomEvent("yixue-back"));
-      Promise.resolve().then(() => {
-        if (window.__yixueBackHandled) {
-          window.__yixueBackHandled = false;
-        } else {
-          router.push("/yixue");
-        }
-      });
+      // P1-REOPEN: 工具页返回键直接返回工具列表，不再切回"输入弹窗/空白初始态"，
+      // 彻底消除"返回后看到只有排盘按钮的空白页"问题（重开表单走结果页"重新排盘"入口）
+      leaveToolPage(router);
       return;
     }
     router.back();

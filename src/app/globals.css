@@ -403,8 +403,10 @@ body.modal-open {
   touch-action: none;
 }
 
-/* P0-1 根治：弹窗打开时隐藏底部导航栏，彻底杜绝层叠遮挡 */
-body.modal-open #app-bottom-nav {
+/* P0-1 根治：弹窗打开时隐藏底部导航栏，彻底杜绝层叠遮挡
+   P1-REOPEN: 拆分 nav-hide 类——排盘 DatePicker 等需要保留导航栏的弹窗
+   通过 useBodyScrollLock(locked, { hideNav: false }) 只锁滚动不隐藏导航 */
+body.modal-open.nav-hide #app-bottom-nav {
   display: none !important;
 }
 

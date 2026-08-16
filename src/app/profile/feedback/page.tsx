@@ -14,6 +14,7 @@ import {
   type Feedback,
 } from "@/lib/feedbackService";
 
+import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
 
 export default function FeedbackPage() {
@@ -109,6 +110,7 @@ export default function FeedbackPage() {
 
   return (
     <div style={{ maxWidth: "420px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#ededed", display: "flex", flexDirection: "column" }}>
+  <PageLoginGuard />
       <BrandHeader title="问题反馈" showBack color={BRAND} onBack={goBack} />
 
       <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>

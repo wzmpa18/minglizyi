@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { leaveToolPage, isManagedBackNavigation } from "@/lib/leaveToolPage";
 import { Solar } from "lunar-javascript";
 import { calculateQimen } from "@/algorithm-core";
 import type { QimenResult, PanMethod, PanLayoutMode, JiGongMethod, QimenTimeType, AnganType } from "@/algorithm-core";
@@ -13,6 +15,7 @@ import type { QimenInterpretItem } from "@/lib/qimen-interpretations";
 import { useToolBack } from "@/lib/useToolBack";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { ShareButton } from "@/components/ShareButton";
+import { PostToSquareButton } from "@/components/PostToSquareButton";
 
 // ============================================================================
 // 常量
@@ -168,6 +171,8 @@ export default function QimenPage() {
   const pageKey = "yixue_qimen"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   const [showForm, setShowForm] = useState(true);
   const [result, setResult] = useState<QimenResult | null>(null);
+  // P1-REOPEN: 返回键关闭排盘弹窗且无结果时直接返回工具列表
+  const router = useRouter();
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
   const [interpretPanel, setInterpretPanel] = useState<{
     palaceLabel: string;
@@ -355,7 +360,7 @@ export default function QimenPage() {
       <div style={{ maxWidth: "420px", margin: "0 auto", backgroundColor: "#fff", minHeight: "100vh" }}>
         <DatePicker
           show={true}
-          onClose={() => setShowForm(false)}
+          onClose={(reason?: "back") => { setShowForm(false); if (reason === "back" && !result && !isManagedBackNavigation()) leaveToolPage(router); }}
           onSubmit={(dateVal) => {
             setFormData(prev => ({ ...prev, year: dateVal.year, month: dateVal.month, day: dateVal.day, hour: dateVal.hour }));
             doPaipan({year: dateVal.year, month: dateVal.month, day: dateVal.day, hour: dateVal.hour});
@@ -863,6 +868,9 @@ export default function QimenPage() {
           variant="block"
           label="分享排盘结果"
         />
+        <div className="mt-2">
+          <PostToSquareButton tool="奇门遁甲" summary="奇门排盘已起局，格局与用神关系清晰" />
+        </div>
       </div>
 
       {/* 免责声明 */}

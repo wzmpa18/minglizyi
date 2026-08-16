@@ -17,6 +17,7 @@ import {
 } from "@/lib/userStore";
 import { getFriends, addFriendRequest, type Friend } from "@/lib/socialStore";
 
+import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
 
 // ==================== 工具函数 ====================
@@ -139,6 +140,7 @@ export default function FriendProfilePage() {
         className="flex min-h-screen flex-col bg-[#ededed]"
         style={{ maxWidth: "420px", margin: "0 auto" }}
       >
+  <PageLoginGuard />
         <BrandHeader title="用户主页" showBack />
         <div className="flex-1 flex items-center justify-center">
           <p className="text-sm text-gray-400">加载中...</p>

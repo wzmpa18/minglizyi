@@ -10,6 +10,7 @@ import {
   getDefaultShareParams,
   type ShareChannel,
 } from "@/lib/shareService";
+import { PageLoginGuard } from "@/components/PageLoginGuard";
 
 const BRAND = "#7B2FBE";
 
@@ -154,6 +155,7 @@ export default function PosterPage() {
         position: "relative",
       }}
     >
+  <PageLoginGuard />
       <BrandHeader title="生成海报" showBack color={BRAND} onBack={goBack} />
 
       <div style={{ flex: 1, overflowY: "auto", padding: "16px", paddingBottom: showShareSheet ? "240px" : "16px" }}>

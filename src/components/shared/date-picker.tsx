@@ -216,7 +216,9 @@ export default function DatePicker({
   }, [date, options, nameState, onNameChange, onSubmit, onClose]);
 
   // P1-6: 统一滚动锁 + P1-7: 弹窗返回拦截
-  useBodyScrollLock(show);
+  // P1-REOPEN: 排盘弹窗保留底部导航栏（hideNav:false）+ 弹窗整体上移 56px 避让，
+  // 弹窗不再遮挡导航栏，导航栏保持可见可点击
+  useBodyScrollLock(show, { hideNav: false });
   usePopupBackHandler(onClose, show);
 
   if (!show) return null;
@@ -234,16 +236,19 @@ export default function DatePicker({
   const selectClass = "flex-1 rounded-lg border border-gray-200 px-2 py-2 text-sm text-center outline-none focus:border-[#7B2FBE] bg-white cursor-pointer";
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-end justify-center" style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+    <div
+      className="fixed inset-0 z-[9999] flex items-end justify-center"
+      style={{ paddingBottom: "calc(56px + env(safe-area-inset-bottom, 0px))" }}
+    >
       {/* 遮罩层 - 独立div确保点击可关闭 */}
       <div
         className="absolute inset-0 bg-black/50"
         onClick={onClose}
       />
-      {/* 弹窗内容 */}
+      {/* 弹窗内容（P1-REOPEN: 上移避让后高度自适应，小屏不低于 70vh 可用区） */}
       <div
         className="relative w-full max-w-[420px] rounded-t-2xl bg-white shadow-2xl"
-        style={{ maxHeight: "85vh", overflowY: "auto" }}
+        style={{ maxHeight: "calc(100vh - 56px - env(safe-area-inset-bottom, 0px))", overflowY: "auto" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* 标题栏 - 右上角×关闭按钮（对标吉时雨 closeBtn: 1） */}
@@ -494,11 +499,11 @@ export default function DatePicker({
                 <div>
                   <label className="mb-1 block text-sm text-gray-700">
                     出生地（东经{" "}
-                    <span className="font-medium text-[#7B2FBE]">{options.longitude.toFixed(1)}°</span>
+                    <span className="font-medium text-[#7B2FBE]">{(options.longitude ?? 0).toFixed(1)}°</span>
                     ）
                   </label>
                   <select
-                    value={provinceByLongitude(options.longitude)}
+                    value={provinceByLongitude(options.longitude ?? 0)}
                     onChange={(e) => {
                       const lng = PROVINCE_LONGITUDES[e.target.value];
                       if (lng !== undefined) {

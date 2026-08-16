@@ -10,6 +10,7 @@ import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipan
 import { useToolBack } from "@/lib/useToolBack";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { ShareButton } from "@/components/ShareButton";
+import { PostToSquareButton } from "@/components/PostToSquareButton";
 
 // ============================================================================
 // 品牌色 & 常量
@@ -1018,6 +1019,9 @@ export default function LiuyaoPage() {
                 variant="block"
                 label="分享排盘结果"
               />
+        <div className="mt-2">
+          <PostToSquareButton tool="六爻" summary="六爻卦象已排出，世应与六亲关系清晰" />
+        </div>
             </div>
 
             {/* 免责声明 */}

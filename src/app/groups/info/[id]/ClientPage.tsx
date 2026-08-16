@@ -11,7 +11,10 @@ import {
   type GroupInfo,
   type GroupMember,
 } from "@/lib/socialStore";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
+import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
 
 export default function GroupInfoPage() {
@@ -28,6 +31,14 @@ export default function GroupInfoPage() {
   const [announcementText, setAnnouncementText] = useState("");
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [showDisbandConfirm, setShowDisbandConfirm] = useState(false);
+
+  // P1 弹窗规范：退群/解散确认弹窗 —— 返回键优先关闭弹窗 + 背景滚动锁
+  const anyConfirmOpen = showLeaveConfirm || showDisbandConfirm;
+  useBodyScrollLock(anyConfirmOpen);
+  usePopupBackHandler(() => {
+    if (showLeaveConfirm) setShowLeaveConfirm(false);
+    else if (showDisbandConfirm) setShowDisbandConfirm(false);
+  }, anyConfirmOpen);
 
   const currentUserId = "current_user";
   const currentUserName = "我";
@@ -95,6 +106,7 @@ export default function GroupInfoPage() {
         className="flex min-h-screen flex-col bg-[#ededed]"
         style={{ maxWidth: "420px", margin: "0 auto" }}
       >
+  <PageLoginGuard />
         <BrandHeader title="群信息" showBack />
         <div className="flex-1 flex items-center justify-center">
           <p className="text-sm text-gray-400">加载中...</p>

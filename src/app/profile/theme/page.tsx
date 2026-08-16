@@ -6,6 +6,7 @@ import { useTheme, PRESET_THEMES, FontSize } from "@/components/ThemeProvider";
 import { ToggleSwitch } from "@/components/shared";
 
 
+import { PageLoginGuard } from "@/components/PageLoginGuard";
 // ==================== 主页面 ====================
 export default function ThemeSettingsPage() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function ThemeSettingsPage() {
       className="min-h-screen"
       style={{ backgroundColor: "var(--theme-bg)", maxWidth: "420px", margin: "0 auto", paddingBottom: "80px" }}
     >
+  <PageLoginGuard />
       {/* ===== 顶部栏 ===== */}
       <div
         className="sticky top-0 z-10 flex items-center px-4"

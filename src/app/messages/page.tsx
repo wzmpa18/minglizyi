@@ -13,6 +13,7 @@ import {
   type ChatMessage,
 } from "@/lib/socialStore";
 
+import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
 
 // ==================== 类型定义 ====================
@@ -164,6 +165,7 @@ export default function MessagesPage() {
       className="flex min-h-screen flex-col bg-[#ededed]"
       style={{ maxWidth: "420px", margin: "0 auto", paddingBottom: "72px" }}
     >
+  <PageLoginGuard />
       <BrandHeader title="信息" showBack />
 
       {/* 搜索栏 */}

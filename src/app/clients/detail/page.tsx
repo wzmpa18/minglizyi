@@ -19,6 +19,7 @@ import {
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
+import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
 const BRAND_BG = "#F3EDF7";
 
@@ -85,6 +86,7 @@ function EditClientModal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       onClick={onClose}
     >
+  <PageLoginGuard />
       <div
         className="w-full max-w-sm bg-white rounded-2xl overflow-hidden shadow-xl max-h-[85vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}

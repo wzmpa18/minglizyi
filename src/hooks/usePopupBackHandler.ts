@@ -23,8 +23,11 @@ declare global {
  *
  * 用法：
  *   usePopupBackHandler(handleClose, isOpen);
+ *
+ * P1-REOPEN: onClose(reason?) 增加可选参数——"back" 表示由系统返回键/右滑手势触发，
+ * 工具页可据此在无结果时直接返回列表页，避免停留在"空白排盘初始态"
  */
-export function usePopupBackHandler(onClose: () => void, isOpen: boolean) {
+export function usePopupBackHandler(onClose: (reason?: "back") => void, isOpen: boolean) {
   const pushedRef = useRef(false);
   const backHandledRef = useRef(false);
   const onCloseRef = useRef(onClose);
@@ -50,7 +53,7 @@ export function usePopupBackHandler(onClose: () => void, isOpen: boolean) {
       if (pushedRef.current) {
         backHandledRef.current = true;
         pushedRef.current = false;
-        onCloseRef.current();
+        onCloseRef.current("back");
       }
     };
     window.addEventListener("popstate", handlePopState);

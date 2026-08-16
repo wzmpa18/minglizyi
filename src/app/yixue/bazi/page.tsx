@@ -1,6 +1,8 @@
 ﻿"use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { leaveToolPage, isManagedBackNavigation } from "@/lib/leaveToolPage";
 import {
   solarToBazi,
   calculateAllShenSha,
@@ -28,6 +30,7 @@ import {
 import type { TianGan, DiZhi, Gender, BaziResult, BaziPillar } from "@/algorithm-core";
 import { DatePicker } from "@/components/shared";
 import { ShareButton } from "@/components/ShareButton";
+import { PostToSquareButton } from "@/components/PostToSquareButton";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 import { getPillarInterpretation, getShenshaInterpretation } from "@/lib/bazi-interpretations";
@@ -1476,6 +1479,8 @@ export default function BaziPage(){
   const [zaoWanZi,setZaoWanZi]=useState(false); const [zhenTaiyang,setZhenTaiyang]=useState(false);
   const [xiaLing,setXiaLing]=useState(false); const [saveName,setSaveName]=useState(false);
   const [showForm,setShowForm]=useState(true); const [result,setResult]=useState<BaziResult|null>(null);
+  // P1-REOPEN: 返回键关闭排盘弹窗且无结果时直接返回工具列表，不停留在空白初始态
+  const router = useRouter();
   const [shensha,setShensha]=useState<ReturnType<typeof calculateAllShenSha>|null>(null);
   const [activeTab,setActiveTab]=useState<"basic"|"chart"|"detail"|"jingpi"|"xingge"|"notes">("chart");
   const [selectedClient,setSelectedClient]=useState<Client|null>(null);
@@ -1600,7 +1605,7 @@ export default function BaziPage(){
     <div className="w-full" style={{maxWidth:"420px",paddingBottom:"10px"}}>
     <DatePicker
       show={showForm}
-      onClose={() => setShowForm(false)}
+      onClose={(reason?: "back") => { setShowForm(false); if (reason === "back" && !result && !isManagedBackNavigation()) leaveToolPage(router); }}
       onSubmit={(dateVal, opts) => {
         setYear(dateVal.year); setMonth(dateVal.month); setDay(dateVal.day); setHour(dateVal.hour);
         setGender(opts.gender as Gender);
@@ -1674,6 +1679,9 @@ export default function BaziPage(){
           label="分享排盘结果"
           variant="block"
         />
+        <div className="mt-2">
+          <PostToSquareButton tool="八字" summary="八字命盘已排出，四柱五行分布与格局层次清晰" />
+        </div>
       </div>
 
       {/* v19.6: 事情断法 + AI深度解读 */}

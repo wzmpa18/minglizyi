@@ -10,6 +10,7 @@ import {
 } from "@/lib/dualTrackService";
 import { getUserProfile } from "@/lib/auth";
 
+import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
 const BRAND_LIGHT = "#9B5ECF";
 const BRAND_BG = "#F5F0FA";
@@ -84,6 +85,7 @@ function BrandHeader({ title }: { title: string }) {
       className="sticky top-0 z-40 flex h-11 items-center justify-center relative shrink-0"
       style={{ backgroundColor: BRAND }}
     >
+  <PageLoginGuard />
       <button
         onClick={() => router.back()}
         className="absolute left-0 top-0 flex h-11 w-11 items-center justify-center text-white active:bg-white/10 transition-colors"

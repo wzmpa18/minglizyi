@@ -30,6 +30,7 @@ import {
   type PointsActionType,
 } from "@/lib/dualTrackService";
 
+import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
 
 /** 行为类型 -> 对应行为描述（取自积分规则配置，保持与后端一致） */
@@ -211,6 +212,7 @@ export default function ProfilePointsPage() {
   if (!ready) {
     return (
       <div style={pageStyle}>
+  <PageLoginGuard />
         <BrandHeader title="积分流水" showBack backUrl="/profile" color={BRAND} />
         <div style={{ textAlign: "center", padding: "60px 0", color: "#999" }}>加载中...</div>
       </div>

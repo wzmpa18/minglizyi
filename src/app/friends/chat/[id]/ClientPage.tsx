@@ -14,7 +14,10 @@ import {
   type ChatMessage,
 } from "@/lib/socialStore";
 import { getCurrentUserId } from "@/lib/auth";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
+import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
 
 export default function FriendChatPage() {
@@ -38,6 +41,14 @@ export default function FriendChatPage() {
   const [contextMenuMsg, setContextMenuMsg] = useState<string | null>(null); // 长按弹出的单条操作菜单
   const [showClearConfirm, setShowClearConfirm] = useState(false); // 清空确认弹窗
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // P1 弹窗规范：消息操作菜单 / 清空确认弹窗 —— 返回键优先关闭弹窗 + 背景滚动锁
+  const anyDialogOpen = !!contextMenuMsg || showClearConfirm;
+  useBodyScrollLock(anyDialogOpen);
+  usePopupBackHandler(() => {
+    if (contextMenuMsg) setContextMenuMsg(null);
+    else if (showClearConfirm) setShowClearConfirm(false);
+  }, anyDialogOpen);
 
   const currentUserId = getCurrentUserId() || "current_user";
   const currentUserName = (() => {
@@ -208,6 +219,7 @@ export default function FriendChatPage() {
       className="flex min-h-screen flex-col bg-[#ededed]"
       style={{ maxWidth: "420px", margin: "0 auto" }}
     >
+  <PageLoginGuard />
       {/* 头部 - 管理模式下显示退出按钮 */}
       {manageMode ? (
         <div

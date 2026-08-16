@@ -12,6 +12,7 @@ import {
   maskPhone,
 } from "@/lib/clientStore";
 
+import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
 const BRAND_BG = "#F3EDF7";
 
@@ -81,6 +82,7 @@ function ClientFormModal({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       onClick={onClose}
     >
+  <PageLoginGuard />
       <div
         className="w-full max-w-sm bg-white rounded-2xl overflow-hidden shadow-xl"
         onClick={(e) => e.stopPropagation()}

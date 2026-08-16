@@ -1,6 +1,8 @@
 ﻿"use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { leaveToolPage, isManagedBackNavigation } from "@/lib/leaveToolPage";
 import { solarToBazi, GAN, ZHI } from "@/algorithm-core";
 import { solarToLunar, getLunarDateString } from "@/lib/lunar";
 import { DatePicker } from "@/components/shared";
@@ -13,6 +15,7 @@ import { useToolBack } from "@/lib/useToolBack";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
 
 import { ShareButton } from "@/components/ShareButton";
+import { PostToSquareButton } from "@/components/PostToSquareButton";
 // ============================================================================
 // 常量
 // ============================================================================
@@ -306,6 +309,8 @@ export default function TaiyiSanshiPage() {
   const [desc, setDesc] = useState("");
   const [loading, setLoading] = useState(false);
   const [hasResult, setHasResult] = useState(false);
+  // P1-REOPEN: 返回键关闭排盘弹窗且无结果时直接返回工具列表
+  const router = useRouter();
   const [result, setResult] = useState<TaiyiResult | null>(null);
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
   const [showForm, setShowForm] = useState(true);
@@ -380,7 +385,7 @@ export default function TaiyiSanshiPage() {
       <div style={{ maxWidth: "420px", margin: "0 auto", backgroundColor: "#fff", minHeight: "100vh" }}>
         <DatePicker
           show={true}
-          onClose={() => setShowForm(false)}
+          onClose={(reason?: "back") => { setShowForm(false); if (reason === "back" && !hasResult && !isManagedBackNavigation()) leaveToolPage(router); }}
           onSubmit={(dateVal) => {
             setTaiyiYear(dateVal.year);
             setTaiyiMonth(dateVal.month);
@@ -684,6 +689,9 @@ export default function TaiyiSanshiPage() {
           variant="block"
           label="分享排盘结果"
         />
+        <div className="mt-2">
+          <PostToSquareButton tool="太乙神数" summary="太乙局已排出，主客与计神格局清晰" />
+        </div>
       </div>
 
 

@@ -10,6 +10,7 @@ import {
   type GroupInfo,
 } from "@/lib/socialStore";
 
+import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
 
 export default function GroupsPage() {
@@ -64,6 +65,7 @@ export default function GroupsPage() {
       className="flex min-h-screen flex-col bg-[#ededed]"
       style={{ maxWidth: "420px", margin: "0 auto" }}
     >
+  <PageLoginGuard />
       <BrandHeader title="群聊" showBack />
 
       <div className="flex-1 overflow-y-auto">

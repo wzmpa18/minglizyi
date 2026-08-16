@@ -12,6 +12,7 @@ import {
   type ChatMessage,
 } from "@/lib/socialStore";
 
+import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
 
 export default function GroupChatPage() {
@@ -123,6 +124,7 @@ export default function GroupChatPage() {
       className="flex min-h-screen flex-col bg-[#ededed]"
       style={{ maxWidth: "420px", margin: "0 auto" }}
     >
+  <PageLoginGuard />
       <BrandHeader title={groupName} showBack />
 
       <div
