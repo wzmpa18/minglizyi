@@ -11,6 +11,9 @@ import {
   fetchQuestions,
   reviewQuestion,
   generateQuestions,
+  fetchCategories,
+  createCategory,
+  deleteCategory,
   setAcademyAdminKey,
   getAcademyAdminKey,
   TRACK_LIST,
@@ -38,9 +41,13 @@ export default function ReviewWorkbenchPage() {
   const [busy, setBusy] = useState(false);
 
   // 出题面板
-  const [genTrack, setGenTrack] = useState("tcm");
+  const [genTrack, setGenTrack] = useState("zhongyi");
+  const [genCategory, setGenCategory] = useState("");
   const [genLevel, setGenLevel] = useState(1);
   const [genCount, setGenCount] = useState(10);
+  const [cats, setCats] = useState<Array<{ id: string; name: string }>>([]);
+  const [newCatName, setNewCatName] = useState("");
+  const [showCatMgr, setShowCatMgr] = useState(false);
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -54,6 +61,57 @@ export default function ReviewWorkbenchPage() {
       setAuthed(true);
     }
   }, []);
+
+  const loadCats = useCallback(async () => {
+    try {
+      const r = await fetchCategories(genTrack);
+      setCats(r && r.success && r.categories ? r.categories : []);
+    } catch { setCats([]); }
+  }, [genTrack]);
+
+  useEffect(() => {
+    setGenCategory("");
+    if (authed) void loadCats();
+  }, [authed, loadCats]);
+
+  const handleAddCat = async () => {
+    const name = newCatName.trim();
+    if (!name) { showToast("请填写类目名称"); return; }
+    setBusy(true);
+    try {
+      const r = await createCategory(genTrack, name);
+      if (r && r.success) {
+        showToast("类目已创建");
+        setNewCatName("");
+        await loadCats();
+      } else {
+        showToast((r && r.error) || "创建失败");
+      }
+    } catch {
+      showToast("网络异常");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleDelCat = async (id: string, name: string) => {
+    if (!window.confirm(`确认删除类目「${name}」？`)) return;
+    setBusy(true);
+    try {
+      const r = await deleteCategory(id);
+      if (r && r.success) {
+        showToast("已删除");
+        if (genCategory === name) setGenCategory("");
+        await loadCats();
+      } else {
+        showToast((r && r.error) || "删除失败");
+      }
+    } catch {
+      showToast("网络异常");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const load = useCallback(async () => {
     if (!authed) return;
@@ -131,7 +189,7 @@ export default function ReviewWorkbenchPage() {
     setBusy(true);
     showToast("AI 出题中，约需 1-2 分钟...");
     try {
-      const r = await generateQuestions({ track: genTrack, level: genLevel, count: genCount });
+      const r = await generateQuestions({ track: genTrack, level: genLevel, count: genCount, category: genCategory || undefined });
       if (r && r.success) {
         showToast(`已生成 ${r.created || 0} 道题，请到题目审核处理`);
         if (tab === "questions") await load();
@@ -200,6 +258,73 @@ export default function ReviewWorkbenchPage() {
       </div>
 
       <div className="px-3 py-3 pb-24">
+        {/* 类目管理（仅题目页显示） */}
+        {tab === "questions" && (
+          <div className="mb-3 rounded-2xl bg-white p-4 shadow-sm">
+            <button
+              onClick={() => setShowCatMgr(!showCatMgr)}
+              className="flex w-full items-center justify-between"
+            >
+              <div className="text-left">
+                <p className="text-sm font-bold text-gray-800">类目管理</p>
+                <p className="mt-0.5 text-[11px] text-gray-400">
+                  {TRACK_LIST.find((t) => t.key === genTrack)?.name} · {cats.length} 个类目
+                </p>
+              </div>
+              <svg
+                width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2"
+                strokeLinecap="round" strokeLinejoin="round"
+                className="transition-transform"
+                style={{ transform: showCatMgr ? "rotate(180deg)" : "none" }}
+              >
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+            {showCatMgr && (
+              <div className="mt-3 border-t border-gray-100 pt-3">
+                <div className="flex gap-2">
+                  <input
+                    value={newCatName}
+                    onChange={(e) => setNewCatName(e.target.value)}
+                    maxLength={40}
+                    placeholder={`在${TRACK_LIST.find((t) => t.key === genTrack)?.name || ""}板块下新增类目`}
+                    className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-2 text-xs"
+                    style={{ outline: "none" }}
+                  />
+                  <button
+                    onClick={handleAddCat}
+                    disabled={busy}
+                    className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold text-white"
+                    style={{ backgroundColor: busy ? "#c9b3e0" : BRAND }}
+                  >
+                    新增
+                  </button>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {cats.length === 0 ? (
+                    <p className="text-[11px] text-gray-400">暂无类目</p>
+                  ) : cats.map((c) => (
+                    <span
+                      key={c.id}
+                      className="flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-[11px] text-gray-600"
+                    >
+                      {c.name}
+                      <button
+                        onClick={() => handleDelCat(c.id, c.name)}
+                        disabled={busy}
+                        className="flex h-4 w-4 items-center justify-center rounded-full bg-gray-300 text-[9px] leading-none text-white"
+                        aria-label={`删除${c.name}`}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* AI 出题面板（仅题目页显示） */}
         {tab === "questions" && (
           <div className="mb-3 rounded-2xl bg-white p-4 shadow-sm">
@@ -213,6 +338,16 @@ export default function ReviewWorkbenchPage() {
               >
                 {TRACK_LIST.map((t) => (
                   <option key={t.key} value={t.key}>{t.name}</option>
+                ))}
+              </select>
+              <select
+                value={genCategory}
+                onChange={(e) => setGenCategory(e.target.value)}
+                className="rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 text-xs"
+              >
+                <option value="">全部类目</option>
+                {cats.map((c) => (
+                  <option key={c.id} value={c.name}>{c.name}</option>
                 ))}
               </select>
               <select

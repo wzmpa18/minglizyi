@@ -29,7 +29,7 @@ type MyExamRow = {
 export default function AcademyExamPage() {
   const router = useRouter();
   const [mode, setMode] = useState<"select" | "paper" | "result">("select");
-  const [track, setTrack] = useState<string>("general");
+  const [track, setTrack] = useState<string>("guoxue");
   const [level, setLevel] = useState<number>(1);
   const [tracks, setTracks] = useState<TrackOverview[]>([]);
   const [history, setHistory] = useState<MyExamRow[]>([]);

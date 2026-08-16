@@ -143,15 +143,15 @@ function SegmentedRow<T extends string>({
   columns?: 2 | 4;
 }) {
   return (
-    <div className="py-1.5">
-      <div className="mb-1 text-sm text-gray-700">{label}</div>
-      <div className={`grid gap-1.5 ${columns === 4 ? "grid-cols-4" : "grid-cols-2"}`}>
+    <div className="py-1">
+      <div className="mb-0.5 text-xs text-gray-700">{label}</div>
+      <div className={`grid gap-1 ${columns === 4 ? "grid-cols-4" : "grid-cols-2"}`}>
         {options.map(o => (
           <button
             key={o.val}
             type="button"
             onClick={() => onChange(o.val)}
-            className={`rounded-lg px-1 py-2 text-[13px] font-medium transition-all ${
+            className={`rounded-lg px-1 py-1.5 text-xs font-medium transition-all ${
               value === o.val ? "bg-[#7B2FBE] text-white shadow-sm" : "bg-gray-100 text-gray-600"
             }`}
           >
@@ -370,8 +370,8 @@ export default function QimenPage() {
           showGender={false} showCalType={true} showToggles={false} showRegion={false} showName={false}
           submitText="排盘" title="奇门遁甲排盘"
           extraOptions={
-            <div className="border-t border-gray-100 px-4 py-2">
-              <div className="mb-1 text-[15px] font-bold text-gray-800">排盘参数</div>
+            <div className="border-t border-gray-100 px-4 py-1.5">
+              <div className="mb-1 text-[13px] font-bold text-gray-800">排盘参数</div>
               <SegmentedRow
                 label="排盘方式"
                 options={LAYOUT_MODE_OPTIONS}
@@ -392,8 +392,8 @@ export default function QimenPage() {
                 columns={4}
               />
               {formData.panMethod === "zixuan" && (
-                <div className="rounded-lg bg-[#F3EDF7] px-3 py-2">
-                  <div className="mb-1 text-sm text-gray-700">自选局数</div>
+                <div className="rounded-lg bg-[#F3EDF7] px-3 py-1.5">
+                  <div className="mb-1 text-xs text-gray-700">自选局数</div>
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
@@ -438,8 +438,8 @@ export default function QimenPage() {
                 onChange={v => setFormData(prev => ({ ...prev, timeType: v }))}
               />
               {formData.timeType === "zhen" && (
-                <div className="rounded-lg bg-[#F3EDF7] px-3 py-2">
-                  <div className="mb-1 flex items-center justify-between text-sm text-gray-700">
+                <div className="rounded-lg bg-[#F3EDF7] px-3 py-1.5">
+                  <div className="mb-1 flex items-center justify-between text-xs text-gray-700">
                     <span>出生地经度（东经）</span>
                     <span className="font-medium text-[#7B2FBE]">{formData.longitude.toFixed(1)}°</span>
                   </div>

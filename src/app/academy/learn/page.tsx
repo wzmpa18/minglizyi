@@ -4,10 +4,12 @@ import React, { useCallback, useEffect, useState } from "react";
 import { BrandHeader } from "@/components/shared";
 import {
   fetchKnowledge,
+  fetchCategories,
   checkinProgress,
   fetchProgress,
   TRACK_LIST,
   type KnowledgeVo,
+  type CategoryVo,
 } from "@/lib/academyApi";
 import { PageLoginGuard } from "@/components/PageLoginGuard";
 
@@ -15,6 +17,8 @@ const BRAND = "#7B2FBE";
 
 export default function AcademyLearnPage() {
   const [track, setTrack] = useState<string>("");
+  const [category, setCategory] = useState("");
+  const [categories, setCategories] = useState<CategoryVo[]>([]);
   const [points, setPoints] = useState<KnowledgeVo[]>([]);
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -30,7 +34,7 @@ export default function AcademyLearnPage() {
     setLoading(true);
     try {
       const [k, p] = await Promise.all([
-        fetchKnowledge(track ? { track } : undefined),
+        fetchKnowledge(track ? { track, category: category || undefined } : category ? { category } : undefined),
         fetchProgress(),
       ]);
       if (k && k.success && k.points) setPoints(k.points);
@@ -40,10 +44,10 @@ export default function AcademyLearnPage() {
     } catch {} finally {
       setLoading(false);
     }
-  }, [track]);
+  }, [track, category]);
 
   useEffect(() => {
-    // URL ?track= 预选赛道
+    // URL ?track= 预选板块
     if (typeof window !== "undefined") {
       const q = new URLSearchParams(window.location.search).get("track");
       if (q) setTrack(q);
@@ -53,6 +57,14 @@ export default function AcademyLearnPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    setCategory("");
+    if (!track) { setCategories([]); return; }
+    fetchCategories(track)
+      .then((r) => setCategories(r && r.success && r.categories ? r.categories : []))
+      .catch(() => setCategories([]));
+  }, [track]);
 
   const handleCheckin = async (pt: KnowledgeVo) => {
     const key = `${pt.track}:${pt.chapter || pt.title}`;
@@ -71,25 +83,48 @@ export default function AcademyLearnPage() {
       <PageLoginGuard />
       <BrandHeader title="知识学习" showBack backUrl="/academy" />
 
-      {/* 赛道筛选 */}
-      <div className="sticky top-0 z-10 flex gap-2 overflow-x-auto border-b border-gray-200 bg-white px-3 py-2.5">
-        <button
-          onClick={() => setTrack("")}
-          className="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors"
-          style={{ backgroundColor: track === "" ? BRAND : "#f0f0f0", color: track === "" ? "#fff" : "#666" }}
-        >
-          全部
-        </button>
-        {TRACK_LIST.map((t) => (
+      {/* 板块筛选 */}
+      <div className="sticky top-0 z-10 border-b border-gray-200 bg-white">
+        <div className="flex gap-2 overflow-x-auto px-3 py-2.5">
           <button
-            key={t.key}
-            onClick={() => setTrack(t.key)}
+            onClick={() => setTrack("")}
             className="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors"
-            style={{ backgroundColor: track === t.key ? BRAND : "#f0f0f0", color: track === t.key ? "#fff" : "#666" }}
+            style={{ backgroundColor: track === "" ? BRAND : "#f0f0f0", color: track === "" ? "#fff" : "#666" }}
           >
-            {t.name}
+            全部
           </button>
-        ))}
+          {TRACK_LIST.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTrack(t.key)}
+              className="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors"
+              style={{ backgroundColor: track === t.key ? BRAND : "#f0f0f0", color: track === t.key ? "#fff" : "#666" }}
+            >
+              {t.name}
+            </button>
+          ))}
+        </div>
+        {track && categories.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto border-t border-gray-100 px-3 py-2" style={{ backgroundColor: "#faf8fc" }}>
+            <button
+              onClick={() => setCategory("")}
+              className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors"
+              style={{ backgroundColor: category === "" ? BRAND + "22" : "#fff", color: category === "" ? BRAND : "#888", border: `1px solid ${category === "" ? BRAND + "44" : "#eee"}` }}
+            >
+              全部类目
+            </button>
+            {categories.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => setCategory(c.name)}
+                className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors"
+                style={{ backgroundColor: category === c.name ? BRAND + "22" : "#fff", color: category === c.name ? BRAND : "#888", border: `1px solid ${category === c.name ? BRAND + "44" : "#eee"}` }}
+              >
+                {c.name}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="px-3 py-3 pb-24">
@@ -122,6 +157,7 @@ export default function AcademyLearnPage() {
                       <p className="text-sm font-semibold leading-snug text-gray-800">{pt.title}</p>
                       <p className="mt-1 text-[11px] text-gray-400">
                         {TRACK_LIST.find((t) => t.key === pt.track)?.name || pt.track}
+                        {pt.category ? ` · ${pt.category}` : ""}
                         {pt.chapter ? ` · ${pt.chapter}` : ""}
                         {pt.difficulty ? ` · ${pt.difficulty}` : ""}
                       </p>

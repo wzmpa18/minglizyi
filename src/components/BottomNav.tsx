@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-// v18.7：五Tab配置：首页/发现/好友/积分/我的
+// v25.0.20：五Tab配置：首页/发现/好友/学习/我的（积分移入个人中心商业区，学习入口上底部导航）
 const TABS = [
   {
     key: "home",
@@ -24,10 +24,10 @@ const TABS = [
     Icon: FriendsIcon,
   },
   {
-    key: "points",
-    label: "积分",
-    href: "/points",
-    Icon: PointsIcon,
+    key: "study",
+    label: "学习",
+    href: "/academy",
+    Icon: StudyIcon,
   },
   {
     key: "profile",
@@ -76,11 +76,11 @@ function MessagesIcon({ active }: { active: boolean }) {
   );
 }
 
-function PointsIcon({ active }: { active: boolean }) {
+function StudyIcon({ active }: { active: boolean }) {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <polygon points="12 6 13.5 10.5 18 10.5 14.5 13.5 15.5 18 12 15.5 8.5 18 9.5 13.5 6 10.5 10.5 10.5" />
+      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
     </svg>
   );
 }
@@ -100,8 +100,10 @@ export default function BottomNav() {
   const getActiveKey = (): string => {
     // 发现路由
     if (pathname === "/discover" || pathname.startsWith("/discover/")) return "discover";
-    // 积分路由（含子路由：兑换、明细、邀请等）
-    if (pathname === "/points" || pathname.startsWith("/points/") || pathname === "/invite" || pathname.startsWith("/invite/")) return "points";
+    // 学习路由（言道学堂及子页面）
+    if (pathname === "/academy" || pathname.startsWith("/academy/")) return "study";
+    // 积分/邀请路由（积分已移入个人中心，归入「我的」高亮）
+    if (pathname === "/points" || pathname.startsWith("/points/") || pathname === "/invite" || pathname.startsWith("/invite/")) return "profile";
     // 好友路由（含私聊、好友请求、通讯录、社交、消息等）
     if (
       pathname === "/friends" || pathname.startsWith("/friends/") ||

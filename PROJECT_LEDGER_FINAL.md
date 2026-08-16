@@ -112,14 +112,61 @@ PageLoginGuard 组件代码在线上 JS chunk 命中；Cache-Control: no-cache �
 
 ---
 
+## 2026-08-16 P6 言道学堂 V1.0（AI 知识工厂）+ 社交/营销后端化 + 版本热更新（v25.0.19）
+
+> 部署报告：docs/reports/20260816_P6言道学堂_v25.0.19_部署报告.md
+> 验收铁则：无手机实机截图/录屏不算完成，以下条目均已上线但**待用户实机终验**
+> 开发红线：本版本仅交付系统流水线，未生产任何内容（资料/题目/教材均由项目方与 AI 流水线填充）
+
+| 编号 | 任务 | 交付状态 | 实机终验 |
+|------|------|---------|---------|
+| P6-S1 | 个人中心六大分区冻结重构（学习/内容/社区/商业/推广/系统 + 顶部星级/头衔/连续学习天数） | ✅ 已上线 v25.0.19 | 🔲 待用户截图 |
+| P6-A | 知识工厂：上传中心（文本/文件）+ AI 解析知识点 + 审核工作台（资料/知识点/题目三审）+ S/A/B/C 分级 | ✅ 已上线 v25.0.19 | 🔲 待用户截图 |
+| P6-B | 题库引擎：六大题型练习页（筛选/作答/核对解析）+ AI 出题（按赛道等级）+ 错题本 | ✅ 已上线 v25.0.19 | 🔲 待用户截图 |
+| P6-C | 考试引擎：随机组卷 + 限时倒计时/超时自动交卷 + 客观题自动判分 + 补考不限次 + 逐题解析 | ✅ 已上线 v25.0.19 | 🔲 待用户录屏 |
+| P6-F | 等级证书：分赛道头衔 + 电子证书（YA-年份-赛道-序号）+ 公开验真 + 高级证 2 年复核机制 | ✅ 已上线 v25.0.19 | 🔲 待用户截图 |
+| H2-后端 | 社交体系后端化：动态/评论/点赞/关注/好友/私聊/群聊/通知 全链路真实多人互通（socialApiRoutes @ /api/social） | ✅ 已上线 v25.0.19 | 🔲 待用户录屏 |
+| H3-后端 | 推广驾驶舱三接口（invite-code/team-stats/team-members @ register_routes） | ✅ 已上线（服务器原生） | 🔲 待用户截图 |
+| H1 | 版本热更新：version.json + VersionChecker 自动检测强刷（根治手机端旧版缓存） | ✅ 已上线 v25.0.19 | 🔲 待用户截图 |
+| 入口 | 首页言道学堂横幅入口 + 个人中心学习中心五入口 + 知识工厂贡献入口 | ✅ 已上线 v25.0.19 | 🔲 待用户截图 |
+
+后端证据：academyRoutes/socialApiRoutes 挂载于 /www/yandaoguoxue-backend（server.js extraRoutes，
+socialApiRoutes 先于 socialStorageRoutes 挂载避免 /messages 路径冲突）；PM2 重启在线；
+/api/academy/tracks 401 鉴权正常、/api/academy/certificates/verify 公开验真正常、
+/api/social/posts 200 空列表正常、/api/social/admin/storage/status 200 旧路由无损；
+data/academy.db 独立 SQLite 已建（不触碰用户核心库）。
+
+部署证据：三端一致 commit 3404773（本地=GitHub=服务器源码）；本地与服务器 npm run build exit 0；
+releases/v25.0.19 发布 5079 文件；current 软链已切换；nginx cache 清理 + reload；
+公网 8 个学堂页 + profile/social/login 全 200；version.json 公网实测 v25.0.19_D20260816；
+profile 预渲染 HTML 六分区标记全命中；deploy_standard.sh 七层门禁 ALL_GATES_PASS。
+
+---
+
+## 2026-08-16 v25.0.20：底部导航学习入口 + 紫微/奇门移动适配 + 学堂三板块类目 + 倪海厦资料导入
+
+| 编号 | 任务 | 交付状态 | 实机终验 |
+|------|------|---------|---------|
+| NAV-1 | 底部导航：积分移除（个人中心已有积分中心），学习入口上底部导航（/academy） | ✅ 已上线 v25.0.20 | 🔲 待用户实机截图 |
+| ZW-1 | 紫微斗数命盘手机右侧截断根治：等比缩放(fit) + 放大横滑(zoom) 双模式（ResizeObserver） | ✅ 已上线 v25.0.20 | 🔲 待用户实机录屏 |
+| QM-1 | 奇门遁甲排盘参数面板缩小（不再占满整页），选项完整可切换 | ✅ 已上线 v25.0.20 | 🔲 待用户实机截图 |
+| AC-1 | 学堂板块重构：中医/易学/国学三大板块 + 板块下自定义类目（categories 表/CRUD/审核台类目管理），旧赛道值自动兼容映射 | ✅ 已上线 v25.0.20 | 🔲 待用户实机截图 |
+| AC-2 | 倪海厦资料导入：24 份原始资料提取→清洗去乱码→9 大类目整理版（~466 万字）→ 服务器分片导入 materials（status=pending 待审核） | ✅ 已导入 | 🔲 待用户审核工作台抽查 |
+| AC-3 | AI 流水线验证：AI 解析知识点→人工审核→AI 出题→人工审核 全链路跑通 | ✅ 已验证 | 🔲 待用户实机体验 |
+
+资料整理版（用户可保存的完整文字版）：docs/materials/nihaixia/（00 目录总览 + 01-09 九个类目 .md）；
+服务器导入源：/root/nihaixia_import/；导入脚本：scripts/import_academy_materials.js（分片 180k 字/幂等重跑）。
+
+---
+
 ## 生产环境
 
 | 项目 | 值 |
 |------|-----|
 | 服务器 | 82.156.228.87 |
 | 域名 | yandaoguoxue.yandao.vip |
-| 当前版本 | v25.0.18 (公网实测 v25.0.18_D20260816) |
-| 部署路径 | /root/yandaoguoxue/releases/v25.0.18 |
-| 后端服务 | yandaoguoxue-backend (PM2 online) |
-| 数据库 | PostgreSQL + SQLite |
+| 当前版本 | v25.0.20 (公网实测 v25.0.20_D20260816) |
+| 部署路径 | /root/yandaoguoxue/releases/v25.0.20 |
+| 后端服务 | yandaoguoxue-backend (PM2 online, 端口 3001) |
+| 数据库 | PostgreSQL + SQLite（academy.db 独立） |
 | SSL | Let's Encrypt |

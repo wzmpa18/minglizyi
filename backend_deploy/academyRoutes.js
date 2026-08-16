@@ -24,15 +24,39 @@ const ACADEMY_DB_PATH = path.join(__dirname, 'data', 'academy.db');
 const FILE_DIR = path.join(__dirname, 'data', 'academy_files');
 const JWT_SECRET = process.env.JWT_SECRET || 'yandao_default_jwt_secret_change_me';
 
-// ==================== 赛道与等级配置 ====================
+// ==================== 板块与等级配置 ====================
+// v25.0.20：三大板块（中医/易学/国学）+ 板块下自定义类目（categories 表）
+// 旧赛道值兼容映射：tcm→zhongyi, bazi/qimen/ziwei→yixue, general→guoxue
 
 const TRACKS = {
-  tcm: { code: 'TCM', name: '中医', titles: ['', '中医学徒', '中医研究员', '中医讲师', '中医高级师', '认证大师'] },
-  bazi: { code: 'BZ', name: '八字', titles: ['', '命理学徒', '命理研究员', '命理讲师', '命理高级师', '认证大师'] },
-  qimen: { code: 'QM', name: '奇门', titles: ['', '奇门学徒', '奇门研究员', '奇门讲师', '奇门高级师', '认证大师'] },
-  ziwei: { code: 'ZW', name: '紫微', titles: ['', '紫微学徒', '紫微研究员', '紫微讲师', '紫微高级师', '认证大师'] },
-  general: { code: 'GX', name: '国学通识', titles: ['', '国学学徒', '国学研究员', '国学讲师', '国学高级师', '认证大师'] },
+  zhongyi: { code: 'TCM', name: '中医', titles: ['', '中医学徒', '中医研究员', '中医讲师', '中医高级师', '认证大师'] },
+  yixue: { code: 'YX', name: '易学', titles: ['', '易学学徒', '易学研究员', '易学讲师', '易学高级师', '认证大师'] },
+  guoxue: { code: 'GX', name: '国学', titles: ['', '国学学徒', '国学研究员', '国学讲师', '国学高级师', '认证大师'] },
 };
+
+const TRACK_ALIASES = { tcm: 'zhongyi', bazi: 'yixue', qimen: 'yixue', ziwei: 'yixue', general: 'guoxue' };
+
+function normTrack(t) {
+  if (TRACKS[t]) return t;
+  return TRACK_ALIASES[t] || '';
+}
+
+function trackName(t) {
+  return (TRACKS[t] || TRACKS[TRACK_ALIASES[t]] || { name: t || '' }).name || t || '';
+}
+
+// 预置类目（中医·倪海厦人纪系列 / 易学·天纪）
+const PRESET_CATEGORIES = [
+  ['zhongyi', '倪海厦·黄帝内经', 1],
+  ['zhongyi', '倪海厦·针灸', 2],
+  ['zhongyi', '倪海厦·伤寒论', 3],
+  ['zhongyi', '倪海厦·金匮要略', 4],
+  ['zhongyi', '倪海厦·神农本草经', 5],
+  ['zhongyi', '倪海厦·临床医案', 6],
+  ['zhongyi', '倪海厦·学生笔记', 7],
+  ['zhongyi', '倪海厦·方剂处方', 8],
+  ['yixue', '倪海厦·天纪人间道', 1],
+];
 
 // 组卷配置：题量 / 分值 / 及格线 / 限时（分钟）/ 难度配比
 const EXAM_CONFIG = {
@@ -148,7 +172,33 @@ function initTables(d) {
       created_at TEXT DEFAULT (datetime('now','localtime'))
     );
     CREATE INDEX IF NOT EXISTS idx_wrong_user ON wrong_answers(user_id);
+
+    CREATE TABLE IF NOT EXISTS categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      track TEXT NOT NULL,
+      name TEXT NOT NULL,
+      sort INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'active',
+      created_at TEXT DEFAULT (datetime('now','localtime'))
+    );
   `);
+
+  // v25.0.20：旧库列迁移（materials/knowledge_points/questions 补 category；knowledge_points 补 track）
+  const ensureColumn = (table, col, ddl) => {
+    const cols = d.pragma(`table_info(${table})`).map(c => c.name);
+    if (!cols.includes(col)) d.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
+  };
+  ensureColumn('materials', 'category', "category TEXT DEFAULT ''");
+  ensureColumn('knowledge_points', 'track', "track TEXT DEFAULT ''");
+  ensureColumn('knowledge_points', 'category', "category TEXT DEFAULT ''");
+  ensureColumn('questions', 'category', "category TEXT DEFAULT ''");
+
+  // 预置类目（仅首次初始化）
+  const catCount = d.prepare('SELECT COUNT(*) AS c FROM categories').get().c;
+  if (catCount === 0) {
+    const ins = d.prepare('INSERT INTO categories (track, name, sort) VALUES (?,?,?)');
+    for (const [track, name, sort] of PRESET_CATEGORIES) ins.run(track, name, sort);
+  }
 }
 
 // ==================== 认证与权限 ====================
@@ -226,8 +276,8 @@ function extractJson(text) {
 
 function materialVo(r) {
   return {
-    id: String(r.id), title: r.title, track: r.track, trackName: (TRACKS[r.track] || {}).name || r.track,
-    format: r.format, grade: r.grade, status: r.status, parseNote: r.parse_note,
+    id: String(r.id), title: r.title, track: r.track, trackName: trackName(r.track),
+    category: r.category || '', format: r.format, grade: r.grade, status: r.status, parseNote: r.parse_note,
     uploaderId: r.uploader_id, uploaderName: r.uploader_name,
     textPreview: (r.text_content || '').slice(0, 200), createdAt: r.created_at, updatedAt: r.updated_at,
   };
@@ -237,6 +287,7 @@ function knowledgeVo(r) {
   return {
     id: String(r.id), materialId: r.material_id ? String(r.material_id) : '', chapter: r.chapter,
     title: r.title, content: r.content, tags: JSON.parse(r.tags || '[]'),
+    track: r.track || '', category: r.category || '',
     difficulty: r.difficulty, status: r.status, sourceText: r.source_text, createdAt: r.created_at,
   };
 }
@@ -244,7 +295,8 @@ function knowledgeVo(r) {
 function questionVo(r, withAnswer) {
   const vo = {
     id: String(r.id), knowledgeId: r.knowledge_id ? String(r.knowledge_id) : '',
-    track: r.track, type: r.type, stem: r.stem,
+    track: r.track, trackName: trackName(r.track), category: r.category || '',
+    type: r.type, stem: r.stem,
     options: JSON.parse(r.options || '[]'), difficulty: r.difficulty, status: r.status,
     analysis: r.analysis, createdAt: r.created_at,
   };
@@ -256,17 +308,16 @@ function questionVo(r, withAnswer) {
 }
 
 function certVo(r) {
-  const track = TRACKS[r.track] || { name: r.track };
   return {
     id: String(r.id), certNo: r.cert_no, userId: r.user_id, userName: r.user_name,
-    track: r.track, trackName: track.name, level: r.level, title: r.title,
+    track: r.track, trackName: trackName(r.track), level: r.level, title: r.title,
     examId: r.exam_id ? String(r.exam_id) : '', issuedAt: r.issued_at,
     expireAt: r.expire_at, status: r.status,
   };
 }
 
 function nextCertNo(track, year) {
-  const code = (TRACKS[track] || { code: 'GX' }).code;
+  const code = (TRACKS[track] || TRACKS[TRACK_ALIASES[track]] || { code: 'GX' }).code;
   const prefix = `YA-${year}-${code}-`;
   const row = getDb().prepare("SELECT cert_no FROM certificates WHERE cert_no LIKE ? ORDER BY id DESC LIMIT 1").get(prefix + '%');
   let seq = 1;
@@ -286,19 +337,20 @@ single/multi 必须给 4 个选项；judge 无需 options（输出 []）；qa/ca
 
 function runParseTask(materialId, text) {
   const d = getDb();
+  const mat = d.prepare('SELECT track, category FROM materials WHERE id = ?').get(materialId) || {};
   d.prepare(`UPDATE materials SET status='parsing', updated_at=datetime('now','localtime') WHERE id=?`).run(materialId);
   callAI(PARSE_SYSTEM, `赛道资料内容：\n${text.slice(0, 12000)}`)
     .then(content => {
       const list = extractJson(content);
       const arr = Array.isArray(list) ? list : [];
-      const insert = d.prepare('INSERT INTO knowledge_points (material_id, chapter, title, content, tags, difficulty, status, source_text) VALUES (?,?,?,?,?,?,?,?)');
+      const insert = d.prepare('INSERT INTO knowledge_points (material_id, chapter, title, content, tags, difficulty, status, source_text, track, category) VALUES (?,?,?,?,?,?,?,?,?,?)');
       let n = 0;
       for (const kp of arr.slice(0, 200)) {
         if (!kp || !kp.title) continue;
         insert.run(materialId, String(kp.chapter || '未分章').slice(0, 60), String(kp.title).slice(0, 60),
           String(kp.content || '').slice(0, 800), JSON.stringify(Array.isArray(kp.tags) ? kp.tags.slice(0, 6) : []),
           ['easy', 'medium', 'hard'].includes(kp.difficulty) ? kp.difficulty : 'easy', 'pending',
-          String(kp.content || '').slice(0, 300));
+          String(kp.content || '').slice(0, 300), mat.track || '', mat.category || '');
         n++;
       }
       d.prepare(`UPDATE materials SET status='parsed', parse_note=?, updated_at=datetime('now','localtime') WHERE id=?`)
@@ -312,28 +364,33 @@ function runParseTask(materialId, text) {
     });
 }
 
-function runGenQuestionsTask(track, level, count) {
+function runGenQuestionsTask(track, level, count, category = '') {
   const d = getDb();
-  const kps = d.prepare(`SELECT * FROM knowledge_points WHERE status='approved' AND (track=? OR material_id IN (SELECT id FROM materials WHERE track=?)) ORDER BY RANDOM() LIMIT 8`)
-    .all(track, track);
-  const material = kps.length ? kps.map(k => `- ${k.title}：${k.content}`).join('\n') : `赛道「${(TRACKS[track] || {}).name}」基础常识`;
+  const kps = d.prepare(`SELECT * FROM knowledge_points WHERE status='approved'
+      AND (track=? OR material_id IN (SELECT id FROM materials WHERE track=?))
+      ${category ? 'AND (category=? OR material_id IN (SELECT id FROM materials WHERE category=?))' : ''}
+      ORDER BY RANDOM() LIMIT 8`)
+    .all(...(category ? [track, track, category, category] : [track, track]));
+  const material = kps.length ? kps.map(k => `- ${k.title}：${k.content}`).join('\n') : `赛道「${trackName(track)}」基础常识`;
   const diffMap = { 1: 'easy 为主', 2: 'easy/medium 均衡', 3: 'medium/hard 为主' };
   return callAI(GENQ_SYSTEM, `目标等级：${level}级（${diffMap[level] || '均衡'}）\n生成 ${count} 道题\n知识点依据：\n${material}`)
     .then(content => {
       const list = extractJson(content);
       const arr = Array.isArray(list) ? list : [];
-      const insert = d.prepare('INSERT INTO questions (knowledge_id, track, type, stem, options, answer, keywords, analysis, difficulty, status) VALUES (?,?,?,?,?,?,?,?,?,?)');
+      const insert = d.prepare('INSERT INTO questions (knowledge_id, track, type, stem, options, answer, keywords, analysis, difficulty, status, category) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
       let n = 0;
       for (const q of arr.slice(0, 50)) {
         if (!q || !q.stem || !q.type) continue;
         if (!['single', 'multi', 'judge', 'fill', 'qa', 'case'].includes(q.type)) continue;
-        insert.run(kps[n % Math.max(kps.length, 1)] ? kps[n % Math.max(kps.length, 1)].id : null,
+        const kp = kps[n % Math.max(kps.length, 1)];
+        insert.run(kp ? kp.id : null,
           track, q.type, String(q.stem).slice(0, 1000),
           JSON.stringify(Array.isArray(q.options) ? q.options.slice(0, 6).map(o => String(o).slice(0, 200)) : []),
           String(q.answer ?? '').slice(0, 2000),
           JSON.stringify(Array.isArray(q.keywords) ? q.keywords.slice(0, 10).map(k => String(k).slice(0, 30)) : []),
           String(q.analysis || '').slice(0, 600),
-          ['easy', 'medium', 'hard'].includes(q.difficulty) ? q.difficulty : 'easy', 'pending');
+          ['easy', 'medium', 'hard'].includes(q.difficulty) ? q.difficulty : 'easy', 'pending',
+          category || (kp ? (kp.category || '') : ''));
         n++;
       }
       return n;
@@ -383,18 +440,22 @@ function createRouter() {
   const router = express.Router();
   router.use(express.json({ limit: '12mb' }));
 
-  // ---------- 赛道概览（公开） ----------
+  // ---------- 板块概览（公开） ----------
   router.get('/tracks', authRequired, (req, res) => {
     try {
       const d = getDb();
       const me = String(req.user.userId);
+      // 兼容旧赛道值（tcm/bazi/qimen/ziwei/general → 新三板块）
+      const trackKeys = (key) => [key, ...Object.entries(TRACK_ALIASES).filter(([, v]) => v === key).map(([k]) => k)];
+      const inSql = (key, col) => `${col} IN (${trackKeys(key).map(() => '?').join(',')})`;
       const tracks = Object.entries(TRACKS).map(([key, t]) => {
-        const kpCount = d.prepare(`SELECT COUNT(*) AS c FROM knowledge_points WHERE status='approved' AND (track=? OR material_id IN (SELECT id FROM materials WHERE track=?))`).get(key, key).c;
-        const qCount = d.prepare(`SELECT COUNT(*) AS c FROM questions WHERE status='approved' AND track=?`).get(key).c;
-        const myCerts = d.prepare(`SELECT level, title, cert_no, status, issued_at, expire_at FROM certificates WHERE user_id=? AND track=? ORDER BY level DESC`).all(me, key);
-        const myBest = d.prepare(`SELECT MAX(level) AS lv FROM certificates WHERE user_id=? AND track=?`).get(me, key).lv || 0;
+        const kpCount = d.prepare(`SELECT COUNT(*) AS c FROM knowledge_points WHERE status='approved' AND (material_id IN (SELECT id FROM materials WHERE ${inSql(key, 'track')}))`).get(...trackKeys(key)).c;
+        const qCount = d.prepare(`SELECT COUNT(*) AS c FROM questions WHERE status='approved' AND ${inSql(key, 'track')}`).get(...trackKeys(key)).c;
+        const myCerts = d.prepare(`SELECT level, title, cert_no, status, issued_at, expire_at FROM certificates WHERE user_id=? AND ${inSql(key, 'track')} ORDER BY level DESC`).all(me, ...trackKeys(key));
+        const myBest = d.prepare(`SELECT MAX(level) AS lv FROM certificates WHERE user_id=? AND ${inSql(key, 'track')}`).get(me, ...trackKeys(key)).lv || 0;
+        const catCount = d.prepare(`SELECT COUNT(*) AS c FROM categories WHERE track=? AND status='active'`).get(key).c;
         return {
-          key, name: t.name, code: t.code,
+          key, name: t.name, code: t.code, categoryCount: catCount,
           knowledgeCount: kpCount, questionCount: qCount,
           myLevel: myBest, myTitle: t.titles[myBest] || '', myCertificates: myCerts.map(c => ({ ...c, level: c.level, expireAt: c.expire_at })),
         };
@@ -405,12 +466,70 @@ function createRouter() {
     }
   });
 
+  // ---------- 类目（板块下自定义类目） ----------
+  router.get('/categories', authRequired, (req, res) => {
+    try {
+      const d = getDb();
+      const { track = '' } = req.query;
+      const rows = track
+        ? d.prepare(`SELECT * FROM categories WHERE status='active' AND track=? ORDER BY sort, id`).all(track)
+        : d.prepare(`SELECT * FROM categories WHERE status='active' ORDER BY track, sort, id`).all();
+      const matCnt = d.prepare(`SELECT category, COUNT(*) AS c FROM materials GROUP BY category`);
+      const cntMap = Object.fromEntries(matCnt.all().map(r => [r.category, r.c]));
+      res.json({
+        success: true,
+        categories: rows.map(r => ({
+          id: String(r.id), track: r.track, trackName: trackName(r.track), name: r.name, sort: r.sort,
+          materialCount: cntMap[r.name] || 0,
+        })),
+      });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  router.post('/categories', adminRequired, (req, res) => {
+    try {
+      const { track, name } = req.body;
+      const t = normTrack(track);
+      if (!t) return res.status(400).json({ success: false, error: '请选择有效板块' });
+      if (!name || !String(name).trim()) return res.status(400).json({ success: false, error: '请填写类目名称' });
+      const exist = getDb().prepare(`SELECT id FROM categories WHERE track=? AND name=?`).get(t, String(name).trim());
+      if (exist) return res.status(400).json({ success: false, error: '该类目已存在' });
+      const maxSort = getDb().prepare(`SELECT MAX(sort) AS s FROM categories WHERE track=?`).get(t).s || 0;
+      const r = getDb().prepare('INSERT INTO categories (track, name, sort) VALUES (?,?,?)').run(t, String(name).trim().slice(0, 40), maxSort + 1);
+      res.json({ success: true, categoryId: String(r.lastInsertRowid) });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  router.delete('/categories/:id', adminRequired, (req, res) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      const row = getDb().prepare('SELECT * FROM categories WHERE id = ?').get(id);
+      if (!row) return res.status(404).json({ success: false, error: '类目不存在' });
+      const used = getDb().prepare('SELECT COUNT(*) AS c FROM materials WHERE category = ?').get(row.name).c;
+      if (used > 0) return res.status(400).json({ success: false, error: `该类目下有 ${used} 份资料，请先移除资料` });
+      getDb().prepare(`UPDATE categories SET status='deleted' WHERE id=?`).run(id);
+      res.json({ success: true });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
   // ---------- P6-A 资料 ----------
   router.post('/materials', authRequired, (req, res) => {
     try {
-      const { title, track, format = 'text', textContent = '', fileBase64 = '', fileName = '', grade = 'C' } = req.body;
+      const { title, track, category = '', format = 'text', textContent = '', fileBase64 = '', fileName = '', grade = 'C' } = req.body;
       if (!title || !String(title).trim()) return res.status(400).json({ success: false, error: '请填写资料标题' });
-      if (!TRACKS[track]) return res.status(400).json({ success: false, error: '请选择有效赛道' });
+      const t = normTrack(track);
+      if (!t) return res.status(400).json({ success: false, error: '请选择有效板块' });
+      let cat = String(category).trim().slice(0, 40);
+      if (cat) {
+        const ok = getDb().prepare(`SELECT id FROM categories WHERE track=? AND name=? AND status='active'`).get(t, cat);
+        if (!ok) return res.status(400).json({ success: false, error: '类目不存在，请先在类目管理中创建' });
+      }
       let filePath = '';
       if (fileBase64) {
         if (!fs.existsSync(FILE_DIR)) fs.mkdirSync(FILE_DIR, { recursive: true });
@@ -419,8 +538,8 @@ function createRouter() {
         fs.writeFileSync(filePath, Buffer.from(fileBase64.replace(/^data:[^;]+;base64,/, ''), 'base64'));
       }
       if (!textContent && !filePath) return res.status(400).json({ success: false, error: '请提供文本内容或上传文件' });
-      const result = getDb().prepare('INSERT INTO materials (title, track, format, file_path, text_content, grade, status, uploader_id, uploader_name) VALUES (?,?,?,?,?,?,?,?,?)')
-        .run(String(title).trim().slice(0, 100), track, format, filePath, String(textContent).slice(0, 200000),
+      const result = getDb().prepare('INSERT INTO materials (title, track, category, format, file_path, text_content, grade, status, uploader_id, uploader_name) VALUES (?,?,?,?,?,?,?,?,?,?)')
+        .run(String(title).trim().slice(0, 100), t, cat, format, filePath, String(textContent).slice(0, 200000),
           ['S', 'A', 'B', 'C'].includes(grade) ? grade : 'C', 'pending', String(req.user.userId), req.user.nickname || `用户${req.user.userId}`);
       res.json({ success: true, materialId: String(result.lastInsertRowid), message: '资料已提交，等待解析与审核' });
     } catch (e) {
@@ -431,11 +550,17 @@ function createRouter() {
   router.get('/materials', authRequired, (req, res) => {
     try {
       const d = getDb();
-      const { track = '', status = '', mine = '' } = req.query;
+      const { track = '', category = '', status = '', mine = '' } = req.query;
       const me = String(req.user.userId);
       let sql = 'SELECT * FROM materials WHERE 1=1';
       const params = [];
-      if (track) { sql += ' AND track = ?'; params.push(track); }
+      if (track) {
+        const t = normTrack(track);
+        const keys = [t, ...Object.entries(TRACK_ALIASES).filter(([, v]) => v === t).map(([k]) => k)];
+        sql += ` AND track IN (${keys.map(() => '?').join(',')})`;
+        params.push(...keys);
+      }
+      if (category) { sql += ' AND category = ?'; params.push(category); }
       if (mine === '1') { sql += ' AND uploader_id = ?'; params.push(me); }
       else if (isAdmin(req)) { if (status) { sql += ' AND status = ?'; params.push(status); } }
       else { sql += ` AND (status = 'approved' OR uploader_id = ?)`; params.push(me); }
@@ -489,15 +614,22 @@ function createRouter() {
   router.get('/knowledge', authRequired, (req, res) => {
     try {
       const d = getDb();
-      const { track = '', status = '', materialId = '' } = req.query;
-      let sql = `SELECT k.* FROM knowledge_points k LEFT JOIN materials m ON k.material_id = m.id WHERE 1=1`;
+      const { track = '', category = '', status = '', materialId = '' } = req.query;
+      let sql = `SELECT k.*, m.track AS m_track, m.category AS m_category FROM knowledge_points k LEFT JOIN materials m ON k.material_id = m.id WHERE 1=1`;
       const params = [];
-      if (track) { sql += ' AND (k.material_id IN (SELECT id FROM materials WHERE track = ?))'; params.push(track); }
+      if (track) {
+        const t = normTrack(track);
+        const keys = [t, ...Object.entries(TRACK_ALIASES).filter(([, v]) => v === t).map(([k]) => k)];
+        sql += ` AND (m.track IN (${keys.map(() => '?').join(',')}) OR k.track IN (${keys.map(() => '?').join(',')}))`;
+        params.push(...keys, ...keys);
+      }
+      if (category) { sql += ' AND (k.category = ? OR m.category = ?)'; params.push(category, category); }
       if (materialId) { sql += ' AND k.material_id = ?'; params.push(parseInt(materialId, 10)); }
       if (isAdmin(req)) { if (status) { sql += ' AND k.status = ?'; params.push(status); } }
       else { sql += ` AND k.status = 'approved'`; }
       sql += ' ORDER BY k.id DESC LIMIT 300';
-      res.json({ success: true, points: d.prepare(sql).all(...params).map(knowledgeVo) });
+      const rows = d.prepare(sql).all(...params).map(r => knowledgeVo({ ...r, track: r.track || r.m_track || '', category: r.category || r.m_category || '' }));
+      res.json({ success: true, points: rows });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
     }
@@ -533,9 +665,11 @@ function createRouter() {
   // ---------- P6-B 题库 ----------
   router.post('/questions/generate', adminRequired, async (req, res) => {
     try {
-      const { track = 'general', level = 1, count = 10 } = req.body;
+      const { track = 'zhongyi', category = '', level = 1, count = 10 } = req.body;
+      const t = normTrack(track);
+      if (!t) return res.status(400).json({ success: false, error: '请选择有效板块' });
       const n = parseInt(count, 10) || 10;
-      const created = await runGenQuestionsTask(track, parseInt(level, 10) || 1, Math.min(n, 30));
+      const created = await runGenQuestionsTask(t, parseInt(level, 10) || 1, Math.min(n, 30), String(category).trim());
       res.json({ success: true, created, message: `AI 已生成 ${created} 道题，待人工审核` });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
@@ -545,10 +679,16 @@ function createRouter() {
   router.get('/questions', authRequired, (req, res) => {
     try {
       const d = getDb();
-      const { track = '', status = '', type = '' } = req.query;
+      const { track = '', category = '', status = '', type = '' } = req.query;
       let sql = 'SELECT * FROM questions WHERE 1=1';
       const params = [];
-      if (track) { sql += ' AND track = ?'; params.push(track); }
+      if (track) {
+        const t = normTrack(track);
+        const keys = [t, ...Object.entries(TRACK_ALIASES).filter(([, v]) => v === t).map(([k]) => k)];
+        sql += ` AND track IN (${keys.map(() => '?').join(',')})`;
+        params.push(...keys);
+      }
+      if (category) { sql += ' AND category = ?'; params.push(category); }
       if (type) { sql += ' AND type = ?'; params.push(type); }
       if (isAdmin(req)) { if (status) { sql += ' AND status = ?'; params.push(status); } }
       else { sql += ` AND status = 'approved'`; }

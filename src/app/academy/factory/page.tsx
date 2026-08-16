@@ -6,9 +6,11 @@ import { BrandHeader } from "@/components/shared";
 import {
   uploadMaterial,
   fetchMaterials,
+  fetchCategories,
   TRACK_LIST,
   GRADE_NAMES,
   type MaterialVo,
+  type CategoryVo,
 } from "@/lib/academyApi";
 import { PageLoginGuard } from "@/components/PageLoginGuard";
 
@@ -31,7 +33,9 @@ export default function FactoryPage() {
 
   // 上传表单
   const [title, setTitle] = useState("");
-  const [track, setTrack] = useState<string>("tcm");
+  const [track, setTrack] = useState<string>("zhongyi");
+  const [category, setCategory] = useState("");
+  const [categories, setCategories] = useState<CategoryVo[]>([]);
   const [format, setFormat] = useState<"text" | "file">("text");
   const [textContent, setTextContent] = useState("");
   const [fileBase64, setFileBase64] = useState("");
@@ -58,6 +62,13 @@ export default function FactoryPage() {
     if (tab === "mine") void loadMine();
   }, [tab, loadMine]);
 
+  useEffect(() => {
+    setCategory("");
+    fetchCategories(track)
+      .then((r) => setCategories(r && r.success && r.categories ? r.categories : []))
+      .catch(() => setCategories([]));
+  }, [track]);
+
   const handleFile = (f: File | null) => {
     if (!f) return;
     if (f.size > 2 * 1024 * 1024) {
@@ -82,6 +93,7 @@ export default function FactoryPage() {
       const r = await uploadMaterial({
         title: t,
         track,
+        category: category || undefined,
         format: format === "text" ? "text" : "file",
         textContent: format === "text" ? textContent.trim() : undefined,
         fileBase64: format === "file" ? fileBase64 : undefined,
@@ -140,7 +152,7 @@ export default function FactoryPage() {
           </div>
 
           <div className="rounded-2xl bg-white p-4 shadow-sm">
-            <p className="text-sm font-semibold text-gray-700">所属赛道 *</p>
+            <p className="text-sm font-semibold text-gray-700">所属板块 *</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {TRACK_LIST.map((t) => (
                 <button
@@ -153,6 +165,29 @@ export default function FactoryPage() {
                 </button>
               ))}
             </div>
+            <p className="mt-3 text-sm font-semibold text-gray-700">所属类目</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                onClick={() => setCategory("")}
+                className="rounded-full px-3 py-1.5 text-xs font-semibold"
+                style={{ backgroundColor: category === "" ? BRAND : "#f0f0f0", color: category === "" ? "#fff" : "#666" }}
+              >
+                不分类
+              </button>
+              {categories.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => setCategory(c.name)}
+                  className="rounded-full px-3 py-1.5 text-xs font-semibold"
+                  style={{ backgroundColor: category === c.name ? BRAND : "#f0f0f0", color: category === c.name ? "#fff" : "#666" }}
+                >
+                  {c.name}
+                </button>
+              ))}
+            </div>
+            {categories.length === 0 && (
+              <p className="mt-2 text-[10px] text-gray-400">该板块暂无类目，可到审核工作台的类目管理中添加</p>
+            )}
           </div>
 
           <div className="rounded-2xl bg-white p-4 shadow-sm">
@@ -247,7 +282,8 @@ export default function FactoryPage() {
                       </span>
                     </div>
                     <p className="mt-1.5 text-[11px] text-gray-400">
-                      {TRACK_LIST.find((t) => t.key === m.track)?.name || m.track}
+                      {TRACK_LIST.find((t) => t.key === m.track)?.name || m.trackName || m.track}
+                      {m.category ? ` · ${m.category}` : ""}
                       {m.grade ? ` · ${GRADE_NAMES[m.grade] || m.grade}` : ""}
                       {` · ${new Date(m.createdAt).toLocaleDateString("zh-CN")}`}
                     </p>

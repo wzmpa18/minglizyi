@@ -500,9 +500,35 @@ export default function ZiweiPage() {
   const [aiContent, setAiContent] = useState("");
   const [aiScope, setAiScope] = useState<"overall" | "palace" | "daxian" | "liunian" | "liuyue" | "liuri" | "liushi" | null>(null);
 
+  // v25.0.20: 命盘等比缩放适配（根治手机端右侧截断）——fit=适配屏宽整体缩放 / zoom=放大横滑
+  const CHART_DESIGN_W = 440;
+  const chartOuterRef = useRef<HTMLDivElement>(null);
+  const chartInnerRef = useRef<HTMLDivElement>(null);
+  const [chartMode, setChartMode] = useState<"fit" | "zoom">("fit");
+  const [chartScale, setChartScale] = useState(1);
+  const [chartInnerH, setChartInnerH] = useState(0);
+
   // ---- 结果状态 ----
   const [result, setResult] = useState<ZiweiResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const outer = chartOuterRef.current;
+    const inner = chartInnerRef.current;
+    if (!outer || !inner) return;
+    const update = () => {
+      const w = outer.clientWidth;
+      const fitScale = Math.min(1, w / CHART_DESIGN_W);
+      const zoomScale = Math.min(1.8, Math.max(1.1, fitScale * 1.5));
+      setChartScale(chartMode === "fit" ? fitScale : zoomScale);
+      setChartInnerH(inner.scrollHeight);
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(outer);
+    ro.observe(inner);
+    return () => ro.disconnect();
+  }, [chartMode, result, viewMode]);
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
 
   // ---- 提交 ----
@@ -962,8 +988,40 @@ export default function ZiweiPage() {
               ☀ {solarCorrection}
             </div>
           )}
+          {/* ---- v25.0.20: 命盘缩放切换条（fit=适配屏宽整体等比缩放 / zoom=放大后横向滑动） ---- */}
+          <div className="flex items-center justify-between mb-1 mt-2">
+            <span className="text-[11px] text-gray-500">
+              命盘 {chartMode === "fit" ? `适配屏宽 ${Math.round(chartScale * 100)}%` : `放大 ${Math.round(chartScale * 100)}%（← 左右滑动查看）`}
+            </span>
+            <div className="flex rounded-full overflow-hidden text-[11px]" style={{ border: "1px solid #7B2FBE" }}>
+              <button
+                onClick={() => setChartMode("fit")}
+                style={{ padding: "3px 10px", border: 0, cursor: "pointer", background: chartMode === "fit" ? "#7B2FBE" : "#fff", color: chartMode === "fit" ? "#fff" : "#7B2FBE", fontWeight: chartMode === "fit" ? 700 : 400 }}
+              >适配屏宽</button>
+              <button
+                onClick={() => setChartMode("zoom")}
+                style={{ padding: "3px 10px", border: 0, cursor: "pointer", background: chartMode === "zoom" ? "#7B2FBE" : "#fff", color: chartMode === "zoom" ? "#fff" : "#7B2FBE", fontWeight: chartMode === "zoom" ? 700 : 400 }}
+              >放大滑动</button>
+            </div>
+          </div>
+
+          {/* ---- v25.0.20: 缩放容器（等比缩放根治手机右侧截断；zoom 模式横向滑动） ---- */}
+          <div
+            ref={chartOuterRef}
+            style={{
+              overflowX: chartMode === "zoom" ? "auto" : "hidden",
+              overflowY: "hidden",
+              WebkitOverflowScrolling: "touch",
+              height: chartInnerH > 0 ? chartInnerH * chartScale : undefined,
+              marginBottom: 8,
+            }}
+          >
+            <div
+              ref={chartInnerRef}
+              style={{ width: CHART_DESIGN_W, transform: `scale(${chartScale})`, transformOrigin: "top left" }}
+            >
           {/* ---- 4x4 宫格盘（带方位标签和SVG连线，v19.2支持缩放拖拽） ---- */}
-          <div className="bg-white rounded-lg overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08)] mb-2 mt-2">
+          <div className="bg-white rounded-lg overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
             {/* 方位标签 - 上方（对应巳午未申） */}
             <div className="flex text-[9px] text-gray-500" style={{ height: "14px", lineHeight: "14px" }}>
               <div style={{ width: "25%", textAlign: "center" }}>南偏东</div>
@@ -1345,6 +1403,8 @@ export default function ZiweiPage() {
                 <div style={{ width: "25%", textAlign: "center" }}>北偏西</div>
               </div>
               <div style={{ width: "14px" }}></div>
+            </div>
+          </div>
             </div>
           </div>
 

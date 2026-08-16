@@ -4,9 +4,11 @@ import React, { useCallback, useEffect, useState } from "react";
 import { BrandHeader } from "@/components/shared";
 import {
   fetchQuestions,
+  fetchCategories,
   TRACK_LIST,
   TYPE_NAMES,
   type QuestionVo,
+  type CategoryVo,
 } from "@/lib/academyApi";
 import { PageLoginGuard } from "@/components/PageLoginGuard";
 
@@ -16,6 +18,8 @@ const DIFF_NAMES: Record<string, string> = { easy: "易", medium: "中", hard: "
 
 export default function QuestionBankPage() {
   const [track, setTrack] = useState<string>("");
+  const [category, setCategory] = useState("");
+  const [categories, setCategories] = useState<CategoryVo[]>([]);
   const [type, setType] = useState<string>("");
   const [questions, setQuestions] = useState<QuestionVo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,6 +32,7 @@ export default function QuestionBankPage() {
       const r = await fetchQuestions({
         status: "approved",
         ...(track ? { track } : {}),
+        ...(category ? { category } : {}),
         ...(type ? { type } : {}),
       });
       if (r && r.success && r.questions) setQuestions(r.questions);
@@ -37,11 +42,19 @@ export default function QuestionBankPage() {
     } finally {
       setLoading(false);
     }
-  }, [track, type]);
+  }, [track, category, type]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    setCategory("");
+    if (!track) { setCategories([]); return; }
+    fetchCategories(track)
+      .then((r) => setCategories(r && r.success && r.categories ? r.categories : []))
+      .catch(() => setCategories([]));
+  }, [track]);
 
   const choose = (q: QuestionVo, opt: string) => {
     if (q.type === "multi") {
@@ -63,14 +76,14 @@ export default function QuestionBankPage() {
       <PageLoginGuard />
       <BrandHeader title="题库练习" showBack backUrl="/academy" />
 
-      {/* 赛道筛选 */}
+      {/* 板块筛选 */}
       <div className="sticky top-0 z-10 flex gap-2 overflow-x-auto border-b border-gray-200 bg-white px-3 py-2.5">
         <button
           onClick={() => setTrack("")}
           className="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors"
           style={{ backgroundColor: track === "" ? BRAND : "#f0f0f0", color: track === "" ? "#fff" : "#666" }}
         >
-          全部赛道
+          全部板块
         </button>
         {TRACK_LIST.map((t) => (
           <button
@@ -83,6 +96,29 @@ export default function QuestionBankPage() {
           </button>
         ))}
       </div>
+
+      {/* 类目筛选 */}
+      {track && categories.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto border-b border-gray-100 bg-white px-3 py-2">
+          <button
+            onClick={() => setCategory("")}
+            className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors"
+            style={{ backgroundColor: category === "" ? BRAND + "15" : "#f7f7f7", color: category === "" ? BRAND : "#999" }}
+          >
+            全部类目
+          </button>
+          {categories.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => setCategory(c.name)}
+              className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors"
+              style={{ backgroundColor: category === c.name ? BRAND + "15" : "#f7f7f7", color: category === c.name ? BRAND : "#999" }}
+            >
+              {c.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* 题型筛选 */}
       <div className="flex gap-2 overflow-x-auto border-b border-gray-100 bg-white px-3 py-2">

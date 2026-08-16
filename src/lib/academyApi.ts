@@ -43,12 +43,11 @@ async function adminApi<T = any>(path: string, init?: RequestInit): Promise<T> {
   return res.json();
 }
 
+// v25.0.20：三大板块（中医/易学/国学），板块下类目由 categories 接口管理
 export const TRACK_LIST = [
-  { key: "tcm", name: "中医" },
-  { key: "bazi", name: "八字" },
-  { key: "qimen", name: "奇门" },
-  { key: "ziwei", name: "紫微" },
-  { key: "general", name: "国学通识" },
+  { key: "zhongyi", name: "中医" },
+  { key: "yixue", name: "易学" },
+  { key: "guoxue", name: "国学" },
 ] as const;
 
 export const LEVEL_NAMES: Record<number, string> = { 1: "初级", 2: "中级", 3: "高级" };
@@ -60,7 +59,7 @@ export const TYPE_NAMES: Record<string, string> = {
 // ==================== 赛道概览 ====================
 
 export interface TrackOverview {
-  key: string; name: string; code: string;
+  key: string; name: string; code: string; categoryCount: number;
   knowledgeCount: number; questionCount: number;
   myLevel: number; myTitle: string;
   myCertificates: Array<{ level: number; title: string; cert_no: string; status: string; issued_at: string; expire_at: string }>;
@@ -70,16 +69,39 @@ export async function fetchTracks() {
   return api<{ success: boolean; tracks?: TrackOverview[] }>(`/api/academy/tracks`);
 }
 
+// ==================== 类目（板块下自定义类目） ====================
+
+export interface CategoryVo {
+  id: string; track: string; trackName: string; name: string;
+  sort: number; materialCount: number;
+}
+
+export async function fetchCategories(track?: string) {
+  const q = track ? `?track=${encodeURIComponent(track)}` : "";
+  return api<{ success: boolean; categories?: CategoryVo[] }>(`/api/academy/categories${q}`);
+}
+
+export async function createCategory(track: string, name: string) {
+  return adminApi<{ success: boolean; categoryId?: string; message?: string; error?: string }>(`/api/academy/categories`, {
+    method: "POST",
+    body: JSON.stringify({ track, name }),
+  });
+}
+
+export async function deleteCategory(id: string) {
+  return adminApi<{ success: boolean; error?: string }>(`/api/academy/categories/${id}`, { method: "DELETE" });
+}
+
 // ==================== P6-A 知识工厂 ====================
 
 export interface MaterialVo {
-  id: string; title: string; track: string; trackName: string; format: string;
+  id: string; title: string; track: string; trackName: string; category: string; format: string;
   grade: string; status: string; parseNote: string; uploaderId: string; uploaderName: string;
   textPreview: string; createdAt: string; updatedAt: string;
 }
 
 export async function uploadMaterial(data: {
-  title: string; track: string; format?: string; textContent?: string;
+  title: string; track: string; category?: string; format?: string; textContent?: string;
   fileBase64?: string; fileName?: string; grade?: string;
 }) {
   return api<{ success: boolean; materialId?: string; message?: string; error?: string }>(`/api/academy/materials`, {
@@ -88,9 +110,10 @@ export async function uploadMaterial(data: {
   });
 }
 
-export async function fetchMaterials(opts?: { track?: string; status?: string; mine?: boolean }) {
+export async function fetchMaterials(opts?: { track?: string; category?: string; status?: string; mine?: boolean }) {
   const q = new URLSearchParams();
   if (opts?.track) q.set("track", opts.track);
+  if (opts?.category) q.set("category", opts.category);
   if (opts?.status) q.set("status", opts.status);
   if (opts?.mine) q.set("mine", "1");
   return api<{ success: boolean; materials?: MaterialVo[] }>(`/api/academy/materials?${q.toString()}`);
@@ -111,12 +134,13 @@ export async function reviewMaterial(materialId: string, action: "approve" | "re
 
 export interface KnowledgeVo {
   id: string; materialId: string; chapter: string; title: string; content: string;
-  tags: string[]; difficulty: string; status: string; sourceText: string; createdAt: string;
+  track: string; category: string; tags: string[]; difficulty: string; status: string; sourceText: string; createdAt: string;
 }
 
-export async function fetchKnowledge(opts?: { track?: string; status?: string; materialId?: string }) {
+export async function fetchKnowledge(opts?: { track?: string; category?: string; status?: string; materialId?: string }) {
   const q = new URLSearchParams();
   if (opts?.track) q.set("track", opts.track);
+  if (opts?.category) q.set("category", opts.category);
   if (opts?.status) q.set("status", opts.status);
   if (opts?.materialId) q.set("materialId", opts.materialId);
   return api<{ success: boolean; points?: KnowledgeVo[] }>(`/api/academy/knowledge?${q.toString()}`);
@@ -132,21 +156,22 @@ export async function reviewKnowledge(id: string, action: "approve" | "reject", 
 // ==================== P6-B 题库 ====================
 
 export interface QuestionVo {
-  id: string; knowledgeId: string; track: string; type: string; stem: string;
+  id: string; knowledgeId: string; track: string; trackName: string; category: string; type: string; stem: string;
   options: string[]; difficulty: string; status: string;
   analysis: string; answer?: string; keywords?: string[]; createdAt: string;
 }
 
-export async function generateQuestions(data: { track: string; level: number; count?: number }) {
+export async function generateQuestions(data: { track: string; level: number; count?: number; category?: string }) {
   return adminApi<{ success: boolean; created?: number; message?: string; error?: string }>(`/api/academy/questions/generate`, {
     method: "POST",
     body: JSON.stringify(data),
   });
 }
 
-export async function fetchQuestions(opts?: { track?: string; status?: string; type?: string }) {
+export async function fetchQuestions(opts?: { track?: string; category?: string; status?: string; type?: string }) {
   const q = new URLSearchParams();
   if (opts?.track) q.set("track", opts.track);
+  if (opts?.category) q.set("category", opts.category);
   if (opts?.status) q.set("status", opts.status);
   if (opts?.type) q.set("type", opts.type);
   return api<{ success: boolean; questions?: QuestionVo[] }>(`/api/academy/questions?${q.toString()}`);

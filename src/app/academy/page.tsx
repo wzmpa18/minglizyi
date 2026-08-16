@@ -9,7 +9,7 @@ import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
 
 const TRACK_EMOJI: Record<string, string> = {
-  tcm: "🌿", bazi: "☯️", qimen: "🔭", ziwei: "⭐", general: "📜",
+  zhongyi: "🌿", yixue: "☯️", guoxue: "📜",
 };
 
 const ENTRIES = [
@@ -79,8 +79,8 @@ export default function AcademyPage() {
           ))}
         </div>
 
-        {/* 赛道概览 */}
-        <p className="mb-2 mt-4 px-1 text-xs font-semibold text-gray-500">赛道概览</p>
+        {/* 板块概览 */}
+        <p className="mb-2 mt-4 px-1 text-xs font-semibold text-gray-500">板块概览</p>
         {loading ? (
           <div className="rounded-2xl bg-white p-6 text-center text-xs text-gray-400 shadow-sm">加载中...</div>
         ) : tracks.length === 0 ? (
@@ -115,7 +115,7 @@ export default function AcademyPage() {
                     )}
                   </div>
                   <p className="mt-1 text-[11px] text-gray-400">
-                    {t.knowledgeCount} 个知识点 · {t.questionCount} 道题
+                    {t.categoryCount} 个类目 · {t.knowledgeCount} 个知识点 · {t.questionCount} 道题
                     {t.myCertificates.length > 0 ? ` · ${t.myCertificates.length} 张证书` : ""}
                   </p>
                 </div>
