@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Solar } from "lunar-javascript";
 import { calculateQimen } from "@/algorithm-core";
-import type { QimenResult } from "@/algorithm-core";
+import type { QimenResult, PanMethod, PanLayoutMode, JiGongMethod, QimenTimeType, AnganType } from "@/algorithm-core";
 import { DatePicker } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
@@ -95,6 +95,72 @@ const INTERPRET_TYPE_COLORS: Record<string, { bg: string; fg: string; label: str
 };
 
 // ============================================================================
+// 排盘参数选项（对标行业主流工具参数体系）
+// ============================================================================
+
+const LAYOUT_MODE_OPTIONS: { val: PanLayoutMode; label: string }[] = [
+  { val: "zhuanpan", label: "转盘" },
+  { val: "feipan", label: "飞盘" },
+];
+
+const JIGONG_OPTIONS: { val: JiGongMethod; label: string }[] = [
+  { val: "yanggen_yinkun", label: "阳艮阴坤" },
+  { val: "kun", label: "坤宫寄" },
+];
+
+const JU_METHOD_OPTIONS: { val: PanMethod; label: string }[] = [
+  { val: "chaibu", label: "拆补法" },
+  { val: "zhirun", label: "置闰法" },
+  { val: "maoshan", label: "茅山法" },
+  { val: "zixuan", label: "自选局数" },
+];
+
+const ANGAN_OPTIONS: { val: AnganType; label: string }[] = [
+  { val: "zhishi", label: "值使门起" },
+  { val: "men", label: "门地盘起" },
+];
+
+const TIME_TYPE_OPTIONS: { val: QimenTimeType; label: string }[] = [
+  { val: "normal", label: "普通时间" },
+  { val: "zhen", label: "真太阳时" },
+];
+
+const JU_METHOD_LABEL: Record<string, string> = {
+  chaibu: "拆补法", zhirun: "置闰法", maoshan: "茅山法", zixuan: "自选局数",
+};
+
+/** 分段选择器行（label + 选项组），可点击区域≥44px高容器、按钮≥36px */
+function SegmentedRow<T extends string>({
+  label, options, value, onChange, columns = 2,
+}: {
+  label: string;
+  options: { val: T; label: string }[];
+  value: T;
+  onChange: (v: T) => void;
+  columns?: 2 | 4;
+}) {
+  return (
+    <div className="py-1.5">
+      <div className="mb-1 text-sm text-gray-700">{label}</div>
+      <div className={`grid gap-1.5 ${columns === 4 ? "grid-cols-4" : "grid-cols-2"}`}>
+        {options.map(o => (
+          <button
+            key={o.val}
+            type="button"
+            onClick={() => onChange(o.val)}
+            className={`rounded-lg px-1 py-2 text-[13px] font-medium transition-all ${
+              value === o.val ? "bg-[#7B2FBE] text-white shadow-sm" : "bg-gray-100 text-gray-600"
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // 主组件
 // ============================================================================
 
@@ -115,7 +181,14 @@ export default function QimenPage() {
     day: 1,
     hour: 12,
     desc: "",
-    panMethod: "chaibu" as "chaibu" | "zhirun" | "maoshan",
+    panMethod: "chaibu" as PanMethod,
+    layoutMode: "zhuanpan" as PanLayoutMode,
+    jigongMethod: "yanggen_yinkun" as JiGongMethod,
+    anganType: "zhishi" as AnganType,
+    timeType: "normal" as QimenTimeType,
+    longitude: 120,
+    customYinYang: "yang" as "yang" | "yin",
+    customJu: 1,
     showDiShen: false,
     showZhangSheng: false,
   });
@@ -132,20 +205,28 @@ export default function QimenPage() {
   }, []);
 
   // 执行排盘
+  const buildInput = useCallback((y: number, mo: number, d: number, h: number) => ({
+    year: y,
+    month: mo,
+    day: d,
+    hour: h,
+    panMethod: formData.panMethod,
+    layoutMode: formData.layoutMode,
+    jigongMethod: formData.jigongMethod,
+    anganType: formData.anganType,
+    timeType: formData.timeType,
+    longitude: formData.timeType === "zhen" ? formData.longitude : undefined,
+    customJu: formData.panMethod === "zixuan" ? formData.customJu : undefined,
+    customYinYang: formData.panMethod === "zixuan" ? formData.customYinYang : undefined,
+  }), [formData]);
+
   const doPaipan = useCallback((override?: {year: number; month: number; day: number; hour: number}) => {
     const y = override?.year ?? formData.year;
     const mo = override?.month ?? formData.month;
     const d = override?.day ?? formData.day;
     const h = override?.hour ?? formData.hour;
     try {
-      const r = calculateQimen({
-        year: y,
-        month: mo,
-        day: d,
-        hour: h,
-        panMethod: formData.panMethod,
-        anganType: "zhishi" as const,
-      });
+      const r = calculateQimen(buildInput(y, mo, d, h));
       setResult(r);
       setShowForm(false);
       setInterpretPanel(null);
@@ -159,7 +240,7 @@ export default function QimenPage() {
       const errMsg = e instanceof Error ? e.message : "未知错误";
       alert(`排盘出错：${errMsg}\n请检查输入的日期时间是否有效`);
     }
-  }, [formData, selectedClient]);
+  }, [formData, selectedClient, buildInput]);
 
   // 上一局/下一局
   const shiftTime = useCallback((delta: number) => {
@@ -185,19 +266,12 @@ export default function QimenPage() {
     setFormData(prev => ({ ...prev, year: newYear, month: newMonth, day: newDay, hour: h }));
     setTimeout(() => {
       try {
-        const r = calculateQimen({
-          year: newYear,
-          month: newMonth,
-          day: newDay,
-          hour: h,
-          panMethod: formData.panMethod,
-          anganType: "zhishi" as const,
-        });
+        const r = calculateQimen(buildInput(newYear, newMonth, newDay, h));
         setResult(r);
         setInterpretPanel(null);
       } catch (e) { /* ignore */ }
     }, 50);
-  }, [result, formData]);
+  }, [result, formData, buildInput]);
 
   // 监听编辑事件
   useEffect(() => {
@@ -229,14 +303,21 @@ export default function QimenPage() {
         setResult(prefill);
         // 回填输入参数
         if (prefill.inputParams) {
-          const ip = prefill.inputParams;
+          const ip = prefill.inputParams as Record<string, unknown>;
           setFormData(prev => ({
             ...prev,
-            year: ip.year || prev.year,
-            month: ip.month || prev.month,
-            day: ip.day || prev.day,
-            hour: ip.hour !== undefined ? ip.hour : prev.hour,
-            panMethod: ip.panMethod || prev.panMethod,
+            year: (ip.year as number) || prev.year,
+            month: (ip.month as number) || prev.month,
+            day: (ip.day as number) || prev.day,
+            hour: ip.hour !== undefined ? (ip.hour as number) : prev.hour,
+            panMethod: (ip.panMethod as PanMethod) || prev.panMethod,
+            layoutMode: (ip.layoutMode as PanLayoutMode) || prev.layoutMode,
+            jigongMethod: (ip.jigongMethod as JiGongMethod) || prev.jigongMethod,
+            anganType: (ip.anganType as AnganType) || prev.anganType,
+            timeType: (ip.timeType as QimenTimeType) || prev.timeType,
+            longitude: typeof ip.longitude === "number" ? ip.longitude : prev.longitude,
+            customYinYang: (ip.customYinYang as "yang" | "yin") || prev.customYinYang,
+            customJu: typeof ip.customJu === "number" ? ip.customJu : prev.customJu,
           }));
         }
         setShowForm(false);
@@ -249,8 +330,22 @@ export default function QimenPage() {
   useEffect(() => {
     const saved = loadPaipanState("qimen");
     if (saved && saved.input) {
-      const inp = saved.input as any;
-      setFormData(prev => ({...prev, year: inp.year || prev.year, month: inp.month || prev.month, day: inp.day || prev.day, hour: inp.hour !== undefined ? inp.hour : prev.hour, panMethod: inp.panMethod || prev.panMethod}));
+      const inp = saved.input as Record<string, unknown>;
+      setFormData(prev => ({
+        ...prev,
+        year: (inp.year as number) || prev.year,
+        month: (inp.month as number) || prev.month,
+        day: (inp.day as number) || prev.day,
+        hour: inp.hour !== undefined ? (inp.hour as number) : prev.hour,
+        panMethod: (inp.panMethod as PanMethod) || prev.panMethod,
+        layoutMode: (inp.layoutMode as PanLayoutMode) || prev.layoutMode,
+        jigongMethod: (inp.jigongMethod as JiGongMethod) || prev.jigongMethod,
+        anganType: (inp.anganType as AnganType) || prev.anganType,
+        timeType: (inp.timeType as QimenTimeType) || prev.timeType,
+        longitude: typeof inp.longitude === "number" ? inp.longitude : prev.longitude,
+        customYinYang: (inp.customYinYang as "yang" | "yin") || prev.customYinYang,
+        customJu: typeof inp.customJu === "number" ? inp.customJu : prev.customJu,
+      }));
     }
   }, []);
 
@@ -269,6 +364,95 @@ export default function QimenPage() {
           showMinute={true}
           showGender={false} showCalType={true} showToggles={false} showRegion={false} showName={false}
           submitText="排盘" title="奇门遁甲排盘"
+          extraOptions={
+            <div className="border-t border-gray-100 px-4 py-2">
+              <div className="mb-1 text-[15px] font-bold text-gray-800">排盘参数</div>
+              <SegmentedRow
+                label="排盘方式"
+                options={LAYOUT_MODE_OPTIONS}
+                value={formData.layoutMode}
+                onChange={v => setFormData(prev => ({ ...prev, layoutMode: v }))}
+              />
+              <SegmentedRow
+                label="寄宫方式"
+                options={JIGONG_OPTIONS}
+                value={formData.jigongMethod}
+                onChange={v => setFormData(prev => ({ ...prev, jigongMethod: v }))}
+              />
+              <SegmentedRow
+                label="起局方式"
+                options={JU_METHOD_OPTIONS}
+                value={formData.panMethod}
+                onChange={v => setFormData(prev => ({ ...prev, panMethod: v }))}
+                columns={4}
+              />
+              {formData.panMethod === "zixuan" && (
+                <div className="rounded-lg bg-[#F3EDF7] px-3 py-2">
+                  <div className="mb-1 text-sm text-gray-700">自选局数</div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, customYinYang: "yang" }))}
+                      className={`rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                        formData.customYinYang === "yang" ? "bg-[#7B2FBE] text-white" : "bg-white text-gray-600"
+                      }`}
+                    >
+                      阳遁
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, customYinYang: "yin" }))}
+                      className={`rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                        formData.customYinYang === "yin" ? "bg-[#7B2FBE] text-white" : "bg-white text-gray-600"
+                      }`}
+                    >
+                      阴遁
+                    </button>
+                    <select
+                      value={formData.customJu}
+                      onChange={e => setFormData(prev => ({ ...prev, customJu: parseInt(e.target.value, 10) }))}
+                      className="flex-1 rounded-lg border border-gray-200 bg-white px-2 py-2 text-center text-sm outline-none focus:border-[#7B2FBE]"
+                    >
+                      {[1,2,3,4,5,6,7,8,9].map(j => (
+                        <option key={j} value={j}>{j}局</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+              <SegmentedRow
+                label="暗干起法"
+                options={ANGAN_OPTIONS}
+                value={formData.anganType}
+                onChange={v => setFormData(prev => ({ ...prev, anganType: v }))}
+              />
+              <SegmentedRow
+                label="时间类型"
+                options={TIME_TYPE_OPTIONS}
+                value={formData.timeType}
+                onChange={v => setFormData(prev => ({ ...prev, timeType: v }))}
+              />
+              {formData.timeType === "zhen" && (
+                <div className="rounded-lg bg-[#F3EDF7] px-3 py-2">
+                  <div className="mb-1 flex items-center justify-between text-sm text-gray-700">
+                    <span>出生地经度（东经）</span>
+                    <span className="font-medium text-[#7B2FBE]">{formData.longitude.toFixed(1)}°</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={73}
+                    max={135}
+                    step={0.1}
+                    value={formData.longitude}
+                    onChange={e => setFormData(prev => ({ ...prev, longitude: parseFloat(e.target.value) }))}
+                    className="w-full accent-[#7B2FBE]"
+                    style={{ padding: "8px 0", minHeight: "36px" }}
+                  />
+                  <div className="text-[11px] text-gray-400">真太阳时＝钟表时间＋经度差修正＋均时差</div>
+                </div>
+              )}
+            </div>
+          }
         />
       </div>
     );
@@ -356,7 +540,7 @@ export default function QimenPage() {
       if (!p) return `${BAGUA[gongNum]}宫(${DIR[gongNum]}): 数据缺失`;
       return `${BAGUA[gongNum]}宫(${DIR[gongNum]}): 天盘${p.tianPanGan} 地盘${p.diPanGan} 九星${p.star} 八门${p.door||"无"} 八神${p.tianShen}${p.kongwang?" 空亡":""}${p.ma?" 驿马":""}`;
     }).join("\n");
-    return `局象：${isYangDun ? "阳遁" : "阴遁"}${juNum}局 ${yuanShort}元\n日期：${formData.year}年${formData.month}月${formData.day}日 ${lunarStr} ${hourZhi}时\n节气：${result.jieqi}\n四柱：${siZhuArr.map(gz => gz[0]+(gz[1]||"")).join(" ")}\n值符：${zhiFuStar} 值使：${zhiShiDoor} 旬首：${result.xunShou} 马星：${yiMa} 空亡：${result.xunKong[0]}${result.xunKong[1]}\n九宫分布：\n${palaceSummary}`;
+    return `局象：${isYangDun ? "阳遁" : "阴遁"}${juNum}局 ${yuanShort}元（${result.layoutMode === "feipan" ? "飞盘" : "转盘"}·${JU_METHOD_LABEL[result.panMethod] || result.panMethod}·${result.jigongMethod === "kun" ? "坤宫寄" : "阳艮阴坤"}${result.timeType === "zhen" ? "·真太阳时" : ""}）\n日期：${formData.year}年${formData.month}月${formData.day}日 ${lunarStr} ${hourZhi}时\n节气：${result.jieqi}\n四柱：${siZhuArr.map(gz => gz[0]+(gz[1]||"")).join(" ")}\n值符：${zhiFuStar} 值使：${zhiShiDoor} 旬首：${result.xunShou} 马星：${yiMa} 空亡：${result.xunKong[0]}${result.xunKong[1]}\n九宫分布：\n${palaceSummary}`;
   })();
 
   return (
@@ -380,6 +564,28 @@ export default function QimenPage() {
       <div style={{ textAlign: "center", padding: "6px", fontSize: "15px", fontWeight: 700, color: BRAND_PURPLE }}>
         {isYangDun ? "阳遁" : "阴遁"}{juNum}局 {yuanShort}元
       </div>
+
+      {/* 排盘参数徽标 */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", justifyContent: "center", padding: "0 8px 4px" }}>
+        {[
+          result.layoutMode === "feipan" ? "飞盘" : "转盘",
+          JU_METHOD_LABEL[result.panMethod] || result.panMethod,
+          result.jigongMethod === "kun" ? "坤宫寄" : "阳艮阴坤",
+          result.anganType === "men" ? "暗干·门地盘起" : "暗干·值使门起",
+          result.timeType === "zhen" ? "真太阳时" : "普通时间",
+        ].map(badge => (
+          <span key={badge} style={{ fontSize: "10px", padding: "1px 8px", borderRadius: "999px", background: BRAND_PURPLE_BG, color: BRAND_PURPLE, border: `1px solid ${BRAND_PURPLE}22` }}>
+            {badge}
+          </span>
+        ))}
+      </div>
+
+      {/* 真太阳时修正说明 */}
+      {result.timeCorrection && (
+        <div style={{ textAlign: "center", fontSize: "11px", color: "#b8860b", padding: "0 10px 4px" }}>
+          {result.timeCorrection}
+        </div>
+      )}
 
       {/* 日期 */}
       <div style={{ textAlign: "center", fontSize: "12px", color: "#666", padding: "2px 8px" }}>
@@ -477,7 +683,20 @@ export default function QimenPage() {
                 {isZhong ? (
                   <div style={{ textAlign: "center", fontSize: "11px", color: "#666" }}>
                     <div style={{ fontWeight: 700 }}>中宫</div>
-                    <div style={{ fontSize: "10px", marginTop: "4px" }}>寄坤二宫</div>
+                    {/* 飞盘模式下中宫可落星 */}
+                    {result.layoutMode === "feipan" && p.star && (
+                      <div style={{ fontSize: "11px", fontWeight: 500, marginTop: "2px", color: getXingColor(p.star) }}>
+                        {p.star}
+                      </div>
+                    )}
+                    {/* 飞盘模式下中宫天盘干 */}
+                    {result.layoutMode === "feipan" && p.tianPanGan && (
+                      <div style={{ fontSize: "14px", fontWeight: 700, marginTop: "1px", color: getGanColor(p.tianPanGan) }}>
+                        {p.tianPanGan}
+                      </div>
+                    )}
+                    <div style={{ fontSize: "10px", marginTop: "4px" }}>寄{result.jigongTargetName || "坤二宫"}</div>
+                    <div style={{ fontSize: "9px", color: "#999" }}>{p.diPanGan || ""}</div>
                   </div>
                 ) : (
                   <>

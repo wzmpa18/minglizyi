@@ -9,11 +9,20 @@
  * ============================================================================
  */
 
-/** 排盘方法 */
-export type PanMethod = 'chaibu' | 'zhirun' | 'maoshan';
+/** 排盘方法（起局方式） */
+export type PanMethod = 'chaibu' | 'zhirun' | 'maoshan' | 'zixuan';
+
+/** 排盘方式：转盘/飞盘 */
+export type PanLayoutMode = 'zhuanpan' | 'feipan';
+
+/** 中宫寄宫方式：坤宫寄（始终寄坤二）/ 阳艮阴坤（阳遁寄艮八、阴遁寄坤二） */
+export type JiGongMethod = 'kun' | 'yanggen_yinkun';
 
 /** 暗干排法 */
 export type AnganType = 'zhishi' | 'men';
+
+/** 时间类型：普通时间/真太阳时 */
+export type QimenTimeType = 'normal' | 'zhen';
 
 /** 阴阳遁 */
 export type YinYangDun = '阳遁' | '阴遁';
@@ -174,6 +183,18 @@ export interface QimenInput {
   panMethod?: PanMethod;
   /** 暗干排法，默认值使飞布法 */
   anganType?: AnganType;
+  /** 排盘方式：转盘/飞盘，默认转盘 */
+  layoutMode?: PanLayoutMode;
+  /** 中宫寄宫方式，默认阳艮阴坤 */
+  jigongMethod?: JiGongMethod;
+  /** 自选局数 1-9（panMethod='zixuan' 时生效） */
+  customJu?: number;
+  /** 自选阴阳遁（panMethod='zixuan' 时生效，缺省按节气推断） */
+  customYinYang?: 'yang' | 'yin';
+  /** 时间类型：普通时间/真太阳时，默认普通时间 */
+  timeType?: QimenTimeType;
+  /** 经度（timeType='zhen' 时生效，东经度数，默认120） */
+  longitude?: number;
 }
 
 /**
@@ -184,6 +205,16 @@ export interface QimenResult {
   panMethod: PanMethod;
   /** 暗干排法 */
   anganType: AnganType;
+  /** 排盘方式：转盘/飞盘 */
+  layoutMode: PanLayoutMode;
+  /** 中宫寄宫方式 */
+  jigongMethod: JiGongMethod;
+  /** 中宫寄宫目标宫名（如"坤二宫"/"艮八宫"） */
+  jigongTargetName: string;
+  /** 时间类型：普通时间/真太阳时 */
+  timeType: QimenTimeType;
+  /** 真太阳时修正说明（timeType='zhen' 时有值） */
+  timeCorrection?: string;
   /** 日期描述字符串 */
   dateStr: string;
   /** 阴阳遁 */

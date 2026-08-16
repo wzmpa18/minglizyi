@@ -10,6 +10,8 @@ import { updateProfileToServer, fetchProfileFromServer } from "@/lib/loginServic
 import { ensureCurrentUserInDirectory, getCurrentUserEntry, getUserById, setAllowNearby as setUserStoreAllowNearby, getAllowNearby as getUserStoreAllowNearby } from "@/lib/userStore";
 import { getBlacklist, removeFromBlacklist } from "@/lib/socialStore";
 import { captureAndSavePoster, preloadImageAsDataUrl } from "@/lib/posterCapture";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
 const BRAND = "#7B2FBE";
 
@@ -351,6 +353,10 @@ function BlacklistModal({ onClose }: { onClose: () => void }) {
   const [blacklistIds, setBlacklistIds] = useState<string[]>([]);
   const [tick, setTick] = useState(0);
 
+  // P1-6/P1-7: 滚动锁 + 返回拦截（组件仅在弹窗打开时挂载）
+  useBodyScrollLock(true);
+  usePopupBackHandler(onClose, true);
+
   useEffect(() => {
     setBlacklistIds(getBlacklist());
   }, [tick]);
@@ -370,7 +376,7 @@ function BlacklistModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6" onClick={onClose}>
       <div
-        className="w-full max-w-xs rounded-2xl bg-white shadow-xl overflow-hidden max-h-[70vh] flex flex-col"
+        className="w-full max-w-xs rounded-2xl bg-white shadow-xl overflow-hidden max-h-[85vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
@@ -432,10 +438,14 @@ function BlacklistModal({ onClose }: { onClose: () => void }) {
 
 // ==================== 关于我们弹窗 ====================
 function AboutUsModal({ onClose }: { onClose: () => void }) {
+  // P1-6/P1-7: 滚动锁 + 返回拦截（组件仅在弹窗打开时挂载）
+  useBodyScrollLock(true);
+  usePopupBackHandler(onClose, true);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6" onClick={onClose}>
       <div
-        className="w-full max-w-xs rounded-2xl bg-white shadow-xl max-h-[80vh] overflow-y-auto"
+        className="w-full max-w-xs rounded-2xl bg-white shadow-xl max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
@@ -542,6 +552,10 @@ export default function ProfilePage() {
   const [cacheSize, setCacheSize] = useState("0 KB");
   const [isClearing, setIsClearing] = useState(false);
   const [cacheToast, setCacheToast] = useState("");
+
+  // P1-6/P1-7: 编辑资料弹窗滚动锁 + 返回拦截
+  useBodyScrollLock(showEditModal);
+  usePopupBackHandler(() => setShowEditModal(false), showEditModal);
 
   // v20.1: 计算本地缓存占用大小
   const calculateCacheSize = useCallback(() => {
@@ -1264,7 +1278,7 @@ export default function ProfilePage() {
       {/* ===== 弹窗 ===== */}
       {showEditModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6" onClick={() => setShowEditModal(false)}>
-          <div className="w-full max-w-xs rounded-2xl bg-white p-6 shadow-xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-xs rounded-2xl bg-white p-6 shadow-xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <h3 className="mb-4 text-center text-base font-bold text-gray-800">编辑资料</h3>
 
             {/* 头像选择 */}

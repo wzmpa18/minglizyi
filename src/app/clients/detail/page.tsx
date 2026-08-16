@@ -16,6 +16,8 @@ import {
   setPrefillData,
   TOOL_TYPE_MAP,
 } from "@/lib/clientStore";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
 const BRAND = "#7B2FBE";
 const BRAND_BG = "#F3EDF7";
@@ -53,6 +55,10 @@ function EditClientModal({
   const [tags, setTags] = useState(client.tags.join(", "));
   const [note, setNote] = useState(client.note);
 
+  // P1-6/P1-7: 滚动锁 + 返回拦截（组件仅在弹窗打开时挂载）
+  useBodyScrollLock(true);
+  usePopupBackHandler(onClose, true);
+
   const handleSubmit = () => {
     if (!name.trim()) {
       alert("请输入客户姓名");
@@ -80,7 +86,7 @@ function EditClientModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-sm bg-white rounded-2xl overflow-hidden shadow-xl"
+        className="w-full max-w-sm bg-white rounded-2xl overflow-hidden shadow-xl max-h-[85vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
@@ -89,7 +95,7 @@ function EditClientModal({
             ✕
           </button>
         </div>
-        <div className="px-5 py-4 space-y-3 max-h-[60vh] overflow-y-auto">
+        <div className="px-5 py-4 space-y-3 flex-1 overflow-y-auto">
           <div className="flex items-center">
             <label className="w-20 shrink-0 text-[13px] text-gray-600">姓名 *</label>
             <input
@@ -469,13 +475,17 @@ function AddRecordModal({
 }) {
   const tools = Object.entries(TOOL_TYPE_MAP);
 
+  // P1-6/P1-7: 滚动锁 + 返回拦截（组件仅在弹窗打开时挂载）
+  useBodyScrollLock(true);
+  usePopupBackHandler(onClose, true);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/40"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[420px] bg-white rounded-t-2xl max-h-[70vh] overflow-y-auto"
+        className="w-full max-w-[420px] bg-white rounded-t-2xl max-h-[85vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 sticky top-0 bg-white">
@@ -501,6 +511,7 @@ function AddRecordModal({
             </button>
           ))}
         </div>
+        <div className="modal-safe-bottom" />
       </div>
     </div>
   );

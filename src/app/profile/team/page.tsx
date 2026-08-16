@@ -299,6 +299,8 @@ export default function TeamPage() {
         </div>
       </div>
 
+      <div className="page-bottom-nav-safe" aria-hidden="true" />
+
       <LoginPromptModal show={showLoginPrompt} onClose={() => setShowLoginPrompt(false)} />
     </div>
   );

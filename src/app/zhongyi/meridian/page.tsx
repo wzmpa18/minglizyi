@@ -17,6 +17,8 @@ import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import type { TcmMeridian, TcmAcupoint, TcmDongAcupoint } from "@/algorithm-core/types/tcm";
 import { useToolBack } from "@/lib/useToolBack";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
 const BRAND = "#7B2FBE";
 const BRAND_LIGHT = "#9B5ECF";
@@ -151,6 +153,10 @@ function PositioningModal({
   // v20.1: 登录守卫
   const { requireLogin, showLoginPrompt, setShowLoginPrompt } = useRequireLogin();
 
+  // P1-6/P1-7: 滚动锁 + 返回拦截（组件仅在弹窗打开时挂载）
+  useBodyScrollLock(true);
+  usePopupBackHandler(onClose, true);
+
   const bodyArea = useMemo(
     () => detectBodyArea(acupointName, locationText, zone),
     [acupointName, locationText, zone]
@@ -201,7 +207,7 @@ function PositioningModal({
       <div
         style={{
           background: "white", borderRadius: "16px", maxWidth: "380px", width: "100%",
-          maxHeight: "88vh", overflowY: "auto",
+          maxHeight: "85vh", overflowY: "auto",
         }}
         onClick={(e) => e.stopPropagation()}
       >

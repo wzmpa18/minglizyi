@@ -32,6 +32,8 @@ import {
   type ExamSubject,
   type ExamRecord,
 } from "@/algorithm-core/modules/tcm/exam";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
 const BRAND = "#7B2FBE";
 const BRAND_LIGHT = "#9B5ECF";
@@ -63,6 +65,10 @@ export default function MockExamPage() {
   } | null>(null);
   const [reviewFilter, setReviewFilter] = useState<"all" | "wrong" | "flagged">("all");
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // P1-6/P1-7: 答题卡弹窗滚动锁 + 返回拦截
+  useBodyScrollLock(showGrid);
+  usePopupBackHandler(() => setShowGrid(false), showGrid);
 
   const subjects = useMemo(() => getSubjects(), []);
 
@@ -531,8 +537,8 @@ export default function MockExamPage() {
                 width: "100%",
                 maxWidth: "420px",
                 margin: "0 auto",
-                maxHeight: "70vh",
-                overflowY: "auto",
+              maxHeight: "85vh",
+              overflowY: "auto",
               }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -607,6 +613,7 @@ export default function MockExamPage() {
                   );
                 })}
               </div>
+              <div className="modal-safe-bottom" />
             </div>
           </div>
         )}

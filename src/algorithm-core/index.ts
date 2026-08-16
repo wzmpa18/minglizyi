@@ -62,6 +62,9 @@ export type {
   QimenResult,
   QimenPalace,
   PanMethod,
+  PanLayoutMode,
+  JiGongMethod,
+  QimenTimeType,
   AnganType,
   YinYangDun,
   SanYuan,
@@ -203,6 +206,8 @@ export {
   getJieQiIndex,
   daysBetween,
   addDaysToDate,
+  calcTrueSolarTime,
+  getTrueSolarHourIndex,
 } from './common/jieqi';
 
 // ============================================================================

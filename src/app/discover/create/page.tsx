@@ -404,6 +404,8 @@ ${content.trim() ? `用户已有草稿，请在此基础上润色扩展：${cont
         发布内容需遵守社区规范，禁止发布违规信息
       </div>
 
+      <div className="page-bottom-nav-safe" aria-hidden="true" />
+
       <LoginPromptModal show={showLoginPrompt} onClose={() => setShowLoginPrompt(false)} />
     </div>
   );

@@ -202,6 +202,8 @@ function NormalCreate({
       <div className="py-3 text-center">
         <p className="text-[11px] text-gray-400">yandao.vip 分享下载有礼</p>
       </div>
+
+      <div className="page-bottom-nav-safe" aria-hidden="true" />
     </div>
   );
 }
@@ -391,6 +393,8 @@ function QuickCreate({
       <div className="py-3 text-center">
         <p className="text-[11px] text-gray-400">yandao.vip 分享下载有礼</p>
       </div>
+
+      <div className="page-bottom-nav-safe" aria-hidden="true" />
     </div>
   );
 }
@@ -510,6 +514,8 @@ export default function CreateGroupPage() {
       <div className="py-3 text-center">
         <p className="text-[11px] text-gray-400">yandao.vip 分享下载有礼</p>
       </div>
+
+      <div className="page-bottom-nav-safe" aria-hidden="true" />
     </div>
   );
 }

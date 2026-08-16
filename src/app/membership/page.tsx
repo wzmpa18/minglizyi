@@ -517,6 +517,8 @@ export default function MembershipPage() {
         </button>
       </div>
 
+      <div className="page-bottom-nav-safe" aria-hidden="true" />
+
       {/* ===== 支付中遮罩 ===== */}
       {paying && (
         <div

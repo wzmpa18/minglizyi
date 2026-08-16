@@ -213,6 +213,8 @@ export default function PointsPage() {
       <div style={{ padding: "12px 16px", textAlign: "center", fontSize: "11px", color: "#bbb", backgroundColor: "#ededed" }}>
         积分规则最终解释权归平台所有，如有疑问请联系客服
       </div>
+
+      <div className="page-bottom-nav-safe" aria-hidden="true" />
     </div>
   );
 }

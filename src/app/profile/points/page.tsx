@@ -504,6 +504,8 @@ export default function ProfilePointsPage() {
       {/* ===== 底部合规提示 ===== */}
       <ComplianceFooter />
 
+      <div className="page-bottom-nav-safe" aria-hidden="true" />
+
       {/* ===== 申诉弹窗 ===== */}
       {appealTarget && (
         <AppealModal

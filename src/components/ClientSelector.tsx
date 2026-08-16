@@ -8,6 +8,8 @@ import {
   saveClient,
   getClient,
 } from "@/lib/clientStore";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
 const BRAND = "#7B2FBE";
 const BRAND_BG = "#F3EDF7";
@@ -171,6 +173,10 @@ function ClientPanel({
   const [recentClients, setRecentClients] = useState<Client[]>([]);
   const [searchResults, setSearchResults] = useState<Client[]>([]);
 
+  // P1-6/P1-7: 滚动锁 + 返回拦截（组件仅在面板打开时挂载）
+  useBodyScrollLock(true);
+  usePopupBackHandler(onClose, true);
+
   useEffect(() => {
     setRecentClients(getRecentClients(5));
   }, []);
@@ -206,7 +212,7 @@ function ClientPanel({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[420px] bg-white rounded-t-2xl max-h-[75vh] flex flex-col"
+        className="w-full max-w-[420px] bg-white rounded-t-2xl max-h-[85vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 顶部 */}
@@ -351,6 +357,7 @@ function ClientPanel({
             </div>
           </>
         )}
+        <div className="modal-safe-bottom" />
       </div>
     </div>
   );

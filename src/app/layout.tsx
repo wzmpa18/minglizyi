@@ -18,6 +18,8 @@ export const viewport: Viewport = {
   minimumScale: 1,
   maximumScale: 3,
   userScalable: true,
+  // P1-REOPEN: iOS/APP WebView 安全区适配前置条件，缺它 env(safe-area-inset-*) 恒为 0
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

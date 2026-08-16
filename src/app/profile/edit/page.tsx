@@ -517,6 +517,8 @@ export default function EditProfilePage() {
           言道国学不对内容的准确性、完整性作任何保证。
         </p>
       </div>
+
+      <div className="page-bottom-nav-safe" aria-hidden="true" />
     </div>
   );
 }

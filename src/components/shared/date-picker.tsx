@@ -23,6 +23,8 @@ export interface DatePickerOptions {
   zaoWanZi: boolean;
   zhenTaiyang: boolean;
   xiaLing: boolean;
+  /** 出生地经度（东经度数，zhenTaiyang 时用于真太阳时校正，缺省北京 116.4） */
+  longitude?: number;
 }
 
 export interface DatePickerProps {
@@ -43,6 +45,8 @@ export interface DatePickerProps {
   showSaveName?: boolean;
   saveName?: boolean;
   onSaveNameChange?: (v: boolean) => void;
+  /** 工具专属扩展参数区（渲染在日期选择与提交按钮之间，如奇门遁甲排盘参数） */
+  extraOptions?: React.ReactNode;
   submitText?: string;
   title?: string;
 }
@@ -68,7 +72,30 @@ const DEFAULT_OPTIONS: DatePickerOptions = {
   zaoWanZi: false,
   zhenTaiyang: false,
   xiaLing: false,
+  longitude: 116.4,
 };
+
+/** 省份 → 代表经度（东经，省会/首府坐标） */
+const PROVINCE_LONGITUDES: Record<string, number> = {
+  "北京": 116.4, "上海": 121.5, "天津": 117.2, "重庆": 106.5,
+  "广东": 113.3, "浙江": 120.2, "江苏": 118.8, "四川": 104.1,
+  "湖北": 114.3, "湖南": 113.0, "山东": 117.0, "河南": 113.7,
+  "河北": 114.5, "福建": 119.3, "陕西": 108.9, "辽宁": 123.4,
+  "吉林": 125.3, "黑龙江": 126.6, "安徽": 117.3, "江西": 115.9,
+  "云南": 102.7, "贵州": 106.7, "甘肃": 103.8, "山西": 112.6,
+  "广西": 108.3, "海南": 110.3, "内蒙古": 111.7, "新疆": 87.6,
+  "西藏": 91.1, "宁夏": 106.3, "青海": 101.8,
+};
+
+/** 按经度反查最近的省份名（用于初始化选中项） */
+function provinceByLongitude(lng: number): string {
+  let best = "北京"; let bestDiff = Infinity;
+  for (const [p, v] of Object.entries(PROVINCE_LONGITUDES)) {
+    const diff = Math.abs(v - lng);
+    if (diff < bestDiff) { bestDiff = diff; best = p; }
+  }
+  return best;
+}
 
 // ============================================================================
 // 工具函数
@@ -131,11 +158,12 @@ export default function DatePicker({
   showSaveName = false,
   saveName = false,
   onSaveNameChange,
+  extraOptions = null,
   submitText = "排盘",
   title = "选择日期",
 }: DatePickerProps) {
   const [date, setDate] = useState<DatePickerValue>(initialDate || createDefaultDate());
-  const [options, setOptions] = useState<DatePickerOptions>(initialOptions || DEFAULT_OPTIONS);
+  const [options, setOptions] = useState<DatePickerOptions>({ ...DEFAULT_OPTIONS, ...(initialOptions || {}) });
   const [nameState, setNameState] = useState(name);
 
   useEffect(() => {
@@ -143,7 +171,7 @@ export default function DatePicker({
   }, [initialDate]);
 
   useEffect(() => {
-    if (initialOptions) setOptions(initialOptions);
+    if (initialOptions) setOptions({ ...DEFAULT_OPTIONS, ...initialOptions });
   }, [initialOptions]);
 
   useEffect(() => {
@@ -461,60 +489,47 @@ export default function DatePicker({
                 </div>
               </div>
 
-              {/* 6. 地区选择 - 仅勾选真太阳时时显示（对标吉时雨 form-diqu） */}
+              {/* 6. 地区选择 - 仅勾选真太阳时时显示（省份映射经度 + 精细微调，用于真太阳时校正） */}
               {showRegion && options.zhenTaiyang && (
                 <div>
-                  <label className="mb-1 block text-sm text-gray-700">地区</label>
-                  <div className="flex gap-2">
-                    <select
-                      value={options.zhenTaiyang ? "北京" : ""}
-                      onChange={() => {}}
-                      className="flex-1 rounded-lg border border-gray-200 px-2 py-2 text-sm outline-none focus:border-[#7B2FBE] bg-white"
-                    >
-                      <option>北京</option>
-                      <option>上海</option>
-                      <option>广东</option>
-                      <option>浙江</option>
-                      <option>江苏</option>
-                      <option>四川</option>
-                      <option>湖北</option>
-                      <option>湖南</option>
-                      <option>山东</option>
-                      <option>河南</option>
-                      <option>河北</option>
-                      <option>福建</option>
-                      <option>重庆</option>
-                      <option>陕西</option>
-                      <option>辽宁</option>
-                      <option>吉林</option>
-                      <option>黑龙江</option>
-                      <option>安徽</option>
-                      <option>江西</option>
-                      <option>云南</option>
-                      <option>贵州</option>
-                      <option>甘肃</option>
-                      <option>山西</option>
-                      <option>广西</option>
-                      <option>海南</option>
-                      <option>天津</option>
-                      <option>内蒙古</option>
-                      <option>新疆</option>
-                      <option>西藏</option>
-                      <option>宁夏</option>
-                      <option>青海</option>
-                    </select>
-                    <select
-                      className="flex-1 rounded-lg border border-gray-200 px-2 py-2 text-sm outline-none focus:border-[#7B2FBE] bg-white"
-                    >
-                      <option>北京市</option>
-                      <option>其他</option>
-                    </select>
-                  </div>
+                  <label className="mb-1 block text-sm text-gray-700">
+                    出生地（东经{" "}
+                    <span className="font-medium text-[#7B2FBE]">{options.longitude.toFixed(1)}°</span>
+                    ）
+                  </label>
+                  <select
+                    value={provinceByLongitude(options.longitude)}
+                    onChange={(e) => {
+                      const lng = PROVINCE_LONGITUDES[e.target.value];
+                      if (lng !== undefined) {
+                        setOptions(prev => ({ ...prev, longitude: lng }));
+                      }
+                    }}
+                    className="w-full rounded-lg border border-gray-200 px-2 py-2 text-sm outline-none focus:border-[#7B2FBE] bg-white"
+                  >
+                    {Object.keys(PROVINCE_LONGITUDES).map(p => (
+                      <option key={p} value={p}>{p}（{PROVINCE_LONGITUDES[p].toFixed(1)}°E）</option>
+                    ))}
+                  </select>
+                  <input
+                    type="range"
+                    min={73}
+                    max={135}
+                    step={0.1}
+                    value={options.longitude}
+                    onChange={(e) => setOptions(prev => ({ ...prev, longitude: parseFloat(e.target.value) }))}
+                    className="mt-2 w-full accent-[#7B2FBE]"
+                    style={{ padding: "8px 0", minHeight: "36px" }}
+                  />
+                  <div className="text-[11px] text-gray-400">真太阳时＝钟表时间＋经度差修正＋均时差</div>
                 </div>
               )}
             </>
           )}
         </div>
+
+        {/* 工具专属扩展参数区（如奇门遁甲：排盘方式/寄宫/起局/暗干/时间类型） */}
+        {extraOptions}
 
         {/* 排盘按钮（对标吉时雨 submitFormBtn class="app-paipan-button"） */}
         <div className="px-4 pb-5 pt-2">

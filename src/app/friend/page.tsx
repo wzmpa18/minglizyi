@@ -443,6 +443,8 @@ function FriendContent() {
         </p>
       </div>
 
+      <div className="page-bottom-nav-safe" aria-hidden="true" />
+
       {/* Toast 提示 */}
       {toast && (
         <div

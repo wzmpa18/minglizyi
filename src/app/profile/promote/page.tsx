@@ -7,6 +7,8 @@ import { getTeamMembers, getTeamStats, getMyInviteCode, type TeamMember, type Te
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { captureAndSavePoster, preloadImageAsDataUrl } from "@/lib/posterCapture";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
 const BRAND = "#7B2FBE";
 
@@ -36,6 +38,11 @@ export default function PromotePage() {
   const [copiedType, setCopiedType] = useState<"code" | "link" | null>(null);
   const [showPoster, setShowPoster] = useState(false);
   const [toast, setToast] = useState("");
+
+  // P1-6/P1-7: 海报弹窗滚动锁 + 返回拦截
+  useBodyScrollLock(showPoster);
+  usePopupBackHandler(() => setShowPoster(false), showPoster);
+
   const { requireLogin, showLoginPrompt, setShowLoginPrompt } = useRequireLogin();
 
   useEffect(() => {
@@ -474,12 +481,14 @@ export default function PromotePage() {
         </div>
       </div>
 
+      <div className="page-bottom-nav-safe" aria-hidden="true" />
+
       {/* ===== 邀请海报弹窗（可见预览） ===== */}
       {showPoster && (
         <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.7)", padding: 16 }} onClick={() => setShowPoster(false)}>
           <div style={{ width: "100%", maxWidth: 340, backgroundColor: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 24px rgba(0,0,0,0.3)" }} onClick={(e) => e.stopPropagation()}>
             {/* 海报预览 */}
-            <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
+            <div style={{ maxHeight: "85vh", overflowY: "auto" }}>
               {/* 顶部 */}
               <div style={{
                 background: `linear-gradient(135deg, ${BRAND} 0%, #9B59B6 100%)`,

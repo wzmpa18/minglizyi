@@ -328,6 +328,8 @@ export default function AgreementPage() {
           返回
         </button>
       </div>
+
+      <div className="page-bottom-nav-safe" aria-hidden="true" />
     </div>
   );
 }

@@ -132,6 +132,8 @@ export default function OrdersPage() {
           })
         )}
       </div>
+
+      <div className="page-bottom-nav-safe" aria-hidden="true" />
     </div>
   );
 }

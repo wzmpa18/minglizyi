@@ -34,6 +34,8 @@ import {
   type ExamChapter,
   type UserAnswer,
 } from "@/algorithm-core/modules/tcm/exam";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
 const BRAND = "#7B2FBE";
 const BRAND_LIGHT = "#9B5ECF";
@@ -58,6 +60,10 @@ function PracticePageContent() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showJumper, setShowJumper] = useState(false);
   const [sessionKey, setSessionKey] = useState("");
+
+  // P1-6/P1-7: 题号跳转弹窗滚动锁 + 返回拦截
+  useBodyScrollLock(showJumper);
+  usePopupBackHandler(() => setShowJumper(false), showJumper);
 
   const subject = useMemo(() => getSubjectById(subjectId), [subjectId]);
   const chapter = useMemo(
@@ -405,7 +411,7 @@ function PracticePageContent() {
               width: "100%",
               maxWidth: "420px",
               margin: "0 auto",
-              maxHeight: "60vh",
+              maxHeight: "85vh",
               overflowY: "auto",
             }}
             onClick={(e) => e.stopPropagation()}
@@ -446,6 +452,7 @@ function PracticePageContent() {
                 );
               })}
             </div>
+            <div className="modal-safe-bottom" />
           </div>
         </div>
       )}

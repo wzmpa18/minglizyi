@@ -369,6 +369,8 @@ export default function ExchangePage() {
         <div style={{ marginBottom: "4px" }}>虚拟商品一经兑换不支持退换，请谨慎操作</div>
         <div>内容仅供传统文化学习参考，不构成任何决策建议</div>
       </div>
+
+      <div className="page-bottom-nav-safe" aria-hidden="true" />
     </div>
   );
 }

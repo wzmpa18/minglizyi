@@ -459,6 +459,8 @@ export default function FriendProfilePage() {
       <div className="py-3 text-center">
         <p className="text-[11px] text-gray-400">yandao.vip 分享下载有礼</p>
       </div>
+
+      <div className="page-bottom-nav-safe" aria-hidden="true" />
     </div>
   );
 }

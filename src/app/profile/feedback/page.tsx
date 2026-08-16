@@ -391,6 +391,8 @@ export default function FeedbackPage() {
       <div style={{ padding: "12px 16px", textAlign: "center", fontSize: "11px", color: "#bbb", backgroundColor: "#ededed" }}>
         您的反馈将帮助我们持续优化产品体验
       </div>
+
+      <div className="page-bottom-nav-safe" aria-hidden="true" />
     </div>
   );
 }

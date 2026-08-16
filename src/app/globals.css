@@ -526,3 +526,33 @@ body.modal-open #app-bottom-nav {
 .modal-slide-up {
   animation: modalSlideUp 0.3s ease-out;
 }
+
+/* ============================================
+   P1-REOPEN: 页面级底部Tab栏避让统一类
+   底部导航(56px) + 余量(16px) + 系统安全区
+   用于无布局级避让的独立页面（登录/注册/订单/设置等）
+   ============================================ */
+.page-bottom-nav-safe {
+  height: calc(56px + 16px + env(safe-area-inset-bottom, 0px));
+  flex-shrink: 0;
+}
+
+/* ============================================
+   P1-REOPEN: 软键盘适配——键盘唤起(视口高度骤降)时
+   自动隐藏底部Tab栏，避免遮挡输入框与提交按钮
+   ============================================ */
+@media (max-height: 480px) {
+  #app-bottom-nav {
+    display: none !important;
+  }
+}
+
+/* P1-REOPEN: 规范关闭按钮32px视觉 + 44px点击热区（不可见扩展） */
+.modal-close-btn {
+  position: relative;
+}
+.modal-close-btn::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+}

@@ -175,6 +175,8 @@ export default function DownloadPage() {
           <p className="text-xs text-gray-400 mt-0.5">yandao.vip</p>
         </div>
       </div>
+
+      <div className="page-bottom-nav-safe" aria-hidden="true" />
     </div>
   );
 }

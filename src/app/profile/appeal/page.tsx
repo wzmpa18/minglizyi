@@ -785,6 +785,8 @@ function AppealPageInner() {
         </p>
       </div>
 
+      <div className="page-bottom-nav-safe" aria-hidden="true" />
+
       {/* ===== 成功遮罩 ===== */}
       {successMsg && <SuccessOverlay message={successMsg} />}
     </div>

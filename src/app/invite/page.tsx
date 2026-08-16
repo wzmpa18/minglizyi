@@ -297,6 +297,8 @@ export default function InvitePage() {
       <div style={{ padding: "12px 16px", textAlign: "center", fontSize: "11px", color: "#bbb", backgroundColor: "#ededed" }}>
         邀请好友一起学习，共同进步。请遵守平台规则，禁止虚假邀请。
       </div>
+
+      <div className="page-bottom-nav-safe" aria-hidden="true" />
     </div>
   );
 }

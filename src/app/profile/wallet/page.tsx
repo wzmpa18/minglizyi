@@ -6,6 +6,8 @@ import { BrandHeader } from "@/components/shared";
 import { getUserProfile } from "@/lib/auth";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
 const BRAND = "#7B2FBE";
 
@@ -218,6 +220,10 @@ export default function WalletPage() {
   const [payType, setPayType] = useState<PayAccount["type"]>("wechat");
   const [payName, setPayName] = useState("");
   const [payAccount, setPayAccountInput] = useState("");
+
+  // P1-6/P1-7: 提现弹窗滚动锁 + 返回拦截
+  useBodyScrollLock(showWithdraw);
+  usePopupBackHandler(() => setShowWithdraw(false), showWithdraw);
 
   useEffect(() => {
     setWallet(getWalletData());
@@ -545,11 +551,13 @@ export default function WalletPage() {
         </div>
       </div>
 
+      <div className="page-bottom-nav-safe" aria-hidden="true" />
+
       {/* ===== 提现弹窗（多渠道） ===== */}
       {showWithdraw && (
         <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.5)", padding: 16 }} onClick={() => setShowWithdraw(false)}>
           <div
-            style={{ width: "100%", maxWidth: 320, backgroundColor: "#fff", borderRadius: 16, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.15)", maxHeight: "88vh", overflowY: "auto" }}
+            style={{ width: "100%", maxWidth: 320, backgroundColor: "#fff", borderRadius: 16, padding: 20, boxShadow: "0 4px 20px rgba(0,0,0,0.15)", maxHeight: "85vh", overflowY: "auto" }}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>

@@ -57,6 +57,8 @@ export default function BooksPage() {
           ))}
         </div>
       </div>
+
+      <div className="page-bottom-nav-safe" aria-hidden="true" />
     </div>
   );
 }

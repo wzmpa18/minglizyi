@@ -16,10 +16,23 @@
  *   - 拆补法（chaibu）：默认，以日干支符头定三元
  *   - 置闰法（zhirun）：超神接气，以节气交接+符头定局
  *   - 茅山法（maoshan）：以节气交节时刻起，每5天60时辰一元
+ *   - 自选局数（zixuan）：用户直接指定阴阳遁+局数
+ *
+ * 排盘方式：
+ *   - 转盘（zhuanpan）：九星/八门/八神绕八宫顺逆轮转
+ *   - 飞盘（feipan）：九星/八门/八神按洛书轨迹飞泊（九星入中宫）
+ *
+ * 寄宫方式：
+ *   - 坤宫寄（kun）：中五宫始终寄坤二宫
+ *   - 阳艮阴坤（yanggen_yinkun）：阳遁寄艮八宫、阴遁寄坤二宫
  *
  * 暗干排法：
  *   - 值使飞布（zhishi）：时干加在值使门/中宫落宫飞布
  *   - 八门本宫（men）：按八门元旦盘地盘取暗干
+ *
+ * 时间类型：
+ *   - 普通时间（normal）：直接使用钟表时间
+ *   - 真太阳时（zhen）：按经度差+均时差修正后再排盘
  * ============================================================================
  */
 
@@ -29,6 +42,9 @@ import type {
   QimenInput,
   QimenPalace,
   PanMethod,
+  PanLayoutMode,
+  JiGongMethod,
+  QimenTimeType,
   AnganType,
   YinYangDun,
   SanYuan,
@@ -209,6 +225,45 @@ function rotateStartReverse<T>(arr: readonly T[], target: T): T[] {
 /** 模9运算，结果映射到1-9 */
 function mod9(n: number): number {
   return ((n % 9) + 9) % 9 || 9;
+}
+
+/**
+ * 中宫寄宫目标宫
+ * - kun：始终寄坤二宫
+ * - yanggen_yinkun：阳遁寄艮八宫、阴遁寄坤二宫
+ */
+function getJigongTarget(isYang: boolean, method: JiGongMethod): BaGuaName {
+  if (method === 'kun') return '坤';
+  return isYang ? '艮' : '坤';
+}
+
+/**
+ * 真太阳时修正
+ * 真太阳时 = 钟表时间 + 经度差修正 + 均时差
+ *   - 经度差修正 = (经度 - 120) × 4 分钟（东八区中央经线120°E）
+ *   - 均时差 EoT = 9.87·sin(2B) - 7.53·cos(B) - 1.5·sin(B)，B = 2π(N-81)/364，N为年积日
+ */
+function applyTrueSolarTime(
+  year: number, month: number, day: number, hour: number, minute: number, longitude: number,
+): { y: number; m: number; d: number; h: number; mi: number; offsetMin: number; eotMin: number; lonMin: number } {
+  const dt = Date.UTC(year, month - 1, day);
+  const startOfYear = Date.UTC(year, 0, 0);
+  const N = Math.floor((dt - startOfYear) / 86400000);
+  const B = (2 * Math.PI * (N - 81)) / 364;
+  const eotMin = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
+  const lonMin = (longitude - 120) * 4;
+  const offsetMin = eotMin + lonMin;
+  const corrected = new Date(dt + hour * 3600000 + minute * 60000 + Math.round(offsetMin * 60000));
+  return {
+    y: corrected.getUTCFullYear(),
+    m: corrected.getUTCMonth() + 1,
+    d: corrected.getUTCDate(),
+    h: corrected.getUTCHours(),
+    mi: corrected.getUTCMinutes(),
+    offsetMin,
+    eotMin,
+    lonMin,
+  };
 }
 
 /** 生成六十甲子 */
@@ -577,11 +632,30 @@ function getJuMaoshan(
 }
 
 /**
+ * 自选局数定局
+ * 用户直接指定阴阳遁+局数；三元按局数推断（1-3上元/4-6中元/7-9下元）
+ */
+function getJuZixuan(
+  year: number, month: number, day: number, hour: number, minute: number,
+  customJu?: number, customYinYang?: 'yang' | 'yin',
+): { yinYang: YinYangDun; juNum: number; yuan: SanYuan } {
+  const jieqi = getCurrentJieQi(year, month, day, hour, minute);
+  const timeYinYang: YinYangDun = isYangDunByJieqi(jieqi) ? '阳遁' : '阴遁';
+  const yinYang: YinYangDun =
+    customYinYang === 'yang' ? '阳遁' : customYinYang === 'yin' ? '阴遁' : timeYinYang;
+  const juNum = customJu && customJu >= 1 && customJu <= 9 ? Math.floor(customJu) : 1;
+  const yuan = getYuan(juNum);
+  return { yinYang, juNum, yuan };
+}
+
+/**
  * 统一定局入口
  */
 function determineJu(
   year: number, month: number, day: number, hour: number, minute: number,
   method: PanMethod,
+  customJu?: number,
+  customYinYang?: 'yang' | 'yin',
 ): { yinYang: YinYangDun; juNum: number; yuan: SanYuan; jieqi: string } {
   const jieqi = getCurrentJieQi(year, month, day, hour, minute);
   let result;
@@ -591,6 +665,9 @@ function determineJu(
       break;
     case 'maoshan':
       result = getJuMaoshan(year, month, day, hour, minute);
+      break;
+    case 'zixuan':
+      result = getJuZixuan(year, month, day, hour, minute, customJu, customYinYang);
       break;
     case 'chaibu':
     default:
@@ -781,15 +858,15 @@ function locateZhiFuZhiShi(
  * 值符随时干转：值符星飞到时干落宫，其余星按阳顺阴逆排列
  */
 function layoutStars(
-  zfzs: ZhiFuZhiShi, isYang: boolean,
+  zfzs: ZhiFuZhiShi, isYang: boolean, jigongTarget: BaGuaName = '坤',
 ): { stars: Record<BaGuaName, JiuXingName>; starsRev: Record<JiuXingName, BaGuaName> } {
   let startingStar = zfzs.zhiFuXingGong[0];
   let startingGong = zfzs.zhiFuXingGong[1];
 
   // 天芮在排旋转时用天禽代替
   if (startingStar === '天芮') startingStar = '天禽' as JiuXingName;
-  // 中宫寄坤二
-  if (startingGong === '中') startingGong = '坤';
+  // 中宫寄宫
+  if (startingGong === '中') startingGong = jigongTarget;
 
   const rotate = isYang ? CLOCKWISE_8GONG : [...CLOCKWISE_8GONG].reverse();
   const starOrder = isYang
@@ -814,11 +891,13 @@ function layoutStars(
  * 排布人盘八门
  * 值使随时宫转：值使门飞到对应宫位，其余门按阳顺阴逆排列
  */
-function layoutDoors(zfzs: ZhiFuZhiShi, isYang: boolean): Record<BaGuaName, BaMenName> {
+function layoutDoors(
+  zfzs: ZhiFuZhiShi, isYang: boolean, jigongTarget: BaGuaName = '坤',
+): Record<BaGuaName, BaMenName> {
   const startingDoor = zfzs.zhiShiMenGong[0];
   let startingGong = zfzs.zhiShiMenGong[1];
 
-  if (startingGong === '中') startingGong = '坤';
+  if (startingGong === '中') startingGong = jigongTarget;
 
   const rotate = isYang ? CLOCKWISE_8GONG : [...CLOCKWISE_8GONG].reverse();
   const doorOrder = isYang
@@ -841,9 +920,11 @@ function layoutDoors(zfzs: ZhiFuZhiShi, isYang: boolean): Record<BaGuaName, BaMe
  * 排布天八神
  * 值符起于值符星落宫，阳遁顺排阴遁逆排
  */
-function layoutTianShen(zfzs: ZhiFuZhiShi, isYang: boolean): Record<BaGuaName, TianBaShenName> {
+function layoutTianShen(
+  zfzs: ZhiFuZhiShi, isYang: boolean, jigongTarget: BaGuaName = '坤',
+): Record<BaGuaName, TianBaShenName> {
   let startingGong = zfzs.zhiFuXingGong[1];
-  if (startingGong === '中') startingGong = '坤';
+  if (startingGong === '中') startingGong = jigongTarget;
 
   const rotate = isYang ? CLOCKWISE_8GONG : [...CLOCKWISE_8GONG].reverse();
   const gongOrder = rotateStart(rotate, startingGong as BaGuaName);
@@ -877,6 +958,7 @@ function layoutTianPan(
   isYang: boolean,
   hourGZ: string,
   juNum: number,
+  jigongTarget: BaGuaName = '坤',
 ): Record<JiuGongName, TianGan> {
   const xunShouInfo = findXunShou(hourGZ);
   const dunGan = xunShouInfo.dunGan; // 旬首遁干（戊/己/庚/辛/壬/癸）
@@ -895,20 +977,20 @@ function layoutTianPan(
   // 八宫地盘天干（按旋转方向）
   const earthVals: TianGan[] = rotate.map(g => diPan[g]);
 
-  // 情形一：值符星在中宫（寄坤二）
+  // 情形一：值符星在中宫（寄宫目标宫）
   if (zfStarGong === '中') {
-    // 尝试从遁干开始旋转，宫位从坤二开始
+    // 尝试从遁干开始旋转，宫位从寄宫目标宫开始
     let ganReorder: TianGan[];
     try {
       ganReorder = rotateStart(earthVals, dunGan);
     } catch {
-      // 遁干不在八宫（在中宫），从坤宫地盘干开始
-      ganReorder = rotateStart(earthVals, diPan['坤']);
+      // 遁干不在八宫（在中宫），从寄宫目标宫地盘干开始
+      ganReorder = rotateStart(earthVals, diPan[jigongTarget]);
     }
 
     // 检查遁干是否在序列中
     if (ganReorder.includes(dunGan)) {
-      const gongReorder = rotateStart(rotate, '坤');
+      const gongReorder = rotateStart(rotate, jigongTarget);
       // 旬首时（甲时）天盘=地盘
       if (hourGan === '甲') {
         return { ...diPan };
@@ -931,11 +1013,11 @@ function layoutTianPan(
       result['中'] = diPan['中'];
       return result;
     } else {
-      // 遁干在中宫不在八宫序列，从坤宫地盘干起排
-      const gongReorderKun = rotateStart(rotate, '坤');
+      // 遁干在中宫不在八宫序列，从寄宫目标宫地盘干起排
+      const gongReorderJigong = rotateStart(rotate, jigongTarget);
       const result = {} as Record<JiuGongName, TianGan>;
       for (let i = 0; i < 8; i++) {
-        result[gongReorderKun[i]] = ganReorder[i];
+        result[gongReorderJigong[i]] = ganReorder[i];
       }
       result['中'] = diPan['中'];
       return result;
@@ -973,11 +1055,11 @@ function layoutTianPan(
     return result;
   }
 
-  // 情形三：值符为天禽星（寄坤二），遁干在中宫
+  // 情形三：值符为天禽星（寄宫目标宫），遁干在中宫
   if (zfStar === '天禽' && dunGanDiPanGong === '中') {
     const gg: TianGan[] = rotate.map(g => diPan[g]);
-    // 从坤宫地盘干开始旋转天干
-    const ganReorder = rotateStart(gg, diPan['坤']);
+    // 从寄宫目标宫地盘干开始旋转天干
+    const ganReorder = rotateStart(gg, diPan[jigongTarget]);
     const gongReorder = rotateStart(rotate, zfStarGong as BaGuaName);
 
     // 旬首时（甲时）天盘=地盘
@@ -1011,6 +1093,114 @@ function layoutTianPan(
 }
 
 // ============================================================================
+// 十A、飞盘排布（飞盘奇门：按洛书轨迹飞泊，不走八宫轮转）
+// ============================================================================
+
+/**
+ * 飞盘九星排布
+ * 值符星随时干飞至时干落宫，其余八星按洛书本位序（蓬芮冲辅禽心柱任英）
+ * 沿洛书轨迹飞泊（阳遁宫数递增、阴遁递减），九星入九宫（含中宫）
+ * 天盘干随星携带：每星携带其洛书本宫的地盘干飞至新宫
+ */
+function layoutStarsFei(
+  zfzs: ZhiFuZhiShi,
+  isYang: boolean,
+  diPan: Record<JiuGongName, TianGan>,
+  diPanRev: Record<TianGan, JiuGongName>,
+  hourGZ: string,
+  jigongTarget: BaGuaName,
+): {
+  stars: Record<JiuGongName, JiuXingName>;
+  tianPan: Record<JiuGongName, TianGan>;
+  zfLuoGong: JiuGongName;
+} {
+  const xunShouInfo = findXunShou(hourGZ);
+  const dunGan = xunShouInfo.dunGan;
+  const hourGan = hourGZ[0] as TianGan;
+
+  // 时干落宫（甲隐遁干）；落中宫时寄宫
+  const shiGanForLookup: TianGan = hourGan === '甲' ? dunGan : hourGan;
+  let zfLuoGong: JiuGongName = diPanRev[shiGanForLookup] || jigongTarget;
+  if (zfLuoGong === '中') zfLuoGong = jigongTarget;
+
+  // 值符星：旬首遁干洛书本宫星
+  const dunGanGong = diPanRev[dunGan];
+  const zfStar: JiuXingName = zfzs.zhiFuXingGong[0] ||
+    (dunGanGong ? STAR_HOME[GONG_TO_NUM[dunGanGong] - 1] : '天禽');
+  const k = STAR_HOME.indexOf(zfStar);
+
+  const dir = isYang ? 1 : -1;
+  const startNum = GONG_TO_NUM[zfLuoGong as BaGuaName];
+
+  const stars = {} as Record<JiuGongName, JiuXingName>;
+  const tianPan = {} as Record<JiuGongName, TianGan>;
+  for (let i = 0; i < 9; i++) {
+    const starIdx = (k + i) % 9;
+    const palaceNum = (((startNum - 1 + dir * i) % 9) + 9) % 9 + 1;
+    const gong = JIUGONG[palaceNum - 1];
+    stars[gong] = STAR_HOME[starIdx];
+    // 星携带洛书本宫地盘干
+    tianPan[gong] = diPan[JIUGONG[starIdx]];
+  }
+  return { stars, tianPan, zfLuoGong };
+}
+
+/**
+ * 飞盘八门排布
+ * 值使门随时辰计数落宫（zsPai已算），其余门按洛书本位数序
+ * 沿洛书轨迹飞泊八宫（跳过中五宫，门不入中）
+ */
+function layoutDoorsFei(
+  zfzs: ZhiFuZhiShi,
+  isYang: boolean,
+  jigongTarget: BaGuaName,
+): Record<BaGuaName, BaMenName> {
+  const startingDoor = zfzs.zhiShiMenGong[0];
+  let startingGong: JiuGongName = zfzs.zhiShiMenGong[1];
+  if (startingGong === '中') startingGong = jigongTarget;
+
+  // 八门按洛书本位数排序（1坎休 2坤死 3震伤 4巽杜 6乾开 7兑惊 8艮生 9离景）
+  const doorHomeOrder: BaMenName[] = [];
+  for (let i = 0; i < 9; i++) {
+    const d = DOOR_HOME[i];
+    if (d) doorHomeOrder.push(d);
+  }
+  const k = doorHomeOrder.indexOf(startingDoor);
+
+  const dir = isYang ? 1 : -1;
+  let num = GONG_TO_NUM[startingGong as BaGuaName];
+  const doors = {} as Record<BaGuaName, BaMenName>;
+  for (let i = 0; i < 8; i++) {
+    (doors as Record<JiuGongName, BaMenName>)[JIUGONG[num - 1]] = doorHomeOrder[(k + i) % 8];
+    // 前进一宫，跳过中五宫
+    do {
+      num = (((num - 1 + dir) % 9) + 9) % 9 + 1;
+    } while (num === 5);
+  }
+  return doors;
+}
+
+/**
+ * 飞盘天八神排布
+ * 值符神起于值符星落宫，沿洛书轨迹飞泊八宫（跳过中五宫），阳遁顺飞阴遁逆飞
+ */
+function layoutTianShenFei(
+  zfLuoGong: JiuGongName,
+  isYang: boolean,
+): Record<BaGuaName, TianBaShenName> {
+  const dir = isYang ? 1 : -1;
+  let num = GONG_TO_NUM[zfLuoGong as BaGuaName];
+  const shen = {} as Record<BaGuaName, TianBaShenName>;
+  for (let i = 0; i < 8; i++) {
+    (shen as Record<JiuGongName, TianBaShenName>)[JIUGONG[num - 1]] = TIAN_BA_SHEN[i];
+    do {
+      num = (((num - 1 + dir) % 9) + 9) % 9 + 1;
+    } while (num === 5);
+  }
+  return shen;
+}
+
+// ============================================================================
 // 十一、地八神排布
 // ============================================================================
 
@@ -1024,8 +1214,9 @@ function layoutDiShen(
   isYang: boolean,
   tianPan: Record<JiuGongName, TianGan>,
   diPan: Record<JiuGongName, TianGan>,
+  jigongTarget: BaGuaName = '坤',
 ): void {
-  const actualZfGong = zfStarGong === '中' ? '坤' : zfStarGong;
+  const actualZfGong = zfStarGong === '中' ? jigongTarget : zfStarGong;
   const zfTianGan = tianPan[actualZfGong];
   if (!zfTianGan) return;
 
@@ -1239,7 +1430,10 @@ function getRiKongShiKong(dayGZ: string, hourGZ: string): { riKong: string; shiK
  * 击刑标记
  * 规则：艮宫庚击刑，震宫戊击刑，巽宫壬癸击刑，离宫辛击刑，坤宫己击刑
  */
-function markJiXing(board: Record<JiuGongName, Partial<QimenPalace>>): void {
+function markJiXing(
+  board: Record<JiuGongName, Partial<QimenPalace>>,
+  jigongTarget: BaGuaName = '坤',
+): void {
   const jiXingRule: Partial<Record<BaGuaName, string>> = {
     '艮': '庚',
     '震': '戊',
@@ -1258,12 +1452,16 @@ function markJiXing(board: Record<JiuGongName, Partial<QimenPalace>>): void {
     if (palace.diPanGan && rule.includes(palace.diPanGan)) {
       palace.diPanJiXing = true;
     }
-    // 坤宫特殊：中宫寄干也检查击刑
-    if (gong === '坤' && palace.zhongGongDiPan && rule.includes(palace.zhongGongDiPan)) {
-      palace.zhongGongJiXing = true;
+  }
+  // 寄宫目标宫特殊：中宫寄干也检查击刑
+  const jigongPalace = board[jigongTarget];
+  if (jigongPalace) {
+    const rule = jiXingRule[jigongTarget] || '';
+    if (jigongPalace.zhongGongDiPan && rule.includes(jigongPalace.zhongGongDiPan)) {
+      jigongPalace.zhongGongJiXing = true;
     }
-    if (gong === '坤' && palace.zhongGongTianPan && rule.includes(palace.zhongGongTianPan)) {
-      palace.zhongGongJiXing = true;
+    if (jigongPalace.zhongGongTianPan && rule.includes(jigongPalace.zhongGongTianPan)) {
+      jigongPalace.zhongGongJiXing = true;
     }
   }
 }
@@ -1300,6 +1498,7 @@ function markRuMu(
   board: Record<JiuGongName, Partial<QimenPalace>>,
   zfStarGong: JiuGongName,
   dunGan: TianGan,
+  jigongTarget: BaGuaName = '坤',
 ): void {
   const ruMuBase: Partial<Record<BaGuaName, string>> = {
     '乾': '乙丙戊',
@@ -1318,7 +1517,7 @@ function markRuMu(
     }
   }
 
-  // 坤宫特殊：癸入墓，值符在坤时旬首干也入墓
+  // 坤宫特殊：癸入墓，值符落坤时旬首干也入墓
   const kunPalace = board['坤'];
   if (kunPalace) {
     const kunRules = ['癸'];
@@ -1339,6 +1538,15 @@ function markRuMu(
       kunPalace.zhongGongRuMu = true;
     }
   }
+
+  // 寄宫目标为艮时：值符落艮，旬首干入艮墓
+  if (jigongTarget === '艮' && zfStarGong === '艮' && dunGan) {
+    const genPalace = board['艮'];
+    if (genPalace) {
+      if (genPalace.tianPanGan === dunGan) genPalace.tianPanRuMu = true;
+      if (genPalace.diPanGan === dunGan) genPalace.diPanRuMu = true;
+    }
+  }
 }
 
 // ============================================================================
@@ -1350,6 +1558,7 @@ function markRuMu(
  */
 function setChangSheng12(
   board: Record<JiuGongName, Partial<QimenPalace>>,
+  jigongTarget: BaGuaName = '坤',
 ): void {
   for (const gua of CLOCKWISE_8GONG) {
     const palace = board[gua];
@@ -1363,17 +1572,17 @@ function setChangSheng12(
     }
   }
 
-  // 坤宫设置中宫寄干的12长生（在坤宫）
-  const kun = board['坤'];
-  if (kun) {
-    if (kun.zhongGongDiPan) {
-      kun.zhongGong12ZhangSheng = QM_CHANGSHENG_12[kun.zhongGongDiPan]?.['坤'] || '';
+  // 寄宫目标宫设置中宫寄干的12长生
+  const jigong = board[jigongTarget];
+  if (jigong) {
+    if (jigong.zhongGongDiPan) {
+      jigong.zhongGong12ZhangSheng = QM_CHANGSHENG_12[jigong.zhongGongDiPan]?.[jigongTarget] || '';
     }
   }
-  // 中宫天盘寄宫的12长生（寄宫不是坤宫时）
+  // 中宫天盘寄宫的12长生（寄宫目标宫自身除外）
   for (const gua of CLOCKWISE_8GONG) {
     const palace = board[gua];
-    if (palace.zhongGongTianPan && gua !== '坤') {
+    if (palace.zhongGongTianPan && gua !== jigongTarget) {
       palace.zhongGong12ZhangSheng = QM_CHANGSHENG_12[palace.zhongGongTianPan]?.[gua] || '';
     }
   }
@@ -1411,9 +1620,24 @@ export function calculateQimen(input: QimenInput): QimenResult {
   const { year, month, day, hour, minute = 0, panMethod, anganType } = input;
   const method: PanMethod = panMethod || 'chaibu';
   const angan: AnganType = anganType || 'zhishi';
+  const layoutMode: PanLayoutMode = input.layoutMode || 'zhuanpan';
+  const jigongMethod: JiGongMethod = input.jigongMethod || 'yanggen_yinkun';
+  const timeType: QimenTimeType = input.timeType || 'normal';
+  const longitude = input.longitude ?? 120;
+
+  // 0. 真太阳时修正（经度差 + 均时差）
+  let cy = year, cm = month, cdd = day, ch = hour, cmi = minute;
+  let timeCorrection: string | undefined;
+  if (timeType === 'zhen') {
+    const t = applyTrueSolarTime(year, month, day, hour, minute, longitude);
+    cy = t.y; cm = t.m; cdd = t.d; ch = t.h; cmi = t.mi;
+    const fmt = (v: number) => (v >= 0 ? '+' : '') + v.toFixed(1);
+    timeCorrection =
+      `真太阳时 ${t.h}:${String(t.mi).padStart(2, '0')}（修正${fmt(t.offsetMin)}分 = 经差${fmt(t.lonMin)}分 + 均时差${fmt(t.eotMin)}分，东经${longitude}°）`;
+  }
 
   // 1. 计算四柱
-  const siZhu = calcSiZhu(year, month, day, hour, minute);
+  const siZhu = calcSiZhu(cy, cm, cdd, ch, cmi);
   const hourGZ = siZhu.hour;
   const dayGZ = siZhu.day;
   const hourGan = hourGZ[0] as TianGan;
@@ -1421,9 +1645,10 @@ export function calculateQimen(input: QimenInput): QimenResult {
   const dayZhi = dayGZ[1] as DiZhi;
 
   // 2. 定局
-  const juResult = determineJu(year, month, day, hour, minute, method);
+  const juResult = determineJu(cy, cm, cdd, ch, cmi, method, input.customJu, input.customYinYang);
   const { yinYang, juNum, yuan, jieqi } = juResult;
   const isYang = yinYang === '阳遁';
+  const jigongTarget = getJigongTarget(isYang, jigongMethod);
 
   // 3. 排布地盘
   const diPan = layoutDiPan(juNum, isYang);
@@ -1434,17 +1659,26 @@ export function calculateQimen(input: QimenInput): QimenResult {
   const xunShouInfo = findXunShou(hourGZ);
   const dunGan = xunShouInfo.dunGan;
 
-  // 5. 排布天盘九星
-  const { stars } = layoutStars(zfzs, isYang);
+  // 5-8. 排布天盘九星/人盘八门/天八神/天盘天干（转盘轮转 或 飞盘飞泊）
+  let stars: Record<BaGuaName, JiuXingName>;
+  let doors: Record<BaGuaName, BaMenName>;
+  let tianShen: Record<BaGuaName, TianBaShenName>;
+  let tianPan: Record<JiuGongName, TianGan>;
+  let starsFei: Record<JiuGongName, JiuXingName> | null = null;
 
-  // 6. 排布人盘八门
-  const doors = layoutDoors(zfzs, isYang);
-
-  // 7. 排布天八神
-  const tianShen = layoutTianShen(zfzs, isYang);
-
-  // 8. 排布天盘天干
-  const tianPan = layoutTianPan(diPan, diPanRev, zfzs, isYang, hourGZ, juNum);
+  if (layoutMode === 'feipan') {
+    const fei = layoutStarsFei(zfzs, isYang, diPan, diPanRev, hourGZ, jigongTarget);
+    starsFei = fei.stars;
+    stars = fei.stars as Record<BaGuaName, JiuXingName>;
+    tianPan = fei.tianPan;
+    doors = layoutDoorsFei(zfzs, isYang, jigongTarget);
+    tianShen = layoutTianShenFei(fei.zfLuoGong, isYang);
+  } else {
+    ({ stars } = layoutStars(zfzs, isYang, jigongTarget));
+    doors = layoutDoors(zfzs, isYang, jigongTarget);
+    tianShen = layoutTianShen(zfzs, isYang, jigongTarget);
+    tianPan = layoutTianPan(diPan, diPanRev, zfzs, isYang, hourGZ, juNum, jigongTarget);
+  }
 
   // 9. 初始化九宫盘
   const board = {} as Record<JiuGongName, QimenPalace>;
@@ -1455,7 +1689,8 @@ export function calculateQimen(input: QimenInput): QimenResult {
     board[gongName] = {
       position: pos,
       palaceName: gongName,
-      star: isZhong ? '' : (stars[gongName as BaGuaName] || ''),
+      // 飞盘模式中宫可落星（九星入九宫）；转盘中宫无星
+      star: isZhong ? (layoutMode === 'feipan' ? (starsFei?.[gongName] || '') : '') : (stars[gongName as BaGuaName] || ''),
       door: isZhong ? '' : (doors[gongName as BaGuaName] || ''),
       tianShen: isZhong ? '' : (tianShen[gongName as BaGuaName] || ''),
       diShen: '',
@@ -1467,23 +1702,24 @@ export function calculateQimen(input: QimenInput): QimenResult {
     };
   }
 
-  // 10. 中宫寄坤二：中宫地盘干寄到坤宫（dipanJi）
-  board['坤'].zhongGongDiPan = diPan['中'];
-  // 中宫天盘干（tianpanJi）：找天盘上与坤宫地盘干相同的宫位，中宫天盘干寄到该宫
-  // 中宫天盘干=中宫地盘干（转盘奇门中宫不转动）
+  // 10. 中宫寄宫：中宫地盘干寄到寄宫目标宫（dipanJi）
+  board[jigongTarget].zhongGongDiPan = diPan['中'];
+  // 中宫天盘干（tianpanJi）：找天盘上与寄宫目标宫地盘干相同的宫位，中宫天盘干寄到该宫
   const zhongGongTianPanGan = tianPan['中'] || diPan['中'];
-  const kunDiPan = diPan['坤']; // 坤宫地盘干
+  const jigongDiPan = diPan[jigongTarget]; // 寄宫目标宫地盘干
   for (const gua of CLOCKWISE_8GONG) {
-    if (board[gua].tianPanGan === kunDiPan) {
+    if (board[gua].tianPanGan === jigongDiPan) {
       board[gua].zhongGongTianPan = zhongGongTianPanGan;
       break;
     }
   }
 
-  // 11. 天禽星显示为"芮禽"
-  for (const gua of CLOCKWISE_8GONG) {
-    if (board[gua].star === '天禽') {
-      board[gua].star = '芮禽';
+  // 11. 天禽星显示为"芮禽"（仅转盘；飞盘天禽独立落宫不合并）
+  if (layoutMode === 'zhuanpan') {
+    for (const gua of CLOCKWISE_8GONG) {
+      if (board[gua].star === '天禽') {
+        board[gua].star = '芮禽';
+      }
     }
   }
 
@@ -1504,19 +1740,19 @@ export function calculateQimen(input: QimenInput): QimenResult {
   }
 
   // 14. 设置12长生
-  setChangSheng12(board);
+  setChangSheng12(board, jigongTarget);
 
   // 15. 入墓标记
-  markRuMu(board, zfzs.zhiFuXingGong[1], dunGan);
+  markRuMu(board, zfzs.zhiFuXingGong[1], dunGan, jigongTarget);
 
   // 16. 门迫标记
   markMenPo(board);
 
   // 17. 击刑标记
-  markJiXing(board);
+  markJiXing(board, jigongTarget);
 
   // 18. 地八神
-  layoutDiShen(board, zfzs.zhiFuXingGong[1], isYang, tianPan, diPan);
+  layoutDiShen(board, zfzs.zhiFuXingGong[1], isYang, tianPan, diPan, jigongTarget);
 
   // 19. 暗干
   if (angan === 'men') {
@@ -1534,12 +1770,12 @@ export function calculateQimen(input: QimenInput): QimenResult {
   };
 
   // 21. 节气区间
-  const jieQiRange = getJieQiRangeStr(year, month, day, hour, minute);
+  const jieQiRange = getJieQiRangeStr(cy, cm, cdd, ch, cmi);
 
   // 22. 日期字符串
-  const solar = Solar.fromYmdHms(year, month, day, hour, minute, 0);
+  const solar = Solar.fromYmdHms(cy, cm, cdd, ch, cmi, 0);
   const lunar = solar.getLunar();
-  const dateStr = `${year}年${month}月${day}日 ${hour}时${minute}分(${lunar.getMonthInChinese()}月${lunar.getDayInChinese()} ${hourZhi}时)`;
+  const dateStr = `${cy}年${cm}月${cdd}日 ${ch}时${cmi}分(${lunar.getMonthInChinese()}月${lunar.getDayInChinese()} ${hourZhi}时)${timeType === 'zhen' ? ' [真太阳时]' : ''}`;
 
   // 23. 旬首全称
   const xunShouFull = xunShouInfo.liuJia + dunGan;
@@ -1555,6 +1791,7 @@ export function calculateQimen(input: QimenInput): QimenResult {
   const inauspiciousDirections: string[] = [];
   const palaces: QimenPalace[] = [];
   const palaceByGua = {} as Record<JiuGongName, QimenPalace>;
+  const jigongTargetNum = GONG_TO_NUM[jigongTarget];
   for (let i = 0; i < 9; i++) {
     const gongName = JIUGONG[i];
     const p = board[gongName];
@@ -1570,7 +1807,7 @@ export function calculateQimen(input: QimenInput): QimenResult {
     }
     if (gongName === '中') {
       p.isJigong = true;
-      p.jigongTarget = 2; // 中宫寄坤二
+      p.jigongTarget = jigongTargetNum;
     }
     // 聚合标记字段（便于UI层直接使用）
     p.jixing = !!(p.tianPanJiXing || p.diPanJiXing || p.zhongGongJiXing);
@@ -1583,6 +1820,11 @@ export function calculateQimen(input: QimenInput): QimenResult {
   return {
     panMethod: method,
     anganType: angan,
+    layoutMode,
+    jigongMethod,
+    jigongTargetName: `${jigongTarget}${CNUMBER[jigongTargetNum - 1]}宫`,
+    timeType,
+    timeCorrection,
     dateStr,
     yinYangDun: yinYang,
     juNumber: juNum,

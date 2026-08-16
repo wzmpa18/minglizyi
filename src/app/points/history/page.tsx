@@ -154,6 +154,8 @@ export default function PointsHistoryPage() {
       <div style={{ padding: "12px 16px", textAlign: "center", fontSize: "11px", color: "#bbb", backgroundColor: "#ededed" }}>
         积分记录仅供参考，如有疑问请联系客服
       </div>
+
+      <div className="page-bottom-nav-safe" aria-hidden="true" />
     </div>
   );
 }

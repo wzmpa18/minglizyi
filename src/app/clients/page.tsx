@@ -401,6 +401,8 @@ export default function ClientsPage() {
         </div>
       )}
 
+      <div className="page-bottom-nav-safe" aria-hidden="true" />
+
       {showForm && (
         <ClientFormModal
           client={editingClient}

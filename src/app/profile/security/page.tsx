@@ -320,6 +320,8 @@ export default function SecurityPage() {
         </p>
       </div>
 
+      <div className="page-bottom-nav-safe" aria-hidden="true" />
+
       {/* ===== 微信绑定二维码占位弹窗 ===== */}
       {showBindDialog && (
         <div

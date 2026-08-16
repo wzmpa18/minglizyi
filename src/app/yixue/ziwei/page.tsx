@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import type { CSSProperties } from "react";
-import { calculateZiwei, solarToBazi } from "@/algorithm-core";
+import { calculateZiwei, solarToBazi, calcTrueSolarTime } from "@/algorithm-core";
 import type { ZiweiResult, Gender } from "@/algorithm-core";
 import { DatePicker } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
@@ -15,6 +15,8 @@ import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
 import { useToolBack } from "@/lib/useToolBack";
 import { ShareButton } from "@/components/ShareButton";
+import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
 // ====================================================================
 // 品牌色 & 常量
@@ -463,6 +465,9 @@ export default function ZiweiPage() {
   const [zaoWanZi, setZaoWanZi] = useState(false);
   const [zhenTaiyang, setZhenTaiyang] = useState(false);
   const [xiaLing, setXiaLing] = useState(false);
+  // S2-4: 真太阳时修正说明（勾选真太阳时后排盘显示）
+  const [solarCorrection, setSolarCorrection] = useState<string | null>(null);
+  const [longitude, setLongitude] = useState(116.4);
   const [saveName, setSaveName] = useState(false);
   const [showForm, setShowForm] = useState(true);
 
@@ -477,10 +482,11 @@ export default function ZiweiPage() {
   const [selectedLiunian, setSelectedLiunian] = useState<number>(0);
   const [selectedLiuyue, setSelectedLiuyue] = useState<number>(-1);
   const [interpretPanel, setInterpretPanel] = useState<{palaceName: string; palaceGanZhi: string; interpretations: Array<{type: string; title: string; content: string; source: string}>} | null>(null);
+  // P1-REOPEN: 宫位解读面板改规范BottomSheet（85vh内滚+弹窗时隐藏Tab栏，根治APP端底部遮挡）
+  useBodyScrollLock(!!interpretPanel);
+  usePopupBackHandler(() => setInterpretPanel(null), !!interpretPanel);
   // v18.6: 宫位大运名称展开状态（点击宫位展开/收起大运宫名）
   const [expandedPalaceIdx, setExpandedPalaceIdx] = useState<number | null>(null);
-  // v18.6: 解读面板收起状态（避免遮挡命盘）
-  const [panelCollapsed, setPanelCollapsed] = useState(false);
   // v19.2: 流日/流时选中状态
   const [selectedLiuri, setSelectedLiuri] = useState<number>(-1);
   const [selectedLiushi, setSelectedLiushi] = useState<number>(-1);
@@ -899,13 +905,27 @@ export default function ZiweiPage() {
           setGender(opts.gender as Gender);
           setCalType(opts.calType === "solar" ? "gongli" : opts.calType === "lunar" ? "nongli" : "sizhu");
           setZaoWanZi(opts.zaoWanZi); setZhenTaiyang(opts.zhenTaiyang); setXiaLing(opts.xiaLing);
-          handleSubmit({year: dateVal.year, month: dateVal.month, day: dateVal.day, hour: dateVal.hour, gender: opts.gender as Gender});
+          // S2-4: 真太阳时校正——勾选后按出生地经度修正年月日时再排盘
+          let calcDate = { year: dateVal.year, month: dateVal.month, day: dateVal.day, hour: dateVal.hour };
+          if (opts.zhenTaiyang) {
+            const std = new Date(dateVal.year, dateVal.month - 1, dateVal.day, dateVal.hour, dateVal.minute || 0);
+            const tst = calcTrueSolarTime(std, opts.longitude ?? longitude);
+            const t = tst.trueSolarTime;
+            calcDate = { year: t.getFullYear(), month: t.getMonth() + 1, day: t.getDate(), hour: t.getHours() };
+            const sign = tst.totalOffset >= 0 ? "+" : "-";
+            const absMin = Math.abs(tst.totalOffset);
+            setSolarCorrection(`真太阳时 ${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")} ${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}（${(opts.longitude ?? longitude).toFixed(1)}°E，修正${sign}${Math.floor(absMin)}分）`);
+          } else {
+            setSolarCorrection(null);
+          }
+          if (opts.longitude !== undefined) setLongitude(opts.longitude);
+          handleSubmit({ ...calcDate, gender: opts.gender as Gender });
         }}
         initialDate={{year, month, day, hour, minute: 0}}
         initialOptions={{
           gender,
           calType: calType === "gongli" ? "solar" : calType === "nongli" ? "lunar" : "sizhu",
-          zaoWanZi, zhenTaiyang, xiaLing,
+          zaoWanZi, zhenTaiyang, xiaLing, longitude,
         }}
         showName={true} name={name} onNameChange={setName}
         showSaveName={true} saveName={saveName} onSaveNameChange={setSaveName}
@@ -931,6 +951,12 @@ export default function ZiweiPage() {
       )}
       {result && (
         <div className="px-2">
+          {/* S2-4: 真太阳时修正说明（勾选真太阳时后显示） */}
+          {solarCorrection && (
+            <div className="mb-1 mt-2 rounded-lg border border-[#7B2FBE] bg-[#F3EDF7] px-3 py-1.5 text-[11px] leading-relaxed text-[#5B21B6]">
+              ☀ {solarCorrection}
+            </div>
+          )}
           {/* ---- 4x4 宫格盘（带方位标签和SVG连线，v19.2支持缩放拖拽） ---- */}
           <div className="bg-white rounded-lg overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08)] mb-2 mt-2">
             {/* 方位标签 - 上方（对应巳午未申） */}
@@ -1318,48 +1344,52 @@ export default function ZiweiPage() {
           </div>
 
 
-          {/* ---- 宫位解读面板（引经据典 + AI解读） ---- */}
+          {/* ---- 宫位解读面板（P1-REOPEN 规范BottomSheet：85vh内滚 + safe-bottom + 弹窗时隐藏Tab栏，根治APP端底部遮挡） ---- */}
           {interpretPanel && (
-            <div className="bg-white rounded-lg overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08)] mb-2" style={{ border: "1px solid #7B2FBE" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "linear-gradient(135deg, #7B2FBE, #9B5ECF)", color: "white" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", cursor: "pointer" }} onClick={() => setPanelCollapsed(!panelCollapsed)}>
-                  <span style={{ fontSize: "12px" }}>{panelCollapsed ? "▶" : "▼"}</span>
-                  <span style={{ fontSize: "16px", fontWeight: "bold" }}>{interpretPanel.palaceName}</span>
-                  <span style={{ fontSize: "12px", marginLeft: "4px", opacity: 0.9 }}>{interpretPanel.palaceGanZhi}</span>
+            <div className="modal-overlay">
+              <div className="modal-backdrop" onClick={() => setInterpretPanel(null)} />
+              <div className="modal-bottom-sheet modal-slide-up shadow-2xl">
+                <div className="modal-header" style={{ background: "linear-gradient(135deg, #7B2FBE, #9B5ECF)", borderBottom: "none" }}>
+                  <div className="modal-header-title" style={{ color: "white" }}>
+                    <span style={{ fontSize: "17px", fontWeight: "bold" }}>{interpretPanel.palaceName}</span>
+                    <span style={{ fontSize: "12px", marginLeft: "8px", opacity: 0.9, fontWeight: "normal" }}>{interpretPanel.palaceGanZhi}</span>
+                  </div>
+                  <button
+                    className="modal-close-btn"
+                    onClick={() => setInterpretPanel(null)}
+                    style={{ background: "rgba(255,255,255,0.25)", color: "white", fontSize: "16px", lineHeight: 1 }}
+                    aria-label="关闭解读面板"
+                  >
+                    ×
+                  </button>
                 </div>
-                <button onClick={() => setInterpretPanel(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "white", width: "28px", height: "28px", borderRadius: "50%", cursor: "pointer", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>x</button>
-              </div>
-              {!panelCollapsed && (
-                <>
-                  <div style={{ padding: "10px 12px", maxHeight: "200px", overflowY: "auto" }}>
-                    {interpretPanel.interpretations.map((item, idx) => (
-                      <div key={idx} style={{ marginBottom: idx < interpretPanel.interpretations.length - 1 ? "10px" : 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", marginBottom: "4px" }}>
-                          <span style={{ fontSize: "10px", fontWeight: "bold", padding: "1px 6px", borderRadius: "3px", background: item.type === "star" ? "#fef3c7" : item.type === "sihua" ? "#e0e7ff" : "#f3e8ff", color: item.type === "star" ? "#92400e" : item.type === "sihua" ? "#3730a3" : "#6b21a8", marginRight: "8px" }}>{item.type === "star" ? "星曜" : item.type === "sihua" ? "四化" : "宫位"}</span>
-                          <span style={{ fontSize: "13px", fontWeight: "bold", color: "#333" }}>{item.title}</span>
-                        </div>
-                        <div style={{ fontSize: "12px", color: "#555", lineHeight: "1.6", whiteSpace: "pre-line" }}>{item.content}</div>
-                        <div style={{ fontSize: "10px", color: "#999", marginTop: "4px", fontStyle: "italic" }}>—— {item.source}</div>
+                <div className="modal-bottom-sheet-body" style={{ padding: "12px 14px" }}>
+                  {interpretPanel.interpretations.map((item, idx) => (
+                    <div key={idx} style={{ marginBottom: idx < interpretPanel.interpretations.length - 1 ? "12px" : 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", marginBottom: "4px" }}>
+                        <span style={{ fontSize: "10px", fontWeight: "bold", padding: "1px 6px", borderRadius: "3px", background: item.type === "star" ? "#fef3c7" : item.type === "sihua" ? "#e0e7ff" : "#f3e8ff", color: item.type === "star" ? "#92400e" : item.type === "sihua" ? "#3730a3" : "#6b21a8", marginRight: "8px" }}>{item.type === "star" ? "星曜" : item.type === "sihua" ? "四化" : "宫位"}</span>
+                        <span style={{ fontSize: "13px", fontWeight: "bold", color: "#333" }}>{item.title}</span>
                       </div>
-                    ))}
-                  </div>
+                      <div style={{ fontSize: "12px", color: "#555", lineHeight: "1.7", whiteSpace: "pre-line" }}>{item.content}</div>
+                      <div style={{ fontSize: "10px", color: "#999", marginTop: "4px", fontStyle: "italic" }}>—— {item.source}</div>
+                    </div>
+                  ))}
                   {/* v18.9: AI解读此宫按钮 */}
-                  <div style={{ padding: "6px 12px", borderTop: "1px solid #eee" }}>
-                    <button
-                      onClick={() => {
-                        const ctx = `${interpretPanel.palaceName}(${interpretPanel.palaceGanZhi})\n` + interpretPanel.interpretations.map(i => `${i.title}: ${i.content}`).join("\n");
-                        handleAIInterpret("palace", ctx);
-                      }}
-                      disabled={aiInterpreting}
-                      className="w-full py-2 rounded-lg font-bold text-sm cursor-pointer border-0 text-white disabled:opacity-60"
-                      style={{ background: aiInterpreting ? "#999" : BRAND_PURPLE }}
-                    >
-                      {aiInterpreting && aiScope === "palace" ? "AI解读中..." : "🤖 AI解读此宫"}
-                    </button>
-                  </div>
-                  <div style={{ padding: "6px 12px", background: "#fafafa", borderTop: "1px solid #eee", fontSize: "10px", color: "#999", textAlign: "center" }}>点击其他宫位可查看不同解读 · 引经据典，仅供参考</div>
-                </>
-              )}
+                  <button
+                    onClick={() => {
+                      const ctx = `${interpretPanel.palaceName}(${interpretPanel.palaceGanZhi})\n` + interpretPanel.interpretations.map(i => `${i.title}: ${i.content}`).join("\n");
+                      handleAIInterpret("palace", ctx);
+                    }}
+                    disabled={aiInterpreting}
+                    className="w-full py-2.5 mt-3 rounded-lg font-bold text-sm cursor-pointer border-0 text-white disabled:opacity-60"
+                    style={{ background: aiInterpreting ? "#999" : BRAND_PURPLE }}
+                  >
+                    {aiInterpreting && aiScope === "palace" ? "AI解读中..." : "🤖 AI解读此宫"}
+                  </button>
+                  <div style={{ padding: "8px 0 2px", fontSize: "10px", color: "#999", textAlign: "center" }}>引经据典，仅供参考</div>
+                </div>
+                <div className="modal-safe-bottom" />
+              </div>
             </div>
           )}
 
