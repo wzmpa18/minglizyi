@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { WENZHEN_CATEGORIES, buildWenzhenSystemPrompt } from "@/data/wenzhen_data";
+import { buildZhengguPrompt } from "@/data/zhenggu_knowledge";
 import { callAI, getUserPermissionLevel, getPermissionStatus, truncateContentForFreeUser, generateContentKey, isSingleUnlocked, activateSingleUnlock, SINGLE_UNLOCK_PRICE } from "@/lib/aiService";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
@@ -112,6 +113,11 @@ export default function WenzhenPage() {
         selectedMasterIds,
         supplementText
       );
+      // 中华非遗正骨内部资料：按摩正骨门类选择「正骨」名家时，注入疼痛类诊断与手法解决依据
+      const useZhenggu = activeCategory === "anmo" && selectedMasterIds.includes("zhenggu");
+      const finalSystemPrompt = useZhenggu
+        ? `${systemPrompt}\n\n${buildZhengguPrompt()}`
+        : systemPrompt;
 
       // 构建用户prompt
       const userParts: string[] = [];
@@ -134,7 +140,7 @@ export default function WenzhenPage() {
       contentKeyRef.current = cKey;
 
       const result = await callAI({
-        systemPrompt,
+        systemPrompt: finalSystemPrompt,
         userPrompt,
         cacheKey: cKey,
       });

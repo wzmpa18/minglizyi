@@ -46,6 +46,7 @@ import {
   toggleLike as apiToggleLike,
   addComment as apiAddComment,
   fetchComments as apiFetchComments,
+  SOCIAL_CIRCLES,
   type SocialPost,
 } from "@/lib/socialApi";
 import { communityActivity } from "@/lib/pointsStore";
@@ -101,7 +102,7 @@ function toQualityPost(sp: SocialPost): QualityPost {
     authorAvatar: sp.authorAvatar || "",
     content: sp.content,
     images: Array.isArray(sp.images) ? sp.images : [],
-    topic: sp.toolType || "",
+    topic: sp.circleLabel || sp.toolType || "",
     likes: sp.likeCount || 0,
     comments: sp.commentCount || 0,
     shares: 0,
@@ -119,9 +120,10 @@ function PublishPanel({
   onPublish,
 }: {
   onClose: () => void;
-  onPublish: (content: string) => void;
+  onPublish: (content: string, circle: string) => void;
 }) {
   const [text, setText] = useState("");
+  const [circle, setCircle] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useBodyScrollLock(true);
@@ -133,8 +135,8 @@ function PublishPanel({
 
   const handlePublish = () => {
     const trimmed = text.trim();
-    if (!trimmed) return;
-    onPublish(trimmed);
+    if (!trimmed || !circle) return;
+    onPublish(trimmed, circle);
     onClose();
   };
 
@@ -160,15 +162,32 @@ function PublishPanel({
             maxLength={500}
           />
           <p className="mt-1 text-right text-xs text-gray-400">{text.length}/500</p>
+          <p className="mt-3 mb-2 text-xs font-medium text-gray-600">选择圈层（必选）</p>
+          <div className="flex flex-wrap gap-2">
+            {SOCIAL_CIRCLES.map((c) => (
+              <button
+                key={c.key}
+                onClick={() => setCircle(circle === c.key ? "" : c.key)}
+                className="rounded-full px-3 py-1.5 text-xs font-medium transition-all active:scale-95"
+                style={{
+                  backgroundColor: circle === c.key ? BRAND : "#f3f4f6",
+                  color: circle === c.key ? "#fff" : "#666",
+                  border: circle === c.key ? `1px solid ${BRAND}` : "1px solid #e5e7eb",
+                }}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
         </div>
         <div className="p-5">
           <button
             onClick={handlePublish}
-            disabled={!text.trim()}
+            disabled={!text.trim() || !circle}
             className="w-full rounded-xl py-3 text-sm font-bold text-white transition-all active:scale-[0.98]"
             style={{
-              backgroundColor: text.trim() ? BRAND : "#ddd",
-              cursor: text.trim() ? "pointer" : "not-allowed",
+              backgroundColor: text.trim() && circle ? BRAND : "#ddd",
+              cursor: text.trim() && circle ? "pointer" : "not-allowed",
             }}
           >
             发布
@@ -495,6 +514,8 @@ export default function DiscoverPage() {
   const serverCursorRef = useRef<number>(Number.MAX_SAFE_INTEGER);
   // P1 收敛：动态一级标签筛选
   const [activeTag, setActiveTag] = useState<string>("");
+  // P6-I-PLUS 规则5：圈层筛选（8 固定圈层，不同领域不混排）
+  const [activeCircle, setActiveCircle] = useState<string>("");
 
   // 行业资讯状态
   const [news, setNews] = useState<NewsItem[]>([]);
@@ -529,7 +550,7 @@ export default function DiscoverPage() {
     setRefreshing(refresh);
     try {
       const cursor = refresh ? Number.MAX_SAFE_INTEGER : serverCursorRef.current;
-      const r = await apiFetchPosts({ tag: activeTag || undefined, cursor, limit: 20 });
+      const r = await apiFetchPosts({ tag: activeTag || undefined, circle: activeCircle || undefined, cursor, limit: 20 });
       if (r && r.success && r.posts) {
         const newPosts = r.posts.map(toQualityPost);
         serverCursorRef.current = r.nextCursor || 0;
@@ -565,11 +586,16 @@ export default function DiscoverPage() {
     setLiked(getLikedPosts());
     setFollows(new Set(getFollows()));
     setRefreshing(false);
-  }, [activeTag]);
+  }, [activeTag, activeCircle]);
 
   // P1 收敛：标签筛选（点击已选标签取消筛选）
   const handleTagFilter = useCallback((tag: string) => {
     setActiveTag((prev) => (prev === tag ? "" : tag));
+  }, []);
+
+  // P6-I-PLUS 规则5：圈层筛选（点击已选圈层取消筛选，切换即刷新）
+  const handleCircleFilter = useCallback((key: string) => {
+    setActiveCircle((prev) => (prev === key ? "" : key));
   }, []);
 
   // ==================== 加载行业资讯（含错误降级，支持分类过滤） ====================
@@ -934,10 +960,11 @@ export default function DiscoverPage() {
   }, []);
 
   // ==================== 发布动态（v25.0.19：后端真实发布，全站用户可见） ====================
-  const handlePublish = useCallback((content: string) => {
+  const handlePublish = useCallback((content: string, circle: string) => {
     if (!requireLogin()) return;
     const { filtered } = filterSensitive(content);
     const user = getUserProfile();
+    const circleInfo = SOCIAL_CIRCLES.find((c) => c.key === circle);
     const optimistic: QualityPost = {
       id: `user_${Date.now()}`,
       authorId: user?.userId || "anonymous",
@@ -945,7 +972,7 @@ export default function DiscoverPage() {
       authorAvatar: user?.avatar || "",
       content: filtered,
       images: [],
-      topic: "",
+      topic: circleInfo ? circleInfo.label : "",
       likes: 0,
       comments: 0,
       shares: 0,
@@ -959,6 +986,7 @@ export default function DiscoverPage() {
     setPosts((prev) => [optimistic, ...prev]);
     void apiCreatePost({
       content: filtered,
+      circle,
       tags: activeTag ? [activeTag] : undefined,
     }).then((r) => {
       if (r && r.success && r.post) {
@@ -1118,9 +1146,41 @@ export default function DiscoverPage() {
             </button>
           </div>
 
+          {/* 圈层筛选栏（P6-I-PLUS 规则5：8 固定圈层，不同领域不混排） */}
+          <div
+            className="sticky top-[57px] z-20 flex items-center gap-2 overflow-x-auto border-b border-gray-100 bg-white px-4 py-2"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          >
+            <span className="shrink-0 text-xs text-gray-400">圈层</span>
+            <button
+              onClick={() => handleCircleFilter("")}
+              className="shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-all active:scale-95"
+              style={{
+                backgroundColor: activeCircle === "" ? BRAND : "#f5f5f5",
+                color: activeCircle === "" ? "#fff" : "#666",
+              }}
+            >
+              全部
+            </button>
+            {SOCIAL_CIRCLES.map((c) => (
+              <button
+                key={c.key}
+                onClick={() => handleCircleFilter(c.key)}
+                className="shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-all active:scale-95"
+                style={{
+                  backgroundColor: activeCircle === c.key ? BRAND : "#f5f5f5",
+                  color: activeCircle === c.key ? "#fff" : "#666",
+                  border: activeCircle === c.key ? `1px solid ${BRAND}` : "1px solid #eee",
+                }}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+
           {/* 标签筛选栏（P1 收敛：一级标签体系） */}
           <div
-            className="sticky top-[89px] z-20 flex gap-2 overflow-x-auto border-b border-gray-100 bg-white px-4 py-2.5"
+            className="sticky top-[121px] z-20 flex gap-2 overflow-x-auto border-b border-gray-100 bg-white px-4 py-2.5"
             style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
           >
             <button

@@ -297,3 +297,14 @@ export function getShichenOptions(): Array<{ value: number; label: string; zhi: 
   ];
   return shichen;
 }
+
+// ZW-TIME 紫微时间轴引擎（P6-I-PLUS 规则6 永久冻结模块）
+export {
+  getZwDecadalList,
+  getZwYearlyList,
+  getZwMonthlyList,
+  getZwDailyList,
+  getZwHourlyList,
+  getZwHoroscopeAt,
+} from './zwtime';
+export type { ZwTimeNode, ZwTimeInput, ZwTimeLevel, ZwHoroscopeSnapshot } from './zwtime';

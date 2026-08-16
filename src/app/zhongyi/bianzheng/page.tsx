@@ -13,10 +13,8 @@ import { useToolBack } from "@/lib/useToolBack";
 import { callAI, getPermissionStatus } from "@/lib/aiService";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
-import {
-  WENZHEN_CATEGORIES,
-  buildWenzhenSystemPrompt,
-} from "@/data/wenzhen_data";
+import { WENZHEN_CATEGORIES, buildWenzhenSystemPrompt } from "@/data/wenzhen_data";
+import { buildZhengguPrompt } from "@/data/zhenggu_knowledge";
 
 // ============================================================================
 // 辨证学习页
@@ -233,9 +231,15 @@ export default function BianZhengPage() {
         supplementText.trim()
       );
       // 追加基础辨证维度与疗法侧重（wenzhen_data.ts 只读，不修改原函数）
+      // 正骨为主时注入中华非遗正骨疼痛诊断依据库（核心内部资料）
+      const zhengguCtx = therapyFocus === "zhenggu" ? `\n\n${buildZhengguPrompt()}` : "";
       const systemPrompt =
         `${basePrompt}\n\n基础辨证维度：${systemLabel}\n疗法侧重：${therapyLabel}\n` +
-        `请在辨证分析与治法思路中体现上述基础辨证维度与疗法侧重，确保不同流派组合产生差异化的辨证方案。`;
+        `请在辨证分析与治法思路中体现上述基础辨证维度与疗法侧重，确保不同流派组合产生差异化的辨证方案。` +
+        (therapyFocus === "zhenggu"
+          ? "\n本例疗法侧重为正骨为主：疼痛类症状必须按下方正骨依据库给出「骨错位位置→触诊验证→轻手法方向」分析，并优先核对安全红线。"
+          : "") +
+        zhengguCtx;
 
       const userPrompt = `请对以下症状进行辨证分析：\n\n选择症状：${symptomsText}${detailText}`;
 

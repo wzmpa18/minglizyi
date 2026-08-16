@@ -280,7 +280,15 @@ export type {
 export {
   calculateZiwei,
   getShichenOptions,
+  // ZW-TIME 紫微时间轴引擎（P6-I-PLUS 规则6 永久冻结模块）
+  getZwDecadalList,
+  getZwYearlyList,
+  getZwMonthlyList,
+  getZwDailyList,
+  getZwHourlyList,
+  getZwHoroscopeAt,
 } from './modules/ziwei';
+export type { ZwTimeNode, ZwTimeInput, ZwTimeLevel, ZwHoroscopeSnapshot } from './modules/ziwei';
 
 // ============================================================================
 // 五、神煞模块 (modules/shensha/)

@@ -3,6 +3,14 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import type { CSSProperties } from "react";
 import { calculateZiwei, solarToBazi, calcTrueSolarTime } from "@/algorithm-core";
+import {
+  getZwDecadalList,
+  getZwYearlyList,
+  getZwMonthlyList,
+  getZwDailyList,
+  getZwHourlyList,
+} from "@/algorithm-core";
+import type { ZwTimeInput } from "@/algorithm-core";
 import { useRouter } from "next/navigation";
 import { leaveToolPage, isManagedBackNavigation } from "@/lib/leaveToolPage";
 import type { ZiweiResult, Gender } from "@/algorithm-core";
@@ -197,15 +205,6 @@ const SUIQIAN = ["太岁", "太阳", "丧门", "太阴", "官符", "死符", "�
 // v19.2: 将前十二神（流年杂煞，从寅宫起将星顺行）
 const JIANGQIAN = ["将星", "攀鞍", "岁驿", "息神", "华盖", "劫煞", "灾煞", "天煞", "指背", "咸池", "月煞", "亡神"];
 
-// 月份干支简化计算
-const MONTH_GAN_START: Record<string, string> = {
-  "甲": "丙", "己": "丙",
-  "乙": "戊", "庚": "戊",
-  "丙": "庚", "辛": "庚",
-  "丁": "壬", "壬": "壬",
-  "戊": "甲", "癸": "甲",
-};
-
 // ====================================================================
 // 工具函数
 // ====================================================================
@@ -315,28 +314,6 @@ function getLaiyinPalaceIdx(yearStem: string): number {
 function getGanZhiColor(char: string): string {
   const wx = GAN_WUXING[char] || ZHI_WUXING[char];
   return wx ? WUXING_COLORS[wx] : "#585858";
-}
-
-/** 根据公历年获取年干支（天干+地支） */
-function getYearGanZhi(year: number): { gan: string; zhi: string } {
-  const ganIdx = (year - 4) % 10;
-  const zhiIdx = (year - 4) % 12;
-  return {
-    gan: GAN_NAMES[(ganIdx + 10) % 10],
-    zhi: ZHI_NAMES[(zhiIdx + 12) % 12],
-  };
-}
-
-/** 根据年干和月份(1-12)获取月干支 */
-function getMonthGanZhi(yearGan: string, month: number): { gan: string; zhi: string } {
-  // 月支固定：正月寅、二月卯...十二月丑
-  const monthZhi = ["寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥", "子", "丑"];
-  const zhi = monthZhi[(month - 1) % 12];
-  // 五虎遁年起月法
-  const startGan = MONTH_GAN_START[yearGan] || "丙";
-  const startGanIdx = GAN_NAMES.indexOf(startGan);
-  const gan = GAN_NAMES[(startGanIdx + month - 1) % 10];
-  return { gan, zhi };
 }
 
 /**
@@ -697,80 +674,82 @@ export default function ZiweiPage() {
     return pos >= 0 ? `大运${PALACE_NAMES_12[pos]}` : "";
   };
 
-  // 流年数据（当前选中大限对应的10年，对标jishiyu，显示年份+干支）
+  // v25.0.24 ZW-TIME 时间轴引擎输入（P6-I-PLUS 规则6：全部时间层级统一走引擎）
+  const zwInput = useMemo<ZwTimeInput | null>(() => {
+    if (!result) return null;
+    return { year, month, day, hour, gender };
+  }, [result, year, month, day, hour, gender]);
+
+  // v25.0.24 大限四化由引擎统一计算（iztro horoscope 大限干四化）
+  const zwDecadal = useMemo(() => {
+    if (!zwInput) return [];
+    try { return getZwDecadalList(zwInput); } catch { return []; }
+  }, [zwInput]);
+
+  // 流年数据（v25.0.24 ZW-TIME 引擎：当前选中大限对应的10年，宫位/干支/四化由引擎统一计算）
   const liunianYears = useMemo(() => {
-    if (!decadalData.length || !result) return [];
-    const curDaxian = decadalData[selectedDaxian];
-    if (!curDaxian) return [];
-    const startAge = curDaxian.ageRange[0];
-    const startYear = year + startAge - 1;
-    const years = [];
-    for (let i = 0; i < 10; i++) {
-      const y = startYear + i;
-      const gz = getYearGanZhi(y);
-      years.push({
-        year: y,
-        age: startAge + i,
-        gan: gz.gan,
-        zhi: gz.zhi,
-      });
-    }
-    return years;
-  }, [decadalData, selectedDaxian, year, result]);
+    if (!zwInput || !decadalData.length) return [];
+    try {
+      return getZwYearlyList(zwInput, selectedDaxian).map(n => ({
+        year: n.year ?? 0,
+        age: n.age ?? 0,
+        gan: n.gan,
+        zhi: n.zhi,
+        mutagen: n.mutagen,
+        palaceIndex: n.palaceIndex,
+        palaceName: n.palaceName,
+        solarDate: n.solarDate,
+      }));
+    } catch { return []; }
+  }, [zwInput, decadalData, selectedDaxian]);
 
-  // 流月数据（当前选中年份的12个月干支，对标jishiyu）
+  // 流月数据（v25.0.24 ZW-TIME 引擎：按农历月真实边界计算，宫位由引擎输出）
   const liuyueMonths = useMemo(() => {
-    if (!liunianYears.length) return [];
+    if (!zwInput || !liunianYears.length) return [];
     const curYear = liunianYears[selectedLiunian]?.year || year;
-    const yearGan = getYearGanZhi(curYear).gan;
-    const months = [];
-    for (let m = 1; m <= 12; m++) {
-      const gz = getMonthGanZhi(yearGan, m);
-      months.push({ label: `${m}月`, gan: gz.gan, zhi: gz.zhi });
-    }
-    return months;
-  }, [liunianYears, selectedLiunian, year]);
+    try {
+      return getZwMonthlyList(zwInput, curYear).map((n, i) => ({
+        ...n,
+        label: `${i + 1}月`,
+        lunarMonth: n.lunarMonth ?? i + 1,
+      }));
+    } catch { return []; }
+  }, [zwInput, liunianYears, selectedLiunian, year]);
 
-  // v19.5: 流日数据（选中流月的30天，干支五行色，农历日名）
+  // 流日数据（v25.0.24 ZW-TIME 引擎：真实历法日干支，修复原顺序推算误差）
   const liuriDays = useMemo(() => {
-    if (!liuyueMonths.length || selectedLiuyue < 0) return [];
+    if (!zwInput || !liuyueMonths.length || selectedLiuyue < 0) return [];
     const curMonth = liuyueMonths[selectedLiuyue];
+    const curYear = liunianYears[selectedLiunian]?.year || year;
     if (!curMonth) return [];
-    // v19.5: 农历日名
-    const lunarDayNames = [
-      "初一","初二","初三","初四","初五","初六","初七","初八","初九","初十",
-      "十一","十二","十三","十四","十五","十六","十七","十八","十九","二十",
-      "廿一","廿二","廿三","廿四","廿五","廿六","廿七","廿八","廿九","三十"
-    ];
-    const days = [];
-    const startZhiIdx = ZHI_NAMES.indexOf(curMonth.zhi);
-    const startGan = curMonth.gan;
-    const startGanIdx = GAN_NAMES.indexOf(startGan);
-    for (let d = 1; d <= 30; d++) {
-      const ganIdx = (startGanIdx + d - 1) % 10;
-      const zhiIdx = (startZhiIdx + d - 1) % 12;
-      days.push({ day: d, lunarName: lunarDayNames[d - 1], gan: GAN_NAMES[ganIdx], zhi: ZHI_NAMES[zhiIdx] });
-    }
-    return days;
-  }, [liuyueMonths, selectedLiuyue]);
+    try {
+      return getZwDailyList(zwInput, curYear, curMonth.lunarMonth ?? selectedLiuyue + 1).map(n => ({
+        day: n.lunarDay ?? 0,
+        lunarName: n.sub,
+        gan: n.gan,
+        zhi: n.zhi,
+        mutagen: n.mutagen,
+        palaceIndex: n.palaceIndex,
+        palaceName: n.palaceName,
+        solarDate: n.solarDate,
+      }));
+    } catch { return []; }
+  }, [zwInput, liuyueMonths, selectedLiuyue, liunianYears, selectedLiunian, year]);
 
-  // v19.2: 流时数据（12个时辰，地支固定子~亥）
+  // 流时数据（v25.0.24 ZW-TIME 引擎：时辰宫位由引擎 horoscope 统一计算）
   const liushiHours = useMemo(() => {
     const curDay = selectedLiuri >= 0 ? liuriDays[selectedLiuri] : null;
-    if (!curDay) return [];
-    const hours = [];
-    const dayGanIdx = GAN_NAMES.indexOf(curDay.gan);
-    // 日上起时：甲己还加甲，乙庚丙作初...
-    const startHourGan: Record<number, number> = { 0: 0, 5: 0, 1: 2, 6: 2, 2: 4, 7: 4, 3: 6, 8: 6, 4: 8, 9: 8 };
-    const startGanIdx = startHourGan[dayGanIdx] ?? 0;
-    for (let h = 0; h < 12; h++) {
-      const ganIdx = (startGanIdx + h) % 10;
-      // 时辰地支从子(10)开始
-      const zhiIdx = (10 + h) % 12;
-      hours.push({ hour: h, gan: GAN_NAMES[ganIdx], zhi: ZHI_NAMES[zhiIdx] });
-    }
-    return hours;
-  }, [liuriDays, selectedLiuri]);
+    if (!zwInput || !curDay?.solarDate) return [];
+    try {
+      return getZwHourlyList(zwInput, curDay.solarDate).map(n => ({
+        gan: n.gan,
+        zhi: n.zhi,
+        mutagen: n.mutagen,
+        palaceIndex: n.palaceIndex,
+        palaceName: n.palaceName,
+      }));
+    } catch { return []; }
+  }, [zwInput, liuriDays, selectedLiuri]);
 
   // 流月数据（正月~十二月）
   const months = useMemo(() => {
@@ -1262,13 +1241,16 @@ export default function ZiweiPage() {
                     const palaceBg = viewMode === "sanhe" ? getPalaceBg(palaceZhiIdx) : "#fff";
                     // v18.9: 来因宫标记
                     const isLaiyin = palaceZhiIdx === laiyinPalaceIdx;
+                    // v25.0.24: ZW-TIME 时间轴选中宫位高亮（紫框）
+                    const isZwFocus = focusedPalace !== null && palaceZhiIdx === focusedPalace;
 
                     return (
                       <div
                         key={idx}
                         onClick={() => { setExpandedPalaceIdx(prev => prev === idx ? null : idx); if (viewMode === "sanhe") setFocusedPalace(palaceZhiIdx); const palaceInterp = getPalaceInterpretation(palace.name); const starInterps = getPalaceAllStarInterpretations(palace.majorStars || [], palace.name, result.sihua); const allInterps = []; if (palaceInterp) { allInterps.push({ type: "palace" as const, title: palaceInterp.title, content: palaceInterp.summary + "\n" + palaceInterp.details.join("\n"), source: palaceInterp.source }); } allInterps.push(...starInterps); setInterpretPanel({ palaceName: palace.name, palaceGanZhi: (palace.heavenlyStem || "") + (palace.earthlyBranch || ""), interpretations: allInterps }); }}
                         style={{
-                          border: isLaiyin ? "2px solid #ff6600" : "1px solid #ccc",
+                          border: isLaiyin ? "2px solid #ff6600" : isZwFocus ? "2px solid #7B2FBE" : "1px solid #ccc",
+                          boxShadow: isZwFocus ? "0 0 4px rgba(123,47,190,0.45)" : "none",
                           padding: "1px 1px",
                           display: "flex",
                           flexDirection: "column",
@@ -1308,7 +1290,16 @@ export default function ZiweiPage() {
                               const fs = star.isMajor ? majorFs : star.category === "minor" ? minorFs : auxFs;
                               const colW = star.isMajor ? majorColW : star.category === "minor" ? minorColW : auxColW;
                               return (
-                                <div key={`star-${j}`} style={{ display: "flex", flexDirection: "column", alignItems: "center", lineHeight: "1", width: colW, flexShrink: 0 }}>
+                                <div
+                                  key={`star-${j}`}
+                                  // v25.0.24: 点击主星跳转学习模块对应知识点（工具→学习双向闭环）
+                                  onClick={star.isMajor ? (e: React.MouseEvent) => {
+                                    e.stopPropagation();
+                                    router.push(`/academy/learn?track=yixue&term=${encodeURIComponent(star.name)}`);
+                                  } : undefined}
+                                  title={star.isMajor ? `查看「${star.name}」学习知识点` : undefined}
+                                  style={{ display: "flex", flexDirection: "column", alignItems: "center", lineHeight: "1", width: colW, flexShrink: 0 }}
+                                >
                                   {star.name.split("").map((char, ci) => (
                                     <span key={ci} style={{ fontSize: fs, fontWeight: star.weight as any, color: star.color, lineHeight: "1", display: "block", textAlign: "center" }}>{char}</span>
                                   ))}
@@ -1458,6 +1449,65 @@ export default function ZiweiPage() {
             </div>
           )}
 
+          {/* ---- v25.0.24: ZW-TIME 时间轴状态卡（命盘→大运→流年→流月→流日层级路径 + 流命宫 + 运限四化） ---- */}
+          {decadalData.length > 0 && (() => {
+            const dn = zwDecadal[selectedDaxian];
+            const yn = liunianYears[selectedLiunian];
+            const mn = selectedLiuyue >= 0 ? liuyueMonths[selectedLiuyue] : null;
+            const dayN = selectedLiuri >= 0 ? liuriDays[selectedLiuri] : null;
+            const hourN = selectedLiushi >= 0 ? liushiHours[selectedLiushi] : null;
+            const deepest = hourN && hourN.palaceIndex >= 0 ? hourN
+              : dayN && dayN.palaceIndex >= 0 ? dayN
+              : mn && mn.palaceIndex >= 0 ? mn
+              : yn && yn.palaceIndex >= 0 ? yn
+              : dn && dn.palaceIndex >= 0 ? dn : null;
+            const mut = hourN?.mutagen?.length === 4 ? hourN.mutagen
+              : dayN?.mutagen?.length === 4 ? dayN.mutagen
+              : mn?.mutagen?.length === 4 ? mn.mutagen
+              : yn?.mutagen?.length === 4 ? yn.mutagen
+              : dn?.mutagen?.length === 4 ? dn.mutagen : [];
+            const deepestPalaceName = hourN ? "流时宫"
+              : dayN ? "流日宫"
+              : mn ? "流月宫"
+              : yn ? "流年宫" : "大限宫";
+            return (
+              <div className="bg-white mb-2 border border-gray-300 rounded-lg p-2" style={{ background: "linear-gradient(135deg,#F3EDF7,#fff)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap", fontSize: "10px", lineHeight: "1.5" }}>
+                  <span style={{ background: BRAND_PURPLE, color: "#fff", fontWeight: "bold", padding: "1px 6px", borderRadius: "8px", fontSize: "9px" }}>ZW-TIME</span>
+                  <span style={{ color: "#666" }}>时间轴：</span>
+                  <span style={{ fontWeight: "bold", color: BRAND_PURPLE_DARK }}>
+                    大限{dn ? `${dn.gan}${dn.zhi}(${dn.sub})` : "-"}
+                  </span>
+                  <span style={{ color: "#999" }}>›</span>
+                  <span style={{ fontWeight: "bold" }}>{yn ? `${yn.year}年${yn.gan}${yn.zhi}` : "-"}</span>
+                  {mn && (<><span style={{ color: "#999" }}>›</span><span style={{ fontWeight: "bold" }}>{mn.label}</span></>)}
+                  {dayN && (<><span style={{ color: "#999" }}>›</span><span style={{ fontWeight: "bold" }}>{dayN.lunarName}</span></>)}
+                  {hourN && (<><span style={{ color: "#999" }}>›</span><span style={{ fontWeight: "bold" }}>{hourN.zhi}时</span></>)}
+                </div>
+                {deepest && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", fontSize: "10px", marginTop: "4px", lineHeight: "1.5" }}>
+                    <span style={{ color: "#666" }}>{deepestPalaceName}：</span>
+                    <span style={{ fontWeight: "bold", color: BRAND_PURPLE }}>
+                      {deepest.palaceName ? `${deepest.palaceName}（${ZHI_NAMES[deepest.palaceIndex] || ""}宫）` : `${ZHI_NAMES[deepest.palaceIndex] || ""}宫`}
+                    </span>
+                    {mut.length === 4 && (
+                      <>
+                        <span style={{ color: "#999" }}>|</span>
+                        <span style={{ color: "#666" }}>运限四化：</span>
+                        {[["禄", "#16a34a"], ["权", "#ea580c"], ["科", "#2563eb"], ["忌", "#dc2626"]].map(([hua, color], k) => (
+                          <span key={hua} style={{ whiteSpace: "nowrap" }}>
+                            <span style={{ fontWeight: "bold" }}>{mut[k]}</span>
+                            <span style={{ color: color as string, fontWeight: "bold" }}>化{hua}</span>
+                          </span>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           {/* ---- 底部时间表格（对标jishiyu：大限12宫、流年10年、流月12月，干支五行色） ---- */}
           {decadalData.length > 0 && (
             <div className="bg-white mb-2 border border-gray-300 overflow-hidden">
@@ -1505,14 +1555,18 @@ export default function ZiweiPage() {
                 </div>
               </div>
 
-              {/* v25.0.21: 限四化行（当前选中大限的天干四化，对标文墨天机） */}
+              {/* v25.0.24: 限四化行（ZW-TIME 引擎统一计算的大限四化） */}
               {(() => {
                 const cur = decadalData[selectedDaxian];
+                const engMut = zwDecadal[selectedDaxian]?.mutagen;
                 const sh = cur ? TIANGAN_SIHUA[cur.decadalGan] : null;
-                if (!cur || !sh) return null;
-                const items: Array<[string, string]> = [
-                  [sh.lu, "化禄"], [sh.quan, "化权"], [sh.ke, "化科"], [sh.ji, "化忌"],
-                ];
+                if (!cur) return null;
+                const items: Array<[string, string]> = engMut && engMut.length === 4
+                  ? [[engMut[0], "化禄"], [engMut[1], "化权"], [engMut[2], "化科"], [engMut[3], "化忌"]]
+                  : sh
+                    ? [[sh.lu, "化禄"], [sh.quan, "化权"], [sh.ke, "化科"], [sh.ji, "化忌"]]
+                    : [];
+                if (!items.length) return null;
                 return (
                   <div style={{ display: "flex", borderBottom: "1px solid #ccc", background: "#f9f4ff", alignItems: "center" }}>
                     <div style={{ width: "22px", display: "flex", alignItems: "center", justifyContent: "center", borderRight: "1px solid #ccc", fontSize: "9px", color: "#7B2FBE", fontWeight: "bold", writingMode: "vertical-rl", textOrientation: "upright", letterSpacing: "1px", padding: "4px 1px", lineHeight: "1" }}>限四化</div>
@@ -1540,12 +1594,10 @@ export default function ZiweiPage() {
                         key={`ln-${i}`}
                         onClick={() => {
                           setSelectedLiunian(i);
-                          // 虚线三角形移动到流年地支对应宫位
-                          const zhi = liunianYears[i]?.zhi;
-                          if (zhi) {
-                            const zhiIdx = ZHI_NAMES.indexOf(zhi);
-                            if (zhiIdx >= 0) setFocusedPalace(zhiIdx);
-                          }
+                          // v25.0.24: ZW-TIME 引擎宫位高亮（流年流入宫），地支定位作兜底
+                          const n = liunianYears[i];
+                          const idx = n?.palaceIndex !== undefined && n.palaceIndex >= 0 ? n.palaceIndex : ZHI_NAMES.indexOf(n?.zhi || "");
+                          if (idx >= 0) setFocusedPalace(idx);
                         }}
                         style={{
                           flex: "0 0 auto",
@@ -1571,14 +1623,18 @@ export default function ZiweiPage() {
                 </div>
               </div>
 
-              {/* v25.0.21: 年四化行（当前选中流年的天干四化，对标文墨天机） */}
+              {/* v25.0.24: 年四化行（ZW-TIME 引擎统一计算的流年四化） */}
               {(() => {
                 const cur = liunianYears[selectedLiunian];
+                const engMut = cur?.mutagen;
                 const sh = cur ? TIANGAN_SIHUA[cur.gan] : null;
-                if (!cur || !sh) return null;
-                const items: Array<[string, string]> = [
-                  [sh.lu, "化禄"], [sh.quan, "化权"], [sh.ke, "化科"], [sh.ji, "化忌"],
-                ];
+                if (!cur) return null;
+                const items: Array<[string, string]> = engMut && engMut.length === 4
+                  ? [[engMut[0], "化禄"], [engMut[1], "化权"], [engMut[2], "化科"], [engMut[3], "化忌"]]
+                  : sh
+                    ? [[sh.lu, "化禄"], [sh.quan, "化权"], [sh.ke, "化科"], [sh.ji, "化忌"]]
+                    : [];
+                if (!items.length) return null;
                 return (
                   <div style={{ display: "flex", borderBottom: "1px solid #ccc", background: "#f4f9ff", alignItems: "center" }}>
                     <div style={{ width: "22px", display: "flex", alignItems: "center", justifyContent: "center", borderRight: "1px solid #ccc", fontSize: "9px", color: "#0462d7", fontWeight: "bold", writingMode: "vertical-rl", textOrientation: "upright", letterSpacing: "1px", padding: "4px 1px", lineHeight: "1" }}>年四化</div>
@@ -1605,13 +1661,10 @@ export default function ZiweiPage() {
                       <div
                         key={`ly-${i}`}
                         onClick={() => {
-                          // v19.0: 流月可点击，虚线三角形移动到流月地支对应宫位
+                          // v25.0.24: ZW-TIME 引擎宫位高亮（流月从流年宫起数，非月支宫）
                           setSelectedLiuyue(i);
-                          const zhi = m.zhi;
-                          if (zhi) {
-                            const zhiIdx = ZHI_NAMES.indexOf(zhi);
-                            if (zhiIdx >= 0) setFocusedPalace(zhiIdx);
-                          }
+                          const idx = m.palaceIndex !== undefined && m.palaceIndex >= 0 ? m.palaceIndex : ZHI_NAMES.indexOf(m.zhi);
+                          if (idx >= 0) setFocusedPalace(idx);
                         }}
                         style={{
                           flex: 1,
@@ -1658,8 +1711,9 @@ export default function ZiweiPage() {
                             onClick={() => {
                               setSelectedLiuri(actualIdx);
                               setSelectedLiushi(-1);
-                              const zhiIdx = ZHI_NAMES.indexOf(d.zhi);
-                              if (zhiIdx >= 0) setFocusedPalace(zhiIdx);
+                              // v25.0.24: ZW-TIME 引擎宫位高亮（流日从流月宫起数）
+                              const idx = d.palaceIndex !== undefined && d.palaceIndex >= 0 ? d.palaceIndex : ZHI_NAMES.indexOf(d.zhi);
+                              if (idx >= 0) setFocusedPalace(idx);
                             }}
                             style={{
                               flex: 1,
@@ -1696,8 +1750,9 @@ export default function ZiweiPage() {
                             onClick={() => {
                               setSelectedLiuri(actualIdx);
                               setSelectedLiushi(-1);
-                              const zhiIdx = ZHI_NAMES.indexOf(d.zhi);
-                              if (zhiIdx >= 0) setFocusedPalace(zhiIdx);
+                              // v25.0.24: ZW-TIME 引擎宫位高亮（流日从流月宫起数）
+                              const idx = d.palaceIndex !== undefined && d.palaceIndex >= 0 ? d.palaceIndex : ZHI_NAMES.indexOf(d.zhi);
+                              if (idx >= 0) setFocusedPalace(idx);
                             }}
                             style={{
                               flex: 1,
@@ -1736,9 +1791,9 @@ export default function ZiweiPage() {
                           key={`ls-${i}`}
                           onClick={() => {
                             setSelectedLiushi(i);
-                            // 虚线三角形移动到流时地支对应宫位
-                            const zhiIdx = ZHI_NAMES.indexOf(h.zhi);
-                            if (zhiIdx >= 0) setFocusedPalace(zhiIdx);
+                            // v25.0.24: ZW-TIME 引擎宫位高亮（流时从流日宫起数）
+                            const idx = h.palaceIndex !== undefined && h.palaceIndex >= 0 ? h.palaceIndex : ZHI_NAMES.indexOf(h.zhi);
+                            if (idx >= 0) setFocusedPalace(idx);
                           }}
                           style={{
                             flex: 1,

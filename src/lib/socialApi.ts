@@ -32,12 +32,26 @@ export function isLoggedIn(): boolean {
 export interface SocialPost {
   id: string; postId: string; authorId: string; authorName: string; authorAvatar: string;
   content: string; images: string[]; tags: string[]; toolType: string;
+  circle: string; circleLabel: string;
   likeCount: number; commentCount: number; liked: boolean; createdAt: string;
 }
 
-export async function fetchPosts(opts?: { tag?: string; cursor?: number; limit?: number }) {
+// P6-I-PLUS 规则5：8 个固定圈层（永久冻结，与学习模块分类一一对应）
+export const SOCIAL_CIRCLES: Array<{ key: string; label: string; track: string }> = [
+  { key: "TCM", label: "中医", track: "zhongyi" },
+  { key: "ZWDS", label: "紫微", track: "yixue" },
+  { key: "Bazi", label: "八字", track: "yixue" },
+  { key: "LiuRen", label: "六壬", track: "yixue" },
+  { key: "QiMen", label: "奇门", track: "yixue" },
+  { key: "FengShui", label: "风水", track: "yixue" },
+  { key: "GuoXue", label: "国学", track: "guoxue" },
+  { key: "Life", label: "生活", track: "" },
+];
+
+export async function fetchPosts(opts?: { tag?: string; circle?: string; cursor?: number; limit?: number }) {
   const q = new URLSearchParams();
   if (opts?.tag) q.set("tag", opts.tag);
+  if (opts?.circle) q.set("circle", opts.circle);
   if (opts?.cursor) q.set("cursor", String(opts.cursor));
   if (opts?.limit) q.set("limit", String(opts.limit));
   return api<{ success: boolean; posts?: SocialPost[]; nextCursor?: number; error?: string }>(`/api/social/posts?${q.toString()}`);
@@ -47,7 +61,7 @@ export async function fetchMyPosts() {
   return api<{ success: boolean; posts?: SocialPost[] }>(`/api/social/posts/mine`, { method: "GET" });
 }
 
-export async function createPost(data: { content: string; images?: string[]; tags?: string[]; toolType?: string }) {
+export async function createPost(data: { content: string; images?: string[]; tags?: string[]; toolType?: string; circle?: string }) {
   return api<{ success: boolean; post?: SocialPost; error?: string }>(`/api/social/posts`, {
     method: "POST",
     body: JSON.stringify(data),

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { BrandHeader } from "@/components/shared";
 import {
   fetchKnowledge,
@@ -24,6 +24,8 @@ export default function AcademyLearnPage() {
   const [openId, setOpenId] = useState<string | null>(null);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState("");
+  // v25.0.24: 术语筛选（紫微等工具页点击星曜术语跳转 ?term=）
+  const [term, setTerm] = useState("");
 
   const showToast = (msg: string) => {
     setToast(msg);
@@ -47,10 +49,13 @@ export default function AcademyLearnPage() {
   }, [track, category]);
 
   useEffect(() => {
-    // URL ?track= 预选板块
+    // URL ?track= 预选板块；?term= 术语筛选（工具页星曜跳转）
     if (typeof window !== "undefined") {
-      const q = new URLSearchParams(window.location.search).get("track");
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get("track");
       if (q) setTrack(q);
+      const t = params.get("term");
+      if (t) setTerm(t);
     }
   }, []);
 
@@ -77,6 +82,20 @@ export default function AcademyLearnPage() {
       }
     } catch {}
   };
+
+  // v25.0.24: 术语过滤（标题/章节/内容/标签命中即保留）
+  const filteredPoints = useMemo(() => {
+    if (!term) return points;
+    const kw = term.trim();
+    if (!kw) return points;
+    return points.filter((pt) =>
+      pt.title?.includes(kw) ||
+      pt.chapter?.includes(kw) ||
+      pt.category?.includes(kw) ||
+      pt.content?.includes(kw) ||
+      (pt.tags || []).some((tg) => tg.includes(kw))
+    );
+  }, [points, term]);
 
   return (
     <div style={{ maxWidth: "420px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f5f5f5" }}>
@@ -128,16 +147,29 @@ export default function AcademyLearnPage() {
       </div>
 
       <div className="px-3 py-3 pb-24">
+        {/* v25.0.24: 术语筛选提示条（工具页星曜术语跳转进入时显示） */}
+        {term && (
+          <div className="mb-2.5 flex items-center justify-between rounded-xl px-3 py-2 text-xs" style={{ backgroundColor: BRAND + "14", color: BRAND }}>
+            <span className="font-semibold">术语筛选：{term}（{filteredPoints.length} 条）</span>
+            <button
+              onClick={() => setTerm("")}
+              className="ml-2 rounded-full bg-white px-2 py-0.5 text-[11px] font-bold"
+              style={{ color: "#888", border: "1px solid #eee" }}
+            >
+              清除 ✕
+            </button>
+          </div>
+        )}
         {loading ? (
           <div className="rounded-2xl bg-white p-6 text-center text-xs text-gray-400 shadow-sm">加载中...</div>
-        ) : points.length === 0 ? (
+        ) : filteredPoints.length === 0 ? (
           <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
-            <p className="text-sm text-gray-500">暂无知识点</p>
+            <p className="text-sm text-gray-500">{term ? `未找到与「${term}」相关的知识点` : "暂无知识点"}</p>
             <p className="mt-1 text-xs text-gray-400">知识点由知识工厂的资料经 AI 解析并审核后生成</p>
           </div>
         ) : (
           <div className="space-y-2.5">
-            {points.map((pt) => {
+            {filteredPoints.map((pt) => {
               const key = `${pt.track}:${pt.chapter || pt.title}`;
               const open = openId === pt.id;
               const done = checked.has(key);

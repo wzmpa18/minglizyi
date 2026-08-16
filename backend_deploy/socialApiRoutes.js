@@ -142,6 +142,40 @@ function initTables(d) {
     );
     CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id, read, id DESC);
   `);
+  // P6-I-PLUS 规则5：社交圈层分类系统永久冻结 —— 8 个固定一级圈层，禁止随意新增
+  try {
+    const cols = d.prepare(`PRAGMA table_info(posts)`).all().map(c => c.name);
+    if (cols.includes('post_id') && !cols.includes('circle')) {
+      d.exec(`ALTER TABLE posts ADD COLUMN circle TEXT DEFAULT ''`);
+      d.exec(`CREATE INDEX IF NOT EXISTS idx_posts_circle ON posts(circle, id DESC)`);
+    }
+  } catch (e) { console.error('[SocialApi] circle 列迁移异常(不阻断):', e.message); }
+}
+
+// 8 个固定圈层（永久冻结，与学习模块分类一一对应）
+const SOCIAL_CIRCLES = {
+  TCM: { key: 'TCM', label: '中医', track: 'zhongyi' },
+  ZWDS: { key: 'ZWDS', label: '紫微', track: 'yixue' },
+  Bazi: { key: 'Bazi', label: '八字', track: 'yixue' },
+  LiuRen: { key: 'LiuRen', label: '六壬', track: 'yixue' },
+  QiMen: { key: 'QiMen', label: '奇门', track: 'yixue' },
+  FengShui: { key: 'FengShui', label: '风水', track: 'yixue' },
+  GuoXue: { key: 'GuoXue', label: '国学', track: 'guoxue' },
+  Life: { key: 'Life', label: '生活', track: '' },
+};
+
+// 排盘/工具分享自动匹配圈层（toolType → circle key）
+function autoCircleFromTool(toolType) {
+  const t = String(toolType || '').toLowerCase();
+  if (!t) return '';
+  if (/(ziwei|zwds|紫微)/.test(t)) return 'ZWDS';
+  if (/(bazi|八字|bithi)/.test(t)) return 'Bazi';
+  if (/(liuren|六壬)/.test(t)) return 'LiuRen';
+  if (/(qimen|奇门)/.test(t)) return 'QiMen';
+  if (/(fengshui|风水|xuankong|堪舆)/.test(t)) return 'FengShui';
+  if (/(zhongyi|tcm|中医| acupuncture|针灸| herbal|本草)/.test(t)) return 'TCM';
+  if (/(guoxue|国学|poem|classic|经史)/.test(t)) return 'GuoXue';
+  return '';
 }
 
 // ==================== 认证 ====================
@@ -220,6 +254,8 @@ function rowToPost(row, currentUserId) {
     images: JSON.parse(row.images || '[]'),
     tags: JSON.parse(row.tags || '[]'),
     toolType: row.tool_type,
+    circle: row.circle && SOCIAL_CIRCLES[row.circle] ? row.circle : '',
+    circleLabel: row.circle && SOCIAL_CIRCLES[row.circle] ? SOCIAL_CIRCLES[row.circle].label : '',
     likeCount: row.like_count,
     commentCount: row.comment_count,
     liked,
@@ -233,15 +269,27 @@ function createRouter() {
 
   // ==================== 动态广场 ====================
 
-  // GET /api/social/posts?tag=&cursor=&limit=
+  // GET /api/social/circles —— 8 个固定圈层目录（前端筛选栏数据源，永久冻结）
+  router.get('/circles', (_req, res) => {
+    res.json({ success: true, circles: Object.values(SOCIAL_CIRCLES) });
+  });
+
+  // GET /api/social/posts?tag=&circle=&cursor=&limit=（circle 圈层筛选，不同领域不混排）
   router.get('/posts', authOptional, (req, res) => {
     try {
       const d = getDb();
-      const { tag = '', cursor = 0, limit = 20 } = req.query;
+      const { tag = '', circle = '', cursor = 0, limit = 20 } = req.query;
       const lim = Math.min(parseInt(limit, 10) || 20, 50);
       const cur = parseInt(cursor, 10) || 0;
+      const ck = circle && SOCIAL_CIRCLES[circle] ? circle : '';
       let rows;
-      if (tag) {
+      if (ck && tag) {
+        rows = d.prepare(`SELECT * FROM posts WHERE status='active' AND circle=? AND tags LIKE ? AND id < ? ORDER BY id DESC LIMIT ?`)
+          .all(ck, `%"${tag}"%`, cur, lim);
+      } else if (ck) {
+        rows = d.prepare(`SELECT * FROM posts WHERE status='active' AND circle=? AND id < ? ORDER BY id DESC LIMIT ?`)
+          .all(ck, cur, lim);
+      } else if (tag) {
         rows = d.prepare(`SELECT * FROM posts WHERE status='active' AND tags LIKE ? AND id < ? ORDER BY id DESC LIMIT ?`)
           .all(`%"${tag}"%`, cur, lim);
       } else {
@@ -267,20 +315,26 @@ function createRouter() {
     }
   });
 
-  // POST /api/social/posts  { content, images, tags, toolType }
+  // POST /api/social/posts  { content, images, tags, toolType, circle }
+  // P6-I-PLUS 规则5：发布动态必须绑定圈层（排盘/证书分享按 toolType 自动匹配，无圈层拒绝发布）
   router.post('/posts', authRequired, (req, res) => {
     try {
-      const { content, images = [], tags = [], toolType = '' } = req.body;
+      const { content, images = [], tags = [], toolType = '', circle = '' } = req.body;
       if (!content || !String(content).trim()) {
         return res.status(400).json({ success: false, error: '动态内容不能为空' });
       }
+      const autoCk = autoCircleFromTool(toolType);
+      const ck = (circle && SOCIAL_CIRCLES[circle] ? circle : '') || autoCk;
+      if (!ck) {
+        return res.status(400).json({ success: false, error: `发布动态必须选择圈层：${Object.values(SOCIAL_CIRCLES).map(c => c.label).join('/')}` });
+      }
       const info = userPublicInfo(req.user.userId) || { nickname: '国学爱好者', avatar: '' };
       const postId = `p${Date.now()}${Math.floor(Math.random() * 1000)}`;
-      getDb().prepare(`INSERT INTO posts (post_id, user_id, nickname, avatar, content, images, tags, tool_type) VALUES (?,?,?,?,?,?,?,?)`)
+      getDb().prepare(`INSERT INTO posts (post_id, user_id, nickname, avatar, content, images, tags, tool_type, circle) VALUES (?,?,?,?,?,?,?,?,?)`)
         .run(postId, String(req.user.userId), info.nickname, info.avatar, String(content).trim().slice(0, 5000),
           JSON.stringify(Array.isArray(images) ? images.slice(0, 9) : []),
           JSON.stringify(Array.isArray(tags) ? tags.slice(0, 5) : []),
-          String(toolType || '').slice(0, 40));
+          String(toolType || '').slice(0, 40), ck);
       const row = getDb().prepare('SELECT * FROM posts WHERE post_id = ?').get(postId);
       res.json({ success: true, post: rowToPost(row, String(req.user.userId)) });
     } catch (e) {

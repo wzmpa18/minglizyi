@@ -19,6 +19,7 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 
 const ACADEMY_DB_PATH = path.join(__dirname, 'data', 'academy.db');
 const FILE_DIR = path.join(__dirname, 'data', 'academy_files');
@@ -35,6 +36,21 @@ const TRACKS = {
 };
 
 const TRACK_ALIASES = { tcm: 'zhongyi', bazi: 'yixue', qimen: 'yixue', ziwei: 'yixue', general: 'guoxue' };
+
+// P6-I-PLUS 规则1：三类组织模型永久冻结（禁止第四种组织类型；公益组织禁止收费，只能 free 档）
+const ORG_TYPES = {
+  ORG_TYPE_NPO: { code: 'NPO', name: '公益组织', canCharge: false, defaultTier: 'free', legacy: 'public' },
+  ORG_TYPE_EDU: { code: 'EDU', name: '教育组织', canCharge: true, defaultTier: 'biz50', legacy: 'commercial' },
+  ORG_TYPE_CORP: { code: 'CORP', name: '企业组织', canCharge: true, defaultTier: 'biz50', legacy: 'commercial' },
+};
+function normOrgType(v) {
+  const s = String(v || '').trim().toUpperCase();
+  if (ORG_TYPES[s]) return s;
+  // 旧值兼容映射：public→NPO, commercial→EDU
+  if (s === 'PUBLIC') return 'ORG_TYPE_NPO';
+  if (s === 'COMMERCIAL') return 'ORG_TYPE_EDU';
+  return '';
+}
 
 function normTrack(t) {
   if (TRACKS[t]) return t;
@@ -218,6 +234,27 @@ function initTables(d) {
   // P6-I 原则4：三层权限（PUBLIC/PRIVATE/ORG），禁止新增其他类型
   ensureColumn('materials', 'visibility', "visibility TEXT DEFAULT 'PUBLIC'");
   ensureColumn('materials', 'org_id', 'org_id INTEGER DEFAULT 0');
+  // P6-I-PLUS 规则4：Knowledge Hash 指纹列 + 复用来源
+  ensureColumn('materials', 'content_hash', "content_hash TEXT DEFAULT ''");
+  ensureColumn('materials', 'dedup_of', 'dedup_of INTEGER DEFAULT 0');
+  ensureColumn('knowledge_points', 'content_hash', "content_hash TEXT DEFAULT ''");
+  d.exec(`
+    CREATE INDEX IF NOT EXISTS idx_kp_hash ON knowledge_points(content_hash);
+    CREATE INDEX IF NOT EXISTS idx_mat_hash ON materials(content_hash);
+  `);
+  // 一次性回填存量指纹（幂等：已有指纹的行跳过）
+  try {
+    const kpBack = d.prepare(`SELECT id, title, content FROM knowledge_points WHERE content_hash='' OR content_hash IS NULL LIMIT 5000`).all();
+    if (kpBack.length) {
+      const up = d.prepare('UPDATE knowledge_points SET content_hash=? WHERE id=?');
+      d.transaction(() => { for (const k of kpBack) up.run(kpHash(k.title, k.content), k.id); })();
+    }
+    const matBack = d.prepare(`SELECT id, text_content FROM materials WHERE (content_hash='' OR content_hash IS NULL) AND text_content!='' LIMIT 5000`).all();
+    if (matBack.length) {
+      const up = d.prepare('UPDATE materials SET content_hash=? WHERE id=?');
+      d.transaction(() => { for (const m of matBack) up.run(materialHash(m.text_content), m.id); })();
+    }
+  } catch (e) { console.error('[Academy] 指纹回填异常(不阻断启动):', e.message); }
 
   // P6-A/P6-B：全覆盖出题批量任务（知识点分组遍历，进度可查）
   d.exec(`
@@ -293,6 +330,33 @@ function initTables(d) {
       amount REAL DEFAULT 0,
       note TEXT DEFAULT '',
       created_at TEXT DEFAULT (datetime('now','localtime'))
+    );
+  `);
+
+  // P6-I-PLUS 规则1：三类组织模型永久冻结（ORG_TYPE_NPO 公益 / ORG_TYPE_EDU 教育 / ORG_TYPE_CORP 企业）
+  // 红线：禁止第四种组织类型；公益组织禁止收费（只能 free 档）
+  ensureColumn('organizations', 'org_type', "org_type TEXT DEFAULT ''");
+
+  // P6-I-PLUS 规则2：学习路径为唯一核心学习资产 —— 全局路径 + 机构引用（org_path_refs），禁止复制
+  d.exec(`
+    CREATE TABLE IF NOT EXISTS learning_paths (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      track TEXT NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      stages_json TEXT DEFAULT '[]',
+      status TEXT DEFAULT 'active',
+      created_by TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now','localtime')),
+      updated_at TEXT DEFAULT (datetime('now','localtime'))
+    );
+    CREATE TABLE IF NOT EXISTS org_path_refs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id INTEGER NOT NULL,
+      path_id INTEGER NOT NULL,
+      added_by TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now','localtime')),
+      UNIQUE(org_id, path_id)
     );
   `);
 
@@ -441,6 +505,7 @@ function materialVo(r) {
     category: r.category || '', format: r.format, grade: r.grade, status: r.status, parseNote: r.parse_note,
     uploaderId: r.uploader_id, uploaderName: r.uploader_name,
     visibility: r.visibility || 'PUBLIC', orgId: String(r.org_id || 0),
+    dedupOf: r.dedup_of ? String(r.dedup_of) : '', contentHash: (r.content_hash || '').slice(0, 16),
     textPreview: (r.text_content || '').slice(0, 200), createdAt: r.created_at, updatedAt: r.updated_at,
   };
 }
@@ -497,6 +562,21 @@ const GENQ_SYSTEM = `你是国学考试出题引擎。基于给定知识点生�
 [{"type":"single|multi|judge|fill|qa|case","stem":"题干","options":["A选项","B选项","C选项","D选项"],"answer":"答案(single填选项序号0-3;multi填序号数组字符串如\"0,2\";judge填对|错;fill填标准答案文本;qa/case填参考答案要点)","keywords":["评分关键词"],"analysis":"解析(100字内)","difficulty":"easy|medium|hard"}]
 single/multi 必须给 4 个选项；judge 无需 options（输出 []）；qa/case options 输出 []。只输出 JSON。`;
 
+// ==================== P6-I-PLUS 规则4：Knowledge Hash 指纹去重引擎 ====================
+// 资料级：全文归一化 sha256 → 命中即复用已有知识点/题目，AI 调用 0 次
+// 知识点级：标题+核心内容归一化 sha256 → 跨资料/跨用户/跨机构全局去重，禁止重复入库
+function sha256(s) { return crypto.createHash('sha256').update(String(s), 'utf8').digest('hex'); }
+function materialHash(text) {
+  const norm = String(text || '').replace(/\s+/g, '').toLowerCase();
+  return sha256('mat:' + norm);
+}
+function kpHash(title, content) {
+  const norm = (s) => String(s || '')
+    .replace(/[\s，。；、：！？!?,.;:'"()（）【】\[\]《》“”‘’·-]/g, '')
+    .toLowerCase();
+  return sha256('kp:' + norm(title) + '|' + norm(content).slice(0, 500));
+}
+
 // v25.0.21：全文分段解析（每段约 11k 字）；v25.0.23：上限 14→20 段（22 万字），
 // 覆盖人纪系列单部 18 万字典籍，杜绝神农本草经式的尾部截断（全覆盖出题前提）
 const PARSE_CHUNK = 11000;
@@ -521,8 +601,10 @@ async function runParseTask(materialId, text) {
   const mat = d.prepare('SELECT track, category FROM materials WHERE id = ?').get(materialId) || {};
   d.prepare(`UPDATE materials SET status='parsing', updated_at=datetime('now','localtime') WHERE id=?`).run(materialId);
   const chunks = splitForParse(text);
-  const insert = d.prepare('INSERT INTO knowledge_points (material_id, chapter, title, content, tags, difficulty, status, source_text, track, category) VALUES (?,?,?,?,?,?,?,?,?,?)');
+  const insert = d.prepare('INSERT INTO knowledge_points (material_id, chapter, title, content, tags, difficulty, status, source_text, track, category, content_hash) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
+  const hashExists = d.prepare('SELECT id FROM knowledge_points WHERE content_hash=? LIMIT 1');
   let n = 0;
+  let reused = 0; // P6-I-PLUS 规则4：知识点级指纹复用计数
   try {
     for (let i = 0; i < chunks.length; i++) {
       const content = await callAI(PARSE_SYSTEM, `赛道资料内容（第${i + 1}/${chunks.length}段）：\n${chunks[i]}`, 'parse_material', { materialId });
@@ -530,19 +612,24 @@ async function runParseTask(materialId, text) {
       const arr = Array.isArray(list) ? list : [];
       for (const kp of arr.slice(0, 200)) {
         if (!kp || !kp.title) continue;
-        insert.run(materialId, String(kp.chapter || '未分章').slice(0, 60), String(kp.title).slice(0, 60),
-          String(kp.content || '').slice(0, 800), JSON.stringify(Array.isArray(kp.tags) ? kp.tags.slice(0, 6) : []),
+        const title = String(kp.title).slice(0, 60);
+        const kcontent = String(kp.content || '').slice(0, 800);
+        // 指纹比对：全局已存在则复用，不重复入库（跨资料/跨用户/跨机构）
+        const h = kpHash(title, kcontent);
+        if (hashExists.get(h)) { reused++; continue; }
+        insert.run(materialId, String(kp.chapter || '未分章').slice(0, 60), title, kcontent,
+          JSON.stringify(Array.isArray(kp.tags) ? kp.tags.slice(0, 6) : []),
           ['easy', 'medium', 'hard'].includes(kp.difficulty) ? kp.difficulty : 'easy', 'pending',
-          String(kp.content || '').slice(0, 300), mat.track || '', mat.category || '');
+          String(kp.content || '').slice(0, 300), mat.track || '', mat.category || '', h);
         n++;
       }
     }
     d.prepare(`UPDATE materials SET status='parsed', parse_note=?, updated_at=datetime('now','localtime') WHERE id=?`)
-      .run(`AI 解析完成：全文 ${chunks.length} 段，提取 ${n} 个知识点，待人工审核`, materialId);
-    console.log(`[Academy] 资料#${materialId} 解析完成: ${chunks.length} 段 / ${n} 个知识点`);
+      .run(`AI 解析完成：全文 ${chunks.length} 段，提取 ${n} 个知识点，指纹复用已有 ${reused} 个，待人工审核`, materialId);
+    console.log(`[Academy] 资料#${materialId} 解析完成: ${chunks.length} 段 / 新增 ${n} / 指纹复用 ${reused}`);
   } catch (err) {
     d.prepare(`UPDATE materials SET status='parsed', parse_note=?, updated_at=datetime('now','localtime') WHERE id=?`)
-      .run(`AI 解析完成（部分）：已提取 ${n} 个知识点，末段失败：${err.message}`, materialId);
+      .run(`AI 解析完成（部分）：新增 ${n} 个知识点，指纹复用 ${reused} 个，末段失败：${err.message}`, materialId);
     console.error(`[Academy] 资料#${materialId} 解析第段失败:`, err.message);
   }
 }
@@ -804,9 +891,11 @@ function createRouter() {
         fs.writeFileSync(filePath, Buffer.from(fileBase64.replace(/^data:[^;]+;base64,/, ''), 'base64'));
       }
       if (!textContent && !filePath) return res.status(400).json({ success: false, error: '请提供文本内容或上传文件' });
-      const result = getDb().prepare('INSERT INTO materials (title, track, category, format, file_path, text_content, grade, status, uploader_id, uploader_name, visibility, org_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)')
+      // P6-I-PLUS 规则4：上传即生成资料指纹（Knowledge Hash），供解析前去重比对
+      const matHash = filePath ? '' : materialHash(textContent);
+      const result = getDb().prepare('INSERT INTO materials (title, track, category, format, file_path, text_content, grade, status, uploader_id, uploader_name, visibility, org_id, content_hash) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)')
         .run(String(title).trim().slice(0, 100), t, cat, 'text', filePath, String(textContent).slice(0, 200000),
-          ['S', 'A', 'B', 'C'].includes(grade) ? grade : 'C', 'pending', String(req.user.userId), req.user.nickname || `用户${req.user.userId}`, vis, orgIdVal);
+          ['S', 'A', 'B', 'C'].includes(grade) ? grade : 'C', 'pending', String(req.user.userId), req.user.nickname || `用户${req.user.userId}`, vis, orgIdVal, matHash);
       res.json({ success: true, materialId: String(result.lastInsertRowid), message: '资料已提交，等待解析与审核' });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
@@ -863,9 +952,23 @@ function createRouter() {
   // 管理员：触发 AI 解析
   router.post('/materials/:id/parse', adminRequired, (req, res) => {
     try {
-      const row = getDb().prepare('SELECT * FROM materials WHERE id = ?').get(parseInt(req.params.id, 10));
+      const d = getDb();
+      const row = d.prepare('SELECT * FROM materials WHERE id = ?').get(parseInt(req.params.id, 10));
       if (!row) return res.status(404).json({ success: false, error: '资料不存在' });
       if (!row.text_content) return res.status(400).json({ success: false, error: '该资料无文本内容（OCR 通道待接入），请补充文本后解析' });
+      // P6-I-PLUS 规则4：资料级指纹去重 —— 内容一致直接复用已有知识点/题目，本次 AI 调用 0 次
+      const h = row.content_hash || materialHash(row.text_content);
+      if (!row.content_hash) d.prepare(`UPDATE materials SET content_hash=? WHERE id=?`).run(h, row.id);
+      const dup = d.prepare(`SELECT id, title FROM materials WHERE content_hash=? AND id!=? AND status IN ('parsed','approved') LIMIT 1`).get(h, row.id);
+      if (dup) {
+        d.prepare(`UPDATE materials SET status='parsed', dedup_of=?, parse_note=?, updated_at=datetime('now','localtime') WHERE id=?`)
+          .run(dup.id, `指纹命中：与资料#${dup.id}《${dup.title}》内容一致，复用其知识点与题目，本次 AI 调用 0 次`, row.id);
+        try {
+          d.prepare(`INSERT INTO ai_call_logs (scene, material_id, tokens_in, tokens_out) VALUES ('hash_dedup_reuse', ?, 0, 0)`).run(row.id);
+        } catch { /* 日志失败不影响主流程 */ }
+        console.log(`[Academy] 资料#${row.id} 指纹命中复用资料#${dup.id}，AI 零消耗`);
+        return res.json({ success: true, dedup: true, reusedFrom: dup.id, message: `内容指纹命中，直接复用资料#${dup.id}《${dup.title}》的知识点与题目，AI 零消耗` });
+      }
       runParseTask(row.id, row.text_content);
       res.json({ success: true, message: '解析任务已启动，请稍后刷新查看知识点' });
     } catch (e) {
@@ -900,7 +1003,14 @@ function createRouter() {
         params.push(...keys, ...keys);
       }
       if (category) { sql += ' AND (k.category = ? OR m.category = ?)'; params.push(category, category); }
-      if (materialId) { sql += ' AND k.material_id = ?'; params.push(parseInt(materialId, 10)); }
+      if (materialId) {
+        // P6-I-PLUS 规则4：指纹复用的资料展示其复用来源（dedup_of）的知识点
+        const mid = parseInt(materialId, 10);
+        const src = d.prepare('SELECT dedup_of FROM materials WHERE id=?').get(mid);
+        const ids = src && src.dedup_of ? [mid, src.dedup_of] : [mid];
+        sql += ` AND k.material_id IN (${ids.map(() => '?').join(',')})`;
+        params.push(...ids);
+      }
       if (isAdmin(req)) { if (status) { sql += ' AND k.status = ?'; params.push(status); } }
       else { sql += ` AND k.status = 'approved'`; }
       sql += ' ORDER BY k.id DESC LIMIT 300';
@@ -1199,8 +1309,11 @@ function createRouter() {
 
   // ---------- P6-I 机构学习空间 SaaS（v25.0.22） ----------
   function orgVo(o, extra = {}) {
+    const ot = o.org_type && ORG_TYPES[o.org_type] ? o.org_type : normOrgType(o.type) || 'ORG_TYPE_EDU';
+    const meta = ORG_TYPES[ot] || ORG_TYPES.ORG_TYPE_EDU;
     return {
       id: String(o.id), name: o.name, type: o.type, logo: o.logo, intro: o.intro, notice: o.notice,
+      orgType: ot, orgTypeCode: meta.code, orgTypeLabel: meta.name, canCharge: meta.canCharge,
       ownerId: o.owner_id, status: o.status, tier: o.tier, memberLimit: o.member_limit,
       expireAt: o.expire_at, createdAt: o.created_at, ...extra,
     };
@@ -1211,47 +1324,62 @@ function createRouter() {
     return m ? m.role : '';
   }
 
-  // 机构入驻申请
+  // 机构入驻申请（P6-I-PLUS 规则1：三类组织 NPO/EDU/CORP，创建时选定，后台审核可调整）
   router.post('/orgs/apply', authRequired, (req, res) => {
     try {
-      const { name, type = 'commercial', intro = '', logo = '' } = req.body;
+      const { name, orgType = '', type = '', intro = '', logo = '' } = req.body;
       if (!name || !String(name).trim()) return res.status(400).json({ success: false, error: '请填写机构名称' });
-      if (!['public', 'commercial'].includes(type)) return res.status(400).json({ success: false, error: '机构类型无效' });
+      const ot = normOrgType(orgType || type);
+      if (!ot) return res.status(400).json({ success: false, error: '机构类型无效：仅支持 ORG_TYPE_NPO 公益 / ORG_TYPE_EDU 教育 / ORG_TYPE_CORP 企业' });
       const d = getDb();
       const dup = d.prepare(`SELECT id FROM organizations WHERE name=? AND status != 'rejected'`).get(String(name).trim());
       if (dup) return res.status(400).json({ success: false, error: '该机构名称已存在' });
       const tiers = JSON.parse((d.prepare(`SELECT value_json FROM loc_configs WHERE key='org_tiers'`).get() || { value_json: '[]' }).value_json);
-      const tier = type === 'public' ? 'free' : 'biz50';
+      const meta = ORG_TYPES[ot];
+      // 红线：公益组织禁止收费，强制 free 档（人数上限后台 org_tiers.free 可调，默认 50）
+      const tier = meta.defaultTier;
       const limit = (tiers.find(x => x.key === tier) || {}).memberLimit || 50;
-      const info = d.prepare('INSERT INTO organizations (name, type, logo, intro, owner_id, status, tier, member_limit) VALUES (?,?,?,?,?,?,?,?)')
-        .run(String(name).trim().slice(0, 50), type, String(logo).slice(0, 500), String(intro).slice(0, 1000),
+      const info = d.prepare('INSERT INTO organizations (name, type, org_type, logo, intro, owner_id, status, tier, member_limit) VALUES (?,?,?,?,?,?,?,?,?)')
+        .run(String(name).trim().slice(0, 50), meta.legacy, ot, String(logo).slice(0, 500), String(intro).slice(0, 1000),
           String(req.user.userId), 'pending', tier, limit);
       d.prepare('INSERT INTO org_members (org_id, user_id, role) VALUES (?,?,?)').run(Number(info.lastInsertRowid), String(req.user.userId), 'owner');
-      res.json({ success: true, orgId: String(info.lastInsertRowid), message: '入驻申请已提交，等待平台审核' });
+      res.json({ success: true, orgId: String(info.lastInsertRowid), message: `入驻申请已提交（${meta.name}），等待平台审核` });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
     }
   });
 
-  // 平台审核机构（通过/驳回 + 档位配置）
+  // 平台审核机构（通过/驳回 + 档位配置 + 类型调整；公益组织禁止收费档位）
   router.post('/orgs/:id/review', adminRequired, (req, res) => {
     try {
-      const { action, tier = '' } = req.body;
+      const { action, tier = '', orgType = '' } = req.body;
       if (!['approve', 'reject'].includes(action)) return res.status(400).json({ success: false, error: '未知操作' });
       const d = getDb();
       const org = d.prepare('SELECT * FROM organizations WHERE id=?').get(parseInt(req.params.id, 10));
       if (!org) return res.status(404).json({ success: false, error: '机构不存在' });
+      let ot = org.org_type && ORG_TYPES[org.org_type] ? org.org_type : normOrgType(org.type) || 'ORG_TYPE_EDU';
+      if (orgType) {
+        const nt = normOrgType(orgType);
+        if (!nt) return res.status(400).json({ success: false, error: '机构类型无效：仅支持 NPO/EDU/CORP 三类' });
+        ot = nt;
+      }
+      const meta = ORG_TYPES[ot];
       let memberLimit = org.member_limit;
-      if (action === 'approve' && tier) {
+      let finalTier = tier || org.tier;
+      // 红线：公益组织只能 free 档（禁止收费）
+      if (!meta.canCharge && finalTier && finalTier !== 'free') {
+        return res.status(400).json({ success: false, error: `红线校验失败：${meta.name}（公益）禁止开通收费档位，仅可用 free 公益基础版` });
+      }
+      if (action === 'approve' && finalTier) {
         const tiers = JSON.parse((d.prepare(`SELECT value_json FROM loc_configs WHERE key='org_tiers'`).get() || { value_json: '[]' }).value_json);
-        const t = tiers.find(x => x.key === tier);
+        const t = tiers.find(x => x.key === finalTier);
         if (t) memberLimit = t.memberLimit;
       }
-      d.prepare(`UPDATE organizations SET status=?, tier=?, member_limit=? WHERE id=?`)
-        .run(action === 'approve' ? 'active' : 'rejected', tier || org.tier, memberLimit, org.id);
+      d.prepare(`UPDATE organizations SET status=?, tier=?, member_limit=?, org_type=?, type=? WHERE id=?`)
+        .run(action === 'approve' ? 'active' : 'rejected', finalTier, memberLimit, ot, meta.legacy, org.id);
       d.prepare('INSERT INTO loc_op_logs (admin_id, action, target, detail) VALUES (?,?,?,?)')
-        .run('admin', `org_${action}`, `org#${org.id}`, `${org.name} tier=${tier || org.tier}`);
-      res.json({ success: true });
+        .run('admin', `org_${action}`, `org#${org.id}`, `${org.name} orgType=${ot} tier=${finalTier}`);
+      res.json({ success: true, org: { orgType: ot, tier: finalTier } });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
     }
@@ -1369,6 +1497,114 @@ function createRouter() {
       const rows = d.prepare('SELECT * FROM org_earnings WHERE org_id=? ORDER BY id DESC LIMIT 200').all(orgId);
       const total = d.prepare('SELECT COALESCE(SUM(amount),0) s FROM org_earnings WHERE org_id=?').get(orgId).s;
       res.json({ success: true, total, earnings: rows.map(e => ({ id: String(e.id), userId: e.user_id, source: e.source, amount: e.amount, note: e.note, createdAt: e.created_at })) });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // ---------- P6-I-PLUS 规则2：学习路径引用模型（全局唯一资产，机构只引用不复制） ----------
+
+  function pathVo(p, extra = {}) {
+    let stages = [];
+    try { stages = JSON.parse(p.stages_json || '[]'); } catch { stages = []; }
+    return {
+      id: String(p.id), track: p.track, name: p.name, description: p.description,
+      stageCount: Array.isArray(stages) ? stages.length : 0, stages,
+      status: p.status, createdAt: p.created_at, updatedAt: p.updated_at, ...extra,
+    };
+  }
+
+  // 全局学习路径列表（登录可见，供机构引用与学员浏览）
+  router.get('/paths', authRequired, (req, res) => {
+    try {
+      const d = getDb();
+      const { track = '' } = req.query;
+      const t = track ? normTrack(track) : '';
+      const rows = t
+        ? d.prepare(`SELECT * FROM learning_paths WHERE status='active' AND track=? ORDER BY id DESC LIMIT 200`).all(t)
+        : d.prepare(`SELECT * FROM learning_paths WHERE status='active' ORDER BY id DESC LIMIT 200`).all();
+      res.json({ success: true, paths: rows.map(p => pathVo(p)) });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 管理员：创建/更新全局标准学习路径（阶段→章节→知识点→题库→考试结构）
+  router.post('/paths', adminRequired, (req, res) => {
+    try {
+      const { id = 0, name, track, description = '', stages = [] } = req.body;
+      if (!name || !String(name).trim()) return res.status(400).json({ success: false, error: '请填写路径名称' });
+      const t = normTrack(track);
+      if (!t) return res.status(400).json({ success: false, error: '板块无效' });
+      const d = getDb();
+      if (!Array.isArray(stages) || stages.length > 60) return res.status(400).json({ success: false, error: '阶段列表无效（最多 60 个阶段）' });
+      const stagesJson = JSON.stringify(stages);
+      if (id) {
+        const exist = d.prepare('SELECT id FROM learning_paths WHERE id=?').get(parseInt(id, 10));
+        if (!exist) return res.status(404).json({ success: false, error: '路径不存在' });
+        d.prepare(`UPDATE learning_paths SET name=?, track=?, description=?, stages_json=?, updated_at=datetime('now','localtime') WHERE id=?`)
+          .run(String(name).trim().slice(0, 80), t, String(description).slice(0, 500), stagesJson, parseInt(id, 10));
+        d.prepare('INSERT INTO loc_op_logs (admin_id, action, target, detail) VALUES (?,?,?,?)')
+          .run('admin', 'path_update', `path#${id}`, String(name).trim());
+        return res.json({ success: true, pathId: String(id), message: '路径已更新，所有引用机构同步生效' });
+      }
+      const info = d.prepare('INSERT INTO learning_paths (track, name, description, stages_json, created_by) VALUES (?,?,?,?,?)')
+        .run(t, String(name).trim().slice(0, 80), String(description).slice(0, 500), stagesJson, String(req.user ? req.user.userId : 'admin'));
+      d.prepare('INSERT INTO loc_op_logs (admin_id, action, target, detail) VALUES (?,?,?,?)')
+        .run('admin', 'path_create', `path#${info.lastInsertRowid}`, String(name).trim());
+      res.json({ success: true, pathId: String(info.lastInsertRowid), message: '全局学习路径已创建' });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 机构已引用的学习路径（成员可见；引用即同步，公共路径更新机构侧自动生效）
+  router.get('/orgs/:id/paths', authRequired, (req, res) => {
+    try {
+      const d = getDb();
+      const orgId = parseInt(req.params.id, 10);
+      const org = d.prepare('SELECT * FROM organizations WHERE id=?').get(orgId);
+      if (!org) return res.status(404).json({ success: false, error: '机构不存在' });
+      const role = myOrgRole(d, orgId, req.user.userId);
+      if (!role && org.status !== 'active' && !isAdmin(req)) return res.status(403).json({ success: false, error: '机构未开放' });
+      const rows = d.prepare(`SELECT p.*, r.created_at AS ref_at, r.added_by FROM learning_paths p
+        JOIN org_path_refs r ON r.path_id=p.id WHERE r.org_id=? AND p.status='active' ORDER BY r.id DESC`).all(orgId);
+      res.json({ success: true, paths: rows.map(p => pathVo(p, { refAt: p.ref_at, addedBy: p.added_by })) });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 机构管理员：引用全局学习路径（org_path_refs 唯一约束防重复引用；不复制任何数据）
+  router.post('/orgs/:id/paths', authRequired, (req, res) => {
+    try {
+      const { pathId } = req.body;
+      const pid = parseInt(pathId, 10);
+      const d = getDb();
+      const orgId = parseInt(req.params.id, 10);
+      const role = myOrgRole(d, orgId, req.user.userId);
+      if (!['owner', 'admin'].includes(role) && !isAdmin(req)) return res.status(403).json({ success: false, error: '需要机构管理员权限' });
+      const path = d.prepare(`SELECT * FROM learning_paths WHERE id=? AND status='active'`).get(pid);
+      if (!path) return res.status(404).json({ success: false, error: '全局路径不存在或已下线' });
+      const dup = d.prepare('SELECT id FROM org_path_refs WHERE org_id=? AND path_id=?').get(orgId, pid);
+      if (dup) return res.status(400).json({ success: false, error: '该路径已被机构引用' });
+      d.prepare('INSERT INTO org_path_refs (org_id, path_id, added_by) VALUES (?,?,?)').run(orgId, pid, String(req.user.userId));
+      res.json({ success: true, message: `已引用全局路径《${path.name}》（引用不复制，公共更新自动同步）` });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 机构管理员：取消引用
+  router.delete('/orgs/:id/paths/:pathId', authRequired, (req, res) => {
+    try {
+      const d = getDb();
+      const orgId = parseInt(req.params.id, 10);
+      const pid = parseInt(req.params.pathId, 10);
+      const role = myOrgRole(d, orgId, req.user.userId);
+      if (!['owner', 'admin'].includes(role) && !isAdmin(req)) return res.status(403).json({ success: false, error: '需要机构管理员权限' });
+      d.prepare('DELETE FROM org_path_refs WHERE org_id=? AND path_id=?').run(orgId, pid);
+      res.json({ success: true });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
     }
