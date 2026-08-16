@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -11,6 +11,7 @@ import { getFollowStats, getCurrentUserId } from "@/lib/userStore";
 import { fetchTracks, fetchProgress } from "@/lib/academyApi";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
+import IcpFooter from "@/components/IcpFooter";
 
 const BRAND = "#7B2FBE";
 
@@ -49,15 +50,64 @@ function ZoneItem({
   );
 }
 
-// ==================== 分区容器（白卡 + 区内标题） ====================
-function Zone({ title, children }: { title: string; children: React.ReactNode }) {
+// ==================== 分区容器（可折叠抽屉：白卡 + 可点击区标题 + 展开箭头） ====================
+function Zone({
+  title,
+  children,
+  defaultOpen = false,
+  storageKey,
+}: {
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+  storageKey?: string;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  useEffect(() => {
+    if (!storageKey) return;
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved !== null) setOpen(saved === "1");
+    } catch {}
+  }, [storageKey]);
+
+  const toggle = () => {
+    setOpen((o) => {
+      const next = !o;
+      if (storageKey) {
+        try {
+          localStorage.setItem(storageKey, next ? "1" : "0");
+        } catch {}
+      }
+      return next;
+    });
+  };
+
   return (
     <section className="mx-3 mt-3 overflow-hidden rounded-xl bg-white shadow-sm">
-      <div className="flex items-center gap-2 px-4 pb-1 pt-3">
+      <button
+        onClick={toggle}
+        aria-expanded={open}
+        className="flex w-full items-center gap-2 px-4 pb-1.5 pt-3 active:bg-gray-50"
+      >
         <span className="h-3.5 w-1 rounded-full" style={{ backgroundColor: BRAND }} />
-        <p className="text-[13px] font-semibold text-gray-700">{title}</p>
-      </div>
-      {children}
+        <p className="flex-1 text-left text-[13px] font-semibold text-gray-700">{title}</p>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#999"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s ease" }}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+      {open && <div>{children}</div>}
     </section>
   );
 }
@@ -822,7 +872,7 @@ export default function ProfilePage() {
       </div>
 
       {/* ===== 第一区：学习中心 ===== */}
-      <Zone title="学习中心">
+      <Zone title="学习中心" defaultOpen storageKey="yandao_zone_study">
         <ZoneItem
           icon={Ic.academy}
           label="言道学堂"
@@ -857,7 +907,7 @@ export default function ProfilePage() {
       </Zone>
 
       {/* ===== 第二区：内容中心 ===== */}
-      <Zone title="内容中心">
+      <Zone title="内容中心" storageKey="yandao_zone_content">
         <ZoneItem
           icon={Ic.records}
           label="我的测算"
@@ -880,7 +930,7 @@ export default function ProfilePage() {
       </Zone>
 
       {/* ===== 第三区：社区中心 ===== */}
-      <Zone title="社区中心">
+      <Zone title="社区中心" storageKey="yandao_zone_social">
         <ZoneItem
           icon={Ic.moments}
           label="我的动态"
@@ -918,7 +968,7 @@ export default function ProfilePage() {
       </Zone>
 
       {/* ===== 第四区：商业中心 ===== */}
-      <Zone title="商业中心">
+      <Zone title="商业中心" storageKey="yandao_zone_biz">
         <ZoneItem
           icon={Ic.member}
           label="会员中心"
@@ -952,7 +1002,7 @@ export default function ProfilePage() {
       </Zone>
 
       {/* ===== 第五区：推广中心 ===== */}
-      <Zone title="推广中心">
+      <Zone title="推广中心" storageKey="yandao_zone_promo">
         <ZoneItem
           icon={Ic.inviteCode}
           label="我的推广"
@@ -978,7 +1028,7 @@ export default function ProfilePage() {
       </Zone>
 
       {/* ===== 第六区：系统中心 ===== */}
-      <Zone title="系统中心">
+      <Zone title="系统中心" storageKey="yandao_zone_sys">
         <ZoneItem
           icon={Ic.security}
           label="账号安全"
@@ -1022,9 +1072,7 @@ export default function ProfilePage() {
         )}
       </div>
 
-      <div className="pb-2 text-center text-[10px] text-gray-300">
-        言道 v25.0 · 传承国学文化
-      </div>
+      <IcpFooter />
 
       {/* ===== 弹窗 ===== */}
       {showQR && (

@@ -1505,6 +1505,29 @@ export default function ZiweiPage() {
                 </div>
               </div>
 
+              {/* v25.0.21: 限四化行（当前选中大限的天干四化，对标文墨天机） */}
+              {(() => {
+                const cur = decadalData[selectedDaxian];
+                const sh = cur ? TIANGAN_SIHUA[cur.decadalGan] : null;
+                if (!cur || !sh) return null;
+                const items: Array<[string, string]> = [
+                  [sh.lu, "化禄"], [sh.quan, "化权"], [sh.ke, "化科"], [sh.ji, "化忌"],
+                ];
+                return (
+                  <div style={{ display: "flex", borderBottom: "1px solid #ccc", background: "#f9f4ff", alignItems: "center" }}>
+                    <div style={{ width: "22px", display: "flex", alignItems: "center", justifyContent: "center", borderRight: "1px solid #ccc", fontSize: "9px", color: "#7B2FBE", fontWeight: "bold", writingMode: "vertical-rl", textOrientation: "upright", letterSpacing: "1px", padding: "4px 1px", lineHeight: "1" }}>限四化</div>
+                    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "space-around", padding: "3px 2px", gap: "2px" }}>
+                      {items.map(([star, hua], k) => (
+                        <span key={k} style={{ fontSize: "10px", whiteSpace: "nowrap", lineHeight: "1.4" }}>
+                          <span style={{ fontWeight: "bold" }}>{star}</span>
+                          <span style={{ color: SIHUA_COLORS[hua], fontWeight: "bold" }}>{hua}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* 流年行 */}
               <div style={{ display: "flex", borderBottom: "1px solid #ccc", background: "#fafafa" }}>
                 <div style={{ width: "22px", display: "flex", alignItems: "center", justifyContent: "center", borderRight: "1px solid #ccc", fontSize: "10px", color: "#333", fontWeight: "bold", writingMode: "vertical-rl", textOrientation: "upright", letterSpacing: "2px", padding: "4px 1px", lineHeight: "1" }}>流年</div>
@@ -1547,6 +1570,30 @@ export default function ZiweiPage() {
                   })}
                 </div>
               </div>
+
+              {/* v25.0.21: 年四化行（当前选中流年的天干四化，对标文墨天机） */}
+              {(() => {
+                const cur = liunianYears[selectedLiunian];
+                const sh = cur ? TIANGAN_SIHUA[cur.gan] : null;
+                if (!cur || !sh) return null;
+                const items: Array<[string, string]> = [
+                  [sh.lu, "化禄"], [sh.quan, "化权"], [sh.ke, "化科"], [sh.ji, "化忌"],
+                ];
+                return (
+                  <div style={{ display: "flex", borderBottom: "1px solid #ccc", background: "#f4f9ff", alignItems: "center" }}>
+                    <div style={{ width: "22px", display: "flex", alignItems: "center", justifyContent: "center", borderRight: "1px solid #ccc", fontSize: "9px", color: "#0462d7", fontWeight: "bold", writingMode: "vertical-rl", textOrientation: "upright", letterSpacing: "1px", padding: "4px 1px", lineHeight: "1" }}>年四化</div>
+                    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "space-around", padding: "3px 2px", gap: "2px" }}>
+                      <span style={{ fontSize: "9px", color: "#666", whiteSpace: "nowrap" }}>{cur.year}年</span>
+                      {items.map(([star, hua], k) => (
+                        <span key={k} style={{ fontSize: "10px", whiteSpace: "nowrap", lineHeight: "1.4" }}>
+                          <span style={{ fontWeight: "bold" }}>{star}</span>
+                          <span style={{ color: SIHUA_COLORS[hua], fontWeight: "bold" }}>{hua}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* 流月行 */}
               <div style={{ display: "flex", borderBottom: "1px solid #ccc", background: "#fafafa" }}>
@@ -1746,7 +1793,9 @@ export default function ZiweiPage() {
                 onClick={() => {
                   const cur = decadalData[selectedDaxian];
                   if (!cur) return;
-                  const ctx = `大运：${cur.name} ${cur.decadalGan}${cur.decadalZhi} ${cur.ageRange[0]}-${cur.ageRange[1]}岁\n` +
+                  const sh = TIANGAN_SIHUA[cur.decadalGan];
+                  const sihuaLine = sh ? `\n大限四化（${cur.decadalGan}干）：${sh.lu}化禄 ${sh.quan}化权 ${sh.ke}化科 ${sh.ji}化忌` : "";
+                  const ctx = `大运：${cur.name} ${cur.decadalGan}${cur.decadalZhi} ${cur.ageRange[0]}-${cur.ageRange[1]}岁${sihuaLine}\n` +
                     result.palaces.map(p => `${p.name}(${p.heavenlyStem}${p.earthlyBranch}): 主星[${(p.majorStars||[]).join(",")}]`).join("\n");
                   handleAIInterpret("daxian", ctx);
                 }}
@@ -1760,7 +1809,9 @@ export default function ZiweiPage() {
                 onClick={() => {
                   const cur = liunianYears[selectedLiunian];
                   if (!cur) return;
-                  const ctx = `流年：${cur.year}年 ${cur.gan}${cur.zhi} ${cur.age}岁\n当前大运：${decadalData[selectedDaxian]?.name || ""}`;
+                  const sh = TIANGAN_SIHUA[cur.gan];
+                  const sihuaLine = sh ? `\n流年四化（${cur.gan}干）：${sh.lu}化禄 ${sh.quan}化权 ${sh.ke}化科 ${sh.ji}化忌` : "";
+                  const ctx = `流年：${cur.year}年 ${cur.gan}${cur.zhi} ${cur.age}岁${sihuaLine}\n当前大运：${decadalData[selectedDaxian]?.name || ""}`;
                   handleAIInterpret("liunian", ctx);
                 }}
                 disabled={aiInterpreting}

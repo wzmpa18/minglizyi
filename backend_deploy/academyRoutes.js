@@ -56,6 +56,17 @@ const PRESET_CATEGORIES = [
   ['zhongyi', '倪海厦·学生笔记', 7],
   ['zhongyi', '倪海厦·方剂处方', 8],
   ['yixue', '倪海厦·天纪人间道', 1],
+  // v25.0.21：易学分门别类类目（用户整理的命理类核心资料）
+  ['yixue', '八字命理', 10],
+  ['yixue', '紫微斗数', 11],
+  ['yixue', '奇门遁甲', 12],
+  ['yixue', '大六壬', 13],
+  ['yixue', '小六壬', 14],
+  ['yixue', '梅花易数', 15],
+  ['yixue', '玄空风水', 16],
+  ['yixue', '七政四余', 17],
+  ['yixue', '易经推命', 18],
+  ['yixue', '堪舆地脉', 19],
 ];
 
 // 组卷配置：题量 / 分值 / 及格线 / 限时（分钟）/ 难度配比
@@ -193,11 +204,11 @@ function initTables(d) {
   ensureColumn('knowledge_points', 'category', "category TEXT DEFAULT ''");
   ensureColumn('questions', 'category', "category TEXT DEFAULT ''");
 
-  // 预置类目（仅首次初始化）
-  const catCount = d.prepare('SELECT COUNT(*) AS c FROM categories').get().c;
-  if (catCount === 0) {
-    const ins = d.prepare('INSERT INTO categories (track, name, sort) VALUES (?,?,?)');
-    for (const [track, name, sort] of PRESET_CATEGORIES) ins.run(track, name, sort);
+  // 预置类目（幂等：缺一条补一条，v25.0.21 起每次启动确保齐全）
+  const existCat = d.prepare('SELECT id FROM categories WHERE track=? AND name=?');
+  const ins = d.prepare('INSERT INTO categories (track, name, sort) VALUES (?,?,?)');
+  for (const [track, name, sort] of PRESET_CATEGORIES) {
+    if (!existCat.get(track, name)) ins.run(track, name, sort);
   }
 }
 
@@ -335,16 +346,36 @@ const GENQ_SYSTEM = `你是国学考试出题引擎。基于给定知识点生�
 [{"type":"single|multi|judge|fill|qa|case","stem":"题干","options":["A选项","B选项","C选项","D选项"],"answer":"答案(single填选项序号0-3;multi填序号数组字符串如\"0,2\";judge填对|错;fill填标准答案文本;qa/case填参考答案要点)","keywords":["评分关键词"],"analysis":"解析(100字内)","difficulty":"easy|medium|hard"}]
 single/multi 必须给 4 个选项；judge 无需 options（输出 []）；qa/case options 输出 []。只输出 JSON。`;
 
-function runParseTask(materialId, text) {
+// v25.0.21：全文分段解析（每段约 11k 字，最多 14 段 ≈ 15 万字，保证长篇典籍全覆盖）
+const PARSE_CHUNK = 11000;
+const PARSE_MAX_CHUNKS = 14;
+
+function splitForParse(text) {
+  const chunks = [];
+  let rest = String(text || '');
+  while (rest.length > 0 && chunks.length < PARSE_MAX_CHUNKS) {
+    if (rest.length <= PARSE_CHUNK) { chunks.push(rest); break; }
+    let cut = rest.lastIndexOf('\n', PARSE_CHUNK);
+    if (cut < PARSE_CHUNK * 0.5) cut = rest.lastIndexOf('。', PARSE_CHUNK);
+    if (cut < PARSE_CHUNK * 0.5) cut = PARSE_CHUNK;
+    chunks.push(rest.slice(0, cut + 1));
+    rest = rest.slice(cut + 1).trimStart();
+  }
+  return chunks;
+}
+
+async function runParseTask(materialId, text) {
   const d = getDb();
   const mat = d.prepare('SELECT track, category FROM materials WHERE id = ?').get(materialId) || {};
   d.prepare(`UPDATE materials SET status='parsing', updated_at=datetime('now','localtime') WHERE id=?`).run(materialId);
-  callAI(PARSE_SYSTEM, `赛道资料内容：\n${text.slice(0, 12000)}`)
-    .then(content => {
+  const chunks = splitForParse(text);
+  const insert = d.prepare('INSERT INTO knowledge_points (material_id, chapter, title, content, tags, difficulty, status, source_text, track, category) VALUES (?,?,?,?,?,?,?,?,?,?)');
+  let n = 0;
+  try {
+    for (let i = 0; i < chunks.length; i++) {
+      const content = await callAI(PARSE_SYSTEM, `赛道资料内容（第${i + 1}/${chunks.length}段）：\n${chunks[i]}`);
       const list = extractJson(content);
       const arr = Array.isArray(list) ? list : [];
-      const insert = d.prepare('INSERT INTO knowledge_points (material_id, chapter, title, content, tags, difficulty, status, source_text, track, category) VALUES (?,?,?,?,?,?,?,?,?,?)');
-      let n = 0;
       for (const kp of arr.slice(0, 200)) {
         if (!kp || !kp.title) continue;
         insert.run(materialId, String(kp.chapter || '未分章').slice(0, 60), String(kp.title).slice(0, 60),
@@ -353,15 +384,15 @@ function runParseTask(materialId, text) {
           String(kp.content || '').slice(0, 300), mat.track || '', mat.category || '');
         n++;
       }
-      d.prepare(`UPDATE materials SET status='parsed', parse_note=?, updated_at=datetime('now','localtime') WHERE id=?`)
-        .run(`AI 解析完成：提取 ${n} 个知识点，待人工审核`, materialId);
-      console.log(`[Academy] 资料#${materialId} 解析完成: ${n} 个知识点`);
-    })
-    .catch(err => {
-      d.prepare(`UPDATE materials SET status='parse_failed', parse_note=?, updated_at=datetime('now','localtime') WHERE id=?`)
-        .run(`AI 解析失败：${err.message}`, materialId);
-      console.error(`[Academy] 资料#${materialId} 解析失败:`, err.message);
-    });
+    }
+    d.prepare(`UPDATE materials SET status='parsed', parse_note=?, updated_at=datetime('now','localtime') WHERE id=?`)
+      .run(`AI 解析完成：全文 ${chunks.length} 段，提取 ${n} 个知识点，待人工审核`, materialId);
+    console.log(`[Academy] 资料#${materialId} 解析完成: ${chunks.length} 段 / ${n} 个知识点`);
+  } catch (err) {
+    d.prepare(`UPDATE materials SET status='parsed', parse_note=?, updated_at=datetime('now','localtime') WHERE id=?`)
+      .run(`AI 解析完成（部分）：已提取 ${n} 个知识点，末段失败：${err.message}`, materialId);
+    console.error(`[Academy] 资料#${materialId} 解析第段失败:`, err.message);
+  }
 }
 
 function runGenQuestionsTask(track, level, count, category = '') {

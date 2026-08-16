@@ -50,3 +50,9 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Local-only tooling and raw docs (v25.0.21)
+scripts/node_scratch/
+scripts/git_clean_crlf*.sh
+docs/materials/nihaixia_raw/
+

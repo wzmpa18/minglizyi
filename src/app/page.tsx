@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Solar, Lunar } from "lunar-javascript";
+import IcpFooter from "@/components/IcpFooter";
 
 const BRAND = "#7B2FBE";
 
@@ -351,6 +352,8 @@ export default function HomePage(){
               {today.ji.length>0?today.ji.map((j,i)=><span key={i} className="rounded px-1.5 py-0.5 text-xs" style={{backgroundColor:"#fde8e8",color:"#ed4d49"}}>{j}</span>):<span className="text-xs text-gray-400">无</span>}
             </div>
           </div>
+
+          <IcpFooter />
         </div>
       </div>
 

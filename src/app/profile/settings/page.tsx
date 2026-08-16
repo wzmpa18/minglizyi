@@ -128,6 +128,7 @@ export default function SettingsPage() {
   const [allowSearch, setAllowSearch] = useState(true);
   const [allowNearby, setAllowNearby] = useState(true);
   const [notifyEnabled, setNotifyEnabled] = useState(true);
+  const [zoomEnabled, setZoomEnabled] = useState(true);
   const [showBlacklist, setShowBlacklist] = useState(false);
 
   const [cacheSize, setCacheSize] = useState("0 KB");
@@ -161,8 +162,22 @@ export default function SettingsPage() {
     if (s !== null) setAllowSearch(s === "true");
     if (n !== null) setAllowNearby(n === "true");
     if (nf !== null) setNotifyEnabled(nf === "true");
+    const zd = localStorage.getItem("yandao_zoom_disabled");
+    if (zd !== null) setZoomEnabled(zd !== "1");
     const storeNearby = getUserStoreAllowNearby();
     setAllowNearby(storeNearby);
+  }, []);
+
+  // v25.0.21：屏幕放大开关（关闭后全站禁用双指捏拉/双击/Ctrl+滚轮缩放）
+  const toggleZoom = useCallback(() => {
+    setZoomEnabled((v) => {
+      const next = !v;
+      try {
+        localStorage.setItem("yandao_zoom_disabled", next ? "0" : "1");
+        window.dispatchEvent(new CustomEvent("yandao-zoom-toggle", { detail: { disabled: !next } }));
+      } catch {}
+      return next;
+    });
   }, []);
 
   const calculateCacheSize = useCallback(() => {
@@ -245,6 +260,22 @@ export default function SettingsPage() {
           onClick={() => setShowBlacklist(true)}
           noBorder
         />
+      </div>
+
+      {/* ===== 显示设置 ===== */}
+      <div className="mx-3 mt-3 rounded-xl bg-white shadow-sm overflow-hidden">
+        <div className="px-4 pt-3 pb-1">
+          <p className="text-xs font-medium text-gray-400">显示设置</p>
+        </div>
+        <SettingsItem
+          label="屏幕放大"
+          right={<ToggleSwitch checked={zoomEnabled} onChange={toggleZoom} />}
+        />
+        <div className="px-4 pb-3">
+          <p className="text-[11px] leading-4 text-gray-400">
+            开启后可双指捏拉 / 双击 / Ctrl+滚轮放大页面；关闭后禁用全部放大交互，页面固定 100%
+          </p>
+        </div>
       </div>
 
       {/* ===== 通知设置 ===== */}

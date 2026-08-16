@@ -3,20 +3,22 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
 /**
- * v19.7_final: 全局缩放组件
+ * v25.0.21: 全局缩放组件（新增可关闭开关）
  *
  * 功能：
  * 1. 移动端：双指捏拉缩放，双击切换100%/200%
  * 2. 桌面端：Ctrl+滚轮缩放，放大后按住拖动查看
  * 3. 缩放范围：100% ~ 250%，localStorage全局记忆
  * 4. 放大后支持上下左右拖动查看（桌面端鼠标拖动，移动端原生滚动）
- * 5. 首次进入APP弹出轻提示「双指捏拉可放大页面」
+ * 5. 放大时弹出自动关闭提醒（可在 我的-通用设置 关闭放大功能）
+ * 6. v25.0.21：新增「屏幕放大」总开关（yandao_zoom_disabled），关闭后禁用所有缩放交互
  *
  * 集成方式：在 app/layout.tsx 中包裹 {children}
  */
 
 const STORAGE_KEY = "yandao_global_zoom";
 const HINT_KEY = "yandao_zoom_hint_shown";
+const DISABLED_KEY = "yandao_zoom_disabled";
 const MIN_ZOOM = 1.0;
 const MAX_ZOOM = 2.5;
 const ZOOM_STEP = 0.1;
@@ -29,6 +31,8 @@ export default function GlobalZoomProvider({
 }) {
   const [zoom, setZoom] = useState(1.0);
   const [showHint, setShowHint] = useState(false);
+  const [showRemind, setShowRemind] = useState(false);
+  const [zoomDisabled, setZoomDisabled] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const lastTapRef = useRef(0);
   const pinchStartRef = useRef<{ dist: number; zoom: number } | null>(null);
@@ -43,19 +47,27 @@ export default function GlobalZoomProvider({
   }>({ isDragging: false, startX: 0, startY: 0, scrollLeft: 0, scrollTop: 0 });
 
   // ====== 设置缩放（带边界限制） ======
-  const setZoomSafe = useCallback((next: number) => {
-    const clamped = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(next * 10) / 10));
-    setZoom(clamped);
-  }, []);
+  const setZoomSafe = useCallback(
+    (next: number) => {
+      const clamped = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(next * 10) / 10));
+      setZoom(clamped);
+    },
+    []
+  );
 
-  // ====== 挂载时读取保存的缩放级别 + 首次提示 ======
+  // ====== 挂载时读取保存的缩放级别/关闭开关 + 首次提示 ======
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const val = parseFloat(saved);
-        if (val >= MIN_ZOOM && val <= MAX_ZOOM) {
-          setZoom(val);
+      const disabled = localStorage.getItem(DISABLED_KEY);
+      if (disabled === "1") setZoomDisabled(true);
+
+      if (disabled !== "1") {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const val = parseFloat(saved);
+          if (val >= MIN_ZOOM && val <= MAX_ZOOM) {
+            setZoom(val);
+          }
         }
       }
     } catch {}
@@ -71,6 +83,18 @@ export default function GlobalZoomProvider({
     } catch {}
   }, []);
 
+  // ====== 监听设置页开关变化（跨组件实时生效） ======
+  useEffect(() => {
+    const onToggle = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { disabled: boolean } | undefined;
+      const nextDisabled = detail ? detail.disabled : localStorage.getItem(DISABLED_KEY) === "1";
+      setZoomDisabled(nextDisabled);
+      if (nextDisabled) setZoom(1.0);
+    };
+    window.addEventListener("yandao-zoom-toggle", onToggle);
+    return () => window.removeEventListener("yandao-zoom-toggle", onToggle);
+  }, []);
+
   // ====== 缩放变化时持久化 ======
   useEffect(() => {
     try {
@@ -78,8 +102,19 @@ export default function GlobalZoomProvider({
     } catch {}
   }, [zoom]);
 
+  // ====== v25.0.21：从 100% 放大时弹自动关闭提醒（3秒） ======
+  useEffect(() => {
+    if (zoom > 1.0) {
+      setShowRemind(true);
+      const timer = setTimeout(() => setShowRemind(false), 3000);
+      return () => clearTimeout(timer);
+    }
+    setShowRemind(false);
+  }, [zoom > 1.0]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // ====== 桌面端：Ctrl+滚轮缩放 ======
   useEffect(() => {
+    if (zoomDisabled) return;
     const el = containerRef.current;
     if (!el) return;
 
@@ -87,17 +122,20 @@ export default function GlobalZoomProvider({
       if (e.ctrlKey) {
         e.preventDefault();
         const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
-        setZoomSafe(zoom + delta);
+        setZoom((z) => {
+          const clamped = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round((z + delta) * 10) / 10));
+          return clamped;
+        });
       }
     };
 
     el.addEventListener("wheel", handleWheel, { passive: false });
     return () => el.removeEventListener("wheel", handleWheel);
-  }, [zoom, setZoomSafe]);
+  }, [zoomDisabled]);
 
   // ====== 桌面端：放大后鼠标拖动查看 ======
   useEffect(() => {
-    if (zoom <= 1.0) return;
+    if (zoomDisabled || zoom <= 1.0) return;
 
     const handleMouseDown = (e: MouseEvent) => {
       // 仅左键拖动
@@ -161,11 +199,12 @@ export default function GlobalZoomProvider({
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
     };
-  }, [zoom]);
+  }, [zoom, zoomDisabled]);
 
   // ====== 移动端：双指捏拉缩放 ======
   const handleTouchStart = useCallback(
     (e: React.TouchEvent) => {
+      if (zoomDisabled) return;
       if (e.touches.length === 2) {
         const dx = e.touches[0].clientX - e.touches[1].clientX;
         const dy = e.touches[0].clientY - e.touches[1].clientY;
@@ -173,11 +212,12 @@ export default function GlobalZoomProvider({
         pinchStartRef.current = { dist, zoom };
       }
     },
-    [zoom]
+    [zoom, zoomDisabled]
   );
 
   const handleTouchMove = useCallback(
     (e: React.TouchEvent) => {
+      if (zoomDisabled) return;
       if (e.touches.length === 2 && pinchStartRef.current) {
         e.preventDefault();
         const dx = e.touches[0].clientX - e.touches[1].clientX;
@@ -187,11 +227,12 @@ export default function GlobalZoomProvider({
         setZoomSafe(pinchStartRef.current.zoom * ratio);
       }
     },
-    [setZoomSafe]
+    [setZoomSafe, zoomDisabled]
   );
 
   const handleTouchEnd = useCallback(
     (e: React.TouchEvent) => {
+      if (zoomDisabled) return;
       if (e.touches.length < 2) {
         pinchStartRef.current = null;
       }
@@ -207,7 +248,7 @@ export default function GlobalZoomProvider({
         }
       }
     },
-    [zoom, setZoomSafe]
+    [zoom, setZoomSafe, zoomDisabled]
   );
 
   return (
@@ -226,7 +267,7 @@ export default function GlobalZoomProvider({
       {children}
 
       {/* 首次使用提示 */}
-      {showHint && (
+      {showHint && !zoomDisabled && (
         <div
           style={{
             position: "fixed",
@@ -249,8 +290,32 @@ export default function GlobalZoomProvider({
         </div>
       )}
 
+      {/* v25.0.21：放大时提醒（自动关闭，提示可去设置关闭） */}
+      {showRemind && !zoomDisabled && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: "110px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            background: "rgba(0,0,0,0.78)",
+            color: "#fff",
+            padding: "8px 16px",
+            borderRadius: "20px",
+            fontSize: "12px",
+            zIndex: 9999,
+            pointerEvents: "none",
+            whiteSpace: "nowrap",
+            boxShadow: "0 2px 12px rgba(0,0,0,0.3)",
+            animation: "zoomHintFade 0.3s ease",
+          }}
+        >
+          页面已放大 · 可在「我的-通用设置」关闭放大功能
+        </div>
+      )}
+
       {/* 缩放指示器（非100%时显示） */}
-      {zoom !== 1.0 && (
+      {zoom !== 1.0 && !zoomDisabled && (
         <button
           onClick={() => setZoomSafe(1.0)}
           style={{
