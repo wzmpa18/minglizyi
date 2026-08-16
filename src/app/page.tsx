@@ -239,6 +239,19 @@ export default function HomePage(){
           <MedicineIcon/><span className="mt-1 text-base font-bold">中医学习</span>
         </Link>
       </div>
+
+      {/* 言道学堂入口 */}
+      <Link href="/academy" className="mx-3 mt-3 flex items-center gap-3 rounded-2xl px-4 py-3 text-white shadow-md active:opacity-90" style={{background:"linear-gradient(135deg,#5B3FA8 0%,#8E44AD 100%)"}}>
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 text-lg">🎓</span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold">言道学堂</p>
+          <p className="text-[10px] opacity-80">AI 知识工厂 · 学习考级 · 电子证书认证</p>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="9 18 15 12 9 6" />
+        </svg>
+      </Link>
+
       <p className="mt-2 text-center text-xs text-gray-400">传统文化学习与研究 · 仅供学习参考</p>
 
       {/* 黄历区（在按钮下方） */}

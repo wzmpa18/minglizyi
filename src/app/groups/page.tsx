@@ -9,6 +9,7 @@ import {
   getGroupMessages,
   type GroupInfo,
 } from "@/lib/socialStore";
+import { fetchGroups as apiFetchGroups } from "@/lib/socialApi";
 
 import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
@@ -23,6 +24,31 @@ export default function GroupsPage() {
 
   useEffect(() => {
     setGroups(getGroups());
+    // v25.0.19：合并后端真实群组（跨设备/多成员可见）
+    void apiFetchGroups().then((r) => {
+      const serverGroupsRaw = r && r.success ? r.groups : undefined;
+      if (serverGroupsRaw) {
+        setGroups((prev) => {
+          const ids = new Set(prev.map((g) => g.id));
+          const serverGroups: GroupInfo[] = serverGroupsRaw
+            .filter((g) => !ids.has(g.groupId))
+            .map((g) => ({
+              id: g.groupId,
+              name: g.name,
+              avatar: g.name.slice(0, 1),
+              ownerId: g.ownerId,
+              ownerName: g.ownerName || "",
+              members: [],
+              announcement: g.announcement || "",
+              maxMembers: 50,
+              level: "small" as const,
+              createdAt: g.createdAt || "",
+              tags: [],
+            }));
+          return [...prev, ...serverGroups];
+        });
+      }
+    }).catch(() => {});
   }, []);
 
   const handleGoToChat = (group: GroupInfo) => {

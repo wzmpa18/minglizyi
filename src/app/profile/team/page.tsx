@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { BrandHeader } from "@/components/shared";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
+import { getTeamMembers } from "@/lib/teamApi";
 
 const BRAND = "#7B2FBE";
 
@@ -92,7 +93,23 @@ export default function TeamPage() {
   }, []);
 
   useEffect(() => {
+    // 本地缓存先渲染，后端真实数据随后覆盖（v25.0.19）
     setMembers(getTeamData().members);
+    void getTeamMembers().then((r) => {
+      if (r.success && r.data && Array.isArray(r.data.members)) {
+        const serverMembers: TeamMember[] = r.data.members.map((m) => ({
+          userId: String(m.invitee_id ?? m.relation_id),
+          nickname: m.nickname || `用户${m.invitee_id}`,
+          avatar: m.avatar || (m.nickname || "友").slice(0, 1),
+          account: "",
+          level: m.level,
+          registeredAt: m.user_created_at || m.invite_time || "",
+          totalConsumption: 0,
+        }));
+        setMembers(serverMembers);
+        safeSet(STORAGE_KEY, { members: serverMembers });
+      }
+    }).catch(() => {});
   }, []);
 
   // 数据概览

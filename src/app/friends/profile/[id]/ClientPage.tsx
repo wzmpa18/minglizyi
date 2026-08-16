@@ -16,6 +16,11 @@ import {
   type UserPost,
 } from "@/lib/userStore";
 import { getFriends, addFriendRequest, type Friend } from "@/lib/socialStore";
+import {
+  fetchUserProfile as apiFetchUserProfile,
+  toggleFollow as apiToggleFollow,
+  sendFriendRequest as apiSendFriendRequest,
+} from "@/lib/socialApi";
 
 import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
@@ -68,13 +73,43 @@ export default function FriendProfilePage() {
   const [isFriend, setIsFriend] = useState(false);
   const [isSelf, setIsSelf] = useState(false);
 
-  // 初始化：加载用户资料、关注状态、动态列表
+  // 初始化：加载用户资料、关注状态、动态列表（v25.0.19：后端真实资料优先）
   useEffect(() => {
     const cid = getCurrentUserId();
     const found = getUserById(userId);
     if (!found) {
-      setNotFound(true);
-      setLoading(false);
+      // 本地目录无此人：尝试后端真实用户资料
+      void apiFetchUserProfile(userId).then((r) => {
+        if (r && r.success && r.user) {
+          const u = r.user;
+          setUser({
+            userId: u.userId,
+            nickname: u.nickname || "言道用户",
+            avatar: u.avatar || (u.nickname || "友").slice(0, 1),
+            bio: u.bio || "这个人很神秘，什么都没写~",
+            gender: "unknown",
+            tags: [],
+            followCount: u.followingCount || 0,
+            fanCount: u.followerCount || 0,
+            postCount: u.postCount || 0,
+            allowSearch: true,
+            allowViewPosts: true,
+            registeredAt: "",
+            lastActiveAt: "",
+          });
+          setFollowStats({ following: u.followingCount || 0, fans: u.followerCount || 0 });
+          setNotFound(false);
+        } else {
+          setNotFound(true);
+        }
+        setLoading(false);
+      }).catch(() => {
+        setNotFound(true);
+        setLoading(false);
+      });
+      setIsSelf(cid === userId);
+      const friends: Friend[] = getFriends();
+      setIsFriend(friends.some((f) => f.id === userId));
       return;
     }
     setUser(found);
@@ -91,6 +126,14 @@ export default function FriendProfilePage() {
     } else {
       setPosts([]);
     }
+    // 后端真实粉丝/关注/动态数覆盖本地种子数据
+    void apiFetchUserProfile(userId).then((r) => {
+      const su = r && r.success ? r.user : undefined;
+      if (su) {
+        setFollowStats({ following: su.followingCount || 0, fans: su.followerCount || 0 });
+        setUser((prev) => (prev ? { ...prev, fanCount: su.followerCount, followCount: su.followingCount, postCount: su.postCount } : prev));
+      }
+    }).catch(() => {});
     setLoading(false);
   }, [userId]);
 
@@ -98,6 +141,8 @@ export default function FriendProfilePage() {
   const handleToggleFollow = () => {
     const result = toggleFollowUser(userId);
     setIsFollowing(result);
+    // v25.0.19：后端真实关注（对方收到通知）
+    void apiToggleFollow(userId).catch(() => {});
     setFollowStats(getFollowStats(userId));
     const updated = getUserById(userId);
     if (updated) setUser(updated);
@@ -124,6 +169,8 @@ export default function FriendProfilePage() {
       status: "pending",
       createdAt: new Date().toISOString(),
     });
+    // v25.0.19：后端真实好友申请（对方登录即可看到）
+    void apiSendFriendRequest(userId, "我想加你为好友").catch(() => {});
     setRequestSent(true);
   };
 

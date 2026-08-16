@@ -9,6 +9,10 @@ import {
   addFriend,
   type FriendRequest,
 } from "@/lib/socialStore";
+import {
+  fetchFriendRequests as apiFetchFriendRequests,
+  respondFriendRequest as apiRespondFriendRequest,
+} from "@/lib/socialApi";
 
 import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
@@ -22,10 +26,53 @@ export default function FriendRequestsPage() {
 
   useEffect(() => {
     setRequests(getFriendRequests());
+    // v25.0.19：合并后端真实好友申请（其他用户发送的申请）
+    void apiFetchFriendRequests().then((r) => {
+      const serverReqsRaw = r && r.success ? r.requests : undefined;
+      if (serverReqsRaw) {
+        setRequests((prev) => {
+          const ids = new Set(prev.map((x) => x.id));
+          const serverReqs: FriendRequest[] = serverReqsRaw
+            .filter((x) => !ids.has(x.id))
+            .map((x) => ({
+              id: x.id,
+              fromId: x.fromId,
+              fromName: x.fromName || "言道用户",
+              fromAvatar: x.fromName?.slice(0, 1) || "友",
+              message: x.message || "",
+              status: "pending" as const,
+              createdAt: x.createdAt,
+            }));
+          return [...serverReqs, ...prev];
+        });
+      }
+    }).catch(() => {});
   }, []);
 
   const refresh = () => {
     setRequests([...getFriendRequests()]);
+    void apiFetchFriendRequests().then((r) => {
+      const serverReqsRaw = r && r.success ? r.requests : undefined;
+      if (serverReqsRaw) {
+        setRequests((prev) => {
+          const localById = new Map(prev.map((x) => [x.id, x]));
+          for (const x of serverReqsRaw) {
+            if (!localById.has(x.id)) {
+              localById.set(x.id, {
+                id: x.id,
+                fromId: x.fromId,
+                fromName: x.fromName || "言道用户",
+                fromAvatar: x.fromName?.slice(0, 1) || "友",
+                message: x.message || "",
+                status: "pending" as const,
+                createdAt: x.createdAt,
+              });
+            }
+          }
+          return [...localById.values()];
+        });
+      }
+    }).catch(() => {});
   };
 
   const handleAccept = (req: FriendRequest) => {
@@ -40,11 +87,17 @@ export default function FriendRequestsPage() {
       tags: [],
       addedAt: new Date().toISOString(),
     });
+    if (/^\d+$/.test(req.id)) {
+      void apiRespondFriendRequest(req.id, "accept").catch(() => {});
+    }
     refresh();
   };
 
   const handleReject = (req: FriendRequest) => {
     updateFriendRequest(req.id, "rejected");
+    if (/^\d+$/.test(req.id)) {
+      void apiRespondFriendRequest(req.id, "reject").catch(() => {});
+    }
     refresh();
   };
 

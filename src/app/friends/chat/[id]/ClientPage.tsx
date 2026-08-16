@@ -14,6 +14,7 @@ import {
   type ChatMessage,
 } from "@/lib/socialStore";
 import { getCurrentUserId } from "@/lib/auth";
+import { sendPrivateMessage, fetchPrivateMessages } from "@/lib/socialApi";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
@@ -89,7 +90,8 @@ export default function FriendChatPage() {
     const text = inputText.trim();
     if (!text) return;
 
-    const newMsg: ChatMessage = {
+    // v25.0.19: 真实发送到后端（对方设备可收到），失败时本地降级保留
+    const optimistic: ChatMessage = {
       id: "msg_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
       senderId: currentUserId,
       senderName: currentUserName,
@@ -98,23 +100,60 @@ export default function FriendChatPage() {
       timestamp: new Date().toISOString(),
     };
 
-    saveChatMessage(chatKey, newMsg);
-    setMessages((prev) => [...prev, newMsg]);
+    saveChatMessage(chatKey, optimistic);
+    setMessages((prev) => [...prev, optimistic]);
     setInputText("");
 
-    setTimeout(() => {
-      const autoReply: ChatMessage = {
-        id: "reply_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
-        senderId: friendId,
-        senderName: friendName,
-        content: "收到你的消息了，稍后回复你~",
-        type: "text",
-        timestamp: new Date().toISOString(),
-      };
-      saveChatMessage(chatKey, autoReply);
-      setMessages((prev) => [...prev, autoReply]);
-    }, 1000 + Math.random() * 1500);
-  }, [inputText, chatKey, friendId, friendName, currentUserId, currentUserName]);
+    void sendPrivateMessage(friendId, text).then((r) => {
+      if (r && r.success && r.message) {
+        lastServerMsgIdRef.current = Math.max(lastServerMsgIdRef.current, parseInt(r.message.id, 10) || 0);
+      }
+    });
+  }, [inputText, chatKey, friendId, currentUserId, currentUserName]);
+
+  // v25.0.19: 轮询拉取对方真实回复（替代已移除的假自动回复）
+  const lastServerMsgIdRef = useRef(0);
+  useEffect(() => {
+    let stopped = false;
+    const poll = async () => {
+      if (stopped || document.visibilityState === "hidden") return;
+      try {
+        const r = await fetchPrivateMessages(friendId, lastServerMsgIdRef.current);
+        if (r && r.success && r.messages && r.messages.length) {
+          for (const m of r.messages) {
+            lastServerMsgIdRef.current = Math.max(lastServerMsgIdRef.current, parseInt(m.id, 10) || 0);
+          }
+          const incoming: ChatMessage[] = r.messages
+            .filter((m) => String(m.senderId) !== String(currentUserId))
+            .map((m) => ({
+              id: "srv_" + m.id,
+              senderId: m.senderId,
+              senderName: m.senderName,
+              content: m.content,
+              type: (m.type === "image" || m.type === "system" ? m.type : "text") as ChatMessage["type"],
+              timestamp: m.createdAt,
+            }));
+          if (incoming.length) {
+            setMessages((prev) => {
+              const existIds = new Set(prev.map((x) => x.id));
+              const fresh = incoming.filter((x) => !existIds.has(x.id));
+              for (const f of fresh) saveChatMessage(chatKey, f);
+              return fresh.length ? [...prev, ...fresh] : prev;
+            });
+          }
+        }
+      } catch { /* 网络异常静默，下轮重试 */ }
+    };
+    void poll();
+    const timer = setInterval(poll, 4000);
+    const onVisible = () => { if (document.visibilityState === "visible") void poll(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [friendId, chatKey, currentUserId]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {

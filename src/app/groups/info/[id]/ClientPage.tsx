@@ -11,6 +11,7 @@ import {
   type GroupInfo,
   type GroupMember,
 } from "@/lib/socialStore";
+import { getCurrentUserId } from "@/lib/auth";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
@@ -40,8 +41,14 @@ export default function GroupInfoPage() {
     else if (showDisbandConfirm) setShowDisbandConfirm(false);
   }, anyConfirmOpen);
 
-  const currentUserId = "current_user";
-  const currentUserName = "我";
+  const currentUserId = getCurrentUserId() || "current_user";
+  const currentUserName = (() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem("yandao_user_profile") : null;
+      if (raw) return JSON.parse(raw).nickname || "我";
+    } catch {}
+    return "我";
+  })();
 
   useEffect(() => {
     const groups = getGroups();

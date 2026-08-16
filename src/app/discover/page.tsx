@@ -28,12 +28,10 @@ import {
 } from "@/lib/discoverService";
 import {
   getPosts,
-  savePosts,
   addPost,
   getLikedPosts,
   toggleLikePost,
   filterSensitive,
-  addComment,
   getComments,
   toggleFollow,
   getFollows,
@@ -42,6 +40,14 @@ import {
 } from "@/lib/socialStore";
 import { getUserProfile } from "@/lib/auth";
 import { getCurrentUser } from "@/lib/loginService";
+import {
+  fetchPosts as apiFetchPosts,
+  createPost as apiCreatePost,
+  toggleLike as apiToggleLike,
+  addComment as apiAddComment,
+  fetchComments as apiFetchComments,
+  type SocialPost,
+} from "@/lib/socialApi";
 import { communityActivity } from "@/lib/pointsStore";
 import { getMembershipStatus } from "@/lib/membershipStore";
 import { FEED_TAGS, TAG_COLORS } from "@/lib/feedTags";
@@ -84,6 +90,27 @@ function PostAvatar({ text }: { text: string }) {
       {text}
     </div>
   );
+}
+
+// ==================== 后端动态映射（v25.0.19 社交后端化） ====================
+function toQualityPost(sp: SocialPost): QualityPost {
+  return {
+    id: sp.postId || sp.id,
+    authorId: sp.authorId,
+    authorName: sp.authorName || "言道用户",
+    authorAvatar: sp.authorAvatar || "",
+    content: sp.content,
+    images: Array.isArray(sp.images) ? sp.images : [],
+    topic: sp.toolType || "",
+    likes: sp.likeCount || 0,
+    comments: sp.commentCount || 0,
+    shares: 0,
+    liked: !!sp.liked,
+    isAd: false,
+    createdAt: sp.createdAt,
+    qualityScore: 0,
+    tags: Array.isArray(sp.tags) ? sp.tags : [],
+  };
 }
 
 // ==================== 发布面板 ====================
@@ -464,6 +491,8 @@ export default function DiscoverPage() {
   const [postPage, setPostPage] = useState(1);
   const [hasMorePosts, setHasMorePosts] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  // v25.0.19：后端动态分页游标
+  const serverCursorRef = useRef<number>(Number.MAX_SAFE_INTEGER);
   // P1 收敛：动态一级标签筛选
   const [activeTag, setActiveTag] = useState<string>("");
 
@@ -495,28 +524,44 @@ export default function DiscoverPage() {
   const [aiComments, setAiComments] = useState<Record<string, string>>({});
   const [aiLoading, setAiLoading] = useState<string | null>(null);
 
-  // ==================== 加载站内动态 ====================
-  const loadPosts = useCallback((page: number, refresh: boolean) => {
+  // ==================== 加载站内动态（v25.0.19：后端真实数据，本地降级兜底） ====================
+  const loadPosts = useCallback(async (page: number, refresh: boolean) => {
     setRefreshing(refresh);
-    const { posts: newPosts, hasMore } = getQualityPosts(page, 20, activeTag || undefined);
+    try {
+      const cursor = refresh ? Number.MAX_SAFE_INTEGER : serverCursorRef.current;
+      const r = await apiFetchPosts({ tag: activeTag || undefined, cursor, limit: 20 });
+      if (r && r.success && r.posts) {
+        const newPosts = r.posts.map(toQualityPost);
+        serverCursorRef.current = r.nextCursor || 0;
+        if (refresh) {
+          setPosts(newPosts);
+        } else {
+          setPosts((prev) => [...prev, ...newPosts]);
+        }
+        setHasMorePosts(!!r.nextCursor && r.nextCursor > 0);
+        setPostPage(page);
+        // 已登录时以服务端点赞态为准
+        setLiked(new Set(newPosts.filter((p) => p.liked).map((p) => p.id)));
+        setRefreshing(false);
+        return;
+      }
+    } catch { /* 后端不可达时降级本地 */ }
 
+    // 降级：本地存储数据（离线/后端异常时保证页面可用）
+    const { posts: newPosts, hasMore } = getQualityPosts(page, 20, activeTag || undefined);
     if (refresh) {
       setPosts(newPosts);
       setCachedPosts(newPosts);
     } else {
       setPosts((prev) => [...prev, ...newPosts]);
     }
-
     setHasMorePosts(hasMore);
     setPostPage(page);
-
-    // 加载评论
     const allComments: Record<string, Comment[]> = {};
     newPosts.forEach((p) => {
       allComments[p.id] = getComments(p.id);
     });
     setCommentsMap((prev) => (refresh ? allComments : { ...prev, ...allComments }));
-
     setLiked(getLikedPosts());
     setFollows(new Set(getFollows()));
     setRefreshing(false);
@@ -579,8 +624,8 @@ export default function DiscoverPage() {
       setFollows(new Set(getFollows()));
     }
 
-    // 加载最新数据
-    loadPosts(1, true);
+    // 加载最新数据（后端真实动态，失败降级本地）
+    void loadPosts(1, true);
 
     const membership = getMembershipStatus();
     setIsMember(membership.isActive && membership.level !== "basic");
@@ -726,24 +771,43 @@ export default function DiscoverPage() {
     []
   );
 
-  // ==================== 点赞 ====================
+  // ==================== 点赞（v25.0.19：后端真实点赞，全站用户可见） ====================
   const handleLike = useCallback((postId: string) => {
-    const nowLiked = toggleLikePost(postId);
+    if (!requireLogin()) return;
+    // 本地乐观更新
+    const willLike = !liked.has(postId);
     setLiked((prev) => {
       const next = new Set(prev);
-      if (nowLiked) next.add(postId);
+      if (willLike) next.add(postId);
       else next.delete(postId);
       return next;
     });
     setPosts((prev) =>
       prev.map((p) => {
         if (p.id === postId) {
-          return { ...p, liked: nowLiked, likes: nowLiked ? p.likes + 1 : p.likes - 1 };
+          return { ...p, liked: willLike, likes: willLike ? p.likes + 1 : Math.max(0, p.likes - 1) };
         }
         return p;
       })
     );
-  }, []);
+    void apiToggleLike(postId).then((r) => {
+      if (r && r.success && typeof r.likeCount === "number") {
+        setPosts((prev) =>
+          prev.map((p) => (p.id === postId ? { ...p, likes: r.likeCount as number, liked: !!r.liked } : p))
+        );
+        setLiked((prev2) => {
+          const next = new Set(prev2);
+          if (r.liked) next.add(postId);
+          else next.delete(postId);
+          return next;
+        });
+      } else {
+        // 后端失败回滚
+        toggleLikePost(postId);
+        void loadPosts(1, true);
+      }
+    });
+  }, [liked, requireLogin, loadPosts]);
 
   // ==================== AI点评动态 ====================
   const handleAIComment = useCallback(async (postId: string, postContent: string) => {
@@ -777,13 +841,14 @@ export default function DiscoverPage() {
     }
   }, [aiLoading]);
 
-  // ==================== 评论 ====================
+  // ==================== 评论（v25.0.19：后端真实评论，全站用户可见） ====================
   const handleComment = useCallback(
     (postId: string) => {
+      if (!requireLogin()) return;
       const text = commentText.trim();
       if (!text) return;
       const user = getCurrentUser();
-      const comment: Comment = {
+      const localComment: Comment = {
         id: `c_${Date.now()}`,
         postId,
         authorId: user?.userId || "anonymous",
@@ -792,17 +857,44 @@ export default function DiscoverPage() {
         content: filterSensitive(text).filtered,
         createdAt: new Date().toISOString(),
       };
-      addComment(comment);
+      // 乐观更新
       setCommentsMap((prev) => ({
         ...prev,
-        [postId]: [...(prev[postId] || []), comment],
+        [postId]: [...(prev[postId] || []), localComment],
       }));
       setCommentText("");
       setPosts((prev) =>
         prev.map((p) => (p.id === postId ? { ...p, comments: p.comments + 1 } : p))
       );
+      void apiAddComment(postId, localComment.content).then((r) => {
+        if (r && r.success) {
+          if (r.comment) {
+            const serverComment: Comment = {
+              id: r.comment.id,
+              postId,
+              authorId: r.comment.authorId || localComment.authorId,
+              authorName: r.comment.authorName || localComment.authorName,
+              authorAvatar: "",
+              content: r.comment.content || localComment.content,
+              createdAt: r.comment.createdAt || localComment.createdAt,
+            };
+            setCommentsMap((prev) => ({
+              ...prev,
+              [postId]: [...(prev[postId] || []).filter((c) => c.id !== localComment.id), serverComment],
+            }));
+          }
+        } else {
+          setCommentsMap((prev) => ({
+            ...prev,
+            [postId]: (prev[postId] || []).filter((c) => c.id !== localComment.id),
+          }));
+          setPosts((prev) =>
+            prev.map((p) => (p.id === postId ? { ...p, comments: Math.max(0, p.comments - 1) } : p))
+          );
+        }
+      });
     },
-    [commentText]
+    [commentText, requireLogin]
   );
 
   // ==================== 关注 ====================
@@ -816,6 +908,7 @@ export default function DiscoverPage() {
     });
   }, []);
 
+  // v25.0.19：展开评论区时从后端拉取真实评论
   const toggleComments = useCallback((postId: string) => {
     setActiveCommentPost((prev) => {
       // 切换到不同帖子时清空评论输入框
@@ -824,13 +917,28 @@ export default function DiscoverPage() {
       }
       return prev === postId ? null : postId;
     });
+    void apiFetchComments(postId).then((r) => {
+      if (r && r.success && r.comments) {
+        const list: Comment[] = r.comments.map((c) => ({
+          id: c.id,
+          postId,
+          authorId: c.authorId,
+          authorName: c.authorName || "言道用户",
+          authorAvatar: "",
+          content: c.content,
+          createdAt: c.createdAt,
+        }));
+        setCommentsMap((prev) => ({ ...prev, [postId]: list }));
+      }
+    });
   }, []);
 
-  // ==================== 发布动态 ====================
+  // ==================== 发布动态（v25.0.19：后端真实发布，全站用户可见） ====================
   const handlePublish = useCallback((content: string) => {
+    if (!requireLogin()) return;
     const { filtered } = filterSensitive(content);
     const user = getUserProfile();
-    const newPost: QualityPost = {
+    const optimistic: QualityPost = {
       id: `user_${Date.now()}`,
       authorId: user?.userId || "anonymous",
       authorName: user?.nickname || "言道用户",
@@ -845,13 +953,28 @@ export default function DiscoverPage() {
       isAd: false,
       createdAt: new Date().toISOString(),
       qualityScore: 0,
+      tags: activeTag ? [activeTag] : [],
     };
-    addPost(newPost);
-    setPosts((prev) => [newPost, ...prev]);
+    // 乐观插入
+    setPosts((prev) => [optimistic, ...prev]);
+    void apiCreatePost({
+      content: filtered,
+      tags: activeTag ? [activeTag] : undefined,
+    }).then((r) => {
+      if (r && r.success && r.post) {
+        const serverPost = toQualityPost(r.post);
+        // 用服务端真实动态替换本地乐观版本
+        setPosts((prev) => [serverPost, ...prev.filter((p) => p.id !== optimistic.id)]);
+      } else {
+        // 发布失败移除乐观版本并提示
+        setPosts((prev) => prev.filter((p) => p.id !== optimistic.id));
+        addPost(optimistic);
+      }
+    });
     try {
       communityActivity("发布动态");
     } catch {}
-  }, []);
+  }, [requireLogin, activeTag]);
 
   // ==================== 搜索过滤 ====================
   const filteredPosts = posts.filter((p) => {

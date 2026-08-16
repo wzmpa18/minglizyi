@@ -11,6 +11,8 @@ import {
   type GroupInfo,
   type ChatMessage,
 } from "@/lib/socialStore";
+import { getCurrentUserId } from "@/lib/auth";
+import { sendGroupMessage, fetchGroupMessages } from "@/lib/socialApi";
 
 import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
@@ -29,8 +31,17 @@ export default function GroupChatPage() {
   const [inputText, setInputText] = useState("");
   const chatListRef = useRef<HTMLDivElement>(null);
 
-  const currentUserId = "current_user";
-  const currentUserName = "我";
+  const currentUserId = getCurrentUserId() || "current_user";
+  const currentUserName = (() => {
+    try {
+      const profileRaw = typeof window !== "undefined" ? localStorage.getItem("yandao_user_profile") : null;
+      if (profileRaw) {
+        const profile = JSON.parse(profileRaw);
+        return profile.nickname || "我";
+      }
+    } catch {}
+    return "我";
+  })();
 
   useEffect(() => {
     const groups = getGroups();
@@ -67,6 +78,7 @@ export default function GroupChatPage() {
     const text = inputText.trim();
     if (!text) return;
 
+    // v25.0.19: 真实发送到后端群聊（全体成员可见），本地同步保存
     const newMsg: ChatMessage = {
       id: "gmsg_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
       senderId: currentUserId,
@@ -80,19 +92,56 @@ export default function GroupChatPage() {
     setMessages((prev) => [...prev, newMsg]);
     setInputText("");
 
-    setTimeout(() => {
-      const autoReply: ChatMessage = {
-        id: "greply_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
-        senderId: "system_user",
-        senderName: "群成员",
-        content: "收到你的消息了",
-        type: "text",
-        timestamp: new Date().toISOString(),
-      };
-      saveGroupMessage(groupId, autoReply);
-      setMessages((prev) => [...prev, autoReply]);
-    }, 1000 + Math.random() * 1500);
-  }, [inputText, groupId]);
+    void sendGroupMessage(groupId, text).then((r) => {
+      if (r && r.success && r.message) {
+        lastServerMsgIdRef.current = Math.max(lastServerMsgIdRef.current, parseInt(r.message.id, 10) || 0);
+      }
+    });
+  }, [inputText, groupId, currentUserId, currentUserName]);
+
+  // v25.0.19: 轮询拉取群内其他成员真实消息（替代已移除的假自动回复）
+  const lastServerMsgIdRef = useRef(0);
+  useEffect(() => {
+    let stopped = false;
+    const poll = async () => {
+      if (stopped || document.visibilityState === "hidden") return;
+      try {
+        const r = await fetchGroupMessages(groupId, lastServerMsgIdRef.current);
+        if (r && r.success && r.messages && r.messages.length) {
+          for (const m of r.messages) {
+            lastServerMsgIdRef.current = Math.max(lastServerMsgIdRef.current, parseInt(m.id, 10) || 0);
+          }
+          const incoming: ChatMessage[] = r.messages
+            .filter((m) => String(m.senderId) !== String(currentUserId))
+            .map((m) => ({
+              id: "gsrv_" + m.id,
+              senderId: m.senderId,
+              senderName: m.senderName,
+              content: m.content,
+              type: (m.type === "image" || m.type === "system" ? m.type : "text") as ChatMessage["type"],
+              timestamp: m.createdAt,
+            }));
+          if (incoming.length) {
+            setMessages((prev) => {
+              const existIds = new Set(prev.map((x) => x.id));
+              const fresh = incoming.filter((x) => !existIds.has(x.id));
+              for (const f of fresh) saveGroupMessage(groupId, f);
+              return fresh.length ? [...prev, ...fresh] : prev;
+            });
+          }
+        }
+      } catch { /* 网络异常静默 */ }
+    };
+    void poll();
+    const timer = setInterval(poll, 5000);
+    const onVisible = () => { if (document.visibilityState === "visible") void poll(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [groupId, currentUserId]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {

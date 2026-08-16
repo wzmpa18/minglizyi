@@ -31,6 +31,14 @@ import {
   type UserDirectoryEntry,
 } from "@/lib/userStore";
 import { getCurrentUserId, getLoginState } from "@/lib/auth";
+import {
+  fetchFriends as apiFetchFriends,
+  fetchGroups as apiFetchGroups,
+  fetchFriendRequests as apiFetchFriendRequests,
+  sendFriendRequest as apiSendFriendRequest,
+  respondFriendRequest as apiRespondFriendRequest,
+  removeFriend as apiRemoveFriend,
+} from "@/lib/socialApi";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
@@ -453,7 +461,7 @@ function AddFriendView({
     }
   };
 
-  // ==================== 发送好友申请 ====================
+  // ==================== 发送好友申请（v25.0.19：后端真实送达） ====================
   const handleSendRequest = (user: UserDirectoryEntry, message: string) => {
     const myName = loginState.profile?.nickname || "当前用户";
     const myAvatar = loginState.profile?.nickname?.slice(0, 1) || "我";
@@ -466,6 +474,8 @@ function AddFriendView({
       status: "pending",
       createdAt: new Date().toISOString(),
     });
+    // 后端真实好友申请：对方登录后即可在申请列表看到
+    void apiSendFriendRequest(user.userId, message || `我是${myName}，想加你为好友`).catch(() => {});
     setRequestedIds((prev) => new Set(prev).add(user.userId));
     setRequestingUser(null);
     setRequestMessage("");
@@ -1518,13 +1528,87 @@ export default function FriendsPage() {
     }
   }, []);
 
-  // ==================== 数据加载 ====================
+  // ==================== 数据加载（v25.0.19：本地 + 后端合并） ====================
   const loadData = useCallback(() => {
     setFriends(getFriends());
     setGroups(getGroups());
     const reqs = getFriendRequests();
     setFriendRequests(reqs);
     setBlacklist(getBlacklist());
+
+    // 后端真实好友/群组/申请（登录后跨设备跨用户可见）
+    void apiFetchFriends().then((r) => {
+      const serverFriends = r && r.success ? r.friends : undefined;
+      if (serverFriends) {
+        setFriends((prev) => {
+          const localById = new Map(prev.map((f) => [f.id, f]));
+          for (const sf of serverFriends) {
+            const existing = localById.get(sf.userId);
+            if (!existing) {
+              prev.push({
+                id: sf.userId,
+                name: sf.nickname || "言道用户",
+                avatar: sf.avatar || (sf.nickname || "友").slice(0, 1),
+                online: false,
+                lastSeen: sf.friendSince || new Date().toISOString(),
+                note: "",
+                tags: [],
+                addedAt: sf.friendSince || new Date().toISOString(),
+              });
+            } else {
+              // 服务端昵称/头像较新时同步（保留本地备注与标签）
+              existing.name = sf.nickname || existing.name;
+              existing.avatar = sf.avatar || existing.avatar;
+            }
+          }
+          return [...prev];
+        });
+      }
+    }).catch(() => {});
+    void apiFetchGroups().then((r) => {
+      const serverGroupsRaw = r && r.success ? r.groups : undefined;
+      if (serverGroupsRaw) {
+        setGroups((prev) => {
+          const ids = new Set(prev.map((g) => g.id));
+          const serverGroups: typeof prev = serverGroupsRaw
+            .filter((g) => !ids.has(g.groupId))
+            .map((g) => ({
+              id: g.groupId,
+              name: g.name,
+              avatar: g.name.slice(0, 1),
+              ownerId: g.ownerId,
+              ownerName: g.ownerName || "",
+              members: [],
+              announcement: g.announcement || "",
+              maxMembers: 50,
+              level: "small" as const,
+              createdAt: g.createdAt || "",
+              tags: [],
+            }));
+          return [...prev, ...serverGroups];
+        });
+      }
+    }).catch(() => {});
+    void apiFetchFriendRequests().then((r) => {
+      const serverReqsRaw = r && r.success ? r.requests : undefined;
+      if (serverReqsRaw) {
+        setFriendRequests((prev) => {
+          const ids = new Set(prev.map((x) => x.id));
+          const serverReqs: FriendRequest[] = serverReqsRaw
+            .filter((x) => !ids.has(x.id))
+            .map((x) => ({
+              id: x.id,
+              fromId: x.fromId,
+              fromName: x.fromName || "言道用户",
+              fromAvatar: x.fromName?.slice(0, 1) || "友",
+              message: x.message || "",
+              status: "pending" as const,
+              createdAt: x.createdAt,
+            }));
+          return [...serverReqs, ...prev];
+        });
+      }
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -1562,7 +1646,7 @@ export default function FriendsPage() {
     g.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // ==================== 好友请求处理 ====================
+  // ==================== 好友请求处理（v25.0.19：同步后端） ====================
   const handleAcceptRequest = (req: FriendRequest) => {
     updateFriendRequest(req.id, "accepted");
     // 创建好友记录
@@ -1577,11 +1661,18 @@ export default function FriendsPage() {
       addedAt: new Date().toISOString(),
     };
     addFriend(newFriend);
+    // 服务端申请（数字ID）同步受理，对方账号同步成为好友
+    if (/^\d+$/.test(req.id)) {
+      void apiRespondFriendRequest(req.id, "accept").catch(() => {});
+    }
     loadData();
   };
 
   const handleRejectRequest = (req: FriendRequest) => {
     updateFriendRequest(req.id, "rejected");
+    if (/^\d+$/.test(req.id)) {
+      void apiRespondFriendRequest(req.id, "reject").catch(() => {});
+    }
     loadData();
   };
 
@@ -1589,6 +1680,7 @@ export default function FriendsPage() {
   const handleDeleteFriend = () => {
     if (deleteConfirmId) {
       removeFriend(deleteConfirmId);
+      void apiRemoveFriend(deleteConfirmId).catch(() => {});
       setDeleteConfirmId(null);
       setActionMenu(null);
       loadData();

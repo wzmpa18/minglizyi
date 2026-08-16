@@ -4,6 +4,8 @@ import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { BrandHeader } from "@/components/shared";
 import { createGroup, type GroupInfo } from "@/lib/socialStore";
+import { createGroup as apiCreateGroup } from "@/lib/socialApi";
+import { getCurrentUserId } from "@/lib/auth";
 
 import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
@@ -48,8 +50,14 @@ function NormalCreate({
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [error, setError] = useState("");
 
-  const currentUserId = "current_user";
-  const currentUserName = "我";
+  const currentUserId = getCurrentUserId() || "current_user";
+  const currentUserName = (() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem("yandao_user_profile") : null;
+      if (raw) return JSON.parse(raw).nickname || "我";
+    } catch {}
+    return "我";
+  })();
 
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) =>
@@ -91,6 +99,8 @@ function NormalCreate({
     };
 
     createGroup(newGroup);
+    // v25.0.19：后端真实建群（全体成员可见、可加入）
+    void apiCreateGroup(name).catch(() => {});
     router.push("/groups");
   };
 
@@ -220,8 +230,14 @@ function QuickCreate({
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedLevel, setSelectedLevel] = useState<(typeof GROUP_LEVELS)[number]>(GROUP_LEVELS[1]); // 默认中群
 
-  const currentUserId = "current_user";
-  const currentUserName = "我";
+  const currentUserId = getCurrentUserId() || "current_user";
+  const currentUserName = (() => {
+    try {
+      const raw = typeof window !== "undefined" ? localStorage.getItem("yandao_user_profile") : null;
+      if (raw) return JSON.parse(raw).nickname || "我";
+    } catch {}
+    return "我";
+  })();
 
   // 根据选中的标签智能推荐群名
   const suggestedName = useMemo(() => {
@@ -270,6 +286,8 @@ function QuickCreate({
     };
 
     createGroup(newGroup);
+    // v25.0.19：后端真实建群（全体成员可见、可加入）
+    void apiCreateGroup(suggestedName).catch(() => {});
     router.push("/groups");
   };
 

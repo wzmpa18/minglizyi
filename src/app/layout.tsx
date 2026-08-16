@@ -6,6 +6,7 @@ import AuthRestoreInit from "@/components/AuthRestoreInit";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import GlobalZoomProvider from "@/components/GlobalZoomProvider";
 import SwipeBackProvider from "@/components/SwipeBackProvider";
+import VersionChecker from "@/components/VersionChecker";
 
 export const metadata: Metadata = {
   title: "言道国学",
@@ -41,6 +42,7 @@ export default function RootLayout({
       </head>
       <body>
         <ThemeProvider>
+          <VersionChecker />
           <SwipeBackProvider>
             <CloudSyncInit />
             <AuthRestoreInit />

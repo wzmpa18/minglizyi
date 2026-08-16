@@ -8,6 +8,7 @@ import { captureAndSavePoster, preloadImageAsDataUrl } from "@/lib/posterCapture
 import { getPointsBalance } from "@/lib/pointsStore";
 import { getAIQuotaInfo } from "@/lib/aiQuotaService";
 import { getFollowStats, getCurrentUserId } from "@/lib/userStore";
+import { fetchTracks, fetchProgress } from "@/lib/academyApi";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
@@ -574,9 +575,48 @@ const Ic = {
       <line x1="12" y1="8" x2="12.01" y2="8" />
     </svg>
   ),
+  academy: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={BRAND} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 10L12 5 2 10l10 5 10-5z" />
+      <path d="M6 12v5c0 1.7 2.7 3 6 3s6-1.3 6-3v-5" />
+      <path d="M22 10v6" />
+    </svg>
+  ),
+  study: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={BRAND} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+    </svg>
+  ),
+  exam: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={BRAND} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="9" y1="15" x2="15" y2="15" />
+    </svg>
+  ),
+  cert: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={BRAND} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="6" />
+      <path d="M15.5 13l1.5 8-5-3-5 3 1.5-8" />
+      <path d="M12 5l.9 1.8 2 .3-1.4 1.4.3 2L12 9.6l-1.8.9.3-2L9.1 7.1l2-.3L12 5z" />
+    </svg>
+  ),
+  wrongbook: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={BRAND} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+      <line x1="9" y1="9" x2="15" y2="9" />
+    </svg>
+  ),
+  factory: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={BRAND} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z" />
+      <path d="M7 18h1" /><path d="M12 18h1" /><path d="M17 18h1" />
+    </svg>
+  ),
 };
 
-// ==================== 主页面组件（五大分区架构） ====================
+// ==================== 主页面组件（六大分区冻结架构） ====================
 export default function ProfilePage() {
   const router = useRouter();
 
@@ -593,6 +633,9 @@ export default function ProfilePage() {
   const [aiRemaining, setAiRemaining] = useState<number | null>(null);
   const [pointsTotal, setPointsTotal] = useState(0);
   const [followStats, setFollowStats] = useState({ following: 0, fans: 0 });
+  // 学堂数据：最高专业头衔 / 连续学习天数
+  const [topTitle, setTopTitle] = useState<string>("");
+  const [studyStreak, setStudyStreak] = useState(0);
 
   // 页面加载时从后端同步最新资料
   useEffect(() => {
@@ -639,6 +682,38 @@ export default function ProfilePage() {
       const stats = getFollowStats(uid);
       setFollowStats(stats);
     } catch { /* ignore */ }
+  }, []);
+
+  // 加载学堂数据：最高专业头衔 + 连续学习天数（学习打卡日期连续计算）
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    (async () => {
+      try {
+        const [t, p] = await Promise.all([fetchTracks(), fetchProgress()]);
+        if (t && t.success && t.tracks) {
+          const best = t.tracks
+            .filter((x) => x.myLevel > 0)
+            .sort((a, b) => b.myLevel - a.myLevel)[0];
+          if (best) setTopTitle(best.myTitle);
+        }
+        if (p && p.success && p.progress && p.progress.length > 0) {
+          const days = new Set(p.progress.map((x) => (x.completedAt || "").slice(0, 10)));
+          let streak = 0;
+          const cur = new Date();
+          // 若今日无打卡，从昨天起算连续天数
+          const todayStr = cur.toISOString().slice(0, 10);
+          if (!days.has(todayStr)) cur.setDate(cur.getDate() - 1);
+          for (;;) {
+            const s = cur.toISOString().slice(0, 10);
+            if (days.has(s)) {
+              streak += 1;
+              cur.setDate(cur.getDate() - 1);
+            } else break;
+          }
+          setStudyStreak(streak);
+        }
+      } catch { /* ignore */ }
+    })();
   }, []);
 
   const userId = loginState.isLoggedIn && loginState.profile?.userId
@@ -700,7 +775,22 @@ export default function ProfilePage() {
                 >
                   {isMember ? "高级会员" : "普通用户"}
                 </span>
+                {topTitle && (
+                  <span
+                    className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                    style={{ backgroundColor: "rgba(255,255,255,0.2)", color: "#fff", border: "1px solid rgba(255,255,255,0.35)" }}
+                  >
+                    🏅 {topTitle}
+                  </span>
+                )}
                 <span className="text-[10px] text-white/60 font-mono">ID: {userId}</span>
+              </div>
+              <div className="mt-1.5 flex items-center gap-3 text-[11px] text-white/80">
+                <span className="flex items-center gap-1">
+                  <span className="text-[11px]" style={{ color: "#ffd54f" }}>★★★★★</span>
+                  <span>5.0</span>
+                </span>
+                <span>连续学习 {studyStreak} 天</span>
               </div>
               <div className="mt-1 flex gap-3 text-[11px] text-white/70">
                 <span>关注 {followStats.following}</span>
@@ -731,42 +821,43 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* ===== 第一区：资产中心 ===== */}
-      <Zone title="资产中心">
+      {/* ===== 第一区：学习中心 ===== */}
+      <Zone title="学习中心">
         <ZoneItem
-          icon={Ic.member}
-          label="我的会员"
-          sub={isMember ? "高级会员权益生效中" : "开通会员解锁全部权益"}
-          onClick={() => router.push("/membership")}
+          icon={Ic.academy}
+          label="言道学堂"
+          sub="AI 知识工厂 · 学习考级认证生态"
+          onClick={() => router.push("/academy")}
         />
         <ZoneItem
-          icon={Ic.ai}
-          label="AI 额度"
-          right={<span className="text-xs text-gray-400">{aiRemaining !== null ? `剩余 ${aiRemaining} 次` : ""}</span>}
-          onClick={() => router.push(loginState.isLoggedIn ? "/yixue/ai" : "/login")}
+          icon={Ic.study}
+          label="我的学习"
+          sub="知识点精读 · 学习打卡"
+          onClick={() => router.push("/academy/learn")}
         />
         <ZoneItem
-          icon={Ic.points}
-          label="积分中心"
-          right={<span className="text-xs text-gray-400">{pointsTotal} 分</span>}
-          onClick={() => router.push("/points")}
+          icon={Ic.exam}
+          label="我的考试"
+          sub="等级考试 · 随机组卷 · 不限补考"
+          onClick={() => router.push("/academy/exam")}
         />
         <ZoneItem
-          icon={Ic.wallet}
-          label="我的钱包"
-          onClick={() => router.push("/profile/wallet")}
+          icon={Ic.cert}
+          label="我的证书"
+          sub="电子证书 · 公开验真"
+          onClick={() => router.push("/academy/certificates")}
         />
         <ZoneItem
-          icon={Ic.featured}
-          label="言道精选"
-          sub="实体好物 · 数字产品 · 咨询服务 · 课程专栏"
-          onClick={() => router.push("/featured")}
+          icon={Ic.wrongbook}
+          label="错题本"
+          sub="错题回顾 · 消灭薄弱点"
+          onClick={() => router.push("/academy/wrong-book")}
           noBorder
         />
       </Zone>
 
-      {/* ===== 第二区：我的内容 ===== */}
-      <Zone title="我的内容">
+      {/* ===== 第二区：内容中心 ===== */}
+      <Zone title="内容中心">
         <ZoneItem
           icon={Ic.records}
           label="我的测算"
@@ -780,15 +871,21 @@ export default function ProfilePage() {
           onClick={() => router.push("/profile/favorites")}
         />
         <ZoneItem
-          icon={Ic.moments}
-          label="我的动态"
-          onClick={() => router.push("/profile/moments")}
+          icon={Ic.factory}
+          label="我的上传 · 知识贡献"
+          sub="上传资料 · AI 解析 · 贡献积分"
+          onClick={() => router.push("/academy/factory")}
           noBorder
         />
       </Zone>
 
-      {/* ===== 第三区：社交中心 ===== */}
-      <Zone title="社交中心">
+      {/* ===== 第三区：社区中心 ===== */}
+      <Zone title="社区中心">
+        <ZoneItem
+          icon={Ic.moments}
+          label="我的动态"
+          onClick={() => router.push("/profile/moments")}
+        />
         <ZoneItem
           icon={Ic.notify}
           label="消息通知"
@@ -820,11 +917,46 @@ export default function ProfilePage() {
         />
       </Zone>
 
-      {/* ===== 第四区：推广中心 ===== */}
+      {/* ===== 第四区：商业中心 ===== */}
+      <Zone title="商业中心">
+        <ZoneItem
+          icon={Ic.member}
+          label="会员中心"
+          sub={isMember ? "高级会员权益生效中" : "开通会员解锁全部权益"}
+          onClick={() => router.push("/membership")}
+        />
+        <ZoneItem
+          icon={Ic.ai}
+          label="AI 额度"
+          right={<span className="text-xs text-gray-400">{aiRemaining !== null ? `剩余 ${aiRemaining} 次` : ""}</span>}
+          onClick={() => router.push(loginState.isLoggedIn ? "/yixue/ai" : "/login")}
+        />
+        <ZoneItem
+          icon={Ic.points}
+          label="积分中心"
+          right={<span className="text-xs text-gray-400">{pointsTotal} 分</span>}
+          onClick={() => router.push("/points")}
+        />
+        <ZoneItem
+          icon={Ic.wallet}
+          label="我的钱包"
+          onClick={() => router.push("/profile/wallet")}
+        />
+        <ZoneItem
+          icon={Ic.featured}
+          label="言道精选"
+          sub="实体好物 · 数字产品 · 咨询服务 · 课程专栏"
+          onClick={() => router.push("/featured")}
+          noBorder
+        />
+      </Zone>
+
+      {/* ===== 第五区：推广中心 ===== */}
       <Zone title="推广中心">
         <ZoneItem
           icon={Ic.inviteCode}
-          label="邀请码"
+          label="我的推广"
+          sub="邀请码 · 拉新奖励"
           onClick={() => router.push("/invite")}
         />
         <ZoneItem
@@ -834,18 +966,18 @@ export default function ProfilePage() {
         />
         <ZoneItem
           icon={Ic.team}
-          label="我的团队"
+          label="团队数据"
           onClick={() => router.push("/profile/team")}
         />
         <ZoneItem
           icon={Ic.profit}
-          label="推广收益"
+          label="收益记录"
           onClick={() => router.push("/profile/promote")}
           noBorder
         />
       </Zone>
 
-      {/* ===== 第五区：系统中心 ===== */}
+      {/* ===== 第六区：系统中心 ===== */}
       <Zone title="系统中心">
         <ZoneItem
           icon={Ic.security}
