@@ -24,7 +24,7 @@ echo "--- [2] 构建 ---"
 npm run build 2>&1 | tail -30
 
 echo "--- [3] 页面导出校验（v25.0.27 全量清单） ---"
-for p in yixue/tarot academy/favorites academy/notes academy/leaderboard academy/learn academy/question-bank yixue/ziwei yixue/astro yixue/wannianli yixue/qimen discover/create membership messages/system profile/consult privacy admin/tools admin/sources; do
+for p in yixue/tarot academy/favorites academy/notes academy/leaderboard academy/learn academy/question-bank yixue/ziwei yixue/astro yixue/wannianli yixue/qimen discover/create membership messages/system profile/consult/provider-apply privacy admin/tools admin/sources; do
   test -f "out/${p}/index.html" || { echo "FATAL: out/${p}/index.html missing"; exit 1; }
   echo "OK: ${p}"
 done
