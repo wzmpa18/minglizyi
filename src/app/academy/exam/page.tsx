@@ -147,7 +147,7 @@ export default function AcademyExamPage() {
           {/* 报考卡片 */}
           <div className="rounded-2xl bg-white p-4 shadow-sm">
             <p className="text-sm font-bold text-gray-800">选择赛道</p>
-            <div className="mt-2.5 grid grid-cols-3 gap-2">
+            <div className="mt-2.5 grid grid-cols-2 gap-2">
               {TRACK_LIST.map((t) => (
                 <button
                   key={t.key}

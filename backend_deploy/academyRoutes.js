@@ -40,6 +40,12 @@ const TRACKS = {
 
 const TRACK_ALIASES = { tcm: 'zhongyi', bazi: 'yixue', qimen: 'yixue', ziwei: 'yixue', general: 'guoxue' };
 
+// P6-补04 医考专区：'yikao' 作为独立 track 标签挂在唯一题库引擎上（分类标签区分），
+// 不进入 TRACKS（/tracks 三大板块概览保持冻结），中医板块查询不受医考数据影响。
+const EXTRA_TRACKS = {
+  yikao: { code: 'YK', name: '医考', titles: ['', '医考学徒', '医考研究员', '医考讲师', '医考高级师', '认证大师'] },
+};
+
 // P6-I-PLUS 规则1：三类组织模型永久冻结（禁止第四种组织类型；公益组织禁止收费，只能 free 档）
 const ORG_TYPES = {
   ORG_TYPE_NPO: { code: 'NPO', name: '公益组织', canCharge: false, defaultTier: 'free', legacy: 'public' },
@@ -56,12 +62,12 @@ function normOrgType(v) {
 }
 
 function normTrack(t) {
-  if (TRACKS[t]) return t;
+  if (TRACKS[t] || EXTRA_TRACKS[t]) return t;
   return TRACK_ALIASES[t] || '';
 }
 
 function trackName(t) {
-  return (TRACKS[t] || TRACKS[TRACK_ALIASES[t]] || { name: t || '' }).name || t || '';
+  return (TRACKS[t] || TRACKS[TRACK_ALIASES[t]] || EXTRA_TRACKS[t] || { name: t || '' }).name || t || '';
 }
 
 // 预置类目（中医·倪海厦人纪系列 / 易学·天纪）
@@ -86,6 +92,28 @@ const PRESET_CATEGORIES = [
   ['yixue', '七政四余', 17],
   ['yixue', '易经推命', 18],
   ['yixue', '堪舆地脉', 19],
+  // P6-补04：医考专区类目（track='yikao'，科目池与前端 toolConfig.yikao.subjects/stations 名称一一对应）
+  ['yikao', '中医基础理论', 1],
+  ['yikao', '中医诊断学', 2],
+  ['yikao', '中药学', 3],
+  ['yikao', '方剂学', 4],
+  ['yikao', '中医内科学', 5],
+  ['yikao', '中医外科学', 6],
+  ['yikao', '中医妇科学', 7],
+  ['yikao', '中医儿科学', 8],
+  ['yikao', '针灸学', 9],
+  ['yikao', '诊断学基础', 10],
+  ['yikao', '内科学', 11],
+  ['yikao', '传染病学', 12],
+  ['yikao', '医学伦理学', 13],
+  ['yikao', '卫生法规', 14],
+  ['yikao', '第一站病案分析', 21],
+  ['yikao', '第二站病史采集', 22],
+  ['yikao', '第二站中医操作', 23],
+  ['yikao', '第二站中医临床答辩', 24],
+  ['yikao', '第三站体格检查', 25],
+  ['yikao', '第三站西医操作', 26],
+  ['yikao', '第三站西医临床答辩', 27],
 ];
 
 // 组卷配置：题量 / 分值 / 及格线 / 限时（分钟）/ 难度配比
@@ -564,7 +592,7 @@ function certVo(r) {
 }
 
 function nextCertNo(track, year) {
-  const code = (TRACKS[track] || TRACKS[TRACK_ALIASES[track]] || { code: 'GX' }).code;
+  const code = (TRACKS[track] || TRACKS[TRACK_ALIASES[track]] || EXTRA_TRACKS[track] || { code: 'GX' }).code;
   const prefix = `YA-${year}-${code}-`;
   const row = getDb().prepare("SELECT cert_no FROM certificates WHERE cert_no LIKE ? ORDER BY id DESC LIMIT 1").get(prefix + '%');
   let seq = 1;
@@ -1272,7 +1300,8 @@ function createRouter() {
     try {
       const d = getDb();
       const { track, level: levelStr } = req.body;
-      if (!TRACKS[track]) return res.status(400).json({ success: false, error: '请选择有效赛道' });
+      if (!TRACKS[track] && !EXTRA_TRACKS[track]) return res.status(400).json({ success: false, error: '请选择有效赛道' });
+      const trackDef = TRACKS[track] || EXTRA_TRACKS[track];
       const level = Math.min(3, Math.max(1, parseInt(levelStr, 10) || 1));
       const cfg = getExamConfig()[level];
       const picked = [];
@@ -1288,7 +1317,7 @@ function createRouter() {
         pickBy(type, 'hard', n - Math.ceil(n / 2) - Math.floor(n / 2));
       }
       if (picked.length === 0) {
-        return res.json({ success: false, error: `「${TRACKS[track].name}」题库建设中，暂无可组卷题目`, empty: true });
+        return res.json({ success: false, error: `「${trackDef.name}」题库建设中，暂无可组卷题目`, empty: true });
       }
       const perScore = Math.floor(100 / picked.length);
       const result = d.prepare('INSERT INTO exams (user_id, track, level, question_ids, answers) VALUES (?,?,?,?,?)')
@@ -1296,7 +1325,7 @@ function createRouter() {
       res.json({
         success: true,
         examId: String(result.lastInsertRowid),
-        track, trackName: TRACKS[track].name, level, levelTitle: TRACKS[track].titles[level],
+        track, trackName: trackDef.name, level, levelTitle: trackDef.titles[level],
         minutes: cfg.minutes, passScore: cfg.passScore,
         questions: picked.map(q => ({ ...questionVo(q, false), score: perScore })),
         startedAt: new Date().toISOString(),

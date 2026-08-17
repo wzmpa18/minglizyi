@@ -5,11 +5,14 @@ import { useRouter } from "next/navigation";
 import { BrandHeader } from "@/components/shared";
 import { fetchWrongAnswers, TRACK_LIST, TYPE_NAMES } from "@/lib/academyApi";
 import { PageLoginGuard } from "@/components/PageLoginGuard";
+import AIInterpretButton from "@/components/AIInterpretButton";
+import { getToolConfig } from "@/lib/toolConfigStore";
 
 const BRAND = "#7B2FBE";
 
 export default function WrongBookPage() {
   const router = useRouter();
+  const aiWrongEnabled = getToolConfig().yikao?.aiWrongAnalysisEnabled === true;
   const [wrongs, setWrongs] = useState<Array<{
     id: string; questionId: string; myAnswer: string; type: string; track: string;
     stem: string; options: string[]; answer: string; analysis: string; createdAt: string;
@@ -119,6 +122,19 @@ export default function WrongBookPage() {
                           <p className="mt-2 whitespace-pre-wrap rounded-lg bg-white p-2 text-[11px] leading-relaxed text-gray-600">
                             {w.analysis}
                           </p>
+                        )}
+                        {w.track === "yikao" && aiWrongEnabled && (
+                          <div className="mt-2">
+                            <AIInterpretButton
+                              toolName="医考错题"
+                              scope="AI深度解析"
+                              contextData={`题干：${w.stem}\n我的作答：${w.myAnswer || "（未作答）"}\n正确答案：${w.answer}\n基础解析：${w.analysis || "（无）"}`}
+                              systemPrompt="你是中医执业医师资格考试辅导老师。请针对这道错题进行深度解析：1. 指出错误原因与易混淆点；2. 讲透背后的考点原理；3. 给出同类题的举一反三思路。语言书面化、条理清晰，避免绝对化表述。结尾标注：「以上内容由AI生成，仅供文化娱乐参考，不构成任何专业建议」"
+                              buttonText="AI 错题深度解析（增值）"
+                              buttonStyle="secondary"
+                              cacheKey={`yikao_wrong_${w.questionId}`}
+                            />
+                          </div>
                         )}
                       </div>
                     )}

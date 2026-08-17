@@ -8,7 +8,7 @@
 // ============================================================================
 
 import { useCallback, useEffect, useState } from "react";
-import { CalendarDays, ScrollText, Sparkles, Handshake, TrendingUp, AlarmClock, History, Save, RotateCcw, Plus, X, BadgeCheck, Ticket } from "lucide-react";
+import { CalendarDays, ScrollText, Sparkles, Handshake, TrendingUp, AlarmClock, History, Save, RotateCcw, Plus, X, BadgeCheck, Ticket, Stethoscope, ArrowUp, ArrowDown } from "lucide-react";
 import { THEME, styles, AdminCard, Badge, LoadingSpinner, useMounted, useToast, ToggleSwitch, ConfirmDialog } from "../_shared";
 import {
   getToolConfig,
@@ -32,7 +32,7 @@ import {
   type RedeemCode,
 } from "@/lib/redeemCodeStore";
 
-type TabKey = "calendar" | "zeri" | "astro" | "consult" | "growth" | "reminder" | "account" | "redeem" | "audit";
+type TabKey = "calendar" | "zeri" | "astro" | "consult" | "growth" | "reminder" | "account" | "redeem" | "yikao" | "audit";
 
 const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: "calendar", label: "万年历", icon: <CalendarDays size={14} /> },
@@ -43,6 +43,7 @@ const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
   { key: "reminder", label: "记事提醒", icon: <AlarmClock size={14} /> },
   { key: "account", label: "账户特权", icon: <BadgeCheck size={14} /> },
   { key: "redeem", label: "兑换码", icon: <Ticket size={14} /> },
+  { key: "yikao", label: "医考专区", icon: <Stethoscope size={14} /> },
   { key: "audit", label: "审计与回滚", icon: <History size={14} /> },
 ];
 
@@ -55,10 +56,11 @@ const MODULE_LABEL: Record<TabKey, string> = {
   reminder: "记事提醒",
   account: "账户特权",
   redeem: "兑换码",
+  yikao: "医考专区",
   audit: "审计",
 };
 
-const CONFIG_MODULES = ["calendar", "zeri", "astro", "consult", "growth", "reminder", "account", "redeem"] as const;
+const CONFIG_MODULES = ["calendar", "zeri", "astro", "consult", "growth", "reminder", "account", "redeem", "yikao"] as const;
 
 function NumField({
   label, value, onChange, suffix, min = 0, max = 999999,
@@ -333,6 +335,10 @@ export default function AdminToolsPage() {
   const [snapshots, setSnapshots] = useState<Record<string, string[]>>({});
   const [rollbackTarget, setRollbackTarget] = useState<{ module: TabKey; version: string } | null>(null);
   const [newEvent, setNewEvent] = useState({ name: "", keywords: "", folkNote: "" });
+  const [newExam, setNewExam] = useState({ name: "", id: "" });
+  const [newSubject, setNewSubject] = useState({ name: "", id: "" });
+  const [newStation, setNewStation] = useState({ name: "", group: "" });
+  const [newCard, setNewCard] = useState({ seal: "", title: "", subtitle: "", price: 19.9 });
 
   const refresh = useCallback(() => {
     const cfg = getToolConfig();
@@ -719,6 +725,393 @@ export default function AdminToolsPage() {
             <SaveBar module="redeem" summary="更新兑换码规则配置" />
           </AdminCard>
           <RedeemManager onToast={show} />
+        </>
+      )}
+
+      {/* ===== 医考专区（P6-补04） ===== */}
+      {tab === "yikao" && (
+        <>
+          <AdminCard title="医考专区总配置">
+            <BoolField label="专区总开关" desc="学习中心首页入口与 /academy/yikao 页面显隐" value={draft.yikao.enabled} onChange={(v) => setDraft({ ...draft, yikao: { ...draft.yikao, enabled: v } })} />
+            <BoolField label="AI 错题深度解析服务" desc="错题本增值解读入口，走统一 Paywall" value={draft.yikao.aiWrongAnalysisEnabled} onChange={(v) => setDraft({ ...draft, yikao: { ...draft.yikao, aiWrongAnalysisEnabled: v } })} />
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 14, marginTop: 14 }}>
+              <NumField label="AI 错题解析定价" value={draft.yikao.aiWrongAnalysisPrice} onChange={(v) => setDraft({ ...draft, yikao: { ...draft.yikao, aiWrongAnalysisPrice: v } })} suffix="元/次" min={0} max={999} />
+              <NumField label="覆盖度达标阈值" value={draft.yikao.coverageThreshold} onChange={(v) => setDraft({ ...draft, yikao: { ...draft.yikao, coverageThreshold: v } })} suffix="%（达到才显示「覆盖全部核心考点」）" min={1} max={100} />
+              <div>
+                <label style={styles.label}>考纲结构版本</label>
+                <input style={styles.input} value={draft.yikao.version} onChange={(e) => setDraft({ ...draft, yikao: { ...draft.yikao, version: e.target.value } })} />
+              </div>
+            </div>
+            <div style={{ marginTop: 14 }}>
+              <label style={styles.label}>文库学科横向切换标签</label>
+              <TagEditor
+                values={draft.yikao.libTabs}
+                onChange={(v) => setDraft({ ...draft, yikao: { ...draft.yikao, libTabs: v } })}
+                placeholder="输入学科名，如：中诊"
+              />
+            </div>
+            <div style={{ marginTop: 14 }}>
+              <label style={styles.label}>免责声明文案（工具页底部统一展示）</label>
+              <textarea
+                style={{ ...styles.input, resize: "none" }}
+                rows={3}
+                value={draft.yikao.disclaimer}
+                onChange={(e) => setDraft({ ...draft, yikao: { ...draft.yikao, disclaimer: e.target.value } })}
+              />
+            </div>
+            <SaveBar module="yikao" summary="更新医考专区总配置" />
+          </AdminCard>
+
+          <AdminCard title={`考试类别（共 ${draft.yikao.exams.length} 类，顶部导航切换项）`} style={{ marginTop: 16 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {draft.yikao.exams.map((ex, idx) => (
+                <div key={ex.id} style={{ padding: 14, borderRadius: 10, border: `1px solid ${ex.enabled ? THEME.border : THEME.errorBg}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <input
+                        style={{ ...styles.input, fontWeight: 700, width: 180 }}
+                        value={ex.name}
+                        onChange={(e) => {
+                          const list = [...draft.yikao.exams];
+                          list[idx] = { ...ex, name: e.target.value };
+                          setDraft({ ...draft, yikao: { ...draft.yikao, exams: list } });
+                        }}
+                      />
+                      <Badge type={ex.enabled ? "success" : "error"}>{ex.enabled ? "启用" : "停用"}</Badge>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <ToggleSwitch checked={ex.enabled} size="sm" onChange={(v) => {
+                        const list = [...draft.yikao.exams];
+                        list[idx] = { ...ex, enabled: v };
+                        setDraft({ ...draft, yikao: { ...draft.yikao, exams: list } });
+                      }} />
+                      <button style={styles.btnDanger} onClick={() => setDraft({ ...draft, yikao: { ...draft.yikao, exams: draft.yikao.exams.filter((x) => x.id !== ex.id) } })}>
+                        <X size={13} /> 删除
+                      </button>
+                    </div>
+                  </div>
+                  <label style={styles.label}>考试科目勾选（顺序即章节树顺序，科目在下方「科目与章节」维护）</label>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {draft.yikao.subjects.map((s) => {
+                      const on = ex.subjectIds.includes(s.id);
+                      return (
+                        <button
+                          key={s.id}
+                          onClick={() => {
+                            const list = [...draft.yikao.exams];
+                            list[idx] = { ...ex, subjectIds: on ? ex.subjectIds.filter((x) => x !== s.id) : [...ex.subjectIds, s.id] };
+                            setDraft({ ...draft, yikao: { ...draft.yikao, exams: list } });
+                          }}
+                          style={{
+                            padding: "4px 10px", borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: "pointer",
+                            border: `1px solid ${on ? THEME.primary : THEME.border}`,
+                            backgroundColor: on ? THEME.primaryBg : "#fff",
+                            color: on ? THEME.primary : THEME.textSub,
+                          }}
+                        >{on ? "✓ " : ""}{s.name}</button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 16, padding: 14, borderRadius: 10, border: `2px dashed ${THEME.border}` }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: THEME.textMain, marginBottom: 10 }}>新增考试类别</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input style={styles.input} value={newExam.name} placeholder="考试名称，如：中医执业助理医师" onChange={(e) => setNewExam({ ...newExam, name: e.target.value })} />
+                <input style={{ ...styles.input, width: 120 }} value={newExam.id} placeholder="类别ID，如 zyzlz" onChange={(e) => setNewExam({ ...newExam, id: e.target.value })} />
+                <button
+                  style={{ ...styles.btnPrimary, display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}
+                  onClick={() => {
+                    const id = newExam.id.trim();
+                    const name = newExam.name.trim();
+                    if (!id || !name) { show("请填写类别ID与考试名称", "error"); return; }
+                    if (draft.yikao.exams.some((x) => x.id === id)) { show("类别ID已存在", "error"); return; }
+                    setDraft({ ...draft, yikao: { ...draft.yikao, exams: [...draft.yikao.exams, { id, name, subjectIds: draft.yikao.subjects.filter((s) => s.enabled).map((s) => s.id), enabled: true }] } });
+                    setNewExam({ name: "", id: "" });
+                    show("已加入列表，保存后生效", "success");
+                  }}
+                >
+                  <Plus size={14} /> 加入
+                </button>
+              </div>
+            </div>
+            <SaveBar module="yikao" summary="更新医考考试类别" />
+          </AdminCard>
+
+          <AdminCard title={`科目与章节（共享池共 ${draft.yikao.subjects.length} 科）`} style={{ marginTop: 16 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {draft.yikao.subjects.map((s, idx) => (
+                <div key={s.id} style={{ padding: 14, borderRadius: 10, border: `1px solid ${s.enabled ? THEME.border : THEME.errorBg}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <button style={{ ...styles.btnSecondary, padding: "4px 8px" }} disabled={idx === 0} onClick={() => {
+                        const list = [...draft.yikao.subjects];
+                        [list[idx - 1], list[idx]] = [list[idx], list[idx - 1]];
+                        setDraft({ ...draft, yikao: { ...draft.yikao, subjects: list } });
+                      }}><ArrowUp size={12} /></button>
+                      <button style={{ ...styles.btnSecondary, padding: "4px 8px" }} disabled={idx === draft.yikao.subjects.length - 1} onClick={() => {
+                        const list = [...draft.yikao.subjects];
+                        [list[idx + 1], list[idx]] = [list[idx], list[idx + 1]];
+                        setDraft({ ...draft, yikao: { ...draft.yikao, subjects: list } });
+                      }}><ArrowDown size={12} /></button>
+                      <input
+                        style={{ ...styles.input, fontWeight: 700, width: 160 }}
+                        value={s.name}
+                        onChange={(e) => {
+                          const list = [...draft.yikao.subjects];
+                          list[idx] = { ...s, name: e.target.value };
+                          setDraft({ ...draft, yikao: { ...draft.yikao, subjects: list } });
+                        }}
+                      />
+                      <Badge type={s.enabled ? "success" : "error"}>{s.enabled ? "启用" : "停用"}</Badge>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <ToggleSwitch checked={s.enabled} size="sm" onChange={(v) => {
+                        const list = [...draft.yikao.subjects];
+                        list[idx] = { ...s, enabled: v };
+                        setDraft({ ...draft, yikao: { ...draft.yikao, subjects: list } });
+                      }} />
+                      <button style={styles.btnDanger} onClick={() => setDraft({ ...draft, yikao: { ...draft.yikao, subjects: draft.yikao.subjects.filter((x) => x.id !== s.id), exams: draft.yikao.exams.map((ex) => ({ ...ex, subjectIds: ex.subjectIds.filter((sid) => sid !== s.id) })) } })}>
+                        <X size={13} /> 删除
+                      </button>
+                    </div>
+                  </div>
+                  <BoolField label="基础章节练习免费开放" desc="关闭后整科目为增值内容（带锁，走统一 Paywall）" value={s.freeTier} onChange={(v) => {
+                    const list = [...draft.yikao.subjects];
+                    list[idx] = { ...s, freeTier: v };
+                    setDraft({ ...draft, yikao: { ...draft.yikao, subjects: list } });
+                  }} />
+                  <div style={{ marginTop: 8 }}>
+                    <label style={styles.label}>二级章节（展开展示；留空则显示「全部章节」）</label>
+                    <TagEditor
+                      values={s.chapters}
+                      onChange={(v) => {
+                        const list = [...draft.yikao.subjects];
+                        list[idx] = { ...s, chapters: v };
+                        setDraft({ ...draft, yikao: { ...draft.yikao, subjects: list } });
+                      }}
+                      placeholder="输入章节名，如：阴阳五行"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 16, padding: 14, borderRadius: 10, border: `2px dashed ${THEME.border}` }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: THEME.textMain, marginBottom: 10 }}>新增科目</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input style={styles.input} value={newSubject.name} placeholder="科目名称，如：推拿学" onChange={(e) => setNewSubject({ ...newSubject, name: e.target.value })} />
+                <input style={{ ...styles.input, width: 120 }} value={newSubject.id} placeholder="科目ID，如 tuina" onChange={(e) => setNewSubject({ ...newSubject, id: e.target.value })} />
+                <button
+                  style={{ ...styles.btnPrimary, display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}
+                  onClick={() => {
+                    const id = newSubject.id.trim();
+                    const name = newSubject.name.trim();
+                    if (!id || !name) { show("请填写科目ID与名称", "error"); return; }
+                    if (draft.yikao.subjects.some((x) => x.id === id)) { show("科目ID已存在", "error"); return; }
+                    setDraft({ ...draft, yikao: { ...draft.yikao, subjects: [...draft.yikao.subjects, { id, name, chapters: [], freeTier: true, enabled: true }] } });
+                    setNewSubject({ name: "", id: "" });
+                    show("已加入共享池，保存后生效", "success");
+                  }}
+                >
+                  <Plus size={14} /> 加入
+                </button>
+              </div>
+            </div>
+            <SaveBar module="yikao" summary="更新医考科目与章节" />
+          </AdminCard>
+
+          <AdminCard title={`实践技能考核站（共 ${draft.yikao.stations.length} 项）`} style={{ marginTop: 16 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {draft.yikao.stations.map((st, idx) => (
+                <div key={st.id} style={{ padding: 14, borderRadius: 10, border: `1px solid ${st.enabled ? THEME.border : THEME.errorBg}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                      <button style={{ ...styles.btnSecondary, padding: "4px 8px" }} disabled={idx === 0} onClick={() => {
+                        const list = [...draft.yikao.stations];
+                        [list[idx - 1], list[idx]] = [list[idx], list[idx - 1]];
+                        setDraft({ ...draft, yikao: { ...draft.yikao, stations: list } });
+                      }}><ArrowUp size={12} /></button>
+                      <button style={{ ...styles.btnSecondary, padding: "4px 8px" }} disabled={idx === draft.yikao.stations.length - 1} onClick={() => {
+                        const list = [...draft.yikao.stations];
+                        [list[idx + 1], list[idx]] = [list[idx], list[idx + 1]];
+                        setDraft({ ...draft, yikao: { ...draft.yikao, stations: list } });
+                      }}><ArrowDown size={12} /></button>
+                      <input
+                        style={{ ...styles.input, fontWeight: 700, width: 200 }}
+                        value={st.name}
+                        onChange={(e) => {
+                          const list = [...draft.yikao.stations];
+                          list[idx] = { ...st, name: e.target.value };
+                          setDraft({ ...draft, yikao: { ...draft.yikao, stations: list } });
+                        }}
+                      />
+                      <input
+                        style={{ ...styles.input, width: 110 }}
+                        value={st.group}
+                        onChange={(e) => {
+                          const list = [...draft.yikao.stations];
+                          list[idx] = { ...st, group: e.target.value };
+                          setDraft({ ...draft, yikao: { ...draft.yikao, stations: list } });
+                        }}
+                      />
+                      <Badge type={st.paid ? "warning" : "success"}>{st.paid ? "增值" : "免费"}</Badge>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <ToggleSwitch checked={st.paid} size="sm" onChange={(v) => {
+                        const list = [...draft.yikao.stations];
+                        list[idx] = { ...st, paid: v };
+                        setDraft({ ...draft, yikao: { ...draft.yikao, stations: list } });
+                      }} />
+                      <ToggleSwitch checked={st.enabled} size="sm" onChange={(v) => {
+                        const list = [...draft.yikao.stations];
+                        list[idx] = { ...st, enabled: v };
+                        setDraft({ ...draft, yikao: { ...draft.yikao, stations: list } });
+                      }} />
+                      <button style={styles.btnDanger} onClick={() => setDraft({ ...draft, yikao: { ...draft.yikao, stations: draft.yikao.stations.filter((x) => x.id !== st.id) } })}>
+                        <X size={13} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 16, padding: 14, borderRadius: 10, border: `2px dashed ${THEME.border}` }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: THEME.textMain, marginBottom: 10 }}>新增考核站（分组名如：第一站）</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input style={styles.input} value={newStation.name} placeholder="站名，如：第一站病案分析" onChange={(e) => setNewStation({ ...newStation, name: e.target.value })} />
+                <input style={{ ...styles.input, width: 110 }} value={newStation.group} placeholder="分组" onChange={(e) => setNewStation({ ...newStation, group: e.target.value })} />
+                <button
+                  style={{ ...styles.btnPrimary, display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}
+                  onClick={() => {
+                    const name = newStation.name.trim();
+                    const group = newStation.group.trim() || "第一站";
+                    if (!name) { show("请填写站名", "error"); return; }
+                    setDraft({ ...draft, yikao: { ...draft.yikao, stations: [...draft.yikao.stations, { id: "st_" + Date.now().toString(36), name, group, paid: true, enabled: true }] } });
+                    setNewStation({ name: "", group: "" });
+                    show("已加入列表，保存后生效", "success");
+                  }}
+                >
+                  <Plus size={14} /> 加入
+                </button>
+              </div>
+            </div>
+            <SaveBar module="yikao" summary="更新实践技能考核站" />
+          </AdminCard>
+
+          <AdminCard title={`精选题库卡片（2×2，共 ${draft.yikao.cards.length} 张）`} style={{ marginTop: 16 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {draft.yikao.cards.map((c, idx) => (
+                <div key={c.id} style={{ padding: 14, borderRadius: 10, border: `1px solid ${c.enabled ? THEME.border : THEME.errorBg}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <button style={{ ...styles.btnSecondary, padding: "4px 8px" }} disabled={idx === 0} onClick={() => {
+                        const list = [...draft.yikao.cards];
+                        [list[idx - 1], list[idx]] = [list[idx], list[idx - 1]];
+                        setDraft({ ...draft, yikao: { ...draft.yikao, cards: list } });
+                      }}><ArrowUp size={12} /></button>
+                      <button style={{ ...styles.btnSecondary, padding: "4px 8px" }} disabled={idx === draft.yikao.cards.length - 1} onClick={() => {
+                        const list = [...draft.yikao.cards];
+                        [list[idx + 1], list[idx]] = [list[idx], list[idx + 1]];
+                        setDraft({ ...draft, yikao: { ...draft.yikao, cards: list } });
+                      }}><ArrowDown size={12} /></button>
+                      <input
+                        style={{ ...styles.input, fontWeight: 700, width: 64, textAlign: "center" }}
+                        maxLength={2}
+                        value={c.seal}
+                        onChange={(e) => {
+                          const list = [...draft.yikao.cards];
+                          list[idx] = { ...c, seal: e.target.value };
+                          setDraft({ ...draft, yikao: { ...draft.yikao, cards: list } });
+                        }}
+                      />
+                      <input
+                        style={{ ...styles.input, fontWeight: 700, width: 130 }}
+                        value={c.title}
+                        onChange={(e) => {
+                          const list = [...draft.yikao.cards];
+                          list[idx] = { ...c, title: e.target.value };
+                          setDraft({ ...draft, yikao: { ...draft.yikao, cards: list } });
+                        }}
+                      />
+                      <Badge type={c.enabled ? "success" : "error"}>{c.enabled ? "启用" : "停用"}</Badge>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <ToggleSwitch checked={c.enabled} size="sm" onChange={(v) => {
+                        const list = [...draft.yikao.cards];
+                        list[idx] = { ...c, enabled: v };
+                        setDraft({ ...draft, yikao: { ...draft.yikao, cards: list } });
+                      }} />
+                      <button style={styles.btnDanger} onClick={() => setDraft({ ...draft, yikao: { ...draft.yikao, cards: draft.yikao.cards.filter((x) => x.id !== c.id) } })}>
+                        <X size={13} /> 删除
+                      </button>
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 10 }}>
+                    <div>
+                      <label style={styles.label}>副标题文案</label>
+                      <input style={styles.input} value={c.subtitle} onChange={(e) => {
+                        const list = [...draft.yikao.cards];
+                        list[idx] = { ...c, subtitle: e.target.value };
+                        setDraft({ ...draft, yikao: { ...draft.yikao, cards: list } });
+                      }} />
+                    </div>
+                    <NumField label="单次购买价格" value={c.price} onChange={(v) => {
+                      const list = [...draft.yikao.cards];
+                      list[idx] = { ...c, price: v };
+                      setDraft({ ...draft, yikao: { ...draft.yikao, cards: list } });
+                    }} suffix="元（0=免费）" min={0} max={999} />
+                    <div>
+                      <label style={styles.label}>解锁目标键（Paywall 内容键）</label>
+                      <input style={styles.input} value={c.target} onChange={(e) => {
+                        const list = [...draft.yikao.cards];
+                        list[idx] = { ...c, target: e.target.value };
+                        setDraft({ ...draft, yikao: { ...draft.yikao, cards: list } });
+                      }} />
+                    </div>
+                  </div>
+                  <div style={{ marginTop: 4 }}>
+                    <BoolField label="会员权益抵扣" desc="开启后会员免费解锁该卡片" value={c.memberFree} onChange={(v) => {
+                      const list = [...draft.yikao.cards];
+                      list[idx] = { ...c, memberFree: v };
+                      setDraft({ ...draft, yikao: { ...draft.yikao, cards: list } });
+                    }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div style={{ marginTop: 16, padding: 14, borderRadius: 10, border: `2px dashed ${THEME.border}` }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: THEME.textMain, marginBottom: 10 }}>新增精选卡片</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <input style={{ ...styles.input, width: 60, textAlign: "center" }} maxLength={2} value={newCard.seal} placeholder="印章" onChange={(e) => setNewCard({ ...newCard, seal: e.target.value })} />
+                <input style={{ ...styles.input, width: 130 }} value={newCard.title} placeholder="卡片名称" onChange={(e) => setNewCard({ ...newCard, title: e.target.value })} />
+                <input style={{ ...styles.input, width: 140 }} value={newCard.subtitle} placeholder="副标题文案" onChange={(e) => setNewCard({ ...newCard, subtitle: e.target.value })} />
+                <input style={{ ...styles.input, width: 100 }} type="number" value={newCard.price} placeholder="价格" onChange={(e) => setNewCard({ ...newCard, price: Number(e.target.value) || 0 })} />
+                <button
+                  style={{ ...styles.btnPrimary, display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}
+                  onClick={() => {
+                    if (!newCard.seal.trim() || !newCard.title.trim()) { show("请填写印章字与卡片名称", "error"); return; }
+                    const id = "card_" + Date.now().toString(36);
+                    setDraft({ ...draft, yikao: { ...draft.yikao, cards: [...draft.yikao.cards, { id, seal: newCard.seal.trim(), title: newCard.title.trim(), subtitle: newCard.subtitle.trim() || "精选内容", price: newCard.price, memberFree: true, target: `yikao_${id}`, enabled: true }] } });
+                    setNewCard({ seal: "", title: "", subtitle: "", price: 19.9 });
+                    show("已加入，保存后生效", "success");
+                  }}
+                >
+                  <Plus size={14} /> 加入
+                </button>
+              </div>
+            </div>
+            <SaveBar module="yikao" summary="更新精选题库卡片" />
+          </AdminCard>
+
+          <AdminCard title="题目审核与数据看板（复用统一引擎）" style={{ marginTop: 16 }}>
+            <div style={{ fontSize: 12, color: THEME.textHint, lineHeight: 1.8 }}>
+              医考题目走唯一题库引擎标准流水线：知识点绑定 → 三级去重 → 11项质量闸门 → 人工审核 → 入库。<br />
+              题目审核 / 批量上下架 / 质量分：学堂 LOC「<b>题库治理</b>」模块（track=医考筛选）。<br />
+              覆盖度 / 正确率 / 错题分布看板：学堂 LOC「<b>健康度看板</b>」模块。<br />
+              考纲资料入库：学堂「知识工厂」上传 txt/md 考纲文本 → AI 解析知识点 → 生成题目。
+            </div>
+          </AdminCard>
         </>
       )}
 

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { BrandHeader } from "@/components/shared";
 import { fetchTracks, LEVEL_NAMES, type TrackOverview } from "@/lib/academyApi";
 import { PageLoginGuard } from "@/components/PageLoginGuard";
+import { getToolConfig } from "@/lib/toolConfigStore";
 
 const BRAND = "#7B2FBE";
 
@@ -26,6 +27,7 @@ export default function AcademyPage() {
   const router = useRouter();
   const [tracks, setTracks] = useState<TrackOverview[]>([]);
   const [loading, setLoading] = useState(true);
+  const yikaoEnabled = getToolConfig().yikao?.enabled === true;
 
   useEffect(() => {
     void fetchTracks().then((r) => {
@@ -79,6 +81,24 @@ export default function AcademyPage() {
             </button>
           ))}
         </div>
+
+        {/* 医考题库专区入口（LOC 配置开关控制显隐） */}
+        {yikaoEnabled && (
+          <button
+            onClick={() => router.push("/academy/yikao")}
+            className="mt-3 flex w-full items-center gap-3 rounded-2xl p-4 text-left shadow-sm active:scale-[0.98] transition-transform"
+            style={{ background: "linear-gradient(135deg,#2FAE9E 0%,#1F8A7D 100%)" }}
+          >
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[15px] font-bold text-white" style={{ backgroundColor: "#C05046", border: "2px solid rgba(255,227,179,.6)" }}>考</span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-white">医考题库专区</p>
+              <p className="mt-0.5 text-[11px]" style={{ color: "rgba(255,255,255,.85)" }}>中医执业医师 · 刷题 / 模考 / 文库一体化</p>
+            </div>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.8)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+        )}
 
         {/* 板块概览 */}
         <p className="mb-2 mt-4 px-1 text-xs font-semibold text-gray-500">板块概览</p>

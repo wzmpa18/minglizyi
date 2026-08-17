@@ -139,6 +139,70 @@ export interface RedeemConfig {
   maxFailAttempts: number;
 }
 
+// ==================== 医考题库专区（P6-补04） ====================
+// 架构红线：100% 复用唯一题库引擎（track='yikao' 标签区分），配置驱动全部文案/科目/权限/价格
+
+/** 医考理论科目定义（共享池，各考试类别引用） */
+export interface YikaoSubjectDef {
+  id: string; // 如 zhongji
+  name: string; // 中医基础理论
+  /** 二级章节名（章节树展开展示；后台可改） */
+  chapters: string[];
+  /** 基础章节练习免费开放（false=整科目增值） */
+  freeTier: boolean;
+  enabled: boolean;
+}
+
+/** 实践技能站定义 */
+export interface YikaoStationDef {
+  id: string;
+  name: string; // 第一站病案分析
+  group: string; // 第一站 / 第二站 / 第三站
+  /** 增值内容（带锁标识，走统一 Paywall） */
+  paid: boolean;
+  enabled: boolean;
+}
+
+/** 考试类别定义 */
+export interface YikaoExamDef {
+  id: string; // zyzy（category 前缀：zyzy:科目名）
+  name: string; // 中医执业医师
+  subjectIds: string[];
+  enabled: boolean;
+}
+
+/** 精选题库卡片（2×2） */
+export interface YikaoCardDef {
+  id: string;
+  seal: string; // 印章单字：密/刷/讲/真
+  title: string; // 冲刺密卷
+  subtitle: string; // 考前冲刺提分
+  /** 增值内容价格（元）；0=免费 */
+  price: number;
+  /** 会员权益抵扣（true=会员免费） */
+  memberFree: boolean;
+  /** 解锁目标键（统一 Paywall 内容键） */
+  target: string;
+  enabled: boolean;
+}
+
+export interface YikaoConfig {
+  enabled: boolean; // 专区总开关
+  version: string; // 考纲结构版本
+  exams: YikaoExamDef[];
+  subjects: YikaoSubjectDef[];
+  stations: YikaoStationDef[];
+  cards: YikaoCardDef[];
+  /** AI 错题深度解析定价（元/次） */
+  aiWrongAnalysisPrice: number;
+  aiWrongAnalysisEnabled: boolean;
+  /** 覆盖度达标阈值（%，达到才显示「覆盖全部核心考点」） */
+  coverageThreshold: number;
+  /** 文库学科横向切换标签 */
+  libTabs: string[];
+  disclaimer: string;
+}
+
 export interface ToolConfig {
   calendar: CalendarFieldConfig;
   zeri: ZeriRulesConfig;
@@ -149,6 +213,7 @@ export interface ToolConfig {
   reminder: ReminderConfig;
   account: AccountPrivilegeConfig;
   redeem: RedeemConfig;
+  yikao: YikaoConfig;
 }
 
 // ==================== 默认配置（内容类字段由项目方后台修改） ====================
@@ -252,6 +317,49 @@ export const DEFAULT_TOOL_CONFIG: ToolConfig = {
     maxRedeemPerUser: 0,
     maxFailAttempts: 5,
   },
+  yikao: {
+    enabled: true,
+    version: "yikao-syllabus-2026-v1",
+    exams: [
+      { id: "zyzy", name: "中医执业医师", enabled: true, subjectIds: ["zhongji", "zhongzhen", "zhongyao", "fangji", "zhongnei", "zhongwai", "zhongfu", "zhonger", "zhenjiu", "zhenduan", "neike", "chuanran", "lunli", "fagui"] },
+    ],
+    subjects: [
+      { id: "zhongji", name: "中医基础理论", chapters: [], freeTier: true, enabled: true },
+      { id: "zhongzhen", name: "中医诊断学", chapters: [], freeTier: true, enabled: true },
+      { id: "zhongyao", name: "中药学", chapters: [], freeTier: true, enabled: true },
+      { id: "fangji", name: "方剂学", chapters: [], freeTier: true, enabled: true },
+      { id: "zhongnei", name: "中医内科学", chapters: [], freeTier: true, enabled: true },
+      { id: "zhongwai", name: "中医外科学", chapters: [], freeTier: true, enabled: true },
+      { id: "zhongfu", name: "中医妇科学", chapters: [], freeTier: true, enabled: true },
+      { id: "zhonger", name: "中医儿科学", chapters: [], freeTier: true, enabled: true },
+      { id: "zhenjiu", name: "针灸学", chapters: [], freeTier: true, enabled: true },
+      { id: "zhenduan", name: "诊断学基础", chapters: [], freeTier: true, enabled: true },
+      { id: "neike", name: "内科学", chapters: [], freeTier: true, enabled: true },
+      { id: "chuanran", name: "传染病学", chapters: [], freeTier: true, enabled: true },
+      { id: "lunli", name: "医学伦理学", chapters: [], freeTier: true, enabled: true },
+      { id: "fagui", name: "卫生法规", chapters: [], freeTier: true, enabled: true },
+    ],
+    stations: [
+      { id: "st1-bingan", name: "第一站病案分析", group: "第一站", paid: true, enabled: true },
+      { id: "st2-bingshi", name: "第二站病史采集", group: "第二站", paid: true, enabled: true },
+      { id: "st2-zhongyi", name: "第二站中医操作", group: "第二站", paid: true, enabled: true },
+      { id: "st2-dabian", name: "第二站中医临床答辩", group: "第二站", paid: true, enabled: true },
+      { id: "st3-tige", name: "第三站体格检查", group: "第三站", paid: true, enabled: true },
+      { id: "st3-xiyi", name: "第三站西医操作", group: "第三站", paid: true, enabled: true },
+      { id: "st3-dabian", name: "第三站西医临床答辩", group: "第三站", paid: true, enabled: true },
+    ],
+    cards: [
+      { id: "mijuan", seal: "密", title: "冲刺密卷", subtitle: "考前冲刺提分", price: 29.9, memberFree: true, target: "yikao_mijuan", enabled: true },
+      { id: "bishua", seal: "刷", title: "必刷题集", subtitle: "掌握核心考点", price: 19.9, memberFree: true, target: "yikao_bishua", enabled: true },
+      { id: "zhenti-jiang", seal: "讲", title: "真题精讲", subtitle: "精选名师讲解", price: 39.9, memberFree: true, target: "yikao_zhenti_jiang", enabled: true },
+      { id: "zhenti", seal: "真", title: "历年真题", subtitle: "高命中率原题", price: 29.9, memberFree: true, target: "yikao_zhenti", enabled: true },
+    ],
+    aiWrongAnalysisPrice: 9.9,
+    aiWrongAnalysisEnabled: true,
+    coverageThreshold: 100,
+    libTabs: ["中药", "方剂", "中诊", "针灸", "妇科", "儿科"],
+    disclaimer: "内容仅供文化娱乐参考，不构成任何专业建议",
+  },
 };
 
 // ==================== 存储与版本管理 ====================
@@ -307,6 +415,7 @@ export function getToolConfig(): ToolConfig {
     reminder: { ...DEFAULT_TOOL_CONFIG.reminder, ...(stored.reminder || {}) },
     account: { ...DEFAULT_TOOL_CONFIG.account, ...(stored.account || {}) },
     redeem: { ...DEFAULT_TOOL_CONFIG.redeem, ...(stored.redeem || {}) },
+    yikao: { ...DEFAULT_TOOL_CONFIG.yikao, ...(stored.yikao || {}) },
   };
 }
 
@@ -433,6 +542,7 @@ function getVersionOf(module: string, obj: unknown): string {
     consult: "consult-v1",
     growth: "growth-v1",
     reminder: "rem-v1",
+    yikao: DEFAULT_TOOL_CONFIG.yikao.version,
   };
   return defaults[module] || "v1";
 }

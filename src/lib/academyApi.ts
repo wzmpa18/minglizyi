@@ -44,10 +44,12 @@ async function adminApi<T = any>(path: string, init?: RequestInit): Promise<T> {
 }
 
 // v25.0.20：三大板块（中医/易学/国学），板块下类目由 categories 接口管理
+// v25.0.28（P6-补04）：追加医考 track（唯一题库引擎分类标签，不进 /tracks 三大板块概览）
 export const TRACK_LIST = [
   { key: "zhongyi", name: "中医" },
   { key: "yixue", name: "易学" },
   { key: "guoxue", name: "国学" },
+  { key: "yikao", name: "医考" },
 ] as const;
 
 export const LEVEL_NAMES: Record<number, string> = { 1: "初级", 2: "中级", 3: "高级" };

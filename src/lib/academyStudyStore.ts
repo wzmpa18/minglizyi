@@ -22,8 +22,20 @@ export interface FavoriteQuestion {
   createdAt: number;
 }
 
+// P6-补04：题目评论（我的评论快捷入口；与笔记/收藏同级的个人学习数据）
+export interface StudyComment {
+  id: string;
+  questionId: string;
+  stem: string;
+  track: string;
+  category: string;
+  content: string;
+  createdAt: number;
+}
+
 const NOTES_KEY = "yd_academy_notes";
 const FAV_KEY = "yd_academy_favorites";
+const COMMENT_KEY = "yd_academy_comments";
 
 function read<T>(key: string): T[] {
   if (typeof window === "undefined") return [];
@@ -84,4 +96,24 @@ export function toggleFavorite(q: Omit<FavoriteQuestion, "id" | "createdAt">): b
 
 export function removeFavorite(questionId: string): void {
   write(FAV_KEY, read<FavoriteQuestion>(FAV_KEY).filter((f) => f.questionId !== questionId));
+}
+
+// ---------------- 题目评论 ----------------
+
+export function listComments(): StudyComment[] {
+  return read<StudyComment>(COMMENT_KEY).sort((a, b) => b.createdAt - a.createdAt);
+}
+
+export function addComment(c: Omit<StudyComment, "id" | "createdAt">): StudyComment {
+  const item: StudyComment = { ...c, id: `c_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, createdAt: Date.now() };
+  write(COMMENT_KEY, [item, ...read<StudyComment>(COMMENT_KEY)]);
+  return item;
+}
+
+export function deleteComment(id: string): void {
+  write(COMMENT_KEY, read<StudyComment>(COMMENT_KEY).filter((c) => c.id !== id));
+}
+
+export function hasCommented(questionId: string): boolean {
+  return read<StudyComment>(COMMENT_KEY).some((c) => c.questionId === questionId);
 }
