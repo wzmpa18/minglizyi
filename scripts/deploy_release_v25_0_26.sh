@@ -17,6 +17,9 @@ echo "HEAD: $(git rev-parse --short HEAD)"
 echo "--- [1] 盖章 version.json ---"
 node -e "const fs=require('fs');const p='public/version.json';const v={version:'${VERSION}',buildId:'${BUILD_ID}',builtAt:new Date().toISOString()};fs.writeFileSync(p,JSON.stringify(v,null,2)+'\n');console.log(fs.readFileSync(p,'utf8'))"
 
+echo "--- [1.5] 安装依赖（astronomy-engine 为 v25.0.26 新增） ---"
+npm install --no-audit --no-fund 2>&1 | tail -5
+
 echo "--- [2] 构建 ---"
 npm run build 2>&1 | tail -30
 
