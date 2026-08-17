@@ -306,5 +306,11 @@ export {
   getZwDailyList,
   getZwHourlyList,
   getZwHoroscopeAt,
+  // ZW-OVERLAY 叠宫计算（v25.0.25）
+  zwOverlayNames,
+  zwOverlayAt,
+  ZW_PERIOD_PALACE_SEQ,
+  zwPalaceAbbr,
+  ZW_PERIOD_PALACE_ABBR,
 } from './zwtime';
 export type { ZwTimeNode, ZwTimeInput, ZwTimeLevel, ZwHoroscopeSnapshot } from './zwtime';

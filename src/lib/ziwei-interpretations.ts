@@ -2,7 +2,10 @@
  * 紫微斗数经典解读数据库
  * 引经据典，来源：《紫微斗数全书》《十八飞星策天紫微斗数》《紫微斗数骨髓赋》等
  * 用于宫位点击解读功能
+ * v25.0.25 ZW-KB：接入用户授权知识库增补（ziwei-kb-supplement.ts，仅补缺不覆盖）
  */
+
+import { KB_SUPPLEMENT_SOURCE, getKbStarNote, getKbStarPalaceSupplement } from "./ziwei-kb-supplement";
 
 export interface PalaceInterpretation {
   palace: string;
@@ -324,6 +327,21 @@ export function getPalaceAllStarInterpretations(
     const interp = getStarPalaceInterpretation(star, palaceName);
     if (interp) {
       results.push({ type: "star", title: `${star}在${palaceName}`, content: interp, source: "《紫微斗数全书》" });
+    } else {
+      // v25.0.25 ZW-KB 增补：现有库未覆盖的星×宫，回退到用户授权知识库赋性断语（查漏补缺，不改动既有条目）
+      const kb = getKbStarNote(star);
+      if (kb) {
+        const parts = [kb.nature, kb.traits];
+        if (kb.patterns.length) parts.push(`格局组合：${kb.patterns.join("；")}`);
+        if (kb.sihua.length) parts.push(`四化要点：${kb.sihua.join("；")}`);
+        if (kb.yearly) parts.push(`流年重点：${kb.yearly}`);
+        results.push({ type: "star", title: `${star}在${palaceName}（赋性）`, content: parts.filter(Boolean).join("\n"), source: KB_SUPPLEMENT_SOURCE });
+      }
+    }
+    // v25.0.25 ZW-KB 增补：辅星落宫专断（昌曲/左右/魁钺等明确落宫条目）
+    const supp = getKbStarPalaceSupplement(star, palaceName);
+    if (supp) {
+      results.push({ type: "star", title: `${star}·${palaceName}专断`, content: supp, source: KB_SUPPLEMENT_SOURCE });
     }
   }
 

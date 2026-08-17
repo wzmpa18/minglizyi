@@ -13,6 +13,13 @@
  *   getZwDailyList(input, year, lunarMonth)    流月内流日列表（真实历法日干支）
  *   getZwHourlyList(input, solarDate)          流日内 12 流时列表
  *   getZwHoroscopeAt(input, date)              任意时点全量运限快照
+ *   zwOverlayNames(anchor)                     叠宫名数组：本命第 i 宫在运限层中的宫名
+ *
+ * 叠宫规则（ZW-OVERLAY v25.0.25，净室推导自《紫微斗数全书》十二宫逆布通例）：
+ *   任一层运限盘（大限/流年/流月/流日/流时）十二宫与本体盘排布方向一致：
+ *   以运限命宫（anchor 宫序索引）为原点，命→兄弟→夫妻→子女→财帛→疾厄→迁移→
+ *   交友→官禄→田宅→福德→父母 沿宫序（寅→卯→…）递减方向依次叠落。
+ *   已对拍 iztro horoscope palaceNames 输出（12 案例全层一致）。
  */
 
 import { astro } from 'iztro';
@@ -176,7 +183,50 @@ function monthGanZhi(yearGan: string, m: number): { gan: string; zhi: string } {
 }
 
 // ============================================================================
-// 三、大限列表（命盘 12 宫各起一限，纯直算零运限调用）
+// 三、叠宫计算（ZW-OVERLAY v25.0.25：纯直算，零运限调用，任意层通用）
+// ============================================================================
+
+/** 运限十二宫序列（与本体盘一致，交友宫用平台口径） */
+export const ZW_PERIOD_PALACE_SEQ = [
+  '命宫', '兄弟', '夫妻', '子女', '财帛', '疾厄', '迁移', '交友', '官禄', '田宅', '福德', '父母',
+];
+
+/**
+ * 叠宫名数组（12 项）：overlay[i] = 本命第 i 宫（宫序 0=寅…11=丑）在该运限层中的宫名。
+ * anchor = 该运限命宫落在本命盘的宫序索引（即 ZwTimeNode.palaceIndex）。
+ * 例：anchor=1 时 overlay[1]='命宫'、overlay[0]='兄弟'、overlay[2]='父母'。
+ */
+export function zwOverlayNames(anchor: number): string[] {
+  const overlay: string[] = new Array(12).fill('');
+  if (!Number.isInteger(anchor) || anchor < 0 || anchor > 11) return overlay;
+  for (let k = 0; k < 12; k++) {
+    overlay[(anchor - k + 24) % 12] = ZW_PERIOD_PALACE_SEQ[k];
+  }
+  return overlay;
+}
+
+/**
+ * 跨层叠宫查询：level2Anchor 宫在 level1 运限盘中的宫名。
+ * 例：流年命宫（yearlyAnchor）叠大限盘何宫 → zwOverlayAt(decadalAnchor, yearlyAnchor)。
+ */
+export function zwOverlayAt(level1Anchor: number, level2Anchor: number): string {
+  if (level1Anchor < 0 || level1Anchor > 11 || level2Anchor < 0 || level2Anchor > 11) return '';
+  return ZW_PERIOD_PALACE_SEQ[(level1Anchor - level2Anchor + 24) % 12];
+}
+
+/** 运限十二宫简写（命宫空间有限，吉时雨口径：大限夫妻宫=大夫、流年财帛=年财 等） */
+export const ZW_PERIOD_PALACE_ABBR = [
+  '命', '兄', '夫', '子', '财', '疾', '迁', '交', '官', '田', '福', '父',
+];
+
+/** 宫名→单字简写：命宫→命、夫妻→夫；未命中返回原值 */
+export function zwPalaceAbbr(name: string): string {
+  const i = ZW_PERIOD_PALACE_SEQ.indexOf(name);
+  return i >= 0 ? ZW_PERIOD_PALACE_ABBR[i] : name;
+}
+
+// ============================================================================
+// 四、大限列表（命盘 12 宫各起一限，纯直算零运限调用）
 // ============================================================================
 
 export function getZwDecadalList(input: ZwTimeInput): ZwTimeNode[] {
