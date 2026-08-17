@@ -17,7 +17,7 @@ export type SourceLicense =
   | "MIT"
   | "CC0"
   | "CC-BY-4.0"
-  | "Authorized"; // 项目方书面授权素材（如依婷体系知识库）
+  | "Authorized"; // 项目方书面授权素材（编者整理知识库）
 
 export type SourceStatus = "active" | "suspended" | "disputed";
 
@@ -129,16 +129,16 @@ const SEED_SOURCES: SourceRecord[] = [
   },
   {
     sourceId: "SRC-ZW-KB-YITING",
-    name: "紫微斗数标准化知识库（依婷体系）",
+    name: "紫微斗数知识库（编者整理）",
     license: "Authorized",
-    version: "v2（用户授权素材）",
+    version: "v2（项目方授权素材）",
     commercialUse: true,
     url: "-",
     scope: "紫微断语/叠宫技法/十二宫格局释义",
     importedAt: "2026-08-17T00:00:00.000Z",
     importedBy: "platform",
     status: "active",
-    note: "项目方书面授权素材（用户上传），仅限本平台使用；陈红平/善天道等未授权付费素材严禁入库",
+    note: "项目方书面授权素材（用户上传），仅限本平台使用；未授权付费素材严禁入库",
   },
 ];
 

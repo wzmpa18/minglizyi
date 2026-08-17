@@ -70,6 +70,18 @@ export interface AstroConfig {
   disclaimer: string;
 }
 
+/** 塔罗工具配置（P6-补03 第四阶段） */
+export interface TarotConfig {
+  dataVersion: string; // 基础数据版本（公版韦特骨架 + 自研释义）
+  enabled: boolean;
+  aiDeepPrice: number; // AI 深度牌阵解读定价（元/次）
+  aiDeepEnabled: boolean;
+  defaultPrivate: boolean; // 隐私默认私有（运行时强制 true）
+  maxSavedReadings: number; // 最多保存占卜记录数
+  enabledSpreadIds: string[]; // 开放牌阵白名单
+  disclaimer: string;
+}
+
 /** 真人咨询服务配置（言道精选类目） */
 export interface ConsultServiceConfig {
   enabled: boolean;
@@ -131,6 +143,7 @@ export interface ToolConfig {
   calendar: CalendarFieldConfig;
   zeri: ZeriRulesConfig;
   astro: AstroConfig;
+  tarot: TarotConfig;
   consult: ConsultServiceConfig;
   growth: GrowthConfig;
   reminder: ReminderConfig;
@@ -187,6 +200,16 @@ export const DEFAULT_TOOL_CONFIG: ToolConfig = {
     defaultPrivate: true,
     maxSavedCharts: 20,
     disclaimer: "占星内容仅面向文化兴趣娱乐，行星位置为天文计算结果，解读为传统文化视角的描述，不构成任何专业建议，请理性看待。",
+  },
+  tarot: {
+    dataVersion: "waite-publicdomain-v1",
+    enabled: true,
+    aiDeepPrice: 9.9,
+    aiDeepEnabled: true,
+    defaultPrivate: true,
+    maxSavedReadings: 50,
+    enabledSpreadIds: ["one", "three-flow", "love-four", "career-four", "celtic"],
+    disclaimer: "塔罗内容仅面向文化兴趣娱乐，牌面释义为传统文化视角的描述，不构成任何专业建议，请理性看待。",
   },
   consult: {
     enabled: true,
@@ -278,6 +301,7 @@ export function getToolConfig(): ToolConfig {
     calendar: { ...DEFAULT_TOOL_CONFIG.calendar, ...(stored.calendar || {}) },
     zeri: { ...DEFAULT_TOOL_CONFIG.zeri, ...(stored.zeri || {}) },
     astro: { ...DEFAULT_TOOL_CONFIG.astro, ...(stored.astro || {}) },
+    tarot: { ...DEFAULT_TOOL_CONFIG.tarot, ...(stored.tarot || {}) },
     consult: { ...DEFAULT_TOOL_CONFIG.consult, ...(stored.consult || {}) },
     growth: { ...DEFAULT_TOOL_CONFIG.growth, ...(stored.growth || {}) },
     reminder: { ...DEFAULT_TOOL_CONFIG.reminder, ...(stored.reminder || {}) },
@@ -303,9 +327,12 @@ export function updateToolConfig<K extends keyof ToolConfig>(
   const before = current[module];
   const after = { ...before, ...patch } as ToolConfig[K];
 
-  // 安全校验：占星隐私默认私有不可关闭
+  // 安全校验：占星/塔罗隐私默认私有不可关闭
   if (module === "astro" && (patch as Partial<AstroConfig>).defaultPrivate === false) {
     (after as unknown as AstroConfig).defaultPrivate = true;
+  }
+  if (module === "tarot" && (patch as Partial<TarotConfig>).defaultPrivate === false) {
+    (after as unknown as TarotConfig).defaultPrivate = true;
   }
   // 归因优先级禁止 last（禁止后到覆盖已确认绑定）
   if (module === "growth" && (patch as Partial<GrowthConfig>).attributionPriority === "last") {
@@ -402,6 +429,7 @@ function getVersionOf(module: string, obj: unknown): string {
     calendar: "cal-v1",
     zeri: DEFAULT_TOOL_CONFIG.zeri.version,
     astro: "astro-v1",
+    tarot: "tarot-v1",
     consult: "consult-v1",
     growth: "growth-v1",
     reminder: "rem-v1",

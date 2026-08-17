@@ -141,6 +141,18 @@ function initTables(d) {
       created_at TEXT DEFAULT (datetime('now','localtime'))
     );
     CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id, read, id DESC);
+
+    CREATE TABLE IF NOT EXISTS reports (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      target_type TEXT NOT NULL,
+      target_id TEXT NOT NULL,
+      reporter_id TEXT NOT NULL,
+      reporter_name TEXT DEFAULT '',
+      reason TEXT DEFAULT '',
+      status TEXT DEFAULT 'pending',
+      created_at TEXT DEFAULT (datetime('now','localtime'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_reports_target ON reports(target_type, target_id);
   `);
   // P6-I-PLUS 规则5：社交圈层分类系统永久冻结 —— 8 个固定一级圈层，禁止随意新增
   try {
@@ -391,6 +403,46 @@ function createRouter() {
       }
       const updated = d.prepare('SELECT like_count FROM posts WHERE post_id = ?').get(postId);
       res.json({ success: true, liked: !existing, likeCount: updated.like_count });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // POST /api/social/posts/:postId/report { reason } 举报动态（幂等：同人同动态仅一次）
+  router.post('/posts/:postId/report', authRequired, (req, res) => {
+    try {
+      const d = getDb();
+      const postId = req.params.postId;
+      const me = String(req.user.userId);
+      const post = d.prepare('SELECT * FROM posts WHERE post_id = ?').get(postId);
+      if (!post) return res.status(404).json({ success: false, error: '动态不存在' });
+      const dup = d.prepare('SELECT 1 FROM reports WHERE target_type = ? AND target_id = ? AND reporter_id = ?')
+        .get('post', postId, me);
+      if (dup) return res.json({ success: true, duplicated: true, message: '已收到你的举报，请勿重复提交' });
+      const info = userPublicInfo(me) || { nickname: '' };
+      d.prepare('INSERT INTO reports (target_type, target_id, reporter_id, reporter_name, reason) VALUES (?,?,?,?,?)')
+        .run('post', postId, me, info.nickname || '', String(req.body.reason || '其他').trim().slice(0, 200));
+      res.json({ success: true, message: '举报已提交，平台将尽快核实处理' });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // POST /api/social/comments/:commentId/report { reason } 举报评论
+  router.post('/comments/:commentId/report', authRequired, (req, res) => {
+    try {
+      const d = getDb();
+      const commentId = req.params.commentId;
+      const me = String(req.user.userId);
+      const comment = d.prepare('SELECT * FROM comments WHERE id = ?').get(parseInt(commentId, 10));
+      if (!comment) return res.status(404).json({ success: false, error: '评论不存在' });
+      const dup = d.prepare('SELECT 1 FROM reports WHERE target_type = ? AND target_id = ? AND reporter_id = ?')
+        .get('comment', commentId, me);
+      if (dup) return res.json({ success: true, duplicated: true, message: '已收到你的举报，请勿重复提交' });
+      const info = userPublicInfo(me) || { nickname: '' };
+      d.prepare('INSERT INTO reports (target_type, target_id, reporter_id, reporter_name, reason) VALUES (?,?,?,?,?)')
+        .run('comment', commentId, me, info.nickname || '', String(req.body.reason || '其他').trim().slice(0, 200));
+      res.json({ success: true, message: '举报已提交，平台将尽快核实处理' });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
     }
@@ -655,6 +707,91 @@ function createRouter() {
         d.prepare('UPDATE groups SET member_ids = ? WHERE id = ?').run(JSON.stringify(members), row.id);
       }
       res.json({ success: true, group: groupToVo({ ...row, member_ids: JSON.stringify(members) }) });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // GET /api/social/groups/:id/detail 群详情（成员资料、仅成员可看）
+  router.get('/groups/:id/detail', authRequired, (req, res) => {
+    try {
+      const row = getDb().prepare('SELECT * FROM groups WHERE id = ?').get(parseInt(req.params.id, 10));
+      if (!row) return res.status(404).json({ success: false, error: '群不存在' });
+      const members = JSON.parse(row.member_ids || '[]');
+      if (!members.includes(String(req.user.userId))) return res.status(403).json({ success: false, error: '你不是群成员' });
+      const memberProfiles = members.map((id) => {
+        const info = userPublicInfo(id) || {};
+        return { userId: id, nickname: info.nickname || `用户${id.slice(-4)}`, avatar: info.avatar || '', memberLevel: info.memberLevel || 0 };
+      });
+      res.json({ success: true, group: groupToVo(row), members: memberProfiles });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // POST /api/social/groups/:id/leave 退群（群主退群自动转让给最早入群成员，无人则解散）
+  router.post('/groups/:id/leave', authRequired, (req, res) => {
+    try {
+      const d = getDb();
+      const row = d.prepare('SELECT * FROM groups WHERE id = ?').get(parseInt(req.params.id, 10));
+      if (!row) return res.status(404).json({ success: false, error: '群不存在' });
+      const me = String(req.user.userId);
+      const members = JSON.parse(row.member_ids || '[]');
+      if (!members.includes(me)) return res.status(400).json({ success: false, error: '你不在该群' });
+      const rest = members.filter((m) => m !== me);
+      if (rest.length === 0) {
+        d.prepare('DELETE FROM groups WHERE id = ?').run(row.id);
+        return res.json({ success: true, dissolved: true });
+      }
+      let ownerId = row.owner_id, ownerName = row.owner_name;
+      if (String(row.owner_id) === me) {
+        const nextOwner = rest[0];
+        const info = userPublicInfo(nextOwner) || { nickname: `用户${nextOwner.slice(-4)}` };
+        ownerId = nextOwner;
+        ownerName = info.nickname;
+        notify(nextOwner, 'group_transfer', { userId: me, nickname: ownerName }, `你已成为「${row.name}」的新群主`, `/groups/chat/${row.id}`);
+      }
+      d.prepare('UPDATE groups SET member_ids = ?, owner_id = ?, owner_name = ? WHERE id = ?')
+        .run(JSON.stringify(rest), String(ownerId), ownerName, row.id);
+      res.json({ success: true, dissolved: false });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // POST /api/social/groups/:id/kick { userId } 群主移除成员
+  router.post('/groups/:id/kick', authRequired, (req, res) => {
+    try {
+      const d = getDb();
+      const row = d.prepare('SELECT * FROM groups WHERE id = ?').get(parseInt(req.params.id, 10));
+      if (!row) return res.status(404).json({ success: false, error: '群不存在' });
+      const me = String(req.user.userId);
+      if (String(row.owner_id) !== me) return res.status(403).json({ success: false, error: '仅群主可移除成员' });
+      const target = String(req.body.userId || '');
+      const members = JSON.parse(row.member_ids || '[]');
+      if (!members.includes(target)) return res.status(400).json({ success: false, error: '该用户不在群内' });
+      if (target === me) return res.status(400).json({ success: false, error: '群主请使用退群' });
+      d.prepare('UPDATE groups SET member_ids = ? WHERE id = ?')
+        .run(JSON.stringify(members.filter((m) => m !== target)), row.id);
+      res.json({ success: true });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // POST /api/social/groups/:id/update { name?, announcement? } 群主改群名/公告
+  router.post('/groups/:id/update', authRequired, (req, res) => {
+    try {
+      const d = getDb();
+      const row = d.prepare('SELECT * FROM groups WHERE id = ?').get(parseInt(req.params.id, 10));
+      if (!row) return res.status(404).json({ success: false, error: '群不存在' });
+      if (String(row.owner_id) !== String(req.user.userId)) return res.status(403).json({ success: false, error: '仅群主可修改群资料' });
+      const name = req.body.name !== undefined ? String(req.body.name).trim().slice(0, 30) : row.name;
+      const announcement = req.body.announcement !== undefined ? String(req.body.announcement).trim().slice(0, 200) : row.announcement;
+      if (!name) return res.status(400).json({ success: false, error: '群名称不能为空' });
+      d.prepare('UPDATE groups SET name = ?, announcement = ? WHERE id = ?').run(name, announcement, row.id);
+      const updated = d.prepare('SELECT * FROM groups WHERE id = ?').get(row.id);
+      res.json({ success: true, group: groupToVo(updated) });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
     }

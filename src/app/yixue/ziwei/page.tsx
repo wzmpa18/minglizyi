@@ -476,8 +476,11 @@ export default function ZiweiPage() {
   // v19.2: 流日/流时选中状态
   const [selectedLiuri, setSelectedLiuri] = useState<number>(-1);
   const [selectedLiushi, setSelectedLiushi] = useState<number>(-1);
-  // v25.0.25: ZW-OVERLAY 叠宫显示开关（大限/流年/深层运限宫名叠于命盘宫格）
-  const [showOverlay, setShowOverlay] = useState(true);
+  // v25.0.27: ZW-OVERLAY 叠宫逐层开关（P6-补03 交互规则修正：默认仅展示本命盘，
+  // 大限/流年/流月/流日/流时必须用户主动点击对应单元格才逐层展开，禁止自动联动）
+  const [showOverlay, setShowOverlay] = useState(false);
+  const [dxLayer, setDxLayer] = useState(false);
+  const [lnLayer, setLnLayer] = useState(false);
   // v18.9: AI解读状态
   const [aiInterpreting, setAiInterpreting] = useState(false);
   const [aiContent, setAiContent] = useState("");
@@ -768,8 +771,9 @@ export default function ZiweiPage() {
   // 每层返回 {anchor=该运限命宫宫序索引, names[12]=本命第 i 宫在该层的宫名}
   const overlayInfo = useMemo(() => {
     if (!showOverlay) return null;
-    const dx = zwDecadalAligned[selectedDaxian];
-    const ln = liunianYears[selectedLiunian];
+    // v25.0.27: 层级尊重用户点击——仅 dxLayer/lnLayer 开启的层参与叠宫；深层(月/日/时)选中即视为手动展开
+    const dx = dxLayer ? zwDecadalAligned[selectedDaxian] : null;
+    const ln = lnLayer ? liunianYears[selectedLiunian] : null;
     const deep = selectedLiushi >= 0 ? { node: liushiHours[selectedLiushi], tag: "时" }
       : selectedLiuri >= 0 ? { node: liuriDays[selectedLiuri], tag: "日" }
       : selectedLiuyue >= 0 ? { node: liuyueMonths[selectedLiuyue], tag: "月" }
@@ -781,7 +785,7 @@ export default function ZiweiPage() {
         ? { tag: deep.tag, anchor: deep.node.palaceIndex, names: zwOverlayNames(deep.node.palaceIndex) }
         : null,
     };
-  }, [showOverlay, zwDecadalAligned, selectedDaxian, liunianYears, selectedLiunian, liuyueMonths, selectedLiuyue, liuriDays, selectedLiuri, liushiHours, selectedLiushi]);
+  }, [showOverlay, dxLayer, lnLayer, zwDecadalAligned, selectedDaxian, liunianYears, selectedLiunian, liuyueMonths, selectedLiuyue, liuriDays, selectedLiuri, liushiHours, selectedLiushi]);
 
   // 流月数据（正月~十二月）
   const months = useMemo(() => {
@@ -821,9 +825,13 @@ export default function ZiweiPage() {
     };
   }, [showForm, result]);
 
-  // 当大限变化时重置流年
+  // 当大限变化时重置流年（v25.0.27: 点击某大限仅展开对应大限层，不自动带出流年及以下层级）
   useEffect(() => {
     setSelectedLiunian(0);
+    setLnLayer(false);
+    setSelectedLiuyue(-1);
+    setSelectedLiuri(-1);
+    setSelectedLiushi(-1);
   }, [selectedDaxian]);
 
   // 默认无连线，点击宫位才显示三方四正
@@ -1005,12 +1013,12 @@ export default function ZiweiPage() {
               命盘 {chartMode === "fit" ? `${Math.round(chartScale * 100)}%` : `放大 ${Math.round(chartScale * 100)}%`}
             </span>
             <div className="flex items-center gap-1">
-              {/* v25.0.25: 叠宫显示开关（大限/流年/深层运限宫名叠于宫格） */}
+              {/* v25.0.27: 叠宫总开关（默认关=仅本命盘；点击下方大限/流年/流月/流日/流时格子逐层手动展开） */}
               <button
                 onClick={() => setShowOverlay(v => !v)}
                 className="rounded-full text-[10px]"
                 style={{ padding: "3px 9px", border: "1px solid #7B2FBE", cursor: "pointer", background: showOverlay ? "#7B2FBE" : "#fff", color: showOverlay ? "#fff" : "#7B2FBE", fontWeight: showOverlay ? 700 : 400 }}
-                title="叠宫：在命盘宫格上叠加显示大限宫名/流年宫名/深层运限宫名"
+                title="叠宫：默认仅本命盘，点击时间表格中的大限/流年/流月/流日/流时格子逐层展开对应叠宫"
               >叠宫</button>
               <div className="flex rounded-full overflow-hidden text-[10px]" style={{ border: "1px solid #7B2FBE" }}>
                 <button
@@ -1024,19 +1032,19 @@ export default function ZiweiPage() {
               </div>
             </div>
           </div>
-          {/* v25.0.25: 叠宫图例（开启时显示）+ 技法入口（KB 卷二2.6/卷五5.6 叠宫论） */}
+          {/* v25.0.27: 叠宫图例（仅显示已展开层）+ 技法入口（KB 卷二2.6/卷五5.6 叠宫论） */}
           {showOverlay && overlayInfo && (overlayInfo.dx || overlayInfo.ln || overlayInfo.deep) && (
             <div className="flex items-center gap-2 mb-1 text-[9px] text-gray-500 flex-wrap" style={{ lineHeight: 1.3 }}>
               <span>叠宫图例（X=命兄夫子财疾迁交官田福父）：</span>
-              <span style={{ color: "#d97706", fontWeight: 700 }}>大X=大限X宫</span>
-              <span style={{ color: "#2563eb", fontWeight: 700 }}>年X=流年X宫</span>
+              {overlayInfo.dx && <span style={{ color: "#d97706", fontWeight: 700 }}>大X=大限X宫</span>}
+              {overlayInfo.ln && <span style={{ color: "#2563eb", fontWeight: 700 }}>年X=流年X宫</span>}
               {overlayInfo.deep && <span style={{ color: "#0d9488", fontWeight: 700 }}>{overlayInfo.deep.tag}X=流{overlayInfo.deep.tag}X宫</span>}
-              <span>（粗体下划线=该层命宫叠落处；叠罗汉：自上而下 流{overlayInfo.deep ? overlayInfo.deep.tag : "月"}→流年→大限，压于本命宫名上方）</span>
+              <span>（粗体下划线=该层命宫叠落处；叠罗汉自下而上 大限→流年→流月/日/时）</span>
               <button
                 onClick={() => setInterpretPanel({
                   palaceName: "叠宫技法",
                   palaceGanZhi: "本命定格局·大限定方向·流年定事件",
-                  interpretations: KB_OVERLAY_GUIDE.map(g => ({ type: g.type as any, title: g.title, content: g.content, source: "《紫微斗数标准化知识库·依婷体系》（用户授权素材）" })),
+                  interpretations: KB_OVERLAY_GUIDE.map(g => ({ type: g.type as any, title: g.title, content: g.content, source: "《紫微斗数知识库·编者整理》" })),
                 })}
                 className="rounded-full"
                 style={{ padding: "1px 8px", border: "1px solid #7B2FBE", cursor: "pointer", background: "#fff", color: "#7B2FBE", fontWeight: 700, fontSize: "9px" }}
@@ -1337,8 +1345,8 @@ export default function ZiweiPage() {
                           <span style={{ position: "absolute", right: "1px", top: "50%", transform: "translateY(-50%)", fontSize: "7px", color: "#ff6600", fontWeight: "bold", background: "#fff0e0", padding: "1px 2px", borderRadius: "2px", lineHeight: "1", zIndex: 4, writingMode: "vertical-rl", textOrientation: "upright" }}>来因</span>
                         )}
 
-                        {/* v19.2: 星曜区域 - 主星+辅星+煞星+杂曜全部在上半区排布，左下角仅放神煞(博士/将前/岁前)；动态字号自适应 */}
-                        <div style={{ flex: 1, display: "flex", flexDirection: "row", flexWrap: "wrap", alignContent: "flex-start", gap: "0px 0px", overflow: "hidden", padding: "0px", position: "relative", zIndex: 1 }}>
+                        {/* v25.0.27: 星曜区域优先保底（minHeight 防止被叠宫/神煞/宫名挤压致星曜不可见）；主星字号放大确保清晰 */}
+                        <div style={{ flex: "1 1 auto", minHeight: "50px", display: "flex", flexDirection: "row", flexWrap: "wrap", alignContent: "flex-start", gap: "0px 0px", overflow: "hidden", padding: "0px", position: "relative", zIndex: 1 }}>
                           {(() => {
                             // v19.2: 星曜全部在上半区——主星→六吉→六煞→杂曜→禄存天马
                             const mainAndAuxStars: Array<{name: string; isMajor: boolean; color: string; weight: string; category: "major" | "aux" | "minor"}> = [
@@ -1349,13 +1357,13 @@ export default function ZiweiPage() {
                               ...otherMinorStars.map(s => ({ name: s, isMajor: false, color: MINOR_STAR_COLOR, weight: "normal", category: "minor" as const })),
                             ];
                             const totalCount = mainAndAuxStars.length;
-                            // v19.3: 放大字号 - 主星：11-14px，辅星：9-11px，杂曜：7-8px
-                            const majorFs = totalCount > 12 ? "11px" : totalCount > 8 ? "12px" : totalCount > 5 ? "13px" : "14px";
-                            const auxFs = totalCount > 12 ? "9px" : totalCount > 8 ? "10px" : "11px";
-                            const minorFs = totalCount > 12 ? "7px" : "8px";
-                            const majorColW = totalCount > 12 ? "11px" : totalCount > 8 ? "12px" : totalCount > 5 ? "13px" : "14px";
-                            const auxColW = totalCount > 12 ? "9px" : totalCount > 8 ? "10px" : "11px";
-                            const minorColW = totalCount > 12 ? "7px" : "8px";
+                            // v25.0.27: 放大字号（P6-补03 宫位排版：主星清晰不重叠）- 主星：12-15px，辅星：10-12px，杂曜：8-9px
+                            const majorFs = totalCount > 12 ? "12px" : totalCount > 8 ? "13px" : totalCount > 5 ? "14px" : "15px";
+                            const auxFs = totalCount > 12 ? "10px" : totalCount > 8 ? "11px" : "12px";
+                            const minorFs = totalCount > 12 ? "8px" : "9px";
+                            const majorColW = totalCount > 12 ? "12px" : totalCount > 8 ? "13px" : totalCount > 5 ? "14px" : "15px";
+                            const auxColW = totalCount > 12 ? "10px" : totalCount > 8 ? "11px" : "12px";
+                            const minorColW = totalCount > 12 ? "8px" : "9px";
                             return mainAndAuxStars.map((star, j) => {
                               const brightness = getStarBrightness(result, star.name, palace.name);
                               const st = getSihuaType(result.sihua, star.name);
@@ -1403,27 +1411,18 @@ export default function ZiweiPage() {
                           )}
                         </div>
 
-                        {/* v19.3: 底部 - 神煞区(博士+将前+岁前)纵排左下角 | 长生+大限干支竖排右 | 宫名红色居中 */}
+                        {/* v25.0.27: 底部 - 神煞区统一靠左下角单行排布（博士/将前/岁前/长生合并一行释放纵向空间） | 大限干支竖排右 */}
                         <div style={{ flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: "1px", position: "relative", zIndex: 2, backgroundColor: isLaiyin ? "#fff8f0" : palaceBg }}>
-                          {/* 左下：神煞区（博士十二神+将前十二神+岁前十二神，纵向排列，无星曜混入） */}
-                          <div style={{ display: "flex", flexDirection: "column", gap: "0px", maxWidth: "60%", lineHeight: "1", alignContent: "flex-end" }}>
-                            {boshiStars.map((sn, j) => (
-                              <span key={`bs-${j}`} style={{ fontSize: "7px", color: "#666", lineHeight: "1.1", textAlign: "left" }}>{sn}</span>
-                            ))}
-                            {jiangqianStars.map((sn, j) => (
-                              <span key={`jq-${j}`} style={{ fontSize: "7px", color: "#8B4513", lineHeight: "1.1", textAlign: "left" }}>{sn}</span>
-                            ))}
-                            {suiqianStars.map((sn, j) => (
-                              <span key={`sq-${j}`} style={{ fontSize: "7px", color: "#556B2F", lineHeight: "1.1", textAlign: "left" }}>{sn}</span>
-                            ))}
-                          </div>
-                          {/* 右下：长生竖排 + 大限干支竖排 */}
-                          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", lineHeight: "1" }}>
-                            {changshengStars.length > 0 && (
-                              <span style={{ fontSize: "7px", color: "#2fae8e", lineHeight: "1.1", writingMode: "vertical-rl", textOrientation: "upright" }}>
-                                {changshengStars.join("")}
+                          {/* 左下：神煞单行（博士十二神+将前十二神+岁前十二神+长生十二神，靠左下角） */}
+                          <div style={{ display: "flex", flexDirection: "column", gap: "0px", maxWidth: "70%", lineHeight: "1", alignItems: "flex-start" }}>
+                            {[...boshiStars, ...jiangqianStars, ...suiqianStars, ...changshengStars].length > 0 && (
+                              <span style={{ fontSize: "6.5px", color: "#666", lineHeight: "1.15", textAlign: "left", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "clip", maxWidth: "100%" }}>
+                                {[...boshiStars, ...jiangqianStars, ...suiqianStars, ...changshengStars].filter(Boolean).join("·")}
                               </span>
                             )}
+                          </div>
+                          {/* 右下：大限干支竖排 */}
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", lineHeight: "1" }}>
                             {palace.decadal && (
                               <span style={{ fontSize: "7px", color: "#585858", lineHeight: "1.1", writingMode: "vertical-rl", textOrientation: "upright" }}>
                                 {palace.decadal}{isShen ? "身" : ""}
@@ -1637,6 +1636,9 @@ export default function ZiweiPage() {
                         key={`dy-${i}`}
                         onClick={() => {
                           setSelectedDaxian(i);
+                          // v25.0.27: 点击大限=用户主动展开大限叠宫层（不自动带出流年层级）
+                          setDxLayer(true);
+                          setShowOverlay(true);
                           // 虚线三角形移动到大限对应宫位
                           const palaceName = decadalData[i]?.name;
                           const palace = result?.palaces.find(p => p.name === palaceName);
@@ -1708,6 +1710,9 @@ export default function ZiweiPage() {
                         key={`ln-${i}`}
                         onClick={() => {
                           setSelectedLiunian(i);
+                          // v25.0.27: 点击流年=用户主动展开流年叠宫层
+                          setLnLayer(true);
+                          setShowOverlay(true);
                           // v25.0.24: ZW-TIME 引擎宫位高亮（流年流入宫），地支定位作兜底
                           const n = liunianYears[i];
                           const idx = n?.palaceIndex !== undefined && n.palaceIndex >= 0 ? n.palaceIndex : ZHI_NAMES.indexOf(n?.zhi || "");
@@ -1777,6 +1782,7 @@ export default function ZiweiPage() {
                         onClick={() => {
                           // v25.0.24: ZW-TIME 引擎宫位高亮（流月从流年宫起数，非月支宫）
                           setSelectedLiuyue(i);
+                          setShowOverlay(true);
                           const idx = m.palaceIndex !== undefined && m.palaceIndex >= 0 ? m.palaceIndex : ZHI_NAMES.indexOf(m.zhi);
                           if (idx >= 0) setFocusedPalace(idx);
                         }}
@@ -1825,6 +1831,7 @@ export default function ZiweiPage() {
                             onClick={() => {
                               setSelectedLiuri(actualIdx);
                               setSelectedLiushi(-1);
+                              setShowOverlay(true);
                               // v25.0.24: ZW-TIME 引擎宫位高亮（流日从流月宫起数）
                               const idx = d.palaceIndex !== undefined && d.palaceIndex >= 0 ? d.palaceIndex : ZHI_NAMES.indexOf(d.zhi);
                               if (idx >= 0) setFocusedPalace(idx);
@@ -1864,6 +1871,7 @@ export default function ZiweiPage() {
                             onClick={() => {
                               setSelectedLiuri(actualIdx);
                               setSelectedLiushi(-1);
+                              setShowOverlay(true);
                               // v25.0.24: ZW-TIME 引擎宫位高亮（流日从流月宫起数）
                               const idx = d.palaceIndex !== undefined && d.palaceIndex >= 0 ? d.palaceIndex : ZHI_NAMES.indexOf(d.zhi);
                               if (idx >= 0) setFocusedPalace(idx);
@@ -1905,6 +1913,7 @@ export default function ZiweiPage() {
                           key={`ls-${i}`}
                           onClick={() => {
                             setSelectedLiushi(i);
+                            setShowOverlay(true);
                             // v25.0.24: ZW-TIME 引擎宫位高亮（流时从流日宫起数）
                             const idx = h.palaceIndex !== undefined && h.palaceIndex >= 0 ? h.palaceIndex : ZHI_NAMES.indexOf(h.zhi);
                             if (idx >= 0) setFocusedPalace(idx);

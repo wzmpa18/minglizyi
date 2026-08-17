@@ -47,6 +47,7 @@ const TOOLS = [
   { href: "/yixue/carplate", label: "车牌号吉凶", icon: "car" },
   { href: "/yixue/zeri", label: "择日", icon: "zeri" },
   { href: "/yixue/astro", label: "占星术", icon: "astro" },
+  { href: "/yixue/tarot", label: "塔罗牌", icon: "tarot" },
   { href: "/yixue/jiemeng", label: "周公解梦", icon: "meng" },
   { href: "/yixue/jieqi", label: "二十四节气", icon: "jieqi" },
 ];
@@ -77,6 +78,7 @@ function ToolIcon({ icon }: { icon: string }) {
     car: "车",
     zeri: "日",
     astro: "星",
+    tarot: "塔",
     meng: "梦",
     jieqi: "节",
   };

@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { BrandHeader } from "@/components/shared";
 import { useToolBack } from "@/lib/useToolBack";
 import { addPost } from "@/lib/socialStore";
+import { createPost } from "@/lib/socialApi";
 import { getCurrentUser } from "@/lib/loginService";
 import { communityActivity } from "@/lib/pointsStore";
 import { callAI } from "@/lib/aiService";
@@ -12,12 +13,16 @@ import { LoginPromptModal } from "@/components/LoginPromptModal";
 
 const BRAND = "#7B2FBE";
 
+// P6-I-PLUS 规则5：话题对齐 8 个固定圈层（永久冻结，与社区圈层一一对应）
 const TOPICS = [
-  { key: "mingli", label: "命理讨论" },
-  { key: "zhongyi", label: "中医养生" },
-  { key: "jingdian", label: "经典研读" },
-  { key: "shenghuo", label: "生活感悟" },
-  { key: "guoxue", label: "国学入门" },
+  { key: "ZWDS", label: "紫微斗数" },
+  { key: "Bazi", label: "八字命理" },
+  { key: "QiMen", label: "奇门遁甲" },
+  { key: "LiuRen", label: "六壬梅花" },
+  { key: "FengShui", label: "风水堪舆" },
+  { key: "TCM", label: "中医养生" },
+  { key: "GuoXue", label: "国学经典" },
+  { key: "Life", label: "生活感悟" },
 ];
 
 const SENSITIVE_KEYWORDS = ["敏感词1", "敏感词2", "敏感词3"];

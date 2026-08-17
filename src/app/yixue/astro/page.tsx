@@ -11,6 +11,7 @@ import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipan
 import AIInterpretButton from "@/components/AIInterpretButton";
 import { ShareButton } from "@/components/ShareButton";
 import { SourceAttribution } from "@/components/SourceAttribution";
+import { getDignity, DIGNITY_NOTES, CLASSICAL_ASTRO_VERSION as CLASSICAL_VERSION } from "@/lib/classicalAstroRules";
 
 // ============================================================================
 // 常量
@@ -46,6 +47,7 @@ export default function AstroPage() {
   const [shareConfirmed, setShareConfirmed] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [showMyCharts, setShowMyCharts] = useState(false);
+  const [showDignity, setShowDignity] = useState(false);
 
   useEffect(() => {
     setSaved(listCharts());
@@ -245,18 +247,55 @@ export default function AstroPage() {
 
           {/* 行星表 */}
           <div className="mb-3 overflow-hidden rounded-lg border border-gray-100">
-            <div className="grid grid-cols-5 bg-gray-50 px-2 py-1.5 text-[10px] font-bold text-gray-500">
-              <span>行星</span><span>星座</span><span className="text-right">度数</span><span className="text-right">宫位</span><span className="text-right">状态</span>
+            <div className="grid grid-cols-6 bg-gray-50 px-2 py-1.5 text-[10px] font-bold text-gray-500">
+              <span>行星</span><span>星座</span><span className="text-right">度数</span><span className="text-right">宫位</span><span className="text-right">尊贵</span><span className="text-right">状态</span>
             </div>
-            {chart.planets.map((p) => (
-              <div key={p.body} className="grid grid-cols-5 items-center px-2 py-1.5 text-[11px] text-gray-700 odd:bg-white even:bg-gray-50/50">
-                <span className="font-semibold">{p.symbol} {p.name}</span>
-                <span>{p.signName}</span>
-                <span className="text-right">{Math.floor(p.signDegree)}°{String(Math.floor((p.signDegree % 1) * 60)).padStart(2, "0")}′</span>
-                <span className="text-right">{p.house}宫</span>
-                <span className={`text-right ${p.retrograde ? "font-bold text-red-500" : "text-gray-300"}`}>{p.retrograde ? "℞ 逆行" : "顺行"}</span>
+            {chart.planets.map((p) => {
+              const dig = getDignity(p.name, p.signIndex);
+              const digColor = dig.kind === "domicile" || dig.kind === "exaltation" ? "#1E8449" : dig.kind === "detriment" || dig.kind === "fall" ? "#b03a2e" : "#9aa0a6";
+              return (
+                <div key={p.body} className="grid grid-cols-6 items-center px-2 py-1.5 text-[11px] text-gray-700 odd:bg-white even:bg-gray-50/50">
+                  <span className="font-semibold">{p.symbol} {p.name}</span>
+                  <span>{p.signName}</span>
+                  <span className="text-right">{Math.floor(p.signDegree)}°{String(Math.floor((p.signDegree % 1) * 60)).padStart(2, "0")}′</span>
+                  <span className="text-right">{p.house}宫</span>
+                  <span className="text-right font-semibold" style={{ color: digColor }}>{dig.label}</span>
+                  <span className={`text-right ${p.retrograde ? "font-bold text-red-500" : "text-gray-300"}`}>{p.retrograde ? "℞ 逆行" : "顺行"}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* 古典尊贵说明（公版典籍框架） */}
+          <div className="mb-3 rounded-lg border border-purple-100 p-2.5">
+            <button onClick={() => setShowDignity(!showDignity)} className="flex w-full items-center justify-between">
+              <span className="text-xs font-bold text-gray-700">古典尊贵（庙旺陷弱）· {CLASSICAL_VERSION}</span>
+              <span className="text-[10px] text-gray-400">{showDignity ? "收起 ▲" : "展开 ▼"}</span>
+            </button>
+            {showDignity && (
+              <div className="mt-2 space-y-1.5">
+                {chart.planets.filter((p) => ["太阳", "月亮", "水星", "金星", "火星", "木星", "土星"].includes(p.name)).map((p) => {
+                  const dig = getDignity(p.name, p.signIndex);
+                  return (
+                    <div key={p.body} className="rounded bg-gray-50 px-2 py-1.5">
+                      <span className="text-[11px] font-bold text-gray-700">{p.name}·{p.signName}</span>
+                      <span className="ml-1.5 rounded-full bg-white px-1.5 py-0.5 text-[10px] font-bold" style={{ color: dig.kind === "domicile" || dig.kind === "exaltation" ? "#1E8449" : dig.kind ? "#b03a2e" : "#666" }}>
+                        {dig.label}
+                      </span>
+                      <p className="mt-0.5 text-[11px] leading-relaxed text-gray-500">{dig.note}</p>
+                    </div>
+                  );
+                })}
+                <div className="border-t border-gray-100 pt-1.5">
+                  {DIGNITY_NOTES.map((t) => (
+                    <div key={t.term} className="mt-1">
+                      <span className="text-[10px] font-bold text-gray-600">{t.term}</span>
+                      <span className="ml-1 text-[10px] text-gray-400">{t.note}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
+            )}
           </div>
 
           {/* 相位 */}
@@ -291,7 +330,7 @@ export default function AstroPage() {
                   scope="深度解读"
                   buttonText={`AI 深度解读 ¥${astroCfg.aiDeepPrice}/次`}
                   cacheKey={`astro_deep_${chart.input.year}${chart.input.month}${chart.input.day}${chart.input.hour}${chart.input.minute}_${chart.input.lat}_${chart.input.lon}_${astroCfg.dataVersion}`}
-                  contextData={`出生: ${chart.input.year}-${chart.input.month}-${chart.input.day} ${chart.input.hour}:${chart.input.minute} ${chart.input.placeName}\n上升: ${chart.ascSignName}\n天顶: ${chart.mcSignName}\n行星: ${chart.planets.map((p) => `${p.name}=${p.signName}${Math.floor(p.signDegree)}度${p.house}宫${p.retrograde ? "(逆行)" : ""}`).join("; ")}\n相位: ${chart.aspects.slice(0, 8).map((a) => `${a.planetA}${a.symbol}${a.planetB}(${a.type},${a.orb}度)`).join("; ")}`}
+                  contextData={`出生: ${chart.input.year}-${chart.input.month}-${chart.input.day} ${chart.input.hour}:${chart.input.minute} ${chart.input.placeName}\n上升: ${chart.ascSignName}\n天顶: ${chart.mcSignName}\n行星: ${chart.planets.map((p) => `${p.name}=${p.signName}${Math.floor(p.signDegree)}度${p.house}宫${p.retrograde ? "(逆行)" : ""}`).join("; ")}\n古典尊贵: ${chart.planets.map((p) => `${p.name}:${getDignity(p.name, p.signIndex).label}`).join("; ")}\n相位: ${chart.aspects.slice(0, 8).map((a) => `${a.planetA}${a.symbol}${a.planetB}(${a.type},${a.orb}度)`).join("; ")}`}
                   systemPrompt={`你是占星文化兴趣解读师。请基于星盘数据生成文化娱乐向解读。
 要求：
 1. 围绕性格倾向、关系沟通、成长建议三个方向展开，使用温和、鼓励的语言

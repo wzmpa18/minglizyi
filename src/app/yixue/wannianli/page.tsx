@@ -8,7 +8,7 @@ import { getCalendarGanzhiInterpretation, getCalendarJieqiInterpretation } from 
 import type { CalendarInterpretItem } from "@/lib/calendar-interpretations";
 import { savePaipanState, loadPaipanState } from "@/lib/paipanPersistence";
 import { getToolConfig, type CalendarFieldConfig } from "@/lib/toolConfigStore";
-import { getUpcomingEvents, getEventsOnDate, EVENT_TYPE_META } from "@/lib/calendarEventsStore";
+import { getUpcomingEvents, getEventsOnDate, createEvent, deleteEvent, EVENT_TYPE_META, type CalendarEventType, type ReminderOffset, REMINDER_OFFSET_OPTIONS } from "@/lib/calendarEventsStore";
 
 import { ShareButton } from "@/components/ShareButton";
 const BRAND = "#7B2FBE";
@@ -50,6 +50,12 @@ export default function WannianliPage() {
   const [interpretPanel, setInterpretPanel] = useState<{title: string; items: CalendarInterpretItem[]} | null>(null);
   const [fieldConfig, setFieldConfig] = useState<CalendarFieldConfig | null>(null);
   const [eventsVersion, setEventsVersion] = useState(0);
+  // v25.0.27: 点击日期快速登记事项（标题/类型/提醒时间档位，写 calendarEventsStore）
+  const [addPanelOpen, setAddPanelOpen] = useState(false);
+  const [addTitle, setAddTitle] = useState("");
+  const [addType, setAddType] = useState<CalendarEventType>("todo");
+  const [addReminders, setAddReminders] = useState<ReminderOffset[]>([{ offsetMinutes: 1440 }]);
+  const [addError, setAddError] = useState<string | null>(null);
   const today = useClientDate();
   useEffect(() => {
     const cfg = getToolConfig();
@@ -595,27 +601,116 @@ export default function WannianliPage() {
             </div>
           )}
 
-          {/* 当日事件摘要 */}
+          {/* 当日事项（v25.0.27: 点击日期登记 + 提醒时间 + 已登记信息展示/删除） */}
           {(!fieldConfig || fieldConfig.showDayEvents) && (
             <div className="mt-3 rounded-lg border p-2.5" style={{ borderColor: "#e9def5", backgroundColor: "#faf7fd" }}>
               <div className="mb-1.5 flex items-center justify-between">
-                <span className="text-xs font-semibold text-gray-600">当日事项</span>
-                <button onClick={() => router.push("/yixue/wannianli/events")} className="text-[11px] font-medium" style={{ color: BRAND }}>
-                  管理 ›
-                </button>
+                <span className="text-xs font-semibold text-gray-600">
+                  当日事项（{selectedYmd.m}月{selectedYmd.d}日）
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => { setAddPanelOpen(v => !v); setAddError(null); }}
+                    className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold text-white"
+                    style={{ backgroundColor: BRAND }}
+                  >＋ 登记提醒</button>
+                  <button onClick={() => router.push("/yixue/wannianli/events")} className="text-[11px] font-medium" style={{ color: BRAND }}>
+                    管理 ›
+                  </button>
+                </div>
               </div>
+
+              {/* 快速登记表单 */}
+              {addPanelOpen && (
+                <div className="mb-2 rounded-lg border border-purple-100 bg-white p-2.5">
+                  <input
+                    value={addTitle}
+                    onChange={(e) => { setAddTitle(e.target.value); setAddError(null); }}
+                    placeholder={`事项标题，如：交房租 / 妈妈生日（${selectedYmd.m}月${selectedYmd.d}日）`}
+                    maxLength={50}
+                    className="w-full rounded-lg border border-gray-300 px-2.5 py-2 text-sm outline-none focus:border-purple-400"
+                  />
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {(Object.keys(EVENT_TYPE_META) as CalendarEventType[]).map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => setAddType(t)}
+                        className="rounded-full px-2.5 py-1 text-[11px]"
+                        style={{
+                          border: `1px solid ${addType === t ? BRAND : "#d9d2e6"}`,
+                          backgroundColor: addType === t ? BRAND : "#fff",
+                          color: addType === t ? "#fff" : "#666",
+                          fontWeight: addType === t ? 700 : 400,
+                        }}
+                      >{EVENT_TYPE_META[t].icon} {EVENT_TYPE_META[t].label}</button>
+                    ))}
+                  </div>
+                  <div className="mt-2 text-[11px] text-gray-500">提醒时间（可多选）：</div>
+                  <div className="mt-1 flex flex-wrap gap-1.5">
+                    {REMINDER_OFFSET_OPTIONS.map((o) => {
+                      const on = addReminders.some(r => r.offsetMinutes === o.offsetMinutes);
+                      return (
+                        <button
+                          key={o.offsetMinutes}
+                          onClick={() => setAddReminders(prev => on ? prev.filter(r => r.offsetMinutes !== o.offsetMinutes) : [...prev, { offsetMinutes: o.offsetMinutes }])}
+                          className="rounded-full px-2.5 py-1 text-[11px]"
+                          style={{
+                            border: `1px solid ${on ? BRAND : "#d9d2e6"}`,
+                            backgroundColor: on ? "#F3EDF7" : "#fff",
+                            color: on ? BRAND : "#666",
+                            fontWeight: on ? 700 : 400,
+                          }}
+                        >{o.label}</button>
+                      );
+                    })}
+                  </div>
+                  {addError && <div className="mt-1.5 text-[11px] text-red-500">{addError}</div>}
+                  <button
+                    onClick={() => {
+                      const r = createEvent({
+                        type: addType,
+                        title: addTitle,
+                        dateMode: "solar",
+                        year: selectedYmd.y,
+                        month: selectedYmd.m,
+                        day: selectedYmd.d,
+                        repeat: "none",
+                        reminders: addReminders,
+                      });
+                      if (!r.success) { setAddError(r.error || "保存失败"); return; }
+                      setAddTitle("");
+                      setAddPanelOpen(false);
+                      setAddError(null);
+                      setEventsVersion(v => v + 1);
+                    }}
+                    className="mt-2.5 w-full rounded-lg py-2 text-sm font-bold text-white"
+                    style={{ backgroundColor: BRAND }}
+                  >保存并开启提醒</button>
+                </div>
+              )}
+
               {dayEvents.length > 0 ? (
                 <div className="flex flex-col gap-1">
-                  {dayEvents.slice(0, 4).map((o, i) => (
+                  {dayEvents.slice(0, 6).map((o, i) => (
                     <div key={i} className="flex items-center gap-1.5 text-xs">
                       <span>{EVENT_TYPE_META[o.event.type].icon}</span>
                       <span className="font-medium text-gray-700">{o.event.title}</span>
                       {o.event.relatedName && <span className="text-gray-400">· {o.event.relatedName}</span>}
+                      {o.event.reminders.length > 0 && (
+                        <span className="text-[10px] text-gray-400">
+                          · 提醒{o.event.reminders.map(r => REMINDER_OFFSET_OPTIONS.find(x => x.offsetMinutes === r.offsetMinutes)?.label || "").filter(Boolean).join("/")}
+                        </span>
+                      )}
+                      <button
+                        onClick={() => { deleteEvent(o.event.id); setEventsVersion(v => v + 1); }}
+                        className="ml-auto text-[10px] text-gray-400 active:text-red-500"
+                        title="删除此事项"
+                      >删除</button>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-[11px] text-gray-400">今日暂无记事，点击「管理」添加生日、纪念日或待办提醒</div>
+                <div className="text-[11px] text-gray-400">该日暂无登记事项，点击「＋ 登记提醒」写入安排与提醒时间</div>
               )}
               {upcomingEvents.length > 0 && (
                 <div className="mt-2 border-t pt-1.5" style={{ borderColor: "#efe8f7" }}>

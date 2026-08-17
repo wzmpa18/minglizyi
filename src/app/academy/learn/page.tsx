@@ -18,6 +18,8 @@ const BRAND = "#7B2FBE";
 export default function AcademyLearnPage() {
   const [track, setTrack] = useState<string>("");
   const [category, setCategory] = useState("");
+  // P6-补03 阶段3：二级类目手风琴抽屉开关
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [categories, setCategories] = useState<CategoryVo[]>([]);
   const [points, setPoints] = useState<KnowledgeVo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,12 +104,12 @@ export default function AcademyLearnPage() {
       <PageLoginGuard />
       <BrandHeader title="知识学习" showBack backUrl="/academy" />
 
-      {/* 板块筛选 */}
+      {/* P6-补03 阶段3：一级类目一屏可见（不再横向滚动），二级类目纵向折叠抽屉（手风琴） */}
       <div className="sticky top-0 z-10 border-b border-gray-200 bg-white">
-        <div className="flex gap-2 overflow-x-auto px-3 py-2.5">
+        <div className="grid grid-cols-4 gap-1.5 px-3 py-2.5">
           <button
             onClick={() => setTrack("")}
-            className="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors"
+            className="rounded-full px-1 py-1.5 text-xs font-semibold transition-colors"
             style={{ backgroundColor: track === "" ? BRAND : "#f0f0f0", color: track === "" ? "#fff" : "#666" }}
           >
             全部
@@ -115,8 +117,8 @@ export default function AcademyLearnPage() {
           {TRACK_LIST.map((t) => (
             <button
               key={t.key}
-              onClick={() => setTrack(t.key)}
-              className="shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors"
+              onClick={() => setTrack(track === t.key ? "" : t.key)}
+              className="rounded-full px-1 py-1.5 text-xs font-semibold transition-colors"
               style={{ backgroundColor: track === t.key ? BRAND : "#f0f0f0", color: track === t.key ? "#fff" : "#666" }}
             >
               {t.name}
@@ -124,24 +126,38 @@ export default function AcademyLearnPage() {
           ))}
         </div>
         {track && categories.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto border-t border-gray-100 px-3 py-2" style={{ backgroundColor: "#faf8fc" }}>
+          <div className="border-t border-gray-100 px-3 py-2" style={{ backgroundColor: "#faf8fc" }}>
             <button
-              onClick={() => setCategory("")}
-              className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors"
-              style={{ backgroundColor: category === "" ? BRAND + "22" : "#fff", color: category === "" ? BRAND : "#888", border: `1px solid ${category === "" ? BRAND + "44" : "#eee"}` }}
+              onClick={() => setDrawerOpen(v => !v)}
+              className="flex w-full items-center justify-between rounded-lg bg-white px-3 py-2 text-xs font-bold"
+              style={{ color: BRAND, border: "1px solid #e9def5" }}
             >
-              全部类目
+              <span>{category ? `类目：${category}` : "全部类目（点击展开章节）"}</span>
+              <span style={{ fontSize: "10px", color: "#999" }}>{drawerOpen ? "收起 ▲" : "展开 ▼"}</span>
             </button>
-            {categories.map((c) => (
-              <button
-                key={c.id}
-                onClick={() => setCategory(c.name)}
-                className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-colors"
-                style={{ backgroundColor: category === c.name ? BRAND + "22" : "#fff", color: category === c.name ? BRAND : "#888", border: `1px solid ${category === c.name ? BRAND + "44" : "#eee"}` }}
-              >
-                {c.name}
-              </button>
-            ))}
+            {drawerOpen && (
+              <div className="mt-1.5 flex flex-col gap-1">
+                <button
+                  onClick={() => setCategory("")}
+                  className="flex items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-semibold transition-colors"
+                  style={{ backgroundColor: category === "" ? BRAND + "18" : "#fff", color: category === "" ? BRAND : "#666", border: `1px solid ${category === "" ? BRAND + "44" : "#eee"}` }}
+                >
+                  <span>全部类目</span>
+                  {category === "" && <span style={{ color: BRAND }}>✓</span>}
+                </button>
+                {categories.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => { setCategory(c.name); setDrawerOpen(false); }}
+                    className="flex items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-semibold transition-colors"
+                    style={{ backgroundColor: category === c.name ? BRAND + "18" : "#fff", color: category === c.name ? BRAND : "#666", border: `1px solid ${category === c.name ? BRAND + "44" : "#eee"}` }}
+                  >
+                    <span>{c.name}</span>
+                    {category === c.name && <span style={{ color: BRAND }}>✓</span>}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

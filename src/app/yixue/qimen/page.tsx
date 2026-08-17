@@ -10,6 +10,7 @@ import { DatePicker } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 import { getQimenPalaceInterpretation } from "@/lib/qimen-interpretations";
+import { QM_KB_SOURCE, getQmGanNotes, getQmMenNotes, getQmShenNotes, getQmXingNotes, QM_GANZHI_JICHU } from "@/lib/qimen-kb-supplement";
 import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
 import type { QimenInterpretItem } from "@/lib/qimen-interpretations";
 import { useToolBack } from "@/lib/useToolBack";
@@ -178,6 +179,8 @@ export default function QimenPage() {
     palaceLabel: string;
     items: QimenInterpretItem[];
   } | null>(null);
+  // v25.0.27: 干支基础断法面板开关（QM-KB）
+  const [showGanzhiKb, setShowGanzhiKb] = useState(false);
 
   // 表单状态（固定默认值，避免 hydration mismatch；mounted 后更新为真实时间）
   const [formData, setFormData] = useState({
@@ -535,7 +538,20 @@ export default function QimenPage() {
       p.tianPanGan,
       p.diPanGan,
     );
-    setInterpretPanel(interp);
+    // v25.0.27: QM-KB 增补断语（P6-补03：知识库去名书面化注入——十干/八门/八神/九星象义）
+    const kbItems: QimenInterpretItem[] = [];
+    const pushKb = (title: string, notes: string[]) => {
+      for (const n of notes) kbItems.push({ type: "gong" as const, title, content: n, source: QM_KB_SOURCE });
+    };
+    if (p.tianPanGan) pushKb(`${p.tianPanGan}·十干象义`, getQmGanNotes(p.tianPanGan));
+    if (p.door) pushKb(`${p.door}·八门断语`, getQmMenNotes(p.door));
+    if (p.tianShen) pushKb(`${p.tianShen}·八神断语`, getQmShenNotes(p.tianShen));
+    if (p.star) pushKb(`${p.star}·九星断语`, getQmXingNotes(p.star));
+    if (kbItems.length > 0) {
+      setInterpretPanel({ ...interp, items: [...interp.items, ...kbItems] });
+    } else {
+      setInterpretPanel(interp);
+    }
   };
 
   // v18.9: AI解读局象整体上下文
@@ -849,6 +865,31 @@ export default function QimenPage() {
         <span>门迫:蓝底</span>
         <span>空:空亡</span>
         <span>马:驿马</span>
+      </div>
+
+      {/* v25.0.27: 干支基础断法（QM-KB，四柱干支关系判断） */}
+      <div style={{ padding: "2px 8px 6px" }}>
+        <button
+          onClick={() => setShowGanzhiKb(v => !v)}
+          style={{
+            width: "100%", padding: "7px", border: `1px solid ${BRAND_PURPLE}`, borderRadius: "8px",
+            backgroundColor: showGanzhiKb ? "#F3EDF7" : "#fff", color: BRAND_PURPLE,
+            fontSize: "12px", fontWeight: "bold", cursor: "pointer",
+          }}
+        >📖 干支基础断法（合化·相穿·六冲·暗合·三合·墓库）{showGanzhiKb ? " ▲" : " ▼"}</button>
+        {showGanzhiKb && (
+          <div style={{ marginTop: "6px", border: "1px solid #e9def5", borderRadius: "8px", padding: "10px 12px", backgroundColor: "#faf7fd", maxHeight: "340px", overflowY: "auto" }}>
+            {QM_GANZHI_JICHU.map((g, gi) => (
+              <div key={gi} style={{ marginBottom: "10px" }}>
+                <div style={{ fontSize: "12px", fontWeight: "bold", color: BRAND_PURPLE, marginBottom: "4px" }}>【{g.group}】</div>
+                {g.notes.map((n, ni) => (
+                  <div key={ni} style={{ fontSize: "11px", color: "#555", lineHeight: 1.7, marginBottom: "3px" }}>· {n}</div>
+                ))}
+              </div>
+            ))}
+            <div style={{ fontSize: "10px", color: "#999", fontStyle: "italic", textAlign: "right" }}>—— {QM_KB_SOURCE}</div>
+          </div>
+        )}
       </div>
 
       {/* v19.6: 事情断法 + AI深度解读 */}

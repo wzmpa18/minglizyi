@@ -61,6 +61,24 @@ export async function fetchMyPosts() {
   return api<{ success: boolean; posts?: SocialPost[] }>(`/api/social/posts/mine`, { method: "GET" });
 }
 
+export async function fetchPostDetail(postId: string) {
+  return api<{ success: boolean; post?: SocialPost; error?: string }>(`/api/social/posts/${postId}`, { method: "GET" });
+}
+
+export async function reportPost(postId: string, reason: string) {
+  return api<{ success: boolean; duplicated?: boolean; message?: string; error?: string }>(`/api/social/posts/${postId}/report`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export async function reportComment(commentId: string, reason: string) {
+  return api<{ success: boolean; duplicated?: boolean; message?: string; error?: string }>(`/api/social/comments/${commentId}/report`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+}
+
 export async function createPost(data: { content: string; images?: string[]; tags?: string[]; toolType?: string; circle?: string }) {
   return api<{ success: boolean; post?: SocialPost; error?: string }>(`/api/social/posts`, {
     method: "POST",
@@ -163,6 +181,37 @@ export async function createGroup(name: string) {
 
 export async function joinGroup(groupId: string) {
   return api<{ success: boolean; group?: GroupVo; error?: string }>(`/api/social/groups/${groupId}/join`, { method: "POST" });
+}
+
+// ==================== 群管理（P6-补03 第五阶段） ====================
+
+export interface GroupMemberVo {
+  userId: string; nickname: string; avatar: string; memberLevel: number;
+}
+
+export async function fetchGroupDetail(groupId: string) {
+  return api<{ success: boolean; group?: GroupVo; members?: GroupMemberVo[]; error?: string }>(`/api/social/groups/${groupId}/detail`);
+}
+
+/** 退群：群主退群自动转让，最后一人退群解散 */
+export async function leaveGroup(groupId: string) {
+  return api<{ success: boolean; dissolved?: boolean; error?: string }>(`/api/social/groups/${groupId}/leave`, { method: "POST" });
+}
+
+/** 群主移除成员 */
+export async function kickGroupMember(groupId: string, userId: string) {
+  return api<{ success: boolean; error?: string }>(`/api/social/groups/${groupId}/kick`, {
+    method: "POST",
+    body: JSON.stringify({ userId }),
+  });
+}
+
+/** 群主修改群名/公告（传哪个字段改哪个） */
+export async function updateGroup(groupId: string, data: { name?: string; announcement?: string }) {
+  return api<{ success: boolean; group?: GroupVo; error?: string }>(`/api/social/groups/${groupId}/update`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 }
 
 export async function fetchGroupMessages(groupId: string, afterId = 0) {
