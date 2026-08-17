@@ -371,3 +371,139 @@ export async function updateLocConfig(key: string, value: unknown) {
 export async function fetchLocOpLogs() {
   return adminApi<{ success: boolean; logs?: Array<{ id: string; adminId: string; action: string; target: string; detail: string; createdAt: string }>; error?: string }>(`/api/academy/loc/op-logs`);
 }
+
+// ==================== v25.0.25 P6-TCM-02 质量治理层 ====================
+
+/** 3.4 覆盖度引擎：真实计算动态展示（禁止写死文案） */
+export interface CoverageVo {
+  track: string; category: string;
+  kp_total: number; kp_covered: number; kp_uncovered: number;
+  coverage_rate: number; display_text: string;
+  exam_points_total: number; exam_points_covered: number;
+  uncovered_list: Array<{ id: number; title: string; chapter: string }>;
+}
+
+export async function fetchCoverage(track: string, category?: string) {
+  const q = `?track=${encodeURIComponent(track)}${category ? `&category=${encodeURIComponent(category)}` : ""}`;
+  return api<{ success: boolean; coverage?: CoverageVo; error?: string }>(`/api/academy/governance/coverage${q}`);
+}
+
+/** 7.1 题库健康度看板 */
+export interface LocHealth {
+  knowledge: { kp_total: number; kp_approved: number; kp_uncovered: number; kp_conflict: number; kp_no_source: number };
+  question: { q_total: number; q_pending: number; q_dup: number; q_high_quality: number; q_no_score_legacy: number; q_no_kp: number };
+  coverage: Array<{ category: string; kp_total: number; kp_covered: number; coverage_rate: number }>;
+  cost: { ai_calls: number; tokens_in: number; tokens_out: number; gen_done: number; gen_failed: number; dedup_saved_kp: number };
+}
+
+export async function fetchLocHealth() {
+  return adminApi<{ success: boolean; health?: LocHealth; error?: string }>(`/api/academy/loc/health`);
+}
+
+/** 7.2 异常报警 */
+export interface AlertVo { id: string; type: string; severity: string; detail: string; status: string; createdAt: string }
+
+export async function scanAlerts() {
+  return adminApi<{ success: boolean; new_alerts?: Array<{ alert_type: string; severity: string; detail: string }>; error?: string }>(`/api/academy/loc/alerts/scan`, { method: "POST" });
+}
+
+export async function fetchAlerts() {
+  return adminApi<{ success: boolean; alerts?: AlertVo[]; error?: string }>(`/api/academy/loc/alerts`);
+}
+
+export async function resolveAlert(id: string) {
+  return adminApi<{ success: boolean; error?: string }>(`/api/academy/loc/alerts/${id}/resolve`, { method: "POST" });
+}
+
+/** 2.1 来源证据链反查 */
+export interface KpTrace {
+  knowledge: { id: number; title: string; version: number; state: string; score: number; checks: Array<{ name: string; pass: boolean; weight: number; note: string }>; conflict_group: number; superseded_by: number };
+  source: { material_id: number; material_title: string; source_id: number; source_type: string; source_title: string; source_author: string; auth_level: number; source_location: string; source_text: string; track: string; category: string };
+  generation: { extraction_time: string; ai_model: string; prompt_version: string; confidence_score: number; ai_calls: Array<{ scene: string; tokens_in: number; tokens_out: number; created_at: string }> };
+  review: { status: string; state: string; reviewer: string; review_time: string; events: Array<{ id: number; kp_id: number; event: string; actor: string; detail: string; created_at: string }> };
+  versions: Array<{ id: number; version: number; govern_state: string; created_at: string }>;
+}
+
+export async function fetchKnowledgeTrace(id: string) {
+  return api<{ success: boolean; trace?: KpTrace; error?: string }>(`/api/academy/knowledge/${id}/trace`);
+}
+
+/** 2.2 状态机：废弃 / 新版本替代 */
+export async function deprecateKnowledge(id: string, reason?: string) {
+  return adminApi<{ success: boolean; message?: string; error?: string }>(`/api/academy/knowledge/${id}/deprecate`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export async function supersedeKnowledge(id: string, patch: { title?: string; content: string }) {
+  return adminApi<{ success: boolean; newId?: number; version?: number; message?: string; error?: string }>(`/api/academy/knowledge/${id}/supersede`, {
+    method: "POST",
+    body: JSON.stringify(patch),
+  });
+}
+
+/** 2.4 冲突队列与裁定 */
+export async function fetchKnowledgeConflicts() {
+  return adminApi<{ success: boolean; conflicts?: KnowledgeVo[]; error?: string }>(`/api/academy/knowledge/conflicts`);
+}
+
+export async function resolveKnowledgeConflict(groupId: string, keepKpId: string, note?: string) {
+  return adminApi<{ success: boolean; keep?: number; dismissed?: number[]; error?: string }>(`/api/academy/knowledge/conflicts/resolve`, {
+    method: "POST",
+    body: JSON.stringify({ groupId, keepKpId, note }),
+  });
+}
+
+/** 3.1 二级结构重复审核队列 */
+export async function fetchDupQueue() {
+  return adminApi<{ success: boolean; questions?: QuestionVo[]; error?: string }>(`/api/academy/questions/dup-queue`);
+}
+
+/** 4.1 来源注册库 */
+export interface SourceVo { id: string; name: string; sourceType: string; author: string; authLevel: number; usage: string; licenseNote: string; createdAt: string }
+
+export async function fetchSources() {
+  return api<{ success: boolean; levels?: Record<string, { name: string; usage: string }>; sources?: SourceVo[]; error?: string }>(`/api/academy/sources`);
+}
+
+export async function createSource(data: { name: string; sourceType?: string; author?: string; authLevel: number; licenseNote?: string }) {
+  return adminApi<{ success: boolean; sourceId?: string; error?: string }>(`/api/academy/sources`, {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export async function bindMaterialSource(materialId: string, sourceId: string) {
+  return adminApi<{ success: boolean; message?: string; error?: string }>(`/api/academy/materials/${materialId}/bind-source`, {
+    method: "POST",
+    body: JSON.stringify({ sourceId }),
+  });
+}
+
+/** 4.3 用户贡献版权声明（三项确认全勾选） */
+export async function declareMaterialCopyright(materialId: string, confirmed: [boolean, boolean, boolean]) {
+  return api<{ success: boolean; message?: string; error?: string }>(`/api/academy/materials/${materialId}/declare`, {
+    method: "POST",
+    body: JSON.stringify({ confirmed }),
+  });
+}
+
+/** 治理配置（冲突阈值等，后台可配） */
+export interface GovernanceCfg {
+  kp_pass_score: number; kp_priority_score: number;
+  q_pass_score: number; q_priority_score: number;
+  conflict_title_sim: number; conflict_content_sim: number;
+  kp_question_concentration: number;
+}
+
+export async function fetchGovernanceCfg() {
+  return adminApi<{ success: boolean; governance?: GovernanceCfg; error?: string }>(`/api/academy/loc/governance`);
+}
+
+export async function updateGovernanceCfg(patch: Partial<GovernanceCfg>) {
+  return adminApi<{ success: boolean; governance?: GovernanceCfg; message?: string; error?: string }>(`/api/academy/loc/governance`, {
+    method: "PUT",
+    body: JSON.stringify(patch),
+  });
+}

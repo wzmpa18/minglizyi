@@ -5,10 +5,12 @@ import { BrandHeader } from "@/components/shared";
 import {
   fetchQuestions,
   fetchCategories,
+  fetchCoverage,
   TRACK_LIST,
   TYPE_NAMES,
   type QuestionVo,
   type CategoryVo,
+  type CoverageVo,
 } from "@/lib/academyApi";
 import { PageLoginGuard } from "@/components/PageLoginGuard";
 
@@ -22,6 +24,7 @@ export default function QuestionBankPage() {
   const [categories, setCategories] = useState<CategoryVo[]>([]);
   const [type, setType] = useState<string>("");
   const [questions, setQuestions] = useState<QuestionVo[]>([]);
+  const [coverage, setCoverage] = useState<CoverageVo | null>(null);
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState<string | null>(null);
   const [picked, setPicked] = useState<Record<string, string>>({});
@@ -47,6 +50,14 @@ export default function QuestionBankPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // P6-TCM-02 3.4：覆盖度由后台真实计算动态展示（禁止写死文案）
+  useEffect(() => {
+    if (!track) { setCoverage(null); return; }
+    fetchCoverage(track, category || undefined)
+      .then((r) => setCoverage(r && r.success && r.coverage ? r.coverage : null))
+      .catch(() => setCoverage(null));
+  }, [track, category]);
 
   useEffect(() => {
     setCategory("");
@@ -140,6 +151,23 @@ export default function QuestionBankPage() {
           </button>
         ))}
       </div>
+
+      {/* 覆盖度真实计算动态展示（P6-TCM-02 3.4，禁止写死） */}
+      {coverage && (
+        <div className="border-b border-gray-100 bg-white px-3 py-2">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-medium" style={{ color: coverage.coverage_rate >= 100 ? "#15803d" : coverage.coverage_rate >= 70 ? "#a16207" : "#666" }}>
+              {coverage.display_text}
+            </p>
+            <p className="text-[10px] text-gray-400">
+              知识点覆盖 {coverage.kp_covered}/{coverage.kp_total}（{coverage.coverage_rate}%）
+            </p>
+          </div>
+          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-gray-100">
+            <div className="h-full rounded-full transition-all" style={{ width: `${coverage.coverage_rate}%`, backgroundColor: coverage.coverage_rate >= 100 ? "#10b981" : BRAND }} />
+          </div>
+        </div>
+      )}
 
       <div className="px-3 py-3 pb-24">
         {loading ? (

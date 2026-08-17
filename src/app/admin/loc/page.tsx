@@ -21,17 +21,24 @@ import {
   getAcademyAdminKey,
   TRACK_LIST,
   LEVEL_NAMES,
+  fetchLocHealth,
+  fetchAlerts,
+  scanAlerts,
+  resolveAlert,
   type LocDashboard,
+  type LocHealth,
+  type AlertVo,
   type OrgVo,
   type GenTaskVo,
 } from "@/lib/academyApi";
 
 const BRAND = "#7B2FBE";
 
-type TabKey = "dashboard" | "exam" | "rules" | "tiers" | "orgs" | "fullgen" | "logs";
+type TabKey = "dashboard" | "health" | "exam" | "rules" | "tiers" | "orgs" | "fullgen" | "logs";
 
 const TABS: Array<{ key: TabKey; name: string }> = [
   { key: "dashboard", name: "数据看板" },
+  { key: "health", name: "健康度" },
   { key: "exam", name: "考试配置" },
   { key: "rules", name: "积分与分佣" },
   { key: "tiers", name: "机构档位" },
@@ -77,6 +84,8 @@ export default function LocPage() {
   const [busy, setBusy] = useState(false);
 
   const [dash, setDash] = useState<LocDashboard | null>(null);
+  const [health, setHealth] = useState<LocHealth | null>(null);
+  const [alerts, setAlerts] = useState<AlertVo[]>([]);
   const [examCfg, setExamCfg] = useState<ExamCfg | null>(null);
   const [commission, setCommission] = useState<CommissionRules | null>(null);
   const [pointsRules, setPointsRules] = useState<PointsRules | null>(null);
@@ -129,6 +138,10 @@ export default function LocPage() {
       if (tab === "dashboard") {
         const r = await fetchLocDashboard();
         if (r && r.success && r.dashboard) setDash(r.dashboard);
+      } else if (tab === "health") {
+        const [h, a] = await Promise.all([fetchLocHealth(), fetchAlerts()]);
+        if (h && h.success && h.health) setHealth(h.health);
+        if (a && a.success && a.alerts) setAlerts(a.alerts);
       } else if (tab === "exam" || tab === "rules" || tab === "tiers") {
         await loadConfig();
       } else if (tab === "orgs") {
@@ -202,6 +215,30 @@ export default function LocPage() {
       } else {
         showToast((r && r.error) || "启动失败");
       }
+    } catch { showToast("网络异常"); } finally { setBusy(false); }
+  };
+
+  // P6-TCM-02 7.2：一键扫描异常（同知识点集中/重复率/无来源/冲突/无覆盖/AI 失败率）
+  const handleScanAlerts = async () => {
+    setBusy(true);
+    try {
+      const r = await scanAlerts();
+      if (r && r.success) {
+        const n = (r.new_alerts || []).length;
+        showToast(n > 0 ? `发现 ${n} 项新异常` : "扫描完成：无新增异常");
+        await loadTab();
+      } else {
+        showToast((r && r.error) || "扫描失败");
+      }
+    } catch { showToast("网络异常"); } finally { setBusy(false); }
+  };
+
+  const handleResolveAlert = async (id: string) => {
+    setBusy(true);
+    try {
+      const r = await resolveAlert(id);
+      showToast(r && r.success ? "已标记处理" : (r && r.error) || "操作失败");
+      setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, status: "resolved" } : a)));
     } catch { showToast("网络异常"); } finally { setBusy(false); }
   };
 
@@ -316,6 +353,95 @@ export default function LocPage() {
                   );
                 })}
                 {(dash?.aiByDay || []).length === 0 && <p className="py-3 text-center text-xs text-gray-300">暂无数据</p>}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ============ 健康度看板（P6-TCM-02 7.1/7.2） ============ */}
+        {tab === "health" && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] text-gray-500">题库健康度四维指标（知识/题目/覆盖/成本）+ 自动异常报警 · 禁止仅看题目总数</p>
+              <button onClick={handleScanAlerts} disabled={busy} className="rounded-full px-3 py-1.5 text-xs font-bold text-white disabled:opacity-50" style={{ backgroundColor: BRAND }}>
+                {busy ? "扫描中…" : "一键扫描异常"}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {[
+                ["知识点总数", health?.knowledge.kp_total],
+                ["已审核", health?.knowledge.kp_approved],
+                ["未覆盖", health?.knowledge.kp_uncovered],
+                ["冲突待裁定", health?.knowledge.kp_conflict],
+                ["题目总数", health?.question.q_total],
+                ["待审核", health?.question.q_pending],
+                ["结构重复待审", health?.question.q_dup],
+                ["高质量题(≥90)", health?.question.q_high_quality],
+              ].map(([label, v]) => (
+                <div key={String(label)} className="rounded-xl bg-white p-3 text-center shadow-sm">
+                  <p className="text-xl font-bold" style={{ color: BRAND }}>{v ?? "-"}</p>
+                  <p className="mt-0.5 text-[10px] text-gray-500">{label}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="rounded-2xl bg-white p-4 shadow-sm">
+              <p className="text-sm font-bold text-gray-700">各类目覆盖率（真实计算）</p>
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="text-gray-400">
+                    <tr><th className="py-1.5">类目</th><th>知识点</th><th>已覆盖</th><th>覆盖率</th></tr>
+                  </thead>
+                  <tbody>
+                    {(health?.coverage || []).map((c) => (
+                      <tr key={c.category} className="border-t border-gray-50">
+                        <td className="py-1.5 font-medium text-gray-700">{c.category}</td>
+                        <td>{c.kp_total}</td>
+                        <td>{c.kp_covered}</td>
+                        <td>
+                          <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold" style={{ backgroundColor: c.coverage_rate >= 100 ? "#dcfce7" : c.coverage_rate >= 70 ? "#fef9c3" : "#fee2e2", color: c.coverage_rate >= 100 ? "#15803d" : c.coverage_rate >= 70 ? "#a16207" : "#b91c1c" }}>
+                            {c.coverage_rate}%
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                    {(health?.coverage || []).length === 0 && (
+                      <tr><td colSpan={4} className="py-3 text-center text-gray-300">暂无数据</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="rounded-2xl bg-white p-4 shadow-sm">
+              <p className="text-sm font-bold text-gray-700">成本维度</p>
+              <p className="mt-1 text-[11px] text-gray-400">
+                AI 调用 {health?.cost.ai_calls ?? 0} 次 · tokens 入{health?.cost.tokens_in ?? 0}/出{health?.cost.tokens_out ?? 0} ·
+                出题任务 成功{health?.cost.gen_done ?? 0}/失败{health?.cost.gen_failed ?? 0} · 指纹去重节省 {health?.cost.dedup_saved_kp ?? 0} 个知识点
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-white p-4 shadow-sm">
+              <p className="text-sm font-bold text-gray-700">异常报警（自动扫描 · 高危推送）</p>
+              <div className="mt-3 space-y-2">
+                {alerts.map((a) => (
+                  <div key={a.id} className={`flex items-start justify-between gap-3 rounded-xl border p-3 ${a.status === "open" ? "border-red-100 bg-red-50" : "border-gray-100 bg-gray-50"}`}>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold" style={{ color: a.severity === "high" ? "#b91c1c" : "#a16207" }}>
+                        [{a.severity === "high" ? "高危" : "提示"}] {a.type}
+                      </p>
+                      <p className="mt-0.5 break-words text-[11px] text-gray-600">{a.detail}</p>
+                      <p className="mt-0.5 text-[10px] text-gray-400">{a.createdAt}</p>
+                    </div>
+                    {a.status === "open" && (
+                      <button onClick={() => handleResolveAlert(a.id)} disabled={busy} className="shrink-0 rounded-full border border-gray-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-gray-600">
+                        标记处理
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {alerts.length === 0 && <p className="py-3 text-center text-xs text-gray-300">暂无报警记录（可点击上方一键扫描）</p>}
               </div>
             </div>
           </div>

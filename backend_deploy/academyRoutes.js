@@ -21,6 +21,9 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
+// P6-TCM-02 质量治理层：嵌入流水线节点，不替换任何原有步骤
+const QG = require('./qualityGate');
+
 const ACADEMY_DB_PATH = path.join(__dirname, 'data', 'academy.db');
 const FILE_DIR = path.join(__dirname, 'data', 'academy_files');
 const JWT_SECRET = process.env.JWT_SECRET || 'yandao_default_jwt_secret_change_me';
@@ -407,6 +410,9 @@ function initTables(d) {
   for (const [track, name, sort] of PRESET_CATEGORIES) {
     if (!existCat.get(track, name)) ins.run(track, name, sort);
   }
+
+  // P6-TCM-02：质量治理层迁移（增量、幂等，位于流水线最后一步挂载，不改变既有表语义）
+  try { QG.applyQualityGate(d); } catch (e) { console.error('[Academy] 质量治理层迁移异常(不阻断启动):', e.message); }
 }
 
 // ==================== 认证与权限 ====================
@@ -516,6 +522,12 @@ function knowledgeVo(r) {
     title: r.title, content: r.content, tags: JSON.parse(r.tags || '[]'),
     track: r.track || '', category: r.category || '',
     difficulty: r.difficulty, status: r.status, sourceText: r.source_text, createdAt: r.created_at,
+    // P6-TCM-02：治理字段（状态机/质量分/来源证据链/版本/冲突）
+    governState: r.govern_state || '', version: r.version || 1, qScore: r.q_score || 0,
+    sourceLocation: r.source_location || '', extractionTime: r.extraction_time || '',
+    aiModel: r.ai_model || '', promptVersion: r.prompt_version || '',
+    confidenceScore: r.confidence_score || 0, conflictGroup: r.conflict_group || 0,
+    supersededBy: r.superseded_by || 0, reviewer: r.reviewer || '', reviewTime: r.review_time || '',
   };
 }
 
@@ -526,10 +538,18 @@ function questionVo(r, withAnswer) {
     type: r.type, stem: r.stem,
     options: JSON.parse(r.options || '[]'), difficulty: r.difficulty, status: r.status,
     analysis: r.analysis, createdAt: r.created_at,
+    // P6-TCM-02：治理字段（质量分/校验明细/重复标记/多维关联）
+    governState: r.govern_state || '', qScore: r.q_score || 0, qTier: r.q_tier || '',
+    dupTier: r.dup_tier || 0, sourceId: r.source_id || 0, chapter: r.chapter || '',
+    reviewer: r.reviewer || '', reviewTime: r.review_time || '',
   };
   if (withAnswer) {
     vo.answer = r.answer;
     vo.keywords = JSON.parse(r.keywords || '[]');
+    vo.qChecks = JSON.parse(r.q_checks || '[]');
+    vo.secondaryKnowledgeIds = JSON.parse(r.secondary_knowledge_ids || '[]');
+    vo.examPointIds = JSON.parse(r.exam_point_ids || '[]');
+    vo.dupOfStem = r.dup_of_stem || '';
   }
   return vo;
 }
@@ -555,8 +575,9 @@ function nextCertNo(track, year) {
 // ==================== AI 解析 / 出题（异步任务） ====================
 
 const PARSE_SYSTEM = `你是国学知识结构化引擎。将用户提供的资料拆分为知识点数组，严格输出 JSON：
-[{"chapter":"章节名","title":"知识点标题(20字内)","content":"知识点说明(150字内)","tags":["标签"],"difficulty":"easy|medium|hard"}]
+[{"chapter":"章节名","title":"知识点标题(20字内)","content":"知识点说明(150字内)","tags":["标签"],"difficulty":"easy|medium|hard","location":"原文位置(如 段落序号/小节名)","confidence":0.0到1.0的提取置信度小数}]
 只输出 JSON，不要解释。若资料无法解析输出 []。`;
+const PARSE_PROMPT_VERSION = 'v25.0.25_gate';
 
 const GENQ_SYSTEM = `你是国学考试出题引擎。基于给定知识点生成考试题目，严格输出 JSON 数组：
 [{"type":"single|multi|judge|fill|qa|case","stem":"题干","options":["A选项","B选项","C选项","D选项"],"answer":"答案(single填选项序号0-3;multi填序号数组字符串如\"0,2\";judge填对|错;fill填标准答案文本;qa/case填参考答案要点)","keywords":["评分关键词"],"analysis":"解析(100字内)","difficulty":"easy|medium|hard"}]
@@ -601,10 +622,15 @@ async function runParseTask(materialId, text) {
   const mat = d.prepare('SELECT track, category FROM materials WHERE id = ?').get(materialId) || {};
   d.prepare(`UPDATE materials SET status='parsing', updated_at=datetime('now','localtime') WHERE id=?`).run(materialId);
   const chunks = splitForParse(text);
-  const insert = d.prepare('INSERT INTO knowledge_points (material_id, chapter, title, content, tags, difficulty, status, source_text, track, category, content_hash) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
+  // P6-TCM-02 2.1：来源证据链字段 + 2.3 三级质量闸门字段一并写入
+  const insert = d.prepare(`INSERT INTO knowledge_points (material_id, chapter, title, content, tags, difficulty, status, source_text,
+    track, category, content_hash, govern_state, q_score, q_checks, source_location, extraction_time, ai_model, prompt_version, confidence_score, conflict_group)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
   const hashExists = d.prepare('SELECT id FROM knowledge_points WHERE content_hash=? LIMIT 1');
   let n = 0;
   let reused = 0; // P6-I-PLUS 规则4：知识点级指纹复用计数
+  let discarded = 0;   // 2.3 质量分 <70 自动淘汰
+  let conflicts = 0;   // 2.4 冲突标记待人工裁定
   try {
     for (let i = 0; i < chunks.length; i++) {
       const content = await callAI(PARSE_SYSTEM, `赛道资料内容（第${i + 1}/${chunks.length}段）：\n${chunks[i]}`, 'parse_material', { materialId });
@@ -617,21 +643,60 @@ async function runParseTask(materialId, text) {
         // 指纹比对：全局已存在则复用，不重复入库（跨资料/跨用户/跨机构）
         const h = kpHash(title, kcontent);
         if (hashExists.get(h)) { reused++; continue; }
+        // P6-TCM-02 2.3：知识点质量闸门（评分分级 + 冲突检测，禁止 AI 自动放行）
+        const gate = QG.gateKnowledgePoint(d, {
+          title, content: kcontent, source_text: String(kp.content || '').slice(0, 300),
+          material_id: materialId, chapter: kp.chapter || '未分章', confidence_score: kp.confidence ?? 0.85,
+          _hashDup: false,
+        });
+        if (gate.action === 'discard') { discarded++; continue; }
+        let conflictGroup = 0;
+        if (gate.state === 'CONFLICT') {
+          conflictGroup = gate.conflict.group || QG.nextConflictGroup(d);
+          conflicts++;
+        }
         insert.run(materialId, String(kp.chapter || '未分章').slice(0, 60), title, kcontent,
           JSON.stringify(Array.isArray(kp.tags) ? kp.tags.slice(0, 6) : []),
           ['easy', 'medium', 'hard'].includes(kp.difficulty) ? kp.difficulty : 'easy', 'pending',
-          String(kp.content || '').slice(0, 300), mat.track || '', mat.category || '', h);
+          String(kp.content || '').slice(0, 300), mat.track || '', mat.category || '', h,
+          gate.state, gate.score, JSON.stringify(gate.checks),
+          String(kp.location || `段${i + 1}`).slice(0, 60),
+          new Date().toISOString().slice(0, 19).replace('T', ' '), 'douban-pro-32k', PARSE_PROMPT_VERSION,
+          Number(kp.confidence ?? 0.85), conflictGroup);
         n++;
       }
     }
     d.prepare(`UPDATE materials SET status='parsed', parse_note=?, updated_at=datetime('now','localtime') WHERE id=?`)
-      .run(`AI 解析完成：全文 ${chunks.length} 段，提取 ${n} 个知识点，指纹复用已有 ${reused} 个，待人工审核`, materialId);
-    console.log(`[Academy] 资料#${materialId} 解析完成: ${chunks.length} 段 / 新增 ${n} / 指纹复用 ${reused}`);
+      .run(`AI 解析完成：全文 ${chunks.length} 段，提取 ${n} 个知识点，指纹复用已有 ${reused} 个，质量淘汰 ${discarded} 个，冲突待裁定 ${conflicts} 个，待人工审核`, materialId);
+    console.log(`[Academy] 资料#${materialId} 解析完成: ${chunks.length} 段 / 新增 ${n} / 指纹复用 ${reused} / 淘汰 ${discarded} / 冲突 ${conflicts}`);
   } catch (err) {
     d.prepare(`UPDATE materials SET status='parsed', parse_note=?, updated_at=datetime('now','localtime') WHERE id=?`)
-      .run(`AI 解析完成（部分）：新增 ${n} 个知识点，指纹复用 ${reused} 个，末段失败：${err.message}`, materialId);
+      .run(`AI 解析完成（部分）：新增 ${n} 个知识点，指纹复用 ${reused} 个，质量淘汰 ${discarded} 个，末段失败：${err.message}`, materialId);
     console.error(`[Academy] 资料#${materialId} 解析第段失败:`, err.message);
   }
+}
+
+// P6-TCM-02 3.1/3.2：出题插入统一走质量闸门（11 项校验 + 三级去重 + 评分分级）
+// 返回 { created, discarded, dupFlagged }
+function gatedQuestionInsert(d, q, kp, track, category) {
+  const gate = QG.gateQuestion(d, { ...q, knowledge_id: kp ? kp.id : null });
+  if (gate.action === 'discard') return { created: 0, discarded: 1, dupFlagged: 0 };
+  const insert = d.prepare(`INSERT INTO questions (knowledge_id, track, type, stem, options, answer, keywords, analysis, difficulty, status, category,
+    govern_state, q_score, q_checks, q_tier, dup_tier, q_hash1, q_hash2, source_id, chapter, exam_point_ids)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+  const examPoints = kp && kp.tags ? JSON.parse(kp.tags || '[]') : [];
+  insert.run(kp ? kp.id : null, track, q.type, String(q.stem).slice(0, 1000),
+    JSON.stringify(Array.isArray(q.options) ? q.options.slice(0, 6).map(o => String(o).slice(0, 200)) : []),
+    String(q.answer ?? '').slice(0, 2000),
+    JSON.stringify(Array.isArray(q.keywords) ? q.keywords.slice(0, 10).map(k => String(k).slice(0, 30)) : []),
+    String(q.analysis || '').slice(0, 600),
+    ['easy', 'medium', 'hard'].includes(q.difficulty) ? q.difficulty : 'easy', 'pending',
+    category || (kp ? (kp.category || '') : ''),
+    gate.state, gate.score, JSON.stringify(gate.checks), gate.tier, gate.dup.tier,
+    gate.dup.h1, gate.dup.h2,
+    kp ? kp.material_id || 0 : 0, kp ? (kp.chapter || '') : '',
+    JSON.stringify(examPoints.slice(0, 6)));
+  return { created: 1, discarded: 0, dupFlagged: gate.dup.tier === 2 ? 1 : 0 };
 }
 
 function runGenQuestionsTask(track, level, count, category = '') {
@@ -647,21 +712,13 @@ function runGenQuestionsTask(track, level, count, category = '') {
     .then(content => {
       const list = extractJson(content);
       const arr = Array.isArray(list) ? list : [];
-      const insert = d.prepare('INSERT INTO questions (knowledge_id, track, type, stem, options, answer, keywords, analysis, difficulty, status, category) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
       let n = 0;
       for (const q of arr.slice(0, 50)) {
         if (!q || !q.stem || !q.type) continue;
         if (!['single', 'multi', 'judge', 'fill', 'qa', 'case'].includes(q.type)) continue;
         const kp = kps[n % Math.max(kps.length, 1)];
-        insert.run(kp ? kp.id : null,
-          track, q.type, String(q.stem).slice(0, 1000),
-          JSON.stringify(Array.isArray(q.options) ? q.options.slice(0, 6).map(o => String(o).slice(0, 200)) : []),
-          String(q.answer ?? '').slice(0, 2000),
-          JSON.stringify(Array.isArray(q.keywords) ? q.keywords.slice(0, 10).map(k => String(k).slice(0, 30)) : []),
-          String(q.analysis || '').slice(0, 600),
-          ['easy', 'medium', 'hard'].includes(q.difficulty) ? q.difficulty : 'easy', 'pending',
-          category || (kp ? (kp.category || '') : ''));
-        n++;
+        const r = gatedQuestionInsert(d, q, kp, track, category);
+        n += r.created;
       }
       return n;
     });
@@ -694,7 +751,6 @@ async function runFullGenTask(taskId) {
       .run(groups.length, all.length, all.length - pending.length, taskId);
     if (groups.length === 0) { finish.run('done', '全部知识点已有题目（缓存命中，0 次 AI 调用）', taskId); return; }
 
-    const insert = d.prepare('INSERT INTO questions (knowledge_id, track, type, stem, options, answer, keywords, analysis, difficulty, status, category) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
     const diffMap = { 1: 'easy 为主', 2: 'easy/medium 均衡', 3: 'medium/hard 为主' };
     for (let gi = 0; gi < groups.length; gi++) {
       const group = groups[gi];
@@ -707,22 +763,24 @@ async function runFullGenTask(taskId) {
       const list = extractJson(content);
       const arr = Array.isArray(list) ? list : [];
       let created = 0;
+      let discardedG = 0;
+      let dupFlagged = 0;
       for (let qi = 0; qi < arr.length; qi++) {
         const q = arr[qi];
         if (!q || !q.stem || !q.type) continue;
         if (!['single', 'multi', 'judge', 'fill', 'qa', 'case'].includes(q.type)) continue;
         const kp = group[Math.min(qi, group.length - 1)];
-        insert.run(kp.id, task.track, q.type, String(q.stem).slice(0, 1000),
-          JSON.stringify(Array.isArray(q.options) ? q.options.slice(0, 6).map(o => String(o).slice(0, 200)) : []),
-          String(q.answer ?? '').slice(0, 2000),
-          JSON.stringify(Array.isArray(q.keywords) ? q.keywords.slice(0, 10).map(k => String(k).slice(0, 30)) : []),
-          String(q.analysis || '').slice(0, 600),
-          ['easy', 'medium', 'hard'].includes(q.difficulty) ? q.difficulty : 'easy', 'pending',
-          task.category || kp.category || '');
-        created++;
+        // P6-TCM-02：质量闸门插入（<70 淘汰 / L1 完全重复拒绝 / L2 结构重复标记待审）
+        const r = gatedQuestionInsert(d, q, kp, task.track, task.category || kp.category || '');
+        created += r.created;
+        discardedG += r.discarded;
+        dupFlagged += r.dupFlagged;
       }
       const covered = created > 0 ? group.length : 0;
       bump.run(covered, created, 0, taskId);
+      if (discardedG || dupFlagged) {
+        console.log(`[Academy] 任务#${taskId} 组${gi + 1}: 质量淘汰 ${discardedG} 道, 结构重复待审 ${dupFlagged} 道`);
+      }
     }
     finish.run('done', '', taskId);
     console.log(`[Academy] 全覆盖出题任务#${taskId} 完成`);
@@ -1021,6 +1079,16 @@ function createRouter() {
     }
   });
 
+  // 2.4 冲突清单（注意：必须定义在 /knowledge/:id 之前，避免被当作 id 吞掉）
+  router.get('/knowledge/conflicts', adminRequired, (req, res) => {
+    try {
+      const rows = getDb().prepare(`SELECT k.* FROM knowledge_points k WHERE k.govern_state='CONFLICT' ORDER BY k.conflict_group, k.id LIMIT 300`).all();
+      res.json({ success: true, conflicts: rows.map(knowledgeVo) });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
   router.get('/knowledge/:id', authRequired, (req, res) => {
     try {
       const row = getDb().prepare('SELECT * FROM knowledge_points WHERE id = ?').get(parseInt(req.params.id, 10));
@@ -1036,15 +1104,65 @@ function createRouter() {
     try {
       const { action, content, title } = req.body;
       if (!['approve', 'reject'].includes(action)) return res.status(400).json({ success: false, error: '未知操作' });
+      const d = getDb();
+      const id = parseInt(req.params.id, 10);
       if (content || title) {
-        getDb().prepare('UPDATE knowledge_points SET status=?, title=COALESCE(NULLIF(?,\'\'),title), content=COALESCE(NULLIF(?,\'\'),content) WHERE id=?')
-          .run(action === 'approve' ? 'approved' : 'rejected', title || '', content || '', parseInt(req.params.id, 10));
+        d.prepare('UPDATE knowledge_points SET status=?, title=COALESCE(NULLIF(?,\'\'),title), content=COALESCE(NULLIF(?,\'\'),content) WHERE id=?')
+          .run(action === 'approve' ? 'approved' : 'rejected', title || '', content || '', id);
       } else {
-        getDb().prepare('UPDATE knowledge_points SET status=? WHERE id=?').run(action === 'approve' ? 'approved' : 'rejected', parseInt(req.params.id, 10));
+        d.prepare('UPDATE knowledge_points SET status=? WHERE id=?').run(action === 'approve' ? 'approved' : 'rejected', id);
       }
+      // P6-TCM-02 2.2：审核动作同步治理状态机 + 审核人留痕
+      QG.applyReview(d, 'knowledge_points', id, action === 'approve', req.headers['x-admin-key'] ? 'admin_key' : String(req.user?.uid || 'admin'));
       res.json({ success: true });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // ---------- P6-TCM-02 质量治理层：状态机 / 证据链 / 冲突裁定 ----------
+  // 2.1 来源证据链反查：任意正式知识点可回溯「资料→原文位置→AI→审核→版本」
+  router.get('/knowledge/:id/trace', authRequired, (req, res) => {
+    try {
+      const trace = QG.traceKnowledge(getDb(), parseInt(req.params.id, 10));
+      if (!trace) return res.status(404).json({ success: false, error: '知识点不存在' });
+      res.json({ success: true, trace });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 2.2 废弃（保留历史版本，禁止物理删除）
+  router.post('/knowledge/:id/deprecate', adminRequired, (req, res) => {
+    try {
+      const kp = QG.deprecateKp(getDb(), parseInt(req.params.id, 10), 'admin', req.body?.reason || '');
+      res.json({ success: true, deprecated: kp.id, message: '已标记废弃（历史版本保留可追溯）' });
+    } catch (e) {
+      res.status(400).json({ success: false, error: e.message });
+    }
+  });
+
+  // 2.2 新版本替代（原版本 SUPERSEDED + superseded_by，新版本进入审核）
+  router.post('/knowledge/:id/supersede', adminRequired, (req, res) => {
+    try {
+      const { title, content } = req.body || {};
+      if (!content) return res.status(400).json({ success: false, error: '请提供新版本内容' });
+      const r = QG.supersedeKp(getDb(), parseInt(req.params.id, 10), { title, content }, 'admin');
+      res.json({ success: true, newId: r.newId, version: r.version, message: `已创建 v${r.version} 替代版本，原版本保留为 SUPERSEDED` });
+    } catch (e) {
+      res.status(400).json({ success: false, error: e.message });
+    }
+  });
+
+  // 2.4 冲突裁定（多源冲突由人工裁定权威版本，历史版本永久留存）
+  router.post('/knowledge/conflicts/resolve', adminRequired, (req, res) => {
+    try {
+      const { groupId, keepKpId, note } = req.body || {};
+      if (!groupId || !keepKpId) return res.status(400).json({ success: false, error: '缺少 groupId/keepKpId' });
+      const r = QG.resolveConflict(getDb(), parseInt(groupId, 10), parseInt(keepKpId, 10), 'admin', note);
+      res.json({ success: true, ...r });
+    } catch (e) {
+      res.status(400).json({ success: false, error: e.message });
     }
   });
 
@@ -1120,14 +1238,30 @@ function createRouter() {
     try {
       const { action, stem, answer, analysis } = req.body;
       if (!['approve', 'reject'].includes(action)) return res.status(400).json({ success: false, error: '未知操作' });
+      const d = getDb();
       const id = parseInt(req.params.id, 10);
       if (stem || answer || analysis) {
-        getDb().prepare('UPDATE questions SET status=?, stem=COALESCE(NULLIF(?,\'\'),stem), answer=COALESCE(NULLIF(?,\'\'),answer), analysis=COALESCE(NULLIF(?,\'\'),analysis) WHERE id=?')
+        d.prepare('UPDATE questions SET status=?, stem=COALESCE(NULLIF(?,\'\'),stem), answer=COALESCE(NULLIF(?,\'\'),answer), analysis=COALESCE(NULLIF(?,\'\'),analysis) WHERE id=?')
           .run(action === 'approve' ? 'approved' : 'rejected', stem || '', answer || '', analysis || '', id);
       } else {
-        getDb().prepare('UPDATE questions SET status=? WHERE id=?').run(action === 'approve' ? 'approved' : 'rejected', id);
+        d.prepare('UPDATE questions SET status=? WHERE id=?').run(action === 'approve' ? 'approved' : 'rejected', id);
       }
+      // P6-TCM-02：题目审核同步治理状态机 + 审核人留痕；人工裁定冗余后清除重复标记
+      QG.applyReview(d, 'questions', id, action === 'approve', req.headers['x-admin-key'] ? 'admin_key' : String(req.user?.uid || 'admin'));
+      if (action === 'approve') d.prepare('UPDATE questions SET dup_tier=0 WHERE id=?').run(id);
       res.json({ success: true });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // P6-TCM-02 3.1：二级结构重复审核队列（人工判定是否冗余）
+  router.get('/questions/dup-queue', adminRequired, (req, res) => {
+    try {
+      const rows = getDb().prepare(`SELECT q.*, q2.stem AS dup_of_stem FROM questions q
+        LEFT JOIN questions q2 ON q2.q_hash2 = q.q_hash2 AND q2.id != q.id
+        WHERE q.dup_tier=2 AND q.status='pending' GROUP BY q.id ORDER BY q.id DESC LIMIT 200`).all();
+      res.json({ success: true, questions: rows.map(q => questionVo(q, true)) });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
     }
@@ -1674,6 +1808,159 @@ function createRouter() {
           aiByDay: d.prepare(`SELECT date(created_at) day, COUNT(*) calls FROM ai_call_logs WHERE created_at >= datetime('now','localtime','-30 days') GROUP BY day ORDER BY day`).all(),
         },
       });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // ==================== P6-TCM-02 质量治理层：覆盖度 / 来源注册 / 版权声明 / 健康度 / 报警 ====================
+
+  // 3.4 覆盖度引擎：真实计算动态展示（禁止前端写死文案）
+  router.get('/governance/coverage', authRequired, (req, res) => {
+    try {
+      const { track = 'zhongyi', category = '' } = req.query;
+      const t = normTrack(String(track)) || 'zhongyi';
+      res.json({ success: true, coverage: QG.computeCoverage(getDb(), t, String(category).trim()) });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 7.1 题库健康度看板（知识/题目/覆盖/成本四维度）
+  router.get('/loc/health', adminRequired, (req, res) => {
+    try {
+      res.json({ success: true, health: QG.collectHealth(getDb()) });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 7.2 自动异常报警：扫描 + 列表 + 处理
+  router.post('/loc/alerts/scan', adminRequired, (req, res) => {
+    try {
+      res.json({ success: true, ...QG.scanAnomalies(getDb()) });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  router.get('/loc/alerts', adminRequired, (req, res) => {
+    try {
+      const rows = getDb().prepare(`SELECT * FROM anomaly_alerts ORDER BY CASE status WHEN 'open' THEN 0 ELSE 1 END, id DESC LIMIT 200`).all();
+      res.json({ success: true, alerts: rows.map(a => ({ id: String(a.id), type: a.alert_type, severity: a.severity, detail: a.detail, status: a.status, createdAt: a.created_at })) });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  router.post('/loc/alerts/:id/resolve', adminRequired, (req, res) => {
+    try {
+      getDb().prepare(`UPDATE anomaly_alerts SET status='resolved' WHERE id=?`).run(parseInt(req.params.id, 10));
+      res.json({ success: true });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 4.1 来源注册库：所有内容来源分级登记（1-6 级授权）
+  router.get('/sources', authRequired, (req, res) => {
+    try {
+      const rows = getDb().prepare('SELECT * FROM source_registry ORDER BY auth_level, id').all();
+      res.json({
+        success: true,
+        levels: QG.SOURCE_LEVELS,
+        sources: rows.map(s => ({ id: String(s.id), name: s.name, sourceType: s.source_type, author: s.author, authLevel: s.auth_level, usage: (QG.SOURCE_LEVELS[s.auth_level] || {}).usage || '', licenseNote: s.license_note, createdAt: s.created_at })),
+      });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  router.post('/sources', adminRequired, (req, res) => {
+    try {
+      const { name, sourceType = 'book', author = '', authLevel, licenseNote = '' } = req.body || {};
+      if (!name) return res.status(400).json({ success: false, error: '请提供来源名称' });
+      const lv = parseInt(authLevel, 10);
+      if (!(lv >= 1 && lv <= 6)) return res.status(400).json({ success: false, error: '授权等级必须为 1-6' });
+      const d = getDb();
+      const r = d.prepare('INSERT INTO source_registry (name, source_type, author, auth_level, license_note) VALUES (?,?,?,?,?)')
+        .run(String(name).slice(0, 120), String(sourceType).slice(0, 30), String(author).slice(0, 60), lv, String(licenseNote).slice(0, 300));
+      d.prepare('INSERT INTO loc_op_logs (admin_id, action, target, detail) VALUES (?,?,?,?)')
+        .run('admin', 'source_register', `#${r.lastInsertRowid}`, `${name} L${lv}`);
+      res.json({ success: true, sourceId: String(r.lastInsertRowid) });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 资料绑定来源（正式入库内容必须绑定 source_id 与授权状态）
+  router.post('/materials/:id/bind-source', adminRequired, (req, res) => {
+    try {
+      const { sourceId } = req.body || {};
+      const d = getDb();
+      const src = d.prepare('SELECT id, auth_level FROM source_registry WHERE id=?').get(parseInt(sourceId, 10));
+      if (!src) return res.status(404).json({ success: false, error: '来源不存在' });
+      d.prepare('UPDATE materials SET source_id=? WHERE id=?').run(src.id, parseInt(req.params.id, 10));
+      // 授权等级 6（不明）禁止进入公共库：强制转私有待审
+      if (src.auth_level === 6) {
+        d.prepare(`UPDATE materials SET visibility='PRIVATE' WHERE id=? AND visibility='PUBLIC'`).run(parseInt(req.params.id, 10));
+      }
+      res.json({ success: true, message: src.auth_level === 6 ? '已绑定 L6 来源：资料已强制转私有待审，禁止进入公共库' : '来源绑定成功' });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 4.3 用户贡献版权声明：申请公开精选必须完成三项确认，未声明仅可私有
+  router.post('/materials/:id/declare', authRequired, (req, res) => {
+    try {
+      const { confirmed } = req.body || {};
+      if (!Array.isArray(confirmed) || confirmed.length < 3 || !confirmed.every(Boolean)) {
+        return res.status(400).json({ success: false, error: '必须完成全部 3 项版权声明确认：本人原创/合法授权、同意平台展示使用、理解版权投诉下架规则' });
+      }
+      const d = getDb();
+      const mid = parseInt(req.params.id, 10);
+      const mat = d.prepare('SELECT id, uploader_id FROM materials WHERE id=?').get(mid);
+      if (!mat) return res.status(404).json({ success: false, error: '资料不存在' });
+      if (String(mat.uploader_id) !== String(req.user.userId)) return res.status(403).json({ success: false, error: '仅上传者本人可声明' });
+      const rec = {
+        uploader_id: req.user.userId, declared_at: new Date().toISOString(),
+        confirmations: ['original_or_licensed', 'platform_display_consent', 'takedown_ack'], auth_type: 'level4_user_authorized',
+      };
+      d.prepare('UPDATE materials SET declaration_json=? WHERE id=?').run(JSON.stringify(rec), mid);
+      res.json({ success: true, message: '版权声明已留存，可申请公开精选' });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 治理配置（冲突检测阈值等后台可配）
+  router.get('/loc/governance', adminRequired, (req, res) => {
+    try {
+      res.json({ success: true, governance: QG.getGovernanceConfig(getDb()), states: QG.KP_STATES, levels: QG.SOURCE_LEVELS });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  router.put('/loc/governance', adminRequired, (req, res) => {
+    try {
+      const allowed = ['kp_pass_score', 'kp_priority_score', 'q_pass_score', 'q_priority_score', 'conflict_title_sim', 'conflict_content_sim', 'kp_question_concentration'];
+      const cfg = QG.getGovernanceConfig(getDb());
+      for (const k of allowed) {
+        if (req.body && k in req.body) {
+          const v = Number(req.body[k]);
+          if (!Number.isFinite(v)) return res.status(400).json({ success: false, error: `参数 ${k} 必须为数字` });
+          cfg[k] = v;
+        }
+      }
+      const d = getDb();
+      d.prepare(`INSERT INTO loc_configs (key, value_json, updated_by, updated_at) VALUES ('governance',?,?,datetime('now','localtime'))
+        ON CONFLICT(key) DO UPDATE SET value_json=excluded.value_json, updated_by=excluded.updated_by, updated_at=excluded.updated_at`)
+        .run(JSON.stringify(cfg), String(req.user ? req.user.userId : 'admin'));
+      d.prepare('INSERT INTO loc_op_logs (admin_id, action, target, detail) VALUES (?,?,?,?)')
+        .run(String(req.user ? req.user.userId : 'admin'), 'governance_update', 'governance', JSON.stringify(cfg));
+      res.json({ success: true, governance: cfg, message: '治理配置已保存，实时生效' });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
     }
