@@ -24,7 +24,7 @@ echo "--- [2] 构建 ---"
 npm run build 2>&1 | tail -30
 
 echo "--- [3] 新增页面导出校验 ---"
-for p in admin/tools admin/sources admin/alerts admin/consult yixue/astro yixue/wannianli yixue/wannianli/events yixue/zeri membership messages/system profile/consult privacy yixue/ziwei; do
+for p in admin/tools admin/sources admin/alerts admin/consult yixue/astro yixue/wannianli yixue/wannianli/events yixue/zeri membership messages/system profile/consult/provider-apply privacy yixue/ziwei; do
   test -f "out/${p}/index.html" || { echo "FATAL: out/${p}/index.html missing"; exit 1; }
   echo "OK: ${p}"
 done
