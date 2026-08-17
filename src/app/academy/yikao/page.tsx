@@ -10,6 +10,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 import { PageLoginGuard } from "@/components/PageLoginGuard";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
@@ -593,9 +594,17 @@ export default function YikaoPage() {
     <div style={{ maxWidth: "420px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f5f5f5" }}>
       <PageLoginGuard />
 
-      {/* ===== 顶部导航：考试类型 + 题库/文库双Tab + 设置 ===== */}
+      {/* ===== 顶部导航：返回键 + 考试类型 + 题库/文库双Tab + 设置 ===== */}
       <div className="sticky top-0 z-20 bg-white shadow-[0_1px_0_0_#f0f0f0]">
         <div className="flex items-center gap-2 px-3 py-2.5">
+          <button
+            onClick={() => { if (window.history.length > 1) router.back(); else router.push("/academy"); }}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full active:bg-black/5"
+            aria-label="返回"
+            title="返回上一页"
+          >
+            <ArrowLeft className="h-5 w-5" style={{ color: INK }} />
+          </button>
           <button
             onClick={() => setShowExamPicker(true)}
             className="flex shrink-0 items-center gap-1 text-[15px] font-bold"

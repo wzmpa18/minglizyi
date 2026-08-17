@@ -53,9 +53,9 @@ const DEFAULT_SYSTEM_PROMPT = `你是资深易学解读师。请基于提供的�
 2. 语言通俗易懂，避免过于玄乎的表述
 3. 避免绝对化、宿命论表述
 4. 不涉及医疗、投资、法律等违规建议
-5. 结尾必须标注：「以上内容由AI生成，仅供传统文化学习参考，不构成人生决策建议」`;
+5. 结尾必须标注：「以上内容仅供传统文化学习参考，不构成人生决策建议」`;
 
-const DISCLAIMER = "\n\n以上内容由AI生成，仅供传统文化学习参考，不构成人生决策建议";
+const DISCLAIMER = "\n\n以上内容仅供传统文化学习参考，不构成人生决策建议";
 
 export default function AIInterpretButton({
   toolName,
@@ -254,7 +254,7 @@ export default function AIInterpretButton({
                 textAlign: "center",
               }}
             >
-              以上内容由AI生成，仅供传统文化学习参考，不构成人生决策建议
+              以上内容仅供传统文化学习参考，不构成人生决策建议
             </div>
           )}
         </div>

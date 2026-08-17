@@ -32,7 +32,7 @@ export const SUIT_NAMES: Record<TarotSuit, string> = {
 export const TAROT_DATA_VERSION = "waite-publicdomain-v1";
 
 // ============================================================================
-// 大阿卡纳 22 张（韦特体系：力量=8，正义=11）
+// 大阿卡纳 22 张（力量=8，正义=11）
 // ============================================================================
 const MAJOR: Array<[number, string, string, string[], string[], string, string]> = [
   [0, "愚者", "The Fool",

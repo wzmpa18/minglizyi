@@ -466,7 +466,7 @@ export default function BatchNumberMatching({ toolType }: BatchNumberMatchingPro
 3. 对全部号码的整体格局做综合评价
 4. 给出号码选择的整体建议和注意事项
 5. 语言专业但不晦涩，适合普通用户阅读理解
-6. 结尾必须标注：「以上内容由AI生成，仅供传统文化学习参考，不构成人生决策建议」`;
+6. 结尾必须标注：「以上内容仅供传统文化学习参考，不构成人生决策建议」`;
 
     const userPrompt = `【八字五行分析】
 日主：${bazi.dayMaster}（${bazi.dayMasterWuxing}）

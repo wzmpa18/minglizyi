@@ -21,7 +21,6 @@ import {
   Handshake,
   Wrench,
   BellRing,
-  ShieldCheck,
 } from "lucide-react";
 import { THEME, AdminCard, StatCard, LoadingSpinner, useMounted, Badge } from "./_shared";
 import { fetchDashboardStats } from "@/lib/admin/client";
@@ -129,14 +128,6 @@ export default function AdminOverviewPage() {
       icon: <Wrench size={24} />,
       color: "#B9770E",
       items: ["万年历字段开关", "择日规则版本化", "占星配置与隐私", "真人服务类目定价", "增长反作弊阈值", "全权限账户白名单", "会员兑换码", "配置审计与回滚"],
-    },
-    {
-      href: "/admin/sources",
-      title: "来源注册库",
-      desc: "净室合规与来源标注（P6-TOOL-04-补02）",
-      icon: <ShieldCheck size={24} />,
-      color: "#7C3AED",
-      items: ["第三方资源全量登记", "许可证分级标注", "一键下架/争议处置", "清单导出与完整性自检"],
     },
     {
       href: "/admin/consult",

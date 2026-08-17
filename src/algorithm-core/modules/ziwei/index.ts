@@ -1,13 +1,13 @@
 /**
- * 紫微斗数排盘核心算法层（v2.0 - 基于 iztro 官方库）
+ * 紫微斗数排盘核心算法层（v2.0 - 基于 排盘引擎 官方库）
  *
- * 原始来源：iztro v2.5.8 (MIT License) - https://github.com/SylarLong/iztro
- * 修改记录：2026-07-29 重写核心算法层，直接集成 iztro 官方库作为排盘引擎，
+ * 原始来源：排盘引擎 v2.5.8 - https://github.com/SylarLong/排盘引擎
+ * 修改记录：2026-07-29 重写核心算法层，直接集成 排盘引擎 官方库作为排盘引擎，
  *           修复原有3个P0致命Bug：
  *             1) 公历转农历缺失（原代码直接用公历月日代替农历）
  *             2) 十二宫名称顺序错误
  *             3) 月份索引错误（左辅右弼等用公历月导致位置偏移）
- *           iztro 内部使用 lunar-lite 完成精确的公历→农历转换、五虎遁、
+ * 排盘引擎 内部使用 lunar-lite 完成精确的公历→农历转换、五虎遁、
  *           安星诀、大限顺逆、四化飞星等全部排盘逻辑，与 jishiyu 一致。
  *
  * 导出：calculateZiwei(input: ZiweiInput): ZiweiResult
@@ -19,9 +19,9 @@ import type { ZiweiResult, ZiweiInput, ZiweiPalace, ZiweiStar, ZiweiSihua } from
 import type { TianGan, DiZhi } from '../../types/common';
 
 // ============================================================================
-// 一、时辰索引映射（公历小时 → iztro时辰序号）
+// 一、时辰索引映射（公历小时 → 排盘引擎时辰序号）
 // ============================================================================
-// iztro 时辰序号约定：
+// 排盘引擎 时辰序号约定：
 //   0=早子时(00:00-01:00), 1=丑时(01:00-03:00), 2=寅时(03:00-05:00),
 //   3=卯时(05:00-07:00), 4=辰时(07:00-09:00), 5=巳时(09:00-11:00),
 //   6=午时(11:00-13:00), 7=未时(13:00-15:00), 8=申时(15:00-17:00),
@@ -30,7 +30,7 @@ import type { TianGan, DiZhi } from '../../types/common';
 // ============================================================================
 
 /**
- * 将公历小时数转换为 iztro 时辰索引
+ * 将公历小时数转换为 排盘引擎 时辰索引
  * @param hour - 公历小时 (0-23)
  * @returns 时辰索引 (0-12)
  */
@@ -52,21 +52,21 @@ const MUTAGEN_MAP: Record<string, string> = {
 };
 
 // ============================================================================
-// 宫名映射（iztro 默认 "仆役" → 标准名 "交友"）
+// 宫名映射（排盘引擎 默认 "仆役" → 标准名 "交友"）
 // ============================================================================
 const PALACE_NAME_MAP: Record<string, string> = {
   '仆役': '交友',
 };
 
-/** 将 iztro 宫名映射为标准十二宫名 */
+/** 将 排盘引擎 宫名映射为标准十二宫名 */
 function mapPalaceName(name: string): string {
   return PALACE_NAME_MAP[name] || name;
 }
 
 // ============================================================================
-// 三、星耀类型分类（iztro type → 页面分类）
+// 三、星耀类型分类（排盘引擎 type → 页面分类）
 // ============================================================================
-// iztro star types:
+// 排盘引擎 star types:
 //   'major'     → 14主星
 //   'soft'      → 六吉星（文昌、文曲、左辅、右弼、天魁、天钺）
 //   'tough'     → 六煞星（擎羊、陀罗、火星、铃星、地空、地劫）
@@ -95,7 +95,7 @@ function isShaStar(type: string): boolean {
 // ============================================================================
 
 /**
- * 紫微斗数完整排盘（基于 iztro 官方引擎）
+ * 紫微斗数完整排盘（基于 排盘引擎 官方引擎）
  *
  * @param input - 排盘参数（公历年月日时 + 性别）
  * @returns ZiweiResult 完整星盘结果，数据格式与现有UI层兼容
@@ -106,10 +106,10 @@ export function calculateZiwei(input: ZiweiInput): ZiweiResult {
   // 1. 转换参数格式
   const solarDateStr = `${year}-${month}-${day}`;
   const timeIndex = hourToTimeIndex(hour);
-  // iztro 性别参数类型内部校验，使用类型断言避免 ts 严格类型不兼容
+ // 排盘引擎 性别参数类型内部校验，使用类型断言避免 ts 严格类型不兼容
   const genderStr = (gender === 'male' ? '男' : '女') as '男' | '女';
 
-  // 2. 调用 iztro 核心排盘（fixLeap=true 处理闰月，zh-CN 输出简体中文）
+ // 2. 调用 排盘引擎 核心排盘（fixLeap=true 处理闰月，zh-CN 输出简体中文）
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const astrolabe = (astro as any).bySolar(solarDateStr, timeIndex, genderStr, true, 'zh-CN');
 

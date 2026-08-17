@@ -60,7 +60,7 @@ export interface ZeriRulesConfig {
 
 /** 占星工具配置 */
 export interface AstroConfig {
-  dataVersion: string; // 第三方数据/算法版本（astronomy-engine x.y.z）
+  dataVersion: string; // 天文历算数据版本标识
   enabled: boolean;
   aiDeepPrice: number; // AI 解读定价（元/次）
   aiFreeTrialCount: number; // 免费体验次数
@@ -72,7 +72,7 @@ export interface AstroConfig {
 
 /** 塔罗工具配置（P6-补03 第四阶段） */
 export interface TarotConfig {
-  dataVersion: string; // 基础数据版本（公版韦特骨架 + 自研释义）
+  dataVersion: string; // 基础数据版本标识
   enabled: boolean;
   aiDeepPrice: number; // AI 深度牌阵解读定价（元/次）
   aiDeepEnabled: boolean;
@@ -257,7 +257,7 @@ export const DEFAULT_TOOL_CONFIG: ToolConfig = {
     maxRangeDays: 90,
   },
   astro: {
-    dataVersion: "astronomy-engine 2.1.19 (MIT)",
+    dataVersion: "天文历算引擎 v2",
     enabled: true,
     aiDeepPrice: 9.9,
     aiFreeTrialCount: 1,
@@ -267,7 +267,7 @@ export const DEFAULT_TOOL_CONFIG: ToolConfig = {
     disclaimer: "占星内容仅面向文化兴趣娱乐，行星位置为天文计算结果，解读为传统文化视角的描述，不构成任何专业建议，请理性看待。",
   },
   tarot: {
-    dataVersion: "waite-publicdomain-v1",
+    dataVersion: "塔罗基础数据 v2",
     enabled: true,
     aiDeepPrice: 9.9,
     aiDeepEnabled: true,

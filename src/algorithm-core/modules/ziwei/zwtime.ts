@@ -2,7 +2,7 @@
  * ZW-TIME 紫微时间轴引擎（P6-I-PLUS 规则6 永久冻结模块）
  *
  * 职责：统一时间维度计算，覆盖 命盘 → 大运 → 流年 → 流月 → 流日 → 流时 全层级。
- * 数据源：iztro astrolabe（排盘+运限校准）+ lunar-lite（精确历法转换）。
+ * 数据源：排盘引擎 astrolabe（排盘+运限校准）+ lunar-lite（精确历法转换）。
  * 性能设计：大限/流年零运限调用纯直算；流月/流日/流时各 1 次运限调用校准起点后公式推算。
  * 冻结约束：所有紫微相关时间分析统一调用本引擎，页面层禁止各自重复实现时间推算。
  *
@@ -19,7 +19,7 @@
  *   任一层运限盘（大限/流年/流月/流日/流时）十二宫与本体盘排布方向一致：
  *   以运限命宫（anchor 宫序索引）为原点，命→兄弟→夫妻→子女→财帛→疾厄→迁移→
  *   交友→官禄→田宅→福德→父母 沿宫序（寅→卯→…）递减方向依次叠落。
- *   已对拍 iztro horoscope palaceNames 输出（12 案例全层一致）。
+ * 已对拍 排盘引擎 horoscope palaceNames 输出（12 案例全层一致）。
  */
 
 import { astro } from 'iztro';
@@ -97,7 +97,7 @@ const ZHI_STD = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', 
 /** 寅起宫位序（=命盘宫序） */
 const ZHI_ORDER = ['寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥', '子', '丑'];
 
-/** 标准天干四化表（与 iztro 一致：戊干右弼科、壬干左辅科） */
+/** 标准天干四化表（与 排盘引擎 一致：戊干右弼科、壬干左辅科） */
 const GAN_MUTAGEN: Record<string, string[]> = {
   '甲': ['廉贞', '破军', '武曲', '太阳'],
   '乙': ['天机', '天梁', '紫微', '太阴'],
@@ -165,7 +165,7 @@ function natalPalaceName(input: ZwTimeInput, index: number): string {
   return p?.name || '';
 }
 
-/** 年干支（立春分界的年柱，与 iztro yearly 一致） */
+/** 年干支（立春分界的年柱，与 排盘引擎 yearly 一致） */
 function yearGanZhi(y: number): { gan: string; zhi: string } {
   return {
     gan: GAN_LIST[(y - 4) % 10],

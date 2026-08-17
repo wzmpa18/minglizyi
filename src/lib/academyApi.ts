@@ -462,35 +462,6 @@ export async function fetchDupQueue() {
   return adminApi<{ success: boolean; questions?: QuestionVo[]; error?: string }>(`/api/academy/questions/dup-queue`);
 }
 
-/** 4.1 来源注册库 */
-export interface SourceVo { id: string; name: string; sourceType: string; author: string; authLevel: number; usage: string; licenseNote: string; createdAt: string }
-
-export async function fetchSources() {
-  return api<{ success: boolean; levels?: Record<string, { name: string; usage: string }>; sources?: SourceVo[]; error?: string }>(`/api/academy/sources`);
-}
-
-export async function createSource(data: { name: string; sourceType?: string; author?: string; authLevel: number; licenseNote?: string }) {
-  return adminApi<{ success: boolean; sourceId?: string; error?: string }>(`/api/academy/sources`, {
-    method: "POST",
-    body: JSON.stringify(data),
-  });
-}
-
-export async function bindMaterialSource(materialId: string, sourceId: string) {
-  return adminApi<{ success: boolean; message?: string; error?: string }>(`/api/academy/materials/${materialId}/bind-source`, {
-    method: "POST",
-    body: JSON.stringify({ sourceId }),
-  });
-}
-
-/** 4.3 用户贡献版权声明（三项确认全勾选） */
-export async function declareMaterialCopyright(materialId: string, confirmed: [boolean, boolean, boolean]) {
-  return api<{ success: boolean; message?: string; error?: string }>(`/api/academy/materials/${materialId}/declare`, {
-    method: "POST",
-    body: JSON.stringify({ confirmed }),
-  });
-}
-
 /** 治理配置（冲突阈值等，后台可配） */
 export interface GovernanceCfg {
   kp_pass_score: number; kp_priority_score: number;

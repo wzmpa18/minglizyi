@@ -41,6 +41,9 @@ export default function FactoryPage() {
   const [track, setTrack] = useState<string>("zhongyi");
   const [category, setCategory] = useState("");
   const [categories, setCategories] = useState<CategoryVo[]>([]);
+  // P7-4：自定义类目输入
+  const [showCustomCat, setShowCustomCat] = useState(false);
+  const [customCatName, setCustomCatName] = useState("");
   const [format, setFormat] = useState<"text" | "file">("text");
   const [textContent, setTextContent] = useState("");
   const [fileBase64, setFileBase64] = useState("");
@@ -69,6 +72,19 @@ export default function FactoryPage() {
     setTimeout(() => setToast(""), 2500);
   };
 
+  // P7-4：确认自定义类目（本地追加并选中，随资料一并提交）
+  const confirmCustomCat = () => {
+    const name = customCatName.trim().slice(0, 20);
+    if (!name) { showToast("请输入类目名称"); return; }
+    if (name.includes("倪海厦")) { showToast("该类目名称不可用，请更换"); return; }
+    if (!categories.some((c) => c.name === name)) {
+      setCategories((prev) => [...prev, { id: `custom-${Date.now()}`, track, trackName: "", name, sort: 99, materialCount: 0 }]);
+    }
+    setCategory(name);
+    setShowCustomCat(false);
+    setCustomCatName("");
+  };
+
   const loadMine = useCallback(async () => {
     setLoading(true);
     try {
@@ -85,8 +101,13 @@ export default function FactoryPage() {
 
   useEffect(() => {
     setCategory("");
+    setShowCustomCat(false);
     fetchCategories(track)
-      .then((r) => setCategories(r && r.success && r.categories ? r.categories : []))
+      .then((r) => {
+        const list = r && r.success && r.categories ? r.categories : [];
+        // P7-4：标签区不再展示「倪海厦」相关类目
+        setCategories(list.filter((c) => !c.name.includes("倪海厦")));
+      })
       .catch(() => setCategories([]));
   }, [track]);
 
@@ -214,9 +235,37 @@ export default function FactoryPage() {
                   {c.name}
                 </button>
               ))}
+              {/* P7-4：自定义类目 */}
+              <button
+                onClick={() => { setShowCustomCat((v) => !v); setCustomCatName(""); }}
+                className="rounded-full border border-dashed px-3 py-1.5 text-xs font-semibold"
+                style={{ borderColor: BRAND + "66", color: BRAND }}
+              >
+                + 自定义类目
+              </button>
             </div>
-            {categories.length === 0 && (
-              <p className="mt-2 text-[10px] text-gray-400">该板块暂无类目，可到审核工作台的类目管理中添加</p>
+            {showCustomCat && (
+              <div className="mt-2 flex gap-2">
+                <input
+                  value={customCatName}
+                  onChange={(e) => setCustomCatName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") confirmCustomCat(); }}
+                  maxLength={20}
+                  placeholder="输入自定义类目名称（≤20字）"
+                  className="min-w-0 flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-xs"
+                  style={{ outline: "none" }}
+                />
+                <button
+                  onClick={confirmCustomCat}
+                  className="shrink-0 rounded-xl px-4 py-2 text-xs font-bold text-white"
+                  style={{ backgroundColor: BRAND }}
+                >
+                  确定
+                </button>
+              </div>
+            )}
+            {categories.length === 0 && !showCustomCat && (
+              <p className="mt-2 text-[10px] text-gray-400">该板块暂无类目，可点击「+ 自定义类目」新建，或到审核工作台的类目管理中添加</p>
             )}
           </div>
 
@@ -275,20 +324,24 @@ export default function FactoryPage() {
                 ["PUBLIC", "公开"],
                 ["PRIVATE", "仅自己"],
                 ["ORG", "机构内部"],
-              ] as const).map(([k, label]) => {
-                const disabled = k === "ORG" && myOrgs.length === 0;
-                return (
-                  <button
-                    key={k}
-                    disabled={disabled}
-                    onClick={() => setVisibility(k)}
-                    className="flex-1 rounded-xl py-2.5 text-xs font-semibold disabled:opacity-40"
-                    style={{ backgroundColor: visibility === k ? BRAND : "#f5f5f5", color: visibility === k ? "#fff" : "#666" }}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
+              ] as const).map(([k, label]) => (
+                <button
+                  key={k}
+                  onClick={() => {
+                    // P7-4：未加入机构时给出引导而非禁用
+                    if (k === "ORG" && myOrgs.length === 0) {
+                      showToast("您还未加入任何机构，正在前往机构专区…");
+                      setTimeout(() => router.push("/academy/orgs"), 900);
+                      return;
+                    }
+                    setVisibility(k);
+                  }}
+                  className="flex-1 rounded-xl py-2.5 text-xs font-semibold"
+                  style={{ backgroundColor: visibility === k ? BRAND : "#f5f5f5", color: visibility === k ? "#fff" : "#666" }}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
             {visibility === "ORG" && (
               <select

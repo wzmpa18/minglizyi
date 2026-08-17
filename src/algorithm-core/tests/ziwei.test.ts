@@ -6,7 +6,7 @@
  * 创建日期：2026-07-26
  * 版本：v1.0.0
  *
- * 基准来源：iztro (MIT)
+ * 基准来源：排盘引擎 
  * 测试范围：
  *   - 紫微斗数完整排盘（calculateZiwei）
  *   - 时辰选项（getShichenOptions）

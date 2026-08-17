@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 原始来源：mystilight-8char (ISC License)
  * 原始版本：v1.0
  * 修改记录：2026-07-26 按V3.1手册修正身强身弱、大运起运逻辑、格局判定
@@ -958,13 +958,13 @@ export function getNearestJieQi(year, month, day) {
 // 二十二、公历转八字（v17.8 根因修复: 仅保留吉时雨同源 solarToBazi，旧版 buildBazi 已删除）
 // ============================================================================
 
-// 二十二、公历转八字（v17.7 根因重写: 直接使用 lunar-javascript 对标吉时雨）
+// 二十二、公历转八字（v17.7 根因重写: 直接使用 历法引擎 对标吉时雨）
 // ============================================================================
 
 /**
  * 公历日期转八字四柱（v17.7 根因重写）
  *
- * 算法源: 直接复用 lunar-javascript 库的 Solar/Lunar/EightChar 类，
+ * 算法源: 直接复用 历法引擎 库的 Solar/Lunar/EightChar 类，
  * 与吉时雨 (jishiyu) bazi.js 的 init()/paipan() 完全同源。
  * 禁止任何自主实现的节气/四柱/十神/藏干/地势/空亡/大运计算逻辑。
  *
@@ -996,7 +996,7 @@ export function solarToBazi(params) {
   var sect = params.sect || 1; // 默认普通模式，晚子时需传 sect=2
 
   // ============================================================
-  // 1. 使用 lunar-javascript 创建 Solar/Lunar/EightChar —— 对标吉时雨
+ // 1. 使用 历法引擎 创建 Solar/Lunar/EightChar —— 对标吉时雨
   // ============================================================
   var solar = LunarSolar.fromYmdHms(year, month, day, hour, minute, 0);
   var lunar = solar.getLunar();
@@ -1232,7 +1232,7 @@ export function solarToBazi(params) {
   });
 
   // ============================================================
-  // 7. 节气信息 (使用 lunar-javascript 精确节气)
+ // 7. 节气信息 (使用 历法引擎 精确节气)
   // ============================================================
   var prevJie = lunar.getPrevJie();
   var nextJie = lunar.getNextJie();

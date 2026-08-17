@@ -857,7 +857,7 @@ export default function WannianliPage() {
         <div className="rounded-lg border border-gray-200 bg-[#f9f9f9] p-3 text-center">
           <p className="mb-1 text-xs font-semibold text-gray-400">免责声明</p>
           <p className="text-[11px] leading-relaxed text-gray-400">
-            本万年历数据由 lunar-javascript 历法库计算，仅供传统文化学习与参考。节气日期为精确天文计算，宜忌内容来源于传统择日典籍，不构成任何专业建议或决策依据。记事提醒数据仅本人可见，可在记事管理页导出或彻底删除。请理性看待，切勿迷信。
+            节气日期为精确天文计算，宜忌内容整理自传统择日典籍，内容仅供文化娱乐参考，不构成任何专业建议或决策依据。记事提醒数据仅本人可见，可在记事管理页导出或彻底删除。请理性看待，切勿迷信。
           </p>
         </div>
       </div>

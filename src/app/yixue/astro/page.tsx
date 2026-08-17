@@ -10,7 +10,7 @@ import type { SavedChart } from "@/lib/astroStore";
 import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
 import AIInterpretButton from "@/components/AIInterpretButton";
 import { ShareButton } from "@/components/ShareButton";
-import { SourceAttribution } from "@/components/SourceAttribution";
+
 import { getDignity, DIGNITY_NOTES, CLASSICAL_ASTRO_VERSION as CLASSICAL_VERSION } from "@/lib/classicalAstroRules";
 
 // ============================================================================
@@ -337,7 +337,7 @@ export default function AstroPage() {
 2. 行星落座、宫位、相位的解读仅作传统文化视角的描述
 3. 严禁绝对化表述（如"命中注定""必然"）、恐吓式结论、诱导式话术
 4. 不构成医疗、心理、法律、金融等专业建议，不替用户做重大决策
-5. 结尾必须标注：「以上内容由AI生成，仅面向文化兴趣娱乐，不构成任何专业建议」`}
+5. 结尾必须标注：「以上内容仅面向文化兴趣娱乐，不构成任何专业建议」`}
                 />
               </div>
               <div className="mt-1.5 flex items-center justify-center gap-3 text-[10px] text-gray-400">
@@ -473,8 +473,6 @@ export default function AstroPage() {
         </p>
         <p className="mt-1 text-[10px] text-gray-400">天文计算：{astroCfg.dataVersion} · 隐私策略：出生数据默认私有，可随时彻底删除</p>
       </div>
-      {/* P6-TOOL-04-补02：MIT/CC BY 开源组件署名（后台来源注册库驱动） */}
-      <SourceAttribution />
       <div style={{ height: "20px" }} />
     </div>
   );

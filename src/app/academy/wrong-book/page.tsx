@@ -129,7 +129,7 @@ export default function WrongBookPage() {
                               toolName="医考错题"
                               scope="AI深度解析"
                               contextData={`题干：${w.stem}\n我的作答：${w.myAnswer || "（未作答）"}\n正确答案：${w.answer}\n基础解析：${w.analysis || "（无）"}`}
-                              systemPrompt="你是中医执业医师资格考试辅导老师。请针对这道错题进行深度解析：1. 指出错误原因与易混淆点；2. 讲透背后的考点原理；3. 给出同类题的举一反三思路。语言书面化、条理清晰，避免绝对化表述。结尾标注：「以上内容由AI生成，仅供文化娱乐参考，不构成任何专业建议」"
+                              systemPrompt="你是中医执业医师资格考试辅导老师。请针对这道错题进行深度解析：1. 指出错误原因与易混淆点；2. 讲透背后的考点原理；3. 给出同类题的举一反三思路。语言书面化、条理清晰，避免绝对化表述。结尾标注：「以上内容仅供文化娱乐参考，不构成任何专业建议」"
                               buttonText="AI 错题深度解析（增值）"
                               buttonStyle="secondary"
                               cacheKey={`yikao_wrong_${w.questionId}`}

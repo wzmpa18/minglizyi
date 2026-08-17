@@ -45,7 +45,7 @@ interface EventDivinationPanelProps {
   isPaidTool?: boolean; // 号码/车牌等需要付费的工具
 }
 
-const DISCLAIMER = "\n\n以上内容由AI生成，仅供传统文化学习参考，不构成人生决策建议";
+const DISCLAIMER = "\n\n以上内容仅供传统文化学习参考，不构成人生决策建议";
 
 // 快捷问题模板
 const QUICK_QUESTIONS = [
@@ -196,7 +196,7 @@ export default function EventDivinationPanel({
 3. 吉凶趋势判断
 4. 注意事项与建议
 5. 语言通俗易懂，避免绝对化表述
-6. 结尾必须标注：「以上内容由AI生成，仅供传统文化学习参考，不构成人生决策建议」`;
+6. 结尾必须标注：「以上内容仅供传统文化学习参考，不构成人生决策建议」`;
 
       const userPrompt = `【${toolName}排盘数据】\n${chartContext}\n\n请给出全面深度的AI解读。`;
 
@@ -415,7 +415,7 @@ export default function EventDivinationPanel({
             </div>
             {content && !loading && (
               <div style={{ padding: "6px 12px", background: "#fafafa", borderTop: "1px solid #eee", fontSize: "10px", color: "#999", textAlign: "center" }}>
-                以上内容由AI生成，仅供传统文化学习参考，不构成人生决策建议
+                以上内容仅供传统文化学习参考，不构成人生决策建议
               </div>
             )}
           </div>

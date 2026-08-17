@@ -4,14 +4,14 @@
  * ============================================================================
  *
  * 功能：
- *   - 使用 lunar-javascript 计算四柱干支
+ * - 使用 历法引擎 计算四柱干支
  *   - 支持三种起卦方式：手动起卦、时间起卦（梅花易数法）、数字起卦
  *   - 本卦/变卦完整排盘：卦名、卦宫、世应、纳甲、六亲、六神
  *   - 动爻标记、空亡、月破、日冲
  *   - 伏神查找、卦身、驿马桃花
  *   - 五行生克、用神初步判定
  *
- * 外部依赖：lunar-javascript（四柱计算）
+ * 外部依赖：历法引擎（四柱计算）
  * 协议：MIT
  * ============================================================================
  */
@@ -578,7 +578,7 @@ function jiaZiIndex(ganZhi: string): number {
 export function calculateLiuyao(input: LiuyaoInput): LiuyaoResult {
   const { year, month, day, hour, minute = 0, method, question = '' } = input;
 
-  // 使用 lunar-javascript 计算四柱
+ // 使用 历法引擎 计算四柱
   const solar = Solar.fromYmdHms(year, month, day, hour, minute, 0);
   const lunar = solar.getLunar();
   const bazi = lunar.getEightChar();

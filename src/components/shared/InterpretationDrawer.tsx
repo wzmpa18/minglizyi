@@ -1,7 +1,7 @@
 /**
  * 统一解读抽屉组件 v18.2
  * 全局统一解读抽屉样式：右上角关闭按钮、内容可滚动、不遮挡原排盘核心内容
- * AI生成内容标注「AI 参考」
+ * 解读内容标注「参考」
  */
 "use client";
 
@@ -147,7 +147,7 @@ export default function InterpretationDrawer({
               <div key={idx} style={{ marginBottom: idx < items.length - 1 ? "12px" : 0, padding: "12px", borderRadius: "10px", backgroundColor: tc.bg, border: `1px solid ${tc.fg}20` }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
                   <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: "4px", fontSize: "11px", fontWeight: 600, backgroundColor: tc.fg, color: "#fff" }}>{item.isAI ? "AI 参考" : tc.label}</span>
-                  {item.isAI && <span style={{ fontSize: "10px", color: "#9ca3af" }}>AI生成内容，仅供参考</span>}
+                  {item.isAI && <span style={{ fontSize: "10px", color: "#9ca3af" }}>内容仅供参考</span>}
                 </div>
                 <div style={{ fontSize: "14px", lineHeight: "1.7", color: "#333", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{item.content}</div>
               </div>
@@ -161,7 +161,7 @@ export default function InterpretationDrawer({
                 <div style={{ padding: "12px", borderRadius: "10px", backgroundColor: "#f3e8ff", border: "1px solid #7B2FBE20" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
                     <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: "4px", fontSize: "11px", fontWeight: 600, backgroundColor: "#7B2FBE", color: "#fff" }}>AI 参考</span>
-                    <span style={{ fontSize: "10px", color: "#9ca3af" }}>AI生成内容，仅供参考</span>
+                    <span style={{ fontSize: "10px", color: "#9ca3af" }}>内容仅供参考</span>
                   </div>
                   <div style={{ fontSize: "14px", lineHeight: "1.7", color: "#4a1d8a", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{aiContent}</div>
 

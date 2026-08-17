@@ -591,7 +591,7 @@ export default function AdminToolsPage() {
             <NumField label="最多保存星盘数" value={draft.astro.maxSavedCharts} onChange={(v) => setDraft({ ...draft, astro: { ...draft.astro, maxSavedCharts: v } })} suffix="个" min={1} max={100} />
           </div>
           <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, backgroundColor: THEME.infoBg, fontSize: 12, color: THEME.info }}>
-            第三方数据版本：{draft.astro.dataVersion}（许可证核查见 docs/compliance/占星工具第三方数据资产清单.md）
+            数据版本：{draft.astro.dataVersion}
           </div>
           <div style={{ marginTop: 12 }}>
             <label style={styles.label}>免责声明文案</label>

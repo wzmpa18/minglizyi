@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { Solar } from "lunar-javascript";
@@ -481,7 +481,7 @@ export default function ZeriPage() {
 3. 明确提示需要避开的生肖冲煞与方位
 4. 禁止生成确定性承诺（如"必定顺利""保证成功"），禁止替用户做出重大决策
 5. 不涉及医疗、法律、金融等专业建议
-6. 结尾必须标注：「以上内容由AI生成，仅供传统文化参考与个人娱乐，不构成任何专业建议」`}
+6. 结尾必须标注：「以上内容仅供传统文化参考与个人娱乐，不构成任何专业建议」`}
                 />
               </div>
               <div className="mt-1.5 flex items-center justify-center gap-3 text-[10px] text-gray-400">

@@ -9,18 +9,83 @@ import { getToolConfig } from "@/lib/toolConfigStore";
 
 const BRAND = "#7B2FBE";
 
-const TRACK_EMOJI: Record<string, string> = {
-  zhongyi: "🌿", yixue: "☯️", guoxue: "📜",
-};
+// v25.0.29（P7-3）：言道学堂重构为五大学习区
+// 易学学习区 / 中医学习区（现有学习资料分门别类）/ 医学考试区 / 养生学习区（内容完善中）/ 国学学习区
+interface ZoneDef {
+  key: string;
+  name: string;
+  emoji: string;
+  color: string;
+  desc: string;
+  trackKey?: string;
+  entries: Array<{ key: string; label: string; url: string }>;
+  coming?: boolean;
+}
 
-const ENTRIES = [
-  { key: "learn", emoji: "📖", name: "知识学习", desc: "分赛道知识点精读打卡", url: "/academy/learn" },
-  { key: "bank", emoji: "📝", name: "题库练习", desc: "六大题型逐题精练", url: "/academy/question-bank" },
-  { key: "exam", emoji: "🎓", name: "等级考试", desc: "随机组卷 · 限时答题 · 自动判分", url: "/academy/exam" },
-  { key: "cert", emoji: "🏅", name: "我的证书", desc: "电子证书查验与复核", url: "/academy/certificates" },
-  { key: "wrong", emoji: "📕", name: "错题本", desc: "错题回顾消灭薄弱点", url: "/academy/wrong-book" },
-  { key: "factory", emoji: "🏭", name: "知识工厂", desc: "上传资料 · AI 解析入库", url: "/academy/factory" },
-  { key: "orgs", emoji: "🏛️", name: "机构专区", desc: "入驻开班 · 专属学习空间", url: "/academy/orgs" },
+const ZONES: ZoneDef[] = [
+  {
+    key: "yixue",
+    name: "易学学习区",
+    emoji: "☯️",
+    color: "#7B2FBE",
+    desc: "八字 · 紫微 · 六爻 · 易学知识点精读与题库",
+    trackKey: "yixue",
+    entries: [
+      { key: "learn", label: "📖 知识学习", url: "/academy/learn?track=yixue" },
+      { key: "bank", label: "📝 题库练习", url: "/academy/question-bank" },
+      { key: "exam", label: "🎓 等级考试", url: "/academy/exam" },
+    ],
+  },
+  {
+    key: "zhongyi",
+    name: "中医学习区",
+    emoji: "🌿",
+    color: "#2FAE9E",
+    desc: "典籍讲义分门别类 · 中医知识点与题库",
+    trackKey: "zhongyi",
+    entries: [
+      { key: "learn", label: "📖 知识学习", url: "/academy/learn?track=zhongyi" },
+      { key: "bank", label: "📝 题库练习", url: "/academy/question-bank" },
+      { key: "exam", label: "🎓 等级考试", url: "/academy/exam" },
+    ],
+  },
+  {
+    key: "yikao",
+    name: "医学考试区",
+    emoji: "🩺",
+    color: "#C05046",
+    desc: "中医执业医师 · 刷题 / 模考 / 文库一体化",
+    entries: [{ key: "yikao", label: "🎓 医考题库专区", url: "/academy/yikao" }],
+  },
+  {
+    key: "yangsheng",
+    name: "养生学习区",
+    emoji: "🍵",
+    color: "#8B6F47",
+    desc: "四时养生 · 食疗本草 · 内容完善中，敬请期待",
+    entries: [],
+    coming: true,
+  },
+  {
+    key: "guoxue",
+    name: "国学学习区",
+    emoji: "📜",
+    color: "#B8860B",
+    desc: "经史子集 · 传统经典 · 内容完善中，敬请期待",
+    trackKey: "guoxue",
+    entries: [
+      { key: "learn", label: "📖 知识学习", url: "/academy/learn?track=guoxue" },
+      { key: "bank", label: "📝 题库练习", url: "/academy/question-bank" },
+    ],
+  },
+];
+
+// 通用学习工具（跨区共用）
+const TOOLS = [
+  { key: "wrong", emoji: "📕", name: "错题本", desc: "错题回顾", url: "/academy/wrong-book" },
+  { key: "cert", emoji: "🏅", name: "我的证书", desc: "查验复核", url: "/academy/certificates" },
+  { key: "factory", emoji: "🏭", name: "知识工厂", desc: "AI 解析入库", url: "/academy/factory" },
+  { key: "orgs", emoji: "🏛️", name: "机构专区", desc: "入驻开班", url: "/academy/orgs" },
 ];
 
 export default function AcademyPage() {
@@ -34,6 +99,8 @@ export default function AcademyPage() {
       if (r && r.success && r.tracks) setTracks(r.tracks);
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
+
+  const trackOf = (key?: string) => (key ? tracks.find((t) => t.key === key) : undefined);
 
   return (
     <div style={{ maxWidth: "420px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f5f5f5" }}>
@@ -54,102 +121,118 @@ export default function AcademyPage() {
               学
             </span>
             <div>
-              <p className="text-base font-bold text-gray-800">言道学堂 · AI 知识工厂</p>
-              <p className="text-[11px] text-gray-400">学 · 练 · 考 · 证 一体化国学成长体系</p>
+              <p className="text-base font-bold text-gray-800">言道学堂 · 五大学习区</p>
+              <p className="text-[11px] text-gray-400">易学 · 中医 · 医考 · 养生 · 国学</p>
             </div>
           </div>
           <p className="mt-3 text-xs leading-relaxed text-gray-500">
-            上传资料由 AI 解析为结构化知识点，自动生成六大题型题库；随机组卷考试通过后颁发分赛道等级证书，可公开验真。
+            分区学习 · 逐级考核 · 证书验真；上传资料由 AI 解析为结构化知识点，经人工审核后生成题库。
           </p>
         </div>
       </div>
 
       <div className="px-3 pb-24 pt-1">
-        {/* 功能入口宫格 */}
-        <div className="grid grid-cols-3 gap-2.5">
-          {ENTRIES.map((e) => (
+        {/* ===== 五大学习区 ===== */}
+        <div className="space-y-3">
+          {ZONES.map((z) => {
+            // 医学考试区受 LOC 开关控制
+            if (z.key === "yikao" && !yikaoEnabled) return null;
+            const t = trackOf(z.trackKey);
+            return (
+              <section key={z.key} className="overflow-hidden rounded-2xl bg-white shadow-sm">
+                {/* 区头 */}
+                <div className="flex items-center gap-2.5 px-4 pt-3.5 pb-2" style={{ borderBottom: z.coming ? "none" : "1px solid #f2f2f2" }}>
+                  <span
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-lg"
+                    style={{ backgroundColor: z.color + "12" }}
+                  >
+                    {z.emoji}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[15px] font-bold text-gray-800">{z.name}</span>
+                      {z.coming && (
+                        <span className="rounded-full px-2 py-0.5 text-[9px] font-semibold" style={{ backgroundColor: z.color + "15", color: z.color }}>
+                          完善中
+                        </span>
+                      )}
+                      {t && t.myLevel > 0 && (
+                        <span className="rounded-full px-2 py-0.5 text-[9px] font-semibold" style={{ backgroundColor: BRAND + "15", color: BRAND }}>
+                          {LEVEL_NAMES[t.myLevel] || `L${t.myLevel}`}
+                          {t.myTitle ? ` · ${t.myTitle}` : ""}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-0.5 truncate text-[11px] text-gray-400">{z.desc}</p>
+                  </div>
+                </div>
+
+                {z.coming ? (
+                  /* 养生/国学等内容完善区：预留说明 */
+                  <div className="px-4 pb-3.5 pt-1.5">
+                    <div className="rounded-xl bg-gray-50 px-3 py-2.5 text-center text-[11px] text-gray-400">
+                      内容完善中，敬请期待
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* 区内统计（仅学习型板块） */}
+                    {t && (
+                      <div className="flex items-center gap-1.5 px-4 pt-2 text-[10px] text-gray-400">
+                        <span>{t.categoryCount} 个类目</span>
+                        <span>·</span>
+                        <span>{t.knowledgeCount} 个知识点</span>
+                        <span>·</span>
+                        <span>覆盖全部核心知识点与考点</span>
+                      </div>
+                    )}
+                    {/* 区内入口 */}
+                    <div className="flex flex-wrap gap-2 px-4 pb-3.5 pt-2">
+                      {z.entries.map((e) => (
+                        <button
+                          key={e.key}
+                          onClick={() => router.push(e.url)}
+                          className="rounded-full px-3.5 py-2 text-xs font-bold active:scale-[0.97] transition-transform"
+                          style={{
+                            backgroundColor: z.key === "yikao" ? "#2FAE9E" : z.color + "12",
+                            color: z.key === "yikao" ? "#fff" : z.color,
+                          }}
+                        >
+                          {e.label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </section>
+            );
+          })}
+        </div>
+
+        {/* ===== 学习工具 ===== */}
+        <p className="mb-2 mt-4 px-1 text-xs font-semibold text-gray-500">学习工具</p>
+        <div className="grid grid-cols-4 gap-2.5">
+          {TOOLS.map((e) => (
             <button
               key={e.key}
               onClick={() => router.push(e.url)}
-              className="flex flex-col items-center rounded-2xl bg-white p-3 shadow-sm active:scale-[0.97] transition-transform"
+              className="flex flex-col items-center rounded-2xl bg-white p-2.5 shadow-sm active:scale-[0.97] transition-transform"
             >
-              <span className="mb-1.5 flex h-10 w-10 items-center justify-center rounded-xl text-xl" style={{ backgroundColor: BRAND + "12" }}>
+              <span className="mb-1 flex h-9 w-9 items-center justify-center rounded-xl text-lg" style={{ backgroundColor: BRAND + "12" }}>
                 {e.emoji}
               </span>
-              <p className="text-[13px] font-bold text-gray-800">{e.name}</p>
-              <p className="mt-0.5 text-center text-[10px] leading-tight text-gray-400">{e.desc}</p>
+              <p className="text-[12px] font-bold text-gray-800">{e.name}</p>
+              <p className="mt-0.5 text-center text-[9px] leading-tight text-gray-400">{e.desc}</p>
             </button>
           ))}
         </div>
 
-        {/* 医考题库专区入口（LOC 配置开关控制显隐） */}
-        {yikaoEnabled && (
-          <button
-            onClick={() => router.push("/academy/yikao")}
-            className="mt-3 flex w-full items-center gap-3 rounded-2xl p-4 text-left shadow-sm active:scale-[0.98] transition-transform"
-            style={{ background: "linear-gradient(135deg,#2FAE9E 0%,#1F8A7D 100%)" }}
-          >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[15px] font-bold text-white" style={{ backgroundColor: "#C05046", border: "2px solid rgba(255,227,179,.6)" }}>考</span>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-white">医考题库专区</p>
-              <p className="mt-0.5 text-[11px]" style={{ color: "rgba(255,255,255,.85)" }}>中医执业医师 · 刷题 / 模考 / 文库一体化</p>
-            </div>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.8)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
-          </button>
-        )}
-
-        {/* 板块概览 */}
-        <p className="mb-2 mt-4 px-1 text-xs font-semibold text-gray-500">板块概览</p>
-        {loading ? (
-          <div className="rounded-2xl bg-white p-6 text-center text-xs text-gray-400 shadow-sm">加载中...</div>
-        ) : tracks.length === 0 ? (
-          <div className="rounded-2xl bg-white p-6 text-center shadow-sm">
-            <p className="text-xs text-gray-400">暂无赛道数据，去知识工厂上传第一份资料吧</p>
-          </div>
-        ) : (
-          <div className="space-y-2.5">
-            {tracks.map((t) => (
-              <button
-                key={t.key}
-                onClick={() => router.push(`/academy/learn?track=${t.key}`)}
-                className="flex w-full items-center gap-3 rounded-2xl bg-white p-4 text-left shadow-sm active:bg-gray-50"
-              >
-                <span
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xl"
-                  style={{ backgroundColor: BRAND + "12" }}
-                >
-                  {TRACK_EMOJI[t.key] || "📚"}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-gray-800">{t.name}</span>
-                    {t.myLevel > 0 && (
-                      <span
-                        className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
-                        style={{ backgroundColor: BRAND + "15", color: BRAND }}
-                      >
-                        {LEVEL_NAMES[t.myLevel] || `L${t.myLevel}`}
-                        {t.myTitle ? ` · ${t.myTitle}` : ""}
-                      </span>
-                    )}
-                  </div>
-                  <p className="mt-1 text-[11px] text-gray-400">
-                    {t.categoryCount} 个类目 · {t.knowledgeCount} 个知识点 · {t.questionCount} 道题
-                    {t.myCertificates.length > 0 ? ` · ${t.myCertificates.length} 张证书` : ""}
-                  </p>
-                </div>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </button>
-            ))}
-          </div>
+        {loading && (
+          <p className="mt-3 text-center text-[10px] text-gray-300">学习区数据加载中...</p>
         )}
 
         <p className="mt-4 text-center text-[10px] leading-relaxed text-gray-300">
-          言道学堂内容由 AI 辅助生成并经人工审核<br />仅供传统文化学习参考
+          内容仅供文化娱乐参考，不构成任何专业建议
         </p>
       </div>
 

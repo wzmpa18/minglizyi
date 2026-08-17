@@ -595,7 +595,7 @@ export default function HuangliPage() {
         <div className="rounded-lg bg-[#f9f9f9] p-3 text-center border border-gray-200">
           <p className="mb-1 text-xs font-semibold text-gray-400">免责声明</p>
           <p className="text-[11px] leading-relaxed text-gray-400">
-            本老黄历数据由 lunar-javascript 历法库计算，仅供传统文化学习与参考。宜忌、冲煞、神煞等内容均来源于传统择日典籍，不构成任何决策依据。请理性看待，切勿迷信。
+            宜忌、冲煞、神煞等内容整理自传统择日典籍，内容仅供文化娱乐参考，不构成任何专业建议或决策依据。请理性看待，切勿迷信。
           </p>
         </div>
       </div>

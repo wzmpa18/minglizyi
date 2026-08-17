@@ -116,7 +116,7 @@ function daysInMonth(year: number, month: number): number {
 
 /**
  * 将农历日期转换为公历日期
- * 使用 lunar-javascript (MIT) 库进行精确转换
+ * 使用 历法引擎 库进行精确转换
  * 转换失败时返回原始日期（降级处理）
  */
 function lunarToSolarDate(date: DatePickerValue): DatePickerValue {

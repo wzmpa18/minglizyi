@@ -455,7 +455,7 @@ export default function TarotPage() {
 
       {/* 隐私与说明 */}
       <div className="px-3 pb-3 pt-1 text-center text-[10px] text-gray-400">
-        基础牌义骨架取自公版韦特体系，释义为平台独立整理；记录仅存于本机，默认私有
+        牌面释义为平台独立整理；记录仅存于本机，默认私有
       </div>
     </div>
   );

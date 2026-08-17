@@ -476,7 +476,7 @@ export async function getEventDivination(
 3. 给出吉凶趋势判断和注意事项
 4. 语言客观中肯，避免绝对化表述
 5. 不涉及医疗诊断、投资建议等违规内容
-6. 结尾必须标注：「以上内容由AI生成，仅供传统文化学习参考，不构成人生决策建议」`;
+6. 结尾必须标注：「以上内容仅供传统文化学习参考，不构成人生决策建议」`;
 
   const userPrompt = `【${toolName}排盘数据】\n${chartContext}\n\n【用户提问】\n${userQuestion}\n\n请结合排盘数据，针对用户的问题进行断事分析。`;
 
@@ -504,7 +504,7 @@ export async function getPhoneAIInterpretation(
 3. 五行平衡分析及调和建议
 4. 号码与使用者运势的关联解读
 5. 给出使用建议
-6. 结尾必须标注：「以上内容由AI生成，仅供传统文化学习参考，不构成人生决策建议」`;
+6. 结尾必须标注：「以上内容仅供传统文化学习参考，不构成人生决策建议」`;
 
   const userPrompt = `手机号码：${phoneNumber}\n分析数据：\n${analysisData}\n\n请给出深度AI解读。`;
 
@@ -530,7 +530,7 @@ export async function getCarplateAIInterpretation(
 3. 吉祥/不利组合的能量影响分析
 4. 对行车平安的传统文化解读
 5. 给出使用建议
-6. 结尾必须标注：「以上内容由AI生成，仅供传统文化学习参考，不构成人生决策建议」`;
+6. 结尾必须标注：「以上内容仅供传统文化学习参考，不构成人生决策建议」`;
 
   const userPrompt = `车牌号码：${plateNumber}\n分析数据：\n${analysisData}\n\n请给出深度AI解读。`;
 

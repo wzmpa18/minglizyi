@@ -371,7 +371,7 @@ export function buildWenzhenSystemPrompt(
   parts.push(`3. 治法思路（体现所选流派特点）`);
   parts.push(`4. 方药建议或取穴经验参考（引用原著原文）`);
   parts.push(`5. 注意事项与禁忌`);
-  parts.push(`\n⚠️ 免责声明：以上内容由AI生成，仅供传统文化学习参考，不构成医疗诊断或治疗建议。如有身体不适，请前往正规医疗机构就诊。`);
+  parts.push(`\n⚠️ 免责声明：以上内容仅供传统文化学习参考，不构成医疗诊断或治疗建议。如有身体不适，请前往正规医疗机构就诊。`);
 
   return parts.join("\n");
 }

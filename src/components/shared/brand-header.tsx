@@ -19,10 +19,12 @@ export function BrandHeader({ title = "言道排盘", showBack = false, backUrl,
   const handleBack = () => {
     if (onBack) {
       onBack();
+    } else if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
     } else if (backUrl) {
       router.push(backUrl);
     } else {
-      router.back();
+      router.push("/");
     }
   };
 
