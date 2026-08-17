@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const VERSION = "v25.0.27";
+const VERSION = "v25.0.28";
 const now = new Date();
 const d = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
 const buildId = `${VERSION}_D${d}`;
