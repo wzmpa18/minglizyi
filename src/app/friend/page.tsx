@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { getLoginState } from "@/lib/auth";
 import { addFriend, type Friend } from "@/lib/socialStore";
 import { getUserById, findUserById } from "@/lib/userStore";
+import { recordInviteLanding } from "@/lib/antiCheatStore";
 
 const BRAND = "#7B2FBE";
 // APK 直链 - 使用 guoxue 域名（Nginx已配置正确的 Content-Type 和 Content-Disposition）
@@ -43,6 +44,10 @@ function FriendContent() {
     // 存储 referrer ID 到 localStorage，注册时自动绑定邀请关系
     if (referrerId) {
       localStorage.setItem("yandao_referrer_id", referrerId);
+      // P6-TOOL-04 §5.2: 记录邀请链接首次落地时间（先到先得，用于有效期校验）
+      try {
+        recordInviteLanding();
+      } catch { /* ignore */ }
     }
 
     // 检查登录状态

@@ -71,10 +71,29 @@ interface AuspiciousDay {
   reasons: string[];
   // 特别提示
   warnings: string[];
+  // P6-TOOL-04：结果展示扩展字段（历史记录可能缺失，可选）
+  jiShi?: string[]; // 当日吉时（按时辰天神吉凶判定）
+  posXi?: string; // 喜神方位
+  posCai?: string; // 财神方位
+  posFu?: string; // 福神方位
 }
 
-function findAuspiciousDays(eventKey: string, startDate: Date, endDate: Date, userShengXiao?: string): AuspiciousDay[] {
-  const eventType = EVENT_TYPES.find(e => e.key === eventKey);
+/** 自定义事项定义（P6-TOOL-04：事项分类由 LOC 后台配置，引擎按关键词匹配） */
+export interface ZeriCustomEvent {
+  key: string;
+  label: string;
+  yiKeywords: string[];
+}
+
+function findAuspiciousDays(
+  eventKey: string,
+  startDate: Date,
+  endDate: Date,
+  userShengXiao?: string,
+  customEvent?: ZeriCustomEvent
+): AuspiciousDay[] {
+  const preset = EVENT_TYPES.find(e => e.key === eventKey);
+  const eventType = preset || (customEvent ? { key: customEvent.key, label: customEvent.label, icon: "宜", yiKeywords: customEvent.yiKeywords } : undefined);
   if (!eventType) return [];
 
   const results: AuspiciousDay[] = [];
@@ -170,6 +189,16 @@ function findAuspiciousDays(eventKey: string, startDate: Date, endDate: Date, us
 
       // 匹配到宜中的事项或综合评分>=60则入选
       if (matched || score >= 60) {
+        // P6-TOOL-04：吉时（遍历十二时辰，按各时辰天神吉凶判定）与方位
+        const jiShi: string[] = [];
+        try {
+          for (const h of [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21]) {
+            const lh = Solar.fromYmdHms(cur.getFullYear(), cur.getMonth() + 1, cur.getDate(), h, 0, 0).getLunar();
+            if (lh.getTimeTianShenLuck() === "吉") jiShi.push(lh.getTimeZhi() + "时");
+          }
+        } catch {
+          /* ignore 吉时计算异常 */
+        }
         results.push({
           date: new Date(cur),
           dateStr: formatDate(cur),
@@ -188,6 +217,10 @@ function findAuspiciousDays(eventKey: string, startDate: Date, endDate: Date, us
           score,
           reasons,
           warnings,
+          jiShi,
+          posXi: lunar.getDayPositionXiDesc() || "",
+          posCai: lunar.getDayPositionCaiDesc() || "",
+          posFu: lunar.getDayPositionFuDesc() || "",
         });
       }
     } catch {

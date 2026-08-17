@@ -514,6 +514,7 @@ export const TOOL_TYPE_MAP: Record<string, { name: string; color: string; path: 
   phone: { name: "号码吉凶", color: "#009688", path: "/yixue/phone" },
   carplate: { name: "车牌吉凶", color: "#FF5722", path: "/yixue/carplate" },
   zeri: { name: "择日", color: "#8BC34A", path: "/yixue/zeri" },
+  astro: { name: "占星术", color: "#5C6BC0", path: "/yixue/astro" },
   jiemeng: { name: "解梦", color: "#E040FB", path: "/yixue/jiemeng" },
   // P2-3 中医服务类型（医考学习数据暂不接入客户档案）
   "tcm-constitution": { name: "中医体质测评", color: "#7B2FBE", path: "/zhongyi/constitution" },

@@ -3,6 +3,7 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { BrandHeader } from "@/components/shared";
+import { SourceAttribution } from "@/components/SourceAttribution";
 
 const BRAND = "#7B2FBE";
 
@@ -307,6 +308,20 @@ export default function PrivacyPage() {
           <P>
             8.3 如您不同意更新后的隐私政策，您有权停止使用本平台服务。如您在政策更新后继续使用本平台服务，即视为您同意更新后的政策。
           </P>
+        </Section>
+
+        {/* 第三方来源与知识产权声明（P6-TOOL-04-补02 分级标注） */}
+        <Section index={9} title="第三方来源与知识产权声明">
+          <P>
+            9.1 本平台遵循净室开发与来源分级标注原则：第三方开源引擎与数据仅经标准接口调用，与自研业务代码物理分层；传统典籍整理自公共领域资料。
+          </P>
+          <P>
+            9.2 采用 MIT / CC BY 4.0 许可证的开源组件与数据，按协议要求在相关功能页面底部合规说明区署名并保留来源链接；完整第三方资源清单（含许可证、版本、商用权限）可在平台运营后台「来源注册库」导出核查。
+          </P>
+          <P>
+            9.3 平台 AI 生成的解读内容均标注「AI生成，仅供文化娱乐参考」，与传统典籍原文、授权素材分层存储；如对内容来源有异议，可通过客服邮箱联系我们，平台将依据来源注册库核查并第一时间处理。
+          </P>
+          <SourceAttribution compact />
         </Section>
 
         {/* 联系方式 */}

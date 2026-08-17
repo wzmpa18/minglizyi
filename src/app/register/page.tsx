@@ -4,6 +4,7 @@ import React, { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { BrandHeader } from "@/components/shared";
 import { sendSmsCode, sendEmailCode, registerWithPhone, registerWithEmail, checkUserExist } from "@/lib/loginService";
+import { recordInviteLanding } from "@/lib/antiCheatStore";
 
 const BRAND = "#7B2FBE";
 
@@ -63,20 +64,32 @@ export default function RegisterPage() {
   // v18.6: 从URL参数自动填充邀请码（/register?code=XXX 或 /register?ref=userId）
   // ref 参数也被存储为 referrer_id，注册时传给后端
   const [referrerId, setReferrerId] = useState("");
+  // P6-TOOL-04 §5.1: 受邀注册时展示邀请关系与奖励说明
+  const [invitedByCode, setInvitedByCode] = useState("");
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
     const ref = params.get("ref");
+    const storedRef = localStorage.getItem("yandao_referrer_id");
+    const hasInvite = !!(code || ref || storedRef);
     if (code) {
       setInviteCode(code);
+      setInvitedByCode(code);
+    } else if (ref || storedRef) {
+      setInvitedByCode("ref");
+    }
+    // P6-TOOL-04 §5.2: 记录邀请链接首次落地时间（先到先得，用于有效期校验）
+    if (hasInvite) {
+      try {
+        recordInviteLanding();
+      } catch { /* ignore */ }
     }
     if (ref) {
       // ref 是数字 userId，直接传给后端
       setReferrerId(ref);
     }
     // 也检查 localStorage 中 friend 页存储的 referrer_id
-    const storedRef = localStorage.getItem("yandao_referrer_id");
     if (storedRef && !ref) {
       setReferrerId(storedRef);
     }
@@ -723,6 +736,27 @@ export default function RegisterPage() {
 
         {/* 邀请码（选填） */}
         <div style={{ marginBottom: 24 }}>
+          {/* P6-TOOL-04 §5.1: 受邀注册时明确展示邀请关系与奖励说明 */}
+          {invitedByCode && (
+            <div
+              style={{
+                backgroundColor: "rgba(123, 47, 190, 0.08)",
+                border: "1px solid rgba(123, 47, 190, 0.25)",
+                borderRadius: 12,
+                padding: "12px 16px",
+                marginBottom: 12,
+              }}
+            >
+              <div style={{ fontSize: 13, color: "#7B2FBE", fontWeight: 600, marginBottom: 4 }}>
+                🎁 您正在通过邀请链接注册
+              </div>
+              <div style={{ fontSize: 12, color: "#666", lineHeight: 1.6 }}>
+                注册成功后将与邀请人建立邀请关系（每个账号仅可绑定一次，不可更换）；
+                邀请人可获得邀请奖励积分，您后续消费时邀请人可获返佣。邀请关系有效期以平台规则为准，
+                奖励发放需通过平台风控校验。请勿使用他人账号或虚拟设备批量注册，异常行为将冻结奖励。
+              </div>
+            </div>
+          )}
           <div
             style={{
               display: "flex",

@@ -1031,7 +1031,7 @@ export default function ZiweiPage() {
               <span style={{ color: "#d97706", fontWeight: 700 }}>大X=大限X宫</span>
               <span style={{ color: "#2563eb", fontWeight: 700 }}>年X=流年X宫</span>
               {overlayInfo.deep && <span style={{ color: "#0d9488", fontWeight: 700 }}>{overlayInfo.deep.tag}X=流{overlayInfo.deep.tag}X宫</span>}
-              <span>（粗体下划线=该层命宫叠落处）</span>
+              <span>（粗体下划线=该层命宫叠落处；叠罗汉：自上而下 流{overlayInfo.deep ? overlayInfo.deep.tag : "月"}→流年→大限，压于本命宫名上方）</span>
               <button
                 onClick={() => setInterpretPanel({
                   palaceName: "叠宫技法",
@@ -1431,17 +1431,17 @@ export default function ZiweiPage() {
                             )}
                           </div>
                         </div>
-                        {/* v25.0.25: ZW-OVERLAY 叠宫行（简写口径：大X=大限X宫 / 年X=流年X宫 / 月·日·时X=流月日时X宫；该层命宫叠落处加粗下划线） */}
+                        {/* v25.0.26: ZW-OVERLAY 叠宫改纵向叠罗汉（吉时雨口径：每层2字，自下而上 大X←年X←月/日/时X，层层压于本命宫名上方；该层命宫叠落处加粗下划线） */}
                         {overlayInfo && (overlayInfo.dx || overlayInfo.ln || overlayInfo.deep) && (
-                          <div style={{ display: "flex", justifyContent: "center", alignItems: "baseline", gap: "3px", fontSize: "6.5px", lineHeight: "1.2", flexShrink: 0, whiteSpace: "nowrap", overflow: "hidden", position: "relative", zIndex: 3, backgroundColor: isLaiyin ? "#fff8f0" : palaceBg }}>
-                            {overlayInfo.dx && overlayInfo.dx.names[palaceZhiIdx] && (
-                              <span style={{ color: "#d97706", fontWeight: overlayInfo.dx.names[palaceZhiIdx] === "命宫" ? 700 : 400, borderBottom: overlayInfo.dx.names[palaceZhiIdx] === "命宫" ? "1px solid #d97706" : "none" }}>大{zwPalaceAbbr(overlayInfo.dx.names[palaceZhiIdx])}</span>
+                          <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center", gap: 0, fontSize: "6.5px", lineHeight: "1.15", flexShrink: 0, whiteSpace: "nowrap", position: "relative", zIndex: 3, backgroundColor: isLaiyin ? "#fff8f0" : palaceBg }}>
+                            {overlayInfo.deep && overlayInfo.deep.names[palaceZhiIdx] && (
+                              <span style={{ color: "#0d9488", fontWeight: overlayInfo.deep.names[palaceZhiIdx] === "命宫" ? 700 : 400, borderBottom: overlayInfo.deep.names[palaceZhiIdx] === "命宫" ? "1px solid #0d9488" : "none", lineHeight: "1.15" }}>{overlayInfo.deep.tag}{zwPalaceAbbr(overlayInfo.deep.names[palaceZhiIdx])}</span>
                             )}
                             {overlayInfo.ln && overlayInfo.ln.names[palaceZhiIdx] && (
-                              <span style={{ color: "#2563eb", fontWeight: overlayInfo.ln.names[palaceZhiIdx] === "命宫" ? 700 : 400, borderBottom: overlayInfo.ln.names[palaceZhiIdx] === "命宫" ? "1px solid #2563eb" : "none" }}>年{zwPalaceAbbr(overlayInfo.ln.names[palaceZhiIdx])}</span>
+                              <span style={{ color: "#2563eb", fontWeight: overlayInfo.ln.names[palaceZhiIdx] === "命宫" ? 700 : 400, borderBottom: overlayInfo.ln.names[palaceZhiIdx] === "命宫" ? "1px solid #2563eb" : "none", lineHeight: "1.15" }}>年{zwPalaceAbbr(overlayInfo.ln.names[palaceZhiIdx])}</span>
                             )}
-                            {overlayInfo.deep && overlayInfo.deep.names[palaceZhiIdx] && (
-                              <span style={{ color: "#0d9488", fontWeight: overlayInfo.deep.names[palaceZhiIdx] === "命宫" ? 700 : 400, borderBottom: overlayInfo.deep.names[palaceZhiIdx] === "命宫" ? "1px solid #0d9488" : "none" }}>{overlayInfo.deep.tag}{zwPalaceAbbr(overlayInfo.deep.names[palaceZhiIdx])}</span>
+                            {overlayInfo.dx && overlayInfo.dx.names[palaceZhiIdx] && (
+                              <span style={{ color: "#d97706", fontWeight: overlayInfo.dx.names[palaceZhiIdx] === "命宫" ? 700 : 400, borderBottom: overlayInfo.dx.names[palaceZhiIdx] === "命宫" ? "1px solid #d97706" : "none", lineHeight: "1.15" }}>大{zwPalaceAbbr(overlayInfo.dx.names[palaceZhiIdx])}</span>
                             )}
                           </div>
                         )}

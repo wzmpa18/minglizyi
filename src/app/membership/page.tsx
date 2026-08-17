@@ -6,6 +6,7 @@ import { BrandHeader } from "@/components/shared";
 import { useToolBack } from "@/lib/useToolBack";
 import {
   getMembershipStatus,
+  isSuperAccount,
   MEMBERSHIP_PLANS,
   createOrder,
   completeOrder,
@@ -23,6 +24,8 @@ import {
 } from "@/lib/membershipStore";
 import { updateUserProfile, getClientUserId } from "@/lib/auth";
 import { processConsumptionRebate } from "@/lib/inviteStore";
+import { redeemCode, getMyRedemptions } from "@/lib/redeemCodeStore";
+import { getToolConfig } from "@/lib/toolConfigStore";
 
 const BRAND = "#7B2FBE";
 
@@ -36,11 +39,43 @@ export default function MembershipPage() {
   const [successInfo, setSuccessInfo] = useState<{ planName: string; level: MemberLevel } | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [orders, setOrders] = useState<OrderRecord[]>([]);
+  // 兑换码（P6-TOOL-04-补02）
+  const [redeemInput, setRedeemInput] = useState("");
+  const [redeeming, setRedeeming] = useState(false);
+  const [redeemMsg, setRedeemMsg] = useState("");
+  const [redeemOk, setRedeemOk] = useState(false);
+  const [myRedemptions, setMyRedemptions] = useState<ReturnType<typeof getMyRedemptions>>([]);
+  const [redeemEnabled, setRedeemEnabled] = useState(false);
 
   useEffect(() => {
     setStatus(getMembershipStatus());
     setOrders(getOrders());
+    try {
+      setRedeemEnabled(getToolConfig().redeem.enabled);
+      setMyRedemptions(getMyRedemptions());
+    } catch {}
   }, []);
+
+  const handleRedeem = () => {
+    if (!redeemInput.trim()) {
+      setRedeemOk(false);
+      setRedeemMsg("请输入兑换码");
+      return;
+    }
+    setRedeeming(true);
+    try {
+      const res = redeemCode(redeemInput);
+      setRedeemOk(res.success);
+      setRedeemMsg(res.message);
+      if (res.success) {
+        setRedeemInput("");
+        setStatus(getMembershipStatus());
+        setMyRedemptions(getMyRedemptions());
+      }
+    } finally {
+      setRedeeming(false);
+    }
+  };
 
   const formatDays = (days: number) => {
     if (days === Infinity) return "永久有效";
@@ -132,9 +167,44 @@ export default function MembershipPage() {
                   ? "永久有效 · 尊享全部权益"
                   : formatDays(status.daysRemaining)}
               </div>
+              {isSuperAccount() && (
+                <div style={{ fontSize: "11px", marginTop: "4px", padding: "2px 8px", borderRadius: "8px", backgroundColor: "rgba(255,215,0,0.35)", display: "inline-block", fontWeight: 700 }}>
+                  全权限账户
+                </div>
+              )}
             </div>
           </div>
         </div>
+
+        {/* ===== 兑换码（P6-TOOL-04-补02：运营发放渠道，核销复用统一会员/积分引擎） ===== */}
+        {redeemEnabled && (
+          <div style={{ margin: "0 12px 12px", padding: "14px 16px", backgroundColor: "#fff", borderRadius: "14px", border: "1px solid #eee" }}>
+            <div style={{ fontSize: "14px", fontWeight: 600, color: "#333", marginBottom: "8px" }}>🎁 兑换码</div>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <input
+                value={redeemInput}
+                onChange={(e) => setRedeemInput(e.target.value.toUpperCase())}
+                placeholder="输入兑换码，如 YD-XXXX-XXXX"
+                style={{ flex: 1, padding: "10px 12px", borderRadius: "10px", border: "1px solid #ddd", fontSize: "14px", fontFamily: "monospace", outline: "none" }}
+              />
+              <button
+                disabled={redeeming}
+                onClick={handleRedeem}
+                style={{ padding: "10px 18px", borderRadius: "10px", border: "none", backgroundColor: BRAND, color: "#fff", fontSize: "14px", fontWeight: 600, cursor: "pointer", opacity: redeeming ? 0.6 : 1 }}
+              >
+                {redeeming ? "兑换中..." : "兑换"}
+              </button>
+            </div>
+            {redeemMsg && (
+              <div style={{ marginTop: "8px", fontSize: "12px", color: redeemOk ? "#27ae60" : "#e74c3c" }}>{redeemMsg}</div>
+            )}
+            {myRedemptions.length > 0 && (
+              <div style={{ marginTop: "10px", fontSize: "12px", color: "#888" }}>
+                最近兑换：{myRedemptions.slice(0, 3).map((r) => `${r.rewardDetail}（${r.redeemedAt.slice(5, 10).replace("-", "/")}）`).join("、")}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ===== 套餐标题 ===== */}
         <div style={{ padding: "8px 16px 4px", fontSize: "15px", fontWeight: 600, color: "#333" }}>

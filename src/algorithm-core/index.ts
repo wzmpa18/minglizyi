@@ -482,6 +482,7 @@ export {
 // ============================================================================
 export {
   type AuspiciousDay,
+  type ZeriCustomEvent,
   EVENT_TYPES as ZERI_EVENT_TYPES,
   JIANCHU_JIXIONG,
   SHENGXIAO,
@@ -490,6 +491,20 @@ export {
   getScoreLabel as getZeriScoreLabel,
   formatDate,
 } from './modules/zeri';
+
+// ============================================================================
+// 十四B、占星天文模块 (modules/astro/) — P6-TOOL-04 v25.0.26 新增
+// 基于 astronomy-engine 2.1.19 (MIT) + 自研占星换算层
+// ============================================================================
+export {
+  type AstroInput,
+  type AstroPlanetPosition,
+  type AstroAspect,
+  type NatalChartResult,
+  ASTRO_ENGINE_VERSION,
+  ASTRO_CITIES,
+  calcNatalChart,
+} from './modules/astro';
 
 // ============================================================================
 // 十五、手机号吉凶模块 (modules/phone/) — v18.4 新增

@@ -483,6 +483,12 @@ export async function registerWithPhone(params: RegisterParams): Promise<LoginRe
         } catch {}
       }
 
+      // P6-TOOL-04 §5.2：注册成功登记设备档案（设备农场识别）
+      try {
+        const { recordRegistration } = await import('./antiCheatStore');
+        recordRegistration(user.userId);
+      } catch { /* ignore */ }
+
       syncLocalData(user.userId);
       return { success: true, message: '注册成功', user, isNewUser: true };
     }
@@ -551,6 +557,12 @@ export async function registerWithPhone(params: RegisterParams): Promise<LoginRe
   }
 
   syncLocalData(userId);
+
+  // P6-TOOL-04 §5.2：本地降级注册同样登记设备档案
+  try {
+    const { recordRegistration } = await import('./antiCheatStore');
+    recordRegistration(userId);
+  } catch { /* ignore */ }
 
   // v19.7_final: 注册到服务端用户表（供后续唯一性校验）
   registerToServer(phone);
@@ -728,6 +740,14 @@ export async function loginWithEmail(email: string, code: string): Promise<Login
 
   syncLocalData(userId);
 
+  // P6-TOOL-04 §5.2：邮箱验证码登录新建账号视为注册，登记设备档案
+  if (isNewUser) {
+    try {
+      const { recordRegistration } = await import('./antiCheatStore');
+      recordRegistration(userId);
+    } catch { /* ignore */ }
+  }
+
   return { success: true, message: isNewUser ? '注册成功' : '登录成功', user, isNewUser };
 }
 
@@ -792,6 +812,12 @@ export async function registerWithEmail(params: RegisterEmailParams): Promise<Lo
           });
         } catch {}
       }
+
+      // P6-TOOL-04 §5.2：注册成功登记设备档案（设备农场识别）
+      try {
+        const { recordRegistration } = await import('./antiCheatStore');
+        recordRegistration(user.userId);
+      } catch { /* ignore */ }
 
       syncLocalData(user.userId);
       return { success: true, message: '注册成功', user, isNewUser: true };
@@ -860,6 +886,12 @@ export async function registerWithEmail(params: RegisterEmailParams): Promise<Lo
   }
 
   syncLocalData(userId);
+
+  // P6-TOOL-04 §5.2：本地降级邮箱注册同样登记设备档案
+  try {
+    const { recordRegistration } = await import('./antiCheatStore');
+    recordRegistration(userId);
+  } catch { /* ignore */ }
 
   // v19.7_final: 注册到服务端用户表（供后续唯一性校验）
   registerToServer(undefined, email);

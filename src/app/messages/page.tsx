@@ -82,6 +82,21 @@ export default function MessagesPage() {
   const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  // 系统通知（统一消息中心）
+  const [sysUnread, setSysUnread] = useState(0);
+  const [sysLatest, setSysLatest] = useState<{ title: string } | null>(null);
+  useEffect(() => {
+    import("@/lib/notificationCenter").then(({ listNotifications, getUnreadCount, subscribeNotifications }) => {
+      const load = () => {
+        setSysUnread(getUnreadCount());
+        const list = listNotifications();
+        setSysLatest(list.length > 0 ? { title: list[0].title } : null);
+      };
+      load();
+      const unsub = subscribeNotifications(load);
+      return unsub;
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const friends = getFriends();
@@ -196,6 +211,36 @@ export default function MessagesPage() {
 
       {/* 会话列表 */}
       <div className="flex-1 overflow-y-auto px-3">
+        {/* 系统通知入口（统一消息中心：提醒/订单/AI报告/奖励），始终置顶显示 */}
+        <div className="space-y-2 pt-0">
+          <button
+            onClick={() => router.push("/messages/system")}
+            className="flex w-full items-center gap-3 bg-white rounded-xl p-4 text-left active:bg-gray-50 transition-colors"
+          >
+            <div className="relative shrink-0">
+              <div
+                className="flex h-12 w-12 items-center justify-center rounded-full text-white text-xl"
+                style={{ backgroundColor: "#0d9488" }}
+              >
+                🔔
+              </div>
+              {sysUnread > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                  {sysUnread > 99 ? "99+" : sysUnread}
+                </span>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-gray-800">系统通知</span>
+                <span className="ml-2 shrink-0 text-xs text-gray-400">{sysUnread > 0 ? "有新通知" : ""}</span>
+              </div>
+              <p className="mt-0.5 truncate text-xs text-gray-500">
+                {sysLatest ? sysLatest.title : "记事提醒、订单进展、AI 报告结果"}
+              </p>
+            </div>
+          </button>
+        </div>
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
             <div

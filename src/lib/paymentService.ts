@@ -13,7 +13,11 @@ import { getUserProfile } from "./auth";
 /**
  * 支付场景类型（与后端 OrderType 保持一致）
  */
-export type PaymentScenario = "SINGLE_UNLOCK" | "MEMBERSHIP" | "POINTS_RECHARGE";
+export type PaymentScenario =
+  | "SINGLE_UNLOCK"
+  | "MEMBERSHIP"
+  | "POINTS_RECHARGE"
+  | "CONSULT_SERVICE";
 
 /**
  * 支付渠道
@@ -38,6 +42,10 @@ export interface CallPaymentParams {
     membershipLevel?: string;
     membershipDays?: number;
     pointsAmount?: number;
+    /** CONSULT_SERVICE: 咨询服务ID / 服务者ID / 需求描述 */
+    consultServiceId?: string;
+    consultProviderId?: string;
+    consultRequirement?: string;
     openid?: string;
     returnUrl?: string;
   };
@@ -86,6 +94,7 @@ export const COMPLIANCE_TITLES: Record<PaymentScenario, string> = {
   SINGLE_UNLOCK: "传统文化学习资料深度解读（单次）",
   MEMBERSHIP: "传统文化学习平台会员服务",
   POINTS_RECHARGE: "传统文化学习平台积分充值",
+  CONSULT_SERVICE: "传统文化学习顾问咨询服务",
 };
 
 // ==================== 配置常量 ====================
@@ -530,6 +539,28 @@ export async function payForPointsRecharge(
     type: "POINTS_RECHARGE",
     amount,
     extra: { pointsAmount },
+  });
+}
+
+/**
+ * 发起真人咨询服务预约支付（P6-TOOL-04 §3.3）
+ * 订单走统一 CONSULT_SERVICE 场景；支付成功后由调用方
+ * 以返回的 orderId 登记 consultServiceStore 履约台账。
+ */
+export async function payForConsultService(
+  serviceId: string,
+  providerId: string,
+  amount: number,
+  requirement: string
+): Promise<CallPaymentResult> {
+  return callPayment({
+    type: "CONSULT_SERVICE",
+    amount,
+    extra: {
+      consultServiceId: serviceId,
+      consultProviderId: providerId,
+      consultRequirement: requirement.slice(0, 500),
+    },
   });
 }
 

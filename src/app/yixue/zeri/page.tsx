@@ -10,9 +10,11 @@ import { getZeriJianchuInterpretation, getZeriShenshaInterpretation, getZeriYiji
 import type { ZeriInterpretItem } from "@/lib/zeri-interpretations";
 import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
 import { useToolBack } from "@/lib/useToolBack";
-import { findAuspiciousDays, ZERI_EVENT_TYPES, JIANCHU_JIXIONG, SHENGXIAO, getZeriScoreColor, getZeriScoreLabel, formatDate, addDaysToDate } from "@/algorithm-core";
+import { findAuspiciousDays, SHENGXIAO, getZeriScoreColor, getZeriScoreLabel, formatDate, addDaysToDate } from "@/algorithm-core";
 import type { AuspiciousDay } from "@/algorithm-core";
+import { getToolConfig } from "@/lib/toolConfigStore";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
+import AIInterpretButton from "@/components/AIInterpretButton";
 
 import { ShareButton } from "@/components/ShareButton";
 // ============================================================================
@@ -33,7 +35,10 @@ const INTERPRET_TYPE_COLORS: Record<string, { bg: string; fg: string; label: str
 // ============================================================================
 export default function ZeriPage() {
   const pageKey = "yixue_zeri"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
-  const [eventType, setEventType] = useState("嫁娶");
+  // P6-TOOL-04：事项分类与展示字段全部来自 LOC 后台配置（toolConfigStore），规则版本可追溯
+  const zeriCfg = useMemo(() => getToolConfig().zeri, []);
+  const enabledEventTypes = useMemo(() => zeriCfg.eventTypes.filter((e) => e.enabled), [zeriCfg]);
+  const [eventType, setEventType] = useState<string>("");
   const [startYear, setStartYear] = useState(2026);
   const [startMonth, setStartMonth] = useState(1);
   const [startDay, setStartDay] = useState(2);
@@ -70,24 +75,36 @@ export default function ZeriPage() {
       return;
     }
     const dayDiff = Math.round((end.getTime() - start.getTime()) / 86400000);
-    if (dayDiff > 90) {
-      setError("日期范围不能超过90天");
+    if (dayDiff > zeriCfg.maxRangeDays) {
+      setError(`日期范围不能超过${zeriCfg.maxRangeDays}天`);
+      return;
+    }
+    const ev = enabledEventTypes.find((e) => e.id === eventType) || enabledEventTypes[0];
+    if (!ev) {
+      setError("择日事项未配置，请联系管理员");
       return;
     }
     setError("");
     setLoading(true);
     setTimeout(() => {
-      const r = findAuspiciousDays(eventType, start, end, userShengXiao || undefined);
+      // 引擎预设键命中走内置规则；自定义事项走后台配置的宜忌关键词匹配
+      const r = findAuspiciousDays(
+        ev.engineKey || ev.name,
+        start,
+        end,
+        userShengXiao || undefined,
+        { key: ev.id, label: ev.name, yiKeywords: ev.yiKeywords }
+      );
       setResults(r);
       setHasResult(true);
       setLoading(false);
-      savePaipanState("zeri",{input:{eventType,startYear,startMonth,startDay,endYear,endMonth,endDay,userShengXiao},showForm:false,_ts:Date.now()});
+      savePaipanState("zeri",{input:{eventType:ev.id,startYear,startMonth,startDay,endYear,endMonth,endDay,userShengXiao},showForm:false,_ts:Date.now()});
       // 保存客户记录
       if(selectedClient && r.length > 0){
-        try{saveRecord({clientId:selectedClient.id,type:"zeri",data:{results:r,inputParams:{eventType,startYear,startMonth,startDay,endYear,endMonth,endDay,userShengXiao}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
+        try{saveRecord({clientId:selectedClient.id,type:"zeri",data:{results:r,inputParams:{eventType:ev.id,startYear,startMonth,startDay,endYear,endMonth,endDay,userShengXiao}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
       }
     }, 200);
-  }, [eventType, startYear, startMonth, startDay, endYear, endMonth, endDay, userShengXiao, selectedClient]);
+  }, [eventType, startYear, startMonth, startDay, endYear, endMonth, endDay, userShengXiao, selectedClient, zeriCfg, enabledEventTypes]);
 
   const handleDayClick = useCallback((day: any) => {
     const interp = getZeriJianchuInterpretation(day.jianChu);
@@ -115,12 +132,19 @@ export default function ZeriPage() {
     };
   }, [hasResult]);
 
-  // localStorage 持久化：恢复排盘状态
+  // localStorage 持久化：恢复排盘状态（兼容旧版预设键存储）
   useEffect(() => {
     const saved = loadPaipanState("zeri");
+    let restored = "";
     if (saved && saved.input) {
       const inp = saved.input as any;
-      if (inp.eventType) setEventType(inp.eventType);
+      if (inp.eventType) {
+        // 新版存配置 id；旧版存引擎预设键/事项名，映射回配置项
+        const hit = enabledEventTypes.find((e) => e.id === inp.eventType)
+          || enabledEventTypes.find((e) => e.engineKey === inp.eventType)
+          || enabledEventTypes.find((e) => e.name === inp.eventType);
+        if (hit) restored = hit.id;
+      }
       if (inp.startYear) setStartYear(inp.startYear);
       if (inp.startMonth) setStartMonth(inp.startMonth);
       if (inp.startDay) setStartDay(inp.startDay);
@@ -129,11 +153,14 @@ export default function ZeriPage() {
       if (inp.endDay) setEndDay(inp.endDay);
       if (inp.userShengXiao) setUserShengXiao(inp.userShengXiao);
     }
-  }, []);
+    setEventType(restored || enabledEventTypes[0]?.id || "");
+  }, [enabledEventTypes]);
 
-  const eventLabel = useMemo(() => {
-    return ZERI_EVENT_TYPES.find(e => e.key === eventType)?.label || eventType;
-  }, [eventType]);
+  const currentEvent = useMemo(
+    () => enabledEventTypes.find((e) => e.id === eventType) || enabledEventTypes[0],
+    [eventType, enabledEventTypes]
+  );
+  const eventLabel = currentEvent?.name || "择日";
 
   return (
     <div className="mx-auto w-full bg-[#ededed]" style={{ maxWidth: "420px", minHeight: "100vh" }}>
@@ -172,22 +199,25 @@ export default function ZeriPage() {
       {/* 输入表单 */}
       {!hasResult && (
         <div className="bg-white px-3 py-3">
-          {/* 事项类型 */}
+          {/* 事项类型（LOC 后台可配置：增删改、启停） */}
           <div className="mb-3">
-            <label className="mb-1 block text-xs text-gray-500">选择事项</label>
+            <label className="mb-1 flex items-center justify-between text-xs text-gray-500">
+              <span>选择事项</span>
+              <span className="text-[10px] text-gray-400">规则版本 {zeriCfg.version}</span>
+            </label>
             <div className="grid grid-cols-4 gap-1.5">
-              {ZERI_EVENT_TYPES.map((e) => (
+              {enabledEventTypes.map((e) => (
                 <button
-                  key={e.key}
-                  onClick={() => setEventType(e.key)}
+                  key={e.id}
+                  onClick={() => setEventType(e.id)}
                   className={`flex flex-col items-center rounded-lg border py-2 text-xs transition-all ${
-                    eventType === e.key
+                    eventType === e.id
                       ? "border-[#7B2FBE] bg-purple-50 text-[#7B2FBE]"
                       : "border-gray-200 bg-gray-50 text-gray-600"
                   }`}
                 >
-                  <span className="text-base font-bold">{e.icon}</span>
-                  <span className="mt-0.5 text-[10px]">{e.label}</span>
+                  <span className="text-base font-bold">{e.name.slice(0, 1)}</span>
+                  <span className="mt-0.5 text-[10px]">{e.name}</span>
                 </button>
               ))}
             </div>
@@ -287,7 +317,7 @@ export default function ZeriPage() {
       {/* 结果 */}
       {hasResult && (
         <div className="bg-white px-2 py-2">
-          {/* 结果概览 */}
+          {/* 结果概览（含规则版本标识，可追溯本次查询使用的规则） */}
           <div className="mb-3 rounded-lg p-3" style={{ backgroundColor: "#f3edf7" }}>
             <div className="text-center">
               <div className="text-sm" style={{ color: BRAND }}>
@@ -300,8 +330,17 @@ export default function ZeriPage() {
               <div className="mt-2 text-2xl font-bold" style={{ color: BRAND }}>
                 共找到 {results.length} 个吉日
               </div>
+              <div className="mt-1 text-[10px] text-gray-400">规则版本 {zeriCfg.version}</div>
             </div>
           </div>
+
+          {/* 民俗注意事项（LOC 后台按事项配置） */}
+          {zeriCfg.showFolkNote && currentEvent?.folkNote && (
+            <div className="mb-3 rounded-lg border border-amber-100 bg-amber-50/60 p-2.5">
+              <div className="text-xs font-bold text-amber-700">【{currentEvent.name}】民俗注意</div>
+              <div className="mt-1 text-[11px] leading-relaxed text-amber-800/90">{currentEvent.folkNote}</div>
+            </div>
+          )}
 
           {/* 吉日列表 */}
           {results.length === 0 ? (
@@ -339,27 +378,63 @@ export default function ZeriPage() {
                     </div>
                   </div>
 
-                  {/* 冲煞 */}
-                  {day.chongShengXiao && (
+                  {/* 冲煞（后台开关 showChongSha） */}
+                  {zeriCfg.showChongSha && day.chongShengXiao && (
                     <div className="mt-1.5 rounded bg-red-50 px-1.5 py-1 text-[10px] text-red-600">
                       冲{day.chongShengXiao}（{day.chongDesc}） · 煞{day.sha}方
                     </div>
                   )}
 
-                  {/* 宜/忌 */}
-                  <div className="mt-1.5 grid grid-cols-2 gap-1 text-[10px]">
-                    <div>
-                      <span className="text-emerald-600 font-bold">宜：</span>
-                      <span className="text-gray-600">{day.yi.join("、") || "无"}</span>
+                  {/* 吉时（后台开关 showJiShi） */}
+                  {zeriCfg.showJiShi && day.jiShi && day.jiShi.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1 rounded bg-amber-50/70 px-1.5 py-1 text-[10px]">
+                      <span className="font-bold text-amber-700">吉时</span>
+                      {day.jiShi.map((js, i) => (
+                        <span key={i} className="rounded-full bg-amber-100 px-1.5 py-0.5 font-medium text-amber-800">{js}</span>
+                      ))}
                     </div>
-                    <div>
-                      <span className="text-red-500 font-bold">忌：</span>
-                      <span className="text-gray-600">{day.ji.join("、") || "无"}</span>
-                    </div>
-                  </div>
+                  )}
 
-                  {/* 推荐理由 */}
-                  {day.reasons.length > 0 && (
+                  {/* 方位（后台开关 showFangWei：喜神/财神/福神） */}
+                  {zeriCfg.showFangWei && (day.posXi || day.posCai || day.posFu) && (
+                    <div className="mt-1.5 grid grid-cols-3 gap-1 text-center text-[10px]">
+                      {day.posXi && (
+                        <div className="rounded bg-gray-50 py-1">
+                          <span className="text-gray-400">喜神</span>
+                          <span className="ml-1 font-semibold text-gray-700">{day.posXi}</span>
+                        </div>
+                      )}
+                      {day.posCai && (
+                        <div className="rounded bg-gray-50 py-1">
+                          <span className="text-gray-400">财神</span>
+                          <span className="ml-1 font-semibold text-gray-700">{day.posCai}</span>
+                        </div>
+                      )}
+                      {day.posFu && (
+                        <div className="rounded bg-gray-50 py-1">
+                          <span className="text-gray-400">福神</span>
+                          <span className="ml-1 font-semibold text-gray-700">{day.posFu}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 宜/忌（后台开关 showYiJi） */}
+                  {zeriCfg.showYiJi && (
+                    <div className="mt-1.5 grid grid-cols-2 gap-1 text-[10px]">
+                      <div>
+                        <span className="text-emerald-600 font-bold">宜：</span>
+                        <span className="text-gray-600">{day.yi.join("、") || "无"}</span>
+                      </div>
+                      <div>
+                        <span className="text-red-500 font-bold">忌：</span>
+                        <span className="text-gray-600">{day.ji.join("、") || "无"}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 推荐理由（后台开关 showRuleBasis：规则依据） */}
+                  {zeriCfg.showRuleBasis && day.reasons.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-1">
                       {day.reasons.slice(0, 3).map((r, i) => (
                         <span key={i} className="rounded bg-emerald-50 px-1 py-0.5 text-[9px] text-emerald-700">{r}</span>
@@ -377,6 +452,43 @@ export default function ZeriPage() {
                   )}
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* P6-TOOL-04 §3.2：AI 深度择日分析（增值服务，复用统一 Paywall/AI网关/缓存幂等链路） */}
+          {zeriCfg.aiDeepEnabled && results.length > 0 && (
+            <div className="mt-3 rounded-lg border border-purple-200 bg-purple-50/40 p-2.5">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-bold" style={{ color: BRAND }}>AI 深度择日分析</div>
+                <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-semibold" style={{ color: BRAND }}>
+                  增值服务 ¥{zeriCfg.aiDeepPrice}/次
+                </span>
+              </div>
+              <div className="mt-1 text-[10px] leading-relaxed text-gray-500">
+                AI 结合传统规则对候选吉日做解释、对比与注意事项说明，结果永久缓存不重复计费，生成失败不计费。
+              </div>
+              <div className="mt-2">
+                <AIInterpretButton
+                  toolName="择日深度分析"
+                  scope="深度分析"
+                  buttonText={`AI 深度择日分析 ¥${zeriCfg.aiDeepPrice}/次`}
+                  cacheKey={`zeri_deep_${currentEvent?.id}_${startYear}${startMonth}${startDay}_${endYear}${endMonth}${endDay}_${zeriCfg.version}`}
+                  contextData={`事项: ${eventLabel}\n规则版本: ${zeriCfg.version}\n日期范围: ${startYear}-${startMonth}-${startDay} 至 ${endYear}-${endMonth}-${endDay}\n生肖: ${userShengXiao || "未指定"}\n民俗注意: ${currentEvent?.folkNote || "无"}\n候选吉日: ${results.slice(0, 5).map((d) => `${d.dateStr}(${d.dayGZ}日,建除${d.jianChu},评分${d.score},吉时${(d.jiShi || []).join("/")},冲${d.chongShengXiao},煞${d.sha}方)`).join("; ")}`}
+                  systemPrompt={`你是传统择日文化解读师。请基于提供的择日结果数据，对候选吉日做解释、横向对比与注意事项说明。
+要求：
+1. 逐条解释每个候选日期的规则依据（建除十二神、干支冲煞、吉时方位等）
+2. 对比各候选日期的优劣与适用场景，给出民俗文化视角的参考说明
+3. 明确提示需要避开的生肖冲煞与方位
+4. 禁止生成确定性承诺（如"必定顺利""保证成功"），禁止替用户做出重大决策
+5. 不涉及医疗、法律、金融等专业建议
+6. 结尾必须标注：「以上内容由AI生成，仅供传统文化参考与个人娱乐，不构成任何专业建议」`}
+                />
+              </div>
+              <div className="mt-1.5 flex items-center justify-center gap-3 text-[10px] text-gray-400">
+                <a href="/profile/wallet" className="underline">费用账单</a>
+                <span>·</span>
+                <a href="/profile/feedback" className="underline">投诉反馈</a>
+              </div>
             </div>
           )}
 
@@ -497,10 +609,10 @@ export default function ZeriPage() {
       </div>
 
 
-      {/* 免责声明 */}
+      {/* 免责声明（LOC 后台可配置文案） */}
       <div className="mx-3 mt-4 rounded-lg border border-red-100 bg-red-50/50 p-3">
         <p className="text-xs leading-relaxed text-gray-500">
-          <strong>免责声明：</strong>本页面内容仅供传统文化娱乐参考，不构成任何决策建议。择吉属于传统民俗文化，日期选择请结合实际情况理性决定。
+          <strong>免责声明：</strong>{zeriCfg.disclaimer}
         </p>
       </div>
       <div style={{ height: "20px" }} />

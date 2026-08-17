@@ -7,6 +7,9 @@
 // B类工具独立管控，不占用通用AI次数，保障营收不亏损
 // ============================================================================
 
+import { getUserProfile } from "./auth";
+import { getToolConfig } from "./toolConfigStore";
+
 export type MemberLevel = "basic" | "monthly" | "yearly" | "lifetime";
 
 // ==================== B类高价值工具定义 ====================
@@ -232,8 +235,39 @@ function getMonthKey(): string {
 
 // ==================== 会员状态管理 ====================
 
+/**
+ * 全权限账户判定（P6-TOOL-04-补02：LOC 后台白名单，精确或 134* 前缀匹配）。
+ * 白名单账户在统一会员引擎内直接视为终身会员，下游 AI 配额/B类工具/广告/导出权益自动生效。
+ */
+export function isSuperAccount(): boolean {
+  if (typeof window === "undefined") return false;
+  let phone = "";
+  let superPhones: string[] = [];
+  try {
+    phone = getUserProfile()?.phone || "";
+    superPhones = getToolConfig().account.superPhones || [];
+  } catch {
+    return false;
+  }
+  if (!phone) return false;
+  return superPhones.some((p) => {
+    const rule = p.trim();
+    if (!rule) return false;
+    return rule.endsWith("*") ? phone.startsWith(rule.slice(0, -1)) : phone === rule;
+  });
+}
+
 /** 获取当前会员状态 */
 export function getMembershipStatus(): MembershipStatus {
+  if (isSuperAccount()) {
+    return {
+      level: "lifetime",
+      startTime: new Date().toISOString(),
+      expireTime: null,
+      isActive: true,
+      daysRemaining: Infinity,
+    };
+  }
   const status = safeGet<MembershipStatus | null>(STATUS_KEY, null);
   if (!status) {
     return {

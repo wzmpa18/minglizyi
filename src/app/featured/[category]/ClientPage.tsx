@@ -3,6 +3,7 @@
 import { useParams, useRouter } from "next/navigation";
 import { BrandHeader } from "@/components/shared";
 import { getCategory, getItemsByCategory, type FeaturedCategoryKey } from "@/lib/featuredStore";
+import ConsultLive from "./ConsultLive";
 
 const BRAND = "#7B2FBE";
 
@@ -50,6 +51,13 @@ export default function FeaturedCategoryPage() {
 
       {/* 商品列表 */}
       <div className="px-3 py-3 pb-24">
+        {/* 咨询类目：优先渲染实时可预约服务区（P6-TOOL-04 §3.3） */}
+        {category.key === "consult" && <ConsultLive />}
+
+        {category.key === "consult" && items.length > 0 && (
+          <p className="mb-2 mt-4 text-[12px] font-semibold text-gray-500">精选服务展示</p>
+        )}
+
         {items.length === 0 ? (
           <div className="py-16 text-center text-sm text-gray-400">该分类暂无内容，持续上架中</div>
         ) : (
@@ -93,7 +101,9 @@ export default function FeaturedCategoryPage() {
         )}
 
         <p className="mt-4 text-center text-[10px] text-gray-300">
-          下单与支付链路即将开放，当前为内容展示
+          {category.key === "consult"
+            ? "真人服务由平台审核服务者提供 · 统一下单 · 担保结算 · 售后仲裁"
+            : "下单与支付链路即将开放，当前为内容展示"}
         </p>
       </div>
 

@@ -24,6 +24,7 @@ export type PointsSource =
   | "deduct_malicious"    // 恶意差评/刷分
   | "deduct_violation"    // 违规内容
   | "exchange"            // 兑换消耗
+  | "redeem_code"         // 兑换码奖励（P6-TOOL-04-补02 运营发放渠道）
   | "admin_adjust";       // 管理员调整
 // v20.5: 已移除 daily_share 积分获取渠道（易造假刷分）
 
@@ -408,6 +409,17 @@ export function spendPoints(amount: number, description: string): { success: boo
   }
   writeRecord("spend", "exchange", -amount, description);
   return { success: true, message: `消耗${amount}积分` };
+}
+
+/**
+ * 运营发放积分（兑换码/后台补偿等渠道，正数入账，不占每日上限）
+ */
+export function grantPoints(amount: number, description: string): { success: boolean; message: string } {
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return { success: false, message: "积分数额无效" };
+  }
+  writeRecord("earn", "redeem_code", amount, description);
+  return { success: true, message: `获得${amount}积分` };
 }
 
 // ==================== 便捷方法 ====================

@@ -1,14 +1,14 @@
 ﻿"use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Solar, SolarMonth } from "lunar-javascript";
-import ClientSelector from "@/components/ClientSelector";
-import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
-import type { Client } from "@/lib/clientStore";
 import { useClientDate } from "@/lib/useClientDate";
 import { getCalendarGanzhiInterpretation, getCalendarJieqiInterpretation } from "@/lib/calendar-interpretations";
 import type { CalendarInterpretItem } from "@/lib/calendar-interpretations";
 import { savePaipanState, loadPaipanState } from "@/lib/paipanPersistence";
+import { getToolConfig, type CalendarFieldConfig } from "@/lib/toolConfigStore";
+import { getUpcomingEvents, getEventsOnDate, EVENT_TYPE_META } from "@/lib/calendarEventsStore";
 
 import { ShareButton } from "@/components/ShareButton";
 const BRAND = "#7B2FBE";
@@ -37,6 +37,7 @@ interface DayCell {
 }
 
 export default function WannianliPage() {
+  const router = useRouter();
   const [viewYear, setViewYear] = useState(2026);
   const [viewMonth, setViewMonth] = useState(1);
   const [selectedYmd, setSelectedYmd] = useState<{ y: number; m: number; d: number }>({
@@ -45,10 +46,15 @@ export default function WannianliPage() {
     d: 1,
   });
   const [showPicker, setShowPicker] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<Client|null>(null);
-  const [saveTip, setSaveTip] = useState("");
+  const [showMoreTools, setShowMoreTools] = useState(false);
   const [interpretPanel, setInterpretPanel] = useState<{title: string; items: CalendarInterpretItem[]} | null>(null);
+  const [fieldConfig, setFieldConfig] = useState<CalendarFieldConfig | null>(null);
+  const [eventsVersion, setEventsVersion] = useState(0);
   const today = useClientDate();
+  useEffect(() => {
+    const cfg = getToolConfig();
+    setFieldConfig(cfg.calendar);
+  }, []);
   useEffect(() => {
     const t = new Date();
     setViewYear(t.getFullYear());
@@ -56,17 +62,6 @@ export default function WannianliPage() {
     setSelectedYmd({ y: t.getFullYear(), m: t.getMonth() + 1, d: t.getDate() });
   }, []);
 
-  // URL参数clientId
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    const cid = params.get("clientId");
-    if (cid) { const c = getClient(cid); if (c) setSelectedClient(c); }
-    const prefill = getPrefillData("wannianli");
-    if (prefill) { clearPrefillData("wannianli"); }
-  }, []);
-
-  // localStorage 持久化：恢复万年历状态
   useEffect(() => {
     const saved = loadPaipanState("wannianli");
     if (saved && saved.input) {
@@ -77,20 +72,19 @@ export default function WannianliPage() {
     }
   }, []);
 
-  // localStorage 持久化：保存万年历状态
   useEffect(() => {
-    savePaipanState("wannianli",{input:{viewYear,viewMonth,selectedYmd},result:calendarData,showForm:false,_ts:Date.now()});
+    savePaipanState("wannianli",{input:{viewYear,viewMonth,selectedYmd},result:null,showForm:false,_ts:Date.now()});
   }, [viewYear, viewMonth, selectedYmd]);
 
-  const handleSaveRecord = () => {
-    if (!selectedClient) { alert("请先选择客户"); return; }
-    const data = { date: `${selectedYmd.y}-${selectedYmd.m}-${selectedYmd.d}`, selectedYmd };
-    try {
-      saveRecord({ clientId: selectedClient.id, type: "wannianli", data, note: "", status: "pending" });
-      setSaveTip("已保存到客户档案");
-      setTimeout(() => setSaveTip(""), 2000);
-    } catch(e) { console.error("保存失败:", e); }
-  };
+  // 记事提醒数据（eventsVersion 变化时刷新）
+  const dayEvents = useMemo(() => {
+    void eventsVersion;
+    return getEventsOnDate(selectedYmd.y, selectedYmd.m, selectedYmd.d);
+  }, [selectedYmd, eventsVersion]);
+  const upcomingEvents = useMemo(() => {
+    void eventsVersion;
+    return getUpcomingEvents(14).filter((o) => o.daysAway >= 0);
+  }, [eventsVersion]);
 
   // 点击干支解读
   const handleGanzhiClick = useCallback((gz: string, label: string) => {
@@ -139,11 +133,33 @@ export default function WannianliPage() {
     return cells;
   }, [viewYear, viewMonth]);
 
+  // ===== 月度事件标记（含记事的日期打点） =====
+  const monthEventDays = useMemo(() => {
+    void eventsVersion;
+    const set = new Set<string>();
+    for (const o of getUpcomingEvents(45)) {
+      if (o.y === viewYear && o.m === viewMonth) set.add(`${o.y}-${o.m}-${o.d}`);
+    }
+    return set;
+  }, [viewYear, viewMonth, eventsVersion]);
+
   // ===== 选中日期详情 =====
   const selectedDetail = useMemo(() => {
     const s = Solar.fromYmd(selectedYmd.y, selectedYmd.m, selectedYmd.d);
     const l = s.getLunar();
     const bz = l.getEightChar();
+    // 吉时：遍历十二时辰（含早晚子时），按各时辰天神吉凶判定
+    const jiShiList: string[] = [];
+    for (const h of [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21]) {
+      try {
+        const lh = Solar.fromYmdHms(selectedYmd.y, selectedYmd.m, selectedYmd.d, h, 0, 0).getLunar();
+        if (lh.getTimeTianShenLuck() === "吉") {
+          jiShiList.push(lh.getTimeZhi() + "时");
+        }
+      } catch {
+        /* ignore 单时辰计算异常 */
+      }
+    }
     return {
       solar: s,
       lunar: l,
@@ -158,6 +174,10 @@ export default function WannianliPage() {
       solarFestivals: s.getFestivals(),
       shengXiao: l.getYearShengXiao(),
       zhiXing: l.getZhiXing(),
+      jiShi: jiShiList,
+      posXi: l.getDayPositionXiDesc(),
+      posCai: l.getDayPositionCaiDesc(),
+      posFu: l.getDayPositionFuDesc(),
     };
   }, [selectedYmd]);
 
@@ -233,21 +253,69 @@ export default function WannianliPage() {
       </div>
 
       <div className="mx-auto w-full px-3 pt-3" style={{ maxWidth: "500px" }}>
-        {/* 客户选择与保存 */}
-        <div className="mb-2.5 bg-white rounded-lg shadow-sm">
-          <ClientSelector selectedClient={selectedClient} onSelect={setSelectedClient} />
-          {selectedClient && (
-            <div className="px-3 pb-2">
+        {/* ===== 功能入口（后台可配置开关） ===== */}
+        {fieldConfig && fieldConfig.functionEnabled && (
+          <div className="mb-2.5 grid grid-cols-3 gap-2">
+            {fieldConfig.showReminderEntry && (
               <button
-                onClick={handleSaveRecord}
-                className="w-full rounded-lg py-2 text-sm text-white font-medium"
-                style={{ backgroundColor: BRAND }}
+                onClick={() => router.push("/yixue/wannianli/events")}
+                className="flex flex-col items-center gap-1 rounded-[10px] bg-white py-2.5 shadow-sm active:opacity-70"
               >
-                {saveTip || "保存所选日期到客户档案"}
+                <span className="text-xl">⏰</span>
+                <span className="text-xs font-medium text-gray-700">记事提醒</span>
               </button>
+            )}
+            {fieldConfig.showZeriEntry && (
+              <button
+                onClick={() => router.push("/yixue/zeri")}
+                className="flex flex-col items-center gap-1 rounded-[10px] bg-white py-2.5 shadow-sm active:opacity-70"
+              >
+                <span className="text-xl">📅</span>
+                <span className="text-xs font-medium text-gray-700">择日</span>
+              </button>
+            )}
+            {fieldConfig.showMoreToolsEntry && (
+              <button
+                onClick={() => setShowMoreTools(!showMoreTools)}
+                className="flex flex-col items-center gap-1 rounded-[10px] bg-white py-2.5 shadow-sm active:opacity-70"
+              >
+                <span className="text-xl">🧰</span>
+                <span className="text-xs font-medium text-gray-700">更多工具</span>
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* ===== 更多工具列表（排盘能力收纳于此，不占首页核心操作区） ===== */}
+        {showMoreTools && (
+          <div className="mb-2.5 rounded-[10px] bg-white p-2 shadow-sm">
+            <div className="mb-1.5 px-1 text-xs font-semibold text-gray-600">更多工具</div>
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { name: "八字", icon: "☯️", path: "/yixue/bazi" },
+                { name: "紫微斗数", icon: "🌌", path: "/yixue/ziwei" },
+                { name: "奇门遁甲", icon: "🏛️", path: "/yixue/qimen" },
+                { name: "六爻", icon: "🔮", path: "/yixue/liuyao" },
+                { name: "梅花易数", icon: "🌸", path: "/yixue/meihua" },
+                { name: "大六壬", icon: "🌊", path: "/yixue/daliuren" },
+                { name: "黄历", icon: "📜", path: "/yixue/huangli" },
+                { name: "节气", icon: "🍃", path: "/yixue/jieqi" },
+              ].map((t) => (
+                <button
+                  key={t.path}
+                  onClick={() => router.push(t.path)}
+                  className="flex flex-col items-center gap-1 rounded-lg bg-[#f9f7fb] py-2 active:opacity-70"
+                >
+                  <span className="text-lg">{t.icon}</span>
+                  <span className="text-[10px] text-gray-600">{t.name}</span>
+                </button>
+              ))}
             </div>
-          )}
-        </div>
+            <button onClick={() => setShowMoreTools(false)} className="mt-2 w-full rounded-lg border py-1.5 text-xs text-gray-500">
+              收起
+            </button>
+          </div>
+        )}
 
         {/* 年月选择器 */}
         {showPicker && (
@@ -375,6 +443,9 @@ export default function WannianliPage() {
                       style={{ backgroundColor: BRAND }}
                     />
                   )}
+                  {monthEventDays.has(`${cell.year}-${cell.month}-${cell.day}`) && cell.isCurrentMonth && (
+                    <div className="absolute bottom-0.5 left-1/2 h-[4px] w-[4px] -translate-x-1/2 rounded-full bg-pink-400" />
+                  )}
                 </div>
               );
             })}
@@ -445,6 +516,7 @@ export default function WannianliPage() {
           </div>
 
           {/* 宜忌 */}
+          {(!fieldConfig || fieldConfig.showYiJi) && (
           <div className="mb-3 grid grid-cols-2 gap-2">
             <div className="rounded-lg border border-green-100 bg-green-50/50 p-2">
               <div className="mb-1 text-center text-sm font-bold text-emerald-600">宜</div>
@@ -475,18 +547,93 @@ export default function WannianliPage() {
               )}
             </div>
           </div>
+          )}
 
           {/* 冲煞/建星 */}
-          <div className="grid grid-cols-2 gap-2 text-center text-xs">
-            <div className="rounded-lg bg-gray-50 p-2">
-              <span className="text-gray-400">冲煞：</span>
-              <span className="font-semibold text-red-500">{selectedDetail.chongDesc}</span>
+          {(!fieldConfig || fieldConfig.showChongSha) && (
+            <div className="mb-2 grid grid-cols-2 gap-2 text-center text-xs">
+              <div className="rounded-lg bg-gray-50 p-2">
+                <span className="text-gray-400">冲煞：</span>
+                <span className="font-semibold text-red-500">{selectedDetail.chongDesc}</span>
+              </div>
+              <div className="rounded-lg bg-gray-50 p-2">
+                <span className="text-gray-400">建星：</span>
+                <span className="font-semibold" style={{ color: BRAND }}>{selectedDetail.zhiXing}日</span>
+              </div>
             </div>
-            <div className="rounded-lg bg-gray-50 p-2">
-              <span className="text-gray-400">建星：</span>
-              <span className="font-semibold" style={{ color: BRAND }}>{selectedDetail.zhiXing}日</span>
+          )}
+
+          {/* 吉时 */}
+          {(!fieldConfig || fieldConfig.showJiShi) && selectedDetail.jiShi.length > 0 && (
+            <div className="mb-2 rounded-lg border border-amber-100 bg-amber-50/60 p-2">
+              <div className="mb-1 text-center text-xs font-semibold text-amber-700">吉时</div>
+              <div className="flex flex-wrap justify-center gap-1">
+                {selectedDetail.jiShi.map((js, i) => (
+                  <span key={i} className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[11px] font-medium text-amber-800">
+                    {js}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* 方位 */}
+          {(!fieldConfig || fieldConfig.showFangWei) && (
+            <div className="grid grid-cols-3 gap-2 text-center text-[11px]">
+              <div className="rounded-lg bg-gray-50 p-1.5">
+                <div className="text-gray-400">喜神</div>
+                <div className="font-semibold text-gray-700">{selectedDetail.posXi}</div>
+              </div>
+              <div className="rounded-lg bg-gray-50 p-1.5">
+                <div className="text-gray-400">财神</div>
+                <div className="font-semibold text-gray-700">{selectedDetail.posCai}</div>
+              </div>
+              <div className="rounded-lg bg-gray-50 p-1.5">
+                <div className="text-gray-400">福神</div>
+                <div className="font-semibold text-gray-700">{selectedDetail.posFu}</div>
+              </div>
+            </div>
+          )}
+
+          {/* 当日事件摘要 */}
+          {(!fieldConfig || fieldConfig.showDayEvents) && (
+            <div className="mt-3 rounded-lg border p-2.5" style={{ borderColor: "#e9def5", backgroundColor: "#faf7fd" }}>
+              <div className="mb-1.5 flex items-center justify-between">
+                <span className="text-xs font-semibold text-gray-600">当日事项</span>
+                <button onClick={() => router.push("/yixue/wannianli/events")} className="text-[11px] font-medium" style={{ color: BRAND }}>
+                  管理 ›
+                </button>
+              </div>
+              {dayEvents.length > 0 ? (
+                <div className="flex flex-col gap-1">
+                  {dayEvents.slice(0, 4).map((o, i) => (
+                    <div key={i} className="flex items-center gap-1.5 text-xs">
+                      <span>{EVENT_TYPE_META[o.event.type].icon}</span>
+                      <span className="font-medium text-gray-700">{o.event.title}</span>
+                      {o.event.relatedName && <span className="text-gray-400">· {o.event.relatedName}</span>}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-[11px] text-gray-400">今日暂无记事，点击「管理」添加生日、纪念日或待办提醒</div>
+              )}
+              {upcomingEvents.length > 0 && (
+                <div className="mt-2 border-t pt-1.5" style={{ borderColor: "#efe8f7" }}>
+                  {upcomingEvents.slice(0, 3).map((o, i) => (
+                    <div key={i} className="flex items-center justify-between text-[11px] text-gray-500">
+                      <span className="truncate">
+                        {EVENT_TYPE_META[o.event.type].icon} {o.event.title}
+                        {o.event.relatedName ? " · " + o.event.relatedName : ""}
+                      </span>
+                      <span className="ml-2 shrink-0 font-medium" style={{ color: BRAND }}>
+                        {o.daysAway === 0 ? "今天" : o.daysAway === 1 ? "明天" : `${o.daysAway}天后`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* ===== 解读抽屉 ===== */}
           {interpretPanel && (
@@ -615,7 +762,7 @@ export default function WannianliPage() {
         <div className="rounded-lg border border-gray-200 bg-[#f9f9f9] p-3 text-center">
           <p className="mb-1 text-xs font-semibold text-gray-400">免责声明</p>
           <p className="text-[11px] leading-relaxed text-gray-400">
-            本万年历数据由 lunar-javascript 历法库计算，仅供传统文化学习与参考。节气日期为精确天文计算，宜忌内容来源于传统择日典籍，不构成任何决策依据。请理性看待，切勿迷信。
+            本万年历数据由 lunar-javascript 历法库计算，仅供传统文化学习与参考。节气日期为精确天文计算，宜忌内容来源于传统择日典籍，不构成任何专业建议或决策依据。记事提醒数据仅本人可见，可在记事管理页导出或彻底删除。请理性看待，切勿迷信。
           </p>
         </div>
       </div>

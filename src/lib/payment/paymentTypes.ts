@@ -11,11 +11,13 @@
  * - SINGLE_UNLOCK: 单次 AI 解锁（单次深度解读）
  * - MEMBERSHIP: 会员开通（月/季/年）
  * - POINTS_RECHARGE: 积分充值
+ * - CONSULT_SERVICE: 真人咨询服务预约（言道精选 consult 类目，P6-TOOL-04 §3.3）
  */
 export enum OrderType {
   SINGLE_UNLOCK = "SINGLE_UNLOCK",
   MEMBERSHIP = "MEMBERSHIP",
   POINTS_RECHARGE = "POINTS_RECHARGE",
+  CONSULT_SERVICE = "CONSULT_SERVICE",
 }
 
 // ==================== 订单状态枚举 ====================
@@ -87,6 +89,12 @@ export interface OrderExtra {
   membershipDays?: number;
   /** POINTS_RECHARGE: 充值积分数量 */
   pointsAmount?: number;
+  /** CONSULT_SERVICE: 咨询服务ID（consultServiceStore 中的上架服务） */
+  consultServiceId?: string;
+  /** CONSULT_SERVICE: 服务者ID */
+  consultProviderId?: string;
+  /** CONSULT_SERVICE: 买家需求描述 */
+  consultRequirement?: string;
   /** 第三方交易号（支付成功后回填） */
   tradeNo?: string;
 }
@@ -175,6 +183,7 @@ export const PAYMENT_COMPLIANCE_TEXT = {
     [OrderType.SINGLE_UNLOCK]: "传统文化学习资料深度解读（单次）",
     [OrderType.MEMBERSHIP]: "传统文化学习平台会员服务",
     [OrderType.POINTS_RECHARGE]: "传统文化学习平台积分充值",
+    [OrderType.CONSULT_SERVICE]: "传统文化学习顾问咨询服务",
   } as Readonly<Record<OrderType, string>>,
 
   /** 各订单类型的合规描述 */
@@ -185,6 +194,8 @@ export const PAYMENT_COMPLIANCE_TEXT = {
       "传统文化学习平台会员服务，开通后可在会员有效期内享受平台全部学习工具与课程资源。",
     [OrderType.POINTS_RECHARGE]:
       "传统文化学习平台积分充值，充值积分可用于兑换平台内的学习工具额度与课程资源。",
+    [OrderType.CONSULT_SERVICE]:
+      "传统文化学习顾问一对一线下/线上咨询服务，由平台审核通过的第三方服务者提供，内容仅供文化参考与个人娱乐。",
   } as Readonly<Record<OrderType, string>>,
 
   /** 合规注意事项 */

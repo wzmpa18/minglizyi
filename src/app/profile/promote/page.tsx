@@ -9,6 +9,8 @@ import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { captureAndSavePoster, preloadImageAsDataUrl } from "@/lib/posterCapture";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
+import { listFrozenRewards, listAppeals, submitAppeal, type FrozenReward, type AppealRecord } from "@/lib/antiCheatStore";
+import { releaseMaturedFrozenRewards } from "@/lib/inviteStore";
 
 const BRAND = "#7B2FBE";
 
@@ -38,6 +40,18 @@ export default function PromotePage() {
   const [copiedType, setCopiedType] = useState<"code" | "link" | null>(null);
   const [showPoster, setShowPoster] = useState(false);
   const [toast, setToast] = useState("");
+
+  // P6-TOOL-04 §5.2：冻结奖励与申诉
+  const [frozenList, setFrozenList] = useState<FrozenReward[]>([]);
+  const [appealList, setAppealList] = useState<AppealRecord[]>([]);
+  const [showAppealModal, setShowAppealModal] = useState(false);
+  const [appealTarget, setAppealTarget] = useState<FrozenReward | null>(null);
+  const [appealReason, setAppealReason] = useState("");
+  const [appealContact, setAppealContact] = useState("");
+  const [appealSubmitting, setAppealSubmitting] = useState(false);
+
+  useBodyScrollLock(showAppealModal);
+  usePopupBackHandler(() => setShowAppealModal(false), showAppealModal);
 
   // P1-6/P1-7: 海报弹窗滚动锁 + 返回拦截
   useBodyScrollLock(showPoster);
@@ -76,6 +90,16 @@ export default function PromotePage() {
         setInvitees(membersRes.data.members);
       }
     } catch {}
+
+    // P6-TOOL-04 §5.2：解冻观察期满的奖励并加载冻结台账与申诉记录
+    try {
+      const released = releaseMaturedFrozenRewards(uid);
+      if (released > 0) showToast(`${released} 笔冻结奖励已过观察期，自动发放`);
+    } catch { /* ignore */ }
+    try {
+      setFrozenList(listFrozenRewards({ userId: uid }));
+      setAppealList(listAppeals({ userId: uid }));
+    } catch { /* ignore */ }
   }, []);
 
   useEffect(() => {
@@ -102,6 +126,34 @@ export default function PromotePage() {
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(""), 2000);
+  };
+
+  // P6-TOOL-04 §5.2：提交申诉
+  const handleSubmitAppeal = async () => {
+    if (!appealTarget) return;
+    setAppealSubmitting(true);
+    try {
+      const result = submitAppeal({
+        userId,
+        targetId: appealTarget.id,
+        targetType: "reward_freeze",
+        reason: appealReason,
+        contact: appealContact || undefined,
+      });
+      showToast(result.message);
+      if (result.success) {
+        setShowAppealModal(false);
+        setAppealTarget(null);
+        setAppealReason("");
+        setAppealContact("");
+        setFrozenList(listFrozenRewards({ userId }));
+        setAppealList(listAppeals({ userId }));
+      }
+    } catch {
+      showToast("提交失败，请重试");
+    } finally {
+      setAppealSubmitting(false);
+    }
   };
 
   // 复制邀请码
@@ -366,6 +418,71 @@ export default function PromotePage() {
           )}
         </div>
 
+        {/* ===== 冻结奖励与申诉（P6-TOOL-04 §5.2） ===== */}
+        {frozenList.length > 0 && (
+          <div style={{ backgroundColor: "#fff", borderRadius: 12, overflow: "hidden", marginBottom: 12, boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+            <div style={{ padding: "12px 16px", borderBottom: "1px solid #f0f0f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: "#333" }}>冻结奖励与申诉</span>
+              <span style={{ fontSize: 12, color: "#e67e22" }}>共 {frozenList.length} 笔</span>
+            </div>
+            {frozenList.slice(0, 20).map((f) => {
+              const statusMeta: Record<string, { label: string; color: string }> = {
+                frozen: { label: "观察中", color: "#e67e22" },
+                appealing: { label: "申诉处理中", color: "#3498DB" },
+                released: { label: "已发放", color: "#27ae60" },
+                revoked: { label: "已撤销", color: "#e74c3c" },
+              };
+              const meta = statusMeta[f.status] || statusMeta.frozen;
+              const relatedAppeal = appealList.find((a) => a.targetId === f.id);
+              return (
+                <div key={f.id} style={{ padding: "12px 16px", borderBottom: "1px solid #f5f5f5" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ fontSize: 13, color: "#333" }}>
+                      邀请 {f.inviteeName || "新用户"}（{f.level === 1 ? "一级" : "二级"}）+{f.amount} 积分
+                    </div>
+                    <span style={{ fontSize: 11, color: meta.color, fontWeight: 600 }}>{meta.label}</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: "#999", marginTop: 4, lineHeight: 1.5 }}>
+                    冻结原因：{f.reasonText}<br />
+                    冻结时间 {formatTime(f.frozenAt)}
+                    {f.status === "frozen" ? ` · 预计 ${formatTime(f.releaseAt)} 自动解冻` : ""}
+                  </div>
+                  {relatedAppeal && (
+                    <div style={{ fontSize: 11, color: relatedAppeal.status === "approved" ? "#27ae60" : relatedAppeal.status === "rejected" ? "#e74c3c" : "#3498DB", marginTop: 4 }}>
+                      申诉状态：{relatedAppeal.status === "pending" ? "待处理" : relatedAppeal.status === "approved" ? "已通过" : "未通过"}
+                      {relatedAppeal.adminNote ? `（${relatedAppeal.adminNote}）` : ""}
+                    </div>
+                  )}
+                  {(f.status === "frozen" || f.status === "revoked") && !relatedAppeal && (
+                    <button
+                      onClick={() => {
+                        setAppealTarget(f);
+                        setShowAppealModal(true);
+                      }}
+                      style={{
+                        marginTop: 8,
+                        padding: "5px 14px",
+                        borderRadius: 14,
+                        border: "1px solid " + BRAND,
+                        backgroundColor: "transparent",
+                        color: BRAND,
+                        fontSize: 12,
+                        cursor: "pointer",
+                      }}
+                    >
+                      发起申诉
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+            <div style={{ padding: "10px 16px", fontSize: 11, color: "#bbb", lineHeight: 1.6 }}>
+              为防止刷奖励等异常行为，触发风控规则的奖励将进入冻结观察期，
+              观察期满自动发放；如有疑问可发起申诉，平台将在1-3个工作日内处理。
+            </div>
+          </div>
+        )}
+
         <p style={{ fontSize: 11, color: "#bbb", textAlign: "center", marginTop: 16, lineHeight: 1.7 }}>
           邀请奖励自动发放至积分账户<br />佣金收益可前往「我的钱包」查看与提现
         </p>
@@ -583,6 +700,107 @@ export default function PromotePage() {
                 style={{ flex: 1, padding: "12px 0", border: "none", backgroundColor: "transparent", color: BRAND, fontSize: 15, fontWeight: 600, cursor: savingPoster ? "not-allowed" : "pointer", opacity: savingPoster ? 0.5 : 1 }}
               >
                 {savingPoster ? "保存中..." : "保存海报"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== 申诉弹窗（P6-TOOL-04 §5.2） ===== */}
+      {showAppealModal && appealTarget && (
+        <div
+          style={{ position: "fixed", inset: 0, zIndex: 70, display: "flex", alignItems: "flex-end", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.5)" }}
+          onClick={() => setShowAppealModal(false)}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 420,
+              backgroundColor: "#fff",
+              borderRadius: "16px 16px 0 0",
+              padding: "20px 16px calc(20px + env(safe-area-inset-bottom, 0px))",
+              maxHeight: "85vh",
+              overflowY: "auto",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: 16, fontWeight: 700, color: "#333", marginBottom: 4 }}>发起申诉</div>
+            <div style={{ fontSize: 12, color: "#999", marginBottom: 14, lineHeight: 1.5 }}>
+              申诉对象：邀请 {appealTarget.inviteeName || "新用户"} 奖励 {appealTarget.amount} 积分（{appealTarget.status === "revoked" ? "已撤销" : "冻结观察中"}）
+            </div>
+            <div style={{ fontSize: 13, color: "#555", marginBottom: 6 }}>申诉说明（必填，10-500字）</div>
+            <textarea
+              value={appealReason}
+              onChange={(e) => setAppealReason(e.target.value)}
+              placeholder="请说明实际情况，例如：被邀请人为家人/朋友真实注册，可提供必要证明……"
+              maxLength={500}
+              style={{
+                width: "100%",
+                height: 100,
+                borderRadius: 10,
+                border: "1px solid #e0e0e0",
+                padding: "10px 12px",
+                fontSize: 14,
+                color: "#333",
+                outline: "none",
+                resize: "none",
+                boxSizing: "border-box",
+                marginBottom: 12,
+              }}
+            />
+            <div style={{ fontSize: 13, color: "#555", marginBottom: 6 }}>联系方式（选填，便于沟通）</div>
+            <input
+              type="text"
+              value={appealContact}
+              onChange={(e) => setAppealContact(e.target.value)}
+              placeholder="手机号 / 微信号 / 邮箱"
+              maxLength={50}
+              style={{
+                width: "100%",
+                height: 44,
+                borderRadius: 10,
+                border: "1px solid #e0e0e0",
+                padding: "0 12px",
+                fontSize: 14,
+                color: "#333",
+                outline: "none",
+                boxSizing: "border-box",
+                marginBottom: 16,
+              }}
+            />
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => setShowAppealModal(false)}
+                style={{
+                  flex: 1,
+                  height: 44,
+                  borderRadius: 22,
+                  border: "1px solid #ddd",
+                  backgroundColor: "#fff",
+                  color: "#666",
+                  fontSize: 14,
+                  cursor: "pointer",
+                }}
+              >
+                取消
+              </button>
+              <button
+                onClick={handleSubmitAppeal}
+                disabled={appealSubmitting || appealReason.trim().length < 10}
+                style={{
+                  flex: 1,
+                  height: 44,
+                  borderRadius: 22,
+                  border: "none",
+                  backgroundColor: BRAND,
+                  color: "#fff",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: appealSubmitting || appealReason.trim().length < 10 ? "not-allowed" : "pointer",
+                  opacity: appealSubmitting || appealReason.trim().length < 10 ? 0.5 : 1,
+                }}
+              >
+                {appealSubmitting ? "提交中..." : "提交申诉"}
               </button>
             </div>
           </div>

@@ -90,9 +90,27 @@ export function ShareButton({
     }
   }, []);
 
+  // P6-TOOL-04 §5.1/§5.2：分享链接统一携带邀请标识（不泄露邀请人敏感信息，仅带邀请码）
+  // 全场景覆盖：万年历宜忌、择日结果、星盘报告、学习证书、工具排盘结果
+  const buildAttributedLink = useCallback((rawUrl: string): string => {
+    if (typeof window === "undefined") return rawUrl;
+    const { inviteCode } = getCurrentUserInfo();
+    if (!inviteCode) return rawUrl;
+    try {
+      const u = new URL(rawUrl, window.location.origin);
+      if (!u.searchParams.get("code") && !u.searchParams.get("ref")) {
+        u.searchParams.set("code", inviteCode);
+      }
+      return u.toString();
+    } catch {
+      return rawUrl;
+    }
+  }, [getCurrentUserInfo]);
+
   // 复制链接
   const handleCopyLink = useCallback(() => {
-    const link = url || (typeof window !== "undefined" ? window.location.href : "");
+    const rawLink = url || (typeof window !== "undefined" ? window.location.href : "");
+    const link = buildAttributedLink(rawLink);
     copyToClipboard(link).then((ok) => {
       if (ok) {
         showToast("链接已复制，可粘贴分享");
@@ -102,7 +120,7 @@ export function ShareButton({
       }
     });
     setShowMenu(false);
-  }, [url, copyToClipboard, showToast]);
+  }, [url, copyToClipboard, showToast, buildAttributedLink]);
 
   // 生成海报
   const handleGeneratePoster = useCallback(async () => {
@@ -110,7 +128,8 @@ export function ShareButton({
     setGenerating(true);
     try {
       const { userId, userName, inviteCode } = getCurrentUserInfo();
-      const shareUrl = url || (typeof window !== "undefined" ? window.location.href : "https://yandao.vip");
+      const rawShareUrl = url || (typeof window !== "undefined" ? window.location.href : "https://yandao.vip");
+      const shareUrl = buildAttributedLink(rawShareUrl);
       const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(shareUrl)}`;
 
       const posterUrl = await generatePoster({
@@ -137,12 +156,13 @@ export function ShareButton({
     } finally {
       setGenerating(false);
     }
-  }, [type, title, description, url, getCurrentUserInfo, showToast]);
+  }, [type, title, description, url, getCurrentUserInfo, showToast, buildAttributedLink]);
 
   // 系统分享
   const handleSystemShare = useCallback(async () => {
     setShowMenu(false);
-    const link = url || (typeof window !== "undefined" ? window.location.href : "");
+    const rawLink = url || (typeof window !== "undefined" ? window.location.href : "");
+    const link = buildAttributedLink(rawLink);
     if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
       try {
         await navigator.share({
@@ -159,7 +179,7 @@ export function ShareButton({
       // 不支持系统分享时，降级为复制链接
       handleCopyLink();
     }
-  }, [title, description, url, showToast, handleCopyLink]);
+  }, [title, description, url, showToast, handleCopyLink, buildAttributedLink]);
 
   // 分享成功后发放奖励
   const handleShareSuccess = useCallback(() => {
