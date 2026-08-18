@@ -61,13 +61,13 @@ sleep 3
 
 echo "--- [7] 公网验证（紫微页200 + version + ICP） ---"
 DOMAIN="https://yandaoguoxue.yandao.vip"
-ZIWEI=$(curl -s -o /dev/null -w '%{http_code}' ${DOMAIN}/yixue/ziwei)
+ZIWEI=$(curl -sL -o /dev/null -w '%{http_code}' ${DOMAIN}/yixue/ziwei)
 echo "公网 /yixue/ziwei: ${ZIWEI}"
 [ "$ZIWEI" != "200" ] && { echo "FATAL: 紫微页公网非200"; exit 1; }
 VJSON=$(curl -s ${DOMAIN}/version.json)
 echo "$VJSON"
 echo "$VJSON" | grep -q "\"v25.0.32\"" || { echo "WARN: 公网version未生效（可能缓存，稍后复验）"; }
-HOME=$(curl -s -o /dev/null -w '%{http_code}' ${DOMAIN}/)
+HOME=$(curl -sL -o /dev/null -w '%{http_code}' ${DOMAIN}/)
 echo "公网首页: ${HOME}"
 
 echo "===== DEPLOY ${VERSION} COMPLETE ====="
