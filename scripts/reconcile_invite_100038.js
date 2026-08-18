@@ -4,9 +4,19 @@
 // 分享链接注册，但 v25.0.37 前邮箱注册链路完全丢失邀请上下文（不上送 ref/sig/deviceId），
 // 导致服务端归因为空。经项目方确认，按服务端 bindInviteAndReward 同款逻辑补绑+补发注册奖励。
 // 幂等：已绑定/已发奖则跳过，可安全重复执行。
-// 用法：cd /root/backend-auth && node /tmp/reconcile_invite_100038.js
+// 用法：node /root/yandaoguoxue-source/scripts/reconcile_invite_100038.js
 // ============================================================================
-const Database = require('better-sqlite3');
+// better-sqlite3 只在后端运行目录安装（node 按脚本路径而非 cwd 解析，需绝对路径引用）
+let Database;
+try {
+  Database = require('/www/yandaoguoxue-backend/node_modules/better-sqlite3');
+} catch (e1) {
+  try {
+    Database = require('/root/backend-auth/node_modules/better-sqlite3');
+  } catch (e2) {
+    Database = require('better-sqlite3');
+  }
+}
 const DB_PATH = process.env.DB_PATH || '/root/backend-auth/data/yandao_users.db';
 
 const INVITER_ID = 100000;
