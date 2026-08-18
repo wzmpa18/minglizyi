@@ -1039,7 +1039,7 @@ function createRouter() {
   // ------------------------------------------------------------------
   router.post('/register', async (req, res) => {
     try {
-      const { phone, email, code, password, inviteCode, inviteRef, inviteTs, inviteSig, deviceId } = req.body;
+      const { phone, email, code, password, inviteCode, inviteRef, inviteTs, inviteSig, deviceId, referrer_id } = req.body;
 
       const isPhone = phone && /^1[3-9]\d{9}$/.test(phone);
       const isEmail = email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -1090,6 +1090,17 @@ function createRouter() {
         deviceId: deviceId || null,
         clientIp: getClientIp(req),
       });
+
+      // P7-社交修复-01：纯 referrer_id（无签名）不直接采信（防伪造），但审计留痕供人工对账
+      if (!inviteRef && !inviteCode && referrer_id) {
+        try {
+          const db0 = initDatabase();
+          const plainInviter = db0.prepare('SELECT user_id FROM users WHERE user_id = ?').get(Number(referrer_id));
+          logInviteAudit(db0, user.userId, plainInviter ? plainInviter.user_id : null, 'plain_ref', 'rejected', 'UNSIGNED_REF_MANUAL_RECONCILE', getClientIp(req), deviceId || '');
+        } catch (e) {
+          console.error('[AUTH /register] plain_ref audit error:', e);
+        }
+      }
 
       // 生成 token 对
       const tokenPair = generateTokenPair({

@@ -1319,7 +1319,14 @@ export default function ZiweiPage() {
                     // v18.9: 来因宫标记
                     const isLaiyin = palaceZhiIdx === laiyinPalaceIdx;
                     // v25.0.24: ZW-TIME 时间轴选中宫位高亮（紫框）
-                    const isZwFocus = focusedPalace !== null && palaceZhiIdx === focusedPalace;
+                      const isZwFocus = focusedPalace !== null && palaceZhiIdx === focusedPalace;
+                      // 20260819用户指令垂直布局实测（宫格高≈146px=440/0.75÷4行，7px竖排字高7.7px/字）：
+                      // 右下角干支(2~3字，身宫并入)沉底 → 十二长生(1条2字)纵排其正上方 → E区动态栏在长生上方，
+                      // 三段自下而上互不重叠；来因宫右缘中部占用时 E区整体左移让位
+                      const gzChars = (palace.heavenlyStem || palace.earthlyBranch ? 2 : 0) + (isShen ? 1 : 0);
+                      const csBottomPx = gzChars > 0 ? Math.ceil(gzChars * 7.7) + 1 : 16;
+                      const dynBottomPx = csBottomPx + 16;
+                      const laiyinPadPx = isLaiyin ? 11 : 0;
 
                     return (
                       <div
@@ -1338,22 +1345,23 @@ export default function ZiweiPage() {
                         }}
                       >
                         {/* P7-上架前阻断整改-01：宫干支恢复基础——四化/三合/飞星模式均需宫干（天干四化表 L91 宫干飞化之源） */}
+                        {/* 20260819用户指令：来因宫改右侧靠边中间纵向竖排显示 */}
                         {isLaiyin && (
-                          <span style={{ position: "absolute", left: "1px", top: "2px", fontSize: "7px", color: "#ff6600", fontWeight: "bold", background: "#fff0e0", padding: "1px 2px", borderRadius: "2px", lineHeight: "1", zIndex: 4 }}>来因</span>
+                          <span style={{ position: "absolute", right: "0px", top: "38%", fontSize: "7px", color: "#ff6600", fontWeight: "bold", writingMode: "vertical-rl", textOrientation: "upright", whiteSpace: "nowrap", lineHeight: "1.1", zIndex: 5, background: "#fff8f0", padding: "1px 0" }}>来因</span>
                         )}
 
-                        {/* ══ A区（星曜主区，宫格上部）20260819用户指令：恢复v29口径 ══
-                            星名逐字竖排（一星一列，列宽=字号）；副星与主星同字号（仅杂曜略小）；
-                            庙旺紧贴星名正下方、四化叠罗汉（本命红→大限蓝→流年绿，留位对齐）；
-                            右侧按 D区(长生列) + E区(动态栏实际列数) 动态预留宽度，区域不互相侵占；
-                            星多时自动换行（固定宫格内），密集宫格经放大横滑模式阅读 */}
+                        {/* ══ A区（星曜主区，宫格上部）20260819用户指令：单行横排 ══
+                            星名逐字竖排（一星一列，列宽=字号）→ 列与列从左至右单行横排（flexWrap:nowrap 不换行）；
+                            主星字号保持既有分档不变；副星/杂曜按可用宽度实测自动缩小至全部排完；
+                            每颗星（含杂曜）庙旺紧贴星名正下方；四化叠罗汉（本命红→大限蓝→流年绿，留位对齐）；
+                            右侧按 D区(长生/干支列) + E区(动态栏实际列数) 动态预留宽度，区域不互相侵占 */}
                         {(() => {
-                          // E区动态栏实际列数（紧凑竖排：全部动态星按层序合流、每列10颗续列、最多3列）→ A区右侧动态预留
+                          // E区动态栏实际列数（每列10颗续列、最多3列）→ A区右侧动态预留
                           const dynList = dynamicStarsByPalace[palaceZhiIdx] || [];
                           const dynCols = Math.min(3, Math.ceil(dynList.length / 10) || (dynList.length ? 1 : 0));
-                          const starPadRight = 12 + dynCols * 9;
+                          const starPadRight = 12 + dynCols * 8 + laiyinPadPx;
                           return (
-                        <div style={{ flex: "1 1 auto", minHeight: "50px", display: "flex", flexDirection: "row", flexWrap: "wrap", alignContent: "flex-start", gap: "2px 2px", overflow: "hidden", padding: `0 ${starPadRight}px 0 2px`, position: "relative", zIndex: 1 }}>
+                        <div style={{ flex: "1 1 auto", minHeight: "50px", display: "flex", flexDirection: "row", flexWrap: "nowrap", alignContent: "flex-start", gap: "2px 2px", overflow: "hidden", padding: `0 ${starPadRight}px 0 2px`, position: "relative", zIndex: 1 }}>
                           {(() => {
                             // 数据归类：主星→六吉→六煞→杂曜 全部入A区
                             const mainAndAuxStars: Array<{name: string; isMajor: boolean; color: string; weight: string; category: "major" | "aux" | "minor"}> = [
@@ -1363,11 +1371,19 @@ export default function ZiweiPage() {
                               ...otherMinorStars.map(s => ({ name: s, isMajor: false, color: MINOR_STAR_COLOR, weight: "normal", category: "minor" as const })),
                             ];
                             const totalCount = mainAndAuxStars.length;
-                            // 20260819用户指令：恢复v29口径——星名逐字竖排；副星与主星同字号（仅杂曜略小）；按星数分档防溢出
-                            const majorFs = totalCount > 12 ? "12px" : totalCount > 8 ? "13px" : totalCount > 5 ? "14px" : "15px";
-                            const minorFs = totalCount > 12 ? "8px" : "9px";
-                            const majorColW = totalCount > 12 ? "13px" : totalCount > 8 ? "14px" : totalCount > 5 ? "15px" : "16px";
-                            const minorColW = totalCount > 12 ? "9px" : "10px";
+                            // 20260819用户指令：主星大小不变（沿用既有分档）；副星与杂曜按宫格实测可用宽度自动缩小，
+                            // 保证主星+副星+杂曜全部单行横排排完（严禁换行成两行）
+                            const CELL_W = (CHART_DESIGN_W - 14) / 4;
+                            const availW = CELL_W - 3 - starPadRight;
+                            const majorCount = mainAndAuxStars.filter(s => s.category === "major").length;
+                            const subCount = totalCount - majorCount;
+                            const majorFsPx = totalCount > 12 ? 12 : totalCount > 8 ? 13 : totalCount > 5 ? 14 : 15;
+                            const majorColW = majorFsPx + 1;
+                            let subFsPx = 9;
+                            if (subCount > 0) {
+                              const remW = availW - majorCount * majorColW - 2 * (totalCount - 1);
+                              subFsPx = Math.max(4, Math.min(9, Math.floor(remW / subCount) - 1));
+                            }
                             // v25.0.29（P7-5）：运限四化星名（ZW-TIME 引擎统一计算；仅用户点击对应层后展开）
                             const dxMut = dxLayer && zwDecadalAligned[selectedDaxian]?.mutagen;
                             const lnMut = lnLayer && liunianYears[selectedLiunian]?.mutagen;
@@ -1382,6 +1398,8 @@ export default function ZiweiPage() {
                               const st = getSihuaType(result.sihua, star.name);
                               const dxHua = huaOfMut(dxMut, star.name);
                               const lnHua = huaOfMut(lnMut, star.name);
+                              const starFsPx = star.category === "major" ? majorFsPx : subFsPx;
+                              const starColW = star.category === "major" ? majorColW : subFsPx + 1;
                               return (
                                 <div
                                   key={`star-${j}`}
@@ -1391,14 +1409,14 @@ export default function ZiweiPage() {
                                     router.push(`/academy/learn?track=yixue&term=${encodeURIComponent(star.name)}`);
                                   } : undefined}
                                   title={star.isMajor ? `查看「${star.name}」学习知识点` : undefined}
-                                  style={{ display: "flex", flexDirection: "column", alignItems: "center", lineHeight: "1", width: star.category === "minor" ? minorColW : majorColW, flexShrink: 0 }}
+                                  style={{ display: "flex", flexDirection: "column", alignItems: "center", lineHeight: "1", width: starColW, flexShrink: 0 }}
                                 >
                                   {star.name.split("").map((char, ci) => (
-                                    <span key={ci} style={{ fontSize: star.category === "minor" ? minorFs : majorFs, fontWeight: star.weight as any, color: star.color, lineHeight: "1", display: "block", textAlign: "center" }}>{char}</span>
+                                    <span key={ci} style={{ fontSize: `${starFsPx}px`, fontWeight: star.weight as any, color: star.color, lineHeight: "1", display: "block", textAlign: "center" }}>{char}</span>
                                   ))}
-                                  {/* 庙旺利陷=星名正下方第一行（仅主星有亮度数据，与星名绑定不可拆分） */}
-                                  {star.isMajor && brightness && brightness !== "-" ? (
-                                    <span style={{ fontSize: "7px", color: BRIGHTNESS_COLORS[brightness] || "#888", lineHeight: "1" }}>{brightness}</span>
+                                  {/* 20260819用户指令：每颗星（含杂曜）都要庙旺——星名正下方，缺数据默认「平」 */}
+                                  {brightness && brightness !== "-" ? (
+                                    <span style={{ fontSize: star.category === "major" ? "7px" : `${Math.max(4, subFsPx)}px`, color: BRIGHTNESS_COLORS[brightness] || "#888", lineHeight: "1", whiteSpace: "nowrap" }}>{brightness}</span>
                                   ) : null}
                                   {/* P7-5: 四化=星下叠罗汉（本命红→大限蓝→流年绿，逐层留位保持列对齐） */}
                                   {dxMut || lnMut ? (
@@ -1434,32 +1452,31 @@ export default function ZiweiPage() {
 
                         {/* ══ B区（内容缓冲区/空白区）══ 星曜区与宫底之间的自然留白（flex 自动分配，不塞其他文字） */}
 
-                        {/* v25.0.29（P7-5）：中部小限/大限岁数——用户点击大限后让位给星下四化，隐藏本块 */}
-                        {!dxLayer && (
-                          <div style={{ flexShrink: 0, lineHeight: "1", position: "relative", zIndex: 1, backgroundColor: isLaiyin ? "#fff8f0" : palaceBg }}>
+                        {/* 20260819用户指令：本命盘宫位内必须有小限/大限岁数数字——始终显示（不再因点击大限隐藏） */}
+                        <div style={{ flexShrink: 0, lineHeight: "1", position: "relative", zIndex: 1, backgroundColor: isLaiyin ? "#fff8f0" : palaceBg }}>
                             {palace.ages && palace.ages.length > 0 && (
-                              <div style={{ fontSize: "6px", color: "#bbb", lineHeight: "1", textAlign: "center", whiteSpace: "nowrap", overflow: "hidden" }}>
+                              <div style={{ fontSize: "7px", color: "#8a8a8a", lineHeight: "1", textAlign: "center", whiteSpace: "nowrap", overflow: "hidden" }}>
                                 {palace.ages.slice(0, 4).join(",")}
                               </div>
                             )}
                             {palace.ageRange && palace.ageRange[0] > 0 && (
-                              <div style={{ fontSize: "6px", color: "#aaa", textAlign: "center", lineHeight: "1" }}>
+                              <div style={{ fontSize: "7px", color: "#999", textAlign: "center", lineHeight: "1" }}>
                                 {palace.ageRange[0]}-{palace.ageRange[1]}
                               </div>
                             )}
-                          </div>
-                        )}
+                        </div>
 
-                        {/* ══ E区（右侧动态栏）v25.0.32（P7-紫微布局-02）══
-                            大限/流年/流月/流日/流时/童限/小限动态星统一入宫格右侧动态栏（右侧边缘内侧，与D区并列独立子区）；
-                            纵向排列，层序固定 大限→流年→流月→流日→流时→童限/小限；两字简称（层级前缀+星曜简称）；
-                            未由用户主动选择的时间层级不显示；每层超过6颗自动续列，内容多时向上扩展不遮宫名/干支/主星 */}
+                        {/* ══ E区（右侧动态栏）20260819用户指令 ══
+                            大限/流年/流月/流日/流时/童限/小限动态星统一入宫格右侧动态栏；
+                            位置=宫格右侧、十二长生上方，自下而上生长；列与列从右往左排（row-reverse）；
+                            层序固定 大限→流年→流月→流日→流时→童限/小限；两字简称（层级前缀+星曜简称）；
+                            未由用户主动选择的时间层级不显示；每列10颗续列（最多3列），与A区starPadRight预留一致 */}
                         {(() => {
                           const dyn = dynamicStarsByPalace[palaceZhiIdx];
                           if (!dyn || dyn.length === 0) return null;
                           const colorOf = (lv: string) => DYN_LEVEL_COLORS[lv] || "#555";
-                          // P7-上架前阻断整改-01：合流紧凑竖排——全部层级简称按层序（大限→流年→流月→流日→流时→童限/小限）
-                          // 合成单一序列，每列10颗续列（最多3列，适配固定宫格高度不溢出），与A区starPadRight预留一致；层内颜色不混、顺序不变
+                          // 合流紧凑竖排——全部层级简称按层序（大限→流年→流月→流日→流时→童限/小限）
+                          // 合成单一序列，每列10颗续列（最多3列），层内颜色不混、顺序不变
                           const seq = DYN_LEVEL_ORDER.flatMap((lv) => (dyn.filter((d) => d.level === lv).map((d) => ({ abbr: d.abbr, lv }))));
                           const chunk = (arr: typeof seq, n: number) => {
                             const out: typeof seq[] = [];
@@ -1467,7 +1484,7 @@ export default function ZiweiPage() {
                             return out;
                           };
                           return (
-                            <div style={{ position: "absolute", right: "11px", top: "3px", display: "flex", flexDirection: "row", gap: "1px", zIndex: 4, lineHeight: "1.1", alignItems: "flex-start" }}>
+                            <div style={{ position: "absolute", right: `${1 + laiyinPadPx}px`, bottom: `${dynBottomPx}px`, display: "flex", flexDirection: "row-reverse", alignItems: "flex-end", gap: "1px", zIndex: 4, lineHeight: "1.1" }}>
                               {chunk(seq, 10).map((col, ci) => (
                                 <div key={`dyn-${ci}`} style={{ display: "flex", flexDirection: "column", lineHeight: "1.1" }}>
                                   {col.map((d) => (
@@ -1481,27 +1498,23 @@ export default function ZiweiPage() {
                           );
                         })()}
 
-                        {/* ══ D区（右侧：十二长生竖排顶部 + 宫干支/大限干支右下角）20260819用户指令 ══
-                            十二长生固定宫格右侧靠边竖排（顶部）；宫干支+大限干支恢复昨日口径固定右下角竖排，
+                        {/* ══ D区（右侧：十二长生纵排于右下角干支正上方）20260819用户指令 ══
+                            十二长生固定宫格右侧靠边竖排，位于右下角干支的上面；
                             干支五行配色——四化/三合/飞星模式均显示，为宫干飞化（天干四化表）提供视觉基准 */}
-                        <div style={{ position: "absolute", right: "0px", top: "3px", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 0, zIndex: 4, lineHeight: "1.1" }}>
+                        <div style={{ position: "absolute", right: "0px", bottom: `${csBottomPx}px`, display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 0, zIndex: 4, lineHeight: "1.1" }}>
                           {changshengStars.filter(Boolean).map((s, k) => (
                             <span key={`cs-${k}`} style={{ fontSize: "7px", color: "#8a6d3b", fontWeight: 600, writingMode: "vertical-rl", textOrientation: "upright", lineHeight: "1.1", whiteSpace: "nowrap" }}>
                               {s}
                             </span>
                           ))}
                         </div>
-                        {/* D区-右下角：宫干支+大限干支竖排（20260819用户指令：恢复昨日右下角口径） */}
-                        <div style={{ position: "absolute", right: "1px", bottom: "15px", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 0, zIndex: 4, lineHeight: "1.1" }}>
+                        {/* D区-右下角：宫干支竖排（20260819用户指令：去重只留一个、最右下角沉底；身宫标记并入干支列） */}
+                        <div style={{ position: "absolute", right: "1px", bottom: "0px", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 0, zIndex: 4, lineHeight: "1.1" }}>
                           {(palace.heavenlyStem || palace.earthlyBranch) && (
                             <span style={{ fontSize: "7px", fontWeight: "bold", lineHeight: "1.1", writingMode: "vertical-rl", textOrientation: "upright", whiteSpace: "nowrap" }}>
                               <span style={{ color: getGanZhiColor(palace.heavenlyStem) }}>{palace.heavenlyStem}</span>
                               <span style={{ color: getGanZhiColor(palace.earthlyBranch) }}>{palace.earthlyBranch}</span>
-                            </span>
-                          )}
-                          {palace.decadal && (
-                            <span style={{ fontSize: "7px", color: "#585858", lineHeight: "1.1", writingMode: "vertical-rl", textOrientation: "upright" }}>
-                              {palace.decadal}{isShen ? "身" : ""}
+                              {isShen ? <span style={{ color: "#b91c1c" }}>身</span> : null}
                             </span>
                           )}
                         </div>
@@ -1540,6 +1553,13 @@ export default function ZiweiPage() {
                           <span style={{ fontSize: "10px", fontWeight: "bold", color: "#fa0000", lineHeight: "1.2" }}>
                             {palace.name}
                           </span>
+                          {/* 20260819用户指令：底部必须有童限标记（童限宫=命宫，仅选定流年后童限生效时显示） */}
+                          {dynamicStars.tongActive && palace.name === "命宫" && (
+                            <span style={{ fontSize: "8px", fontWeight: "bold", color: "#d97706", marginLeft: "1px", lineHeight: "1.2" }}>童限</span>
+                          )}
+                          {dynamicStars.xiaoActive && dynamicStars.xiaoPalaceIdx === palaceZhiIdx && (
+                            <span style={{ fontSize: "8px", fontWeight: "bold", color: "#be185d", marginLeft: "1px", lineHeight: "1.2" }}>小限</span>
+                          )}
                           {expandedPalaceIdx === idx && (
                             <span style={{ fontSize: "7px", color: "#999", marginLeft: "1px" }}>
                               {getDaxianPalaceName(palaceZhiIdx)}

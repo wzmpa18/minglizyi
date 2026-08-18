@@ -488,6 +488,8 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
             maxWidth: "420px",
             bottom: "0",
             transform: "translateX(-50%)",
+            zIndex: 1001,
+            paddingBottom: "calc(12px + env(safe-area-inset-bottom))",
           }}
         >
           <button
@@ -520,6 +522,8 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
               maxWidth: "420px",
               bottom: "0",
               transform: "translateX(-50%)",
+              zIndex: 1001,
+              paddingBottom: "calc(8px + env(safe-area-inset-bottom))",
             }}
           >
             <input

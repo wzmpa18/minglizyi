@@ -97,6 +97,12 @@ function ProfileIcon({ active }: { active: boolean }) {
 export default function BottomNav() {
   const pathname = usePathname();
 
+  // P7-社交修复-01：私聊页隐藏底部Tab栏（聊天输入栏 fixed bottom-0 与Tab栏重叠互斥，
+  // Tab栏 zIndex 1000 会完全盖住输入框，导致"打不开对话框无法发消息"）
+  if (pathname === "/friends/chat" || pathname.startsWith("/friends/chat")) {
+    return null;
+  }
+
   const getActiveKey = (): string => {
     // 发现路由
     if (pathname === "/discover" || pathname.startsWith("/discover/")) return "discover";

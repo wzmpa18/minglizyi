@@ -426,14 +426,16 @@ export async function registerToServer(phone?: string, email?: string): Promise<
 // ============================================================================
 
 export async function registerWithPhone(params: RegisterParams): Promise<LoginResult> {
-  const { phone, smsCode, password, inviteCode } = params;
+  const { phone, smsCode, password, inviteCode, referrer_id } = params;
 
   // P9-推广中心：统一读取邀请上下文（签名链接 ref/ts/sig 优先，邀请码次之）+ 设备指纹
+  // P7-社交修复-01：referrer_id 一并上送（好友页纯ref场景），后端仅审计留痕不直接采信（防伪造）
   const { getInviteContext, getDeviceId, clearInviteContext } = await import('./inviteApi');
   const inviteCtx = getInviteContext();
   const inviteBody: Record<string, unknown> = {
     inviteCode: (inviteCtx?.code || inviteCode) || null,
     deviceId: getDeviceId(),
+    referrer_id: referrer_id || null,
   };
   if (inviteCtx?.ref) {
     inviteBody.inviteRef = inviteCtx.ref;
@@ -748,13 +750,28 @@ export async function loginWithEmail(email: string, code: string): Promise<Login
 export async function registerWithEmail(params: RegisterEmailParams): Promise<LoginResult> {
   const { email, emailCode, password, inviteCode, referrer_id } = params;
 
+  // P7-社交修复-01：邮箱注册与手机注册同口径——统一读取邀请上下文（签名链接 ref/ts/sig 优先）
+  // + 设备指纹上送服务端归因（此前邮箱注册完全丢失邀请归因，导致"注册了却不在邀请人名下"）
+  const { getInviteContext, getDeviceId, clearInviteContext } = await import('./inviteApi');
+  const inviteCtx = getInviteContext();
+  const inviteBody: Record<string, unknown> = {
+    inviteCode: (inviteCtx?.code || inviteCode) || null,
+    deviceId: getDeviceId(),
+    referrer_id: referrer_id || null,
+  };
+  if (inviteCtx?.ref) {
+    inviteBody.inviteRef = inviteCtx.ref;
+    inviteBody.inviteTs = inviteCtx.ts;
+    inviteBody.inviteSig = inviteCtx.sig;
+  }
+
   // v21.0: 调用后端 /api/auth/register 接口（含 httpOnly cookie）
   try {
     const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include', // 携带/接收 httpOnly cookie
-      body: JSON.stringify({ email, code: emailCode, password, inviteCode: inviteCode || null, referrer_id: referrer_id || null }),
+      body: JSON.stringify({ email, code: emailCode, password, ...inviteBody }),
     });
     const data = await res.json();
 
@@ -808,6 +825,9 @@ export async function registerWithEmail(params: RegisterEmailParams): Promise<Lo
         const { recordRegistration } = await import('./antiCheatStore');
         recordRegistration(user.userId);
       } catch { /* ignore */ }
+
+      // P7-社交修复-01：归因已在服务端完成，清除本地邀请上下文
+      clearInviteContext();
 
       syncLocalData(user.userId);
       return { success: true, message: '注册成功', user, isNewUser: true };
