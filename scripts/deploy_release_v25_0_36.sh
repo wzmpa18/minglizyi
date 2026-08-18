@@ -10,14 +10,14 @@ SRC_DIR="/root/yandaoguoxue-source"
 VERSION="v25.0.36"
 BUILD_ID="${VERSION}_D20260819"
 RELEASE_DIR="/root/yandaoguoxue/releases/${VERSION}"
-EXPECT_HEAD="5c63fde"
+CONTENT_COMMIT="5c63fde"
 
 cd "$SRC_DIR"
 
-echo "--- [0] 源码同步校验 ---"
+echo "--- [0] 源码同步校验（祖先提交校验，规避脚本入库自引用哈希） ---"
 HEAD=$(git rev-parse --short HEAD)
 echo "HEAD: ${HEAD}"; git log --oneline -2
-[ "$HEAD" != "$EXPECT_HEAD" ] && { echo "FATAL: HEAD ${HEAD} != EXPECT ${EXPECT_HEAD}，先拉取最新源码"; exit 1; }
+git merge-base --is-ancestor "${CONTENT_COMMIT}" HEAD || { echo "FATAL: 内容提交 ${CONTENT_COMMIT} 不在当前历史，先 git pull"; exit 1; }
 grep -q "\"version\": \"${VERSION}\"" package.json || { echo "FATAL: package.json 版本未升级到 ${VERSION}"; exit 1; }
 
 echo "--- [0.5] 内容门禁（本轮7张查询参数页 + 注册自动绑定 + 紫微竖排） ---"
