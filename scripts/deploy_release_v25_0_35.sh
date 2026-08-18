@@ -28,7 +28,7 @@ echo "--- [1] 构建（build.sh 静态导出） ---"
 bash build.sh 2>&1 | tail -6
 
 echo "--- [2] 页面导出校验（弹窗治理涉及页 + 抽检核心页） ---"
-for p in academy/yikao friends profile promote invite register login profile privacy yixue/ziwei; do
+for p in academy/yikao friends profile profile/promote invite register login privacy yixue/ziwei; do
   test -f "out/${p}/index.html" || { echo "FATAL: out/${p}/index.html missing"; exit 1; }
   echo "OK: ${p}"
 done
