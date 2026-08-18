@@ -21,7 +21,7 @@ git merge-base --is-ancestor "${CONTENT_COMMIT}" HEAD || { echo "FATAL: 内容�
 grep -q "\"version\": \"${VERSION}\"" package.json || { echo "FATAL: package.json 版本未升级到 ${VERSION}"; exit 1; }
 
 echo "--- [0.5] 内容门禁（本轮7张查询参数页 + 注册自动绑定 + 紫微竖排） ---"
-for p in friends/chat friends/profile groups/chat groups/info discover/detail featured/detail yangsheng/detail; do
+for p in friends/chat friends/profile groups/chat groups/info discover/detail featured/detail zhongyi/yangsheng/detail; do
   test -f "src/app/${p}/page.tsx" || { echo "FATAL: src/app/${p}/page.tsx 缺失"; exit 1; }
 done
 grep -q "邀请人已自动绑定" src/app/register/page.tsx || { echo "FATAL: 注册自动绑定提示缺失"; exit 1; }
@@ -33,7 +33,7 @@ echo "--- [1] 构建（build.sh 静态导出） ---"
 bash build.sh 2>&1 | tail -6
 
 echo "--- [2] 页面导出校验（本轮7张新页 + 核心页抽检） ---"
-for p in friends/chat friends/profile groups/chat groups/info discover/detail featured/detail yangsheng/detail friends profile register login invite yixue/ziwei; do
+for p in friends/chat friends/profile groups/chat groups/info discover/detail featured/detail zhongyi/yangsheng/detail friends profile register login invite yixue/ziwei; do
   test -f "out/${p}/index.html" || { echo "FATAL: out/${p}/index.html missing"; exit 1; }
   echo "OK: ${p}"
 done
