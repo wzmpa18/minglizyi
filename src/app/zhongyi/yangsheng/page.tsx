@@ -305,7 +305,7 @@ function GongfaCard({ gongfa }: { gongfa: GongfaDetail }) {
 
   return (
     <Link
-      href={`/zhongyi/yangsheng/${gongfa.id}`}
+      href={`/zhongyi/yangsheng/detail?id=${encodeURIComponent(gongfa.id)}`}
       style={{
         display: "block",
         background: "white",

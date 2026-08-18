@@ -17,10 +17,10 @@ import { sendGroupMessage, fetchGroupMessages } from "@/lib/socialApi";
 import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
 
-export default function GroupChatPage() {
+export default function GroupChatPage({ routeId }: { routeId?: string }) {
   const params = useParams();
   const router = useRouter();
-  const groupId = params.id as string;
+  const groupId = routeId || (params.id as string);
 
   const { showResult, savedParams, saveParams } = useToolBack({
     pageKey: "group_chat_" + groupId,
@@ -151,7 +151,7 @@ export default function GroupChatPage() {
   };
 
   const handleGoToInfo = () => {
-    router.push("/groups/info/" + groupId);
+    router.push("/groups/info?id=" + encodeURIComponent(groupId));
   };
 
   const formatTime = (timestamp: string) => {

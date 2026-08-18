@@ -50,10 +50,10 @@ function formatGender(gender: "male" | "female" | "unknown"): string {
 
 // ==================== 页面组件 ====================
 
-export default function FriendProfilePage() {
+export default function FriendProfilePage({ routeId }: { routeId?: string }) {
   const params = useParams();
   const router = useRouter();
-  const userId = params.id as string;
+  const userId = routeId || (params.id as string);
 
   const { showResult, savedParams, saveParams } = useToolBack({
     pageKey: "friend_profile_" + userId,
@@ -150,7 +150,7 @@ export default function FriendProfilePage() {
 
   // 跳转到聊天
   const handleSendMessage = () => {
-    router.push("/friends/chat/" + userId);
+    router.push("/friends/chat?id=" + encodeURIComponent(userId));
   };
 
   // 跳转到资料编辑

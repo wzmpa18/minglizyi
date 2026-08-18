@@ -52,7 +52,7 @@ export default function GroupsPage() {
   }, []);
 
   const handleGoToChat = (group: GroupInfo) => {
-    router.push("/groups/chat/" + group.id);
+    router.push("/groups/chat?id=" + encodeURIComponent(group.id));
   };
 
   const handleCreateGroup = () => {

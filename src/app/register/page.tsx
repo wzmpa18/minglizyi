@@ -757,35 +757,74 @@ export default function RegisterPage() {
               </div>
             </div>
           )}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              backgroundColor: "#fff",
-              borderRadius: 12,
-              padding: "0 16px",
-              height: 52,
-            }}
-          >
-            <input
-              type="text"
-              placeholder="邀请码（选填）"
-              value={inviteCode}
-              onChange={(e) => {
-                setInviteCode(e.target.value);
-                setError("");
-              }}
-              onKeyDown={handleKeyDown}
+          {invitedByCode || referrerId ? (
+            <div
               style={{
-                flex: 1,
-                border: "none",
-                outline: "none",
-                fontSize: 16,
-                color: "#333",
-                backgroundColor: "transparent",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                backgroundColor: "#F3EDF7",
+                borderRadius: 12,
+                padding: "14px 16px",
+                border: "1px solid rgba(123, 47, 190, 0.25)",
               }}
-            />
-          </div>
+            >
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#7B2FBE" }}>
+                  邀请人已自动绑定
+                </div>
+                <div style={{ fontSize: 12, color: "#666", marginTop: 2 }}>
+                  注册即与邀请人建立邀请关系，无需填写邀请码
+                </div>
+              </div>
+              <div
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: "50%",
+                  backgroundColor: "#7B2FBE",
+                  color: "#fff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 13,
+                  flexShrink: 0,
+                }}
+              >
+                ✓
+              </div>
+            </div>
+          ) : (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                backgroundColor: "#fff",
+                borderRadius: 12,
+                padding: "0 16px",
+                height: 52,
+              }}
+            >
+              <input
+                type="text"
+                placeholder="邀请码（选填）"
+                value={inviteCode}
+                onChange={(e) => {
+                  setInviteCode(e.target.value);
+                  setError("");
+                }}
+                onKeyDown={handleKeyDown}
+                style={{
+                  flex: 1,
+                  border: "none",
+                  outline: "none",
+                  fontSize: 16,
+                  color: "#333",
+                  backgroundColor: "transparent",
+                }}
+              />
+            </div>
+          )}
         </div>
 
         {/* 错误提示 */}

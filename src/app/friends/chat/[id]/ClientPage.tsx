@@ -21,10 +21,10 @@ import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
 
-export default function FriendChatPage() {
+export default function FriendChatPage({ routeId }: { routeId?: string }) {
   const params = useParams();
   const router = useRouter();
-  const friendId = params.id as string;
+  const friendId = routeId || (params.id as string);
   const chatKey = "private_" + friendId;
 
   const { showResult, savedParams, saveParams } = useToolBack({

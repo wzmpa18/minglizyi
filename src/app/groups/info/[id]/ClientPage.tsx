@@ -20,10 +20,10 @@ import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
 
-export default function GroupInfoPage() {
+export default function GroupInfoPage({ routeId }: { routeId?: string }) {
   const params = useParams();
   const router = useRouter();
-  const groupId = params.id as string;
+  const groupId = routeId || (params.id as string);
 
   useToolBack({ pageKey: "group_info_" + groupId });
 

@@ -168,9 +168,9 @@ export default function MessagesPage() {
 
   const handleClick = (conv: Conversation) => {
     if (conv.type === "friend") {
-      router.push("/friends/chat/" + conv.id);
+      router.push("/friends/chat?id=" + encodeURIComponent(conv.id));
     } else {
-      router.push("/groups/chat/" + conv.id);
+      router.push("/groups/chat?id=" + encodeURIComponent(conv.id));
     }
   };
 

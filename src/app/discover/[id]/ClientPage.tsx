@@ -49,8 +49,9 @@ interface CommentItem {
   createdAt: string;
 }
 
-export default function DiscoverDetailPage() {
-  const { id } = useParams<{ id: string }>();
+export default function DiscoverDetailPage({ routeId }: { routeId?: string }) {
+  const params = useParams<{ id: string }>();
+  const id = routeId || params?.id || "";
   const { goBack } = useToolBack();
 
   const [post, setPost] = useState<Post | null>(null);
@@ -169,7 +170,7 @@ export default function DiscoverDetailPage() {
         title: post.content.slice(0, 40) || "动态",
         summary: `${post.authorName} · ${post.likes}赞 ${post.comments}评`,
         tool: "社区动态",
-        href: `/discover/${post.id}`,
+        href: `/discover/detail?id=${encodeURIComponent(post.id)}`,
       });
       setFaved(true);
       flash("已收藏，可在 我的-收藏 查看");

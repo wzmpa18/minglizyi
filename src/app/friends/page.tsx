@@ -574,7 +574,7 @@ function AddFriendView({
 
   // ==================== 跳转用户主页 ====================
   const goToProfile = (userId: string) => {
-    router.push(`/friends/profile/${userId}`);
+    router.push(`/friends/profile?id=${encodeURIComponent(userId)}`);
   };
 
   // ==================== 渲染用户卡片 ====================
@@ -1655,7 +1655,7 @@ export default function FriendsPage() {
   const handleSendMessage = (friendId: string) => {
     if (!requireLogin()) return;
     setActionMenu(null);
-    router.push(`/friends/chat/${friendId}`);
+    router.push(`/friends/chat?id=${encodeURIComponent(friendId)}`);
   };
 
   // ==================== 修改备注 ====================

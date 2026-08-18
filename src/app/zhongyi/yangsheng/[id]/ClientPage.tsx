@@ -73,10 +73,10 @@ function filterContent(text: string): string {
   return filtered;
 }
 
-export default function ClientPage() {
+export default function ClientPage({ routeId }: { routeId?: string }) {
   const router = useRouter();
   const params = useParams();
-  const id = params.id as string;
+  const id = routeId || (params.id as string);
   useToolBack();
 
   const gongfa = getGongfaById(id);
@@ -238,7 +238,7 @@ export default function ClientPage() {
           type="article"
           title={`${gongfa.name} - 养生上古之道`}
           description={`${gongfa.name}：${gongfa.intro.slice(0, 50)}...`}
-          url={`/zhongyi/yangsheng/${gongfa.id}`}
+          url={`/zhongyi/yangsheng/detail?id=${encodeURIComponent(gongfa.id)}`}
         />
       </div>
 
@@ -447,7 +447,7 @@ export default function ClientPage() {
             {related.map((r) => (
               <Link
                 key={r.id}
-                href={`/zhongyi/yangsheng/${r.id}`}
+                href={`/zhongyi/yangsheng/detail?id=${encodeURIComponent(r.id)}`}
                 style={{
                   display: "flex",
                   alignItems: "center",

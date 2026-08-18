@@ -1206,7 +1206,7 @@ export default function DiscoverPage() {
 
                 {/* 内容 */}
                 <div
-                  onClick={() => router.push(`/discover/${post.id}`)}
+                  onClick={() => router.push(`/discover/detail?id=${encodeURIComponent(post.id)}`)}
                   className="cursor-pointer"
                 >
                   <p className="mt-3 text-sm leading-relaxed text-gray-700">{post.content}</p>
@@ -1247,7 +1247,7 @@ export default function DiscoverPage() {
                     type="post"
                     title={post.content.slice(0, 50)}
                     description={post.content}
-                    url={typeof window !== "undefined" ? `${window.location.origin}/discover/${post.id}` : ""}
+                    url={typeof window !== "undefined" ? `${window.location.origin}/discover/detail?id=${encodeURIComponent(post.id)}` : ""}
                     label={String(post.shares)}
                   />
                 </div>

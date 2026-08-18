@@ -346,8 +346,8 @@ function FriendContent() {
           </p>
           <p style={{ fontSize: 12, color: "#999", marginBottom: 16, lineHeight: 1.5 }}>
             {downloadTriggered
-              ? "请查看浏览器下载栏，安装后使用邀请码注册即可绑定邀请关系"
-              : referrerId ? `邀请码：${referrerId}，下载APP注册后自动绑定` : "扫码下载APP，即刻体验国学文化"}
+              ? "请查看浏览器下载栏，安装后打开APP注册，邀请关系自动绑定，无需填写邀请码"
+              : referrerId ? `已记录邀请人（ID:${referrerId}），下载APP注册后自动绑定，无需填写邀请码` : "扫码下载APP，即刻体验国学文化"}
           </p>
 
           {/* 手动兜底按钮 */}
@@ -371,7 +371,7 @@ function FriendContent() {
           {/* 注册引导 */}
           <div style={{ paddingTop: 12, borderTop: "1px solid #f0f0f0" }}>
             <p style={{ fontSize: 12, color: "#999", marginBottom: 8 }}>
-              已安装APP？直接注册绑定邀请关系
+              已安装APP？直接注册，邀请关系自动绑定
             </p>
             <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
               <button

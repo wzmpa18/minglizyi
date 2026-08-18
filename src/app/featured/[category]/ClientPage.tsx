@@ -65,7 +65,7 @@ export default function FeaturedCategoryPage() {
             {items.map((item) => (
               <button
                 key={item.id}
-                onClick={() => router.push(`/featured/${item.category}/${item.id}`)}
+                onClick={() => router.push(`/featured/detail?category=${encodeURIComponent(item.category)}&id=${encodeURIComponent(item.id)}`)}
                 className="rounded-2xl bg-white p-4 text-left shadow-sm active:scale-[0.99] transition-transform"
               >
                 <div className="flex items-start justify-between gap-3">

@@ -177,7 +177,7 @@ function QRModal({ onClose, userId, nickname, avatar }: { onClose: () => void; u
     });
   };
 
-  const qrSrc = qrDataUrl || qrApiUrl;
+  const qrSrc = qrDataUrl;
 
   return (
     <>

@@ -59,7 +59,7 @@ export default function FansPage() {
                   </div>
                   <button
                     className="min-w-0 flex-1 text-left"
-                    onClick={() => router.push(`/friends/profile/${id}`)}
+                    onClick={() => router.push(`/friends/profile?id=${encodeURIComponent(id)}`)}
                   >
                     <p className="truncate text-sm font-semibold text-gray-800">{u?.nickname || id}</p>
                     <p className="text-xs text-gray-400 font-mono">ID: {id}</p>

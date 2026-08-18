@@ -9,13 +9,13 @@ import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
 const BRAND = "#7B2FBE";
 
-export default function FeaturedItemPage() {
+export default function FeaturedItemPage({ routeCategory, routeId }: { routeCategory?: string; routeId?: string }) {
   const router = useRouter();
   const params = useParams<{ category: string; id: string }>();
   const [showBuyTip, setShowBuyTip] = useState(false);
 
-  const categoryKey = params?.category as string;
-  const itemId = params?.id as string;
+  const categoryKey = routeCategory || (params?.category as string);
+  const itemId = routeId || (params?.id as string);
 
   const category = getCategory(categoryKey);
   const item = getItem(categoryKey, itemId);
