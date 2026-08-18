@@ -1,0 +1,467 @@
+{
+  "total": 264,
+  "sampled": 64,
+  "stats": {
+    "sampled": 64,
+    "total": 264,
+    "dirty": 0,
+    "badType": 0,
+    "badOptions": 0,
+    "badAnswer": 0,
+    "shortAnalysis": 0,
+    "kpUnbound": 0,
+    "kpTrackMismatch": 0,
+    "kpNotApproved": 0
+  },
+  "issues": [],
+  "sample": [
+    {
+      "id": 4140,
+      "type": "single",
+      "stem": "患者男，45岁，腹痛泄泻，泻必腹痛，每因情志不畅诱发，舌淡红苔薄白，脉弦缓。最佳选方是",
+      "answer": "B",
+      "flags": ""
+    },
+    {
+      "id": 4259,
+      "type": "single",
+      "stem": "定喘汤的功用是",
+      "answer": "A",
+      "flags": ""
+    },
+    {
+      "id": 4128,
+      "type": "single",
+      "stem": "患者男，68岁，大便干结，小便清长，腰膝酸软，舌淡苔白，脉沉迟。宜用？",
+      "answer": "B",
+      "flags": ""
+    },
+    {
+      "id": 4245,
+      "type": "single",
+      "stem": "患者男，65岁，猝然昏倒，面青身凉，苔白，脉迟。证属",
+      "answer": "B",
+      "flags": ""
+    },
+    {
+      "id": 4189,
+      "type": "single",
+      "stem": "下列关于补益剂概念与分类的叙述，正确的是",
+      "answer": "B",
+      "flags": ""
+    },
+    {
+      "id": 4134,
+      "type": "single",
+      "stem": "患者男，28岁，往来寒热，胸胁苦满，默默不欲饮食，心烦喜呕，口苦咽干，舌苔薄白，脉弦。最宜选用下列何方？",
+      "answer": "A",
+      "flags": ""
+    },
+    {
+      "id": 4127,
+      "type": "single",
+      "stem": "济川煎的君药是？",
+      "answer": "C",
+      "flags": ""
+    },
+    {
+      "id": 4107,
+      "type": "single",
+      "stem": "下列方剂中，主治风寒表实无汗而喘的是",
+      "answer": "B",
+      "flags": ""
+    },
+    {
+      "id": 4227,
+      "type": "single",
+      "stem": "患者女，30岁，遗精滑泄频作，腰酸耳鸣，神疲乏力，舌淡苔薄，脉细弱。最佳选方是？",
+      "answer": "B",
+      "flags": ""
+    },
+    {
+      "id": 4206,
+      "type": "single",
+      "stem": "补阴剂共性主治阴虚，下列哪项不是其典型表现？",
+      "answer": "E",
+      "flags": ""
+    },
+    {
+      "id": 4143,
+      "type": "single",
+      "stem": "甘草泻心汤主治胃气虚弱痞利俱甚，方中变化特点是",
+      "answer": "C",
+      "flags": ""
+    },
+    {
+      "id": 4347,
+      "type": "single",
+      "stem": "小金丹组成中作为君药的是",
+      "answer": "A",
+      "flags": ""
+    },
+    {
+      "id": 4339,
+      "type": "single",
+      "stem": "肥儿丸的功用是下列哪一项",
+      "answer": "A",
+      "flags": ""
+    },
+    {
+      "id": 4184,
+      "type": "single",
+      "stem": "当归四逆汤主治证的病机是",
+      "answer": "B",
+      "flags": ""
+    },
+    {
+      "id": 4228,
+      "type": "single",
+      "stem": "地黄饮子与龟鹿二仙胶均治虚衰，其主治证的主要区别是？",
+      "answer": "A",
+      "flags": ""
+    },
+    {
+      "id": 4153,
+      "type": "single",
+      "stem": "患者女，32岁，头面红肿焮痛，恶寒发热，咽喉不利，舌燥口渴，舌红苔黄，脉浮数。应选方剂是",
+      "answer": "B",
+      "flags": ""
+    },
+    {
+      "id": 4262,
+      "type": "single",
+      "stem": "关于理血剂概念与分类，下列表述正确的是",
+      "answer": "B",
+      "flags": ""
+    },
+    {
+      "id": 4311,
+      "type": "single",
+      "stem": "五皮散的君药是下列哪味药物？",
+      "answer": "E",
+      "flags": ""
+    },
+    {
+      "id": 4316,
+      "type": "single",
+      "stem": "羌活胜湿汤的组成中不包含下列哪项？",
+      "answer": "D",
+      "flags": ""
+    },
+    {
+      "id": 4149,
+      "type": "single",
+      "stem": "清营汤主治营分证，其典型临床表现是",
+      "answer": "A",
+      "flags": ""
+    },
+    {
+      "id": 4303,
+      "type": "single",
+      "stem": "甘露消毒丹中用以利湿化浊、清热解毒，被列为君药的是哪组？",
+      "answer": "A",
+      "flags": ""
+    },
+    {
+      "id": 4190,
+      "type": "single",
+      "stem": "下列除哪项外，均属补气剂的主治范畴",
+      "answer": "C",
+      "flags": ""
+    },
+    {
+      "id": 4282,
+      "type": "single",
+      "stem": "牵正散的主治证是",
+      "answer": "C",
+      "flags": ""
+    },
+    {
+      "id": 4110,
+      "type": "single",
+      "stem": "柴葛解肌汤主治证候的病机特点是",
+      "answer": "B",
+      "flags": ""
+    },
+    {
+      "id": 4100,
+      "type": "single",
+      "stem": "患者男，28岁。恶寒发热，头痛，汗出恶风，鼻塞，脉浮缓。最宜选用的方剂是",
+      "answer": "B",
+      "flags": ""
+    },
+    {
+      "id": 4232,
+      "type": "single",
+      "stem": "易黄汤的主治证是",
+      "answer": "D",
+      "flags": ""
+    },
+    {
+      "id": 4203,
+      "type": "single",
+      "stem": "气血双补剂中，下列哪首方剂主治脉结代、心动悸？",
+      "answer": "C",
+      "flags": ""
+    },
+    {
+      "id": 4260,
+      "type": "single",
+      "stem": "患者胃虚痰阻气逆，心下痞硬、噫气不除、舌淡苔白滑，最宜选用的方剂是",
+      "answer": "B",
+      "flags": ""
+    },
+    {
+      "id": 4108,
+      "type": "single",
+      "stem": "患者男，42岁。恶寒发热，无汗，喘咳，痰多清稀，舌苔白滑。宜用",
+      "answer": "C",
+      "flags": ""
+    },
+    {
+      "id": 4191,
+      "type": "single",
+      "stem": "四君子汤的组成药物不包括",
+      "answer": "D",
+      "flags": ""
+    },
+    {
+      "id": 4300,
+      "type": "single",
+      "stem": "茵陈蒿汤中用量独重且为君药的是何药？",
+      "answer": "C",
+      "flags": ""
+    },
+    {
+      "id": 4248,
+      "type": "single",
+      "stem": "患者女，42岁，脘腹胀满，嗳气频作，胁肋胀痛，脉弦。治宜选用哪类方剂",
+      "answer": "C",
+      "flags": ""
+    },
+    {
+      "id": 4273,
+      "type": "single",
+      "stem": "咳血方中用以清肝泻火的药物是",
+      "answer": "B",
+      "flags": ""
+    },
+    {
+      "id": 4164,
+      "type": "single",
+      "stem": "清胃散中升麻的作用是",
+      "answer": "C",
+      "flags": ""
+    },
+    {
+      "id": 4150,
+      "type": "single",
+      "stem": "患者男，45岁，骤然吐血衄血，斑色紫黑，神昏谵语，舌绛起刺。最宜选用的方剂是",
+      "answer": "B",
+      "flags": ""
+    },
+    {
+      "id": 4154,
+      "type": "single",
+      "stem": "仙方活命饮被称为痈疡首方，其功用特点为",
+      "answer": "B",
+      "flags": ""
+    },
+    {
+      "id": 4161,
+      "type": "single",
+      "stem": "左金丸中黄连与吴茱萸的用量比例是",
+      "answer": "D",
+      "flags": ""
+    },
+    {
+      "id": 4238,
+      "type": "single",
+      "stem": "患者女，38岁，带下黄白黏稠腥臭，腰酸腿软，苔腻脉濡缓。辨证属",
+      "answer": "A",
+      "flags": ""
+    },
+    {
+      "id": 4096,
+      "type": "single",
+      "stem": "患者男，28岁。恶寒发热，无汗而喘，舌苔薄白，脉浮紧。宜选用的解表剂类型是",
+      "answer": "C",
+      "flags": ""
+    },
+    {
+      "id": 4123,
+      "type": "single",
+      "stem": "大黄牡丹汤的主治证是？",
+      "answer": "B",
+      "flags": ""
+    },
+    {
+      "id": 4319,
+      "type": "single",
+      "stem": "独活寄生汤中作为君药的是下列哪味药物？",
+      "answer": "A",
+      "flags": ""
+    },
+    {
+      "id": 4205,
+      "type": "single",
+      "stem": "炙甘草汤煎服时特殊加入的辅料是？",
+      "answer": "B",
+      "flags": ""
+    },
+    {
+      "id": 4295,
+      "type": "single",
+      "stem": "百合固金汤的功用是",
+      "answer": "A",
+      "flags": ""
+    },
+    {
+      "id": 4133,
+      "type": "single",
+      "stem": "下列关于和解剂概念与分类的叙述，正确的是哪项？",
+      "answer": "B",
+      "flags": ""
+    },
+    {
+      "id": 4177,
+      "type": "single",
+      "stem": "患者女，50岁，胸腹大寒痛，痛不可触近，手足厥冷，舌淡苔白，脉沉紧。当选",
+      "answer": "D",
+      "flags": ""
+    },
+    {
+      "id": 4183,
+      "type": "single",
+      "stem": "温经散寒剂的主治共同特点不包括",
+      "answer": "D",
+      "flags": ""
+    },
+    {
+      "id": 4156,
+      "type": "single",
+      "stem": "导赤散主治心火下移小肠，其药物组成是",
+      "answer": "A",
+      "flags": ""
+    },
+    {
+      "id": 4132,
+      "type": "single",
+      "stem": "增液承气汤的功用是滋阴增液、泄热通便，其组成不含下列哪类药物？",
+      "answer": "A",
+      "flags": ""
+    },
+    {
+      "id": 4247,
+      "type": "single",
+      "stem": "理气剂的主要分类是",
+      "answer": "B",
+      "flags": ""
+    },
+    {
+      "id": 4129,
+      "type": "single",
+      "stem": "十枣汤的组成药物中，除芫花、甘遂、大戟外，尚包含下列哪味药物？",
+      "answer": "A",
+      "flags": ""
+    },
+    {
+      "id": 4145,
+      "type": "single",
+      "stem": "白虎汤主治气分热盛证，下列哪项不属于其典型表现",
+      "answer": "E",
+      "flags": ""
+    },
+    {
+      "id": 4122,
+      "type": "single",
+      "stem": "调胃承气汤中甘草的作用主要是？",
+      "answer": "B",
+      "flags": ""
+    },
+    {
+      "id": 4344,
+      "type": "single",
+      "stem": "苇茎汤的主治病证是",
+      "answer": "B",
+      "flags": ""
+    },
+    {
+      "id": 4290,
+      "type": "single",
+      "stem": "桑杏汤主治证候的特征是",
+      "answer": "B",
+      "flags": ""
+    },
+    {
+      "id": 4155,
+      "type": "single",
+      "stem": "五味消毒饮与仙方活命饮的鉴别要点是",
+      "answer": "B",
+      "flags": ""
+    },
+    {
+      "id": 4170,
+      "type": "single",
+      "stem": "当归六黄汤的功用是",
+      "answer": "A",
+      "flags": ""
+    },
+    {
+      "id": 4175,
+      "type": "single",
+      "stem": "小建中汤的君药是",
+      "answer": "E",
+      "flags": ""
+    },
+    {
+      "id": 4148,
+      "type": "single",
+      "stem": "痛泻要方中防风的主要配伍意义是",
+      "answer": "C",
+      "flags": ""
+    },
+    {
+      "id": 4317,
+      "type": "single",
+      "stem": "患者女，52岁，腰膝酸冷，小便清长，夜尿频多，带下清稀，舌淡脉沉弱。宜选何方？",
+      "answer": "C",
+      "flags": ""
+    },
+    {
+      "id": 4312,
+      "type": "single",
+      "stem": "苓桂术甘汤的功用是？",
+      "answer": "A",
+      "flags": ""
+    },
+    {
+      "id": 4263,
+      "type": "single",
+      "stem": "桃核承气汤主治下焦蓄血证，其辨证关键症状是",
+      "answer": "A",
+      "flags": ""
+    },
+    {
+      "id": 4168,
+      "type": "single",
+      "stem": "青蒿鳖甲汤主治温病后期的特点是",
+      "answer": "B",
+      "flags": ""
+    },
+    {
+      "id": 4207,
+      "type": "single",
+      "stem": "患者男，40岁，腰膝酸软，口干咽燥，潮热盗汗，舌红少苔，脉细数。宜用下列哪类方剂？",
+      "answer": "C",
+      "flags": ""
+    },
+    {
+      "id": 4338,
+      "type": "single",
+      "stem": "患者男，6岁，形体消瘦，肚腹胀大，青筋暴露，时有腹痛，睡中啮齿。宜辨为蛔证，可选？",
+      "answer": "D",
+      "flags": ""
+    }
+  ]
+}

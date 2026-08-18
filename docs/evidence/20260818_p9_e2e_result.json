@@ -1,0 +1,187 @@
+{
+  "pass": 36,
+  "fail": 0,
+  "results": [
+    {
+      "name": "T1.1 邀请人A注册成功",
+      "ok": true,
+      "detail": "userId=100021"
+    },
+    {
+      "name": "T1.2 A无上级绑定",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T1.3 B经签名链接注册绑定成功",
+      "ok": true,
+      "detail": "reason="
+    },
+    {
+      "name": "T1.4 users.invited_by = A",
+      "ok": true,
+      "detail": "invited_by=100021"
+    },
+    {
+      "name": "T1.5 关系表level=1(单层)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T1.6 A注册奖励到账",
+      "ok": true,
+      "detail": "balance=50 期望50"
+    },
+    {
+      "name": "T1.7 invite_rewards注册奖励记录",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T1.8 积分流水invite_register",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T1.9 首付费奖励发放成功",
+      "ok": true,
+      "detail": "{\"granted\":true,\"points\":200}"
+    },
+    {
+      "name": "T1.10 A累计积分=注册+首付费",
+      "ok": true,
+      "detail": "balance=250 期望250"
+    },
+    {
+      "name": "T1.11 首付费奖励幂等(重复调用不重复发放)",
+      "ok": true,
+      "detail": "{\"granted\":false,\"reason\":\"ALREADY_GRANTED\"}"
+    },
+    {
+      "name": "T1.12 幂等后余额不变",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T1.13 首付费流水仅1条",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T2.1 自邀/关联设备拦截",
+      "ok": true,
+      "detail": "reason=SELF_OR_LINKED_DEVICE"
+    },
+    {
+      "name": "T2.2 C未产生绑定",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T2.3 D无邀请注册正常",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T2.4 同设备批量注册拦截(≥3账号)",
+      "ok": true,
+      "detail": "reason=DEVICE_BATCH_REGISTER"
+    },
+    {
+      "name": "T2.5 同IP高频注册拦截(24h≥5)",
+      "ok": true,
+      "detail": "reason=IP_BATCH_REGISTER"
+    },
+    {
+      "name": "T2.6 多来源冲突取签名链接源(A)",
+      "ok": true,
+      "detail": "reason="
+    },
+    {
+      "name": "T2.7 G绑定到A(首绑且高可信源)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T2.8 伪造签名拦截",
+      "ok": true,
+      "detail": "reason=NO_SOURCE"
+    },
+    {
+      "name": "T2.9 已绑定账号不被覆盖(复核)",
+      "ok": true,
+      "detail": "invited_by=100021"
+    },
+    {
+      "name": "T3.1 审计:自邀/关联设备留痕",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T3.2 审计:同设备批量留痕",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T3.3 审计:同IP批量留痕",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T3.4 审计:伪造签名留痕",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T3.5 审计:多来源冲突留痕",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T3.6 审计:成功绑定留痕",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T3.7 审计:首付费留痕",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T4.1 A密码登录成功",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T4.2 /invite/link返回签名链接",
+      "ok": true,
+      "detail": "100021&ts=1787035115134&sig=5d1268b1cd957bbc685d38a5fede1d87"
+    },
+    {
+      "name": "T4.3 overview邀请数=库(B+G)",
+      "ok": true,
+      "detail": "api=2"
+    },
+    {
+      "name": "T4.4 overview累计奖励=B注册+G注册+B首付费",
+      "ok": true,
+      "detail": "api=300 期望300"
+    },
+    {
+      "name": "T4.5 明细含邀请注册奖励",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T4.6 明细含邀请付费奖励",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "T4.7 明细余额与库一致",
+      "ok": true,
+      "detail": "api=300 期望300"
+    }
+  ],
+  "finishedAt": "2026-08-18T06:38:35.159Z"
+}
