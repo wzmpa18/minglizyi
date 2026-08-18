@@ -214,6 +214,23 @@ export interface ToolConfig {
   account: AccountPrivilegeConfig;
   redeem: RedeemConfig;
   yikao: YikaoConfig;
+  promoFloat: PromoFloatConfig;
+}
+
+/** P7-弹窗统一-01：营销浮窗（邀请好友送题库等）统一治理配置 */
+export interface PromoFloatConfig {
+  /** 后台总开关（首发默认关闭：仅推广中心/个人中心可展示） */
+  enabled: boolean;
+  /** 允许展示的页面路径白名单（前缀匹配） */
+  allowedPages: string[];
+  /** 点击跳转目标 */
+  target: string;
+  /** 每日最多展示次数（频次限制） */
+  dailyMaxShows: number;
+  /** 关闭后冷却小时数 */
+  cooldownHours: number;
+  /** 是否提供「不再显示」永久关闭 */
+  allowPermanentClose: boolean;
 }
 
 // ==================== 默认配置（内容类字段由项目方后台修改） ====================
@@ -360,6 +377,15 @@ export const DEFAULT_TOOL_CONFIG: ToolConfig = {
     libTabs: ["中药", "方剂", "中诊", "针灸", "妇科", "儿科"],
     disclaimer: "内容仅供文化娱乐参考，不构成任何专业建议",
   },
+  // 营销浮窗统一治理：首发默认关闭；开启后仅在白名单页面展示
+  promoFloat: {
+    enabled: false,
+    allowedPages: ["/invite", "/profile/promote", "/profile"],
+    target: "/invite",
+    dailyMaxShows: 1,
+    cooldownHours: 48,
+    allowPermanentClose: true,
+  },
 };
 
 // ==================== 存储与版本管理 ====================
@@ -416,6 +442,7 @@ export function getToolConfig(): ToolConfig {
     account: { ...DEFAULT_TOOL_CONFIG.account, ...(stored.account || {}) },
     redeem: { ...DEFAULT_TOOL_CONFIG.redeem, ...(stored.redeem || {}) },
     yikao: { ...DEFAULT_TOOL_CONFIG.yikao, ...(stored.yikao || {}) },
+    promoFloat: { ...DEFAULT_TOOL_CONFIG.promoFloat, ...(stored.promoFloat || {}) },
   };
 }
 
@@ -543,6 +570,7 @@ function getVersionOf(module: string, obj: unknown): string {
     growth: "growth-v1",
     reminder: "rem-v1",
     yikao: DEFAULT_TOOL_CONFIG.yikao.version,
+    promoFloat: "promo-float-v1",
   };
   return defaults[module] || "v1";
 }

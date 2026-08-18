@@ -9,6 +9,8 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import GlobalZoomProvider from "@/components/GlobalZoomProvider";
 import SwipeBackProvider from "@/components/SwipeBackProvider";
 import VersionChecker from "@/components/VersionChecker";
+import { ToastHost } from "@/components/ui";
+import { PromoFloat } from "@/components/marketing/PromoFloat";
 
 export const metadata: Metadata = {
   title: "言道国学",
@@ -55,6 +57,10 @@ export default function RootLayout({
             </GlobalZoomProvider>
           </SwipeBackProvider>
           <BottomNav />
+          {/* P7-弹窗统一-01：全站统一营销浮窗（后台开关+页面白名单+频次+冷却期+永久关闭） */}
+          <PromoFloat />
+          {/* P7-弹窗统一-01：全站统一轻提示宿主（showToast 全局事件） */}
+          <ToastHost />
         </ThemeProvider>
       </body>
     </html>

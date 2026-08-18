@@ -12,8 +12,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { PageLoginGuard } from "@/components/PageLoginGuard";
-import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
-import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
+import { SelectorDialog, BottomSheet, PaymentDialog } from "@/components/ui";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import {
@@ -112,13 +111,8 @@ export default function YikaoPage() {
   const [libPoints, setLibPoints] = useState<KnowledgeVo[]>([]);
   const [libLoading, setLibLoading] = useState(false);
 
-  // 弹窗规范：背景滚动锁 + 返回键优先关闭
-  useBodyScrollLock(showExamPicker || showSettings || !!unlockTarget);
-  usePopupBackHandler(() => {
-    if (unlockTarget) setUnlockTarget(null);
-    else if (showExamPicker) setShowExamPicker(false);
-    else if (showSettings) setShowSettings(false);
-  }, showExamPicker || showSettings || !!unlockTarget);
+  // 弹窗规范：统一组件（SelectorDialog/BottomSheet/PaymentDialog/LoginPromptModal）内部已接管
+  // body 滚动锁与返回键优先关闭弹窗，页面不再重复挂载，避免双份 history 拦截
 
   const exams = cfg.exams.filter((e) => e.enabled);
   const currentExam = exams.find((e) => e.id === examId) || exams[0];
@@ -679,110 +673,70 @@ export default function YikaoPage() {
         </>
       ) : renderLib()}
 
-      {/* ===== 悬浮邀请入口 ===== */}
-      {!activeSubject && !activeCard && !station && (
-        <button
-          onClick={() => router.push("/invite")}
-          className="fixed z-30 flex flex-col items-center rounded-xl px-2.5 py-2 shadow-lg active:scale-95"
-          style={{ right: "max(12px, calc(50vw - 198px))", bottom: "84px", background: "linear-gradient(160deg,#e85d4f,#c05046)", border: "2px solid #ffe3b3" }}
-          title="邀好友送题库"
-        >
-          <span className="text-[10px] font-bold" style={{ color: "#ffe3b3" }}>邀好友</span>
-          <span className="text-[12px] font-bold text-white">送题库</span>
-        </button>
-      )}
+      {/* P7-弹窗统一-01：移除页面自写固定定位营销浮窗（首发营销浮窗仅允许推广中心/个人中心，
+          由统一组件 PromoFloat 按后台开关+白名单+频次+冷却期治理，医考页不再展示） */}
 
       {/* ===== 底部导航垫层 ===== */}
       <div className="page-bottom-nav-safe" aria-hidden="true" />
 
-      {/* ===== 考试类型选择弹层 ===== */}
-      {showExamPicker && (
-        <div className="fixed inset-0 z-50 flex items-end" style={{ backgroundColor: "rgba(0,0,0,.45)" }} onClick={() => setShowExamPicker(false)}>
-          <div
-            className="mx-auto w-full rounded-t-2xl bg-white px-4 pb-8 pt-4"
-            style={{ maxWidth: "420px", maxHeight: "85vh", overflowY: "auto", paddingBottom: "calc(2rem + env(safe-area-inset-bottom))" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <p className="mb-3 text-center text-sm font-bold" style={{ color: INK }}>选择考试类型</p>
-            {exams.map((e) => (
-              <button
-                key={e.id}
-                onClick={() => { setExamId(e.id); localStorage.setItem(EXAM_KEY, e.id); setCoverages({}); setShowExamPicker(false); }}
-                className="mb-2 flex w-full items-center justify-between rounded-xl px-4 py-3 text-sm font-medium"
-                style={{ backgroundColor: examId === e.id ? GREEN + "12" : "#f7f7f7", color: examId === e.id ? GREEN_DARK : INK }}
-              >
-                {e.name}
-                {examId === e.id && <span style={{ color: GREEN }}>✓</span>}
-              </button>
-            ))}
-            <p className="mt-2 text-center text-[10px] text-gray-400">更多考试类别由运营后台配置开放</p>
-          </div>
-        </div>
-      )}
+      {/* ===== 考试类型选择：统一居中 SelectorDialog（P7-弹窗统一-01，禁止贴底部） ===== */}
+      <SelectorDialog
+        open={showExamPicker}
+        onClose={() => setShowExamPicker(false)}
+        title="选择考试类型"
+        accent={GREEN_DARK}
+        options={exams.map((e) => ({ id: e.id, name: e.name }))}
+        value={examId}
+        onSelect={(id) => {
+          setExamId(id);
+          localStorage.setItem(EXAM_KEY, id);
+          setCoverages({});
+          setShowExamPicker(false);
+        }}
+        footer="更多考试类别由运营后台配置开放"
+      />
 
-      {/* ===== 设置弹层 ===== */}
-      {showSettings && (
-        <div className="fixed inset-0 z-50 flex items-end" style={{ backgroundColor: "rgba(0,0,0,.45)" }} onClick={() => setShowSettings(false)}>
-          <div
-            className="mx-auto w-full rounded-t-2xl bg-white px-4 pb-8 pt-4"
-            style={{ maxWidth: "420px", maxHeight: "85vh", overflowY: "auto", paddingBottom: "calc(2rem + env(safe-area-inset-bottom))" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <p className="mb-3 text-center text-sm font-bold" style={{ color: INK }}>设置</p>
-            <div className="space-y-2">
-              <div className="rounded-xl bg-gray-50 px-4 py-3">
-                <p className="text-xs font-bold text-gray-700">当前考试</p>
-                <p className="mt-1 text-[11px] text-gray-500">{currentExam?.name} · 考纲结构 {cfg.version}</p>
-              </div>
-              <div className="rounded-xl bg-gray-50 px-4 py-3">
-                <p className="text-xs font-bold text-gray-700">练习模式说明</p>
-                <p className="mt-1 text-[11px] leading-relaxed text-gray-500">章节练习按目录顺序推进；章节乱序随机打乱题序强化记忆；实践技能覆盖三站考核，增值内容支持单次解锁或会员权益。</p>
-              </div>
-              <button
-                onClick={() => { setActiveSubject(null); setActiveCard(null); setStation(null); setPicked({}); setGraded({}); setShowSettings(false); }}
-                className="w-full rounded-xl px-4 py-3 text-left text-xs font-bold"
-                style={{ backgroundColor: GREEN + "0d", color: GREEN_DARK }}
-              >清空当前练习进度（重新作答）</button>
-              <p className="px-1 pt-1 text-[10px] leading-relaxed text-gray-400">{cfg.disclaimer}</p>
-            </div>
+      {/* ===== 设置：统一 BottomSheet（用户主动点击触发） ===== */}
+      <BottomSheet open={showSettings} onClose={() => setShowSettings(false)} title="设置">
+        <div className="space-y-2">
+          <div className="rounded-xl bg-gray-50 px-4 py-3">
+            <p className="text-xs font-bold text-gray-700">当前考试</p>
+            <p className="mt-1 text-[11px] text-gray-500">{currentExam?.name} · 考纲结构 {cfg.version}</p>
           </div>
+          <div className="rounded-xl bg-gray-50 px-4 py-3">
+            <p className="text-xs font-bold text-gray-700">练习模式说明</p>
+            <p className="mt-1 text-[11px] leading-relaxed text-gray-500">章节练习按目录顺序推进；章节乱序随机打乱题序强化记忆；实践技能覆盖三站考核，增值内容支持单次解锁或会员权益。</p>
+          </div>
+          <button
+            onClick={() => { setActiveSubject(null); setActiveCard(null); setStation(null); setPicked({}); setGraded({}); setShowSettings(false); }}
+            className="w-full rounded-xl px-4 py-3 text-left text-xs font-bold"
+            style={{ backgroundColor: GREEN + "0d", color: GREEN_DARK }}
+          >清空当前练习进度（重新作答）</button>
+          <p className="px-1 pt-1 text-[10px] leading-relaxed text-gray-400">{cfg.disclaimer}</p>
         </div>
-      )}
+      </BottomSheet>
 
-      {/* ===== 统一 Paywall 解锁面板 ===== */}
-      {unlockTarget && (
-        <div className="fixed inset-0 z-50 flex items-end" style={{ backgroundColor: "rgba(0,0,0,.45)" }} onClick={() => !paying && setUnlockTarget(null)}>
-          <div
-            className="mx-auto w-full rounded-t-2xl bg-white px-5 pb-8 pt-5"
-            style={{ maxWidth: "420px", maxHeight: "85vh", overflowY: "auto", paddingBottom: "calc(2rem + env(safe-area-inset-bottom))" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <p className="text-center text-base font-bold" style={{ color: INK }}>解锁「{unlockTarget.title}」</p>
-            <p className="mt-1.5 text-center text-[11px] text-gray-500">支持单次购买或会员权益抵扣 · 支付后权限自动生效</p>
-            <div className="mt-4 rounded-xl p-4" style={{ backgroundColor: CREAM, border: "1px solid #ece4cf" }}>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-600">单次购买（永久解锁）</span>
-                <span className="text-lg font-bold" style={{ color: SEAL_RED }}>¥{unlockTarget.price.toFixed(2)}</span>
-              </div>
-            </div>
-            {payMsg && <p className="mt-3 text-center text-[11px] font-medium" style={{ color: payMsg.includes("成功") ? "#10b981" : SEAL_RED }}>{payMsg}</p>}
-            <button
-              onClick={handlePay}
-              disabled={paying}
-              className="mt-4 w-full rounded-full py-3 text-sm font-bold text-white disabled:opacity-50"
-              style={{ backgroundColor: GREEN }}
-            >{paying ? "支付处理中..." : "微信支付 · 立即解锁"}</button>
-            {unlockTarget.memberFree && (
-              <button
-                onClick={() => { setUnlockTarget(null); router.push("/membership"); }}
-                className="mt-2.5 w-full rounded-full py-3 text-sm font-bold"
-                style={{ backgroundColor: "#fff", color: GREEN_DARK, border: `1px solid ${GREEN}66` }}
-              >开通会员 · 权益抵扣免费学</button>
-            )}
-            <p className="mt-3 text-center text-[10px] text-gray-400">退款后权限将同步回收 · 交易受平台统一保障</p>
-          </div>
-        </div>
-      )}
+      {/* ===== 统一 Paywall 解锁面板（PaymentDialog，P7-弹窗统一-01） ===== */}
+      <PaymentDialog
+        open={!!unlockTarget}
+        onClose={() => setUnlockTarget(null)}
+        title={unlockTarget ? `解锁「${unlockTarget.title}」` : ""}
+        subtitle="支持单次购买或会员权益抵扣 · 支付后权限自动生效"
+        price={unlockTarget?.price}
+        paying={paying}
+        payMsg={payMsg}
+        accent={GREEN}
+        onPay={handlePay}
+      >
+        {unlockTarget?.memberFree && (
+          <button
+            onClick={() => { setUnlockTarget(null); router.push("/membership"); }}
+            className="mt-2.5 w-full rounded-full py-3 text-sm font-bold"
+            style={{ backgroundColor: "#fff", color: GREEN_DARK, border: `1px solid ${GREEN}66` }}
+          >开通会员 · 权益抵扣免费学</button>
+        )}
+        <p className="mt-3 text-center text-[10px] text-gray-400">退款后权限将同步回收 · 交易受平台统一保障</p>
+      </PaymentDialog>
 
       <LoginPromptModal show={showLoginPrompt} onClose={() => setShowLoginPrompt(false)} />
     </div>

@@ -7,7 +7,7 @@
 set -e
 SRC_DIR="/root/yandaoguoxue-source"
 VERSION="v25.0.34"
-EXPECT_HEAD="d69b6ff"
+EXPECT_HEAD="a1eb287"
 BUILD_ID="${VERSION}_D20260818"
 RELEASE_DIR="/root/yandaoguoxue/releases/${VERSION}"
 

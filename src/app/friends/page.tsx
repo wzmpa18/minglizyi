@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { BrandHeader } from "@/components/shared";
+import { ConfirmDialog as UnifiedConfirmDialog } from "@/components/ui";
 import {
   type Friend,
   type FriendRequest,
@@ -72,59 +73,8 @@ function FriendAvatar({ text, size = 44 }: { text: string; size?: number }) {
   );
 }
 
-// ==================== 确认弹窗组件 ====================
-function ConfirmDialog({
-  title,
-  message,
-  confirmText = "确认",
-  cancelText = "取消",
-  onConfirm,
-  onCancel,
-}: {
-  title: string;
-  message: string;
-  confirmText?: string;
-  cancelText?: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-}) {
-  useBodyScrollLock(true);
-  usePopupBackHandler(onCancel, true);
-
-  return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center"
-      style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
-      onClick={onCancel}
-    >
-      <div
-        className="mx-4 w-full max-w-[300px] rounded-2xl bg-white shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="px-6 pt-6 pb-2 text-center">
-          <h3 className="text-base font-bold text-gray-800">{title}</h3>
-          <p className="mt-2 text-sm text-gray-500">{message}</p>
-        </div>
-        <div className="flex border-t border-gray-100 mt-4">
-          <button
-            onClick={onCancel}
-            className="flex-1 py-3 text-sm text-gray-500 font-medium active:bg-gray-50 rounded-bl-2xl"
-          >
-            {cancelText}
-          </button>
-          <div className="w-px bg-gray-100" />
-          <button
-            onClick={onConfirm}
-            className="flex-1 py-3 text-sm font-semibold active:bg-gray-50 rounded-br-2xl"
-            style={{ color: BRAND }}
-          >
-            {confirmText}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+// ==================== 确认弹窗：统一组件（P7-弹窗统一-01） ====================
+// 原页面自写 ConfirmDialog 已废弃，统一引用 src/components/ui/ConfirmDialog
 
 // ==================== 修改备注弹窗组件 ====================
 function NoteEditDialog({
@@ -2231,9 +2181,11 @@ export default function FriendsPage() {
         />
       )}
 
-      {/* ===== 删除确认弹窗 ===== */}
+      {/* ===== 删除确认弹窗：统一 ConfirmDialog（P7-弹窗统一-01） ===== */}
       {deleteConfirmId && (
-        <ConfirmDialog
+        <UnifiedConfirmDialog
+          open
+          danger
           title="删除好友"
           message="确定要删除该好友吗？删除后将无法恢复。"
           confirmText="删除"
