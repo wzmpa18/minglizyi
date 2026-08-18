@@ -334,33 +334,56 @@ export default function PosterPage() {
         </button>
       </div>
 
-      {/* 底部分享面板（海报生成后显示） */}
+      {/* v25.0.30（P8-1 弹窗规范）：分享面板居中偏上 + 蒙层关闭 + 右上角×（原底部形态改统一口径） */}
       {showShareSheet && posterUrl && (
+        <>
         <div
           style={{
             position: "fixed",
-            left: 0,
-            right: 0,
-            bottom: 0,
-            maxWidth: "420px",
+            inset: 0,
+            backgroundColor: "rgba(0,0,0,0.4)",
+            zIndex: 99,
+          }}
+          onClick={() => setShowShareSheet(false)}
+        />
+        <div
+          style={{
+            position: "fixed",
+            left: "50%",
+            transform: "translateX(-50%)",
+            top: "12vh",
+            width: "calc(100% - 32px)",
+            maxWidth: "360px",
             margin: "0 auto",
             backgroundColor: "#fff",
-            borderRadius: "16px 16px 0 0",
-            boxShadow: "0 -4px 20px rgba(0,0,0,0.08)",
+            borderRadius: "16px",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
             padding: "16px 16px 20px",
             zIndex: 100,
+            maxHeight: "80vh",
+            overflowY: "auto",
           }}
         >
-          {/* 拖拽指示条 */}
-          <div
+          <button
+            onClick={() => setShowShareSheet(false)}
             style={{
-              width: "36px",
-              height: "4px",
-              borderRadius: "2px",
-              backgroundColor: "#e0e0e0",
-              margin: "0 auto 14px",
+              position: "absolute",
+              right: "8px",
+              top: "8px",
+              width: "44px",
+              height: "44px",
+              borderRadius: "50%",
+              border: "none",
+              backgroundColor: "#f5f5f5",
+              color: "#888",
+              fontSize: "18px",
+              lineHeight: 1,
+              cursor: "pointer",
             }}
-          />
+            aria-label="关闭分享面板"
+          >
+            ×
+          </button>
           <div style={{ fontSize: "15px", fontWeight: 600, color: "#333", marginBottom: "14px" }}>
             分享到
           </div>
@@ -412,6 +435,7 @@ export default function PosterPage() {
             })}
           </div>
         </div>
+        </>
       )}
 
       {/* 底部免责声明 */}

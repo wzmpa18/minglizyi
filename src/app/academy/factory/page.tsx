@@ -76,7 +76,6 @@ export default function FactoryPage() {
   const confirmCustomCat = () => {
     const name = customCatName.trim().slice(0, 20);
     if (!name) { showToast("请输入类目名称"); return; }
-    if (name.includes("倪海厦")) { showToast("该类目名称不可用，请更换"); return; }
     if (!categories.some((c) => c.name === name)) {
       setCategories((prev) => [...prev, { id: `custom-${Date.now()}`, track, trackName: "", name, sort: 99, materialCount: 0 }]);
     }
@@ -105,8 +104,7 @@ export default function FactoryPage() {
     fetchCategories(track)
       .then((r) => {
         const list = r && r.success && r.categories ? r.categories : [];
-        // P7-4：标签区不再展示「倪海厦」相关类目
-        setCategories(list.filter((c) => !c.name.includes("倪海厦")));
+        setCategories(list);
       })
       .catch(() => setCategories([]));
   }, [track]);

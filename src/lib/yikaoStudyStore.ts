@@ -65,12 +65,21 @@ export function getAllProgress(): Record<string, YikaoSubjectProgress> {
   return safeGet();
 }
 
-/** 判分（与唯一题库引擎口径一致：客观题精确匹配；multi 逗号排序拼接比较） */
+/** 历史数字索引答案（0 基）兼容归一为字母；字母/文本原样返回（P7-TCM-EXAM-01 3.3 双端兼容） */
+function normalizeChoiceAnswer(s: string): string {
+  const t = s.trim();
+  if (/^\d+(,\d+)*$/.test(t)) {
+    return t.split(",").map((x) => String.fromCharCode(65 + parseInt(x, 10))).join(",");
+  }
+  return t;
+}
+
+/** 判分（与唯一题库引擎口径一致：客观题精确匹配；multi 逗号排序拼接比较；兼容历史数字索引答案） */
 export function isAnswerCorrect(qType: string, myAnswer: string, refAnswer: string): boolean {
   if (!myAnswer || !refAnswer) return false;
-  const norm = (s: string) => s.trim().split(",").filter(Boolean).sort().join(",");
+  const norm = (s: string) => normalizeChoiceAnswer(s).split(",").filter(Boolean).sort().join(",");
   if (qType === "multi") return norm(myAnswer) === norm(refAnswer);
-  if (qType === "judge" || qType === "single") return myAnswer.trim() === refAnswer.trim();
+  if (qType === "judge" || qType === "single") return normalizeChoiceAnswer(myAnswer) === normalizeChoiceAnswer(refAnswer);
   // 主观题（fill/qa/case）不自动判分，不计入掌握度
   return false;
 }

@@ -237,18 +237,18 @@ export default function DatePicker({
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-end justify-center"
-      style={{ paddingBottom: "calc(56px + env(safe-area-inset-bottom, 0px))" }}
+      className="fixed inset-0 z-[9999] flex justify-center"
+      style={{ paddingTop: "max(8vh, 48px)", alignItems: "flex-start" }}
     >
       {/* 遮罩层 - 独立div确保点击可关闭 */}
       <div
         className="absolute inset-0 bg-black/50"
         onClick={onClose}
       />
-      {/* 弹窗内容（P1-REOPEN: 上移避让后高度自适应，小屏不低于 70vh 可用区） */}
+      {/* v25.0.30（P8-1 弹窗规范）：屏幕居中偏上 + 80vh 上限 + 内容内滚（原底部形态改居中偏上口径） */}
       <div
-        className="relative w-full max-w-[420px] rounded-t-2xl bg-white shadow-2xl"
-        style={{ maxHeight: "calc(100vh - 56px - env(safe-area-inset-bottom, 0px))", overflowY: "auto" }}
+        className="relative w-full max-w-[380px] rounded-2xl bg-white shadow-2xl"
+        style={{ maxHeight: "80vh", overflowY: "auto" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* 标题栏 - 右上角×关闭按钮（对标吉时雨 closeBtn: 1） */}

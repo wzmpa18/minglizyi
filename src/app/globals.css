@@ -389,12 +389,13 @@ p { margin: 0; padding: 0; }
 }
 
 /* ============================================
-   P1-6: 全站弹窗/弹层统一适配规范 v2.0
+   P1-6: 全站弹窗/弹层统一适配规范 v3.0（P8-1 居中偏上口径）
    统一规则：
-   1. max-height: 85vh（适配所有屏幕）
-   2. overflow-y: auto（内容区可滚动）
-   3. padding-bottom: 底部导航栏(56px) + safe-area
-   4. body scroll lock（弹窗打开时禁止背景滚动）
+   1. 屏幕居中偏上（顶部保留安全边距，底部不超出可视区）
+   2. max-height: 80vh（内容超出时弹窗内部滚动）
+   3. 小弹窗放大点击区域，大弹窗收窄避免溢出
+   4. 蒙层点击关闭 + 右上角关闭按钮
+   5. body scroll lock（弹窗打开时禁止背景滚动）
    ============================================ */
 
 /* Body 滚动锁定 */
@@ -410,21 +411,21 @@ body.modal-open.nav-hide #app-bottom-nav {
   display: none !important;
 }
 
-/* 底部弹窗容器（BottomSheet/Drawer） */
+/* 大弹窗容器（发布动态/分享/表单类）——居中偏上，宽度收窄避免溢出 */
 .modal-bottom-sheet {
   position: relative;
   width: 100%;
-  max-width: 420px;
-  max-height: 85vh;
+  max-width: 380px;
+  max-height: 80vh;
   background-color: #fff;
-  border-top-left-radius: 16px;
-  border-top-right-radius: 16px;
+  border-radius: 16px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
 }
 
-/* 底部弹窗内容滚动区 */
+/* 大弹窗内容滚动区 */
 .modal-bottom-sheet-body {
   flex: 1;
   overflow-y: auto;
@@ -438,17 +439,18 @@ body.modal-open.nav-hide #app-bottom-nav {
   flex-shrink: 0;
 }
 
-/* 居中弹窗容器（Modal/Dialog） */
+/* 小弹窗容器（确认/提示类）——居中偏上，放大点击区域 */
 .modal-center {
   position: relative;
   width: 100%;
-  max-width: 320px;
-  max-height: 85vh;
+  max-width: 340px;
+  max-height: 80vh;
   background-color: #fff;
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
 }
 
 .modal-center-body {
@@ -457,14 +459,15 @@ body.modal-open.nav-hide #app-bottom-nav {
   -webkit-overflow-scrolling: touch;
 }
 
-/* 弹窗遮罩层 */
+/* 弹窗遮罩层——P8-1：统一居中偏上（顶部安全边距 8vh，底部余量充足不遮挡操作区） */
 .modal-overlay {
   position: fixed;
   inset: 0;
   z-index: 9999;
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: center;
+  padding: max(8vh, 48px) 16px 12vh;
 }
 
 .modal-overlay-center {
@@ -472,9 +475,9 @@ body.modal-open.nav-hide #app-bottom-nav {
   inset: 0;
   z-index: 9999;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 20px;
+  padding: max(8vh, 48px) 20px 12vh;
 }
 
 /* 弹窗背景遮罩 */

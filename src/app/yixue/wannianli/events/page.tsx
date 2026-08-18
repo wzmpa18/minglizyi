@@ -79,13 +79,14 @@ export default function CalendarEventsPage() {
     [reminderCfg]
   );
 
+  // P7-补05：生日/纪念日默认「每年农历重复」，用户可手动修改
   const emptyForm: FormState = useMemo(
     () => ({
       type: "birthday",
       title: "",
       relatedName: "",
       note: "",
-      dateMode: "solar",
+      dateMode: "lunar",
       dateStr: fmtYMD(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate()),
       repeat: "yearly",
       customInterval: "1",
@@ -95,6 +96,10 @@ export default function CalendarEventsPage() {
     []
   );
   const [form, setForm] = useState<FormState>(emptyForm);
+  // 用户是否手动调整过历法/重复（未调整时切换生日/纪念日自动应用每年农历默认）
+  const [calendarTouched, setCalendarTouched] = useState(false);
+  // P7-补05：提交前重复规则确认弹窗
+  const [confirming, setConfirming] = useState(false);
 
   const refresh = useCallback(() => {
     setEvents(listEvents());
@@ -126,6 +131,7 @@ export default function CalendarEventsPage() {
       return;
     }
     setForm(emptyForm);
+    setCalendarTouched(false);
     setShowForm(true);
   };
 
@@ -143,6 +149,7 @@ export default function CalendarEventsPage() {
       customUnit: ev.customUnit || "month",
       reminders: ev.reminders.map((r) => r.offsetMinutes),
     });
+    setCalendarTouched(true);
     setShowForm(true);
   };
 
@@ -153,6 +160,18 @@ export default function CalendarEventsPage() {
     }));
   };
 
+  // P7-补05：重复规则摘要文案（用于提交前确认）
+  const repeatSummary = useMemo(() => {
+    if (form.repeat === "none") return "不重复（仅发生当天提醒一次）";
+    if (form.repeat === "yearly") return form.dateMode === "lunar" ? "每年重复 · 按农历推算" : "每年重复 · 按公历推算";
+    if (form.repeat === "monthly") return form.dateMode === "lunar" ? "每月重复 · 按公历日" : "每月重复";
+    if (form.repeat === "weekly") return "每周重复";
+    const n = Math.max(1, Number(form.customInterval) || 1);
+    const unit = CUSTOM_UNITS.find((u) => u.v === form.customUnit)?.label || "天";
+    return `自定义：每 ${n} ${unit}重复一次`;
+  }, [form.repeat, form.dateMode, form.customInterval, form.customUnit]);
+
+  // 提交：先校验，再弹窗确认重复规则，避免漏选
   const submitForm = () => {
     const [y, m, d] = form.dateStr.split("-").map(Number);
     if (!form.title.trim()) {
@@ -167,6 +186,12 @@ export default function CalendarEventsPage() {
       showTip("请至少选择一个提醒档位");
       return;
     }
+    setConfirming(true);
+  };
+
+  const doSaveForm = () => {
+    setConfirming(false);
+    const [y, m, d] = form.dateStr.split("-").map(Number);
     const reminders: ReminderOffset[] = form.reminders.map((o) => ({ offsetMinutes: o }));
     if (form.id) {
       const r = updateEvent(form.id, {
@@ -438,8 +463,12 @@ export default function CalendarEventsPage() {
 
         {/* ===== 上限提示 ===== */}
         {limitReached && (
-          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 px-6" onClick={() => setLimitReached(false)}>
-            <div className="w-full max-w-[300px] rounded-xl bg-white p-4 text-center" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="fixed inset-0 z-[70] flex justify-center bg-black/40 px-6"
+            style={{ paddingTop: "max(8vh, 48px)", alignItems: "flex-start" }}
+            onClick={() => setLimitReached(false)}
+          >
+            <div className="w-full max-w-[340px] rounded-2xl bg-white p-4 text-center" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }} onClick={(e) => e.stopPropagation()}>
               <div className="mb-2 text-sm font-bold text-gray-800">已达记事上限</div>
               <div className="mb-3 text-xs text-gray-500">当前上限 {reminderCfg.maxEventsPerUser} 条，可删除不需要的记事后继续添加。</div>
               <button onClick={() => setLimitReached(false)} className="w-full rounded-lg py-2 text-sm text-white" style={{ backgroundColor: BRAND }}>
@@ -449,21 +478,21 @@ export default function CalendarEventsPage() {
           </div>
         )}
 
-        {/* ===== 新建/编辑弹窗（统一规范：maxHeight 85vh + 内容区滚动 + 安全区） ===== */}
+        {/* ===== 新建/编辑弹窗（P7-补05 统一规范：居中偏上 + 最大80vh + 内部滚动 + 蒙层/右上角双关闭） ===== */}
         {showForm && (
           <div
-            className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40"
+            className="fixed inset-0 z-[60] flex justify-center bg-black/40"
+            style={{ paddingTop: "max(8vh, 48px)", alignItems: "flex-start", paddingBottom: "12vh" }}
             onClick={() => setShowForm(false)}
-            style={{ display: "flex" }}
           >
             <div
-              className="w-full rounded-t-2xl bg-white"
-              style={{ maxWidth: "500px", maxHeight: "85vh", display: "flex", flexDirection: "column", paddingBottom: "env(safe-area-inset-bottom)" }}
+              className="w-full rounded-2xl bg-white"
+              style={{ maxWidth: "380px", maxHeight: "80vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between border-b px-4 py-3">
+              <div className="flex items-center justify-between border-b px-4 py-3 flex-shrink-0">
                 <span className="text-base font-bold text-gray-800">{form.id ? "编辑记事" : "新建记事"}</span>
-                <button onClick={() => setShowForm(false)} className="h-7 w-7 rounded-full bg-gray-100 text-gray-500">
+                <button onClick={() => setShowForm(false)} className="h-11 w-11 rounded-full bg-gray-100 text-gray-500" aria-label="关闭记事弹窗">
                   ✕
                 </button>
               </div>
@@ -475,7 +504,17 @@ export default function CalendarEventsPage() {
                     {EVENT_TYPES.map((t) => (
                       <button
                         key={t}
-                        onClick={() => setForm((f) => ({ ...f, type: t }))}
+                        onClick={() =>
+                          setForm((f) => {
+                            const nf = { ...f, type: t };
+                            // 新建且用户未手动调整过：生日/纪念日默认每年农历重复
+                            if (!f.id && (t === "birthday" || t === "anniversary") && !calendarTouched) {
+                              nf.repeat = "yearly";
+                              nf.dateMode = "lunar";
+                            }
+                            return nf;
+                          })
+                        }
                         className={`rounded-full px-3 py-1.5 text-xs font-medium ${form.type === t ? "text-white" : "bg-gray-100 text-gray-600"}`}
                         style={form.type === t ? { backgroundColor: BRAND } : undefined}
                       >
@@ -517,7 +556,10 @@ export default function CalendarEventsPage() {
                       { value: "solar", label: "公历", active: form.dateMode === "solar" },
                       { value: "lunar", label: "农历", active: form.dateMode === "lunar" },
                     ]}
-                    onClick={(v) => setForm((f) => ({ ...f, dateMode: v as DateMode }))}
+                    onClick={(v) => {
+                      setCalendarTouched(true);
+                      setForm((f) => ({ ...f, dateMode: v as DateMode }));
+                    }}
                   />
                   {form.dateMode === "lunar" && (
                     <div className="mt-1 text-[11px] text-gray-400">选择农历时，按所选公历日换算农历月日，每年按农历推算提醒</div>
@@ -542,7 +584,10 @@ export default function CalendarEventsPage() {
                     {REPEAT_OPTIONS.map((r) => (
                       <button
                         key={r}
-                        onClick={() => setForm((f) => ({ ...f, repeat: r }))}
+                        onClick={() => {
+                          setCalendarTouched(true);
+                          setForm((f) => ({ ...f, repeat: r }));
+                        }}
                         className={`rounded-full px-3 py-1.5 text-xs font-medium ${form.repeat === r ? "text-white" : "bg-gray-100 text-gray-600"}`}
                         style={form.repeat === r ? { backgroundColor: BRAND } : undefined}
                       >
@@ -622,10 +667,64 @@ export default function CalendarEventsPage() {
           </div>
         )}
 
+        {/* ===== P7-补05：提交前重复规则确认弹窗（居中偏上） ===== */}
+        {confirming && (
+          <div
+            className="fixed inset-0 z-[80] flex justify-center bg-black/50"
+            style={{ paddingTop: "max(8vh, 48px)", alignItems: "flex-start" }}
+            onClick={() => setConfirming(false)}
+          >
+            <div
+              className="w-full rounded-2xl bg-white p-4"
+              style={{ maxWidth: "340px", maxHeight: "80vh", overflowY: "auto", boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-sm font-bold text-gray-800">请确认提醒规则</span>
+                <button onClick={() => setConfirming(false)} className="h-9 w-9 rounded-full bg-gray-100 text-gray-500" aria-label="关闭确认弹窗">
+                  ✕
+                </button>
+              </div>
+              <div className="mb-3 space-y-1.5 rounded-lg bg-gray-50 p-3 text-xs leading-relaxed text-gray-600">
+                <div>
+                  事件：<span className="font-semibold text-gray-800">{EVENT_TYPE_META[form.type].icon} {form.title}</span>
+                  {form.relatedName ? ` · ${form.relatedName}` : ""}
+                </div>
+                <div>
+                  日期：{form.dateStr}
+                  {form.dateMode === "lunar" && formLunarHint ? `（${formLunarHint}）` : ""} · {form.dateMode === "lunar" ? "农历" : "公历"}
+                </div>
+                <div>
+                  重复规则：<span className="font-semibold" style={{ color: BRAND }}>{repeatSummary}</span>
+                </div>
+                <div>
+                  提醒档位：
+                  {form.reminders
+                    .map((o) => REMINDER_OFFSET_OPTIONS.find((x) => x.offsetMinutes === o)?.label || `提前${o}分钟`)
+                    .join("、")}
+                </div>
+              </div>
+              <div className="mb-3 text-[11px] text-gray-400">确认后按上述规则推算并触发提醒；如需调整请返回修改。</div>
+              <div className="flex gap-2">
+                <button onClick={() => setConfirming(false)} className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm font-medium text-gray-500">
+                  返回修改
+                </button>
+                <button onClick={doSaveForm} className="flex-1 rounded-xl py-2.5 text-sm font-bold text-white active:opacity-80" style={{ backgroundColor: BRAND }}>
+                  确认提交
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ===== 导出确认弹窗 ===== */}
         {showExport && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-6" onClick={() => setShowExport(false)}>
-            <div className="w-full max-w-[300px] rounded-xl bg-white p-4" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="fixed inset-0 z-[60] flex justify-center bg-black/40 px-6"
+            style={{ paddingTop: "max(8vh, 48px)", alignItems: "flex-start" }}
+            onClick={() => setShowExport(false)}
+          >
+            <div className="w-full max-w-[340px] rounded-2xl bg-white p-4" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.18)" }} onClick={(e) => e.stopPropagation()}>
               <div className="mb-2 text-sm font-bold text-gray-800">导出记事数据</div>
               <div className="mb-3 text-xs leading-relaxed text-gray-500">
                 将导出全部记事与提醒历史为 JSON 文件，包含事件内容与提醒记录，请妥善保管。

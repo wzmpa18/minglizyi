@@ -533,6 +533,9 @@ function myOrgIds(req) {
 // P6-I 原则2：所有 AI 调用写入 ai_call_logs（场景/关联对象/token 估算），重复内容走库缓存不调 AI
 
 async function callAI(systemPrompt, userPrompt, scene = 'other', refs = {}) {
+  // P7-TCM-EXAM-01 4.3：场景感知超时——大输出场景（解析/命题）300s，其余 90s
+  const LONG_SCENES = new Set(['parse_material', 'gen_questions', 'gen_full']);
+  const aiTimeoutMs = LONG_SCENES.has(scene) ? 300000 : 90000;
   const deepseekKey = process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY || '';
   const hunyuanKey = process.env.HUNYUAN_API_KEY || '';
   const apiKey = deepseekKey || hunyuanKey;
@@ -553,7 +556,7 @@ async function callAI(systemPrompt, userPrompt, scene = 'other', refs = {}) {
       ],
       temperature: 0.3,
     }),
-    signal: AbortSignal.timeout(90000),
+    signal: AbortSignal.timeout(aiTimeoutMs),
   });
   if (!resp.ok) throw new Error(`AI 接口返回 ${resp.status}`);
   const data = await resp.json();

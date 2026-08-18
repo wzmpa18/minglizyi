@@ -264,15 +264,24 @@ function ShareMenu({
   return (
     <>
       <div className="fixed inset-0 z-[90]" onClick={onClose} style={{ backgroundColor: "rgba(0,0,0,0.4)" }} />
+      {/* v25.0.30（P8-1 弹窗规范）：屏幕居中偏上 + 80vh 上限 + 内容内滚 + 右上角关闭按钮 */}
       <div
-        className="fixed bottom-0 left-1/2 -translate-x-1/2 z-[100] w-full max-w-[420px] rounded-t-2xl bg-white shadow-xl"
-        style={{ animation: "shareSlideUp 0.2s ease-out", paddingBottom: "calc(56px + env(safe-area-inset-bottom, 0px))" }}
+        className="fixed left-1/2 -translate-x-1/2 top-[12vh] z-[100] w-full max-w-[360px] rounded-2xl bg-white shadow-xl flex flex-col overflow-hidden"
+        style={{ maxHeight: "80vh" }}
       >
-        <div className="px-4 pt-4 pb-2 text-center">
-          <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-gray-200" />
+        <div className="relative px-4 pt-4 pb-2 text-center">
           <p className="text-sm font-semibold text-gray-800 mb-3">分享到</p>
+          <button
+            onClick={onClose}
+            className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 text-base leading-none"
+            style={{ minHeight: "44px", minWidth: "44px", height: "44px", width: "44px" }}
+            aria-label="关闭分享菜单"
+          >
+            ×
+          </button>
         </div>
-        <div className="grid grid-cols-3 gap-3 px-6 pb-6">
+        <div className="overflow-y-auto" style={{ WebkitOverflowScrolling: "touch" }}>
+        <div className="grid grid-cols-3 gap-3 px-6 pb-4">
           <button
             onClick={onCopyLink}
             className="flex flex-col items-center gap-2"
@@ -328,9 +337,10 @@ function ShareMenu({
             分享有礼 · 每日首次分享可获得积分奖励 · 请勿分享违规内容
           </p>
         </div>
+        </div>
         <button
           onClick={onClose}
-          className="w-full border-t border-gray-100 py-3 text-sm text-gray-500"
+          className="w-full border-t border-gray-100 py-3 text-sm text-gray-500 flex-shrink-0"
         >
           取消
         </button>

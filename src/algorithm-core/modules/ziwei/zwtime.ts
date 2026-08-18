@@ -226,6 +226,59 @@ export function zwPalaceAbbr(name: string): string {
 }
 
 // ============================================================================
+// 三B、年系/限系动态星曜（P8-2 文墨天机口径：按层级干支动态入宫）
+// ============================================================================
+
+/** 动态星曜：星名 + 寅起宫序索引（0=寅..11=丑，与命盘宫序一致） */
+export interface ZwSeriesStar {
+  name: string;
+  palaceIndex: number;
+}
+
+/** 天干→禄存宫序（甲禄寅、乙禄卯、丙戊禄巳、丁己禄午、庚禄申、辛禄酉、壬禄亥、癸禄子） */
+const LUCUN_BY_GAN: Record<string, number> = {
+  '甲': 0, '乙': 1, '丙': 3, '丁': 4, '戊': 3, '己': 4, '庚': 6, '辛': 7, '壬': 9, '癸': 10,
+};
+
+/** 天干→[天魁宫序, 天钺宫序]（甲戊庚丑未、乙己子申、丙丁亥酉、壬癸卯巳、辛午寅） */
+const KUIYUE_BY_GAN: Record<string, [number, number]> = {
+  '甲': [11, 5], '戊': [11, 5], '庚': [11, 5],
+  '乙': [10, 6], '己': [10, 6],
+  '丙': [9, 7], '丁': [9, 7],
+  '壬': [1, 3], '癸': [1, 3],
+  '辛': [4, 0],
+};
+
+/** 按任意层级干支排年系/限系动态星曜；lunarMonth 提供时追加月系星（天姚/天刑） */
+export function zwSeriesStars(gan: string, zhi: string, lunarMonth?: number): ZwSeriesStar[] {
+  const out: ZwSeriesStar[] = [];
+  const lucun = LUCUN_BY_GAN[gan];
+  if (lucun !== undefined) {
+    out.push({ name: '禄存', palaceIndex: lucun });
+    out.push({ name: '擎羊', palaceIndex: (lucun + 1) % 12 });
+    out.push({ name: '陀罗', palaceIndex: (lucun + 11) % 12 });
+  }
+  const kuiyue = KUIYUE_BY_GAN[gan];
+  if (kuiyue) {
+    out.push({ name: '天魁', palaceIndex: kuiyue[0] });
+    out.push({ name: '天钺', palaceIndex: kuiyue[1] });
+  }
+  const zhiStdIdx = ZHI_STD.indexOf(zhi);
+  if (zhiStdIdx >= 0) {
+    // 红鸾：卯宫起子年逆行；天喜：红鸾对宫
+    const hongluan = (1 - zhiStdIdx + 24) % 12;
+    out.push({ name: '红鸾', palaceIndex: hongluan });
+    out.push({ name: '天喜', palaceIndex: (hongluan + 6) % 12 });
+  }
+  if (lunarMonth && lunarMonth >= 1 && lunarMonth <= 12) {
+    const m = lunarMonth - 1;
+    out.push({ name: '天姚', palaceIndex: (11 + m) % 12 }); // 正月起丑顺行
+    out.push({ name: '天刑', palaceIndex: (7 + m) % 12 });  // 正月起酉顺行
+  }
+  return out;
+}
+
+// ============================================================================
 // 四、大限列表（命盘 12 宫各起一限，纯直算零运限调用）
 // ============================================================================
 

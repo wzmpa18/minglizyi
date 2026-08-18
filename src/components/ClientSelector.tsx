@@ -208,11 +208,12 @@ function ClientPanel({
 
   return (
     <div
-      className="fixed inset-0 z-[2000] flex items-end justify-center bg-black/40"
+      className="fixed inset-0 z-[2000] flex justify-center bg-black/40"
+      style={{ paddingTop: "max(8vh, 48px)", alignItems: "flex-start" }}
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[420px] bg-white rounded-t-2xl max-h-[85vh] flex flex-col"
+        className="w-full max-w-[380px] bg-white rounded-2xl max-h-[80vh] flex flex-col shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 顶部 */}

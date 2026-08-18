@@ -11,8 +11,9 @@ import {
   zwOverlayNames,
   zwOverlayAt,
   zwPalaceAbbr,
+  zwSeriesStars,
 } from "@/algorithm-core";
-import type { ZwTimeInput } from "@/algorithm-core";
+import type { ZwTimeInput, ZwSeriesStar } from "@/algorithm-core";
 import { useRouter } from "next/navigation";
 import { leaveToolPage, isManagedBackNavigation } from "@/lib/leaveToolPage";
 import type { ZiweiResult, Gender } from "@/algorithm-core";
@@ -745,6 +746,31 @@ export default function ZiweiPage() {
     };
   }, [showOverlay, dxLayer, lnLayer, zwDecadalAligned, selectedDaxian, liunianYears, selectedLiunian, liuyueMonths, selectedLiuyue, liuriDays, selectedLiuri, liushiHours, selectedLiushi]);
 
+  // v25.0.30（P8-2 文墨天机口径）：年系/限系动态星曜——按层级干支排布入宫（大限蓝/流年绿/流月青）
+  const dynamicStars = useMemo(() => {
+    const dxNode = dxLayer ? zwDecadalAligned[selectedDaxian] : null;
+    const lnNode = lnLayer ? liunianYears[selectedLiunian] : null;
+    const yueNode = selectedLiuyue >= 0 ? liuyueMonths[selectedLiuyue] : null;
+    return {
+      dx: dxNode?.gan && dxNode?.zhi ? zwSeriesStars(dxNode.gan, dxNode.zhi) : [],
+      ln: lnNode?.gan && lnNode?.zhi ? zwSeriesStars(lnNode.gan, lnNode.zhi) : [],
+      yue: yueNode?.gan && yueNode?.zhi ? zwSeriesStars(yueNode.gan, yueNode.zhi, yueNode.lunarMonth) : [],
+    };
+  }, [dxLayer, lnLayer, zwDecadalAligned, selectedDaxian, liunianYears, selectedLiunian, liuyueMonths, selectedLiuyue]);
+  const dynamicStarsByPalace = useMemo(() => {
+    const map: Record<number, Array<{ name: string; color: string }>> = {};
+    const put = (list: Array<{ name: string; palaceIndex: number }>, color: string) => {
+      list.forEach((s) => {
+        if (!map[s.palaceIndex]) map[s.palaceIndex] = [];
+        if (!map[s.palaceIndex].some((x) => x.name === s.name)) map[s.palaceIndex].push({ name: s.name, color });
+      });
+    };
+    put(dynamicStars.dx, "#2563eb");
+    put(dynamicStars.ln, "#16a34a");
+    put(dynamicStars.yue, "#0d9488");
+    return map;
+  }, [dynamicStars]);
+
   // 流月数据（正月~十二月）
   const months = useMemo(() => {
     return ["正月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "冬月", "腊月"];
@@ -1275,11 +1301,11 @@ export default function ZiweiPage() {
                       >
                         {/* v19.4: 移除顶部干支行，释放空间给星曜；来因宫标记改为右侧绝对定位 */}
                         {isLaiyin && (
-                          <span style={{ position: "absolute", right: "1px", top: "50%", transform: "translateY(-50%)", fontSize: "7px", color: "#ff6600", fontWeight: "bold", background: "#fff0e0", padding: "1px 2px", borderRadius: "2px", lineHeight: "1", zIndex: 4, writingMode: "vertical-rl", textOrientation: "upright" }}>来因</span>
+                          <span style={{ position: "absolute", left: "1px", top: "2px", fontSize: "7px", color: "#ff6600", fontWeight: "bold", background: "#fff0e0", padding: "1px 2px", borderRadius: "2px", lineHeight: "1", zIndex: 4 }}>来因</span>
                         )}
 
-                        {/* v25.0.29（P7-5 文墨天机口径）：星曜区域——星名竖排→庙旺第一行→四化叠罗汉（本命红/大限蓝/流年绿，留位对齐） */}
-                        <div style={{ flex: "1 1 auto", minHeight: "50px", display: "flex", flexDirection: "row", flexWrap: "wrap", alignContent: "flex-start", gap: "0px 0px", overflow: "hidden", padding: "0px", position: "relative", zIndex: 1 }}>
+                        {/* v25.0.30（P8-2 文墨天机口径）：星曜区左右留边——左侧动态杂曜列 / 右侧长生干支列 */}
+                        <div style={{ flex: "1 1 auto", minHeight: "50px", display: "flex", flexDirection: "row", flexWrap: "wrap", alignContent: "flex-start", gap: "0px 0px", overflow: "hidden", padding: "0 8px", position: "relative", zIndex: 1 }}>
                           {(() => {
                             // v19.2: 星曜全部在上半区——主星→六吉→六煞→杂曜→禄存天马
                             const mainAndAuxStars: Array<{name: string; isMajor: boolean; color: string; weight: string; category: "major" | "aux" | "minor"}> = [
@@ -1327,9 +1353,12 @@ export default function ZiweiPage() {
                                   {star.name.split("").map((char, ci) => (
                                     <span key={ci} style={{ fontSize: fs, fontWeight: star.weight as any, color: star.color, lineHeight: "1", display: "block", textAlign: "center" }}>{char}</span>
                                   ))}
-                                  {/* P7-5: 庙旺状态=星下第一行（仅主星有亮度数据） */}
-                                  {star.isMajor && brightness && brightness !== "-" && (
+                                  {/* v25.0.30（P8-2）：庙旺状态=星下第一行——全星曜统一标注（主星/辅星/煞星/杂曜），与主星规则一致 */}
+                                  {brightness && brightness !== "-" && brightness !== "平" && (
                                     <span style={{ fontSize: "7px", color: BRIGHTNESS_COLORS[brightness] || "#888", lineHeight: "1" }}>{brightness}</span>
+                                  )}
+                                  {brightness === "平" && (
+                                    <span style={{ fontSize: "7px", color: BRIGHTNESS_COLORS[brightness] || "#888", lineHeight: "1" }}>平</span>
                                   )}
                                   {/* P7-5: 四化=星下叠罗汉（本命红→大限蓝→流年绿，逐层留位保持列对齐） */}
                                   {dxMut || lnMut ? (
@@ -1377,36 +1406,52 @@ export default function ZiweiPage() {
                           </div>
                         )}
 
-                        {/* v25.0.29（P7-5）：宫位底部——神煞/十二博士/十二长生恢复纵向竖排靠宫底 | 大限干支竖排右 */}
-                        <div style={{ flexShrink: 0, display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: "1px", position: "relative", zIndex: 2, backgroundColor: isLaiyin ? "#fff8f0" : palaceBg, marginTop: "auto" }}>
-                          {/* 左下：神煞纵向竖排（博士十二神→将前十二神→岁前十二神→长生十二神，逐行竖排） */}
-                          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", maxWidth: "70%", lineHeight: "1.15" }}>
-                            {[...boshiStars, ...jiangqianStars, ...suiqianStars, ...changshengStars].filter(Boolean).map((s, k) => (
-                              <span key={`ss-${k}`} style={{ fontSize: "6.5px", color: "#666", lineHeight: "1.15", textAlign: "left", whiteSpace: "nowrap" }}>
-                                {s}
-                              </span>
-                            ))}
-                          </div>
-                          {/* 右下：大限干支竖排 */}
-                          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", lineHeight: "1" }}>
-                            {palace.decadal && (
-                              <span style={{ fontSize: "7px", color: "#585858", lineHeight: "1.1", writingMode: "vertical-rl", textOrientation: "upright" }}>
-                                {palace.decadal}{isShen ? "身" : ""}
-                              </span>
-                            )}
-                          </div>
+                        {/* v25.0.30（P8-2 文墨天机口径）：左侧靠中部——动态杂曜竖排（大限蓝/流年绿/流月青，由外往内） */}
+                        {(() => {
+                          const dyn = dynamicStarsByPalace[palaceZhiIdx];
+                          if (!dyn || dyn.length === 0) return null;
+                          return (
+                            <div style={{ position: "absolute", left: "0px", top: "42%", transform: "translateY(-50%)", display: "flex", flexDirection: "row", gap: "1px", zIndex: 4, lineHeight: "1.1" }}>
+                              {dyn.map((s, k) => (
+                                <span key={`dyn-${k}`} style={{ fontSize: "7px", fontWeight: 600, color: s.color, writingMode: "vertical-rl", textOrientation: "upright", lineHeight: "1.1", whiteSpace: "nowrap" }}>
+                                  {s.name}
+                                </span>
+                              ))}
+                            </div>
+                          );
+                        })()}
+
+                        {/* v25.0.30（P8-2 文墨天机口径）：右侧列——十二长生竖排（干支上方）+ 大限干支竖排；右下角——神煞纵向竖排 */}
+                        <div style={{ position: "absolute", right: "0px", top: "16%", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 0, zIndex: 4, lineHeight: "1.1" }}>
+                          {changshengStars.filter(Boolean).map((s, k) => (
+                            <span key={`cs-${k}`} style={{ fontSize: "7px", color: "#8a6d3b", fontWeight: 600, writingMode: "vertical-rl", textOrientation: "upright", lineHeight: "1.1", whiteSpace: "nowrap" }}>
+                              {s}
+                            </span>
+                          ))}
+                          {palace.decadal && (
+                            <span style={{ fontSize: "7px", color: "#585858", lineHeight: "1.1", writingMode: "vertical-rl", textOrientation: "upright" }}>
+                              {palace.decadal}{isShen ? "身" : ""}
+                            </span>
+                          )}
                         </div>
-                        {/* v25.0.26: ZW-OVERLAY 叠宫改纵向叠罗汉（吉时雨口径：每层2字，自下而上 大X←年X←月/日/时X，层层压于本命宫名上方；该层命宫叠落处加粗下划线） */}
+                        <div style={{ position: "absolute", right: "1px", bottom: "14px", display: "flex", flexDirection: "column", alignItems: "flex-end", maxWidth: "66%", zIndex: 4, lineHeight: "1.15" }}>
+                          {[...boshiStars, ...jiangqianStars, ...suiqianStars].filter(Boolean).map((s, k) => (
+                            <span key={`ss-${k}`} style={{ fontSize: "6.5px", color: "#666", lineHeight: "1.15", textAlign: "right", whiteSpace: "nowrap" }}>
+                              {s}
+                            </span>
+                          ))}
+                        </div>
+                        {/* v25.0.26: ZW-OVERLAY 叠宫纵向叠罗汉 | v25.0.30（P8-2）：叠宫字号=宫名10px，仅颜色区分层级 */}
                         {overlayInfo && (overlayInfo.dx || overlayInfo.ln || overlayInfo.deep) && (
-                          <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center", gap: 0, fontSize: "6.5px", lineHeight: "1.15", flexShrink: 0, whiteSpace: "nowrap", position: "relative", zIndex: 3, backgroundColor: isLaiyin ? "#fff8f0" : palaceBg }}>
+                          <div style={{ display: "flex", flexDirection: "column", justifyContent: "flex-end", alignItems: "center", gap: 0, lineHeight: "1.15", flexShrink: 0, whiteSpace: "nowrap", position: "relative", zIndex: 3, marginTop: "auto", backgroundColor: isLaiyin ? "#fff8f0" : palaceBg }}>
                             {overlayInfo.deep && overlayInfo.deep.names[palaceZhiIdx] && (
-                              <span style={{ color: "#0d9488", fontWeight: overlayInfo.deep.names[palaceZhiIdx] === "命宫" ? 700 : 400, borderBottom: overlayInfo.deep.names[palaceZhiIdx] === "命宫" ? "1px solid #0d9488" : "none", lineHeight: "1.15" }}>{overlayInfo.deep.tag}{zwPalaceAbbr(overlayInfo.deep.names[palaceZhiIdx])}</span>
+                              <span style={{ fontSize: "10px", color: "#0d9488", fontWeight: overlayInfo.deep.names[palaceZhiIdx] === "命宫" ? 700 : 400, borderBottom: overlayInfo.deep.names[palaceZhiIdx] === "命宫" ? "1px solid #0d9488" : "none", lineHeight: "1.15" }}>{overlayInfo.deep.tag}{zwPalaceAbbr(overlayInfo.deep.names[palaceZhiIdx])}</span>
                             )}
                             {overlayInfo.ln && overlayInfo.ln.names[palaceZhiIdx] && (
-                              <span style={{ color: "#2563eb", fontWeight: overlayInfo.ln.names[palaceZhiIdx] === "命宫" ? 700 : 400, borderBottom: overlayInfo.ln.names[palaceZhiIdx] === "命宫" ? "1px solid #2563eb" : "none", lineHeight: "1.15" }}>年{zwPalaceAbbr(overlayInfo.ln.names[palaceZhiIdx])}</span>
+                              <span style={{ fontSize: "10px", color: "#2563eb", fontWeight: overlayInfo.ln.names[palaceZhiIdx] === "命宫" ? 700 : 400, borderBottom: overlayInfo.ln.names[palaceZhiIdx] === "命宫" ? "1px solid #2563eb" : "none", lineHeight: "1.15" }}>年{zwPalaceAbbr(overlayInfo.ln.names[palaceZhiIdx])}</span>
                             )}
                             {overlayInfo.dx && overlayInfo.dx.names[palaceZhiIdx] && (
-                              <span style={{ color: "#d97706", fontWeight: overlayInfo.dx.names[palaceZhiIdx] === "命宫" ? 700 : 400, borderBottom: overlayInfo.dx.names[palaceZhiIdx] === "命宫" ? "1px solid #d97706" : "none", lineHeight: "1.15" }}>大{zwPalaceAbbr(overlayInfo.dx.names[palaceZhiIdx])}</span>
+                              <span style={{ fontSize: "10px", color: "#d97706", fontWeight: overlayInfo.dx.names[palaceZhiIdx] === "命宫" ? 700 : 400, borderBottom: overlayInfo.dx.names[palaceZhiIdx] === "命宫" ? "1px solid #d97706" : "none", lineHeight: "1.15" }}>大{zwPalaceAbbr(overlayInfo.dx.names[palaceZhiIdx])}</span>
                             )}
                           </div>
                         )}

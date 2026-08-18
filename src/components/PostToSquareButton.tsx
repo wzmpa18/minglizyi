@@ -156,14 +156,15 @@ function PublishSheet({
   return (
     <>
       <div className="fixed inset-0 z-[95] bg-black/50" onClick={onClose} />
+      {/* v25.0.30（P8-1 弹窗规范）：屏幕居中偏上（顶部12vh）+ 80vh 上限 + 内容区内滚，蒙层与右上角均可关闭 */}
       <div
-        className="modal-bottom-sheet fixed bottom-0 left-1/2 z-[100] w-full max-w-[420px] -translate-x-1/2 rounded-t-2xl bg-white shadow-xl"
-        style={{ maxHeight: "85vh", display: "flex", flexDirection: "column" }}
+        className="fixed left-1/2 top-[12vh] z-[100] w-full max-w-[360px] -translate-x-1/2 rounded-2xl bg-white shadow-xl"
+        style={{ maxHeight: "80vh", display: "flex", flexDirection: "column", overflow: "hidden" }}
       >
         {/* 标题栏 */}
-        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 flex-shrink-0">
           <span className="text-base font-bold text-gray-800">{published ? "发布成功" : `分享${tool}结果`}</span>
-          <button onClick={onClose} className="text-gray-400 active:text-gray-600">
+          <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500" style={{ minHeight: "44px", minWidth: "44px", height: "44px", width: "44px" }} aria-label="关闭发布弹窗">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
             </svg>
@@ -239,8 +240,8 @@ function PublishSheet({
               </p>
             </div>
 
-            {/* 发布按钮 */}
-            <div className="modal-safe-bottom border-t border-gray-100 px-4 py-3">
+            {/* 发布按钮（P8-1：居中弹窗无底部遮挡，直接贴弹窗底部） */}
+            <div className="border-t border-gray-100 px-4 py-3 flex-shrink-0">
               <button
                 onClick={handlePublish}
                 disabled={submitting || content.trim().length < 5}

@@ -312,5 +312,7 @@ export {
   ZW_PERIOD_PALACE_SEQ,
   zwPalaceAbbr,
   ZW_PERIOD_PALACE_ABBR,
+  // P8-2 年系/限系动态星曜（文墨天机口径）
+  zwSeriesStars,
 } from './zwtime';
-export type { ZwTimeNode, ZwTimeInput, ZwTimeLevel, ZwHoroscopeSnapshot } from './zwtime';
+export type { ZwTimeNode, ZwTimeInput, ZwTimeLevel, ZwHoroscopeSnapshot, ZwSeriesStar } from './zwtime';

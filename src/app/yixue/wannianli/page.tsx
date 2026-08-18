@@ -665,16 +665,23 @@ export default function WannianliPage() {
                     })}
                   </div>
                   {addError && <div className="mt-1.5 text-[11px] text-red-500">{addError}</div>}
+                  {(addType === "birthday" || addType === "anniversary") && (
+                    <div className="mt-1.5 text-[11px]" style={{ color: BRAND }}>
+                      {EVENT_TYPE_META[addType].label}默认按每年农历重复提醒，可在「管理」中修改
+                    </div>
+                  )}
                   <button
                     onClick={() => {
+                      // P7-补05：生日/纪念日默认「每年农历重复」，其余类型单次公历提醒
+                      const isMemorial = addType === "birthday" || addType === "anniversary";
                       const r = createEvent({
                         type: addType,
                         title: addTitle,
-                        dateMode: "solar",
+                        dateMode: isMemorial ? "lunar" : "solar",
                         year: selectedYmd.y,
                         month: selectedYmd.m,
                         day: selectedYmd.d,
-                        repeat: "none",
+                        repeat: isMemorial ? "yearly" : "none",
                         reminders: addReminders,
                       });
                       if (!r.success) { setAddError(r.error || "保存失败"); return; }

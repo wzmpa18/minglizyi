@@ -44,6 +44,15 @@ export function LoginPromptModal({
         className="modal-center"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* v25.0.30（P8-1）：补右上角关闭按钮，统一关闭逻辑（蒙层+×+暂不登录） */}
+        <button
+          onClick={onClose}
+          className="absolute right-2 top-2 z-10 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 text-base leading-none"
+          style={{ minHeight: "44px", minWidth: "44px", height: "44px", width: "44px" }}
+          aria-label="关闭登录提示"
+        >
+          ×
+        </button>
         <div className="modal-center-body">
           <div className="flex flex-col items-center pt-8 pb-4">
             <div
