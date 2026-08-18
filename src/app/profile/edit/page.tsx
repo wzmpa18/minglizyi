@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { BrandHeader } from "@/components/shared";
-import { getCurrentUser, updateProfile } from "@/lib/loginService";
+import { getCurrentUser, updateProfileToServer } from "@/lib/loginService";
 
 import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
@@ -79,7 +79,28 @@ export default function EditProfilePage() {
     }
     const reader = new FileReader();
     reader.onload = () => {
-      setProfile((prev) => ({ ...prev, avatar: reader.result as string }));
+      // 压缩为256px JPEG，避免base64超过后端请求体限制导致保存失败
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 256;
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          setProfile((prev) => ({ ...prev, avatar: reader.result as string }));
+          return;
+        }
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        setProfile((prev) => ({ ...prev, avatar: canvas.toDataURL("image/jpeg", 0.85) }));
+      };
+      img.onerror = () => {
+        setProfile((prev) => ({ ...prev, avatar: reader.result as string }));
+      };
+      img.src = reader.result as string;
     };
     reader.readAsDataURL(file);
     // 重置 input 以便可以重复选择同一文件
@@ -100,13 +121,17 @@ export default function EditProfilePage() {
       setSaving(true);
       setError("");
       setSuccess("");
-      await updateProfile({
+      const result = await updateProfileToServer({
         avatar: profile.avatar,
         nickname: profile.nickname.trim(),
         gender: profile.gender,
         birthday: profile.birthday,
         bio: profile.bio.trim(),
       });
+      if (!result.success) {
+        setError(result.message || "保存失败，请重试");
+        return;
+      }
       setSuccess("保存成功");
       setTimeout(() => {
         router.back();

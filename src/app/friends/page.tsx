@@ -257,7 +257,16 @@ function ActionMenu({
           minWidth: "140px",
         }}
       >
-        {/* P9-首发裁剪：私聊入口隐藏 */}
+        {/* v25.0.33（P7-整改-01）：恢复私聊入口 */}
+        <button
+          onClick={onMessage}
+          className="flex w-full items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+          发消息
+        </button>
         <button
           onClick={onRemark}
           className="flex w-full items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100"
@@ -2074,7 +2083,8 @@ export default function FriendsPage() {
                         longPressTriggered.current = false;
                         return;
                       }
-                      // P9-首发裁剪：点击好友行不再进入私聊（长按操作菜单仍可用）
+                      // v25.0.33（P7-整改-01）：恢复点击好友行进入一对一私聊
+                      handleSendMessage(friend.id);
                     }}
                     onTouchStart={(e) => handleTouchStart(friend.id, e)}
                     onTouchEnd={handleTouchEnd}

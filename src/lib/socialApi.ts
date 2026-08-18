@@ -154,10 +154,10 @@ export async function fetchPrivateMessages(peerId: string, afterId = 0) {
   return api<{ success: boolean; messages?: ChatMessage[] }>(`/api/social/messages/private/${peerId}?afterId=${afterId}`);
 }
 
-export async function sendPrivateMessage(peerId: string, content: string) {
+export async function sendPrivateMessage(peerId: string, content: string, type: "text" | "image" = "text") {
   return api<{ success: boolean; message?: ChatMessage; error?: string }>(`/api/social/messages/private/${peerId}`, {
     method: "POST",
-    body: JSON.stringify({ content }),
+    body: JSON.stringify({ content, type }),
   });
 }
 

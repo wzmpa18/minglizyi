@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { getLoginState } from "@/lib/auth";
 import { addFriend, type Friend } from "@/lib/socialStore";
+import { sendFriendRequest } from "@/lib/socialApi";
 import { getUserById, findUserById } from "@/lib/userStore";
 import { recordInviteLanding } from "@/lib/antiCheatStore";
 
@@ -117,8 +118,13 @@ function FriendContent() {
         addedAt: new Date().toISOString(),
       };
       addFriend(friend);
+      // 后端真实好友申请：对方通过后双方好友列表同步（P7-整改-01修复：此前仅写本地，对方收不到申请）
+      try {
+        const myName = getLoginState().profile?.nickname || "言道用户";
+        await sendFriendRequest(targetId, `我是${myName}，通过扫码添加你为好友`);
+      } catch { /* 后端申请失败不阻断本地展示 */ }
       setFriendAdded(true);
-      setToast("已成功添加对方为好友");
+      setToast("已发送好友申请，对方通过后自动成为好友");
       setTimeout(() => setToast(""), 4000);
     } catch {
       setToast("添加好友失败，请稍后重试");

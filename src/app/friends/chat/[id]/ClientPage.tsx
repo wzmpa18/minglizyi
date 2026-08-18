@@ -13,7 +13,7 @@ import {
   getFriends,
   type ChatMessage,
 } from "@/lib/socialStore";
-import { getCurrentUserId } from "@/lib/auth";
+import { getCurrentUserId, getLoginState } from "@/lib/auth";
 import { sendPrivateMessage, fetchPrivateMessages } from "@/lib/socialApi";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
@@ -51,7 +51,8 @@ export default function FriendChatPage() {
     else if (showClearConfirm) setShowClearConfirm(false);
   }, anyDialogOpen);
 
-  const currentUserId = getCurrentUserId() || "current_user";
+  // v25.0.33（P7-整改-01）：消息方向判断改用登录态服务器 userId（原匿名ID会导致自发消息被渲染到对方侧）
+  const currentUserId = (typeof window !== "undefined" ? getLoginState().profile?.userId : undefined) || getCurrentUserId() || "current_user";
   const currentUserName = (() => {
     try {
       const profileRaw = typeof window !== "undefined" ? localStorage.getItem("yandao_user_profile") : null;
@@ -105,11 +106,77 @@ export default function FriendChatPage() {
     setInputText("");
 
     void sendPrivateMessage(friendId, text).then((r) => {
+      if (r && r.success === false) {
+        // 服务端拦截（敏感词/开关关闭）：撤回本地乐观消息并提示
+        deleteChatMessage(chatKey, optimistic.id);
+        setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+        alert(r.error || "消息发送失败");
+        return;
+      }
       if (r && r.success && r.message) {
         lastServerMsgIdRef.current = Math.max(lastServerMsgIdRef.current, parseInt(r.message.id, 10) || 0);
       }
     });
   }, [inputText, chatKey, friendId, currentUserId, currentUserName]);
+
+  // v25.0.33: 图片消息（压缩至720px JPEG后发送）
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSendImage = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      alert("请选择图片文件");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert("图片大小不能超过5MB");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const MAX = 720;
+        const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          alert("图片处理失败，请重试");
+          return;
+        }
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+
+        const optimistic: ChatMessage = {
+          id: "msg_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
+          senderId: currentUserId,
+          senderName: currentUserName,
+          content: dataUrl,
+          type: "image",
+          timestamp: new Date().toISOString(),
+        };
+        saveChatMessage(chatKey, optimistic);
+        setMessages((prev) => [...prev, optimistic]);
+
+        void sendPrivateMessage(friendId, dataUrl, "image").then((r) => {
+          if (r && r.success === false) {
+            deleteChatMessage(chatKey, optimistic.id);
+            setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+            alert(r.error || "图片发送失败");
+          }
+        });
+      };
+      img.onerror = () => alert("图片读取失败，请重试");
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  }, [chatKey, friendId, currentUserId, currentUserName]);
 
   // v25.0.19: 轮询拉取对方真实回复（替代已移除的假自动回复）
   const lastServerMsgIdRef = useRef(0);
@@ -374,7 +441,21 @@ export default function FriendChatPage() {
                   cursor: manageMode ? "pointer" : "default",
                 }}
               >
-                <p>{msg.content}</p>
+                {msg.type === "image" && /^data:image\/|^https?:\/\//.test(msg.content) ? (
+                  <img
+                    src={msg.content}
+                    alt="图片消息"
+                    className="max-w-[180px] max-h-[220px] rounded-lg object-cover cursor-pointer"
+                    onClick={(e) => {
+                      if (manageMode) {
+                        e.stopPropagation();
+                        handleToggleSelect(msg.id);
+                      }
+                    }}
+                  />
+                ) : (
+                  <p className="break-words">{msg.content}</p>
+                )}
                 <p
                   className="mt-1 text-right text-[10px]"
                   style={{ opacity: isMe ? 0.7 : 0.5 }}
@@ -441,6 +522,25 @@ export default function FriendChatPage() {
               transform: "translateX(-50%)",
             }}
           >
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleSendImage}
+            />
+            <button
+              onClick={() => imageInputRef.current?.click()}
+              aria-label="发送图片"
+              className="shrink-0 rounded-xl p-2.5 transition-colors"
+              style={{ border: `1px solid ${BRAND}40`, color: BRAND, backgroundColor: "#f9f5fc" }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                <circle cx="8.5" cy="8.5" r="1.5" />
+                <polyline points="21 15 16 10 5 21" />
+              </svg>
+            </button>
             <input
               type="text"
               value={inputText}

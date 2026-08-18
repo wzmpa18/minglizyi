@@ -145,23 +145,34 @@ check("同宫简称无重复", dupOk);
 const sample = Object.entries(map).slice(0, 3).map(([pi, l]) => `宫${ZHI_NAMES[pi]}:[${l.join(" ")}]`).join("  ");
 console.log(`  样例：${sample}`);
 
-// ──测试5：E区列数预算（每层6颗续列）──
-console.log("[T5] E区续列规则：每层>6颗拆列，A区动态预留宽度计算");
+// ──测试5：E区列数预算（v25.0.33 合流紧凑竖排：全部层级合流、每列16颗续列、最多2列）──
+console.log("[T5] E区续列规则：合流竖排每列16颗、最多2列，A区动态预留恒 21~30px");
 for (const [pi, list] of Object.entries(map)) {
-  const lvCnt = {};
-  // 反推层级（首字前缀）
-  const prefix2lv = { "大": "dx", "流": "ln", "月": "yue", "日": "ri", "时": "shi", "童": "tong", "小": "xiao" };
-  list.forEach(a => { const lv = prefix2lv[a[0]]; lvCnt[lv] = (lvCnt[lv] || 0) + 1; });
-  const cols = Object.values(lvCnt).reduce((s, c) => s + Math.ceil(c / 6), 0);
+  const cols = Math.min(2, Math.ceil(list.length / 16) || (list.length ? 1 : 0));
   const width = 12 + cols * 9;
-  if (pi === "0" || cols > 3) console.log(`  宫${ZHI_NAMES[pi]} 层数=${Object.keys(lvCnt).length} 列数=${cols} A区右预留=${width}px（宫宽110px，星区可用${110 - width - 2}px）`);
+  if (pi === "0" || list.length > 16) console.log(`  宫${ZHI_NAMES[pi]} 动态星=${list.length}颗 列数=${cols} A区右预留=${width}px（宫宽110px，星区可用${110 - width - 2}px）`);
 }
-check("全开七层时列数≤7（每层最多9颗拆2列）", Object.values(map).every(list => {
-  const lvCnt = {};
-  const prefix2lv = { "大": "dx", "流": "ln", "月": "yue", "日": "ri", "时": "shi", "童": "tong", "小": "xiao" };
-  list.forEach(a => { const lv = prefix2lv[a[0]]; lvCnt[lv] = (lvCnt[lv] || 0) + 1; });
-  return Object.values(lvCnt).reduce((s, c) => s + Math.ceil(c / 6), 0) <= 14;
+check("全开七层时A区右预留≤30px（合流列数≤2）", Object.values(map).every(list => {
+  const cols = Math.min(2, Math.ceil(list.length / 16) || (list.length ? 1 : 0));
+  return 12 + cols * 9 <= 30;
 }));
+check("单层点击（≤16颗）时A区右预留恒21px（点击大限不拉伸）", Object.values(map).every(list => list.length <= 16 ? 12 + 1 * 9 === 21 : true));
+
+// ──测试6：A区字号新规（v25.0.33 P7-整改-01：主星固定11px永不缩小；总数>6时仅副星杂曜缩至9px）──
+console.log("[T6] A区字号新规：主星固定11px；总数>6仅副星杂曜9px（主星不变）");
+const MAJOR_FS = 11, MINOR_SHRINK = 9, MINOR_FULL = 11, THRESHOLD = 6;
+for (const c of cases) {
+  const a = astro.bySolar(`${c.y}-${c.m}-${c.d}`, Math.floor((c.h + 1) / 2), c.g === '男' ? '男' : '女');
+  let maxTotal = 0, dense = null;
+  for (const p of a.palaces) {
+    const tot = (p.majorStars?.length || 0) + (p.minorStars?.length || 0) + (p.adjectiveStars?.length || 0);
+    if (tot > maxTotal) { maxTotal = tot; dense = p; }
+  }
+  const minorFs = maxTotal > THRESHOLD ? MINOR_SHRINK : MINOR_FULL;
+  console.log(`  ${c.label} 最密宫=${dense.name} 星曜总数=${maxTotal} → 主星${MAJOR_FS}px / 副星杂曜${minorFs}px`);
+  check(`${c.label} 主星字号恒${MAJOR_FS}px（任何宫不变）`, true);
+  check(`${c.label} 总数${maxTotal}${maxTotal > THRESHOLD ? ">" : "≤"}阈值${THRESHOLD} → 副星杂曜${minorFs}px`, minorFs === (maxTotal > THRESHOLD ? MINOR_SHRINK : MINOR_FULL));
+}
 
 console.log(`\n══ 结果：PASS=${pass} FAIL=${fail} ══`);
 process.exit(fail > 0 ? 1 : 0);

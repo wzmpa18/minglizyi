@@ -153,6 +153,16 @@ function initTables(d) {
       created_at TEXT DEFAULT (datetime('now','localtime'))
     );
     CREATE INDEX IF NOT EXISTS idx_reports_target ON reports(target_type, target_id);
+
+    CREATE TABLE IF NOT EXISTS sensitive_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      scene TEXT NOT NULL,
+      content TEXT NOT NULL,
+      words TEXT DEFAULT '[]',
+      created_at TEXT DEFAULT (datetime('now','localtime'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_sensitive_user ON sensitive_logs(user_id, id DESC);
   `);
   // P6-I-PLUS 规则5：社交圈层分类系统永久冻结 —— 8 个固定一级圈层，禁止随意新增
   try {
@@ -175,6 +185,66 @@ const SOCIAL_CIRCLES = {
   GuoXue: { key: 'GuoXue', label: '国学', track: 'guoxue' },
   Life: { key: 'Life', label: '生活', track: '' },
 };
+
+// ==================== P7-整改-01：功能总开关（后台一键开关） ====================
+// 数据来源：data/social_feature_config.json（服务器后台可直接编辑），环境变量同名大写可覆盖。
+// 本次仅开放：好友添加、一对一私聊（资料修改在 auth 路由，不受此开关管辖）。
+// 群聊/动态发布/公开评论保持关闭。
+const FEATURE_CONFIG_PATH = path.join(__dirname, 'data', 'social_feature_config.json');
+const FEATURE_DEFAULTS = {
+  friends_add_enabled: true,   // 好友添加（含扫码加好友）
+  private_chat_enabled: true,  // 一对一私聊（文字+图片）
+  posts_enabled: false,        // 动态发布（保持关闭）
+  comments_enabled: false,     // 公开评论（保持关闭）
+  groups_enabled: false,       // 群聊（保持关闭）
+};
+let featureConfigCache = null;
+let featureConfigMtime = 0;
+
+function featureEnabled(key) {
+  let val;
+  const envKey = key.toUpperCase();
+  if (process.env[envKey] !== undefined) {
+    val = process.env[envKey];
+  } else {
+    try {
+      const st = fs.statSync(FEATURE_CONFIG_PATH);
+      if (!featureConfigCache || st.mtimeMs !== featureConfigMtime) {
+        featureConfigMtime = st.mtimeMs;
+        featureConfigCache = JSON.parse(fs.readFileSync(FEATURE_CONFIG_PATH, 'utf-8'));
+      }
+      val = featureConfigCache[key];
+    } catch { /* 无配置文件时走默认值 */ }
+  }
+  const enabled = val === undefined ? FEATURE_DEFAULTS[key] : (val === true || val === 'true' || val === 1 || val === '1');
+  return enabled;
+}
+
+function featureDisabled(res, label) {
+  return res.status(403).json({ success: false, error: `${label}功能暂未开放` });
+}
+
+// ==================== P7-整改-01：统一敏感词过滤（与前端 socialStore 同源词表） ====================
+const SENSITIVE_WORDS = [
+  '违法', '赌博', '毒品', '枪支', '色情', '裸聊', '约炮',
+  '诈骗', '传销', '洗钱', '高利贷', '假币', '炸药',
+  '政治敏感', '邪教', '恐怖', '分裂',
+];
+
+function findSensitiveWords(text) {
+  const hit = [];
+  for (const w of SENSITIVE_WORDS) {
+    if (text.includes(w)) hit.push(w);
+  }
+  return hit;
+}
+
+function logSensitive(userId, scene, content, words) {
+  try {
+    getDb().prepare('INSERT INTO sensitive_logs (user_id, scene, content, words) VALUES (?,?,?,?)')
+      .run(String(userId), scene, String(content).slice(0, 500), JSON.stringify(words));
+  } catch (e) { console.error('[SocialApi] 敏感词留痕失败:', e.message); }
+}
 
 // 排盘/工具分享自动匹配圈层（toolType → circle key）
 function autoCircleFromTool(toolType) {
@@ -331,6 +401,7 @@ function createRouter() {
   // P6-I-PLUS 规则5：发布动态必须绑定圈层（排盘/证书分享按 toolType 自动匹配，无圈层拒绝发布）
   router.post('/posts', authRequired, (req, res) => {
     try {
+      if (!featureEnabled('posts_enabled')) return featureDisabled(res, '动态发布');
       const { content, images = [], tags = [], toolType = '', circle = '' } = req.body;
       if (!content || !String(content).trim()) {
         return res.status(400).json({ success: false, error: '动态内容不能为空' });
@@ -464,6 +535,7 @@ function createRouter() {
   // POST /api/social/posts/:postId/comments { content }
   router.post('/posts/:postId/comments', authRequired, (req, res) => {
     try {
+      if (!featureEnabled('comments_enabled')) return featureDisabled(res, '评论');
       const { content } = req.body;
       if (!content || !String(content).trim()) return res.status(400).json({ success: false, error: '评论内容不能为空' });
       const d = getDb();
@@ -519,6 +591,7 @@ function createRouter() {
   // POST /api/social/friends/request { toId, message }
   router.post('/friends/request', authRequired, (req, res) => {
     try {
+      if (!featureEnabled('friends_add_enabled')) return featureDisabled(res, '添加好友');
       const { toId, message = '' } = req.body;
       const me = String(req.user.userId);
       const target = String(toId || '');
@@ -623,6 +696,7 @@ function createRouter() {
   // GET /api/social/messages/private/:peerId?afterId=
   router.get('/messages/private/:peerId', authRequired, (req, res) => {
     try {
+      if (!featureEnabled('private_chat_enabled')) return featureDisabled(res, '私聊');
       const convId = privateConvId(req.user.userId, req.params.peerId);
       const afterId = parseInt(req.query.afterId, 10) || 0;
       const rows = getDb().prepare('SELECT * FROM chat_messages WHERE conversation_id = ? AND id > ? ORDER BY id ASC LIMIT 200').all(convId, afterId);
@@ -635,17 +709,50 @@ function createRouter() {
     }
   });
 
-  // POST /api/social/messages/private/:peerId { content }
+  // POST /api/social/messages/private/:peerId { content, type: 'text' | 'image' }
+  // P7-整改-01：文字/图片消息；敏感词拦截留痕；单聊会话滚动覆盖仅保留最近100条
   router.post('/messages/private/:peerId', authRequired, (req, res) => {
     try {
+      if (!featureEnabled('private_chat_enabled')) return featureDisabled(res, '私聊');
       const { content, type = 'text' } = req.body;
       if (!content || !String(content).trim()) return res.status(400).json({ success: false, error: '消息不能为空' });
-      const info = userPublicInfo(req.user.userId) || { nickname: '国学爱好者' };
-      const convId = privateConvId(req.user.userId, req.params.peerId);
-      const result = getDb().prepare('INSERT INTO chat_messages (conversation_id, sender_id, sender_name, content, msg_type) VALUES (?,?,?,?,?)')
-        .run(convId, String(req.user.userId), info.nickname, String(content).trim().slice(0, 3000), String(type));
-      notify(req.params.peerId, 'chat', { userId: req.user.userId, nickname: info.nickname }, `发来消息：${String(content).trim().slice(0, 30)}`, `/friends/chat/${req.user.userId}`);
-      const row = getDb().prepare('SELECT * FROM chat_messages WHERE id = ?').get(result.lastInsertRowid);
+
+      const d = getDb();
+      const me = String(req.user.userId);
+      const msgType = String(type);
+      let finalContent;
+
+      if (msgType === 'image') {
+        // 图片消息：仅接受 data:image/* base64，最大约3MB（路由体限制6mb）
+        const c = String(content);
+        if (!/^data:image\/(png|jpeg|jpg|gif|webp);base64,/.test(c)) {
+          return res.status(400).json({ success: false, error: '图片格式不支持' });
+        }
+        if (c.length > 4 * 1024 * 1024) {
+          return res.status(400).json({ success: false, error: '图片过大，请压缩后重试' });
+        }
+        finalContent = c;
+      } else {
+        // 文字消息：统一敏感词过滤，违规拦截并留痕
+        const text = String(content).trim().slice(0, 3000);
+        const hits = findSensitiveWords(text);
+        if (hits.length) {
+          logSensitive(me, 'private_message', text, hits);
+          return res.status(400).json({ success: false, error: '消息包含违规内容，已拦截' });
+        }
+        finalContent = text;
+      }
+
+      const info = userPublicInfo(me) || { nickname: '国学爱好者' };
+      const convId = privateConvId(me, req.params.peerId);
+      const result = d.prepare('INSERT INTO chat_messages (conversation_id, sender_id, sender_name, content, msg_type) VALUES (?,?,?,?,?)')
+        .run(convId, me, info.nickname, finalContent, msgType === 'image' ? 'image' : 'text');
+
+      // 滚动覆盖：单聊会话仅保留最近100条
+      d.prepare(`DELETE FROM chat_messages WHERE conversation_id = ? AND id NOT IN (SELECT id FROM chat_messages WHERE conversation_id = ? ORDER BY id DESC LIMIT 100)`).run(convId, convId);
+
+      notify(req.params.peerId, 'chat', { userId: me, nickname: info.nickname }, msgType === 'image' ? '发来一张图片' : `发来消息：${finalContent.slice(0, 30)}`, `/friends/chat/${me}`);
+      const row = d.prepare('SELECT * FROM chat_messages WHERE id = ?').get(result.lastInsertRowid);
       res.json({ success: true, message: { id: String(row.id), senderId: row.sender_id, senderName: row.sender_name, content: row.content, type: row.msg_type, createdAt: row.created_at } });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
@@ -653,6 +760,14 @@ function createRouter() {
   });
 
   // ==================== 群聊 ====================
+
+  // 群聊开关（默认关闭，仅拦截写操作；读取走 GET 不受影响）
+  router.use('/groups', (req, res, next) => {
+    if (!featureEnabled('groups_enabled') && req.method !== 'GET') {
+      return featureDisabled(res, '群聊');
+    }
+    next();
+  });
 
   // POST /api/social/groups { name }
   router.post('/groups', authRequired, (req, res) => {
