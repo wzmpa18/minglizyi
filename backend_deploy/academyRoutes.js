@@ -70,17 +70,20 @@ function trackName(t) {
   return (TRACKS[t] || TRACKS[TRACK_ALIASES[t]] || EXTRA_TRACKS[t] || { name: t || '' }).name || t || '';
 }
 
-// 预置类目（中医·倪海厦人纪系列 / 易学·天纪）
+// P7-TCM-EXAM-01 三层分离：第一层中医公共学科大类（标准学科名，不含任何个人/机构/课程名）
+// 个人、老师、流派资料仅作为第二层「学习资料/流派专题」标签，存于资料标题与来源标签，不进入类目
 const PRESET_CATEGORIES = [
-  ['zhongyi', '倪海厦·黄帝内经', 1],
-  ['zhongyi', '倪海厦·针灸', 2],
-  ['zhongyi', '倪海厦·伤寒论', 3],
-  ['zhongyi', '倪海厦·金匮要略', 4],
-  ['zhongyi', '倪海厦·神农本草经', 5],
-  ['zhongyi', '倪海厦·临床医案', 6],
-  ['zhongyi', '倪海厦·学生笔记', 7],
-  ['zhongyi', '倪海厦·方剂处方', 8],
-  ['yixue', '倪海厦·天纪人间道', 1],
+  ['zhongyi', '黄帝内经与中医基础理论', 1],
+  ['zhongyi', '伤寒论', 2],
+  ['zhongyi', '金匮要略', 3],
+  ['zhongyi', '中药学与神农本草', 4],
+  ['zhongyi', '方剂学', 5],
+  ['zhongyi', '针灸推拿与经络', 6],
+  ['zhongyi', '中医诊断学', 7],
+  ['zhongyi', '中医临床各科', 8],
+  ['zhongyi', '医案与临证笔记', 9],
+  ['zhongyi', '养生食疗与功法', 10],
+  ['yixue', '天纪易理研修', 1],
   // v25.0.21：易学分门别类类目（用户整理的命理类核心资料）
   ['yixue', '八字命理', 10],
   ['yixue', '紫微斗数', 11],
@@ -251,6 +254,23 @@ function initTables(d) {
       status TEXT DEFAULT 'active',
       created_at TEXT DEFAULT (datetime('now','localtime'))
     );
+
+    CREATE TABLE IF NOT EXISTS exam_specs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      version TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
+      exam_category TEXT NOT NULL DEFAULT 'zhongyi_zhiye',
+      authority TEXT DEFAULT '',
+      source_url TEXT DEFAULT '',
+      effective_date TEXT DEFAULT '',
+      status TEXT DEFAULT 'draft',
+      question_types TEXT DEFAULT '[]',
+      difficulty_policy TEXT DEFAULT '{}',
+      blueprint TEXT DEFAULT '{}',
+      imported_note TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now','localtime')),
+      updated_at TEXT DEFAULT (datetime('now','localtime'))
+    );
   `);
 
   // v25.0.20：旧库列迁移（materials/knowledge_points/questions 补 category；knowledge_points 补 track）
@@ -269,10 +289,41 @@ function initTables(d) {
   ensureColumn('materials', 'content_hash', "content_hash TEXT DEFAULT ''");
   ensureColumn('materials', 'dedup_of', 'dedup_of INTEGER DEFAULT 0');
   ensureColumn('knowledge_points', 'content_hash', "content_hash TEXT DEFAULT ''");
+  // P7-TCM-EXAM-01：医考规范版本绑定 + 拒绝原因审计列
+  ensureColumn('questions', 'exam_spec_version', "exam_spec_version TEXT DEFAULT ''");
+  ensureColumn('questions', 'reject_reason', "reject_reason TEXT DEFAULT ''");
+  ensureColumn('knowledge_points', 'exam_spec_version', "exam_spec_version TEXT DEFAULT ''");
   d.exec(`
     CREATE INDEX IF NOT EXISTS idx_kp_hash ON knowledge_points(content_hash);
     CREATE INDEX IF NOT EXISTS idx_mat_hash ON materials(content_hash);
   `);
+  // P7-TCM-EXAM-01 3.1：考纲规范版本登记（幂等）
+  // 依据：国家中医类别医师资格考试大纲（2025年版）——国家卫生健康委、国家中医药管理局中医师资格认证中心公布
+  // 题型/选项/难度策略全部由本版本配置驱动，不硬编码；官方更新后新建版本灰度切换，不覆盖历史
+  try {
+    const specExists = d.prepare("SELECT id FROM exam_specs WHERE version=?").get('2025-tcm-zhiye-v1');
+    if (!specExists) {
+      d.prepare(`INSERT INTO exam_specs (version, name, exam_category, authority, source_url, effective_date, status, question_types, difficulty_policy, imported_note)
+        VALUES (?,?,?,?,?,?,?,?,?,?)`).run(
+        '2025-tcm-zhiye-v1',
+        '国家中医类别医师资格考试大纲（2025年版）',
+        'zhongyi_zhiye',
+        '国家卫生健康委 / 国家中医药管理局中医师资格认证中心',
+        'https://www.nmec.org.cn',
+        '2025-01-01',
+        'active',
+        JSON.stringify([
+          { code: 'A1', display: '单句型最佳选择题', type: 'single', options: 5, answerFormat: 'letter',
+            desc: '题干为单句陈述或直接提问，考查概念定义、药性功效、方剂组成主治、病因病机、诊断治法等记忆与理解' },
+          { code: 'A2', display: '病例摘要型最佳选择题', type: 'single', options: 5, answerFormat: 'letter',
+            desc: '题干为病例摘要（患者性别年龄+主诉+关键症状体征舌脉），考查辨证、选方、用药、诊断与处理' },
+        ]),
+        JSON.stringify({ easy: 30, medium: 50, hard: 20 }),
+        '初版登记：A1/A2 两类题型五选项字母答案；蓝图按科目知识点动态生成'
+      );
+      console.log('[Academy] exam_specs 登记初始版本 2025-tcm-zhiye-v1 (active)');
+    }
+  } catch (e) { console.error('[Academy] exam_specs 登记异常(不阻断):', e.message); }
   // 一次性回填存量指纹（幂等：已有指纹的行跳过）
   try {
     const kpBack = d.prepare(`SELECT id, title, content FROM knowledge_points WHERE content_hash='' OR content_hash IS NULL LIMIT 5000`).all();
@@ -566,6 +617,7 @@ function questionVo(r, withAnswer) {
     type: r.type, stem: r.stem,
     options: JSON.parse(r.options || '[]'), difficulty: r.difficulty, status: r.status,
     analysis: r.analysis, createdAt: r.created_at,
+    examSpecVersion: r.exam_spec_version || '', rejectReason: r.reject_reason || '',
     // P6-TCM-02：治理字段（质量分/校验明细/重复标记/多维关联）
     governState: r.govern_state || '', qScore: r.q_score || 0, qTier: r.q_tier || '',
     dupTier: r.dup_tier || 0, sourceId: r.source_id || 0, chapter: r.chapter || '',
@@ -610,6 +662,71 @@ const PARSE_PROMPT_VERSION = 'v25.0.25_gate';
 const GENQ_SYSTEM = `你是国学考试出题引擎。基于给定知识点生成考试题目，严格输出 JSON 数组：
 [{"type":"single|multi|judge|fill|qa|case","stem":"题干","options":["A选项","B选项","C选项","D选项"],"answer":"答案(single填选项序号0-3;multi填序号数组字符串如\"0,2\";judge填对|错;fill填标准答案文本;qa/case填参考答案要点)","keywords":["评分关键词"],"analysis":"解析(100字内)","difficulty":"easy|medium|hard"}]
 single/multi 必须给 4 个选项；judge 无需 options（输出 []）；qa/case options 输出 []。只输出 JSON。`;
+
+// P8-5a 医考专用命题引擎：国家执业医师（中医/中西医结合）资格考试题型口径
+// A1 型（单句型最佳选择题）+ A2 型（病例摘要型最佳选择题），五选项 A-E，字母答案，难度对标真实医考
+const YIKAO_GENQ_SYSTEM = `你是国家执业医师（中医/中西医结合）资格考试命题专家。基于给定知识点命制医考试题，严格输出 JSON 数组：
+[{"type":"single","stem":"题干","options":["选项1","选项2","选项3","选项4","选项5"],"answer":"A","keywords":["考点关键词"],"analysis":"解析(100字内)","difficulty":"easy|medium|hard"}]
+命题规则：
+1. 每题 type 固定为 single（国家医考笔试全部为单项选择题）；必须给 5 个选项；answer 填正确选项字母（A/B/C/D/E 之一）；options 只写选项内容本身，不带"A."、"B."等前缀。
+2. 题型采用国家医考标准两类：A1 型（单句型最佳选择题，题干为单句陈述或提问，直接考查概念、性能、功效、组成、主治、病因病机、诊断与治法要点等）；A2 型（病例摘要型最佳选择题，题干以「患者性别年龄+主诉+关键症状体征舌脉」病例摘要呈现，考查辨证、选方、用药、诊断与处理）。临床类知识点优先命 A2 型，基础理论类知识点优先命 A1 型。
+3. 五个选项须同质可比、长度相近；干扰项为考核中常见易混淆内容（相近功效药物、相似方证、易混诊断等）；正确答案位置在 A-E 间均匀分布，不得集中于同一字母。
+4. 难度对标真实医考：easy（教材定义与直接记忆，约占三成）、medium（需理解鉴别后应用，约占五成）、hard（病例综合分析或多考点交叉，约占两成）。
+5. 术语严格遵循国家规划教材口径；不出现任何人名、机构名、商标名、书名、网站名；不使用繁体字；全部原创命题，不复述任何真题原题。
+6. 解析须说明正确项依据，并点出最易错项的要害。
+只输出 JSON。`;
+
+function genqSystemFor(track) {
+  if (track !== 'yikao') return GENQ_SYSTEM;
+  // P7-TCM-EXAM-01 3.3：题型/选项/难度策略由当前生效 exam_spec_version 配置驱动，不硬编码
+  const spec = getActiveExamSpec();
+  if (!spec || !spec.questionTypes.length) return YIKAO_GENQ_SYSTEM;
+  const types = spec.questionTypes;
+  const optCounts = [...new Set(types.map((t) => t.options))];
+  const letterHint = types.some((t) => t.answerFormat === 'letter')
+    ? 'answer 填正确选项字母（A-E 之一）' : 'answer 填正确选项序号';
+  const typeLines = types.map((t) => `${t.code} 型（${t.display}，${t.options} 个选项）：${t.desc}`).join('\n');
+  const dp = spec.difficultyPolicy || {};
+  const diffLine = Object.entries(dp).map(([k, v]) => `${k}约${v}%`).join('、') || 'easy/medium/hard 均衡';
+  return `你是国家执业医师（中医/中西医结合）资格考试命题专家，依据《${spec.name}》（版本 ${spec.version}）命制原创模拟题，严格输出 JSON 数组：
+[{"type":"single","stem":"题干","options":["选项1",...],"answer":"A","keywords":["考点关键词"],"analysis":"解析(100字内)","difficulty":"easy|medium|hard"}]
+命题规则：
+1. 每题 type 固定为 single；options 必须为 ${optCounts.join(' 或 ')} 个；${letterHint}；options 只写选项内容本身，不带"A."、"B."等前缀。
+2. 题型采用以下规范类型：\n${typeLines}
+3. 各选项须同质可比、长度相近；干扰项为常见易混淆内容；正确答案位置在选项字母间均匀分布，不得集中于同一字母。
+4. 难度分布：${diffLine}。
+5. 术语严格遵循国家规划教材口径；不出现任何人名、机构名、商标名、书名、网站名；不使用繁体字；全部原创命题，不复述任何真题原题。
+6. 解析须说明正确项依据，并点出最易错项的要害。
+只输出 JSON。`;
+}
+
+// P7-TCM-EXAM-01 3.1：读取当前生效考试规范（延迟查库；库未就绪返回 null 走内置默认）
+function getActiveExamSpec() {
+  try {
+    const row = getDb().prepare("SELECT * FROM exam_specs WHERE status='active' ORDER BY id DESC LIMIT 1").get();
+    if (!row) return null;
+    return {
+      version: row.version, name: row.name, authority: row.authority,
+      questionTypes: JSON.parse(row.question_types || '[]'),
+      difficultyPolicy: JSON.parse(row.difficulty_policy || '{}'),
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+// 医考难度指令：由当前生效规范难度策略驱动
+function genqLevelText(track, level) {
+  if (track === 'yikao') {
+    const spec = getActiveExamSpec();
+    const dp = (spec && spec.difficultyPolicy) || { easy: 30, medium: 50, hard: 20 };
+    const line = Object.entries(dp).map(([k, v]) => `${k}约${v}%`).join('、');
+    const codes = spec && spec.questionTypes.length ? spec.questionTypes.map((t) => t.code).join('型与') + '型' : 'A1型与A2型';
+    return `难度对标当前生效考试规范：${line}，${codes}搭配`;
+  }
+  const diffMap = { 1: 'easy 为主', 2: 'easy/medium 均衡', 3: 'medium/hard 为主' };
+  return `目标等级：${level}级（${diffMap[level] || '均衡'}）`;
+}
 
 // ==================== P6-I-PLUS 规则4：Knowledge Hash 指纹去重引擎 ====================
 // 资料级：全文归一化 sha256 → 命中即复用已有知识点/题目，AI 调用 0 次
@@ -698,6 +815,13 @@ async function runParseTask(materialId, text) {
       .run(`AI 解析完成：全文 ${chunks.length} 段，提取 ${n} 个知识点，指纹复用已有 ${reused} 个，质量淘汰 ${discarded} 个，冲突待裁定 ${conflicts} 个，待人工审核`, materialId);
     console.log(`[Academy] 资料#${materialId} 解析完成: ${chunks.length} 段 / 新增 ${n} / 指纹复用 ${reused} / 淘汰 ${discarded} / 冲突 ${conflicts}`);
   } catch (err) {
+    // P7-TCM-EXAM-01 4.3：解析产出为 0（新增 0 且复用 0）必须失败告警，禁止静默标记 parsed
+    if (n === 0 && reused === 0) {
+      d.prepare(`UPDATE materials SET status='pending', parse_note=?, updated_at=datetime('now','localtime') WHERE id=?`)
+        .run(`解析失败：全部 ${chunks.length} 段均未产出知识点（${err.message}），已回置 pending 待重试（禁止静默空转）`, materialId);
+      console.error(`[Academy] 资料#${materialId} 解析零产出告警（回置 pending）:`, err.message);
+      return;
+    }
     d.prepare(`UPDATE materials SET status='parsed', parse_note=?, updated_at=datetime('now','localtime') WHERE id=?`)
       .run(`AI 解析完成（部分）：新增 ${n} 个知识点，指纹复用 ${reused} 个，质量淘汰 ${discarded} 个，末段失败：${err.message}`, materialId);
     console.error(`[Academy] 资料#${materialId} 解析第段失败:`, err.message);
@@ -705,13 +829,35 @@ async function runParseTask(materialId, text) {
 }
 
 // P6-TCM-02 3.1/3.2：出题插入统一走质量闸门（11 项校验 + 三级去重 + 评分分级）
-// 返回 { created, discarded, dupFlagged }
+// P7-TCM-EXAM-01 3.2：医考题入库绑定当前生效 exam_spec_version
+// P7-TCM-EXAM-01 5.1：医考驳回题落库留审计（EXAM_SCOPE_REJECTED / QUALITY_REJECTED + reject_reason），支持人工回滚
 function gatedQuestionInsert(d, q, kp, track, category) {
-  const gate = QG.gateQuestion(d, { ...q, knowledge_id: kp ? kp.id : null });
-  if (gate.action === 'discard') return { created: 0, discarded: 1, dupFlagged: 0 };
+  const gate = QG.gateQuestion(d, { ...q, track, knowledge_id: kp ? kp.id : null });
+  if (gate.action === 'discard') {
+    if (track === 'yikao') {
+      const auditInsert = d.prepare(`INSERT INTO questions (knowledge_id, track, type, stem, options, answer, keywords, analysis, difficulty, status, category,
+        govern_state, q_score, q_checks, q_tier, dup_tier, q_hash1, q_hash2, source_id, chapter, exam_point_ids, exam_spec_version, reject_reason)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+      const auditSpec = getActiveExamSpec()?.version || '';
+      auditInsert.run(kp ? kp.id : null, track, q.type, String(q.stem).slice(0, 1000),
+        JSON.stringify(Array.isArray(q.options) ? q.options.slice(0, 6).map(o => String(o).slice(0, 200)) : []),
+        String(q.answer ?? '').slice(0, 2000),
+        JSON.stringify(Array.isArray(q.keywords) ? q.keywords.slice(0, 10).map(k => String(k).slice(0, 30)) : []),
+        String(q.analysis || '').slice(0, 600),
+        ['easy', 'medium', 'hard'].includes(q.difficulty) ? q.difficulty : 'easy', 'rejected',
+        category || (kp ? (kp.category || '') : ''),
+        gate.state, gate.score, JSON.stringify(gate.checks), gate.tier, gate.dup.tier,
+        gate.dup.h1, gate.dup.h2,
+        kp ? kp.material_id || 0 : 0, kp ? (kp.chapter || '') : '',
+        '[]', auditSpec,
+        gate.rejectReason || (gate.dup.tier === 1 ? 'DUPLICATE_REJECTED' : 'QUALITY_REJECTED'));
+    }
+    return { created: 0, discarded: 1, dupFlagged: 0 };
+  }
+  const specVersion = track === 'yikao' ? (getActiveExamSpec()?.version || '') : '';
   const insert = d.prepare(`INSERT INTO questions (knowledge_id, track, type, stem, options, answer, keywords, analysis, difficulty, status, category,
-    govern_state, q_score, q_checks, q_tier, dup_tier, q_hash1, q_hash2, source_id, chapter, exam_point_ids)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+    govern_state, q_score, q_checks, q_tier, dup_tier, q_hash1, q_hash2, source_id, chapter, exam_point_ids, exam_spec_version)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
   const examPoints = kp && kp.tags ? JSON.parse(kp.tags || '[]') : [];
   insert.run(kp ? kp.id : null, track, q.type, String(q.stem).slice(0, 1000),
     JSON.stringify(Array.isArray(q.options) ? q.options.slice(0, 6).map(o => String(o).slice(0, 200)) : []),
@@ -723,7 +869,7 @@ function gatedQuestionInsert(d, q, kp, track, category) {
     gate.state, gate.score, JSON.stringify(gate.checks), gate.tier, gate.dup.tier,
     gate.dup.h1, gate.dup.h2,
     kp ? kp.material_id || 0 : 0, kp ? (kp.chapter || '') : '',
-    JSON.stringify(examPoints.slice(0, 6)));
+    JSON.stringify(examPoints.slice(0, 6)), specVersion);
   return { created: 1, discarded: 0, dupFlagged: gate.dup.tier === 2 ? 1 : 0 };
 }
 
@@ -735,8 +881,7 @@ function runGenQuestionsTask(track, level, count, category = '') {
       ORDER BY RANDOM() LIMIT 8`)
     .all(...(category ? [track, track, category, category] : [track, track]));
   const material = kps.length ? kps.map(k => `- ${k.title}：${k.content}`).join('\n') : `赛道「${trackName(track)}」基础常识`;
-  const diffMap = { 1: 'easy 为主', 2: 'easy/medium 均衡', 3: 'medium/hard 为主' };
-  return callAI(GENQ_SYSTEM, `目标等级：${level}级（${diffMap[level] || '均衡'}）\n生成 ${count} 道题\n知识点依据：\n${material}`, 'gen_questions', { taskId: null })
+  return callAI(genqSystemFor(track), `${genqLevelText(track, level)}\n生成 ${count} 道题\n知识点依据：\n${material}`, 'gen_questions', { taskId: null })
     .then(content => {
       const list = extractJson(content);
       const arr = Array.isArray(list) ? list : [];
@@ -777,16 +922,22 @@ async function runFullGenTask(taskId) {
     for (let i = 0; i < pending.length; i += FULLGEN_GROUP_SIZE) groups.push(pending.slice(i, i + FULLGEN_GROUP_SIZE));
     d.prepare('UPDATE gen_tasks SET total_groups=?, total_kp=?, skipped_cached=? WHERE id=?')
       .run(groups.length, all.length, all.length - pending.length, taskId);
-    if (groups.length === 0) { finish.run('done', '全部知识点已有题目（缓存命中，0 次 AI 调用）', taskId); return; }
+    if (groups.length === 0) {
+      // P7-TCM-EXAM-01 4.3：区分"无可用知识点"与"全部缓存命中"，禁止误导性成功
+      if (all.length === 0) {
+        finish.run('failed', `无可用知识点（track=${task.track}${task.category ? ' category=' + task.category : ''}）：需先完成资料解析与知识点审核，禁止空转`, taskId);
+        return;
+      }
+      finish.run('done', `全部 ${all.length} 个知识点已有题目（缓存命中，0 次 AI 调用）`, taskId); return;
+    }
 
-    const diffMap = { 1: 'easy 为主', 2: 'easy/medium 均衡', 3: 'medium/hard 为主' };
     for (let gi = 0; gi < groups.length; gi++) {
       const group = groups[gi];
       const kpText = group.map((k, idx) => `${gi + 1}.${idx + 1} [${k.title}] ${k.content}`).join('\n');
       const per = Math.max(4, Math.min(10, group.length + 2));
       const content = await callAI(
-        GENQ_SYSTEM,
-        `目标等级：${task.level}级（${diffMap[task.level] || '均衡'}）\n逐个知识点出题：以下 ${group.length} 个知识点，每个知识点至少 1 道题，共生成 ${per} 道题，题目顺序与知识点顺序对应\n知识点依据：\n${kpText}`,
+        genqSystemFor(task.track),
+        `${genqLevelText(task.track, task.level)}\n逐个知识点出题：以下 ${group.length} 个知识点，每个知识点至少 1 道题，共生成 ${per} 道题，题目顺序与知识点顺序对应\n知识点依据：\n${kpText}`,
         'gen_full', { taskId });
       const list = extractJson(content);
       const arr = Array.isArray(list) ? list : [];
@@ -820,18 +971,26 @@ async function runFullGenTask(taskId) {
 
 // ==================== 判分 ====================
 
+// P8-5a：选项答案统一解析——兼容字母（A-F，医考国家题型口径）与数字索引（历史数据）
+function ansToIdx(v) {
+  const s = String(v ?? '').trim().toUpperCase();
+  if (/^[A-F]$/.test(s)) return s.charCodeAt(0) - 65;
+  if (/^\d+$/.test(s)) return parseInt(s, 10);
+  return -1;
+}
+
 function gradeAnswer(q, myAnswer) {
   const ans = String(myAnswer ?? '').trim();
   switch (q.type) {
     case 'single': {
-      const idx = parseInt(ans, 10);
-      if (isNaN(idx)) return { full: false, ratio: 0 };
-      const correct = parseInt(String(q.answer).trim(), 10);
+      const idx = ansToIdx(ans);
+      if (idx < 0) return { full: false, ratio: 0 };
+      const correct = ansToIdx(String(q.answer).trim());
       return { full: idx === correct, ratio: idx === correct ? 1 : 0 };
     }
     case 'multi': {
-      const mine = ans.split(',').map(s => s.trim()).filter(Boolean).sort();
-      const correct = String(q.answer).split(',').map(s => s.trim()).filter(Boolean).sort();
+      const mine = ans.split(',').map(s => s.trim()).filter(Boolean).map(ansToIdx).sort((a, b) => a - b);
+      const correct = String(q.answer).split(',').map(s => s.trim()).filter(Boolean).map(ansToIdx).sort((a, b) => a - b);
       const hit = mine.filter(x => correct.includes(x)).length;
       const wrong = mine.filter(x => !correct.includes(x)).length;
       if (mine.length === correct.length && hit === correct.length && wrong === 0) return { full: true, ratio: 1 };
@@ -1218,6 +1377,46 @@ function createRouter() {
         .run(t, String(category).trim(), Math.min(3, Math.max(1, parseInt(level, 10) || 1)), 'running');
       runFullGenTask(Number(info.lastInsertRowid));
       res.json({ success: true, taskId: String(info.lastInsertRowid), message: '全覆盖出题任务已启动，可轮询进度' });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // P7-TCM-EXAM-01 3.1：考试规范版本查询（后台来源库留存，前端不展示冗长来源）
+  router.get('/exam-specs', adminRequired, (req, res) => {
+    try {
+      const rows = getDb().prepare('SELECT * FROM exam_specs ORDER BY id DESC').all();
+      res.json({
+        success: true,
+        specs: rows.map(s => ({
+          id: String(s.id), version: s.version, name: s.name, examCategory: s.exam_category,
+          authority: s.authority, sourceUrl: s.source_url, effectiveDate: s.effective_date,
+          status: s.status,
+          questionTypes: JSON.parse(s.question_types || '[]'),
+          difficultyPolicy: JSON.parse(s.difficulty_policy || '{}'),
+          importedNote: s.imported_note, createdAt: s.created_at, updatedAt: s.updated_at,
+        })),
+      });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 规范版本状态流转（draft→gray→active / active→archived；active 切换前旧版本自动归档，不覆盖历史）
+  router.post('/exam-specs/:version/status', adminRequired, (req, res) => {
+    try {
+      const { status } = req.body;
+      if (!['draft', 'gray', 'active', 'archived'].includes(status)) {
+        return res.status(400).json({ success: false, error: '无效状态' });
+      }
+      const d = getDb();
+      const spec = d.prepare('SELECT id FROM exam_specs WHERE version=?').get(req.params.version);
+      if (!spec) return res.status(404).json({ success: false, error: '规范版本不存在' });
+      if (status === 'active') {
+        d.prepare("UPDATE exam_specs SET status='archived', updated_at=datetime('now','localtime') WHERE status='active' AND id!=?").run(spec.id);
+      }
+      d.prepare("UPDATE exam_specs SET status=?, updated_at=datetime('now','localtime') WHERE id=?").run(status, spec.id);
+      res.json({ success: true });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
     }

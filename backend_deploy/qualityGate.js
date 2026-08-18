@@ -274,30 +274,55 @@ function checkQuestionDuplicate(d, q) {
 }
 
 // ==================== 3.2 题目 11 项质量闸门 ====================
+// P7-TCM-EXAM-01：医考轨道（yikao）范围污染检测——命中即 EXAM_SCOPE_REJECTED，
+// 不允许"改名重新入库"（reject_reason 留审计，回滚需人工）
+const EXAM_SCOPE_PATTERN = /倪海厦|陈士铎|汉唐中医|人纪|天纪|讲义|课程目录|课程讲解|学生笔记|听课笔记|随堂|第[一二三四五六七八九十百\d]+页|页码|整理时间|内部方剂|方剂编号|民间经验方|秘方|祖传|包治|彻底根治|根治百病|疗效显著/;
+
 function gateQuestion(d, q) {
   const cfg = getGovernanceConfig(d);
   const checks = [];
   const add = (name, ok, weight, note) => checks.push({ name, pass: !!ok, weight, note: note || '' });
+  const isYikao = String(q.track || '') === 'yikao';
 
   const stem = String(q.stem || '').trim();
   const answer = String(q.answer ?? '').trim();
   const options = Array.isArray(q.options) ? q.options : [];
   const type = String(q.type || '');
-  const inRange = (v) => /^[0-3]$/.test(v);
+  // P8-5a：答案兼容字母（A-F，国家医考五选项口径）与数字索引（历史数据）
+  const ansIdx = (v) => {
+    const s = String(v ?? '').trim().toUpperCase();
+    if (/^[A-F]$/.test(s)) return s.charCodeAt(0) - 65;
+    if (/^\d+$/.test(s)) return parseInt(s, 10);
+    return -1;
+  };
+  const inRange = (v) => { const i = ansIdx(v); return i >= 0 && i <= 5; };
   const validAnswer = type === 'single' ? inRange(answer)
-    : type === 'multi' ? /^([0-3],)*[0-3]$/.test(answer)
+    : type === 'multi' ? answer.length > 0 && answer.split(',').every((x) => inRange(x))
     : type === 'judge' ? ['对', '错'].includes(answer)
     : ['fill', 'qa', 'case'].includes(type) ? answer.length > 0 : false;
 
+  // P7-TCM-EXAM-01 3.3：医考题选项数/答案格式由当前生效 exam_spec_version 配置，不硬编码
+  let yikaoSpec = null;
+  if (isYikao) {
+    try {
+      const row = d.prepare("SELECT * FROM exam_specs WHERE status='active' ORDER BY id DESC LIMIT 1").get();
+      if (row) yikaoSpec = { version: row.version, questionTypes: JSON.parse(row.question_types || '[]'), difficultyPolicy: JSON.parse(row.difficulty_policy || '{}') };
+    } catch (e) { /* exam_specs 未就绪时走默认五选项口径 */ }
+  }
+  const specSingle = yikaoSpec && yikaoSpec.questionTypes.find((t) => t.code === 'A1' || /single/i.test(String(t.code || '')));
+  const yikaoOptCount = specSingle ? Number(specSingle.options) || 5 : 5;
+  const specLetterFmt = !specSingle || specSingle.answerFormat !== 'index';
   // 1 题干完整性
   add('题干完整性', stem.length >= 10, 10, `${stem.length}字`);
   // 2 答案一致性
   add('答案一致性', validAnswer, 12, `type=${type}`);
-  // 3 选项唯一性
+  // 3 选项唯一性（常规题 4-5 项；医考题按 exam_spec 当前规范，默认 5 项）
   const optOk = (type === 'single' || type === 'multi')
-    ? options.length === 4 && new Set(options.map(normText)).size === 4
+    ? (isYikao
+        ? options.length === yikaoOptCount && new Set(options.map(normText)).size === options.length
+        : options.length >= 4 && options.length <= 5 && new Set(options.map(normText)).size === options.length)
     : true;
-  add('选项唯一性', optOk, 10, `${options.length}项`);
+  add('选项唯一性', optOk, 10, `${options.length}项${isYikao ? `/规范${yikaoOptCount}项` : ''}`);
   // 4 答案可验证性
   const verifiable = (type === 'single' || type === 'multi')
     ? answer.split(',').every(inRange)
@@ -325,15 +350,26 @@ function gateQuestion(d, q) {
   const body = stem + (options.join('') || '');
   const complianceOk = body.length < 900 && !/(郑重声明|版权所有.{0,6}禁止|本书目录|内容提要[:：])/.test(body);
   add('合规性检测', complianceOk, 5);
+  // 12 医考答案格式规范（P7-TCM-EXAM-01 3.3：新题必须按当前规范统一格式，字母口径）
+  const yikaoFmtOk = !isYikao || !specLetterFmt || !['single', 'multi'].includes(type)
+    || (/^[A-E](,[A-E])*$/.test(answer.toUpperCase()));
+  add('医考答案格式', yikaoFmtOk, 12, isYikao ? (yikaoSpec ? `v=${yikaoSpec.version}` : '默认字母口径') : '非医考');
+  // 13 医考范围污染（P7-TCM-EXAM-01 1.3：人名/流派/课程/页码/内部编号，阻断性）
+  const scopeHit = isYikao ? EXAM_SCOPE_PATTERN.test(body) : false;
+  add('医考范围污染', !scopeHit, 0, scopeHit ? 'EXAM_SCOPE_REJECTED' : '无污染');
 
   const score = checks.reduce((s, c) => s + (c.pass ? c.weight : 0), 0);
 
+  // 医考范围污染：无条件 EXAM_SCOPE_REJECTED（0 权重不计分，纯阻断；留审计标记供人工核查回滚）
+  if (scopeHit) {
+    return { action: 'discard', state: 'EXAM_SCOPE_REJECTED', score: Math.min(score, 60), checks, tier: 'rejected-scope', dup, rejectReason: 'EXAM_SCOPE_REJECTED' };
+  }
   // L1 完全重复：无条件自动拒绝（即使其余项满分）
   if (dup.tier === 1) {
     return { action: 'discard', state: 'REJECTED', score: Math.min(score, 60), checks, tier: 'normal', dup };
   }
   if (score < cfg.q_pass_score) {
-    return { action: 'discard', state: 'REJECTED', score, checks, tier: 'normal', dup };
+    return { action: 'discard', state: 'REJECTED', score, checks, tier: 'normal', dup, rejectReason: 'QUALITY_REJECTED' };
   }
   return {
     action: 'insert', state: 'NEEDS_REVIEW', score, checks,
