@@ -396,40 +396,8 @@ export default function YikaoPage() {
                           className="rounded-full px-3 py-1 text-[11px] font-bold"
                           style={{ color: GREEN_DARK, border: `1px solid ${GREEN}55`, backgroundColor: "#fff" }}
                         >📝 记笔记</button>
-                        <button
-                          onClick={() => { setCommentOpenId(commentOpenId === q.id ? null : q.id); setCommentText(""); }}
-                          className="rounded-full px-3 py-1 text-[11px] font-bold"
-                          style={{ color: commentDone[q.id] ? "#999" : GREEN_DARK, border: `1px solid ${GREEN}55`, backgroundColor: "#fff" }}
-                        >{commentDone[q.id] ? "💬 已评论" : "💬 评论"}</button>
+                        {/* P9-首发裁剪：题目评论入口隐藏 */}
                       </div>
-                      {commentOpenId === q.id && !commentDone[q.id] && (
-                        <div className="mt-2">
-                          <textarea
-                            value={commentText}
-                            onChange={(e) => setCommentText(e.target.value)}
-                            placeholder="写下你对这道题的见解或疑问（可在「我的评论」中查看）"
-                            maxLength={300}
-                            rows={3}
-                            className="w-full rounded-lg border border-gray-200 p-2 text-[11px] leading-relaxed outline-none"
-                            style={{ borderColor: GREEN + "55" }}
-                          />
-                          <div className="mt-1.5 flex items-center justify-between">
-                            <span className="text-[10px] text-gray-300">{commentText.length}/300</span>
-                            <button
-                              onClick={() => {
-                                if (!commentText.trim()) return;
-                                addComment({ questionId: q.id, stem: q.stem.slice(0, 40), track: "yikao", category: q.category || "", content: commentText.trim() });
-                                setCommentDone((p) => ({ ...p, [q.id]: true }));
-                                setCommentText("");
-                                setCommentOpenId(null);
-                              }}
-                              disabled={!commentText.trim()}
-                              className="rounded-full px-4 py-1 text-[11px] font-bold text-white disabled:opacity-40"
-                              style={{ backgroundColor: GREEN }}
-                            >发布</button>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>

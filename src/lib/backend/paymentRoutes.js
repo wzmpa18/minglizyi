@@ -195,6 +195,16 @@ function updateOrderRecord(orderId, status, channel) {
   if (channel) order.channel = channel;
   if (status === ORDER_STATUS.PAID && !order.paidAt) {
     order.paidAt = new Date().toISOString();
+    // P9-推广中心：订单首次支付成功 → 触发被邀请人首次有效付费奖励（单层/幂等）
+    try {
+      const { grantFirstPayReward } = require('./register_routes');
+      const r = grantFirstPayReward(order.userId, order.orderId);
+      if (r && r.granted) {
+        console.log(`[payment] 首付费奖励已发放 orderId=${order.orderId} inviter获得=${r.points}积分`);
+      }
+    } catch (e) {
+      console.error('[payment] 首付费奖励发放失败:', e.message);
+    }
   }
   return order;
 }

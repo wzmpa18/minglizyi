@@ -360,6 +360,68 @@ function createAdditionalTables(db) {
     CREATE INDEX IF NOT EXISTS idx_orders_status ON user_orders(status);
   `);
 
+  // P9-推广中心：积分流水表（服务端发放，明细可查）
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS points_transactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      tx_type TEXT NOT NULL,
+      amount INTEGER NOT NULL,
+      balance_after INTEGER NOT NULL,
+      ref_id INTEGER,
+      note TEXT DEFAULT '',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(user_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_ptx_user ON points_transactions(user_id);
+    CREATE INDEX IF NOT EXISTS idx_ptx_type ON points_transactions(tx_type);
+  `);
+
+  // P9-推广中心：邀请绑定审计表（多来源冲突/防作弊全记录，可回溯）
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS invite_audit (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      invitee_id INTEGER,
+      inviter_id INTEGER,
+      source TEXT NOT NULL,
+      result TEXT NOT NULL,
+      reason TEXT DEFAULT '',
+      ip TEXT DEFAULT '',
+      device_id TEXT DEFAULT '',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_iaudit_invitee ON invite_audit(invitee_id);
+    CREATE INDEX IF NOT EXISTS idx_iaudit_inviter ON invite_audit(inviter_id);
+  `);
+
+  // P9-推广中心：设备注册登记表（同设备批量注册/关联账号检测）
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS device_registry (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      device_id TEXT NOT NULL,
+      user_id INTEGER NOT NULL,
+      ip TEXT DEFAULT '',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_dev_device ON device_registry(device_id);
+    CREATE INDEX IF NOT EXISTS idx_dev_user ON device_registry(user_id);
+  `);
+
+  // P9-推广中心：邀请奖励幂等表（register/first_pay 每被邀请人每类型仅一次）
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS invite_rewards (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      invitee_id INTEGER NOT NULL,
+      inviter_id INTEGER NOT NULL,
+      reward_type TEXT NOT NULL,
+      points INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'granted',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(invitee_id, reward_type)
+    );
+    CREATE INDEX IF NOT EXISTS idx_ireward_inviter ON invite_rewards(inviter_id);
+  `);
+
   // 星级评价表
   db.exec(`
     CREATE TABLE IF NOT EXISTS user_ratings (
@@ -458,25 +520,188 @@ function findUserByAccount(account) {
 }
 
 /**
+ * ============ P9-推广中心：签名链接 / 服务端发奖 / 防作弊（单层奖励） ============
+ */
+
+// 签名密钥：env 优先，缺省用固定派生值（部署时必须在 .env 配置 INVITE_SIGN_SECRET）
+function inviteSignSecret() {
+  return process.env.INVITE_SIGN_SECRET || 'yandao-invite-sign-fallback-2026';
+}
+
+// 生成签名（HMAC-SHA256，永久有效，ts 仅防篡改）
+function signInviteRef(userId, ts) {
+  const crypto = require('crypto');
+  return crypto.createHmac('sha256', inviteSignSecret()).update(`${userId}.${ts}`).digest('hex').slice(0, 32);
+}
+
+function verifyInviteSig(userId, ts, sig) {
+  if (!userId || !ts || !sig) return false;
+  if (!/^\d+$/.test(String(ts)) || Number(ts) > Date.now() + 600000) return false; // 不允许未来时间戳
+  return signInviteRef(userId, ts) === String(sig).toLowerCase();
+}
+
+// 奖励额度（env 可覆盖，默认与前端宣传一致）
+function inviteRewardPoints(type) {
+  if (type === 'first_pay') return Number(process.env.INVITE_REWARD_FIRST_PAY) || 200;
+  return Number(process.env.INVITE_REWARD_REGISTER) || 50;
+}
+
+// 服务端积分发放：更新余额 + 写流水（幂等由调用方保证）
+function grantPointsTx(db, userId, txType, amount, refId, note) {
+  db.prepare(`INSERT OR IGNORE INTO user_assets (user_id, points_balance, star_rating, star_rating_count, member_level)
+    VALUES (?, 0, 0, 0, 'basic')`).run(userId);
+  const bal = db.prepare('UPDATE user_assets SET points_balance = points_balance + ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?')
+    .run(amount, userId);
+  const row = db.prepare('SELECT points_balance FROM user_assets WHERE user_id = ?').get(userId);
+  db.prepare('INSERT INTO points_transactions (user_id, tx_type, amount, balance_after, ref_id, note) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(userId, txType, amount, row ? row.points_balance : 0, refId || null, note || '');
+  return row ? row.points_balance : null;
+}
+
+// 记录绑定审计
+function logInviteAudit(db, inviteeId, inviterId, source, result, reason, ip, deviceId) {
+  db.prepare('INSERT INTO invite_audit (invitee_id, inviter_id, source, result, reason, ip, device_id) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(inviteeId || null, inviterId || null, source, result, reason || '', ip || '', deviceId || '');
+}
+
+/**
+ * 归因解析 + 五类防作弊（返回 { inviterId, source, ok, reason }）
+ * 场景：signed_link（签名链接，最可信）> code（邀请码）> none
+ * 拦截：自邀/关联设备、同设备批量注册、同IP批量注册、多来源冲突（取可信源）、被邀人已绑定（首绑优先）
+ */
+function resolveInviteAttribution(db, { inviteRef, inviteTs, inviteSig, inviteCode, deviceId, clientIp }) {
+  const sources = [];
+
+  if (inviteRef && verifyInviteSig(inviteRef, inviteTs, inviteSig)) {
+    const inviter = db.prepare('SELECT user_id FROM users WHERE user_id = ?').get(Number(inviteRef));
+    if (inviter) sources.push({ inviterId: inviter.user_id, source: 'signed_link' });
+  } else if (inviteRef) {
+    // 签名不通过的 ref 一律不采信（防伪造）
+    logInviteAudit(db, null, Number(inviteRef) || null, 'signed_link', 'rejected', 'SIG_INVALID', clientIp, deviceId);
+  }
+
+  if (inviteCode) {
+    const inviter = db.prepare('SELECT user_id FROM users WHERE invite_code = ?').get(String(inviteCode).trim());
+    if (inviter) sources.push({ inviterId: inviter.user_id, source: 'code' });
+  }
+
+  if (!sources.length) return { inviterId: null, source: 'none', ok: false, reason: 'NO_SOURCE' };
+
+  // 多来源冲突：取最高可信源；若两个可信源指向不同邀请人，记冲突审计
+  const ranked = sources.sort((a, b) => (a.source === 'signed_link' ? -1 : 1) - (b.source === 'signed_link' ? -1 : 1));
+  const picked = ranked[0];
+  const conflict = sources.find(s => s !== picked && s.inviterId !== picked.inviterId);
+  if (conflict) {
+    logInviteAudit(db, null, picked.inviterId, 'multi_source', 'conflict_logged', `PICKED_${picked.source}_OVER_${conflict.source}`, clientIp, deviceId);
+  }
+
+  // 防作弊1：自邀（邀请人与被邀人同设备 → 关联账号）
+  if (deviceId) {
+    const inviterSameDevice = db.prepare('SELECT id FROM device_registry WHERE device_id = ? AND user_id = ?').get(deviceId, picked.inviterId);
+    if (inviterSameDevice) {
+      return { inviterId: null, source: picked.source, ok: false, reason: 'SELF_OR_LINKED_DEVICE' };
+    }
+    // 防作弊2：同设备批量注册（该设备已注册 ≥3 个账号）
+    const devCount = db.prepare('SELECT COUNT(DISTINCT user_id) c FROM device_registry WHERE device_id = ?').get(deviceId);
+    if (devCount.c >= 3) {
+      return { inviterId: null, source: picked.source, ok: false, reason: 'DEVICE_BATCH_REGISTER' };
+    }
+  }
+
+  // 防作弊3：同IP批量注册（24h 内同IP注册 ≥5 次 → 不绑定）
+  if (clientIp) {
+    const ipCount = db.prepare("SELECT COUNT(*) c FROM device_registry WHERE ip = ? AND created_at >= datetime('now','-1 day')").get(clientIp);
+    if (ipCount.c >= 5) {
+      return { inviterId: null, source: picked.source, ok: false, reason: 'IP_BATCH_REGISTER' };
+    }
+  }
+
+  return { inviterId: picked.inviterId, source: picked.source, ok: true, reason: '' };
+}
+
+/**
+ * 绑定 + 单层奖励发放（注册成功后调用）
+ * 单层规则：只写 level=1 关系，只奖励直接邀请人（不写二级关系、不发二级奖励）
+ */
+function bindInviteAndReward(db, inviteeId, attribution, clientIp, deviceId) {
+  const { inviterId, source, ok, reason } = attribution;
+  if (!ok || !inviterId) {
+    logInviteAudit(db, inviteeId, inviterId || null, source || 'none', 'rejected', reason, clientIp, deviceId);
+    return { bound: false, reason };
+  }
+
+  // 首绑优先：已被绑定则拒绝（永久生效，不可覆盖）
+  const invitee = db.prepare('SELECT invited_by FROM users WHERE user_id = ?').get(inviteeId);
+  if (!invitee) return { bound: false, reason: 'INVITEE_NOT_FOUND' };
+  if (invitee.invited_by) {
+    logInviteAudit(db, inviteeId, inviterId, source, 'rejected', 'ALREADY_BOUND_FIRST_WINS', clientIp, deviceId);
+    return { bound: false, reason: 'ALREADY_BOUND' };
+  }
+  if (inviteeId === inviterId) {
+    logInviteAudit(db, inviteeId, inviterId, source, 'rejected', 'SELF_INVITE', clientIp, deviceId);
+    return { bound: false, reason: 'SELF_INVITE' };
+  }
+
+  // 写绑定（单层）
+  db.prepare('UPDATE users SET invited_by = ? WHERE user_id = ?').run(inviterId, inviteeId);
+  db.prepare('INSERT INTO user_invite_relation (inviter_id, invitee_id, level) VALUES (?, ?, 1)').run(inviterId, inviteeId);
+
+  // 发放注册奖励（幂等：invite_rewards 唯一约束）
+  let rewarded = 0;
+  try {
+    const pts = inviteRewardPoints('register');
+    db.prepare('INSERT INTO invite_rewards (invitee_id, inviter_id, reward_type, points, status) VALUES (?, ?, ?, ?, ?)')
+      .run(inviteeId, inviterId, 'register', pts, 'granted');
+    grantPointsTx(db, inviterId, 'invite_register', pts, inviteeId, `邀请新用户注册奖励(单层)`);
+    rewarded = pts;
+  } catch (e) {
+    // 唯一约束冲突 = 已发过，幂等跳过
+  }
+
+  logInviteAudit(db, inviteeId, inviterId, source, 'bound', rewarded ? `REWARDED_${rewarded}` : 'REWARD_IDEMPOTENT_SKIP', clientIp, deviceId);
+  return { bound: true, rewardPoints: rewarded };
+}
+
+/**
+ * P9-推广中心：被邀请人首次有效付费 → 奖励直接邀请人（单层、幂等）
+ * 由支付链路在订单支付成功时调用；重复调用安全（invite_rewards 唯一约束）
+ * @param {number|string} inviteeUserId - 被邀请人用户ID
+ * @param {string} orderNo - 关联订单号（审计留痕）
+ */
+function grantFirstPayReward(inviteeUserId, orderNo) {
+  const db = initDatabase();
+  const inviteeId = parseInt(inviteeUserId, 10);
+  if (!inviteeId || isNaN(inviteeId)) return { granted: false, reason: 'INVALID_USER' };
+
+  const invitee = db.prepare('SELECT user_id, invited_by FROM users WHERE user_id = ?').get(inviteeId);
+  if (!invitee) return { granted: false, reason: 'INVITEE_NOT_FOUND' };
+  if (!invitee.invited_by) return { granted: false, reason: 'NOT_INVITED' };
+
+  try {
+    const pts = inviteRewardPoints('first_pay');
+    db.prepare('INSERT INTO invite_rewards (invitee_id, inviter_id, reward_type, points, status) VALUES (?, ?, ?, ?, ?)')
+      .run(inviteeId, invitee.invited_by, 'first_pay', pts, 'granted');
+    grantPointsTx(db, invitee.invited_by, 'invite_first_pay', pts, inviteeId, `被邀请人首次有效付费奖励(单层)${orderNo ? ' 订单:' + orderNo : ''}`);
+    logInviteAudit(db, inviteeId, invitee.invited_by, 'payment', 'first_pay_rewarded', `PTS_${pts}${orderNo ? '_ORDER_' + orderNo : ''}`, '', '');
+    return { granted: true, points: pts };
+  } catch (e) {
+    return { granted: false, reason: 'ALREADY_GRANTED' };
+  }
+}
+
+/**
  * 创建新用户（用户ID由数据库自增分配，从100000开始）
- * @param {Object} params - { phone, email, password, inviteCode }
+ * P9-推广中心：邀请归因/防作弊/单层奖励统一走 resolveInviteAttribution + bindInviteAndReward
+ * @param {Object} params - { phone, email, password, inviteRef, inviteTs, inviteSig, inviteCode, deviceId, clientIp }
+ * @param {Object} opts - { skipAttribution: 跳过邀请归因（内部迁移场景） }
  * @returns {Object} 新用户记录（不含密码哈希）
  */
-function createUser(params) {
+function createUser(params, opts = {}) {
   const db = initDatabase();
-  const { phone, email, password, inviteCode } = params;
+  const { phone, email, password, inviteRef, inviteTs, inviteSig, inviteCode, deviceId, clientIp } = params;
 
   const userInviteCode = generateInviteCode();
   const passwordHash = bcrypt.hashSync(password, BCRYPT_ROUNDS);
-
-  // 从邀请码查找邀请人
-  let invitedBy = null;
-  if (inviteCode) {
-    const inviter = db.prepare('SELECT user_id FROM users WHERE invite_code = ?').get(inviteCode);
-    if (inviter) {
-      invitedBy = inviter.user_id;
-    }
-  }
 
   const nickname = phone
     ? `国学爱好者${phone.slice(-4)}`
@@ -484,11 +709,11 @@ function createUser(params) {
     ? email.split('@')[0]
     : '国学爱好者';
 
-  // 插入用户（user_id 由数据库自增分配）
+  // 插入用户（user_id 由数据库自增分配；invited_by 由 bindInviteAndReward 统一写入）
   const result = db.prepare(`
-    INSERT INTO users (phone, email, password_hash, nickname, invite_code, invited_by)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(phone || null, email || null, passwordHash, nickname, userInviteCode, invitedBy);
+    INSERT INTO users (phone, email, password_hash, nickname, invite_code)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(phone || null, email || null, passwordHash, nickname, userInviteCode);
 
   const newUserId = result.lastInsertRowid;
 
@@ -498,24 +723,20 @@ function createUser(params) {
     VALUES (?, 0, 0, 0, 'basic')
   `).run(newUserId);
 
-  // 如果有邀请人，创建分销关系记录
-  if (invitedBy) {
-    db.prepare(`
-      INSERT INTO user_invite_relation (inviter_id, invitee_id, level)
-      VALUES (?, ?, 1)
-    `).run(invitedBy, newUserId);
+  // 设备登记（同设备批量注册/关联账号检测的数据基础）
+  if (deviceId) {
+    db.prepare('INSERT INTO device_registry (device_id, user_id, ip) VALUES (?, ?, ?)')
+      .run(String(deviceId).slice(0, 128), newUserId, clientIp || '');
+  } else {
+    db.prepare('INSERT INTO device_registry (device_id, user_id, ip) VALUES (?, ?, ?)')
+      .run('unknown', newUserId, clientIp || '');
+  }
 
-    // 查找二级上级
-    const parentRelation = db.prepare(
-      'SELECT inviter_id FROM user_invite_relation WHERE invitee_id = ?'
-    ).get(invitedBy);
-
-    if (parentRelation) {
-      db.prepare(`
-        INSERT INTO user_invite_relation (inviter_id, invitee_id, level)
-        VALUES (?, ?, 2)
-      `).run(parentRelation.inviter_id, newUserId);
-    }
+  // 邀请归因 + 单层绑定发奖（签名链接 > 邀请码；五类防作弊拦截）
+  let inviteResult = { bound: false, reason: 'SKIPPED' };
+  if (!opts.skipAttribution) {
+    const attribution = resolveInviteAttribution(db, { inviteRef, inviteTs, inviteSig, inviteCode, deviceId, clientIp });
+    inviteResult = bindInviteAndReward(db, newUserId, attribution, clientIp, deviceId);
   }
 
   // 记录操作日志
@@ -533,6 +754,8 @@ function createUser(params) {
     tags: [],
     memberLevel: 'basic',
     inviteCode: userInviteCode,
+    inviteBound: inviteResult.bound,
+    inviteBoundReason: inviteResult.reason || '',
   };
 }
 
@@ -812,10 +1035,11 @@ function createRouter() {
   // ------------------------------------------------------------------
   // POST /api/auth/register — 注册（手机/邮箱+密码）
   // 注册成功后设置 httpOnly cookie + 返回 access token
+  // P9-推广中心：全量接收邀请归因参数（签名链接 ref/ts/sig、邀请码、设备指纹）
   // ------------------------------------------------------------------
   router.post('/register', async (req, res) => {
     try {
-      const { phone, email, code, password, inviteCode } = req.body;
+      const { phone, email, code, password, inviteCode, inviteRef, inviteTs, inviteSig, deviceId } = req.body;
 
       const isPhone = phone && /^1[3-9]\d{9}$/.test(phone);
       const isEmail = email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -854,12 +1078,17 @@ function createRouter() {
         }
       }
 
-      // 创建用户（user_id 由数据库自增分配，从100000开始）
+      // 创建用户（user_id 由数据库自增分配，从100000开始；归因+防作弊+单层发奖在服务端完成）
       const user = createUser({
         phone: isPhone ? phone : null,
         email: isEmail ? email : null,
         password,
         inviteCode: inviteCode || null,
+        inviteRef: inviteRef || null,
+        inviteTs: inviteTs || null,
+        inviteSig: inviteSig || null,
+        deviceId: deviceId || null,
+        clientIp: getClientIp(req),
       });
 
       // 生成 token 对
@@ -1258,6 +1487,226 @@ function createRouter() {
   });
 
   // ------------------------------------------------------------------
+  // POST /api/auth/login-code — 验证码登录（手机/邮箱）
+  // P9-推广中心：验证码登录自动识别邀请参数；老用户直接登录，新用户自动注册（随机初始密码，可后续找回/修改）
+  // 注册口径与 /register 完全一致：签名链接归因 + 防作弊 + 单层发奖
+  // ------------------------------------------------------------------
+  router.post('/login-code', async (req, res) => {
+    try {
+      const { phone, email, code, inviteCode, inviteRef, inviteTs, inviteSig, deviceId } = req.body;
+
+      const isPhone = phone && /^1[3-9]\d{9}$/.test(phone);
+      const isEmail = email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      if (!isPhone && !isEmail) {
+        return jsonResponse(res, 400, false, '请输入正确的手机号或邮箱');
+      }
+      if (!code || !/^\d{6}$/.test(code)) {
+        return jsonResponse(res, 400, false, '请输入6位验证码');
+      }
+
+      const identifier = isPhone ? `sms:${phone}` : `email:${email}`;
+      const valid = verificationStore.verifyCode(identifier, code);
+      if (!valid) {
+        return jsonResponse(res, 400, false, '验证码错误或已过期');
+      }
+
+      const db = initDatabase();
+      const existing = isPhone ? findUserByPhone(phone) : findUserByEmail(email);
+
+      let user;
+      let isNewUser = false;
+      if (existing) {
+        user = existing;
+        // 首绑优先：老用户从未绑定过邀请人时，登录也补归因（首绑永久生效）
+        if (!existing.invited_by && (inviteRef || inviteCode)) {
+          const attribution = resolveInviteAttribution(db, { inviteRef, inviteTs, inviteSig, inviteCode, deviceId, clientIp: getClientIp(req) });
+          if (attribution.ok && attribution.inviterId && attribution.inviterId !== existing.user_id) {
+            bindInviteAndReward(db, existing.user_id, attribution, getClientIp(req), deviceId);
+          } else if (!attribution.ok) {
+            logInviteAudit(db, existing.user_id, attribution.inviterId || null, attribution.source, 'rejected', attribution.reason, getClientIp(req), deviceId);
+          }
+        }
+        if (deviceId) {
+          db.prepare('INSERT INTO device_registry (device_id, user_id, ip) VALUES (?, ?, ?)')
+            .run(String(deviceId).slice(0, 128), existing.user_id, getClientIp(req));
+        }
+      } else {
+        // 新用户自动注册：随机强密码（用户可通过"忘记密码"重置）
+        const randomPassword = `Yd${Math.random().toString(36).slice(2, 8)}${Date.now().toString(36).slice(-4)}!`;
+        user = createUser({
+          phone: isPhone ? phone : null,
+          email: isEmail ? email : null,
+          password: randomPassword,
+          inviteCode: inviteCode || null,
+          inviteRef: inviteRef || null,
+          inviteTs: inviteTs || null,
+          inviteSig: inviteSig || null,
+          deviceId: deviceId || null,
+          clientIp: getClientIp(req),
+        });
+        isNewUser = true;
+        user.isAutoRegistered = true;
+      }
+
+      db.prepare('UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE user_id = ?').run(user.user_id);
+
+      const tokenPair = generateTokenPair({
+        userId: user.user_id,
+        phone: user.phone || undefined,
+        email: user.email || undefined,
+      });
+      setRefreshTokenCookie(res, tokenPair.refreshToken);
+
+      const fresh = findUserByUserId(user.user_id);
+      return jsonResponse(res, 200, true, isNewUser ? '注册成功' : '登录成功', {
+        user: buildUserResponse(fresh || user),
+        accessToken: tokenPair.accessToken,
+        expiresIn: tokenPair.expiresIn,
+        isNewUser,
+      });
+    } catch (error) {
+      console.error('[AUTH /login-code] error:', error);
+      return jsonResponse(res, 500, false, '登录失败，请稍后重试');
+    }
+  });
+
+  // ------------------------------------------------------------------
+  // GET /api/auth/invite/link — 获取专属签名邀请链接（JWT鉴权）
+  // P9-推广中心：二维码/分享统一数据源；签名永久有效，防伪造
+  // ------------------------------------------------------------------
+  router.get('/invite/link', authMiddleware, (req, res) => {
+    try {
+      const user = findUserByUserId(req.user.userId);
+      if (!user) {
+        return jsonResponse(res, 404, false, '用户不存在');
+      }
+      const ts = Date.now();
+      const sig = signInviteRef(user.user_id, ts);
+      const base = process.env.PUBLIC_BASE_URL || `https://${req.headers.host || 'yandaoguoxue.yandao.vip'}`;
+      const inviteLink = `${base}/register?ref=${user.user_id}&ts=${ts}&sig=${sig}`;
+      return jsonResponse(res, 200, true, '获取成功', {
+        userId: user.user_id,
+        inviteCode: user.invite_code || '',
+        inviteLink,
+        inviteRef: String(user.user_id),
+        inviteTs: String(ts),
+        inviteSig: sig,
+        rewardRules: {
+          register: inviteRewardPoints('register'),
+          firstPay: inviteRewardPoints('first_pay'),
+        },
+      });
+    } catch (error) {
+      console.error('[AUTH /invite/link] error:', error);
+      return jsonResponse(res, 500, false, '获取邀请链接失败');
+    }
+  });
+
+  // ------------------------------------------------------------------
+  // GET /api/auth/invite/overview — 推广中心总览（JWT鉴权）
+  // 单层口径：仅直接邀请（level=1）；统计 + 被邀请人明细（脱敏） + 奖励明细
+  // ------------------------------------------------------------------
+  router.get('/invite/overview', authMiddleware, (req, res) => {
+    try {
+      const userId = req.user.userId;
+      const db = initDatabase();
+
+      const relations = db.prepare(
+        "SELECT r.invitee_id, r.invite_time, u.nickname FROM user_invite_relation r LEFT JOIN users u ON u.user_id = r.invitee_id WHERE r.inviter_id = ? AND r.level = 1 ORDER BY r.invite_time DESC"
+      ).all(userId);
+
+      const rewards = db.prepare(
+        "SELECT id, invitee_id, reward_type, points, status, created_at FROM invite_rewards WHERE inviter_id = ? ORDER BY created_at DESC LIMIT 100"
+      ).all(userId);
+
+      const pointsRow = db.prepare('SELECT points_balance FROM user_assets WHERE user_id = ?').get(userId);
+
+      const todayPrefix = new Date().toISOString().slice(0, 10);
+      const todayInvites = relations.filter(r => String(r.invite_time || '').slice(0, 10) === todayPrefix).length;
+      const monthPrefix = todayPrefix.slice(0, 7);
+      const monthInvites = relations.filter(r => String(r.invite_time || '').slice(0, 7) === monthPrefix).length;
+      const totalRewardPoints = rewards.reduce((s, r) => s + (r.points || 0), 0);
+
+      const maskName = (name) => {
+        if (!name) return '国学爱好者';
+        const n = String(name);
+        if (n.length <= 1) return n + '**';
+        return n.charAt(0) + '**' + n.slice(-1);
+      };
+
+      return jsonResponse(res, 200, true, '获取成功', {
+        stats: {
+          totalInvites: relations.length,
+          todayInvites,
+          monthInvites,
+          totalRewardPoints,
+          pointsBalance: pointsRow ? pointsRow.points_balance || 0 : 0,
+        },
+        invitees: relations.map(r => ({
+          inviteeId: r.invitee_id,
+          name: maskName(r.nickname),
+          invitedAt: r.invite_time,
+        })),
+        rewards: rewards.map(r => ({
+          id: r.id,
+          inviteeId: r.invitee_id,
+          type: r.reward_type === 'first_pay' ? '被邀请人首次付费' : '被邀请人注册',
+          points: r.points,
+          status: r.status,
+          grantedAt: r.created_at,
+        })),
+      });
+    } catch (error) {
+      console.error('[AUTH /invite/overview] error:', error);
+      return jsonResponse(res, 500, false, '获取推广数据失败');
+    }
+  });
+
+  // ------------------------------------------------------------------
+  // GET /api/auth/points/transactions — 积分明细（JWT鉴权）
+  // P9-推广中心：奖励明细可查（与积分流水同源）
+  // ------------------------------------------------------------------
+  router.get('/points/transactions', authMiddleware, (req, res) => {
+    try {
+      const userId = req.user.userId;
+      const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+      const offset = parseInt(req.query.offset) || 0;
+      const db = initDatabase();
+
+      const rows = db.prepare(
+        'SELECT id, tx_type, amount, balance_after, ref_id, note, created_at FROM points_transactions WHERE user_id = ? ORDER BY id DESC LIMIT ? OFFSET ?'
+      ).all(userId, limit, offset);
+
+      const TYPE_LABELS = {
+        invite_register: '邀请注册奖励',
+        invite_first_pay: '邀请付费奖励',
+        share: '分享奖励',
+        consume: '消费扣减',
+        recharge: '充值',
+        adjust: '调整',
+      };
+
+      const balanceRow = db.prepare('SELECT points_balance FROM user_assets WHERE user_id = ?').get(userId);
+
+      return jsonResponse(res, 200, true, '获取成功', {
+        balance: balanceRow ? balanceRow.points_balance || 0 : 0,
+        transactions: rows.map(r => ({
+          id: r.id,
+          type: r.tx_type,
+          typeLabel: TYPE_LABELS[r.tx_type] || r.tx_type,
+          amount: r.amount,
+          balanceAfter: r.balance_after,
+          note: r.note,
+          createdAt: r.created_at,
+        })),
+      });
+    } catch (error) {
+      console.error('[AUTH /points/transactions] error:', error);
+      return jsonResponse(res, 500, false, '获取积分明细失败');
+    }
+  });
+
+  // ------------------------------------------------------------------
   // POST /api/auth/logout — 退出登录（清除 cookie）
   // ------------------------------------------------------------------
   router.post('/logout', (req, res) => {
@@ -1292,4 +1741,7 @@ module.exports = {
   generateTokenPair,
   authMiddleware,
   logOperation,
+  grantFirstPayReward,
+  grantPointsTx,
+  inviteRewardPoints,
 };

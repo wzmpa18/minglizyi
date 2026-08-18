@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { generatePoster } from "@/lib/sharePoster";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import { shareReward } from "@/lib/pointsStore";
 import { getInviteCode } from "@/lib/inviteStore";
+import { getInviteLink } from "@/lib/inviteApi";
 
 const BRAND = "#7B2FBE";
 
@@ -39,6 +40,20 @@ export function ShareButton({
   const [generating, setGenerating] = useState(false);
   const [toast, setToast] = useState("");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // P9-推广中心：签名邀请参数（与服务端 resolveInviteAttribution 同一归因口径）
+  const [inviteParams, setInviteParams] = useState<{ ref: string; ts: string; sig: string } | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    getInviteLink()
+      .then((d) => {
+        if (mounted && d && d.inviteRef && d.inviteTs && d.inviteSig) {
+          setInviteParams({ ref: d.inviteRef, ts: d.inviteTs, sig: d.inviteSig });
+        }
+      })
+      .catch(() => { /* 未登录/接口失败时静默，构建链接走邀请码降级 */ });
+    return () => { mounted = false; };
+  }, []);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -90,22 +105,27 @@ export function ShareButton({
     }
   }, []);
 
-  // P6-TOOL-04 §5.1/§5.2：分享链接统一携带邀请标识（不泄露邀请人敏感信息，仅带邀请码）
-  // 全场景覆盖：万年历宜忌、择日结果、星盘报告、学习证书、工具排盘结果
+  // P9-推广中心：分享链接统一携带邀请标识，与注册归因复用同一套签名链接口径
+  // 优先级：签名链接参数(ref/ts/sig) > 旧邀请码(code)；全场景覆盖：工具结果页、学习成就页、文章等
   const buildAttributedLink = useCallback((rawUrl: string): string => {
     if (typeof window === "undefined") return rawUrl;
-    const { inviteCode } = getCurrentUserInfo();
-    if (!inviteCode) return rawUrl;
     try {
       const u = new URL(rawUrl, window.location.origin);
-      if (!u.searchParams.get("code") && !u.searchParams.get("ref")) {
+      if (inviteParams && !u.searchParams.get("ref")) {
+        u.searchParams.set("ref", inviteParams.ref);
+        u.searchParams.set("ts", inviteParams.ts);
+        u.searchParams.set("sig", inviteParams.sig);
+        return u.toString();
+      }
+      const { inviteCode } = getCurrentUserInfo();
+      if (inviteCode && !u.searchParams.get("code") && !u.searchParams.get("ref")) {
         u.searchParams.set("code", inviteCode);
       }
       return u.toString();
     } catch {
       return rawUrl;
     }
-  }, [getCurrentUserInfo]);
+  }, [getCurrentUserInfo, inviteParams]);
 
   // 复制链接
   const handleCopyLink = useCallback(() => {
@@ -130,7 +150,14 @@ export function ShareButton({
       const { userId, userName, inviteCode } = getCurrentUserInfo();
       const rawShareUrl = url || (typeof window !== "undefined" ? window.location.href : "https://yandao.vip");
       const shareUrl = buildAttributedLink(rawShareUrl);
-      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(shareUrl)}`;
+      // P9：二维码本地生成（qrcode 包），不依赖境外 qrserver 服务
+      const QRCode = (await import("qrcode")).default;
+      const qrUrl = await QRCode.toDataURL(shareUrl, {
+        width: 300,
+        margin: 2,
+        errorCorrectionLevel: "M",
+        color: { dark: "#2D1A3E", light: "#FFFFFF" },
+      });
 
       const posterUrl = await generatePoster({
         size: "vertical",

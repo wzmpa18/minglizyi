@@ -257,15 +257,7 @@ function ActionMenu({
           minWidth: "140px",
         }}
       >
-        <button
-          onClick={onMessage}
-          className="flex w-full items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-          发消息
-        </button>
+        {/* P9-首发裁剪：私聊入口隐藏 */}
         <button
           onClick={onRemark}
           className="flex w-full items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100"
@@ -706,9 +698,16 @@ function AddFriendView({
     );
   };
 
-  // 二维码 URL - 指向 /friend?ref= 实现自动添加好友
+  // 二维码 URL - 指向 /friend?ref= 实现自动添加好友（P9：本地生成）
   const friendInviteUrl = `https://yandaoguoxue.yandao.vip/friend?ref=${currentUserId}`;
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(friendInviteUrl)}&bgcolor=ffffff&color=7B2FBE`;
+  const [qrCodeUrl, setQrCodeUrl] = useState("");
+
+  useEffect(() => {
+    import("@/lib/qrLocal")
+      .then(({ makeQrDataUrl }) => makeQrDataUrl(friendInviteUrl, { width: 200, dark: "#7B2FBE" }))
+      .then(setQrCodeUrl)
+      .catch(() => {});
+  }, [currentUserId]);
 
   return (
     <div
@@ -1884,15 +1883,15 @@ export default function FriendsPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="搜索好友 / 群聊"
+            placeholder="搜索好友"
             className="w-full rounded-xl bg-gray-100 py-2.5 pl-10 pr-4 text-sm text-gray-700 placeholder-gray-400 focus:outline-none"
           />
         </div>
       </div>
 
-      {/* ===== 分段切换 ===== */}
+      {/* ===== 分段切换（P9-首发裁剪：群聊入口隐藏，仅保留好友） ===== */}
       <div className="flex border-b border-gray-100">
-        {(["friends", "groups"] as const).map((tab) => (
+        {(["friends"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -2075,8 +2074,7 @@ export default function FriendsPage() {
                         longPressTriggered.current = false;
                         return;
                       }
-                      if (!requireLogin()) return;
-                      router.push(`/friends/chat/${friend.id}`);
+                      // P9-首发裁剪：点击好友行不再进入私聊（长按操作菜单仍可用）
                     }}
                     onTouchStart={(e) => handleTouchStart(friend.id, e)}
                     onTouchEnd={handleTouchEnd}
@@ -2205,20 +2203,7 @@ export default function FriendsPage() {
               ))
             )}
 
-            {/* 创建群聊按钮 */}
-            <div className="px-4 pt-6">
-              <button
-                onClick={() => router.push("/groups/create")}
-                className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white active:opacity-80 transition-opacity"
-                style={{ backgroundColor: BRAND }}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="5" x2="12" y2="19" />
-                  <line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-                创建群聊
-              </button>
-            </div>
+            {/* P9-首发裁剪：创建群聊入口隐藏 */}
           </>
         )}
       </div>

@@ -94,7 +94,7 @@ export default function FeaturedPage() {
         </div>
 
         <p className="mt-4 text-center text-[10px] leading-relaxed text-gray-300">
-          言道精选内容仅供传统文化学习参考<br />下单与支付链路即将开放，敬请期待
+          言道精选内容仅供传统文化学习参考<br />下单与支付链路暂未开放
         </p>
       </div>
 

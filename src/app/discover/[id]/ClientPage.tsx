@@ -402,60 +402,7 @@ export default function DiscoverDetailPage() {
               </div>
             </div>
 
-            {/* 评论区 */}
-            <div style={{ backgroundColor: "#fff", padding: "16px" }}>
-              <div style={{ fontSize: "15px", fontWeight: 600, color: "#333", marginBottom: "12px" }}>
-                全部评论 ({comments.length})
-              </div>
-
-              {comments.length === 0 ? (
-                <div style={{ textAlign: "center", color: "#999", padding: "20px 0", fontSize: "14px" }}>
-                  暂无评论，快来抢沙发吧
-                </div>
-              ) : (
-                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                  {comments.map((cmt) => (
-                    <div key={cmt.id} style={{ display: "flex", gap: "10px" }}>
-                      <div
-                        style={{
-                          width: "32px", height: "32px", borderRadius: "50%", backgroundColor: "#e0e0e0",
-                          overflow: "hidden", flexShrink: 0,
-                        }}
-                      >
-                        {cmt.authorAvatar ? (
-                          <img src={cmt.authorAvatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                        ) : (
-                          <div
-                            style={{
-                              width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-                              color: "#fff", backgroundColor: "#ccc", fontSize: "12px",
-                            }}
-                          >
-                            {cmt.authorName?.charAt(0) || "?"}
-                          </div>
-                        )}
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "4px" }}>
-                          <span style={{ fontSize: "13px", fontWeight: 600, color: "#333" }}>{cmt.authorName}</span>
-                          <span style={{ fontSize: "11px", color: "#bbb" }}>{formatTime(cmt.createdAt)}</span>
-                          {cmt.authorId !== getCurrentUserId() && (
-                            <button
-                              onClick={() => { setReportTarget({ type: "comment", id: cmt.id }); setShowReport(true); }}
-                              style={{ marginLeft: "auto", background: "none", border: "none", fontSize: "11px", color: "#bbb" }}
-                            >
-                              举报
-                            </button>
-                          )}
-                        </div>
-                        <div style={{ fontSize: "14px", color: "#555", lineHeight: "1.5" }}>{cmt.content}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              {!online && <div style={{ marginTop: "10px", fontSize: "10px", color: "#e67e22", textAlign: "center" }}>本地模式：内容仅本机可见，登录后可同步社区</div>}
-            </div>
+            {/* P9-首发裁剪：评论区隐藏 */}
           </>
         ) : (
           <div style={{ textAlign: "center", padding: "40px 0", color: "#999" }}>动态不存在或已被删除</div>
@@ -507,37 +454,7 @@ export default function DiscoverDetailPage() {
         </div>
       )}
 
-      {/* 底部评论输入框 */}
-      <div
-        style={{
-          position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: "420px",
-          backgroundColor: "#fff", borderTop: "1px solid #e0e0e0", padding: "10px 16px calc(10px + env(safe-area-inset-bottom))",
-          display: "flex", alignItems: "center", gap: "10px", zIndex: 100,
-        }}
-      >
-        <input
-          className="comment-input"
-          type="text"
-          placeholder="写下你的评论..."
-          value={commentText}
-          onChange={(e) => setCommentText(e.target.value)}
-          style={{
-            flex: 1, height: "36px", border: "1px solid #e0e0e0", borderRadius: "18px", padding: "0 14px",
-            fontSize: "14px", outline: "none", backgroundColor: "#f5f5f5",
-          }}
-        />
-        <button
-          onClick={handleSendComment}
-          disabled={!commentText.trim() || submitting}
-          style={{
-            backgroundColor: commentText.trim() ? BRAND : "#ccc", color: "#fff", border: "none", borderRadius: "18px",
-            padding: "8px 16px", fontSize: "14px", fontWeight: 600,
-            cursor: commentText.trim() ? "pointer" : "not-allowed", whiteSpace: "nowrap",
-          }}
-        >
-          {submitting ? "发送中" : "发送"}
-        </button>
-      </div>
+      {/* P9-首发裁剪：底部评论输入框隐藏 */}
 
       {/* 底部免责声明 */}
       <div style={{ padding: "12px 16px", textAlign: "center", fontSize: "11px", color: "#bbb", backgroundColor: "#ededed" }}>

@@ -1693,6 +1693,9 @@ export default function BaziPage(){
         />
       </div>
     </div>}
+
+    {/* 统一免责声明 */}
+    <div style={{ padding: "10px 12px", fontSize: "10px", color: "#999", textAlign: "center" }}>内容仅供文化娱乐参考，不构成任何专业建议</div>
     </div>
   </div>;
 }

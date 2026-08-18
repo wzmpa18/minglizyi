@@ -426,7 +426,20 @@ export async function registerToServer(phone?: string, email?: string): Promise<
 // ============================================================================
 
 export async function registerWithPhone(params: RegisterParams): Promise<LoginResult> {
-  const { phone, smsCode, password, inviteCode, referrer_id } = params;
+  const { phone, smsCode, password, inviteCode } = params;
+
+  // P9-推广中心：统一读取邀请上下文（签名链接 ref/ts/sig 优先，邀请码次之）+ 设备指纹
+  const { getInviteContext, getDeviceId, clearInviteContext } = await import('./inviteApi');
+  const inviteCtx = getInviteContext();
+  const inviteBody: Record<string, unknown> = {
+    inviteCode: (inviteCtx?.code || inviteCode) || null,
+    deviceId: getDeviceId(),
+  };
+  if (inviteCtx?.ref) {
+    inviteBody.inviteRef = inviteCtx.ref;
+    inviteBody.inviteTs = inviteCtx.ts;
+    inviteBody.inviteSig = inviteCtx.sig;
+  }
 
   // v21.0: 调用后端 /api/auth/register 接口（含 httpOnly cookie）
   try {
@@ -434,7 +447,7 @@ export async function registerWithPhone(params: RegisterParams): Promise<LoginRe
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include', // 携带/接收 httpOnly cookie
-      body: JSON.stringify({ phone, code: smsCode, password, inviteCode: inviteCode || null, referrer_id: referrer_id || null }),
+      body: JSON.stringify({ phone, code: smsCode, password, ...inviteBody }),
     });
     const data = await res.json();
 
@@ -465,23 +478,8 @@ export async function registerWithPhone(params: RegisterParams): Promise<LoginRe
       // refresh token 在 httpOnly cookie 中，前端不可读
       saveTokenPair(accessToken, '');
 
-      // 处理邀请码
-      if (inviteCode) {
-        try {
-          const { addInviteRelation, getUserIdByInviteCode } = await import('./inviteStore');
-          const inviterUid = getUserIdByInviteCode(inviteCode) || inviteCode;
-          addInviteRelation({
-            id: `inv_${Date.now()}`,
-            inviterId: inviterUid,
-            inviterName: '',
-            inviteeId: user.userId,
-            inviteeName: user.nickname,
-            level: 1,
-            createdAt: new Date().toISOString(),
-            rewardClaimed: false,
-          });
-        } catch {}
-      }
+      // P9-推广中心：邀请归因/绑定/发奖已在服务端完成，清除本地邀请上下文
+      clearInviteContext();
 
       // P6-TOOL-04 §5.2：注册成功登记设备档案（设备农场识别）
       try {
@@ -537,25 +535,6 @@ export async function registerWithPhone(params: RegisterParams): Promise<LoginRe
   // v20.1: 保存 token 双轨用于自动续期
   saveTokenPair(token, `rt_${userId}_${Date.now()}_reg`);
 
-  // 处理邀请码
-  if (inviteCode) {
-    try {
-      const { addInviteRelation, getUserIdByInviteCode } = await import('./inviteStore');
-      // v18.6: 通过邀请码反查邀请人真实userId，确保邀请关系正确绑定
-      const inviterUid = getUserIdByInviteCode(inviteCode) || inviteCode;
-      addInviteRelation({
-        id: `inv_${Date.now()}`,
-        inviterId: inviterUid,
-        inviterName: '',
-        inviteeId: userId,
-        inviteeName: user.nickname,
-        level: 1,
-        createdAt: new Date().toISOString(),
-        rewardClaimed: false,
-      });
-    } catch {}
-  }
-
   syncLocalData(userId);
 
   // P6-TOOL-04 §5.2：本地降级注册同样登记设备档案
@@ -572,9 +551,39 @@ export async function registerWithPhone(params: RegisterParams): Promise<LoginRe
 
 // ============================================================================
 // 手机号验证码登录
+// P9-推广中心：优先走后端 /api/auth/login-code（服务端校验验证码 + 自动注册 +
+// 邀请归因 + 防作弊 + 单层发奖）；网络不可用时降级本地流程
 // ============================================================================
 
 export async function loginWithPhone(phone: string, code: string, inviteCode?: string): Promise<LoginResult> {
+  try {
+    const { loginWithCodeServer } = await import('./inviteApi');
+    const result = await loginWithCodeServer({ phone, code });
+    if (result.success && result.user) {
+      const user: UserProfile = {
+        userId: String(result.user.userId),
+        nickname: result.user.nickname || `国学爱好者${phone.slice(-4)}`,
+        avatar: result.user.avatar || '',
+        bio: result.user.bio || '',
+        memberLevel: result.user.memberLevel || 'basic',
+        phone,
+        inviteCode: result.user.inviteCode,
+        loginTime: Date.now(),
+      };
+      localStorage.setItem(`yandao_user_${phone}`, JSON.stringify(user));
+      setLoginState(result.accessToken || '', user);
+      saveTokenPair(result.accessToken || '', '');
+      syncLocalData(user.userId);
+      return { success: true, message: result.message, user, isNewUser: !!result.isNewUser };
+    }
+    if (!result.success && result.message && !/网络异常/.test(result.message)) {
+      return { success: false, message: result.message };
+    }
+  } catch (err) {
+    console.error('[LOGIN-CODE] 后端验证码登录失败，回退本地流程:', err);
+  }
+
+  // === 本地降级流程（网络不可用时） ===
   // 服务端校验验证码
   const valid = await verifySmsCode(phone, code);
   if (!valid) {
@@ -606,25 +615,6 @@ export async function loginWithPhone(phone: string, code: string, inviteCode?: s
   // v20.1: 保存 token 双轨（access + refresh）用于自动续期
   const refreshToken = `rt_${userId}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
   saveTokenPair(token, refreshToken);
-
-  // 处理邀请码
-  if (inviteCode) {
-    try {
-      const { addInviteRelation, getUserIdByInviteCode } = await import('./inviteStore');
-      // v18.6: 通过邀请码反查邀请人真实userId，确保邀请关系正确绑定
-      const inviterUid = getUserIdByInviteCode(inviteCode) || inviteCode;
-      addInviteRelation({
-        id: `inv_${Date.now()}`,
-        inviterId: inviterUid,
-        inviterName: '',
-        inviteeId: userId,
-        inviteeName: user.nickname,
-        level: 1,
-        createdAt: new Date().toISOString(),
-        rewardClaimed: false,
-      });
-    } catch {}
-  }
 
   syncLocalData(userId);
 

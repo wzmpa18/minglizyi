@@ -173,11 +173,17 @@ export async function generatePoster(config: PosterConfig): Promise<string> {
   roundRect(ctx, qrX - 10, qrY - 10, qrSize + 20, qrSize + 20, 10);
   ctx.fill();
 
-  // 尝试加载二维码 - 包含邀请码以实现自动添加好友
+  // 尝试加载二维码 - 优先调用方传入（本地生成），降级再本地生成（P9：不再依赖境外 qrserver）
   const posterQrData = config.inviteCode
     ? `${DOWNLOAD_URL}?ref=${config.inviteCode}`
     : DOWNLOAD_URL;
-  const qrUrl = config.qrCodeUrl || `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(posterQrData)}`;
+  let qrUrl = config.qrCodeUrl || "";
+  if (!qrUrl) {
+    try {
+      const { makeQrDataUrl } = await import("./qrLocal");
+      qrUrl = await makeQrDataUrl(posterQrData, { width: qrSize });
+    } catch { /* 走占位 */ }
+  }
   try {
     const img = await loadImage(qrUrl);
     ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
@@ -206,7 +212,7 @@ export async function generatePoster(config: PosterConfig): Promise<string> {
   // iOS 提示
   ctx.fillStyle = "#999";
   ctx.font = `12px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
-  ctx.fillText("iOS 版本・敬请期待", w / 2, qrY + qrSize + 52);
+  ctx.fillText("iOS 版本・暂未开放", w / 2, qrY + qrSize + 52);
 
   // ==================== 底部合规小字 ====================
   ctx.fillStyle = "#ccc";
@@ -289,7 +295,7 @@ function drawWeiboLayout(ctx: CanvasRenderingContext2D, w: number, h: number, co
   ctx.fillText("长按识别二维码，立即下载安卓版", w / 2, 260);
   ctx.fillStyle = "#999";
   ctx.font = '10px "Noto Sans CJK SC", sans-serif';
-  ctx.fillText("iOS 版本・敬请期待", w / 2, 275);
+  ctx.fillText("iOS 版本・暂未开放", w / 2, 275);
 
   // 合规
   ctx.fillStyle = "#ccc";

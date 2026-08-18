@@ -114,8 +114,8 @@ function Zone({
 
 // ==================== 二维码弹窗（完整海报版） ====================
 function QRModal({ onClose, userId, nickname, avatar }: { onClose: () => void; userId: string; nickname?: string; avatar?: string }) {
-  const shareUrl = `https://yandaoguoxue.yandao.vip/friend?ref=${userId}`;
-  const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(shareUrl)}&bgcolor=ffffff&color=7B2FBE`;
+  // P9-推广中心：优先签名邀请链接，本地生成二维码
+  const [shareUrl, setShareUrl] = useState(`https://yandaoguoxue.yandao.vip/friend?ref=${userId}`);
 
   const posterRef = useRef<HTMLDivElement>(null);
   const [qrSaving, setQrSaving] = useState(false);
@@ -127,8 +127,21 @@ function QRModal({ onClose, userId, nickname, avatar }: { onClose: () => void; u
   usePopupBackHandler(onClose, true);
 
   useEffect(() => {
-    preloadImageAsDataUrl(qrApiUrl).then(setQrDataUrl);
-  }, [qrApiUrl]);
+    (async () => {
+      try {
+        const { getInviteLink } = await import("@/lib/inviteApi");
+        const linkData = await getInviteLink();
+        if (linkData?.inviteLink) setShareUrl(linkData.inviteLink);
+      } catch { /* 降级旧链接 */ }
+    })();
+  }, []);
+
+  useEffect(() => {
+    import("@/lib/qrLocal")
+      .then(({ makeQrDataUrl }) => makeQrDataUrl(shareUrl, { width: 300, dark: "#7B2FBE" }))
+      .then(setQrDataUrl)
+      .catch(() => {});
+  }, [shareUrl]);
 
   useEffect(() => {
     if (avatar) {
@@ -929,18 +942,8 @@ export default function ProfilePage() {
         />
       </Zone>
 
-      {/* ===== 第三区：社区中心 ===== */}
+      {/* ===== 第三区：社区中心（P9-首发裁剪：隐藏我的动态/消息通知，保留好友/关注/粉丝） ===== */}
       <Zone title="社区中心" storageKey="yandao_zone_social">
-        <ZoneItem
-          icon={Ic.moments}
-          label="我的动态"
-          onClick={() => router.push("/profile/moments")}
-        />
-        <ZoneItem
-          icon={Ic.notify}
-          label="消息通知"
-          onClick={() => router.push("/messages")}
-        />
         <ZoneItem
           icon={Ic.follow}
           label="我的关注"
@@ -992,13 +995,7 @@ export default function ProfilePage() {
           label="我的钱包"
           onClick={() => router.push("/profile/wallet")}
         />
-        <ZoneItem
-          icon={Ic.featured}
-          label="言道精选"
-          sub="实体好物 · 数字产品 · 咨询服务 · 课程专栏"
-          onClick={() => router.push("/featured")}
-          noBorder
-        />
+        {/* P9-首发裁剪：言道精选入口隐藏 */}
       </Zone>
 
       {/* ===== 第五区：推广中心 ===== */}

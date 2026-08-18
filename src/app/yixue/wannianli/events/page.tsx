@@ -745,6 +745,9 @@ export default function CalendarEventsPage() {
         {tip && (
           <div className="fixed left-1/2 top-16 z-[90] -translate-x-1/2 rounded-full bg-black/75 px-4 py-2 text-xs text-white">{tip}</div>
         )}
+
+        {/* 统一免责声明 */}
+        <div className="py-2.5 text-center text-[10px] text-gray-400">内容仅供文化娱乐参考，不构成任何专业建议</div>
     </div>
   );
 }

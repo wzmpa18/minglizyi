@@ -371,8 +371,8 @@ export default function SecurityPage() {
               </svg>
             </div>
 
-            <p style={{ fontSize: 16, fontWeight: 700, color: BRAND, margin: "0 0 6px" }}>即将开放</p>
-            <p style={{ fontSize: 13, color: "#999", margin: "0 0 16px" }}>微信绑定功能敬请期待</p>
+            <p style={{ fontSize: 16, fontWeight: 700, color: BRAND, margin: "0 0 6px" }}>暂未开放</p>
+            <p style={{ fontSize: 13, color: "#999", margin: "0 0 16px" }}>当前版本暂不支持微信绑定，可使用手机号登录使用全部功能</p>
 
             <button
               onClick={() => setShowBindDialog(false)}

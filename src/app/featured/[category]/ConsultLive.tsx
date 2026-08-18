@@ -273,7 +273,7 @@ export default function ConsultLive() {
           {services.length === 0 ? (
             <div className="rounded-2xl bg-white py-12 text-center shadow-sm">
               <p className="text-sm text-gray-400">暂无上架服务</p>
-              <p className="mt-1 text-[11px] text-gray-300">服务者入驻审核通过后即可上架，敬请期待</p>
+              <p className="mt-1 text-[11px] text-gray-300">服务者入驻审核通过后即可上架</p>
             </div>
           ) : (
             services.map((svc) => (

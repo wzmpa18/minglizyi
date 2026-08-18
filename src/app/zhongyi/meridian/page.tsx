@@ -384,7 +384,7 @@ function MeridianListPage() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={activeTab === "dong" ? "搜索董氏奇穴..." : activeTab === "others" ? "敬请期待..." : "搜索穴位名称..."}
+              placeholder={activeTab === "dong" ? "搜索董氏奇穴..." : activeTab === "others" ? "更多流派整理中..." : "搜索穴位名称..."}
               style={{ flex: 1, border: "none", outline: "none", fontSize: "14px", background: "transparent" }}
             />
             {searchQuery && (
@@ -492,10 +492,10 @@ function MeridianListPage() {
             <div style={{ fontSize: "48px", marginBottom: "16px" }}>🚧</div>
             <h3 style={{ fontSize: "16px", fontWeight: "bold", color: "#455A64", marginBottom: "8px" }}>其他流派</h3>
             <p style={{ fontSize: "13px", color: "#90A4AE", lineHeight: 1.6, marginBottom: "16px" }}>
-              腹针、眼针、耳针、头针等<br />更多针灸流派即将上线
+              腹针、眼针、耳针、头针等<br />更多针灸流派整理中
             </p>
             <div style={{ display: "inline-block", padding: "4px 14px", borderRadius: "14px", backgroundColor: "#ECEFF1", color: "#607D8B", fontSize: "12px", fontWeight: "bold" }}>
-              即将上线
+              整理中
             </div>
           </div>
         )}

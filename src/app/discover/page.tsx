@@ -421,16 +421,7 @@ function VideoCard({
           </svg>
           <span>{video.favorites}</span>
         </button>
-        <button
-          onClick={onToggleComments}
-          className="flex items-center gap-1.5 text-xs transition-colors"
-          style={{ color: showComments ? BRAND : "#999" }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-          <span>{video.comments}</span>
-        </button>
+        {/* P9-首发裁剪：评论入口隐藏 */}
         <a
           href={video.url}
           target="_blank"
@@ -1052,19 +1043,7 @@ export default function DiscoverPage() {
             />
           )}
         </button>
-        <button
-          onClick={() => handleTabSwitch("news")}
-          className="flex-1 py-3 text-sm font-semibold transition-colors relative"
-          style={{ color: activeTab === "news" ? BRAND : "#999" }}
-        >
-          行业资讯
-          {activeTab === "news" && (
-            <div
-              className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full"
-              style={{ width: "40px", backgroundColor: BRAND }}
-            />
-          )}
-        </button>
+        {/* P9-首发裁剪：行业资讯（外部聚合）Tab 隐藏 */}
         <button
           onClick={() => handleTabSwitch("video")}
           className="flex-1 py-3 text-sm font-semibold transition-colors relative"
@@ -1109,20 +1088,7 @@ export default function DiscoverPage() {
                 className="w-full rounded-full bg-white/20 py-2 pl-10 pr-4 text-sm text-white placeholder-white/60 focus:outline-none"
               />
             </div>
-            <button
-              onClick={() => {
-                if (!requireLogin()) return;
-                router.push("/discover/create");
-              }}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white shadow-md active:scale-95 transition-transform"
-              style={{ color: BRAND }}
-              title="发布动态"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-            </button>
+            {/* P9-首发裁剪：发布动态入口隐藏 */}
             <button
               onClick={() => loadPosts(1, true)}
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20"
@@ -1265,7 +1231,7 @@ export default function DiscoverPage() {
                   </div>
                 )}
 
-                {/* 操作栏 */}
+                {/* 操作栏（P9-首发裁剪：隐藏评论与AI点评入口，保留点赞/分享） */}
                 <div className="mt-3 flex items-center gap-5 border-t border-gray-100 pt-3">
                   <button
                     onClick={() => handleLike(post.id)}
@@ -1277,16 +1243,6 @@ export default function DiscoverPage() {
                     </svg>
                     <span>{post.likes}</span>
                   </button>
-                  <button
-                    onClick={() => toggleComments(post.id)}
-                    className="flex items-center gap-1.5 text-xs transition-colors"
-                    style={{ color: activeCommentPost === post.id ? BRAND : "#999" }}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                    </svg>
-                    <span>{post.comments}</span>
-                  </button>
                   <ShareButton
                     type="post"
                     title={post.content.slice(0, 50)}
@@ -1294,15 +1250,6 @@ export default function DiscoverPage() {
                     url={typeof window !== "undefined" ? `${window.location.origin}/discover/${post.id}` : ""}
                     label={String(post.shares)}
                   />
-                  <button
-                    onClick={() => handleAIComment(post.id, post.content)}
-                    disabled={aiLoading === post.id}
-                    className="flex items-center gap-1.5 text-xs transition-colors"
-                    style={{ color: aiComments[post.id] ? BRAND : "#999" }}
-                  >
-                    <span style={{ fontSize: "14px" }}>{aiLoading === post.id ? "⏳" : "🤖"}</span>
-                    <span>{aiLoading === post.id ? "AI点评中" : "AI点评"}</span>
-                  </button>
                 </div>
 
                 {/* AI点评结果 */}
@@ -1494,20 +1441,7 @@ export default function DiscoverPage() {
             视频内容版权归原平台及作者所有，本应用仅做链接聚合展示，不存储任何视频内容。如发现侵权内容，请点击「侵权举报」。
           </div>
 
-          {/* 提交视频按钮 */}
-          <div className="px-3 py-3">
-            <button
-              onClick={() => setShowVideoSubmit(true)}
-              className="w-full rounded-xl py-3 text-sm font-bold text-white transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-              style={{ backgroundColor: BRAND }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-              提交学习视频
-            </button>
-          </div>
+          {/* P9-首发裁剪：提交学习视频入口隐藏 */}
 
           {/* 视频列表 */}
           <div className="px-3 space-y-3 pb-3">
@@ -1553,7 +1487,7 @@ export default function DiscoverPage() {
                   <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
                 </svg>
                 <p className="text-sm text-gray-400">还没有学习视频</p>
-                <p className="mt-1 text-xs text-gray-400">点击上方按钮，分享优质的B站/西瓜视频学习资源</p>
+                <p className="mt-1 text-xs text-gray-400">学习资源持续扩充中</p>
               </div>
             )}
           </div>

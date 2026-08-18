@@ -3,6 +3,7 @@ import "./globals.css";
 import BottomNav from "@/components/BottomNav";
 import CloudSyncInit from "@/components/CloudSyncInit";
 import AuthRestoreInit from "@/components/AuthRestoreInit";
+import InviteCaptureInit from "@/components/InviteCaptureInit";
 import ReminderSchedulerInit from "@/components/ReminderSchedulerInit";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import GlobalZoomProvider from "@/components/GlobalZoomProvider";
@@ -47,6 +48,7 @@ export default function RootLayout({
           <SwipeBackProvider>
             <CloudSyncInit />
             <AuthRestoreInit />
+            <InviteCaptureInit />
             <ReminderSchedulerInit />
             <GlobalZoomProvider>
               {children}

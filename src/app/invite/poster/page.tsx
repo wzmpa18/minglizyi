@@ -76,13 +76,14 @@ export default function PosterPage() {
         setInviteCode(code);
       } catch {}
 
+      // P9-推广中心：优先使用服务端签名邀请链接，本地生成二维码
+      const { getInviteLink } = await import("@/lib/inviteApi");
+      const { makeQrDataUrl } = await import("@/lib/qrLocal");
+      const linkData = await getInviteLink();
       const shareUrl =
-        typeof window !== "undefined"
-          ? `${window.location.origin}/friend?ref=${userId}`
-          : "";
-      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
-        shareUrl
-      )}`;
+        linkData?.inviteLink ||
+        (typeof window !== "undefined" ? `${window.location.origin}/friend?ref=${userId}` : "");
+      const qrCodeUrl = shareUrl ? await makeQrDataUrl(shareUrl, { width: 300 }) : "";
 
       const url = await generatePoster({
         size: selectedSize,

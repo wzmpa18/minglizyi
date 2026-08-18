@@ -62,7 +62,7 @@ const ZONES: ZoneDef[] = [
     name: "养生学习区",
     emoji: "🍵",
     color: "#8B6F47",
-    desc: "四时养生 · 食疗本草 · 内容完善中，敬请期待",
+    desc: "四时养生 · 食疗本草 · 内容持续完善中",
     entries: [],
     coming: true,
   },
@@ -71,7 +71,7 @@ const ZONES: ZoneDef[] = [
     name: "国学学习区",
     emoji: "📜",
     color: "#B8860B",
-    desc: "经史子集 · 传统经典 · 内容完善中，敬请期待",
+    desc: "经史子集 · 传统经典 · 系统研读",
     trackKey: "guoxue",
     entries: [
       { key: "learn", label: "📖 知识学习", url: "/academy/learn?track=guoxue" },
@@ -153,7 +153,7 @@ export default function AcademyPage() {
                       <span className="text-[15px] font-bold text-gray-800">{z.name}</span>
                       {z.coming && (
                         <span className="rounded-full px-2 py-0.5 text-[9px] font-semibold" style={{ backgroundColor: z.color + "15", color: z.color }}>
-                          完善中
+                          持续完善中
                         </span>
                       )}
                       {t && t.myLevel > 0 && (
@@ -168,10 +168,10 @@ export default function AcademyPage() {
                 </div>
 
                 {z.coming ? (
-                  /* 养生/国学等内容完善区：预留说明 */
+                  /* 养生等内容持续完善区：预留说明 */
                   <div className="px-4 pb-3.5 pt-1.5">
                     <div className="rounded-xl bg-gray-50 px-3 py-2.5 text-center text-[11px] text-gray-400">
-                      内容完善中，敬请期待
+                      核心知识点持续完善中
                     </div>
                   </div>
                 ) : (

@@ -151,9 +151,9 @@ export default function FeaturedItemPage() {
                 <line x1="12" y1="8" x2="12.01" y2="8" />
               </svg>
             </div>
-            <p className="text-sm font-bold text-gray-800">下单链路即将开放</p>
+            <p className="text-sm font-bold text-gray-800">下单链路暂未开放</p>
             <p className="mt-1.5 text-xs leading-relaxed text-gray-500">
-              当前为内容架构展示阶段，支付与下单功能将在后续版本开放，敬请期待
+              当前为内容架构展示阶段，支付与下单功能暂未开放
             </p>
             <button
               onClick={() => setShowBuyTip(false)}

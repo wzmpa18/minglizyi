@@ -308,38 +308,25 @@ export default function FriendProfilePage() {
                   编辑资料
                 </button>
               ) : isFriend ? (
-                <button
-                  onClick={handleSendMessage}
-                  className="flex-1 rounded-xl py-2.5 text-sm font-semibold text-white"
-                  style={{ backgroundColor: BRAND }}
+                /* P9-首发裁剪：私聊入口隐藏，好友态展示互动引导 */
+                <div
+                  className="flex-1 rounded-xl py-2.5 text-sm text-center"
+                  style={{ backgroundColor: "#f3ebfa", color: BRAND }}
                 >
-                  发消息
-                </button>
+                  已是好友 · 可在动态广场互动
+                </div>
               ) : (
-                <>
-                  <button
-                    onClick={handleAddFriend}
-                    disabled={requestSent}
-                    className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors"
-                    style={{
-                      backgroundColor: requestSent ? "#f0f0f0" : BRAND,
-                      color: requestSent ? "#999" : "white",
-                    }}
-                  >
-                    {requestSent ? "已申请" : "加好友"}
-                  </button>
-                  <button
-                    onClick={handleSendMessage}
-                    className="flex-1 rounded-xl py-2.5 text-sm font-semibold"
-                    style={{
-                      backgroundColor: "white",
-                      color: BRAND,
-                      border: `1px solid ${BRAND}`,
-                    }}
-                  >
-                    发消息
-                  </button>
-                </>
+                <button
+                  onClick={handleAddFriend}
+                  disabled={requestSent}
+                  className="flex-1 rounded-xl py-2.5 text-sm font-semibold transition-colors"
+                  style={{
+                    backgroundColor: requestSent ? "#f0f0f0" : BRAND,
+                    color: requestSent ? "#999" : "white",
+                  }}
+                >
+                  {requestSent ? "已申请" : "加好友"}
+                </button>
               )}
             </div>
           </div>

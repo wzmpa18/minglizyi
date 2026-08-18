@@ -49,46 +49,8 @@ export function PostToSquareButton({
     return sanitizeTags([base || undefined, ...extraTags]);
   }, [tool, extraTags]);
 
-  return (
-    <>
-      {variant === "block" ? (
-        <button
-          onClick={() => { setPublished(false); setOpen(true); }}
-          className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold active:opacity-80"
-          style={{ backgroundColor: "#f3ebfa", color: BRAND, border: `1px solid ${BRAND}` }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-          发布到广场
-        </button>
-      ) : (
-        <button
-          onClick={() => { setPublished(false); setOpen(true); }}
-          className="flex items-center gap-1 text-xs transition-colors"
-          style={{ color: BRAND }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-          发布到广场
-        </button>
-      )}
-
-      {open && (
-        <PublishSheet
-          tool={tool}
-          autoTitle={autoTitle}
-          autoContent={autoContent}
-          defaultTags={defaultTags}
-          published={published}
-          onPublished={() => setPublished(true)}
-          onClose={() => setOpen(false)}
-          goSquare={() => { setOpen(false); router.push("/discover"); }}
-        />
-      )}
-    </>
-  );
+  // P9-首发裁剪：社交发布功能暂未开放，入口整体隐藏（代码保留，恢复时删除此判断）
+  return null;
 }
 
 // ==================== 发布底部面板 ====================

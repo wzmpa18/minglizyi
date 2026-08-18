@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { BrandHeader } from "@/components/shared";
+import { makeQrDataUrl } from "@/lib/qrLocal";
 
 const BRAND = "#7B2FBE";
 const DOWNLOAD_URL = "https://yandaoguoxue.yandao.vip/friend";
@@ -18,7 +19,14 @@ const FEATURES: { icon: string; title: string; desc: string }[] = [
 ];
 
 export default function DownloadPage() {
-  const downloadQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(APK_URL)}&bgcolor=ffffff&color=7B2FBE`;
+  // P9：本地生成 APK 下载二维码，不依赖境外 qrserver 服务
+  const [downloadQrUrl, setDownloadQrUrl] = useState("");
+
+  useEffect(() => {
+    makeQrDataUrl(APK_URL, { width: 240, dark: "#7B2FBE" })
+      .then(setDownloadQrUrl)
+      .catch(() => {});
+  }, []);
 
   const handleDownloadAPK = () => {
     window.location.href = APK_URL;
@@ -107,29 +115,10 @@ export default function DownloadPage() {
           支持 Android 8.0 及以上系统
         </p>
 
-        {/* iOS 占位按钮 */}
-        <button
-          disabled
-          className="w-full mt-3 rounded-xl py-3.5 text-sm font-bold text-gray-400 flex items-center justify-center gap-2"
-          style={{ backgroundColor: "#e5e5e5", cursor: "not-allowed" }}
-        >
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M12 19l7-7 3 3-7 7-3-3z" />
-            <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
-            <path d="M2 2l7.586 7.586" />
-            <circle cx="11" cy="11" r="2" />
-          </svg>
-          iOS 版本 · 敬请期待
-        </button>
+        {/* iOS 说明（P9：不可点击占位按钮改为纯文本说明） */}
+        <p className="mt-3 text-center text-xs text-gray-400">
+          iOS 版本暂未发布，可先通过 Safari 添加到主屏幕使用网页版
+        </p>
       </div>
 
       {/* ===== 扫码下载区域 ===== */}
@@ -144,15 +133,15 @@ export default function DownloadPage() {
             className="flex h-48 w-48 items-center justify-center rounded-xl border-2 overflow-hidden"
             style={{ borderColor: BRAND }}
           >
-            <img
-              src={downloadQrUrl}
-              alt="下载二维码"
-              className="h-full w-full object-contain"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = "none";
-              }}
-            />
+            {downloadQrUrl ? (
+              <img
+                src={downloadQrUrl}
+                alt="下载二维码"
+                className="h-full w-full object-contain"
+              />
+            ) : (
+              <span className="text-xs text-gray-400">二维码生成中...</span>
+            )}
           </div>
           <p className="mt-3 text-sm font-medium" style={{ color: BRAND }}>
             扫码下载言道国学APP

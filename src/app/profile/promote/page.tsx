@@ -6,7 +6,7 @@ import { BrandHeader } from "@/components/shared";
 import { getTeamMembers, getTeamStats, getMyInviteCode, type TeamMember, type TeamStats } from "@/lib/teamApi";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
-import { captureAndSavePoster, preloadImageAsDataUrl } from "@/lib/posterCapture";
+import { captureAndSavePoster } from "@/lib/posterCapture";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import { listFrozenRewards, listAppeals, submitAppeal, type FrozenReward, type AppealRecord } from "@/lib/antiCheatStore";
@@ -106,21 +106,31 @@ export default function PromotePage() {
     loadData();
   }, [loadData]);
 
-  // 邀请链接
-  const inviteLink = `https://yandaoguoxue.yandao.vip/friend?ref=${userId}`;
-  // 海报二维码
-  const posterQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(inviteLink)}&bgcolor=ffffff&color=7B2FBE`;
-
-  // 海报截图 ref 和预加载状态
-  const posterRef = useRef<HTMLDivElement>(null);
+  // 邀请链接（P9-推广中心：优先服务端签名邀请链接，降级旧 ref 链接）
+  const [inviteLink, setInviteLink] = useState(`https://yandaoguoxue.yandao.vip/friend?ref=${userId}`);
+  // 海报二维码（本地生成，不依赖境外服务）
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
 
-  // 预加载二维码为 data URL，避免 html2canvas 跨域污染
+  // 海报截图 ref
+  const posterRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    if (posterQrUrl) {
-      preloadImageAsDataUrl(posterQrUrl).then(setQrDataUrl);
-    }
-  }, [posterQrUrl]);
+    (async () => {
+      try {
+        const { getInviteLink } = await import("@/lib/inviteApi");
+        const linkData = await getInviteLink();
+        if (linkData?.inviteLink) setInviteLink(linkData.inviteLink);
+      } catch { /* 降级旧链接 */ }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!inviteLink) return;
+    import("@/lib/qrLocal")
+      .then(({ makeQrDataUrl }) => makeQrDataUrl(inviteLink, { width: 300, dark: "#7B2FBE" }))
+      .then(setQrDataUrl)
+      .catch(() => {});
+  }, [inviteLink]);
 
   // 显示轻提示
   const showToast = (msg: string) => {
@@ -202,8 +212,8 @@ export default function PromotePage() {
     }
   };
 
-  // 二维码图片源（优先使用预加载的 data URL）
-  const qrSrc = qrDataUrl || posterQrUrl;
+  // 二维码图片源（本地生成 data URL）
+  const qrSrc = qrDataUrl;
 
   return (
     <div style={{ maxWidth: "420px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f5f5f5", display: "flex", flexDirection: "column" }}>
@@ -568,7 +578,11 @@ export default function PromotePage() {
             display: "inline-block", padding: 10,
             border: `2px solid ${BRAND}`, borderRadius: 12, backgroundColor: "#fff",
           }}>
-            <img src={qrSrc} alt="下载二维码" style={{ width: 160, height: 160, display: "block" }} />
+            {qrSrc ? (
+              <img src={qrSrc} alt="下载二维码" style={{ width: 160, height: 160, display: "block" }} />
+            ) : (
+              <div style={{ width: 160, height: 160, display: "flex", alignItems: "center", justifyContent: "center", color: "#bbb", fontSize: 12 }}>二维码生成中...</div>
+            )}
           </div>
         </div>
 
@@ -578,7 +592,7 @@ export default function PromotePage() {
             长按识别二维码，立即下载安卓版
           </div>
           <div style={{ fontSize: 12, color: "#999", marginTop: 4 }}>
-            iOS 版本 敬请期待
+            iOS 版本暂未发布
           </div>
         </div>
 
@@ -666,7 +680,7 @@ export default function PromotePage() {
                   长按识别二维码，立即下载安卓版
                 </div>
                 <div style={{ fontSize: 11, color: "#999", marginTop: 2 }}>
-                  iOS 版本 敬请期待
+                  iOS 版本暂未发布
                 </div>
               </div>
 
