@@ -22,8 +22,8 @@ import {
   MembershipStatus,
   OrderRecord,
 } from "@/lib/membershipStore";
-import { updateUserProfile, getClientUserId } from "@/lib/auth";
-import { processConsumptionRebate } from "@/lib/inviteStore";
+import { updateUserProfile } from "@/lib/auth";
+import { reportConsumptionRebate } from "@/lib/inviteApi";
 import { redeemCode, getMyRedemptions } from "@/lib/redeemCodeStore";
 import { getToolConfig } from "@/lib/toolConfigStore";
 
@@ -104,18 +104,12 @@ export default function MembershipPage() {
         setSuccessInfo({ planName: plan.name, level: selectedPlan });
         setShowSuccess(true);
 
-        // v19.6: 处理消费返佣（二级分销体系）
-        try {
-          const currentUserId = getClientUserId();
-          if (currentUserId && plan.price > 0) {
-            const rebateResult = processConsumptionRebate(currentUserId, plan.price);
-            if (rebateResult.firstLevelReward > 0 || rebateResult.secondLevelReward > 0) {
-              console.log(`[v19.6] 消费返佣已发放: 一级${rebateResult.firstLevelReward}积分, 二级${rebateResult.secondLevelReward}积分`);
-            }
+        // v25.0.40: 消费返佣上报服务端统一账本（订单号幂等，JWT识别消费人）
+        void reportConsumptionRebate({ orderNo: order.id, amount: plan.price, product: plan.name }).then((r) => {
+          if (r && r.granted) {
+            console.log(`[v25.0.40] 消费返佣已入账: 一级${r.level1Points || 0}积分, 二级${r.level2Points || 0}积分`);
           }
-        } catch (e) {
-          console.error("[v19.6] 消费返佣处理异常:", e);
-        }
+        });
 
         // 刷新订单列表
         setOrders(getOrders());

@@ -1,0 +1,6 @@
+        // v25.0.40: 消费返佣上报服务端统一账本（订单号幂等，JWT识别消费人）
+        void reportConsumptionRebate({ orderNo: order.id, amount: plan.price, product: plan.name }).then((r) => {
+          if (r && r.granted) {
+            console.log(`[v25.0.40] 消费返佣已入账: 一级${r.level1Points || 0}积分, 二级${r.level2Points || 0}积分`);
+          }
+        });

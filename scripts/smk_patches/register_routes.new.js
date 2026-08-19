@@ -1903,7 +1903,6 @@ module.exports = {
   authMiddleware,
   logOperation,
   grantFirstPayReward,
-  grantConsumptionRebate,
   grantPointsTx,
   inviteRewardPoints,
 };

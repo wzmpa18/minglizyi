@@ -1,0 +1,3 @@
+      const rewards = db.prepare(
+        "SELECT id, invitee_id, reward_type, points, status, created_at FROM invite_rewards WHERE inviter_id = ? ORDER BY created_at DESC LIMIT 100"
+      ).all(userId);

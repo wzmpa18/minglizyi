@@ -1,0 +1,5 @@
+const CONSUMPTION_REBATE_KEY = 'yandao_consumption_rebates'; // 消费返佣台账（按接收人 userId 检索）
+
+// 消费返佣比例（v19.7_final 统一标准：全产品一级15%、二级8%）
+const REBATE_RATE_LEVEL1 = 0.15; // 一级返佣：消费金额的 15% 换算积分
+const REBATE_RATE_LEVEL2 = 0.08; // 二级返佣：消费金额的 8% 换算积分

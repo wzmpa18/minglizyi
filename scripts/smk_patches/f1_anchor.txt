@@ -1,0 +1,7 @@
+    const data = await authGet<any>(`/api/auth/points/transactions?limit=${limit}`);
+    if (!data || !data.success || !data.data) return null;
+    return data.data as PointsTransactions;
+  } catch {
+    return null;
+  }
+}

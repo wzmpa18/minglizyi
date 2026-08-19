@@ -532,6 +532,12 @@ function myOrgIds(req) {
 // ==================== AI 通道（复用 /api/ai/chat 同款配置） ====================
 // P6-I 原则2：所有 AI 调用写入 ai_call_logs（场景/关联对象/token 估算），重复内容走库缓存不调 AI
 
+// v25.0.39：AI 留痕取实际调用通道（与 callAI 同口径），杜绝 ai_model 失真
+function currentAIModel() {
+  const deepseekKey = process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY || '';
+  return deepseekKey ? 'deepseek-chat' : (process.env.HUNYUAN_MODEL || 'hy3');
+}
+
 async function callAI(systemPrompt, userPrompt, scene = 'other', refs = {}) {
   // P7-TCM-EXAM-01 4.3：场景感知超时——大输出场景（解析/命题）300s，其余 90s
   const LONG_SCENES = new Set(['parse_material', 'gen_questions', 'gen_full']);
@@ -768,12 +774,16 @@ function splitForParse(text) {
 async function runParseTask(materialId, text) {
   const d = getDb();
   const mat = d.prepare('SELECT track, category FROM materials WHERE id = ?').get(materialId) || {};
+  // v25.0.39：来源标签——按内容工厂规范 3.3，老师/流派专题资料仅作"来源标签"（source_author），
+  // 不进入公共学科大类的标题/正文；公域典籍（无绑定来源）留空
+  const src = d.prepare('SELECT sr.author, sr.name FROM materials m JOIN source_registry sr ON m.source_id = sr.id WHERE m.id = ?').get(materialId) || {};
+  const sourceAuthor = String((src && (src.author || src.name)) || '').slice(0, 60);
   d.prepare(`UPDATE materials SET status='parsing', updated_at=datetime('now','localtime') WHERE id=?`).run(materialId);
   const chunks = splitForParse(text);
   // P6-TCM-02 2.1：来源证据链字段 + 2.3 三级质量闸门字段一并写入
   const insert = d.prepare(`INSERT INTO knowledge_points (material_id, chapter, title, content, tags, difficulty, status, source_text,
-    track, category, content_hash, govern_state, q_score, q_checks, source_location, extraction_time, ai_model, prompt_version, confidence_score, conflict_group)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+    track, category, content_hash, govern_state, q_score, q_checks, source_author, source_location, extraction_time, ai_model, prompt_version, confidence_score, conflict_group)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
   const hashExists = d.prepare('SELECT id FROM knowledge_points WHERE content_hash=? LIMIT 1');
   let n = 0;
   let reused = 0; // P6-I-PLUS 规则4：知识点级指纹复用计数
@@ -807,9 +817,9 @@ async function runParseTask(materialId, text) {
           JSON.stringify(Array.isArray(kp.tags) ? kp.tags.slice(0, 6) : []),
           ['easy', 'medium', 'hard'].includes(kp.difficulty) ? kp.difficulty : 'easy', 'pending',
           String(kp.content || '').slice(0, 300), mat.track || '', mat.category || '', h,
-          gate.state, gate.score, JSON.stringify(gate.checks),
+          gate.state, gate.score, JSON.stringify(gate.checks), sourceAuthor,
           String(kp.location || `段${i + 1}`).slice(0, 60),
-          new Date().toISOString().slice(0, 19).replace('T', ' '), 'douban-pro-32k', PARSE_PROMPT_VERSION,
+          new Date().toISOString().slice(0, 19).replace('T', ' '), currentAIModel(), PARSE_PROMPT_VERSION,
           Number(kp.confidence ?? 0.85), conflictGroup);
         n++;
       }

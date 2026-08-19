@@ -1,0 +1,20 @@
+  // v25.0.40 社交×营销绑定：消费返佣服务端统一账本（按订单号幂等，替代前端本地模拟）
+  // 链路：消费用户 C → 一级邀请人 A（返15%积分） → 二级邀请人 B（返8%积分）
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS consumption_rebates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      order_no TEXT NOT NULL UNIQUE,
+      consumer_id INTEGER NOT NULL,
+      amount REAL NOT NULL,
+      product TEXT DEFAULT '',
+      level1_inviter_id INTEGER,
+      level1_points INTEGER DEFAULT 0,
+      level2_inviter_id INTEGER,
+      level2_points INTEGER DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'granted',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_crebate_consumer ON consumption_rebates(consumer_id);
+    CREATE INDEX IF NOT EXISTS idx_crebate_l1 ON consumption_rebates(level1_inviter_id);
+    CREATE INDEX IF NOT EXISTS idx_crebate_l2 ON consumption_rebates(level2_inviter_id);
+  `);

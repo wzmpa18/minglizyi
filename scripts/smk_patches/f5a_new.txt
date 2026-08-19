@@ -1,0 +1,60 @@
+  // v25.0.40: 统一文本发送通道（手动输入与邀请分享共用，含防抖/乐观更新/失败标记重发）
+  const sendTextMessage = useCallback((text: string) => {
+    if (!text || sending) return;
+
+    const optimistic: ChatMessage = {
+      id: "msg_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
+      senderId: currentUserId,
+      senderName: currentUserName,
+      content: text,
+      type: "text",
+      timestamp: new Date().toISOString(),
+      status: "sending",
+    };
+
+    saveChatMessage(chatKey, optimistic);
+    setMessages((prev) => [...prev, optimistic]);
+    setSending(true);
+
+    void sendPrivateMessage(friendId, text).then((r) => {
+      setSending(false);
+      if (r && r.success && r.message) {
+        confirmServerMessage(optimistic.id, r.message);
+        return;
+      }
+      // 失败：敏感词拦截/开关关闭/登录过期/网络异常——保留消息标记失败，可点击重发
+      markMessageFailed(optimistic.id, (r && r.error) || "消息发送失败，请重试", !!(r && (r as any).code === 401));
+    }).catch(() => {
+      setSending(false);
+      markMessageFailed(optimistic.id, "网络连接失败，请检查网络后重试", false);
+    });
+  }, [chatKey, friendId, currentUserId, currentUserName, sending, confirmServerMessage, markMessageFailed]);
+
+  const handleSend = useCallback(() => {
+    const text = inputText.trim();
+    if (!text) return;
+    // v25.0.38 P0-3：发送防抖——未收到后端返回前禁止重复提交
+    if (sending) return;
+    setInputText("");
+    sendTextMessage(text);
+  }, [inputText, sending, sendTextMessage]);
+
+  // v25.0.40 社交×营销绑定：聊天内邀请分享入口——把我的专属邀请链接作为消息发给好友
+  const [inviteSharing, setInviteSharing] = useState(false);
+  const handleShareInvite = useCallback(async () => {
+    if (sending || inviteSharing) return;
+    setInviteSharing(true);
+    try {
+      const { getInviteLink } = await import("@/lib/inviteApi");
+      const linkData = await getInviteLink();
+      if (!linkData || !linkData.inviteLink) {
+        alert("邀请链接获取失败，请稍后重试");
+        return;
+      }
+      sendTextMessage(`我邀请你一起学国学（排盘/学堂/题库一站学习）：${linkData.inviteLink}`);
+    } catch (e) {
+      alert("邀请分享失败，请稍后重试");
+    } finally {
+      setInviteSharing(false);
+    }
+  }, [sending, inviteSharing, sendTextMessage]);

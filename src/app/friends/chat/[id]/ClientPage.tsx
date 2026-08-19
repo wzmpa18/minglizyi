@@ -147,11 +147,9 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
     else alert(err || "消息发送失败，请重试");
   }, [chatKey]);
 
-  const handleSend = useCallback(() => {
-    const text = inputText.trim();
-    if (!text) return;
-    // v25.0.38 P0-3：发送防抖——未收到后端返回前禁止重复提交
-    if (sending) return;
+  // v25.0.40: 统一文本发送通道（手动输入与邀请分享共用，含防抖/乐观更新/失败标记重发）
+  const sendTextMessage = useCallback((text: string) => {
+    if (!text || sending) return;
 
     const optimistic: ChatMessage = {
       id: "msg_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
@@ -165,7 +163,6 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
 
     saveChatMessage(chatKey, optimistic);
     setMessages((prev) => [...prev, optimistic]);
-    setInputText("");
     setSending(true);
 
     void sendPrivateMessage(friendId, text).then((r) => {
@@ -180,7 +177,36 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
       setSending(false);
       markMessageFailed(optimistic.id, "网络连接失败，请检查网络后重试", false);
     });
-  }, [inputText, chatKey, friendId, currentUserId, currentUserName, sending, confirmServerMessage, markMessageFailed]);
+  }, [chatKey, friendId, currentUserId, currentUserName, sending, confirmServerMessage, markMessageFailed]);
+
+  const handleSend = useCallback(() => {
+    const text = inputText.trim();
+    if (!text) return;
+    // v25.0.38 P0-3：发送防抖——未收到后端返回前禁止重复提交
+    if (sending) return;
+    setInputText("");
+    sendTextMessage(text);
+  }, [inputText, sending, sendTextMessage]);
+
+  // v25.0.40 社交×营销绑定：聊天内邀请分享入口——把我的专属邀请链接作为消息发给好友
+  const [inviteSharing, setInviteSharing] = useState(false);
+  const handleShareInvite = useCallback(async () => {
+    if (sending || inviteSharing) return;
+    setInviteSharing(true);
+    try {
+      const { getInviteLink } = await import("@/lib/inviteApi");
+      const linkData = await getInviteLink();
+      if (!linkData || !linkData.inviteLink) {
+        alert("邀请链接获取失败，请稍后重试");
+        return;
+      }
+      sendTextMessage(`我邀请你一起学国学（排盘/学堂/题库一站学习）：${linkData.inviteLink}`);
+    } catch (e) {
+      alert("邀请分享失败，请稍后重试");
+    } finally {
+      setInviteSharing(false);
+    }
+  }, [sending, inviteSharing, sendTextMessage]);
 
   // v25.0.38 P0-2：失败消息点击重发
   const handleResend = useCallback((msgId: string) => {
@@ -676,6 +702,19 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
                 <circle cx="8.5" cy="8.5" r="1.5" />
                 <polyline points="21 15 16 10 5 21" />
+              </svg>
+            </button>            <button
+              onClick={handleShareInvite}
+              disabled={inviteSharing || sending}
+              aria-label="分享邀请链接"
+              className="shrink-0 rounded-xl p-2.5 transition-colors disabled:opacity-40"
+              style={{ border: `1px solid ${BRAND}40`, color: BRAND, backgroundColor: "#f9f5fc" }}
+              title="把我的邀请链接发给好友"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                <polyline points="16 6 12 2 8 6" />
+                <line x1="12" y1="2" x2="12" y2="15" />
               </svg>
             </button>
             <input

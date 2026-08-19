@@ -1,0 +1,7 @@
+      // 处理消费返佣
+      try {
+        const userId = getClientUserId();
+        processConsumptionRebate(userId, PRICE);
+      } catch (rebateErr) {
+        console.error("返佣处理失败:", rebateErr);
+      }

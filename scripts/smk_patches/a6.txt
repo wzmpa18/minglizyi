@@ -1,0 +1,1 @@
+      const totalRewardPoints = rewards.reduce((s, r) => s + (r.points || 0), 0);

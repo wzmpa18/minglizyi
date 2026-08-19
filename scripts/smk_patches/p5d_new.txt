@@ -1,0 +1,4 @@
+        invite_register: '邀请注册奖励',
+        invite_first_pay: '邀请付费奖励',
+        rebate_level1: '消费返佣(一级)',
+        rebate_level2: '消费分成(二级)',

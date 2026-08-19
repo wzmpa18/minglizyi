@@ -1,0 +1,6 @@
+      // v25.0.40: 消费返佣上报服务端统一账本（本工具单次购买，固定订单键保证幂等）
+      void reportConsumptionRebate({ orderNo: `bnm_${getClientUserId()}`, amount: PRICE, product: "数字能量·号码匹配报告" }).then((r) => {
+        if (r && r.granted) {
+          console.log(`[v25.0.40] 消费返佣已入账: 一级${r.level1Points || 0}积分, 二级${r.level2Points || 0}积分`);
+        }
+      });

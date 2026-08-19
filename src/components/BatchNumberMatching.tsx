@@ -19,7 +19,7 @@ import { callAI, getPermissionStatus } from "@/lib/aiService";
 import { getClientUserId } from "@/lib/auth";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
-import { processConsumptionRebate } from "@/lib/inviteStore";
+import { reportConsumptionRebate } from "@/lib/inviteApi";
 import { ShareButton } from "@/components/ShareButton";
 
 // ==================== 常量 ====================
@@ -412,13 +412,12 @@ export default function BatchNumberMatching({ toolType }: BatchNumberMatchingPro
       setPaid(true);
       setPaidStatusState(status);
 
-      // 处理消费返佣
-      try {
-        const userId = getClientUserId();
-        processConsumptionRebate(userId, PRICE);
-      } catch (rebateErr) {
-        console.error("返佣处理失败:", rebateErr);
-      }
+      // v25.0.40: 消费返佣上报服务端统一账本（本工具单次购买，固定订单键保证幂等）
+      void reportConsumptionRebate({ orderNo: `bnm_${getClientUserId()}`, amount: PRICE, product: "数字能量·号码匹配报告" }).then((r) => {
+        if (r && r.granted) {
+          console.log(`[v25.0.40] 消费返佣已入账: 一级${r.level1Points || 0}积分, 二级${r.level2Points || 0}积分`);
+        }
+      });
 
       showToast("支付成功，正在生成报告...");
       setStep("result");

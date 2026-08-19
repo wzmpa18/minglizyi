@@ -1,0 +1,7 @@
+
+      // v25.0.40：消费返佣明细（我作为一级/二级邀请人收到的返佣）+ 接收人视角统计
+      const rebates = db.prepare(
+        "SELECT order_no, consumer_id, amount, product, level1_inviter_id, level1_points, level2_inviter_id, level2_points, created_at FROM consumption_rebates WHERE level1_inviter_id = ? OR level2_inviter_id = ? ORDER BY created_at DESC LIMIT 100"
+      ).all(userId, userId);
+      const rebateEarned = (r) => (r.level1_inviter_id === userId ? r.level1_points : 0) + (r.level2_inviter_id === userId ? r.level2_points : 0);
+      const totalRebatePoints = rebates.reduce((s, r) => s + rebateEarned(r), 0);
