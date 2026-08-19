@@ -6,7 +6,7 @@ import { makeQrDataUrl } from "@/lib/qrLocal";
 
 const BRAND = "#7B2FBE";
 const DOWNLOAD_URL = "https://yandaoguoxue.yandao.vip/friend";
-const APK_URL = "https://yandaoguoxue.yandao.vip/app-download/guoxue-chuancheng-v1.0-release.apk";
+const APK_URL = "https://yandaoguoxue.yandao.vip/app-download/yandao-guoxue-v25.0.41-release.apk";
 
 /** 功能亮点列表 */
 const FEATURES: { icon: string; title: string; desc: string }[] = [
