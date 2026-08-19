@@ -40,10 +40,14 @@ grep -q 'reconcileInviteFriendships' src/lib/backend/register_routes.js || { ech
 echo "内容门禁 OK"
 
 echo "--- [2] 构建（build.sh 静态导出） ---"
+set -o pipefail
 bash build.sh 2>&1 | tail -6
 
 echo "--- [3] 页面导出校验 ---"
-for p in friends user groups messages discover index; do
+# 首页为单文件导出 out/index.html（非目录式）
+test -f "out/index.html" || { echo "FATAL: out/index.html missing"; exit 1; }
+echo "OK: index(单文件导出)"
+for p in friends user groups messages discover; do
   test -f "out/${p}/index.html" || { echo "FATAL: out/${p}/index.html missing"; exit 1; }
   echo "OK: ${p}"
 done
