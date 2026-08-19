@@ -6,7 +6,7 @@
 // 数据源：GET /api/social/users/:userId/profile（含好友/备注/拉黑关系）
 // ============================================================================
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BrandHeader } from "@/components/shared";
 import { ConfirmDialog } from "@/components/ui";
@@ -35,7 +35,8 @@ const LEVEL_META: Record<string, { name: string; color: string }> = {
   lifetime: { name: "终身会员", color: "#e74c3c" },
 };
 
-export default function UserProfilePage() {
+// 静态导出兼容：useSearchParams 必须包在 Suspense 内（同 friends/profile 模式）
+function UserProfileInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const uid = searchParams.get("uid") || "";
@@ -468,5 +469,13 @@ export default function UserProfilePage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function UserProfilePage() {
+  return (
+    <Suspense fallback={null}>
+      <UserProfileInner />
+    </Suspense>
   );
 }
