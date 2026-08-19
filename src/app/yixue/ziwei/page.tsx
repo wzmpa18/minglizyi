@@ -467,6 +467,9 @@ export default function ZiweiPage() {
   // v19.2: 流日/流时选中状态
   const [selectedLiuri, setSelectedLiuri] = useState<number>(-1);
   const [selectedLiushi, setSelectedLiushi] = useState<number>(-1);
+  // v25.0.41（20260819用户指令）：童限前置模式——点击大限行最前"童限"格进入，
+  // 虚线三角箭头指本命（命宫），下方展开童限/小限对照行与童限期（起限前）流年流月流日流时
+  const [tongxianActive, setTongxianActive] = useState(false);
   // v25.0.27: ZW-OVERLAY 叠宫逐层开关（P6-补03 交互规则修正：默认仅展示本命盘，
   // 大限/流年/流月/流日/流时必须用户主动点击对应单元格才逐层展开，禁止自动联动）
   const [showOverlay, setShowOverlay] = useState(false);
@@ -690,11 +693,49 @@ export default function ZiweiPage() {
     return decadalData.map(d => zwDecadal.find(n => n.gan === d.decadalGan && n.zhi === d.decadalZhi) || null);
   }, [zwDecadal, decadalData]);
 
+  // v25.0.41（20260819用户指令）童限年列表：起限前虚岁1~起运岁-1；
+  // 年干支与引擎yearGanZhi同式（(y-4)%10/%12），流年宫=年支所在宫（与引擎yearly一致），
+  // 小限宫=ages含该虚岁之宫，童限宫恒为命宫
+  const tongxianYears = useMemo(() => {
+    if (!result || !decadalData.length) return [];
+    const qiyunAge = decadalData[0]?.ageRange?.[0] || 0;
+    if (qiyunAge <= 1) return [];
+    const ZHI_STD = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"];
+    const list: Array<{
+      year: number; age: number; gan: string; zhi: string; mutagen: string[];
+      palaceIndex: number; palaceName: string; xiaoPalaceName: string; xiaoPalaceIdx: number;
+    }> = [];
+    for (let age = 1; age < qiyunAge; age++) {
+      const y = year + age - 1;
+      const gan = GAN_NAMES[(y - 4) % 10];
+      const zhi = ZHI_STD[(y - 4) % 12];
+      const idx = ZHI_NAMES.indexOf(zhi);
+      const p = result.palaces.find(pp => pp.index === idx || ZHI_NAMES.indexOf(pp.earthlyBranch) === idx);
+      const xiao = result.palaces.find(pp => (pp.ages || []).includes(age));
+      const sh = TIANGAN_SIHUA[gan];
+      list.push({
+        year: y, age, gan, zhi,
+        mutagen: sh ? [sh.lu, sh.quan, sh.ke, sh.ji] : [],
+        palaceIndex: idx,
+        palaceName: p?.name || "",
+        xiaoPalaceName: xiao?.name || "",
+        xiaoPalaceIdx: xiao ? (xiao.index !== undefined ? xiao.index : ZHI_NAMES.indexOf(xiao.earthlyBranch)) : -1,
+      });
+    }
+    return list;
+  }, [result, decadalData, year]);
+
   // 流年数据（v25.0.24 ZW-TIME 引擎：当前选中大限对应的10年，宫位/干支/四化由引擎统一计算）
   const liunianYears = useMemo(() => {
     if (!zwInput || !decadalData.length) return [];
+    // v25.0.41（20260819用户指令）：童限模式下流年行展示童限期（起限前）各年
+    if (tongxianActive) return tongxianYears;
     try {
-      return getZwYearlyList(zwInput, selectedDaxian).map(n => ({
+      // v25.0.41 修正：selectedDaxian为起运年龄序（命宫起顺/逆），引擎大限列表为宫序（寅→丑），
+      // 同索引直传会取错大限（v25.0.25已在zwDecadalAligned按大限干支对齐修正同类错位，此处沿用同一规则）
+      const aligned = zwDecadalAligned[selectedDaxian];
+      const engIdx = aligned ? zwDecadal.indexOf(aligned) : -1;
+      return getZwYearlyList(zwInput, engIdx >= 0 ? engIdx : selectedDaxian).map(n => ({
         year: n.year ?? 0,
         age: n.age ?? 0,
         gan: n.gan,
@@ -705,7 +746,7 @@ export default function ZiweiPage() {
         solarDate: n.solarDate,
       }));
     } catch { return []; }
-  }, [zwInput, decadalData, selectedDaxian]);
+  }, [zwInput, decadalData, selectedDaxian, tongxianActive, tongxianYears, zwDecadalAligned, zwDecadal]);
 
   // 流月数据（v25.0.24 ZW-TIME 引擎：按农历月真实边界计算，宫位由引擎输出）
   const liuyueMonths = useMemo(() => {
@@ -778,6 +819,7 @@ export default function ZiweiPage() {
   // v25.0.32（P7-紫微布局-02 E区）：七层时间层级动态星——大限/流年/流月/流日/流时/童限/小限
   // 每层仅在该层被用户主动选中后参与计算（zwSeriesStars 为冻结引擎，仅做数据调用不改算法）；
   // 童限/小限补齐：虚岁由用户选定的流年决定——虚岁<起运岁=童限（童限宫=命宫），否则小限（宫=ages含该虚岁之宫，iztro ages 表）
+  // v25.0.41（20260819用户指令）：童限期内童限与小限同时显示（童限宫=命宫＋小限宫=ages含虚岁之宫）
   const dynamicStars = useMemo(() => {
     const dxNode = dxLayer ? zwDecadalAligned[selectedDaxian] : null;
     const lnNode = lnLayer ? liunianYears[selectedLiunian] : null;
@@ -789,7 +831,7 @@ export default function ZiweiPage() {
     const tongNode = lnLayer && curAge > 0 && qiyunAge > 0 && curAge < qiyunAge
       ? (result?.palaces?.find((p) => p.name === "命宫") ?? null)
       : null;
-    const xiaoNode = lnLayer && curAge > 0 && !tongNode
+    const xiaoNode = lnLayer && curAge > 0
       ? (result?.palaces?.find((p) => (p.ages || []).includes(curAge)) ?? null)
       : null;
     const gzOf = (n: { gan?: string; zhi?: string; heavenlyStem?: string; earthlyBranch?: string } | null) => {
@@ -1648,7 +1690,9 @@ export default function ZiweiPage() {
           {/* ---- v25.0.24: ZW-TIME 时间轴状态卡（命盘→大运→流年→流月→流日层级路径 + 流命宫 + 运限四化） ---- */}
           {decadalData.length > 0 && (() => {
             // v25.0.25 修正：改用按干支对齐后的引擎大限节点（原宫序/年龄序同索引取值会错宫）
-            const dn = zwDecadalAligned[selectedDaxian];
+            // v25.0.41（20260819用户指令）：童限模式（起限前）无大限层，时间轴首段显示童限
+            const dn = tongxianActive ? null : zwDecadalAligned[selectedDaxian];
+            const txQiyun = decadalData[0]?.ageRange?.[0] || 0;
             const yn = liunianYears[selectedLiunian];
             const mn = selectedLiuyue >= 0 ? liuyueMonths[selectedLiuyue] : null;
             const dayN = selectedLiuri >= 0 ? liuriDays[selectedLiuri] : null;
@@ -1673,7 +1717,7 @@ export default function ZiweiPage() {
                   <span style={{ background: BRAND_PURPLE, color: "#fff", fontWeight: "bold", padding: "1px 6px", borderRadius: "8px", fontSize: "9px" }}>ZW-TIME</span>
                   <span style={{ color: "#666" }}>时间轴：</span>
                   <span style={{ fontWeight: "bold", color: BRAND_PURPLE_DARK }}>
-                    大限{dn ? `${dn.gan}${dn.zhi}(${dn.sub})` : "-"}
+                    {tongxianActive ? `童限(虚岁1-${txQiyun - 1}·起限前)` : `大限${dn ? `${dn.gan}${dn.zhi}(${dn.sub})` : "-"}`}
                   </span>
                   <span style={{ color: "#999" }}>›</span>
                   <span style={{ fontWeight: "bold" }}>{yn ? `${yn.year}年${yn.gan}${yn.zhi}` : "-"}</span>
@@ -1738,14 +1782,54 @@ export default function ZiweiPage() {
               <div style={{ display: "flex", borderBottom: "1px solid #ccc", background: "#fafafa" }}>
                 {/* 大限标签 */}
                 <div style={{ width: "22px", display: "flex", alignItems: "center", justifyContent: "center", borderRight: "1px solid #ccc", fontSize: "10px", color: "#333", fontWeight: "bold", writingMode: "vertical-rl", textOrientation: "upright", letterSpacing: "2px", padding: "4px 1px", lineHeight: "1" }}>大限</div>
-                {/* 大限12格 */}
+                {/* 大限12格（v25.0.41 20260819用户指令：最前增加"童限"前置格，起限前可选，对标文墨天机"起限前(童限)"） */}
                 <div style={{ flex: 1, display: "flex", overflowX: "auto" }}>
+                  {tongxianYears.length > 0 && (() => {
+                    const txQiyun = decadalData[0]?.ageRange?.[0] || 0;
+                    const txActive = tongxianActive;
+                    const mingP = result?.palaces.find(p => p.name === "命宫");
+                    const mingIdx = mingP ? (mingP.index !== undefined ? mingP.index : ZHI_NAMES.indexOf(mingP.earthlyBranch)) : -1;
+                    return (
+                      <div
+                        key="tongxian"
+                        onClick={() => {
+                          setTongxianActive(true);
+                          // 20260819用户指令：点击童限→排盘状态箭头对本命（虚线三角指命宫）
+                          if (mingIdx >= 0) setFocusedPalace(mingIdx);
+                          // 童限非大限层：回到本命盘状态，深层选择重置，等待用户点童限流年
+                          setSelectedLiunian(0);
+                          setLnLayer(false);
+                          setDxLayer(false);
+                          setShowOverlay(false);
+                          setSelectedLiuyue(-1);
+                          setSelectedLiuri(-1);
+                          setSelectedLiushi(-1);
+                        }}
+                        style={{
+                          flex: "0 0 auto",
+                          width: `${100/12}%`,
+                          minWidth: "28px",
+                          borderRight: "1px solid #ccc",
+                          padding: "3px 1px",
+                          textAlign: "center",
+                          cursor: "pointer",
+                          background: txActive ? "#fef3c7" : "#fff",
+                          lineHeight: "1.3",
+                        }}
+                        title={`起限前(童限)：虚岁1-${txQiyun - 1}，童限宫=命宫`}
+                      >
+                        <div style={{ fontSize: "9px", color: "#b45309" }}>起限前</div>
+                        <div style={{ fontSize: "12px", fontWeight: "bold", color: "#d97706" }}>童限</div>
+                      </div>
+                    );
+                  })()}
                   {decadalData.map((d, i) => {
-                    const isActive = i === selectedDaxian;
+                    const isActive = i === selectedDaxian && !tongxianActive;
                     return (
                       <div
                         key={`dy-${i}`}
                         onClick={() => {
+                          setTongxianActive(false);
                           setSelectedDaxian(i);
                           // v25.0.27: 点击大限=用户主动展开大限叠宫层（不自动带出流年层级）
                           setDxLayer(true);
@@ -1784,6 +1868,40 @@ export default function ZiweiPage() {
 
               {/* v25.0.29（P7-5）：限四化行移除——四化统一写在宫内对应星曜下方（红=本命/蓝=大限/绿=流年） */}
 
+              {/* v25.0.41（20260819用户指令）：童限/小限对照行——点击童限后出现（童限宫=命宫，小限宫随选定童限流年虚岁） */}
+              {tongxianActive && tongxianYears.length > 0 && (() => {
+                const cur = tongxianYears[selectedLiunian] || tongxianYears[0];
+                const txQiyun = decadalData[0]?.ageRange?.[0] || 0;
+                const mingP = result?.palaces.find(p => p.name === "命宫");
+                const mingIdx = mingP ? (mingP.index !== undefined ? mingP.index : ZHI_NAMES.indexOf(mingP.earthlyBranch)) : -1;
+                return (
+                  <div style={{ display: "flex", borderBottom: "1px solid #ccc", background: "#fffbeb" }}>
+                    <div style={{ width: "22px", display: "flex", alignItems: "center", justifyContent: "center", borderRight: "1px solid #ccc", fontSize: "10px", color: "#b45309", fontWeight: "bold", writingMode: "vertical-rl", textOrientation: "upright", letterSpacing: "2px", padding: "4px 1px", lineHeight: "1" }}>童限</div>
+                    <div style={{ flex: 1, display: "flex", overflowX: "auto" }}>
+                      <div
+                        onClick={() => { if (mingIdx >= 0) setFocusedPalace(mingIdx); }}
+                        style={{ flex: "0 0 auto", width: "25%", padding: "3px 1px", textAlign: "center", cursor: "pointer", borderRight: "1px solid #f3e8d0" }}
+                        title="童限宫即命宫（点击箭头指本命）"
+                      >
+                        <div style={{ fontSize: "9px", color: "#b45309" }}>童限宫</div>
+                        <div style={{ fontSize: "12px", fontWeight: "bold", color: "#d97706" }}>命宫</div>
+                      </div>
+                      <div
+                        onClick={() => { if (cur.xiaoPalaceIdx >= 0) setFocusedPalace(cur.xiaoPalaceIdx); }}
+                        style={{ flex: "0 0 auto", width: "25%", padding: "3px 1px", textAlign: "center", cursor: "pointer", borderRight: "1px solid #f3e8d0" }}
+                        title="小限宫（点击箭头指小限宫）"
+                      >
+                        <div style={{ fontSize: "9px", color: "#be185d" }}>小限{cur.age}岁</div>
+                        <div style={{ fontSize: "12px", fontWeight: "bold", color: "#be185d" }}>{cur.xiaoPalaceName || "-"}</div>
+                      </div>
+                      <div style={{ flex: 1, minWidth: "0", padding: "3px 4px", fontSize: "8px", color: "#92400e", lineHeight: "1.4", display: "flex", alignItems: "center" }}>
+                        起限前虚岁1-{txQiyun - 1}为童限（童限宫=命宫）；点下方流年看童限期流月流日流时
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* 流年行 */}
               <div style={{ display: "flex", borderBottom: "1px solid #ccc", background: "#fafafa" }}>
                 <div style={{ width: "22px", display: "flex", alignItems: "center", justifyContent: "center", borderRight: "1px solid #ccc", fontSize: "10px", color: "#333", fontWeight: "bold", writingMode: "vertical-rl", textOrientation: "upright", letterSpacing: "2px", padding: "4px 1px", lineHeight: "1" }}>流年</div>
@@ -1817,7 +1935,7 @@ export default function ZiweiPage() {
                           lineHeight: "1.3",
                         }}
                       >
-                        <div style={{ fontSize: "9px", color: isCurrent ? "#fff" : "#666" }}>{y.year % 100}</div>
+                        <div style={{ fontSize: "9px", color: isCurrent ? "#fff" : "#666", whiteSpace: "nowrap", overflow: "hidden" }}>{tongxianActive ? `${y.year % 100}·${y.age}岁` : y.year % 100}</div>
                         <div style={{ fontSize: "12px", fontWeight: "bold" }}>
                           <span style={{ color: isCurrent ? "#fff" : getGanZhiColor(y.gan) }}>{y.gan}</span>
                           <span style={{ color: isCurrent ? "#fff" : getGanZhiColor(y.zhi) }}>{y.zhi}</span>
