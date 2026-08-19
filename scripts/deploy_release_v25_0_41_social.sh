@@ -40,8 +40,8 @@ grep -q 'reconcileInviteFriendships' src/lib/backend/register_routes.js || { ech
 echo "内容门禁 OK"
 
 echo "--- [2] 构建（build.sh 静态导出） ---"
-set -o pipefail
-bash build.sh 2>&1 | tail -6
+# pipefail 仅限构建子shell：全局pipefail会让[3.6]的grep无匹配(退出码1)被set -e静默终止
+( set -o pipefail; bash build.sh 2>&1 | tail -6 )
 
 echo "--- [3] 页面导出校验 ---"
 # 首页为单文件导出 out/index.html（非目录式）
