@@ -248,22 +248,23 @@ function initTables(d) {
 // v25.0.42：存量会话回填——把 chat_messages 里已有的会话补进 user_conversations（幂等）
 function backfillUserConversations(d) {
   const convs = d.prepare('SELECT conversation_id, MAX(id) AS max_id, MAX(created_at) AS last_at FROM chat_messages GROUP BY conversation_id').all();
+  // 修正：子查询按 ?2（conversation_id）取末条消息时间；语句共5个绑定参数，run不得多传
   const stmt = d.prepare(`INSERT OR IGNORE INTO user_conversations (user_id, conversation_id, conv_type, peer_id, group_id, updated_at)
-    VALUES (?,?,?,?,?,COALESCE((SELECT created_at FROM chat_messages WHERE conversation_id = ?1 ORDER BY id DESC LIMIT 1), datetime('now','localtime')))`);
+    VALUES (?,?,?,?,?,COALESCE((SELECT created_at FROM chat_messages WHERE conversation_id = ?2 ORDER BY id DESC LIMIT 1), datetime('now','localtime')))`);
   for (const c of convs) {
     const cid = c.conversation_id;
     if (cid.startsWith('private:')) {
       const parts = cid.split(':'); // private:a:b
       if (parts.length === 3) {
-        stmt.run(parts[1], cid, 'private', parts[2], 0, cid);
-        stmt.run(parts[2], cid, 'private', parts[1], 0, cid);
+        stmt.run(parts[1], cid, 'private', parts[2], 0);
+        stmt.run(parts[2], cid, 'private', parts[1], 0);
       }
     } else if (cid.startsWith('group:')) {
       const gid = parseInt(cid.slice(6), 10);
       const g = d.prepare('SELECT member_ids FROM groups WHERE id = ?').get(gid);
       if (g) {
         const members = JSON.parse(g.member_ids || '[]');
-        for (const m of members) stmt.run(String(m), cid, 'group', '', gid, cid);
+        for (const m of members) stmt.run(String(m), cid, 'group', '', gid);
       }
     }
   }
