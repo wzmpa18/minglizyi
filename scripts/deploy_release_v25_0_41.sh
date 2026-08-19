@@ -45,10 +45,12 @@ echo "--- [2] 构建（build.sh 静态导出） ---"
 bash build.sh 2>&1 | tail -6
 
 echo "--- [3] 页面导出校验 ---"
-for p in yixue/ziwei yixue index; do
+for p in yixue/ziwei yixue; do
   test -f "out/${p}/index.html" || { echo "FATAL: out/${p}/index.html missing"; exit 1; }
   echo "OK: ${p}"
 done
+test -f "out/index.html" || { echo "FATAL: out/index.html missing"; exit 1; }
+echo "OK: index(单文件导出)"
 
 echo "--- [3.5] 功能标记入包校验 ---"
 grep -rq "起限前" out/_next/static/chunks/ && echo "TX-PRE(童限前置格) OK" || { echo "FATAL: 童限前置格未入包"; exit 1; }
