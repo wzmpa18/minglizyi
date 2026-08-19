@@ -34,6 +34,8 @@ export interface ChatMessage {
   content: string;
   type: 'text' | 'image' | 'system';
   timestamp: string;
+  /** v25.0.38 P0-2：发送状态（本地乐观消息专用；服务端确认后 id 统一为 srv_ 前缀） */
+  status?: 'sending' | 'sent' | 'failed';
 }
 
 export interface GroupInfo {

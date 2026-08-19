@@ -11,10 +11,11 @@ import {
   batchDeleteChatMessages,
   clearAllChatMessages,
   getFriends,
+  saveFriends,
   type ChatMessage,
 } from "@/lib/socialStore";
 import { getCurrentUserId, getLoginState } from "@/lib/auth";
-import { sendPrivateMessage, fetchPrivateMessages } from "@/lib/socialApi";
+import { sendPrivateMessage, fetchPrivateMessages, fetchUserProfile } from "@/lib/socialApi";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
@@ -34,6 +35,11 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState("");
   const [friendName, setFriendName] = useState("好友");
+  // v25.0.38 P0-1：对方最新昵称（强制从后端用户接口实时拉取，禁止仅靠本地缓存渲染）
+  const [peerNickname, setPeerNickname] = useState("");
+  // v25.0.38 P0-2：发送防抖（未收到后端返回前禁止重复提交）与登录态异常提示
+  const [sending, setSending] = useState(false);
+  const [authExpired, setAuthExpired] = useState(false);
   const chatListRef = useRef<HTMLDivElement>(null);
 
   // v20.1: 消息管理模式
@@ -65,6 +71,7 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
   })();
 
   useEffect(() => {
+    // v25.0.38 P0-1：昵称渲染规则——本地备注(用户主动设置) > 后端实时昵称 > 本地缓存兜底
     const friends = getFriends();
     const friend = friends.find((f) => f.id === friendId);
     if (friend) {
@@ -73,6 +80,22 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
 
     const msgs = getChatMessages(chatKey);
     setMessages(msgs);
+
+    // 强制从后端用户接口拉取最新昵称：好友改昵称后，聊天页标题与消息旁昵称实时同步
+    void fetchUserProfile(friendId).then((r) => {
+      if (r && r.success && r.user && r.user.nickname) {
+        setPeerNickname(r.user.nickname);
+        const local = getFriends();
+        const localFriend = local.find((f) => f.id === friendId);
+        // 同步刷新本地缓存，保证好友列表/信息页与聊天页昵称一致
+        if (localFriend) {
+          localFriend.name = r.user.nickname;
+          localFriend.avatar = r.user.avatar || localFriend.avatar;
+          saveFriends(local);
+        }
+        setFriendName((localFriend && localFriend.note) || r.user.nickname);
+      }
+    }).catch(() => { /* 拉取失败保留本地兜底显示 */ });
   }, [friendId, chatKey]);
 
   useEffect(() => {
@@ -87,11 +110,49 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
     setMessages(msgs);
   }, [chatKey]);
 
+  // v25.0.38 P0-2：服务端消息游标（增量轮询用）
+  const lastServerMsgIdRef = useRef(0);
+
+  // v25.0.38 P0-2：服务端确认后用 srv_ 版本替换本地乐观消息（ID 统一，跨设备刷新不重复不丢失）
+  const confirmServerMessage = useCallback((optimisticId: string, serverMsg: { id: string; senderId: string; senderName: string; content: string; type: string; createdAt: string }) => {
+    deleteChatMessage(chatKey, optimisticId);
+    const confirmed: ChatMessage = {
+      id: "srv_" + serverMsg.id,
+      senderId: serverMsg.senderId,
+      senderName: serverMsg.senderName,
+      content: serverMsg.content,
+      type: (serverMsg.type === "image" || serverMsg.type === "system" ? serverMsg.type : "text") as ChatMessage["type"],
+      timestamp: serverMsg.createdAt,
+      status: "sent",
+    };
+    const local = getChatMessages(chatKey);
+    if (!local.find((m) => m.id === confirmed.id)) saveChatMessage(chatKey, confirmed);
+    setMessages((prev) => {
+      const withoutOptimistic = prev.filter((m) => m.id !== optimisticId);
+      return withoutOptimistic.find((m) => m.id === confirmed.id) ? withoutOptimistic : [...withoutOptimistic, confirmed];
+    });
+    lastServerMsgIdRef.current = Math.max(lastServerMsgIdRef.current, parseInt(serverMsg.id, 10) || 0);
+  }, [chatKey]);
+
+  // v25.0.38 P0-2：发送失败标记（保留消息 + 红色感叹号，点击可重发）；401 显式提示重新登录
+  const markMessageFailed = useCallback((optimisticId: string, err: string, isAuth: boolean) => {
+    const local = getChatMessages(chatKey);
+    const target = local.find((m) => m.id === optimisticId);
+    if (target) {
+      deleteChatMessage(chatKey, optimisticId);
+      saveChatMessage(chatKey, { ...target, status: "failed" });
+    }
+    setMessages((prev) => prev.map((m) => (m.id === optimisticId ? { ...m, status: "failed" as const } : m)));
+    if (isAuth) setAuthExpired(true);
+    else alert(err || "消息发送失败，请重试");
+  }, [chatKey]);
+
   const handleSend = useCallback(() => {
     const text = inputText.trim();
     if (!text) return;
+    // v25.0.38 P0-3：发送防抖——未收到后端返回前禁止重复提交
+    if (sending) return;
 
-    // v25.0.19: 真实发送到后端（对方设备可收到），失败时本地降级保留
     const optimistic: ChatMessage = {
       id: "msg_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
       senderId: currentUserId,
@@ -99,25 +160,52 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
       content: text,
       type: "text",
       timestamp: new Date().toISOString(),
+      status: "sending",
     };
 
     saveChatMessage(chatKey, optimistic);
     setMessages((prev) => [...prev, optimistic]);
     setInputText("");
+    setSending(true);
 
     void sendPrivateMessage(friendId, text).then((r) => {
-      if (r && r.success === false) {
-        // 服务端拦截（敏感词/开关关闭）：撤回本地乐观消息并提示
-        deleteChatMessage(chatKey, optimistic.id);
-        setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
-        alert(r.error || "消息发送失败");
+      setSending(false);
+      if (r && r.success && r.message) {
+        confirmServerMessage(optimistic.id, r.message);
         return;
       }
-      if (r && r.success && r.message) {
-        lastServerMsgIdRef.current = Math.max(lastServerMsgIdRef.current, parseInt(r.message.id, 10) || 0);
-      }
+      // 失败：敏感词拦截/开关关闭/登录过期/网络异常——保留消息标记失败，可点击重发
+      markMessageFailed(optimistic.id, (r && r.error) || "消息发送失败，请重试", !!(r && (r as any).code === 401));
+    }).catch(() => {
+      setSending(false);
+      markMessageFailed(optimistic.id, "网络连接失败，请检查网络后重试", false);
     });
-  }, [inputText, chatKey, friendId, currentUserId, currentUserName]);
+  }, [inputText, chatKey, friendId, currentUserId, currentUserName, sending, confirmServerMessage, markMessageFailed]);
+
+  // v25.0.38 P0-2：失败消息点击重发
+  const handleResend = useCallback((msgId: string) => {
+    const target = messages.find((m) => m.id === msgId);
+    if (!target || target.senderId !== currentUserId) return;
+    if (target.type !== "text") { alert("图片消息请重新选择发送"); return; }
+    deleteChatMessage(chatKey, msgId);
+    setMessages((prev) => prev.filter((m) => m.id !== msgId));
+
+    const optimistic: ChatMessage = { ...target, id: "msg_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8), status: "sending" };
+    saveChatMessage(chatKey, optimistic);
+    setMessages((prev) => [...prev, optimistic]);
+    setSending(true);
+    void sendPrivateMessage(friendId, target.content).then((r) => {
+      setSending(false);
+      if (r && r.success && r.message) {
+        confirmServerMessage(optimistic.id, r.message);
+        return;
+      }
+      markMessageFailed(optimistic.id, (r && r.error) || "消息发送失败，请重试", !!(r && (r as any).code === 401));
+    }).catch(() => {
+      setSending(false);
+      markMessageFailed(optimistic.id, "网络连接失败，请检查网络后重试", false);
+    });
+  }, [messages, chatKey, friendId, currentUserId, sending, confirmServerMessage, markMessageFailed]);
 
   // v25.0.33: 图片消息（压缩至720px JPEG后发送）
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -160,54 +248,62 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
           content: dataUrl,
           type: "image",
           timestamp: new Date().toISOString(),
+          status: "sending",
         };
         saveChatMessage(chatKey, optimistic);
         setMessages((prev) => [...prev, optimistic]);
+        setSending(true);
 
         void sendPrivateMessage(friendId, dataUrl, "image").then((r) => {
-          if (r && r.success === false) {
-            deleteChatMessage(chatKey, optimistic.id);
-            setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
-            alert(r.error || "图片发送失败");
+          setSending(false);
+          if (r && r.success && r.message) {
+            confirmServerMessage(optimistic.id, r.message);
+            return;
           }
+          markMessageFailed(optimistic.id, (r && r.error) || "图片发送失败，请重试", !!(r && (r as any).code === 401));
+        }).catch(() => {
+          setSending(false);
+          markMessageFailed(optimistic.id, "网络连接失败，请检查网络后重试", false);
         });
       };
       img.onerror = () => alert("图片读取失败，请重试");
       img.src = reader.result as string;
     };
     reader.readAsDataURL(file);
-  }, [chatKey, friendId, currentUserId, currentUserName]);
+  }, [chatKey, friendId, currentUserId, currentUserName, confirmServerMessage, markMessageFailed]);
 
-  // v25.0.19: 轮询拉取对方真实回复（替代已移除的假自动回复）
-  const lastServerMsgIdRef = useRef(0);
+  // v25.0.38 P0-2：消息拉取统一走服务端——首轮全量（afterId=0）含双方消息，后续增量；
+  // 本地仅作渲染兜底，进入聊天页强制以后端数据为准，禁止纯本地缓存渲染
   useEffect(() => {
     let stopped = false;
     const poll = async () => {
       if (stopped || document.visibilityState === "hidden") return;
       try {
         const r = await fetchPrivateMessages(friendId, lastServerMsgIdRef.current);
+        if (r && (r as any).code === 401) {
+          setAuthExpired(true);
+          return;
+        }
         if (r && r.success && r.messages && r.messages.length) {
           for (const m of r.messages) {
             lastServerMsgIdRef.current = Math.max(lastServerMsgIdRef.current, parseInt(m.id, 10) || 0);
           }
-          const incoming: ChatMessage[] = r.messages
-            .filter((m) => String(m.senderId) !== String(currentUserId))
-            .map((m) => ({
-              id: "srv_" + m.id,
-              senderId: m.senderId,
-              senderName: m.senderName,
-              content: m.content,
-              type: (m.type === "image" || m.type === "system" ? m.type : "text") as ChatMessage["type"],
-              timestamp: m.createdAt,
-            }));
-          if (incoming.length) {
-            setMessages((prev) => {
-              const existIds = new Set(prev.map((x) => x.id));
-              const fresh = incoming.filter((x) => !existIds.has(x.id));
-              for (const f of fresh) saveChatMessage(chatKey, f);
-              return fresh.length ? [...prev, ...fresh] : prev;
-            });
-          }
+          // 不过滤发送方：自己发的消息同样入列（跨设备/换机后历史可见），按 srv_ ID 去重
+          const incoming: ChatMessage[] = r.messages.map((m) => ({
+            id: "srv_" + m.id,
+            senderId: m.senderId,
+            senderName: m.senderName,
+            content: m.content,
+            type: (m.type === "image" || m.type === "system" ? m.type : "text") as ChatMessage["type"],
+            timestamp: m.createdAt,
+            status: "sent" as const,
+          }));
+          setMessages((prev) => {
+            const existIds = new Set(prev.map((x) => x.id));
+            const fresh = incoming.filter((x) => !existIds.has(x.id));
+            for (const f of fresh) saveChatMessage(chatKey, f);
+            return fresh.length ? [...prev, ...fresh] : prev;
+          });
         }
       } catch { /* 网络异常静默，下轮重试 */ }
     };
@@ -220,7 +316,7 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
       clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [friendId, chatKey, currentUserId]);
+  }, [friendId, chatKey]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -354,6 +450,20 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
         <BrandHeader title={friendName} showBack />
       )}
 
+      {/* v25.0.38 P0-2：登录过期提示条（此前 401 被静默吞掉，消息收发全断且无任何提示） */}
+      {authExpired && (
+        <div className="flex items-center justify-between gap-2 px-3 py-2 text-xs" style={{ backgroundColor: "#fff3cd", color: "#856404" }}>
+          <span>登录已过期，消息无法收发，请重新登录</span>
+          <button
+            className="shrink-0 rounded-lg px-2.5 py-1 font-semibold text-white"
+            style={{ backgroundColor: BRAND }}
+            onClick={() => router.push(`/login?redirect=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname + window.location.search : "/friends")}`)}
+          >
+            去登录
+          </button>
+        </div>
+      )}
+
       {/* 消息列表 */}
       <div
         ref={chatListRef}
@@ -421,7 +531,30 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
                     fontSize: "14px",
                   }}
                 >
-                  {msg.senderName.slice(0, 1)}
+                  {(peerNickname || msg.senderName || "友").slice(0, 1)}
+                </div>
+              )}
+
+              {/* v25.0.38 P0-2：发送失败红色感叹号，点击重发 */}
+              {isMe && !manageMode && msg.status === "failed" && (
+                <button
+                  aria-label="重发消息"
+                  className="shrink-0 flex h-6 w-6 items-center justify-center rounded-full bg-red-100"
+                  onClick={() => handleResend(msg.id)}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc3545" strokeWidth="2.5" strokeLinecap="round">
+                    <path d="M12 8v5" />
+                    <circle cx="12" cy="17" r="0.5" fill="#dc3545" />
+                  </svg>
+                </button>
+              )}
+              {/* v25.0.38 P0-2：发送中时钟图标 */}
+              {isMe && !manageMode && msg.status === "sending" && (
+                <div className="shrink-0 flex h-6 w-6 items-center justify-center">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round">
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 7v5l3 3" />
+                  </svg>
                 </div>
               )}
 
@@ -556,13 +689,13 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
             />
             <button
               onClick={handleSend}
-              disabled={!inputText.trim()}
+              disabled={!inputText.trim() || sending}
               className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-colors"
               style={{
-                backgroundColor: inputText.trim() ? BRAND : "#ccc",
+                backgroundColor: inputText.trim() && !sending ? BRAND : "#ccc",
               }}
             >
-              发送
+              {sending ? "发送中" : "发送"}
             </button>
             {messages.length > 0 && (
               <button

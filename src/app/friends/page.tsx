@@ -9,6 +9,7 @@ import {
   type FriendRequest,
   type GroupInfo,
   getFriends,
+  saveFriends,
   removeFriend,
   addFriend,
   addFriendRequest,
@@ -1519,6 +1520,8 @@ export default function FriendsPage() {
               existing.avatar = sf.avatar || existing.avatar;
             }
           }
+          // v25.0.38 P0-1：同步结果持久化到本地，保证聊天页/信息页等读缓存处昵称一致
+          saveFriends([...prev]);
           return [...prev];
         });
       }

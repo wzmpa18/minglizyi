@@ -16,11 +16,26 @@ function tokenHeader(): Record<string, string> {
 }
 
 async function api<T = any>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...tokenHeader(), ...(init?.headers || {}) },
-  });
-  return res.json();
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...init,
+      headers: { "Content-Type": "application/json", ...tokenHeader(), ...(init?.headers || {}) },
+    });
+  } catch {
+    // v25.0.38 P0-2：网络异常不再静默，返回结构化错误供调用方提示
+    return { success: false, error: "网络连接失败，请检查网络后重试" } as any;
+  }
+  let data: any = null;
+  try { data = await res.json(); } catch { /* 非JSON响应兜底 */ }
+  // v25.0.38 P0-2：HTTP 状态码检查——401 登录过期必须显式暴露，禁止静默吞掉
+  if (res.status === 401) {
+    return { success: false, code: 401, error: (data && data.error) || "登录已过期，请重新登录" } as any;
+  }
+  if (!res.ok) {
+    return { success: false, code: res.status, error: (data && data.error) || `请求失败（${res.status}）` } as any;
+  }
+  return (data === null ? { success: false, error: "服务响应异常" } : data) as T;
 }
 
 export function isLoggedIn(): boolean {

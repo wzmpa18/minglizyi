@@ -751,7 +751,8 @@ function createRouter() {
       // 滚动覆盖：单聊会话仅保留最近100条
       d.prepare(`DELETE FROM chat_messages WHERE conversation_id = ? AND id NOT IN (SELECT id FROM chat_messages WHERE conversation_id = ? ORDER BY id DESC LIMIT 100)`).run(convId, convId);
 
-      notify(req.params.peerId, 'chat', { userId: me, nickname: info.nickname }, msgType === 'image' ? '发来一张图片' : `发来消息：${finalContent.slice(0, 30)}`, `/friends/chat/${me}`);
+      // v25.0.38 P0-2：通知跳转改 query 格式（静态导出下动态路由 /friends/chat/:id 会 404 兜底首页，B 端点通知进不去聊天页）
+      notify(req.params.peerId, 'chat', { userId: me, nickname: info.nickname }, msgType === 'image' ? '发来一张图片' : `发来消息：${finalContent.slice(0, 30)}`, `/friends/chat?id=${me}`);
       const row = d.prepare('SELECT * FROM chat_messages WHERE id = ?').get(result.lastInsertRowid);
       res.json({ success: true, message: { id: String(row.id), senderId: row.sender_id, senderName: row.sender_name, content: row.content, type: row.msg_type, createdAt: row.created_at } });
     } catch (e) {
