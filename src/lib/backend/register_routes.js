@@ -447,6 +447,22 @@ function createAdditionalTables(db) {
   // v25.0.41 退款返佣冲正：存量表补 reversed_at 列（新表建表后再迁移，避免首建库时序问题）
   ensureColumn(db, 'consumption_rebates', 'reversed_at', 'DATETIME');
 
+  // v25.0.41 邀请绑定最终一致性：自动加好友补偿任务表（InviteBound→PENDING→autoFriend→DONE，失败RETRY，超阈值ALERT）
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS invite_friend_tasks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      invitee_id INTEGER NOT NULL,
+      inviter_id INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'PENDING',
+      attempts INTEGER DEFAULT 0,
+      last_error TEXT DEFAULT '',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(invitee_id, inviter_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_ift_status ON invite_friend_tasks(status, attempts);
+  `);
+
   // 星级评价表
   db.exec(`
     CREATE TABLE IF NOT EXISTS user_ratings (
@@ -685,10 +701,10 @@ function bindInviteAndReward(db, inviteeId, attribution, clientIp, deviceId) {
 
   logInviteAudit(db, inviteeId, inviterId, source, 'bound', rewarded ? `REWARDED_${rewarded}` : 'REWARD_IDEMPOTENT_SKIP', clientIp, deviceId);
 
-  // v25.0.40 社交×营销绑定：邀请注册成功 → 自动互加好友（social.db，容错不影响注册主流程）
-  try { autoFriendOnInviteBind(db, inviteeId, inviterId); } catch (e) {
-    console.error('[invite] autoFriendOnInviteBind error:', e.message);
-  }
+  // v25.0.41 邀请绑定最终一致性：InviteBound → 幂等任务PENDING → autoFriend → DONE
+  // 失败保留PENDING进RETRY队列（后续注册/每日reconcile重试），attempts超阈值ALERT审计留痕
+  enqueueInviteFriendTask(db, inviteeId, inviterId);
+  runInviteFriendTask(db, inviteeId, inviterId);
   return { bound: true, rewardPoints: rewarded };
 }
 
@@ -832,13 +848,14 @@ function reverseConsumptionRebate(orderNo) {
 
 /**
  * v25.0.40 社交×营销绑定：邀请注册绑定成功 → 自动互加好友（social.db）
- * 跨库容错：social.db 不存在/表缺失时静默跳过，绝不影响注册主流程
+ * v25.0.41 修正：仅在新插入好友关系时发通知（重试/补偿场景重复调用不再重复通知）
+ * 返回 {inserted:true}(新好友) / {inserted:false}(已存在,幂等成功) / {skipped:'SOCIAL_DB_MISSING'}(库不可用,需重试)
  */
 function autoFriendOnInviteBind(userDb, inviteeId, inviterId) {
   const path = require('path');
   const fs = require('fs');
   const socialDbPath = process.env.SOCIAL_DB_PATH || path.join(__dirname, 'data', 'social.db');
-  if (!fs.existsSync(socialDbPath)) return false;
+  if (!fs.existsSync(socialDbPath)) return { skipped: 'SOCIAL_DB_MISSING' };
 
   let sdb = null;
   try {
@@ -847,17 +864,104 @@ function autoFriendOnInviteBind(userDb, inviteeId, inviterId) {
     const b = String(inviterId);
     const [x, y] = a < b ? [a, b] : [b, a];
     const inserted = sdb.prepare('INSERT OR IGNORE INTO friendships (user_a, user_b) VALUES (?, ?)').run(x, y);
-
-    const inviterName = (userDb.prepare('SELECT nickname FROM users WHERE user_id = ?').get(inviterId) || {}).nickname || '邀请人';
-    const inviteeName = (userDb.prepare('SELECT nickname FROM users WHERE user_id = ?').get(inviteeId) || {}).nickname || '国学爱好者';
-    const notifyStmt = sdb.prepare('INSERT INTO notifications (user_id, type, actor_id, actor_name, content, link) VALUES (?,?,?,?,?,?)');
-    notifyStmt.run(a, 'friend_accepted', b, inviterName, '你邀请注册的账号已开通，你们已成为好友，去打个招呼吧', '/friends');
-    notifyStmt.run(b, 'friend_accepted', a, inviteeName, '你邀请的好友已注册成功，你们已成为好友，去打个招呼吧', '/friends');
-    return inserted.changes > 0;
+    if (inserted.changes > 0) {
+      const inviterName = (userDb.prepare('SELECT nickname FROM users WHERE user_id = ?').get(inviterId) || {}).nickname || '邀请人';
+      const inviteeName = (userDb.prepare('SELECT nickname FROM users WHERE user_id = ?').get(inviteeId) || {}).nickname || '国学爱好者';
+      const notifyStmt = sdb.prepare('INSERT INTO notifications (user_id, type, actor_id, actor_name, content, link) VALUES (?,?,?,?,?,?)');
+      notifyStmt.run(a, 'friend_accepted', b, inviterName, '你邀请注册的账号已开通，你们已成为好友，去打个招呼吧', '/friends');
+      notifyStmt.run(b, 'friend_accepted', a, inviteeName, '你邀请的好友已注册成功，你们已成为好友，去打个招呼吧', '/friends');
+    }
+    return { inserted: inserted.changes > 0 };
   } finally {
     if (sdb) { try { sdb.close(); } catch (e) {} }
   }
 }
+
+/**
+ * v25.0.41 邀请绑定最终一致性：补偿任务队列
+ * InviteBound → 入队(幂等) → autoFriend → DONE；失败 attempts++ 留PENDING待重试；超阈值ALERT
+ */
+const INVITE_FRIEND_MAX_ATTEMPTS = 5;
+
+function enqueueInviteFriendTask(db, inviteeId, inviterId) {
+  db.prepare("INSERT OR IGNORE INTO invite_friend_tasks (invitee_id, inviter_id, status) VALUES (?, ?, 'PENDING')")
+    .run(inviteeId, inviterId);
+}
+
+function runInviteFriendTask(db, inviteeId, inviterId) {
+  const row = db.prepare('SELECT * FROM invite_friend_tasks WHERE invitee_id = ? AND inviter_id = ?').get(inviteeId, inviterId);
+  if (!row) return { done: true, reason: 'NO_TASK' };
+  if (row.status === 'DONE') return { done: true, reason: 'ALREADY_DONE' };
+  try {
+    const r = autoFriendOnInviteBind(db, inviteeId, inviterId);
+    if (r && r.skipped) throw new Error(r.skipped); // social.db不可用 → 保持PENDING待每日reconcile重试
+    db.prepare("UPDATE invite_friend_tasks SET status = 'DONE', updated_at = datetime('now','localtime') WHERE id = ?").run(row.id);
+    return { done: true, inserted: !!(r && r.inserted) };
+  } catch (e) {
+    const attempts = (row.attempts || 0) + 1;
+    db.prepare("UPDATE invite_friend_tasks SET attempts = ?, last_error = ?, updated_at = datetime('now','localtime') WHERE id = ?")
+      .run(attempts, String(e.message || e).slice(0, 200), row.id);
+    // 超阈值ALERT（第5次及之后每10次告警一次，避免审计刷屏；ALERT不熔断，每日reconcile持续兜底）
+    if (attempts >= INVITE_FRIEND_MAX_ATTEMPTS && (attempts - INVITE_FRIEND_MAX_ATTEMPTS) % 10 === 0) {
+      logInviteAudit(db, inviteeId, inviterId, 'reconcile', 'alert',
+        `AUTO_FRIEND_FAILED_${attempts}_TIMES_${String(e.message || e).slice(0, 80)}`, '', '');
+      console.error(`[invite] autoFriend补偿ALERT: invitee=${inviteeId} inviter=${inviterId} attempts=${attempts} err=${e.message}`);
+    }
+    return { done: false, attempts };
+  }
+}
+
+function retryPendingInviteFriendTasks(db) {
+  const rows = db.prepare("SELECT invitee_id, inviter_id FROM invite_friend_tasks WHERE status != 'DONE' LIMIT 500").all();
+  let fixed = 0;
+  for (const r of rows) {
+    if (runInviteFriendTask(db, r.invitee_id, r.inviter_id).done) fixed++;
+  }
+  return { pending: rows.length, fixed };
+}
+
+/**
+ * v25.0.41 每日reconcile：邀请关系存在但好友关系缺失 → 建任务并自动补齐
+ * 覆盖social.db瞬时故障造成的永久漏加好友；由crontab每日执行（reconcile_invite_friends.js）
+ */
+function reconcileInviteFriendships(db) {
+  const pairs = db.prepare('SELECT user_id, invited_by FROM users WHERE invited_by IS NOT NULL').all();
+  let missing = 0, fixed = 0, failed = 0;
+  const path = require('path');
+  const fs = require('fs');
+  const socialDbPath = process.env.SOCIAL_DB_PATH || path.join(__dirname, 'data', 'social.db');
+  if (!fs.existsSync(socialDbPath)) return { total: pairs.length, missing, fixed, failed, error: 'SOCIAL_DB_MISSING' };
+  let sdb = null;
+  try {
+    sdb = new Database(socialDbPath, { readonly: true });
+    const stmt = sdb.prepare('SELECT 1 FROM friendships WHERE user_a = ? AND user_b = ?');
+    for (const p of pairs) {
+      const a = String(p.user_id);
+      const b = String(p.invited_by);
+      const [x, y] = a < b ? [a, b] : [b, a];
+      let has = false;
+      try { has = !!stmt.get(x, y); } catch (e) { failed++; continue; }
+      if (!has) {
+        missing++;
+        // 任务已DONE但好友关系缺失（如被删除/历史漏加）→ 重置PENDING强制重跑
+        db.prepare("UPDATE invite_friend_tasks SET status = 'PENDING' WHERE invitee_id = ? AND inviter_id = ? AND status = 'DONE'")
+          .run(p.user_id, p.invited_by);
+        enqueueInviteFriendTask(db, p.user_id, p.invited_by);
+        if (runInviteFriendTask(db, p.user_id, p.invited_by).done) fixed++;
+        else failed++;
+      }
+    }
+  } finally {
+    if (sdb) { try { sdb.close(); } catch (e) {} }
+  }
+  const summary = { total: pairs.length, missing, fixed, failed };
+  if (missing > 0) {
+    logInviteAudit(db, null, null, 'reconcile', missing > 0 && failed === 0 ? 'reconciled' : 'reconcile_partial',
+      `MISSING_${missing}_FIXED_${fixed}_FAILED_${failed}`, '', '');
+  }
+  return summary;
+}
+
 /**
  * 创建新用户（用户ID由数据库自增分配，从100000开始）
  * P9-推广中心：邀请归因/防作弊/单层奖励统一走 resolveInviteAttribution + bindInviteAndReward
@@ -1978,4 +2082,7 @@ module.exports = {
   rebateProductPrice,
   grantPointsTx,
   inviteRewardPoints,
+  reconcileInviteFriendships,
+  retryPendingInviteFriendTasks,
+  runInviteFriendTask,
 };
