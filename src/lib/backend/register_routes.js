@@ -293,6 +293,7 @@ function migrateUserIdToNumeric(db) {
  * 创建 P1 架构加固的额外表
  */
 function createAdditionalTables(db) {
+
   // 分销关系表
   db.exec(`
     CREATE TABLE IF NOT EXISTS user_invite_relation (
@@ -436,12 +437,15 @@ function createAdditionalTables(db) {
       level2_inviter_id INTEGER,
       level2_points INTEGER DEFAULT 0,
       status TEXT NOT NULL DEFAULT 'granted',
+      reversed_at DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
     CREATE INDEX IF NOT EXISTS idx_crebate_consumer ON consumption_rebates(consumer_id);
     CREATE INDEX IF NOT EXISTS idx_crebate_l1 ON consumption_rebates(level1_inviter_id);
     CREATE INDEX IF NOT EXISTS idx_crebate_l2 ON consumption_rebates(level2_inviter_id);
   `);
+  // v25.0.41 退款返佣冲正：存量表补 reversed_at 列（新表建表后再迁移，避免首建库时序问题）
+  ensureColumn(db, 'consumption_rebates', 'reversed_at', 'DATETIME');
 
   // 星级评价表
   db.exec(`
@@ -725,6 +729,29 @@ function rebateRate(level) {
 }
 
 /**
+ * v25.0.41 营销返佣安全补强：服务端权威价格目录
+ * 返佣金额一律以本目录为准，客户端上报的 amount 仅作对账参考（不一致时以服务端为准并留痕）。
+ * 商品定价变更需同步更新此处（与前端 membershipStore/BTool 套餐对齐）。
+ */
+const REBATE_PRODUCT_PRICES = {
+  '月度会员': 39,
+  '年度会员': 366,
+  '终身会员': 3600,
+  '数字能量·号码匹配报告': 198,
+  '姓名深度解析（单次）': 9.9,
+  '手机号吉凶解读（单次）': 18,
+  '车牌合号分析（单次）': 18,
+};
+
+function rebateProductPrice(product) {
+  const key = String(product || '').trim();
+  if (key && Object.prototype.hasOwnProperty.call(REBATE_PRODUCT_PRICES, key)) {
+    return REBATE_PRODUCT_PRICES[key];
+  }
+  return null;
+}
+
+/**
  * v25.0.40 社交×营销绑定：消费返佣统一服务端发放（按订单号幂等）
  * 链路：消费用户 C → 一级邀请人 A（返15%积分） → 二级邀请人 B（返8%积分）
  * 由前端订单支付成功后调用 POST /api/auth/invite/consumption-rebate；积分走 user_assets + points_transactions
@@ -771,6 +798,36 @@ function grantConsumptionRebate(consumerUserId, orderNo, amount, product) {
 
   logInviteAudit(db, consumerId, inviterA, 'payment', 'consumption_rebate', `L1_${level1Points}_L2_${level2Points}_AMT_${amt}_ORDER_${orderKey}`, '', '');
   return { granted: true, level1Points, level2Points, level1InviterId: inviterA, level2InviterId: inviterB || null };
+}
+
+/**
+ * v25.0.41 营销返佣安全补强：退款返佣冲正（按订单号幂等）
+ * 订单退款时扣回已发放的一/二级返佣积分，账本行标记 reversed；重复冲正/无返佣安全跳过。
+ */
+function reverseConsumptionRebate(orderNo) {
+  const db = initDatabase();
+  const orderKey = String(orderNo || '').trim().slice(0, 64);
+  if (!orderKey) return { reversed: false, reason: 'INVALID_ORDER' };
+  const row = db.prepare('SELECT * FROM consumption_rebates WHERE order_no = ?').get(orderKey);
+  if (!row) return { reversed: false, reason: 'NO_REBATE' };
+  if (row.status === 'reversed') return { reversed: false, reason: 'ALREADY_REVERSED' };
+
+  const tx = db.transaction(() => {
+    if (row.level1_points > 0 && row.level1_inviter_id) {
+      grantPointsTx(db, row.level1_inviter_id, 'rebate_reverse_level1', -row.level1_points, orderKey + ':REFUND',
+        `退款冲正·一级返佣扣回·订单:${orderKey}`);
+    }
+    if (row.level2_points > 0 && row.level2_inviter_id) {
+      grantPointsTx(db, row.level2_inviter_id, 'rebate_reverse_level2', -row.level2_points, orderKey + ':REFUND',
+        `退款冲正·二级返佣扣回·订单:${orderKey}`);
+    }
+    db.prepare("UPDATE consumption_rebates SET status = 'reversed', reversed_at = datetime('now','localtime') WHERE id = ?").run(row.id);
+  });
+  tx();
+
+  logInviteAudit(db, row.consumer_id, row.level1_inviter_id, 'refund', 'consumption_rebate_reversal',
+    `L1_-${row.level1_points}_L2_-${row.level2_points}_ORDER_${orderKey}`, '', '');
+  return { reversed: true, level1PointsReversed: row.level1_points, level2PointsReversed: row.level2_points };
 }
 
 /**
@@ -971,16 +1028,17 @@ function authMiddleware(req, res, next) {
 
 /**
  * 从请求中提取客户端 IP
+ * v25.0.41 IP风控加固：生产流量必经 nginx（3001 端口仅内网可达），
+ * nginx 以 $remote_addr 强制覆盖 X-Real-IP → 唯一可信头；
+ * X-Forwarded-For 仅取最后一段（由可信代理追加），首段可被客户端伪造。
  */
 function getClientIp(req) {
-  return (
-    req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
-    req.headers['x-real-ip'] ||
-    req.connection?.remoteAddress ||
-    req.socket?.remoteAddress ||
-    req.ip ||
-    '0.0.0.0'
-  );
+  const realIp = String(req.headers['x-real-ip'] || '').trim();
+  if (realIp) return realIp;
+  const xff = String(req.headers['x-forwarded-for'] || '');
+  const parts = xff.split(',').map(s => s.trim()).filter(Boolean);
+  if (parts.length) return parts[parts.length - 1];
+  return req.connection?.remoteAddress || req.socket?.remoteAddress || req.ip || '0.0.0.0';
 }
 
 /**
@@ -1728,11 +1786,23 @@ function createRouter() {
   // ------------------------------------------------------------------
   // POST /api/auth/invite/consumption-rebate — 消费返佣上报（JWT鉴权，订单号幂等）
   // v25.0.40 社交×营销绑定：前端订单支付成功后上报；服务端统一计算一/二级返佣并入账
+  // v25.0.41 安全补强：返佣金额一律取服务端权威价格目录（REBATE_PRODUCT_PRICES），
+  //                   客户端上报 amount 仅作对账参考，无法决定返佣金额；未知商品直接拒绝并留痕。
   // ------------------------------------------------------------------
   router.post('/invite/consumption-rebate', authMiddleware, (req, res) => {
     try {
       const { orderNo, amount, product } = req.body || {};
-      const result = grantConsumptionRebate(req.user.userId, orderNo, amount, product);
+      const price = rebateProductPrice(product);
+      if (price === null) {
+        logInviteAudit(initDatabase(), req.user.userId, null, 'payment', 'rebate_rejected', `UNKNOWN_PRODUCT_${String(product || '').slice(0, 40)}_ORDER_${String(orderNo || '').slice(0, 64)}`, getClientIp(req), '');
+        return jsonResponse(res, 200, true, 'UNKNOWN_PRODUCT', { granted: false, reason: 'UNKNOWN_PRODUCT' });
+      }
+      // 客户端金额与服务端目录不一致：以服务端为准并留痕（攻击面：伪造大额）
+      if (amount !== undefined && Number(amount) !== price) {
+        logInviteAudit(initDatabase(), req.user.userId, null, 'payment', 'rebate_amount_mismatch',
+          `CLIENT_${Number(amount)}_SERVER_${price}_ORDER_${String(orderNo || '').slice(0, 64)}`, getClientIp(req), '');
+      }
+      const result = grantConsumptionRebate(req.user.userId, orderNo, price, product);
       if (result.granted) {
         return jsonResponse(res, 200, true, '返佣已入账', result);
       }
@@ -1904,6 +1974,8 @@ module.exports = {
   logOperation,
   grantFirstPayReward,
   grantConsumptionRebate,
+  reverseConsumptionRebate,
+  rebateProductPrice,
   grantPointsTx,
   inviteRewardPoints,
 };

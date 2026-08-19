@@ -205,6 +205,28 @@ function updateOrderRecord(orderId, status, channel) {
     } catch (e) {
       console.error('[payment] 首付费奖励发放失败:', e.message);
     }
+    // v25.0.41 订单事件驱动返佣：支付成功即由服务端按订单金额发放一/二级返佣（前端上报仅作兜底对账）
+    try {
+      const { grantConsumptionRebate } = require('./register_routes');
+      const rb = grantConsumptionRebate(order.userId, order.orderId, order.amount, order.title);
+      if (rb && rb.granted) {
+        console.log(`[payment] 订单事件返佣已入账 orderId=${order.orderId} L1=${rb.level1Points}分 L2=${rb.level2Points}分`);
+      }
+    } catch (e) {
+      console.error('[payment] 订单事件返佣发放失败:', e.message);
+    }
+  }
+  if (status === ORDER_STATUS.REFUNDED) {
+    // v25.0.41 退款返佣冲正：退款即扣回该订单已发放的一/二级返佣积分（幂等）
+    try {
+      const { reverseConsumptionRebate } = require('./register_routes');
+      const rv = reverseConsumptionRebate(orderId);
+      if (rv && rv.reversed) {
+        console.log(`[payment] 退款返佣冲正完成 orderId=${orderId} L1扣回=${rv.level1PointsReversed}分 L2扣回=${rv.level2PointsReversed}分`);
+      }
+    } catch (e) {
+      console.error('[payment] 退款返佣冲正失败:', e.message);
+    }
   }
   return order;
 }
@@ -480,6 +502,10 @@ module.exports = {
     return router;
   },
   isPaymentEnabled,
+  createOrderRecord,
+  getOrderRecord,
+  updateOrderRecord,
+  ORDER_STATUS,
   // 预留：供外部注入数据库适配器
   setDatabase(dbModule) {
     // TODO: 参数到位后启用
