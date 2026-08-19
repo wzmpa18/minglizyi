@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -66,7 +66,7 @@ export default function FollowsPage() {
                   </div>
                   <button
                     className="min-w-0 flex-1 text-left"
-                    onClick={() => router.push(`/friends/profile?id=${encodeURIComponent(id)}`)}
+                    onClick={() => router.push(`/user?uid=${encodeURIComponent(id)}`)}
                   >
                     <p className="truncate text-sm font-semibold text-gray-800">{u?.nickname || id}</p>
                     <p className="text-xs text-gray-400 font-mono">ID: {id}</p>

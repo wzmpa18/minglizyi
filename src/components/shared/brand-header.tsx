@@ -9,11 +9,12 @@ interface BrandHeaderProps {
   backUrl?: string;
   onEdit?: () => void;
   onBack?: () => void;
+  onTitleClick?: () => void;
   color?: string;
   children?: React.ReactNode;
 }
 
-export function BrandHeader({ title = "言道排盘", showBack = false, backUrl, onEdit, onBack, color, children }: BrandHeaderProps) {
+export function BrandHeader({ title = "言道排盘", showBack = false, backUrl, onEdit, onBack, onTitleClick, color, children }: BrandHeaderProps) {
   const router = useRouter();
 
   const handleBack = () => {
@@ -39,7 +40,7 @@ export function BrandHeader({ title = "言道排盘", showBack = false, backUrl,
           <ArrowLeft className="w-5 h-5" />
         </button>
       )}
-      <div style={{ textAlign: "center" }}>
+      <div style={{ textAlign: "center" }} onClick={onTitleClick} className={onTitleClick ? "cursor-pointer" : undefined}>
         <span className="text-white text-[18px] font-bold">{title}</span>
         <div style={{ fontSize: "10px", fontWeight: "normal", opacity: 0.65, lineHeight: "1.4", color: "white" }}>yandao.vip 分享下载有礼</div>
       </div>

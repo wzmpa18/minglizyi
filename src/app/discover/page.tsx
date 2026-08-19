@@ -1185,10 +1185,20 @@ export default function DiscoverPage() {
               <div key={post.id} className="rounded-xl bg-white p-4 shadow-sm">
                 {/* 用户信息 */}
                 <div className="flex items-center gap-3">
-                  <PostAvatar text={post.authorAvatar || post.authorName.slice(0, 1)} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-800">{post.authorName}</p>
-                    <p className="text-xs text-gray-400">{formatTime(post.createdAt)}</p>
+                  {/* v25.0.41：点击作者统一进入唯一用户资料页 */}
+                  <div
+                    className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+                    onClick={() => {
+                      if (post.authorId && post.authorId !== "system") {
+                        router.push(`/user?uid=${encodeURIComponent(post.authorId)}`);
+                      }
+                    }}
+                  >
+                    <PostAvatar text={post.authorAvatar || post.authorName.slice(0, 1)} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-800">{post.authorName}</p>
+                      <p className="text-xs text-gray-400">{formatTime(post.createdAt)}</p>
+                    </div>
                   </div>
                   {post.authorId !== "system" && (
                     <button

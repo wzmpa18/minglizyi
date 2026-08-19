@@ -181,6 +181,7 @@ export async function sendPrivateMessage(peerId: string, content: string, type: 
 export interface GroupVo {
   id: string; groupId: string; name: string; ownerId: string; ownerName: string;
   announcement: string; memberIds: string[]; createdAt: string;
+  memberCount?: number; avatar?: string; admins?: string[]; muteAll?: boolean;
 }
 
 export async function fetchGroups() {
@@ -201,11 +202,22 @@ export async function joinGroup(groupId: string) {
 // ==================== 群管理（P6-补03 第五阶段） ====================
 
 export interface GroupMemberVo {
-  userId: string; nickname: string; avatar: string; memberLevel: number;
+  userId: string; nickname: string; realName?: string; avatar: string; memberLevel: number;
+  role?: "owner" | "admin" | "member"; groupNickname?: string;
+}
+
+export interface GroupDetailVo {
+  success: boolean;
+  group?: GroupVo;
+  members?: GroupMemberVo[];
+  myRole?: "owner" | "admin" | "member";
+  myGroupNickname?: string;
+  myMuteRemain?: number;
+  error?: string;
 }
 
 export async function fetchGroupDetail(groupId: string) {
-  return api<{ success: boolean; group?: GroupVo; members?: GroupMemberVo[]; error?: string }>(`/api/social/groups/${groupId}/detail`);
+  return api<GroupDetailVo>(`/api/social/groups/${groupId}/detail`);
 }
 
 /** 退群：群主退群自动转让，最后一人退群解散 */
@@ -257,6 +269,140 @@ export async function markNotificationsRead() {
 
 // ==================== 用户公开信息 ====================
 
+export interface SocialUserProfile {
+  userId: string; nickname: string; avatar: string; bio: string; memberLevel: string;
+  postCount: number; followerCount: number; followingCount: number;
+  isFriend?: boolean; friendRemark?: string; blockedByMe?: boolean; blockingMe?: boolean; isSelf?: boolean;
+}
+
 export async function fetchUserProfile(userId: string) {
-  return api<{ success: boolean; user?: { userId: string; nickname: string; avatar: string; bio: string; memberLevel: string; postCount: number; followerCount: number; followingCount: number } }>(`/api/social/users/${userId}/profile`);
+  return api<{ success: boolean; user?: SocialUserProfile; error?: string }>(`/api/social/users/${userId}/profile`);
+}
+
+// ==================== v25.0.41 统一会话模型（服务端持久化） ====================
+
+export interface ConversationVo {
+  conversationId: string;
+  type: "private" | "group";
+  peerId?: string;
+  peerName?: string;
+  peerAvatar?: string;
+  groupId?: number;
+  groupName?: string;
+  pinned: boolean;
+  muted: boolean;
+  updatedAt: string;
+  unread: number;
+  lastMessage: { id: string; senderId: string; senderName: string; content: string; type: string; createdAt: string };
+}
+
+export async function fetchConversations() {
+  return api<{ success: boolean; conversations?: ConversationVo[]; totalUnread?: number; notificationUnread?: number; error?: string }>(`/api/social/conversations`);
+}
+
+export async function markConversationRead(conversationId: string) {
+  return api<{ success: boolean; error?: string }>(`/api/social/conversations/${conversationId}/read`, { method: "POST" });
+}
+
+export async function toggleConversationPin(conversationId: string, pinned: boolean) {
+  return api<{ success: boolean; error?: string }>(`/api/social/conversations/${conversationId}/pin`, {
+    method: "POST",
+    body: JSON.stringify({ pinned }),
+  });
+}
+
+export async function toggleConversationMute(conversationId: string, muted: boolean) {
+  return api<{ success: boolean; error?: string }>(`/api/social/conversations/${conversationId}/mute`, {
+    method: "POST",
+    body: JSON.stringify({ muted }),
+  });
+}
+
+export async function deleteConversation(conversationId: string) {
+  return api<{ success: boolean; error?: string }>(`/api/social/conversations/${conversationId}`, { method: "DELETE" });
+}
+
+// ==================== v25.0.41 群管理扩展 ====================
+
+export async function dissolveGroup(groupId: string) {
+  return api<{ success: boolean; error?: string }>(`/api/social/groups/${groupId}/dissolve`, { method: "POST" });
+}
+
+export async function transferGroup(groupId: string, toUserId: string) {
+  return api<{ success: boolean; error?: string }>(`/api/social/groups/${groupId}/transfer`, {
+    method: "POST",
+    body: JSON.stringify({ toUserId }),
+  });
+}
+
+export async function setGroupAdmins(groupId: string, userId: string, isAdmin: boolean) {
+  return api<{ success: boolean; error?: string }>(`/api/social/groups/${groupId}/admins`, {
+    method: "POST",
+    body: JSON.stringify({ userId, isAdmin }),
+  });
+}
+
+export async function muteAllGroup(groupId: string, muted: boolean) {
+  return api<{ success: boolean; error?: string }>(`/api/social/groups/${groupId}/mute-all`, {
+    method: "POST",
+    body: JSON.stringify({ muted }),
+  });
+}
+
+export async function muteGroupMember(groupId: string, userId: string, minutes: number) {
+  return api<{ success: boolean; mutedUntil?: string; error?: string }>(`/api/social/groups/${groupId}/mute-member`, {
+    method: "POST",
+    body: JSON.stringify({ userId, minutes }),
+  });
+}
+
+export async function setGroupNickname(groupId: string, nickname: string) {
+  return api<{ success: boolean; error?: string }>(`/api/social/groups/${groupId}/nickname`, {
+    method: "POST",
+    body: JSON.stringify({ nickname }),
+  });
+}
+
+export async function inviteGroupMembers(groupId: string, userIds: string[]) {
+  return api<{ success: boolean; invited?: string[]; error?: string }>(`/api/social/groups/${groupId}/invite`, {
+    method: "POST",
+    body: JSON.stringify({ userIds }),
+  });
+}
+
+export async function reportGroup(groupId: string, reason: string) {
+  return api<{ success: boolean; message?: string; error?: string }>(`/api/social/groups/${groupId}/report`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export async function reportMessage(msgId: string, reason: string) {
+  return api<{ success: boolean; message?: string; error?: string }>(`/api/social/messages/${msgId}/report`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+}
+
+// ==================== v25.0.41 黑名单（服务端） ====================
+
+export async function fetchServerBlacklist() {
+  return api<{ success: boolean; blacklist?: Array<{ userId: string; nickname: string; avatar: string }> }>(`/api/social/blacklist`);
+}
+
+export async function addServerBlacklist(userId: string) {
+  return api<{ success: boolean; error?: string }>(`/api/social/blacklist/${userId}`, { method: "POST" });
+}
+
+export async function removeServerBlacklist(userId: string) {
+  return api<{ success: boolean; error?: string }>(`/api/social/blacklist/${userId}`, { method: "DELETE" });
+}
+
+// ==================== v25.0.41 好友备注（服务端） ====================
+
+export async function setFriendRemark(userId: string, remark: string) {
+  return api<{ success: boolean; error?: string }>(`/api/social/friends/${userId}/remark`, {
+    method: "POST",
+    body: JSON.stringify({ remark }),
+  });
 }

@@ -40,6 +40,12 @@ import {
   sendFriendRequest as apiSendFriendRequest,
   respondFriendRequest as apiRespondFriendRequest,
   removeFriend as apiRemoveFriend,
+  fetchConversations,
+  markConversationRead,
+  toggleConversationPin,
+  toggleConversationMute,
+  deleteConversation,
+  type ConversationVo,
 } from "@/lib/socialApi";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
@@ -575,7 +581,8 @@ function AddFriendView({
 
   // ==================== 跳转用户主页 ====================
   const goToProfile = (userId: string) => {
-    router.push(`/friends/profile?id=${encodeURIComponent(userId)}`);
+    // v25.0.41：统一进入唯一 UserProfile 页面（原 /friends/profile 局部页废弃跳转）
+    router.push(`/user?uid=${encodeURIComponent(userId)}`);
   };
 
   // ==================== 渲染用户卡片 ====================
@@ -1419,6 +1426,233 @@ function BlacklistPanel({ onBack }: { onBack: () => void }) {
   );
 }
 
+// ==================== v25.0.41 消息Tab：服务端统一会话列表 ====================
+// 数据全部来自 /api/social/conversations（服务端持久化，跨设备恢复），禁止localStorage模拟
+function convTime(iso: string): string {
+  try {
+    const d = new Date(iso);
+    const now = new Date();
+    const diffMins = Math.floor((now.getTime() - d.getTime()) / 60000);
+    if (diffMins < 1) return "刚刚";
+    if (diffMins < 60) return `${diffMins}分钟前`;
+    if (now.toDateString() === d.toDateString()) {
+      return d.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+    }
+    const diffDays = Math.floor((now.getTime() - d.getTime()) / 86400000);
+    if (diffDays === 1) return "昨天";
+    if (diffDays < 7) return `${diffDays}天前`;
+    return d.toLocaleDateString("zh-CN", { month: "short", day: "numeric" });
+  } catch {
+    return "";
+  }
+}
+
+function ConversationsView({ onOpenPrivate }: { onOpenPrivate: (peerId: string) => void }) {
+  const router = useRouter();
+  const [convs, setConvs] = useState<ConversationVo[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [query, setQuery] = useState("");
+  const [menu, setMenu] = useState<{ conv: ConversationVo; x: number; y: number } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ConversationVo | null>(null);
+
+  const load = useCallback(() => {
+    void fetchConversations().then((r) => {
+      if (r && r.success && r.conversations) setConvs(r.conversations);
+      setLoaded(true);
+    }).catch(() => setLoaded(true));
+  }, []);
+
+  useEffect(() => {
+    load();
+    const t = setInterval(load, 5000);
+    return () => clearInterval(t);
+  }, [load]);
+
+  useEffect(() => {
+    if (!menu) return;
+    const close = () => setMenu(null);
+    window.addEventListener("click", close);
+    return () => window.removeEventListener("click", close);
+  }, [menu]);
+
+  const open = (c: ConversationVo) => {
+    void markConversationRead(c.conversationId).catch(() => {});
+    if (c.type === "group") {
+      router.push(`/groups/chat/${c.groupId}`);
+    } else {
+      onOpenPrivate(c.peerId || "");
+    }
+  };
+
+  const filtered = convs.filter((c) => {
+    const name = c.type === "group" ? c.groupName || "" : c.peerName || "";
+    return name.toLowerCase().includes(query.toLowerCase()) || (c.lastMessage?.content || "").includes(query);
+  });
+
+  const act = async (fn: () => Promise<any>) => {
+    await fn().catch(() => {});
+    setMenu(null);
+    load();
+  };
+
+  return (
+    <div>
+      {/* 会话搜索 */}
+      <div className="px-4 pt-3 pb-2">
+        <div className="relative">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="搜索会话"
+            className="w-full rounded-xl bg-gray-100 py-2.5 pl-10 pr-4 text-sm text-gray-700 placeholder-gray-400 focus:outline-none"
+          />
+        </div>
+      </div>
+
+      {!loaded ? (
+        <div className="py-16 text-center text-sm text-gray-400">加载中…</div>
+      ) : filtered.length === 0 ? (
+        <div className="py-16 text-center">
+          <svg className="mx-auto mb-3" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+          <p className="text-sm text-gray-400">{query ? "暂无匹配的会话" : "暂无会话，去通讯录找好友聊聊天吧"}</p>
+        </div>
+      ) : (
+        filtered.map((c) => {
+          const name = c.type === "group" ? c.groupName || "群聊" : c.peerName || "用户";
+          const lastText = c.lastMessage
+            ? `${c.type === "group" && c.lastMessage.senderName ? c.lastMessage.senderName + "：" : ""}${c.lastMessage.type === "image" ? "[图片]" : c.lastMessage.content}`
+            : "";
+          return (
+            <div
+              key={c.conversationId}
+              className="flex w-full items-center gap-3 border-b border-gray-50 px-4 py-3 text-left select-none cursor-pointer active:bg-gray-50"
+              style={c.pinned ? { backgroundColor: "#F7F5FA" } : undefined}
+              onClick={() => open(c)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setMenu({ conv: c, x: e.clientX, y: e.clientY });
+              }}
+              onTouchStart={(e) => {
+                const t0 = Date.now();
+                const touch = e.touches[0];
+                const timer = setTimeout(() => {
+                  if (touch) setMenu({ conv: c, x: touch.clientX, y: touch.clientY });
+                }, 500);
+                const clear = () => {
+                  clearTimeout(timer);
+                  document.removeEventListener("touchend", clear);
+                  document.removeEventListener("touchmove", clear);
+                };
+                document.addEventListener("touchend", clear);
+                document.addEventListener("touchmove", clear);
+                if (Date.now() - t0 < 0) return;
+              }}
+            >
+              <div className="relative shrink-0">
+                <div
+                  className="flex h-11 w-11 items-center justify-center rounded-full text-base font-semibold text-white"
+                  style={{ backgroundColor: c.type === "group" ? BRAND : "#9C6ADE" }}
+                >
+                  {(c.type === "group" ? c.groupName || "群" : c.peerName || "友").slice(0, 1)}
+                </div>
+                {c.type === "group" && (
+                  <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-white">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ background: BRAND, borderRadius: "50%" }}>
+                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                      <circle cx="9" cy="7" r="4" />
+                    </svg>
+                  </span>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  {c.pinned && (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={BRAND} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                      <line x1="12" y1="17" x2="12" y2="22" />
+                      <path d="M5 17h14l-1.5-6.5a4 4 0 0 0-4-3.5h-3a4 4 0 0 0-4 3.5L5 17z" />
+                    </svg>
+                  )}
+                  <span className="text-sm font-semibold text-gray-800 truncate">{name}</span>
+                  {c.muted && (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                      <line x1="1" y1="1" x2="23" y2="23" />
+                      <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V5a3 3 0 0 0-5.94-.6" />
+                      <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23" />
+                    </svg>
+                  )}
+                  <span className="ml-auto shrink-0 text-xs text-gray-400">{convTime(c.updatedAt)}</span>
+                </div>
+                <div className="mt-0.5 flex items-center gap-2">
+                  <p className="truncate text-xs text-gray-400 flex-1">{lastText || "暂无消息"}</p>
+                  {c.unread > 0 && !c.muted && (
+                    <span
+                      className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full px-1 text-[10px] font-bold text-white"
+                      style={{ backgroundColor: "#F44336" }}
+                    >
+                      {c.unread > 99 ? "99+" : c.unread}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })
+      )}
+
+      {/* 会话操作菜单 */}
+      {menu && (
+        <div className="fixed inset-0 z-50" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="absolute w-40 overflow-hidden rounded-xl bg-white shadow-xl"
+            style={{
+              left: Math.min(menu.x, (typeof window !== "undefined" ? window.innerWidth : 400) - 170),
+              top: Math.min(menu.y, (typeof window !== "undefined" ? window.innerHeight : 800) - 220),
+              border: "1px solid #eee",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button onClick={() => act(() => toggleConversationPin(menu.conv.conversationId, !menu.conv.pinned))} className="flex w-full items-center gap-2 px-4 py-3 text-sm text-gray-700 active:bg-gray-100">
+              {menu.conv.pinned ? "取消置顶" : "置顶聊天"}
+            </button>
+            <button onClick={() => act(() => toggleConversationMute(menu.conv.conversationId, !menu.conv.muted))} className="flex w-full items-center gap-2 px-4 py-3 text-sm text-gray-700 active:bg-gray-100">
+              {menu.conv.muted ? "开启提醒" : "消息免打扰"}
+            </button>
+            {menu.conv.unread > 0 && (
+              <button onClick={() => act(() => markConversationRead(menu.conv.conversationId))} className="flex w-full items-center gap-2 px-4 py-3 text-sm text-gray-700 active:bg-gray-100">
+                标记已读
+              </button>
+            )}
+            <button onClick={() => { setDeleteTarget(menu.conv); setMenu(null); }} className="flex w-full items-center gap-2 px-4 py-3 text-sm text-red-500 active:bg-gray-100">
+              删除会话
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 删除会话确认 */}
+      {deleteTarget && (
+        <UnifiedConfirmDialog
+          open
+          danger
+          title="删除会话"
+          message={`确定删除与「${deleteTarget.type === "group" ? deleteTarget.groupName : deleteTarget.peerName}」的会话吗？删除后可重新发起聊天。`}
+          confirmText="删除"
+          cancelText="取消"
+          onConfirm={() => { const t = deleteTarget; setDeleteTarget(null); void act(() => deleteConversation(t.conversationId)); }}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+    </div>
+  );
+}
+
 // ==================== 主页面 ====================
 export default function FriendsPage() {
   const router = useRouter();
@@ -1428,7 +1662,9 @@ export default function FriendsPage() {
   const [view, setView] = useState<"list" | "addFriend" | "requests" | "blacklist">("list");
   const [addMode, setAddMode] = useState<"scan" | "search" | "nearby">("scan");
   const [scannedUid, setScannedUid] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"friends" | "groups">("friends");
+  // v25.0.41：聊天页两个一级Tab——消息（默认，服务端统一会话）｜通讯录
+  const [activeTab, setActiveTab] = useState<"messages" | "contacts">("messages");
+  const [contactsSection, setContactsSection] = useState<"friends" | "groups">("friends");
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddMenu, setShowAddMenu] = useState(false);
 
@@ -1661,6 +1897,12 @@ export default function FriendsPage() {
     router.push(`/friends/chat?id=${encodeURIComponent(friendId)}`);
   };
 
+  // v25.0.41：点击任何用户统一进入唯一 UserProfile 页面
+  const handleOpenProfile = (userId: string) => {
+    if (!requireLogin()) return;
+    router.push(`/user?uid=${encodeURIComponent(userId)}`);
+  };
+
   // ==================== 修改备注 ====================
   const handleRemarkFriend = (friendId: string) => {
     setActionMenu(null);
@@ -1743,7 +1985,7 @@ export default function FriendsPage() {
     >
       {/* ===== Header ===== */}
       <div className="sticky top-0 z-40 relative">
-        <BrandHeader title="好友" />
+        <BrandHeader title="聊天" />
         {/* + 按钮 */}
         <button
           onClick={() => setShowAddMenu(!showAddMenu)}
@@ -1776,6 +2018,21 @@ export default function FriendsPage() {
                 onClick={() => {
                   if (!requireLogin()) return;
                   setShowAddMenu(false);
+                  setAddMode("search");
+                  setView("addFriend");
+                }}
+                className="flex w-full items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                添加好友
+              </button>
+              <button
+                onClick={() => {
+                  if (!requireLogin()) return;
+                  setShowAddMenu(false);
                   setAddMode("scan");
                   setView("addFriend");
                 }}
@@ -1793,16 +2050,17 @@ export default function FriendsPage() {
                 onClick={() => {
                   if (!requireLogin()) return;
                   setShowAddMenu(false);
-                  setAddMode("search");
-                  setView("addFriend");
+                  router.push("/groups/create");
                 }}
                 className="flex w-full items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 active:bg-gray-100"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                 </svg>
-                昵称搜索
+                创建群聊
               </button>
               <button
                 onClick={() => {
@@ -1824,36 +2082,9 @@ export default function FriendsPage() {
         )}
       </div>
 
-      {/* ===== 搜索栏 ===== */}
-      <div className="sticky z-30 bg-white px-4 py-3" style={{ top: "40px" }}>
-        <div className="relative">
-          <svg
-            className="absolute left-3 top-1/2 -translate-y-1/2"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#999"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="搜索好友"
-            className="w-full rounded-xl bg-gray-100 py-2.5 pl-10 pr-4 text-sm text-gray-700 placeholder-gray-400 focus:outline-none"
-          />
-        </div>
-      </div>
-
-      {/* ===== 分段切换（P9-首发裁剪：群聊入口隐藏，仅保留好友） ===== */}
+      {/* ===== 分段切换（v25.0.41：聊天页一级Tab——消息｜通讯录） ===== */}
       <div className="flex border-b border-gray-100">
-        {(["friends"] as const).map((tab) => (
+        {(["messages", "contacts"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -1863,7 +2094,7 @@ export default function FriendsPage() {
               fontWeight: activeTab === tab ? 600 : 400,
             }}
           >
-            {tab === "friends" ? "好友" : "群聊"}
+            {tab === "messages" ? "消息" : "通讯录"}
             {activeTab === tab && (
               <div
                 className="absolute bottom-0 left-1/2 h-0.5 w-8 -translate-x-1/2 rounded-full"
@@ -1874,16 +2105,77 @@ export default function FriendsPage() {
         ))}
       </div>
 
+      {/* ===== 搜索栏（仅通讯录Tab；消息Tab使用会话内搜索） ===== */}
+      {activeTab === "contacts" && (
+        <div className="sticky z-30 bg-white px-4 py-3" style={{ top: "40px" }}>
+          <div className="relative">
+            <svg
+              className="absolute left-3 top-1/2 -translate-y-1/2"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#999"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="搜索好友 / 群聊"
+              className="w-full rounded-xl bg-gray-100 py-2.5 pl-10 pr-4 text-sm text-gray-700 placeholder-gray-400 focus:outline-none"
+            />
+          </div>
+        </div>
+      )}
+
       {/* ===== 列表内容 ===== */}
       <div className="flex-1">
-        {activeTab === "friends" ? (
+        {activeTab === "messages" ? (
+          <ConversationsView
+            onOpenPrivate={(peerId) => {
+              if (!requireLogin()) return;
+              router.push(`/friends/chat?id=${encodeURIComponent(peerId)}`);
+            }}
+          />
+        ) : (
           <>
-            {/* 好友请求入口 */}
+            {/* 新的朋友入口 */}
             <FriendRequestsEntry
               count={pendingCount}
               onOpen={() => setView("requests")}
             />
 
+            {/* 通讯录分区切换：好友｜群聊 */}
+            <div className="flex border-b border-gray-50 bg-gray-50/60">
+              {(["friends", "groups"] as const).map((sec) => (
+                <button
+                  key={sec}
+                  onClick={() => setContactsSection(sec)}
+                  className="relative flex-1 py-2.5 text-xs font-medium transition-colors"
+                  style={{
+                    color: contactsSection === sec ? BRAND : "#999",
+                    fontWeight: contactsSection === sec ? 600 : 400,
+                  }}
+                >
+                  {sec === "friends" ? `好友（${filteredFriends.length}）` : `群聊（${filteredGroups.length}）`}
+                  {contactsSection === sec && (
+                    <div
+                      className="absolute bottom-0 left-1/2 h-0.5 w-6 -translate-x-1/2 rounded-full"
+                      style={{ backgroundColor: BRAND }}
+                    />
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {contactsSection === "friends" ? (
+              <>
             {/* 黑名单管理入口 */}
             <BlacklistEntry
               count={blacklist.length}
@@ -2036,8 +2328,8 @@ export default function FriendsPage() {
                         longPressTriggered.current = false;
                         return;
                       }
-                      // v25.0.33（P7-整改-01）：恢复点击好友行进入一对一私聊
-                      handleSendMessage(friend.id);
+                      // v25.0.41：点击好友行进入唯一用户资料页（资料页内可发消息）
+                      handleOpenProfile(friend.id);
                     }}
                     onTouchStart={(e) => handleTouchStart(friend.id, e)}
                     onTouchEnd={handleTouchEnd}
@@ -2102,71 +2394,119 @@ export default function FriendsPage() {
                 );
               })
             )}
-          </>
-        ) : (
-          <>
-            {/* 群聊列表 */}
-            {filteredGroups.length === 0 ? (
-              <div className="py-16 text-center">
-                <svg
-                  className="mx-auto mb-3"
-                  width="48"
-                  height="48"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#ccc"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                  <circle cx="9" cy="7" r="4" />
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                </svg>
-                <p className="text-sm text-gray-400">
-                  {searchQuery ? "暂无匹配的群聊" : "暂无群聊"}
-                </p>
-              </div>
+              </>
             ) : (
-              filteredGroups.map((group) => (
-                <div
-                  key={group.id}
-                  className="flex w-full items-center gap-3 border-b border-gray-50 px-4 py-3 text-left"
-                >
-                  <FriendAvatar text={group.name} size={44} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-gray-800 truncate">
-                        {group.name}
-                      </span>
-                      <span className="text-xs text-gray-400 shrink-0">
-                        ({group.members.length}人)
-                      </span>
+              <>
+                {/* ===== 群聊分区：我创建的群 / 我加入的群 ===== */}
+                {(() => {
+                  const myId = getCurrentUserId();
+                  const created = filteredGroups.filter((g) => g.ownerId === myId || String(g.ownerId) === String(myId));
+                  const joined = filteredGroups.filter((g) => !(g.ownerId === myId || String(g.ownerId) === String(myId)));
+                  const renderGroupRow = (group: GroupInfo, isOwner: boolean) => (
+                    <div
+                      key={group.id}
+                      className="flex w-full items-center gap-3 border-b border-gray-50 px-4 py-3 text-left cursor-pointer active:bg-gray-50"
+                      onClick={() => {
+                        if (!requireLogin()) return;
+                        router.push(`/groups/chat/${encodeURIComponent(group.id)}`);
+                      }}
+                    >
+                      <FriendAvatar text={group.name} size={44} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold text-gray-800 truncate">
+                            {group.name}
+                          </span>
+                          <span className="text-xs text-gray-400 shrink-0">
+                            ({group.members.length}人)
+                          </span>
+                        </div>
+                        {group.announcement && (
+                          <p className="mt-0.5 truncate text-xs text-gray-400">
+                            {group.announcement}
+                          </p>
+                        )}
+                      </div>
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#ddd"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M9 18l6-6-6-6" />
+                      </svg>
                     </div>
-                    {group.announcement && (
-                      <p className="mt-0.5 truncate text-xs text-gray-400">
-                        {group.announcement}
-                      </p>
-                    )}
-                  </div>
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#ddd"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M9 18l6-6-6-6" />
-                  </svg>
-                </div>
-              ))
+                  );
+                  return (
+                    <>
+                      {created.length > 0 && (
+                        <>
+                          <p className="px-4 pt-3 pb-1 text-xs font-medium text-gray-400">我创建的群（{created.length}）</p>
+                          {created.map((g) => renderGroupRow(g, true))}
+                        </>
+                      )}
+                      {joined.length > 0 && (
+                        <>
+                          <p className="px-4 pt-3 pb-1 text-xs font-medium text-gray-400">我加入的群（{joined.length}）</p>
+                          {joined.map((g) => renderGroupRow(g, false))}
+                        </>
+                      )}
+                      {filteredGroups.length === 0 && (
+                        <div className="py-12 text-center">
+                          <svg className="mx-auto mb-3" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                            <circle cx="9" cy="7" r="4" />
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                          </svg>
+                          <p className="text-sm text-gray-400">
+                            {searchQuery ? "暂无匹配的群聊" : "暂无群聊"}
+                          </p>
+                          {!searchQuery && (
+                            <button
+                              onClick={() => {
+                                if (!requireLogin()) return;
+                                router.push("/groups/create");
+                              }}
+                              className="mt-4 rounded-xl px-6 py-2.5 text-sm font-semibold text-white"
+                              style={{ backgroundColor: BRAND }}
+                            >
+                              创建群聊
+                            </button>
+                          )}
+                        </div>
+                      )}
+                      {filteredGroups.length > 0 && (
+                        <button
+                          onClick={() => {
+                            if (!requireLogin()) return;
+                            router.push("/groups/create");
+                          }}
+                          className="flex w-full items-center gap-3 border-b border-gray-50 px-4 py-3 text-left active:bg-gray-50"
+                        >
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: BRAND_LIGHT }}>
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={BRAND} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                              <circle cx="9" cy="7" r="4" />
+                              <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                            </svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-800">创建群聊</p>
+                            <p className="text-xs text-gray-400">和好友一起学习交流</p>
+                          </div>
+                        </button>
+                      )}
+                    </>
+                  );
+                })()}
+              </>
             )}
-
-            {/* P9-首发裁剪：创建群聊入口隐藏 */}
           </>
         )}
       </div>

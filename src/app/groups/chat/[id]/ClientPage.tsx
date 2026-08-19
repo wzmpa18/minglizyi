@@ -12,7 +12,13 @@ import {
   type ChatMessage,
 } from "@/lib/socialStore";
 import { getCurrentUserId } from "@/lib/auth";
-import { sendGroupMessage, fetchGroupMessages } from "@/lib/socialApi";
+import {
+  sendGroupMessage,
+  fetchGroupMessages,
+  fetchGroupDetail,
+  reportMessage,
+  type GroupMemberVo,
+} from "@/lib/socialApi";
 
 import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
@@ -30,6 +36,16 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState("");
   const chatListRef = useRef<HTMLDivElement>(null);
+
+  // v25.0.41：群角色/禁言/成员（@功能与禁言拦截）
+  const [myRole, setMyRole] = useState<"owner" | "admin" | "member">("member");
+  const [muteAll, setMuteAll] = useState(false);
+  const [myMuteRemain, setMyMuteRemain] = useState(0);
+  const [members, setMembers] = useState<GroupMemberVo[]>([]);
+  const [atPicker, setAtPicker] = useState(false);
+  const [failIds, setFailIds] = useState<Set<string>>(new Set());
+  const [reportTarget, setReportTarget] = useState<{ serverId: string; name: string } | null>(null);
+  const [toast, setToast] = useState("");
 
   const currentUserId = getCurrentUserId() || "current_user";
   const currentUserName = (() => {
@@ -68,15 +84,48 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
     setMessages(msgs);
   }, [groupId]);
 
+  // v25.0.41：拉取群详情（我的角色/全员禁言/我的禁言状态/成员列表供@选择）
+  useEffect(() => {
+    let stopped = false;
+    const loadDetail = async () => {
+      try {
+        const r = await fetchGroupDetail(groupId);
+        if (stopped || !r || !r.success) return;
+        setMyRole(r.myRole || "member");
+        setMuteAll(!!r.group?.muteAll);
+        setMyMuteRemain(r.myMuteRemain || 0);
+        setMembers(r.members || []);
+        if (r.group?.name && !groupId.startsWith("grp_")) {
+          setGroup((prev) => (prev && prev.name !== r.group!.name ? { ...prev, name: r.group!.name } : prev));
+        }
+      } catch { /* 静默 */ }
+    };
+    void loadDetail();
+    const t = setInterval(loadDetail, 30000);
+    return () => { stopped = true; clearInterval(t); };
+  }, [groupId]);
+
   useEffect(() => {
     if (chatListRef.current) {
       chatListRef.current.scrollTop = chatListRef.current.scrollHeight;
     }
   }, [messages]);
 
+  const showToast = (msg: string) => {
+    setToast(msg);
+    setTimeout(() => setToast(""), 2500);
+  };
+
   const handleSend = useCallback(() => {
     const text = inputText.trim();
     if (!text) return;
+
+    // v25.0.41：禁言拦截（全员禁言仅群主/管理员可发；个人禁言到期前不可发）
+    const canSpeak = (myRole === "owner" || myRole === "admin") || (!muteAll && myMuteRemain <= 0);
+    if (!canSpeak) {
+      showToast(muteAll ? "群主已开启全员禁言" : `你已被禁言，剩余${Math.ceil(myMuteRemain / 60000)}分钟`);
+      return;
+    }
 
     // v25.0.19: 真实发送到后端群聊（全体成员可见），本地同步保存
     const newMsg: ChatMessage = {
@@ -95,9 +144,26 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
     void sendGroupMessage(groupId, text).then((r) => {
       if (r && r.success && r.message) {
         lastServerMsgIdRef.current = Math.max(lastServerMsgIdRef.current, parseInt(r.message.id, 10) || 0);
+        setFailIds((prev) => { const n = new Set(prev); n.delete(newMsg.id); return n; });
+      } else {
+        // v25.0.41：发送失败标记（可重发）
+        setFailIds((prev) => new Set(prev).add(newMsg.id));
       }
+    }).catch(() => {
+      setFailIds((prev) => new Set(prev).add(newMsg.id));
     });
-  }, [inputText, groupId, currentUserId, currentUserName]);
+  }, [inputText, groupId, currentUserId, currentUserName, myRole, muteAll, myMuteRemain]);
+
+  // v25.0.41：失败重发
+  const handleResend = (msg: ChatMessage) => {
+    void sendGroupMessage(groupId, msg.content).then((r) => {
+      if (r && r.success) {
+        setFailIds((prev) => { const n = new Set(prev); n.delete(msg.id); return n; });
+      } else {
+        showToast((r && r.error) || "重发失败，请检查网络");
+      }
+    }).catch(() => showToast("重发失败，请检查网络"));
+  };
 
   // v25.0.19: 轮询拉取群内其他成员真实消息（替代已移除的假自动回复）
   const lastServerMsgIdRef = useRef(0);
@@ -174,7 +240,28 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
       style={{ maxWidth: "420px", margin: "0 auto" }}
     >
   <PageLoginGuard />
-      <BrandHeader title={groupName} showBack />
+      {/* v25.0.41：点击群名/···进入群详情（群资料+管理） */}
+      <div className="relative">
+        <BrandHeader title={groupName} showBack onTitleClick={handleGoToInfo} />
+        <button
+          onClick={handleGoToInfo}
+          className="absolute right-2 top-0 flex h-10 w-10 items-center justify-center text-white"
+          aria-label="群详情"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="5" cy="12" r="2" />
+            <circle cx="12" cy="12" r="2" />
+            <circle cx="19" cy="12" r="2" />
+          </svg>
+        </button>
+      </div>
+
+      {/* 全员禁言提示条 */}
+      {muteAll && myRole === "member" && (
+        <div className="px-3 py-1.5 text-center text-xs" style={{ backgroundColor: "#fff7e6", color: "#d48806" }}>
+          群主已开启全员禁言，仅管理员可发言
+        </div>
+      )}
 
       <div
         ref={chatListRef}
@@ -210,13 +297,18 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
 
         {messages.map((msg) => {
           const isMe = msg.senderId === currentUserId;
+          const failed = failIds.has(msg.id);
+          // 服务端消息ID（举报用）：gsrv_123 → 123；本地消息暂无服务端ID则不可举报
+          const serverId = msg.id.startsWith("gsrv_") ? msg.id.slice(5) : "";
           return (
             <div
               key={msg.id}
               className={"flex " + (isMe ? "justify-end" : "justify-start")}
             >
               {!isMe && (
-                <div
+                /* v25.0.41：点击头像进入唯一用户资料页 */
+                <button
+                  onClick={() => router.push(`/user?uid=${encodeURIComponent(msg.senderId)}`)}
                   className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white font-bold mr-2"
                   style={{
                     backgroundColor: BRAND,
@@ -224,7 +316,7 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
                   }}
                 >
                   {msg.senderName.slice(0, 1)}
-                </div>
+                </button>
               )}
 
               <div
@@ -235,20 +327,47 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
                   borderBottomRightRadius: isMe ? "4px" : "16px",
                   borderBottomLeftRadius: !isMe ? "4px" : "16px",
                 }}
+                onContextMenu={(e) => {
+                  // v25.0.41：长按/右键举报消息
+                  if (serverId) { e.preventDefault(); setReportTarget({ serverId, name: msg.senderName }); }
+                }}
+                onTouchStart={(e) => {
+                  const touch = e.touches[0];
+                  const timer = setTimeout(() => {
+                    if (touch && serverId) setReportTarget({ serverId, name: msg.senderName });
+                  }, 600);
+                  const clear = () => {
+                    clearTimeout(timer);
+                    document.removeEventListener("touchend", clear);
+                    document.removeEventListener("touchmove", clear);
+                  };
+                  document.addEventListener("touchend", clear);
+                  document.addEventListener("touchmove", clear);
+                }}
               >
                 {!isMe && (
                   <p
-                    className="mb-0.5 text-[11px] font-semibold"
+                    className="mb-0.5 text-[11px] font-semibold cursor-pointer"
                     style={{ color: BRAND }}
+                    onClick={() => router.push(`/user?uid=${encodeURIComponent(msg.senderId)}`)}
                   >
                     {msg.senderName}
                   </p>
                 )}
                 <p>{msg.content}</p>
                 <p
-                  className="mt-1 text-right text-[10px]"
+                  className="mt-1 text-right text-[10px] flex items-center justify-end gap-1"
                   style={{ opacity: isMe ? 0.7 : 0.5 }}
                 >
+                  {failed && (
+                    <button
+                      onClick={() => handleResend(msg)}
+                      className="rounded px-1 text-[10px]"
+                      style={{ color: "#F44336" }}
+                    >
+                      发送失败，点击重发
+                    </button>
+                  )}
                   {formatTime(msg.timestamp)}
                 </p>
               </div>
@@ -269,6 +388,38 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
         })}
       </div>
 
+      {/* @成员选择条（v25.0.41：@成员 / @全体[仅群主和管理员]） */}
+      {atPicker && (
+        <div className="border-t border-gray-200 bg-white px-3 py-2" style={{ maxHeight: "180px", overflowY: "auto" }}>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-xs text-gray-500">选择要@的成员</p>
+            <button onClick={() => setAtPicker(false)} className="text-xs text-gray-400">收起</button>
+          </div>
+          {(myRole === "owner" || myRole === "admin") && (
+            <button
+              onClick={() => { setInputText((prev) => prev + "@全体成员 "); setAtPicker(false); }}
+              className="flex w-full items-center gap-2 border-b border-gray-50 py-2 text-left"
+            >
+              <span className="rounded-full px-2 py-0.5 text-[10px] font-semibold text-white" style={{ backgroundColor: "#F39C12" }}>全体</span>
+              <span className="text-sm text-gray-800">@全体成员</span>
+            </button>
+          )}
+          {members.filter((m) => String(m.userId) !== String(currentUserId)).map((m) => (
+            <button
+              key={m.userId}
+              onClick={() => { setInputText((prev) => prev + `@${m.nickname} `); setAtPicker(false); }}
+              className="flex w-full items-center gap-2 border-b border-gray-50 py-2 text-left last:border-0"
+            >
+              <span className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold text-white" style={{ backgroundColor: m.role === "owner" ? "#F39C12" : m.role === "admin" ? "#3498DB" : "#B39DDB" }}>
+                {(m.nickname || "友").slice(0, 1)}
+              </span>
+              <span className="text-sm text-gray-800 truncate">@{m.nickname}</span>
+            </button>
+          ))}
+          {members.length === 0 && <p className="py-3 text-center text-xs text-gray-400">成员加载中…</p>}
+        </div>
+      )}
+
       <div
         className="fixed left-1/2 flex w-full items-center gap-2 border-t border-gray-200 bg-white px-3 py-2"
         style={{
@@ -277,6 +428,15 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
           transform: "translateX(-50%)",
         }}
       >
+        {/* v25.0.41：@成员快捷入口 */}
+        <button
+          onClick={() => setAtPicker(!atPicker)}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-sm font-bold"
+          style={{ color: BRAND }}
+          aria-label="艾特成员"
+        >
+          @
+        </button>
         <input
           type="text"
           value={inputText}
@@ -297,6 +457,37 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
           发送
         </button>
       </div>
+
+      {/* 消息举报弹窗（v25.0.41） */}
+      {reportTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-8" onClick={() => setReportTarget(null)}>
+          <div className="w-full rounded-2xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
+            <p className="mb-2 text-center text-sm font-semibold text-gray-800">举报 {reportTarget.name} 的消息</p>
+            <p className="mb-3 text-center text-xs text-gray-400">举报后平台将尽快核实处理</p>
+            <div className="flex gap-3">
+              <button onClick={() => setReportTarget(null)} className="flex-1 rounded-xl bg-gray-100 py-2.5 text-sm text-gray-600">取消</button>
+              <button
+                onClick={async () => {
+                  const r = await reportMessage(reportTarget.serverId, "群聊消息举报").catch(() => null);
+                  setReportTarget(null);
+                  showToast(r && r.success ? "举报已提交" : (r && r.error) || "举报失败");
+                }}
+                className="flex-1 rounded-xl py-2.5 text-sm font-semibold text-white"
+                style={{ backgroundColor: "#F44336" }}
+              >
+                确认举报
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div className="fixed left-1/2 top-16 z-[60] -translate-x-1/2 rounded-full bg-black/70 px-4 py-2 text-xs text-white">
+          {toast}
+        </div>
+      )}
 
       <div className="py-3 text-center">
         <p className="text-[11px] text-gray-400">yandao.vip 分享下载有礼</p>

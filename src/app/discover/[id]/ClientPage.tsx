@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { BrandHeader } from "@/components/shared";
 import { useToolBack } from "@/lib/useToolBack";
 import { getPosts, getComments, addComment, toggleLikePost } from "@/lib/socialStore";
@@ -51,6 +51,7 @@ interface CommentItem {
 
 export default function DiscoverDetailPage({ routeId }: { routeId?: string }) {
   const params = useParams<{ id: string }>();
+  const router = useRouter();
   const id = routeId || params?.id || "";
   const { goBack } = useToolBack();
 
@@ -289,8 +290,15 @@ export default function DiscoverDetailPage({ routeId }: { routeId?: string }) {
           <>
             {/* 帖子详情卡片 */}
             <div style={{ backgroundColor: "#fff", padding: "16px", marginBottom: "8px" }}>
-              {/* 作者信息 */}
-              <div style={{ display: "flex", alignItems: "center", marginBottom: "12px" }}>
+              {/* 作者信息（v25.0.41：点击作者进入唯一用户资料页） */}
+              <div
+                style={{ display: "flex", alignItems: "center", marginBottom: "12px", cursor: "pointer" }}
+                onClick={() => {
+                  if (post.authorId && post.authorId !== "system") {
+                    router.push(`/user?uid=${encodeURIComponent(post.authorId)}`);
+                  }
+                }}
+              >
                 <div
                   style={{
                     width: "40px", height: "40px", borderRadius: "50%", backgroundColor: "#e0e0e0",

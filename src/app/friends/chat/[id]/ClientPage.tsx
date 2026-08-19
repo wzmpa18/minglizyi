@@ -473,7 +473,10 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
           </button>
         </div>
       ) : (
-        <BrandHeader title={friendName} showBack />
+        /* v25.0.41：点击对方昵称进入唯一用户资料页 */
+        <div className="relative">
+          <BrandHeader title={friendName} showBack onTitleClick={() => router.push(`/user?uid=${encodeURIComponent(friendId)}`)} />
+        </div>
       )}
 
       {/* v25.0.38 P0-2：登录过期提示条（此前 401 被静默吞掉，消息收发全断且无任何提示） */}

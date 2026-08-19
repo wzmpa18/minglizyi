@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-// v25.0.20：五Tab配置：首页/发现/好友/学习/我的（积分移入个人中心商业区，学习入口上底部导航）
+// v25.0.41：五Tab配置：首页/发现/聊天/学习/我的（"好友"正式更名"聊天"，入口含消息+通讯录）
 const TABS = [
   {
     key: "home",
@@ -19,9 +19,9 @@ const TABS = [
   },
   {
     key: "friends",
-    label: "好友",
+    label: "聊天",
     href: "/friends",
-    Icon: FriendsIcon,
+    Icon: ChatIcon,
   },
   {
     key: "study",
@@ -55,13 +55,10 @@ function DiscoverIcon({ active }: { active: boolean }) {
   );
 }
 
-function FriendsIcon({ active }: { active: boolean }) {
+function ChatIcon({ active }: { active: boolean }) {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
     </svg>
   );
 }
