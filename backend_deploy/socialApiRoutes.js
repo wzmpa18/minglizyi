@@ -1060,13 +1060,18 @@ function createRouter() {
       const row = d.prepare('SELECT * FROM groups WHERE id = ?').get(parseInt(req.params.id, 10));
       if (!row) return res.status(404).json({ success: false, error: '群不存在' });
       const me = String(req.user.userId);
-      if (String(row.owner_id) !== me) return res.status(403).json({ success: false, error: '仅群主可移除成员' });
+      const admins = JSON.parse(row.admins || '[]');
+      const isOwner = String(row.owner_id) === me;
+      if (!isOwner && !admins.includes(me)) return res.status(403).json({ success: false, error: '仅群主/管理员可移除成员' });
       const target = String(req.body.userId || '');
+      if (String(row.owner_id) === target) return res.status(403).json({ success: false, error: '不能移除群主' });
+      if (!isOwner && admins.includes(target)) return res.status(403).json({ success: false, error: '管理员不能移除其他管理员' });
       const members = JSON.parse(row.member_ids || '[]');
       if (!members.includes(target)) return res.status(400).json({ success: false, error: '该用户不在群内' });
-      if (target === me) return res.status(400).json({ success: false, error: '群主请使用退群' });
-      d.prepare('UPDATE groups SET member_ids = ? WHERE id = ?')
-        .run(JSON.stringify(members.filter((m) => m !== target)), row.id);
+      if (target === me) return res.status(400).json({ success: false, error: '请使用退出群聊' });
+      d.prepare('UPDATE groups SET member_ids = ?, admins = ? WHERE id = ?')
+        .run(JSON.stringify(members.filter((m) => m !== target)), JSON.stringify(admins.filter((a) => a !== target)), row.id);
+      notify(target, 'group_kicked', { userId: me }, `你已被移出「${row.name}」`, '/friends');
       res.json({ success: true });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
