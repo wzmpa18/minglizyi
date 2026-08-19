@@ -1478,7 +1478,7 @@ function ConversationsView({ onOpenPrivate }: { onOpenPrivate: (peerId: string) 
   const open = (c: ConversationVo) => {
     void markConversationRead(c.conversationId).catch(() => {});
     if (c.type === "group") {
-      router.push(`/groups/chat/${c.groupId}`);
+      router.push(`/groups/chat?id=${encodeURIComponent(c.groupId)}`);
     } else {
       onOpenPrivate(c.peerId || "");
     }
@@ -2408,7 +2408,7 @@ export default function FriendsPage() {
                       className="flex w-full items-center gap-3 border-b border-gray-50 px-4 py-3 text-left cursor-pointer active:bg-gray-50"
                       onClick={() => {
                         if (!requireLogin()) return;
-                        router.push(`/groups/chat/${encodeURIComponent(group.id)}`);
+                        router.push(`/groups/chat?id=${encodeURIComponent(group.id)}`);
                       }}
                     >
                       <FriendAvatar text={group.name} size={44} />

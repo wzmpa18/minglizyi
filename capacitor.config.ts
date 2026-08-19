@@ -14,7 +14,7 @@ const config: CapacitorConfig = {
       keystorePath: 'yandao-release.keystore',
       keystoreAlias: 'yandao',
     },
-    backgroundColor: '#7B2FBE',
+    backgroundColor: '#2D3039',
     allowMixedContent: false,
     // v25.0.38 P0-3：移除 captureInput（已废弃的实验特性，会拦截 WebView 输入导致
     // 聊天页输入框无法唤起软键盘、发送按钮点击失效）
@@ -23,7 +23,7 @@ const config: CapacitorConfig = {
   plugins: {
     SplashScreen: {
       launchShowDuration: 2000,
-      backgroundColor: '#7B2FBE',
+      backgroundColor: '#2D3039',
       androidSplashResourceName: 'splash',
       showSpinner: false,
       androidScaleType: 'CENTER_CROP',

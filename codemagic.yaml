@@ -1,0 +1,55 @@
+# Codemagic CI/CD 配置 - 言道国学 iOS 构建
+# 使用方法: 将本文件放在仓库根目录, Codemagic 会自动识别
+# 前置: 在 Codemagic 控制台配置 Apple 开发者账号(自动证书签名)
+workflows:
+  ios-workflow:
+    name: 言道国学 iOS
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: yandao_guoxue_asc
+    environment:
+      node: 20
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.yandao.guoxue
+    scripts:
+      - name: 安装依赖
+        script: |
+          npm ci --legacy-peer-deps
+      - name: 添加iOS平台(如不存在)
+        script: |
+          if [ ! -d "ios" ]; then
+            npx cap add ios
+          fi
+      - name: 同步Web资源与插件
+        script: |
+          npx cap sync ios
+      - name: 替换AppIcon资产
+        script: |
+          rm -rf ios/App/App/Assets.xcassets/AppIcon.appiconset
+          cp -r ios-assets/AppIcon.appiconset ios/App/App/Assets.xcassets/
+          plutil -replace CFBundleDisplayName -string "言道国学" ios/App/App/Info.plist
+      - name: CocoaPods安装
+        script: |
+          cd ios/App && pod install
+      - name: 构建IPA
+        script: |
+          xcode-project build-ipa \
+            --project ios/App/App.xcodeproj \
+            --scheme App \
+            --configuration Release
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - ios/App/App/Assets.xcassets/AppIcon.appiconset/icon-1024.png
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true
+        release_type: SCHEDULED
+        earliest_release_date: "2026-09-01T12:00:00+08:00"
+        notify_testers: false
