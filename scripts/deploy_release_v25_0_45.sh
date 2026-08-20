@@ -46,10 +46,12 @@ echo "--- [2] 构建（build.sh 静态导出） ---"
 bash build.sh 2>&1 | tail -6
 
 echo "--- [3] 页面导出校验 ---"
-for p in invite/poster invite index; do
+for p in invite/poster invite; do
   test -f "out/${p}/index.html" || { echo "FATAL: out/${p}/index.html missing"; exit 1; }
   echo "OK: ${p}"
 done
+test -f "out/index.html" || { echo "FATAL: out/index.html missing"; exit 1; }
+echo "OK: index(首页)"
 grep -q "\"version\": \"${VERSION}\"" out/version.json || { echo "FATAL: version.json 未升级"; cat out/version.json; exit 1; }
 cat out/version.json
 
