@@ -1,6 +1,6 @@
 {
   "name": "06-app",
-  "version": "v25.0.44",
+  "version": "v25.0.45",
   "private": true,
   "scripts": {
     "dev": "node scripts/gen-version.js && next dev",
@@ -29,6 +29,7 @@
     "html2canvas": "^1.4.1",
     "html2canvas-pro": "^2.3.3",
     "iztro": "^2.5.8",
+    "jsqr": "^1.4.0",
     "lucide-react": "^1.26.0",
     "lunar-javascript": "^1.7.7",
     "next": "16.2.12",

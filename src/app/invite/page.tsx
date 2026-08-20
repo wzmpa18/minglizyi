@@ -175,6 +175,53 @@ export default function InvitePage() {
       <BrandHeader title="推广中心" showBack />
 
       <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 8px" }}>
+        {/* ===== AI推广助手入口（P7-MKT-POSTER-02） ===== */}
+        <button
+          onClick={() => router.push("/invite/poster")}
+          style={{
+            width: "100%",
+            background: `linear-gradient(135deg, #3D2364 0%, ${BRAND} 60%, #9B59B6 100%)`,
+            borderRadius: "14px",
+            padding: "16px 18px",
+            marginBottom: "12px",
+            color: "#fff",
+            border: "none",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "14px",
+            textAlign: "left",
+          }}
+        >
+          <div
+            style={{
+              width: "46px",
+              height: "46px",
+              borderRadius: "12px",
+              backgroundColor: "rgba(255,255,255,0.18)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "22px",
+              flexShrink: 0,
+            }}
+          >
+            ✦
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: "15px", fontWeight: 700 }}>
+              AI推广助手 · 智能海报
+              <span style={{ fontSize: "10px", fontWeight: 500, padding: "2px 6px", borderRadius: "8px", backgroundColor: "rgba(255,255,255,0.2)", marginLeft: "8px", verticalAlign: "middle" }}>
+                新
+              </span>
+            </div>
+            <div style={{ fontSize: "11px", opacity: 0.88, marginTop: "3px", lineHeight: 1.5 }}>
+              选圈层、选模块、选渠道，AI自动生成专属推广海报与配套文案
+            </div>
+          </div>
+          <span style={{ fontSize: "18px", opacity: 0.8 }}>›</span>
+        </button>
+
         {/* ===== 专属邀请二维码卡 ===== */}
         <div
           style={{

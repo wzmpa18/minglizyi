@@ -56,3 +56,5 @@ scripts/node_scratch/
 scripts/git_clean_crlf*.sh
 docs/materials/nihaixia_raw/
 
+
+.tmp-mkt-e2e/

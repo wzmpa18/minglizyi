@@ -111,7 +111,7 @@ export default function SecurityPage() {
 
   const handleUnbindConfirm = () => {
     removeWeChatBind();
-    setWeChatBind(null);
+    setWechatBind(null);
     setShowUnbindDialog(false);
   };
 

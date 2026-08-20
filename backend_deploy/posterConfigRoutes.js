@@ -129,15 +129,33 @@ function verifyAdmin(req) {
     return authHeader.replace('Bearer ', '') === ADMIN_KEY;
 }
 
-// 记录海报事件
-function logPosterEvent(type, userId, size) {
+// P7-MKT-POSTER-02 营销传播事件（第三十三条）：poster_generated / poster_saved /
+// copy_copied / system_share_started / style_switched / qr_selftest_failed
+const MARKETING_EVENTS = new Set([
+    'poster_generated',
+    'poster_saved',
+    'copy_copied',
+    'system_share_started',
+    'style_switched',
+    'qr_selftest_failed'
+]);
+
+// 记录海报事件（兼容旧版 generate/save 与新营销事件）
+function logPosterEvent(type, userId, size, meta) {
     const stats = getStats();
     const record = {
-        type,           // generate | save
+        type,           // generate | save | poster_generated | ...
         userId: userId || 'anonymous',
         size: size || 'vertical',
         timestamp: new Date().toISOString()
     };
+    if (meta && typeof meta === 'object') {
+        // 维度元数据：audience/product/channel/template/ratio/copyId
+        const dims = ['audience', 'product', 'channel', 'template', 'ratio', 'copyId'];
+        for (const k of dims) {
+            if (meta[k]) record[k] = String(meta[k]).slice(0, 40);
+        }
+    }
     stats.records.push(record);
     // 只保留最近10000条
     if (stats.records.length > 10000) {
@@ -231,14 +249,15 @@ router.get('/poster/config/public', (req, res) => {
     });
 });
 
-// POST /api/poster/log - 记录海报事件（生成/保存）
+// POST /api/poster/log - 记录海报事件（生成/保存 + P7营销事件）
 router.post('/poster/log', (req, res) => {
     try {
-        const { type, userId, size } = req.body;
-        if (!type || (type !== 'generate' && type !== 'save')) {
+        const { type, event, userId, size, audience, product, channel, template, ratio, copyId } = req.body;
+        const finalType = event || type;
+        if (!finalType || (finalType !== 'generate' && finalType !== 'save' && !MARKETING_EVENTS.has(finalType))) {
             return res.json({ success: false, error: '无效的事件类型' });
         }
-        logPosterEvent(type, userId, size);
+        logPosterEvent(finalType, userId, size, { audience, product, channel, template, ratio, copyId });
         res.json({ success: true });
     } catch (error) {
         res.json({ success: false, error: error.message });

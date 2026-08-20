@@ -1478,7 +1478,7 @@ function ConversationsView({ onOpenPrivate }: { onOpenPrivate: (peerId: string) 
   const open = (c: ConversationVo) => {
     void markConversationRead(c.conversationId).catch(() => {});
     if (c.type === "group") {
-      router.push(`/groups/chat?id=${encodeURIComponent(c.groupId)}`);
+      router.push(`/groups/chat?id=${encodeURIComponent(String(c.groupId ?? ""))}`);
     } else {
       onOpenPrivate(c.peerId || "");
     }
