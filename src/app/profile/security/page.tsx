@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { BrandHeader } from "@/components/shared";
-import { getLoginState } from "@/lib/auth";
+import { getLoginState, getUserToken, clearLoginState } from "@/lib/auth";
 
 const BRAND = "#7B2FBE";
 
@@ -65,6 +65,11 @@ export default function SecurityPage() {
   const [email, setEmail] = useState<string>("");
   const [numberId, setNumberId] = useState<string>("");
   const [copied, setCopied] = useState(false);
+  // v25.0.44 FINAL-RC-02：iOS上架要求的自助注销账号入口（Apple 5.1.1(v)）
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   useEffect(() => {
     setWechatBind(getWeChatBind());
@@ -106,8 +111,47 @@ export default function SecurityPage() {
 
   const handleUnbindConfirm = () => {
     removeWeChatBind();
-    setWechatBind(null);
+    setWeChatBind(null);
     setShowUnbindDialog(false);
+  };
+
+  // v25.0.44：注销账号 —— 调用服务端删除/匿名化接口，成功后清除本地登录态并回首页
+  const handleDeleteAccount = async () => {
+    setDeleteError("");
+    if (deleteConfirmText.trim() !== "注销") {
+      setDeleteError('请输入"注销"两个字以确认');
+      return;
+    }
+    setDeleting(true);
+    try {
+      const token = getUserToken();
+      const res = await fetch("/api/account/delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ confirmText: deleteConfirmText.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        setDeleteError(data.message || data.error || "注销失败，请稍后重试或联系客服");
+        setDeleting(false);
+        return;
+      }
+      // 服务端已删除/匿名化，清除本地登录态与用户数据
+      clearLoginState();
+      try {
+        Object.keys(localStorage)
+          .filter((k) => k.startsWith("yandao_user_") || k === "yandao_auth_token" || k === "yandao_wechat_bind")
+          .forEach((k) => localStorage.removeItem(k));
+      } catch {}
+      setShowDeleteDialog(false);
+      router.push("/");
+    } catch {
+      setDeleteError("网络异常，请稍后重试");
+      setDeleting(false);
+    }
   };
 
   // 通用行样式
@@ -315,6 +359,39 @@ export default function SecurityPage() {
           </button>
         </div>
 
+        {/* ===== 危险区：注销账号（v25.0.44 iOS上架合规，Apple 5.1.1(v)）===== */}
+        <div style={cardStyle}>
+          <div style={sectionTitleStyle}>危险区</div>
+          <div style={{ ...rowStyle, borderBottom: "none" }}>
+            <div style={{ ...iconBoxStyle, backgroundColor: "#fdf0ef" }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 6h18" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, color: "#333", textAlign: "left" }}>注销账号</div>
+              <div style={{ fontSize: 11, color: "#999", textAlign: "left", marginTop: 2 }}>删除账号全部数据，不可恢复</div>
+            </div>
+            <button
+              onClick={() => { setShowDeleteDialog(true); setDeleteConfirmText(""); setDeleteError(""); }}
+              style={{
+                padding: "6px 14px",
+                borderRadius: 16,
+                border: "1px solid #e74c3c",
+                backgroundColor: "#fff",
+                color: "#e74c3c",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              注销
+            </button>
+          </div>
+        </div>
+
         <p style={{ fontSize: 11, color: "#bbb", textAlign: "center", marginTop: 16, lineHeight: 1.7 }}>
           绑定微信和手机号可提升账号安全性<br />如遇账号问题请联系客服
         </p>
@@ -410,6 +487,66 @@ export default function SecurityPage() {
                 style={{ flex: 1, padding: "12px 0", border: "none", backgroundColor: "transparent", color: "#e74c3c", fontSize: 15, fontWeight: 600, cursor: "pointer" }}
               >
                 确认解绑
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ===== 注销账号确认弹窗（v25.0.44）===== */}
+      {showDeleteDialog && (
+        <div
+          style={{ position: "fixed", inset: 0, zIndex: 60, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.5)", padding: 24 }}
+          onClick={() => { if (!deleting) setShowDeleteDialog(false); }}
+        >
+          <div
+            style={{ width: "100%", maxWidth: 320, backgroundColor: "#fff", borderRadius: 16, overflow: "hidden", boxShadow: "0 4px 20px rgba(0,0,0,0.15)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: "20px 20px 12px" }}>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: "#e74c3c", margin: "0 0 10px", textAlign: "center" }}>确认注销账号？</h3>
+              <div style={{ fontSize: 12, color: "#666", lineHeight: 1.8, backgroundColor: "#fdf6f5", borderRadius: 8, padding: "10px 12px", marginBottom: 12 }}>
+                注销后将执行以下操作，<strong style={{ color: "#e74c3c" }}>不可恢复</strong>：
+                <br />· 删除您的手机号、邮箱等个人信息
+                <br />· 清空昵称、头像、个人资料
+                <br />· 删除全部排盘记录与学习数据
+                <br />· 会员权益与积分立即失效
+              </div>
+              <div style={{ fontSize: 12, color: "#999", marginBottom: 8 }}>请输入"注销"两个字确认：</div>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => { setDeleteConfirmText(e.target.value); setDeleteError(""); }}
+                placeholder="注销"
+                disabled={deleting}
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  padding: "10px 12px",
+                  borderRadius: 8,
+                  border: `1px solid ${deleteError ? "#e74c3c" : "#e0e0e0"}`,
+                  fontSize: 15,
+                  outline: "none",
+                  color: "#333",
+                  textAlign: "center",
+                  letterSpacing: 2,
+                }}
+              />
+              {deleteError && <div style={{ fontSize: 12, color: "#e74c3c", marginTop: 6, textAlign: "center" }}>{deleteError}</div>}
+            </div>
+            <div style={{ display: "flex", borderTop: "1px solid #f0f0f0" }}>
+              <button
+                onClick={() => setShowDeleteDialog(false)}
+                disabled={deleting}
+                style={{ flex: 1, padding: "12px 0", border: "none", backgroundColor: "transparent", color: "#666", fontSize: 15, cursor: deleting ? "not-allowed" : "pointer", borderRight: "1px solid #f0f0f0" }}
+              >
+                取消
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleting}
+                style={{ flex: 1, padding: "12px 0", border: "none", backgroundColor: "transparent", color: "#e74c3c", fontSize: 15, fontWeight: 600, cursor: deleting ? "not-allowed" : "pointer", opacity: deleting ? 0.5 : 1 }}
+              >
+                {deleting ? "注销中…" : "确认注销"}
               </button>
             </div>
           </div>
