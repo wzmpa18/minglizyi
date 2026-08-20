@@ -106,7 +106,7 @@ echo "$VJSON"
 echo "$VJSON" | grep -q "\"${VERSION}\"" || echo "WARN: 公网version可能缓存，稍后复验"
 HC=$(curl -sL -o /dev/null -w '%{http_code}' ${DOMAIN}/api/health)
 echo "公网 /api/health: ${HC}"
-LOGTEST=$(curl -sL -X POST ${DOMAIN}/api/poster/log -H 'Content-Type: application/json' -d '{"event":"poster_generated","userId":"deploy_verify","size":"R3_4","product":"P09","audience":"A05","channel":"C01","template":"T02-1"}')
+LOGTEST=$(curl -sL -X POST ${DOMAIN}/api/admin/poster-config/poster/log -H 'Content-Type: application/json' -d '{"event":"poster_generated","userId":"deploy_verify","size":"R3_4","product":"P09","audience":"A05","channel":"C01","template":"T02-1"}')
 echo "埋点接口: ${LOGTEST}"
 echo "$LOGTEST" | grep -q '"success":true' || { echo "FATAL: 营销埋点接口异常"; exit 1; }
 echo "===== DEPLOY ${VERSION} COMPLETE ====="

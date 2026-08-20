@@ -17,7 +17,7 @@ export async function logMarketingEvent(payload: MarketingEventPayload): Promise
     userId = localStorage.getItem("yandao_user_id") || "";
   } catch { /* ignore */ }
   try {
-    await fetch(`${API_BASE}/api/poster/log`, {
+    await fetch(`${API_BASE}/api/admin/poster-config/poster/log`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
