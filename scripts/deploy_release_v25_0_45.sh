@@ -32,6 +32,12 @@ grep -q "AI推广助手" src/app/invite/poster/page.tsx || { echo "FATAL: 推广
 grep -q "useState(false)" src/app/invite/poster/page.tsx || { echo "FATAL: 头像默认公开(违规)"; exit 1; }
 echo "内容门禁 OK"
 
+echo "--- [1.2] 依赖同步（新增jsqr二维码解码库） ---"
+grep -q '"jsqr"' package.json || { echo "FATAL: jsqr依赖缺失"; exit 1; }
+npm install --no-audit --no-fund 2>&1 | tail -2
+node -e "require.resolve('jsqr')" >/dev/null 2>&1 || { echo "FATAL: jsqr未安装"; exit 1; }
+echo "依赖同步 OK"
+
 echo "--- [1.5] E2E 回归（77项） ---"
 node scripts/p7-mkt-poster-e2e.cjs 2>&1 | tail -3
 
