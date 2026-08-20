@@ -49,6 +49,7 @@ function NormalCreate({
   const [selectedLevel, setSelectedLevel] = useState<(typeof GROUP_LEVELS)[number]>(GROUP_LEVELS[0]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [error, setError] = useState("");
+  const [creating, setCreating] = useState(false);
 
   const currentUserId = getCurrentUserId() || "current_user";
   const currentUserName = (() => {
@@ -65,7 +66,7 @@ function NormalCreate({
     );
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     const name = groupName.trim();
     if (!name) {
       setError("请输入群名称");
@@ -75,9 +76,29 @@ function NormalCreate({
       setError("群名称不能超过20个字符");
       return;
     }
+    if (creating) return;
+    setCreating(true);
+
+    // v25.0.46：等待服务端建群并统一使用服务端群ID——修复本地ID与服务端ID分离
+    // 导致聊天页发消息/成员管理全部404的问题
+    let groupId = "group_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+    try {
+      const r = await apiCreateGroup(name);
+      if (r && r.success && r.group && r.group.groupId) {
+        groupId = String(r.group.groupId);
+      } else {
+        setError((r && r.error) || "创建群聊失败，请检查网络后重试");
+        setCreating(false);
+        return;
+      }
+    } catch {
+      setError("创建群聊失败，请检查网络后重试");
+      setCreating(false);
+      return;
+    }
 
     const newGroup: GroupInfo = {
-      id: "group_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
+      id: groupId,
       name: name,
       avatar: name.slice(0, 1),
       ownerId: currentUserId,
@@ -99,9 +120,9 @@ function NormalCreate({
     };
 
     createGroup(newGroup);
-    // v25.0.19：后端真实建群（全体成员可见、可加入）
-    void apiCreateGroup(name).catch(() => {});
-    router.push("/groups");
+    setCreating(false);
+    // 创建成功直接进入群聊页，可立即发消息并邀请好友
+    router.push("/groups/chat?id=" + encodeURIComponent(groupId));
   };
 
   return (
@@ -201,13 +222,13 @@ function NormalCreate({
         {/* 创建按钮 */}
         <button
           onClick={handleCreate}
-          disabled={!groupName.trim()}
+          disabled={!groupName.trim() || creating}
           className="w-full rounded-xl py-3 text-sm font-semibold text-white transition-colors"
           style={{
-            backgroundColor: groupName.trim() ? BRAND : "#ccc",
+            backgroundColor: groupName.trim() && !creating ? BRAND : "#ccc",
           }}
         >
-          创建群聊
+          {creating ? "创建中…" : "创建群聊"}
         </button>
       </div>
 
@@ -229,6 +250,8 @@ function QuickCreate({
   const router = useRouter();
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [selectedLevel, setSelectedLevel] = useState<(typeof GROUP_LEVELS)[number]>(GROUP_LEVELS[1]); // 默认中群
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
 
   const currentUserId = getCurrentUserId() || "current_user";
   const currentUserName = (() => {
@@ -260,11 +283,30 @@ function QuickCreate({
     );
   };
 
-  const handleQuickCreate = () => {
+  const handleQuickCreate = async () => {
+    if (creating) return;
+    setCreating(true);
     const tags = selectedTags.length > 0 ? selectedTags : pickRandom(AVAILABLE_TAGS, 3);
 
+    // v25.0.46：等待服务端建群并统一使用服务端群ID（与普通建群同一修复）
+    let groupId = "group_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+    try {
+      const r = await apiCreateGroup(suggestedName);
+      if (r && r.success && r.group && r.group.groupId) {
+        groupId = String(r.group.groupId);
+      } else {
+        setCreateError((r && r.error) || "创建群聊失败，请检查网络后重试");
+        setCreating(false);
+        return;
+      }
+    } catch {
+      setCreateError("创建群聊失败，请检查网络后重试");
+      setCreating(false);
+      return;
+    }
+
     const newGroup: GroupInfo = {
-      id: "group_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
+      id: groupId,
       name: suggestedName,
       avatar: suggestedName.slice(0, 1),
       ownerId: currentUserId,
@@ -286,9 +328,9 @@ function QuickCreate({
     };
 
     createGroup(newGroup);
-    // v25.0.19：后端真实建群（全体成员可见、可加入）
-    void apiCreateGroup(suggestedName).catch(() => {});
-    router.push("/groups");
+    setCreating(false);
+    // 创建成功直接进入群聊页，可立即发消息并邀请好友
+    router.push("/groups/chat?id=" + encodeURIComponent(groupId));
   };
 
   return (
@@ -391,19 +433,25 @@ function QuickCreate({
         {/* 一键创建按钮 */}
         <button
           onClick={handleQuickCreate}
+          disabled={creating}
           className="w-full rounded-xl py-4 text-base font-bold text-white transition-all active:scale-[0.98]"
           style={{
             backgroundColor: BRAND,
             boxShadow: "0 4px 16px rgba(123, 47, 190, 0.4)",
+            opacity: creating ? 0.6 : 1,
           }}
         >
           <div className="flex items-center justify-center gap-2">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
             </svg>
-            一键创建 "{suggestedName}"
+            {creating ? "创建中…" : `一键创建 "${suggestedName}"`}
           </div>
         </button>
+
+        {createError && (
+          <p className="text-xs text-red-500 text-center">{createError}</p>
+        )}
 
         <p className="text-xs text-gray-400 text-center">
           系统将自动设置群公告、头像等信息

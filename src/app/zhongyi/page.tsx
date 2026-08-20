@@ -3,14 +3,33 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { HERBS_DB, searchHerbs as searchHerbsFn } from "@/algorithm-core/modules/tcm/herbs";
-import { FORMULAS_DB, searchFormulas as searchFormulasFn } from "@/algorithm-core/modules/tcm/formulas";
-import type { TcmHerb, TcmFormula } from "@/algorithm-core/types/tcm";
+import { searchHerbs as searchHerbsFn } from "@/algorithm-core/modules/tcm/herbs";
+import { searchFormulas as searchFormulasFn } from "@/algorithm-core/modules/tcm/formulas";
 
 const BRAND = "#7B2FBE";
 const BRAND_LIGHT = "#9B5ECF";
 const BRAND_BG = "#F3EDF7";
 const COMPLIANCE_TEXT = "本APP内容仅供传统文化研究参考，不构成医疗建议。如有身体不适，请及时就医。";
+
+// v25.0.46：全资料域搜索结果项
+interface SearchItem {
+  type: "中药" | "方剂" | "穴位" | "经络" | "典籍" | "养生" | "伤寒";
+  name: string;
+  href: string;
+  category?: string;
+  desc?: string;
+}
+
+// v25.0.46：各资料域标签配色
+const TYPE_META: Record<string, { bg: string; fg: string }> = {
+  中药: { bg: "#E8F5E9", fg: "#2E7D32" },
+  方剂: { bg: "#FFEBEE", fg: "#C62828" },
+  穴位: { bg: "#E3F2FD", fg: "#1565C0" },
+  经络: { bg: "#E1F5FE", fg: "#0277BD" },
+  典籍: { bg: "#F3E5F5", fg: "#6A1B9A" },
+  养生: { bg: "#FFF3E0", fg: "#E65100" },
+  伤寒: { bg: "#FBE9E7", fg: "#BF360C" },
+};
 
 // ==================== 每日推荐数据 ====================
 const DAILY_HERBS = [
@@ -42,7 +61,7 @@ function getDailyItem<T>(arr: T[], dayOffset: number = 0): T {
 
 // ==================== 最近浏览 ====================
 interface RecentItem {
-  type: "herb" | "formula" | "meridian" | "classic";
+  type: "herb" | "formula" | "meridian" | "classic" | "yangsheng";
   id: string;
   name: string;
   category?: string;
@@ -252,7 +271,8 @@ function ChevronRight() {
 export default function ZhongyiHome() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<{ type: string; name: string; href: string; category?: string }[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchItem[]>([]);
+  const [searching, setSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [recentItems, setRecentItems] = useState<RecentItem[]>([]);
   const [dailyHerb] = useState(() => getDailyItem(DAILY_HERBS));
@@ -262,39 +282,145 @@ export default function ZhongyiHome() {
     setRecentItems(getRecentItems());
   }, []);
 
-  // 搜索逻辑
+  // v25.0.46：全资料域搜索——中药/方剂/穴位/经络/典籍/养生功法/伤寒证型
+  // 250ms 防抖 + 动态 import（典籍等大数据仅在搜索时按需加载，不拖慢首屏）
   useEffect(() => {
-    if (!searchQuery.trim()) {
+    const q = searchQuery.trim();
+    if (!q) {
       setSearchResults([]);
+      setSearching(false);
       setShowResults(false);
       return;
     }
-    const q = searchQuery;
-    const results: { type: string; name: string; href: string; category?: string }[] = [];
-
-    try {
-      // 搜索中药
-      const herbs = searchHerbsFn(q);
-      for (const h of herbs) {
-        results.push({ type: "中药", name: h.name, href: `/zhongyi/herb?id=${h.id}`, category: h.category });
-        if (results.length >= 8) break;
-      }
-      // 搜索方剂
-      const formulas = searchFormulasFn(q);
-      for (const f of formulas) {
-        results.push({ type: "方剂", name: f.name, href: `/zhongyi/formula?id=${f.id}`, category: f.category });
-        if (results.length >= 10) break;
-      }
-    } catch (e) {
-      console.error("Search error:", e);
-    }
-
-    setSearchResults(results);
+    let cancelled = false;
+    setSearching(true);
     setShowResults(true);
+    const timer = setTimeout(async () => {
+      const results: SearchItem[] = [];
+
+      // 1. 中药（同步，包体小）
+      try {
+        for (const h of searchHerbsFn(q).slice(0, 8)) {
+          results.push({ type: "中药", name: h.name, href: `/zhongyi/herb?id=${h.id}`, category: h.category });
+        }
+      } catch { /* ignore */ }
+
+      // 2. 方剂（同步）
+      try {
+        for (const f of searchFormulasFn(q).slice(0, 6)) {
+          results.push({ type: "方剂", name: f.name, href: `/zhongyi/formula?id=${f.id}`, category: f.category });
+        }
+      } catch { /* ignore */ }
+      if (cancelled) return;
+      setSearchResults([...results]);
+
+      // 3. 穴位 + 经络（动态加载）
+      try {
+        const { searchAcupoints, searchMeridians } = await import("@/algorithm-core/modules/tcm/meridians");
+        if (cancelled) return;
+        for (const pt of searchAcupoints(q).slice(0, 8)) {
+          results.push({
+            type: "穴位",
+            name: pt.name,
+            href: `/zhongyi/meridian?acupoint=${encodeURIComponent(pt.name)}`,
+            category: `${pt.meridian} · ${pt.code}`,
+            desc: pt.function,
+          });
+        }
+        for (const m of searchMeridians(q).slice(0, 4)) {
+          results.push({
+            type: "经络",
+            name: m.name,
+            href: `/zhongyi/meridian?meridian=${encodeURIComponent(m.name)}`,
+            category: m.category,
+            desc: `循行：${m.pathway.slice(0, 40)}…`,
+          });
+        }
+        setSearchResults([...results]);
+      } catch { /* ignore */ }
+
+      // 4. 典籍全文检索（动态加载，四大经典章节标题+正文）
+      try {
+        const { searchClassics } = await import("@/algorithm-core/modules/tcm/classics");
+        if (cancelled) return;
+        for (const c of searchClassics(q).slice(0, 5)) {
+          results.push({
+            type: "典籍",
+            name: c.chapterTitle,
+            href: `/zhongyi/classic?book=${c.bookId}&chapter=${c.chapterId}`,
+            category: c.bookName,
+            desc: `…${c.snippet}…`,
+          });
+        }
+        setSearchResults([...results]);
+      } catch { /* ignore */ }
+
+      // 5. 养生功法（动态加载）
+      try {
+        const { searchGongfa } = await import("@/data/yangsheng_data");
+        if (cancelled) return;
+        for (const g of searchGongfa(q).slice(0, 4)) {
+          results.push({
+            type: "养生",
+            name: g.name,
+            href: `/zhongyi/yangsheng/detail?id=${encodeURIComponent(g.id)}`,
+            category: g.category,
+            desc: g.intro.slice(0, 50),
+          });
+        }
+        setSearchResults([...results]);
+      } catch { /* ignore */ }
+
+      // 6. 伤寒六经辨证证型（动态加载）
+      try {
+        const { SHANGHAN_SYNDROMES } = await import("@/algorithm-core/modules/tcm/shanghan");
+        if (cancelled) return;
+        const kw = q.toLowerCase();
+        for (const s of SHANGHAN_SYNDROMES.filter(
+          (x) => x.name.toLowerCase().includes(kw) || x.description.toLowerCase().includes(kw) || x.symptoms.some((y) => y.includes(q))
+        ).slice(0, 4)) {
+          results.push({
+            type: "伤寒",
+            name: s.name,
+            href: "/zhongyi/shanghan",
+            category: "六经辨证",
+            desc: s.description.slice(0, 50),
+          });
+        }
+        setSearchResults([...results]);
+      } catch { /* ignore */ }
+
+      if (!cancelled) setSearching(false);
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [searchQuery]);
 
-  const handleSearchItemClick = (item: { type: string; name: string; href: string; category?: string }) => {
-    addRecentItem({ type: item.type as any, id: item.href.split("=")[1] || item.name, name: item.name, category: item.category });
+  const handleSearchItemClick = (item: SearchItem) => {
+    let recentType: RecentItem["type"] = "yangsheng";
+    let recentId = item.name;
+    if (item.type === "中药") {
+      recentType = "herb";
+      recentId = item.href.split("id=")[1] || item.name;
+    } else if (item.type === "方剂") {
+      recentType = "formula";
+      recentId = item.href.split("id=")[1] || item.name;
+    } else if (item.type === "穴位" || item.type === "经络") {
+      recentType = "meridian";
+      recentId = item.name;
+    } else if (item.type === "典籍") {
+      recentType = "classic";
+      const book = item.href.match(/book=([^&]+)/)?.[1] || "";
+      const chapter = item.href.match(/chapter=([^&]+)/)?.[1] || "";
+      recentId = chapter ? `${decodeURIComponent(book)}/${decodeURIComponent(chapter)}` : decodeURIComponent(book) || item.name;
+    } else {
+      recentType = "yangsheng";
+      recentId = decodeURIComponent(item.href.split("id=")[1] || item.name);
+    }
+    addRecentItem({ type: recentType, id: recentId, name: item.name, category: item.category });
     router.push(item.href);
     setShowResults(false);
     setSearchQuery("");
@@ -373,8 +499,8 @@ export default function ZhongyiHome() {
             )}
           </div>
 
-          {/* 搜索结果下拉 */}
-          {showResults && searchResults.length > 0 && (
+          {/* 搜索结果下拉（v25.0.46：全资料域） */}
+          {showResults && (
             <div
               style={{
                 position: "absolute",
@@ -385,44 +511,80 @@ export default function ZhongyiHome() {
                 background: "white",
                 borderRadius: "12px",
                 boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-                maxHeight: "300px",
+                maxHeight: "360px",
                 overflowY: "auto",
                 zIndex: 200,
               }}
             >
-              {searchResults.map((r, i) => (
-                <button
-                  key={i}
-                  onClick={() => handleSearchItemClick(r)}
-                  style={{
-                    width: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "10px",
-                    padding: "10px 14px",
-                    border: "none",
-                    background: i % 2 === 0 ? "white" : "#fafafa",
-                    textAlign: "left",
-                    cursor: "pointer",
-                    borderBottom: i < searchResults.length - 1 ? "1px solid #f0f0f0" : "none",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: "10px",
-                      padding: "2px 6px",
-                      borderRadius: "4px",
-                      backgroundColor: r.type === "中药" ? "#E8F5E9" : r.type === "方剂" ? "#FFEBEE" : "#E3F2FD",
-                      color: r.type === "中药" ? "#2E7D32" : r.type === "方剂" ? "#C62828" : "#1565C0",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {r.type}
-                  </span>
-                  <span style={{ flex: 1, fontSize: "14px", color: "#333" }}>{r.name}</span>
-                  {r.category && <span style={{ fontSize: "11px", color: "#999" }}>{r.category}</span>}
-                </button>
-              ))}
+              {searchResults.length === 0 ? (
+                <div style={{ padding: "18px 14px", textAlign: "center" }}>
+                  <p style={{ margin: 0, fontSize: "13px", color: searching ? "#999" : "#bbb" }}>
+                    {searching ? "正在搜索中药、方剂、穴位、经络、典籍、养生…" : `未找到与「${searchQuery.trim()}」相关的资料`}
+                  </p>
+                  {!searching && (
+                    <p style={{ margin: "6px 0 0", fontSize: "11px", color: "#ccc" }}>
+                      可尝试：药名（当归）、方名（桂枝汤）、穴名（足三里）、经名（督脉）、条文关键词
+                    </p>
+                  )}
+                </div>
+              ) : (
+                searchResults.map((r, i) => {
+                  const meta = TYPE_META[r.type] || { bg: "#eee", fg: "#666" };
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => handleSearchItemClick(r)}
+                      style={{
+                        width: "100%",
+                        display: "flex",
+                        alignItems: "flex-start",
+                        gap: "10px",
+                        padding: "10px 14px",
+                        border: "none",
+                        background: i % 2 === 0 ? "white" : "#fafafa",
+                        textAlign: "left",
+                        cursor: "pointer",
+                        borderBottom: i < searchResults.length - 1 ? "1px solid #f0f0f0" : "none",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "10px",
+                          padding: "2px 6px",
+                          borderRadius: "4px",
+                          backgroundColor: meta.bg,
+                          color: meta.fg,
+                          flexShrink: 0,
+                          marginTop: "2px",
+                        }}
+                      >
+                        {r.type}
+                      </span>
+                      <span style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                          <span style={{ fontSize: "14px", color: "#333", fontWeight: 500 }}>{r.name}</span>
+                          {r.category && <span style={{ fontSize: "11px", color: "#999", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.category}</span>}
+                        </span>
+                        {r.desc && (
+                          <span
+                            style={{
+                              display: "block",
+                              fontSize: "11px",
+                              color: "#aaa",
+                              marginTop: "2px",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {r.desc}
+                          </span>
+                        )}
+                      </span>
+                    </button>
+                  );
+                })
+              )}
             </div>
           )}
         </div>
@@ -649,10 +811,12 @@ export default function ZhongyiHome() {
               const typeColor = item.type === "herb" ? { bg: "#E8F5E9", text: "#2E7D32", label: "中药" }
                 : item.type === "formula" ? { bg: "#FFEBEE", text: "#C62828", label: "方剂" }
                 : item.type === "meridian" ? { bg: "#E3F2FD", text: "#1565C0", label: "经络" }
+                : item.type === "yangsheng" ? { bg: "#FFF3E0", text: "#E65100", label: "养生" }
                 : { bg: "#F3E5F5", text: "#6A1B9A", label: "典籍" };
               const getHref = () => {
                 if (item.type === "herb") return `/zhongyi/herb?id=${item.id}`;
                 if (item.type === "formula") return `/zhongyi/formula?id=${item.id}`;
+                if (item.type === "yangsheng") return `/zhongyi/yangsheng/detail?id=${encodeURIComponent(item.id)}`;
                 if (item.type === "meridian") return `/zhongyi/meridian?acupoint=${encodeURIComponent(item.id)}`;
                 // 典籍格式: bookId/chapterId
                 const parts = item.id.split('/');

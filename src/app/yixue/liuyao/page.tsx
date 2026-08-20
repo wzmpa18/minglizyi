@@ -774,153 +774,129 @@ export default function LiuyaoPage() {
               </tbody>
             </table>
 
-            {/* 卦盘区域 */}
-            <div style={{
-              display: "flex", justifyContent: "center",
-              padding: "16px 8px", gap: "0",
-              background: "#fff",
-            }}>
-              {/* 六神列 */}
-              <div style={{ width: "36px", textAlign: "center", flexShrink: 0 }}>
-                <div style={{
-                  fontSize: "11px", fontWeight: "bold", color: BRAND,
-                  marginBottom: "2px", borderBottom: "1px solid #eee", paddingBottom: "4px",
-                }}>
-                  六神
-                </div>
-                <div style={{ height: "26px" }} />
-                {[5, 4, 3, 2, 1, 0].map(i => {
-                  const shen = result.benGua.yaos[i].liuShen;
-                  const shenColor: Record<string, string> = {
-                    "青龙": "#2E8B57", "朱雀": "#D93025", "勾陈": "#8B5A2B",
-                    "螣蛇": "#6A1B9A", "白虎": "#E65100", "玄武": "#1A237E",
-                  };
-                  return (
-                    <div key={i}>
-                      <div style={{ height: "13px" }} />
-                      <div style={{
-                        fontSize: "11px", lineHeight: "22px", minHeight: "22px",
-                        padding: "2px 4px",
-                        color: shenColor[shen] || "#333", fontWeight: "bold",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                      }}>
-                        {shen}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* 爻位列 */}
-              <div style={{ width: "36px", textAlign: "center", flexShrink: 0 }}>
-                <div style={{
-                  fontSize: "11px", fontWeight: "bold", color: BRAND,
-                  marginBottom: "2px", borderBottom: "1px solid #eee", paddingBottom: "4px",
-                }}>
-                  爻位
-                </div>
-                <div style={{ height: "26px" }} />
-                {[5, 4, 3, 2, 1, 0].map(i => (
-                  <div key={i}>
-                    <div style={{ height: "13px" }} />
-                    <div style={{
-                      fontSize: "11px", lineHeight: "22px", minHeight: "22px",
-                      padding: "2px 4px",
-                      color: "#888", fontWeight: "bold",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                    }}>
-                      {YAO_NAMES[i]}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* 本卦列 */}
-              <div style={{ flex: 1, textAlign: "center", maxWidth: "180px" }}>
-                <div style={{
-                  fontSize: "13px", fontWeight: "bold", color: BRAND,
-                  marginBottom: "2px", borderBottom: "1px solid #eee", paddingBottom: "4px",
-                }}>
-                  本卦
-                </div>
-                <div style={{
-                  fontSize: "13px", fontWeight: "bold", color: "#333",
-                  marginBottom: "4px", cursor: "pointer",
-                  padding: "2px 6px", borderRadius: "4px",
-                  transition: "background 0.15s",
-                }}
-                onClick={() => handleGuaNameClick(result.benGua.name)}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#f5f0fa"; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = ""; }}
-                title="点击查看卦象解读"
-                >
-                  {result.benGua.name}
-                  <span style={{ fontSize: "11px", color: "#888", fontWeight: "normal" }}>
-                    （{result.benGua.gong}）
-                  </span>
-                  {result.benGua.alias && (
-                    <span style={{
-                      fontSize: "10px", color: "#fff", background: BRAND,
-                      padding: "1px 4px", borderRadius: "3px", marginLeft: "4px",
-                    }}>
-                      {result.benGua.alias}
-                    </span>
-                  )}
-                </div>
-                {/* 爻从上到下显示（上爻在最上） */}
-                {[5, 4, 3, 2, 1, 0].map(i => (
-                  <YaoRow key={i} yao={result.benGua.yaos[i]} onClick={() => handleYaoClick(result.benGua.yaos[i])} />
-                ))}
-              </div>
-
-              {/* 变卦列 */}
-              {result.bianGua && (
-                <div style={{ flex: 1, textAlign: "center", maxWidth: "180px", borderLeft: "1px dashed #ddd", paddingLeft: "4px" }}>
-                  <div style={{
-                    fontSize: "13px", fontWeight: "bold", color: BRAND,
-                    marginBottom: "2px", borderBottom: "1px solid #eee", paddingBottom: "4px",
-                  }}>
-                    变卦
-                  </div>
-                  <div style={{
-                    fontSize: "13px", fontWeight: "bold", color: "#333",
-                    marginBottom: "4px",
-                  }}>
-                    {result.bianGua.name}
-                    <span style={{ fontSize: "11px", color: "#888", fontWeight: "normal" }}>
-                      （{result.bianGua.gong}）
-                    </span>
-                    {result.bianGua.alias && (
-                      <span style={{
-                        fontSize: "10px", color: "#fff", background: "#888",
-                        padding: "1px 4px", borderRadius: "3px", marginLeft: "4px",
-                      }}>
-                        {result.bianGua.alias}
-                      </span>
+            {/* 卦盘区域：HTML表格结构，每行一个爻位，保证六神/爻位/本卦/变卦横竖对齐 */}
+            <div style={{ padding: "16px 8px", background: "#fff" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+                <thead>
+                  <tr>
+                    <th style={{ width: "38px", fontSize: "11px", fontWeight: "bold", color: BRAND, padding: "2px 2px 4px", borderBottom: "1px solid #eee" }}>六神</th>
+                    <th style={{ width: "38px", fontSize: "11px", fontWeight: "bold", color: BRAND, padding: "2px 2px 4px", borderBottom: "1px solid #eee" }}>爻位</th>
+                    <th style={{ fontSize: "11px", fontWeight: "bold", color: BRAND, padding: "2px 2px 4px", borderBottom: "1px solid #eee" }}>本卦</th>
+                    {result.bianGua && (
+                      <th style={{ fontSize: "11px", fontWeight: "bold", color: BRAND, padding: "2px 2px 4px", borderBottom: "1px solid #eee", borderLeft: "1px dashed #ddd" }}>变卦</th>
                     )}
-                  </div>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: 0 }} />
+                    <td style={{ padding: 0 }} />
+                    <td style={{ padding: "0 2px" }}>
+                      <div style={{
+                        fontSize: "13px", fontWeight: "bold", color: "#333",
+                        marginBottom: "4px", cursor: "pointer",
+                        padding: "2px 6px", borderRadius: "4px",
+                        transition: "background 0.15s",
+                      }}
+                      onClick={() => handleGuaNameClick(result.benGua.name)}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = "#f5f0fa"; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = ""; }}
+                      title="点击查看卦象解读"
+                      >
+                        {result.benGua.name}
+                        <span style={{ fontSize: "11px", color: "#888", fontWeight: "normal" }}>
+                          （{result.benGua.gong}）
+                        </span>
+                        {result.benGua.alias && (
+                          <span style={{
+                            fontSize: "10px", color: "#fff", background: BRAND,
+                            padding: "1px 4px", borderRadius: "3px", marginLeft: "4px",
+                          }}>
+                            {result.benGua.alias}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    {result.bianGua && (
+                      <td style={{ padding: "0 2px", borderLeft: "1px dashed #ddd" }}>
+                        <div style={{
+                          fontSize: "13px", fontWeight: "bold", color: "#333",
+                          marginBottom: "4px",
+                        }}>
+                          {result.bianGua.name}
+                          <span style={{ fontSize: "11px", color: "#888", fontWeight: "normal" }}>
+                            （{result.bianGua.gong}）
+                          </span>
+                          {result.bianGua.alias && (
+                            <span style={{
+                              fontSize: "10px", color: "#fff", background: "#888",
+                              padding: "1px 4px", borderRadius: "3px", marginLeft: "4px",
+                            }}>
+                              {result.bianGua.alias}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* 从上爻到初爻渲染，每行一个爻位，表格保证横向对齐 */}
                   {[5, 4, 3, 2, 1, 0].map(i => {
+                    const shen = result.benGua.yaos[i].liuShen;
+                    const shenColor: Record<string, string> = {
+                      "青龙": "#2E8B57", "朱雀": "#D93025", "勾陈": "#8B5A2B",
+                      "螣蛇": "#6A1B9A", "白虎": "#E65100", "玄武": "#1A237E",
+                    };
                     const benYao = result.benGua.yaos[i];
-                    const bianYao = result.bianGua!.yaos[i];
+                    const bianYao = result.bianGua?.yaos[i];
                     return (
-                      <YaoRow
-                        key={i}
-                        yao={{
-                          ...bianYao,
-                          isShi: false,
-                          isYing: false,
-                          isKong: false,
-                          isYuePo: false,
-                          isRiChong: false,
-                        }}
-                        isBianGua
-                        isDongLine={benYao.isDong}
-                        bianYang={bianYao.isYang}
-                      />
+                      <tr key={i}>
+                        <td style={{ padding: 0, verticalAlign: "middle" }}>
+                          <div style={{ height: "13px" }} />
+                          <div style={{
+                            fontSize: "11px", lineHeight: "22px", minHeight: "22px",
+                            padding: "2px 2px",
+                            color: shenColor[shen] || "#333", fontWeight: "bold",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                          }}>
+                            {shen}
+                          </div>
+                        </td>
+                        <td style={{ padding: 0, verticalAlign: "middle" }}>
+                          <div style={{ height: "13px" }} />
+                          <div style={{
+                            fontSize: "11px", lineHeight: "22px", minHeight: "22px",
+                            padding: "2px 2px",
+                            color: "#888", fontWeight: "bold",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                          }}>
+                            {YAO_NAMES[i]}
+                          </div>
+                        </td>
+                        <td style={{ padding: 0, verticalAlign: "middle" }}>
+                          <YaoRow yao={benYao} onClick={() => handleYaoClick(benYao)} />
+                        </td>
+                        {result.bianGua && bianYao && (
+                          <td style={{ padding: 0, verticalAlign: "middle", borderLeft: "1px dashed #ddd" }}>
+                            <YaoRow
+                              yao={{
+                                ...bianYao,
+                                isShi: false,
+                                isYing: false,
+                                isKong: false,
+                                isYuePo: false,
+                                isRiChong: false,
+                              }}
+                              isBianGua
+                              isDongLine={benYao.isDong}
+                              bianYang={bianYao.isYang}
+                            />
+                          </td>
+                        )}
+                      </tr>
                     );
                   })}
-                </div>
-              )}
+                </tbody>
+              </table>
             </div>
 
             {/* 用神提示 */}

@@ -9,7 +9,7 @@ import {
   getGroupMessages,
   type GroupInfo,
 } from "@/lib/socialStore";
-import { fetchGroups as apiFetchGroups } from "@/lib/socialApi";
+import { fetchGroups as apiFetchGroups, fetchConversations, type ConversationVo } from "@/lib/socialApi";
 
 import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
@@ -21,6 +21,8 @@ export default function GroupsPage() {
   });
 
   const [groups, setGroups] = useState<GroupInfo[]>([]);
+  // v25.0.46：服务端会话数据（最后消息/未读数），键为群ID字符串
+  const [convMap, setConvMap] = useState<Map<string, ConversationVo>>(new Map());
 
   useEffect(() => {
     setGroups(getGroups());
@@ -38,7 +40,14 @@ export default function GroupsPage() {
               avatar: g.name.slice(0, 1),
               ownerId: g.ownerId,
               ownerName: g.ownerName || "",
-              members: [],
+              // v25.0.46：填充服务端成员，列表成员数真实显示
+              members: (g.memberIds || []).map((id) => ({
+                userId: id,
+                name: String(id) === String(g.ownerId) ? (g.ownerName || "群主") : "群成员",
+                avatar: "友",
+                role: String(id) === String(g.ownerId) ? ("owner" as const) : ("member" as const),
+                joinedAt: g.createdAt || "",
+              })),
               announcement: g.announcement || "",
               maxMembers: 50,
               level: "small" as const,
@@ -47,6 +56,18 @@ export default function GroupsPage() {
             }));
           return [...prev, ...serverGroups];
         });
+      }
+    }).catch(() => {});
+    // v25.0.46：统一会话接口拉取群最后消息/未读数
+    void fetchConversations().then((r) => {
+      if (r && r.success && r.conversations) {
+        const m = new Map<string, ConversationVo>();
+        for (const c of r.conversations) {
+          if (c.type === "group" && c.groupId !== undefined) {
+            m.set(String(c.groupId), c);
+          }
+        }
+        setConvMap(m);
       }
     }).catch(() => {});
   }, []);
@@ -60,6 +81,12 @@ export default function GroupsPage() {
   };
 
   const getLastMessage = (group: GroupInfo) => {
+    // v25.0.46：优先服务端会话的最后一条消息
+    const conv = convMap.get(String(group.id));
+    if (conv && conv.lastMessage && conv.lastMessage.content) {
+      const prefix = conv.type === "group" ? (conv.lastMessage.senderName ? conv.lastMessage.senderName + "：" : "") : "";
+      return prefix + conv.lastMessage.content;
+    }
     const msgs = getGroupMessages(group.id);
     if (msgs.length === 0) return "暂无消息";
     const last = msgs[msgs.length - 1];
@@ -67,6 +94,17 @@ export default function GroupsPage() {
   };
 
   const getLastTime = (group: GroupInfo) => {
+    const conv = convMap.get(String(group.id));
+    if (conv && conv.lastMessage && conv.lastMessage.createdAt) {
+      try {
+        return new Date(conv.lastMessage.createdAt).toLocaleTimeString(
+          "zh-CN",
+          { hour: "2-digit", minute: "2-digit" }
+        );
+      } catch {
+        return "";
+      }
+    }
     const msgs = getGroupMessages(group.id);
     if (msgs.length === 0) return "";
     try {
@@ -77,6 +115,11 @@ export default function GroupsPage() {
     } catch {
       return "";
     }
+  };
+
+  const getUnread = (group: GroupInfo) => {
+    const conv = convMap.get(String(group.id));
+    return conv ? conv.unread : 0;
   };
 
   const levelLabel: Record<string, string> = {
@@ -152,19 +195,27 @@ export default function GroupsPage() {
                     {getLastMessage(group)}
                   </p>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-[11px] text-gray-400">
-                      {group.members.length}位成员
-                    </span>
-                    <span
-                      className="text-[11px] rounded px-1.5 py-0.5"
-                      style={{
-                        backgroundColor: BRAND + "15",
-                        color: BRAND,
-                      }}
-                    >
-                      {levelLabel[group.level] || group.level}
-                    </span>
-                  </div>
+                <span className="text-[11px] text-gray-400">
+                  {group.members.length}位成员
+                </span>
+                <span
+                  className="text-[11px] rounded px-1.5 py-0.5"
+                  style={{
+                    backgroundColor: BRAND + "15",
+                    color: BRAND,
+                  }}
+                >
+                  {levelLabel[group.level] || group.level}
+                </span>
+              </div>
+              {getUnread(group) > 0 && (
+                <span
+                  className="mt-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold text-white"
+                  style={{ backgroundColor: "#F44336" }}
+                >
+                  {getUnread(group) > 99 ? "99+" : getUnread(group)}
+                </span>
+              )}
                 </div>
               </button>
             ))}
