@@ -325,7 +325,7 @@ export default function LiuyaoPage() {
     }
   }, []);
 
-  // 爻位点击 → 显示爻位解读
+  // 爻位点击 → 显示爻位解读（含伏神信息）
   const handleYaoClick = useCallback((yao: LiuyaoYao) => {
     const interp = getYaoInterpretation(
       yao.position - 1,
@@ -337,9 +337,22 @@ export default function LiuyaoPage() {
       yao.gan,
       yao.zhi,
     );
+    const fushenItem: LiuyaoInterpretItem = yao.fushen
+      ? {
+          type: "gua" as any,
+          title: "伏神",
+          content: `本爻伏神：${yao.fushen.liuQin} ${yao.fushen.gan}${yao.fushen.zhi}\n伏神为本宫八纯卦中缺失的六亲，隐伏于本爻之下。若需用此六亲，须待伏神出现（动爻引出或值月值日）方可为用。`,
+          source: "纳甲法·伏神查找",
+        }
+      : {
+          type: "gua" as any,
+          title: "伏神",
+          content: "本爻六亲俱全，无需另寻伏神。",
+          source: "纳甲法·伏神查找",
+        };
     setInterpretPanel({
       title: YAO_NAMES[yao.position - 1] + "解读",
-      items: interp.items,
+      items: [...interp.items, fushenItem],
     });
   }, []);
 
@@ -796,6 +809,30 @@ export default function LiuyaoPage() {
                     </div>
                   );
                 })}
+              </div>
+
+              {/* 爻位列 */}
+              <div style={{ width: "36px", textAlign: "center", flexShrink: 0 }}>
+                <div style={{
+                  fontSize: "11px", fontWeight: "bold", color: BRAND,
+                  marginBottom: "2px", borderBottom: "1px solid #eee", paddingBottom: "4px",
+                }}>
+                  爻位
+                </div>
+                <div style={{ height: "26px" }} />
+                {[5, 4, 3, 2, 1, 0].map(i => (
+                  <div key={i}>
+                    <div style={{ height: "13px" }} />
+                    <div style={{
+                      fontSize: "11px", lineHeight: "22px", minHeight: "22px",
+                      padding: "2px 4px",
+                      color: "#888", fontWeight: "bold",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                    }}>
+                      {YAO_NAMES[i]}
+                    </div>
+                  </div>
+                ))}
               </div>
 
               {/* 本卦列 */}
