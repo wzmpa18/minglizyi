@@ -359,6 +359,8 @@ export default function ZhongyiHome() {
                 outline: "none",
                 fontSize: "14px",
                 background: "transparent",
+                color: "#333",
+                caretColor: "#333",
               }}
             />
             {searchQuery && (

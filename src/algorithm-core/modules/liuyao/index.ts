@@ -33,11 +33,11 @@ import type {
 const BAGUA = ['乾', '兑', '离', '震', '巽', '坎', '艮', '坤'] as const;
 type Trigram = typeof BAGUA[number];
 
-/** 三爻编码 -> 卦名：下爻在index0, 上爻在index2（如111=乾，001=艮） */
+/** 三爻编码 -> 卦名：下爻(初爻)在index0, 上爻在index2（如111=乾，100=震，001=艮） */
 const CODE_TO_TRIGRAM: Record<string, Trigram> = {
   '111': '乾', '000': '坤',
-  '001': '震', '010': '坎', '100': '艮',
-  '110': '巽', '101': '离', '011': '兑',
+  '100': '震', '010': '坎', '001': '艮',
+  '011': '巽', '101': '离', '110': '兑',
 };
 
 /** 伏羲八卦数：1乾 2兑 3离 4震 5巽 6坎 7艮 8坤 */
@@ -76,7 +76,7 @@ const NAJIA_ZHI: Record<Trigram, string[]> = {
   '坤': ['未', '巳', '卯', '丑', '亥', '酉'],
 };
 
-/** 六十四卦名称 key=从初爻到上爻的6位编码(初爻在左/低位) */
+/** 六十四卦名称 key=6位编码，上爻在左(index0)、初爻在右(index5)，即传统卦画从上往下读 */
 const GUAMING: Record<string, string> = {
   '000000': '坤为地', '100000': '山地剥', '010000': '水地比', '110000': '风地观',
   '001000': '雷地豫', '101000': '火地晋', '011000': '泽地萃', '111000': '天地否',
@@ -187,59 +187,44 @@ function isPairMatch(pairs: [Trigram, Trigram][], inner: Trigram, outer: Trigram
 }
 
 /**
- * 计算世应位置
- * 根据天地人三爻异同判断世爻位置
+ * 计算世应位置（京房八宫天地人异同法）
+ * @param innerCode 内卦三爻码
+ * @param outerCode 外卦三爻码
+ * 约定：index0=天爻(内卦三爻/外卦上爻)，index1=人爻(二爻/五爻)，index2=地爻(初爻/四爻)
  * @returns [世爻index 0-5, 应爻index 0-5]
  */
 function calcShiYing(innerCode: string, outerCode: string): [number, number] {
-  // innerCode/outerCode 是三爻码，index0=下爻(初/四)，index2=上爻(三/上)
-  // 对应天爻(index2)、人爻(index1)、地爻(index0)
+  const tianSame = innerCode[0] === outerCode[0];
+  const renSame = innerCode[1] === outerCode[1];
+  const diSame = innerCode[2] === outerCode[2];
+
   let shiIdx: number;
-
-  const t0 = innerCode[0], t1 = innerCode[1], t2 = innerCode[2];
-  const o0 = outerCode[0], o1 = outerCode[1], o2 = outerCode[2];
-
-  if (t0 === o0 && t1 === o1 && t2 === o2) {
-    // 天地人都相同 → 八纯卦 → 世在上爻(index5)
-    shiIdx = 5;
-  } else if (t0 !== o0 && t1 !== o1 && t2 !== o2) {
-    // 天地人都不同 → 世在三爻(index2)
-    shiIdx = 2;
-  } else if (t2 === o2 && t1 !== o1 && t0 !== o0) {
-    // 天同，人地不同 → 一世 → 初爻(index0)
-    shiIdx = 0;
-  } else if (t2 !== o2 && t1 === o1 && t0 === o0) {
-    // 天不同，人地同 → 四世 → 四爻(index3)... wait, let me recalculate
-    // Actually per jishiyu: only tian different → shiIndex=4 (五爻)
-    shiIdx = 4;
-  } else if (t0 !== o0 && t1 !== o1 && t2 === o2) {
-    // 只有地爻不同? No, t0=地, t1=人, t2=天
-    // t0!=o0 (地不同), t1!=o1 (人不同), t2==o2 (天同) → that's already covered above
-    // Let me re-examine jishiyu logic:
-    // inner[0] !== outer[0] && inner[1] != outer[1] && inner[2] == outer[2] → shiIndex=3
-    shiIdx = 3;
-  } else if (t0 === o0 && t1 === o1 && t2 !== o2) {
-    // 地人同，天不同 → already covered
-    // But jishiyu has: inner[0]==outer[0] && inner[1]==outer[1] && inner[2]!==outer[2] → shiIndex=0
-    // Wait that conflicts with above. Let me re-read jishiyu code carefully.
-    shiIdx = 0;
-  } else if (t0 !== o0 && t1 === o1 && t2 !== o2) {
-    // 只有人爻相同(地天不同) → 四世? → shiIndex=3
-    shiIdx = 3;
-  } else if (t0 === o0 && t1 !== o1 && t2 === o2) {
-    // 只有人爻不同(地天同) → 二世? → shiIndex=2
-    shiIdx = 2;
+  if (tianSame && renSame && diSame) {
+    shiIdx = 5;      // 八纯卦：世在上爻
+  } else if (!tianSame && !renSame && !diSame) {
+    shiIdx = 2;      // 三世：世在三爻
+  } else if (diSame && renSame && !tianSame) {
+    shiIdx = 4;      // 五世：天异，世在五爻
+  } else if (diSame && !renSame && !tianSame) {
+    shiIdx = 3;      // 四世：人天异，世在四爻
+  } else if (!diSame && renSame && tianSame) {
+    shiIdx = 0;      // 一世：地异，世在初爻
+  } else if (!diSame && !renSame && tianSame) {
+    shiIdx = 1;      // 二世：地人异，世在二爻
+  } else if (!diSame && renSame && !tianSame) {
+    shiIdx = 3;      // 游魂：地天异，世在四爻
   } else {
-    shiIdx = 5;
+    shiIdx = 2;      // 归魂：人异，世在三爻
   }
 
-  const yingIdx = shiIdx > 2 ? shiIdx % 3 : shiIdx % 3 + 3;
+  const yingIdx = (shiIdx + 3) % 6;
   return [shiIdx, yingIdx];
 }
 
 /**
  * 计算卦宫
  * 规则：归魂卦归内卦宫；否则按世爻位置判断
+ * 一/二/三世卦及八纯卦：宫=外卦；四世/五世/游魂卦：宫=内卦阴阳全变后的卦
  */
 function calcGuaGong(
   yaoList: { isYang: boolean; isDong: boolean }[],
@@ -249,7 +234,7 @@ function calcGuaGong(
   if (isPairMatch(GUIHUN, inner, outer)) {
     return inner;
   }
-  // 找世爻位置
+  // 找世爻位置（reverse后：index0=天爻）
   const innerCode = yaoList.slice(0, 3).map(y => y.isYang ? '1' : '0').reverse().join('');
   const outerCode = yaoList.slice(3, 6).map(y => y.isYang ? '1' : '0').reverse().join('');
   const [shiIdx] = calcShiYing(innerCode, outerCode);
@@ -257,10 +242,10 @@ function calcGuaGong(
   if ([0, 1, 2, 5].includes(shiIdx)) {
     return outer;
   } else {
-    // 三四世 → 取内卦变爻后的卦
+    // 四世/五世/游魂 → 内卦阴阳全变即本宫内卦
     const reversedInner = yaoList.slice(0, 3)
       .map(y => y.isYang ? '0' : '1')
-      .reverse().join('');
+      .join('');
     return CODE_TO_TRIGRAM[reversedInner] || inner;
   }
 }
@@ -523,8 +508,8 @@ function buildHexagram(
     };
   });
 
-  // 卦名
-  const name = GUAMING[code] || '未知卦';
+  // 卦名（GUAMING的key为上爻在左/index0，code为初爻在左，需反转后再查）
+  const name = GUAMING[code.split('').reverse().join('')] || '未知卦';
   const gongName = `${gong}宫`;
   const gongWx = TRIGRAM_WUXING[gong];
 

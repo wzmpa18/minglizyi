@@ -908,7 +908,9 @@ export default function ZiweiPage() {
   useEffect(() => {
     const editHandler = () => setShowForm(true);
     const backHandler = () => {
-      if (!showForm && result) { setShowForm(true); window.__yixueBackHandled = true; }
+      // v25.0.44：返回键按浏览顺序返回——弹窗打开时仅收起弹窗；结果页直接放行给layout返回工具列表，
+      // 不再重开排盘表单（旧逻辑导致"排盘页↔表单弹窗"死循环，用户永远退不出页面）
+      if (showForm) { setShowForm(false); window.__yixueBackHandled = true; }
     };
     window.addEventListener("yixue-edit", editHandler);
     window.addEventListener("yixue-back", backHandler);
@@ -916,7 +918,7 @@ export default function ZiweiPage() {
       window.removeEventListener("yixue-edit", editHandler);
       window.removeEventListener("yixue-back", backHandler);
     };
-  }, [showForm, result]);
+  }, [showForm]);
 
   // 当大限变化时重置流年（v25.0.27: 点击某大限仅展开对应大限层，不自动带出流年及以下层级）
   useEffect(() => {

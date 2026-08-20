@@ -171,13 +171,10 @@ export default function YizhangjingPage() {
       }
     };
     const backHandler = () => {
-      if (!showForm && hasResult) {
-        if (dateType === "sizhu") {
-          setShowInput(true);
-          setHasResult(false);
-        } else {
-          setShowForm(true);
-        }
+      // v25.0.44：返回键按浏览顺序返回——弹窗打开时仅收起弹窗，结果页放行给layout返回工具列表
+      if (showForm || showInput) {
+        setShowForm(false);
+        setShowInput(false);
         window.__yixueBackHandled = true;
       }
     };
@@ -187,7 +184,7 @@ export default function YizhangjingPage() {
       window.removeEventListener("yixue-edit", editHandler);
       window.removeEventListener("yixue-back", backHandler);
     };
-  }, [showForm, hasResult, dateType]);
+  }, [showForm, showInput]);
 
   const handlePrev = useCallback(() => {
     const d = new Date(selectedYear, selectedMonth - 1, selectedDay, selectedHour);

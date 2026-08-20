@@ -241,8 +241,8 @@ export default function HomePage(){
         </Link>
       </div>
 
-      {/* 言道学堂入口 */}
-      <Link href="/academy" className="mx-3 mt-3 flex items-center gap-3 rounded-2xl px-4 py-3 text-white shadow-md active:opacity-90" style={{background:"linear-gradient(135deg,#5B3FA8 0%,#8E44AD 100%)"}}>
+      {/* 言道学堂入口（v25.0.44：三板块配色区分——上紫/中绿/下深蓝，传统文化色系） */}
+      <Link href="/academy" className="mx-3 mt-3 flex items-center gap-3 rounded-2xl px-4 py-3 text-white shadow-md active:opacity-90" style={{background:"linear-gradient(135deg,#1E6B45 0%,#31996A 100%)"}}>
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 text-lg">🎓</span>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold">言道学堂</p>
@@ -257,8 +257,8 @@ export default function HomePage(){
 
       {/* 黄历区（在按钮下方） */}
       <div className="mx-3 mt-4 rounded-2xl overflow-hidden bg-white">
-        {/* 黄历头 */}
-        <div className="px-4 py-3 text-white" style={{background:`linear-gradient(135deg,${BRAND} 0%,#9B5ECF 100%)`}}>
+        {/* 黄历头（v25.0.44：深蓝渐变，与上方紫/绿板块区分，白字高对比） */}
+        <div className="px-4 py-3 text-white" style={{background:"linear-gradient(135deg,#1B3A68 0%,#2D5CA0 100%)"}}>
           <div className="flex items-start justify-between">
             <div>
               <div className="text-xl font-bold">{today.gongli}</div>

@@ -500,14 +500,14 @@ export default function MeihuaPage() {
   // v18.2: 监听编辑/返回事件，实现逐级返回
   useEffect(() => {
     const editHandler = () => { setResult(null); setShowPopup(true); };
-    const backHandler = () => { if (result) { setResult(null); setShowPopup(true); window.__yixueBackHandled = true; } };
+    const backHandler = () => { if (showPopup) { setShowPopup(false); window.__yixueBackHandled = true; } };
     window.addEventListener("yixue-edit", editHandler);
     window.addEventListener("yixue-back", backHandler);
     return () => {
       window.removeEventListener("yixue-edit", editHandler);
       window.removeEventListener("yixue-back", backHandler);
     };
-  }, [result]);
+  }, [showPopup]);
 
   // ---- 自动显示初始解读 ----
   useEffect(() => {

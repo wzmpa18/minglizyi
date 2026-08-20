@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -364,7 +364,7 @@ export default function TaiyiSanshiPage() {
   useEffect(() => {
     const editHandler = () => setShowForm(true);
     const backHandler = () => {
-      if (!showForm && result) { setShowForm(true); window.__yixueBackHandled = true; }
+      if (showForm) { setShowForm(false); window.__yixueBackHandled = true; }
     };
     window.addEventListener("yixue-edit", editHandler);
     window.addEventListener("yixue-back", backHandler);

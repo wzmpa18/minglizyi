@@ -1486,12 +1486,12 @@ export default function BaziPage(){
   const [selectedClient,setSelectedClient]=useState<Client|null>(null);
   const [interpretPanel, setInterpretPanel] = useState<{pillarLabel:string; items:Array<{type:string;title:string;content:string;source:string}>} | null>(null);
 
-  // 监听layout的edit事件和back事件（v18.2：返回时从结果页切回输入页）
+  // 监听layout的edit事件和back事件（v25.0.44：返回键按浏览顺序返回，弹窗打开时仅收起弹窗，结果页放行给layout返回工具列表）
   useEffect(() => {
     const editHandler = () => setShowForm(true);
     const backHandler = () => {
-      if (!showForm && result) {
-        setShowForm(true);
+      if (showForm) {
+        setShowForm(false);
         window.__yixueBackHandled = true;
       }
     };
@@ -1501,7 +1501,7 @@ export default function BaziPage(){
       window.removeEventListener("yixue-edit", editHandler);
       window.removeEventListener("yixue-back", backHandler);
     };
-  }, [showForm, result]);
+  }, [showForm]);
 
   // URL参数clientId自动选中客户 + 回填数据检查
   useEffect(() => {

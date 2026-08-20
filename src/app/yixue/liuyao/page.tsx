@@ -459,7 +459,7 @@ export default function LiuyaoPage() {
   // v18.2: 监听编辑/返回事件，实现逐级返回
   useEffect(() => {
     const editHandler = () => setShowForm(true);
-    const backHandler = () => { if (!showForm && result) { setShowForm(true); window.__yixueBackHandled = true; } };
+    const backHandler = () => { if (showForm) { setShowForm(false); window.__yixueBackHandled = true; } };
     window.addEventListener("yixue-edit", editHandler);
     window.addEventListener("yixue-back", backHandler);
     return () => {
@@ -776,8 +776,8 @@ export default function LiuyaoPage() {
                   六神
                 </div>
                 <div style={{ height: "13px" }} />
-                {/* 从初爻到上爻 */}
-                {[0, 1, 2, 3, 4, 5].map(i => {
+                {/* 从上爻到初爻渲染，与本卦爻列[5,4,3,2,1,0]同向，确保六神与爻一排对齐 */}
+                {[5, 4, 3, 2, 1, 0].map(i => {
                   const shen = result.benGua.yaos[i].liuShen;
                   const shenColor: Record<string, string> = {
                     "青龙": "#2E8B57", "朱雀": "#D93025", "勾陈": "#8B5A2B",
