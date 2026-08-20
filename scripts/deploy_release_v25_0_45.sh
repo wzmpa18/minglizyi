@@ -27,7 +27,8 @@ for f in types audiences products channels templates copyLibrary compliance reco
   test -f "src/lib/marketing/${f}.ts" || { echo "FATAL: src/lib/marketing/${f}.ts missing"; exit 1; }
 done
 grep -q "MARKETING_EVENTS" backend_deploy/posterConfigRoutes.js || { echo "FATAL: 后端营销事件未实现"; exit 1; }
-grep -q "qr_selftest_failed" src/lib/marketing/qrSelfTest.ts || { echo "FATAL: 二维码自测未实现"; exit 1; }
+grep -q "export async function qrSelfTest" src/lib/marketing/qrSelfTest.ts || { echo "FATAL: 二维码自测未实现"; exit 1; }
+grep -rq "qr_selftest_failed" src/app/invite/poster/page.tsx || { echo "FATAL: 二维码自测失败禁止保存逻辑缺失"; exit 1; }
 grep -q "AI推广助手" src/app/invite/poster/page.tsx || { echo "FATAL: 推广助手页缺失"; exit 1; }
 grep -q "useState(false)" src/app/invite/poster/page.tsx || { echo "FATAL: 头像默认公开(违规)"; exit 1; }
 echo "内容门禁 OK"
