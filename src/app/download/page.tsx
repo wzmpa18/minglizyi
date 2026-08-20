@@ -6,7 +6,7 @@ import { makeQrDataUrl } from "@/lib/qrLocal";
 
 const BRAND = "#7B2FBE";
 const DOWNLOAD_URL = "https://yandaoguoxue.yandao.vip/friend";
-const APK_URL = "https://yandaoguoxue.yandao.vip/app-download/yandao-guoxue-v25.0.42-release.apk";
+const APK_URL = "https://yandaoguoxue.yandao.vip/app-download/yandao-guoxue-v25.0.44-release.apk";
 
 /** 功能亮点列表 */
 const FEATURES: { icon: string; title: string; desc: string }[] = [
@@ -57,7 +57,7 @@ export default function DownloadPage() {
         </div>
         <h1 className="text-2xl font-bold text-white">言道国学</h1>
         <p className="mt-2 text-sm text-white/85">
-          v1.1.0 | 更新日期 2026.08.10
+          v25.0.44 | 更新日期 2026.08.20
         </p>
         <p className="mt-1 text-xs text-white/60">
           传承千年智慧，感悟国学之美
@@ -115,9 +115,10 @@ export default function DownloadPage() {
           支持 Android 8.0 及以上系统
         </p>
 
-        {/* iOS 说明（P9：不可点击占位按钮改为纯文本说明） */}
+        {/* iOS 说明（v25.0.44：TestFlight 测试阶段状态） */}
         <p className="mt-3 text-center text-xs text-gray-400">
-          iOS 版本暂未发布，可先通过 Safari 添加到主屏幕使用网页版
+          iOS 版正在 TestFlight 测试中，即将上线 App Store；可先通过 Safari
+          添加到主屏幕使用网页版
         </p>
       </div>
 
