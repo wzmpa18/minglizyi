@@ -6,6 +6,7 @@
 // ============================================================================
 
 import { getUserProfile } from "./auth";
+import { isPaymentsBlocked, IOS_PAYMENT_DISABLED_TIP, clientPlatformHeaders } from "./platformGate";
 
 // --- 类型定义 ---
 
@@ -119,12 +120,16 @@ export async function purchaseIncrementalPackage(
   packageId: string,
   paymentData?: Record<string, any>
 ): Promise<{ success: boolean; data?: any; error?: string }> {
+  // FINAL-RC-02: 平台付费关闭（iOS 本期不开放任何付费），请求层直接拦截
+  if (isPaymentsBlocked()) {
+    return { success: false, error: IOS_PAYMENT_DISABLED_TIP };
+  }
   const userId = getCurrentUserId();
   if (!userId) return { success: false, error: "请先登录" };
   try {
     const res = await fetch("/api/ai-quota/purchase", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...clientPlatformHeaders() },
       body: JSON.stringify({ userId, packageId, paymentData }),
     });
     return await res.json();

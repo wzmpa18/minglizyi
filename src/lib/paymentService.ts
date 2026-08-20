@@ -7,6 +7,7 @@
 // ============================================================================
 
 import { getUserProfile } from "./auth";
+import { isPaymentsBlocked, IOS_PAYMENT_DISABLED_TIP, clientPlatformHeaders } from "./platformGate";
 
 // ==================== 类型定义 ====================
 
@@ -141,6 +142,15 @@ function getCurrentUserId(): string | null {
 export async function callPayment(
   params: CallPaymentParams
 ): Promise<CallPaymentResult> {
+  // FINAL-RC-02: 平台付费关闭（iOS 本期不开放任何付费），请求层直接拦截
+  if (isPaymentsBlocked()) {
+    return {
+      success: false,
+      error: IOS_PAYMENT_DISABLED_TIP,
+      message: IOS_PAYMENT_DISABLED_TIP,
+    };
+  }
+
   const userId = getCurrentUserId();
   if (!userId) {
     return {
@@ -163,7 +173,7 @@ export async function callPayment(
     // 1. 创建订单
     const res = await fetch(`${API_BASE}/create`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...clientPlatformHeaders() },
       body: JSON.stringify({
         userId,
         type,

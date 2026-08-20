@@ -10,6 +10,7 @@ const config: CapacitorConfig = {
     cleartext: false,
   },
   android: {
+    appendUserAgent: 'YandaoGuoxueAndroid',
     buildOptions: {
       keystorePath: 'yandao-release.keystore',
       keystoreAlias: 'yandao',
@@ -19,6 +20,10 @@ const config: CapacitorConfig = {
     // v25.0.38 P0-3：移除 captureInput（已废弃的实验特性，会拦截 WebView 输入导致
     // 聊天页输入框无法唤起软键盘、发送按钮点击失效）
     webContentsDebuggingEnabled: false,
+  },
+  ios: {
+    // FINAL-RC-02：UA 追加标记，供 platformGate 在原生桥不可用时兜底识别 iOS 壳
+    appendUserAgent: 'YandaoGuoxueIOS',
   },
   plugins: {
     SplashScreen: {

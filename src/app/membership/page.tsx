@@ -26,6 +26,7 @@ import { updateUserProfile } from "@/lib/auth";
 import { reportConsumptionRebate } from "@/lib/inviteApi";
 import { redeemCode, getMyRedemptions } from "@/lib/redeemCodeStore";
 import { getToolConfig } from "@/lib/toolConfigStore";
+import { isPaymentsBlocked, IOS_PAYMENT_DISABLED_TIP } from "@/lib/platformGate";
 
 const BRAND = "#7B2FBE";
 
@@ -46,6 +47,12 @@ export default function MembershipPage() {
   const [redeemOk, setRedeemOk] = useState(false);
   const [myRedemptions, setMyRedemptions] = useState<ReturnType<typeof getMyRedemptions>>([]);
   const [redeemEnabled, setRedeemEnabled] = useState(false);
+  // FINAL-RC-02: iOS 本期不开放任何付费（静态导出需 useEffect 后置判定，避免水合不一致）
+  const [paymentsBlocked, setPaymentsBlocked] = useState(false);
+
+  useEffect(() => {
+    setPaymentsBlocked(isPaymentsBlocked());
+  }, []);
 
   useEffect(() => {
     setStatus(getMembershipStatus());
@@ -83,6 +90,10 @@ export default function MembershipPage() {
   };
 
   const handlePay = () => {
+    if (isPaymentsBlocked()) {
+      setErrorMsg(IOS_PAYMENT_DISABLED_TIP);
+      return;
+    }
     const plan = MEMBERSHIP_PLANS.find((p) => p.level === selectedPlan);
     if (!plan || plan.price === 0) {
       setErrorMsg("该套餐为免费版本，无需开通");
@@ -200,13 +211,23 @@ export default function MembershipPage() {
           </div>
         )}
 
+        {/* ===== FINAL-RC-02: iOS 付费关闭提示卡 ===== */}
+        {paymentsBlocked && (
+          <div style={{ margin: "12px", padding: "16px", borderRadius: "14px", backgroundColor: "#fff", border: "1px solid #eee", textAlign: "center" }}>
+            <div style={{ fontSize: "15px", fontWeight: 600, color: "#333", marginBottom: "6px" }}>会员购买暂未开放</div>
+            <div style={{ fontSize: "13px", color: "#888", lineHeight: 1.7 }}>{IOS_PAYMENT_DISABLED_TIP}</div>
+          </div>
+        )}
+
         {/* ===== 套餐标题 ===== */}
-        <div style={{ padding: "8px 16px 4px", fontSize: "15px", fontWeight: 600, color: "#333" }}>
-          选择会员套餐
-        </div>
+        {!paymentsBlocked && (
+          <div style={{ padding: "8px 16px 4px", fontSize: "15px", fontWeight: 600, color: "#333" }}>
+            选择会员套餐
+          </div>
+        )}
 
         {/* ===== 套餐列表 ===== */}
-        {MEMBERSHIP_PLANS.map((plan) => {
+        {!paymentsBlocked && MEMBERSHIP_PLANS.map((plan) => {
           const isSelected = selectedPlan === plan.level;
           const levelColor = getLevelColor(plan.level);
           return (
@@ -332,7 +353,7 @@ export default function MembershipPage() {
           </div>
           {status.level === "basic" ? (
             <div
-              onClick={() => { setSelectedPlan("yearly"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+              onClick={() => { if (paymentsBlocked) { setErrorMsg(IOS_PAYMENT_DISABLED_TIP); return; } setSelectedPlan("yearly"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
               style={{ marginTop: "12px", padding: "10px", borderRadius: "10px", backgroundColor: "#faf6ff", border: `1px solid ${BRAND}55`, textAlign: "center", fontSize: "13px", color: BRAND, fontWeight: 600, cursor: "pointer" }}
             >
               升级会员解锁全部中医功能 →
@@ -344,7 +365,8 @@ export default function MembershipPage() {
           )}
         </div>
 
-        {/* ===== B类高价值工具定价 ===== */}
+        {/* ===== B类高价值工具定价（FINAL-RC-02: iOS 付费关闭期间隐藏定价购买区） ===== */}
+        {!paymentsBlocked && (
         <div style={{ margin: "12px", padding: "16px", borderRadius: "14px", backgroundColor: "#fff", border: "1px solid #eee", boxShadow: "0 1px 4px rgba(0,0,0,0.04)" }}>
           <div style={{ fontSize: "15px", fontWeight: 600, color: "#333", marginBottom: "4px" }}>
             B类高价值工具定价
@@ -385,6 +407,7 @@ export default function MembershipPage() {
             </div>
           )}
         </div>
+        )}
 
         {/* ===== 完整权益对比表 ===== */}
         <div style={{ margin: "12px", padding: "16px", borderRadius: "14px", backgroundColor: "#fff", border: "1px solid #eee", boxShadow: "0 1px 4px rgba(0,0,0,0.04)", overflowX: "auto" }}>
@@ -435,7 +458,9 @@ export default function MembershipPage() {
           </div>
         </div>
 
-        {/* ===== 支付方式 ===== */}
+        {/* ===== 支付方式（FINAL-RC-02: iOS 隐藏，禁止任何外部支付入口） ===== */}
+        {!paymentsBlocked && (
+          <>
         <div style={{ padding: "16px 16px 4px", fontSize: "15px", fontWeight: 600, color: "#333" }}>
           支付方式
         </div>
@@ -499,6 +524,8 @@ export default function MembershipPage() {
             </div>
           ))}
         </div>
+          </>
+        )}
 
         {/* ===== 错误提示 ===== */}
         {errorMsg && (
@@ -552,7 +579,8 @@ export default function MembershipPage() {
         )}
       </div>
 
-      {/* ===== 底部开通按钮 ===== */}
+      {/* ===== 底部开通按钮（FINAL-RC-02: iOS 隐藏任何付费入口） ===== */}
+      {!paymentsBlocked && (
       <div
         style={{
           padding: "12px 16px",
@@ -580,6 +608,7 @@ export default function MembershipPage() {
             : `立即开通 · ¥${MEMBERSHIP_PLANS.find((p) => p.level === selectedPlan)?.price ?? 0}`}
         </button>
       </div>
+      )}
 
       <div className="page-bottom-nav-safe" aria-hidden="true" />
 

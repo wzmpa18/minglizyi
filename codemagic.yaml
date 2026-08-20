@@ -1,13 +1,12 @@
-# Codemagic CI/CD 配置 - 言道国学 iOS 构建
-# 使用方法: 将本文件放在仓库根目录, Codemagic 会自动识别
-# 前置: 在 Codemagic 控制台配置 Apple 开发者账号(自动证书签名)
+# Codemagic CI/CD - 言道国学 iOS (FINAL-RC-02)
+# 工程: ios/ 已正式入库Git(Bundle ID com.yandao.guoxue/AppIcon/PrivacyInfo/LaunchScreen)
+# 签名: App Store Connect API Key (Key ID: UWQ354QP54) — 在Codemagic控制台 Teams→Integrations→App Store Connect 添加.p8密钥
+# Issuer ID: 需在ASC后台 Users and Access→Integrations 查看(形如xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)并配置到集成
 workflows:
   ios-workflow:
-    name: 言道国学 iOS
+    name: 言道国学 iOS TestFlight
     max_build_duration: 60
     instance_type: mac_mini_m2
-    integrations:
-      app_store_connect: yandao_guoxue_asc
     environment:
       node: 20
       xcode: latest
@@ -19,19 +18,16 @@ workflows:
       - name: 安装依赖
         script: |
           npm ci --legacy-peer-deps
-      - name: 添加iOS平台(如不存在)
+      - name: Web构建(静态导出)
         script: |
-          if [ ! -d "ios" ]; then
-            npx cap add ios
-          fi
-      - name: 同步Web资源与插件
+          bash build.sh
+      - name: 同步Web资源到iOS工程(已入库的正式工程)
         script: |
           npx cap sync ios
-      - name: 替换AppIcon资产
+      - name: 显示版本信息
         script: |
-          rm -rf ios/App/App/Assets.xcassets/AppIcon.appiconset
-          cp -r ios-assets/AppIcon.appiconset ios/App/App/Assets.xcassets/
-          plutil -replace CFBundleDisplayName -string "言道国学" ios/App/App/Info.plist
+          cat public/version.json
+          grep -A1 "MARKETING_VERSION" ios/App/App.xcodeproj/project.pbxproj | head -2
       - name: CocoaPods安装
         script: |
           cd ios/App && pod install
@@ -40,16 +36,17 @@ workflows:
           xcode-project build-ipa \
             --project ios/App/App.xcodeproj \
             --scheme App \
-            --configuration Release
+            --configuration Release \
+            --archive-flags="-destination 'generic/platform=iOS'"
     artifacts:
       - build/ios/ipa/*.ipa
-      - ios/App/App/Assets.xcassets/AppIcon.appiconset/icon-1024.png
     publishing:
       app_store_connect:
-        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
-        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
-        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
         release_type: SCHEDULED
         earliest_release_date: "2026-09-01T12:00:00+08:00"
         notify_testers: false
+        # 若控制台集成已配置则以上生效; 也可用环境变量方式:
+        # api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        # key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        # issuer_id: $APP_STORE_CONNECT_ISSUER_ID

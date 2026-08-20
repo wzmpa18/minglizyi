@@ -19,6 +19,7 @@ import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
+import { isPaymentsBlocked, IOS_PAYMENT_DISABLED_TIP } from "@/lib/platformGate";
 
 export interface InterpretationItem {
   type: string;
@@ -58,6 +59,12 @@ export default function InterpretationDrawer({
   const [aiError, setAiError] = useState(false);
   const [aiLocked, setAiLocked] = useState(false); // v20.1: AI内容是否锁定
   const [showSingleUnlock, setShowSingleUnlock] = useState(false); // v20.1: 单次解锁弹窗
+  // FINAL-RC-02: iOS 本期不开放任何付费，单次解锁/会员购买入口隐藏
+  const [paymentsBlocked, setPaymentsBlocked] = useState(false);
+
+  useEffect(() => {
+    setPaymentsBlocked(isPaymentsBlocked());
+  }, []);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false); // v20.1: 登录提示弹窗
   const colors = { ...DEFAULT_TYPE_COLORS, ...typeColors };
 
@@ -108,6 +115,7 @@ export default function InterpretationDrawer({
 
   // v20.1: 单次解锁
   const handleSingleUnlock = () => {
+    if (isPaymentsBlocked()) return; // FINAL-RC-02: iOS 付费关闭，禁止本地解锁购买
     if (!aiEnhance) return;
     const cKey = generateContentKey(aiEnhance.toolName, aiEnhance.context.slice(0, 80));
     activateSingleUnlock(cKey);
@@ -173,6 +181,9 @@ export default function InterpretationDrawer({
                         <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                       </svg>
                       <div style={{ fontSize: "11px", color: "#7B2FBE", fontWeight: "bold", marginTop: "4px" }}>后续深度内容已锁定</div>
+                      {paymentsBlocked ? (
+                        <div style={{ fontSize: "10px", color: "#999", marginTop: "6px", lineHeight: 1.6 }}>{IOS_PAYMENT_DISABLED_TIP}</div>
+                      ) : (
                       <div style={{ display: "flex", gap: "6px", marginTop: "8px" }}>
                         <button
                           onClick={() => setShowSingleUnlock(true)}
@@ -207,6 +218,7 @@ export default function InterpretationDrawer({
                           开通会员
                         </button>
                       </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -275,10 +287,16 @@ export default function InterpretationDrawer({
               </div>
             </div>
             <div style={{ padding: "14px" }}>
+              {paymentsBlocked ? (
+                <div style={{ textAlign: "center", padding: "6px 0 10px", fontSize: "13px", color: "#888", lineHeight: 1.7 }}>
+                  {IOS_PAYMENT_DISABLED_TIP}
+                </div>
+              ) : (
               <div style={{ textAlign: "center", marginBottom: "12px" }}>
                 <span style={{ fontSize: "26px", fontWeight: "bold", color: "#7B2FBE" }}>¥{SINGLE_UNLOCK_PRICE}</span>
                 <span style={{ fontSize: "12px", color: "#999", marginLeft: "4px" }}>/ 次</span>
               </div>
+              )}
               <button
                 onClick={handleSingleUnlock}
                 style={{
@@ -292,6 +310,7 @@ export default function InterpretationDrawer({
                   fontWeight: "bold",
                   cursor: "pointer",
                   marginBottom: "6px",
+                  display: paymentsBlocked ? "none" : "block",
                 }}
               >
                 确认支付 ¥{SINGLE_UNLOCK_PRICE} 解锁

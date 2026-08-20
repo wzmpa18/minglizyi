@@ -15,6 +15,7 @@
  */
 
 import { getLoginState, clearLoginState, getUserToken } from "./auth";
+import { clientPlatformHeaders } from "./platformGate";
 
 // ==================== Token 存储键名 ====================
 const REFRESH_TOKEN_KEY = "yandao_refresh_token";
@@ -221,6 +222,11 @@ export async function fetchWithAuth(
   const headers = new Headers(options.headers || {});
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
+  }
+  // FINAL-RC-02: 注入客户端平台标识，服务端 platformFeatureGate 依据此头做最终裁决
+  const platformHeaders = clientPlatformHeaders();
+  for (const [k, v] of Object.entries(platformHeaders)) {
+    if (!headers.has(k)) headers.set(k, v);
   }
   if (!headers.has("Content-Type") && options.body) {
     headers.set("Content-Type", "application/json");
