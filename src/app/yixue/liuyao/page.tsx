@@ -771,12 +771,11 @@ export default function LiuyaoPage() {
               <div style={{ width: "36px", textAlign: "center", flexShrink: 0 }}>
                 <div style={{
                   fontSize: "11px", fontWeight: "bold", color: BRAND,
-                  marginBottom: "4px", borderBottom: "1px solid #eee", paddingBottom: "4px",
+                  marginBottom: "2px", borderBottom: "1px solid #eee", paddingBottom: "4px",
                 }}>
                   六神
                 </div>
-                <div style={{ height: "13px" }} />
-                {/* 从上爻到初爻渲染，与本卦爻列[5,4,3,2,1,0]同向，确保六神与爻一排对齐 */}
+                <div style={{ height: "26px" }} />
                 {[5, 4, 3, 2, 1, 0].map(i => {
                   const shen = result.benGua.yaos[i].liuShen;
                   const shenColor: Record<string, string> = {
@@ -784,11 +783,16 @@ export default function LiuyaoPage() {
                     "螣蛇": "#6A1B9A", "白虎": "#E65100", "玄武": "#1A237E",
                   };
                   return (
-                    <div key={i} style={{
-                      fontSize: "11px", lineHeight: "22px", minHeight: "22px",
-                      color: shenColor[shen] || "#333", fontWeight: "bold",
-                    }}>
-                      {shen}
+                    <div key={i}>
+                      <div style={{ height: "13px" }} />
+                      <div style={{
+                        fontSize: "11px", lineHeight: "22px", minHeight: "22px",
+                        padding: "2px 4px",
+                        color: shenColor[shen] || "#333", fontWeight: "bold",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                      }}>
+                        {shen}
+                      </div>
                     </div>
                   );
                 })}
