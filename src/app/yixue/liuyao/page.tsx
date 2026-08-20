@@ -169,9 +169,9 @@ function YaoRow({
   const rightContent = isBianGua ? (
     isDongLine ? (
       <div style={{ display: "flex", alignItems: "center", gap: "2px", fontSize: "11px", whiteSpace: "nowrap" }}>
-        <span style={{ color: "#666", fontWeight: "bold", width: "14px" }}>{yao.bianLiuQin}</span>
-        <span style={{ color: getGanColor(yao.bianGan || "") }}>{yao.bianGan}</span>
-        <span style={{ color: getZhiColor(yao.bianZhi || "") }}>{yao.bianZhi}</span>
+        <span style={{ color: "#666", fontWeight: "bold", width: "14px" }}>{yao.liuQinShort}</span>
+        <span style={{ color: getGanColor(yao.gan || "") }}>{yao.gan}</span>
+        <span style={{ color: getZhiColor(yao.zhi || "") }}>{yao.zhi}</span>
       </div>
     ) : null
   ) : (
