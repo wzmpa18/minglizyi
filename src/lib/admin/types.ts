@@ -142,6 +142,28 @@ export interface DashboardStats {
   aiUsage: AIUsageStats;
 }
 
+// ==================== 行业资讯内容源类型 ====================
+
+/** 资讯分类 */
+export type NewsAdminCategory = "zhongyi" | "yixue";
+
+/** 单条行业资讯（后台管理用） */
+export interface NewsAdminItem {
+  id: string;
+  title: string;
+  summary: string;
+  source: string;
+  sourceUrl: string;
+  publishedAt: string;
+  category: NewsAdminCategory;
+}
+
+/** 资讯列表响应 */
+export interface NewsAdminListData {
+  items: NewsAdminItem[];
+  total: number;
+}
+
 // ==================== API 响应类型 ====================
 
 export interface ApiSuccess<T> {

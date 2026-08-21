@@ -15,6 +15,8 @@ import type {
   MembershipPlanConfig,
   MemberLevel,
   AIQuotaConfig,
+  NewsAdminItem,
+  NewsAdminListData,
 } from "./types";
 
 // ==================== 管理员密钥管理 ====================
@@ -214,4 +216,53 @@ export async function saveMembershipConfig(
     body: JSON.stringify(config),
   });
   return res.success ? res.data! : null;
+}
+
+// ==================== 行业资讯内容源 API ====================
+
+/** 获取全部资讯列表 */
+export async function fetchNewsItems(): Promise<NewsAdminListData | null> {
+  const res = await adminFetch<NewsAdminListData>("/api/admin/news");
+  return res.success ? res.data! : null;
+}
+
+/** 新增资讯（后端做合规校验，失败时返回错误消息） */
+export async function createNewsItem(
+  item: Omit<NewsAdminItem, "id">
+): Promise<{ ok: boolean; error?: string }> {
+  const res = await adminFetch<NewsAdminItem>("/api/admin/news", {
+    method: "POST",
+    body: JSON.stringify(item),
+  });
+  return { ok: !!res.success, error: res.error };
+}
+
+/** 更新资讯 */
+export async function updateNewsItem(
+  id: string,
+  item: Omit<NewsAdminItem, "id">
+): Promise<{ ok: boolean; error?: string }> {
+  const res = await adminFetch<NewsAdminItem>(`/api/admin/news/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    body: JSON.stringify(item),
+  });
+  return { ok: !!res.success, error: res.error };
+}
+
+/** 删除资讯 */
+export async function deleteNewsItem(
+  id: string
+): Promise<{ ok: boolean; error?: string }> {
+  const res = await adminFetch(`/api/admin/news/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+  return { ok: !!res.success, error: res.error };
+}
+
+/** 恢复默认资讯库 */
+export async function resetNewsItems(): Promise<{ ok: boolean; error?: string }> {
+  const res = await adminFetch("/api/admin/news/reset", {
+    method: "POST",
+  });
+  return { ok: !!res.success, error: res.error };
 }

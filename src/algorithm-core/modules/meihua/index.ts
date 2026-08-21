@@ -21,7 +21,10 @@ import {
   TRIGRAM_DATA,
   HEXAGRAM_NAMES,
   HEXAGRAM_TRIGRAMS,
+  getFuShenForHexagram,
+  getGongNameForHexagram,
 } from '@/algorithm-core/modules/liuyao';
+import type { YaoHiddenBranch, TrigramName as LiuyaoTrigram } from '@/algorithm-core/modules/liuyao';
 
 // ============================================================================
 // 类型定义
@@ -75,6 +78,10 @@ export interface HexagramInfo {
   upperInfo: TrigramInfo;
   lowerInfo: TrigramInfo;
   guaCi: string;
+  /** 京房卦宫（如"乾宫"），FuShenCore依据 */
+  gong?: string;
+  /** 伏神/隐藏地支层（FuShenCore统一计算，每爻必有，index0=初爻） */
+  fushenLayer?: YaoHiddenBranch[];
 }
 
 /** 体用分析结果 */
@@ -335,7 +342,22 @@ export function calculateMeihua(input: MeihuaInput): MeihuaResult {
     guaCi: HEXAGRAM_GUACI[bianData.num] ?? '暂无卦辞记录。',
   };
 
-  // 5. 体用分析
+  // 5. 伏神/隐藏地支层（FuShenCore统一计算，本卦/互卦/变卦三卦层全挂载）
+  //    仅为展示层附加数据，不参与梅花体用推断，不改变任何既有算法
+  for (const gua of [benGua, huGua, bianGua]) {
+    const yaoYangFlags = (getTrigramInfo(gua.lower).lines + getTrigramInfo(gua.upper).lines)
+      .split('')
+      .map(ch => ch === '1');
+    const coreInput = {
+      yaoYangFlags,
+      innerTrigram: gua.lower as LiuyaoTrigram,
+      outerTrigram: gua.upper as LiuyaoTrigram,
+    };
+    gua.gong = getGongNameForHexagram(coreInput);
+    gua.fushenLayer = getFuShenForHexagram(coreInput);
+  }
+
+  // 6. 体用分析
   const tiYong = analyzeTiYong(upperTrigram, lowerTrigram, changeYao);
 
   return { benGua, huGua, bianGua, changeYao, tiYong };

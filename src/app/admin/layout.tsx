@@ -19,6 +19,7 @@ import {
   X,
   Shield,
   Home,
+  Newspaper,
 } from "lucide-react";
 import { THEME, useMounted } from "./_shared";
 import { getAdminKey, setAdminKey, clearAdminKey, isAdminAuthed } from "@/lib/admin/client";
@@ -37,6 +38,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/admin/dashboard", label: "数据看板", icon: <BarChart3 size={18} />, desc: "用户·邀请·浏览·会员·AI" },
   { href: "/admin/ai-control", label: "AI功能管控", icon: <Bot size={18} />, desc: "开关·配额·定价" },
   { href: "/admin/membership", label: "会员管理", icon: <Crown size={18} />, desc: "等级·价格·权益·上下架" },
+  { href: "/admin/sources", label: "内容源管理", icon: <Newspaper size={18} />, desc: "行业资讯·合规门禁" },
 ];
 
 // ==================== 登录门禁 ====================

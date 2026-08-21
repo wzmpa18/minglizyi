@@ -142,6 +142,10 @@ function YaoRow({
     isYang: boolean; isDong: boolean;
     isShi: boolean; isYing: boolean;
     isKong: boolean; isYuePo: boolean; isRiChong: boolean;
+    hiddenBranch?: {
+      gan: string; zhi: string; zhiWuxing: string;
+      liuQin: string; liuQinShort: string; isMissingLiuQin: boolean;
+    };
     fushen?: { liuQin: string; gan: string; zhi: string };
     bianGan?: string; bianZhi?: string; bianLiuQin?: string; bianIsYang?: boolean;
   };
@@ -190,26 +194,24 @@ function YaoRow({
     if (yao.isRiChong) markers.push("冲");
   }
 
-  // 伏神
-  const fushen = !isBianGua && yao.fushen ? (
-    <div style={{
-      fontSize: "10px", color: "#999", textAlign: "center",
-      lineHeight: "1.2", marginBottom: "1px", height: "12px",
-    }}>
-      伏{yao.fushen.liuQin.slice(0, 1)}{yao.fushen.gan}{yao.fushen.zhi}
-    </div>
-  ) : (
-    <div style={{ height: "13px" }} />
-  );
-
   const lineIsYang = isBianGua && isDongLine ? (bianYang ?? yao.isYang) : yao.isYang;
+
+  // FU_SHEN_ROW：每爻统一渲染（位于MAIN_ROW正下方，明确归属本爻）
+  // hiddenBranch来自FuShenCore（本宫八纯卦同爻位干支六亲），每爻必有真实值
+  const hb = yao.hiddenBranch;
+  const fuShenText = hb ? `伏${hb.liuQinShort}${hb.gan}${hb.zhi}` : "";
+  const fuShenStyle: React.CSSProperties = isBianGua
+    ? { color: "#c8c8c8" } // 变卦列：变卦自身宫隐藏层（浅灰参考）
+    : hb?.isMissingLiuQin
+      ? { color: "#B45309", fontWeight: "bold" } // 传统缺亲伏神（琥珀醒目）
+      : { color: "#c4c4c4" }; // 本宫隐藏层参考（本卦已有该六亲，浅灰）
 
   return (
     <div
       onClick={onClick}
       style={onClick ? { cursor: "pointer" } : undefined}
     >
-      {fushen}
+      {/* MAIN_ROW：六亲干支 / 爻象 / 世应 */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "2px 4px", gap: "4px", minHeight: "22px",
@@ -236,6 +238,14 @@ function YaoRow({
         <div style={{ width: "70px", textAlign: "left", minHeight: "14px", display: "flex", justifyContent: "flex-start", alignItems: "center" }}>
           {rightContent}
         </div>
+      </div>
+      {/* FU_SHEN_ROW：伏神/隐藏地支层，六爻统一 */}
+      <div style={{
+        height: "14px", fontSize: "10px", lineHeight: "14px",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        whiteSpace: "nowrap",
+      }}>
+        <span style={fuShenStyle}>{fuShenText}</span>
       </div>
     </div>
   );

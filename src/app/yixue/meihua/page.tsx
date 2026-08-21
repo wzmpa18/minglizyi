@@ -15,6 +15,8 @@ import {
   getCurrentJieQi,
   GAN_WUXING,
   ZHI_WUXING,
+  getFuShenForHexagram,
+  getGongNameForHexagram,
 } from "@/algorithm-core";
 import type { TrigramName, TianGan, DiZhi } from "@/algorithm-core";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
@@ -275,6 +277,18 @@ function buildMeihuaResultFromTrigrams(upperTrigram: TrigramName, lowerTrigram: 
   const bianData = getBianGua(upperTrigram, lowerTrigram, changeYao);
   const tiYong = analyzeTiYong(upperTrigram, lowerTrigram, changeYao);
 
+  // FuShenCore：本卦/互卦/变卦三卦层统一挂载伏神/隐藏地支层
+  const attachFushenLayer = (lower: TrigramName, upper: TrigramName) => {
+    const yaoYangFlags = (getTrigramInfo(lower).lines + getTrigramInfo(upper).lines)
+      .split("")
+      .map(ch => ch === "1");
+    const coreInput = { yaoYangFlags, innerTrigram: lower, outerTrigram: upper };
+    return {
+      gong: getGongNameForHexagram(coreInput),
+      fushenLayer: getFuShenForHexagram(coreInput),
+    };
+  };
+
   return {
     benGua: {
       num: hexNum,
@@ -282,6 +296,7 @@ function buildMeihuaResultFromTrigrams(upperTrigram: TrigramName, lowerTrigram: 
       upper: upperTrigram,
       lower: lowerTrigram,
       guaCi: HEXAGRAM_GUACI[hexNum] ?? "暂无卦辞记录。",
+      ...attachFushenLayer(lowerTrigram, upperTrigram),
     },
     huGua: {
       num: huData.num,
@@ -289,6 +304,7 @@ function buildMeihuaResultFromTrigrams(upperTrigram: TrigramName, lowerTrigram: 
       upper: huData.upper,
       lower: huData.lower,
       guaCi: HEXAGRAM_GUACI[huData.num] ?? "暂无卦辞记录。",
+      ...attachFushenLayer(huData.lower, huData.upper),
     },
     bianGua: {
       num: bianData.num,
@@ -296,6 +312,7 @@ function buildMeihuaResultFromTrigrams(upperTrigram: TrigramName, lowerTrigram: 
       upper: bianData.upper,
       lower: bianData.lower,
       guaCi: HEXAGRAM_GUACI[bianData.num] ?? "暂无卦辞记录。",
+      ...attachFushenLayer(bianData.lower, bianData.upper),
     },
     changeYao,
     tiYong,

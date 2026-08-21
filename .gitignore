@@ -58,3 +58,9 @@ docs/materials/nihaixia_raw/
 
 
 .tmp-mkt-e2e/
+
+# Temp verify dirs and keystore backups
+.tmp-fushen-verify/
+.tmp-mkt-e2e/
+*.keystore*
+!android/app/*.keystore

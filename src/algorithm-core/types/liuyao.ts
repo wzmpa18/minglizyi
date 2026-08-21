@@ -43,6 +43,26 @@ export interface LiuyaoInput {
   number?: NumberDivinationInput;
 }
 
+/**
+ * 隐藏地支层（FuShenCore · B类）
+ * 本爻位在本宫八纯卦中的干支六亲 —— 六爻皆可计算，永不缺位。
+ * 产品定义（FINAL-CLEAN-RC-01 第三部分永久冻结）：每爻都有对应伏神/隐藏地支层。
+ */
+export interface HiddenBranchLayer {
+  /** 本宫八纯卦该爻位天干 */
+  gan: string;
+  /** 本宫八纯卦该爻位地支 */
+  zhi: string;
+  /** 地支五行 */
+  zhiWuxing: string;
+  /** 六亲全称（对本宫五行） */
+  liuQin: string;
+  /** 六亲简称 */
+  liuQinShort: string;
+  /** 是否为本卦缺失六亲（传统缺亲伏神 A类，恒为隐藏层的子集） */
+  isMissingLiuQin: boolean;
+}
+
 /** 单爻信息 */
 export interface LiuyaoYao {
   /** 爻位 1-6 (1=初爻, 6=上爻) */
@@ -73,7 +93,9 @@ export interface LiuyaoYao {
   isYuePo: boolean;
   /** 是否日冲(日破/暗动) */
   isRiChong: boolean;
-  /** 伏神（如有） */
+  /** 隐藏地支层：本爻位在本宫八纯卦中的干支六亲（每爻必有，FuShenCore统一计算） */
+  hiddenBranch?: HiddenBranchLayer;
+  /** 传统缺亲伏神（本卦缺失六亲时存在，恒为hiddenBranch的缺失子集） */
   fushen?: {
     liuQin: string;
     gan: string;

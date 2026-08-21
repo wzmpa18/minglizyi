@@ -8,6 +8,8 @@ import {
   getIndustryNews,
   getCachedPosts,
   setCachedPosts,
+  getCachedNews,
+  setCachedNews,
   type QualityPost,
   type NewsItem,
   type NewsCategory,
@@ -589,22 +591,46 @@ export default function DiscoverPage() {
     setActiveCircle((prev) => (prev === key ? "" : key));
   }, []);
 
-  // ==================== 加载行业资讯（含错误降级，支持分类过滤） ====================
-  const loadNews = useCallback((page: number, refresh: boolean, category?: NewsCategory | "all") => {
+  // ==================== 加载行业资讯（v25.0.47 后端动态优先 + 失败降级本地，支持分类过滤） ====================
+  const loadNews = useCallback(async (page: number, refresh: boolean, category?: NewsCategory | "all") => {
     setNewsLoading(true);
     setNewsError(false);
+    const cat = category ?? newsCategory;
     try {
-      const cat = category ?? newsCategory;
-      const { news: newNews, hasMore } = getIndustryNews(page, 20, cat);
-      if (refresh) {
-        setNews(newNews);
-      } else {
-        setNews((prev) => [...prev, ...newNews]);
+      // 1. 优先从后端拉取（内容源后台可维护：/admin/sources）
+      const res = await fetch(`/api/news/public?page=${page}&pageSize=20&category=${cat}`, {
+        headers: { "Content-Type": "application/json" },
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && Array.isArray(json.news)) {
+          const newNews = json.news as NewsItem[];
+          if (refresh) {
+            setNews(newNews);
+            if (newNews.length > 0) setCachedNews(newNews);
+          } else {
+            setNews((prev) => [...prev, ...newNews]);
+          }
+          setHasMoreNews(!!json.hasMore);
+          setNewsPage(page);
+          return;
+        }
       }
-      setHasMoreNews(hasMore);
-      setNewsPage(page);
+      throw new Error("NEWS_API_FAIL");
     } catch {
-      setNewsError(true);
+      // 2. 后端不可用：降级本地内置资讯库（与旧版行为一致，保证页面可用）
+      try {
+        const { news: newNews, hasMore } = getIndustryNews(page, 20, cat);
+        if (refresh) {
+          setNews(newNews);
+        } else {
+          setNews((prev) => [...prev, ...newNews]);
+        }
+        setHasMoreNews(hasMore);
+        setNewsPage(page);
+      } catch {
+        setNewsError(true);
+      }
     } finally {
       setNewsLoading(false);
     }
@@ -655,7 +681,12 @@ export default function DiscoverPage() {
     if (tab === activeTab) return;
     setActiveTab(tab);
     if (tab === "news" && news.length === 0 && !newsError) {
-      loadNews(1, true);
+      // 先展示本地缓存（24小时内有效）提升打开速度，再后台拉最新
+      const cached = getCachedNews();
+      if (cached && cached.length > 0) {
+        setNews(cached);
+      }
+      void loadNews(1, true);
     }
     if (tab === "video") {
       loadVideos();
@@ -1043,7 +1074,20 @@ export default function DiscoverPage() {
             />
           )}
         </button>
-        {/* P9-首发裁剪：行业资讯（外部聚合）Tab 隐藏 */}
+        {/* 行业资讯 Tab（v25.0.47 恢复：内容源后台可维护 /admin/sources，带来源标注） */}
+        <button
+          onClick={() => handleTabSwitch("news")}
+          className="flex-1 py-3 text-sm font-semibold transition-colors relative"
+          style={{ color: activeTab === "news" ? BRAND : "#999" }}
+        >
+          行业资讯
+          {activeTab === "news" && (
+            <div
+              className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 rounded-full"
+              style={{ width: "40px", backgroundColor: BRAND }}
+            />
+          )}
+        </button>
         <button
           onClick={() => handleTabSwitch("video")}
           className="flex-1 py-3 text-sm font-semibold transition-colors relative"

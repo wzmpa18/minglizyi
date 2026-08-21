@@ -91,6 +91,7 @@ export type {
   ShenSha,
   ManualYaoInput,
   NumberDivinationInput,
+  HiddenBranchLayer,
 } from './types/liuyao';
 
 // 从liuyao模块重导出TrigramName类型（兼容meihua等模块）
@@ -359,6 +360,12 @@ export {
   calcGuaGong,
   findFuShen,
   jiaZiIndex,
+  // FuShenCore（六爻/梅花统一伏神与隐藏地支层核心）
+  getFuShenForYao,
+  getFuShenForHexagram,
+  getGongNameForHexagram,
+  type FuShenCoreInput,
+  type YaoHiddenBranch,
 } from './modules/liuyao';
 
 // ============================================================================

@@ -23,6 +23,7 @@ import type {
   LiuyaoYao,
   LiuyaoHexagram,
   YaoType,
+  HiddenBranchLayer,
 } from '../../types/liuyao';
 
 // ============================================================================
@@ -320,7 +321,7 @@ function getInnerOuter(yaoArr: { isYang: boolean }[]): { inner: Trigram; outer: 
 }
 
 /**
- * 查找伏神
+ * 查找伏神（传统缺亲规则）
  * 八纯卦中缺失六亲所对应的爻
  */
 function findFuShen(
@@ -348,6 +349,100 @@ function findFuShen(
     }
   }
   return result;
+}
+
+// ============================================================================
+// FuShenCore —— 六爻/梅花统一伏神与隐藏地支层计算核心（唯一实现）
+// ============================================================================
+//
+// 两个概念（FINAL-CLEAN-RC-01 第三/四部分永久冻结，两者不得混为一谈）：
+//
+// A. hiddenBranch（隐藏地支层 · B类）：每个爻位在本宫八纯卦中同爻位的干支六亲。
+//    六爻皆可计算、永不缺位 —— 产品上每一爻都可点击查看，禁止理解为"只有少数爻才有"。
+//
+// B. palaceFuShen（传统缺亲伏神 · A类）：《子平必背》规则 —— 卦中六亲不全时，
+//    从本宫八纯卦取缺失六亲所在爻位，平移到本卦对应爻位（隐伏于飞神之下）。
+//    恒为 hiddenBranch 的子集（仅 isMissingLiuQin 的爻位）。
+//
+// 数据来源追溯：宫卦纳甲表（NAJIA_GAN/NAJIA_ZHI）+ 宫五行生克（getLiuQin），
+// 与《子平必背》安卦歌诀逐条核对（乾金甲子外壬午…兑金丁巳外丁亥），无AI生成值。
+// 六爻与梅花共用本核心，禁止各自另写一套。
+// ============================================================================
+
+/** FuShenCore 输入：一个六爻卦的阴阳结构与内外卦名 */
+export interface FuShenCoreInput {
+  /** 六爻阴阳标志，index0=初爻 */
+  yaoYangFlags: boolean[];
+  /** 内卦（下卦）名 */
+  innerTrigram: Trigram;
+  /** 外卦（上卦）名 */
+  outerTrigram: Trigram;
+}
+
+/** FuShenCore 输出：单爻隐藏地支层 */
+export interface YaoHiddenBranch extends HiddenBranchLayer {
+  /** 爻位 1-6 */
+  position: number;
+}
+
+/** 取本宫八纯卦某爻位的干支六亲 */
+function palaceYaoAt(gong: Trigram, position: number): {
+  gan: string; zhi: string; zhiWuxing: string; liuQin: string; liuQinShort: string;
+} {
+  const zhi = NAJIA_ZHI[gong][position - 1];
+  let gan: string;
+  if (gong === '乾') gan = position <= 3 ? '甲' : '壬';
+  else if (gong === '坤') gan = position <= 3 ? '乙' : '癸';
+  else gan = NAJIA_GAN[gong].inner;
+  const zhiWuxing = ZHI_WUXING[zhi];
+  const liuQin = getLiuQin(TRIGRAM_WUXING[gong], zhiWuxing);
+  return { gan, zhi, zhiWuxing, liuQin, liuQinShort: LIUQIN_SHORT[liuQin] };
+}
+
+/**
+ * 计算一个六爻卦的完整伏神/隐藏地支层（FuShenCore唯一入口）
+ * 返回6个元素，index0=初爻，每爻必有hiddenBranch，缺失六亲标isMissingLiuQin
+ */
+export function getFuShenForHexagram(input: FuShenCoreInput): YaoHiddenBranch[] {
+  const { yaoYangFlags, innerTrigram, outerTrigram } = input;
+  if (yaoYangFlags.length !== 6) {
+    throw new Error('FuShenCore: 需要6个爻的阴阳标志');
+  }
+  const yaoBase = yaoYangFlags.map((isYang, i) => ({ position: i + 1, isYang, isDong: false }));
+  const gong = calcGuaGong(yaoBase, innerTrigram, outerTrigram);
+
+  // 当前卦按纳甲装卦后的六亲集合（判定缺失）
+  const gongWx = TRIGRAM_WUXING[gong];
+  const existingQin = new Set<string>();
+  for (let i = 0; i < 6; i++) {
+    const trig = i < 3 ? innerTrigram : outerTrigram;
+    existingQin.add(getLiuQin(gongWx, ZHI_WUXING[NAJIA_ZHI[trig][i]]));
+  }
+
+  return yaoBase.map((y) => {
+    const p = palaceYaoAt(gong, y.position);
+    return { position: y.position, ...p, isMissingLiuQin: !existingQin.has(p.liuQin) };
+  });
+}
+
+/**
+ * 计算单个爻位的伏神/隐藏地支层（FuShenCore单爻入口）
+ * @param position 爻位 1-6
+ */
+export function getFuShenForYao(input: FuShenCoreInput, position: number): YaoHiddenBranch {
+  const all = getFuShenForHexagram(input);
+  const idx = position - 1;
+  if (idx < 0 || idx > 5) {
+    throw new Error('FuShenCore: 爻位必须在1-6之间');
+  }
+  return all[idx];
+}
+
+/** 计算卦宫名（供梅花等外部模块复用，如"乾宫"） */
+export function getGongNameForHexagram(input: FuShenCoreInput): string {
+  const yaoBase = input.yaoYangFlags.map((isYang, i) => ({ position: i + 1, isYang, isDong: false }));
+  const gong = calcGuaGong(yaoBase, input.innerTrigram, input.outerTrigram);
+  return `${gong}宫`;
 }
 
 /**
@@ -479,9 +574,14 @@ function buildHexagram(
   // 六神（从初爻到上爻）
   const shenStart = LIUSHEN_START[dayGan] ?? 0;
 
-  // 伏神
+  // 伏神/隐藏地支层（FuShenCore统一计算：每爻必有hiddenBranch，缺失六亲才标fushen）
   const existingQin = new Set(gzInfo.map(g => g.liuQin));
   const fushenMap = findFuShen(gong, existingQin);
+  const hiddenLayer = getFuShenForHexagram({
+    yaoYangFlags: yaoBase.map(y => y.isYang),
+    innerTrigram: inner,
+    outerTrigram: outer,
+  });
 
   const yaos: LiuyaoYao[] = yaoBase.map((y, i) => {
     const gz = gzInfo[i];
@@ -489,6 +589,7 @@ function buildHexagram(
     const isYuePo = gz.zhi === monthPoZhi;
     const isRiChong = gz.zhi === riChongZhi;
     const fs = fushenMap[y.position];
+    const hb = hiddenLayer[i];
     return {
       position: y.position,
       isYang: y.isYang,
@@ -504,6 +605,10 @@ function buildHexagram(
       isKong,
       isYuePo,
       isRiChong,
+      hiddenBranch: hb ? {
+        gan: hb.gan, zhi: hb.zhi, zhiWuxing: hb.zhiWuxing,
+        liuQin: hb.liuQin, liuQinShort: hb.liuQinShort, isMissingLiuQin: hb.isMissingLiuQin,
+      } : undefined,
       fushen: fs ? { liuQin: fs.liuQin, gan: fs.gan, zhi: fs.zhi } : undefined,
     };
   });
@@ -758,4 +863,6 @@ export {
   calcGuaGong,
   findFuShen,
   jiaZiIndex,
+  // 注：FuShenCore三函数（getFuShenForYao/getFuShenForHexagram/getGongNameForHexagram）
+  // 已在定义处直接export，此处不重复列出
 };

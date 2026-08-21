@@ -1,0 +1,160 @@
+name: iOS Build (ipa)
+
+# 言道国学 iOS 打包管道（FINAL-CLEAN-RC-01）
+# - macOS runner + Capacitor iOS 工程（远程加载模式：壳加载 https://yandaoguoxue.yandao.vip）
+# - 签名：App Store Connect API（P8 密钥）自动签名
+#   Secrets 必需：
+#     APP_STORE_CONNECT_KEY       — AuthKey_UWQ354QP54.p8 全文内容
+#     APP_STORE_CONNECT_ISSUER_ID — App Store Connect 后台 → 用户和访问 → 集成 → 密钥 页的 Issuer ID
+#   Key ID 已内联（UWQ354QP54，非敏感标识）
+# - Issuer ID 未配置时：产出未签名 xcarchive（可在任意 Mac 上完成签名导出）
+on:
+  workflow_dispatch:
+    inputs:
+      upload_testflight:
+        description: '签名成功后上传 TestFlight'
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    name: Archive & Export
+    runs-on: macos-14
+    timeout-minutes: 60
+    env:
+      KEY_ID: UWQ354QP54
+      APP_NAME: 言道国学
+      BUNDLE_ID: com.yandao.guoxue
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync Capacitor iOS
+        run: |
+          test -d www || mkdir -p www
+          test -f www/index.html || echo '<!doctype html><title>Yandao Guoxue</title>' > www/index.html
+          npx cap sync ios
+
+      - name: Check signing credentials
+        id: creds
+        run: |
+          if [ -n "${{ secrets.APP_STORE_CONNECT_KEY }}" ] && [ -n "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}" ]; then
+            echo "mode=signed" >> "$GITHUB_OUTPUT"
+            echo "签名模式：App Store Connect API（P8）"
+          else
+            echo "mode=unsigned" >> "$GITHUB_OUTPUT"
+            echo "::warning::未配置 APP_STORE_CONNECT_KEY / APP_STORE_CONNECT_ISSUER_ID Secrets，将产出未签名 xcarchive"
+          fi
+
+      - name: Write API key
+        if: steps.creds.outputs.mode == 'signed'
+        run: |
+          mkdir -p "$HOME/private_keys"
+          printf '%s\n' "${{ secrets.APP_STORE_CONNECT_KEY }}" > "$HOME/private_keys/AuthKey_${KEY_ID}.p8"
+
+      - name: Archive (signed)
+        if: steps.creds.outputs.mode == 'signed'
+        run: |
+          cd ios/App
+          xcodebuild archive \
+            -project App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$HOME/private_keys/AuthKey_${KEY_ID}.p8" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}"
+
+      - name: Archive (unsigned fallback)
+        if: steps.creds.outputs.mode == 'unsigned'
+        run: |
+          cd ios/App
+          xcodebuild archive \
+            -project App.xcodeproj \
+            -scheme App \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Export ipa
+        if: steps.creds.outputs.mode == 'signed'
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>destination</key>
+            <string>export</string>
+            <key>signingStyle</key>
+            <string>automatic</string>
+            <key>stripSwiftSymbols</key>
+            <true/>
+          </dict>
+          </plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/App.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$HOME/private_keys/AuthKey_${KEY_ID}.p8" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}"
+          ls -la "$RUNNER_TEMP/export"
+
+      - name: Upload ipa artifact
+        if: steps.creds.outputs.mode == 'signed'
+        uses: actions/upload-artifact@v4
+        with:
+          name: yandao-guoxue-ios-ipa
+          path: ${{ runner.temp }}/export/*.ipa
+          retention-days: 14
+
+      - name: Upload to TestFlight
+        if: steps.creds.outputs.mode == 'signed' && inputs.upload_testflight
+        run: |
+          IPA=$(ls "$RUNNER_TEMP/export/"*.ipa | head -1)
+          xcrun altool --upload-app --type ios -f "$IPA" --apiKey "$KEY_ID" --api-issuer "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}"
+
+      - name: Upload unsigned xcarchive artifact
+        if: steps.creds.outputs.mode == 'unsigned'
+        run: |
+          cd "$RUNNER_TEMP"
+          zip -r -q App.xcarchive.zip App.xcarchive
+        # 产物在下一步上传
+
+      - name: Upload archive artifact
+        if: steps.creds.outputs.mode == 'unsigned'
+        uses: actions/upload-artifact@v4
+        with:
+          name: yandao-guoxue-ios-xcarchive-unsigned
+          path: ${{ runner.temp }}/App.xcarchive.zip
+          retention-days: 14
+
+      - name: Build summary
+        run: |
+          echo "### iOS 构建结果" >> $GITHUB_STEP_SUMMARY
+          echo "- 模式: ${{ steps.creds.outputs.mode }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Bundle: $BUNDLE_ID" >> $GITHUB_STEP_SUMMARY
+          echo "- 远程加载: https://yandaoguoxue.yandao.vip (v25.0.47)" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.creds.outputs.mode }}" = "signed" ]; then
+            echo "- 产物: signed ipa (TestFlight 上传: ${{ inputs.upload_testflight }})" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- 产物: 未签名 xcarchive（需补 Issuer ID Secret 后重跑可出签名 ipa）" >> $GITHUB_STEP_SUMMARY
+          fi
