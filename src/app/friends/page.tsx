@@ -15,6 +15,7 @@ import {
   addFriendRequest,
   getFriendRequests,
   getGroups,
+  isLegacyLocalGroupId,
   createGroup,
   updateFriendRequest,
   updateFriendNote,
@@ -1726,7 +1727,8 @@ export default function FriendsPage() {
   // ==================== 数据加载（v25.0.19：本地 + 后端合并） ====================
   const loadData = useCallback(() => {
     setFriends(getFriends());
-    setGroups(getGroups());
+    // v25.0.47 P1-A：legacy group_* 本地假群一律不展示（与群列表页同一规则）
+    setGroups(getGroups().filter((g) => !isLegacyLocalGroupId(g.id)));
     const reqs = getFriendRequests();
     setFriendRequests(reqs);
     setBlacklist(getBlacklist());

@@ -254,6 +254,33 @@ export function getGroups(): GroupInfo[] {
   return safeGet<GroupInfo[]>(KEYS.GROUPS, []);
 }
 
+// ==================== v25.0.47 P1-A：legacy group_* 假群治理 ====================
+// LEGACY_GROUP_MIGRATION_RULE
+// 历史版本建群时在本地生成 "group_<13位时间戳>_<随机串>" 业务ID，服务端从不承认这些ID，
+// 用户点入只能看到"暂无消息"空壳页。迁移判定（三种情况）：
+//  A. 能明确映射到服务器真实groupId → 本地记录不含任何服务器ID字段，不存在可明确映射的数据；
+//     按名称/群主匹配属于猜测，绝对禁止
+//  B. 服务端根本不存在 → INVALID_LEGACY_GROUP：群列表不再展示，聊天页显示失效提示
+//  C. 不能确认映射 → 与 B 同一处理：提示"该旧群记录已失效，请返回群列表。"并提供本地删除按钮
+// 服务端业务groupId一律为纯数字；group_<纯数字>（无随机后缀）是会话静音key命名空间，与本规则无关。
+export function isLegacyLocalGroupId(id: string): boolean {
+  return /^group_\d{10,}_[0-9a-z]+$/.test(id);
+}
+
+/** 清理本地全部失效旧群记录（含其本地消息），返回被清理的群ID列表 */
+export function purgeLegacyGroups(): string[] {
+  if (typeof window === 'undefined') return [];
+  const groups = getGroups();
+  const legacy = groups.filter((g) => isLegacyLocalGroupId(g.id));
+  if (legacy.length === 0) return [];
+  const legacyIds = new Set(legacy.map((g) => g.id));
+  saveGroups(groups.filter((g) => !legacyIds.has(g.id)));
+  legacy.forEach((g) => {
+    try { localStorage.removeItem(KEYS.GROUP_MESSAGES + g.id); } catch {}
+  });
+  return legacy.map((g) => g.id);
+}
+
 export function saveGroups(groups: GroupInfo[]): void {
   safeSet(KEYS.GROUPS, groups);
 }

@@ -8,6 +8,8 @@ import {
   getGroups,
   getGroupMessages,
   saveGroupMessage,
+  isLegacyLocalGroupId,
+  purgeLegacyGroups,
   type GroupInfo,
   type ChatMessage,
 } from "@/lib/socialStore";
@@ -37,6 +39,11 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
   const [inputText, setInputText] = useState("");
   const chatListRef = useRef<HTMLDivElement>(null);
 
+  // v25.0.47 P1-A：legacy group_* 假群不再进入空壳聊天页，显示失效提示
+  const [invalidLegacy, setInvalidLegacy] = useState(false);
+  // v25.0.47 P1-A：服务端明确返回404（群已解散/已被移出）时提示，网络异常不误报
+  const [serverMissing, setServerMissing] = useState(false);
+
   // v25.0.41：群角色/禁言/成员（@功能与禁言拦截）
   const [myRole, setMyRole] = useState<"owner" | "admin" | "member">("member");
   const [muteAll, setMuteAll] = useState(false);
@@ -60,6 +67,13 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
   })();
 
   useEffect(() => {
+    // v25.0.47 P1-A：legacy group_* 本地旧ID直接判失效（INVALID_LEGACY_GROUP），禁止进入空壳聊天页
+    if (isLegacyLocalGroupId(groupId)) {
+      setInvalidLegacy(true);
+      return;
+    }
+    setInvalidLegacy(false);
+    setServerMissing(false);
     const groups = getGroups();
     const found = groups.find((g) => g.id === groupId);
     if (found) {
@@ -90,7 +104,13 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
     const loadDetail = async () => {
       try {
         const r = await fetchGroupDetail(groupId);
-        if (stopped || !r || !r.success) return;
+        if (stopped) return;
+        if (!r || !r.success) {
+          // v25.0.47 P1-A：服务端明确404=群不存在/已退出，不再静默吞掉
+          if (r && (r as { code?: number }).code === 404) setServerMissing(true);
+          return;
+        }
+        setServerMissing(false);
         setMyRole(r.myRole || "member");
         setMuteAll(!!r.group?.muteAll);
         setMyMuteRemain(r.myMuteRemain || 0);
@@ -98,7 +118,7 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
         if (r.group?.name && !groupId.startsWith("grp_")) {
           setGroup((prev) => (prev && prev.name !== r.group!.name ? { ...prev, name: r.group!.name } : prev));
         }
-      } catch { /* 静默 */ }
+      } catch { /* 网络异常静默，不误报群缺失 */ }
     };
     void loadDetail();
     const t = setInterval(loadDetail, 30000);
@@ -233,6 +253,75 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
   };
 
   const groupName = group ? group.name : "群聊";
+
+  // v25.0.47 P1-A：legacy group_* 失效旧群页——只提示+可删除本地记录，禁止空壳聊天页
+  if (invalidLegacy) {
+    return (
+      <div
+        className="flex min-h-screen flex-col bg-[#ededed]"
+        style={{ maxWidth: "420px", margin: "0 auto" }}
+      >
+        <PageLoginGuard />
+        <BrandHeader title="群聊" showBack />
+        <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
+          <div
+            className="mb-4 flex h-16 w-16 items-center justify-center rounded-full"
+            style={{ backgroundColor: "#f0e8f9" }}
+          >
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={BRAND} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          </div>
+          <p className="text-sm font-semibold text-gray-700">该旧群记录已失效，请返回群列表。</p>
+          <p className="mt-2 text-xs text-gray-400">此群为历史版本本地创建，服务器不存在该群，消息无法收发。</p>
+          <button
+            onClick={() => {
+              purgeLegacyGroups();
+              showToast("已删除本地失效旧群记录");
+              setTimeout(() => router.replace("/friends"), 600);
+            }}
+            className="mt-6 rounded-xl px-6 py-2.5 text-sm font-semibold"
+            style={{ backgroundColor: "#fff", color: BRAND, border: "1px solid " + BRAND }}
+          >
+            删除本地失效记录
+          </button>
+          <button
+            onClick={() => router.replace("/friends")}
+            className="mt-3 rounded-xl px-8 py-2.5 text-sm font-semibold text-white"
+            style={{ backgroundColor: BRAND }}
+          >
+            返回群列表
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // v25.0.47 P1-A：服务端明确404（群已解散/已被移出）——不再显示空壳聊天页
+  if (serverMissing) {
+    return (
+      <div
+        className="flex min-h-screen flex-col bg-[#ededed]"
+        style={{ maxWidth: "420px", margin: "0 auto" }}
+      >
+        <PageLoginGuard />
+        <BrandHeader title="群聊" showBack />
+        <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
+          <p className="text-sm font-semibold text-gray-700">群不存在或你已退出该群</p>
+          <p className="mt-2 text-xs text-gray-400">该群可能已被解散，或你已被移出群聊。</p>
+          <button
+            onClick={() => router.replace("/friends")}
+            className="mt-6 rounded-xl px-8 py-2.5 text-sm font-semibold text-white"
+            style={{ backgroundColor: BRAND }}
+          >
+            返回群列表
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

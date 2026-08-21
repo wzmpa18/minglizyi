@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { BrandHeader } from "@/components/shared";
-import { createGroup, type GroupInfo } from "@/lib/socialStore";
+import { createGroup, isLegacyLocalGroupId, type GroupInfo } from "@/lib/socialStore";
 import { createGroup as apiCreateGroup } from "@/lib/socialApi";
 import { getCurrentUserId } from "@/lib/auth";
 
@@ -81,7 +81,8 @@ function NormalCreate({
 
     // v25.0.46：等待服务端建群并统一使用服务端群ID——修复本地ID与服务端ID分离
     // 导致聊天页发消息/成员管理全部404的问题
-    let groupId = "group_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+    // v25.0.47 P1-A：业务groupId只来自服务器，本地绝不预生成 group_* 假ID
+    let groupId = "";
     try {
       const r = await apiCreateGroup(name);
       if (r && r.success && r.group && r.group.groupId) {
@@ -93,6 +94,11 @@ function NormalCreate({
       }
     } catch {
       setError("创建群聊失败，请检查网络后重试");
+      setCreating(false);
+      return;
+    }
+    if (!groupId || isLegacyLocalGroupId(groupId)) {
+      setError("创建群聊失败，请稍后重试");
       setCreating(false);
       return;
     }
@@ -289,7 +295,8 @@ function QuickCreate({
     const tags = selectedTags.length > 0 ? selectedTags : pickRandom(AVAILABLE_TAGS, 3);
 
     // v25.0.46：等待服务端建群并统一使用服务端群ID（与普通建群同一修复）
-    let groupId = "group_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+    // v25.0.47 P1-A：业务groupId只来自服务器，本地绝不预生成 group_* 假ID
+    let groupId = "";
     try {
       const r = await apiCreateGroup(suggestedName);
       if (r && r.success && r.group && r.group.groupId) {
@@ -301,6 +308,11 @@ function QuickCreate({
       }
     } catch {
       setCreateError("创建群聊失败，请检查网络后重试");
+      setCreating(false);
+      return;
+    }
+    if (!groupId || isLegacyLocalGroupId(groupId)) {
+      setCreateError("创建群聊失败，请稍后重试");
       setCreating(false);
       return;
     }

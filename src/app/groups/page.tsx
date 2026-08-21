@@ -7,6 +7,7 @@ import { useToolBack } from "@/lib/useToolBack";
 import {
   getGroups,
   getGroupMessages,
+  isLegacyLocalGroupId,
   type GroupInfo,
 } from "@/lib/socialStore";
 import { fetchGroups as apiFetchGroups, fetchConversations, type ConversationVo } from "@/lib/socialApi";
@@ -25,7 +26,8 @@ export default function GroupsPage() {
   const [convMap, setConvMap] = useState<Map<string, ConversationVo>>(new Map());
 
   useEffect(() => {
-    setGroups(getGroups());
+    // v25.0.47 P1-A：legacy group_* 本地假群一律不展示（服务端不承认这些ID，点入只会空壳页）
+    setGroups(getGroups().filter((g) => !isLegacyLocalGroupId(g.id)));
     // v25.0.19：合并后端真实群组（跨设备/多成员可见）
     void apiFetchGroups().then((r) => {
       const serverGroupsRaw = r && r.success ? r.groups : undefined;
