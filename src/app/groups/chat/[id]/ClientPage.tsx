@@ -8,6 +8,7 @@ import {
   getGroups,
   getGroupMessages,
   saveGroupMessage,
+  deleteGroupMessage,
   isLegacyLocalGroupId,
   purgeLegacyGroups,
   type GroupInfo,
@@ -161,10 +162,19 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
     setMessages((prev) => [...prev, newMsg]);
     setInputText("");
 
-    void sendGroupMessage(groupId, text).then((r) => {
+    void sendGroupMessage(groupId, text, newMsg.id).then((r) => {
       if (r && r.success && r.message) {
-        lastServerMsgIdRef.current = Math.max(lastServerMsgIdRef.current, parseInt(r.message.id, 10) || 0);
+        const serverId = parseInt(r.message.id, 10) || 0;
+        lastServerMsgIdRef.current = Math.max(lastServerMsgIdRef.current, serverId);
         setFailIds((prev) => { const n = new Set(prev); n.delete(newMsg.id); return n; });
+        // v25.0.47：乐观消息改用服务端规范ID落库，换设备/清缓存重登后自己的历史消息也能从服务端拉回
+        const canonicalId = "gsrv_" + r.message.id;
+        deleteGroupMessage(groupId, newMsg.id);
+        saveGroupMessage(groupId, { ...newMsg, id: canonicalId });
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === canonicalId)) return prev.filter((m) => m.id !== newMsg.id);
+          return prev.map((m) => (m.id === newMsg.id ? { ...m, id: canonicalId } : m));
+        });
       } else {
         // v25.0.41：发送失败标记（可重发）
         setFailIds((prev) => new Set(prev).add(newMsg.id));
@@ -174,18 +184,27 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
     });
   }, [inputText, groupId, currentUserId, currentUserName, myRole, muteAll, myMuteRemain]);
 
-  // v25.0.41：失败重发
+  // v25.0.41：失败重发（v25.0.47：沿用原clientMsgId幂等，成功后同样落规范ID）
   const handleResend = (msg: ChatMessage) => {
-    void sendGroupMessage(groupId, msg.content).then((r) => {
-      if (r && r.success) {
+    void sendGroupMessage(groupId, msg.content, msg.id.startsWith("gsrv_") ? undefined : msg.id).then((r) => {
+      if (r && r.success && r.message) {
         setFailIds((prev) => { const n = new Set(prev); n.delete(msg.id); return n; });
+        const canonicalId = "gsrv_" + r.message.id;
+        if (msg.id !== canonicalId) {
+          deleteGroupMessage(groupId, msg.id);
+          saveGroupMessage(groupId, { ...msg, id: canonicalId });
+          setMessages((prev) => {
+            if (prev.some((m) => m.id === canonicalId)) return prev.filter((m) => m.id !== msg.id);
+            return prev.map((m) => (m.id === msg.id ? { ...m, id: canonicalId } : m));
+          });
+        }
       } else {
         showToast((r && r.error) || "重发失败，请检查网络");
       }
     }).catch(() => showToast("重发失败，请检查网络"));
   };
 
-  // v25.0.19: 轮询拉取群内其他成员真实消息（替代已移除的假自动回复）
+  // v25.0.19: 轮询拉取群内真实消息（v25.0.47：含自己的消息，换设备/清缓存重登可拉回完整历史）
   const lastServerMsgIdRef = useRef(0);
   useEffect(() => {
     let stopped = false;
@@ -197,22 +216,30 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
           for (const m of r.messages) {
             lastServerMsgIdRef.current = Math.max(lastServerMsgIdRef.current, parseInt(m.id, 10) || 0);
           }
-          const incoming: ChatMessage[] = r.messages
-            .filter((m) => String(m.senderId) !== String(currentUserId))
-            .map((m) => ({
-              id: "gsrv_" + m.id,
-              senderId: m.senderId,
-              senderName: m.senderName,
-              content: m.content,
-              type: (m.type === "image" || m.type === "system" ? m.type : "text") as ChatMessage["type"],
-              timestamp: m.createdAt,
-            }));
+          const incoming: ChatMessage[] = r.messages.map((m) => ({
+            id: "gsrv_" + m.id,
+            senderId: m.senderId,
+            senderName: m.senderName,
+            content: m.content,
+            type: (m.type === "image" || m.type === "system" ? m.type : "text") as ChatMessage["type"],
+            timestamp: m.createdAt,
+          }));
           if (incoming.length) {
             setMessages((prev) => {
               const existIds = new Set(prev.map((x) => x.id));
               const fresh = incoming.filter((x) => !existIds.has(x.id));
+              // v25.0.47：清理与自身历史重复的旧版乐观缓存（gmsg_本地消息 vs 服务端gsrv_历史）
+              const ownFresh = new Set(fresh.filter((x) => String(x.senderId) === String(currentUserId)).map((x) => x.content));
+              let base = prev;
+              if (ownFresh.size) {
+                const dups = prev.filter((x) => x.id.startsWith("gmsg_") && String(x.senderId) === String(currentUserId) && ownFresh.has(x.content));
+                if (dups.length) {
+                  dups.forEach((x) => deleteGroupMessage(groupId, x.id));
+                  base = prev.filter((x) => !dups.includes(x));
+                }
+              }
               for (const f of fresh) saveGroupMessage(groupId, f);
-              return fresh.length ? [...prev, ...fresh] : prev;
+              return fresh.length || base !== prev ? [...base, ...fresh] : prev;
             });
           }
         }

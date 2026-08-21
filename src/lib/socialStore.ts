@@ -307,6 +307,8 @@ export function getGroupMessages(groupId: string): ChatMessage[] {
 
 export function saveGroupMessage(groupId: string, msg: ChatMessage): void {
   const msgs = getGroupMessages(groupId);
+  // v25.0.47：按ID幂等入库（轮询回包与发送回执可能先后落同一条服务端消息）
+  if (msgs.some((m) => m.id === msg.id)) return;
   msgs.push(msg);
   safeSet(KEYS.GROUP_MESSAGES + groupId, msgs);
 }

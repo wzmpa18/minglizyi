@@ -245,10 +245,10 @@ export async function fetchGroupMessages(groupId: string, afterId = 0) {
   return api<{ success: boolean; messages?: ChatMessage[]; group?: GroupVo; error?: string }>(`/api/social/groups/${groupId}/messages?afterId=${afterId}`);
 }
 
-export async function sendGroupMessage(groupId: string, content: string) {
+export async function sendGroupMessage(groupId: string, content: string, clientMsgId?: string) {
   return api<{ success: boolean; message?: ChatMessage; error?: string }>(`/api/social/groups/${groupId}/messages`, {
     method: "POST",
-    body: JSON.stringify({ content }),
+    body: JSON.stringify(clientMsgId ? { content, clientMsgId } : { content }),
   });
 }
 
