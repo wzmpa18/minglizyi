@@ -1,0 +1,79 @@
+name: Android Build (apk)
+
+# 言道国学 Android 云打包（fc12）
+# - ubuntu runner + Capacitor Android 工程（远程加载模式）
+# - 签名：仓库根 yandao-release.keystore（经 ANDROID_KEYSTORE_B64 Secret 注入）
+#   Secret 配置：base64 -w0 yandao-release.keystore 的输出 → ANDROID_KEYSTORE_B64
+#   密码已在 android/app/build.gradle（yandao2024/yandao）
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Assemble Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      APP_NAME: 言道国学
+      BUNDLE_ID: com.yandao.guoxue
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync Capacitor Android
+        run: |
+          test -d www || mkdir -p www
+          test -f www/index.html || echo '<!doctype html><title>Yandao Guoxue</title>' > www/index.html
+          npx cap sync android
+
+      - name: Restore keystore
+        run: |
+          printf '%s' "${{ secrets.ANDROID_KEYSTORE_B64 }}" | base64 -d > yandao-release.keystore
+          ls -la yandao-release.keystore
+          test -s yandao-release.keystore || { echo "FATAL: keystore empty"; exit 1; }
+
+      - name: Verify version gate
+        run: |
+          grep -q 'versionCode 2047' android/app/build.gradle || { echo "FATAL: versionCode 非 2047"; exit 1; }
+          grep -q 'versionName "25.0.47"' android/app/build.gradle || { echo "FATAL: versionName 非 25.0.47"; exit 1; }
+          echo "版本门禁 OK: versionCode 2047 / versionName 25.0.47"
+
+      - name: Build release APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Show APK info
+        run: |
+          ls -la android/app/build/outputs/apk/release/
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: yandao-guoxue-android-apk
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 14
+
+      - name: Build summary
+        run: |
+          echo "### Android 构建结果" >> $GITHUB_STEP_SUMMARY
+          echo "- Bundle: $BUNDLE_ID (versionCode 2047 / versionName 25.0.47)" >> $GITHUB_STEP_SUMMARY
+          echo "- 远程加载: https://yandaoguoxue.yandao.vip (v25.0.47_3)" >> $GITHUB_STEP_SUMMARY
+          echo "- 产物: signed release apk" >> $GITHUB_STEP_SUMMARY
