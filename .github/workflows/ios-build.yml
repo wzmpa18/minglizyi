@@ -63,7 +63,9 @@ jobs:
           printf '%s\n' "${{ secrets.APP_STORE_CONNECT_KEY }}" > "$HOME/private_keys/AuthKey_${KEY_ID}.p8"
 
       - name: Archive (signed)
+        id: signed_archive
         if: steps.creds.outputs.mode == 'signed'
+        continue-on-error: true
         run: |
           cd ios/App
           xcodebuild archive \
@@ -77,10 +79,20 @@ jobs:
             -authenticationKeyID "$KEY_ID" \
             -authenticationKeyIssuerID "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}"
 
+      - name: Note signing failure
+        if: steps.creds.outputs.mode == 'signed' && steps.signed_archive.outcome == 'failure'
+        run: |
+          echo "### ⚠️ 签名归档失败，已降级产出未签名 xcarchive" >> $GITHUB_STEP_SUMMARY
+          echo "常见根因（查看 Archive (signed) 步骤日志确认）：" >> $GITHUB_STEP_SUMMARY
+          echo "- **PLA Update available** → 账号持有人 ZHIMIN WU 登录 https://developer.apple.com/account 接受最新《计划许可协议》后重跑" >> $GITHUB_STEP_SUMMARY
+          echo "- 其他错误 → 检查 Bundle ID 注册 / 证书 / 密钥权限" >> $GITHUB_STEP_SUMMARY
+          echo "::warning::签名失败已降级为未签名产物；解决后重跑本 workflow 即出签名 ipa"
+
       - name: Archive (unsigned fallback)
-        if: steps.creds.outputs.mode == 'unsigned'
+        if: steps.creds.outputs.mode == 'unsigned' || steps.signed_archive.outcome == 'failure'
         run: |
           cd ios/App
+          rm -rf "$RUNNER_TEMP/App.xcarchive"
           xcodebuild archive \
             -project App.xcodeproj \
             -scheme App \
@@ -90,7 +102,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO
 
       - name: Export ipa
-        if: steps.creds.outputs.mode == 'signed'
+        if: steps.creds.outputs.mode == 'signed' && steps.signed_archive.outcome == 'success'
         run: |
           cat > "$RUNNER_TEMP/ExportOptions.plist" <<'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
@@ -119,7 +131,7 @@ jobs:
           ls -la "$RUNNER_TEMP/export"
 
       - name: Upload ipa artifact
-        if: steps.creds.outputs.mode == 'signed'
+        if: steps.creds.outputs.mode == 'signed' && steps.signed_archive.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: yandao-guoxue-ios-ipa
@@ -127,20 +139,20 @@ jobs:
           retention-days: 14
 
       - name: Upload to TestFlight
-        if: steps.creds.outputs.mode == 'signed' && inputs.upload_testflight
+        if: steps.creds.outputs.mode == 'signed' && steps.signed_archive.outcome == 'success' && inputs.upload_testflight
         run: |
           IPA=$(ls "$RUNNER_TEMP/export/"*.ipa | head -1)
           xcrun altool --upload-app --type ios -f "$IPA" --apiKey "$KEY_ID" --api-issuer "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}"
 
       - name: Upload unsigned xcarchive artifact
-        if: steps.creds.outputs.mode == 'unsigned'
+        if: steps.creds.outputs.mode == 'unsigned' || steps.signed_archive.outcome == 'failure'
         run: |
           cd "$RUNNER_TEMP"
           zip -r -q App.xcarchive.zip App.xcarchive
         # 产物在下一步上传
 
       - name: Upload archive artifact
-        if: steps.creds.outputs.mode == 'unsigned'
+        if: steps.creds.outputs.mode == 'unsigned' || steps.signed_archive.outcome == 'failure'
         uses: actions/upload-artifact@v4
         with:
           name: yandao-guoxue-ios-xcarchive-unsigned
@@ -153,8 +165,10 @@ jobs:
           echo "- 模式: ${{ steps.creds.outputs.mode }}" >> $GITHUB_STEP_SUMMARY
           echo "- Bundle: $BUNDLE_ID" >> $GITHUB_STEP_SUMMARY
           echo "- 远程加载: https://yandaoguoxue.yandao.vip (v25.0.47)" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.creds.outputs.mode }}" = "signed" ]; then
+          if [ "${{ steps.creds.outputs.mode }}" = "signed" ] && [ "${{ steps.signed_archive.outcome }}" = "success" ]; then
             echo "- 产物: signed ipa (TestFlight 上传: ${{ inputs.upload_testflight }})" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ steps.creds.outputs.mode }}" = "signed" ]; then
+            echo "- 产物: 未签名 xcarchive（签名失败已降级，见上方诊断；解决 PLA 后重跑即出签名 ipa）" >> $GITHUB_STEP_SUMMARY
           else
-            echo "- 产物: 未签名 xcarchive（需补 Issuer ID Secret 后重跑可出签名 ipa）" >> $GITHUB_STEP_SUMMARY
+            echo "- 产物: 未签名 xcarchive（需补 APP_STORE_CONNECT_KEY / ISSUER_ID Secrets 后重跑可出签名 ipa）" >> $GITHUB_STEP_SUMMARY
           fi
