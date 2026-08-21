@@ -18,7 +18,7 @@ import {
   getFuShenForHexagram,
   getGongNameForHexagram,
 } from "@/algorithm-core";
-import type { TrigramName, TianGan, DiZhi } from "@/algorithm-core";
+import type { TrigramName, TianGan, DiZhi, YaoHiddenBranch } from "@/algorithm-core";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 import { getMeihuaHexagramInterpretation, getMeihuaTiYongInterpretation, type MeihuaInterpretItem } from "@/lib/meihua-interpretations";
@@ -153,6 +153,7 @@ function HexagramDisplay({
   changeYao,
   isActive,
   onClick,
+  fushenLayer,
 }: {
   upper: TrigramName;
   lower: TrigramName;
@@ -161,6 +162,7 @@ function HexagramDisplay({
   changeYao: number;
   isActive: boolean;
   onClick: () => void;
+  fushenLayer?: YaoHiddenBranch[];
 }) {
   const upperInfo = getTrigramInfo(upper);
   const lowerInfo = getTrigramInfo(lower);
@@ -211,47 +213,71 @@ function HexagramDisplay({
       </div>
 
       {/* 6 条爻线: DOM 第二位 → 视觉中间位 */}
+      {/* 每爻包裹 MAIN_ROW(爻线) + FU_SHEN_ROW(伏神层)，与六爻 HexagramRow 结构统一 */}
       {allLines.map((line, i) => {
         const isUpper = line.pos >= 4;
         const color = isUpper ? upperColor : lowerColor;
+        const hb = fushenLayer?.[i];
+        const fuShenText = hb ? `伏${hb.liuQinShort}${hb.gan}${hb.zhi}` : "";
         return (
-          <div
-            key={i}
-            className="meihua-line"
-            style={{
-              width: "40px",
-              height: "8px",
-              margin: "2px 0",
-              display: line.isYang ? "block" : "flex",
-              justifyContent: line.isYang ? undefined : "space-between",
-              backgroundColor: line.isYang ? color : "transparent",
-            }}
-          >
-            {!line.isYang && (
-              <>
-                <div
-                  style={{
-                    width: "15px",
-                    height: "8px",
-                    backgroundColor: color,
-                  }}
-                />
-                <div
-                  style={{
-                    width: "10px",
-                    height: "8px",
-                    backgroundColor: "white",
-                  }}
-                />
-                <div
-                  style={{
-                    width: "15px",
-                    height: "8px",
-                    backgroundColor: color,
-                  }}
-                />
-              </>
-            )}
+          <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+            {/* MAIN_ROW：爻线本体 */}
+            <div
+              className="meihua-line"
+              style={{
+                width: "40px",
+                height: "8px",
+                margin: "2px 0",
+                display: line.isYang ? "block" : "flex",
+                justifyContent: line.isYang ? undefined : "space-between",
+                backgroundColor: line.isYang ? color : "transparent",
+              }}
+            >
+              {!line.isYang && (
+                <>
+                  <div
+                    style={{
+                      width: "15px",
+                      height: "8px",
+                      backgroundColor: color,
+                    }}
+                  />
+                  <div
+                    style={{
+                      width: "10px",
+                      height: "8px",
+                      backgroundColor: "white",
+                    }}
+                  />
+                  <div
+                    style={{
+                      width: "15px",
+                      height: "8px",
+                      backgroundColor: color,
+                    }}
+                  />
+                </>
+              )}
+            </div>
+            {/* FU_SHEN_ROW：伏神/隐藏地支层（FuShenCore统一数据源，样式同六爻） */}
+            <div
+              style={{
+                height: "12px",
+                fontSize: "8px",
+                lineHeight: "12px",
+                whiteSpace: "nowrap",
+              }}
+            >
+              <span
+                style={
+                  hb?.isMissingLiuQin
+                    ? { color: "#B45309", fontWeight: "bold" } // 传统缺亲伏神（琥珀醒目）
+                    : { color: "#c4c4c4" } // 本宫隐藏层参考（浅灰）
+                }
+              >
+                {fuShenText}
+              </span>
+            </div>
           </div>
         );
       })}
@@ -875,6 +901,7 @@ export default function MeihuaPage() {
                       changeYao={result.changeYao}
                       isActive={activeGua === "ben"}
                       onClick={() => handleGuaClick("ben")}
+                      fushenLayer={result.benGua.fushenLayer}
                     />
 
                     {/* 动爻标记 */}
@@ -889,6 +916,7 @@ export default function MeihuaPage() {
                       changeYao={0}
                       isActive={activeGua === "hu"}
                       onClick={() => handleGuaClick("hu")}
+                      fushenLayer={result.huGua.fushenLayer}
                     />
 
                     {/* 空位 */}
@@ -911,6 +939,7 @@ export default function MeihuaPage() {
                       changeYao={0}
                       isActive={activeGua === "bian"}
                       onClick={() => handleGuaClick("bian")}
+                      fushenLayer={result.bianGua.fushenLayer}
                     />
 
                     {/* 空位 */}
