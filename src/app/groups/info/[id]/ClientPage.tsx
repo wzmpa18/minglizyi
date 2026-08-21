@@ -600,7 +600,7 @@ export default function GroupInfoClient({ routeId }: { routeId?: string }) {
             <p className="mb-2 text-center text-sm font-semibold text-gray-800">管理 {memberMenu.nickname}</p>
             {isOwner && (
               <button
-                onClick={() => setConfirmKind("transfer")}
+                onClick={() => { setConfirmMember(memberMenu); setConfirmKind("transfer"); }}
                 className="w-full rounded-xl bg-gray-50 py-3 text-sm text-gray-700"
               >
                 转让群主给 TA
@@ -617,7 +617,7 @@ export default function GroupInfoClient({ routeId }: { routeId?: string }) {
             <button onClick={() => setMuteTarget(memberMenu)} className="mt-2 w-full rounded-xl bg-gray-50 py-3 text-sm text-gray-700">
               禁言设置
             </button>
-            <button onClick={() => setConfirmKind("kick")} className="mt-2 w-full rounded-xl bg-red-50 py-3 text-sm text-red-500">
+            <button onClick={() => { setConfirmMember(memberMenu); setConfirmKind("kick"); }} className="mt-2 w-full rounded-xl bg-red-50 py-3 text-sm text-red-500">
               移出群聊
             </button>
             <button onClick={() => setMemberMenu(null)} className="mt-3 w-full rounded-xl bg-gray-100 py-3 text-sm text-gray-500">
