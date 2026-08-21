@@ -137,7 +137,7 @@ export default function BottomNav() {
         left: 0,
         right: 0,
         zIndex: 1000,
-        height: "56px",
+        height: "var(--bottom-nav-height, 56px)",
         backgroundColor: "var(--theme-card-bg)",
         borderTop: "1px solid var(--theme-border)",
         display: "flex",

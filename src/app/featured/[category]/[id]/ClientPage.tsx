@@ -42,7 +42,15 @@ export default function FeaturedItemPage({ routeCategory, routeId }: { routeCate
   }
 
   return (
-    <div style={{ maxWidth: "420px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f5f5f5" }}>
+    <div
+      style={{
+        maxWidth: "420px",
+        margin: "0 auto",
+        minHeight: "100vh",
+        backgroundColor: "#f5f5f5",
+        paddingBottom: "calc(var(--bottom-nav-height, 56px) + env(safe-area-inset-bottom, 0px))",
+      }}
+    >
       <BrandHeader title={CATEGORY_NAMES[item.category]} showBack />
 
       <div className="pb-28">
@@ -116,9 +124,10 @@ export default function FeaturedItemPage({ routeCategory, routeId }: { routeCate
         </p>
       </div>
 
-      {/* 底部操作栏（避开导航栏） */}
+      {/* 底部操作栏（位于导航正上方，v25.0.47 统一避让） */}
       <div
-        className="modal-safe-bottom fixed bottom-0 left-1/2 z-30 flex w-full max-w-[420px] -translate-x-1/2 items-center gap-3 border-t border-gray-100 bg-white px-4 py-3"
+        className="fixed left-1/2 z-30 flex w-full max-w-[420px] -translate-x-1/2 items-center gap-3 border-t border-gray-100 bg-white px-4 py-3"
+        style={{ bottom: "calc(var(--bottom-nav-height, 56px) + env(safe-area-inset-bottom, 0px))" }}
       >
         <button
           onClick={() => router.push(`/featured/${item.category}`)}

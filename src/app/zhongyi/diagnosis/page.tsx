@@ -1048,7 +1048,7 @@ export default function DiagnosisPage() {
         margin: "0 auto",
         minHeight: "100vh",
         backgroundColor: "#f8f5fc",
-        paddingBottom: "120px",
+        paddingBottom: "calc(120px + var(--bottom-nav-height, 56px) + env(safe-area-inset-bottom, 0px))",
       }}
     >
       {/* 紫色头部 */}
@@ -1901,7 +1901,7 @@ export default function DiagnosisPage() {
       <div
         style={{
           position: "fixed",
-          bottom: 0,
+          bottom: "calc(var(--bottom-nav-height, 56px) + env(safe-area-inset-bottom, 0px))",
           left: 0,
           right: 0,
           maxWidth: "420px",

@@ -370,7 +370,7 @@ export default function PosterAssistantPage() {
       <PageLoginGuard />
       <BrandHeader title="AI推广助手" showBack color={BRAND} onBack={goBack} />
 
-      <div style={{ flex: 1, overflowY: "auto", padding: "14px 16px 90px" }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: `14px 16px calc(90px + var(--bottom-nav-height, 56px) + env(safe-area-inset-bottom, 0px))` }}>
         {/* 步骤指示 */}
         <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "14px" }}>
           {STEP_LABELS.map((label, i) => {
@@ -703,12 +703,12 @@ export default function PosterAssistantPage() {
       <div
         style={{
           position: "fixed",
-          bottom: 0,
+          bottom: "calc(var(--bottom-nav-height, 56px) + env(safe-area-inset-bottom, 0px))",
           left: "50%",
           transform: "translateX(-50%)",
           width: "100%",
           maxWidth: "420px",
-          padding: "10px 16px calc(10px + env(safe-area-inset-bottom))",
+          padding: "10px 16px",
           backgroundColor: "#fff",
           borderTop: "1px solid #eee",
           display: "flex",

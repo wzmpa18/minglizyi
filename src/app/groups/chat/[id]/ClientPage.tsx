@@ -266,7 +266,7 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
       <div
         ref={chatListRef}
         className="flex-1 overflow-y-auto px-3 py-4 space-y-3"
-        style={{ paddingBottom: "80px" }}
+        style={{ paddingBottom: "calc(80px + var(--bottom-nav-height, 56px) + env(safe-area-inset-bottom, 0px))" }}
       >
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20">
@@ -424,7 +424,7 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
         className="fixed left-1/2 flex w-full items-center gap-2 border-t border-gray-200 bg-white px-3 py-2"
         style={{
           maxWidth: "420px",
-          bottom: "0",
+          bottom: "calc(var(--bottom-nav-height, 56px) + env(safe-area-inset-bottom, 0px))",
           transform: "translateX(-50%)",
         }}
       >
