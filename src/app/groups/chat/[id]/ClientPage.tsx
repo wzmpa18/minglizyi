@@ -382,7 +382,11 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
   return (
     <div
       className="flex min-h-screen flex-col bg-[#ededed]"
-      style={{ maxWidth: "420px", margin: "0 auto" }}
+      style={{
+        maxWidth: "420px",
+        margin: "0 auto",
+        paddingBottom: "calc(80px + var(--bottom-nav-height, 56px) + env(safe-area-inset-bottom, 0px))",
+      }}
     >
   <PageLoginGuard />
       {/* v25.0.41：点击群名/···进入群详情（群资料+管理） */}
@@ -411,7 +415,6 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
       <div
         ref={chatListRef}
         className="flex-1 overflow-y-auto px-3 py-4 space-y-3"
-        style={{ paddingBottom: "calc(80px + var(--bottom-nav-height, 56px) + env(safe-area-inset-bottom, 0px))" }}
       >
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center py-20">

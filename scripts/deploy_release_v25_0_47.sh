@@ -42,6 +42,7 @@ grep -q "六神/爻位/本卦/变卦横竖对齐" src/app/yixue/liuyao/page.tsx 
 grep -q "clientMsgId" src/lib/socialApi.ts || { echo "FATAL: 群消息发送缺clientMsgId幂等"; exit 1; }
 grep -q "按ID幂等入库" src/lib/socialStore.ts || { echo "FATAL: 群消息入库未幂等"; exit 1; }
 grep -q "含自己的消息，换设备/清缓存重登可拉回完整历史" src/app/groups/chat/\[id\]/ClientPage.tsx || { echo "FATAL: 群消息轮询未含自己历史"; exit 1; }
+grep -q 'paddingBottom: "calc(80px + var(--bottom-nav-height' src/app/groups/chat/\[id\]/ClientPage.tsx || { echo "FATAL: 群聊根容器未做底部统一避让"; exit 1; }
 echo "内容门禁 OK"
 
 echo "--- [2] 构建（build.sh 静态导出） ---"
@@ -67,6 +68,7 @@ grep -rq "该旧群记录已失效" out/_next/static/chunks/ && echo "P1A-INVALI
 grep -rq "删除本地失效记录" out/_next/static/chunks/ && echo "P1A-PURGE(删除本地记录) OK" || { echo "FATAL: 删除入口未入包"; exit 1; }
 grep -rq -- "--bottom-nav-height" out/_next/static/chunks/ && echo "P0A-NAV-VAR(导航高度变量) OK" || { echo "FATAL: 导航变量未入包"; exit 1; }
 grep -rq "群不存在或你已退出该群" out/_next/static/chunks/ && echo "P1A-SERVER-MISSING(服务端404提示) OK" || { echo "FATAL: 服务端404提示未入包"; exit 1; }
+grep -rq 'paddingBottom:"calc(80px + var(--bottom-nav-height' out/_next/static/chunks/ && echo "P0A-CHAT-ROOT-PADDING(群聊根容器避让) OK" || { echo "FATAL: 群聊根容器避让未入包"; exit 1; }
 
 echo "--- [3.7] 错误IP残留扫描 ---"
 BAD=$(grep -rl '101.32.191.210' out/ 2>/dev/null | wc -l)
