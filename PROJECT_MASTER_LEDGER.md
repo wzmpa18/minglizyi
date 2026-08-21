@@ -84,17 +84,18 @@
 
 ## 五、移动端打包状态（2026-08-21 更新）
 
-### 5.1 iOS ✅ 打包管道已验证可用
+### 5.1 iOS ✅ 打包管道已验证可用（签名三件套已齐，待签 PLA）
 
 | 项 | 状态 |
 |----|------|
 | 工程 | ios/App（Capacitor，远程加载 https://yandaoguoxue.yandao.vip） |
-| Bundle ID | com.yandao.guoxue，自动签名，iOS 15.0+ |
+| Bundle ID | com.yandao.guoxue，自动签名，iOS 15.0+，**DEVELOPMENT_TEAM=WM586465ZD**（08-22 从分发证书提取补入 pbxproj，commit b99bda9） |
 | 就绪校验 | **33 项全通过**（scripts/ios-build-readiness-verify.mjs：工程结构/Bundle/UA 标记 YandaoGuoxueIOS/15 图标/PrivacyInfo/ATS/线上联动/支付门禁/P8 格式） |
-| 云打包 | GitHub Actions `.github/workflows/ios-build.yml`（macos-14 + Xcode 15.4） |
-| 实测 | ✅ **ARCHIVE SUCCEEDED**（run 32493360331），产物 xcarchive 工件 `yandao-guoxue-ios-xcarchive-unsigned` |
-| 签名材料 | P8 已入 GitHub Secrets（APP_STORE_CONNECT_KEY / KEY_ID=UWQ354QP54） |
-| **唯一缺口** | ⚠️ 需补 `APP_STORE_CONNECT_ISSUER_ID` Secret（App Store Connect → 用户和访问 → 集成 → 密钥页顶部 Issuer ID）→ 补齐后重跑即出**签名 ipa**（可选直传 TestFlight） |
+| 云打包 | GitHub Actions `.github/workflows/ios-build.yml`（macos-14 + Xcode 15.4；签名失败自动降级产出未签名 xcarchive，commit 5843ad3） |
+| 实测 | ✅ 归档能力验证（run 32493360331 / 32534601195 均产出 xcarchive 工件） |
+| 签名材料 | ✅ 三件套已入 GitHub Secrets：APP_STORE_CONNECT_KEY（P8 私钥）/ KEY_ID=UWQ354QP54 / **ISSUER_ID=ee663add-…-8110（08-22 配置）** |
+| API 认证 | ✅ 实测有效（ES256 JWT 调 ASC API，403 为协议问题而非认证失败） |
+| **唯一缺口** | ⚠️ **PLA（计划许可协议）未接受** —— 账号持有人 ZHIMIN WU 登录 developer.apple.com/account 接受最新协议 → 重跑 workflow 即出**签名 ipa**（可选直传 TestFlight）。Apple 硬性要求，API 密钥无法绕过 |
 | 备选 | codemagic.yaml 同步就绪（控制台集成 P8 + Issuer ID） |
 
 ### 5.2 Android
@@ -139,7 +140,7 @@ gh workflow run ios-build.yml --repo wzmpa18/minglizyi --ref main
 
 | 项 | 说明 | 责任方 |
 |----|------|--------|
-| iOS 签名 Issuer ID | 补一个 GitHub Secret 即可出签名 ipa/TestFlight | 项目方（ASC 后台查看） |
+| **iOS 签署 PLA 协议** | Issuer ID 已配置（08-22）；仅剩账号持有人登录 developer.apple.com/account 接受最新《计划许可协议》→ 重跑 iOS workflow 即出签名 ipa/TestFlight（Apple 硬性要求，API 密钥无法绕过） | 项目方（账号持有人 ZHIMIN WU） |
 | 用户实机终验 | 六爻伏神/梅花伏神视觉、群聊功能、海报二维码（报告 3/5/6） | 项目方 |
 | AI TokenHub 白名单 | 腾讯 Key 白名单需含 82.156.228.87（UV-004 遗留） | 项目方 |
 | 内容运营 | 资讯内容生产走 /admin/sources；学堂资料审核工作台 | 项目方 |
