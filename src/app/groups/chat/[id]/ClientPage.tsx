@@ -44,6 +44,8 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
   const [invalidLegacy, setInvalidLegacy] = useState(false);
   // v25.0.47 P1-A：服务端明确返回404（群已解散/已被移出）时提示，网络异常不误报
   const [serverMissing, setServerMissing] = useState(false);
+  // v25.0.47：服务端明确返回403（非成员/已被移出）——禁止可输入但永远发送失败的空壳页
+  const [notMember, setNotMember] = useState(false);
 
   // v25.0.41：群角色/禁言/成员（@功能与禁言拦截）
   const [myRole, setMyRole] = useState<"owner" | "admin" | "member">("member");
@@ -108,9 +110,12 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
         if (stopped) return;
         if (!r || !r.success) {
           // v25.0.47 P1-A：服务端明确404=群不存在/已退出，不再静默吞掉
-          if (r && (r as { code?: number }).code === 404) setServerMissing(true);
+          if (r && (r as { code?: number }).code === 404) { setServerMissing(true); setNotMember(false); return; }
+          // v25.0.47：服务端明确403=非成员（被踢/从未入群）——不再显示可输入的空壳页
+          if (r && (r as { code?: number }).code === 403) { setNotMember(true); setServerMissing(false); return; }
           return;
         }
+        setNotMember(false);
         setServerMissing(false);
         setMyRole(r.myRole || "member");
         setMuteAll(!!r.group?.muteAll);
@@ -317,6 +322,30 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
           <button
             onClick={() => router.replace("/friends")}
             className="mt-3 rounded-xl px-8 py-2.5 text-sm font-semibold text-white"
+            style={{ backgroundColor: BRAND }}
+          >
+            返回群列表
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // v25.0.47：服务端明确403（非成员/已被移出）——被踢用户访问失败提示，禁止空壳聊天页
+  if (notMember) {
+    return (
+      <div
+        className="flex min-h-screen flex-col bg-[#ededed]"
+        style={{ maxWidth: "420px", margin: "0 auto" }}
+      >
+        <PageLoginGuard />
+        <BrandHeader title="群聊" showBack />
+        <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
+          <p className="text-sm font-semibold text-gray-700">你不是该群成员</p>
+          <p className="mt-2 text-xs text-gray-400">你已被移出该群，或从未加入该群聊。</p>
+          <button
+            onClick={() => router.replace("/friends")}
+            className="mt-6 rounded-xl px-8 py-2.5 text-sm font-semibold text-white"
             style={{ backgroundColor: BRAND }}
           >
             返回群列表

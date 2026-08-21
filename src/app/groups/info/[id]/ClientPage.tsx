@@ -551,9 +551,12 @@ export default function GroupInfoClient({ routeId }: { routeId?: string }) {
                     <button
                       key={f.id}
                       onClick={() => {
-                        const next = new Set(invitePicked);
-                        if (picked) next.delete(f.id); else next.add(f.id);
-                        setInvitePicked(next);
+                        // v25.0.47：函数式更新——极速连点两次时旧闭包集合会互相覆盖（只保留最后一次）
+                        setInvitePicked((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(f.id)) next.delete(f.id); else next.add(f.id);
+                          return next;
+                        });
                       }}
                       className="flex w-full items-center gap-3 border-b border-gray-50 py-3 text-left"
                     >
