@@ -1,9 +1,11 @@
 "use client";
 
 // ============================================================================
-// 前端支付服务层 - v20.4
+// 前端支付服务层 - v25.0.47_9 (FIX-PAY-UNBIND-WECHAT-APPID)
 // 功能：发起支付、选择支付渠道、支付状态轮询、支付成功后刷新用户权益
-// 当前为预留实现，支付通道开放后可直接对接
+// Native 扫码支付（全场景兜底通道）：后端返回 payMode=NATIVE + codeUrl，
+// 前端渲染付款二维码，用户微信扫码/长按识别完成支付；无需公众号参数、
+// 不要求微信内环境。JSAPI 保留：公众号参数补充后自动启用免扫码支付。
 // ============================================================================
 
 import { getUserProfile } from "./auth";
@@ -62,8 +64,25 @@ export interface CallPaymentResult {
   payUrl?: string;
   prepayId?: string;
   jsapiParams?: Record<string, string>;
+  /** 支付模式：JSAPI(微信内免扫码) / NATIVE(扫码支付，全场景兜底) */
+  payMode?: "JSAPI" | "NATIVE";
+  /** Native扫码支付：微信付款二维码内容(weixin://wxpay/bizpayurl?...) */
+  codeUrl?: string;
   message?: string;
   error?: string;
+}
+
+/**
+ * Native 扫码支付票券（v25.0.47_9）
+ * 付费入口收到后调用 useNativePayQR().openQR 弹出付款二维码，
+ * 用户扫码支付成功（轮询确认 PAID）后执行本地权益逻辑。
+ */
+export interface NativePayTicket {
+  nativePay: true;
+  codeUrl: string;
+  orderId: string;
+  amount: number;
+  title: string;
 }
 
 /**
@@ -309,6 +328,18 @@ export async function callPayment(
 
     // 2. 根据渠道调起支付
     const resultChannel = data.channel || channel;
+    if (resultChannel === "wechat" && data.payMode === "NATIVE" && data.codeUrl) {
+      // v25.0.47_9: Native扫码支付——不调起JSAPI，直接返回codeUrl，
+      // 由上层(PayQRCodeModal)渲染付款二维码，用户微信扫码/长按识别完成支付
+      return {
+        success: true,
+        orderId: data.orderId,
+        channel: resultChannel,
+        payMode: "NATIVE",
+        codeUrl: data.codeUrl,
+        message: "订单创建成功（扫码支付）",
+      };
+    }
     if (resultChannel === "wechat" && data.jsapiParams) {
       // 调起微信 JSAPI 支付
       await invokeWechatPay(data.jsapiParams);
@@ -686,20 +717,16 @@ export async function payForConsultService(
 }
 
 /**
- * v25.0.47_8: 单次解锁/套餐统一真实支付入口（微信JSAPI）
- * 流程：环境校验 -> 真实下单 -> 调起微信支付 -> 轮询确认 -> 返回结果
+ * v25.0.47_9: 单次解锁/套餐统一真实支付入口（JSAPI + Native扫码双通道）
+ * 流程：真实下单 -> [NATIVE]返回二维码票券由调用方弹码 / [JSAPI]调起支付轮询确认
  * 支付成功后由调用方执行本地解锁/激活标记（服务端订单已留痕）
+ * FIX-PAY-UNBIND: 不再强制微信内环境——非微信环境自动走扫码支付
  */
 export async function paySingleUnlockAndWait(
   targetId: string,
-  amount: number
-): Promise<{ paid: boolean; message: string }> {
-  if (!isInWechatBrowser()) {
-    return {
-      paid: false,
-      message: "微信支付需在微信内完成，请用微信打开本页面后再试",
-    };
-  }
+  amount: number,
+  title?: string
+): Promise<{ paid: boolean; message: string; ticket?: NativePayTicket }> {
   try {
     const r = await payForUnlock(targetId, amount);
     if (!r || !r.success || !r.orderId) {
@@ -708,6 +735,21 @@ export async function paySingleUnlockAndWait(
         message: (r && (r.message || r.error)) || "支付发起失败，请稍后重试",
       };
     }
+    // Native扫码支付：立即返回二维码票券（弹码后组件轮询，不阻塞此函数）
+    if (r.payMode === "NATIVE" && r.codeUrl) {
+      return {
+        paid: false,
+        message: "请扫码完成支付",
+        ticket: {
+          nativePay: true,
+          codeUrl: r.codeUrl,
+          orderId: r.orderId,
+          amount,
+          title: title || COMPLIANCE_TITLES.SINGLE_UNLOCK,
+        },
+      };
+    }
+    // JSAPI：调起微信支付后轮询确认
     const status = await pollPaymentStatus(r.orderId);
     if (status && status.status === "PAID") {
       return { paid: true, message: "支付成功，权益已生效" };

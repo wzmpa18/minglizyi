@@ -6,6 +6,7 @@ import { WENZHEN_CATEGORIES, buildWenzhenSystemPrompt } from "@/data/wenzhen_dat
 import { buildZhengguPrompt } from "@/data/zhenggu_knowledge";
 import { callAI, getUserPermissionLevel, getPermissionStatus, truncateContentForFreeUser, generateContentKey, isSingleUnlocked, activateSingleUnlock, SINGLE_UNLOCK_PRICE } from "@/lib/aiService";
 import { paySingleUnlockAndWait } from "@/lib/paymentService";
+import { useNativePayQR } from "@/components/PayQRCodeModal";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { useToolBack } from "@/lib/useToolBack";
@@ -171,6 +172,9 @@ export default function WenzhenPage() {
     }
   }, [activeCategory, selectedMasters, supplementText, symptomInput, setShowLoginPrompt]);
 
+  // v25.0.47_9: Native扫码支付弹层（全场景兜底收款通道）
+  const { qrModal, openQR } = useNativePayQR();
+
   // v25.0.47_8: 单次解锁（真实微信支付，成功后本地解锁）
   const [unlockPaying, setUnlockPaying] = useState(false);
   const [unlockMsg, setUnlockMsg] = useState("");
@@ -182,6 +186,16 @@ export default function WenzhenPage() {
     setUnlockMsg("");
     try {
       const r = await paySingleUnlockAndWait(cKey, SINGLE_UNLOCK_PRICE);
+      // v25.0.47_9: Native扫码支付——弹出付款二维码，扫码成功后执行本地解锁
+      if (r.ticket && aiFullContent) {
+        openQR(r.ticket, () => {
+          activateSingleUnlock(cKey);
+          setAiResult(aiFullContent);
+          setIsLocked(false);
+          setShowPayment(false);
+        });
+        return;
+      }
       if (r.paid && aiFullContent) {
         activateSingleUnlock(cKey);
         setAiResult(aiFullContent);
@@ -193,7 +207,7 @@ export default function WenzhenPage() {
     } finally {
       setUnlockPaying(false);
     }
-  }, [aiFullContent, unlockPaying]);
+  }, [aiFullContent, unlockPaying, openQR]);
 
   return (
     <div
@@ -643,6 +657,9 @@ export default function WenzhenPage() {
           ⚠️ {COMPLIANCE_TEXT}
         </p>
       </div>
+
+      {/* v25.0.47_9: Native扫码支付二维码弹层 */}
+      {qrModal}
 
       {/* 登录引导弹窗 */}
       {showLoginPrompt && (

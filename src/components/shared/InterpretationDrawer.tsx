@@ -16,6 +16,7 @@ import {
   SINGLE_UNLOCK_PRICE,
 } from "@/lib/aiService";
 import { paySingleUnlockAndWait } from "@/lib/paymentService";
+import { useNativePayQR } from "@/components/PayQRCodeModal";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
@@ -114,6 +115,9 @@ export default function InterpretationDrawer({
     return () => { cancelled = true; };
   }, [show, aiEnhance]);
 
+  // v25.0.47_9: Native扫码支付弹层（全场景兜底收款通道）
+  const { qrModal, openQR } = useNativePayQR();
+
   // v25.0.47_8: 单次解锁（真实微信支付，成功后本地解锁；FINAL-RC-02: iOS 付费关闭）
   const [unlockPaying, setUnlockPaying] = useState(false);
   const [unlockMsg, setUnlockMsg] = useState("");
@@ -125,6 +129,18 @@ export default function InterpretationDrawer({
     setUnlockMsg("");
     try {
       const r = await paySingleUnlockAndWait(cKey, SINGLE_UNLOCK_PRICE);
+      // v25.0.47_9: Native扫码支付——弹出付款二维码，扫码成功后执行本地解锁
+      if (r.ticket) {
+        openQR(r.ticket, () => {
+          activateSingleUnlock(cKey);
+          setShowSingleUnlock(false);
+          if (aiFullContent) {
+            setAiContent(aiFullContent);
+            setAiLocked(false);
+          }
+        });
+        return;
+      }
       if (r.paid) {
         activateSingleUnlock(cKey);
         setShowSingleUnlock(false);
@@ -355,6 +371,9 @@ export default function InterpretationDrawer({
 
       {/* v20.1: 登录提示弹窗 */}
       <LoginPromptModal show={showLoginPrompt} onClose={() => setShowLoginPrompt(false)} />
+
+      {/* v25.0.47_9: Native扫码支付二维码弹层 */}
+      {qrModal}
     </div>
   );
 }

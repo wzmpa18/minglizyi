@@ -56,7 +56,7 @@
 | AI_GATEWAY / AI_PAYWALL | VERIFIED | RC-04 修复后公网双格式实测 200 |
 | YIXUE / LIUYAO / ZIWEI 算法 | VERIFIED（冻结区，禁止改动） | |
 | MEMBERSHIP / ENTITLEMENT | VERIFIED | 服务端 SSOT，v25.0.47_8 权益交付闭环 |
-| WECHAT_PAY | **CODE_READY（差 APPID）** | 商户凭证齐全；缺公众号 APPID/SECRET（见待办 1） |
+| WECHAT_PAY | **NATIVE VERIFIED（v25.0.47_9）** | Native 扫码支付全场景可用：微信侧实测下单成功返回 code_url；公众号参数已解耦（APPID 已配置用于下单字段，AppSecret 无需配置）；JSAPI 保留待公众号参数补充后自动启用 |
 | COMMISSION_L1 | VERIFIED | 一级分佣自动记账 |
 | WITHDRAWAL | IMPLEMENTED_NOT_VERIFIED | 需商家转账权限（见待办 2） |
 | ADMIN_CENTER | READY_FOR_OWNER_ACCEPTANCE | 统一后台 /admin 全功能，待项目方实操验收 |
@@ -74,7 +74,7 @@
 
 ## 七、项目方待办（按优先级）
 
-1. **提供公众号 APPID + APP SECRET**（该公众号需与商户号 1116339601 绑定并开通 JSAPI 支付）：填入 /www/yandaoguoxue-backend/.env 的 WECHAT_APPID / WECHAT_APP_SECRET 两行 → `pm2 restart yandaoguoxue-backend` → 全站支付立即可用（前后端链路已全部就绪，勿需改代码）
+1. ~~提供公众号 APPID~~ **已完成（v25.0.47_9）**：APPID wxedc4b3ff9f707969 已配置并与商户号绑定，Native 扫码支付全场景可用（0.01 元实测下单成功）。**可选增强**：若后续补充 WECHAT_APP_SECRET（AppSecret 仅网页授权用，扫码支付不需要），微信内环境自动升级 JSAPI 免扫码支付+微信一键登录，仅需填 .env 一行+重启，无需改代码
 2. **微信商家转账权限**（分佣提现打款用）：商户平台申请开通
 3. **iOS**：开发者账号接受 Apple PLA 后才能签名/TestFlight
 4. **后台实操验收**（指令第 23 章十项操作）

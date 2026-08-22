@@ -19,6 +19,7 @@ import {
   SINGLE_UNLOCK_PRICE,
 } from "@/lib/aiService";
 import { paySingleUnlockAndWait } from "@/lib/paymentService";
+import { useNativePayQR } from "@/components/PayQRCodeModal";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import MasterExchangePanel from "./MasterExchangePanel";
@@ -139,6 +140,9 @@ export default function EventDivinationPanel({
     [toolName, chartContext, activeMode, userQuestion]
   );
 
+  // v25.0.47_9: Native扫码支付弹层（全场景兜底收款通道）
+  const { qrModal, openQR } = useNativePayQR();
+
   // v25.0.47_8: 单次付费解锁（真实微信支付，成功后本地解锁标记）
   const [unlockPaying, setUnlockPaying] = useState(false);
   const [unlockMsg, setUnlockMsg] = useState("");
@@ -149,6 +153,16 @@ export default function EventDivinationPanel({
     setUnlockMsg("");
     try {
       const r = await paySingleUnlockAndWait(cKey, SINGLE_UNLOCK_PRICE);
+      // v25.0.47_9: Native扫码支付——弹出付款二维码，扫码成功后执行本地解锁
+      if (r.ticket) {
+        openQR(r.ticket, () => {
+          activateSingleUnlock(cKey);
+          setShowSingleUnlock(false);
+          setContent(fullContent);
+          setIsLocked(false);
+        });
+        return;
+      }
       if (r.paid) {
         activateSingleUnlock(cKey);
         setShowSingleUnlock(false);
@@ -160,7 +174,7 @@ export default function EventDivinationPanel({
     } finally {
       setUnlockPaying(false);
     }
-  }, [toolName, chartContext, activeMode, userQuestion, fullContent, unlockPaying]);
+  }, [toolName, chartContext, activeMode, userQuestion, fullContent, unlockPaying, openQR]);
 
   // 执行事情断法
   const handleEventDivination = useCallback(async () => {
@@ -245,7 +259,17 @@ export default function EventDivinationPanel({
     setPurchasePaying(true);
     setPurchaseMsg("");
     try {
-      const r = await paySingleUnlockAndWait(`ai_plan_${planKey}`, plan.price);
+      const r = await paySingleUnlockAndWait(`ai_plan_${planKey}`, plan.price, plan.name);
+      // v25.0.47_9: Native扫码支付——弹出付款二维码，扫码成功后激活套餐
+      if (r.ticket) {
+        openQR(r.ticket, () => {
+          activatePaidPlan(planKey);
+          setShowPayment(false);
+          const quota = checkAIQuota();
+          setQuotaMsg(quota.message + " 套餐已激活，请重新点击解读");
+        });
+        return;
+      }
       if (r.paid) {
         activatePaidPlan(planKey);
         setShowPayment(false);
@@ -257,7 +281,7 @@ export default function EventDivinationPanel({
     } finally {
       setPurchasePaying(false);
     }
-  }, [purchasePaying]);
+  }, [purchasePaying, openQR]);
 
   return (
     <div className="mt-3 rounded-lg overflow-hidden" style={{ border: "1px solid #e0d0f0" }}>
@@ -750,6 +774,9 @@ export default function EventDivinationPanel({
 
       {/* v20.1: 登录提示弹窗 */}
       <LoginPromptModal show={showLoginPrompt} onClose={() => setShowLoginPrompt(false)} />
+
+      {/* v25.0.47_9: Native扫码支付二维码弹层 */}
+      {qrModal}
     </div>
   );
 }

@@ -27,12 +27,15 @@ import { reportConsumptionRebate } from "@/lib/inviteApi";
 import { redeemCode, getMyRedemptions } from "@/lib/redeemCodeStore";
 import { getToolConfig } from "@/lib/toolConfigStore";
 import { isPaymentsBlocked, IOS_PAYMENT_DISABLED_TIP } from "@/lib/platformGate";
-import { payForMembership, pollPaymentStatus, isInWechatBrowser } from "@/lib/paymentService";
+import { payForMembership, pollPaymentStatus } from "@/lib/paymentService";
+import { useNativePayQR } from "@/components/PayQRCodeModal";
 
 const BRAND = "#7B2FBE";
 
 export default function MembershipPage() {
   const { goBack } = useToolBack();
+  // v25.0.47_9: Native扫码支付弹层（全场景兜底收款通道）
+  const { qrModal, openQR } = useNativePayQR();
   const [status, setStatus] = useState<MembershipStatus>(() => getMembershipStatus());
   const [selectedPlan, setSelectedPlan] = useState<MemberLevel>("yearly");
   const [paymentMethod, setPaymentMethod] = useState<"wechat" | "alipay">("wechat");
@@ -90,7 +93,32 @@ export default function MembershipPage() {
     return `剩余 ${days} 天`;
   };
 
-  // v25.0.47_8: 真实微信支付（服务端下单 -> JSAPI调起 -> 轮询确认 -> 服务端权益交付）
+  // v25.0.47_9: 支付成功统一权益落地（JSAPI轮询确认 / Native扫码回调共用）
+  // 服务端订单已交付权益（users.member_level/membership_expiry），此处同步本地展示与账本
+  const applyMembershipPaid = (serverOrderNo: string) => {
+    const plan = MEMBERSHIP_PLANS.find((p) => p.level === selectedPlan);
+    if (!plan) return;
+    const order = createOrder(selectedPlan, paymentMethod);
+    const result = completeOrder(order.id);
+    if (result.success && result.status) {
+      const profileLevel = selectedPlan === "basic" ? "basic" : "premium";
+      updateUserProfile({ memberLevel: profileLevel });
+      setStatus(result.status);
+    }
+    setSuccessInfo({ planName: plan.name, level: selectedPlan });
+    setShowSuccess(true);
+
+    // 消费返佣上报服务端统一账本（订单号幂等，JWT识别消费人）
+    void reportConsumptionRebate({ orderNo: serverOrderNo, amount: plan.price, product: plan.name }).then((rb) => {
+      if (rb && rb.granted) {
+        console.log(`[v25.0.47_9] 消费返佣已入账: 一级${rb.level1Points || 0}积分, 二级${rb.level2Points || 0}积分`);
+      }
+    });
+
+    setOrders(getOrders());
+  };
+
+  // v25.0.47_8/9: 真实微信支付（JSAPI调起轮询 / Native扫码弹码，服务端权益交付）
   const handlePay = async () => {
     if (isPaymentsBlocked()) {
       setErrorMsg(IOS_PAYMENT_DISABLED_TIP);
@@ -107,11 +135,7 @@ export default function MembershipPage() {
       setErrorMsg("请先登录后再开通会员");
       return;
     }
-    // 微信JSAPI支付仅在微信内置浏览器可用
-    if (!isInWechatBrowser()) {
-      setErrorMsg("微信支付需在微信内完成，请用微信打开本页面后再试");
-      return;
-    }
+    // v25.0.47_9: 扫码支付全场景可用（非微信环境/微信内均可，微信内长按识别二维码）
     setErrorMsg("");
     setPaying(true);
     try {
@@ -122,29 +146,21 @@ export default function MembershipPage() {
         setErrorMsg((r && (r.message || r.error)) || "支付发起失败，请稍后重试");
         return;
       }
-      // 轮询支付结果（用户在微信收银台完成支付后服务端回调置PAID）
+      // v25.0.47_9: Native扫码支付——弹出付款二维码（全场景兜底通道）
+      if (r.payMode === "NATIVE" && r.codeUrl) {
+        setPaying(false);
+        const paidOrderNo = r.orderId;
+        openQR(
+          { nativePay: true, codeUrl: r.codeUrl, orderId: paidOrderNo, amount: plan.price, title: plan.name },
+          () => applyMembershipPaid(paidOrderNo)
+        );
+        return;
+      }
+      // JSAPI：调起微信支付后轮询结果（用户在微信收银台完成支付后服务端回调置PAID）
       const status = await pollPaymentStatus(r.orderId);
       setPaying(false);
       if (status && status.status === "PAID") {
-        // 真实支付成功：本地记录订单历史并同步会员展示（服务端已开通，本地为缓存同步）
-        const order = createOrder(selectedPlan, paymentMethod);
-        const result = completeOrder(order.id);
-        if (result.success && result.status) {
-          const profileLevel = selectedPlan === "basic" ? "basic" : "premium";
-          updateUserProfile({ memberLevel: profileLevel });
-          setStatus(result.status);
-        }
-        setSuccessInfo({ planName: plan.name, level: selectedPlan });
-        setShowSuccess(true);
-
-        // 消费返佣上报服务端统一账本（订单号幂等，JWT识别消费人）
-        void reportConsumptionRebate({ orderNo: r.orderId, amount: plan.price, product: plan.name }).then((rb) => {
-          if (rb && rb.granted) {
-            console.log(`[v25.0.47_8] 消费返佣已入账: 一级${rb.level1Points || 0}积分, 二级${rb.level2Points || 0}积分`);
-          }
-        });
-
-        setOrders(getOrders());
+        applyMembershipPaid(r.orderId);
       } else {
         setErrorMsg("支付未完成或确认中；若已付款，会员权益将在到账后自动生效，请稍后刷新查看");
       }
@@ -754,6 +770,9 @@ export default function MembershipPage() {
           </div>
         </div>
       )}
+
+      {/* v25.0.47_9: Native扫码支付二维码弹层 */}
+      {qrModal}
 
       {/* 旋转动画样式 */}
       <style>{`@keyframes yandao-spin { to { transform: rotate(360deg); } }`}</style>

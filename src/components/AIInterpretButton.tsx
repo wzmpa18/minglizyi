@@ -15,6 +15,7 @@ import {
   SINGLE_UNLOCK_PRICE,
 } from "@/lib/aiService";
 import { paySingleUnlockAndWait } from "@/lib/paymentService";
+import { useNativePayQR } from "@/components/PayQRCodeModal";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 
@@ -161,6 +162,9 @@ export default function AIInterpretButton({
     }
   }, [loading, toolName, scope, contextData, systemPrompt, cacheKey, setShowLoginPrompt]);
 
+  // v25.0.47_9: Native扫码支付弹层（全场景兜底收款通道）
+  const { qrModal, openQR } = useNativePayQR();
+
   // v25.0.47_8: 单次付费解锁（真实微信支付，成功后本地解锁）
   const [unlockPaying, setUnlockPaying] = useState(false);
   const [unlockMsg, setUnlockMsg] = useState("");
@@ -171,6 +175,16 @@ export default function AIInterpretButton({
     setUnlockMsg("");
     try {
       const r = await paySingleUnlockAndWait(cKey, SINGLE_UNLOCK_PRICE);
+      // v25.0.47_9: Native扫码支付——弹出付款二维码，扫码成功后执行本地解锁
+      if (r.ticket) {
+        openQR(r.ticket, () => {
+          activateSingleUnlock(cKey);
+          setShowSingleUnlock(false);
+          setContent(fullContent);
+          setIsLocked(false);
+        });
+        return;
+      }
       if (r.paid) {
         activateSingleUnlock(cKey);
         setShowSingleUnlock(false);
@@ -182,7 +196,7 @@ export default function AIInterpretButton({
     } finally {
       setUnlockPaying(false);
     }
-  }, [toolName, scope, contextData, fullContent, unlockPaying]);
+  }, [toolName, scope, contextData, fullContent, unlockPaying, openQR]);
 
   const primaryColor = "#7B2FBE";
   const secondaryColor = "#9B5ECF";
@@ -422,6 +436,9 @@ export default function AIInterpretButton({
 
       {/* v20.1: 登录提示弹窗 */}
       <LoginPromptModal show={showLoginPrompt} onClose={() => setShowLoginPrompt(false)} />
+
+      {/* v25.0.47_9: Native扫码支付二维码弹层 */}
+      {qrModal}
     </>
   );
 }

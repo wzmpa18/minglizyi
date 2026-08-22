@@ -87,13 +87,15 @@ function generateOrderId() {
  * @returns {boolean}
  */
 function isPaymentEnabled() {
-  // TODO: 参数到位后启用
-  // 当微信支付或支付宝环境变量配置完成后返回 true
+  // FIX-PAY-UNBIND-WECHAT-APPID: 支付总开关仅受商户核心参数控制
+  // （商户号+APIv3密钥+私钥文件+证书序列号），与公众号 AppID/AppSecret 完全解耦。
+  // Native扫码支付（全场景兜底通道）在上述4项齐全时即可下单收款；
+  // JSAPI/网页授权在公众号参数补充后自动启用，无需改代码。
   const wechatConfigured = !!(
     process.env.WECHAT_MCH_ID &&
-    process.env.WECHAT_APPID &&
     process.env.WECHAT_API_V3_KEY &&
-    process.env.WECHAT_API_CERT_PATH
+    process.env.WECHAT_API_CERT_PATH &&
+    process.env.WECHAT_CERT_SERIAL_NO
   );
   const alipayConfigured = !!(
     process.env.ALIPAY_APP_ID &&
@@ -110,7 +112,8 @@ function paymentNotReadyResponse(res) {
   return jsonResponse(res, 200, false, '支付通道即将开放，敬请期待', {
     enabled: false,
     channels: {
-      wechat: !!(process.env.WECHAT_MCH_ID && process.env.WECHAT_APPID),
+      // FIX-PAY-UNBIND: 微信通道可用性以商户核心参数为准（不含公众号AppID）
+      wechat: !!(process.env.WECHAT_MCH_ID && process.env.WECHAT_API_V3_KEY),
       alipay: !!process.env.ALIPAY_APP_ID,
     },
   });
@@ -517,39 +520,69 @@ router.post('/create', async (req, res) => {
     const payChannel = channel || 'wechat';
 
     if (payChannel === 'wechat' && wechatPayV3.isConfigured()) {
-      // JSAPI支付必须提供支付者openid（前端经公众号网页授权获取）
+      // ===== FIX-PAY-UNBIND-WECHAT-APPID 通道选择 =====
+      // JSAPI（免扫码，需公众号AppID+openid）；缺任一参数自动降级 Native 扫码支付，
+      // 不报错、不阻断流程；微信内环境同样展示二维码（长按识别支付）。
       const openid = extra && extra.openid;
-      if (!openid) {
-        updateOrderRecord(order.orderId, ORDER_STATUS.CLOSED, null);
-        return jsonResponse(res, 400, false, '缺少支付者openid，请先完成微信网页授权', {
-          needOauth: true,
-          oauthConfigured: wechatPayV3.isOauthConfigured(),
+      const canJsapi = !!openid && wechatPayV3.isReadyForJsapi();
+
+      if (canJsapi) {
+        const result = await wechatPayV3.createJsapiOrder({
+          outTradeNo: order.orderId,
+          description: order.title,
+          amountYuan: order.amount,
+          openid,
         });
+
+        if (result.success) {
+          order.channel = 'wechat';
+          order.payMode = 'JSAPI';
+          order.prepayId = result.prepayId;
+          const jsapiParams = wechatPayV3.buildJsapiParams(result.prepayId);
+          console.log(`[payment/create] 微信JSAPI下单成功 orderId=${order.orderId} prepayId=${result.prepayId}`);
+          return jsonResponse(res, 200, true, '订单创建成功', {
+            orderId: order.orderId,
+            channel: 'wechat',
+            payMode: 'JSAPI',
+            prepayId: result.prepayId,
+            jsapiParams,
+          });
+        }
+        // JSAPI下单失败：降级Native扫码，不报错不阻断
+        console.log(`[payment/create] JSAPI下单失败降级Native orderId=${order.orderId} err=${result.error}`);
+      } else if (!openid) {
+        console.log(`[payment/create] 无openid(非微信内/未授权)走Native扫码 orderId=${order.orderId}`);
+      } else {
+        console.log(`[payment/create] 公众号AppID未配置走Native扫码 orderId=${order.orderId}`);
       }
 
-      const result = await wechatPayV3.createJsapiOrder({
+      // ===== Native 扫码支付（全场景兜底收款通道）=====
+      const nativeResult = await wechatPayV3.createNativeOrder({
         outTradeNo: order.orderId,
         description: order.title,
         amountYuan: order.amount,
-        openid,
       });
 
-      if (!result.success) {
-        // 微信侧下单失败：关闭本地订单防悬挂
-        updateOrderRecord(order.orderId, ORDER_STATUS.CLOSED, 'wechat');
-        return jsonResponse(res, 500, false, result.error || '微信下单失败');
+      if (nativeResult.success && nativeResult.codeUrl) {
+        order.channel = 'wechat';
+        order.payMode = 'NATIVE';
+        console.log(`[payment/create] 微信Native扫码下单成功 orderId=${order.orderId}`);
+        return jsonResponse(res, 200, true, '订单创建成功（扫码支付）', {
+          orderId: order.orderId,
+          channel: 'wechat',
+          payMode: 'NATIVE',
+          codeUrl: nativeResult.codeUrl,
+        });
       }
 
-      order.channel = 'wechat';
-      order.prepayId = result.prepayId;
-      const jsapiParams = wechatPayV3.buildJsapiParams(result.prepayId);
-      console.log(`[payment/create] 微信JSAPI下单成功 orderId=${order.orderId} prepayId=${result.prepayId}`);
-      return jsonResponse(res, 200, true, '订单创建成功', {
-        orderId: order.orderId,
-        channel: 'wechat',
-        prepayId: result.prepayId,
-        jsapiParams,
-      });
+      // Native也失败（典型：商户号尚未绑定/配置appid）：关闭本地订单并给出明确缺口
+      updateOrderRecord(order.orderId, ORDER_STATUS.CLOSED, 'wechat');
+      const needAppid = !!nativeResult.needAppid;
+      return jsonResponse(res, 200, false,
+        needAppid
+          ? '支付通道尚未完全开通：商户号需绑定AppID（公众号/小程序/移动应用任一），配置后即可收款'
+          : (nativeResult.error || '微信下单失败'),
+        { enabled: false, needAppid });
     }
 
     // 支付宝通道尚未配置

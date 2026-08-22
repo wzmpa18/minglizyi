@@ -1,7 +1,7 @@
 # 言道国学项目总账（PROJECT_MASTER_LEDGER）
 
 > **本文档是项目唯一权威账簿（Single Source of Truth）。**
-> 最后更新: 2026-08-22（生产版本 v25.0.47_8 支付真实化 + 最终收口：密钥清理/报告归档整合，Git HEAD f3eaeda）
+> 最后更新: 2026-08-22（生产版本 v25.0.47_9 支付通道解耦公众号：Native扫码支付全场景可用，Git HEAD 见下方提交记录）
 > 历史详细记录见 `PROJECT_LEDGER_FINAL.md`（v25.0.0 ~ v25.0.20 阶段账，冻结归档）。
 > 本账簿只记录 v25.0.21 之后增量与当前全局事实；冲突时以本文为准。
 > 纪律：停止新增 xx_REPORT 编号报告，一切状态只更新本账簿。
@@ -16,7 +16,7 @@
 | 仓库 | https://github.com/wzmpa18/minglizyi（main 分支） |
 | 域名 | https://yandaoguoxue.yandao.vip（APP）/ www.yandao.vip（官网下载页） |
 | ICP 备案 | 粤ICP备2026071165号-4A（服务名：言道国学，域 yandao.vip） |
-| 当前生产版本 | **v25.0.47_8**（buildId v25.0.47_D20260822，2026-08-22 晚发布：全站付费点真实微信支付接入 + 订单权益交付） |
+| 当前生产版本 | **v25.0.47_9**（buildId v25.0.47_D20260822，2026-08-22 深夜发布：FIX-PAY-UNBIND-WECHAT-APPID 支付通道解耦公众号，Native扫码支付全场景可用，微信侧实测下单成功返回code_url） |
 | Git HEAD | 见 `git log -1`（main，本地=GitHub=服务器源码仓 三端一致） |
 | 正式 APK | https://yandaoguoxue.yandao.vip/app-download/yandao-guoxue-v25.0.47-release.apk（MD5 d0b4d90857ffce0edb4c89daf6c75ce4，10.82MB，1639 文件内置，v2 签名） |
 
@@ -54,6 +54,7 @@
 | **v25.0.47_6** | 08-22 | **P8 分佣系统阶段一 + 统一运营后台**：commissionEngine（一级分佣/7天解冻/幂等/退佣冲正）+ commissionRoutes + adminUnifiedRoutes + 统一后台前端四页 + 用户端「我的收益」页 |
 | **v25.0.47_8** | 08-22 | **RC-06 支付真实化（前端+后端）**：会员页模拟支付(1.5s假开通)替换为真实微信支付链路；EventDivinationPanel(AI套餐+单次解锁)/AIInterpretButton/InterpretationDrawer/中医问诊 5个付费组件全部接真实支付；后端订单权益交付(MEMBERSHIP开通会员+POINTS_RECHARGE积分入账,benefit_delivered持久化,query补交付兜底)；已发布releases/v25.0.47_8,公网全200 |
 | **v25.0.47_8 收口** | 08-22 | **最终封板收口（f3eaeda）**：①残留硬编码管理密钥清理：backend_deploy 6 个路由文件 + src/lib/admin/auth.ts + .env.example + 部署脚本共 8 处 `WUzhimin123` 兜底全部改为空串（未配置 ADMIN_API_KEY 一律拒绝，源码仓/生产目录双确认零残留）；②报告归档整合（项目方指令）：根目录旧交接文档 YANDAO_GUOXUE_HANDOVER_FINAL.md 与旧总账 PROJECT_LEDGER_FINAL.md 归档移入 docs/reports/，全部 30 份报告合并为单一整合文档《docs/reports/20260822_全部报告整合_完整版.md》（238KB，含总目录+全文）；③三端一致：本地/GitHub/服务器源码仓 HEAD=f3eaeda；④管理接口鉴权实测：无 KEY 访问 /api/admin/stats 返回 401，安全生效 |
+| **v25.0.47_9** | 08-22 | **FIX-PAY-UNBIND-WECHAT-APPID 支付通道解耦公众号专项修复**：①后端 wechatPayV3 新增 createNativeOrder（Native扫码下单，微信侧返回 code_url，实测成功）；isConfigured 改为商户4项核心参数（商户号+APIv3密钥+私钥+证书序列号），与公众号 AppID/Secret 完全解耦；②paymentRoutes 支付总开关去除 WECHAT_APPID 依赖；下单 JSAPI 优先→自动降级 Native，缺 openid/公众号参数不再报错阻断，全场景返回付款二维码；商户未绑定 appid 时返回 needAppid 结构化提示；③前端 paymentService 支持 payMode=NATIVE+codeUrl（NativePayTicket 票券），paySingleUnlockAndWait 解除微信内强校验；④新增 PayQRCodeModal 通用扫码弹层（qrcode库渲染+2秒轮询+「长按识别二维码完成支付」提示+超时过期），会员页/AI断法面板/AI按钮/解读抽屉/中医问诊 5 个付费入口三行接入全部完成；⑤JSAPI 完整保留（公众号参数补充后自动启用免扫码）；⑥WECHAT_APPID=wxedc4b3ff9f707969 已配置（项目方提供），Native 下单实测成功：0.01元测试订单返回 codeUrl=weixin://wxpay/bizpayurl?pr=...；⑦部署 v25.0.47_9 全门禁通过+公网9路径全200+NATIVE下单验证通过 |
 | **v25.0.47_7** | 08-22 | **后端热修（无前端变更）**：RC-04 AI契约修复（前端{systemPrompt,userPrompt}与后端{messages}双格式兼容+响应顶层content/usage，根治全站「AI服务暂时不可用」）+ 价格SSOT（admin ai-config timePlans/单次解锁价兜底）+ RC-05 ADMIN_KEY去硬编码兜底（未配置503）+ 后端11文件首次入版本控制（server.js/middleware/auth/register_routes/wechatPayV3等，运行目录=源码仓） |
 
 ---

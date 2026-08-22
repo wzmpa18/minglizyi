@@ -45,10 +45,13 @@ function config() {
   };
 }
 
-/** 商户侧配置是否齐备（下单可用） */
+/** 商户侧配置是否齐备（下单可用）
+ * FIX-PAY-UNBIND-WECHAT-APPID: Native扫码支付仅依赖商户4项核心参数
+ * （商户号+APIv3密钥+私钥文件+证书序列号），与公众号 AppID/AppSecret 完全解耦。
+ */
 function isConfigured() {
   const c = config();
-  return !!(c.mchId && c.appId && c.apiV3Key && c.certPath && c.certSerialNo);
+  return !!(c.mchId && c.apiV3Key && c.certPath && c.certSerialNo);
 }
 
 /** 网页授权配置是否齐备（获取openid用） */
@@ -57,7 +60,9 @@ function isOauthConfigured() {
   return !!(c.appId && c.appSecret);
 }
 
-/** JSAPI下单是否齐备（下单签名 + AppID） */
+/** JSAPI下单是否齐备（下单签名 + AppID）
+ * FIX-PAY-UNBIND: JSAPI/网页授权仍需公众号 AppID；参数为空时下单自动降级 Native 扫码支付
+ */
 function isReadyForJsapi() {
   return isConfigured() && !!config().appId;
 }
@@ -76,6 +81,10 @@ function getConfigStatus() {
     certSerialNo: !!c.certSerialNo,
     wxPayPublicKeyFile: pubKeyFileOk,
     pubKeyId: !!c.pubKeyId,
+    // FIX-PAY-UNBIND: Native扫码就绪（商户4项核心参数，与公众号参数无关）
+    nativeReady: isConfigured(),
+    // JSAPI就绪（Native就绪 + 公众号AppID）
+    jsapiReady: isReadyForJsapi(),
     // 整体状态：NOT_CONFIGURED(未配置) / PARTIAL(部分) / READY(齐备可开启)
     overall: isConfigured() ? 'READY' : (c.mchId || certFileOk) ? 'PARTIAL' : 'NOT_CONFIGURED',
   };
@@ -214,6 +223,58 @@ function buildJsapiParams(prepayId) {
     signType: 'RSA',
     paySign,
   };
+}
+
+// ============================================================================
+// Native 扫码支付下单（FIX-PAY-UNBIND-WECHAT-APPID 新增）
+// ============================================================================
+
+/**
+ * Native扫码下单（全场景兜底收款通道）
+ * 不需要支付者openid、不需要公众号网页授权；微信侧返回 code_url，
+ * 前端将其渲染为付款二维码，用户微信扫码/长按识别完成支付。
+ * 注：微信V3直连商户下单接口要求 appid 字段（公众号/小程序/移动应用任一，
+ * 需与商户号绑定）；该 appid 与 WECHAT_APP_SECRET（仅网页授权用）无关。
+ * @param {object} params
+ * @param {string} params.outTradeNo 商户订单号（本系统orderId，唯一）
+ * @param {string} params.description 商品描述（合规口径标题）
+ * @param {number} params.amountYuan 金额（元）
+ * @param {string} [params.notifyUrl] 回调地址（默认 公网站点/api/payment/callback/wechat）
+ * @returns {Promise<{success: boolean, codeUrl?: string, error?: string, needAppid?: boolean}>}
+ */
+async function createNativeOrder(params) {
+  if (!isConfigured()) {
+    return { success: false, error: '微信支付商户配置未完成' };
+  }
+  const { outTradeNo, description, amountYuan } = params;
+  if (!outTradeNo || !description) {
+    return { success: false, error: '缺少订单号/描述' };
+  }
+  const totalFen = Math.round(Number(amountYuan) * 100);
+  if (!Number.isFinite(totalFen) || totalFen <= 0) {
+    return { success: false, error: '金额无效' };
+  }
+  const c = config();
+  const notifyUrl = params.notifyUrl || `${c.baseUrl}/api/payment/callback/wechat`;
+  const body = {
+    mchid: c.mchId,
+    description,
+    out_trade_no: outTradeNo,
+    notify_url: notifyUrl,
+    amount: { total: totalFen, currency: 'CNY' },
+  };
+  if (c.appId) body.appid = c.appId;
+  const r = await wxApiRequest('POST', '/v3/pay/transactions/native', body);
+  if (r.ok && r.data && r.data.code_url) {
+    return { success: true, codeUrl: r.data.code_url };
+  }
+  const errMsg =
+    (r.data && (r.data.message || r.data.code)) ||
+    `微信Native下单失败(HTTP ${r.status})`;
+  // 微信V3要求appid字段：商户未绑定/未配置时给出明确缺口提示
+  const needAppid = /appid|公众号ID|必填/i.test(String(errMsg)) || (r.data && r.data.detail && String(r.data.detail.location || '').includes('appid'));
+  console.error('[wechatPayV3] createNativeOrder失败:', JSON.stringify(r.data).slice(0, 300));
+  return { success: false, error: errMsg, needAppid };
 }
 
 // ============================================================================
@@ -436,6 +497,7 @@ module.exports = {
   getConfigStatus,
   config,
   createJsapiOrder,
+  createNativeOrder,
   buildJsapiParams,
   verifyCallbackSignature,
   decryptCallbackResource,
