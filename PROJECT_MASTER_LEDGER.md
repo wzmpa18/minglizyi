@@ -1,7 +1,7 @@
 # 言道国学项目总账（PROJECT_MASTER_LEDGER）
 
 > **本文档是项目唯一权威账簿（Single Source of Truth）。**
-> 最后更新: 2026-08-22（前端 v25.0.47_6 + 后端热修 v25.0.47_7，Git HEAD f0ea4fe）
+> 最后更新: 2026-08-22（生产版本 v25.0.47_8 支付真实化，Git HEAD 80d3a4c）
 > 历史详细记录见 `PROJECT_LEDGER_FINAL.md`（v25.0.0 ~ v25.0.20 阶段账，冻结归档）。
 > 本账簿只记录 v25.0.21 之后增量与当前全局事实；冲突时以本文为准。
 > 纪律：停止新增 xx_REPORT 编号报告，一切状态只更新本账簿。
@@ -16,7 +16,7 @@
 | 仓库 | https://github.com/wzmpa18/minglizyi（main 分支） |
 | 域名 | https://yandaoguoxue.yandao.vip（APP）/ www.yandao.vip（官网下载页） |
 | ICP 备案 | 粤ICP备2026071165号-4A（服务名：言道国学，域 yandao.vip） |
-| 当前生产版本 | 前端 **v25.0.47_6**（buildId v25.0.47_D20260822）+ 后端热修 **v25.0.47_7**（RC-04/RC-05，2026-08-22 晚） |
+| 当前生产版本 | **v25.0.47_8**（buildId v25.0.47_D20260822，2026-08-22 晚发布：全站付费点真实微信支付接入 + 订单权益交付） |
 | Git HEAD | 见 `git log -1`（main，本地=GitHub=服务器源码仓 三端一致） |
 | 正式 APK | https://yandaoguoxue.yandao.vip/app-download/yandao-guoxue-v25.0.47-release.apk（MD5 d0b4d90857ffce0edb4c89daf6c75ce4，10.82MB，1639 文件内置，v2 签名） |
 
@@ -52,6 +52,7 @@
 | v25.0.47_4 | 08-22 | 群聊页隐藏 BottomNav（输入框贴底 safe-area）；群资料/好友按钮 z-[10001] 修复遮挡；微信支付 V3 JSAPI 后端全量实现（wechatPayV3.js，通道 OFF 待凭证）；Android 原生 APK 发布（GitHub Actions run 32541997259） |
 | v25.0.47_5 | 08-22 | **Share Engine 统一分享系统**：25 个易学工具页全接入、/share/result 签名 Token 落地页、复制链接/海报/二维码/系统分享四通道、复用 HMAC 邀请归因 |
 | **v25.0.47_6** | 08-22 | **P8 分佣系统阶段一 + 统一运营后台**：commissionEngine（一级分佣/7天解冻/幂等/退佣冲正）+ commissionRoutes + adminUnifiedRoutes + 统一后台前端四页 + 用户端「我的收益」页 |
+| **v25.0.47_8** | 08-22 | **RC-06 支付真实化（前端+后端）**：会员页模拟支付(1.5s假开通)替换为真实微信支付链路；EventDivinationPanel(AI套餐+单次解锁)/AIInterpretButton/InterpretationDrawer/中医问诊 5个付费组件全部接真实支付；后端订单权益交付(MEMBERSHIP开通会员+POINTS_RECHARGE积分入账,benefit_delivered持久化,query补交付兜底)；已发布releases/v25.0.47_8,公网全200 |
 | **v25.0.47_7** | 08-22 | **后端热修（无前端变更）**：RC-04 AI契约修复（前端{systemPrompt,userPrompt}与后端{messages}双格式兼容+响应顶层content/usage，根治全站「AI服务暂时不可用」）+ 价格SSOT（admin ai-config timePlans/单次解锁价兜底）+ RC-05 ADMIN_KEY去硬编码兜底（未配置503）+ 后端11文件首次入版本控制（server.js/middleware/auth/register_routes/wechatPayV3等，运行目录=源码仓） |
 
 ---
