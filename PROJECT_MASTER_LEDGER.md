@@ -1,7 +1,7 @@
 # 言道国学项目总账（PROJECT_MASTER_LEDGER）
 
 > **本文档是项目唯一权威账簿（Single Source of Truth）。**
-> 最后更新: 2026-08-22（生产版本 v25.0.47_9 支付通道解耦公众号：Native扫码支付全场景可用，Git HEAD 见下方提交记录）
+> 最后更新: 2026-08-23（生产版本 v25.0.47_10 统一运营管理中心封板：FINAL-ADMIN-COMMERCIAL-SEAL-02 商业控制权交付，Git HEAD 见下方提交记录）
 > 历史详细记录见 `PROJECT_LEDGER_FINAL.md`（v25.0.0 ~ v25.0.20 阶段账，冻结归档）。
 > 本账簿只记录 v25.0.21 之后增量与当前全局事实；冲突时以本文为准。
 > 纪律：停止新增 xx_REPORT 编号报告，一切状态只更新本账簿。
@@ -16,7 +16,7 @@
 | 仓库 | https://github.com/wzmpa18/minglizyi（main 分支） |
 | 域名 | https://yandaoguoxue.yandao.vip（APP）/ www.yandao.vip（官网下载页） |
 | ICP 备案 | 粤ICP备2026071165号-4A（服务名：言道国学，域 yandao.vip） |
-| 当前生产版本 | **v25.0.47_9**（buildId v25.0.47_D20260822，2026-08-22 深夜发布：FIX-PAY-UNBIND-WECHAT-APPID 支付通道解耦公众号，Native扫码支付全场景可用，微信侧实测下单成功返回code_url） |
+| 当前生产版本 | **v25.0.47_10**（buildId v25.0.47_D20260823，2026-08-23 发布：FINAL-ADMIN-COMMERCIAL-SEAL-02 统一运营管理中心封板——17菜单后台/老板驾驶舱20项指标/功能开关服务端强制/工具矩阵/价格SSOT/订单佣金状态/提现开关DISABLED） |
 | Git HEAD | 见 `git log -1`（main，本地=GitHub=服务器源码仓 三端一致） |
 | 正式 APK | https://yandaoguoxue.yandao.vip/app-download/yandao-guoxue-v25.0.47-release.apk（MD5 d0b4d90857ffce0edb4c89daf6c75ce4，10.82MB，1639 文件内置，v2 签名） |
 
@@ -37,6 +37,8 @@
 | SSH 工具 | scripts/ssh_exec.py（paramiko，密钥 id_rsa_yandao 优先/密码降级） |
 
 **服务器磁盘（2026-08-22 最终清理后）**：12.1G / 50G（本次回收 4.4G：swapfile2 2G、android-sdk+.gradle+gradle zip 1.75G、.npm 275M、旧 releases 六版 158M、releases 根散落旧构建 20M、git bundle、散落脚本、旧备份目录归档删除）。
+
+| **v25.0.47_10** | 08-23 | **FINAL-ADMIN-COMMERCIAL-SEAL-02 统一运营管理中心封板（商业控制权交付）**：①/admin 重构为「言道国学运营管理中心」统一壳：17项固定菜单（总览/用户管理/工具管理/产品与价格/会员与权益/AI管理/学习中医/社交群聊/发现资讯/营销海报/推广分佣/支付订单/提现/内容审核/系统功能开关/审计日志/系统状态）+ 移动端抽屉导航，全部子页面从 /admin 统一导航进入；②老板驾驶舱首页：版本/Git Commit/服务器/后端/数据库/AI/微信支付 三色健康状态（绿正常/黄部分可用/红故障）+ 今日新增/总用户/会员数/今日订单/今日实付/待处理订单/今日AI调用/群数/今日动态/待审举报/今日佣金/待解冻佣金/提现状态 20项指标；③featureControlRoutes 功能开关总中心：17项开关 ON/OFF/MAINTENANCE 三态 + **服务端强制拦截**（实测：后台关闭ai→POST /api/ai/chat 直接403 FEATURE_DISABLED，恢复即通；PUT后缓存即时失效）；④toolAdminRoutes 工具管理矩阵：14款正式工具服务端配置（启用/维护/免费/收费模式/会员等级/单次价格/AI开关/AI额度/每日次数/分享/Web/Android/iOS/微信小程序/QQ小程序），替代localStorage，后台只控开关收费权限额度平台、**不触碰排盘算法**；⑤publicPricingRoutes 价格SSOT公开接口 /api/public/pricing（会员套餐/AI单次/AI时卡/额度包/B类工具价），前端pricingStore消费层：会员页/AI断法面板/AI按钮/解读抽屉/中医问诊全部接入，后台改价实时生效免发版（实测：请求0.01被服务端纠正为产品价9.9/39下单）；⑥paymentRoutes 订单详情+权益重试发放（幂等benefit_delivered双校验）；订单佣金状态权威回显（读commission_records：FROZEN+佣金额+比例+推荐人）；⑦AI结构化错误码：AI_DISABLED/AI_MAINTENANCE/AI_SERVICE_UNAVAILABLE/FEATURE_DISABLED/FEATURE_MAINTENANCE 分级提示（前端aiService透传errorCode）；⑧分佣真实链验证通过：A(910080)邀B(910081)注册绑定level=1，B两笔订单PAID+权益交付，A佣金待解冻13.68元（9.9×20%=1.98 + 39×30%=11.70），解冻日2026-08-29，commission_records/commission_accounts/后台订单详情三处一致；⑨提现总开关 WITHDRAW_TRANSFER=DISABLED：commissionEngine withdrawEnabled=false（商家转账未开通一律拒绝），/api/commission/config 下发，用户端「我的收益」按钮显示「暂未开放」；⑩iOS平台门控 platformGates（IOS_PAYMENT_ENABLED=false，数字商品后续走StoreKit/IAP）；⑪管理认证统一：env ADMIN_API_KEY 映射 SUPER_ADMIN（featureControl/toolAdmin/payment三个路由模块与adminUnified一致）；⑫部署 scripts/deploy_release_v25_0_47_10.sh 全门禁（v9支付门禁全保留+v10后台封板门禁新增）+公网13路径全200+三大公开配置接口+Native下单验证通过 |
 
 ---
 
