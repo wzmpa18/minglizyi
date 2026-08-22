@@ -46,10 +46,12 @@ echo "--- [2] 构建（build.sh 静态导出） ---"
 bash build.sh 2>&1 | tail -6
 
 echo "--- [3] 页面导出校验 ---"
-for p in admin admin/unified admin/commission admin/moderation admin/orders profile profile/income share/result groups groups/chat zhongyi yixue/liuyao invite/poster friends index; do
+for p in admin admin/unified admin/commission admin/moderation admin/orders profile profile/income share/result groups groups/chat zhongyi yixue/liuyao invite/poster friends; do
   test -f "out/${p}/index.html" || { echo "FATAL: out/${p}/index.html missing"; exit 1; }
   echo "OK: ${p}"
 done
+test -f "out/index.html" || { echo "FATAL: out/index.html missing"; exit 1; }
+echo "OK: index(首页)"
 
 echo "--- [3.5] 烧录ID一致性（防更新提示死循环） ---"
 BUILD_ID=$(node -e "console.log(JSON.parse(require('fs').readFileSync('out/version.json','utf8')).buildId)")
