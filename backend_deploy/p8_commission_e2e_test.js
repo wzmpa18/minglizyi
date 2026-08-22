@@ -78,7 +78,8 @@ try {
   check('解冻: FROZEN→UNFROZEN', unfrozen >= 1 && recU.status === 'UNFROZEN', `unfrozen=${unfrozen}`);
   const acctU = db.prepare('SELECT frozen_cents, withdrawable_cents FROM commission_accounts WHERE user_id = ?').get(INVITER);
   check('解冻: 可提现增加', acctU.withdrawable_cents - acctBefore.withdrawable_cents === expectCents, `wd=${acctU.withdrawable_cents}`);
-  check('解冻: 待解冻回落', acctU.frozen_cents - acctBefore.frozen_cents === 0, `frozen=${acctU.frozen_cents}`);
+  // TEST_ORDER(3000)已解冻，TEST_ORDER2(1500)仍在冻结期 → 相对原始应剩1500
+  check('解冻: 待解冻回落', acctU.frozen_cents - acctBefore.frozen_cents === 1500, `frozen=${acctU.frozen_cents}`);
 
   // ---- 6. 验收5：全额退款 → 佣金扣减（已解冻→优先扣可提现） ----
   const r6 = engine.reverseCommission(TEST_ORDER);
