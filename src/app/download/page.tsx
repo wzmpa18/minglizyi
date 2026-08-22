@@ -6,7 +6,7 @@ import { makeQrDataUrl } from "@/lib/qrLocal";
 
 const BRAND = "#7B2FBE";
 const DOWNLOAD_URL = "https://yandaoguoxue.yandao.vip/friend";
-const APK_URL = "https://yandaoguoxue.yandao.vip/app-download/yandao-guoxue-v25.0.45-release.apk";
+const APK_URL = "https://yandaoguoxue.yandao.vip/app-download/yandao-guoxue-v25.0.47-release.apk";
 
 /** 功能亮点列表 */
 const FEATURES: { icon: string; title: string; desc: string }[] = [
@@ -57,7 +57,7 @@ export default function DownloadPage() {
         </div>
         <h1 className="text-2xl font-bold text-white">言道国学</h1>
         <p className="mt-2 text-sm text-white/85">
-          v25.0.45 | 更新日期 2026.08.20
+          v25.0.47 | 更新日期 2026.08.22 | 原生离线版
         </p>
         <p className="mt-1 text-xs text-white/60">
           传承千年智慧，感悟国学之美

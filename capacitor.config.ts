@@ -5,8 +5,10 @@ const config: CapacitorConfig = {
   appName: '言道国学',
   webDir: 'www',
   server: {
+    // v25.0.47 原生内置资源模式：移除 server.url（原远程加载 https://yandaoguoxue.yandao.vip），
+    // APK/IPA 从 www/ 内置资源加载（离线可用、过审友好）；
+    // 后端 API 由 public/native-api-patch.js 在原生壳内改写到线上服务器
     androidScheme: 'https',
-    url: 'https://yandaoguoxue.yandao.vip',
     cleartext: false,
   },
   android: {

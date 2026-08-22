@@ -385,7 +385,8 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
       style={{
         maxWidth: "420px",
         margin: "0 auto",
-        paddingBottom: "calc(80px + var(--bottom-nav-height, 56px) + env(safe-area-inset-bottom, 0px))",
+        // v25.0.47：群聊页已隐藏底部Tab栏（与私聊一致），仅需避让输入栏自身高度
+        paddingBottom: "calc(80px + env(safe-area-inset-bottom, 0px))",
       }}
     >
   <PageLoginGuard />
@@ -394,7 +395,7 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
         <BrandHeader title={groupName} showBack onTitleClick={handleGoToInfo} />
         <button
           onClick={handleGoToInfo}
-          className="absolute right-2 top-0 flex h-10 w-10 items-center justify-center text-white"
+          className="absolute right-2 top-0 z-[10001] flex h-10 w-10 items-center justify-center text-white"
           aria-label="群详情"
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
@@ -572,7 +573,8 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
         className="fixed left-1/2 flex w-full items-center gap-2 border-t border-gray-200 bg-white px-3 py-2"
         style={{
           maxWidth: "420px",
-          bottom: "calc(var(--bottom-nav-height, 56px) + env(safe-area-inset-bottom, 0px))",
+          // v25.0.47：群聊页已隐藏底部Tab栏（与私聊一致），输入栏直接贴底+安全区
+          bottom: "env(safe-area-inset-bottom, 0px)",
           transform: "translateX(-50%)",
         }}
       >

@@ -1988,10 +1988,10 @@ export default function FriendsPage() {
       {/* ===== Header ===== */}
       <div className="sticky top-0 z-40 relative">
         <BrandHeader title="聊天" />
-        {/* + 按钮 */}
+        {/* + 按钮（z-[10001]：必须盖过 BrandHeader 根元素 z-[10000]，否则自 v25.0.41 起被层叠上下文完全遮挡） */}
         <button
           onClick={() => setShowAddMenu(!showAddMenu)}
-          className="absolute right-2 top-0 z-10 flex h-10 w-10 items-center justify-center text-white"
+          className="absolute right-2 top-0 z-[10001] flex h-10 w-10 items-center justify-center text-white"
         >
           <svg
             width="24"

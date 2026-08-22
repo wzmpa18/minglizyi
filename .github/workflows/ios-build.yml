@@ -1,7 +1,7 @@
 name: iOS Build (ipa)
 
 # 言道国学 iOS 打包管道（FINAL-CLEAN-RC-01）
-# - macOS runner + Capacitor iOS 工程（远程加载模式：壳加载 https://yandaoguoxue.yandao.vip）
+# - macOS runner + Capacitor iOS 工程（v25.0.47 原生内置资源模式：www/ 内置 web 资源 + API 经 native-api-patch.js 改写线上）
 # - 签名：App Store Connect API（P8 密钥）自动签名
 #   Secrets 必需：
 #     APP_STORE_CONNECT_KEY       — AuthKey_UWQ354QP54.p8 全文内容
@@ -39,11 +39,25 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build web bundle (native assets)
+        run: |
+          npm run build
+          test -f out/index.html || { echo "FATAL: 静态导出产物缺失 out/index.html"; exit 1; }
+          grep -q '__nativeApiPatchInstalled' out/index.html || { echo "FATAL: 原生 API 改写脚本未内联进 HTML（layout 注入缺失）"; exit 1; }
+          rm -rf www
+          mkdir -p www
+          cp -r out/. www/
+          echo "www 内置资源: $(find www -type f | wc -l) files, $(du -sh www | cut -f1)"
+
       - name: Sync Capacitor iOS
         run: |
-          test -d www || mkdir -p www
-          test -f www/index.html || echo '<!doctype html><title>Yandao Guoxue</title>' > www/index.html
           npx cap sync ios
+          test -f ios/App/App/public/index.html || { echo "FATAL: iOS assets 未同步内置资源"; exit 1; }
+          test -f ios/App/App/public/native-api-patch.js || { echo "FATAL: native-api-patch.js 未进入 iOS assets"; exit 1; }
+          if grep -q '"url":' ios/App/App/capacitor.config.json; then
+            echo "FATAL: capacitor.config 仍含 server.url（远程加载模式残留）"; exit 1
+          fi
+          echo "原生模式校验 OK: 内置资源已同步且无 server.url 残留"
 
       - name: Check signing credentials
         id: creds

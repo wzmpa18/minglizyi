@@ -1,4 +1,6 @@
 ﻿import type { Metadata, Viewport } from "next";
+import fs from "fs";
+import path from "path";
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
 import CloudSyncInit from "@/components/CloudSyncInit";
@@ -16,6 +18,12 @@ export const metadata: Metadata = {
   title: "言道国学",
   description: "基于传统命理学典籍，提供八字、紫微斗数、奇门遁甲、六爻等排盘功能，仅供文化学习与参考。",
 };
+
+// v25.0.47 原生内置资源模式：构建时读取 API 改写脚本源码（单一事实源 public/native-api-patch.js）
+const nativeApiPatchCode = fs.readFileSync(
+  path.join(process.cwd(), "public", "native-api-patch.js"),
+  "utf-8"
+);
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -45,6 +53,10 @@ export default function RootLayout({
         <meta name="theme-color" content="#7B2FBE" />
       </head>
       <body>
+        {/* v25.0.47 原生内置资源模式：原生壳内将相对 /api 请求改写到线上服务器（Web 端零影响）。
+            构建时从 public/native-api-patch.js 读取源码内联进 HTML head —— 解析期同步执行，
+            早于所有应用 JS（next/script 的 beforeInteractive 在静态导出下是运行时队列注入，时序不保险） */}
+        <script dangerouslySetInnerHTML={{ __html: nativeApiPatchCode }} />
         <ThemeProvider>
           <VersionChecker />
           <SwipeBackProvider>

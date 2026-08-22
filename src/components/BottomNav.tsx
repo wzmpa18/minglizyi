@@ -96,7 +96,12 @@ export default function BottomNav() {
 
   // P7-社交修复-01：私聊页隐藏底部Tab栏（聊天输入栏 fixed bottom-0 与Tab栏重叠互斥，
   // Tab栏 zIndex 1000 会完全盖住输入框，导致"打不开对话框无法发消息"）
-  if (pathname === "/friends/chat" || pathname.startsWith("/friends/chat")) {
+  // v25.0.47：群聊页同步隐藏（与私聊一致的全屏聊天体验；原输入栏抬高56px避让Tab栏，
+  // 视觉上与导航挤在一起，用户实测反馈"底部导航栏被遮挡"）
+  if (
+    pathname === "/friends/chat" || pathname.startsWith("/friends/chat") ||
+    pathname === "/groups/chat" || pathname.startsWith("/groups/chat")
+  ) {
     return null;
   }
 

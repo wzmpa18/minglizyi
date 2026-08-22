@@ -28,10 +28,11 @@ check(pbx.includes('PRODUCT_BUNDLE_IDENTIFIER = com.yandao.guoxue;'), 'Bundle ID
 check(pbx.includes('CODE_SIGN_STYLE = Automatic;'), '签名方式：Automatic');
 check(/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+;/.test(pbx), '部署目标版本已设定', (pbx.match(/IPHONEOS_DEPLOYMENT_TARGET = ([0-9.]+)/) || [])[1]);
 
-console.log('=== [3] Capacitor 配置（远程加载模式） ===');
+console.log('=== [3] Capacitor 配置（v25.0.47 原生内置资源模式） ===');
 const capJson = JSON.parse(fs.readFileSync(path.join(IOS, 'App', 'App', 'capacitor.config.json'), 'utf-8'));
 check(capJson.appId === 'com.yandao.guoxue', 'appId 一致', capJson.appId);
-check(capJson.server?.url === 'https://yandaoguoxue.yandao.vip', '远程加载 URL（iOS 壳加载线上前端）', capJson.server?.url);
+check(!capJson.server?.url, '无 server.url（原生内置资源模式，非远程加载壳）', capJson.server?.url || '(无)');
+check(fs.existsSync(path.join(ROOT, 'public', 'native-api-patch.js')), 'native-api-patch.js 存在（原生壳 API 改写到线上）');
 check((capJson.ios?.appendUserAgent || '').includes('YandaoGuoxueIOS'), 'iOS UA 标记（platformGate 门禁依赖）', capJson.ios?.appendUserAgent);
 
 console.log('=== [4] 图标资产（按 Contents.json 声明校验） ===');
@@ -46,7 +47,7 @@ for (const f of declaredFiles) {
 console.log('=== [5] 合规与隐私 ===');
 check(fs.existsSync(path.join(IOS, 'App', 'App', 'PrivacyInfo.xcprivacy')), 'PrivacyInfo.xcprivacy（苹果隐私清单）');
 const capCfg = JSON.parse(fs.readFileSync(path.join(IOS, 'App', 'App', 'capacitor.config.json'), 'utf-8'));
-check((capCfg.server?.url || '').startsWith('https://'), '远程加载走 HTTPS（ATS 默认策略满足，无需例外）');
+check(!capCfg.server?.url, '无 server.url（内置资源加载，API 全走 HTTPS 域名由 patch 改写，ATS 满足）');
 check(fs.existsSync(path.join(ROOT, 'public', 'version.json')), 'version.json 存在');
 
 console.log('=== [6] 线上前端联动（iOS 壳远程加载的内容） ===');
