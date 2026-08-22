@@ -124,6 +124,7 @@ const ORDER_TYPES = {
   SINGLE_UNLOCK: 'SINGLE_UNLOCK',
   MEMBERSHIP: 'MEMBERSHIP',
   POINTS_RECHARGE: 'POINTS_RECHARGE',
+  AI_PACKAGE: 'AI_PACKAGE',
 };
 
 const ORDER_STATUS = {
@@ -138,7 +139,87 @@ const COMPLIANCE_TITLES = {
   SINGLE_UNLOCK: '传统文化学习资料深度解读（单次）',
   MEMBERSHIP: '传统文化学习平台会员服务',
   POINTS_RECHARGE: '传统文化学习平台积分充值',
+  AI_PACKAGE: '传统文化AI智能解读服务套餐',
 };
+
+// ============================================================================
+// v25.0.47_7 价格SSOT：公开定价端点（无鉴权，前端展示与下单金额来源）
+// 读取后台管理配置 data/admin-ai-config.json + data/admin-membership-config.json，
+// 管理端改价后此处自动生效（前端带缓存，最迟5分钟同步）。
+// ============================================================================
+
+/** AI时长套餐默认值（与前端 aiService.AI_PAID_PLANS 保持一致） */
+const DEFAULT_AI_TIME_PLANS = [
+  { key: 'single', name: '单次解读', price: 2.9, duration: '1次', desc: '单次AI深度解读' },
+  { key: 'daily', name: '日卡', price: 9.9, duration: '24小时', desc: '当日无限次解读' },
+  { key: 'monthly', name: '月卡', price: 39.9, duration: '30天', desc: '全工具月度畅享' },
+  { key: 'quarterly', name: '季卡', price: 99.9, duration: '90天', desc: '季度无限解读' },
+  { key: 'yearly', name: '年卡', price: 199, duration: '365天', desc: '全年无限解读' },
+];
+
+const DEFAULT_SINGLE_UNLOCK_PRICE = 9.9;
+
+/** 会员套餐默认值（与 server.js GET /api/admin/membership-config 一致） */
+const DEFAULT_MEMBERSHIP_PLANS = [
+  { level: 'basic', name: '普通会员', price: 0, originalPrice: 0, duration: '永久免费', features: ['全部14款排盘工具（基础排盘）', '每日3次通用AI问答', '中医基础内容查询', '模拟考试初级题库', '社区浏览发帖 · 签到积分'], badge: '', highlighted: false, enabled: true },
+  { level: 'monthly', name: '月度会员', price: 39, originalPrice: 59, duration: '30天', features: ['全部14款排盘工具', '每日50次通用AI问答', 'B类工具月赠3次，超出享8折', '中医学习库全部开放', '模拟考试全等级开放', '签到积分2倍 · 无广告体验', '专属标识/头像框 · 导出排盘报告'], badge: '热门', highlighted: false, enabled: true },
+  { level: 'yearly', name: '年度会员', price: 366, originalPrice: 458, duration: '365天', features: ['全部14款排盘工具', '通用AI问答无限次', 'B类工具月赠15次，超出享7折', '中医学习库全部开放', '模拟考试全等级开放', '签到积分3倍 · 无广告体验', '专属标识/头像框 · 导出排盘报告', '专属客服支持'], badge: '推荐', highlighted: true, enabled: true },
+  { level: 'lifetime', name: '终身会员', price: 3600, originalPrice: 4500, duration: '永久有效', features: ['全部14款排盘工具', '通用AI问答无限次', 'B类工具无限次免费使用', '中医学习库全部开放', '模拟考试全等级开放', '签到积分5倍 · 无广告体验', '专属标识/头像框 · 导出排盘报告', '专属客服支持 · 新功能优先体验'], badge: '尊享', highlighted: false, enabled: true },
+];
+
+/** 读取后台配置 JSON（不存在或损坏返回 null） */
+function readAdminConfig(filename) {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const p = path.join(__dirname, 'data', filename);
+    if (!fs.existsSync(p)) return null;
+    return JSON.parse(fs.readFileSync(p, 'utf-8'));
+  } catch (e) {
+    return null;
+  }
+}
+
+/** GET /api/payment/pricing — 公开定价（价格SSOT） */
+router.get('/pricing', (req, res) => {
+  try {
+    const aiCfg = readAdminConfig('admin-ai-config.json');
+    const memberCfg = readAdminConfig('admin-membership-config.json');
+
+    const timePlans = Array.isArray(aiCfg && aiCfg.timePlans) && aiCfg.timePlans.length
+      ? aiCfg.timePlans
+      : DEFAULT_AI_TIME_PLANS;
+    const singleUnlockPrice = typeof (aiCfg && aiCfg.singleUnlockPrice) === 'number' && aiCfg.singleUnlockPrice > 0
+      ? aiCfg.singleUnlockPrice
+      : DEFAULT_SINGLE_UNLOCK_PRICE;
+    const membershipPlans = Array.isArray(memberCfg && memberCfg.plans) && memberCfg.plans.length
+      ? memberCfg.plans.filter(p => p.enabled !== false)
+      : DEFAULT_MEMBERSHIP_PLANS;
+
+    res.json({
+      success: true,
+      data: {
+        aiPlans: timePlans,
+        singleUnlockPrice,
+        membershipPlans,
+        aiGlobalEnabled: aiCfg ? aiCfg.globalEnabled !== false : true,
+        updatedAt: (aiCfg && aiCfg.updatedAt) || (memberCfg && memberCfg.updatedAt) || null,
+      },
+    });
+  } catch (error) {
+    // 配置异常时回退默认值，保证前端可用
+    res.json({
+      success: true,
+      data: {
+        aiPlans: DEFAULT_AI_TIME_PLANS,
+        singleUnlockPrice: DEFAULT_SINGLE_UNLOCK_PRICE,
+        membershipPlans: DEFAULT_MEMBERSHIP_PLANS,
+        aiGlobalEnabled: true,
+        updatedAt: null,
+      },
+    });
+  }
+});
 
 // ============================================================================
 // 订单存储：内存缓存 + user_orders 表持久化（v25.0.47_5 统一后台订单中心）
