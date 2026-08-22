@@ -38,8 +38,8 @@ test -f backend_deploy/wechatTransfer.js || { echo "FATAL: 缺商家转账模块
 # 4) 支付钩子接入分佣
 grep -q 'grantCommission' backend_deploy/paymentRoutes.js || { echo "FATAL: 支付钩子未接分佣"; exit 1; }
 grep -q 'reverseCommission' backend_deploy/paymentRoutes.js || { echo "FATAL: 退款钩子未接冲正"; exit 1; }
-grep -q 'adminUnifiedRoutes' backend_deploy/server.js || { echo "FATAL: server.js未注册统一后台"; exit 1; }
-grep -q 'commissionRoutes' backend_deploy/server.js || { echo "FATAL: server.js未注册佣金路由"; exit 1; }
+grep -q 'adminUnifiedRoutes' "$BACKEND_DIR/server.js" || { echo "FATAL: 后端server.js未注册统一后台"; exit 1; }
+grep -q 'commissionRoutes' "$BACKEND_DIR/server.js" || { echo "FATAL: 后端server.js未注册佣金路由"; exit 1; }
 echo "内容门禁 OK"
 
 echo "--- [2] 构建（build.sh 静态导出） ---"
