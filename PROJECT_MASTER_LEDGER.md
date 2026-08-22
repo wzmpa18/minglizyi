@@ -1,7 +1,7 @@
 # 言道国学项目总账（PROJECT_MASTER_LEDGER）
 
 > **本文档是项目唯一权威账簿（Single Source of Truth）。**
-> 最后更新: 2026-08-22（生产版本 v25.0.47_8 支付真实化，Git HEAD 80d3a4c）
+> 最后更新: 2026-08-22（生产版本 v25.0.47_8 支付真实化 + 最终收口：密钥清理/报告归档整合，Git HEAD f3eaeda）
 > 历史详细记录见 `PROJECT_LEDGER_FINAL.md`（v25.0.0 ~ v25.0.20 阶段账，冻结归档）。
 > 本账簿只记录 v25.0.21 之后增量与当前全局事实；冲突时以本文为准。
 > 纪律：停止新增 xx_REPORT 编号报告，一切状态只更新本账簿。
@@ -53,6 +53,7 @@
 | v25.0.47_5 | 08-22 | **Share Engine 统一分享系统**：25 个易学工具页全接入、/share/result 签名 Token 落地页、复制链接/海报/二维码/系统分享四通道、复用 HMAC 邀请归因 |
 | **v25.0.47_6** | 08-22 | **P8 分佣系统阶段一 + 统一运营后台**：commissionEngine（一级分佣/7天解冻/幂等/退佣冲正）+ commissionRoutes + adminUnifiedRoutes + 统一后台前端四页 + 用户端「我的收益」页 |
 | **v25.0.47_8** | 08-22 | **RC-06 支付真实化（前端+后端）**：会员页模拟支付(1.5s假开通)替换为真实微信支付链路；EventDivinationPanel(AI套餐+单次解锁)/AIInterpretButton/InterpretationDrawer/中医问诊 5个付费组件全部接真实支付；后端订单权益交付(MEMBERSHIP开通会员+POINTS_RECHARGE积分入账,benefit_delivered持久化,query补交付兜底)；已发布releases/v25.0.47_8,公网全200 |
+| **v25.0.47_8 收口** | 08-22 | **最终封板收口（f3eaeda）**：①残留硬编码管理密钥清理：backend_deploy 6 个路由文件 + src/lib/admin/auth.ts + .env.example + 部署脚本共 8 处 `WUzhimin123` 兜底全部改为空串（未配置 ADMIN_API_KEY 一律拒绝，源码仓/生产目录双确认零残留）；②报告归档整合（项目方指令）：根目录旧交接文档 YANDAO_GUOXUE_HANDOVER_FINAL.md 与旧总账 PROJECT_LEDGER_FINAL.md 归档移入 docs/reports/，全部 30 份报告合并为单一整合文档《docs/reports/20260822_全部报告整合_完整版.md》（238KB，含总目录+全文）；③三端一致：本地/GitHub/服务器源码仓 HEAD=f3eaeda；④管理接口鉴权实测：无 KEY 访问 /api/admin/stats 返回 401，安全生效 |
 | **v25.0.47_7** | 08-22 | **后端热修（无前端变更）**：RC-04 AI契约修复（前端{systemPrompt,userPrompt}与后端{messages}双格式兼容+响应顶层content/usage，根治全站「AI服务暂时不可用」）+ 价格SSOT（admin ai-config timePlans/单次解锁价兜底）+ RC-05 ADMIN_KEY去硬编码兜底（未配置503）+ 后端11文件首次入版本控制（server.js/middleware/auth/register_routes/wechatPayV3等，运行目录=源码仓） |
 
 ---

@@ -1,7 +1,7 @@
 # 言道国学 · FINAL_PROJECT_HANDOVER 最终交接报告
 
-> 版本：v25.0.47_8 ｜ Git：80d3a4c（GitHub wzmpa18/minglizyi main）｜ 日期：2026-08-22
-> 本文档为唯一主交接文档。历史部署/验收报告已全部收纳于 `docs/reports/`（28 份），不再另行生成独立报告。
+> 版本：v25.0.47_8 ｜ Git：f3eaeda（GitHub wzmpa18/minglizyi main）｜ 日期：2026-08-22
+> 本文档为唯一主交接文档。历史部署/验收报告已全部收纳于 `docs/reports/`（30 份原始报告 + 1 份整合完整版《20260822_全部报告整合_完整版.md》，全部集中在这一个文件夹），不再另行生成独立报告。
 
 ## 一、项目概况
 
@@ -15,7 +15,7 @@
 
 | 位置 | 路径 |
 |---|---|
-| GitHub | https://github.com/wzmpa18/minglizyi（main = 80d3a4c） |
+| GitHub | https://github.com/wzmpa18/minglizyi（main = f3eaeda） |
 | 本地主仓库 | C:\Users\ZhuanZ\Projects\minglizyi |
 | 服务器源码仓 | /root/yandaoguoxue-source |
 | 生产后端 | /www/yandaoguoxue-backend（PM2: yandaoguoxue-backend, 端口 3001） |
@@ -62,7 +62,7 @@
 | ADMIN_CENTER | READY_FOR_OWNER_ACCEPTANCE | 统一后台 /admin 全功能，待项目方实操验收 |
 | ANDROID | VERIFIED | APK 可用（v25.0.47_6 包） |
 | IOS | IOS_SIGNING_BLOCKED_BY_PLA | Apple PLA 未接受（见待办 3） |
-| BACKUP / DEPLOYMENT / SOURCE_SYNC | VERIFIED | 每日 2 点 DB 备份；三端 HEAD 一致 80d3a4c |
+| BACKUP / DEPLOYMENT / SOURCE_SYNC | VERIFIED | 每日 2 点 DB 备份；三端 HEAD 一致 f3eaeda |
 | SOCIAL / GROUP_CHAT / DISCOVERY_NEWS / MARKETING / SHARE / DOWNLOAD | VERIFIED | 公网 200 回归通过 |
 
 ## 六、SECRET INVENTORY（只说位置，绝不写值）
@@ -94,4 +94,4 @@
 5. 禁止事项：不动易学冻结算法、不删生产表、不把密钥写进仓库/报告、不做第二套后台
 
 ---
-*报告归档：docs/reports/（28 份历史部署/验收报告）｜ 总账：PROJECT_MASTER_LEDGER.md ｜ 干净源码包：YANDAOGUOXUE_FINAL_CLEAN_SOURCE/*
+*报告归档：docs/reports/（30 份原始报告 + 1 份整合完整版，全部在一个文件夹；旧版交接/旧总账已归档其中）｜ 总账：PROJECT_MASTER_LEDGER.md ｜ 干净源码包：/root/YANDAOGUOXUE_FINAL_CLEAN_SOURCE/*
