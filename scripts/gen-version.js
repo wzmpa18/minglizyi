@@ -5,8 +5,8 @@ const path = require("path");
 // 发版仅需改 package.json 一处，本脚本在构建时自动生成 public/version.json，杜绝硬编码旧版本复发。
 const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8"));
 const VERSION = String(pkg.version || "").trim();
-if (!/^v\d+\.\d+\.\d+$/.test(VERSION)) {
-  console.error("FATAL: package.json version 必须形如 v25.0.34，当前为: " + JSON.stringify(pkg.version));
+if (!/^v\d+\.\d+\.\d+(_\d+)?$/.test(VERSION)) {
+  console.error("FATAL: package.json version 必须形如 v25.0.34 或 v25.0.34_12，当前为: " + JSON.stringify(pkg.version));
   process.exit(1);
 }
 
