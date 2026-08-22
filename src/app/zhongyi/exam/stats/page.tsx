@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionGate } from "@/components/SectionGate";
 import { useState, useEffect, useMemo, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -25,7 +26,7 @@ const BRAND_LIGHT = "#9B5ECF";
 const CORRECT_COLOR = "#10B981";
 const WRONG_COLOR = "#EF4444";
 
-export default function StatsPage() {
+function StatsPageOriginal() {
   const router = useRouter();
   const [stats, setStats] = useState<LS | null>(null);
   const [weakTopics, setWeakTopics] = useState<WeakTopic[]>([]);
@@ -427,5 +428,14 @@ function MetricCard({
         <div style={{ fontSize: "11px", color: "#999", marginTop: "2px" }}>{label}</div>
       </div>
     </div>
+  );
+}
+
+// v25.0.47_12: 中医板块知识开放程度门控（后台工具矩阵实时控制：开放/会员专享/维护/关闭）
+export default function StatsPage() {
+  return (
+    <SectionGate toolId="zhongyi_exam" title="医考刷题">
+      <StatsPageOriginal />
+    </SectionGate>
   );
 }

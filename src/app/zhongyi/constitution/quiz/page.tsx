@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionGate } from "@/components/SectionGate";
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -19,7 +20,7 @@ const OPTIONS = [
   { value: 5, label: "总是", desc: "几乎每天" },
 ];
 
-export default function ConstitutionQuiz() {
+function ConstitutionQuizOriginal() {
   const router = useRouter();
   const questions = useMemo(() => getQuestionnaire(), []);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -303,5 +304,14 @@ export default function ConstitutionQuiz() {
         体质测评仅供学习参考，不作为诊断依据
       </p>
     </div>
+  );
+}
+
+// v25.0.47_12: 中医板块知识开放程度门控（后台工具矩阵实时控制：开放/会员专享/维护/关闭）
+export default function ConstitutionQuiz() {
+  return (
+    <SectionGate toolId="zhongyi_constitution" title="体质测评">
+      <ConstitutionQuizOriginal />
+    </SectionGate>
   );
 }

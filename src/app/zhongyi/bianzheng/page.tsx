@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionGate } from "@/components/SectionGate";
 import { useState } from "react";
 import {
   AlertTriangle,
@@ -143,7 +144,7 @@ const THERAPY_FOCUS = [
 // 页面组件
 // ============================================================================
 
-export default function BianZhengPage() {
+function BianZhengPageOriginal() {
   useToolBack({ pageKey: "zhongyi_bianzheng", eventName: "zhongyi-back", globalFlag: "__zhongyiBackHandled" });
 
   // v20.1: 登录守卫
@@ -841,5 +842,14 @@ export default function BianZhengPage() {
       {/* v20.1: 登录提示弹窗 */}
       <LoginPromptModal show={showLoginPrompt} onClose={() => setShowLoginPrompt(false)} />
     </div>
+  );
+}
+
+// v25.0.47_12: 中医板块知识开放程度门控（后台工具矩阵实时控制：开放/会员专享/维护/关闭）
+export default function BianZhengPage() {
+  return (
+    <SectionGate toolId="zhongyi_bianzheng" title="辨证学">
+      <BianZhengPageOriginal />
+    </SectionGate>
   );
 }

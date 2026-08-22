@@ -1,4 +1,6 @@
-﻿"use client";
+"use client";
+
+import { SectionGate } from "@/components/SectionGate";
 
 import { useState, useEffect, useMemo, Suspense, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -1056,7 +1058,7 @@ function MeridianPageInner() {
   return <MeridianListPage />;
 }
 
-export default function MeridianPage() {
+function MeridianPageOriginal() {
   useToolBack({ pageKey: "zhongyi_meridian", eventName: "zhongyi-back", globalFlag: "__zhongyiBackHandled" });
   return (
     <Suspense fallback={
@@ -1069,4 +1071,11 @@ export default function MeridianPage() {
   );
 }
 
-
+// v25.0.47_12: 中医板块知识开放程度门控（后台工具矩阵实时控制：开放/会员专享/维护/关闭）
+export default function MeridianPage() {
+  return (
+    <SectionGate toolId="zhongyi_meridian" title="经络穴位">
+      <MeridianPageOriginal />
+    </SectionGate>
+  );
+}

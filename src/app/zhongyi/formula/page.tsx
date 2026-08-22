@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionGate } from "@/components/SectionGate";
 import { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -377,7 +378,7 @@ function FormulaPageInner() {
   return resolvedId ? <FormulaDetailPage formulaId={resolvedId} /> : <FormulaListPage />;
 }
 
-export default function FormulaPage() {
+function FormulaPageOriginal() {
   useToolBack({ pageKey: "zhongyi_formula", eventName: "zhongyi-back", globalFlag: "__zhongyiBackHandled" });
   return (
     <Suspense fallback={
@@ -390,3 +391,11 @@ export default function FormulaPage() {
   );
 }
 
+// v25.0.47_12: 中医板块知识开放程度门控（后台工具矩阵实时控制：开放/会员专享/维护/关闭）
+export default function FormulaPage() {
+  return (
+    <SectionGate toolId="zhongyi_formula" title="方剂库">
+      <FormulaPageOriginal />
+    </SectionGate>
+  );
+}

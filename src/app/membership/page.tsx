@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BrandHeader } from "@/components/shared";
 import { useToolBack } from "@/lib/useToolBack";
@@ -35,6 +36,7 @@ const BRAND = "#7B2FBE";
 
 export default function MembershipPage() {
   const { goBack } = useToolBack();
+  const router = useRouter();
   // v25.0.47_9: Native扫码支付弹层（全场景兜底收款通道）
   const { qrModal, openQR } = useNativePayQR();
   // v25.0.47_10: 价格 SSOT——套餐价格优先读服务端（后台改价实时生效），本地常量仅兜底
@@ -47,6 +49,8 @@ export default function MembershipPage() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [successInfo, setSuccessInfo] = useState<{ planName: string; level: MemberLevel } | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
+  // v25.0.47_12 P0修复：未登录时在支付按钮上方悬浮登录引导（点击按钮立即可见反馈）
+  const [needLogin, setNeedLogin] = useState(false);
   const [orders, setOrders] = useState<OrderRecord[]>([]);
   // 兑换码（P6-TOOL-04-补02）
   const [redeemInput, setRedeemInput] = useState("");
@@ -136,14 +140,17 @@ export default function MembershipPage() {
     // 真实支付必须登录（服务端订单与权益交付均以 userId 为主键）
     const profile = getUserProfile();
     if (!profile || !profile.userId) {
-      setErrorMsg("请先登录后再开通会员");
+      // v25.0.47_12 P0修复：未登录提示固定在按钮上方悬浮展示，点击即可见反馈，并提供一键跳登录
+      setNeedLogin(true);
+      setErrorMsg("");
       return;
     }
+    setNeedLogin(false);
     // v25.0.47_9: 扫码支付全场景可用（非微信环境/微信内均可，微信内长按识别二维码）
     setErrorMsg("");
     setPaying(true);
     try {
-      const daysMap: Record<string, number> = { monthly: 30, yearly: 365, lifetime: -1 };
+      const daysMap: Record<string, number> = { monthly: 30, quarterly: 90, yearly: 365, lifetime: -1 };
       const r = await payForMembership(plan.level, plan.price, daysMap[plan.level] ?? 30);
       if (!r || !r.success || !r.orderId) {
         setPaying(false);
@@ -632,6 +639,57 @@ export default function MembershipPage() {
           borderTop: "1px solid #eee",
         }}
       >
+        {/* v25.0.47_12 P0修复：支付反馈固定在按钮正上方，点击立即可见，杜绝"死键"体验 */}
+        {needLogin && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "10px",
+              padding: "10px 12px",
+              marginBottom: "10px",
+              borderRadius: "10px",
+              backgroundColor: "#fff7e6",
+              border: "1px solid #ffd591",
+              animation: "modalSlideUp 0.25s ease",
+            }}
+          >
+            <span style={{ fontSize: "13px", color: "#ad6800", flex: 1 }}>请先登录后再开通会员</span>
+            <button
+              onClick={() => router.push("/login")}
+              style={{
+                padding: "6px 14px",
+                borderRadius: "14px",
+                border: "none",
+                backgroundColor: BRAND,
+                color: "#fff",
+                fontSize: "13px",
+                fontWeight: 600,
+                cursor: "pointer",
+                whiteSpace: "nowrap",
+              }}
+            >
+              去登录
+            </button>
+          </div>
+        )}
+        {errorMsg && (
+          <div
+            style={{
+              padding: "10px 12px",
+              marginBottom: "10px",
+              borderRadius: "10px",
+              backgroundColor: "#fff1f0",
+              border: "1px solid #ffa39e",
+              fontSize: "13px",
+              color: "#cf1322",
+              lineHeight: 1.5,
+            }}
+          >
+            {errorMsg}
+          </div>
+        )}
         <button
           onClick={handlePay}
           disabled={paying}

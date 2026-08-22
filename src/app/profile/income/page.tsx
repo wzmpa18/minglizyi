@@ -24,6 +24,7 @@ import {
   getCommissionWithdrawals,
   applyCommissionWithdraw,
   getCommissionConfig,
+  isCommissionWithdrawWindowOpen,
   COMMISSION_STATUS_LABELS,
   WITHDRAW_STATUS_LABELS,
   formatCommissionTime,
@@ -168,6 +169,14 @@ export default function ProfileIncomePage() {
   const withdrawable = summary?.withdrawableYuan ?? "0.00";
   // v25.0.47_10: 提现通道开关（后端 /api/commission/config 下发，undefined 视为开放兼容旧版）
   const withdrawOpen = config?.withdrawEnabled !== false;
+  // v25.0.47_12: 月度提现窗口（每月15号后可提现；窗口外按钮禁用，服务端同样强制拦截）
+  const inWindow = isCommissionWithdrawWindowOpen(config);
+  const canWithdraw = withdrawOpen && inWindow;
+  const withdrawBtnTip = !withdrawOpen
+    ? WITHDRAW_DISABLED_TIP
+    : !inWindow
+    ? `佣金每月${config?.settleDay ?? 30}号统一结算，每月${config?.withdrawOpenDay ?? 15}号后可发起提现`
+    : undefined;
   const frozen = summary?.frozenYuan ?? "0.00";
   const total = summary?.totalEarningsYuan ?? "0.00";
 
@@ -184,21 +193,21 @@ export default function ProfileIncomePage() {
               {loading ? "--" : withdrawable}
             </span>
             <button
-              onClick={() => withdrawOpen && setShowWithdrawModal(true)}
-              disabled={parseFloat(withdrawable) <= 0 || !withdrawOpen}
-              title={withdrawOpen ? undefined : WITHDRAW_DISABLED_TIP}
+              onClick={() => canWithdraw && setShowWithdrawModal(true)}
+              disabled={parseFloat(withdrawable) <= 0 || !canWithdraw}
+              title={withdrawBtnTip}
               style={{
                 padding: "9px 24px",
                 borderRadius: "999px",
                 border: "none",
-                backgroundColor: parseFloat(withdrawable) > 0 && withdrawOpen ? "#fff" : "rgba(255,255,255,0.5)",
+                backgroundColor: parseFloat(withdrawable) > 0 && canWithdraw ? "#fff" : "rgba(255,255,255,0.5)",
                 color: BRAND,
                 fontSize: 14,
                 fontWeight: 700,
-                cursor: parseFloat(withdrawable) > 0 && withdrawOpen ? "pointer" : "not-allowed",
+                cursor: parseFloat(withdrawable) > 0 && canWithdraw ? "pointer" : "not-allowed",
               }}
             >
-              {withdrawOpen ? "提现" : "暂未开放"}
+              {canWithdraw ? "提现" : withdrawOpen ? `${config?.withdrawOpenDay ?? 15}号后可提` : "暂未开放"}
             </button>
           </div>
 
@@ -223,11 +232,15 @@ export default function ProfileIncomePage() {
             </div>
           </div>
 
-          {config?.unfreezeEnabled && config.unfreezeDays > 0 && (
+          {config?.monthlySettleEnabled ? (
+            <div style={{ fontSize: 11, opacity: 0.75, marginTop: 10, lineHeight: 1.5 }}>
+              佣金在订单支付成功后计入待解冻金额，每月{config.settleDay ?? 30}号统一结算转为可提现余额，每月{config.withdrawOpenDay ?? 15}号后可发起提现。
+            </div>
+          ) : config?.unfreezeEnabled && config.unfreezeDays > 0 ? (
             <div style={{ fontSize: 11, opacity: 0.75, marginTop: 10, lineHeight: 1.5 }}>
               佣金在订单支付成功后冻结，{config.unfreezeDays} 天解冻期（无退款）后转为可提现余额。
             </div>
-          )}
+          ) : null}
         </div>
 
         {/* ===== 税务合规提示（第七章红线，固定展示） ===== */}

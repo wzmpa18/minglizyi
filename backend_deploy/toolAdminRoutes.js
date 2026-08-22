@@ -21,6 +21,7 @@ const MATRIX_FILE = path.join(DATA_DIR, 'tool-matrix.json');
 const ROLES = { SUPER_ADMIN: 50, ADMIN: 40, CONTENT_ADMIN: 30, FINANCE_ADMIN: 30, SUPPORT_ADMIN: 20 };
 
 // ==================== 默认工具矩阵（与正式 14 款工具对齐）====================
+// v25.0.47_12 定价对齐：B类单次解析工具统一零售价 9.9 元/次（择日/合婚转 ONE_TIME）
 const DEFAULT_MATRIX = {
   bazi:     { name: '八字排盘',     status: 'ON', payMode: 'FREE',        price: 0,  memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true,  web: true, android: true, ios: true, wechatMp: false, qqMp: false },
   ziwei:    { name: '紫微斗数',     status: 'ON', payMode: 'FREE',        price: 0,  memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true,  web: true, android: true, ios: true, wechatMp: false, qqMp: false },
@@ -28,14 +29,26 @@ const DEFAULT_MATRIX = {
   liuyao:   { name: '六爻起卦',     status: 'ON', payMode: 'FREE',        price: 0,  memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true,  web: true, android: true, ios: true, wechatMp: false, qqMp: false },
   daliuren: { name: '大六壬',       status: 'ON', payMode: 'FREE',        price: 0,  memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true,  web: true, android: true, ios: true, wechatMp: false, qqMp: false },
   meihua:   { name: '梅花易数',     status: 'ON', payMode: 'FREE',        price: 0,  memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true,  web: true, android: true, ios: true, wechatMp: false, qqMp: false },
-  zeri:     { name: '择日择吉',     status: 'ON', payMode: 'FREE',        price: 0,  memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true,  web: true, android: true, ios: true, wechatMp: true,  qqMp: true },
-  hehun:    { name: '八字合婚',     status: 'ON', payMode: 'FREE',        price: 0,  memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true,  web: true, android: true, ios: true, wechatMp: false, qqMp: false },
+  zeri:     { name: '择日择吉',     status: 'ON', payMode: 'ONE_TIME',   price: 9.9, memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true,  web: true, android: true, ios: true, wechatMp: true,  qqMp: true },
+  hehun:    { name: '八字合婚',     status: 'ON', payMode: 'ONE_TIME',   price: 9.9, memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true,  web: true, android: true, ios: true, wechatMp: false, qqMp: false },
   tarot:    { name: '塔罗占卜',     status: 'ON', payMode: 'FREE',        price: 0,  memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true,  web: true, android: true, ios: true, wechatMp: false, qqMp: false },
   astrology:{ name: '星座运势',     status: 'ON', payMode: 'FREE',        price: 0,  memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true,  web: true, android: true, ios: true, wechatMp: false, qqMp: false },
   name_analysis:  { name: '姓名深度解析', status: 'ON', payMode: 'ONE_TIME',   price: 9.9,  memberLevel: 'basic', aiEnabled: true, aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
-  phone_number:   { name: '手机号解读',   status: 'ON', payMode: 'ONE_TIME',   price: 18,   memberLevel: 'basic', aiEnabled: true, aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
-  license_plate:  { name: '车牌合号',     status: 'ON', payMode: 'ONE_TIME',   price: 18,   memberLevel: 'basic', aiEnabled: true, aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
+  phone_number:   { name: '手机号解读',   status: 'ON', payMode: 'ONE_TIME',   price: 9.9,  memberLevel: 'basic', aiEnabled: true, aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
+  license_plate:  { name: '车牌合号',     status: 'ON', payMode: 'ONE_TIME',   price: 9.9,  memberLevel: 'basic', aiEnabled: true, aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
   wenzhen:  { name: '中医问诊',     status: 'ON', payMode: 'ONE_TIME',   price: 0,  memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true,  web: true, android: true, ios: true, wechatMp: false, qqMp: false },
+  // ==================== v25.0.47_12: 中医板块知识开放程度控制 ====================
+  // 后台可调：status（ON开放/OFF关闭/MAINTENANCE维护）× payMode+memberLevel（FREE全员/MEMBERSHIP会员专享）
+  // 默认全部开放；「中医学习库全部开放」是付费会员权益之一，故支持按档位收紧
+  zhongyi_classic:     { name: '中医·典籍文库',  status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
+  zhongyi_herb:        { name: '中医·中药库',    status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
+  zhongyi_formula:     { name: '中医·方剂库',    status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
+  zhongyi_meridian:    { name: '中医·经络穴位',  status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
+  zhongyi_bianzheng:   { name: '中医·辨证学',    status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
+  zhongyi_yangsheng:   { name: '中医·养生功法',  status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
+  zhongyi_shanghan:    { name: '中医·伤寒六经',  status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
+  zhongyi_constitution:{ name: '中医·体质测评',  status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
+  zhongyi_exam:        { name: '中医·医考刷题',  status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
 };
 
 function loadMatrix() {

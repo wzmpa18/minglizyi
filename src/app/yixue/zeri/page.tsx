@@ -15,6 +15,7 @@ import type { AuspiciousDay } from "@/algorithm-core";
 import { getToolConfig } from "@/lib/toolConfigStore";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
 import AIInterpretButton from "@/components/AIInterpretButton";
+import { buildDeepReportSystemPrompt } from "@/lib/deepReportPrompt";
 
 import { ShareButton } from "@/components/ShareButton";
 // ============================================================================
@@ -474,14 +475,7 @@ export default function ZeriPage() {
                   buttonText={`AI 深度择日分析 ¥${zeriCfg.aiDeepPrice}/次`}
                   cacheKey={`zeri_deep_${currentEvent?.id}_${startYear}${startMonth}${startDay}_${endYear}${endMonth}${endDay}_${zeriCfg.version}`}
                   contextData={`事项: ${eventLabel}\n规则版本: ${zeriCfg.version}\n日期范围: ${startYear}-${startMonth}-${startDay} 至 ${endYear}-${endMonth}-${endDay}\n生肖: ${userShengXiao || "未指定"}\n民俗注意: ${currentEvent?.folkNote || "无"}\n候选吉日: ${results.slice(0, 5).map((d) => `${d.dateStr}(${d.dayGZ}日,建除${d.jianChu},评分${d.score},吉时${(d.jiShi || []).join("/")},冲${d.chongShengXiao},煞${d.sha}方)`).join("; ")}`}
-                  systemPrompt={`你是传统择日文化解读师。请基于提供的择日结果数据，对候选吉日做解释、横向对比与注意事项说明。
-要求：
-1. 逐条解释每个候选日期的规则依据（建除十二神、干支冲煞、吉时方位等）
-2. 对比各候选日期的优劣与适用场景，给出民俗文化视角的参考说明
-3. 明确提示需要避开的生肖冲煞与方位
-4. 禁止生成确定性承诺（如"必定顺利""保证成功"），禁止替用户做出重大决策
-5. 不涉及医疗、法律、金融等专业建议
-6. 结尾必须标注：「以上内容仅供传统文化参考与个人娱乐，不构成任何专业建议」`}
+                  systemPrompt={buildDeepReportSystemPrompt("择日择吉", "对候选吉日逐条解释规则依据（建除十二神、干支冲煞、吉时方位等），横向对比各候选日期的优劣与适用场景，明确提示需要留意的生肖冲煞与方位")}
                 />
               </div>
               <div className="mt-1.5 flex items-center justify-center gap-3 text-[10px] text-gray-400">

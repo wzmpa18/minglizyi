@@ -126,9 +126,18 @@ export interface AdminOrder {
 
 export interface CommissionConfig {
   enabled: boolean;
+  /** v25.0.47_12: 两级分佣比例（level1 一级 / level2 二级）；旧配置可能为按订单类型的映射 */
   ratios: Record<string, number>;
   unfreezeEnabled: boolean;
   unfreezeDays: number;
+  /** v25.0.47_12: 提现通道总开关（商家转账权限开通后置 true） */
+  withdrawEnabled?: boolean;
+  /** v25.0.47_12: 月度结算模式（佣金每月 settleDay 号统一结算） */
+  monthlySettleEnabled?: boolean;
+  /** v25.0.47_12: 月度结算日（默认 30） */
+  settleDay?: number;
+  /** v25.0.47_12: 提现窗口开放日（每月该日之后可提现，默认 15） */
+  withdrawOpenDay?: number;
   minWithdrawYuan: number;
   dailyWithdrawLimit: number;
   transferNote: string;

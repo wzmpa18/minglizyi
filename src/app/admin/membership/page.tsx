@@ -41,6 +41,7 @@ import type { MembershipConfig, MembershipPlanConfig, MemberLevel } from "@/lib/
 const LEVEL_COLORS: Record<MemberLevel, string> = {
   basic: "#95a5a6",
   monthly: "#3498db",
+  quarterly: "#10B981",
   yearly: THEME.primary,
   lifetime: "#F59E0B",
 };

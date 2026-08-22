@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionGate } from "@/components/SectionGate";
 import { useState, useEffect, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -561,7 +562,7 @@ function ConstitutionResultInner() {
   );
 }
 
-export default function ConstitutionResultPage() {
+function ConstitutionResultPageOriginal() {
   return (
     <Suspense
       fallback={
@@ -580,5 +581,14 @@ export default function ConstitutionResultPage() {
     >
       <ConstitutionResultInner />
     </Suspense>
+  );
+}
+
+// v25.0.47_12: 中医板块知识开放程度门控（后台工具矩阵实时控制：开放/会员专享/维护/关闭）
+export default function ConstitutionResultPage() {
+  return (
+    <SectionGate toolId="zhongyi_constitution" title="体质测评">
+      <ConstitutionResultPageOriginal />
+    </SectionGate>
   );
 }

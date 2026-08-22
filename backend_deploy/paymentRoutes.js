@@ -128,6 +128,7 @@ const ORDER_TYPES = {
   MEMBERSHIP: 'MEMBERSHIP',
   POINTS_RECHARGE: 'POINTS_RECHARGE',
   AI_PACKAGE: 'AI_PACKAGE',
+  BATCH_INTERPRET: 'BATCH_INTERPRET',
 };
 
 const ORDER_STATUS = {
@@ -143,6 +144,7 @@ const COMPLIANCE_TITLES = {
   MEMBERSHIP: '传统文化学习平台会员服务',
   POINTS_RECHARGE: '传统文化学习平台积分充值',
   AI_PACKAGE: '传统文化AI智能解读服务套餐',
+  BATCH_INTERPRET: '传统文化号码批量解读服务',
 };
 
 // ============================================================================
@@ -162,12 +164,31 @@ const DEFAULT_AI_TIME_PLANS = [
 
 const DEFAULT_SINGLE_UNLOCK_PRICE = 9.9;
 
+/** 批量解读默认定价（v25.0.47_12：非会员200元/次，会员折扣与档位强对齐） */
+const DEFAULT_BATCH_CONFIG = {
+  basePrice: 200,
+  discounts: { basic: 1, monthly: 0.95, quarterly: 0.85, yearly: 0.8, lifetime: 0 },
+  maxNumbers: 100,
+};
+
+/** 读取批量解读后台配置（admin-batch-config.json，未配置用默认） */
+function readBatchConfig() {
+  const cfg = readAdminConfig('admin-batch-config.json');
+  if (!cfg) return DEFAULT_BATCH_CONFIG;
+  return {
+    basePrice: (typeof cfg.basePrice === 'number' && cfg.basePrice > 0) ? cfg.basePrice : DEFAULT_BATCH_CONFIG.basePrice,
+    discounts: Object.assign({}, DEFAULT_BATCH_CONFIG.discounts, cfg.discounts || {}),
+    maxNumbers: (typeof cfg.maxNumbers === 'number' && cfg.maxNumbers > 0) ? cfg.maxNumbers : DEFAULT_BATCH_CONFIG.maxNumbers,
+  };
+}
+
 /** 会员套餐默认值（与 server.js GET /api/admin/membership-config 一致） */
 const DEFAULT_MEMBERSHIP_PLANS = [
   { level: 'basic', name: '普通会员', price: 0, originalPrice: 0, duration: '永久免费', features: ['全部14款排盘工具（基础排盘）', '每日3次通用AI问答', '中医基础内容查询', '模拟考试初级题库', '社区浏览发帖 · 签到积分'], badge: '', highlighted: false, enabled: true },
-  { level: 'monthly', name: '月度会员', price: 39, originalPrice: 59, duration: '30天', features: ['全部14款排盘工具', '每日50次通用AI问答', 'B类工具月赠3次，超出享8折', '中医学习库全部开放', '模拟考试全等级开放', '签到积分2倍 · 无广告体验', '专属标识/头像框 · 导出排盘报告'], badge: '热门', highlighted: false, enabled: true },
-  { level: 'yearly', name: '年度会员', price: 366, originalPrice: 458, duration: '365天', features: ['全部14款排盘工具', '通用AI问答无限次', 'B类工具月赠15次，超出享7折', '中医学习库全部开放', '模拟考试全等级开放', '签到积分3倍 · 无广告体验', '专属标识/头像框 · 导出排盘报告', '专属客服支持'], badge: '推荐', highlighted: true, enabled: true },
-  { level: 'lifetime', name: '终身会员', price: 3600, originalPrice: 4500, duration: '永久有效', features: ['全部14款排盘工具', '通用AI问答无限次', 'B类工具无限次免费使用', '中医学习库全部开放', '模拟考试全等级开放', '签到积分5倍 · 无广告体验', '专属标识/头像框 · 导出排盘报告', '专属客服支持 · 新功能优先体验'], badge: '尊享', highlighted: false, enabled: true },
+  { level: 'monthly', name: '月度会员', price: 37, originalPrice: 59, duration: '30天', features: ['全部14款排盘工具', '每日50次通用AI问答', 'B类工具月赠3次，超出按¥9.9/次', '批量解读享95折', '中医学习库全部开放', '模拟考试全等级开放', '签到积分2倍 · 无广告体验', '专属标识/头像框 · 导出排盘报告'], badge: '热门', highlighted: false, enabled: true },
+  { level: 'quarterly', name: '季度会员', price: 99, originalPrice: 117, duration: '90天', features: ['全部14款排盘工具', '每日50次通用AI问答', 'B类工具月赠8次，超出按¥9.9/次', '批量解读享85折', '中医学习库全部开放', '模拟考试全等级开放', '签到积分2倍 · 无广告体验', '专属标识/头像框 · 导出排盘报告'], badge: '', highlighted: false, enabled: true },
+  { level: 'yearly', name: '年度会员', price: 374, originalPrice: 458, duration: '365天', features: ['全部14款排盘工具', '通用AI问答无限次', 'B类工具月赠15次，超出按¥9.9/次', '批量解读享8折', '中医学习库全部开放', '模拟考试全等级开放', '签到积分3倍 · 无广告体验', '专属标识/头像框 · 导出排盘报告', '专属客服支持'], badge: '推荐', highlighted: true, enabled: true },
+  { level: 'lifetime', name: '终身会员', price: 3600, originalPrice: 4500, duration: '永久有效', features: ['全部14款排盘工具', '通用AI问答无限次', 'B类工具无限次免费使用', '批量解读免费使用', '中医学习库全部开放', '模拟考试全等级开放', '签到积分5倍 · 无广告体验', '专属标识/头像框 · 导出排盘报告', '专属客服支持 · 新功能优先体验'], badge: '尊享', highlighted: false, enabled: true },
 ];
 
 /** 读取后台配置 JSON（不存在或损坏返回 null） */
@@ -205,6 +226,8 @@ router.get('/pricing', (req, res) => {
         aiPlans: timePlans,
         singleUnlockPrice,
         membershipPlans,
+        // v25.0.47_12: 批量解读定价（零售价+各档位折扣）
+        batchInterpret: readBatchConfig(),
         aiGlobalEnabled: aiCfg ? aiCfg.globalEnabled !== false : true,
         updatedAt: (aiCfg && aiCfg.updatedAt) || (memberCfg && memberCfg.updatedAt) || null,
       },
@@ -217,6 +240,7 @@ router.get('/pricing', (req, res) => {
         aiPlans: DEFAULT_AI_TIME_PLANS,
         singleUnlockPrice: DEFAULT_SINGLE_UNLOCK_PRICE,
         membershipPlans: DEFAULT_MEMBERSHIP_PLANS,
+        batchInterpret: DEFAULT_BATCH_CONFIG,
         aiGlobalEnabled: true,
         updatedAt: null,
       },
@@ -308,7 +332,7 @@ function persistOrder(order) {
 // - POINTS_RECHARGE: user_assets.points_balance 入账 + points_transactions 流水
 // - 幂等：benefit_delivered 持久化标记；失败留待 query 接口补交付
 // ============================================================================
-const MEMBERSHIP_LEVEL_DAYS = { monthly: 30, yearly: 365, lifetime: -1 };
+const MEMBERSHIP_LEVEL_DAYS = { monthly: 30, quarterly: 90, yearly: 365, lifetime: -1 };
 
 function deliverOrderBenefits(order) {
   if (!order || order.benefitDelivered) return;
@@ -491,19 +515,57 @@ function updateOrderRecord(orderId, status, channel) {
 // ============================================================================
 
 // ============================================================================
-// v25.0.47_10: 服务端价格裁决（FINAL-ADMIN-COMMERCIAL-SEAL-02 第七章）
+// v25.0.47_10/12: 服务端价格裁决（FINAL-ADMIN-COMMERCIAL-SEAL-02 第七章）
 // 正式订单金额必须来自服务端 Product/Price SSOT：
 //   MEMBERSHIP     -> extra.membershipLevel -> admin-membership-config.json
 //   AI_PACKAGE     -> extra.packageId / planKey -> admin-ai-config.json
 //   SINGLE_UNLOCK  -> ai_plan_{key} 时卡 / tool-matrix 工具 / singleUnlockPrice
+//   BATCH_INTERPRET -> 下单用户会员等级折扣 -> admin-batch-config.json
 //   POINTS_RECHARGE-> 按充值面额（外层范围校验）
 // 前端传入 amount 仅作展示对照，下单金额以本函数返回为准。
 // ============================================================================
-function resolveServerPrice(type, extra) {
+function readUserMemberLevel(userId) {
+  try {
+    const Database = require('better-sqlite3');
+    const dbPath = process.env.DB_PATH || '/root/backend-auth/data/yandao_users.db';
+    if (!require('fs').existsSync(dbPath)) return 'basic';
+    const db = new Database(dbPath, { readonly: true });
+    try {
+      const uid = parseInt(userId, 10);
+      if (isNaN(uid)) return 'basic';
+      const row = db.prepare('SELECT member_level, membership_expiry FROM users WHERE user_id = ?').get(uid);
+      if (!row) return 'basic';
+      const level = row.member_level || 'basic';
+      if (level === 'lifetime') return 'lifetime';
+      if (row.membership_expiry) {
+        const exp = new Date(row.membership_expiry).getTime();
+        if (!isNaN(exp) && exp > Date.now()) return level;
+        return 'basic';
+      }
+      return level;
+    } finally {
+      db.close();
+    }
+  } catch (e) {
+    return 'basic';
+  }
+}
+
+function resolveServerPrice(type, extra, userId) {
   try {
     const aiCfg = readAdminConfig('admin-ai-config.json');
     const memberCfg = readAdminConfig('admin-membership-config.json');
     const toolMatrix = readAdminConfig('tool-matrix.json');
+
+    if (type === 'BATCH_INTERPRET') {
+      const batchCfg = readBatchConfig();
+      const level = userId ? readUserMemberLevel(userId) : 'basic';
+      const discount = (batchCfg.discounts && batchCfg.discounts[level] != null) ? Number(batchCfg.discounts[level]) : 1;
+      if (discount <= 0) return { price: 0, reason: '终身会员批量解读免费，无需支付' };
+      const price = Math.round(Number(batchCfg.basePrice) * discount * 100) / 100;
+      if (!(price > 0)) return { price: null, reason: '批量解读价格配置无效' };
+      return { price };
+    }
 
     if (type === 'MEMBERSHIP') {
       const level = extra && (extra.membershipLevel || extra.level);
@@ -585,11 +647,15 @@ router.post('/create', async (req, res) => {
       return jsonResponse(res, 400, false, '金额必须为大于 0 的数字');
     }
 
-    // v25.0.47_10: 服务端价格裁决——下单金额以 Product/Price SSOT 为准
-    const resolved = resolveServerPrice(type, extra);
+    // v25.0.47_10/12: 服务端价格裁决——下单金额以 Product/Price SSOT 为准
+    const resolved = resolveServerPrice(type, extra, userId);
     let finalAmount = Number(amount);
     if (resolved) {
       if (resolved.price == null || resolved.price <= 0) {
+        // v12: 批量解读终身会员免费（price=0 语义明确区分），直接免费放行无需创建支付订单
+        if (type === 'BATCH_INTERPRET' && resolved.price === 0) {
+          return jsonResponse(res, 200, true, resolved.reason || '终身会员免费，无需支付', { free: true, payMode: 'FREE' });
+        }
         return jsonResponse(res, 400, false, `该产品当前不可购买（${resolved.reason || '免费或已下架'}）`);
       }
       if (Math.abs(Number(resolved.price) - Number(amount)) > 0.001) {

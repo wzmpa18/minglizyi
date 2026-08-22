@@ -33,6 +33,7 @@ function authRequired(req, res, next) {
 // 公开配置（无敏感信息）
 router.get('/config', (_req, res) => {
   const cfg = commissionEngine.getConfig();
+  const monthly = cfg.monthlySettleEnabled !== false;
   res.json({
     success: true,
     data: {
@@ -42,8 +43,14 @@ router.get('/config', (_req, res) => {
       dailyWithdrawLimit: cfg.dailyWithdrawLimit,
       unfreezeDays: cfg.unfreezeDays,
       unfreezeEnabled: cfg.unfreezeEnabled !== false,
+      // v25.0.47_12: 月度结算/提现窗口规则（每月30号结算、15号后可提现）
+      monthlySettleEnabled: monthly,
+      settleDay: monthly ? cfg.settleDay : null,
+      withdrawOpenDay: monthly ? cfg.withdrawOpenDay : null,
       taxNotice: cfg.taxNotice,
-      withdrawTip: '提现将转入绑定的微信零钱，到账时间1-3个工作日',
+      withdrawTip: monthly
+        ? `佣金每月${cfg.settleDay}号统一结算，每月${cfg.withdrawOpenDay}号后可发起提现，提现转入绑定的微信零钱，到账时间1-3个工作日`
+        : '提现将转入绑定的微信零钱，到账时间1-3个工作日',
     },
   });
 });

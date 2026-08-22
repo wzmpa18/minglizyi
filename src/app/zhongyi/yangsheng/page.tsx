@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionGate } from "@/components/SectionGate";
 import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -41,7 +42,7 @@ function SearchIcon() {
   );
 }
 
-export default function YangshengPage() {
+function YangshengPageOriginal() {
   const router = useRouter();
   useToolBack();
 
@@ -382,5 +383,14 @@ function GongfaCard({ gongfa }: { gongfa: GongfaDetail }) {
         </div>
       </div>
     </Link>
+  );
+}
+
+// v25.0.47_12: 中医板块知识开放程度门控（后台工具矩阵实时控制：开放/会员专享/维护/关闭）
+export default function YangshengPage() {
+  return (
+    <SectionGate toolId="zhongyi_yangsheng" title="养生功法">
+      <YangshengPageOriginal />
+    </SectionGate>
   );
 }

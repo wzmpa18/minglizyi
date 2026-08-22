@@ -632,11 +632,11 @@ router.get('/commission/records', adminAuthUnified('FINANCE_ADMIN'), (req, res) 
     const size = Math.min(100, parseInt(req.query.size, 10) || 20);
     const inviter = req.query.inviter;
     const status = req.query.status;
-    let where = "record_type = 'COMMISSION'"; const params = [];
+    let where = "record_type IN ('COMMISSION','COMMISSION_L2')"; const params = [];
     if (inviter) { where += ' AND inviter_user_id = ?'; params.push(parseInt(inviter, 10)); }
     if (status) { where += ' AND status = ?'; params.push(status); }
     const total = db.prepare(`SELECT COUNT(*) c FROM commission_records WHERE ${where}`).get(...params).c;
-    const rows = db.prepare(`SELECT r.order_no, r.payer_user_id, r.inviter_user_id, r.ratio_percent, r.base_amount_cents, r.commission_cents, r.status, r.created_at, r.unfreeze_at, r.note,
+    const rows = db.prepare(`SELECT r.order_no, r.record_type, r.payer_user_id, r.inviter_user_id, r.ratio_percent, r.base_amount_cents, r.commission_cents, r.status, r.created_at, r.unfreeze_at, r.note,
                                     ui.nickname AS inviter_name, up.nickname AS payer_name
                              FROM commission_records r
                              LEFT JOIN users ui ON ui.user_id = r.inviter_user_id

@@ -30,6 +30,7 @@ import type { AIConfig, AIToolConfig, MemberLevel } from "@/lib/admin/types";
 const LEVEL_LABELS: Record<MemberLevel, string> = {
   basic: "免费用户",
   monthly: "月度会员",
+  quarterly: "季度会员",
   yearly: "年度会员",
   lifetime: "终身会员",
 };

@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionGate } from "@/components/SectionGate";
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, BookX, Play, Trash2, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
@@ -27,7 +28,7 @@ const WRONG_COLOR = "#EF4444";
 
 type View = "list" | "practice" | "detail";
 
-export default function WrongAnswersPage() {
+function WrongAnswersPageOriginal() {
   const router = useRouter();
   const [wrongs, setWrongs] = useState<WrongAnswerRecord[]>([]);
   const [activeTab, setActiveTab] = useState<string>("all");
@@ -499,5 +500,14 @@ export default function WrongAnswersPage() {
 
       <p style={{ textAlign: "center", fontSize: 12, color: "#999", padding: "16px 0" }}>{COMPLIANCE_TEXT}</p>
     </div>
+  );
+}
+
+// v25.0.47_12: 中医板块知识开放程度门控（后台工具矩阵实时控制：开放/会员专享/维护/关闭）
+export default function WrongAnswersPage() {
+  return (
+    <SectionGate toolId="zhongyi_exam" title="医考刷题">
+      <WrongAnswersPageOriginal />
+    </SectionGate>
   );
 }

@@ -64,10 +64,12 @@ export interface CallPaymentResult {
   payUrl?: string;
   prepayId?: string;
   jsapiParams?: Record<string, string>;
-  /** 支付模式：JSAPI(微信内免扫码) / NATIVE(扫码支付，全场景兜底) */
-  payMode?: "JSAPI" | "NATIVE";
+  /** 支付模式：JSAPI(微信内免扫码) / NATIVE(扫码支付，全场景兜底) / FREE(免费放行，v12 批量解读终身会员) */
+  payMode?: "JSAPI" | "NATIVE" | "FREE";
   /** Native扫码支付：微信付款二维码内容(weixin://wxpay/bizpayurl?...) */
   codeUrl?: string;
+  /** v25.0.47_12: 免费放行标记（如终身会员批量解读） */
+  free?: boolean;
   message?: string;
   error?: string;
 }
@@ -760,6 +762,69 @@ export async function paySingleUnlockAndWait(
     };
   } catch {
     return { paid: false, message: "支付异常，请稍后重试" };
+  }
+}
+
+/**
+ * v25.0.47_12: 批量解读服务支付（手机号/车牌号批量解析，非会员200元，会员按档位折扣）
+ * 服务端按下单用户会员等级裁决最终金额（价格 SSOT），前端 amount 仅作展示对照
+ */
+export async function payForBatchInterpret(
+  toolType: "phone" | "carplate",
+  amount: number
+): Promise<CallPaymentResult> {
+  return callPayment({
+    type: "BATCH_INTERPRET",
+    amount,
+    extra: { batchTool: toolType },
+  });
+}
+
+/**
+ * v25.0.47_12: 批量解读统一支付入口（Native扫码弹码 / JSAPI轮询 / 终身会员免费放行）
+ */
+export async function payBatchInterpretAndWait(
+  toolType: "phone" | "carplate",
+  amount: number
+): Promise<{ paid: boolean; free: boolean; message: string; ticket?: NativePayTicket }> {
+  try {
+    const r = await payForBatchInterpret(toolType, amount);
+    if (!r || !r.success || !r.orderId) {
+      // 终身会员免费：服务端返回 free: true 无订单号
+      if (r && r.free) {
+        return { paid: true, free: true, message: r.message || "终身会员免费使用" };
+      }
+      return {
+        paid: false,
+        free: false,
+        message: (r && (r.message || r.error)) || "支付发起失败，请稍后重试",
+      };
+    }
+    if (r.payMode === "NATIVE" && r.codeUrl) {
+      return {
+        paid: false,
+        free: false,
+        message: "请扫码完成支付",
+        ticket: {
+          nativePay: true,
+          codeUrl: r.codeUrl,
+          orderId: r.orderId,
+          amount,
+          title: "号码批量解读服务",
+        },
+      };
+    }
+    const status = await pollPaymentStatus(r.orderId);
+    if (status && status.status === "PAID") {
+      return { paid: true, free: false, message: "支付成功，正在生成报告" };
+    }
+    return {
+      paid: false,
+      free: false,
+      message: "支付未完成或确认中，若已付款权益将自动生效，请稍后重试",
+    };
+  } catch {
+    return { paid: false, free: false, message: "支付异常，请稍后重试" };
   }
 }
 

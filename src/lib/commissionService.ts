@@ -60,8 +60,20 @@ export interface CommissionPublicConfig {
   dailyWithdrawLimit: number;
   unfreezeDays: number;
   unfreezeEnabled: boolean;
+  // v25.0.47_12: 月度结算/提现窗口（每月30号结算、15号后可提现）
+  monthlySettleEnabled?: boolean;
+  settleDay?: number | null;
+  withdrawOpenDay?: number | null;
   taxNotice: string;
   withdrawTip: string;
+}
+
+/** 当前日期是否处于月度提现窗口（每月 withdrawOpenDay 号以后；本地兜底，服务端强制为准） */
+export function isCommissionWithdrawWindowOpen(cfg: CommissionPublicConfig | null): boolean {
+  if (!cfg || cfg.monthlySettleEnabled === false) return true;
+  const openDay = Number(cfg.withdrawOpenDay ?? 15);
+  if (!isFinite(openDay) || openDay <= 0 || openDay >= 28) return true;
+  return new Date().getDate() > openDay;
 }
 
 // ==================== 内部工具 ====================
@@ -159,6 +171,7 @@ export async function getCommissionConfig(): Promise<CommissionPublicConfig | nu
 /** 佣金记录状态 → 中文文案 */
 export const COMMISSION_STATUS_LABELS: Record<string, string> = {
   FROZEN: "待解冻",
+  UNFROZEN: "可提现",
   AVAILABLE: "已到账",
   REVERSED: "已冲正",
   PENDING_REVIEW: "待审核",

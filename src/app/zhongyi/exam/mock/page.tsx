@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionGate } from "@/components/SectionGate";
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -43,7 +44,7 @@ const WRONG_COLOR = "#EF4444";
 
 type MockMode = "setup" | "exam" | "result";
 
-export default function MockExamPage() {
+function MockExamPageOriginal() {
   const router = useRouter();
   const [mode, setMode] = useState<MockMode>("setup");
   const [questionCount, setQuestionCount] = useState(100);
@@ -1000,4 +1001,13 @@ export default function MockExamPage() {
   }
 
   return null;
+}
+
+// v25.0.47_12: 中医板块知识开放程度门控（后台工具矩阵实时控制：开放/会员专享/维护/关闭）
+export default function MockExamPage() {
+  return (
+    <SectionGate toolId="zhongyi_exam" title="医考刷题">
+      <MockExamPageOriginal />
+    </SectionGate>
+  );
 }

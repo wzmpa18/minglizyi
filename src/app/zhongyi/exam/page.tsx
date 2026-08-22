@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionGate } from "@/components/SectionGate";
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -31,7 +32,7 @@ const BRAND = "#7B2FBE";
 const BRAND_LIGHT = "#9B5ECF";
 const BRAND_BG = "#F3EDF7";
 
-export default function ExamHomePage() {
+function ExamHomePageOriginal() {
   useToolBack({ pageKey: "zhongyi_exam", eventName: "zhongyi-back", globalFlag: "__zhongyiBackHandled" });
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
@@ -449,5 +450,14 @@ function SubjectCard({ subject }: { subject: ExamSubject }) {
         <span style={{ fontSize: "11px", color: "#999", flexShrink: 0 }}>{progress}%</span>
       </div>
     </Link>
+  );
+}
+
+// v25.0.47_12: 中医板块知识开放程度门控（后台工具矩阵实时控制：开放/会员专享/维护/关闭）
+export default function ExamHomePage() {
+  return (
+    <SectionGate toolId="zhongyi_exam" title="医考刷题">
+      <ExamHomePageOriginal />
+    </SectionGate>
   );
 }

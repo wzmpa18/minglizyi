@@ -4,7 +4,7 @@
 // ============================================================================
 
 /** 会员等级标识 */
-export type MemberLevel = "basic" | "monthly" | "yearly" | "lifetime";
+export type MemberLevel = "basic" | "monthly" | "quarterly" | "yearly" | "lifetime";
 
 /** AI 工具分类 */
 export type AIToolCategory = "general_ai" | "b_tool" | "incremental";

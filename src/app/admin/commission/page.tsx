@@ -1,11 +1,11 @@
 "use client";
 
 // ============================================================================
-// 言道国学 - 分佣与提现管理后台（P8-DISTRIBUTION-COMMISSION-AUTO）
-//   · 分佣配置：总开关 / 各商品类型一级比例 / 解冻期 / 最低提现额 / 每日次数 / 转账备注
-//   · 佣金明细：按推荐人 / 订单号 / 状态筛选（含待审核异常单）
+// 言道国学 - 分佣与提现管理后台（P8-DISTRIBUTION-COMMISSION-AUTO · v25.0.47_12 两级分佣）
+//   · 分佣配置：总开关 / 一级15%+二级5%两级比例 / 月度结算（30号结算/15号后提现）/ 提现通道开关
+//   · 佣金明细：按推荐人 / 订单号 / 状态筛选（含待审核异常单，二级佣金记录 record_type=COMMISSION_L2）
 //   · 提现审核：待审核列表 + 通过（自动转账）+ 驳回（必填原因）+ 手动解冻扫描
-//   · 合规：仅一级分销；所有变更走后端审计（operator/time/old/new/reason/IP）
+//   · 合规：所有变更走后端审计（operator/time/old/new/reason/IP）
 // ============================================================================
 
 import { useCallback, useEffect, useState } from "react";
@@ -24,17 +24,10 @@ import {
   type AdminWithdrawal,
 } from "@/lib/admin/unifiedService";
 
-const ORDER_TYPE_LABELS: Record<string, string> = {
-  MEMBERSHIP: "会员",
-  SINGLE_UNLOCK: "单项解锁",
-  POINTS_RECHARGE: "积分/AI增量包",
-  AI_PACKAGE: "AI增量包",
-  CONTENT: "内容",
-};
-
 const RECORD_STATUS: Record<string, { label: string; type: "success" | "warning" | "error" | "info" }> = {
   FROZEN: { label: "待解冻", type: "warning" },
-  AVAILABLE: { label: "可提现", type: "success" },
+  UNFROZEN: { label: "可提现", type: "success" },
+  AVAILABLE: { label: "已到账", type: "success" },
   REVERSED: { label: "已冲正", type: "error" },
   PENDING_REVIEW: { label: "待审核", type: "info" },
 };
@@ -137,6 +130,10 @@ export default function AdminCommissionPage() {
       ratios: config.ratios,
       unfreezeEnabled: config.unfreezeEnabled,
       unfreezeDays: config.unfreezeDays,
+      withdrawEnabled: config.withdrawEnabled !== false,
+      monthlySettleEnabled: config.monthlySettleEnabled !== false,
+      settleDay: Number(config.settleDay) || 30,
+      withdrawOpenDay: Number(config.withdrawOpenDay) || 15,
       minWithdrawYuan: config.minWithdrawYuan,
       dailyWithdrawLimit: config.dailyWithdrawLimit,
       transferNote: config.transferNote,
@@ -253,7 +250,7 @@ export default function AdminCommissionPage() {
         <AdminCard>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: THEME.textMain }}>
-              分佣配置（严格一级分销）
+              分佣配置（两级分佣：一级 {config.ratios?.level1 ?? 15}% / 二级 {config.ratios?.level2 ?? 5}%）
             </h3>
             <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: THEME.textSub, cursor: "pointer" }}>
               <input
@@ -265,34 +262,90 @@ export default function AdminCommissionPage() {
             </label>
           </div>
 
-          {/* 商品类型比例 */}
+          {/* 两级分佣比例（v25.0.47_12：全局统一，按用户实付金额计算） */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 16 }}>
-            {Object.entries(config.ratios).map(([type, ratio]) => (
-              <div key={type}>
-                <label style={styles.label}>
-                  {ORDER_TYPE_LABELS[type] || type} 一级比例（%）
-                </label>
+            <div>
+              <label style={styles.label}>一级推荐人比例（%）</label>
+              <input
+                type="number"
+                min={0}
+                max={50}
+                value={config.ratios?.level1 ?? 15}
+                onChange={(e) =>
+                  setConfig({
+                    ...config,
+                    ratios: { ...config.ratios, level1: Number(e.target.value) },
+                  })
+                }
+                style={styles.input}
+              />
+              <p style={{ fontSize: 11, color: THEME.textHint, margin: "4px 0 0" }}>直接推荐人按订单实付金额计算</p>
+            </div>
+            <div>
+              <label style={styles.label}>二级推荐人比例（%）</label>
+              <input
+                type="number"
+                min={0}
+                max={50}
+                value={config.ratios?.level2 ?? 5}
+                onChange={(e) =>
+                  setConfig({
+                    ...config,
+                    ratios: { ...config.ratios, level2: Number(e.target.value) },
+                  })
+                }
+                style={styles.input}
+              />
+              <p style={{ fontSize: 11, color: THEME.textHint, margin: "4px 0 0" }}>一级推荐人的推荐人（间接推荐）</p>
+            </div>
+          </div>
+
+          {/* 月度结算与提现窗口（v25.0.47_12） */}
+          <div style={{ padding: 12, backgroundColor: THEME.primaryBgLight, borderRadius: 8, marginBottom: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: THEME.textSub }}>月度结算与提现窗口</div>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: THEME.textSub, cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={config.monthlySettleEnabled !== false}
+                  onChange={(e) => setConfig({ ...config, monthlySettleEnabled: e.target.checked })}
+                />
+                启用月度结算模式
+              </label>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+              <div>
+                <label style={styles.label}>月度结算日（每月几号）</label>
                 <input
                   type="number"
-                  min={0}
-                  max={50}
-                  value={ratio}
-                  onChange={(e) =>
-                    setConfig({
-                      ...config,
-                      ratios: { ...config.ratios, [type]: Number(e.target.value) },
-                    })
-                  }
+                  min={1}
+                  max={28}
+                  value={config.settleDay ?? 30}
+                  onChange={(e) => setConfig({ ...config, settleDay: Math.min(28, Math.max(1, Number(e.target.value) || 30)) })}
                   style={styles.input}
                 />
               </div>
-            ))}
+              <div>
+                <label style={styles.label}>提现开放日（每月几号后）</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={27}
+                  value={config.withdrawOpenDay ?? 15}
+                  onChange={(e) => setConfig({ ...config, withdrawOpenDay: Math.min(27, Math.max(1, Number(e.target.value) || 15)) })}
+                  style={styles.input}
+                />
+              </div>
+            </div>
+            <p style={{ fontSize: 11, color: THEME.textHint, margin: "8px 0 0", lineHeight: 1.6 }}>
+              月度结算模式：佣金入账后冻结，每月结算日（默认30号，2月按28号）统一解冻为可提现；每月提现开放日（默认15号）之后用户才可发起提现。关闭月度模式则回退「解冻期天数」机制。
+            </p>
           </div>
 
           {/* 全局参数 */}
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 16 }}>
             <div>
-              <label style={styles.label}>解冻期天数</label>
+              <label style={styles.label}>解冻期天数（月度模式关闭时生效）</label>
               <input
                 type="number"
                 min={0}
@@ -335,7 +388,7 @@ export default function AdminCommissionPage() {
             </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 16, flexWrap: "wrap" }}>
             <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: THEME.textSub, cursor: "pointer" }}>
               <input
                 type="checkbox"
@@ -343,6 +396,14 @@ export default function AdminCommissionPage() {
                 onChange={(e) => setConfig({ ...config, unfreezeEnabled: e.target.checked })}
               />
               启用解冻期（关闭则佣金立即可提现）
+            </label>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: THEME.textSub, cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={config.withdrawEnabled !== false}
+                onChange={(e) => setConfig({ ...config, withdrawEnabled: e.target.checked })}
+              />
+              提现通道开关（微信商家转账权限开通后开启）
             </label>
           </div>
 
@@ -391,7 +452,7 @@ export default function AdminCommissionPage() {
           </div>
 
           <p style={{ fontSize: 11, color: THEME.textHint, margin: "12px 0 0", lineHeight: 1.6 }}>
-            合规约束：仅一级分销，比例上限 50%；新比例仅对新订单生效，历史订单不受影响。所有变更记录审计日志。
+            合规约束：两级分佣（一级+二级合计上限 50%），按用户实付金额计算；新比例仅对新订单生效，历史订单不受影响。月度结算模式下佣金每月结算日统一解冻，提现开放日之后可提现。所有变更记录审计日志。
           </p>
         </AdminCard>
       )}
@@ -417,7 +478,7 @@ export default function AdminCommissionPage() {
             <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} style={{ ...styles.input, width: 130 }}>
               <option value="">全部状态</option>
               <option value="FROZEN">待解冻</option>
-              <option value="AVAILABLE">可提现</option>
+              <option value="UNFROZEN">可提现</option>
               <option value="REVERSED">已冲正</option>
               <option value="PENDING_REVIEW">待审核</option>
             </select>
@@ -453,7 +514,12 @@ export default function AdminCommissionPage() {
                     <tr key={r.id}>
                       <Td style={{ fontFamily: "monospace", fontSize: 11 }}>{r.order_no}</Td>
                       <Td>{r.payer_user_id}</Td>
-                      <Td>{r.inviter_user_id}</Td>
+                      <Td>
+                        {r.inviter_user_id}
+                        {r.record_type === "COMMISSION_L2" && (
+                          <span style={{ fontSize: 10, color: THEME.info, marginLeft: 4 }}>（二级）</span>
+                        )}
+                      </Td>
                       <Td>¥{fmtCents(r.base_amount_cents)}</Td>
                       <Td>{r.ratio_percent}%</Td>
                       <Td style={{ fontWeight: 700, color: r.commission_cents < 0 ? THEME.error : THEME.success }}>

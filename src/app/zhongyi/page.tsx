@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { searchHerbs as searchHerbsFn } from "@/algorithm-core/modules/tcm/herbs";
 import { searchFormulas as searchFormulasFn } from "@/algorithm-core/modules/tcm/formulas";
+import { useToolMatrix, evaluateSectionGate } from "@/lib/sectionGate";
 
 const BRAND = "#7B2FBE";
 const BRAND_LIGHT = "#9B5ECF";
@@ -277,6 +278,9 @@ export default function ZhongyiHome() {
   const [recentItems, setRecentItems] = useState<RecentItem[]>([]);
   const [dailyHerb] = useState(() => getDailyItem(DAILY_HERBS));
   const [dailyYangsheng] = useState(() => getDailyItem(DAILY_YANGSHENG));
+  // v25.0.47_12: 后台知识开放程度控制（工具矩阵 SSOT，实时生效）
+  const { tools: matrixTools } = useToolMatrix();
+  const gateOf = (toolId: string) => evaluateSectionGate(matrixTools[toolId]);
 
   useEffect(() => {
     setRecentItems(getRecentItems());
@@ -590,44 +594,87 @@ export default function ZhongyiHome() {
         </div>
       </div>
 
-      {/* 四大入口卡片 */}
+      {/* 四大入口卡片（v12: 按后台开放程度渲染——关闭隐藏/维护置灰/会员专享加锁） */}
       <div style={{ padding: "16px 12px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-          {ENTRIES.map((e) => (
-            <Link
-              key={e.key}
-              href={e.href}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "10px",
-                padding: "16px",
-                borderRadius: "16px",
-                backgroundColor: "white",
-                textDecoration: "none",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                transition: "transform 0.15s",
-              }}
-            >
-              <div
+          {ENTRIES.map((e) => {
+            const gate = gateOf("zhongyi_" + e.key);
+            if (!gate.allowed && gate.status === "OFF") return null;
+            if (!gate.allowed && gate.status === "MAINTENANCE") {
+              return (
+                <div
+                  key={e.key}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "10px",
+                    padding: "16px",
+                    borderRadius: "16px",
+                    backgroundColor: "#F5F5F5",
+                    opacity: 0.65,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "44px",
+                      height: "44px",
+                      borderRadius: "12px",
+                      backgroundColor: "#EEE",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <e.Icon color="#AAA" />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "16px", fontWeight: "bold", color: "#999" }}>{e.title}</div>
+                    <div style={{ fontSize: "12px", color: "#BBB", marginTop: "2px" }}>🛠 维护中，稍后开放</div>
+                  </div>
+                </div>
+              );
+            }
+            return (
+              <Link
+                key={e.key}
+                href={e.href}
                 style={{
-                  width: "44px",
-                  height: "44px",
-                  borderRadius: "12px",
-                  backgroundColor: e.bgColor,
                   display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
+                  flexDirection: "column",
+                  gap: "10px",
+                  padding: "16px",
+                  borderRadius: "16px",
+                  backgroundColor: "white",
+                  textDecoration: "none",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                  transition: "transform 0.15s",
                 }}
               >
-                <e.Icon color={e.color} />
-              </div>
-              <div>
-                <div style={{ fontSize: "16px", fontWeight: "bold", color: "#333" }}>{e.title}</div>
-                <div style={{ fontSize: "12px", color: "#999", marginTop: "2px" }}>{e.desc}</div>
-              </div>
-            </Link>
-          ))}
+                <div
+                  style={{
+                    width: "44px",
+                    height: "44px",
+                    borderRadius: "12px",
+                    backgroundColor: e.bgColor,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <e.Icon color={e.color} />
+                </div>
+                <div>
+                  <div style={{ fontSize: "16px", fontWeight: "bold", color: "#333" }}>
+                    {e.title}
+                    {!gate.allowed && gate.needLevelName && (
+                      <span style={{ fontSize: 11, color: "#C77700", marginLeft: 4 }}>🔒会员</span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: "12px", color: "#999", marginTop: "2px" }}>{e.desc}</div>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </div>
 
@@ -726,72 +773,73 @@ export default function ZhongyiHome() {
         </div>
       </div>
 
-      {/* 快捷入口：医考、AI助手、体质测评 */}
+      {/* 快捷入口：医考、AI助手、体质测评（医考/体质按后台开放程度渲染） */}
       <div style={{ padding: "0 12px 16px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
-          <Link
-            href="/zhongyi/exam"
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "6px",
-              padding: "14px 8px",
-              borderRadius: "16px",
-              background: "white",
-              textDecoration: "none",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-              textAlign: "center",
-            }}
-          >
-            <div style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: "#E3F2FD", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px" }}>
-              📝
-            </div>
-            <div style={{ fontSize: "13px", fontWeight: "bold", color: "#333" }}>医考题库</div>
-            <div style={{ fontSize: "10px", color: "#999" }}>1447题·5科目</div>
-          </Link>
-          <Link
-            href="/zhongyi/ai"
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "6px",
-              padding: "14px 8px",
-              borderRadius: "16px",
-              background: "white",
-              textDecoration: "none",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-              textAlign: "center",
-            }}
-          >
-            <div style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: BRAND_BG, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px" }}>
-              🤖
-            </div>
-            <div style={{ fontSize: "13px", fontWeight: "bold", color: BRAND }}>AI助手</div>
-            <div style={{ fontSize: "10px", color: "#999" }}>学习辅助问答</div>
-          </Link>
-          <Link
-            href="/zhongyi/constitution"
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "6px",
-              padding: "14px 8px",
-              borderRadius: "16px",
-              background: "white",
-              textDecoration: "none",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-              textAlign: "center",
-            }}
-          >
-            <div style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: "#F3E5F5", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px" }}>
-              🧬
-            </div>
-            <div style={{ fontSize: "13px", fontWeight: "bold", color: "#6A1B9A" }}>体质测评</div>
-            <div style={{ fontSize: "10px", color: "#999" }}>九种体质辨识</div>
-          </Link>
+          {(() => {
+            const examGate = gateOf("zhongyi_exam");
+            const constitGate = gateOf("zhongyi_constitution");
+            const quickCard = (opts: { href: string; emoji: string; bg: string; title: string; desc: string; titleColor?: string; gate: { allowed: boolean; status: string; needLevelName: string | null } }) => {
+              if (!opts.gate.allowed && opts.gate.status === "OFF") return null;
+              if (!opts.gate.allowed && opts.gate.status === "MAINTENANCE") {
+                return (
+                  <div
+                    key={opts.title}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "14px 8px",
+                      borderRadius: "16px",
+                      background: "#F5F5F5",
+                      opacity: 0.65,
+                      textAlign: "center",
+                    }}
+                  >
+                    <div style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: "#EEE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px" }}>🛠</div>
+                    <div style={{ fontSize: "13px", fontWeight: "bold", color: "#999" }}>{opts.title}</div>
+                    <div style={{ fontSize: "10px", color: "#BBB" }}>维护中</div>
+                  </div>
+                );
+              }
+              return (
+                <Link
+                  href={opts.href}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "14px 8px",
+                    borderRadius: "16px",
+                    background: "white",
+                    textDecoration: "none",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+                    textAlign: "center",
+                  }}
+                >
+                  <div style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: opts.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px" }}>
+                    {opts.emoji}
+                  </div>
+                  <div style={{ fontSize: "13px", fontWeight: "bold", color: opts.titleColor || "#333" }}>
+                    {opts.title}
+                    {!opts.gate.allowed && opts.gate.needLevelName && (
+                      <span style={{ fontSize: 10, color: "#C77700", marginLeft: 2 }}>🔒</span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: "10px", color: "#999" }}>{opts.desc}</div>
+                </Link>
+              );
+            };
+            return (
+              <>
+                {quickCard({ href: "/zhongyi/exam", emoji: "📝", bg: "#E3F2FD", title: "医考题库", desc: "1447题·5科目", gate: examGate })}
+                {quickCard({ href: "/zhongyi/ai", emoji: "🤖", bg: BRAND_BG, title: "AI助手", desc: "学习辅助问答", titleColor: BRAND, gate: { allowed: true, status: "ON", needLevelName: null } })}
+                {quickCard({ href: "/zhongyi/constitution", emoji: "🧬", bg: "#F3E5F5", title: "体质测评", desc: "九种体质辨识", titleColor: "#6A1B9A", gate: constitGate })}
+              </>
+            );
+          })()}
         </div>
       </div>
 

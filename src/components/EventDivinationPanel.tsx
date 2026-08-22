@@ -24,6 +24,8 @@ import { useAiPricing } from "@/lib/pricingStore";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import MasterExchangePanel from "./MasterExchangePanel";
+// v25.0.47_12 深度报告提质：五段式/700-900字/典籍引用/合规语气（共享标准）
+import { buildDeepReportSystemPrompt } from "@/lib/deepReportPrompt";
 
 /**
  * v19.6: 事情断法 + AI深度解读 组件
@@ -222,16 +224,10 @@ export default function EventDivinationPanel({
     setContent("");
 
     try {
-      const systemPrompt = `你是资深${toolName}解读专家。请基于排盘数据进行全面深度的AI解读。
-要求：
-1. 整体格局分析
-2. 各要素详细解读
-3. 吉凶趋势判断
-4. 注意事项与建议
-5. 语言通俗易懂，避免绝对化表述
-6. 结尾必须标注：「以上内容仅供传统文化学习参考，不构成人生决策建议」`;
+      // v25.0.47_12: 深度报告提质——五段式结构/700-900字/典籍引用/合规语气
+      const systemPrompt = buildDeepReportSystemPrompt(toolName);
 
-      const userPrompt = `【${toolName}排盘数据】\n${chartContext}\n\n请给出全面深度的AI解读。`;
+      const userPrompt = `【${toolName}排盘数据】\n${chartContext}\n\n请严格按照系统要求输出五段式深度解读报告（700-900字）。`;
 
       const result = await callAI({
         systemPrompt,

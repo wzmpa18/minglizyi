@@ -1,4 +1,6 @@
-﻿"use client";
+"use client";
+
+import { SectionGate } from "@/components/SectionGate";
 
 import { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
@@ -370,7 +372,7 @@ function HerbPageInner() {
   return targetId ? <HerbDetailPage herbId={targetId} /> : <HerbListPage />;
 }
 
-export default function HerbPage() {
+function HerbPageOriginal() {
   useToolBack({ pageKey: "zhongyi_herb", eventName: "zhongyi-back", globalFlag: "__zhongyiBackHandled" });
   return (
     <Suspense fallback={
@@ -385,3 +387,11 @@ export default function HerbPage() {
 
 const BRAND_BG = "#F3EDF7";
 
+// v25.0.47_12: 中医板块知识开放程度门控（后台工具矩阵实时控制：开放/会员专享/维护/关闭）
+export default function HerbPage() {
+  return (
+    <SectionGate toolId="zhongyi_herb" title="中药库">
+      <HerbPageOriginal />
+    </SectionGate>
+  );
+}

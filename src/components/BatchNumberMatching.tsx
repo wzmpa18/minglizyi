@@ -2,10 +2,12 @@
 
 // ============================================================================
 // 八字合号 · 批量选号 — 高端功能组件
-// 功能流程：选择功能 → 上传/输入号码 → 录入八字 → 支付¥198 → 生成分析报告 → 保存/分享
+// 功能流程：选择功能 → 上传/输入号码 → 录入八字 → 真实支付 → 生成分析报告 → 保存/分享
+// v25.0.47_12: 接入真实微信Native扫码支付（BATCH_INTERPRET 订单类型）
+//   非会员 ¥200/次；月度95折/季度85折/年度8折/终身免费（服务端SSOT二次校验）
 // ============================================================================
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { solarToBazi } from "@/algorithm-core";
 import type { BaziResult, Gender } from "@/algorithm-core";
 import {
@@ -16,16 +18,21 @@ import {
 } from "@/lib/batchNumberMatch";
 import type { BatchMatchResult, NumberMatchResult } from "@/lib/batchNumberMatch";
 import { callAI, getPermissionStatus } from "@/lib/aiService";
-import { getClientUserId } from "@/lib/auth";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { reportConsumptionRebate } from "@/lib/inviteApi";
 import { ShareButton } from "@/components/ShareButton";
+import { payBatchInterpretAndWait } from "@/lib/paymentService";
+import { useNativePayQR } from "@/components/PayQRCodeModal";
+import {
+  getMembershipStatus,
+  BATCH_INTERPRET_DISCOUNTS,
+  BATCH_INTERPRET_BASE_PRICE,
+} from "@/lib/membershipStore";
 
 // ==================== 常量 ====================
 
 const BRAND = "#7B2FBE";
-const PRICE = 198;
 const STORAGE_KEY = "yandao_batch_match_paid";
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -399,28 +406,52 @@ export default function BatchNumberMatching({ toolType }: BatchNumberMatchingPro
 
   // ==================== 付费处理 ====================
 
-  /** 模拟支付流程 */
-  const handlePay = async () => {
-    setPaying(true);
+  // v25.0.47_12: 按当前会员等级计算应付价（服务端SSOT最终裁决，此处仅展示）
+  const memberLevel = useMemo(() => getMembershipStatus().level, []);
+  const priceInfo = useMemo(() => {
+    const discount = BATCH_INTERPRET_DISCOUNTS[memberLevel] ?? 1;
+    if (discount <= 0) return { price: 0, free: true, discount };
+    return { price: Math.round(BATCH_INTERPRET_BASE_PRICE * discount * 100) / 100, free: false, discount };
+  }, [memberLevel]);
 
-    try {
-      // 模拟支付请求延迟
-      await new Promise<void>((resolve) => setTimeout(resolve, 1500));
+  // v25.0.47_12: Native扫码支付弹层
+  const { qrModal, openQR } = useNativePayQR();
 
-      // 写入付费状态
-      const status = setPaidStatus();
-      setPaid(true);
-      setPaidStatusState(status);
-
-      // v25.0.40: 消费返佣上报服务端统一账本（本工具单次购买，固定订单键保证幂等）
-      void reportConsumptionRebate({ orderNo: `bnm_${getClientUserId()}`, amount: PRICE, product: "数字能量·号码匹配报告" }).then((r) => {
+  /** 支付成功统一落地：解锁 + 返佣上报 + 进入报告 */
+  const completeBatchPayment = useCallback((orderNo: string | null, amountPaid: number) => {
+    const status = setPaidStatus();
+    setPaid(true);
+    setPaidStatusState(status);
+    // 消费返佣上报服务端统一账本（真实订单号幂等；免费放行 orderNo 为 null 时跳过）
+    if (orderNo) {
+      void reportConsumptionRebate({ orderNo, amount: amountPaid, product: "数字能量·号码匹配报告" }).then((r) => {
         if (r && r.granted) {
-          console.log(`[v25.0.40] 消费返佣已入账: 一级${r.level1Points || 0}积分, 二级${r.level2Points || 0}积分`);
+          console.log(`[v25.0.47_12] 批量解读消费返佣已入账: 一级${r.level1Points || 0}积分, 二级${r.level2Points || 0}积分`);
         }
       });
+    }
+    showToast("支付成功，正在生成报告...");
+    setStep("result");
+  }, []);
 
-      showToast("支付成功，正在生成报告...");
-      setStep("result");
+  /** v25.0.47_12: 真实微信支付（Native扫码/JSAPI/终身会员免费放行） */
+  const handlePay = async () => {
+    if (!requireLogin()) return;
+    setPaying(true);
+    try {
+      const r = await payBatchInterpretAndWait(toolType, priceInfo.price);
+      // 终身会员免费放行（无订单）
+      if (r.paid) {
+        completeBatchPayment(null, 0);
+        return;
+      }
+      // Native扫码：弹出付款二维码，扫码成功回调落地
+      if (r.ticket) {
+        openQR(r.ticket, () => completeBatchPayment(r.ticket!.orderId, priceInfo.price));
+        showToast(r.message || "请使用微信扫码完成支付");
+        return;
+      }
+      showToast(r.message || "支付未完成，请重试");
     } catch (err) {
       console.error("支付失败:", err);
       showToast("支付失败，请重试");
@@ -927,15 +958,19 @@ ${numberLabel}类型：${isPhone ? "手机号" : "车牌号"}
                   background: `linear-gradient(135deg, ${BRAND}10 0%, ${BRAND}05 100%)`,
                 }}
               >
-                <p className="text-xs text-gray-500">八字合号·批量选号</p>
+                <p className="text-xs text-gray-500">八字合号·批量选号（{numberLabel}最多100条）</p>
                 <p className="mt-1">
                   <span className="text-3xl font-bold" style={{ color: BRAND }}>
-                    ¥{PRICE}
+                    {priceInfo.free ? "免费" : `¥${priceInfo.price}`}
                   </span>
-                  <span className="ml-1 text-xs text-gray-400">/ 次</span>
+                  {!priceInfo.free && <span className="ml-1 text-xs text-gray-400">/ 次</span>}
                 </p>
                 <p className="mt-1 text-xs text-gray-400">
-                  解锁完整分析报告 · 7天有效
+                  {priceInfo.free
+                    ? "终身会员权益 · 批量解读免费使用"
+                    : priceInfo.discount < 1
+                    ? `会员专享${priceInfo.discount === 0.95 ? "95" : priceInfo.discount === 0.85 ? "85" : "8"}折 · 解锁完整分析报告 · 7天有效`
+                    : "解锁完整分析报告 · 7天有效 · 开通会员享折扣"}
                 </p>
               </div>
 
@@ -1009,8 +1044,10 @@ ${numberLabel}类型：${isPhone ? "手机号" : "车牌号"}
                         <SpinnerSVG />
                         支付处理中...
                       </span>
+                    ) : priceInfo.free ? (
+                      "终身会员免费解锁报告"
                     ) : (
-                      `支付 ¥${PRICE} 解锁报告`
+                      `支付 ¥${priceInfo.price} 解锁报告`
                     )}
                   </button>
 
@@ -1382,6 +1419,9 @@ ${numberLabel}类型：${isPhone ? "手机号" : "车牌号"}
 
       {/* v20.1: 登录提示弹窗 */}
       <LoginPromptModal show={showLoginPrompt} onClose={() => setShowLoginPrompt(false)} />
+
+      {/* v25.0.47_12: Native扫码支付弹层（批量解读真实收款） */}
+      {qrModal}
     </div>
   );
 }

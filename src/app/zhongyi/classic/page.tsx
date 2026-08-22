@@ -1,5 +1,6 @@
 'use client';
 
+import { SectionGate } from "@/components/SectionGate";
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -42,7 +43,7 @@ function ClassicPageInner() {
   return <ClassicHomePage />;
 }
 
-export default function ClassicPage() {
+function ClassicPageOriginal() {
   useToolBack({ pageKey: "zhongyi_classic", eventName: "zhongyi-back", globalFlag: "__zhongyiBackHandled" });
   return (
     <Suspense fallback={
@@ -584,5 +585,14 @@ function ComplianceFooter({ text, darkMode, fixed }: { text: string; darkMode?: 
         ⚠️ {text}
       </div>
     </div>
+  );
+}
+
+// v25.0.47_12: 中医板块知识开放程度门控（后台工具矩阵实时控制：开放/会员专享/维护/关闭）
+export default function ClassicPage() {
+  return (
+    <SectionGate toolId="zhongyi_classic" title="典籍文库">
+      <ClassicPageOriginal />
+    </SectionGate>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionGate } from "@/components/SectionGate";
 import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import {
@@ -40,7 +41,7 @@ interface ClassicTextResult {
 // 辨证学习页面
 // ============================================================
 
-export default function ShanghanPage() {
+function ShanghanPageOriginal() {
   useToolBack({ pageKey: "zhongyi_shanghan", eventName: "zhongyi-back", globalFlag: "__zhongyiBackHandled" });
   const [symptomsInput, setSymptomsInput] = useState("");
   const [symptomTags, setSymptomTags] = useState<string[]>([]);
@@ -632,5 +633,14 @@ export default function ShanghanPage() {
         本APP内容仅供传统文化研究参考，不构成医疗建议。如有身体不适，请及时就医。
       </p>
     </div>
+  );
+}
+
+// v25.0.47_12: 中医板块知识开放程度门控（后台工具矩阵实时控制：开放/会员专享/维护/关闭）
+export default function ShanghanPage() {
+  return (
+    <SectionGate toolId="zhongyi_shanghan" title="伤寒六经">
+      <ShanghanPageOriginal />
+    </SectionGate>
   );
 }

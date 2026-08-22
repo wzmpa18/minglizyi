@@ -176,6 +176,7 @@ async function buildMembership(): Promise<MembershipStats> {
   const levelMultipliers: Record<MemberLevel, { count: number; rate: number }> = {
     basic: { count: 42100, rate: 0 },
     monthly: { count: 1860, rate: 1 },
+    quarterly: { count: 920, rate: 1 },
     yearly: { count: 2480, rate: 1 },
     lifetime: { count: 510, rate: 1 },
   };

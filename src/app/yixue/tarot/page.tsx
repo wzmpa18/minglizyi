@@ -14,6 +14,7 @@ import { getToolConfig } from "@/lib/toolConfigStore";
 import { listReadings, saveReading, deleteReading, type SavedReading } from "@/lib/tarotStore";
 import { useToolBack } from "@/lib/useToolBack";
 import AIInterpretButton from "@/components/AIInterpretButton";
+import { buildDeepReportSystemPrompt } from "@/lib/deepReportPrompt";
 import { ShareButton } from "@/components/ShareButton";
 
 const BRAND = "#7B2FBE";
@@ -363,11 +364,7 @@ export default function TarotPage() {
                       buttonText={`AI 深度牌阵解读 ¥${tarotCfg.aiDeepPrice}/次`}
                       cacheKey={`tarot_${spreadId}_${drawn.map((d) => d.cardId + (d.reversed ? "r" : "u")).join("_")}`}
                       contextData={`${aiContext}\n各牌详情：\n${aiCardsDetail}`}
-                      systemPrompt={`你是塔罗文化兴趣解读师。请基于用户所问与牌阵各位置的牌面（含正逆位）生成文化娱乐向解读。要求：
-1. 按牌阵位置逐一呼应，再作整体综合论断
-2. 书面化、传统典籍风格表达，避免口语化、营销化、恐吓式、绝对化表述
-3. 不涉及医疗、法律、投资等违规建议
-4. 结尾标注：「以上内容仅供文化娱乐参考，不构成任何专业建议」`}
+                      systemPrompt={buildDeepReportSystemPrompt("塔罗牌阵", "按牌阵位置逐一呼应牌面（含正逆位），再作整体综合论断；书面化、传统典籍风格表达")}
                     />
                   </div>
                 </div>

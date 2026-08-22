@@ -9,6 +9,7 @@ import { listCharts, saveChart, deleteChart, deleteAllCharts, buildShareSnapshot
 import type { SavedChart } from "@/lib/astroStore";
 import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
 import AIInterpretButton from "@/components/AIInterpretButton";
+import { buildDeepReportSystemPrompt } from "@/lib/deepReportPrompt";
 import { ShareButton } from "@/components/ShareButton";
 
 import { getDignity, DIGNITY_NOTES, CLASSICAL_ASTRO_VERSION as CLASSICAL_VERSION } from "@/lib/classicalAstroRules";
@@ -331,13 +332,7 @@ export default function AstroPage() {
                   buttonText={`AI 深度解读 ¥${astroCfg.aiDeepPrice}/次`}
                   cacheKey={`astro_deep_${chart.input.year}${chart.input.month}${chart.input.day}${chart.input.hour}${chart.input.minute}_${chart.input.lat}_${chart.input.lon}_${astroCfg.dataVersion}`}
                   contextData={`出生: ${chart.input.year}-${chart.input.month}-${chart.input.day} ${chart.input.hour}:${chart.input.minute} ${chart.input.placeName}\n上升: ${chart.ascSignName}\n天顶: ${chart.mcSignName}\n行星: ${chart.planets.map((p) => `${p.name}=${p.signName}${Math.floor(p.signDegree)}度${p.house}宫${p.retrograde ? "(逆行)" : ""}`).join("; ")}\n古典尊贵: ${chart.planets.map((p) => `${p.name}:${getDignity(p.name, p.signIndex).label}`).join("; ")}\n相位: ${chart.aspects.slice(0, 8).map((a) => `${a.planetA}${a.symbol}${a.planetB}(${a.type},${a.orb}度)`).join("; ")}`}
-                  systemPrompt={`你是占星文化兴趣解读师。请基于星盘数据生成文化娱乐向解读。
-要求：
-1. 围绕性格倾向、关系沟通、成长建议三个方向展开，使用温和、鼓励的语言
-2. 行星落座、宫位、相位的解读仅作传统文化视角的描述
-3. 严禁绝对化表述（如"命中注定""必然"）、恐吓式结论、诱导式话术
-4. 不构成医疗、心理、法律、金融等专业建议，不替用户做重大决策
-5. 结尾必须标注：「以上内容仅面向文化兴趣娱乐，不构成任何专业建议」`}
+                  systemPrompt={buildDeepReportSystemPrompt("占星解读", "围绕性格倾向、关系沟通、成长建议等文化娱乐向内容展开，行星落座、宫位、相位的解读仅作传统文化视角的描述")}
                 />
               </div>
               <div className="mt-1.5 flex items-center justify-center gap-3 text-[10px] text-gray-400">

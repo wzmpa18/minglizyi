@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionGate } from "@/components/SectionGate";
 import { useState, useEffect, useMemo, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -699,7 +700,7 @@ function LoadingFallback() {
   );
 }
 
-export default function PracticePage() {
+function PracticePageOriginal() {
   return (
     <Suspense fallback={<LoadingFallback />}>
       <PracticePageContent />
@@ -1029,5 +1030,14 @@ function ResultView({
 
       <p style={{ textAlign: "center", fontSize: 12, color: "#999", padding: "16px 0" }}>{COMPLIANCE_TEXT}</p>
     </div>
+  );
+}
+
+// v25.0.47_12: 中医板块知识开放程度门控（后台工具矩阵实时控制：开放/会员专享/维护/关闭）
+export default function PracticePage() {
+  return (
+    <SectionGate toolId="zhongyi_exam" title="医考刷题">
+      <PracticePageOriginal />
+    </SectionGate>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionGate } from "@/components/SectionGate";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -46,7 +47,7 @@ function formatDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export default function DailyPracticePage() {
+function DailyPracticePageOriginal() {
   const router = useRouter();
   const today = useMemo(() => getTodayStr(), []);
   const questions = useMemo(() => getDailyQuestions(today), [today]);
@@ -649,5 +650,14 @@ export default function DailyPracticePage() {
 
       <p style={{ textAlign: "center", fontSize: 12, color: "#999", padding: "16px 0" }}>{COMPLIANCE_TEXT}</p>
     </div>
+  );
+}
+
+// v25.0.47_12: 中医板块知识开放程度门控（后台工具矩阵实时控制：开放/会员专享/维护/关闭）
+export default function DailyPracticePage() {
+  return (
+    <SectionGate toolId="zhongyi_exam" title="医考刷题">
+      <DailyPracticePageOriginal />
+    </SectionGate>
   );
 }

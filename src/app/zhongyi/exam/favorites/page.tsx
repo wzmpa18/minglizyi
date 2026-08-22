@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionGate } from "@/components/SectionGate";
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Star, Play, Trash2, CheckCircle2, X } from "lucide-react";
@@ -21,7 +22,7 @@ const BRAND = "#7B2FBE";
 const BRAND_LIGHT = "#9B5ECF";
 const CORRECT_COLOR = "#10B981";
 
-export default function FavoritesPage() {
+function FavoritesPageOriginal() {
   const router = useRouter();
   const [favs, setFavs] = useState<FavoriteItem[]>([]);
   const [questions, setQuestions] = useState<ExamQuestion[]>([]);
@@ -481,5 +482,14 @@ export default function FavoritesPage() {
 
       <p style={{ textAlign: "center", fontSize: 12, color: "#999", padding: "16px 0" }}>{COMPLIANCE_TEXT}</p>
     </div>
+  );
+}
+
+// v25.0.47_12: 中医板块知识开放程度门控（后台工具矩阵实时控制：开放/会员专享/维护/关闭）
+export default function FavoritesPage() {
+  return (
+    <SectionGate toolId="zhongyi_exam" title="医考刷题">
+      <FavoritesPageOriginal />
+    </SectionGate>
   );
 }

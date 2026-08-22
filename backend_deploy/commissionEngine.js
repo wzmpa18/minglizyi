@@ -28,22 +28,38 @@ const DEFAULT_CONFIG = {
   enabled: true,                 // 分佣总开关
   withdrawEnabled: false,        // v25.0.47_10 提现总开关（商家转账权限未开通，开通后置 true）
   unfreezeEnabled: true,         // 解冻期开关
-  unfreezeDays: 7,               // 解冻天数
+  unfreezeDays: 7,               // 解冻天数（旧机制，v12 起由月度结算覆盖：settleDay）
+  settleDay: 30,                 // v25.0.47_12 月度结算日：每月30号统一结算（FROZEN→可提现）
+  withdrawOpenDay: 15,           // v25.0.47_12 提现窗口：每月15号以后（16号起）可发起提现
+  monthlySettleEnabled: true,    // v25.0.47_12 月度结算模式开关（关闭则回退 unfreezeDays 机制）
   minWithdrawYuan: 10,           // 最低提现额（元）
   dailyWithdrawLimit: 1,         // 每日提现次数
   transferNote: '言道国学推荐收益', // 商家转账备注
   taxNotice: '收益需依法缴纳个人所得税，平台将按规定代扣代缴或由用户自行申报',
-  // 一级分佣比例（百分比整数），按订单类型配置
+  // v25.0.47_12 两级分佣：一级15%、二级5%（按用户实付金额计算，全局统一）
   ratios: {
-    MEMBERSHIP: 30,              // 月度/年度/终身会员
-    SINGLE_UNLOCK: 20,           // 中医经方题库等单项内容
-    POINTS_RECHARGE: 25,         // AI增量包（积分充值）
+    level1: 15,                  // 一级推荐人佣金比例（百分比）
+    level2: 5,                   // 二级推荐人佣金比例（百分比）
   },
   riskControl: {
     dailyEarningsAlertYuan: 1000,  // 单日收益超阈值冻结提现待人工审核
     enabled: true,
   },
 };
+
+/** v25.0.47_12: 解析一级/二级比例（兼容旧版按订单类型的 ratios 结构） */
+function resolveRatios(cfg, orderType) {
+  const r = cfg.ratios || {};
+  let level1 = parseInt(r.level1, 10);
+  let level2 = parseInt(r.level2, 10);
+  if (isNaN(level1)) {
+    // 旧结构按类型取值，无 level1 字段：退化为一档比例（二级为0）
+    const legacy = parseInt(r[orderType] != null ? r[orderType] : 0, 10);
+    level1 = isNaN(legacy) ? 0 : legacy;
+  }
+  if (isNaN(level2)) level2 = 0;
+  return { level1, level2 };
+}
 
 function getConfig() {
   try {
@@ -165,12 +181,31 @@ function ensureAccount(db, userId) {
   db.prepare('INSERT OR IGNORE INTO commission_accounts (user_id, updated_at) VALUES (?, ?)').run(parseInt(userId, 10), nowIso());
 }
 
-// ==================== 核心：支付成功 → 自动分佣（幂等） ====================
+/** v25.0.47_12: 月度结算模式下，佣金入账后的下一次结算时间（每月 settleDay 号统一结算） */
+function nextSettleTime(cfg) {
+  const day = Math.min(28, Math.max(1, parseInt(cfg.settleDay, 10) || 30));
+  const now = new Date();
+  let settle = new Date(now.getFullYear(), now.getMonth(), day, 23, 59, 59, 999);
+  if (settle.getTime() <= now.getTime()) {
+    settle = new Date(now.getFullYear(), now.getMonth() + 1, day, 23, 59, 59, 999);
+  }
+  return settle.toISOString();
+}
+
+/** v25.0.47_12: 当前是否处于月度提现窗口（每月 withdrawOpenDay 号以后） */
+function inWithdrawWindow(cfg) {
+  const openDay = parseInt(cfg.withdrawOpenDay, 10) || 15;
+  const d = new Date().getDate();
+  return d > openDay;
+}
+
+// ==================== 核心：支付成功 → 自动分佣（两级，幂等） ====================
 
 /**
  * 订单支付成功后调用（paymentRoutes.updateOrderRecord PAID 钩子）
+ * v25.0.47_12: 两级分佣——一级推荐人 15%、二级推荐人 5%（按实付金额，服务端配置）
  * @param {object} order { orderId, userId, type, amount(元), title }
- * @returns {{granted: boolean, reason?: string, commissionCents?: number, inviterId?: number}}
+ * @returns {{granted: boolean, reason?: string, commissionCents?: number, level2CommissionCents?: number, inviterId?: number, level2InviterId?: number}}
  */
 function grantCommission(order) {
   const cfg = getConfig();
@@ -180,11 +215,11 @@ function grantCommission(order) {
   const db = getDb();
   const orderNo = String(order.orderId);
 
-  // 幂等校验：同订单同类型只处理一次
-  const existed = db.prepare("SELECT id FROM commission_records WHERE order_no = ? AND record_type = 'COMMISSION'").get(orderNo);
-  if (existed) return { granted: false, reason: 'DUPLICATE' };
+  // 幂等校验：同订单一级/二级各只处理一次（record_type 区分）
+  const existedL1 = db.prepare("SELECT id FROM commission_records WHERE order_no = ? AND record_type = 'COMMISSION'").get(orderNo);
+  if (existedL1) return { granted: false, reason: 'DUPLICATE' };
 
-  // 推荐人（严格一级）
+  // 一级推荐人
   const inviterId = getDirectInviter(db, order.userId);
   const eligible = inviterEligible(db, inviterId, order.userId);
   if (!eligible.ok) {
@@ -199,41 +234,67 @@ function grantCommission(order) {
     return { granted: false, reason: eligible.reason };
   }
 
+  // 二级推荐人（一级推荐人的推荐人；不得与下单人/一级相同）
+  const level2InviterId = getDirectInviter(db, inviterId);
+  const l2Valid = level2InviterId && String(level2InviterId) !== String(order.userId) && String(level2InviterId) !== String(inviterId);
+  const l2Eligible = l2Valid ? inviterEligible(db, level2InviterId, order.userId) : { ok: false };
+
   // 分佣计算（整数分）
   const baseCents = yuanToCents(order.amount);
   if (baseCents <= 0) return { granted: false, reason: 'ZERO_AMOUNT' };
-  const ratioPercent = parseInt((cfg.ratios || {})[order.type] != null ? (cfg.ratios || {})[order.type] : 0, 10);
-  if (!ratioPercent) return { granted: false, reason: 'NO_RATIO_FOR_TYPE:' + order.type };
-  const commissionCents = Math.floor(baseCents * ratioPercent / 100);
+  const { level1: ratioL1, level2: ratioL2 } = resolveRatios(cfg, order.type);
+  if (!ratioL1) return { granted: false, reason: 'NO_RATIO_FOR_TYPE:' + order.type };
+  const commissionCents = Math.floor(baseCents * ratioL1 / 100);
+  const level2CommissionCents = (l2Eligible.ok && ratioL2 > 0) ? Math.floor(baseCents * ratioL2 / 100) : 0;
 
-  // 冻结期
+  // 结算时间：v12 月度结算（每月30号统一结算）；关闭月度模式则回退 unfreezeDays
+  const monthlyMode = cfg.monthlySettleEnabled !== false;
   const unfreezeEnabled = cfg.unfreezeEnabled !== false;
-  const unfreezeDays = Math.max(0, parseInt(cfg.unfreezeDays, 10) || 0);
-  const unfreezeAt = unfreezeEnabled ? new Date(Date.now() + unfreezeDays * 86400000).toISOString() : nowIso();
+  let unfreezeAt;
+  if (monthlyMode) {
+    unfreezeAt = nextSettleTime(cfg);
+  } else {
+    const unfreezeDays = Math.max(0, parseInt(cfg.unfreezeDays, 10) || 0);
+    unfreezeAt = unfreezeEnabled ? new Date(Date.now() + unfreezeDays * 86400000).toISOString() : nowIso();
+  }
+
+  const creditFrozen = (cents, uid) => {
+    ensureAccount(db, uid);
+    if (monthlyMode || (unfreezeEnabled && cfg.unfreezeDays > 0)) {
+      db.prepare('UPDATE commission_accounts SET frozen_cents = frozen_cents + ?, total_earnings_cents = total_earnings_cents + ?, updated_at = ? WHERE user_id = ?')
+        .run(cents, cents, nowIso(), uid);
+    } else {
+      db.prepare('UPDATE commission_accounts SET withdrawable_cents = withdrawable_cents + ?, total_earnings_cents = total_earnings_cents + ?, updated_at = ? WHERE user_id = ?')
+        .run(cents, cents, nowIso(), uid);
+    }
+  };
 
   const tx = db.transaction(() => {
     try {
       db.prepare(`INSERT INTO commission_records (order_no, record_type, payer_user_id, inviter_user_id, ratio_percent, base_amount_cents, commission_cents, status, created_at, unfreeze_at, note)
                   VALUES (?, 'COMMISSION', ?, ?, ?, ?, ?, 'FROZEN', ?, ?, ?)`)
-        .run(orderNo, parseInt(order.userId, 10) || 0, inviterId, ratioPercent, baseCents, commissionCents, nowIso(), unfreezeAt, order.title || '');
+        .run(orderNo, parseInt(order.userId, 10) || 0, inviterId, ratioL1, baseCents, commissionCents, nowIso(), unfreezeAt, order.title || '');
     } catch (e) {
       if (/UNIQUE/.test(e.message)) throw new Error('DUPLICATE');
       throw e;
     }
-    ensureAccount(db, inviterId);
-    if (unfreezeEnabled && unfreezeDays > 0) {
-      db.prepare('UPDATE commission_accounts SET frozen_cents = frozen_cents + ?, total_earnings_cents = total_earnings_cents + ?, updated_at = ? WHERE user_id = ?')
-        .run(commissionCents, commissionCents, nowIso(), inviterId);
-    } else {
-      // 解冻期关闭/0天：直接可提现
-      db.prepare('UPDATE commission_accounts SET withdrawable_cents = withdrawable_cents + ?, total_earnings_cents = total_earnings_cents + ?, updated_at = ? WHERE user_id = ?')
-        .run(commissionCents, commissionCents, nowIso(), inviterId);
+    creditFrozen(commissionCents, inviterId);
+    // 二级佣金（独立 record_type 保证同订单幂等）
+    if (level2CommissionCents > 0 && l2Eligible.ok) {
+      try {
+        db.prepare(`INSERT INTO commission_records (order_no, record_type, payer_user_id, inviter_user_id, ratio_percent, base_amount_cents, commission_cents, status, created_at, unfreeze_at, note)
+                    VALUES (?, 'COMMISSION_L2', ?, ?, ?, ?, ?, 'FROZEN', ?, ?, ?)`)
+          .run(orderNo, parseInt(order.userId, 10) || 0, level2InviterId, ratioL2, baseCents, level2CommissionCents, nowIso(), unfreezeAt, (order.title || '') + ' [二级]');
+      } catch (e) {
+        if (!/UNIQUE/.test(e.message)) throw e;
+      }
+      creditFrozen(level2CommissionCents, level2InviterId);
     }
   });
   try {
     tx();
-    console.log(`[Commission] 一级分佣入账 order=${orderNo} inviter=${inviterId} base=${baseCents}分 ratio=${ratioPercent}% commission=${commissionCents}分 unfreeze=${unfreezeAt}`);
-    return { granted: true, commissionCents, inviterId, ratioPercent, unfreezeAt };
+    console.log(`[Commission] 两级分佣入账 order=${orderNo} L1=${inviterId}/${ratioL1}%=${commissionCents}分 L2=${l2Eligible.ok ? level2InviterId + '/' + ratioL2 + '%=' + level2CommissionCents + '分' : '无'} 结算=${unfreezeAt}`);
+    return { granted: true, commissionCents, level2CommissionCents, inviterId, level2InviterId: l2Eligible.ok ? level2InviterId : null, ratioL1, ratioL2, unfreezeAt };
   } catch (e) {
     if (e.message === 'DUPLICATE') return { granted: false, reason: 'DUPLICATE' };
     console.error('[Commission] 分佣失败:', e.message);
@@ -309,6 +370,7 @@ function accountSummary(userId) {
   const uid = parseInt(userId, 10);
   ensureAccount(db, uid);
   const a = db.prepare('SELECT * FROM commission_accounts WHERE user_id = ?').get(uid);
+  const cfg = getConfig();
   return {
     userId: String(uid),
     totalEarningsYuan: (a.total_earnings_cents / 100).toFixed(2),
@@ -317,6 +379,14 @@ function accountSummary(userId) {
     negativeYuan: (a.negative_cents / 100).toFixed(2),
     withdrawFrozen: !!a.withdraw_frozen,
     commissionEnabled: !!a.commission_enabled,
+    // v25.0.47_12: 月度结算/提现窗口信息（前端展示规则用）
+    settleRule: {
+      monthlySettleEnabled: cfg.monthlySettleEnabled !== false,
+      settleDay: cfg.monthlySettleEnabled !== false ? cfg.settleDay : null,
+      withdrawOpenDay: cfg.monthlySettleEnabled !== false ? cfg.withdrawOpenDay : null,
+      inWithdrawWindow: cfg.monthlySettleEnabled !== false ? inWithdrawWindow(cfg) : true,
+      withdrawEnabled: cfg.withdrawEnabled !== false,
+    },
   };
 }
 
@@ -344,6 +414,10 @@ function applyWithdrawal(userId, amountYuan, openid) {
   // v25.0.47_10: 提现通道总开关（WITHDRAW_TRANSFER=DISABLED 时一律拒绝，不假装能提现）
   if (cfg.withdrawEnabled === false) {
     return { ok: false, error: '提现暂未开放：微信商家转账通道开通后将自动启用，收益会正常累计' };
+  }
+  // v25.0.47_12: 月度提现窗口——佣金每月 settleDay 号统一结算，withdrawOpenDay 号之后才可发起提现
+  if (cfg.monthlySettleEnabled !== false && !inWithdrawWindow(cfg)) {
+    return { ok: false, error: `佣金每月${cfg.settleDay}号统一结算，每月${cfg.withdrawOpenDay}号后开放提现；当前不在提现窗口内，收益正常累计` };
   }
   const amountCents = yuanToCents(amountYuan);
   const minCents = Math.round((parseFloat(cfg.minWithdrawYuan) || 10) * 100);

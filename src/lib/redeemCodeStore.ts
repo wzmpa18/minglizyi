@@ -253,6 +253,7 @@ export function redeemCode(rawCode: string): RedeemResult {
     const levelName: Record<MemberLevel, string> = {
       basic: "普通会员",
       monthly: "月度会员（30天）",
+      quarterly: "季度会员（90天）",
       yearly: "年度会员（365天）",
       lifetime: "终身会员",
     };

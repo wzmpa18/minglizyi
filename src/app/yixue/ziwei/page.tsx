@@ -23,6 +23,7 @@ import type { Client } from "@/lib/clientStore";
 import { getPalaceInterpretation, getPalaceAllStarInterpretations } from "@/lib/ziwei-interpretations";
 import { KB_TIANJI_SOURCE, getKbTianjiPalaceNotes } from "@/lib/ziwei-kb-supplement";
 import { callAI, checkAIQuota, incrementAIUsage, getPermissionStatus } from "@/lib/aiService";
+import { buildDeepReportSystemPrompt } from "@/lib/deepReportPrompt";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
@@ -974,13 +975,8 @@ export default function ZiweiPage() {
         liushi: "流时解读",
       }[scope];
 
-      const systemPrompt = `你是资深紫微斗数解读师，精通三合派与四化派理论。请基于提供的命盘数据进行专业解读。
-要求：
-1. 内容结构清晰，分段落阐述
-2. 语言通俗易懂，避免过于玄乎的表述
-3. 避免绝对化、宿命论表述
-4. 不涉及医疗、投资、法律等违规建议
-5. 结尾必须标注：「以上内容仅供传统文化学习参考，不构成人生决策建议」`;
+      // v25.0.47_12 深度报告提质：五段式/700-900字/典籍引用/合规语气
+      const systemPrompt = buildDeepReportSystemPrompt(`紫微斗数·${scopeText}`);
 
       const baseContext = contextData || (() => {
         if (!result) return "";

@@ -1,5 +1,6 @@
 "use client";
 
+import { SectionGate } from "@/components/SectionGate";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -28,7 +29,7 @@ const SHORT_DESC: Record<string, string> = {
   tebing: "先天特异，易过敏",
 };
 
-export default function ConstitutionHome() {
+function ConstitutionHomeOriginal() {
   useToolBack({ pageKey: "zhongyi_constitution", eventName: "zhongyi-back", globalFlag: "__zhongyiBackHandled" });
   const router = useRouter();
   const [types, setTypes] = useState<ConstitutionType[]>([]);
@@ -268,5 +269,14 @@ export default function ConstitutionHome() {
         </p>
       </div>
     </div>
+  );
+}
+
+// v25.0.47_12: 中医板块知识开放程度门控（后台工具矩阵实时控制：开放/会员专享/维护/关闭）
+export default function ConstitutionHome() {
+  return (
+    <SectionGate toolId="zhongyi_constitution" title="体质测评">
+      <ConstitutionHomeOriginal />
+    </SectionGate>
   );
 }

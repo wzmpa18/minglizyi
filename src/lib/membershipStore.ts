@@ -1,16 +1,16 @@
 "use client";
 
 // ============================================================================
-// 会员体系 Store - v20.4
-// 4档会员：普通(免费) / 月度(39元) / 年度(366元) / 终身(3600元)
+// 会员体系 Store - v25.0.47_12
+// 5档会员：普通(免费) / 月度(37元) / 季度(99元) / 年度(374元) / 终身(3600元)
 // 工具分级：A类基础排盘 / 通用AI解读 / B类高价值付费工具 / C类学习内容库
-// B类工具独立管控，不占用通用AI次数，保障营收不亏损
+// B类工具统一零售价 9.9元/次（会员超出免费额度后同价结算，v12 取消阶梯折扣）
 // ============================================================================
 
 import { getUserProfile } from "./auth";
 import { getToolConfig } from "./toolConfigStore";
 
-export type MemberLevel = "basic" | "monthly" | "yearly" | "lifetime";
+export type MemberLevel = "basic" | "monthly" | "quarterly" | "yearly" | "lifetime";
 
 // ==================== B类高价值工具定义 ====================
 
@@ -34,13 +34,13 @@ export const B_TOOLS: Record<BToolType, BToolConfig> = {
   phone_number: {
     type: "phone_number",
     name: "手机号吉凶解读",
-    price: 18,
+    price: 9.9,
     description: "基于数字能量学的手机号码分析",
   },
   license_plate: {
     type: "license_plate",
     name: "车牌合号分析",
-    price: 18,
+    price: 9.9,
     description: "基于数理的车牌号码文化参考",
   },
 };
@@ -103,13 +103,14 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
   {
     level: "monthly",
     name: "月度会员",
-    price: 39,
+    price: 37,
     originalPrice: 59,
     duration: "30天",
     features: [
       "全部14款排盘工具",
       "每日50次通用AI问答",
-      "B类工具月赠3次，超出享8折",
+      "B类工具月赠3次，超出按¥9.9/次",
+      "批量解读享95折",
       "中医学习库全部开放",
       "模拟考试全等级开放",
       "签到积分2倍 · 无广告体验",
@@ -119,15 +120,35 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
     badge: "热门",
   },
   {
+    level: "quarterly",
+    name: "季度会员",
+    price: 99,
+    originalPrice: 117,
+    duration: "90天",
+    features: [
+      "全部14款排盘工具",
+      "每日50次通用AI问答",
+      "B类工具月赠8次，超出按¥9.9/次",
+      "批量解读享85折",
+      "中医学习库全部开放",
+      "模拟考试全等级开放",
+      "签到积分2倍 · 无广告体验",
+      "专属标识/头像框 · 导出排盘报告",
+    ],
+    highlighted: false,
+    badge: "",
+  },
+  {
     level: "yearly",
     name: "年度会员",
-    price: 366,
+    price: 374,
     originalPrice: 458,
     duration: "365天",
     features: [
       "全部14款排盘工具",
       "通用AI问答无限次",
-      "B类工具月赠15次，超出享7折",
+      "B类工具月赠15次，超出按¥9.9/次",
+      "批量解读享8折",
       "中医学习库全部开放",
       "模拟考试全等级开放",
       "签到积分3倍 · 无广告体验",
@@ -147,6 +168,7 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
       "全部14款排盘工具",
       "通用AI问答无限次",
       "B类工具无限次免费使用",
+      "批量解读免费使用",
       "中医学习库全部开放",
       "模拟考试全等级开放",
       "签到积分5倍 · 无广告体验",
@@ -163,6 +185,7 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
 export const AI_QUOTA_CONFIG: Record<MemberLevel, { daily: number; label: string }> = {
   basic: { daily: 3, label: "每日3次" },
   monthly: { daily: 50, label: "每日50次" },
+  quarterly: { daily: 50, label: "每日50次" },
   yearly: { daily: Infinity, label: "无限次" },
   lifetime: { daily: Infinity, label: "无限次" },
 };
@@ -172,7 +195,7 @@ export const AI_QUOTA_CONFIG: Record<MemberLevel, { daily: number; label: string
 export interface BToolBenefit {
   /** 每月赠送次数（Infinity = 无限） */
   monthlyFree: number;
-  /** 超出赠送后的折扣（1 = 原价，0.8 = 8折） */
+  /** 超出赠送后的折扣（1 = 原价，0.8 = 8折）；v12 起统一按零售价结算，discount 恒为 1 */
   discount: number;
   /** 是否无限免费 */
   unlimitedFree: boolean;
@@ -180,16 +203,32 @@ export interface BToolBenefit {
 
 export const B_TOOL_BENEFITS: Record<MemberLevel, BToolBenefit> = {
   basic: { monthlyFree: 0, discount: 1, unlimitedFree: false },
-  monthly: { monthlyFree: 3, discount: 0.8, unlimitedFree: false },
-  yearly: { monthlyFree: 15, discount: 0.7, unlimitedFree: false },
+  monthly: { monthlyFree: 3, discount: 1, unlimitedFree: false },
+  quarterly: { monthlyFree: 8, discount: 1, unlimitedFree: false },
+  yearly: { monthlyFree: 15, discount: 1, unlimitedFree: false },
   lifetime: { monthlyFree: Infinity, discount: 0, unlimitedFree: true },
 };
+
+// ==================== 批量解读服务定价（仅手机号/车牌号，v12）====================
+
+/** 各档位批量解读折扣（1 = 原价）；终身免费 */
+export const BATCH_INTERPRET_DISCOUNTS: Record<MemberLevel, number> = {
+  basic: 1,
+  monthly: 0.95,
+  quarterly: 0.85,
+  yearly: 0.8,
+  lifetime: 0,
+};
+
+/** 批量解读零售价（元/次，最多100条号码） */
+export const BATCH_INTERPRET_BASE_PRICE = 200;
 
 // ==================== 签到积分倍率 ====================
 
 export const SIGNIN_MULTIPLIER: Record<MemberLevel, number> = {
   basic: 1,
   monthly: 2,
+  quarterly: 2,
   yearly: 3,
   lifetime: 5,
 };
@@ -311,6 +350,9 @@ export function activateMembership(level: MemberLevel): MembershipStatus {
   if (level === "monthly") {
     const exp = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
     expireTime = exp.toISOString();
+  } else if (level === "quarterly") {
+    const exp = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
+    expireTime = exp.toISOString();
   } else if (level === "yearly") {
     const exp = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000);
     expireTime = exp.toISOString();
@@ -327,6 +369,8 @@ export function activateMembership(level: MemberLevel): MembershipStatus {
         ? Infinity
         : level === "monthly"
         ? 30
+        : level === "quarterly"
+        ? 90
         : level === "yearly"
         ? 365
         : Infinity,
