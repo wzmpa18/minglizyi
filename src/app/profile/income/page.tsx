@@ -37,6 +37,9 @@ const BRAND = "#7B2FBE";
 
 type TabKey = "records" | "withdrawals";
 
+// v25.0.47_10: 提现通道未开放（WITHDRAW_TRANSFER=DISABLED）时按钮显示"暂未开放"
+const WITHDRAW_DISABLED_TIP = "提现暂未开放：微信商家转账通道开通后自动启用，收益正常累计";
+
 export default function ProfileIncomePage() {
   const router = useRouter();
 
@@ -163,6 +166,8 @@ export default function ProfileIncomePage() {
   }
 
   const withdrawable = summary?.withdrawableYuan ?? "0.00";
+  // v25.0.47_10: 提现通道开关（后端 /api/commission/config 下发，undefined 视为开放兼容旧版）
+  const withdrawOpen = config?.withdrawEnabled !== false;
   const frozen = summary?.frozenYuan ?? "0.00";
   const total = summary?.totalEarningsYuan ?? "0.00";
 
@@ -179,20 +184,21 @@ export default function ProfileIncomePage() {
               {loading ? "--" : withdrawable}
             </span>
             <button
-              onClick={() => setShowWithdrawModal(true)}
-              disabled={parseFloat(withdrawable) <= 0}
+              onClick={() => withdrawOpen && setShowWithdrawModal(true)}
+              disabled={parseFloat(withdrawable) <= 0 || !withdrawOpen}
+              title={withdrawOpen ? undefined : WITHDRAW_DISABLED_TIP}
               style={{
                 padding: "9px 24px",
                 borderRadius: "999px",
                 border: "none",
-                backgroundColor: parseFloat(withdrawable) > 0 ? "#fff" : "rgba(255,255,255,0.5)",
+                backgroundColor: parseFloat(withdrawable) > 0 && withdrawOpen ? "#fff" : "rgba(255,255,255,0.5)",
                 color: BRAND,
                 fontSize: 14,
                 fontWeight: 700,
-                cursor: parseFloat(withdrawable) > 0 ? "pointer" : "not-allowed",
+                cursor: parseFloat(withdrawable) > 0 && withdrawOpen ? "pointer" : "not-allowed",
               }}
             >
-              提现
+              {withdrawOpen ? "提现" : "暂未开放"}
             </button>
           </div>
 

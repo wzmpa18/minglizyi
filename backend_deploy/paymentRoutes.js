@@ -462,7 +462,15 @@ function updateOrderRecord(orderId, status, channel) {
       const commissionEngine = require('./commissionEngine');
       const cr = commissionEngine.grantCommission(order);
       if (cr && cr.granted) {
+        // v25.0.47_10: 分佣结果回写订单（后台订单中心显示真实佣金状态）
+        order.commissionStatus = 'COMMISSION_FROZEN';
+        order.commissionCents = cr.commissionCents;
+        order.commissionInviterId = cr.inviterId;
+        persistOrder(order);
         console.log(`[payment] 一级分佣已入账 orderId=${order.orderId} inviter=${cr.inviterId} commission=${cr.commissionCents}分`);
+      } else if (cr && cr.reason) {
+        order.commissionStatus = 'NO_COMMISSION:' + cr.reason;
+        persistOrder(order);
       }
     } catch (e) {
       console.error('[payment] 分佣记账失败:', e.message);
@@ -1059,7 +1067,17 @@ router.get('/admin/orders/:orderId', _prAdminAuth('FINANCE_ADMIN'), (req, res) =
         benefitType,
         benefitDeliveredAt: order.benefitDeliveredAt || null,
         extra: order.extra || null,
-        commissionStatus: order.commissionStatus || (order.status === 'PAID' ? 'SETTLED_OR_NO_INVITER' : 'NOT_APPLICABLE'),
+        commissionStatus: (() => {
+          // v25.0.47_10: 优先读 commission_records 权威记录（含真实佣金额与推荐人）
+          try {
+            const _cdb = getOrdersDb();
+            const _cr = _cdb.prepare("SELECT status, commission_cents, ratio_percent, inviter_user_id FROM commission_records WHERE order_no = ? AND record_type = 'COMMISSION'").get(orderId);
+            if (_cr) {
+              return `${_cr.status}(佣金${_cr.commission_cents}分·比例${_cr.ratio_percent}%·推荐人${_cr.inviter_user_id})`;
+            }
+          } catch (e) {}
+          return order.commissionStatus || (order.status === 'PAID' ? 'SETTLED_OR_NO_INVITER' : 'NOT_APPLICABLE');
+        })(),
       },
     });
   } catch (e) {

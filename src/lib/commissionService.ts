@@ -55,6 +55,7 @@ export interface CommissionWithdrawal {
 /** 公开配置 */
 export interface CommissionPublicConfig {
   enabled: boolean;
+  withdrawEnabled?: boolean; // v25.0.47_10: false = 提现暂未开放
   minWithdrawYuan: number;
   dailyWithdrawLimit: number;
   unfreezeDays: number;

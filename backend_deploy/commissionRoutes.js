@@ -37,6 +37,7 @@ router.get('/config', (_req, res) => {
     success: true,
     data: {
       enabled: !!cfg.enabled,
+      withdrawEnabled: cfg.withdrawEnabled !== false, // v25.0.47_10: false=提现暂未开放
       minWithdrawYuan: cfg.minWithdrawYuan,
       dailyWithdrawLimit: cfg.dailyWithdrawLimit,
       unfreezeDays: cfg.unfreezeDays,

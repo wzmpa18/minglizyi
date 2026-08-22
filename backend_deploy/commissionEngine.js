@@ -26,6 +26,7 @@ const USERS_DB_PATH = process.env.DB_PATH || '/root/backend-auth/data/yandao_use
 
 const DEFAULT_CONFIG = {
   enabled: true,                 // 分佣总开关
+  withdrawEnabled: false,        // v25.0.47_10 提现总开关（商家转账权限未开通，开通后置 true）
   unfreezeEnabled: true,         // 解冻期开关
   unfreezeDays: 7,               // 解冻天数
   minWithdrawYuan: 10,           // 最低提现额（元）
@@ -340,6 +341,10 @@ function applyWithdrawal(userId, amountYuan, openid) {
   const uid = parseInt(userId, 10);
   if (!uid || isNaN(uid)) return { ok: false, error: '用户无效' };
 
+  // v25.0.47_10: 提现通道总开关（WITHDRAW_TRANSFER=DISABLED 时一律拒绝，不假装能提现）
+  if (cfg.withdrawEnabled === false) {
+    return { ok: false, error: '提现暂未开放：微信商家转账通道开通后将自动启用，收益会正常累计' };
+  }
   const amountCents = yuanToCents(amountYuan);
   const minCents = Math.round((parseFloat(cfg.minWithdrawYuan) || 10) * 100);
   if (amountCents < minCents) return { ok: false, error: `最低提现额为${cfg.minWithdrawYuan}元` };
