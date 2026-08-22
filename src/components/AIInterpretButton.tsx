@@ -16,6 +16,7 @@ import {
 } from "@/lib/aiService";
 import { paySingleUnlockAndWait } from "@/lib/paymentService";
 import { useNativePayQR } from "@/components/PayQRCodeModal";
+import { useAiPricing } from "@/lib/pricingStore";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 
@@ -75,6 +76,10 @@ export default function AIInterpretButton({
   const [showResult, setShowResult] = useState(false);
   const [error, setError] = useState("");
   const [showSingleUnlock, setShowSingleUnlock] = useState(false); // v20.1: 单次解锁弹窗
+
+  // v25.0.47_10: 价格 SSOT——展示与下单价格优先读服务端，本地常量仅兜底
+  const { singleUnlockPrice: serverSinglePrice } = useAiPricing();
+  const singlePrice = serverSinglePrice ?? SINGLE_UNLOCK_PRICE;
 
   // v20.1: 登录守卫
   const { requireLogin, showLoginPrompt, setShowLoginPrompt } = useRequireLogin();
@@ -174,7 +179,7 @@ export default function AIInterpretButton({
     setUnlockPaying(true);
     setUnlockMsg("");
     try {
-      const r = await paySingleUnlockAndWait(cKey, SINGLE_UNLOCK_PRICE);
+      const r = await paySingleUnlockAndWait(cKey, singlePrice);
       // v25.0.47_9: Native扫码支付——弹出付款二维码，扫码成功后执行本地解锁
       if (r.ticket) {
         openQR(r.ticket, () => {
@@ -196,7 +201,7 @@ export default function AIInterpretButton({
     } finally {
       setUnlockPaying(false);
     }
-  }, [toolName, scope, contextData, fullContent, unlockPaying, openQR]);
+  }, [toolName, scope, contextData, fullContent, unlockPaying, openQR, singlePrice]);
 
   const primaryColor = "#7B2FBE";
   const secondaryColor = "#9B5ECF";
@@ -326,7 +331,7 @@ export default function AIInterpretButton({
                   cursor: "pointer",
                 }}
               >
-                单次解锁 ¥{SINGLE_UNLOCK_PRICE}
+                单次解锁 ¥{singlePrice}
               </button>
               <button
                 onClick={() => {
@@ -394,7 +399,7 @@ export default function AIInterpretButton({
                 </div>
               )}
               <div style={{ textAlign: "center", marginBottom: "12px" }}>
-                <span style={{ fontSize: "26px", fontWeight: "bold", color: "#7B2FBE" }}>¥{SINGLE_UNLOCK_PRICE}</span>
+                <span style={{ fontSize: "26px", fontWeight: "bold", color: "#7B2FBE" }}>¥{singlePrice}</span>
                 <span style={{ fontSize: "12px", color: "#999", marginLeft: "4px" }}>/ 次</span>
               </div>
               <button
@@ -413,7 +418,7 @@ export default function AIInterpretButton({
                   marginBottom: "6px",
                 }}
               >
-                {unlockPaying ? "支付确认中..." : <>确认支付 ¥{SINGLE_UNLOCK_PRICE} 解锁</>}</button>
+                {unlockPaying ? "支付确认中..." : <>确认支付 ¥{singlePrice} 解锁</>}</button>
               <button
                 onClick={() => setShowSingleUnlock(false)}
                 style={{

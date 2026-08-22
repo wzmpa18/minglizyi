@@ -17,6 +17,7 @@ import {
 } from "@/lib/aiService";
 import { paySingleUnlockAndWait } from "@/lib/paymentService";
 import { useNativePayQR } from "@/components/PayQRCodeModal";
+import { useAiPricing } from "@/lib/pricingStore";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
@@ -63,6 +64,9 @@ export default function InterpretationDrawer({
   const [showSingleUnlock, setShowSingleUnlock] = useState(false); // v20.1: 单次解锁弹窗
   // FINAL-RC-02: iOS 本期不开放任何付费，单次解锁/会员购买入口隐藏
   const [paymentsBlocked, setPaymentsBlocked] = useState(false);
+  // v25.0.47_10: 价格 SSOT——展示与下单价格优先读服务端，本地常量仅兜底
+  const { singleUnlockPrice: serverSinglePrice } = useAiPricing();
+  const singlePrice = serverSinglePrice ?? SINGLE_UNLOCK_PRICE;
 
   useEffect(() => {
     setPaymentsBlocked(isPaymentsBlocked());
@@ -128,7 +132,7 @@ export default function InterpretationDrawer({
     setUnlockPaying(true);
     setUnlockMsg("");
     try {
-      const r = await paySingleUnlockAndWait(cKey, SINGLE_UNLOCK_PRICE);
+      const r = await paySingleUnlockAndWait(cKey, singlePrice);
       // v25.0.47_9: Native扫码支付——弹出付款二维码，扫码成功后执行本地解锁
       if (r.ticket) {
         openQR(r.ticket, () => {
@@ -229,7 +233,7 @@ export default function InterpretationDrawer({
                             cursor: "pointer",
                           }}
                         >
-                          单次解锁 ¥{SINGLE_UNLOCK_PRICE}
+                          单次解锁 ¥{singlePrice}
                         </button>
                         <button
                           onClick={() => { if (typeof window !== "undefined") window.location.href = "/profile/wallet"; }}
@@ -323,7 +327,7 @@ export default function InterpretationDrawer({
                 </div>
               ) : (
               <div style={{ textAlign: "center", marginBottom: "12px" }}>
-                <span style={{ fontSize: "26px", fontWeight: "bold", color: "#7B2FBE" }}>¥{SINGLE_UNLOCK_PRICE}</span>
+                <span style={{ fontSize: "26px", fontWeight: "bold", color: "#7B2FBE" }}>¥{singlePrice}</span>
                 <span style={{ fontSize: "12px", color: "#999", marginLeft: "4px" }}>/ 次</span>
               </div>
               )}
@@ -348,7 +352,7 @@ export default function InterpretationDrawer({
                   marginBottom: "6px",
                   display: paymentsBlocked ? "none" : "block",
                 }}
-              >{unlockPaying ? "支付确认中..." : <>确认支付 ¥{SINGLE_UNLOCK_PRICE} 解锁</>}</button>
+              >{unlockPaying ? "支付确认中..." : <>确认支付 ¥{singlePrice} 解锁</>}</button>
               <button
                 onClick={() => setShowSingleUnlock(false)}
                 style={{

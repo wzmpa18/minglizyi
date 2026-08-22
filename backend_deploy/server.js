@@ -31,6 +31,9 @@ app.use((req, res, next) => {
 
 // FINAL-RC-02: 平台功能开关（服务端强制执行 PLATFORM_FEATURE_MATRIX，必须先于所有业务路由）
 app.use(createPlatformFeatureGate());
+// v25.0.47_10: 后台动态功能开关服务端强制层（FINAL-ADMIN-COMMERCIAL-SEAL-02 第五章）
+const featureControlRoutes = require("./featureControlRoutes");
+app.use(featureControlRoutes.globalFeatureGate());
 
 // ==================== 认证路由 ====================
 try {
@@ -54,6 +57,43 @@ try {
 // 响应顶层返回 content/usage(前端 aiService.ts 契约), 同时保留 data.* 旧结构
 app.post('/api/ai/chat', async (req, res) => {
   try {
+    // ===== v25.0.47_10: AI 三重开关服务端强制（FINAL-ADMIN-COMMERCIAL-SEAL-02 第五/十三章）=====
+    // ① 后台功能开关总中心（feature-flags 的 ai 开关）
+    const _aiFlag = featureControlRoutes.getFlagStatus('ai');
+    if (_aiFlag !== 'ON') {
+      return res.status(403).json({
+        success: false,
+        error: _aiFlag === 'MAINTENANCE' ? 'AI功能维护中，请稍后再试' : 'AI功能已由后台关闭',
+        code: _aiFlag === 'MAINTENANCE' ? 'AI_MAINTENANCE' : 'AI_DISABLED',
+        flag: 'ai', flagStatus: _aiFlag,
+      });
+    }
+    // ② AI 管理配置总开关（ai-control 页 globalEnabled）+ ③ 工具级开关
+    try {
+      const _aiCfgPath = require('path').join(__dirname, 'data', 'admin-ai-config.json');
+      if (require('fs').existsSync(_aiCfgPath)) {
+        const _aiCfg = JSON.parse(require('fs').readFileSync(_aiCfgPath, 'utf-8'));
+        if (_aiCfg.globalEnabled === false) {
+          return res.status(403).json({ success: false, error: 'AI服务已由后台关闭', code: 'AI_DISABLED' });
+        }
+        const _toolId = req.body && req.body.toolId;
+        if (_toolId) {
+          const _t = (_aiCfg.tools || []).find(x => x.id === _toolId);
+          if (_t && _t.enabled === false) {
+            return res.status(403).json({ success: false, error: `「${_t.name}」已由后台关闭`, code: 'AI_DISABLED', toolId: _toolId });
+          }
+          const _tm = require('./toolAdminRoutes').loadMatrix().tools[_toolId];
+          if (_tm && (_tm.status !== 'ON' || _tm.aiEnabled === false)) {
+            return res.status(403).json({
+              success: false,
+              error: `「${_tm.name}」${_tm.status === 'MAINTENANCE' ? '维护中，请稍后再试' : '已由后台关闭'}`,
+              code: _tm.status === 'MAINTENANCE' ? 'FEATURE_MAINTENANCE' : 'FEATURE_DISABLED',
+              toolId: _toolId,
+            });
+          }
+        }
+      }
+    } catch (_e) { /* 配置读取失败不阻断 AI 服务 */ }
     const { messages, model, stream, systemPrompt, userPrompt } = req.body || {};
     let finalMessages = Array.isArray(messages) && messages.length > 0 ? messages : null;
     if (!finalMessages) {
@@ -71,7 +111,7 @@ app.post('/api/ai/chat', async (req, res) => {
     const apiKey = deepseekKey || hunyuanKey;
 
     if (!apiKey) {
-      return res.json({ success: false, error: 'AI 服务未配置' });
+      return res.json({ success: false, error: 'AI 服务未配置', code: 'AI_SERVICE_UNAVAILABLE' });
     }
 
     const useHunyuan = !deepseekKey && !!hunyuanKey;
@@ -96,16 +136,36 @@ app.post('/api/ai/chat', async (req, res) => {
           detail = errJson.error.message_zh || errJson.error.message;
         }
       } catch {}
-      return res.status(response.status).json({ success: false, error: detail });
+      return res.status(response.status).json({ success: false, error: detail, code: 'AI_SERVICE_UNAVAILABLE' });
     }
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || '';
     const usage = data.usage || {};
+    // v25.0.47_10: AI健康埋点（后台AI控制中心指标）
+    try {
+      const _hp = require('path').join(__dirname, 'data', 'ai-health.json');
+      const _today = new Date().toISOString().slice(0, 10);
+      let _h = { date: _today, calls: 0, success: 0, fail: 0, totalLatencyMs: 0, lastSuccessAt: null, lastFailAt: null, lastError: '' };
+      try { _h = { ..._h, ...JSON.parse(require('fs').readFileSync(_hp, 'utf-8')) }; } catch (e) {}
+      if (_h.date !== _today) { _h = { date: _today, calls: 0, success: 0, fail: 0, totalLatencyMs: 0, lastSuccessAt: null, lastFailAt: null, lastError: '' }; }
+      _h.calls += 1; _h.success += 1; _h.lastSuccessAt = new Date().toISOString();
+      require('fs').writeFileSync(_hp, JSON.stringify(_h), 'utf-8');
+    } catch (e) {}
     res.json({ success: true, content, usage, cached: false, data: { content, usage } });
   } catch (err) {
     console.error('[AI] 代理错误:', err);
-    res.json({ success: false, error: `AI 服务异常: ${err.message}` });
+    // v25.0.47_10: AI健康埋点（失败）
+    try {
+      const _hp = require('path').join(__dirname, 'data', 'ai-health.json');
+      const _today = new Date().toISOString().slice(0, 10);
+      let _h = { date: _today, calls: 0, success: 0, fail: 0, totalLatencyMs: 0, lastSuccessAt: null, lastFailAt: null, lastError: '' };
+      try { _h = { ..._h, ...JSON.parse(require('fs').readFileSync(_hp, 'utf-8')) }; } catch (e) {}
+      if (_h.date !== _today) { _h = { date: _today, calls: 0, success: 0, fail: 0, totalLatencyMs: 0, lastSuccessAt: null, lastFailAt: null, lastError: '' }; }
+      _h.calls += 1; _h.fail += 1; _h.lastFailAt = new Date().toISOString(); _h.lastError = String(err.message || '').slice(0, 200);
+      require('fs').writeFileSync(_hp, JSON.stringify(_h), 'utf-8');
+    } catch (e) {}
+    res.json({ success: false, error: `AI 服务异常: ${err.message}`, code: 'AI_SERVICE_UNAVAILABLE' });
   }
 });
 console.log('[Server] ✅ AI代理路由已挂载: /api/ai/chat');
@@ -366,6 +426,8 @@ const extraRoutes = [
   { file: 'accountDeleteRoutes', path: '/api/account', name: '账号注销' },
   { file: 'commissionRoutes', path: '/api/commission', name: '佣金用户端' },
   { file: 'adminUnifiedRoutes', path: '/api/admin/unified', name: '统一后台' },
+  { file: 'featureControlRoutes', path: '/api/admin/feature-flags', name: '功能开关' },
+  { file: 'toolAdminRoutes', path: '/api/admin/tool-matrix', name: '工具矩阵' },
 ];
 
 for (const route of extraRoutes) {
@@ -383,6 +445,14 @@ for (const route of extraRoutes) {
     console.log(`[Server] ⚠️ ${route.name}路由未加载: ${e.message}`);
   }
 }
+
+// ==================== 公开配置接口（v25.0.47_10 价格SSOT/功能开关/工具矩阵 公开只读） ====================
+const publicPricingRoutes = require('./publicPricingRoutes');
+app.use('/api/public/pricing', publicPricingRoutes.router);
+app.use('/api/public/feature-flags', featureControlRoutes.publicRouter);
+const toolAdminRoutesMod = require('./toolAdminRoutes');
+app.use('/api/public/tool-matrix', toolAdminRoutesMod.publicRouter);
+console.log('[Server] ✅ 公开配置接口已挂载: /api/public/pricing | feature-flags | tool-matrix');
 
 // ==================== 健康检查 ====================
 

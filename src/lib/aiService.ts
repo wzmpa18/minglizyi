@@ -20,6 +20,7 @@ export interface AIResponse {
   cached: boolean;
   usage?: { promptTokens: number; completionTokens: number };
   error?: string;
+  errorCode?: string;
 }
 
 // ==================== localStorage 缓存 ====================
@@ -94,7 +95,9 @@ export async function callAI(request: AIRequest): Promise<AIResponse> {
 
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.error || `HTTP ${res.status}`);
+      const e = new Error(errData.error || `HTTP ${res.status}`) as Error & { code?: string };
+      if (errData.code) e.code = errData.code;
+      throw e;
     }
 
     const data = await res.json();
@@ -103,18 +106,30 @@ export async function callAI(request: AIRequest): Promise<AIResponse> {
       return { success: true, content: data.content, cached: data.cached, usage: data.usage };
     }
 
-    throw new Error(data.error || "AI返回失败");
+    const e2 = new Error(data.error || "AI返回失败") as Error & { code?: string };
+    if (data.code) e2.code = data.code;
+    throw e2;
   } catch (error: any) {
     console.warn("AI call failed:", error.message);
     const category = cacheKey?.includes("zhongyi") ? "zhongyi"
       : cacheKey?.includes("exam") ? "exam"
       : cacheKey?.includes("yixue") ? "yixue"
       : "default";
+    const _code = (error as any).code || "";
+    let msg = FALLBACK_MESSAGES[category] || FALLBACK_MESSAGES.default;
+    if (_code === "AI_DISABLED" || _code === "FEATURE_DISABLED") {
+      msg = "该功能已由平台暂时关闭，请稍后再试。";
+    } else if (_code === "AI_MAINTENANCE" || _code === "FEATURE_MAINTENANCE") {
+      msg = "该功能正在维护中，请稍后再试。";
+    } else if (_code === "AI_SERVICE_UNAVAILABLE") {
+      msg = "AI通道临时故障，已为您保留经典解读内容，请稍后重试。";
+    }
     return {
       success: false,
-      content: FALLBACK_MESSAGES[category] || FALLBACK_MESSAGES.default,
+      content: msg,
       cached: false,
       error: error.message,
+      errorCode: _code || undefined,
     };
   }
 }

@@ -20,6 +20,7 @@ import {
 } from "@/lib/aiService";
 import { paySingleUnlockAndWait } from "@/lib/paymentService";
 import { useNativePayQR } from "@/components/PayQRCodeModal";
+import { useAiPricing } from "@/lib/pricingStore";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import MasterExchangePanel from "./MasterExchangePanel";
@@ -75,6 +76,11 @@ export default function EventDivinationPanel({
   const [quotaMsg, setQuotaMsg] = useState("");
   const [showMasterPanel, setShowMasterPanel] = useState(false);
   const [showSingleUnlock, setShowSingleUnlock] = useState(false); // v20.1: 单次解锁弹窗
+
+  // v25.0.47_10: 价格 SSOT——展示与下单价格优先读服务端（后台改价实时生效），本地常量仅兜底
+  const { singleUnlockPrice: serverSinglePrice, timePlans: serverTimePlans } = useAiPricing();
+  const singlePrice = serverSinglePrice ?? SINGLE_UNLOCK_PRICE;
+  const paidPlans = (serverTimePlans && serverTimePlans.length > 0 ? serverTimePlans : AI_PAID_PLANS) as typeof AI_PAID_PLANS;
 
   // v20.1: 登录守卫 - 未登录用户不可使用AI/付费功能
   const { requireLogin, showLoginPrompt, setShowLoginPrompt } = useRequireLogin();
@@ -152,7 +158,7 @@ export default function EventDivinationPanel({
     setUnlockPaying(true);
     setUnlockMsg("");
     try {
-      const r = await paySingleUnlockAndWait(cKey, SINGLE_UNLOCK_PRICE);
+      const r = await paySingleUnlockAndWait(cKey, singlePrice);
       // v25.0.47_9: Native扫码支付——弹出付款二维码，扫码成功后执行本地解锁
       if (r.ticket) {
         openQR(r.ticket, () => {
@@ -174,7 +180,7 @@ export default function EventDivinationPanel({
     } finally {
       setUnlockPaying(false);
     }
-  }, [toolName, chartContext, activeMode, userQuestion, fullContent, unlockPaying, openQR]);
+  }, [toolName, chartContext, activeMode, userQuestion, fullContent, unlockPaying, openQR, singlePrice]);
 
   // 执行事情断法
   const handleEventDivination = useCallback(async () => {
@@ -254,7 +260,7 @@ export default function EventDivinationPanel({
   const [purchaseMsg, setPurchaseMsg] = useState("");
   const handlePurchase = useCallback(async (planKey: string) => {
     if (purchasePaying) return;
-    const plan = AI_PAID_PLANS.find((p) => p.key === planKey);
+    const plan = paidPlans.find((p) => p.key === planKey);
     if (!plan) return;
     setPurchasePaying(true);
     setPurchaseMsg("");
@@ -517,7 +523,7 @@ export default function EventDivinationPanel({
                     cursor: "pointer",
                   }}
                 >
-                  单次解锁 ¥{SINGLE_UNLOCK_PRICE}
+                  单次解锁 ¥{singlePrice}
                 </button>
                 <button
                   onClick={() => setShowPayment(true)}
@@ -585,7 +591,7 @@ export default function EventDivinationPanel({
                   {purchaseMsg}
                 </div>
               )}
-              {AI_PAID_PLANS.map((plan) => (
+              {paidPlans.map((plan) => (
                 <div
                   key={plan.key}
                   style={{
@@ -716,7 +722,7 @@ export default function EventDivinationPanel({
 
               {/* 价格 */}
               <div style={{ textAlign: "center", marginBottom: "14px" }}>
-                <span style={{ fontSize: "28px", fontWeight: "bold", color: "#7B2FBE" }}>¥{SINGLE_UNLOCK_PRICE}</span>
+                <span style={{ fontSize: "28px", fontWeight: "bold", color: "#7B2FBE" }}>¥{singlePrice}</span>
                 <span style={{ fontSize: "13px", color: "#999", marginLeft: "4px" }}>/ 次</span>
               </div>
 
@@ -743,7 +749,7 @@ export default function EventDivinationPanel({
                   marginBottom: "8px",
                 }}
               >
-                {unlockPaying ? "支付确认中..." : `确认支付 ¥${SINGLE_UNLOCK_PRICE} 解锁`}
+                {unlockPaying ? "支付确认中..." : `确认支付 ¥${singlePrice} 解锁`}
               </button>
               <button
                 onClick={() => setShowSingleUnlock(false)}

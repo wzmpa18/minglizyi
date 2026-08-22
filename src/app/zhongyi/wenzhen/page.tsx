@@ -6,6 +6,7 @@ import { WENZHEN_CATEGORIES, buildWenzhenSystemPrompt } from "@/data/wenzhen_dat
 import { buildZhengguPrompt } from "@/data/zhenggu_knowledge";
 import { callAI, getUserPermissionLevel, getPermissionStatus, truncateContentForFreeUser, generateContentKey, isSingleUnlocked, activateSingleUnlock, SINGLE_UNLOCK_PRICE } from "@/lib/aiService";
 import { paySingleUnlockAndWait } from "@/lib/paymentService";
+import { useAiPricing } from "@/lib/pricingStore";
 import { useNativePayQR } from "@/components/PayQRCodeModal";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
@@ -31,6 +32,10 @@ interface SymptomInput {
 export default function WenzhenPage() {
   const router = useRouter();
   useToolBack();
+
+  // v25.0.47_10: 价格 SSOT——展示与下单价格优先读服务端，本地常量仅兜底
+  const { singleUnlockPrice: serverSinglePrice } = useAiPricing();
+  const singlePrice = serverSinglePrice ?? SINGLE_UNLOCK_PRICE;
 
   // 门类
   const [activeCategory, setActiveCategory] = useState("beipai");
@@ -185,7 +190,7 @@ export default function WenzhenPage() {
     setUnlockPaying(true);
     setUnlockMsg("");
     try {
-      const r = await paySingleUnlockAndWait(cKey, SINGLE_UNLOCK_PRICE);
+      const r = await paySingleUnlockAndWait(cKey, singlePrice);
       // v25.0.47_9: Native扫码支付——弹出付款二维码，扫码成功后执行本地解锁
       if (r.ticket && aiFullContent) {
         openQR(r.ticket, () => {
@@ -619,7 +624,7 @@ export default function WenzhenPage() {
                       cursor: "pointer",
                     }}
                   >
-                    单次解锁 ¥{SINGLE_UNLOCK_PRICE}
+                    单次解锁 ¥{singlePrice}
                   </button>
                   <button
                     onClick={() => router.push("/membership")}
@@ -697,7 +702,7 @@ export default function WenzhenPage() {
             <div style={{ fontSize: "32px", marginBottom: "8px" }}>💊</div>
             <h3 style={{ fontSize: "16px", fontWeight: "bold", margin: "0 0 8px" }}>解锁完整辨证结果</h3>
             <p style={{ fontSize: "13px", color: "#666", margin: "0 0 16px" }}>
-              支付 ¥{SINGLE_UNLOCK_PRICE} 解锁本次完整方药、取穴经验参考、开方思路详解
+              支付 ¥{singlePrice} 解锁本次完整方药、取穴经验参考、开方思路详解
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               {unlockMsg && (
@@ -720,7 +725,7 @@ export default function WenzhenPage() {
                   opacity: unlockPaying ? 0.6 : 1,
                 }}
               >
-                {unlockPaying ? "支付确认中..." : <>确认支付 ¥{SINGLE_UNLOCK_PRICE}</>}
+                {unlockPaying ? "支付确认中..." : <>确认支付 ¥{singlePrice}</>}
               </button>
               <button
                 onClick={() => router.push("/membership")}

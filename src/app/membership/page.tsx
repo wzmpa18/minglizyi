@@ -26,9 +26,10 @@ import { updateUserProfile, getUserProfile } from "@/lib/auth";
 import { reportConsumptionRebate } from "@/lib/inviteApi";
 import { redeemCode, getMyRedemptions } from "@/lib/redeemCodeStore";
 import { getToolConfig } from "@/lib/toolConfigStore";
-import { isPaymentsBlocked, IOS_PAYMENT_DISABLED_TIP } from "@/lib/platformGate";
+import { isPaymentsBlocked, IOS_PAYMENT_DISABLED_TIP } from "@/lib/platformGates";
 import { payForMembership, pollPaymentStatus } from "@/lib/paymentService";
 import { useNativePayQR } from "@/components/PayQRCodeModal";
+import { useServerPricing, mergePlansWithServer } from "@/lib/pricingStore";
 
 const BRAND = "#7B2FBE";
 
@@ -36,6 +37,9 @@ export default function MembershipPage() {
   const { goBack } = useToolBack();
   // v25.0.47_9: Native扫码支付弹层（全场景兜底收款通道）
   const { qrModal, openQR } = useNativePayQR();
+  // v25.0.47_10: 价格 SSOT——套餐价格优先读服务端（后台改价实时生效），本地常量仅兜底
+  const { plans: serverPlans } = useServerPricing();
+  const PLANS = mergePlansWithServer(MEMBERSHIP_PLANS, serverPlans);
   const [status, setStatus] = useState<MembershipStatus>(() => getMembershipStatus());
   const [selectedPlan, setSelectedPlan] = useState<MemberLevel>("yearly");
   const [paymentMethod, setPaymentMethod] = useState<"wechat" | "alipay">("wechat");
@@ -96,7 +100,7 @@ export default function MembershipPage() {
   // v25.0.47_9: 支付成功统一权益落地（JSAPI轮询确认 / Native扫码回调共用）
   // 服务端订单已交付权益（users.member_level/membership_expiry），此处同步本地展示与账本
   const applyMembershipPaid = (serverOrderNo: string) => {
-    const plan = MEMBERSHIP_PLANS.find((p) => p.level === selectedPlan);
+    const plan = PLANS.find((p) => p.level === selectedPlan);
     if (!plan) return;
     const order = createOrder(selectedPlan, paymentMethod);
     const result = completeOrder(order.id);
@@ -124,7 +128,7 @@ export default function MembershipPage() {
       setErrorMsg(IOS_PAYMENT_DISABLED_TIP);
       return;
     }
-    const plan = MEMBERSHIP_PLANS.find((p) => p.level === selectedPlan);
+    const plan = PLANS.find((p) => p.level === selectedPlan);
     if (!plan || plan.price === 0) {
       setErrorMsg("该套餐为免费版本，无需开通");
       return;
@@ -267,7 +271,7 @@ export default function MembershipPage() {
         )}
 
         {/* ===== 套餐列表 ===== */}
-        {!paymentsBlocked && MEMBERSHIP_PLANS.map((plan) => {
+        {!paymentsBlocked && PLANS.map((plan) => {
           const isSelected = selectedPlan === plan.level;
           const levelColor = getLevelColor(plan.level);
           return (
@@ -645,7 +649,7 @@ export default function MembershipPage() {
         >
           {paying
             ? "支付处理中..."
-            : `立即开通 · ¥${MEMBERSHIP_PLANS.find((p) => p.level === selectedPlan)?.price ?? 0}`}
+            : `立即开通 · ¥${PLANS.find((p) => p.level === selectedPlan)?.price ?? 0}`}
         </button>
       </div>
       )}

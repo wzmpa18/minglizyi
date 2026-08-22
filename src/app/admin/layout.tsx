@@ -23,11 +23,24 @@ import {
   Receipt,
   Coins,
   Flag,
+  Users,
+  Wrench,
+  Tag,
+  GraduationCap,
+  MessagesSquare,
+  Megaphone,
+  HandCoins,
+  Banknote,
+  ToggleLeft,
+  ScrollText,
+  Activity,
 } from "lucide-react";
 import { THEME, useMounted } from "./_shared";
 import { getAdminKey, setAdminKey, clearAdminKey, isAdminAuthed } from "@/lib/admin/client";
 
 // ==================== 导航项配置 ====================
+// FINAL-ADMIN-COMMERCIAL-SEAL-02 第三章：后台左侧菜单固定 17 项
+// 所有既有子页面（unified/dashboard/ai-control 等）保留，统一从本导航进入
 
 interface NavItem {
   href: string;
@@ -37,15 +50,23 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/admin", label: "控制台概览", icon: <LayoutDashboard size={18} />, desc: "系统总览与快捷入口" },
-  { href: "/admin/unified", label: "统一控制中心", icon: <Shield size={18} />, desc: "总览·审计·密钥·角色" },
-  { href: "/admin/dashboard", label: "数据看板", icon: <BarChart3 size={18} />, desc: "用户·邀请·浏览·会员·AI" },
-  { href: "/admin/ai-control", label: "AI功能管控", icon: <Bot size={18} />, desc: "开关·配额·定价" },
-  { href: "/admin/membership", label: "会员管理", icon: <Crown size={18} />, desc: "等级·价格·权益·上下架" },
-  { href: "/admin/orders", label: "订单管理", icon: <Receipt size={18} />, desc: "订单·补单·支付状态" },
-  { href: "/admin/commission", label: "分佣与提现", icon: <Coins size={18} />, desc: "比例·明细·提现审核" },
-  { href: "/admin/moderation", label: "内容审核", icon: <Flag size={18} />, desc: "用户·动态·举报·群" },
-  { href: "/admin/sources", label: "内容源管理", icon: <Newspaper size={18} />, desc: "行业资讯·合规门禁" },
+  { href: "/admin", label: "总览", icon: <LayoutDashboard size={18} />, desc: "老板驾驶舱·20项核心指标" },
+  { href: "/admin/moderation", label: "用户管理", icon: <Users size={18} />, desc: "搜索·封禁·禁言·风险记录" },
+  { href: "/admin/tool-control", label: "工具管理", icon: <Wrench size={18} />, desc: "14款工具·开关·收费·平台" },
+  { href: "/admin/pricing", label: "产品与价格", icon: <Tag size={18} />, desc: "价格SSOT·会员·AI产品" },
+  { href: "/admin/membership", label: "会员与权益", icon: <Crown size={18} />, desc: "等级·价格·权益·上下架" },
+  { href: "/admin/ai-control", label: "AI管理", icon: <Bot size={18} />, desc: "开关·配额·定价·健康" },
+  { href: "/admin/loc", label: "学习 / 中医", icon: <GraduationCap size={18} />, desc: "考试配置·积分·机构管理" },
+  { href: "/admin/moderation?tab=group", label: "社交 / 群聊", icon: <MessagesSquare size={18} />, desc: "群管理·举报处理·禁言" },
+  { href: "/admin/sources", label: "发现 / 资讯", icon: <Newspaper size={18} />, desc: "资讯增删改·排序·合规" },
+  { href: "/admin/marketing", label: "营销 / 海报", icon: <Megaphone size={18} />, desc: "海报模板·分享文案·渠道" },
+  { href: "/admin/commission", label: "推广 / 分佣", icon: <HandCoins size={18} />, desc: "比例·冻结期·佣金明细" },
+  { href: "/admin/orders", label: "支付 / 订单", icon: <Receipt size={18} />, desc: "订单查询·补单·权益重试" },
+  { href: "/admin/commission?tab=withdrawals", label: "提现", icon: <Banknote size={18} />, desc: "提现审核·转账状态" },
+  { href: "/admin/moderation?tab=report", label: "内容审核", icon: <Flag size={18} />, desc: "举报·动态·违规内容" },
+  { href: "/admin/feature-flags", label: "系统功能开关", icon: <ToggleLeft size={18} />, desc: "ON/OFF/维护·服务端强制" },
+  { href: "/admin/unified", label: "审计日志", icon: <ScrollText size={18} />, desc: "操作留痕·角色·密钥" },
+  { href: "/admin/dashboard", label: "系统状态", icon: <Activity size={18} />, desc: "数据看板·服务健康" },
 ];
 
 // ==================== 登录门禁 ====================
@@ -121,7 +142,7 @@ function AdminLogin({ onLogin }: { onLogin: () => void }) {
             <Shield size={32} color="#fff" />
           </div>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: THEME.textMain, margin: 0 }}>
-            言道国学 · 管理控制台
+            言道国学 · 运营管理中心
           </h1>
           <p style={{ fontSize: 13, color: THEME.textSub, marginTop: 8 }}>
             请输入管理员密钥以继续
@@ -253,15 +274,16 @@ function Sidebar({
         </div>
         <div>
           <div style={{ fontSize: 15, fontWeight: 800, color: "#fff", lineHeight: 1.2 }}>言道国学</div>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>管理控制台</div>
+          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", marginTop: 2 }}>运营管理中心</div>
         </div>
       </div>
 
       {/* 导航 */}
       <nav style={{ flex: 1, padding: "14px 12px", overflowY: "auto" }}>
         {NAV_ITEMS.map((item) => {
+          const base = item.href.split("?")[0];
           const isActive =
-            item.href === "/admin" ? active === "/admin" : active.startsWith(item.href);
+            base === "/admin" ? active === "/admin" : active.startsWith(base);
           return (
             <Link
               key={item.href}
@@ -468,7 +490,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           >
             {sidebarOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
-          <span style={{ color: "#fff", fontSize: 15, fontWeight: 700 }}>言道国学 · 管理控制台</span>
+          <span style={{ color: "#fff", fontSize: 15, fontWeight: 700 }}>言道国学 · 运营管理中心</span>
         </div>
 
         <div style={{ padding: "24px 28px", maxWidth: 1400 }}>

@@ -266,3 +266,193 @@ export async function resetNewsItems(): Promise<{ ok: boolean; error?: string }>
   });
   return { ok: !!res.success, error: res.error };
 }
+
+// ==================== 统一驾驶舱 overview API（v25.0.47_10） ====================
+
+export interface AdminOverviewData {
+  version: string;
+  gitCommit: string;
+  generatedAt?: string;
+  server?: { uptimeHours?: string | number; memoryMB?: string | number; nodeVersion?: string; pid?: number };
+  users?: { total?: number; newToday?: number; active7d?: number };
+  membership?: { currentMembers?: number; [k: string]: unknown };
+  orders?: {
+    total?: number; paid?: number; pending?: number; revenueYuan?: string | number;
+    today?: number; todayRevenueYuan?: string | number; pendingToday?: number; lastPaidAt?: string | null;
+  };
+  ai?: {
+    enabled?: boolean; callsToday?: number; successToday?: number; failToday?: number;
+    successRate?: number | string; lastSuccessAt?: string | null; lastFailAt?: string | null;
+    lastError?: string; provider?: string; model?: string; avgLatencyMs?: number | string;
+  };
+  social?: { groups?: number; posts?: number; postsToday?: number; comments?: number };
+  moderation?: { pendingReports?: number; [k: string]: unknown };
+  commission?: {
+    records?: number; totalYuan?: string; todayYuan?: string; frozenYuan?: string;
+    withdrawalsPending?: number; withdrawTransfer?: string;
+  };
+  payment?: {
+    nativeReady?: boolean; jsapiReady?: boolean; mode?: string; mchId?: string;
+    appIdConfigured?: boolean; appSecretConfigured?: boolean; lastPaidAt?: string | null;
+    lastCallbackAt?: string | null; lastRefundAt?: string | null; lastReconcileAt?: string | null;
+    todaySuccessRate?: number | string;
+  };
+  health?: Record<string, string>;
+  [k: string]: unknown;
+}
+
+/** 获取老板驾驶舱总览数据（20 项指标 + 三色状态） */
+export async function fetchAdminOverview(): Promise<AdminOverviewData | null> {
+  const res = await adminFetch<AdminOverviewData>("/api/admin/unified/overview");
+  return res.success ? res.data! : null;
+}
+
+// ==================== 系统功能开关 API（v25.0.47_10） ====================
+
+export type FeatureFlagStatus = "ON" | "OFF" | "MAINTENANCE";
+
+export interface FeatureFlagItem {
+  name: string;
+  status: FeatureFlagStatus;
+  desc?: string;
+  enforcePaths?: string[];
+}
+
+export interface FeatureFlagsData {
+  flags: Record<string, FeatureFlagItem>;
+  updatedAt?: string | null;
+}
+
+/** 获取全部功能开关 */
+export async function fetchFeatureFlags(): Promise<FeatureFlagsData | null> {
+  const res = await adminFetch<FeatureFlagsData>("/api/admin/feature-flags");
+  return res.success ? res.data! : null;
+}
+
+/** 更新单个功能开关（SUPER_ADMIN，写审计日志） */
+export async function updateFeatureFlag(
+  flagKey: string,
+  status: FeatureFlagStatus,
+  reason?: string
+): Promise<{ ok: boolean; error?: string; data?: FeatureFlagsData; message?: string }> {
+  const res = await adminFetch<FeatureFlagsData>("/api/admin/feature-flags", {
+    method: "PUT",
+    body: JSON.stringify({ flagKey, status, reason }),
+  });
+  return { ok: !!res.success, error: res.error, data: res.data, message: res.message };
+}
+
+// ==================== 工具管理矩阵 API（v25.0.47_10） ====================
+
+export interface ToolMatrixItem {
+  name: string;
+  status: "ON" | "OFF" | "MAINTENANCE";
+  payMode: "FREE" | "MEMBERSHIP" | "ONE_TIME" | "AI_CREDIT" | "DISABLED";
+  price: number;
+  memberLevel?: string;
+  aiEnabled?: boolean;
+  aiCreditCost?: number;
+  dailyLimit?: number;
+  shareEnabled?: boolean;
+  web?: boolean;
+  android?: boolean;
+  ios?: boolean;
+  wechatMp?: boolean;
+  qqMp?: boolean;
+}
+
+export interface ToolMatrixData {
+  tools: Record<string, ToolMatrixItem>;
+  updatedAt?: string | null;
+}
+
+/** 获取工具矩阵 */
+export async function fetchToolMatrix(): Promise<ToolMatrixData | null> {
+  const res = await adminFetch<ToolMatrixData>("/api/admin/tool-matrix");
+  return res.success ? res.data! : null;
+}
+
+/** 更新单个工具配置 */
+export async function updateToolMatrixItem(
+  toolId: string,
+  patch: Partial<ToolMatrixItem>
+): Promise<{ ok: boolean; error?: string; data?: ToolMatrixData }> {
+  const res = await adminFetch<ToolMatrixData>("/api/admin/tool-matrix", {
+    method: "PUT",
+    body: JSON.stringify({ toolId, patch }),
+  });
+  return { ok: !!res.success, error: res.error, data: res.data };
+}
+
+// ==================== 订单详情 / 权益重试发放 API（v25.0.47_10） ====================
+
+export interface AdminOrderDetail {
+  orderId: string;
+  userId?: string;
+  productType?: string;
+  productName?: string;
+  amountYuan?: string | number;
+  channel?: string;
+  status?: string;
+  createdAt?: string;
+  paidAt?: string | null;
+  transactionId?: string | null;
+  benefitDelivered?: number | boolean;
+  benefitType?: string | null;
+  benefitDeliveredAt?: string | null;
+  commissionStatus?: string;
+  [k: string]: unknown;
+}
+
+/** 订单详情（含权益交付状态/微信交易号） */
+export async function fetchOrderDetail(orderId: string): Promise<AdminOrderDetail | null> {
+  const res = await adminFetch<AdminOrderDetail>(
+    `/api/payment/admin/orders/${encodeURIComponent(orderId)}`
+  );
+  return res.success ? res.data! : null;
+}
+
+/** 重试权益发放（幂等，SUPER_ADMIN） */
+export async function retryBenefitDelivery(orderId: string): Promise<{ ok: boolean; error?: string; message?: string }> {
+  const res = await adminFetch<{ message?: string }>(
+    `/api/payment/admin/orders/${encodeURIComponent(orderId)}/retry-delivery`,
+    { method: "POST" }
+  );
+  return { ok: !!res.success, error: res.error, message: (res.data as any)?.message || res.message };
+}
+
+// ==================== 营销海报 / 分享配置 API（v25.0.47_10） ====================
+
+/** 获取海报配置 */
+export async function fetchPosterConfig(): Promise<Record<string, unknown> | null> {
+  const res = await adminFetch<Record<string, unknown>>("/api/admin/poster-config/poster/config");
+  return res.success ? res.data! : null;
+}
+
+/** 保存海报配置 */
+export async function savePosterConfig(
+  config: Record<string, unknown>
+): Promise<{ ok: boolean; error?: string }> {
+  const res = await adminFetch("/api/admin/poster-config/poster/config", {
+    method: "PUT",
+    body: JSON.stringify(config),
+  });
+  return { ok: !!res.success, error: res.error };
+}
+
+/** 获取分享配置 */
+export async function fetchShareConfig(): Promise<Record<string, unknown> | null> {
+  const res = await adminFetch<Record<string, unknown>>("/api/admin/share-config/share/config");
+  return res.success ? res.data! : null;
+}
+
+/** 保存分享配置 */
+export async function saveShareConfig(
+  config: Record<string, unknown>
+): Promise<{ ok: boolean; error?: string }> {
+  const res = await adminFetch("/api/admin/share-config/share/config", {
+    method: "PUT",
+    body: JSON.stringify(config),
+  });
+  return { ok: !!res.success, error: res.error };
+}

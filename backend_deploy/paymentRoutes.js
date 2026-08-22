@@ -481,6 +481,82 @@ function updateOrderRecord(orderId, status, channel) {
 }
 
 // ============================================================================
+
+// ============================================================================
+// v25.0.47_10: 服务端价格裁决（FINAL-ADMIN-COMMERCIAL-SEAL-02 第七章）
+// 正式订单金额必须来自服务端 Product/Price SSOT：
+//   MEMBERSHIP     -> extra.membershipLevel -> admin-membership-config.json
+//   AI_PACKAGE     -> extra.packageId / planKey -> admin-ai-config.json
+//   SINGLE_UNLOCK  -> ai_plan_{key} 时卡 / tool-matrix 工具 / singleUnlockPrice
+//   POINTS_RECHARGE-> 按充值面额（外层范围校验）
+// 前端传入 amount 仅作展示对照，下单金额以本函数返回为准。
+// ============================================================================
+function resolveServerPrice(type, extra) {
+  try {
+    const aiCfg = readAdminConfig('admin-ai-config.json');
+    const memberCfg = readAdminConfig('admin-membership-config.json');
+    const toolMatrix = readAdminConfig('tool-matrix.json');
+
+    if (type === 'MEMBERSHIP') {
+      const level = extra && (extra.membershipLevel || extra.level);
+      const plans = (Array.isArray(memberCfg && memberCfg.plans) && memberCfg.plans.length)
+        ? memberCfg.plans : DEFAULT_MEMBERSHIP_PLANS;
+      const plan = plans.find(p => p.level === level);
+      if (!plan) return { price: null, reason: '会员套餐不存在' };
+      if (plan.enabled === false) return { price: null, reason: '套餐已下架' };
+      return { price: Number(plan.price) };
+    }
+
+    if (type === 'AI_PACKAGE') {
+      const pkgId = extra && (extra.packageId || extra.id);
+      const planKey = extra && (extra.planKey || extra.key);
+      if (pkgId && aiCfg && Array.isArray(aiCfg.packages)) {
+        const pkg = aiCfg.packages.find(p => p.id === pkgId);
+        if (pkg) {
+          if (pkg.enabled === false) return { price: null, reason: '套餐已下架' };
+          return { price: Number(pkg.price) };
+        }
+      }
+      if (planKey) {
+        const tps = (Array.isArray(aiCfg && aiCfg.timePlans) && aiCfg.timePlans.length)
+          ? aiCfg.timePlans : DEFAULT_AI_TIME_PLANS;
+        const tp = tps.find(p => p.key === planKey);
+        if (tp) return { price: Number(tp.price) };
+      }
+      return { price: null, reason: 'AI套餐不存在' };
+    }
+
+    if (type === 'SINGLE_UNLOCK') {
+      const targetId = extra && extra.unlockTargetId;
+      // AI 时卡（前端约定 unlockTargetId = ai_plan_{key}）
+      if (typeof targetId === 'string' && targetId.startsWith('ai_plan_')) {
+        const planKey = targetId.slice('ai_plan_'.length);
+        const tps = (Array.isArray(aiCfg && aiCfg.timePlans) && aiCfg.timePlans.length)
+          ? aiCfg.timePlans : DEFAULT_AI_TIME_PLANS;
+        const tp = tps.find(p => p.key === planKey);
+        if (tp) return { price: Number(tp.price) };
+        return { price: null, reason: 'AI套餐不存在' };
+      }
+      // B类付费工具（tool-matrix 单项收费）
+      if (toolMatrix && toolMatrix.tools && typeof targetId === 'string' && toolMatrix.tools[targetId]) {
+        const t = toolMatrix.tools[targetId];
+        if (t.status === 'OFF' || t.payMode === 'DISABLED') return { price: null, reason: '工具已关闭' };
+        if (t.payMode === 'ONE_TIME' && Number(t.price) > 0) return { price: Number(t.price) };
+      }
+      // 默认：AI 单次深度解读价
+      const sp = (aiCfg && typeof aiCfg.singleUnlockPrice === 'number' && aiCfg.singleUnlockPrice > 0)
+        ? aiCfg.singleUnlockPrice : DEFAULT_SINGLE_UNLOCK_PRICE;
+      return { price: Number(sp) };
+    }
+
+    // POINTS_RECHARGE / 其他：按充值面额，走外层范围校验
+    return null;
+  } catch (e) {
+    console.error('[payment/create] 价格裁决异常:', e.message);
+    return null;
+  }
+}
+
 // POST /api/payment/create — 创建支付订单
 // ============================================================================
 router.post('/create', async (req, res) => {
@@ -501,6 +577,21 @@ router.post('/create', async (req, res) => {
       return jsonResponse(res, 400, false, '金额必须为大于 0 的数字');
     }
 
+    // v25.0.47_10: 服务端价格裁决——下单金额以 Product/Price SSOT 为准
+    const resolved = resolveServerPrice(type, extra);
+    let finalAmount = Number(amount);
+    if (resolved) {
+      if (resolved.price == null || resolved.price <= 0) {
+        return jsonResponse(res, 400, false, `该产品当前不可购买（${resolved.reason || '免费或已下架'}）`);
+      }
+      if (Math.abs(Number(resolved.price) - Number(amount)) > 0.001) {
+        console.warn(`[payment/create] 金额以服务端为准 type=${type} frontend=${amount} server=${resolved.price}`);
+      }
+      finalAmount = Number(resolved.price);
+    } else if (Number(amount) > 10000) {
+      return jsonResponse(res, 400, false, '金额超出合理范围');
+    }
+
     const validChannels = ['wechat', 'alipay'];
     if (channel && !validChannels.includes(channel)) {
       return jsonResponse(res, 400, false, `支付渠道无效，支持: ${validChannels.join(', ')}`);
@@ -510,13 +601,13 @@ router.post('/create', async (req, res) => {
     if (!isPaymentEnabled()) {
       // TODO: 参数到位后启用
       // 通道未配置时仍创建订单（PENDING 状态），但返回"即将开放"提示
-      const order = createOrderRecord({ userId, type, amount, title, extra });
+      const order = createOrderRecord({ userId, type, amount: finalAmount, title, extra });
       console.log(`[payment/create] 订单已创建（通道未启用）orderId=${order.orderId}`);
       return paymentNotReadyResponse(res);
     }
 
     // === 微信支付V3 JSAPI 下单流程 ===
-    const order = createOrderRecord({ userId, type, amount, title, extra });
+    const order = createOrderRecord({ userId, type, amount: finalAmount, title, extra });
     const payChannel = channel || 'wechat';
 
     if (payChannel === 'wechat' && wechatPayV3.isConfigured()) {
@@ -891,6 +982,123 @@ router.post('/callback/alipay', async (req, res) => {
 // ============================================================================
 // 导出
 // ============================================================================
+
+// ============================================================================
+// v25.0.47_10: 后台订单详情 + 权益重试发放（FINAL-ADMIN-COMMERCIAL-SEAL-02 第十八/十九章）
+// 鉴权：统一角色密钥（admin-keys.json），不回显任何支付密钥
+// ============================================================================
+
+function _resolveAdminKeyPr(token) {
+  try {
+    const fsMod = require('fs');
+    const pathMod = require('path');
+    const keysFile = pathMod.join(__dirname, 'data', 'admin-keys.json');
+    if (!fsMod.existsSync(keysFile) || !token) return null;
+    const keys = JSON.parse(fsMod.readFileSync(keysFile, 'utf-8'));
+    const cryptoMod = require('crypto');
+    const h = cryptoMod.createHash('sha256').update(String(token)).digest('hex');
+    const hit = (keys.keys || []).find(k => k.keyHash === h && k.status === 'active');
+    return hit ? { name: hit.name, role: hit.role } : null;
+  } catch (e) { return null; }
+}
+
+const _PR_ROLES = { SUPER_ADMIN: 50, ADMIN: 40, CONTENT_ADMIN: 30, FINANCE_ADMIN: 30, SUPPORT_ADMIN: 20 };
+
+function _prAdminAuth(minRole) {
+  return (req, res, next) => {
+    const header = req.headers.authorization || '';
+    const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+    const admin = _resolveAdminKeyPr(token);
+    if (!admin) return res.status(401).json({ success: false, error: '密钥无效' });
+    if (minRole && (_PR_ROLES[admin.role] || 0) < _PR_ROLES[minRole]) {
+      return res.status(403).json({ success: false, error: `权限不足（需要${minRole}）` });
+    }
+    req.admin = admin;
+    next();
+  };
+}
+
+// 订单详情（含权益交付状态/权益类型/发放时间/微信交易号）
+router.get('/admin/orders/:orderId', _prAdminAuth('FINANCE_ADMIN'), (req, res) => {
+  try {
+    const orderId = req.params.orderId;
+    const order = ordersStore.get(orderId);
+    if (!order) {
+      return res.status(404).json({ success: false, error: '订单不存在' });
+    }
+    // 数据库侧持久化状态（benefit_delivered / paid_at / transaction_id）
+    let dbInfo = null;
+    try {
+      const db = getOrdersDb();
+      const row = db.prepare('SELECT status, benefit_delivered, paid_at, transaction_id, payment_method FROM user_orders WHERE order_no = ?').get(orderId);
+      if (row) dbInfo = row;
+    } catch (e) {}
+    const benefitType = order.type === 'MEMBERSHIP' ? '会员时长'
+      : order.type === 'POINTS_RECHARGE' ? '积分入账'
+      : order.type === 'SINGLE_UNLOCK' ? '单次解锁标记'
+      : order.type === 'AI_PLAN' ? 'AI套餐额度'
+      : '其他';
+    res.json({
+      success: true,
+      data: {
+        orderId: order.orderId,
+        userId: order.userId,
+        type: order.type,
+        title: order.title,
+        amount: order.amount,
+        status: order.status,
+        channel: order.channel || 'wechat',
+        payMode: order.payMode || null,
+        createdAt: order.createdAt,
+        paidAt: (dbInfo && dbInfo.paid_at) || order.paidAt || null,
+        transactionId: (dbInfo && dbInfo.transaction_id) || order.transactionId || null,
+        benefitDelivered: !!(order.benefitDelivered || (dbInfo && dbInfo.benefit_delivered)),
+        benefitType,
+        benefitDeliveredAt: order.benefitDeliveredAt || null,
+        extra: order.extra || null,
+        commissionStatus: order.commissionStatus || (order.status === 'PAID' ? 'SETTLED_OR_NO_INVITER' : 'NOT_APPLICABLE'),
+      },
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, error: '订单详情查询失败: ' + e.message });
+  }
+});
+
+// 权益重试发放（幂等：benefitDelivered 标记 + DB benefit_delivered 双重校验）
+router.post('/admin/orders/:orderId/retry-delivery', _prAdminAuth('SUPER_ADMIN'), async (req, res) => {
+  try {
+    const orderId = req.params.orderId;
+    const order = ordersStore.get(orderId);
+    if (!order) return res.status(404).json({ success: false, error: '订单不存在' });
+    if (order.status !== 'PAID') {
+      return res.status(400).json({ success: false, error: `订单状态为 ${order.status}，仅已支付订单可重试发放` });
+    }
+    // 幂等检查1：内存标记
+    if (order.benefitDelivered) {
+      return res.json({ success: true, message: '权益已发放，无需重复操作（幂等拦截）', data: { benefitDelivered: true } });
+    }
+    // 幂等检查2：数据库标记
+    try {
+      const db = getOrdersDb();
+      const row = db.prepare('SELECT benefit_delivered FROM user_orders WHERE order_no = ?').get(orderId);
+      if (row && row.benefit_delivered) {
+        order.benefitDelivered = true;
+        return res.json({ success: true, message: '权益已发放（数据库标记），无需重复操作（幂等拦截）', data: { benefitDelivered: true } });
+      }
+    } catch (e) {}
+    // 执行重试
+    deliverOrderBenefits(order);
+    if (order.benefitDelivered) {
+      order.benefitDeliveredAt = new Date().toISOString();
+      console.log(`[payment/admin] 权益重试发放成功 orderId=${orderId} operator=${req.admin.name}`);
+      res.json({ success: true, message: '权益重试发放成功', data: { benefitDelivered: true, benefitDeliveredAt: order.benefitDeliveredAt } });
+    } else {
+      res.json({ success: false, error: '权益发放仍失败，请检查数据库连接/用户存在性' });
+    }
+  } catch (e) {
+    res.status(500).json({ success: false, error: '重试发放失败: ' + e.message });
+  }
+});
 
 module.exports = {
   router,
