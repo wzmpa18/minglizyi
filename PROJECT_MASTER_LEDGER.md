@@ -227,6 +227,7 @@ gh workflow run ios-build.yml --repo wzmpa18/minglizyi --ref main
 
 | 项 | 说明 | 责任方 |
 |----|------|--------|
+| **官网DNS切换** | www.yandao.vip 与 yandao.vip 的 A 记录仍指向旧服务器 111.230.155.30（无SSH权限，其上官网为7/20旧版+旧APK链接）。新服务器 82.156.228.87 已完全就绪（/www/yandao-company 已更新至 v25.0.47 APK 链接+nginx+SSL 自测 200）。**需在腾讯云 DNS 控制台把两条 A 记录改为 82.156.228.87**，或提供旧服务器 SSH 凭证 | 项目方 |
 | **iOS 签署 PLA** | 账号持有人 ZHIMIN WU 登录 developer.apple.com/account 接受最新《计划许可协议》→ 重跑 iOS workflow 出签名 ipa → TestFlight | 项目方 |
 | **微信支付激活** | 提供 WECHAT_APPID + WECHAT_APP_SECRET（公众号 OAuth 用）→ 服务器 ENV 写入 → 0.01 元真实实付 E2E | 项目方 |
 | **商家转账开通** | 微信商户平台开通「商家转账到零钱」产品 → P8 阶段二（提现自动打款）激活 | 项目方 |
