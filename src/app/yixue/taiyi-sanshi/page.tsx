@@ -688,6 +688,25 @@ export default function TaiyiSanshiPage() {
           description="太乙神数排盘"
           variant="block"
           label="分享排盘结果"
+          shareData={{
+            toolType: "taiyi-sanshi",
+            title: `太乙神数：${result.taiyiShen}（${result.taiyiGong}宫）`,
+            summary: `太乙${result.taiyiShen}居${result.taiyiGong}宫 · 积年${result.taiyiJiNian}`,
+            payload: {
+              summaryLines: [
+                `四柱：${result.yearGZ} ${result.monthGZ} ${result.dayGZ} ${result.hourGZ}`,
+                `农历：${result.lunarStr}`,
+                `节气：${result.jieqi}`,
+                `太乙积年：${result.taiyiJiNian}`,
+                `太乙：${result.taiyiShen}（${result.taiyiGong}宫）`,
+                `天目（文昌）：${result.tianmuShen}（${result.tianmuGong}宫）`,
+                `计神：${result.jishenShen}（${result.jishenGong}宫）`,
+                `始击：${result.shijiShen}（${result.shijiGong}宫）`,
+                `主大将：${result.zhuDaJiang[0]}宫 客大将：${result.keDaJiang[0]}宫`,
+                `格局：${result.geju.join("；")}`,
+              ],
+            },
+          }}
         />
         <div className="mt-2">
           <PostToSquareButton tool="太乙神数" summary="太乙局已排出，主客与计神格局清晰" />

@@ -1151,12 +1151,29 @@ export default function DaLiuRenPage() {
       {/* 分享排盘结果 */}
       <div className="px-3 py-2">
         <ShareButton
-          type="tool"
-          title="大六壬排盘结果"
-          description="大六壬排盘"
-          variant="block"
-          label="分享排盘结果"
-        />
+              type="tool"
+              title="大六壬排盘结果"
+              description="大六壬排盘"
+              variant="block"
+              label="分享排盘结果"
+              shareData={{
+                toolType: "daliuren",
+                title: `大六壬：${data.keTi} · 三传${data.sanChuan.map(sc => sc.zhi).join("→")}`,
+                summary: `${data.yuejiangName}加${data.zhanbuTime}时 · ${data.isDaytime ? "昼占" : "夜占"}`,
+                payload: {
+                  summaryLines: [
+                    `四柱：${data.siZhu.map(s => s[0]+s[1]).join(" ")}`,
+                    `日干支：${data.dayGan}${data.dayZhi}`,
+                    `月将：${data.yuejiangName}加${data.zhanbuTime}时`,
+                    `三传：${data.sanChuan.map(sc => sc.zhi).join("→")}（${data.sanChuanMethod}法）`,
+                    `四课：${data.siKe.map(ke => ke.shangShen+ke.xiaShen).join(" ")}`,
+                    `课体：${data.keTi}`,
+                    `空亡：${data.kongwang.join("")}`,
+                    `${data.isDaytime ? "昼占" : "夜占"}`,
+                  ],
+                },
+              }}
+            />
         <div className="mt-2">
           <PostToSquareButton tool="大六壬" summary="大六壬课式已排出，四课三传格局清晰" />
         </div>

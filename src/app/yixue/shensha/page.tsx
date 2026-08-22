@@ -206,6 +206,18 @@ export default function ShenShaPage() {
           description="神煞查询"
           variant="block"
           label="分享排盘结果"
+          shareData={{
+            toolType: "shensha",
+            title: `神煞查询：总计${stats.total}个（吉${stats.ji}·凶${stats.xiong}·中性${stats.zhong}）`,
+            summary: `神煞总计${stats.total}个 · 吉${stats.ji} 凶${stats.xiong} 中性${stats.zhong}`,
+            payload: {
+              summaryLines: [
+                `神煞统计：总计${stats.total}个（吉${stats.ji}，凶${stats.xiong}，中性${stats.zhong}）`,
+                `当前筛选：${activeTab}类，共${filteredData.length}个`,
+                ...filteredData.slice(0, 15).map(s => `${s.name}［${s.category}］`),
+              ],
+            },
+          }}
         />
       </div>
 

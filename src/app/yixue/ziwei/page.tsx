@@ -2242,9 +2242,17 @@ export default function ZiweiPage() {
             <ShareButton
               type="tool"
               title="紫微斗数排盘结果"
-              description={`${name || ''} 紫微斗数命盘`}
+              description="紫微斗数命盘"
               variant="block"
               label="分享排盘结果"
+              shareData={{
+                toolType: "ziwei",
+                title: `紫微斗数：命宫${result.earthlyBranchOfSoulPalace} · ${result.fiveElementsClass}`,
+                summary: `命宫主星[${(mingPalace?.majorStars || []).join(",")}] · 五行局${result.fiveElementsClass}`,
+                payload: {
+                  summaryLines: chartContextSummary.split("\n").filter(Boolean),
+                },
+              }}
             />
         <div className="mt-2">
           <PostToSquareButton tool="紫微斗数" summary="紫微命盘已排出，星曜布局与命宫格局清晰" />

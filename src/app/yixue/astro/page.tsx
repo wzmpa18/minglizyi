@@ -401,7 +401,14 @@ export default function AstroPage() {
                 </label>
                 {shareConfirmed && (
                   <div className="mt-2">
-                    <ShareButton type="tool" title="占星星盘" description="占星兴趣工具" variant="block" label="确认并分享" />
+                    <ShareButton type="tool" title="占星星盘" description="占星兴趣工具" variant="block" label="确认并分享" shareData={{
+              toolType: "astro",
+              title: `占星星盘：上升${chart.ascSignName}`,
+              summary: `上升${chart.ascSignName} · 天顶${chart.mcSignName} · 已确认公开`,
+              payload: {
+                summaryLines: buildShareSnapshot({ id: "", title: saveName || "本命星盘", isPrivate: true, chart, createdAt: "", updatedAt: "" }).split("\n").filter(Boolean),
+              },
+            }} />
                   </div>
                 )}
               </div>

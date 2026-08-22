@@ -745,6 +745,22 @@ export default function YizhangjingPage() {
           description="达摩一掌经排盘"
           variant="block"
           label="分享排盘结果"
+          shareData={{
+            toolType: "yizhangjing",
+            title: `达摩一掌经：年宫${result.yearZhi} · 日宫${result.dayZhi}`,
+            summary: `年宫${result.yearZhi} 月宫${result.monthZhi} 日宫${result.dayZhi} 时宫${result.hourZhi}`,
+            payload: {
+              summaryLines: [
+                `排盘时间：${dateStr}`,
+                `节气：${getJieqiDisplay()}`,
+                `四柱：${result.pillars.map(p => p.gan + p.zhi).join(" ")}`,
+                `年宫：${result.yearZhi}（${getGongInfo(result.yearZhi)?.name ?? ""}）`,
+                `月宫：${result.monthZhi}（${getGongInfo(result.monthZhi)?.name ?? ""}）`,
+                `日宫：${result.dayZhi}（${getGongInfo(result.dayZhi)?.name ?? ""}）`,
+                `时宫：${result.hourZhi}（${getGongInfo(result.hourZhi)?.name ?? ""}）`,
+              ],
+            },
+          }}
         />
         <div className="mt-2">
           <PostToSquareButton tool="达摩一掌经" summary="一掌经推算已完成，十二宫位落位清晰" />

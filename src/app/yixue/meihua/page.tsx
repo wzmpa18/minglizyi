@@ -1079,6 +1079,23 @@ export default function MeihuaPage() {
               description="梅花易数起卦"
               variant="block"
               label="分享排盘结果"
+              shareData={{
+                toolType: "meihua",
+                title: `梅花易数：${result.benGua.name}${result.bianGua ? " → " + result.bianGua.name : ""}`,
+                summary: `${dateStr}起卦 · 动爻${result.changeYao} · 体${result.tiYong.tiWuxing}用${result.tiYong.yongWuxing}`,
+                payload: {
+                  summaryLines: [
+                    `事项：${desc || "未填写"}`,
+                    `时间：${dateStr}`,
+                    `本卦：${result.benGua.name}（上${result.benGua.upper}下${result.benGua.lower}）`,
+                    `互卦：${result.huGua.name}（上${result.huGua.upper}下${result.huGua.lower}）`,
+                    `变卦：${result.bianGua.name}（上${result.bianGua.upper}下${result.bianGua.lower}）`,
+                    `动爻：第${result.changeYao}爻`,
+                    `体用：体卦${result.tiYong.tiGua}（${result.tiYong.tiWuxing}） 用卦${result.tiYong.yongGua}（${result.tiYong.yongWuxing}）`,
+                    `关系：${result.tiYong.relation}`,
+                  ],
+                },
+              }}
             />
         <div className="mt-2">
           <PostToSquareButton tool="梅花易数" summary="梅花易数已起卦，体用生克关系清晰" />

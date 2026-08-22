@@ -561,6 +561,7 @@ export default function ChengguPage() {
         </div>
       )}
       {/* 分享排盘结果 */}
+      {result && (
       <div className="px-3 py-2">
         <ShareButton
           type="tool"
@@ -568,8 +569,25 @@ export default function ChengguPage() {
           description="称骨算命"
           variant="block"
           label="分享排盘结果"
+          shareData={{
+            toolType: "chenggu",
+            title: `称骨算命：${result.totalWeight}（${result.totalQian}钱）`,
+            summary: `${gender === "male" ? "男命" : "女命"} · 总骨重${result.totalWeight}（${result.totalQian}钱）`,
+            payload: {
+              summaryLines: [
+                `年柱：${result.yearGz}（${result.yearWeight}）`,
+                `月骨重：${result.monthWeight}`,
+                `日骨重：${result.dayWeight}`,
+                `时骨重：${result.hourWeight}`,
+                `总骨重：${result.totalWeight}（${result.totalQian}钱）`,
+                `性别：${gender === "male" ? "男命" : "女命"}`,
+                `批语：${result.piyu}`,
+              ],
+            },
+          }}
         />
       </div>
+      )}
 
 
       {/* 免责声明 */}

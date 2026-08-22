@@ -311,6 +311,7 @@ export default function CarplatePage() {
         </div>
       )}
       {/* 分享排盘结果 */}
+      {result && (
       <div className="px-3 py-2">
         <ShareButton
           type="tool"
@@ -318,8 +319,25 @@ export default function CarplatePage() {
           description="车牌号码分析"
           variant="block"
           label="分享排盘结果"
+          shareData={{
+            toolType: "carplate",
+            title: `车牌分析：${result.province}${result.cityLetter}${result.numberPart} · ${result.grade}`,
+            summary: `评分${result.score} · 等级${result.grade} · 81数理第${result.shuliNum}数`,
+            payload: {
+              summaryLines: [
+                `车牌：${result.province}${result.cityLetter}${result.numberPart}`,
+                `评分：${result.score}`,
+                `等级：${result.grade}`,
+                `五行：${Object.entries(result.wuxingCount || {}).map(([k, v]) => k + String(v)).join(" ")}`,
+                `吉祥组合：${result.auspiciousFound.join("、") || "无"}`,
+                `不利组合：${result.inauspiciousFound.join("、") || "无"}`,
+                `81数理：第${result.shuliNum}数·${result.shuliJiXiong}`,
+              ],
+            },
+          }}
         />
       </div>
+      )}
 
 
       {/* 免责声明 */}

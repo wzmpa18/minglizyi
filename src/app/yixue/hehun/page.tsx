@@ -802,12 +802,26 @@ export default function HehunPage() {
 
             <div className="px-3 py-2">
               <ShareButton
-                type="tool"
-                title="八字合婚结果"
-                description="八字合婚分析"
-                variant="block"
-                label="分享合婚结果"
-              />
+          type="tool"
+          title="八字合婚结果"
+          description="八字合婚分析"
+          variant="block"
+          label="分享合婚结果"
+          shareData={{
+            toolType: "hehun",
+            title: `八字合婚：${hehunResult.totalScore}分 ${hehunResult.grade}`,
+            summary: `合婚评分${hehunResult.totalScore}分 · ${hehunResult.grade}`,
+            payload: {
+              summaryLines: [
+                `男方八字：${hehunResult.male.pillars.map((p:any)=>p.gan+p.zhi).join(" ")}`,
+                `女方八字：${hehunResult.female.pillars.map((p:any)=>p.gan+p.zhi).join(" ")}`,
+                `合婚评分：${hehunResult.totalScore}分 ${hehunResult.grade}`,
+                ...hehunResult.items.map((i:any) => `${i.name}：${i.passDesc}`),
+                `总评：${hehunResult.summary}`,
+              ],
+            },
+          }}
+        />
         <div className="mt-2">
           <PostToSquareButton tool="八字合婚" summary="合婚分析已完成，双方八字匹配度已出" />
         </div>

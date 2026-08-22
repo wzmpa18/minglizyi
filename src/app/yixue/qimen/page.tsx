@@ -908,6 +908,14 @@ export default function QimenPage() {
           description="奇门遁甲排盘"
           variant="block"
           label="分享排盘结果"
+          shareData={{
+            toolType: "qimen",
+            title: `奇门遁甲：${isYangDun ? "阳遁" : "阴遁"}${juNum}局`,
+            summary: `${formData.year}年${formData.month}月${formData.day}日 ${hourZhi}时起局`,
+            payload: {
+              summaryLines: qimenOverallContext.split("\n").filter(Boolean),
+            },
+          }}
         />
         <div className="mt-2">
           <PostToSquareButton tool="奇门遁甲" summary="奇门排盘已起局，格局与用神关系清晰" />

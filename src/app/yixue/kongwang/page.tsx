@@ -221,6 +221,21 @@ export default function KongWangPage() {
           description="空亡查询"
           variant="block"
           label="分享排盘结果"
+          shareData={{
+            toolType: "kongwang",
+            title: `空亡查询：${result.ganzhi} · 空亡${result.kongwang}`,
+            summary: `${result.ganzhi} · 所属${result.xunName} · 空亡${result.kongwang}`,
+            payload: {
+              summaryLines: [
+                `查询干支：${result.ganzhi}`,
+                `六十甲子序号：第${(result.idx ?? 0) + 1}位`,
+                `所属旬：${result.xunName}`,
+                `旬内范围：${result.xunRange}`,
+                `空亡地支：${result.kongwang}`,
+                `空亡详解：${result.kwZhi1}和${result.kwZhi2}为空亡，表示虚而不实`,
+              ],
+            },
+          }}
         />
       </div>
 

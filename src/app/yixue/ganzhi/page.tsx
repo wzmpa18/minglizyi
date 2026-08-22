@@ -371,6 +371,42 @@ export default function GanZhiPage() {
           description="干支查询"
           variant="block"
           label="分享排盘结果"
+          shareData={{
+            toolType: "ganzhi",
+            title: mode === "ganzhi-to-index" && mode1Result && !mode1Result.error
+              ? `干支查询：${mode1Result.ganzhi} · 第${mode1Result.idx}位`
+              : mode === "index-to-ganzhi" && mode2Result && !mode2Result.error
+              ? `干支查询：第${mode2Result.idx}位 · ${mode2Result.ganzhi}`
+              : "干支查询结果",
+            summary: mode === "ganzhi-to-index" && mode1Result && !mode1Result.error
+              ? `${mode1Result.ganzhi} · 纳音${mode1Result.nayin}`
+              : mode === "index-to-ganzhi" && mode2Result && !mode2Result.error
+              ? `第${mode2Result.idx}位 · ${mode2Result.ganzhi} · 纳音${mode2Result.nayin}`
+              : "干支查询",
+            payload: {
+              summaryLines: mode === "ganzhi-to-index" && mode1Result && !mode1Result.error
+                ? [
+                    `查询模式：按干支查序号`,
+                    `干支：${mode1Result.ganzhi}`,
+                    `六十甲子序号：第${mode1Result.idx}位`,
+                    `天干五行：${selectedGan}（${mode1Result.ganWx}）`,
+                    `地支五行：${selectedZhi}（${mode1Result.zhiWx}）`,
+                    `纳音：${mode1Result.nayin}（${mode1Result.nayinElement}）`,
+                    `所属旬：${mode1Result.xunName}`,
+                    `空亡：${mode1Result.kongwang}`,
+                  ]
+                : mode === "index-to-ganzhi" && mode2Result && !mode2Result.error
+                ? [
+                    `查询模式：按序号查干支`,
+                    `六十甲子序号：第${mode2Result.idx}位`,
+                    `干支：${mode2Result.ganzhi}`,
+                    `纳音：${mode2Result.nayin}（${mode2Result.nayinElement}）`,
+                    `所属旬：${mode2Result.xunName}`,
+                    `空亡：${mode2Result.kongwang}`,
+                  ]
+                : ["暂无有效查询结果"],
+            },
+          }}
         />
       </div>
 

@@ -247,6 +247,21 @@ export default function NaYinPage() {
           description="纳音五行查询"
           variant="block"
           label="分享排盘结果"
+          shareData={{
+            toolType: "nayin",
+            title: result.error ? "纳音五行查询" : `纳音查询：${result.ganzhi} · ${result.nayin}`,
+            summary: result.error ? "无效的干支组合" : `${result.ganzhi} · 纳音${result.nayin}（${result.nayinElement}）`,
+            payload: {
+              summaryLines: result.error
+                ? [result.error]
+                : [
+                    `干支：${result.ganzhi}`,
+                    `六十甲子序号：第${(result.idx ?? 0) + 1}位`,
+                    `纳音：${result.nayin}`,
+                    `纳音五行：${result.nayinElement}`,
+                  ],
+            },
+          }}
         />
       </div>
 

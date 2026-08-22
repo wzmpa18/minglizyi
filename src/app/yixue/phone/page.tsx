@@ -320,6 +320,7 @@ export default function PhonePage() {
         </div>
       )}
       {/* 分享排盘结果 */}
+      {result && (
       <div className="px-3 py-2">
         <ShareButton
           type="tool"
@@ -327,8 +328,25 @@ export default function PhonePage() {
           description="手机号吉凶分析"
           variant="block"
           label="分享排盘结果"
+          shareData={{
+            toolType: "phone",
+            title: `手机号分析：${result.grade}`,
+            summary: `评分${result.score} · 等级${result.grade} · 81数理第${result.shuliNum}数`,
+            payload: {
+              summaryLines: [
+                `号码：${result.phone}`,
+                `运营商：${result.carrier}`,
+                `评分：${result.score}`,
+                `等级：${result.grade}`,
+                `五行：${Object.entries(result.wuxingCount || {}).map(([k, v]) => k + String(v)).join(" ")}`,
+                `八星组合：${result.baxingMatches.map(m => m.star.name).join("、")}`,
+                `81数理：第${result.shuliNum}数·${result.shuliJiXiong}`,
+              ],
+            },
+          }}
         />
       </div>
+      )}
 
 
       {/* 免责声明 */}

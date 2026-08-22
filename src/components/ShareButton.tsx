@@ -7,6 +7,15 @@ import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import { shareReward } from "@/lib/pointsStore";
 import { getInviteCode } from "@/lib/inviteStore";
 import { getInviteLink } from "@/lib/inviteApi";
+import {
+  createShareToken,
+  copyLinkReal,
+  systemShareReal,
+  makeShareQr,
+  logShareAction,
+  type ShareEngineInput,
+  type ShareTokenData,
+} from "@/lib/shareEngine";
 
 const BRAND = "#7B2FBE";
 
@@ -17,12 +26,17 @@ export interface ShareButtonProps {
   title: string;
   /** 分享描述 */
   description?: string;
-  /** 分享链接 */
+  /** 分享链接（无 shareData 时使用） */
   url?: string;
   /** 按钮文字 */
   label?: string;
   /** 按钮样式：inline=行内小按钮，block=块级大按钮 */
   variant?: "inline" | "block";
+  /**
+   * 统一Share Engine输入（v25.0.47_5）：传入后排盘结果存服务端生成Token链接，
+   * 接收者扫码/点开可查看真实结果，不再分享空白工具页。
+   */
+  shareData?: ShareEngineInput;
   /** 回调 */
   onShared?: () => void;
 }
@@ -34,14 +48,19 @@ export function ShareButton({
   url,
   label = "分享",
   variant = "inline",
+  shareData,
   onShared,
 }: ShareButtonProps) {
   const [showMenu, setShowMenu] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [toast, setToast] = useState("");
+  const [qrImage, setQrImage] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   // P9-推广中心：签名邀请参数（与服务端 resolveInviteAttribution 同一归因口径）
   const [inviteParams, setInviteParams] = useState<{ ref: string; ts: string; sig: string } | null>(null);
+  // Share Engine：Token缓存（同一份排盘结果只创建一次）
+  const tokenCache = useRef<ShareTokenData | null>(null);
+  const tokenCreating = useRef<Promise<ShareTokenData | null> | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -79,34 +98,12 @@ export function ShareButton({
     return { userId, userName, inviteCode };
   }, []);
 
-  // 兼容性复制：优先 navigator.clipboard，降级 execCommand
+  // 兼容性复制：优先 navigator.clipboard，降级 execCommand（真实resolve才算成功）
   const copyToClipboard = useCallback(async (text: string): Promise<boolean> => {
-    if (typeof navigator !== "undefined" && navigator.clipboard && navigator.clipboard.writeText) {
-      try {
-        await navigator.clipboard.writeText(text);
-        return true;
-      } catch { /* fall through to execCommand */ }
-    }
-    // 降级方案：创建临时 textarea + execCommand
-    try {
-      const textarea = document.createElement("textarea");
-      textarea.value = text;
-      textarea.style.position = "fixed";
-      textarea.style.left = "-9999px";
-      textarea.style.top = "0";
-      document.body.appendChild(textarea);
-      textarea.focus();
-      textarea.select();
-      const ok = document.execCommand("copy");
-      document.body.removeChild(textarea);
-      return ok;
-    } catch {
-      return false;
-    }
+    return copyLinkReal(text);
   }, []);
 
   // P9-推广中心：分享链接统一携带邀请标识，与注册归因复用同一套签名链接口径
-  // 优先级：签名链接参数(ref/ts/sig) > 旧邀请码(code)；全场景覆盖：工具结果页、学习成就页、文章等
   const buildAttributedLink = useCallback((rawUrl: string): string => {
     if (typeof window === "undefined") return rawUrl;
     try {
@@ -127,38 +124,59 @@ export function ShareButton({
     }
   }, [getCurrentUserInfo, inviteParams]);
 
-  // 复制链接
-  const handleCopyLink = useCallback(() => {
-    const rawLink = url || (typeof window !== "undefined" ? window.location.href : "");
-    const link = buildAttributedLink(rawLink);
-    copyToClipboard(link).then((ok) => {
-      if (ok) {
-        showToast("链接已复制，可粘贴分享");
-        handleShareSuccess();
-      } else {
-        showToast("复制失败，请手动复制：" + link);
-      }
-    });
-    setShowMenu(false);
-  }, [url, copyToClipboard, showToast, buildAttributedLink]);
+  /**
+   * 取最终分享URL（Share Engine统一入口）：
+   * - 有 shareData：服务端创建Token链接（接收者可查看真实排盘结果），失败则明确报错
+   * - 无 shareData：沿用当前页URL+邀请归因（文章/帖子等）
+   */
+  const ensureShareUrl = useCallback(async (): Promise<string | null> => {
+    if (!shareData) {
+      const rawLink = url || (typeof window !== "undefined" ? window.location.href : "");
+      return buildAttributedLink(rawLink);
+    }
+    if (tokenCache.current) return tokenCache.current.shareUrl;
+    if (!tokenCreating.current) {
+      tokenCreating.current = createShareToken(shareData).then((d) => {
+        if (d) tokenCache.current = d;
+        return d;
+      });
+    }
+    const d = await tokenCreating.current;
+    if (!d) {
+      showToast("分享链接生成失败，请检查网络后重试");
+      return null;
+    }
+    return d.shareUrl;
+  }, [shareData, url, buildAttributedLink, showToast]);
 
-  // 生成海报
+  // 复制链接（真实Clipboard resolve）
+  const handleCopyLink = useCallback(() => {
+    setGenerating(true);
+    ensureShareUrl().then((link) => {
+      setGenerating(false);
+      if (!link) return;
+      copyToClipboard(link).then((ok) => {
+        if (ok) {
+          showToast("链接已复制，可粘贴分享");
+          logShareAction("copy_link");
+          handleShareSuccess();
+        } else {
+          showToast("复制失败，请长按手动复制");
+        }
+      });
+      setShowMenu(false);
+    });
+  }, [ensureShareUrl, copyToClipboard, showToast]);
+
+  // 生成海报（图片真实生成 + 保存）
   const handleGeneratePoster = useCallback(async () => {
     setShowMenu(false);
     setGenerating(true);
     try {
+      const link = await ensureShareUrl();
+      if (!link) { setGenerating(false); return; }
       const { userId, userName, inviteCode } = getCurrentUserInfo();
-      const rawShareUrl = url || (typeof window !== "undefined" ? window.location.href : "https://yandao.vip");
-      const shareUrl = buildAttributedLink(rawShareUrl);
-      // P9：二维码本地生成（qrcode 包），不依赖境外 qrserver 服务
-      const QRCode = (await import("qrcode")).default;
-      const qrUrl = await QRCode.toDataURL(shareUrl, {
-        width: 300,
-        margin: 2,
-        errorCorrectionLevel: "M",
-        color: { dark: "#2D1A3E", light: "#FFFFFF" },
-      });
-
+      const qrUrl = await makeShareQr(link);
       const posterUrl = await generatePoster({
         size: "vertical",
         userId,
@@ -167,15 +185,15 @@ export function ShareButton({
         qrCodeUrl: qrUrl,
       });
 
-      // 下载海报
-      const link = document.createElement("a");
-      link.href = posterUrl;
-      link.download = `yandao-share-${Date.now()}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      const a = document.createElement("a");
+      a.href = posterUrl;
+      a.download = `yandao-share-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
 
       showToast("海报已保存到下载文件夹");
+      logShareAction("save_poster");
       handleShareSuccess();
     } catch (e) {
       console.error("生成海报失败:", e);
@@ -183,30 +201,52 @@ export function ShareButton({
     } finally {
       setGenerating(false);
     }
-  }, [type, title, description, url, getCurrentUserInfo, showToast, buildAttributedLink]);
+  }, [ensureShareUrl, getCurrentUserInfo, showToast]);
 
-  // 系统分享
+  // 二维码（本地生成，展示可长按识别）
+  const handleShowQr = useCallback(async () => {
+    setShowMenu(false);
+    setGenerating(true);
+    try {
+      const link = await ensureShareUrl();
+      if (!link) { setGenerating(false); return; }
+      const qr = await makeShareQr(link);
+      setQrImage(qr);
+      logShareAction("qr_code");
+    } catch (e) {
+      console.error("生成二维码失败:", e);
+      showToast("二维码生成失败，请重试");
+    } finally {
+      setGenerating(false);
+    }
+  }, [ensureShareUrl, showToast]);
+
+  // 系统分享（真实Web Share API；取消≠成功）
   const handleSystemShare = useCallback(async () => {
     setShowMenu(false);
-    const rawLink = url || (typeof window !== "undefined" ? window.location.href : "");
-    const link = buildAttributedLink(rawLink);
-    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
-      try {
-        await navigator.share({
-          title: title,
-          text: description || title,
-          url: link,
-        });
+    setGenerating(true);
+    try {
+      const link = await ensureShareUrl();
+      if (!link) { setGenerating(false); return; }
+      const status = await systemShareReal({ title, text: description || title, url: link });
+      if (status === "success") {
         showToast("分享成功");
+        logShareAction("system_share");
         handleShareSuccess();
-      } catch {
-        // 用户取消分享不算失败
+      } else if (status === "cancelled") {
+        // 用户取消：不提示成功也不报错
+      } else if (status === "unsupported") {
+        // 不支持系统分享：降级为复制链接
+        const ok = await copyToClipboard(link);
+        showToast(ok ? "当前环境不支持系统分享，链接已复制" : "复制失败，请手动复制");
+        if (ok) { logShareAction("copy_link"); handleShareSuccess(); }
+      } else {
+        showToast("分享失败，请重试");
       }
-    } else {
-      // 不支持系统分享时，降级为复制链接
-      handleCopyLink();
+    } finally {
+      setGenerating(false);
     }
-  }, [title, description, url, showToast, handleCopyLink, buildAttributedLink]);
+  }, [title, description, ensureShareUrl, copyToClipboard, showToast]);
 
   // 分享成功后发放奖励
   const handleShareSuccess = useCallback(() => {
@@ -234,10 +274,12 @@ export function ShareButton({
           <ShareMenu
             onCopyLink={handleCopyLink}
             onPoster={handleGeneratePoster}
+            onQr={handleShowQr}
             onSystemShare={handleSystemShare}
             onClose={() => setShowMenu(false)}
           />
         )}
+        {qrImage && <QrModal image={qrImage} url={tokenCache.current?.shareUrl || ""} onClose={() => setQrImage(null)} />}
         {toast && <Toast message={toast} />}
       </>
     );
@@ -258,16 +300,18 @@ export function ShareButton({
           <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
           <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
         </svg>
-        <span>{label}</span>
+        <span>{generating ? "生成中..." : label}</span>
       </button>
       {showMenu && (
         <ShareMenu
           onCopyLink={handleCopyLink}
           onPoster={handleGeneratePoster}
+          onQr={handleShowQr}
           onSystemShare={handleSystemShare}
           onClose={() => setShowMenu(false)}
         />
       )}
+      {qrImage && <QrModal image={qrImage} url={tokenCache.current?.shareUrl || ""} onClose={() => setQrImage(null)} />}
       {toast && <Toast message={toast} />}
     </>
   );
@@ -277,11 +321,13 @@ export function ShareButton({
 function ShareMenu({
   onCopyLink,
   onPoster,
+  onQr,
   onSystemShare,
   onClose,
 }: {
   onCopyLink: () => void;
   onPoster: () => void;
+  onQr: () => void;
   onSystemShare: () => void;
   onClose: () => void;
 }) {
@@ -308,7 +354,7 @@ function ShareMenu({
           </button>
         </div>
         <div className="overflow-y-auto" style={{ WebkitOverflowScrolling: "touch" }}>
-        <div className="grid grid-cols-3 gap-3 px-6 pb-4">
+        <div className="grid grid-cols-4 gap-3 px-6 pb-4">
           <button
             onClick={onCopyLink}
             className="flex flex-col items-center gap-2"
@@ -341,6 +387,23 @@ function ShareMenu({
             <span className="text-xs text-gray-600">生成海报</span>
           </button>
           <button
+            onClick={onQr}
+            className="flex flex-col items-center gap-2"
+          >
+            <div
+              className="flex h-12 w-12 items-center justify-center rounded-full"
+              style={{ backgroundColor: BRAND + "15" }}
+            >
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={BRAND} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" />
+                <path d="M14 14h3v3h-3zM19 14h2M14 19h2M18 18h3v3h-3z" />
+              </svg>
+            </div>
+            <span className="text-xs text-gray-600">二维码</span>
+          </button>
+          <button
             onClick={onSystemShare}
             className="flex flex-col items-center gap-2"
           >
@@ -371,6 +434,54 @@ function ShareMenu({
         >
           取消
         </button>
+      </div>
+    </>
+  );
+}
+
+// ==================== 二维码弹窗 ====================
+function QrModal({ image, url, onClose }: { image: string; url: string; onClose: () => void }) {
+  useBodyScrollLock(true);
+  usePopupBackHandler(onClose, true);
+
+  const handleSave = useCallback(() => {
+    try {
+      const a = document.createElement("a");
+      a.href = image;
+      a.download = `yandao-qr-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } catch { /* ignore */ }
+  }, [image]);
+
+  return (
+    <>
+      <div className="fixed inset-0 z-[110]" onClick={onClose} style={{ backgroundColor: "rgba(0,0,0,0.5)" }} />
+      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[120] w-[300px] rounded-2xl bg-white p-5 shadow-xl">
+        <p className="mb-3 text-center text-sm font-semibold text-gray-800">扫一扫查看排盘结果</p>
+        <div className="flex justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={image} alt="分享二维码" className="h-[240px] w-[240px]" />
+        </div>
+        {url && (
+          <p className="mt-3 break-all text-center text-[10px] leading-4 text-gray-400">{url}</p>
+        )}
+        <div className="mt-4 flex gap-2">
+          <button
+            onClick={handleSave}
+            className="flex-1 rounded-xl py-2.5 text-sm font-semibold text-white"
+            style={{ backgroundColor: BRAND }}
+          >
+            保存二维码
+          </button>
+          <button
+            onClick={onClose}
+            className="flex-1 rounded-xl border border-gray-200 py-2.5 text-sm text-gray-500"
+          >
+            关闭
+          </button>
+        </div>
       </div>
     </>
   );

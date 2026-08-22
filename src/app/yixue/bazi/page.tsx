@@ -1672,13 +1672,27 @@ export default function BaziPage(){
       {/* v18.6: 排盘结果分享入口 */}
       <div className="px-3 py-3">
         <ShareButton
-          type="tool"
-          title="八字排盘结果"
-          description={`${dateStr} ${gender==="male"?"男":"女"} 八字命盘`}
-          url={typeof window !== "undefined" ? window.location.href : ""}
-          label="分享排盘结果"
-          variant="block"
-        />
+              type="tool"
+              title="八字排盘结果"
+              description={`${gender==="male"?"男":"女"}命八字盘`}
+              label="分享排盘结果"
+              variant="block"
+              shareData={{
+                toolType: "bazi",
+                title: `八字排盘：${result.pillars.map(p=>p.gan+p.zhi).join(" ")}`,
+                summary: `${gender==="male"?"男":"女"}命 · ${shengxiao} · ${result.shenQiangRuo?.result || ""}`,
+                payload: {
+                  summaryLines: [
+                    `性别：${gender==="male"?"男命":"女命"} · 生肖：${shengxiao}`,
+                    `四柱：${result.pillars.map(p=>p.gan+p.zhi).join(" ")}`,
+                    ...(wuxingStats ? [`五行：金${(wuxingStats["金"]||0).toFixed(1)} 木${(wuxingStats["木"]||0).toFixed(1)} 水${(wuxingStats["水"]||0).toFixed(1)} 火${(wuxingStats["火"]||0).toFixed(1)} 土${(wuxingStats["土"]||0).toFixed(1)}`] : []),
+                    ...(result.shenQiangRuo?.result ? [`日主强弱：${result.shenQiangRuo.result}`] : []),
+                    ...(result.mainPattern ? [`格局：${result.mainPattern}`] : []),
+                    ...(mingGua ? [`命卦：${mingGua}`] : []),
+                  ],
+                },
+              }}
+            />
         <div className="mt-2">
           <PostToSquareButton tool="八字" summary="八字命盘已排出，四柱五行分布与格局层次清晰" />
         </div>

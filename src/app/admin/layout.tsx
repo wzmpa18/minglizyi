@@ -20,6 +20,9 @@ import {
   Shield,
   Home,
   Newspaper,
+  Receipt,
+  Coins,
+  Flag,
 } from "lucide-react";
 import { THEME, useMounted } from "./_shared";
 import { getAdminKey, setAdminKey, clearAdminKey, isAdminAuthed } from "@/lib/admin/client";
@@ -35,9 +38,13 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/admin", label: "控制台概览", icon: <LayoutDashboard size={18} />, desc: "系统总览与快捷入口" },
+  { href: "/admin/unified", label: "统一控制中心", icon: <Shield size={18} />, desc: "总览·审计·密钥·角色" },
   { href: "/admin/dashboard", label: "数据看板", icon: <BarChart3 size={18} />, desc: "用户·邀请·浏览·会员·AI" },
   { href: "/admin/ai-control", label: "AI功能管控", icon: <Bot size={18} />, desc: "开关·配额·定价" },
   { href: "/admin/membership", label: "会员管理", icon: <Crown size={18} />, desc: "等级·价格·权益·上下架" },
+  { href: "/admin/orders", label: "订单管理", icon: <Receipt size={18} />, desc: "订单·补单·支付状态" },
+  { href: "/admin/commission", label: "分佣与提现", icon: <Coins size={18} />, desc: "比例·明细·提现审核" },
+  { href: "/admin/moderation", label: "内容审核", icon: <Flag size={18} />, desc: "用户·动态·举报·群" },
   { href: "/admin/sources", label: "内容源管理", icon: <Newspaper size={18} />, desc: "行业资讯·合规门禁" },
 ];
 

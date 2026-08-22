@@ -1,0 +1,696 @@
+﻿// ============================================================================
+// 支付路由模块 - v20.4
+// 提供支付下单、查询、关闭、回调相关的 Express 路由
+// 路由前缀：/api/payment
+// 路由列表：
+//   POST /api/payment/create            — 创建支付订单
+//   POST /api/payment/query             — 查询订单状态
+//   POST /api/payment/close             — 关闭订单
+//   POST /api/payment/callback/wechat   — 微信支付回调
+//   POST /api/payment/callback/alipay   — 支付宝回调
+//
+// v25.0.47_4：微信支付V3 JSAPI通道已实装（wechatPayV3.js，零外部依赖）
+//   - POST /api/payment/create          微信JSAPI下单（需extra.openid）
+//   - POST /api/payment/query           本地状态+微信侧主动对账
+//   - POST /api/payment/close           本地关单+微信侧关单
+//   - POST /api/payment/callback/wechat 验签+解密+订单状态机（幂等）
+//   - GET  /api/payment/wechat/oauth-config 网页授权跳转URL构造
+//   - GET  /api/payment/wechat/openid   code换openid
+//   启用条件：.env 配置 WECHAT_MCH_ID/WECHAT_APPID/WECHAT_API_V3_KEY/
+//            WECHAT_API_CERT_PATH/WECHAT_CERT_SERIAL_NO 后自动生效
+// ============================================================================
+
+'use strict';
+
+const express = require('express');
+const wechatPayV3 = require('./wechatPayV3');
+
+const router = express.Router();
+
+// ============================================================================
+// 辅助函数
+// ============================================================================
+
+/**
+ * 从请求中提取客户端 IP
+ * @param {Object} req - Express 请求对象
+ * @returns {string} IP 地址
+ */
+function getClientIp(req) {
+  return (
+    req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+    req.headers['x-real-ip'] ||
+    req.connection?.remoteAddress ||
+    req.socket?.remoteAddress ||
+    req.ip ||
+    '0.0.0.0'
+  );
+}
+
+/**
+ * 统一 JSON 响应格式
+ * @param {Object} res - Express 响应对象
+ * @param {number} status - HTTP 状态码
+ * @param {boolean} success - 是否成功
+ * @param {string} message - 消息
+ * @param {Object} data - 额外数据
+ */
+function jsonResponse(res, status, success, message, data = null) {
+  const body = { success, message };
+  if (data !== null) {
+    body.data = data;
+  }
+  return res.status(status).json(body);
+}
+
+/**
+ * 生成订单号
+ * 规则：YD + 年月日时分秒 + 6位随机数
+ * @returns {string} 订单号
+ */
+function generateOrderId() {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const timestamp =
+    now.getFullYear().toString() +
+    pad(now.getMonth() + 1) +
+    pad(now.getDate()) +
+    pad(now.getHours()) +
+    pad(now.getMinutes()) +
+    pad(now.getSeconds());
+  const random = Math.floor(100000 + Math.random() * 900000).toString();
+  return 'YD' + timestamp + random;
+}
+
+/**
+ * 检查支付通道是否已启用
+ * @returns {boolean}
+ */
+function isPaymentEnabled() {
+  // TODO: 参数到位后启用
+  // 当微信支付或支付宝环境变量配置完成后返回 true
+  const wechatConfigured = !!(
+    process.env.WECHAT_MCH_ID &&
+    process.env.WECHAT_APPID &&
+    process.env.WECHAT_API_V3_KEY &&
+    process.env.WECHAT_API_CERT_PATH
+  );
+  const alipayConfigured = !!(
+    process.env.ALIPAY_APP_ID &&
+    process.env.ALIPAY_APP_PRIVATE_KEY &&
+    process.env.ALIPAY_PUBLIC_KEY
+  );
+  return wechatConfigured || alipayConfigured;
+}
+
+/**
+ * 友好的"支付通道即将开放"响应
+ */
+function paymentNotReadyResponse(res) {
+  return jsonResponse(res, 200, false, '支付通道即将开放，敬请期待', {
+    enabled: false,
+    channels: {
+      wechat: !!(process.env.WECHAT_MCH_ID && process.env.WECHAT_APPID),
+      alipay: !!process.env.ALIPAY_APP_ID,
+    },
+  });
+}
+
+// ============================================================================
+// 订单类型与状态常量（与 paymentTypes.ts 枚举值保持一致）
+// ============================================================================
+
+const ORDER_TYPES = {
+  SINGLE_UNLOCK: 'SINGLE_UNLOCK',
+  MEMBERSHIP: 'MEMBERSHIP',
+  POINTS_RECHARGE: 'POINTS_RECHARGE',
+};
+
+const ORDER_STATUS = {
+  PENDING: 'PENDING',
+  PAID: 'PAID',
+  CLOSED: 'CLOSED',
+  REFUNDED: 'REFUNDED',
+};
+
+// 合规口径标题
+const COMPLIANCE_TITLES = {
+  SINGLE_UNLOCK: '传统文化学习资料深度解读（单次）',
+  MEMBERSHIP: '传统文化学习平台会员服务',
+  POINTS_RECHARGE: '传统文化学习平台积分充值',
+};
+
+// ============================================================================
+// 订单存储：内存缓存 + user_orders 表持久化（v25.0.47_5 统一后台订单中心）
+// ============================================================================
+
+const ordersStore = new Map();
+
+// SQLite 持久化（user_orders 表：与注册系统同库，仅追加/更新订单行）
+let _ordersDb = null;
+function getOrdersDb() {
+  if (_ordersDb) return _ordersDb;
+  try {
+    const Database = require('better-sqlite3');
+    const dbPath = process.env.DB_PATH || '/root/backend-auth/data/yandao_users.db';
+    if (!require('fs').existsSync(dbPath)) return null;
+    const db = new Database(dbPath);
+    db.pragma('journal_mode = WAL');
+    db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_user_orders_order_no ON user_orders(order_no)');
+    _ordersDb = db;
+    return db;
+  } catch (e) {
+    console.error('[payment] 订单库初始化失败（仅内存模式）:', e.message);
+    return null;
+  }
+}
+
+function persistOrder(order) {
+  try {
+    const db = getOrdersDb();
+    if (!db) return;
+    db.prepare(`INSERT INTO user_orders (user_id, order_no, amount, order_type, status, payment_method, created_at, paid_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(order_no) DO UPDATE SET status=excluded.status, payment_method=excluded.payment_method, paid_at=excluded.paid_at`)
+      .run(String(order.userId || ''), order.orderId, Number(order.amount) || 0, order.type, order.status,
+           order.channel || '', order.createdAt, order.paidAt);
+  } catch (e) {
+    console.error('[payment] 订单持久化失败:', e.message);
+  }
+}
+
+// 模块加载时回灌最近订单到内存缓存（重启后仍可查单/关单/对账）
+(function loadPersistedOrders() {
+  try {
+    const db = getOrdersDb();
+    if (!db) return;
+    const rows = db.prepare(`SELECT order_no, user_id, amount, order_type, status, payment_method, created_at, paid_at
+                             FROM user_orders WHERE created_at >= datetime('now', '-30 days') ORDER BY id DESC LIMIT 500`).all();
+    for (const r of rows) {
+      ordersStore.set(r.order_no, {
+        orderId: r.order_no,
+        userId: String(r.user_id || ''),
+        type: r.order_type,
+        amount: r.amount,
+        title: COMPLIANCE_TITLES[r.order_type] || '传统文化学习服务',
+        description: '',
+        status: r.status,
+        channel: r.payment_method || null,
+        createdAt: r.created_at,
+        paidAt: r.paid_at,
+        extra: {},
+      });
+    }
+    console.log(`[payment] 已回灌 ${rows.length} 条近30天订单到内存缓存`);
+  } catch (e) {
+    console.error('[payment] 订单回灌失败:', e.message);
+  }
+})();
+
+/**
+ * 创建订单（内存 + SQLite 持久化）
+ */
+function createOrderRecord(orderData) {
+  const order = {
+    orderId: generateOrderId(),
+    userId: orderData.userId,
+    type: orderData.type,
+    amount: orderData.amount,
+    title: orderData.title || COMPLIANCE_TITLES[orderData.type] || '传统文化学习服务',
+    description: orderData.description || '',
+    status: ORDER_STATUS.PENDING,
+    channel: null,
+    createdAt: new Date().toISOString(),
+    paidAt: null,
+    extra: orderData.extra || {},
+  };
+  ordersStore.set(order.orderId, order);
+  persistOrder(order);
+  return order;
+}
+
+/**
+ * 查询订单
+ */
+function getOrderRecord(orderId) {
+  return ordersStore.get(orderId) || null;
+}
+
+/**
+ * 更新订单状态
+ */
+function updateOrderRecord(orderId, status, channel) {
+  const order = ordersStore.get(orderId);
+  if (!order) return null;
+  order.status = status;
+  if (channel) order.channel = channel;
+  if (status === ORDER_STATUS.PAID && !order.paidAt) {
+    order.paidAt = new Date().toISOString();
+    // P9-推广中心：订单首次支付成功 → 触发被邀请人首次有效付费奖励（单层/幂等）
+    try {
+      const { grantFirstPayReward } = require('./register_routes');
+      const r = grantFirstPayReward(order.userId, order.orderId);
+      if (r && r.granted) {
+        console.log(`[payment] 首付费奖励已发放 orderId=${order.orderId} inviter获得=${r.points}积分`);
+      }
+    } catch (e) {
+      console.error('[payment] 首付费奖励发放失败:', e.message);
+    }
+    // v25.0.41 订单事件驱动返佣：支付成功即由服务端按订单金额发放一/二级返佣（前端上报仅作兜底对账）
+    try {
+      const { grantConsumptionRebate } = require('./register_routes');
+      const rb = grantConsumptionRebate(order.userId, order.orderId, order.amount, order.title);
+      if (rb && rb.granted) {
+        console.log(`[payment] 订单事件返佣已入账 orderId=${order.orderId} L1=${rb.level1Points}分 L2=${rb.level2Points}分`);
+      }
+    } catch (e) {
+      console.error('[payment] 订单事件返佣发放失败:', e.message);
+    }
+  }
+  if (status === ORDER_STATUS.REFUNDED) {
+    // v25.0.41 退款返佣冲正：退款即扣回该订单已发放的一/二级返佣积分（幂等）
+    try {
+      const { reverseConsumptionRebate } = require('./register_routes');
+      const rv = reverseConsumptionRebate(orderId);
+      if (rv && rv.reversed) {
+        console.log(`[payment] 退款返佣冲正完成 orderId=${orderId} L1扣回=${rv.level1PointsReversed}分 L2扣回=${rv.level2PointsReversed}分`);
+      }
+    } catch (e) {
+      console.error('[payment] 退款返佣冲正失败:', e.message);
+    }
+  }
+  persistOrder(order);
+  // P8-DISTRIBUTION-COMMISSION-AUTO：支付成功→一级分佣自动记账（幂等，commissionEngine 内部防重）
+  if (status === ORDER_STATUS.PAID) {
+    try {
+      const commissionEngine = require('./commissionEngine');
+      const cr = commissionEngine.grantCommission(order);
+      if (cr && cr.granted) {
+        console.log(`[payment] 一级分佣已入账 orderId=${order.orderId} inviter=${cr.inviterId} commission=${cr.commissionCents}分`);
+      }
+    } catch (e) {
+      console.error('[payment] 分佣记账失败:', e.message);
+    }
+  }
+  // P8：退款→退佣冲正（全额按订单原额比例冲回）
+  if (status === ORDER_STATUS.REFUNDED) {
+    try {
+      const commissionEngine = require('./commissionEngine');
+      commissionEngine.reverseCommission(orderId);
+    } catch (e) {
+      console.error('[payment] 退佣冲正失败:', e.message);
+    }
+  }
+  return order;
+}
+
+// ============================================================================
+// POST /api/payment/create — 创建支付订单
+// ============================================================================
+router.post('/create', async (req, res) => {
+  try {
+    const { userId, type, amount, title, channel, extra } = req.body;
+
+    // 参数校验
+    if (!userId || typeof userId !== 'string' || userId.length < 4) {
+      return jsonResponse(res, 400, false, '用户ID无效');
+    }
+
+    const validTypes = Object.values(ORDER_TYPES);
+    if (!type || !validTypes.includes(type)) {
+      return jsonResponse(res, 400, false, `订单类型无效，支持: ${validTypes.join(', ')}`);
+    }
+
+    if (typeof amount !== 'number' || isNaN(amount) || amount <= 0) {
+      return jsonResponse(res, 400, false, '金额必须为大于 0 的数字');
+    }
+
+    const validChannels = ['wechat', 'alipay'];
+    if (channel && !validChannels.includes(channel)) {
+      return jsonResponse(res, 400, false, `支付渠道无效，支持: ${validChannels.join(', ')}`);
+    }
+
+    // 检查支付通道是否已启用
+    if (!isPaymentEnabled()) {
+      // TODO: 参数到位后启用
+      // 通道未配置时仍创建订单（PENDING 状态），但返回"即将开放"提示
+      const order = createOrderRecord({ userId, type, amount, title, extra });
+      console.log(`[payment/create] 订单已创建（通道未启用）orderId=${order.orderId}`);
+      return paymentNotReadyResponse(res);
+    }
+
+    // === 微信支付V3 JSAPI 下单流程 ===
+    const order = createOrderRecord({ userId, type, amount, title, extra });
+    const payChannel = channel || 'wechat';
+
+    if (payChannel === 'wechat' && wechatPayV3.isConfigured()) {
+      // JSAPI支付必须提供支付者openid（前端经公众号网页授权获取）
+      const openid = extra && extra.openid;
+      if (!openid) {
+        updateOrderRecord(order.orderId, ORDER_STATUS.CLOSED, null);
+        return jsonResponse(res, 400, false, '缺少支付者openid，请先完成微信网页授权', {
+          needOauth: true,
+          oauthConfigured: wechatPayV3.isOauthConfigured(),
+        });
+      }
+
+      const result = await wechatPayV3.createJsapiOrder({
+        outTradeNo: order.orderId,
+        description: order.title,
+        amountYuan: order.amount,
+        openid,
+      });
+
+      if (!result.success) {
+        // 微信侧下单失败：关闭本地订单防悬挂
+        updateOrderRecord(order.orderId, ORDER_STATUS.CLOSED, 'wechat');
+        return jsonResponse(res, 500, false, result.error || '微信下单失败');
+      }
+
+      order.channel = 'wechat';
+      order.prepayId = result.prepayId;
+      const jsapiParams = wechatPayV3.buildJsapiParams(result.prepayId);
+      console.log(`[payment/create] 微信JSAPI下单成功 orderId=${order.orderId} prepayId=${result.prepayId}`);
+      return jsonResponse(res, 200, true, '订单创建成功', {
+        orderId: order.orderId,
+        channel: 'wechat',
+        prepayId: result.prepayId,
+        jsapiParams,
+      });
+    }
+
+    // 支付宝通道尚未配置
+    return paymentNotReadyResponse(res);
+  } catch (error) {
+    console.error('[payment/create] error:', error);
+    return jsonResponse(res, 500, false, '服务异常，请稍后重试');
+  }
+});
+
+// ============================================================================
+// POST /api/payment/query — 查询订单状态
+// ============================================================================
+router.post('/query', async (req, res) => {
+  try {
+    const { orderId, channel } = req.body;
+
+    if (!orderId) {
+      return jsonResponse(res, 400, false, '缺少订单号');
+    }
+
+    // 检查支付通道是否已启用
+    if (!isPaymentEnabled()) {
+      // TODO: 参数到位后启用
+      // 通道未启用时仅返回本地订单状态
+      const order = getOrderRecord(orderId);
+      if (!order) {
+        return jsonResponse(res, 404, false, '订单不存在');
+      }
+      return jsonResponse(res, 200, true, '订单查询成功（本地状态）', {
+        orderId: order.orderId,
+        status: order.status,
+        amount: order.amount,
+        channel: order.channel,
+        createdAt: order.createdAt,
+        paidAt: order.paidAt,
+      });
+    }
+
+    // === 本地订单 + 微信侧主动对账（回调丢失兜底） ===
+    const order = getOrderRecord(orderId);
+    if (!order) {
+      return jsonResponse(res, 404, false, '订单不存在');
+    }
+
+    // 待支付且微信渠道：主动查微信侧，防回调丢失导致状态停滞
+    if (order.status === ORDER_STATUS.PENDING && order.channel === 'wechat' && wechatPayV3.isConfigured()) {
+      try {
+        const qr = await wechatPayV3.queryOrderByOutTradeNo(orderId);
+        if (qr.success && qr.tradeState === 'SUCCESS') {
+          updateOrderRecord(orderId, ORDER_STATUS.PAID, 'wechat');
+          console.log(`[payment/query] 对账发现已支付，本地状态已更新 orderId=${orderId}`);
+        } else if (qr.success && (qr.tradeState === 'CLOSED' || qr.tradeState === 'REVOKED' || qr.tradeState === 'PAYERROR')) {
+          updateOrderRecord(orderId, ORDER_STATUS.CLOSED, 'wechat');
+        }
+      } catch (e) {
+        console.error('[payment/query] 微信侧对账失败:', e.message);
+      }
+    }
+
+    const latest = getOrderRecord(orderId) || order;
+    return jsonResponse(res, 200, true, '订单查询成功', {
+      orderId: latest.orderId,
+      status: latest.status,
+      amount: latest.amount,
+      channel: latest.channel,
+      createdAt: latest.createdAt,
+      paidAt: latest.paidAt,
+    });
+  } catch (error) {
+    console.error('[payment/query] error:', error);
+    return jsonResponse(res, 500, false, '服务异常，请稍后重试');
+  }
+});
+
+// ============================================================================
+// POST /api/payment/close — 关闭订单
+// ============================================================================
+router.post('/close', async (req, res) => {
+  try {
+    const { orderId, channel } = req.body;
+
+    if (!orderId) {
+      return jsonResponse(res, 400, false, '缺少订单号');
+    }
+
+    // 检查支付通道是否已启用
+    if (!isPaymentEnabled()) {
+      // TODO: 参数到位后启用
+      // 通道未启用时仅关闭本地订单
+      const order = getOrderRecord(orderId);
+      if (!order) {
+        return jsonResponse(res, 404, false, '订单不存在');
+      }
+      if (order.status !== ORDER_STATUS.PENDING) {
+        return jsonResponse(res, 400, false, '仅待支付订单可关闭');
+      }
+      updateOrderRecord(orderId, ORDER_STATUS.CLOSED);
+      return jsonResponse(res, 200, true, '订单已关闭');
+    }
+
+    // === 本地关单 + 微信侧关单 ===
+    const order = getOrderRecord(orderId);
+    if (!order) {
+      return jsonResponse(res, 404, false, '订单不存在');
+    }
+    if (order.status !== ORDER_STATUS.PENDING) {
+      return jsonResponse(res, 400, false, '仅待支付订单可关闭');
+    }
+
+    // 微信渠道：先关微信侧订单（幂等），再关本地
+    if ((channel || order.channel) === 'wechat' && wechatPayV3.isConfigured()) {
+      try {
+        await wechatPayV3.closeOrderByOutTradeNo(orderId);
+      } catch (e) {
+        console.error('[payment/close] 微信侧关单失败(继续本地关闭):', e.message);
+      }
+    }
+
+    updateOrderRecord(orderId, ORDER_STATUS.CLOSED);
+    return jsonResponse(res, 200, true, '订单已关闭');
+  } catch (error) {
+    console.error('[payment/close] error:', error);
+    return jsonResponse(res, 500, false, '服务异常，请稍后重试');
+  }
+});
+
+// ============================================================================
+// POST /api/payment/callback/wechat — 微信支付回调
+// ============================================================================
+router.post('/callback/wechat', async (req, res) => {
+  try {
+    // 提取回调原始数据
+    const headers = {};
+    for (const [key, value] of Object.entries(req.headers)) {
+      headers[key.toLowerCase()] = String(value);
+    }
+    const body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+
+    // 检查支付通道是否已启用
+    if (!isPaymentEnabled()) {
+      // TODO: 参数到位后启用
+      console.log('[payment/callback/wechat] 收到微信回调（通道未启用，忽略）');
+      // 微信要求返回 200 + JSON 格式，否则会重试
+      return res.status(200).json({
+        code: 'SUCCESS',
+        message: '成功',
+      });
+    }
+
+    // === 验签 + 解密 + 幂等状态机 ===
+    // 验签必须用原始字节流（server.js express.json verify 钩子捕获 req.rawBody）
+    const rawBody = req.rawBody || body;
+
+    // 1. 平台证书验签（防伪造回调）
+    const verify = await wechatPayV3.verifyCallbackSignature(headers, rawBody);
+    if (!verify.valid) {
+      console.error('[payment/callback/wechat] 验签失败:', verify.error);
+      return res.status(200).json({ code: 'FAIL', message: '验签失败' });
+    }
+
+    // 2. 解密 resource（AES-256-GCM, APIv3密钥）
+    const payload = typeof req.body === 'object' && req.body ? req.body : JSON.parse(rawBody);
+    if (!payload.resource) {
+      return res.status(200).json({ code: 'FAIL', message: '回调缺少resource' });
+    }
+    let detail;
+    try {
+      detail = wechatPayV3.decryptCallbackResource(payload.resource);
+    } catch (e) {
+      console.error('[payment/callback/wechat] 解密失败:', e.message);
+      return res.status(200).json({ code: 'FAIL', message: '解密失败' });
+    }
+
+    // 3. 订单状态机（幂等：仅 PENDING 可迁移）
+    const order = getOrderRecord(detail.out_trade_no);
+    if (!order) {
+      // 本地无此订单（进程重启内存丢失等）：应答成功防重试风暴，留日志人工核对
+      console.warn(`[payment/callback/wechat] 本地订单不存在 out_trade_no=${detail.out_trade_no} trade_state=${detail.trade_state}`);
+      return res.status(200).json({ code: 'SUCCESS', message: '成功' });
+    }
+
+    if (detail.trade_state === 'SUCCESS') {
+      if (order.status === ORDER_STATUS.PENDING) {
+        updateOrderRecord(order.orderId, ORDER_STATUS.PAID, 'wechat');
+        const paid = getOrderRecord(order.orderId);
+        if (paid) {
+          paid.transactionId = detail.transaction_id || null;
+          paid.successTime = detail.success_time || null;
+        }
+        console.log(`[payment/callback/wechat] 支付成功 orderId=${order.orderId} transactionId=${detail.transaction_id} amount=${detail.amount && detail.amount.total}分`);
+      }
+      // 已PAID的重复回调：幂等跳过
+    } else if (['CLOSED', 'REVOKED', 'PAYERROR'].includes(detail.trade_state)) {
+      if (order.status === ORDER_STATUS.PENDING) {
+        updateOrderRecord(order.orderId, ORDER_STATUS.CLOSED, 'wechat');
+        console.log(`[payment/callback/wechat] 订单关闭 orderId=${order.orderId} trade_state=${detail.trade_state}`);
+      }
+    }
+
+    return res.status(200).json({ code: 'SUCCESS', message: '成功' });
+  } catch (error) {
+    console.error('[payment/callback/wechat] error:', error);
+    return res.status(200).json({
+      code: 'FAIL',
+      message: '处理异常',
+    });
+  }
+});
+
+// ============================================================================
+// GET /api/payment/wechat/oauth-config — 构造公众号网页授权跳转URL
+// 用法：前端在微信浏览器内 fetch 本接口（带redirect_uri当前页地址），
+//       拿到 authorizeUrl 后 location.href 跳转；微信回跳带 ?code=xxx&state=pay
+// ============================================================================
+router.get('/wechat/oauth-config', (req, res) => {
+  try {
+    if (!wechatPayV3.isOauthConfigured()) {
+      return jsonResponse(res, 200, false, '网页授权未配置（需WECHAT_APPID+WECHAT_APP_SECRET）', {
+        oauthConfigured: false,
+      });
+    }
+    const redirectUri = req.query.redirect_uri || `${wechatPayV3.config().baseUrl}/`;
+    const authorizeUrl = wechatPayV3.buildOauthAuthorizeUrl(redirectUri, 'pay');
+    return jsonResponse(res, 200, true, '获取授权地址成功', {
+      oauthConfigured: true,
+      authorizeUrl,
+    });
+  } catch (error) {
+    console.error('[payment/wechat/oauth-config] error:', error.message);
+    return jsonResponse(res, 500, false, '服务异常');
+  }
+});
+
+// ============================================================================
+// GET /api/payment/wechat/openid?code=xxx — 网页授权code换openid
+// 前端从回跳URL取code后调用，openid存本地供JSAPI下单使用
+// ============================================================================
+router.get('/wechat/openid', async (req, res) => {
+  try {
+    const code = req.query.code;
+    if (!code) {
+      return jsonResponse(res, 400, false, '缺少授权code');
+    }
+    const r = await wechatPayV3.getOpenidByOauthCode(String(code));
+    if (!r.success) {
+      return jsonResponse(res, 400, false, r.error || 'code换openid失败');
+    }
+    return jsonResponse(res, 200, true, '获取openid成功', { openid: r.openid });
+  } catch (error) {
+    console.error('[payment/wechat/openid] error:', error.message);
+    return jsonResponse(res, 500, false, '服务异常');
+  }
+});
+
+// ============================================================================
+// POST /api/payment/callback/alipay — 支付宝回调
+// ============================================================================
+router.post('/callback/alipay', async (req, res) => {
+  try {
+    // 提取回调原始数据
+    const headers = {};
+    for (const [key, value] of Object.entries(req.headers)) {
+      headers[key.toLowerCase()] = String(value);
+    }
+    const body =
+      typeof req.body === 'string'
+        ? req.body
+        : new URLSearchParams(req.body).toString();
+
+    // 检查支付通道是否已启用
+    if (!isPaymentEnabled()) {
+      // TODO: 参数到位后启用
+      console.log('[payment/callback/alipay] 收到支付宝回调（通道未启用，忽略）');
+      // 支付宝要求返回纯文本 "success"
+      return res.status(200).send('success');
+    }
+
+    // === 支付通道已启用时的完整流程 ===
+    // TODO: 参数到位后启用
+    //
+    // 1. 调用回调处理器验签 + 发放权益 + 分销返佣
+    //    const result = await paymentCallback.processPaymentCallback('alipay', { headers, body });
+    //
+    // 2. 返回支付宝要求的响应格式
+    //    if (result.success) {
+    //      return res.status(200).send('success');
+    //    }
+    //    return res.status(200).send('fail');
+
+    return res.status(200).send('success');
+  } catch (error) {
+    console.error('[payment/callback/alipay] error:', error);
+    return res.status(200).send('fail');
+  }
+});
+
+// ============================================================================
+// 导出
+// ============================================================================
+
+module.exports = {
+  router,
+  createRouter() {
+    return router;
+  },
+  isPaymentEnabled,
+  createOrderRecord,
+  getOrderRecord,
+  updateOrderRecord,
+  ORDER_STATUS,
+  // 预留：供外部注入数据库适配器
+  setDatabase(dbModule) {
+    // TODO: 参数到位后启用
+    // 注入数据库模块，替换内存存储
+  },
+};

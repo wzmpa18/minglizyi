@@ -584,6 +584,20 @@ export default function HuangliPage() {
           description="老黄历查询"
           variant="block"
           label="分享排盘结果"
+          shareData={{
+            toolType: "huangli",
+            title: `老黄历：${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")} · ${lunarMonth}月${lunarDay}`,
+            summary: `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}（${lunarMonth}月${lunarDay}） · ${shengXiao}年`,
+            payload: {
+              summaryLines: [
+                `公历：${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}（${weekday}）`,
+                `农历：${lunarMonth}月${lunarDay} · ${shengXiao}年`,
+                `干支：${yearGZ}年 ${monthGZ}月 ${dayGZ}日`,
+                `宜：${yi.slice(0, 8).join("、")}`,
+                `忌：${ji.slice(0, 8).join("、")}`,
+              ],
+            },
+          }}
         />
       </div>
 

@@ -856,6 +856,23 @@ export default function WannianliPage() {
           description="万年历查询"
           variant="block"
           label="分享排盘结果"
+          shareData={{
+            toolType: "wannianli",
+            title: `万年历：${selectedYmd.y}-${String(selectedYmd.m).padStart(2, "0")}-${String(selectedYmd.d).padStart(2, "0")}`,
+            summary: `${selectedDetail.yearGZ}年 ${selectedDetail.monthGZ}月 ${selectedDetail.dayGZ}日 · ${selectedDetail.shengXiao}年`,
+            payload: {
+              summaryLines: [
+                `公历：${selectedYmd.y}-${String(selectedYmd.m).padStart(2, "0")}-${String(selectedYmd.d).padStart(2, "0")}`,
+                `干支：${selectedDetail.yearGZ}年 ${selectedDetail.monthGZ}月 ${selectedDetail.dayGZ}日`,
+                `生肖：${selectedDetail.shengXiao}`,
+                `宜：${selectedDetail.yi.slice(0, 8).join("、")}`,
+                `忌：${selectedDetail.ji.slice(0, 8).join("、")}`,
+                `冲煞：${selectedDetail.chongDesc}`,
+                ...(selectedDetail.jieQi ? [`节气：${selectedDetail.jieQi}`] : []),
+                ...(selectedDetail.jiShi.length ? [`吉时：${selectedDetail.jiShi.join("、")}`] : []),
+              ],
+            },
+          }}
         />
       </div>
 

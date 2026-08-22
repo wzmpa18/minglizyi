@@ -1001,6 +1001,12 @@ export default function ProfilePage() {
       {/* ===== 第五区：推广中心 ===== */}
       <Zone title="推广中心" storageKey="yandao_zone_promo">
         <ZoneItem
+          icon={Ic.profit}
+          label="我的收益"
+          sub="推荐佣金 · 可提现余额"
+          onClick={() => router.push("/profile/income")}
+        />
+        <ZoneItem
           icon={Ic.inviteCode}
           label="我的推广"
           sub="邀请码 · 拉新奖励"

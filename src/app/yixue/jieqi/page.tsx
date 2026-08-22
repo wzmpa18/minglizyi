@@ -203,6 +203,19 @@ export default function JieQiPage() {
           description="二十四节气"
           variant="block"
           label="分享排盘结果"
+          shareData={{
+            toolType: "jieqi",
+            title: `二十四节气：${year}年 · 节${jieCount}气${qiCount}`,
+            summary: `${year}年二十四节气 · 十二节十二气交替排列`,
+            payload: {
+              summaryLines: [
+                `年份：${year}年`,
+                `十二节：${jieQiList.filter(j => j.isJie).map(j => j.name).join("、")}`,
+                `十二气：${jieQiList.filter(j => !j.isJie).map(j => j.name).join("、")}`,
+                ...jieQiList.slice(0, 6).map(j => `${j.name}：${j.date}`),
+              ],
+            },
+          }}
         />
       </div>
 

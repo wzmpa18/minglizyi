@@ -1045,6 +1045,24 @@ export default function LiuyaoPage() {
                 description="六爻卦象"
                 variant="block"
                 label="分享排盘结果"
+                shareData={{
+                  toolType: "liuyao",
+                  title: `六爻排盘：${result.benGua.name}${result.bianGua ? " → " + result.bianGua.name : ""}`,
+                  summary: `${result.dateStr}起卦 · ${result.benGua.gong}宫`,
+                  payload: {
+                    summaryLines: [
+                      `事项：${result.question || "未填写"}`,
+                      `时间：${result.dateStr}`,
+                      `节气：${result.jieqi.from}～${result.jieqi.to}`,
+                      `四柱：${result.siZhu.map((gz) => gz[0] + gz[1]).join(" ")}`,
+                      `空亡：${result.kongWang}　驿马：${result.yiMa}　桃花：${result.taoHua}`,
+                      `本卦：${result.benGua.name}（${result.benGua.gong}宫）`,
+                      ...(result.bianGua ? [`变卦：${result.bianGua.name}（${result.bianGua.gong}宫）`] : []),
+                      ...(result.yongShen ? [`用神：${result.yongShen}`] : []),
+                      ...result.benGua.yaos.map((y, i) => `${YAO_NAMES[i]}爻：${y.isYang ? "阳" : "阴"} ${y.liuQin}${y.gan}${y.zhi} ${y.liuShen}${y.isShi ? " 世" : ""}${y.isYing ? " 应" : ""}${y.isDong ? " 动" : ""}${y.isKong ? " 空" : ""}`),
+                    ],
+                  },
+                }}
               />
         <div className="mt-2">
           <PostToSquareButton tool="六爻" summary="六爻卦象已排出，世应与六亲关系清晰" />

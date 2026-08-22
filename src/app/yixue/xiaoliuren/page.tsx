@@ -996,6 +996,7 @@ export default function XiaoliurenPage() {
         </div>
       )}
       {/* 分享排盘结果 */}
+      {result && (
       <div className="px-3 py-2">
         <ShareButton
           type="tool"
@@ -1003,11 +1004,29 @@ export default function XiaoliurenPage() {
           description="小六壬排盘"
           variant="block"
           label="分享排盘结果"
+          shareData={{
+            toolType: "xiaoliuren",
+            title: `小六壬：${result.finalPosition.name}（${result.finalPosition.jiXiong}）`,
+            summary: `${result.finalPosition.name} · 五行${result.finalPosition.wuxing} · 方位${result.finalPosition.direction}`,
+            payload: {
+              summaryLines: [
+                `日期：${dateStr}`,
+                `节气：${jieqi?.name ?? ""}`,
+                `四柱：${bazi?.pillars?.map(p => (p.gan || "")+(p.zhi || "")).join(" ") ?? ""}`,
+                `起课方式：${methodLabel}`,
+                `最终掌诀：${result.finalPosition.name}（${result.finalPosition.jiXiong}）`,
+                `五行：${result.finalPosition.wuxing}`,
+                `方位：${result.finalPosition.direction}`,
+                `推算步骤：${result.steps.map(s => s.result).join("→")}`,
+              ],
+            },
+          }}
         />
         <div className="mt-2">
           <PostToSquareButton tool="小六壬" summary="小六壬掐算已完成，掌上定位结果明确" />
         </div>
       </div>
+      )}
       </div>
     </div>
   );

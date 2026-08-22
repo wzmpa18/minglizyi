@@ -1192,6 +1192,14 @@ export default function NameAnalysisPage() {
               description="姓名五格三才解析"
               variant="block"
               label="分享解析结果"
+              shareData={{
+                toolType: "name",
+                title: `姓名解析：${result.name} · ${result.overallScore}分`,
+                summary: `${result.name} · 综合评分${result.overallScore}（${result.overallRating}）`,
+                payload: {
+                  summaryLines: aiContext.split("\n").filter(Boolean),
+                },
+              }}
             />
           </div>
 

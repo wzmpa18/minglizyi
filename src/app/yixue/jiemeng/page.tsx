@@ -445,6 +445,18 @@ export default function JiemengPage() {
           description="周公解梦"
           variant="block"
           label="分享排盘结果"
+          shareData={{
+            toolType: "jiemeng",
+            title: `周公解梦：${query} · ${results.length}条解析`,
+            summary: `梦境关键词「${query}」 · 匹配${results.length}条`,
+            payload: {
+              summaryLines: [
+                `梦境关键词：${query}`,
+                `匹配结果数：${results.length}条`,
+                ...results.slice(0, 5).map(r => `${r.entry.keyword}［${r.entry.category}］：${r.entry.interpretation}`),
+              ],
+            },
+          }}
         />
       </div>
 

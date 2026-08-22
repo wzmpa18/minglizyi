@@ -14,6 +14,7 @@ import { getToolConfig } from "@/lib/toolConfigStore";
 import { listReadings, saveReading, deleteReading, type SavedReading } from "@/lib/tarotStore";
 import { useToolBack } from "@/lib/useToolBack";
 import AIInterpretButton from "@/components/AIInterpretButton";
+import { ShareButton } from "@/components/ShareButton";
 
 const BRAND = "#7B2FBE";
 const SUIT_MARK: Record<string, string> = { major: "✦", wands: "杖", cups: "杯", swords: "剑", pentacles: "币" };
@@ -332,6 +333,22 @@ export default function TarotPage() {
           {allRevealed && spread && (
             <>
               <ReadingList cards={drawn} spreadName={spread.name} positions={spread.positions} />
+
+              <ShareButton
+                type="tool"
+                title="塔罗牌阵占卜结果"
+                description="塔罗牌阵解读"
+                variant="block"
+                label="分享占卜结果"
+                shareData={{
+                  toolType: "tarot",
+                  title: `塔罗牌阵：${spread.name} · ${drawn.map((d) => getCard(d.cardId)?.name).filter(Boolean).join("·")}`,
+                  summary: `${question.trim() || "综合运势"} · ${spread.positions.length}张牌阵`,
+                  payload: {
+                    summaryLines: aiContext.split("\n").filter(Boolean),
+                  },
+                }}
+              />
 
               {tarotCfg.aiDeepEnabled && (
                 <div className="rounded-xl border border-gray-100 bg-white p-3">

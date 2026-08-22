@@ -524,6 +524,7 @@ export default function XuankongFeixingPage() {
         </div>
       )}
       {/* 分享排盘结果 */}
+      {result && (
       <div className="px-3 py-2">
         <ShareButton
           type="tool"
@@ -531,11 +532,27 @@ export default function XuankongFeixingPage() {
           description="玄空飞星排盘"
           variant="block"
           label="分享排盘结果"
+          shareData={{
+            toolType: "xuankong-feixing",
+            title: `玄空飞星：${result.zuoShan}山${result.xiangShan}向 · ${result.yunName}`,
+            summary: `${result.yunName} · 坐${result.zuoShan}向${result.xiangShan} · ${floor}楼（${result.floorWuxing}）`,
+            payload: {
+              summaryLines: [
+                `元运：${result.yunName}`,
+                `建造年：${buildYear}年`,
+                `坐山：${result.zuoShan}（${result.zuoInfo.direction}） 朝向：${result.xiangShan}（${result.xiangInfo.direction}）`,
+                `楼层：${floor}楼（${result.floorWuxing}）`,
+                `山星${result.shanShun ? "顺飞" : "逆飞"}`,
+                `各宫飞星吉凶：${LUOSHU_ORDER.map(g => GONG_NAMES[g].name+g+"宫 山"+result.zhaiMingData[g].shan+"向"+result.zhaiMingData[g].xiang+"运"+result.zhaiMingData[g].yun+"("+result.gongAnalysis[g].jiXiong+")").join("；")}`,
+              ],
+            },
+          }}
         />
         <div className="mt-2">
           <PostToSquareButton tool="玄空飞星" summary="玄空飞星盘已排出，山向星组合格局清晰" />
         </div>
       </div>
+      )}
 
 
       {/* 免责声明 */}

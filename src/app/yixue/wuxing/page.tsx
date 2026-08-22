@@ -383,6 +383,22 @@ export default function WuXingPage() {
           description="五行查询"
           variant="block"
           label="分享排盘结果"
+          shareData={{
+            toolType: "wuxing",
+            title: activeTab === "tiangan" ? "五行查询：天干五行" : "五行查询：地支五行",
+            summary: activeTab === "tiangan" ? "十天干五行阴阳与五合" : "十二地支五行刑冲合害",
+            payload: {
+              summaryLines: activeTab === "tiangan"
+                ? [
+                    `查询类型：天干五行`,
+                    ...ganData.map(g => `${g.gan}（${g.wuxing}，${g.yinyang}，五合${g.hePartner}）`),
+                  ]
+                : [
+                    `查询类型：地支五行`,
+                    ...zhiData.map(z => `${z.zhi}（${z.wuxing}，${z.yinyang}，六合${z.hePartner}，六冲${z.chongPartner}，三合${z.sanHeGroup}）`),
+                  ],
+            },
+          }}
         />
       </div>
 

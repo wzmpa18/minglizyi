@@ -605,6 +605,20 @@ export default function ZeriPage() {
           description="择吉择日"
           variant="block"
           label="分享排盘结果"
+          shareData={{
+            toolType: "zeri",
+            title: `择日：${eventLabel} · ${results.length}个吉日`,
+            summary: `${eventLabel} · 共筛出${results.length}个吉日`,
+            payload: {
+              summaryLines: [
+                `事项：${eventLabel}`,
+                `日期范围：${startYear}-${String(startMonth).padStart(2, "0")}-${String(startDay).padStart(2, "0")} 至 ${endYear}-${String(endMonth).padStart(2, "0")}-${String(endDay).padStart(2, "0")}`,
+                `生肖：${userShengXiao || "未指定"}`,
+                `吉日数量：${results.length}`,
+                ...results.slice(0, 5).map(d => `吉日：${d.dateStr}（${d.dayGZ}，${d.jianChu}日，纳音${d.naYin}，评分${d.score}）`),
+              ],
+            },
+          }}
         />
       </div>
 

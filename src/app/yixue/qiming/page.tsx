@@ -1477,6 +1477,14 @@ export default function QimingPage() {
               description="AI智能起名推荐"
               variant="block"
               label="分享起名结果"
+              shareData={{
+                toolType: "qiming",
+                title: selectedResult ? `起名推荐：${selectedResult.name} · ${selectedResult.overallScore}分` : `智能起名：${suggestions.length}个推荐名`,
+                summary: selectedResult ? `${selectedResult.name} · 综合评分${selectedResult.overallScore}` : `姓氏${surname} · ${suggestions.length}个推荐名`,
+                payload: {
+                  summaryLines: aiContext.split("\n").filter(Boolean),
+                },
+              }}
             />
           </div>
 
