@@ -125,6 +125,89 @@ function getCurrentUserId(): string | null {
   return profile?.userId || null;
 }
 
+// ==================== 微信网页授权（openid获取，JSAPI支付前置） ====================
+
+const OPENID_CACHE_KEY = "yandao_wechat_openid";
+
+/** 是否在微信内置浏览器内（JSAPI支付唯一可用环境） */
+export function isInWechatBrowser(): boolean {
+  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+  return navigator.userAgent.toLowerCase().includes("micromessenger");
+}
+
+/** 读取缓存的openid（同一公众号维度长期有效） */
+export function getCachedWechatOpenid(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem(OPENID_CACHE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 消费授权回跳：URL含 ?code=xxx&state=pay 时换取openid并缓存
+ * 处理完自动清理URL参数（防刷新重复消费code）
+ */
+export async function consumeWechatOauthCode(): Promise<string | null> {
+  if (typeof window === "undefined") return null;
+  const url = new URL(window.location.href);
+  const code = url.searchParams.get("code");
+  const state = url.searchParams.get("state");
+  if (!code || state !== "pay") return null;
+
+  url.searchParams.delete("code");
+  url.searchParams.delete("state");
+  window.history.replaceState(
+    null,
+    "",
+    url.pathname + (url.search || "") + url.hash
+  );
+
+  try {
+    const res = await fetch(
+      `/api/payment/wechat/openid?code=${encodeURIComponent(code)}`
+    );
+    const json = await res.json();
+    if (json.success && json.data && json.data.openid) {
+      try {
+        localStorage.setItem(OPENID_CACHE_KEY, json.data.openid);
+      } catch {}
+      return json.data.openid as string;
+    }
+  } catch {}
+  return null;
+}
+
+/**
+ * 确保openid可用（仅微信浏览器内有意义）：
+ * 1. 先消费授权回跳code（换取并缓存openid）
+ * 2. 有缓存直接返回
+ * 3. 无缓存时发起授权跳转（页面被重定向，本函数返回null；
+ *    用户回到页面后再次发起支付即带openid）
+ */
+export async function ensureWechatOpenid(): Promise<string | null> {
+  if (!isInWechatBrowser()) return null;
+
+  const fromCode = await consumeWechatOauthCode();
+  if (fromCode) return fromCode;
+
+  const cached = getCachedWechatOpenid();
+  if (cached) return cached;
+
+  try {
+    const redirectUri = window.location.origin + window.location.pathname;
+    const res = await fetch(
+      `/api/payment/wechat/oauth-config?redirect_uri=${encodeURIComponent(redirectUri)}`
+    );
+    const json = await res.json();
+    if (json.success && json.data && json.data.authorizeUrl) {
+      window.location.href = json.data.authorizeUrl as string;
+    }
+  } catch {}
+  return null;
+}
+
 // ==================== 核心接口 ====================
 
 /**
@@ -159,7 +242,7 @@ export async function callPayment(
     };
   }
 
-  const { type, amount, title, channel, extra } = params;
+  const { type, amount, title, channel, extra: extraIn } = params;
 
   // 参数校验
   if (!type) {
@@ -167,6 +250,15 @@ export async function callPayment(
   }
   if (typeof amount !== "number" || amount <= 0) {
     return { success: false, error: "金额必须大于 0" };
+  }
+
+  // 微信JSAPI支付：微信浏览器内自动补openid（授权跳转后用户重试支付即成功）
+  let extra = extraIn;
+  if ((!channel || channel === "wechat") && isInWechatBrowser() && !extraIn?.openid) {
+    const openid = await ensureWechatOpenid();
+    if (openid) {
+      extra = { ...extraIn, openid };
+    }
   }
 
   try {
@@ -187,6 +279,25 @@ export async function callPayment(
     const json = await res.json();
 
     if (!json.success) {
+      // 后端要求先完成微信网页授权：触发授权跳转，回跳后重试支付
+      if (json.data && json.data.needOauth && isInWechatBrowser()) {
+        const openid = await ensureWechatOpenid();
+        if (!openid) {
+          return {
+            success: false,
+            message: "正在跳转微信授权，授权完成后请重新发起支付",
+            error: "微信授权跳转中",
+          };
+        }
+        // 授权回跳已带回openid：携带openid重试一次下单
+        return callPayment({
+          type,
+          amount,
+          title,
+          channel,
+          extra: { ...extra, openid },
+        });
+      }
       return {
         success: false,
         message: json.message || "支付通道即将开放",
