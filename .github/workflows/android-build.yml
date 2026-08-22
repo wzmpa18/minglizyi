@@ -89,5 +89,5 @@ jobs:
         run: |
           echo "### Android 构建结果" >> $GITHUB_STEP_SUMMARY
           echo "- Bundle: $BUNDLE_ID (versionCode 2047 / versionName 25.0.47)" >> $GITHUB_STEP_SUMMARY
-          echo "- 远程加载: https://yandaoguoxue.yandao.vip (v25.0.47_3)" >> $GITHUB_STEP_SUMMARY
+          echo "- 模式: 原生内置资源 (v25.0.47_D20260822, API 改写到 https://yandaoguoxue.yandao.vip)" >> $GITHUB_STEP_SUMMARY
           echo "- 产物: signed release apk" >> $GITHUB_STEP_SUMMARY
