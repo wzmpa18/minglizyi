@@ -14,6 +14,7 @@ import {
   generateContentKey,
   SINGLE_UNLOCK_PRICE,
 } from "@/lib/aiService";
+import { paySingleUnlockAndWait } from "@/lib/paymentService";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 
@@ -160,14 +161,28 @@ export default function AIInterpretButton({
     }
   }, [loading, toolName, scope, contextData, systemPrompt, cacheKey, setShowLoginPrompt]);
 
-  // v20.1: 单次付费解锁
-  const handleSingleUnlock = useCallback(() => {
+  // v25.0.47_8: 单次付费解锁（真实微信支付，成功后本地解锁）
+  const [unlockPaying, setUnlockPaying] = useState(false);
+  const [unlockMsg, setUnlockMsg] = useState("");
+  const handleSingleUnlock = useCallback(async () => {
+    if (unlockPaying) return;
     const cKey = generateContentKey(toolName, scope + contextData.slice(0, 50));
-    activateSingleUnlock(cKey);
-    setShowSingleUnlock(false);
-    setContent(fullContent);
-    setIsLocked(false);
-  }, [toolName, scope, contextData, fullContent]);
+    setUnlockPaying(true);
+    setUnlockMsg("");
+    try {
+      const r = await paySingleUnlockAndWait(cKey, SINGLE_UNLOCK_PRICE);
+      if (r.paid) {
+        activateSingleUnlock(cKey);
+        setShowSingleUnlock(false);
+        setContent(fullContent);
+        setIsLocked(false);
+      } else {
+        setUnlockMsg(r.message);
+      }
+    } finally {
+      setUnlockPaying(false);
+    }
+  }, [toolName, scope, contextData, fullContent, unlockPaying]);
 
   const primaryColor = "#7B2FBE";
   const secondaryColor = "#9B5ECF";
@@ -359,12 +374,18 @@ export default function AIInterpretButton({
               </div>
             </div>
             <div style={{ padding: "14px" }}>
+              {unlockMsg && (
+                <div style={{ marginBottom: "10px", padding: "8px 10px", background: "#fff3e0", borderRadius: "8px", fontSize: "11px", color: "#e65100", textAlign: "center" }}>
+                  {unlockMsg}
+                </div>
+              )}
               <div style={{ textAlign: "center", marginBottom: "12px" }}>
                 <span style={{ fontSize: "26px", fontWeight: "bold", color: "#7B2FBE" }}>¥{SINGLE_UNLOCK_PRICE}</span>
                 <span style={{ fontSize: "12px", color: "#999", marginLeft: "4px" }}>/ 次</span>
               </div>
               <button
                 onClick={handleSingleUnlock}
+                disabled={unlockPaying}
                 style={{
                   width: "100%",
                   padding: "10px",
@@ -378,8 +399,7 @@ export default function AIInterpretButton({
                   marginBottom: "6px",
                 }}
               >
-                确认支付 ¥{SINGLE_UNLOCK_PRICE} 解锁
-              </button>
+                {unlockPaying ? "支付确认中..." : <>确认支付 ¥{SINGLE_UNLOCK_PRICE} 解锁</>}</button>
               <button
                 onClick={() => setShowSingleUnlock(false)}
                 style={{

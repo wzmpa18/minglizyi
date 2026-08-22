@@ -15,6 +15,7 @@ import {
   activateSingleUnlock,
   SINGLE_UNLOCK_PRICE,
 } from "@/lib/aiService";
+import { paySingleUnlockAndWait } from "@/lib/paymentService";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
@@ -113,16 +114,29 @@ export default function InterpretationDrawer({
     return () => { cancelled = true; };
   }, [show, aiEnhance]);
 
-  // v20.1: 单次解锁
-  const handleSingleUnlock = () => {
+  // v25.0.47_8: 单次解锁（真实微信支付，成功后本地解锁；FINAL-RC-02: iOS 付费关闭）
+  const [unlockPaying, setUnlockPaying] = useState(false);
+  const [unlockMsg, setUnlockMsg] = useState("");
+  const handleSingleUnlock = async () => {
     if (isPaymentsBlocked()) return; // FINAL-RC-02: iOS 付费关闭，禁止本地解锁购买
-    if (!aiEnhance) return;
+    if (!aiEnhance || unlockPaying) return;
     const cKey = generateContentKey(aiEnhance.toolName, aiEnhance.context.slice(0, 80));
-    activateSingleUnlock(cKey);
-    setShowSingleUnlock(false);
-    if (aiFullContent) {
-      setAiContent(aiFullContent);
-      setAiLocked(false);
+    setUnlockPaying(true);
+    setUnlockMsg("");
+    try {
+      const r = await paySingleUnlockAndWait(cKey, SINGLE_UNLOCK_PRICE);
+      if (r.paid) {
+        activateSingleUnlock(cKey);
+        setShowSingleUnlock(false);
+        if (aiFullContent) {
+          setAiContent(aiFullContent);
+          setAiLocked(false);
+        }
+      } else {
+        setUnlockMsg(r.message);
+      }
+    } finally {
+      setUnlockPaying(false);
     }
   };
 
@@ -297,8 +311,14 @@ export default function InterpretationDrawer({
                 <span style={{ fontSize: "12px", color: "#999", marginLeft: "4px" }}>/ 次</span>
               </div>
               )}
-              <button
+              {unlockMsg && (
+              <div style={{ marginBottom: "10px", padding: "8px 10px", background: "#fff3e0", borderRadius: "8px", fontSize: "11px", color: "#e65100", textAlign: "center" }}>
+                {unlockMsg}
+              </div>
+            )}
+            <button
                 onClick={handleSingleUnlock}
+          disabled={unlockPaying}
                 style={{
                   width: "100%",
                   padding: "10px",
@@ -312,9 +332,7 @@ export default function InterpretationDrawer({
                   marginBottom: "6px",
                   display: paymentsBlocked ? "none" : "block",
                 }}
-              >
-                确认支付 ¥{SINGLE_UNLOCK_PRICE} 解锁
-              </button>
+              >{unlockPaying ? "支付确认中..." : <>确认支付 ¥{SINGLE_UNLOCK_PRICE} 解锁</>}</button>
               <button
                 onClick={() => setShowSingleUnlock(false)}
                 style={{

@@ -238,6 +238,16 @@ function getOrdersDb() {
     const db = new Database(dbPath);
     db.pragma('journal_mode = WAL');
     db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_user_orders_order_no ON user_orders(order_no)');
+    // v25.0.47_8: 权益交付持久化标记（0/1），重启后由 query 接口补交付
+    try {
+      const cols = db.prepare('PRAGMA table_info(user_orders)').all().map(c => c.name);
+      if (!cols.includes('benefit_delivered')) {
+        db.exec('ALTER TABLE user_orders ADD COLUMN benefit_delivered INTEGER DEFAULT 0');
+        console.log('[payment] user_orders 已添加 benefit_delivered 字段');
+      }
+    } catch (e) {
+      console.error('[payment] benefit_delivered 迁移失败:', e.message);
+    }
     _ordersDb = db;
     return db;
   } catch (e) {
@@ -250,11 +260,11 @@ function persistOrder(order) {
   try {
     const db = getOrdersDb();
     if (!db) return;
-    db.prepare(`INSERT INTO user_orders (user_id, order_no, amount, order_type, status, payment_method, created_at, paid_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(order_no) DO UPDATE SET status=excluded.status, payment_method=excluded.payment_method, paid_at=excluded.paid_at`)
+    db.prepare(`INSERT INTO user_orders (user_id, order_no, amount, order_type, status, payment_method, created_at, paid_at, benefit_delivered)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(order_no) DO UPDATE SET status=excluded.status, payment_method=excluded.payment_method, paid_at=excluded.paid_at, benefit_delivered=excluded.benefit_delivered`)
       .run(String(order.userId || ''), order.orderId, Number(order.amount) || 0, order.type, order.status,
-           order.channel || '', order.createdAt, order.paidAt);
+           order.channel || '', order.createdAt, order.paidAt, order.benefitDelivered ? 1 : 0);
   } catch (e) {
     console.error('[payment] 订单持久化失败:', e.message);
   }
@@ -265,7 +275,7 @@ function persistOrder(order) {
   try {
     const db = getOrdersDb();
     if (!db) return;
-    const rows = db.prepare(`SELECT order_no, user_id, amount, order_type, status, payment_method, created_at, paid_at
+    const rows = db.prepare(`SELECT order_no, user_id, amount, order_type, status, payment_method, created_at, paid_at, benefit_delivered
                              FROM user_orders WHERE created_at >= datetime('now', '-30 days') ORDER BY id DESC LIMIT 500`).all();
     for (const r of rows) {
       ordersStore.set(r.order_no, {
@@ -279,6 +289,7 @@ function persistOrder(order) {
         channel: r.payment_method || null,
         createdAt: r.created_at,
         paidAt: r.paid_at,
+        benefitDelivered: !!r.benefit_delivered,
         extra: {},
       });
     }
@@ -287,6 +298,81 @@ function persistOrder(order) {
     console.error('[payment] 订单回灌失败:', e.message);
   }
 })();
+
+// ============================================================================
+// v25.0.47_8 订单权益交付：订单首次 PAID 后发放真实权益（服务端唯一事实源）
+// - MEMBERSHIP: 更新 users.member_level + membership_expiry（续费在现有有效期上顺延）
+// - POINTS_RECHARGE: user_assets.points_balance 入账 + points_transactions 流水
+// - 幂等：benefit_delivered 持久化标记；失败留待 query 接口补交付
+// ============================================================================
+const MEMBERSHIP_LEVEL_DAYS = { monthly: 30, yearly: 365, lifetime: -1 };
+
+function deliverOrderBenefits(order) {
+  if (!order || order.benefitDelivered) return;
+  if (order.type !== 'MEMBERSHIP' && order.type !== 'POINTS_RECHARGE') {
+    // 其他场景（SINGLE_UNLOCK/CONSULT_SERVICE）权益由前端解锁标记管理，仅记录交付完成防重复判断
+    order.benefitDelivered = true;
+    persistOrder(order);
+    return;
+  }
+  let delivered = false;
+  try {
+    const Database = require('better-sqlite3');
+    const dbPath = process.env.DB_PATH || '/root/backend-auth/data/yandao_users.db';
+    if (!require('fs').existsSync(dbPath)) throw new Error('数据库文件不存在');
+    const db = new Database(dbPath);
+    try {
+      db.pragma('busy_timeout = 5000');
+      const uid = parseInt(order.userId, 10);
+      if (isNaN(uid)) throw new Error('userId 无效: ' + order.userId);
+
+      if (order.type === 'MEMBERSHIP') {
+        const level = order.extra && order.extra.membershipLevel;
+        const days = MEMBERSHIP_LEVEL_DAYS[level];
+        if (!days) throw new Error('membershipLevel 无效: ' + level);
+        let expireTime = null;
+        if (days > 0) {
+          let base = Date.now();
+          try {
+            const row = db.prepare('SELECT membership_expiry FROM users WHERE user_id = ?').get(uid);
+            if (row && row.membership_expiry) {
+              const cur = new Date(row.membership_expiry).getTime();
+              if (cur > base) base = cur;
+            }
+          } catch (e) {}
+          expireTime = new Date(base + days * 86400000).toISOString();
+        }
+        const info = db.prepare('UPDATE users SET member_level = ?, membership_expiry = ? WHERE user_id = ?')
+          .run(level, expireTime, uid);
+        if (info.changes === 0) throw new Error('用户不存在: ' + uid);
+        try {
+          db.prepare('UPDATE user_assets SET member_level = ? WHERE user_id = ?').run(level, uid);
+        } catch (e) {}
+        console.log(`[payment] 会员权益已交付 orderId=${order.orderId} userId=${order.userId} level=${level} expire=${expireTime || '永久'}`);
+      } else if (order.type === 'POINTS_RECHARGE') {
+        const points = parseInt(order.extra && order.extra.pointsAmount, 10);
+        if (!points || points <= 0) throw new Error('pointsAmount 无效');
+        db.prepare(`INSERT OR IGNORE INTO user_assets (user_id, points_balance, star_rating, star_rating_count, member_level)
+          VALUES (?, 0, 0, 0, 'basic')`).run(uid);
+        db.prepare('UPDATE user_assets SET points_balance = points_balance + ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?')
+          .run(points, uid);
+        const row = db.prepare('SELECT points_balance FROM user_assets WHERE user_id = ?').get(uid);
+        db.prepare('INSERT INTO points_transactions (user_id, tx_type, amount, balance_after, ref_id, note) VALUES (?, ?, ?, ?, ?, ?)')
+          .run(uid, 'recharge', points, row ? row.points_balance : 0, order.orderId, '积分充值订单交付');
+        console.log(`[payment] 积分权益已交付 orderId=${order.orderId} userId=${order.userId} points=${points}`);
+      }
+      delivered = true;
+    } finally {
+      db.close();
+    }
+  } catch (e) {
+    console.error(`[payment] 权益交付失败 orderId=${order && order.orderId}:`, e.message);
+  }
+  if (delivered) {
+    order.benefitDelivered = true;
+    persistOrder(order);
+  }
+}
 
 /**
  * 创建订单（内存 + SQLite 持久化）
@@ -336,6 +422,12 @@ function updateOrderRecord(orderId, status, channel) {
       }
     } catch (e) {
       console.error('[payment] 首付费奖励发放失败:', e.message);
+    }
+    // v25.0.47_8 订单权益交付：会员开通/积分入账（幂等，失败由 query 接口补交付）
+    try {
+      deliverOrderBenefits(order);
+    } catch (e) {
+      console.error('[payment] 权益交付异常:', e.message);
     }
     // v25.0.41 订单事件驱动返佣：支付成功即由服务端按订单金额发放一/二级返佣（前端上报仅作兜底对账）
     try {
@@ -519,6 +611,14 @@ router.post('/query', async (req, res) => {
     }
 
     const latest = getOrderRecord(orderId) || order;
+    // v25.0.47_8 已支付但权益未交付（重启丢单/交付失败）：补交付
+    if (latest.status === ORDER_STATUS.PAID && !latest.benefitDelivered) {
+      try {
+        deliverOrderBenefits(latest);
+      } catch (e) {
+        console.error('[payment/query] 补交付失败:', e.message);
+      }
+    }
     return jsonResponse(res, 200, true, '订单查询成功', {
       orderId: latest.orderId,
       status: latest.status,

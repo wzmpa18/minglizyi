@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { WENZHEN_CATEGORIES, buildWenzhenSystemPrompt } from "@/data/wenzhen_data";
 import { buildZhengguPrompt } from "@/data/zhenggu_knowledge";
 import { callAI, getUserPermissionLevel, getPermissionStatus, truncateContentForFreeUser, generateContentKey, isSingleUnlocked, activateSingleUnlock, SINGLE_UNLOCK_PRICE } from "@/lib/aiService";
+import { paySingleUnlockAndWait } from "@/lib/paymentService";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { useToolBack } from "@/lib/useToolBack";
@@ -170,16 +171,29 @@ export default function WenzhenPage() {
     }
   }, [activeCategory, selectedMasters, supplementText, symptomInput, setShowLoginPrompt]);
 
-  // 单次解锁
-  const handleSingleUnlock = useCallback(() => {
+  // v25.0.47_8: 单次解锁（真实微信支付，成功后本地解锁）
+  const [unlockPaying, setUnlockPaying] = useState(false);
+  const [unlockMsg, setUnlockMsg] = useState("");
+  const handleSingleUnlock = useCallback(async () => {
+    if (unlockPaying) return;
     const cKey = contentKeyRef.current;
-    if (cKey && aiFullContent) {
-      activateSingleUnlock(cKey);
-      setAiResult(aiFullContent);
-      setIsLocked(false);
-      setShowPayment(false);
+    if (!cKey) return;
+    setUnlockPaying(true);
+    setUnlockMsg("");
+    try {
+      const r = await paySingleUnlockAndWait(cKey, SINGLE_UNLOCK_PRICE);
+      if (r.paid && aiFullContent) {
+        activateSingleUnlock(cKey);
+        setAiResult(aiFullContent);
+        setIsLocked(false);
+        setShowPayment(false);
+      } else {
+        setUnlockMsg(r.message);
+      }
+    } finally {
+      setUnlockPaying(false);
     }
-  }, [aiFullContent]);
+  }, [aiFullContent, unlockPaying]);
 
   return (
     <div
@@ -669,8 +683,14 @@ export default function WenzhenPage() {
               支付 ¥{SINGLE_UNLOCK_PRICE} 解锁本次完整方药、取穴经验参考、开方思路详解
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {unlockMsg && (
+                <div style={{ padding: "8px 10px", background: "#fff3e0", borderRadius: "8px", fontSize: "12px", color: "#e65100", textAlign: "center" }}>
+                  {unlockMsg}
+                </div>
+              )}
               <button
                 onClick={handleSingleUnlock}
+                disabled={unlockPaying}
                 style={{
                   padding: "12px",
                   borderRadius: "10px",
@@ -679,10 +699,11 @@ export default function WenzhenPage() {
                   color: "white",
                   fontSize: "14px",
                   fontWeight: "bold",
-                  cursor: "pointer",
+                  cursor: unlockPaying ? "not-allowed" : "pointer",
+                  opacity: unlockPaying ? 0.6 : 1,
                 }}
               >
-                确认支付 ¥{SINGLE_UNLOCK_PRICE}
+                {unlockPaying ? "支付确认中..." : <>确认支付 ¥{SINGLE_UNLOCK_PRICE}</>}
               </button>
               <button
                 onClick={() => router.push("/membership")}

@@ -686,6 +686,42 @@ export async function payForConsultService(
 }
 
 /**
+ * v25.0.47_8: 单次解锁/套餐统一真实支付入口（微信JSAPI）
+ * 流程：环境校验 -> 真实下单 -> 调起微信支付 -> 轮询确认 -> 返回结果
+ * 支付成功后由调用方执行本地解锁/激活标记（服务端订单已留痕）
+ */
+export async function paySingleUnlockAndWait(
+  targetId: string,
+  amount: number
+): Promise<{ paid: boolean; message: string }> {
+  if (!isInWechatBrowser()) {
+    return {
+      paid: false,
+      message: "微信支付需在微信内完成，请用微信打开本页面后再试",
+    };
+  }
+  try {
+    const r = await payForUnlock(targetId, amount);
+    if (!r || !r.success || !r.orderId) {
+      return {
+        paid: false,
+        message: (r && (r.message || r.error)) || "支付发起失败，请稍后重试",
+      };
+    }
+    const status = await pollPaymentStatus(r.orderId);
+    if (status && status.status === "PAID") {
+      return { paid: true, message: "支付成功，权益已生效" };
+    }
+    return {
+      paid: false,
+      message: "支付未完成或确认中，若已付款权益将自动生效，请稍后重试",
+    };
+  } catch {
+    return { paid: false, message: "支付异常，请稍后重试" };
+  }
+}
+
+/**
  * 发起支付并自动轮询直到完成
  */
 export async function callPaymentAndWait(

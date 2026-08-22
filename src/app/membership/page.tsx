@@ -22,11 +22,12 @@ import {
   MembershipStatus,
   OrderRecord,
 } from "@/lib/membershipStore";
-import { updateUserProfile } from "@/lib/auth";
+import { updateUserProfile, getUserProfile } from "@/lib/auth";
 import { reportConsumptionRebate } from "@/lib/inviteApi";
 import { redeemCode, getMyRedemptions } from "@/lib/redeemCodeStore";
 import { getToolConfig } from "@/lib/toolConfigStore";
 import { isPaymentsBlocked, IOS_PAYMENT_DISABLED_TIP } from "@/lib/platformGate";
+import { payForMembership, pollPaymentStatus, isInWechatBrowser } from "@/lib/paymentService";
 
 const BRAND = "#7B2FBE";
 
@@ -89,7 +90,8 @@ export default function MembershipPage() {
     return `剩余 ${days} 天`;
   };
 
-  const handlePay = () => {
+  // v25.0.47_8: 真实微信支付（服务端下单 -> JSAPI调起 -> 轮询确认 -> 服务端权益交付）
+  const handlePay = async () => {
     if (isPaymentsBlocked()) {
       setErrorMsg(IOS_PAYMENT_DISABLED_TIP);
       return;
@@ -99,35 +101,57 @@ export default function MembershipPage() {
       setErrorMsg("该套餐为免费版本，无需开通");
       return;
     }
+    // 真实支付必须登录（服务端订单与权益交付均以 userId 为主键）
+    const profile = getUserProfile();
+    if (!profile || !profile.userId) {
+      setErrorMsg("请先登录后再开通会员");
+      return;
+    }
+    // 微信JSAPI支付仅在微信内置浏览器可用
+    if (!isInWechatBrowser()) {
+      setErrorMsg("微信支付需在微信内完成，请用微信打开本页面后再试");
+      return;
+    }
     setErrorMsg("");
     setPaying(true);
-    // create order
-    const order = createOrder(selectedPlan, paymentMethod);
-    // simulate payment (1.5s)
-    window.setTimeout(() => {
-      const result = completeOrder(order.id);
+    try {
+      const daysMap: Record<string, number> = { monthly: 30, yearly: 365, lifetime: -1 };
+      const r = await payForMembership(plan.level, plan.price, daysMap[plan.level] ?? 30);
+      if (!r || !r.success || !r.orderId) {
+        setPaying(false);
+        setErrorMsg((r && (r.message || r.error)) || "支付发起失败，请稍后重试");
+        return;
+      }
+      // 轮询支付结果（用户在微信收银台完成支付后服务端回调置PAID）
+      const status = await pollPaymentStatus(r.orderId);
       setPaying(false);
-      if (result.success && result.status) {
-        // sync user profile memberLevel
-        const profileLevel = selectedPlan === "basic" ? "basic" : "premium";
-        updateUserProfile({ memberLevel: profileLevel });
-        setStatus(result.status);
+      if (status && status.status === "PAID") {
+        // 真实支付成功：本地记录订单历史并同步会员展示（服务端已开通，本地为缓存同步）
+        const order = createOrder(selectedPlan, paymentMethod);
+        const result = completeOrder(order.id);
+        if (result.success && result.status) {
+          const profileLevel = selectedPlan === "basic" ? "basic" : "premium";
+          updateUserProfile({ memberLevel: profileLevel });
+          setStatus(result.status);
+        }
         setSuccessInfo({ planName: plan.name, level: selectedPlan });
         setShowSuccess(true);
 
-        // v25.0.40: 消费返佣上报服务端统一账本（订单号幂等，JWT识别消费人）
-        void reportConsumptionRebate({ orderNo: order.id, amount: plan.price, product: plan.name }).then((r) => {
-          if (r && r.granted) {
-            console.log(`[v25.0.40] 消费返佣已入账: 一级${r.level1Points || 0}积分, 二级${r.level2Points || 0}积分`);
+        // 消费返佣上报服务端统一账本（订单号幂等，JWT识别消费人）
+        void reportConsumptionRebate({ orderNo: r.orderId, amount: plan.price, product: plan.name }).then((rb) => {
+          if (rb && rb.granted) {
+            console.log(`[v25.0.47_8] 消费返佣已入账: 一级${rb.level1Points || 0}积分, 二级${rb.level2Points || 0}积分`);
           }
         });
 
-        // 刷新订单列表
         setOrders(getOrders());
       } else {
-        setErrorMsg(result.message || "支付失败，请重试");
+        setErrorMsg("支付未完成或确认中；若已付款，会员权益将在到账后自动生效，请稍后刷新查看");
       }
-    }, 1500);
+    } catch {
+      setPaying(false);
+      setErrorMsg("支付异常，请稍后重试");
+    }
   };
 
   return (

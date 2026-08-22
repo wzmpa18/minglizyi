@@ -18,6 +18,7 @@ import {
   generateContentKey,
   SINGLE_UNLOCK_PRICE,
 } from "@/lib/aiService";
+import { paySingleUnlockAndWait } from "@/lib/paymentService";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import MasterExchangePanel from "./MasterExchangePanel";
@@ -138,16 +139,28 @@ export default function EventDivinationPanel({
     [toolName, chartContext, activeMode, userQuestion]
   );
 
-  // v20.1: 单次付费解锁
-  const handleSingleUnlock = useCallback(() => {
+  // v25.0.47_8: 单次付费解锁（真实微信支付，成功后本地解锁标记）
+  const [unlockPaying, setUnlockPaying] = useState(false);
+  const [unlockMsg, setUnlockMsg] = useState("");
+  const handleSingleUnlock = useCallback(async () => {
+    if (unlockPaying) return;
     const cKey = generateContentKey(toolName, chartContext + (activeMode === "event" ? userQuestion : "deep"));
-    // 模拟支付成功（实际对接支付体系）
-    activateSingleUnlock(cKey);
-    setShowSingleUnlock(false);
-    // 显示完整内容
-    setContent(fullContent);
-    setIsLocked(false);
-  }, [toolName, chartContext, activeMode, userQuestion, fullContent]);
+    setUnlockPaying(true);
+    setUnlockMsg("");
+    try {
+      const r = await paySingleUnlockAndWait(cKey, SINGLE_UNLOCK_PRICE);
+      if (r.paid) {
+        activateSingleUnlock(cKey);
+        setShowSingleUnlock(false);
+        setContent(fullContent);
+        setIsLocked(false);
+      } else {
+        setUnlockMsg(r.message);
+      }
+    } finally {
+      setUnlockPaying(false);
+    }
+  }, [toolName, chartContext, activeMode, userQuestion, fullContent, unlockPaying]);
 
   // 执行事情断法
   const handleEventDivination = useCallback(async () => {
@@ -222,15 +235,29 @@ export default function EventDivinationPanel({
     }
   }, [loading, toolName, chartContext, checkAccess, processContentByPermission]);
 
-  // 处理付费套餐购买
-  const handlePurchase = useCallback((planKey: string) => {
-    // 模拟支付成功
-    activatePaidPlan(planKey);
-    setShowPayment(false);
-    // 重新检查访问权限
-    const quota = checkAIQuota();
-    setQuotaMsg(quota.message + " 套餐已激活，请重新点击解读");
-  }, []);
+  // v25.0.47_8: 付费套餐购买（真实微信支付，成功后本地激活套餐）
+  const [purchasePaying, setPurchasePaying] = useState(false);
+  const [purchaseMsg, setPurchaseMsg] = useState("");
+  const handlePurchase = useCallback(async (planKey: string) => {
+    if (purchasePaying) return;
+    const plan = AI_PAID_PLANS.find((p) => p.key === planKey);
+    if (!plan) return;
+    setPurchasePaying(true);
+    setPurchaseMsg("");
+    try {
+      const r = await paySingleUnlockAndWait(`ai_plan_${planKey}`, plan.price);
+      if (r.paid) {
+        activatePaidPlan(planKey);
+        setShowPayment(false);
+        const quota = checkAIQuota();
+        setQuotaMsg(quota.message + " 套餐已激活，请重新点击解读");
+      } else {
+        setPurchaseMsg(r.message);
+      }
+    } finally {
+      setPurchasePaying(false);
+    }
+  }, [purchasePaying]);
 
   return (
     <div className="mt-3 rounded-lg overflow-hidden" style={{ border: "1px solid #e0d0f0" }}>
@@ -529,6 +556,11 @@ export default function EventDivinationPanel({
 
             {/* 套餐列表 */}
             <div style={{ padding: "12px" }}>
+              {purchaseMsg && (
+                <div style={{ marginBottom: "8px", padding: "8px 10px", background: "#fff3e0", borderRadius: "8px", fontSize: "11px", color: "#e65100", textAlign: "center" }}>
+                  {purchaseMsg}
+                </div>
+              )}
               {AI_PAID_PLANS.map((plan) => (
                 <div
                   key={plan.key}
@@ -558,6 +590,7 @@ export default function EventDivinationPanel({
                     <div style={{ fontSize: "18px", fontWeight: "bold", color: "#7B2FBE" }}>¥{plan.price}</div>
                     <button
                       onClick={() => handlePurchase(plan.key)}
+                      disabled={purchasePaying}
                       style={{
                         marginTop: "4px",
                         padding: "4px 12px",
@@ -566,10 +599,11 @@ export default function EventDivinationPanel({
                         background: "#7B2FBE",
                         color: "white",
                         fontSize: "11px",
-                        cursor: "pointer",
+                        cursor: purchasePaying ? "not-allowed" : "pointer",
+                        opacity: purchasePaying ? 0.6 : 1,
                       }}
                     >
-                      开通
+                      {purchasePaying ? "开通中" : "开通"}
                     </button>
                   </div>
                 </div>
@@ -663,8 +697,14 @@ export default function EventDivinationPanel({
               </div>
 
               {/* 按钮 */}
+              {unlockMsg && (
+                <div style={{ marginBottom: "8px", padding: "8px 10px", background: "#fff3e0", borderRadius: "8px", fontSize: "11px", color: "#e65100", textAlign: "center" }}>
+                  {unlockMsg}
+                </div>
+              )}
               <button
                 onClick={handleSingleUnlock}
+                disabled={unlockPaying}
                 style={{
                   width: "100%",
                   padding: "12px",
@@ -674,11 +714,12 @@ export default function EventDivinationPanel({
                   color: "white",
                   fontSize: "14px",
                   fontWeight: "bold",
-                  cursor: "pointer",
+                  cursor: unlockPaying ? "not-allowed" : "pointer",
+                  opacity: unlockPaying ? 0.6 : 1,
                   marginBottom: "8px",
                 }}
               >
-                确认支付 ¥{SINGLE_UNLOCK_PRICE} 解锁
+                {unlockPaying ? "支付确认中..." : `确认支付 ¥${SINGLE_UNLOCK_PRICE} 解锁`}
               </button>
               <button
                 onClick={() => setShowSingleUnlock(false)}
