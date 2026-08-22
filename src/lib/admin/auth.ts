@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 /** 管理员密钥：从环境变量读取，回退到项目默认值 */
-const ADMIN_KEY = process.env.ADMIN_API_KEY || "WUzhimin123";
+const ADMIN_KEY = process.env.ADMIN_API_KEY || "";
 
 /**
  * 校验请求是否携带合法的管理员 Bearer Token

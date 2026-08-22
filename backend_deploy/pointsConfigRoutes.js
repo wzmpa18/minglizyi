@@ -12,7 +12,7 @@ const router = express.Router();
 const fs = require('fs');
 const path = require('path');
 
-const ADMIN_KEY = process.env.ADMIN_API_KEY || 'WUzhimin123';
+const ADMIN_KEY = process.env.ADMIN_API_KEY || '';
 const CONFIG_FILE = path.join(__dirname, 'data', 'points_config.json');
 
 // 默认积分配置

@@ -9,7 +9,7 @@ const router = express.Router();
 const fs = require('fs');
 const path = require('path');
 
-const ADMIN_KEY = process.env.ADMIN_API_KEY || 'WUzhimin123';
+const ADMIN_KEY = process.env.ADMIN_API_KEY || '';
 const HUNYUAN_API_KEY = process.env.HUNYUAN_API_KEY || '';
 const HUNYUAN_API_URL = process.env.HUNYUAN_API_URL || 'https://tokenhub.tencentmaas.com/v1/chat/completions';
 const HUNYUAN_MODEL = process.env.HUNYUAN_MODEL || 'hy3';

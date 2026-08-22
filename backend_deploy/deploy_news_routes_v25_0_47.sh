@@ -83,7 +83,7 @@ echo "--- 管理接口未带密钥（应返回 未授权） ---"
 curl -s "$BASE/api/admin/news" | head -c 200
 echo ""
 echo "--- 管理接口带密钥（应返回 success:true） ---"
-ADMIN_KEY="${ADMIN_API_KEY:-WUzhimin123}"
+ADMIN_KEY="${ADMIN_API_KEY:?ADMIN_API_KEY未配置}"
 curl -s "$BASE/api/admin/news" -H "Authorization: Bearer $ADMIN_KEY" | head -c 300
 echo ""
 echo "--- 合规拦截测试（新增含'全网第一'的资讯应被拒） ---"
