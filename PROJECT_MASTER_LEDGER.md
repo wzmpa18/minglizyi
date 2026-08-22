@@ -70,6 +70,7 @@
 | GROUP_CHAT（群聊） | VERIFIED（待用户真机终验） | v25.0.47_4：聊天页输入框/发送/右上角群资料入口（成员/邀请/踢人/公告/禁言/转让/退出/解散） |
 | DISCOVER_EXTERNAL（发现精选） | VERIFIED | /api/news/public 返回真实资讯+来源标注，AI 摘要标注 |
 | ANDROID | VERIFIED | 原生 APK（内置资源模式，API 改写脚本内联），MD5 三端一致，公网可下载 |
+| WEBSITE（官网分发） | VERIFIED | 2026-08-22 DNS 切换完成（www.yandao.vip / yandao.vip A 记录 → 82.156.228.87 已生效，公网解析+200 验证）；官网/APP 站下载链接统一 v25.0.47 APK；旧 APK 404；「言道学外语」死链（APK 在旧服务器不可达）已改「敬请期待」防错 |
 | IOS | PARTIAL（管道就绪，PLA 未签） | 33 项就绪校验通过，xcarchive 产出验证，签名三件套入 Secrets |
 | CLEAN_SOURCE（本地工作区） | VERIFIED | 构建产物/verify/临时脚本/旧快照/node_scratch 全清，仅存正式源码 |
 | SERVER_CLEAN（服务器） | VERIFIED | 12.1G/50G，仅生产+回滚版+备份+证书 |
@@ -227,11 +228,12 @@ gh workflow run ios-build.yml --repo wzmpa18/minglizyi --ref main
 
 | 项 | 说明 | 责任方 |
 |----|------|--------|
-| **官网DNS切换** | www.yandao.vip 与 yandao.vip 的 A 记录仍指向旧服务器 111.230.155.30（无SSH权限，其上官网为7/20旧版+旧APK链接）。新服务器 82.156.228.87 已完全就绪（/www/yandao-company 已更新至 v25.0.47 APK 链接+nginx+SSL 自测 200）。**需在腾讯云 DNS 控制台把两条 A 记录改为 82.156.228.87**，或提供旧服务器 SSH 凭证 | 项目方 |
+| ~~官网DNS切换~~ | **已完成（2026-08-22 18:22）**：www.yandao.vip 与 yandao.vip 两条 A 记录已由项目方在腾讯云 DNS 控制台改为 82.156.228.87 并生效；公网解析验证 + 官网 200 + v25.0.47 APK 直链 206 + 旧 APK 404 + 学外语死链改「敬请期待」全通过。旧服务器 111.230.155.30 不再承载任何域名，待项目方确认后可退订回收 | ~~项目方~~ 已闭环 |
 | **iOS 签署 PLA** | 账号持有人 ZHIMIN WU 登录 developer.apple.com/account 接受最新《计划许可协议》→ 重跑 iOS workflow 出签名 ipa → TestFlight | 项目方 |
 | **微信支付激活** | 提供 WECHAT_APPID + WECHAT_APP_SECRET（公众号 OAuth 用）→ 服务器 ENV 写入 → 0.01 元真实实付 E2E | 项目方 |
 | **商家转账开通** | 微信商户平台开通「商家转账到零钱」产品 → P8 阶段二（提现自动打款）激活 | 项目方 |
 | 真机终验 | 分享扫码链路（奇门/六爻/梅花/紫微任选）、伏神视觉、群聊 UI | 项目方 |
+| 言道学外语下载恢复（可选） | 官网「言道学外语」卡片/详情页下载按钮现为「敬请期待」（APK 仅存于不可达的旧服务器）。若项目方后续提供 yandao-xuewaiyu APK，上传 /var/www/yandao.vip/app-download/yandao/ 并还原按钮即可 | 项目方 |
 | 用户实机回归 | 六爻/梅花伏神、群聊、海报二维码 | 项目方 |
 | AI TokenHub 白名单 | 腾讯 Key 白名单需含 82.156.228.87 | 项目方 |
 | 内容运营 | 资讯 /admin/sources；审核 /admin/moderation；分佣 /admin/commission | 项目方 |
