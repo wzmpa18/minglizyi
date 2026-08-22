@@ -990,6 +990,9 @@ router.post('/callback/alipay', async (req, res) => {
 
 function _resolveAdminKeyPr(token) {
   try {
+    // v25.0.47_10: 环境变量主密钥映射 SUPER_ADMIN（与 adminUnifiedRoutes 认证一致，项目方主账号最高权限）
+    const envKey = process.env.ADMIN_API_KEY;
+    if (envKey && token && token === envKey) return { name: 'env-admin', role: 'SUPER_ADMIN' };
     const fsMod = require('fs');
     const pathMod = require('path');
     const keysFile = pathMod.join(__dirname, 'data', 'admin-keys.json');

@@ -67,6 +67,9 @@ function saveFlags(flags, operator) {
 
 function resolveAdminKey(token) {
   try {
+    // v25.0.47_10: 环境变量主密钥映射 SUPER_ADMIN（与 adminUnifiedRoutes 认证一致）
+    const envKey = process.env.ADMIN_API_KEY;
+    if (envKey && token && token === envKey) return { name: 'env-admin', role: 'SUPER_ADMIN' };
     const keysFile = path.join(DATA_DIR, 'admin-keys.json');
     if (!fs.existsSync(keysFile) || !token) return null;
     const keys = JSON.parse(fs.readFileSync(keysFile, 'utf-8'));
@@ -129,6 +132,8 @@ router.put('/', adminAuthUnified('SUPER_ADMIN'), (req, res) => {
   }
   cur.flags[flagKey].status = status;
   saveFlags(cur.flags, req.admin.name);
+  // v25.0.47_10: 保存后立即失效缓存，开关变更服务端即时生效（不等 5 秒缓存）
+  _cache.flags = null; _cache.at = 0;
   audit(req.admin, 'FEATURE_FLAG_UPDATE', flagKey, oldValue, status, reason || `开关 ${flagKey}: ${oldValue} → ${status}`, req);
   console.log(`[featureControl] ${req.admin.name}(${req.admin.role}) 开关 ${flagKey}: ${oldValue} → ${status}`);
   res.json({ success: true, data: cur });
@@ -176,7 +181,7 @@ function globalFeatureGate() {
             if (status === 'ON') return next();
             return res.status(403).json({
               success: false,
-              error: status === 'MAINTENANCE' ? `${def.name}功能维护中，请稍后再试` : `${def.name}功能已关闭`,
+              error: status === 'MAINTENANCE' ? `${def.name}维护中，请稍后再试` : `${def.name}已关闭`,
               code: status === 'MAINTENANCE' ? 'FEATURE_MAINTENANCE' : 'FEATURE_DISABLED',
               flag: key, flagStatus: status,
             });
@@ -202,7 +207,7 @@ function featureGate(flagKey, opts) {
     const errCode = status === 'MAINTENANCE' ? 'FEATURE_MAINTENANCE' : 'FEATURE_DISABLED';
     return res.status(403).json({
       success: false,
-      error: status === 'MAINTENANCE' ? `${flagName}功能维护中，请稍后再试` : `${flagName}功能已关闭`,
+      error: status === 'MAINTENANCE' ? `${flagName}维护中，请稍后再试` : `${flagName}已关闭`,
       code: errCode,
       flag: flagKey,
       flagStatus: status,

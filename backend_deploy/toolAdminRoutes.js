@@ -61,6 +61,9 @@ function saveMatrix(tools, operator) {
 
 function resolveAdminKey(token) {
   try {
+    // v25.0.47_10: 环境变量主密钥映射 SUPER_ADMIN（与 adminUnifiedRoutes 认证一致）
+    const envKey = process.env.ADMIN_API_KEY;
+    if (envKey && token && token === envKey) return { name: 'env-admin', role: 'SUPER_ADMIN' };
     const keysFile = path.join(DATA_DIR, 'admin-keys.json');
     if (!fs.existsSync(keysFile) || !token) return null;
     const keys = JSON.parse(fs.readFileSync(keysFile, 'utf-8'));

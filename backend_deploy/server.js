@@ -435,6 +435,9 @@ for (const route of extraRoutes) {
     const mod = require('./' + route.file);
     if (mod && typeof mod.createRouter === 'function') {
       app.use(route.path, mod.createRouter());
+    } else if (mod && typeof mod.router === 'function') {
+      // v25.0.47_10: 支持 { router, publicRouter, ... } 导出形式（featureControl/toolAdmin）
+      app.use(route.path, mod.router);
     } else if (typeof mod === 'function') {
       app.use(route.path, mod);
     } else if (mod && typeof mod === 'object') {
