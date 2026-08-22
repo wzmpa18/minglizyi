@@ -178,7 +178,7 @@ jobs:
           echo "### iOS 构建结果" >> $GITHUB_STEP_SUMMARY
           echo "- 模式: ${{ steps.creds.outputs.mode }}" >> $GITHUB_STEP_SUMMARY
           echo "- Bundle: $BUNDLE_ID" >> $GITHUB_STEP_SUMMARY
-          echo "- 远程加载: https://yandaoguoxue.yandao.vip (v25.0.47)" >> $GITHUB_STEP_SUMMARY
+          echo "- 资源: 原生内置 (v25.0.47_D20260822, API 改写到 https://yandaoguoxue.yandao.vip)" >> $GITHUB_STEP_SUMMARY
           if [ "${{ steps.creds.outputs.mode }}" = "signed" ] && [ "${{ steps.signed_archive.outcome }}" = "success" ]; then
             echo "- 产物: signed ipa (TestFlight 上传: ${{ inputs.upload_testflight }})" >> $GITHUB_STEP_SUMMARY
           elif [ "${{ steps.creds.outputs.mode }}" = "signed" ]; then
