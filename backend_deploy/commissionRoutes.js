@@ -122,3 +122,18 @@ router.post('/my/withdraw', authRequired, (req, res) => {
 function createRouter() { return router; }
 module.exports = createRouter;
 module.exports.createRouter = createRouter;
+
+// P8规范第二章4：每日定时任务扫描待解冻记录（启动即扫 + 每6小时兜底，/my/summary 懒解冻作第三重保障）
+(function startUnfreezeScheduler() {
+  const scan = () => {
+    try {
+      const n = commissionEngine.runUnfreeze();
+      if (n > 0) console.log(`[Commission] 定时解冻: ${n} 条记录转可提现`);
+    } catch (e) {
+      console.error('[Commission] 定时解冻扫描失败:', e.message);
+    }
+  };
+  scan();
+  const timer = setInterval(scan, 6 * 3600 * 1000);
+  if (timer.unref) timer.unref();
+})();
