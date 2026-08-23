@@ -1,13 +1,13 @@
 # 言道国学 · FINAL_PROJECT_HANDOVER 最终交接报告
 
-> 版本：v25.0.47_16 ｜ APK：25.0.48 (versionCode 2048) ｜ Git：595368a+（GitHub wzmpa18/minglizyi main）｜ 日期：2026-08-23
+> 版本：v25.0.47_17 ｜ APK：25.0.49 (versionCode 2049) ｜ Git：f88b12a+（GitHub wzmpa18/minglizyi main）｜ 日期：2026-08-23
 > 本文档为唯一主交接文档。历史部署/验收报告已全部收纳于 `docs/reports/`（30 份原始报告 + 1 份整合完整版《20260822_全部报告整合_完整版.md》，全部集中在这一个文件夹），不再另行生成独立报告。
 
 ## 一、项目概况
 
 1. **项目**：言道国学（易学+中医学习 App/Web，Next.js 静态导出 + Node 后端 + SQLite）
 2. **产品定位**：传统文化学习平台——易学排盘工具（八字/紫微/奇门/六爻/梅花/大六壬/择日/手机号/姓名/合婚/塔罗/星座）、中医学习与医考、AI 深度解读（付费）、社区群聊、推广分佣
-3. **当前版本**：v25.0.47_16（buildId v25.0.47_16_D20260823）；APK v25.0.48（versionCode 2048，内置 v25.0.47_16 资源）。版本线：RC-04~06 热修 → v25.0.47_9 支付解耦 → _10 运营管理中心封板 → _12 支付/定价/分佣/中医门控 → _13 商家转账/三级角色/抽屉导航 → _14 支付死键/邀请裂变 → _15 APK死链修复 → **_16 升级提示体系+桌面导航+APK重建+工作区净化**
+3. **当前版本**：v25.0.47_17（buildId v25.0.47_17_D20260823）；APK v25.0.49（versionCode 2049，内置 v25.0.47_17 资源）。版本线：RC-04~06 热修 → v25.0.47_9 支付解耦 → _10 运营管理中心封板 → _12 支付/定价/分佣/中医门控 → _13 商家转账/三级角色/抽屉导航 → _14 支付死键/邀请裂变 → _15 APK死链修复 → _16 升级提示体系+桌面导航+APK重建+工作区净化 → **_17 全端统一抽屉+会员入口+检查更新+典籍AI全量导入**
 4. **生产域名**：https://yandaoguoxue.yandao.vip（H5，微信内体验完整支付链路）
 5. **后台入口与登录方式**：https://yandaoguoxue.yandao.vip/admin/（**言道国学运营管理中心**，唯一正式入口）。**三级角色密钥体系（v25.0.47_13）**：主管理员密钥（SUPER_ADMIN，全系统唯一最高权限）存放于服务器 `/www/yandaoguoxue-backend/.env` 的 `ADMIN_API_KEY=` 一行（SSH 登录 root@82.156.228.87 后执行 `grep '^ADMIN_API_KEY=' /www/yandaoguoxue-backend/.env` 查看，妥善保管勿外泄）；财务/运营子密钥由超级管理员在后台「密钥管理」页签发（明文仅一次性展示，SHA256 哈希存储）。**主密钥可修改**：服务器 .env 改 ADMIN_API_KEY 值 → `pm2 restart yandaoguoxue-backend` 即生效（密钥管理页有指引）。后台菜单按登录角色动态渲染，导航为抽屉式（默认收起+左上角汉堡按钮唤出，内容区全宽不遮挡）；权限由服务端强制校验（越权 403+审计留痕）**
 
@@ -15,11 +15,11 @@
 
 | 位置 | 路径 |
 |---|---|
-| GitHub | https://github.com/wzmpa18/minglizyi（main = 019ab43） |
+| GitHub | https://github.com/wzmpa18/minglizyi（main = f88b12a） |
 | 本地主仓库 | C:\Users\ZhuanZ\Projects\minglizyi |
 | 服务器源码仓 | /root/yandaoguoxue-source |
 | 生产后端 | /www/yandaoguoxue-backend（PM2: yandaoguoxue-backend, 端口 3001） |
-| 生产前端 | /root/yandaoguoxue/current → releases/v25.0.47_13 |
+| 生产前端 | /root/yandaoguoxue/current → releases/v25.0.47_17 |
 | 数据库 | /root/backend-auth/data/yandao_users.db（SQLite WAL, 18 表, 46 用户） |
 | 签名/证书 | Android keystore 与微信支付证书见 SECRET INVENTORY 一节 |
 
@@ -70,6 +70,20 @@
 **公网验收（scripts/verify_v13_final.sh + verify_v13_final_fix.sh，28 项 PASS / 0 FAIL）**：页面健康 8 路径 200；版本 v25.0.47_13；定价 SSOT 37/99/374/3600；主密钥 whoami=SUPER_ADMIN；财务密钥财务域 200 + 越权 5 项全 403（密钥管理/运营接口/改分佣配置/改价 PATCH·PUT/改 AI 配置）；运营密钥运营域 200 + 越权财务 403 + 越权密钥 403；审计日志含 ADMIN_KEY_CREATE+AUDIT_BLOCK_*；临时密钥签发-验证-禁用闭环；未登录提现 401；withdrawEnabled=false/minWithdraw=10/settleDay=0/withdrawOpenDay=16；深度报告字数结构双达标。
 
 **提现启用三步**（待项目方商户平台开通「商家转账到零钱」权限后）：① .env 置 WITHDRAW_TRANSFER_ENABLED=true ② pm2 restart yandaoguoxue-backend ③ 后台「提现」页即可看到自动转账流（≤200 元免审自动打款，>200 元人工审核）。
+
+## 三C、本次会话（2026-08-23 晚）完成的 v25.0.47_17（指令 FIX-V17-DRAWER-MEMBER-UPDATE-CLASSICS）
+
+**全部完成并公网验证（四端 HEAD 一致 = f88b12a：本地=GitHub=服务器源码仓=生产运行目录）：**
+
+1. **后台全端统一抽屉导航**：删除 v16 的 isDesktop 桌面常驻侧栏方案（用户判定「没有抽屉式」且内容仍被挤压），全端统一抽屉覆盖式——侧边栏 fixed+translateX(-100%) 默认收起，汉堡按钮唤出，遮罩层全端显示，内容区全宽零避让；桌面/移动体验完全一致
+2. **商业中心会员购买跳转修复**：ZoneItem 组件新增 href 参数（原生 `<a>` 锚点，不依赖 JS），会员中心入口 href="/membership/" 直达；商业中心 Zone defaultOpen 默认展开
+3. **版本号动态化+系统中心「检查更新」**：页脚 IcpFooter 与关于弹窗改 fetch /version.json 动态读取（解决版本号永远显示 v25.0）；系统中心新增「检查更新」按钮（手动检测新版本，发现新版显示角标，点击刷新即升级；与 v16 AppUpgradeChecker 自动检测双保险）
+4. **中医典籍混元 AI 全量导入（177 章）**：服务器 tcm_gen 混元批量生成管道产出 12 部典籍（素问/灵枢/金匮/温病/难经/神农本草 6 部补全 102 章+新增濒湖脉学/药性赋/汤头歌诀/千金要方/医宗金鉴/中藏经 6 部 75 章，含原文+白话提要）；classicsExtra.ts 外挂模块+classics.ts buildMergedBooks() 自动合并（阅读/搜索/详情全走合并数据）；工程细节：书 ID 映射（jingui→jinkui/shennong→bencao）+章节序号自动接续防冲突
+5. **APK v25.0.49 重建（versionCode 2048→2049）**：内置 v25.0.47_17 资源（8 项关键代码入包全命中）；app-release-config.json 更新至 2049，存量 v25.0.48 用户启动即弹升级窗
+
+**公网验收（deploy_release_v25_0_47_17.sh 全流程）**：内容门禁 v13~v17 全过（含 isDesktop 零残留/会员 href 锚点/classicsExtra 非空等 12 项 v17 新增）；21 路径全 200；version.json 确认 v25.0.47_17；生产 chunks 典籍数据命中；注册页下载按钮三环境；支付三环境（web/wechat/ios）下单回归全 codeUrl；本地公网独立复验 version.json/app-version 接口（2049）/APK 直链 11.22MB/在线 chunk UTF-8 解码 7 部新增典籍全部命中。
+
+**运维提醒**：本机 SSH 连服务器须用 `ssh -i ~/.ssh/id_rsa_yandao -o BatchMode=yes root@82.156.228.87`（known_hosts 已于 2026-08-23 清理过时条目，仅保留 github.com/yandao.vip/82.156.228.87 正确记录）。
 
 ## 四、上次会话（2026-08-22 晚）完成的 RC-06 支付真实化
 
