@@ -418,6 +418,7 @@ const extraRoutes = [
   { file: 'academyRoutes', path: '/api/academy', name: '言道学堂' },
   { file: 'newsRoutes', path: '/api/news', name: '行业资讯' },
   { file: 'newsRoutes', path: '/api/admin/news', name: '资讯管理' },
+  { file: 'announcementRoutes', path: '/api/announcements', name: '公告栏' },
   { file: 'socialStorageRoutes', path: '/api/social', name: '社交存储' },
   { file: 'paymentRoutes', path: '/api/payment', name: '支付' },
   { file: 'shareResultRoutes', path: '/api/share', name: '分享引擎' },

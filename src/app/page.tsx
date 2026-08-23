@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Solar, Lunar } from "lunar-javascript";
 import IcpFooter from "@/components/IcpFooter";
+import AnnouncementBar from "@/components/AnnouncementBar";
 
 const BRAND = "#7B2FBE";
 
@@ -230,6 +231,9 @@ export default function HomePage(){
           <button className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-gray-100"><SettingsIcon/></button>
         </div>
       </div>
+
+      {/* 官方公告栏（永久功能：升级/维护通知，未登录可见） */}
+      <AnnouncementBar />
 
       {/* 双大按钮 */}
       <div className="mt-3 flex gap-3 px-3">

@@ -1,17 +1,19 @@
 #!/bin/bash
 # ============================================================================
-# v25.0.50 APK 重建：FIX-V18 搜索高对比+购买登录引导+网页版自动刷新
-#   前置：已执行 bash build.sh（out/ 为 v25.0.47_18 构建产物）
-#   流程：out/ → android assets/public/ → 写入 app-native.json（versionCode 2050）
-#         → gradlew assembleRelease（自动签名）→ 验证 → 上传分发目录 → 更新别名
-#         → 后端 app-release-config.json 更新至 2049（升级提示数据源）
+# v25.0.51 APK 构建：FIX-V19 公告栏+APK下载链接统一
+#   前置：已执行 bash build.sh（out/ 为 v25.0.47_19 构建产物）
+#   流程：out/ → android assets/public/ → 写入 app-native.json（versionCode 2051）
+#         → gradle assembleRelease（自动签名）→ 验证 → 上传分发目录 → 更新别名
+#         → latest.apk 永久固定名别名（全站 APK 直链统一指向这一处）
+#         → 后端 app-release-config.json 更新至 2051（升级提示数据源）
+#   包含 v18 未发布修复：搜索高对比+购买登录引导+网页版自动刷新+全端抽屉后台
 # ============================================================================
 set -e
 SRC_DIR="/root/yandaoguoxue-source"
 ASSETS_PUBLIC="$SRC_DIR/android/app/src/main/assets/public"
 APK_OUT="$SRC_DIR/android/app/build/outputs/apk/release/app-release.apk"
 DIST_DIR="/var/www/yandao.vip/app-download"
-NEW_APK_NAME="yandao-guoxue-v25.0.50-release.apk"
+NEW_APK_NAME="yandao-guoxue-v25.0.51-release.apk"
 
 cd "$SRC_DIR"
 
@@ -19,8 +21,8 @@ echo "--- [0] 前置校验 ---"
 test -f out/index.html || { echo "FATAL: out/ 不存在，请先执行 bash build.sh"; exit 1; }
 BUILD_ID=$(node -e "console.log(JSON.parse(require('fs').readFileSync('out/version.json','utf8')).buildId)")
 echo "web资源 buildId: ${BUILD_ID}"
-echo "$BUILD_ID" | grep -q "v25.0.47_18" || { echo "FATAL: out/ 非 v25.0.47_18 构建"; exit 1; }
-grep -q 'versionCode 2050' android/app/build.gradle || { echo "FATAL: build.gradle versionCode 非 2050"; exit 1; }
+echo "$BUILD_ID" | grep -q "v25.0.47_19" || { echo "FATAL: out/ 非 v25.0.47_19 构建"; exit 1; }
+grep -q 'versionCode 2051' android/app/build.gradle || { echo "FATAL: build.gradle versionCode 非 2051"; exit 1; }
 
 echo "--- [0.5] 后端版本接口热更（app-version 先于 APK 上线，避免接口404窗口） ---"
 cp -f "$SRC_DIR/backend_deploy/appVersionRoutes.js" /www/yandaoguoxue-backend/appVersionRoutes.js
@@ -39,10 +41,10 @@ cp -r out/* "$ASSETS_PUBLIC/"
 echo "--- [2] 写入 app-native.json（本地版本标识，AppUpgradeChecker 探测用） ---"
 cat > "$ASSETS_PUBLIC/app-native.json" <<'EON'
 {
-  "versionName": "25.0.50",
-  "versionCode": 2050,
+  "versionName": "25.0.51",
+  "versionCode": 2051,
   "platform": "android",
-  "builtAt": "2026-08-23T20:30:00+08:00"
+  "builtAt": "2026-08-23T21:30:00+08:00"
 }
 EON
 cat "$ASSETS_PUBLIC/app-native.json"
@@ -65,13 +67,13 @@ cd /tmp && rm -rf apk_verify && mkdir apk_verify && cd apk_verify
 unzip -o -q "$APK_OUT" "assets/public/app-native.json" "assets/public/version.json" "assets/public/native-api-patch.js" 2>/dev/null
 echo "--- 内置 app-native.json ---"
 cat assets/public/app-native.json
-grep -q '"versionCode": 2050' assets/public/app-native.json || { echo "FATAL: 内置版本号错误"; exit 1; }
+grep -q '"versionCode": 2051' assets/public/app-native.json || { echo "FATAL: 内置版本号错误"; exit 1; }
 echo "--- 内置 version.json ---"
 cat assets/public/version.json
-grep -q "v25.0.47_18" assets/public/version.json || { echo "FATAL: 内置 web 资源版本错误"; exit 1; }
+grep -q "v25.0.47_19" assets/public/version.json || { echo "FATAL: 内置 web 资源版本错误"; exit 1; }
 echo "--- 内置关键代码检查 ---"
 unzip -o -q "$APK_OUT" "assets/public/_next/static/chunks/*" 2>/dev/null
-for kw in "检查更新" "濒湖脉学" "输入关键词，如：脉诊、桂枝" "登录后即可购买会员" "发现新版本" "renderViralPoster" "打开导航菜单" "下载言道国学APP"; do
+for kw in "检查更新" "濒湖脉学" "输入关键词，如：脉诊、桂枝" "登录后即可购买会员" "发现新版本" "renderViralPoster" "打开导航菜单" "下载言道国学APP" "官方公告" "国学随身查，典籍全收录" "latest.apk"; do
   n=$(grep -rl "$kw" assets/public/_next/static/chunks/ 2>/dev/null | wc -l)
   echo "[$kw] 命中 $n 个chunk"
   [ "$n" -eq 0 ] && { echo "FATAL: APK 内置资源缺少 [$kw]"; exit 1; }
@@ -96,26 +98,26 @@ echo "--- [6] 后端版本配置写入（升级提示数据源，幂等） ---"
 mkdir -p /www/yandaoguoxue-backend/data
 cat > /www/yandaoguoxue-backend/data/app-release-config.json <<'EOCFG'
 {
-  "latestVersion": "25.0.50",
-  "latestVersionCode": 2049,
+  "latestVersion": "25.0.51",
+  "latestVersionCode": 2051,
   "downloadUrl": "https://yandaoguoxue.yandao.vip/app-download/latest.apk",
   "downloadPage": "https://yandaoguoxue.yandao.vip/friend",
   "releaseNotes": [
+    "新增官方公告栏：首页顶部永久展示升级/维护通知，长期未登录也不会错过重要信息",
+    "APK下载链接全面统一：公司网站、分享海报、落地页全部指向同一地址，更新包一处撤换",
     "后台导航全新升级：全端统一抽屉式，默认收起不遮挡内容，汉堡按钮一键唤出",
-    "会员购买体验升级：未登录点购买弹出登录引导大弹窗，反馈更清晰；网页版新增版本自动刷新",
-    "新增检查更新：系统中心可手动检测新版本，有更新立即提醒",
-    "中医典籍搜索全新改版：搜索框高对比配色（白底金按钮），一眼可见；命中词黄色高亮标注"
+    "会员购买体验升级：未登录点购买弹出登录引导大弹窗；中医典籍搜索高对比改版，一眼可见"
   ],
   "forceUpdate": false,
-  "publishedAt": "2026-08-23T20:30:00+08:00"
+  "publishedAt": "2026-08-23T21:30:00+08:00"
 }
 EOCFG
-grep -q '"latestVersionCode": 2049' /www/yandaoguoxue-backend/data/app-release-config.json || { echo "FATAL: 后端版本配置写入失败"; exit 1; }
+grep -q '"latestVersionCode": 2051' /www/yandaoguoxue-backend/data/app-release-config.json || { echo "FATAL: 后端版本配置写入失败"; exit 1; }
 grep -q 'app-download/latest.apk' /www/yandaoguoxue-backend/data/app-release-config.json || { echo "FATAL: 后端下载地址未指向统一固定地址 latest.apk"; exit 1; }
 pm2 restart yandaoguoxue-backend --update-env > /dev/null 2>&1
 sleep 3
-curl -s -m 10 https://yandaoguoxue.yandao.vip/api/public/app-version | grep -q '"latestVersionCode":2049\|"latestVersionCode": 2049' || { echo "FATAL: 升级接口未返回2049"; exit 1; }
-echo "后端配置 OK（升级接口已返回 2049）"
+curl -s -m 10 https://yandaoguoxue.yandao.vip/api/public/app-version | grep -q '"latestVersionCode":2051\|"latestVersionCode": 2051' || { echo "FATAL: 升级接口未返回2051"; exit 1; }
+echo "后端配置 OK（升级接口已返回 2051）"
 
 echo "--- [7] 公网验证 ---"
 DOMAIN="https://yandaoguoxue.yandao.vip"
@@ -132,5 +134,5 @@ ALIAS=$(curl -s -o /dev/null -w '%{http_code}' -I ${DOMAIN}/app-download/guoxue-
 echo "别名直链: ${ALIAS}"
 [ "$ALIAS" != "200" ] && { echo "FATAL: 别名直链非200"; exit 1; }
 
-echo "===== APK v25.0.50 BUILD COMPLETE ====="
-echo "NOTE: 旧 v25.0.48 APK 保留在分发目录作回滚备份（不再被前端引用）"
+echo "===== APK v25.0.51 BUILD COMPLETE ====="
+echo "NOTE: 统一固定地址 latest.apk 已指向新包；旧版本 APK 保留在分发目录作回滚备份（不再被前端引用）"

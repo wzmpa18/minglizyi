@@ -11,7 +11,9 @@ import { recordInviteLanding } from "@/lib/antiCheatStore";
 const BRAND = "#7B2FBE";
 // APK 直链兜底值：实际下载地址运行时从 /api/public/app-version 动态获取（SSOT，
 // 服务器发布新 APK 后仅更新 app-release-config.json，前端零改动；接口失败时用此兜底）
-const APK_URL_FALLBACK = "https://yandaoguoxue.yandao.vip/app-download/yandao-guoxue-v25.0.48-release.apk";
+// v25.0.47_19：兜底地址统一为永久固定名 latest.apk——服务器每次发新包都会同步覆盖该别名，
+// 兜底地址永不过期；全站所有 APK 直链（公司网站/分享海报/落地页）统一指向这一处
+const APK_URL_FALLBACK = "https://yandaoguoxue.yandao.vip/app-download/latest.apk";
 
 // ==================== 检测微信/QQ内置浏览器 ====================
 function isInAppBrowser(): boolean {

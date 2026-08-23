@@ -164,6 +164,31 @@ export interface NewsAdminListData {
   total: number;
 }
 
+// ==================== 公告栏类型 ====================
+
+/** 公告级别 */
+export type AnnouncementLevel = "info" | "important" | "urgent";
+
+/** 单条公告（后台管理用） */
+export interface AnnouncementAdminItem {
+  id: string;
+  title: string;
+  content: string;
+  level: AnnouncementLevel;
+  pinned: boolean;
+  published: boolean;
+  publishAt: string;
+  expiresAt: string | null;
+  link: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 公告列表响应 */
+export interface AnnouncementAdminListData {
+  announcements: AnnouncementAdminItem[];
+}
+
 // ==================== API 响应类型 ====================
 
 export interface ApiSuccess<T> {

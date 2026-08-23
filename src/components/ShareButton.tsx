@@ -439,7 +439,15 @@ function ShareMenu({
   );
 }
 
-// ==================== 二维码弹窗 ====================
+// ==================== 二维码弹窗（v25.0.47_19：营销化改版） ====================
+// 项目方要求：二维码弹窗不能只是一张孤零零的二维码，必须像海报一样带介绍与营销卖点，
+// 引导扫码者下载APP。文案与裂变海报同源（sharePoster.ts VALUE_POINTS / 主副标题）。
+const QR_VALUE_POINTS = [
+  { icon: "📊", title: "专业排盘", desc: "八字紫微奇门等14款工具" },
+  { icon: "📚", title: "典籍学习", desc: "中医经典·易学古籍免费读" },
+  { icon: "👥", title: "同道交流", desc: "同好社区·师父在线交流" },
+];
+
 function QrModal({ image, url, onClose }: { image: string; url: string; onClose: () => void }) {
   useBodyScrollLock(true);
   usePopupBackHandler(onClose, true);
@@ -457,17 +465,60 @@ function QrModal({ image, url, onClose }: { image: string; url: string; onClose:
 
   return (
     <>
-      <div className="fixed inset-0 z-[110]" onClick={onClose} style={{ backgroundColor: "rgba(0,0,0,0.5)" }} />
-      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[120] w-[300px] rounded-2xl bg-white p-5 shadow-xl">
-        <p className="mb-3 text-center text-sm font-semibold text-gray-800">扫一扫查看排盘结果</p>
-        <div className="flex justify-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={image} alt="分享二维码" className="h-[240px] w-[240px]" />
+      <div className="fixed inset-0 z-[110]" onClick={onClose} style={{ backgroundColor: "rgba(0,0,0,0.55)" }} />
+      <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[120] flex max-h-[88vh] w-[330px] flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
+        {/* 品牌渐变头部：主标题+副标题（与海报同源文案） */}
+        <div className="relative px-5 pb-4 pt-5 text-center text-white" style={{ background: `linear-gradient(135deg,${BRAND} 0%,#9B5ECF 100%)` }}>
+          <button
+            onClick={onClose}
+            className="absolute right-2.5 top-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-white/25 text-base leading-none text-white"
+            aria-label="关闭二维码弹窗"
+          >
+            ×
+          </button>
+          <p className="text-[10px] tracking-wide opacity-80">东莞言道科技有限公司</p>
+          <p className="mt-1 text-lg font-extrabold">国学随身查，典籍全收录</p>
+          <p className="mt-1 text-[11px] opacity-85">14款专业排盘工具 · 中医典籍知识库 · 同好交流社区</p>
         </div>
-        {url && (
-          <p className="mt-3 break-all text-center text-[10px] leading-4 text-gray-400">{url}</p>
-        )}
-        <div className="mt-4 flex gap-2">
+
+        <div className="overflow-y-auto px-5 pb-5 pt-4">
+          {/* 扫码引导语 */}
+          <p className="text-center text-sm font-bold text-gray-800">扫一扫查看这份排盘结果</p>
+          <p className="mt-0.5 text-center text-[11px] text-gray-500">好友扫码即可查看完整结果，无需注册</p>
+
+          {/* 二维码 */}
+          <div className="mt-3 flex justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={image} alt="分享二维码" className="h-[210px] w-[210px]" />
+          </div>
+          <p className="mt-1.5 text-center text-[11px] font-semibold" style={{ color: BRAND }}>
+            官方正版 · 安全下载
+          </p>
+
+          {/* 营销卖点（与海报 VALUE_POINTS 同源） */}
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {QR_VALUE_POINTS.map((vp) => (
+              <div key={vp.title} className="rounded-xl px-2 py-2.5 text-center" style={{ backgroundColor: BRAND + "0D" }}>
+                <div className="text-lg leading-none">{vp.icon}</div>
+                <div className="mt-1 text-[11px] font-bold text-gray-800">{vp.title}</div>
+                <div className="mt-0.5 text-[9px] leading-tight text-gray-500">{vp.desc}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* 行动召唤 */}
+          <div className="mt-3 rounded-xl px-3 py-2.5 text-center" style={{ backgroundColor: "#FFF7ED" }}>
+            <p className="text-xs font-bold text-orange-600">🎁 扫码还能免费下载「言道国学」APP</p>
+            <p className="mt-0.5 text-[10px] text-orange-500">基础排盘永久免费 · 新人专享基础权益 · 每日签到领积分</p>
+          </div>
+
+          {url && (
+            <p className="mt-2.5 break-all text-center text-[9px] leading-4 text-gray-400">{url}</p>
+          )}
+        </div>
+
+        {/* 底部按钮 */}
+        <div className="flex flex-shrink-0 gap-2 border-t border-gray-100 px-5 py-3.5">
           <button
             onClick={handleSave}
             className="flex-1 rounded-xl py-2.5 text-sm font-semibold text-white"

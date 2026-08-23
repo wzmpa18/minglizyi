@@ -14,10 +14,13 @@ const router = express.Router();
 const DATA_DIR = path.join(__dirname, 'data');
 
 // 兜底默认值：配置文件缺失/损坏时返回（保持接口永不 500）
+// v25.0.47_19：downloadUrl 统一为永久固定名 latest.apk——全站 APK 直链唯一指向，
+// 服务器发新包时同步覆盖 latest.apk 别名即可，所有引用处（公司网站/分享海报/落地页）
+// 自动指向新包，无需改任何链接
 const DEFAULT_RELEASE = {
   latestVersion: '25.0.48',
   latestVersionCode: 2048,
-  downloadUrl: 'https://yandaoguoxue.yandao.vip/app-download/yandao-guoxue-v25.0.48-release.apk',
+  downloadUrl: 'https://yandaoguoxue.yandao.vip/app-download/latest.apk',
   downloadPage: 'https://yandaoguoxue.yandao.vip/friend',
   releaseNotes: [
     '修复邀请海报保存：导出完整高清海报（含背景/标题/卖点/二维码），不再只有二维码',

@@ -5,7 +5,7 @@
 // 供 /admin 下所有页面复用，保证视觉一致性（紫色系 #7B2FBE）
 // ============================================================================
 
-import React, { useState, useEffect, type CSSProperties, type ReactNode } from "react";
+import React, { useState, useEffect, useCallback, type CSSProperties, type ReactNode } from "react";
 
 // ==================== 主题色 ====================
 
@@ -310,13 +310,20 @@ export function LoadingSpinner({ text = "加载中..." }: { text?: string }) {
   );
 }
 
-/** Toast 提示 */
+/**
+ * Toast 提示
+ * v25.0.47_19 修复：show 必须用 useCallback 稳定引用。
+ * 此前 show 每次渲染都是新函数，导致依赖它的 useCallback（load/refresh）连锁失效，
+ * 多个后台页面陷入「渲染→重建回调→useEffect 重跑→重新请求」无限循环：
+ * 表现为页面一直闪、请求风暴（每~120ms一次）、浏览器渲染进程崩溃白屏。
+ * 严禁移除 useCallback，否则总览/工具/资讯/营销/价格/开关/订单/分佣全部回归死循环。
+ */
 export function useToast() {
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" | "info" | "warning" } | null>(null);
-  const show = (msg: string, type: "success" | "error" | "info" | "warning" = "success") => {
+  const show = useCallback((msg: string, type: "success" | "error" | "info" | "warning" = "success") => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 2600);
-  };
+  }, []);
   const node = toast
     ? (() => {
         const c =

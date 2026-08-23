@@ -17,6 +17,8 @@ import type {
   AIQuotaConfig,
   NewsAdminItem,
   NewsAdminListData,
+  AnnouncementAdminItem,
+  AnnouncementAdminListData,
 } from "./types";
 
 // ==================== 管理员密钥管理 ====================
@@ -290,6 +292,49 @@ export async function resetNewsItems(): Promise<{ ok: boolean; error?: string }>
   return { ok: !!res.success, error: res.error };
 }
 
+// ==================== 公告栏 API（v25.0.47_19 首页永久公告栏） ====================
+
+/** 获取全部公告（含未发布/已过期） */
+export async function fetchAnnouncements(): Promise<AnnouncementAdminItem[]> {
+  const res = await adminFetch<AnnouncementAdminListData>("/api/announcements");
+  if (!res.success) return [];
+  const data = res.data as AnnouncementAdminListData | undefined;
+  return data?.announcements ?? [];
+}
+
+/** 新增公告 */
+export async function createAnnouncement(
+  item: Omit<AnnouncementAdminItem, "id" | "createdAt" | "updatedAt">
+): Promise<{ ok: boolean; error?: string }> {
+  const res = await adminFetch<AnnouncementAdminItem>("/api/announcements", {
+    method: "POST",
+    body: JSON.stringify(item),
+  });
+  return { ok: !!res.success, error: res.error };
+}
+
+/** 更新公告 */
+export async function updateAnnouncement(
+  id: string,
+  item: Omit<AnnouncementAdminItem, "id" | "createdAt" | "updatedAt">
+): Promise<{ ok: boolean; error?: string }> {
+  const res = await adminFetch<AnnouncementAdminItem>(`/api/announcements/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    body: JSON.stringify(item),
+  });
+  return { ok: !!res.success, error: res.error };
+}
+
+/** 删除公告 */
+export async function deleteAnnouncement(
+  id: string
+): Promise<{ ok: boolean; error?: string }> {
+  const res = await adminFetch(`/api/announcements/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+  return { ok: !!res.success, error: res.error };
+}
+
 // ==================== 统一驾驶舱 overview API（v25.0.47_10） ====================
 
 export interface AdminOverviewData {
@@ -445,18 +490,46 @@ export async function retryBenefitDelivery(orderId: string): Promise<{ ok: boole
 }
 
 // ==================== 营销海报 / 分享配置 API（v25.0.47_10） ====================
+// v25.0.47_19 修复：后端 poster-config / share-config 路由返回 { success, config }
+// （config 在顶层而非 data 字段），此前前端只读 res.data 导致营销页永远提示
+//「营销配置加载失败」。此处兼容两种结构：优先 data，回退 config。
+
+async function adminFetchRaw(
+  path: string,
+  options: FetchOptions = {}
+): Promise<{ success: boolean; data?: unknown; config?: unknown; error?: string; message?: string }> {
+  const key = getAdminKey();
+  if (!key) {
+    return { success: false, error: "未登录，请先输入管理员密钥" };
+  }
+  try {
+    const res = await fetch(path, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${key}`,
+        ...(options.headers || {}),
+      },
+    });
+    return await res.json();
+  } catch (e: any) {
+    return { success: false, error: `网络异常：${e.message || e}` };
+  }
+}
 
 /** 获取海报配置 */
 export async function fetchPosterConfig(): Promise<Record<string, unknown> | null> {
-  const res = await adminFetch<Record<string, unknown>>("/api/admin/poster-config/poster/config");
-  return res.success ? res.data! : null;
+  const res = await adminFetchRaw("/api/admin/poster-config/poster/config");
+  if (!res.success) return null;
+  const cfg = (res.data ?? res.config) as Record<string, unknown> | undefined;
+  return cfg ?? null;
 }
 
 /** 保存海报配置 */
 export async function savePosterConfig(
   config: Record<string, unknown>
 ): Promise<{ ok: boolean; error?: string }> {
-  const res = await adminFetch("/api/admin/poster-config/poster/config", {
+  const res = await adminFetchRaw("/api/admin/poster-config/poster/config", {
     method: "PUT",
     body: JSON.stringify(config),
   });
@@ -465,15 +538,17 @@ export async function savePosterConfig(
 
 /** 获取分享配置 */
 export async function fetchShareConfig(): Promise<Record<string, unknown> | null> {
-  const res = await adminFetch<Record<string, unknown>>("/api/admin/share-config/share/config");
-  return res.success ? res.data! : null;
+  const res = await adminFetchRaw("/api/admin/share-config/share/config");
+  if (!res.success) return null;
+  const cfg = (res.data ?? res.config) as Record<string, unknown> | undefined;
+  return cfg ?? null;
 }
 
 /** 保存分享配置 */
 export async function saveShareConfig(
   config: Record<string, unknown>
 ): Promise<{ ok: boolean; error?: string }> {
-  const res = await adminFetch("/api/admin/share-config/share/config", {
+  const res = await adminFetchRaw("/api/admin/share-config/share/config", {
     method: "PUT",
     body: JSON.stringify(config),
   });

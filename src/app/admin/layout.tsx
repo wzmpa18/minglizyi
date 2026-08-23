@@ -34,6 +34,7 @@ import {
   ToggleLeft,
   ScrollText,
   Activity,
+  Bell,
 } from "lucide-react";
 import { THEME, useMounted } from "./_shared";
 import { getAdminKey, setAdminKey, clearAdminKey, isAdminAuthed, getAdminRole, setAdminRole } from "@/lib/admin/client";
@@ -54,6 +55,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/admin", label: "总览", icon: <LayoutDashboard size={18} />, desc: "老板驾驶舱·20项核心指标", scope: "all" },
+  { href: "/admin/announcements", label: "公告管理", icon: <Bell size={18} />, desc: "官方公告·置顶·升级通知", scope: "ops" },
   { href: "/admin/moderation", label: "用户管理", icon: <Users size={18} />, desc: "搜索·封禁·禁言·风险记录", scope: "ops" },
   { href: "/admin/tool-control", label: "工具管理", icon: <Wrench size={18} />, desc: "14款工具·开关·收费·平台", scope: "ops" },
   { href: "/admin/pricing", label: "产品与价格", icon: <Tag size={18} />, desc: "价格SSOT·会员·AI产品", scope: "super" },

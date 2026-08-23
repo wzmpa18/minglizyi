@@ -8,7 +8,8 @@ const BRAND = "#7B2FBE";
 const DOWNLOAD_URL = "https://yandaoguoxue.yandao.vip/friend";
 // APK 直链兜底值：实际地址运行时从 /api/public/app-version 动态获取（SSOT，
 // 服务器发布新 APK 后仅更新 app-release-config.json，前端零改动）
-const APK_URL_FALLBACK = "https://yandaoguoxue.yandao.vip/app-download/yandao-guoxue-v25.0.48-release.apk";
+// v25.0.47_19：兜底地址统一为永久固定名 latest.apk（与 friend 落地页同一处，永不过期）
+const APK_URL_FALLBACK = "https://yandaoguoxue.yandao.vip/app-download/latest.apk";
 
 /** 功能亮点列表 */
 const FEATURES: { icon: string; title: string; desc: string }[] = [
@@ -24,6 +25,9 @@ export default function DownloadPage() {
   // P9：本地生成 APK 下载二维码，不依赖境外 qrserver 服务
   const [downloadQrUrl, setDownloadQrUrl] = useState("");
   const [apkUrl, setApkUrl] = useState(APK_URL_FALLBACK);
+  // v25.0.47_19：版本号/发布日期动态化（从版本接口读取，服务器发新包后此页零改动）
+  const [latestVersion, setLatestVersion] = useState("");
+  const [publishedAt, setPublishedAt] = useState("");
 
   // 运行时拉取最新 APK 下载地址（SSOT：服务器发布新包只需更新 app-release-config.json）
   useEffect(() => {
@@ -33,7 +37,10 @@ export default function DownloadPage() {
         const res = await fetch(`/api/public/app-version?t=${Date.now()}`, { cache: "no-store" });
         if (!res.ok) return;
         const json = await res.json();
-        if (!stopped && json?.data?.downloadUrl) setApkUrl(json.data.downloadUrl);
+        if (stopped || !json?.data) return;
+        if (json.data.downloadUrl) setApkUrl(json.data.downloadUrl);
+        if (json.data.latestVersion) setLatestVersion(String(json.data.latestVersion));
+        if (json.data.publishedAt) setPublishedAt(String(json.data.publishedAt).slice(0, 10).replace(/-/g, "."));
       } catch { /* 接口失败保持兜底地址 */ }
     })();
     return () => { stopped = true; };
@@ -76,7 +83,8 @@ export default function DownloadPage() {
         </div>
         <h1 className="text-2xl font-bold text-white">言道国学</h1>
         <p className="mt-2 text-sm text-white/85">
-          v25.0.48 | 更新日期 2026.08.23 | 原生离线版
+          {latestVersion ? `v${latestVersion}` : "最新版本"}
+          {publishedAt ? ` | 更新日期 ${publishedAt}` : ""} | 原生离线版
         </p>
         <p className="mt-1 text-xs text-white/60">
           传承千年智慧，感悟国学之美

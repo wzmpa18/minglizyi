@@ -1,61 +1,70 @@
 "use client";
 
 // ============================================================================
-// 言道国学 - 数据看板页面
-// 多维度运营数据：用户活跃度、邀请转化、页面浏览、会员收入、AI 使用
-// 使用 ECharts 渲染趋势图与分布图
+// 言道国学 - 系统状态页（v25.0.47_19 重写）
+// v25.0.47_19 修复：原页面按从未实现的后端数据规格编写（读取 stats.userActivity
+// 等不存在字段），导致访问即 TypeError 白屏。现改为聚合真实存在的两个接口：
+//   1. /api/admin/unified/overview —— 服务健康(三色) + 用户/会员/订单/AI/社交/审核/佣金
+//   2. /api/admin/stats           —— 用户明细(周增/月增) + 会员等级分布
+// 全部字段防御式访问，任何字段缺失/为空均不崩溃。
 // ============================================================================
 
-import { useEffect, useState, type CSSProperties } from "react";
-import dynamic from "next/dynamic";
+import { useCallback, useEffect, useState } from "react";
 import {
+  Activity,
   BarChart3,
   Users,
-  Gift,
-  Eye,
   Crown,
+  Coins,
   Bot,
   TrendingUp,
   RefreshCw,
-  Coins,
+  Server,
+  ShieldCheck,
+  Eye,
+  Gift,
+  MessagesSquare,
+  Flag,
   Target,
-  Activity,
+  Clock,
 } from "lucide-react";
 import {
   THEME,
   AdminCard,
   StatCard,
-  Badge,
   LoadingSpinner,
   ProgressBar,
   useMounted,
   styles,
 } from "../_shared";
-import { fetchDashboardStats } from "@/lib/admin/client";
-import type { DashboardStats } from "@/lib/admin/types";
+import { fetchAdminOverview, fetchDashboardStats, type AdminOverviewData } from "@/lib/admin/client";
 
-// ECharts 客户端动态加载（避免 SSR 问题）
-const ReactECharts = dynamic(() => import("echarts-for-react"), {
-  ssr: false,
-  loading: () => <div style={{ height: 280, display: "flex", alignItems: "center", justifyContent: "center", color: THEME.textHint }}>图表加载中...</div>,
-});
+interface StatsShape {
+  user?: { total?: number; active?: number; newToday?: number; newThisWeek?: number; newThisMonth?: number };
+  invite?: { totalInvites?: number; successfulInvites?: number; pendingInvites?: number; conversionRate?: number };
+  pageViews?: { total?: number; today?: number; topPages?: { path?: string; title?: string; views?: number }[] };
+  membership?: { totalMembers?: number; monthly?: number; yearly?: number; lifetime?: number; revenue?: number };
+  aiUsage?: { totalCalls?: number; today?: number; successRate?: number; topTools?: { name?: string; calls?: number }[] };
+  generatedAt?: string;
+}
 
 export default function DashboardPage() {
   const mounted = useMounted();
-  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [overview, setOverview] = useState<AdminOverviewData | null>(null);
+  const [stats, setStats] = useState<StatsShape | null>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
-    const data = await fetchDashboardStats();
-    setStats(data);
+    const [ov, st] = await Promise.all([fetchAdminOverview(), fetchDashboardStats()]);
+    setOverview(ov);
+    setStats(st as unknown as StatsShape | null);
     setLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
     if (mounted) load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mounted]);
+  }, [mounted, load]);
 
   if (!mounted || loading) {
     return (
@@ -66,7 +75,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (!stats) {
+  if (!overview && !stats) {
     return (
       <div>
         <PageHeader onRefresh={load} />
@@ -79,196 +88,193 @@ export default function DashboardPage() {
     );
   }
 
-  const ua = stats.userActivity;
-  const inv = stats.invite;
-  const pv = stats.pageViews;
-  const mem = stats.membership;
-  const ai = stats.aiUsage;
+  // ===== 防御式取值（后端字段缺失时显示 0 / -） =====
+  const num = (v: unknown): number => (typeof v === "number" && !isNaN(v) ? v : 0);
+  const yuan = (v: unknown): string => (typeof v === "number" ? `¥${v.toFixed(2)}` : typeof v === "string" ? `¥${v}` : "¥0.00");
+
+  const health = (overview?.health || {}) as Record<string, string>;
+  const healthEntries = Object.entries(health);
+  const serverInfo = overview?.server || {};
+  const users = overview?.users || {};
+  const membership = overview?.membership || {};
+  const orders = overview?.orders || {};
+  const ai = overview?.ai || {};
+  const social = overview?.social || {};
+  const moderation = overview?.moderation || {};
+  const commission = overview?.commission || {};
+  const payment = overview?.payment || {};
+
+  const stUser = stats?.user || {};
+  const stMember = stats?.membership || {};
+  const stInvite = stats?.invite || {};
+  const stPv = stats?.pageViews || {};
+  const stAi = stats?.aiUsage || {};
+
+  const memberLevels = [
+    { key: "monthly", name: "月度会员", count: num(stMember.monthly) },
+    { key: "yearly", name: "年度会员", count: num(stMember.yearly) },
+    { key: "lifetime", name: "终身会员", count: num(stMember.lifetime) },
+  ];
+  const maxLevelCount = Math.max(...memberLevels.map((l) => l.count), 1);
+
+  const topTools = Array.isArray(stAi.topTools) ? stAi.topTools.slice(0, 6) : [];
+  const maxToolCalls = Math.max(...topTools.map((t) => num(t.calls)), 1);
+  const topPages = Array.isArray(stPv.topPages) ? stPv.topPages.slice(0, 6) : [];
 
   return (
     <div>
-      <PageHeader onRefresh={load} generatedAt={stats.generatedAt} />
-      <div style={{ paddingBottom: 24 }}>
-        {/* ============ 用户活跃度 ============ */}
-        <SectionTitle icon={<Users size={18} />}>用户活跃度</SectionTitle>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginBottom: 16 }}>
-          <StatCard label="日活 (DAU)" value={ua.dau.toLocaleString()} sub={`今日新增 ${ua.newUsersToday}`} icon={<Activity size={18} />} color={THEME.primary} trend={{ value: 5.2 }} />
-          <StatCard label="周活 (WAU)" value={ua.wau.toLocaleString()} sub="近7日活跃" icon={<Users size={18} />} color={THEME.info} />
-          <StatCard label="月活 (MAU)" value={ua.mau.toLocaleString()} sub="近30日活跃" icon={<Users size={18} />} color={THEME.success} />
-          <StatCard label="累计用户" value={ua.totalUsers.toLocaleString()} sub="注册总数" icon={<TrendingUp size={18} />} color={THEME.warning} />
-        </div>
-        <AdminCard style={{ marginBottom: 28 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: THEME.textSub, marginBottom: 10 }}>近 14 日 DAU 与新增用户趋势</div>
-          <ReactECharts
-            option={lineChartOption(
-              ua.trend.map((t) => t.date.slice(5)),
-              [
-                { name: "DAU", data: ua.trend.map((t) => t.dau), color: THEME.primary },
-                { name: "新增用户", data: ua.trend.map((t) => t.newUsers), color: THEME.success },
-              ]
-            )}
-            style={{ height: 280 }}
-          />
-        </AdminCard>
+      <PageHeader onRefresh={load} generatedAt={overview?.generatedAt} />
 
-        {/* ============ 邀请数据 ============ */}
-        <SectionTitle icon={<Gift size={18} />}>邀请数据统计</SectionTitle>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginBottom: 16 }}>
-          <StatCard label="累计邀请" value={inv.totalInvites.toLocaleString()} sub={`今日 ${inv.todayInvites}`} icon={<Gift size={18} />} color={THEME.primary} trend={{ value: 3.8 }} />
-          <StatCard label="一级邀请" value={inv.level1Count.toLocaleString()} sub="直接邀请" icon={<Users size={18} />} color={THEME.info} />
-          <StatCard label="二级邀请" value={inv.level2Count.toLocaleString()} sub="间接邀请" icon={<Users size={18} />} color={THEME.primaryLight} />
-          <StatCard label="转化率" value={`${inv.conversionRate}%`} sub="注册→活跃" icon={<Target size={18} />} color={THEME.success} trend={{ value: 1.5 }} />
+      {/* ============ 服务健康状态 ============ */}
+      <SectionTitle icon={<Activity size={18} />}>服务健康状态</SectionTitle>
+      <AdminCard style={{ marginBottom: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginBottom: 14 }}>
+          <HealthDot label="后端服务" status={health.backend || health.server || "正常"} />
+          <HealthDot label="数据库" status={health.database || "正常"} />
+          <HealthDot label="AI 服务" status={health.ai || (ai.enabled ? "正常" : "关闭")} />
+          <HealthDot label="微信支付" status={health.payment || (payment.nativeReady ? "正常" : "待配置")} />
         </div>
-        <AdminCard style={{ marginBottom: 28 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: THEME.textSub, marginBottom: 10 }}>近 14 日邀请趋势</div>
-          <ReactECharts
-            option={barChartOption(
-              inv.trend.map((t) => t.date.slice(5)),
-              [{ name: "邀请人数", data: inv.trend.map((t) => t.invites), color: THEME.primary }]
-            )}
-            style={{ height: 240 }}
-          />
-        </AdminCard>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 16, fontSize: 12, color: THEME.textSub, borderTop: `1px solid ${THEME.border}`, paddingTop: 12 }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Server size={13} /> 运行 {String(serverInfo.uptimeHours ?? "-")} 小时</span>
+          <span>内存 {String(serverInfo.memoryMB ?? "-")} MB</span>
+          <span>Node {String(serverInfo.nodeVersion ?? "-")}</span>
+          <span>PID {String(serverInfo.pid ?? "-")}</span>
+          <span>版本 {String(overview?.version || "-")}</span>
+          <span>Commit {String(overview?.gitCommit || "-")}</span>
+        </div>
+        {healthEntries.length > 0 && (
+          <div style={{ marginTop: 10, fontSize: 11, color: THEME.textHint }}>
+            原始健康字段：{healthEntries.map(([k, v]) => `${k}=${v}`).join(" · ")}
+          </div>
+        )}
+      </AdminCard>
 
-        {/* ============ 页面浏览热度 ============ */}
-        <SectionTitle icon={<Eye size={18} />}>页面浏览热度</SectionTitle>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginBottom: 16 }}>
-          <StatCard label="总浏览量" value={pv.totalViews.toLocaleString()} icon={<Eye size={18} />} color={THEME.primary} />
-          <StatCard label="独立访客" value={pv.totalUniqueVisitors.toLocaleString()} icon={<Users size={18} />} color={THEME.info} />
-          <StatCard label="热门页面数" value={pv.pages.length} sub="统计页面" icon={<BarChart3 size={18} />} color={THEME.warning} />
-        </div>
-        <AdminCard style={{ marginBottom: 28 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: THEME.textSub, marginBottom: 14 }}>页面浏览量排行 Top 10</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }} className="yd-dash-pv">
-            <ReactECharts
-              option={hBarChartOption(
-                pv.pages.slice(0, 10).map((p) => p.title),
-                pv.pages.slice(0, 10).map((p) => p.views),
-                THEME.primary
-              )}
-              style={{ height: 320 }}
-            />
-            <div>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-                <thead>
-                  <tr style={{ borderBottom: `2px solid ${THEME.border}` }}>
-                    <th style={thStyle}>页面</th>
-                    <th style={thStyle}>浏览</th>
-                    <th style={thStyle}>访客</th>
-                    <th style={thStyle}>时长</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pv.pages.slice(0, 8).map((p, i) => (
-                    <tr key={p.path} style={{ borderBottom: `1px solid ${THEME.border}` }}>
-                      <td style={tdStyle}>
-                        <span style={{ color: i < 3 ? THEME.warning : THEME.textHint, fontWeight: 700, marginRight: 6 }}>{i + 1}</span>
-                        {p.title}
-                      </td>
-                      <td style={{ ...tdStyle, fontWeight: 600 }}>{p.views.toLocaleString()}</td>
-                      <td style={tdStyle}>{p.uniqueVisitors.toLocaleString()}</td>
-                      <td style={{ ...tdStyle, color: THEME.textHint }}>{p.avgDuration}s</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <style>{`@media (max-width: 800px) { .yd-dash-pv { grid-template-columns: 1fr !important; } }`}</style>
+      {/* ============ 核心运营指标 ============ */}
+      <SectionTitle icon={<BarChart3 size={18} />}>核心运营指标</SectionTitle>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 14, marginBottom: 24 }}>
+        <StatCard label="总用户数" value={num(users.total).toLocaleString()} sub={`今日新增 ${num(users.newToday)} · 7日活跃 ${num(users.active7d)}`} icon={<Users size={18} />} color={THEME.primary} />
+        <StatCard label="当前会员数" value={num(membership.paid ?? membership.currentMembers).toLocaleString()} sub={`总会员 ${num(stMember.totalMembers).toLocaleString()}`} icon={<Crown size={18} />} color={THEME.warning} />
+        <StatCard label="今日实付金额" value={yuan(orders.todayRevenueYuan)} sub={`累计 ${yuan(orders.revenueYuan)}`} icon={<Coins size={18} />} color={THEME.success} />
+        <StatCard label="待处理订单" value={num(orders.pending).toLocaleString()} sub={`总订单 ${num(orders.total)} · 已支付 ${num(orders.paid)}`} icon={<Clock size={18} />} color={num(orders.pending) > 0 ? THEME.error : THEME.info} />
+        <StatCard label="今日 AI 调用" value={num(ai.callsToday).toLocaleString()} sub={`成功率 ${String(ai.successRate ?? "-")}`} icon={<Bot size={18} />} color={THEME.info} />
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 16, marginBottom: 24 }}>
+        {/* ============ 用户与增长 ============ */}
+        <AdminCard title="用户与增长">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <MiniStat label="累计注册" value={num(stUser.total).toLocaleString()} />
+            <MiniStat label="今日新增" value={num(stUser.newToday).toLocaleString()} />
+            <MiniStat label="本周新增" value={num(stUser.newThisWeek).toLocaleString()} />
+            <MiniStat label="本月新增" value={num(stUser.newThisMonth).toLocaleString()} />
+          </div>
+          <div style={{ marginTop: 12, paddingTop: 10, borderTop: `1px solid ${THEME.border}` }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: THEME.textSub, marginBottom: 6 }}>近 7 日活跃用户</div>
+            <ProgressBar value={num(users.active7d)} max={Math.max(num(users.total), 1)} color={THEME.primary} />
+            <div style={{ fontSize: 11, color: THEME.textHint, marginTop: 4 }}>{num(users.active7d)} / {num(users.total)} 人</div>
           </div>
         </AdminCard>
 
-        {/* ============ 会员数据 ============ */}
-        <SectionTitle icon={<Crown size={18} />}>会员数据</SectionTitle>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginBottom: 16 }}>
-          <StatCard label="付费会员" value={mem.paidMembers.toLocaleString()} sub={`总会员 ${mem.totalMembers.toLocaleString()}`} icon={<Crown size={18} />} color={THEME.warning} trend={{ value: 2.1 }} />
-          <StatCard label="付费转化率" value={`${mem.conversionRate}%`} sub="免费→付费" icon={<Target size={18} />} color={THEME.success} />
-          <StatCard label="本月收入" value={`¥${mem.revenueThisMonth.toLocaleString()}`} icon={<Coins size={18} />} color={THEME.primary} trend={{ value: 8.4 }} />
-          <StatCard label="累计收入" value={`¥${mem.revenueTotal.toLocaleString()}`} icon={<TrendingUp size={18} />} color={THEME.info} />
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 28 }} className="yd-dash-mem">
-          <AdminCard>
-            <div style={{ fontSize: 13, fontWeight: 600, color: THEME.textSub, marginBottom: 10 }}>近 6 个月收入趋势</div>
-            <ReactECharts
-              option={barChartOption(
-                mem.revenueTrend.map((m) => m.month),
-                [{ name: "收入(元)", data: mem.revenueTrend.map((m) => m.revenue), color: THEME.primary }]
-              )}
-              style={{ height: 260 }}
-            />
-          </AdminCard>
-          <AdminCard>
-            <div style={{ fontSize: 13, fontWeight: 600, color: THEME.textSub, marginBottom: 14 }}>各等级会员分布</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              {mem.byLevel.map((l) => {
-                const maxCount = Math.max(...mem.byLevel.map((x) => x.count), 1);
-                return (
-                  <div key={l.level}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: THEME.textMain }}>{l.name}</span>
-                      <span style={{ fontSize: 13, color: THEME.textSub }}>{l.count.toLocaleString()} 人 · ¥{l.revenue.toLocaleString()}</span>
-                    </div>
-                    <ProgressBar value={l.count} max={maxCount} color={l.level === "lifetime" ? THEME.warning : l.level === "yearly" ? THEME.primary : THEME.info} />
-                  </div>
-                );
-              })}
+        {/* ============ 会员等级分布 ============ */}
+        <AdminCard title="会员等级分布">
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {memberLevels.map((l) => (
+              <div key={l.key}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: THEME.textMain }}>{l.name}</span>
+                  <span style={{ fontSize: 13, color: THEME.textSub }}>{l.count.toLocaleString()} 人</span>
+                </div>
+                <ProgressBar value={l.count} max={maxLevelCount} color={l.key === "lifetime" ? THEME.warning : l.key === "yearly" ? THEME.primary : THEME.info} />
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop: 12, paddingTop: 10, borderTop: `1px solid ${THEME.border}`, fontSize: 12, color: THEME.textSub }}>
+            累计会员收入：{yuan(stMember.revenue)}
+          </div>
+        </AdminCard>
+
+        {/* ============ 邀请与浏览 ============ */}
+        <AdminCard title="邀请与页面浏览">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <MiniStat label="累计邀请" value={num(stInvite.totalInvites).toLocaleString()} icon={<Gift size={13} />} />
+            <MiniStat label="成功邀请" value={num(stInvite.successfulInvites).toLocaleString()} />
+            <MiniStat label="总浏览量" value={num(stPv.total).toLocaleString()} icon={<Eye size={13} />} />
+            <MiniStat label="今日浏览" value={num(stPv.today).toLocaleString()} />
+          </div>
+          {topPages.length > 0 ? (
+            <div style={{ marginTop: 12, paddingTop: 10, borderTop: `1px solid ${THEME.border}` }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: THEME.textSub, marginBottom: 6 }}>热门页面</div>
+              {topPages.map((p, i) => (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: THEME.textMain, padding: "3px 0" }}>
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "70%" }}>{p.title || p.path || "-"}</span>
+                  <span style={{ color: THEME.textHint }}>{num(p.views).toLocaleString()} 次</span>
+                </div>
+              ))}
             </div>
-          </AdminCard>
-          <style>{`@media (max-width: 800px) { .yd-dash-mem { grid-template-columns: 1fr !important; } }`}</style>
-        </div>
+          ) : (
+            <div style={{ marginTop: 12, fontSize: 11, color: THEME.textHint }}>页面浏览明细暂无数据（需接入埋点后展示）</div>
+          )}
+        </AdminCard>
 
-        {/* ============ AI 使用统计 ============ */}
-        <SectionTitle icon={<Bot size={18} />}>AI 使用统计</SectionTitle>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 14, marginBottom: 16 }}>
-          <StatCard label="今日调用" value={ai.callsToday.toLocaleString()} icon={<Bot size={18} />} color={THEME.info} trend={{ value: 6.7 }} />
-          <StatCard label="累计调用" value={ai.totalCalls.toLocaleString()} icon={<Activity size={18} />} color={THEME.primary} />
-          <StatCard label="成功率" value={`${ai.successRate}%`} icon={<Target size={18} />} color={THEME.success} />
-          <StatCard label="热门工具" value={ai.topTools[0]?.name || "-"} sub={`${ai.topTools[0]?.calls.toLocaleString() || 0} 次`} icon={<TrendingUp size={18} />} color={THEME.warning} />
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 28 }} className="yd-dash-ai">
-          <AdminCard>
-            <div style={{ fontSize: 13, fontWeight: 600, color: THEME.textSub, marginBottom: 10 }}>近 14 日 AI 调用趋势</div>
-            <ReactECharts
-              option={lineChartOption(
-                ai.callsTrend.map((t) => t.date.slice(5)),
-                [{ name: "调用次数", data: ai.callsTrend.map((t) => t.calls), color: THEME.info }]
-              )}
-              style={{ height: 260 }}
-            />
-          </AdminCard>
-          <AdminCard>
-            <div style={{ fontSize: 13, fontWeight: 600, color: THEME.textSub, marginBottom: 10 }}>热门 AI 工具调用占比</div>
-            <ReactECharts
-              option={pieChartOption(
-                ai.topTools.map((t) => ({ name: t.name, value: t.calls }))
-              )}
-              style={{ height: 260 }}
-            />
-          </AdminCard>
-          <style>{`@media (max-width: 800px) { .yd-dash-ai { grid-template-columns: 1fr !important; } }`}</style>
-        </div>
+        {/* ============ 社交与审核 ============ */}
+        <AdminCard title="社交与内容审核">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <MiniStat label="群聊数" value={num(social.groups).toLocaleString()} icon={<MessagesSquare size={13} />} />
+            <MiniStat label="动态数" value={num(social.posts).toLocaleString()} />
+            <MiniStat label="待处理举报" value={num(moderation.pendingReports).toLocaleString()} icon={<Flag size={13} />} highlight={num(moderation.pendingReports) > 0} />
+            <MiniStat label="评论数" value={num(social.comments).toLocaleString()} />
+          </div>
+          <div style={{ marginTop: 12, paddingTop: 10, borderTop: `1px solid ${THEME.border}`, fontSize: 12, color: THEME.textSub, display: "flex", flexDirection: "column", gap: 4 }}>
+            <span>佣金记录：{num(commission.records).toLocaleString()} 条 · 累计 {yuan(commission.totalYuan)}</span>
+            <span>待审提现：{num(commission.withdrawalsPending).toLocaleString()} 笔</span>
+          </div>
+        </AdminCard>
+      </div>
 
-        <div style={{ textAlign: "center", padding: "8px 0", fontSize: 12, color: THEME.textHint }}>
-          数据看板生成于 {new Date(stats.generatedAt).toLocaleString("zh-CN")}
+      {/* ============ AI 使用统计 ============ */}
+      <SectionTitle icon={<Bot size={18} />}>AI 使用统计</SectionTitle>
+      <AdminCard>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10, marginBottom: 14 }}>
+          <MiniStat label="今日调用" value={num(stAi.today).toLocaleString()} />
+          <MiniStat label="累计调用" value={num(stAi.totalCalls).toLocaleString()} />
+          <MiniStat label="成功率" value={`${num(stAi.successRate)}%`} icon={<Target size={13} />} />
+          <MiniStat label="AI 总开关" value={ai.enabled === false ? "关闭" : "开启"} icon={<ShieldCheck size={13} />} highlight={ai.enabled === false} />
         </div>
+        {topTools.length > 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {topTools.map((t, i) => (
+              <div key={i}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: THEME.textMain }}>{t.name || "-"}</span>
+                  <span style={{ fontSize: 12, color: THEME.textSub }}>{num(t.calls).toLocaleString()} 次</span>
+                </div>
+                <ProgressBar value={num(t.calls)} max={maxToolCalls} color={THEME.info} />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ fontSize: 11, color: THEME.textHint }}>AI 工具调用明细暂无数据</div>
+        )}
+      </AdminCard>
+
+      <div style={{ textAlign: "center", padding: "12px 0 4px", fontSize: 12, color: THEME.textHint, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+        <TrendingUp size={12} /> 数据生成于 {overview?.generatedAt ? new Date(overview.generatedAt).toLocaleString("zh-CN") : stats?.generatedAt ? new Date(stats.generatedAt).toLocaleString("zh-CN") : "-"}
       </div>
     </div>
   );
 }
 
-// ==================== 子组件与图表配置 ====================
-
-const thStyle: CSSProperties = { textAlign: "left", padding: "8px 6px", fontSize: 12, fontWeight: 600, color: THEME.textSub };
-const tdStyle: CSSProperties = { padding: "8px 6px", color: THEME.textMain, fontSize: 13 };
+// ==================== 子组件 ====================
 
 function PageHeader({ onRefresh, generatedAt }: { onRefresh: () => void; generatedAt?: string }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
       <div>
         <h1 style={{ fontSize: 24, fontWeight: 800, color: THEME.textMain, margin: 0, display: "flex", alignItems: "center", gap: 10 }}>
-          <BarChart3 size={26} color={THEME.primary} /> 数据看板
+          <Activity size={26} color={THEME.primary} /> 系统状态
         </h1>
         <p style={{ fontSize: 14, color: THEME.textSub, marginTop: 6 }}>
-          用户活跃度 · 邀请转化 · 页面浏览 · 会员收入 · AI 使用
+          服务健康 · 核心指标 · 会员分布 · AI 使用
           {generatedAt && <span style={{ marginLeft: 8, fontSize: 12, color: THEME.textHint }}>· {new Date(generatedAt).toLocaleTimeString("zh-CN")}</span>}
         </p>
       </div>
@@ -301,95 +307,50 @@ function SectionTitle({ icon, children }: { icon: React.ReactNode; children: Rea
   );
 }
 
-/** 折线图配置 */
-function lineChartOption(
-  xData: string[],
-  series: { name: string; data: number[]; color: string }[]
-) {
-  return {
-    tooltip: { trigger: "axis" },
-    legend: { data: series.map((s) => s.name), bottom: 0, textStyle: { color: "#6b5a78", fontSize: 12 } },
-    grid: { left: 50, right: 20, top: 20, bottom: 40 },
-    xAxis: { type: "category", data: xData, axisLabel: { color: "#9a8eaa", fontSize: 11 }, axisLine: { lineStyle: { color: "#e8dcf2" } } },
-    yAxis: { type: "value", axisLabel: { color: "#9a8eaa", fontSize: 11 }, splitLine: { lineStyle: { color: "#f3edf7" } } },
-    series: series.map((s) => ({
-      name: s.name,
-      type: "line",
-      data: s.data,
-      smooth: true,
-      symbol: "circle",
-      symbolSize: 6,
-      lineStyle: { width: 2.5, color: s.color },
-      itemStyle: { color: s.color },
-      areaStyle: { color: s.color + "20" },
-    })),
-  };
+function HealthDot({ label, status }: { label: string; status: string }) {
+  const s = String(status);
+  const isBad = /故障|关闭|error|down|fail/i.test(s);
+  const isWarn = /待配置|维护|partial|warn/i.test(s);
+  const color = isBad ? THEME.error : isWarn ? THEME.warning : THEME.success;
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+        padding: "10px 14px",
+        borderRadius: 10,
+        border: `1px solid ${THEME.border}`,
+        backgroundColor: "#fff",
+      }}
+    >
+      <span style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: color, flexShrink: 0 }} />
+      <div>
+        <div style={{ fontSize: 12, color: THEME.textSub }}>{label}</div>
+        <div style={{ fontSize: 13, fontWeight: 700, color }}>{isBad ? "故障/关闭" : isWarn ? s : "正常"}</div>
+      </div>
+    </div>
+  );
 }
 
-/** 柱状图配置 */
-function barChartOption(
-  xData: string[],
-  series: { name: string; data: number[]; color: string }[]
-) {
-  return {
-    tooltip: { trigger: "axis" },
-    legend: { data: series.map((s) => s.name), bottom: 0, textStyle: { color: "#6b5a78", fontSize: 12 } },
-    grid: { left: 50, right: 20, top: 20, bottom: 40 },
-    xAxis: { type: "category", data: xData, axisLabel: { color: "#9a8eaa", fontSize: 11 }, axisLine: { lineStyle: { color: "#e8dcf2" } } },
-    yAxis: { type: "value", axisLabel: { color: "#9a8eaa", fontSize: 11 }, splitLine: { lineStyle: { color: "#f3edf7" } } },
-    series: series.map((s) => ({
-      name: s.name,
-      type: "bar",
-      data: s.data,
-      itemStyle: { color: s.color, borderRadius: [4, 4, 0, 0] },
-      barWidth: "50%",
-    })),
-  };
-}
-
-/** 横向柱状图配置 */
-function hBarChartOption(yData: string[], data: number[], color: string) {
-  return {
-    tooltip: { trigger: "axis", axisPointer: { type: "shadow" } },
-    grid: { left: 90, right: 30, top: 10, bottom: 20 },
-    xAxis: { type: "value", axisLabel: { color: "#9a8eaa", fontSize: 11 }, splitLine: { lineStyle: { color: "#f3edf7" } } },
-    yAxis: {
-      type: "category",
-      data: yData,
-      axisLabel: { color: "#6b5a78", fontSize: 12 },
-      axisLine: { lineStyle: { color: "#e8dcf2" } },
-      inverse: true,
-    },
-    series: [
-      {
-        type: "bar",
-        data: data,
-        itemStyle: { color: color, borderRadius: [0, 4, 4, 0] },
-        barWidth: "55%",
-        label: { show: true, position: "right", color: "#6b5a78", fontSize: 11 },
-      },
-    ],
-  };
-}
-
-/** 饼图配置 */
-function pieChartOption(data: { name: string; value: number }[]) {
-  const colors = [THEME.primary, THEME.info, THEME.success, THEME.warning, THEME.primaryLight, "#3498db", "#10B981", "#F59E0B"];
-  return {
-    tooltip: { trigger: "item", formatter: "{b}: {c} ({d}%)" },
-    legend: { type: "scroll", bottom: 0, textStyle: { color: "#6b5a78", fontSize: 11 } },
-    color: colors,
-    series: [
-      {
-        type: "pie",
-        radius: ["40%", "68%"],
-        center: ["50%", "45%"],
-        avoidLabelOverlap: true,
-        itemStyle: { borderColor: "#fff", borderWidth: 2 },
-        label: { show: false },
-        emphasis: { label: { show: true, fontSize: 14, fontWeight: "bold" } },
-        data: data,
-      },
-    ],
-  };
+function MiniStat({ label, value, icon, highlight = false }: { label: string; value: string | number; icon?: React.ReactNode; highlight?: boolean }) {
+  return (
+    <div
+      style={{
+        padding: "10px 12px",
+        borderRadius: 10,
+        backgroundColor: highlight ? "#FEF2F2" : THEME.primaryBgLight,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 6,
+      }}
+    >
+      <div>
+        <div style={{ fontSize: 11, color: THEME.textSub }}>{label}</div>
+        <div style={{ fontSize: 16, fontWeight: 800, color: highlight ? THEME.error : THEME.textMain }}>{value}</div>
+      </div>
+      {icon && <span style={{ color: highlight ? THEME.error : THEME.primaryLight, display: "flex" }}>{icon}</span>}
+    </div>
+  );
 }
