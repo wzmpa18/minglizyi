@@ -131,10 +131,12 @@ function adminAuth(minRole, scope) {
     const admin = resolveAdminKey(token);
     if (!admin) return res.status(401).json({ success: false, error: '密钥无效' });
     if (minRole && (ROLES[admin.role] || 0) < ROLES[minRole]) {
+      audit(admin, 'AUDIT_BLOCK_ROLE', `${req.method} ${req.originalUrl || req.url}`, admin.role, minRole, `越权访问被拦截（需要${ROLE_LABELS[minRole] || minRole}及以上）`, req);
       return res.status(403).json({ success: false, error: `权限不足（需要${ROLE_LABELS[minRole] || minRole}及以上）` });
     }
     if (!hasScope(admin.role, scope)) {
       const domain = scope === 'finance' ? '财务' : scope === 'ops' ? '运营' : scope;
+      audit(admin, 'AUDIT_BLOCK_SCOPE', `${req.method} ${req.originalUrl || req.url}`, admin.role, scope, `越权访问被拦截（当前角色无${domain}操作权限）`, req);
       return res.status(403).json({ success: false, error: `权限不足（当前角色无${domain}操作权限）` });
     }
     req.admin = admin;
@@ -214,6 +216,15 @@ function disableSubKey(maskedOrHash) {
   return { ok: true, old };
 }
 
+/** 查询审计日志（最新在前，可按 action 关键字过滤） */
+function listAudit(limit = 50, action) {
+  let logs = [];
+  try { logs = JSON.parse(fs.readFileSync(AUDIT_FILE, 'utf-8')); } catch { /* 空 */ }
+  let list = logs.slice().reverse();
+  if (action) list = list.filter((l) => (l.action || '').includes(action));
+  return list.slice(0, Math.min(200, limit));
+}
+
 module.exports = {
   ROLES,
   ROLE_SCOPES,
@@ -222,6 +233,7 @@ module.exports = {
   resolveAdminKey,
   hasScope,
   audit,
+  listAudit,
   createSubKey,
   listSubKeys,
   disableSubKey,

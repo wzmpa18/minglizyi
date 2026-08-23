@@ -268,13 +268,10 @@ router.get('/overview', adminAuthUnified('SUPPORT_ADMIN'), (_req, res) => {
 
 router.get('/audit', adminAuthUnified('ADMIN'), (req, res) => {
   try {
-    let logs = [];
-    try { logs = JSON.parse(fs.readFileSync(AUDIT_FILE, 'utf-8')); } catch { /* 空 */ }
+    // v25.0.47_13: 修复——改用 adminRoles.listAudit（原直接读 AUDIT_FILE 为未定义变量，恒返回空）
     const limit = Math.min(200, parseInt(req.query.limit, 10) || 50);
     const action = req.query.action;
-    let list = logs.slice().reverse();
-    if (action) list = list.filter(l => (l.action || '').includes(action));
-    res.json({ success: true, data: list.slice(0, limit) });
+    res.json({ success: true, data: adminRoles.listAudit(limit, action) });
   } catch (e) {
     res.status(500).json({ success: false, error: '审计查询失败' });
   }
