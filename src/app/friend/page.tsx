@@ -9,8 +9,9 @@ import { getUserById, findUserById } from "@/lib/userStore";
 import { recordInviteLanding } from "@/lib/antiCheatStore";
 
 const BRAND = "#7B2FBE";
-// APK 直链 - 使用 guoxue 域名（Nginx已配置正确的 Content-Type 和 Content-Disposition）
-const APK_URL = "https://yandaoguoxue.yandao.vip/app-download/guoxue-chuancheng-v1.0-release.apk";
+// APK 直链 - 与 /download 页统一的正式包（FINAL-SEAL-03 品牌统一后旧文件名 guoxue-chuancheng-v1.0-release.apk 已从服务器删除，
+// 服务器侧已补挂同名别名文件兼容存量分享链接；新代码统一指向正式包名）
+const APK_URL = "https://yandaoguoxue.yandao.vip/app-download/yandao-guoxue-v25.0.47-release.apk";
 
 // ==================== 检测微信/QQ内置浏览器 ====================
 function isInAppBrowser(): boolean {
