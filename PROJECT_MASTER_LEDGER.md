@@ -1,7 +1,7 @@
 # 言道国学项目总账（PROJECT_MASTER_LEDGER）
 
 > **本文档是项目唯一权威账簿（Single Source of Truth）。**
-> 最后更新: 2026-08-23（生产版本 v25.0.47_14：会员支付入口死键修复+邀请海报完整导出修复+邀请裂变营销体系（3套海报模板+4场景文案库）+注册/登录页下载APP按钮，指令 FIX-V14-PAY-MARKETING-VIRAL，Git HEAD=e6d5449 四端一致）
+> 最后更新: 2026-08-23（生产版本 v25.0.47_14：会员支付入口死键修复+邀请海报完整导出修复+邀请裂变营销体系（3套海报模板+4场景文案库）+注册/登录页下载APP按钮，指令 FIX-V14-PAY-MARKETING-VIRAL，代码提交 e6d5449→总账收口 27bf670，四端一致）
 > 历史详细记录见 `PROJECT_LEDGER_FINAL.md`（v25.0.0 ~ v25.0.20 阶段账，冻结归档）。
 > 本账簿只记录 v25.0.21 之后增量与当前全局事实；冲突时以本文为准。
 > 纪律：停止新增 xx_REPORT 编号报告，一切状态只更新本账簿。
@@ -17,7 +17,7 @@
 | 域名 | https://yandaoguoxue.yandao.vip（APP）/ www.yandao.vip（官网下载页） |
 | ICP 备案 | 粤ICP备2026071165号-4A（服务名：言道国学，域 yandao.vip） |
 | 当前生产版本 | **v25.0.47_14**（buildId v25.0.47_14_D20260823，2026-08-23 发布：FIX-V14-PAY-MARKETING-VIRAL——P0会员支付入口死键修复[iOS/微信内浏览器支付全放开，四层门控同步：platformGate.ts+platformGates.ts+platformFeatureGate.js+adminUnifiedRoutes.js，公网实测web/微信头/iOS头/微信UA四环境下单全部返回codeUrl]/P0邀请海报保存修复[完整海报1080×1920全要素导出，替代仅存二维码]/注册+登录页「下载言道国学APP」按钮[a标签全浏览器可点，桌面Chrome/iOS Safari/微信内置浏览器公网实测可见]/邀请裂变营销体系[3套海报模板：朋友圈种草版·社群引流版·专业学习版+4场景分享文案库：朋友圈长文·群聊短文·兴趣群·私发好友+换风格循环切换+系统分享带图]） |
-| Git HEAD | e6d5449（main，本地=GitHub=服务器源码仓=生产运行目录 四端一致） |
+| Git HEAD | 27bf670（main，本地=GitHub=服务器源码仓=生产运行目录 四端一致；其中 e6d5449 为 v25.0.47_14 代码提交、27bf670 为总账收口提交，仅文档/脚本无运行时变更） |
 | 正式 APK | https://yandaoguoxue.yandao.vip/app-download/yandao-guoxue-v25.0.47-release.apk（MD5 d0b4d90857ffce0edb4c89daf6c75ce4，10.82MB，1639 文件内置，v2 签名） |
 
 ---
