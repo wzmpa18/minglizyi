@@ -96,16 +96,18 @@ function ClassicHomePage() {
         <div style={{ display: 'flex', gap: '8px' }}>
           <input
             type="text"
-            placeholder="全文检索典籍..."
+            placeholder="🔍 输入关键词，如：脉诊、桂枝"
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             style={{
-              flex: 1, padding: '10px 14px', borderRadius: '8px', border: 'none',
-              fontSize: '14px', outline: 'none',
+              flex: 1, padding: '11px 14px', borderRadius: '10px',
+              border: '2px solid #FFFFFF', backgroundColor: '#FFFFFF',
+              fontSize: '14px', fontWeight: 500, color: '#333',
+              outline: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.28)',
             }}
           />
-          <button onClick={handleSearch} style={{ padding: '10px 16px', borderRadius: '8px', border: 'none', backgroundColor: '#9C27B0', color: '#fff', fontSize: '14px', cursor: 'pointer' }}>搜索</button>
+          <button onClick={handleSearch} style={{ padding: '11px 20px', borderRadius: '10px', border: '2px solid #FFFFFF', backgroundColor: '#FFC107', color: '#4A148C', fontSize: '15px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.28)', whiteSpace: 'nowrap' }}>搜索</button>
         </div>
       </div>
 
@@ -197,16 +199,33 @@ function BookTocPage({ bookId }: { bookId: string }) {
           <h1 style={{ fontSize: '18px', fontWeight: 600, margin: 0, flex: 1 }}>{book.name}</h1>
         </div>
         <div style={{ fontSize: '12px', opacity: 0.8, marginBottom: '12px' }}>{book.dynasty} · {book.author} · 共{book.chapters.length}篇</div>
-        <input
-          type="text"
-          placeholder="搜索本篇章节..."
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          style={{
-            width: '100%', padding: '10px 14px', borderRadius: '8px', border: 'none',
-            fontSize: '14px', outline: 'none', boxSizing: 'border-box',
-          }}
-        />
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <input
+            type="text"
+            placeholder="🔍 输入章节名/原文关键词筛选"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            style={{
+              flex: 1, padding: '11px 14px', borderRadius: '10px',
+              border: '2px solid #FFFFFF', backgroundColor: '#FFFFFF',
+              fontSize: '14px', fontWeight: 500, color: '#333',
+              outline: 'none', boxSizing: 'border-box', boxShadow: '0 2px 8px rgba(0,0,0,0.28)',
+            }}
+          />
+          {searchText && (
+            <button
+              onClick={() => setSearchText('')}
+              style={{ padding: '10px 14px', borderRadius: '10px', border: '2px solid #FFFFFF', backgroundColor: '#FFC107', color: '#4A148C', fontSize: '13px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+            >
+              清除
+            </button>
+          )}
+        </div>
+        {searchText && (
+          <div style={{ fontSize: '12px', marginTop: '8px', padding: '5px 10px', backgroundColor: 'rgba(255,193,7,0.25)', borderRadius: '6px', border: '1px solid #FFC107', color: '#fff', fontWeight: 600 }}>
+            筛选中：匹配 {filteredChapters.length} / {book.chapters.length} 章（章节名与原文均可匹配）
+          </div>
+        )}
       </div>
 
       <div style={{ padding: '12px 16px' }}>
@@ -518,22 +537,24 @@ function ClassicSearchPage({ keyword }: { keyword: string }) {
         <div style={{ display: 'flex', gap: '8px' }}>
           <input
             type="text"
-            placeholder="搜索典籍原文..."
+            placeholder="🔍 继续搜索典籍原文..."
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             style={{
-              flex: 1, padding: '10px 14px', borderRadius: '8px', border: 'none',
-              fontSize: '14px', outline: 'none',
+              flex: 1, padding: '11px 14px', borderRadius: '10px',
+              border: '2px solid #FFFFFF', backgroundColor: '#FFFFFF',
+              fontSize: '14px', fontWeight: 500, color: '#333',
+              outline: 'none', boxShadow: '0 2px 8px rgba(0,0,0,0.28)',
             }}
           />
-          <button onClick={handleSearch} style={{ padding: '10px 16px', borderRadius: '8px', border: 'none', backgroundColor: '#9C27B0', color: '#fff', fontSize: '14px', cursor: 'pointer' }}>搜索</button>
+          <button onClick={handleSearch} style={{ padding: '11px 20px', borderRadius: '10px', border: '2px solid #FFFFFF', backgroundColor: '#FFC107', color: '#4A148C', fontSize: '15px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.28)', whiteSpace: 'nowrap' }}>搜索</button>
         </div>
       </div>
 
       <div style={{ padding: '12px 16px' }}>
-        <div style={{ fontSize: '13px', color: '#999', marginBottom: '12px' }}>
-          关键词「{keyword}」共找到 {results.length} 处
+        <div style={{ fontSize: '13px', color: '#666', marginBottom: '12px', padding: '8px 12px', backgroundColor: '#F3E5F5', borderRadius: '8px', border: '1px solid #CE93D8' }}>
+          关键词「<span style={{ color: '#7B1FA2', fontWeight: 700 }}>{keyword}</span>」共找到 <span style={{ color: '#D84315', fontWeight: 700, fontSize: '15px' }}>{results.length}</span> 处<span style={{ color: '#999' }}>（命中文字以黄色标出）</span>
         </div>
         {results.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>

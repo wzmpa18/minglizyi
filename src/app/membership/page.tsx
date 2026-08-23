@@ -51,6 +51,8 @@ export default function MembershipPage() {
   const [errorMsg, setErrorMsg] = useState("");
   // v25.0.47_12 P0修复：未登录时在支付按钮上方悬浮登录引导（点击按钮立即可见反馈）
   const [needLogin, setNeedLogin] = useState(false);
+  // v25.0.47_18: 未登录点购买升级为全屏登录引导弹窗（大按钮+明确反馈，杜绝"点了没反应"感）
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [orders, setOrders] = useState<OrderRecord[]>([]);
   // 兑换码（P6-TOOL-04-补02）
   const [redeemInput, setRedeemInput] = useState("");
@@ -140,8 +142,9 @@ export default function MembershipPage() {
     // 真实支付必须登录（服务端订单与权益交付均以 userId 为主键）
     const profile = getUserProfile();
     if (!profile || !profile.userId) {
-      // v25.0.47_12 P0修复：未登录提示固定在按钮上方悬浮展示，点击即可见反馈，并提供一键跳登录
+      // v25.0.47_18: 未登录改为弹窗式登录引导（点击立即可见的大反馈，不再只是按钮上方小字条）
       setNeedLogin(true);
+      setShowLoginModal(true);
       setErrorMsg("");
       return;
     }
@@ -740,6 +743,93 @@ export default function MembershipPage() {
               }}
             />
             <div style={{ fontSize: "14px", color: "#666" }}>正在处理支付...</div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== 登录引导弹窗（v25.0.47_18: 未登录点购买的全屏大反馈） ===== */}
+      {showLoginModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0,0,0,0.55)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "24px",
+          }}
+          onClick={() => setShowLoginModal(false)}
+        >
+          <div
+            style={{
+              backgroundColor: "#fff",
+              borderRadius: "18px",
+              padding: "28px 24px 20px",
+              textAlign: "center",
+              width: "100%",
+              maxWidth: "300px",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                width: "60px",
+                height: "60px",
+                borderRadius: "50%",
+                backgroundColor: BRAND,
+                margin: "0 auto 14px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            </div>
+            <div style={{ fontSize: "17px", fontWeight: 700, color: "#333" }}>登录后即可购买会员</div>
+            <div style={{ fontSize: "13px", color: "#999", marginTop: "6px", lineHeight: 1.6 }}>
+              会员权益与订单将同步保存到您的账号<br />支持手机号验证码一键登录
+            </div>
+            <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
+              <button
+                onClick={() => setShowLoginModal(false)}
+                style={{
+                  flex: 1,
+                  padding: "10px 0",
+                  borderRadius: "22px",
+                  border: "1px solid #ddd",
+                  backgroundColor: "#fff",
+                  color: "#666",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                暂不登录
+              </button>
+              <Link
+                href="/login"
+                style={{
+                  flex: 1,
+                  padding: "10px 0",
+                  borderRadius: "22px",
+                  backgroundColor: BRAND,
+                  color: "#fff",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  textAlign: "center",
+                  textDecoration: "none",
+                  boxSizing: "border-box",
+                  display: "block",
+                }}
+              >
+                立即登录
+              </Link>
+            </div>
           </div>
         </div>
       )}

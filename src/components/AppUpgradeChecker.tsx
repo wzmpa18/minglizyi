@@ -22,6 +22,8 @@ import { useEffect, useState } from "react";
  */
 
 const DISMISS_KEY = "yandao_upgrade_dismissed_for";
+// v25.0.47_18: 网页版版本基准（会话内记录首次加载时的 version.json，部署新版后自动刷新）
+const WEB_VERSION_KEY = "yandao_web_version_baseline";
 
 interface AppNativeInfo {
   versionName: string;
@@ -57,7 +59,12 @@ export default function AppUpgradeChecker() {
           info = (await res.json()) as AppNativeInfo;
         }
       } catch { /* 静默 */ }
-      if (stopped || !info || typeof info.versionCode !== "number") return;
+      if (stopped || !info || typeof info.versionCode !== "number") {
+        // 网页版（app-native.json 不存在）：会话内基准版本 + 轮询检测新部署 → 自动刷新
+        // 解决"旧标签页停留在旧版"问题（用户不刷新也能拿到最新功能）
+        void checkWebVersion();
+        return;
+      }
       setNative(info);
 
       // 2. 拉取服务器最新版本（原生壳内自动改写到线上 API）
@@ -77,15 +84,39 @@ export default function AppUpgradeChecker() {
       } catch { /* 网络失败静默，下次回到前台再查 */ }
     };
 
+    const checkWebVersion = async () => {
+      try {
+        const res = await fetch(`/version.json?t=${Date.now()}`, { cache: "no-store" });
+        if (stopped || !res.ok) return;
+        const data = await res.json();
+        const ver = data && data.version;
+        if (typeof ver !== "string") return;
+        let baseline: string | null = null;
+        try { baseline = sessionStorage.getItem(WEB_VERSION_KEY); } catch { /* 隐私模式 */ }
+        if (!baseline) {
+          try { sessionStorage.setItem(WEB_VERSION_KEY, ver); } catch { /* ignore */ }
+          return;
+        }
+        if (baseline !== ver) {
+          // 服务器已部署新版本 → 先更新基准再刷新（避免刷新后循环）
+          try { sessionStorage.setItem(WEB_VERSION_KEY, ver); } catch { /* ignore */ }
+          window.location.reload();
+        }
+      } catch { /* 网络失败静默，下轮再查 */ }
+    };
+
     const onVisible = () => {
       if (document.visibilityState === "visible") void check();
     };
 
     const timer = setTimeout(() => void check(), 3000);
+    // 网页版每 60 秒轮询版本（部署新版后 ≤60s 内旧标签页自动刷新）
+    const poll = setInterval(() => void checkWebVersion(), 60000);
     document.addEventListener("visibilitychange", onVisible);
     return () => {
       stopped = true;
       clearTimeout(timer);
+      clearInterval(poll);
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
