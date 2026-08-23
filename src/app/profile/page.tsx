@@ -9,6 +9,7 @@ import { getPointsBalance } from "@/lib/pointsStore";
 import { getAIQuotaInfo } from "@/lib/aiQuotaService";
 import { getFollowStats, getCurrentUserId } from "@/lib/userStore";
 import { fetchTracks, fetchProgress } from "@/lib/academyApi";
+import { reloadWithCachePurge } from "@/lib/cachePurge";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import IcpFooter from "@/components/IcpFooter";
@@ -1123,7 +1124,7 @@ export default function ProfilePage() {
               : (appVersion ? `当前版本 ${appVersion}` : "检查是否有新版本")}
           onClick={() => {
             if (updateCheck.result && !updateCheck.result.latest) {
-              window.location.reload();
+              void reloadWithCachePurge();
               return;
             }
             void handleCheckUpdate();

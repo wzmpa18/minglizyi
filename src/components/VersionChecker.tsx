@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { reloadWithCachePurge } from "@/lib/cachePurge";
 
 const RUNNING_BUILD_ID = process.env.NEXT_PUBLIC_BUILD_ID || "dev";
 const AUTO_RELOAD_KEY = "yandao_auto_reloaded";
@@ -36,7 +37,7 @@ export default function VersionChecker() {
 
         if (!alreadyReloaded && canAutoReload()) {
           try { sessionStorage.setItem(AUTO_RELOAD_KEY, "1"); } catch { /* ignore */ }
-          window.location.reload();
+          void reloadWithCachePurge();
           return;
         }
         if (fromTimer) return;
@@ -86,7 +87,7 @@ export default function VersionChecker() {
     >
       <span>新版本 {shortVer} 已发布</span>
       <button
-        onClick={() => window.location.reload()}
+        onClick={() => void reloadWithCachePurge()}
         style={{
           border: "none",
           borderRadius: "14px",

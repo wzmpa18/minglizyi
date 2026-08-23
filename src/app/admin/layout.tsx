@@ -501,12 +501,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         />
       )}
 
-      {/* 侧边栏：全端统一抽屉滑入（覆盖式，不挤压内容区） */}
+      {/* 侧边栏：全端统一抽屉滑入（覆盖式，不挤压内容区）
+          注意：容器必须显式定宽——内部 aside 为 position:fixed 不撑开父级，
+          容器宽度为 0 时 translateX(-100%) 位移量为 0，抽屉将永远可见（v20 修复） */}
       <div
         style={{
           position: "fixed",
           left: 0,
           top: 0,
+          width: 240,
+          height: "100vh",
           zIndex: 100,
           transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)",
           transition: "transform 0.25s ease",

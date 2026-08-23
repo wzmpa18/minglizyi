@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { reloadWithCachePurge } from "@/lib/cachePurge";
 
 /**
  * APP 原生升级检测（v25.0.48 FIX-V16-UPGRADE-NOTICE）
@@ -100,7 +101,8 @@ export default function AppUpgradeChecker() {
         if (baseline !== ver) {
           // 服务器已部署新版本 → 先更新基准再刷新（避免刷新后循环）
           try { sessionStorage.setItem(WEB_VERSION_KEY, ver); } catch { /* ignore */ }
-          window.location.reload();
+          // v25.0.47_20: 彻底清缓存后刷新，确保拿到全新构建
+          await reloadWithCachePurge();
         }
       } catch { /* 网络失败静默，下轮再查 */ }
     };

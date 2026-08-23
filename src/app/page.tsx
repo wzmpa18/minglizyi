@@ -117,12 +117,17 @@ const DEFAULT_YS = {yun:"四之气",qi:"太阴湿土",advice:["饮食清淡，�
 
 function BaguaIcon(){return(<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="14" stroke="white" strokeWidth="1.5" fill="none"/><path d="M16 2a14 14 0 0 1 0 28" stroke="white" strokeWidth="1.5" fill="white" fillOpacity="0.15"/><path d="M16 2a14 14 0 0 0 0 28" stroke="white" strokeWidth="1.5" fill="none"/><circle cx="16" cy="9" r="4" fill="white" fillOpacity="0.9"/><circle cx="16" cy="23" r="4" fill="none" stroke="white" strokeWidth="1.5"/><circle cx="16" cy="9" r="1.5" fill={BRAND}/><circle cx="16" cy="23" r="1.5" fill="white"/></svg>)}
 function MedicineIcon(){return(<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect x="5" y="10" width="22" height="18" rx="3" stroke={BRAND} strokeWidth="2" fill="none"/><rect x="12" y="3" width="8" height="9" rx="1.5" stroke={BRAND} strokeWidth="2" fill="none"/><line x1="16" y1="16" x2="16" y2="24" stroke={BRAND} strokeWidth="2" strokeLinecap="round"/><line x1="12" y1="20" x2="20" y2="20" stroke={BRAND} strokeWidth="2" strokeLinecap="round"/></svg>)}
-function RefreshIcon(){return(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/><path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/></svg>)}
-function SettingsIcon(){return(<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>)}
 
+// v25.0.47_20: 四柱采用白底红字高对比设计（用户要求：必须一眼看清年月日时）
 function Pillar({label,ganzhi}:{label:string;ganzhi:string}){
   const g=ganzhi[0]||"";const z=ganzhi[1]||"";
-  return(<div className="flex flex-col items-center justify-center px-1"><span className="text-[10px] text-gray-500">{label}</span><span className="text-base font-bold leading-tight" style={{color:GAN_WX[g]||"#333"}}>{g}</span><span className="text-base font-bold leading-tight" style={{color:ZHI_WX[z]||"#333"}}>{z}</span></div>);
+  return(
+    <div className="flex flex-col items-center justify-center px-2 py-1" style={{backgroundColor:"#ffffff",borderRadius:"8px",minWidth:"56px"}}>
+      <span className="text-[10px] font-semibold" style={{color:"#333333"}}>{label}</span>
+      <span className="text-base font-bold leading-tight" style={{color:"#C62828"}}>{g}</span>
+      <span className="text-base font-bold leading-tight" style={{color:"#C62828"}}>{z}</span>
+    </div>
+  );
 }
 
 function Collapse({title,children,defaultOpen=false,titleColor}:{title:string;children:React.ReactNode;defaultOpen?:boolean;titleColor?:string}){
@@ -226,10 +231,6 @@ export default function HomePage(){
       {/* 顶部品牌区 */}
       <div className="flex items-center justify-between px-4 py-3 bg-white">
         <div className="flex items-center gap-2"><div><span className="font-bold" style={{fontSize:"24px",color:BRAND}}>言道</span><div style={{fontSize:"10px",fontWeight:"normal",opacity:0.65,lineHeight:"1.4",color:BRAND}}>yandao.vip 分享下载有礼</div></div></div>
-        <div className="flex items-center gap-3">
-          <button onClick={()=>window.location.reload()} className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-gray-100"><RefreshIcon/></button>
-          <button className="flex h-9 w-9 items-center justify-center rounded-full hover:bg-gray-100"><SettingsIcon/></button>
-        </div>
       </div>
 
       {/* 官方公告栏（永久功能：升级/维护通知，未登录可见） */}
@@ -271,7 +272,7 @@ export default function HomePage(){
             </div>
             {today.jieqi&&(<div className="rounded-lg bg-white/20 px-2 py-1 text-center"><div className="text-[10px] opacity-80">节气</div><div className="text-sm font-bold">{today.jieqi}</div></div>)}
           </div>
-          <div className="mt-3 flex justify-around rounded-xl bg-white/15 py-2">{today.pillars.map(p=><Pillar key={p.label} label={p.label} ganzhi={p.ganzhi}/>)}</div>
+          <div className="mt-3 flex justify-around gap-2 rounded-xl bg-white/15 py-2">{today.pillars.map(p=><Pillar key={p.label} label={p.label} ganzhi={p.ganzhi}/>)}</div>
         </div>
 
         {/* 基础信息 */}
