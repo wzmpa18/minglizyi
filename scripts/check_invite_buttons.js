@@ -1,0 +1,10 @@
+const fs = require("fs");
+const t = fs.readFileSync("C:/Users/ZhuanZ/Projects/minglizyi/src/app/invite/page.tsx", "utf8");
+const saves = [...new Set(t.match(/保存[^"'\u4e00-\u9fa5{}<>]{0,10}[\u4e00-\u9fa5]{0,6}/g) || [])];
+console.log("保存相关文案:", saves.join(" | "));
+const qrBtnIdx = t.lastIndexOf("handleSaveQr");
+console.log("\n---二维码按钮上下文---");
+console.log(t.slice(Math.max(0, qrBtnIdx - 350), qrBtnIdx + 150));
+const posterBtnIdx = t.indexOf("handleSavePoster");
+console.log("\n---海报保存按钮上下文---");
+console.log(t.slice(Math.max(0, t.indexOf("onClick={handleSavePoster") - 350), t.indexOf("onClick={handleSavePoster") + 150));

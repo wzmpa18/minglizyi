@@ -1,7 +1,7 @@
 # 言道国学项目总账（PROJECT_MASTER_LEDGER）
 
 > **本文档是项目唯一权威账簿（Single Source of Truth）。**
-> 最后更新: 2026-08-23（生产版本 v25.0.47_13：微信商家转账V3全量对接+三级角色权限体系+抽屉导航+深度报告700-1000字，指令 FIX-WITHDRAW-V13-FINAL，Git HEAD=019ab43 四端一致）
+> 最后更新: 2026-08-23（生产版本 v25.0.47_14：会员支付入口死键修复+邀请海报完整导出修复+邀请裂变营销体系（3套海报模板+4场景文案库）+注册/登录页下载APP按钮，指令 FIX-V14-PAY-MARKETING-VIRAL，Git HEAD=e6d5449 四端一致）
 > 历史详细记录见 `PROJECT_LEDGER_FINAL.md`（v25.0.0 ~ v25.0.20 阶段账，冻结归档）。
 > 本账簿只记录 v25.0.21 之后增量与当前全局事实；冲突时以本文为准。
 > 纪律：停止新增 xx_REPORT 编号报告，一切状态只更新本账簿。
@@ -16,8 +16,8 @@
 | 仓库 | https://github.com/wzmpa18/minglizyi（main 分支） |
 | 域名 | https://yandaoguoxue.yandao.vip（APP）/ www.yandao.vip（官网下载页） |
 | ICP 备案 | 粤ICP备2026071165号-4A（服务名：言道国学，域 yandao.vip） |
-| 当前生产版本 | **v25.0.47_13**（buildId v25.0.47_13_D20260823，2026-08-23 发布：FIX-WITHDRAW-V13-FINAL——微信商家转账V3全量对接/全自动佣金提现引擎[免审200元自动转账·单日2万限额·风控标记·退款扣回·全链路幂等]/三级角色权限体系[SUPER/FINANCE/OPERATOR服务端强校验+子密钥哈希存储+密钥管理页]/后台抽屉式导航按角色渲染/财务端批量审核·状态同步·统计报表·CSV导出/深度报告放宽700-1000字） |
-| Git HEAD | 见 `git log -1`（main，本地=GitHub=服务器源码仓 三端一致） |
+| 当前生产版本 | **v25.0.47_14**（buildId v25.0.47_14_D20260823，2026-08-23 发布：FIX-V14-PAY-MARKETING-VIRAL——P0会员支付入口死键修复[iOS/微信内浏览器支付全放开，四层门控同步：platformGate.ts+platformGates.ts+platformFeatureGate.js+adminUnifiedRoutes.js，公网实测web/微信头/iOS头/微信UA四环境下单全部返回codeUrl]/P0邀请海报保存修复[完整海报1080×1920全要素导出，替代仅存二维码]/注册+登录页「下载言道国学APP」按钮[a标签全浏览器可点，桌面Chrome/iOS Safari/微信内置浏览器公网实测可见]/邀请裂变营销体系[3套海报模板：朋友圈种草版·社群引流版·专业学习版+4场景分享文案库：朋友圈长文·群聊短文·兴趣群·私发好友+换风格循环切换+系统分享带图]） |
+| Git HEAD | e6d5449（main，本地=GitHub=服务器源码仓=生产运行目录 四端一致） |
 | 正式 APK | https://yandaoguoxue.yandao.vip/app-download/yandao-guoxue-v25.0.47-release.apk（MD5 d0b4d90857ffce0edb4c89daf6c75ce4，10.82MB，1639 文件内置，v2 签名） |
 
 ---
@@ -27,7 +27,7 @@
 | 项 | 值 |
 |----|-----|
 | 服务器 | 82.156.228.87（腾讯云轻量 北京，root） |
-| 前端发布 | /root/yandaoguoxue/releases/&lt;tag&gt; + current 软链（SPA 静态导出）；当前 current→v25.0.47_13，回滚目标 v25.0.47_12；目录现状 _5/_6/_8/_9/_10/_12/_13 七版共约 200MB（磁盘 12G/50G 充足暂留，如需清理保留 _12+_13 即可） |
+| 前端发布 | /root/yandaoguoxue/releases/&lt;tag&gt; + current 软链（SPA 静态导出）；当前 current→v25.0.47_14，回滚目标 v25.0.47_13；目录现状 _5/_6/_8/_9/_10/_12/_13/_14 八版共约 210MB（磁盘 12G/50G 充足暂留，如需清理保留 _13+_14 即可） |
 | 后端服务 | /www/yandaoguoxue-backend，PM2 名 yandaoguoxue-backend，端口 3001 |
 | 数据库 | PostgreSQL 15（127.0.0.1:5432/yandaoguoxue）+ SQLite（用户核心库 /root/backend-auth/data/yandao_users.db、academy.db、commission_accounts/records） |
 | Nginx | / → 静态前端；/api/* → 127.0.0.1:3001；/app-download/ → APK 分发 |
@@ -38,6 +38,7 @@
 
 **服务器磁盘（2026-08-22 最终清理后）**：12.1G / 50G（本次回收 4.4G：swapfile2 2G、android-sdk+.gradle+gradle zip 1.75G、.npm 275M、旧 releases 六版 158M、releases 根散落旧构建 20M、git bundle、散落脚本、旧备份目录归档删除）。
 
+| **v25.0.47_14** | 08-23 | **FIX-V14-PAY-MARKETING-VIRAL 支付死键修复 + 邀请裂变营销体系（HEAD=e6d5449，四端一致：本地=GitHub=服务器源码仓=生产运行目录）**：①**P0-1 会员支付入口全链路修复（点击无反应死键根除）**——根因：iOS 设备 `IOS_PAYMENT_ENABLED=false` + 微信内置浏览器 `payment.wechat=false` 双层门控导致按钮隐藏/接口 403；修复：四层门控全量同步放开（src/lib/platformGate.ts 与 platformGates.ts 的 IOS_PAYMENT_ENABLED=true、backend_deploy/platformFeatureGate.js 矩阵 payment.ios/wechat=true、adminUnifiedRoutes.js payment-status iosPaymentEnabled=true），Native 扫码支付不依赖平台商店，iOS Safari/微信/原生壳全环境恢复微信支付；公网回归实测（scripts/verify_v14_pay.sh）：web默认/X-Client-Platform:wechat/X-Client-Platform:ios/微信UA兜底识别 **四环境下单全部返回 codeUrl+payMode=NATIVE**，月/季/年/终身四档位下单全通过，SINGLE_UNLOCK 单次解锁+POINTS_RECHARGE 积分充值全通过，后台无密钥 401 拦截正常；②**P0-2 邀请海报保存修复（"保存相册只有二维码"根除）**——根因：invite/page.tsx 旧 handleSaveQr 直接保存 qrDataUrl 纯二维码图；修复：新增 renderViralPoster 完整海报链路（二维码就绪自动渲染），主按钮「保存完整海报图片」（handleSavePoster）导出 posterEngine 全要素画布：背景底色+主标题+副标题+卖点列表+大号二维码+邀请码+底部合规提示，分辨率 **1080×1920**（超过要求的 750×1334），「保存二维码」降级为辅助按钮；③**注册/登录页「下载言道国学APP」按钮（新用户扫码落地必见）**——a 标签 href=https://yandaoguoxue.yandao.vip/friend target=_blank（原生 HTML 锚点，不依赖 JS，任何浏览器可点），48px 高度品牌描边按钮+下载图标，公网实测桌面 Chrome/iOS Safari UA/微信内置浏览器 UA 三环境注册页+登录页全部可见；④**邀请裂变营销体系（病毒式传播重构）**——新增 src/lib/marketing/viralTemplates.ts（278 行）：3 套海报模板（朋友圈种草版[米色简约国风·"藏在手机里的国学宝藏工具"·✅卖点3条·发圈不违和]/社群引流版[信息密度高·"免费！专业级国学工具App"·▪功能4条·适合国学群中医群]/专业学习版[书卷气·"你的随身国学学习助手"·📚🎯📝卖点·主打学习者]）+4 场景分享文案库（朋友圈图文长文案种草感/群聊私聊短文案直接高效/精准兴趣群文案功能价值/私发好友话术信任转化，「注册了我们都有奖励」钩子）；invite 页新增海报卡（模板循环切换「换一个风格」+「使用通用版」回默认+系统分享 navigator.share 带海报图+文案/邀请码复制/长按兜底提示），invite/poster AI推广助手页推荐集替换为 3 套裂变模板、文案库全量替换、前端不再展示任何合规校验类文字；posterEngine 引擎升级支持 4 条卖点+✅对勾角标+▪方块符号，合规提示统一缩小字号调浅色置底部不占主视觉；⑤**部署与验收（scripts/deploy_release_v25_0_47_14.sh + verify_v14_public.sh + verify_v14_invite.sh + verify_v14_pay.sh + verify_v14_extra.sh）**——内容门禁 v13 全量保留+v14 新增 12 项（四层支付门控/下载按钮/裂变模板/海报引擎）全过；构建产物入包校验：下载按钮入 register/login 页 HTML、3 套模板标题+朋友圈长文案+完整海报标识入 chunks、烧录 ID v25.0.47_14_D20260823 一致、服务器 IP 脱敏 0 匹配；后端同步 15 文件（v13 的 14 文件+platformFeatureGate.js）；公网 18 路径全 200；邀请 API 全链路（JWT token 实测：invite/link 返回邀请码+签名链接+防伪签名、invite/overview 返回真实邀请数据 1 人/207 积分、无 token 401 拦截）；version.json 公网确认 v25.0.47_14_D20260823 |
 | **v25.0.47_13** | 08-23 | **FIX-WITHDRAW-V13-FINAL 微信商家转账提现落地 + 后台三级角色权限体系（HEAD=019ab43，四端一致：本地=GitHub=服务器源码仓=生产运行目录）**：①**微信商家转账 V3 全量对接**（backend_deploy/wechatTransfer.js）：POST /v3/transfer/batches 发起转账（复用现有商户号 1116339601/APIv3密钥/证书序列号/私钥，零新增核心密钥）、回调强制验签（AES-256-GCM 解密+平台证书验签，防伪造篡改）、主动查单查终态、签名头修复为规范 WECHATPAY2-SHA256-RSA2048；②**提现引擎全自动升级**（commissionEngine.js）：新流程 用户申请→校验余额/门槛/窗口→≤免审额度(200元)自动发起转账→微信回调更新状态→成功扣可提现余额/失败退回余额并记录原因；超免审额度进财务人工审核队列；安全机制：全链路幂等（同一提现单仅发起一次转账，终态单重复处理被拦截）、单日单用户限额 2 万元超限拦截、风控标记（新注册/短时间多笔提现自动转人工审核）、退款扣回（全额退款两级佣金全额扣回/部分退款按比例）；③**结算规则对齐**：每月最后 1 天自动结算上月已解冻佣金（settleDay=0）→ 每月 16 日-月末开放提现（withdrawOpenDay=16，inWithdrawWindow 后端强制拦截，窗口外申请直接拒绝）；④**新增 .env 配置**：WITHDRAW_TRANSFER_ENABLED（提现总开关，默认 false）+ WITHDRAW_FREE_PASS_AMOUNT=200（免审额度，后台可动态覆盖）+ WITHDRAW_MIN_AMOUNT=10（最低门槛），仅当文件配置未显式保存时 .env 值生效；⑤**后台三级角色权限体系**（backend_deploy/adminRoles.js 统一模块，全后台唯一事实源）：SUPER_ADMIN（全权限：价格/密钥/封禁/财务终审/系统开关/审计）/ FINANCE_ADMIN（提现审核·订单流水·佣金报表·对账·导出；禁改价/改开关/管密钥/封用户/改分佣比例）/ OPERATOR_ADMIN（用户管理·内容管理·工具开关·营销·数据总览；禁一切资金操作/改价/密钥）；服务端中间件强校验（ROLES 分值+ROLE_SCOPES 域双拦截，403 并写审计 AUDIT_BLOCK_ROLE/AUDIT_BLOCK_SCOPE），前端仅按角色渲染菜单；子密钥 SHA256 哈希存储 data/admin_roles.json（严禁明文/入代码/入 Git），主密钥 ADMIN_API_KEY 自动映射 SUPER_ADMIN 向后兼容；密钥管理页 /admin/keys（SUPER_ADMIN 专属）：三级角色权限表/签发子密钥（明文仅一次性展示）/禁用子密钥/主密钥修改指引（服务器 .env 改 ADMIN_API_KEY 后 PM2 重启）；⑥**后台抽屉式导航**：固定侧边栏改为全端统一抽屉（默认收起+顶部汉堡唤出+遮罩层，内容区全宽），解决移动端/桌面内容遮挡；菜单按角色 scope（all/finance/ops/super）动态渲染；⑦**后台财务端补全**：提现批量审核（单笔/批量+驳回填原因）、同步微信转账终态（对账兜底）、佣金统计报表（日/月/年+分佣层级+退款扣回明细）、提现记录 CSV 导出（按日期/状态筛选，Excel 直开）；⑧**审计修复**：/audit 接口读未定义 AUDIT_FILE 恒返回空 → 改用 adminRoles.listAudit；越权 403 拦截同步写入审计日志；⑨深度报告字数放宽：700-1000 字（目标 850，用户确认「条理清晰不啰嗦，多几百字没关系」），公网实测姓名 988 字/手机号 890 字，五段式 5/5 完整；⑩**公网验收（scripts/verify_v13_final.sh + verify_v13_final_fix.sh，28 项 PASS/0 FAIL）**：页面健康 8 路径 200（301 为 trailingSlash 规范重定向，跟随即 200）/版本 v25.0.47_13/定价 SSOT 37·99·374·3600/主密钥 whoami=SUPER_ADMIN/财务密钥财务域 200+越权 5 项全 403（密钥管理/运营接口/改分佣配置/改价 PATCH·PUT/改 AI 配置）/运营密钥运营域 200+越权财务 403+越权密钥 403/审计日志含 ADMIN_KEY_CREATE+AUDIT_BLOCK_ROLE+AUDIT_BLOCK_SCOPE/临时密钥签发-验证-禁用闭环/未登录提现 401/withdrawEnabled=false+minWithdraw=10+settleDay=0+withdrawOpenDay=16/深度报告两工具字数结构双达标；提现转账开关维持 WITHDRAW_TRANSFER_ENABLED=false（商户「商家转账到零钱」权限未开通，佣金正常累计冻结，权限开通后 .env 置 true+PM2 重启即启用全自动转账，**WITHDRAW_TRANSFER=READY**） |
 | **v25.0.47_12** | 08-23 | **FIX-V12-PAY-CONTENT 支付修复+定价对齐+深度报告提质+两级分佣月度提现+中医板块门控（HEAD=bbb29ec，三端一致；含 bbb29ec 二次迭代：quarterly 档位补齐+提示词强化 820 字版）**：①P0 会员支付死键修复：会员页错误提示可见化（按钮上方悬浮+「去登录」引导）+季度档位补齐，公网实测月度 37/季度 99/年度 374/终身 3600 四档下单全部返回 NATIVE codeUrl；②全量定价 SSOT 对齐：publicPricingRoutes/paymentRoutes/server.js 三处默认值同源（修复 publicPricingRoutes 旧默认 39/366 无季度档问题并部署二次验证），公网 /api/public/pricing 实测返回 basic 0/monthly 37/quarterly 99/yearly 374/lifetime 3600 + batchInterpret 200 元/次（会员折扣 95/85/8 折、终身免费、单次最多 100 条）；B 类工具统一零售 9.9 元/次（会员超出免费额度同价，取消阶梯折扣，权益文案同步「超出按¥9.9/次」）；服务端下单强制裁决公网实测：前端篡改 amount=0.01 全部被覆盖（server=37/99/374/3600/9.9/200，后端日志留痕「金额以服务端为准」）；③深度报告提质：新增 src/lib/deepReportPrompt.ts 统一五段式提示词（核心总论/多维度拆解[事业财运·感情家庭·人际社交·状态趋势]/典籍依据/正向建议 3-5 条/总结收尾），700-900 字硬约束，按工具领域匹配典籍（姓名→康熙字典+说文解字、号码→系辞传河图洛书、合婚→三命通会婚配篇、择日→钦定协纪辨方书、八字→滴天髓等 13 类映射），合规红线（无恐吓/无绝对化/无医疗投资越界）；EventDivinationPanel 24 工具复用 + zeri/ziwei/astro/tarot 独立页接入；公网实测 3 份报告：姓名 803 字/手机号 815 字/合婚 727 字，五段完整 5/5、典籍引用命中、建议 4-5 条、恐吓词零命中；**bbb29ec 二次迭代**：复测发现首轮提示词实际产出仅 561-631 字（模型欠量约 25%），强化分段字数下限（110/330/120/130/70）+自查扩写指令（总目标 820 字）后重新构建发布，复测姓名 714 字/手机号 769 字/合婚 863 字全部落入 700-900 区间；④两级分佣+月度提现：commissionEngine 一级 15%+二级 5%（COMMISSION_L2 独立 record_type 幂等，同人去重/禁自购自返），月度结算模式（佣金 FROZEN→每月 settleDay=30 号统一解冻转可提现→每月 withdrawOpenDay=15 号后开放提现申请，inWithdrawWindow 窗口校验，monthlySettleEnabled 开关可回退旧 7 天机制）；后台推广分佣页两级比例+结算日+开放日全参数可调（PUT /commission/config 合并保存）；前端收入页展示结算规则文案+窗口外禁用提现按钮；公网配置核验 ratios{level1:15,level2:5}/settleDay30/withdrawOpenDay15/monthlySettleEnabled=true；提现总开关维持 DISABLED（商家转账权限未开通，佣金正常累计，权限开通后台一键启用）；⑤中医板块知识开放程度控制：工具矩阵新增 9 条中医条目（zhongyi_classic/herb/formula/meridian/bianzheng/yangsheng/shanghan/constitution/exam），新增 SectionGate 组件+sectionGate.ts 判定层（矩阵 API 2 分钟会话缓存/断网 fail-open 放行），19 个中医页面全量接入（exam 6 子页+constitution 3 子页+yangsheng 3 子页+7 主页），中医主页入口卡片按矩阵动态渲染（OFF 隐藏/MAINTENANCE 置灰/会员专享加锁引导开通）；公网实测后台改 zhongyi_classic→OFF 即时生效→MEMBERSHIP+monthly 即时生效→恢复正常，审计日志 3 条 TOOL_MATRIX_UPDATE 留痕；⑥构建事故修复：herb/meridian 页面 SectionGate import 误插 "use client" 指令之前导致 Turbopack 构建失败（13 错误），脚本批量修复指令位置后构建通过；版本脚本 gen-version.js 支持 v25.0.47_NN 后缀，buildId 升级为 v25.0.47_12_D20260823 防混淆；⑦存量回归核验全通过：Native 支付 6 单实测/AI 开关 403 强制拦截复验/驾驶舱 overview 版本显示 v25.0.47_12/订单中心 14 单/功能开关 17 项/审计日志留痕/PM2 无新增错误（probe 测试用户订单持久化 FOREIGN KEY 失败为预期行为，真实用户订单正常）；⑧**P1 缺陷修复（bbb29ec，回归中发现）**：middleware/auth.js 的 MEMBER_LEVELS/AI_DAILY_LIMITS 缺 quarterly 档位——季度会员（99 元已开售）支付后会被按 basic（等级 0/AI 配额 3 次/天）处理导致权益归零；补齐 quarterly=2（介于 monthly=1 与 yearly=3 之间）+ AI 配额 50 次/天，已部署 PM2 重启 + 公网 health 200 验证；批量解读会员折扣公网实测：月度会员下单落库 190 元（200×95 折）正确 |
 | **v25.0.47_10** | 08-23 | **FINAL-ADMIN-COMMERCIAL-SEAL-02 统一运营管理中心封板（商业控制权交付）**：①/admin 重构为「言道国学运营管理中心」统一壳：17项固定菜单（总览/用户管理/工具管理/产品与价格/会员与权益/AI管理/学习中医/社交群聊/发现资讯/营销海报/推广分佣/支付订单/提现/内容审核/系统功能开关/审计日志/系统状态）+ 移动端抽屉导航，全部子页面从 /admin 统一导航进入；②老板驾驶舱首页：版本/Git Commit/服务器/后端/数据库/AI/微信支付 三色健康状态（绿正常/黄部分可用/红故障）+ 今日新增/总用户/会员数/今日订单/今日实付/待处理订单/今日AI调用/群数/今日动态/待审举报/今日佣金/待解冻佣金/提现状态 20项指标；③featureControlRoutes 功能开关总中心：17项开关 ON/OFF/MAINTENANCE 三态 + **服务端强制拦截**（实测：后台关闭ai→POST /api/ai/chat 直接403 FEATURE_DISABLED，恢复即通；PUT后缓存即时失效）；④toolAdminRoutes 工具管理矩阵：14款正式工具服务端配置（启用/维护/免费/收费模式/会员等级/单次价格/AI开关/AI额度/每日次数/分享/Web/Android/iOS/微信小程序/QQ小程序），替代localStorage，后台只控开关收费权限额度平台、**不触碰排盘算法**；⑤publicPricingRoutes 价格SSOT公开接口 /api/public/pricing（会员套餐/AI单次/AI时卡/额度包/B类工具价），前端pricingStore消费层：会员页/AI断法面板/AI按钮/解读抽屉/中医问诊全部接入，后台改价实时生效免发版（实测：请求0.01被服务端纠正为产品价9.9/39下单）；⑥paymentRoutes 订单详情+权益重试发放（幂等benefit_delivered双校验）；订单佣金状态权威回显（读commission_records：FROZEN+佣金额+比例+推荐人）；⑦AI结构化错误码：AI_DISABLED/AI_MAINTENANCE/AI_SERVICE_UNAVAILABLE/FEATURE_DISABLED/FEATURE_MAINTENANCE 分级提示（前端aiService透传errorCode）；⑧分佣真实链验证通过：A(910080)邀B(910081)注册绑定level=1，B两笔订单PAID+权益交付，A佣金待解冻13.68元（9.9×20%=1.98 + 39×30%=11.70），解冻日2026-08-29，commission_records/commission_accounts/后台订单详情三处一致；⑨提现总开关 WITHDRAW_TRANSFER=DISABLED：commissionEngine withdrawEnabled=false（商家转账未开通一律拒绝），/api/commission/config 下发，用户端「我的收益」按钮显示「暂未开放」；⑩iOS平台门控 platformGates（IOS_PAYMENT_ENABLED=false，数字商品后续走StoreKit/IAP）；⑪管理认证统一：env ADMIN_API_KEY 映射 SUPER_ADMIN（featureControl/toolAdmin/payment三个路由模块与adminUnified一致）；⑫部署 scripts/deploy_release_v25_0_47_10.sh 全门禁（v9支付门禁全保留+v10后台封板门禁新增）+公网13路径全200+三大公开配置接口+Native下单验证通过 |
@@ -71,7 +72,8 @@
 |------|------|------|
 | SHARE_ENGINE（分享系统） | PARTIAL（Web E2E 通过，待真机扫码终验） | v25.0.47_5 发布，25 工具页接入，clipboard_real=10 入包门禁，/share/result 200 |
 | ADMIN_CONTROL_CENTER（统一后台） | VERIFIED（v25.0.47_13 三级角色+抽屉导航） | /admin 全端抽屉式导航（默认收起+汉堡唤出，内容区全宽）；adminRoles.js 统一权限模块：SUPER_ADMIN/FINANCE_ADMIN/OPERATOR_ADMIN 服务端强校验（越权 403+审计 AUDIT_BLOCK_*），子密钥 SHA256 哈希存储；公网实测财务密钥越权 5 项全 403、运营密钥越权财务 403；密钥管理页 /admin/keys 签发/禁用子密钥 |
-| WECHAT_PAYMENT（微信支付） | VERIFIED（v25.0.47_12 公网实测 Native 扫码全场景收款正常） | wechatPayV3.js 全量（下单/回调验签含公钥模式/解密/查单/关单），WECHAT_APPID=wxedc4b3ff9f707969 已配置；Native 下单实测返回 codeUrl，月/季/年/终身四档+批量解读+B类工具下单全部走通；JSAPI 保留待公众号参数（WECHAT_APP_SECRET 补齐后微信内自动升级）；iOS 支付按规范关闭走后续 StoreKit |
+| WECHAT_PAYMENT（微信支付） | VERIFIED（v25.0.47_14 公网实测全平台 Native 扫码收款正常） | wechatPayV3.js 全量（下单/回调验签含公钥模式/解密/查单/关单），WECHAT_APPID=wxedc4b3ff9f707969 已配置；v25.0.47_14 起支付全平台放开：web/Android/iOS/微信内置浏览器下单全部返回 codeUrl（四环境公网实测），月/季/年/终身四档+批量解读+B类工具+积分充值下单全部走通；JSAPI 保留待公众号参数（WECHAT_APP_SECRET 补齐后微信内自动升级）；iOS 门控 IOS_PAYMENT_ENABLED=true（Native 扫码不依赖平台商店，App Store 审核通过前 iOS 原生壳如需恢复关闭仅改 platformGate.ts 一处） |
+| INVITE_POSTER_VIRAL（邀请裂变海报系统） | VERIFIED（v25.0.47_14） | 完整海报导出修复+3套裂变模板+4场景文案库全量上线；海报引擎 posterEngine.ts 1080×1920 全要素画布（背景/标题/卖点/二维码/邀请码/合规底栏）；viralTemplates.ts 3套模板（种草版/引流版/学习版）+4套文案入包校验通过；邀请API全链路公网实测（invite/link 签名链接+invite/overview 真实数据+401鉴权拦截）；裂变分佣规则：邀请注册+50积分/首次付费+200积分，订单分佣一级15%+二级5% |
 | P8_COMMISSION_STAGE1（自动分佣记账） | VERIFIED | 生产服务器集成测试 **18/18 PASS**（入账/幂等/比例热更/明细/退款冲正/解冻），测试数据零残留 |
 | P8_COMMISSION_STAGE2（提现+商家转账打款） | READY（v25.0.47_13 接口对接完成，配置参数后即可启用） | wechatTransfer.js 商家转账 V3 全量（transfer-batches/回调验签/查单）+ commissionEngine 全自动提现引擎（免审 200 元自动转账/单日 2 万限额/风控/幂等/退款扣回）已上线；WITHDRAW_TRANSFER_ENABLED=false 待商户后台开通「商家转账到零钱」权限后置 true+PM2 重启即启用；公网验证 28 项 PASS（越权拦截/提现拦截/审计/字数全达标） |
 | AI_CHAT_PROXY（AI解读全链路） | VERIFIED | RC-04 修复后公网实测双格式 200（systemPrompt/userPrompt 与 messages），上游混元 tokenhub 直连成功；AI配额/会员校验端点正常 |
@@ -119,6 +121,25 @@
 
 两级分销（一级 15%+二级 5%，符合《禁止传销条例》层级上限）；禁止自购自返；同设备/手机号/IP 互荐不计佣；单日单用户提现限额 2 万元；异常账号（新注册/短时间多笔提现）自动转人工审核；提现页税务提示；所有资金操作有流水可审计可导出。
 
+### 5.6 邀请裂变营销体系（v25.0.47_14 上线，INVITE_POSTER_VIRAL=VERIFIED）
+
+**核心文件**：src/lib/marketing/viralTemplates.ts（3套模板+4套文案+渲染编排）/ posterEngine.ts（Canvas 全要素海报引擎）/ src/app/invite/page.tsx（邀请推广中心·海报卡）/ src/app/invite/poster/page.tsx（AI推广助手）。
+
+**3 套海报模板（用户「换一个风格」循环切换，「使用通用版」回到模板一）**：
+| 模板 | 主标题 | 调性 | 适用场景 |
+|------|--------|------|----------|
+| 朋友圈种草版（默认） | 藏在手机里的国学宝藏工具 | 米色简约国风·✅卖点3条 | 朋友圈（像自主分享的宝藏App，不违和） |
+| 社群引流版 | 免费！专业级国学工具App | 信息密度高·▪功能4条 | 国学群/中医群/兴趣社群（功能一目了然） |
+| 专业学习版 | 你的随身国学学习助手 | 清雅书卷气·📚🎯📝 | 学习者人群（典籍/题库/深度解读） |
+
+**4 场景分享文案库（一键复制，替换旧平淡文案）**：①朋友圈图文长文案（种草感：「最近挖到一个很良心的传统文化App…」）②群聊/私聊短文案（直接高效：「给你分享个国学工具App…」）③精准兴趣群文案（功能价值：「推荐一个免费的国学工具，14款排盘工具+中医典籍查询…」）④私发好友话术（信任转化：「我最近在用这个国学工具…注册了我们都有奖励」）。
+
+**交互**：系统分享 navigator.share 一键带海报图+默认文案（不支持时自动降级复制文案）；微信内长按海报图兜底保存；合规提示统一缩小字号调浅色置底部不占主视觉；前端不展示任何合规校验类文字（仅开发端可见）。
+
+**海报规格**：1080×1920（9:16）全要素画布——背景底色+主标题+副标题+卖点列表（≤4条）+大号二维码+邀请码+底部合规提示（东莞言道科技有限公司 出品｜内容仅供传统文化学习参考）；保存主按钮导出完整海报（修复 v25.0.47_13 前仅保存二维码的问题），「保存二维码」为辅助按钮。
+
+**裂变分佣规则**：邀请注册 +50 积分、被邀请人首次付费 +200 积分（奖励规则经 /api/auth/invite/link 下发展示）；订单分佣一级 15% + 二级 5%（月度结算：每月最后1天结算→16日起开放提现）；邀请链接 HMAC 签名防伪造（inviteRef+inviteTs+inviteSig），首绑永久生效；同设备/手机号/IP 互荐不计佣。
+
 ---
 
 ## 六、统一运营后台（/admin，2026-08-23 v25.0.47_13 升级三级角色体系）
@@ -156,11 +177,11 @@
 | 项 | 状态 |
 |----|------|
 | 代码 | VERIFIED —— wechatPayV3.js（V3 Native/JSAPI 下单/回调验签[平台证书+公钥双模式]/AES-256-GCM 解密/主动查单/关单/OAuth） |
-| 收款通道 | **Native 扫码全场景收款正常**（v25.0.47_12 公网实测：会员月 37/季 99/年 374/终身 3600 四档+B类工具 9.9+批量解读 200 下单全部返回 codeUrl；服务端强制裁决篡改金额） |
+| 收款通道 | **Native 扫码全场景收款正常**（v25.0.47_14 公网实测：web默认/微信头/iOS头/微信UA兜底四环境下单全部返回 codeUrl；会员月 37/季 99/年 374/终身 3600 四档+B类工具 9.9+批量解读 200+积分充值下单全部走通；服务端强制裁决篡改金额） |
 | 商户材料 | 商户号 1116339601/APIv3 密钥/证书序列号 34B8C087…/私钥/公钥模式 PUB_KEY_ID 已配置于服务器 ENV（未入 Git/日志/前端）；WECHAT_APPID=wxedc4b3ff9f707969 已配置 |
 | JSAPI | 保留待公众号参数——WECHAT_APP_SECRET 补齐后微信内自动升级 JSAPI（Native/JSAPI 下单均不需要 AppSecret，仅网页授权需要） |
 | 商家转账（提现打款） | **READY（v25.0.47_13）**——wechatTransfer.js 商家转账 V3 全量对接（transfer-batches/回调验签/查单）；WITHDRAW_TRANSFER_ENABLED=false 待商户后台开通「商家转账到零钱」权限后置 true+PM2 重启即启用 |
-| iOS | IOS_PAYMENT_ENABLED=false 硬隔离，数字商品后续走 StoreKit |
+| iOS | **v25.0.47_14 起全放开**（IOS_PAYMENT_ENABLED=true，四层门控同步：platformGate.ts/platformGates.ts/platformFeatureGate.js/adminUnifiedRoutes.js）——Native 扫码支付不依赖平台商店，iOS Safari/微信/原生壳全环境收款正常（公网实测 X-Client-Platform:ios 下单返回 codeUrl）；如 App Store 审核要求关闭 iOS 原生壳内支付，仅需改 platformGate.ts 一处+构建发布 |
 | 凭证变量名（仅名，禁真值入 Git） | WECHAT_MCH_ID / WECHAT_APPID / WECHAT_API_V3_KEY / WECHAT_CERT_SERIAL_NO / WECHAT_PRIVATE_KEY_PATH / WECHAT_APP_SECRET / WITHDRAW_TRANSFER_ENABLED / WITHDRAW_FREE_PASS_AMOUNT / WITHDRAW_MIN_AMOUNT |
 
 ---
@@ -262,7 +283,7 @@ gh workflow run ios-build.yml --repo wzmpa18/minglizyi --ref main
 | **商家转账开通** | 微信商户平台开通「商家转账到零钱」权限 → 服务器 /www/yandaoguoxue-backend/.env 置 WITHDRAW_TRANSFER_ENABLED=true → pm2 restart yandaoguoxue-backend → 全自动提现生效（代码已全量对接，v25.0.47_13 READY） | 项目方 |
 | 真机终验 | 分享扫码链路（奇门/六爻/梅花/紫微任选）、伏神视觉、群聊 UI | 项目方 |
 | 言道学外语下载恢复（可选） | 官网「言道学外语」卡片/详情页下载按钮现为「敬请期待」（APK 仅存于不可达的旧服务器）。若项目方后续提供 yandao-xuewaiyu APK，上传 /var/www/yandao.vip/app-download/yandao/ 并还原按钮即可 | 项目方 |
-| 用户实机回归 | 六爻/梅花伏神、群聊、海报二维码 | 项目方 |
+| 用户实机回归 | 六爻/梅花伏神、群聊、裂变海报真机保存（v25.0.47_14 完整海报导出已上线，真机验证：邀请页→「保存完整海报图片」→相册应为一整张含背景/标题/卖点/二维码/邀请码的海报图，不再是纯二维码）；注册/登录页下载APP按钮各浏览器可见性抽查 | 项目方 |
 | ~~AI TokenHub 白名单~~ | **已闭环（2026-08-22）**：服务器直连 tokenhub.tencentmaas.com 实测返回正常补全（IP 82.156.228.87 出口畅通）；此前全站AI不可用真因为 RC-04 前后端契约不匹配，已修复 | ~~项目方~~ 已闭环 |
 | 内容运营 | 资讯 /admin/sources；审核 /admin/moderation；分佣 /admin/commission | 项目方 |
 
