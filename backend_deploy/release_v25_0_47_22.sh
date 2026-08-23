@@ -22,7 +22,7 @@ echo "public ip: ${PUBIP}"
 [ "${PUBIP}" = "82.156.228.87" ] || { echo "FATAL: 公网IP非82.156.228.87，禁止部署"; exit 1; }
 HEAD=$(git -C "$SRC_DIR" rev-parse --short HEAD)
 echo "source HEAD: ${HEAD}"
-[ "${HEAD}" = "c2e3741" ] || { echo "FATAL: 服务器源码非c2e3741（v22提交）"; exit 1; }
+[ "${HEAD}" = "d1eaf27" ] || { echo "FATAL: 服务器源码非d1eaf27（v22修复提交）"; exit 1; }
 
 test -f "$TAR" || { echo "FATAL: tar missing"; exit 1; }
 echo "=== [1] tar OK ($(du -sh "$TAR" | cut -f1)) ==="
