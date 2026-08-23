@@ -93,7 +93,7 @@ grep -rq "立即升级" out/_next/static/chunks/ && echo "UPGRADE-BTN(升级按�
 grep -rq "app-native.json" out/_next/static/chunks/ && echo "NATIVE-PROBE(本地版本探测) OK" || { echo "FATAL: 本地版本探测未入包"; exit 1; }
 grep -rq "藏在手机里的国学宝藏工具" out/_next/static/chunks/ && echo "VIRAL-TPL1 OK" || { echo "FATAL: 模板一未入包"; exit 1; }
 grep -rq "保存海报图片" out/_next/static/chunks/ && echo "POSTER-SAVE OK" || { echo "FATAL: 海报保存按钮未入包"; exit 1; }
-grep -rq "isDesktop" out/_next/static/chunks/ && echo "ADMIN-DESKTOP(后台桌面模式) OK" || { echo "FATAL: 后台桌面模式未入包"; exit 1; }
+grep -rq "打开导航菜单" out/_next/static/chunks/ && echo "ADMIN-DESKTOP(后台桌面模式) OK" || { echo "FATAL: 后台桌面模式未入包"; exit 1; }
 BAD=$(grep -rl '82\.156\.' out/ 2>/dev/null | wc -l || true)
 [ "$BAD" -gt 0 ] && { echo "FATAL: ${BAD} 个文件含服务器IP"; exit 1; }
 echo "IP脱敏 OK"

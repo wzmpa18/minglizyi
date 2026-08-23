@@ -1,5 +1,0 @@
-
-  // v25.0.40 社交×营销绑定：邀请注册成功 → 自动互加好友（social.db，容错不影响注册主流程）
-  try { autoFriendOnInviteBind(db, inviteeId, inviterId); } catch (e) {
-    console.error('[invite] autoFriendOnInviteBind error:', e.message);
-  }

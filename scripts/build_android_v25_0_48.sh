@@ -49,7 +49,10 @@ cat "$ASSETS_PUBLIC/app-native.json"
 echo "--- [3] Gradle 构建（release 自动签名） ---"
 cd "$SRC_DIR/android"
 export ANDROID_HOME=/opt/android-sdk
-./gradlew assembleRelease --no-daemon -q 2>&1 | tail -5 || { echo "FATAL: gradle 构建失败"; exit 1; }
+# 用本地 Gradle 8.9（服务器曾清理过 wrapper 缓存，./gradlew 需联网下载发行版会失败）
+GRADLE_BIN=/opt/gradle-8.9/bin/gradle
+test -x "$GRADLE_BIN" || { echo "FATAL: $GRADLE_BIN 不存在"; exit 1; }
+"$GRADLE_BIN" assembleRelease --no-daemon -q 2>&1 | tail -5 || { echo "FATAL: gradle 构建失败"; exit 1; }
 test -f "$APK_OUT" || { echo "FATAL: APK 未生成"; exit 1; }
 ls -la "$APK_OUT"
 
@@ -67,7 +70,7 @@ cat assets/public/version.json
 grep -q "v25.0.47_16" assets/public/version.json || { echo "FATAL: 内置 web 资源版本错误"; exit 1; }
 echo "--- 内置关键代码检查 ---"
 unzip -o -q "$APK_OUT" "assets/public/_next/static/chunks/*" 2>/dev/null
-for kw in "发现新版本" "立即升级" "renderViralPoster" "藏在手机里的国学宝藏工具" "isDesktop" "下载言道国学APP"; do
+for kw in "发现新版本" "立即升级" "renderViralPoster" "藏在手机里的国学宝藏工具" "打开导航菜单" "下载言道国学APP"; do
   n=$(grep -rl "$kw" assets/public/_next/static/chunks/ 2>/dev/null | wc -l)
   echo "[$kw] 命中 $n 个chunk"
   [ "$n" -eq 0 ] && { echo "FATAL: APK 内置资源缺少 [$kw]"; exit 1; }

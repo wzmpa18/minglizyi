@@ -1,8 +1,0 @@
-        rewards: rewards.map(r => ({
-          id: r.id,
-          inviteeId: r.invitee_id,
-          type: r.reward_type === 'first_pay' ? '被邀请人首次付费' : '被邀请人注册',
-          points: r.points,
-          status: r.status,
-          grantedAt: r.created_at,
-        })),

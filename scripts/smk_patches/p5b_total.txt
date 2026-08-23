@@ -1,4 +1,0 @@
-
-      // v25.0.40：返佣积分按接收人视角统计
-      const rebateEarned = (r) => (r.level1_inviter_id === userId ? r.level1_points : 0) + (r.level2_inviter_id === userId ? r.level2_points : 0);
-      const totalRebatePoints = rebates.reduce((s, r) => s + rebateEarned(r), 0);

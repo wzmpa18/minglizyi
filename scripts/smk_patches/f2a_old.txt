@@ -1,1 +1,0 @@
-import { updateUserProfile, getClientUserId } from "@/lib/auth";

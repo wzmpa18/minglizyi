@@ -1,2 +1,0 @@
-        invite_register: '邀请注册奖励',
-        invite_first_pay: '邀请付费奖励',
