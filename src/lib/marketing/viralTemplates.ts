@@ -93,17 +93,18 @@ const MOMENTS_VARIANT: TemplateVariant = {
 
 const GROUP_VARIANT: TemplateVariant = {
   id: "VIRAL-GROUP-02",
-  family: "T03",
+  family: "T02",
   name: "社群引流版",
+  // v25.0.47_22 统一视觉规范：米色国风简约质感（原深紫星空不符合规范）
   palette: {
-    bg: ["#2E1D4E", "#5B2D91"],
-    accent: "#F5C542",
-    text: "#FFFFFF",
-    subText: "#D9CDF2",
-    cardBg: "rgba(255,255,255,0.12)",
+    bg: ["#FAF5EA", "#EFE2C8"],
+    accent: "#B4541C",
+    text: "#3B2F1E",
+    subText: "#8A7758",
+    cardBg: "#FFFEF8",
   },
   ratios: ["R9_16", "R3_4", "SQUARE", "LONG"],
-  decorative: "stars",
+  decorative: "paper",
   pointIcon: "square",
 };
 
@@ -111,12 +112,13 @@ const LEARN_VARIANT: TemplateVariant = {
   id: "VIRAL-LEARN-02",
   family: "T05",
   name: "学习进阶版",
+  // v25.0.47_22 统一视觉规范：米色国风简约质感（墨绿点缀区分学习场景）
   palette: {
-    bg: ["#F0F6F2", "#DDEBE3"],
-    accent: "#0F8A7E",
-    text: "#1B382E",
-    subText: "#5B7F73",
-    cardBg: "#FFFFFF",
+    bg: ["#F8F3E5", "#EDE2C9"],
+    accent: "#2F6B4F",
+    text: "#253229",
+    subText: "#7C8A7E",
+    cardBg: "#FDFCF5",
   },
   ratios: ["R9_16", "R3_4", "SQUARE", "LONG"],
   decorative: "grid",
@@ -219,7 +221,7 @@ export const VIRAL_TEMPLATES: ViralTemplate[] = [
   {
     id: "VIRAL_MOMENTS",
     name: "朋友圈种草版",
-    shortName: "种草版",
+    shortName: "朋友圈种草",
     desc: "朋友私藏分享调性 · 主打社交裂变，发朋友圈不违和",
     variant: MOMENTS_VARIANT,
     copy: MOMENTS_COPY,
@@ -227,7 +229,7 @@ export const VIRAL_TEMPLATES: ViralTemplate[] = [
   {
     id: "VIRAL_GROUP",
     name: "社群引流版",
-    shortName: "引流版",
+    shortName: "社群引流",
     desc: "信息密度高 · 功能一目了然，适合国学群/中医群/兴趣社群",
     variant: GROUP_VARIANT,
     copy: GROUP_COPY,
@@ -235,7 +237,7 @@ export const VIRAL_TEMPLATES: ViralTemplate[] = [
   {
     id: "VIRAL_LEARN",
     name: "学习进阶版",
-    shortName: "学习版",
+    shortName: "学习进阶",
     desc: "清雅书卷气 · 主打学习者人群，典籍/题库/深度解读",
     variant: LEARN_VARIANT,
     copy: LEARN_COPY,
@@ -252,12 +254,12 @@ export function cycleViralTemplate(currentVariantId: string): ViralTemplate {
   return VIRAL_TEMPLATES[(idx + 1 + VIRAL_TEMPLATES.length) % VIRAL_TEMPLATES.length];
 }
 
-/** AI推广助手第4步推荐集：固定返回3套裂变模板（模板一默认） */
+/** AI推广助手第4步推荐集：固定返回3套裂变模板（模板一默认）；3:4竖版适配朋友圈/社群转发 */
 export function buildViralRecs(): RecommendationItem[] {
   return VIRAL_TEMPLATES.map((t) => ({
     variant: t.variant,
     copy: t.copy,
-    ratio: "R9_16" as PosterRatio,
+    ratio: "R3_4" as PosterRatio,
     reason: t.desc,
   }));
 }
@@ -313,7 +315,8 @@ export async function renderViralPoster(
     audience: "A03" as AudienceId,
     product: "P14" as ProductId,
     channel: "C01" as ChannelId,
-    ratio: "R9_16",
+    // v25.0.47_22 视觉规范：3:4竖版（1080x1440）适配朋友圈/社群转发
+    ratio: "R3_4",
     variant: t.variant,
     copy: opts.copyOverride ?? t.copy,
     qrDataUrl: opts.qrDataUrl,

@@ -66,6 +66,8 @@ export async function renderPoster(
   const w = spec.width;
   const h = spec.height;
   const unit = w / 1080;
+  // v25.0.47_22：3:4/方形画布竖向空间紧凑，启用dense排版（压缩段间距）防福利条压合规底栏
+  const dense = h / w <= 1.4;
   const p = req.variant.palette;
   const dark = isDarkBg(p.bg[0]);
   const warnings: string[] = [];
@@ -76,16 +78,16 @@ export async function renderPoster(
   const isPersonal = req.variant.family === "T06";
   let y = drawHeader(ctx, w, unit, dark, p, isPersonal ? req : null, warnings, avatarImg);
 
-  y = drawTitle(ctx, w, y, unit, req, dark, p, warnings);
+  y = drawTitle(ctx, w, y, unit, req, dark, p, warnings, dense);
 
-  y = drawSellingPoints(ctx, w, y, unit, req, p, warnings);
+  y = drawSellingPoints(ctx, w, y, unit, req, p, warnings, dense);
 
   if (channelPolicy.priceAllowed && req.price) {
     y = drawPrice(ctx, w, y, unit, p, req.price, dark, warnings);
   }
 
   if (showQr) {
-    drawQrSection(ctx, w, h, y, unit, p, req, dark, warnings, qrImg);
+    drawQrSection(ctx, w, h, y, unit, p, req, dark, warnings, qrImg, dense);
   } else {
     drawNoQrFooter(ctx, w, h, unit, p, dark, req);
   }
@@ -273,7 +275,8 @@ function drawHeader(
 
 function drawTitle(
   ctx: CanvasRenderingContext2D, w: number, y: number, unit: number,
-  req: PosterRequest, dark: boolean, p: PosterRequest["variant"]["palette"], warnings: string[]
+  req: PosterRequest, dark: boolean, p: PosterRequest["variant"]["palette"], warnings: string[],
+  dense: boolean
 ): number {
   const title = req.copy.title;
   // v25.0.47_22 MARKETING-POSTER-V2-AI：主标题字号≤海报宽度1/8且自适应两行排布，
@@ -303,26 +306,27 @@ function drawTitle(
   for (const part of subParts) {
     for (const line of wrapText(ctx, part, maxW).slice(0, 2)) {
       ctx.fillText(line, w / 2, y + 24 * unit);
-      y += 44 * unit;
+      y += (dense ? 40 : 44) * unit;
     }
   }
-  return y + 40 * unit;
+  return y + (dense ? 26 : 40) * unit;
 }
 
 function drawSellingPoints(
   ctx: CanvasRenderingContext2D, w: number, y: number, unit: number,
-  req: PosterRequest, p: PosterRequest["variant"]["palette"], warnings: string[]
+  req: PosterRequest, p: PosterRequest["variant"]["palette"], warnings: string[],
+  dense: boolean
 ): number {
   // v25.0.47_22：分组两栏卖点（社群引流版信息密度布局），优先于常规卖点卡片
   if (req.copy.pointGroups && req.copy.pointGroups.length >= 2) {
-    return drawGroupedPoints(ctx, w, y, unit, req, p, warnings);
+    return drawGroupedPoints(ctx, w, y, unit, req, p, warnings, dense);
   }
-  // 常规卖点卡片：最多4条，行间距1.5倍（营销视觉规范）
+  // 常规卖点卡片：最多4条，行间距1.5倍（营销视觉规范）；dense压缩行距防底部溢出
   const points = req.copy.sellingPoints.slice(0, 4);
   const cardPad = 56 * unit;
   const font = 33 * unit;
-  const rowH = Math.round(font * 1.5 * 1.55); // 行高1.5倍+条目呼吸空间 ≈ 77*unit
-  const cardH = points.length * rowH + 40 * unit;
+  const rowH = Math.round(font * 1.5 * (dense ? 1.34 : 1.55)); // 9:16≈77 / dense≈66
+  const cardH = points.length * rowH + (dense ? 28 : 40) * unit;
 
   ctx.save();
   ctx.shadowColor = "rgba(0,0,0,0.10)";
@@ -333,7 +337,7 @@ function drawSellingPoints(
   ctx.fill();
   ctx.restore();
 
-  let ry = y + 66 * unit;
+  let ry = y + (dense ? 54 : 66) * unit;
   for (const pt of points) {
     const iconCx = cardPad + 56 * unit;
     if (req.variant.pointIcon === "check") {
@@ -371,13 +375,14 @@ function drawSellingPoints(
     ry += rowH;
   }
   ctx.textAlign = "center";
-  return y + cardH + 36 * unit;
+  return y + cardH + (dense ? 22 : 36) * unit;
 }
 
 /** v25.0.47_22：分组两栏卖点（【易学工具】/【中医学习】信息密度布局） */
 function drawGroupedPoints(
   ctx: CanvasRenderingContext2D, w: number, y: number, unit: number,
-  req: PosterRequest, p: PosterRequest["variant"]["palette"], warnings: string[]
+  req: PosterRequest, p: PosterRequest["variant"]["palette"], warnings: string[],
+  dense: boolean
 ): number {
   const groups = req.copy.pointGroups!.slice(0, 2);
   const cardPad = 48 * unit;
@@ -434,7 +439,7 @@ function drawGroupedPoints(
     }
   });
   ctx.textAlign = "center";
-  return y + cardH + 36 * unit;
+  return y + cardH + (dense ? 22 : 36) * unit;
 }
 
 function drawPrice(
@@ -454,24 +459,34 @@ function drawPrice(
 function drawQrSection(
   ctx: CanvasRenderingContext2D, w: number, h: number, y: number, unit: number,
   p: PosterRequest["variant"]["palette"], req: PosterRequest, dark: boolean, warnings: string[],
-  qrImg: HTMLImageElement | null
+  qrImg: HTMLImageElement | null, dense: boolean
 ): void {
   // v25.0.47_22：二维码尺寸≥海报宽度1/4（长按识别率保障）
   const qrSize = req.channel === "C09" ? 340 * unit : 280 * unit;
   const benefitLines = req.copy.benefitLine
     ? req.copy.benefitLine.split("\n").map((s) => s.trim()).filter(Boolean).slice(0, 2)
     : [];
+  // v25.0.47_22 布局规范：CTA在二维码上方、标注/邀请码在下方（三模板统一结构）
+  const ctaNeed = 66 * unit;
   const extraNeed =
     (req.copy.qrNote ? 38 * unit : 0) +
     (req.inviteCode ? 40 * unit : 0) +
-    (benefitLines.length ? benefitLines.length * 44 * unit + 64 * unit : 0);
-  const bottomNeed = qrSize + 150 * unit + extraNeed;
+    (benefitLines.length ? benefitLines.length * (dense ? 40 : 44) * unit + (dense ? 44 : 64) * unit : 0);
+  const bottomNeed = ctaNeed + qrSize + (dense ? 86 : 110) * unit + extraNeed;
   const avail = h - y - 130 * unit;
-  let qrY = y + 30 * unit;
+  let topY = y + (dense ? 18 : 26) * unit;
   if (avail < bottomNeed) {
     warnings.push("safearea:二维码区空间紧张");
-    qrY = Math.max(y + 8 * unit, h - bottomNeed - 110 * unit);
+    topY = Math.max(y + 8 * unit, h - bottomNeed - 110 * unit);
   }
+
+  // CTA（二维码上方，营销规范：行动召唤前置降低决策成本）
+  ctx.textAlign = "center";
+  ctx.fillStyle = p.accent;
+  ctx.font = `bold ${34 * unit}px ${FONT}`;
+  ctx.fillText(req.copy.cta, w / 2, topY + 34 * unit);
+
+  const qrY = topY + ctaNeed;
   const qrX = (w - qrSize) / 2;
 
   ctx.fillStyle = dark ? "rgba(255,255,255,0.94)" : "#FFFFFF";
@@ -486,31 +501,27 @@ function drawQrSection(
     warnings.push("safearea:二维码未加载");
   }
 
-  let by = qrY + qrSize + 56 * unit;
-  ctx.fillStyle = p.accent;
-  ctx.font = `bold ${34 * unit}px ${FONT}`;
-  ctx.textAlign = "center";
-  ctx.fillText(req.copy.cta, w / 2, by);
-  by += 38 * unit;
+  let by = qrY + qrSize + (dense ? 40 : 52) * unit;
 
   // v25.0.47_22：二维码区下方小字标注（如「永久免费基础功能 · 无强制广告」）
   if (req.copy.qrNote) {
     ctx.fillStyle = dark ? "rgba(255,255,255,0.68)" : p.subText;
     ctx.font = `${25 * unit}px ${FONT}`;
     ctx.fillText(req.copy.qrNote, w / 2, by);
-    by += 40 * unit;
+    by += (dense ? 34 : 40) * unit;
   }
 
   if (req.inviteCode) {
     ctx.fillStyle = dark ? "rgba(255,255,255,0.6)" : p.subText;
     ctx.font = `${24 * unit}px ${FONT}`;
     ctx.fillText(`邀请码：${req.inviteCode}`, w / 2, by);
-    by += 44 * unit;
+    by += (dense ? 36 : 44) * unit;
   }
 
   // v25.0.47_22：行动召唤条（浅底色福利条，突出福利感）
   if (benefitLines.length > 0) {
-    const stripH = benefitLines.length * 44 * unit + 30 * unit;
+    const lineGap = (dense ? 40 : 44) * unit;
+    const stripH = benefitLines.length * lineGap + (dense ? 22 : 30) * unit;
     const stripW = w - 200 * unit;
     ctx.save();
     ctx.fillStyle = hexAlpha(dark ? "#FFFFFF" : p.accent, dark ? 0.14 : 0.12);
@@ -520,7 +531,7 @@ function drawQrSection(
     ctx.fillStyle = dark ? "#F5C542" : p.accent;
     ctx.font = `bold ${27 * unit}px ${FONT}`;
     benefitLines.forEach((line, i) => {
-      ctx.fillText(line, w / 2, by + 40 * unit + i * 44 * unit);
+      ctx.fillText(line, w / 2, by + (dense ? 32 : 40) * unit + i * lineGap);
     });
   }
 }
