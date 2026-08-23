@@ -857,11 +857,46 @@ export default function RegisterPage() {
             fontWeight: 600,
             cursor: loading ? "not-allowed" : "pointer",
             opacity: loading ? 0.7 : 1,
-            marginBottom: 20,
+            marginBottom: 14,
           }}
         >
           {loading ? "注册中..." : "注册"}
         </button>
+
+        {/* v25.0.47_14: 下载APP入口（新用户扫码落地必见，全浏览器兼容：普通/系统/微信内置浏览器均可点击） */}
+        <a
+          href="https://yandaoguoxue.yandao.vip/friend"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            width: "100%",
+            height: 48,
+            border: `1.5px solid ${BRAND}`,
+            borderRadius: 12,
+            backgroundColor: "#fff",
+            color: BRAND,
+            fontSize: 15,
+            fontWeight: 600,
+            textDecoration: "none",
+            marginBottom: 8,
+            cursor: "pointer",
+            boxSizing: "border-box",
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          下载言道国学APP
+        </a>
+        <div style={{ textAlign: "center", fontSize: 11, color: "#aaa", marginBottom: 16 }}>
+          安卓安装包 · 手机浏览器打开即可下载 · 网页版功能完全一致
+        </div>
 
         {/* 已有账号？去登录 */}
         <div style={{ textAlign: "center" }}>

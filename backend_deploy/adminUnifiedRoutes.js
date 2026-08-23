@@ -523,7 +523,8 @@ router.get('/payment-status', adminAuthUnified('FINANCE_ADMIN', 'finance'), (_re
   if (!wechat.configured || wechat.missing.length) wechat.status = 'PARTIAL_CONFIGURED';
   else if (enabled) wechat.status = 'ENABLED';
   else wechat.status = 'CONFIGURED';
-  res.json({ success: true, data: { wechat, iosPaymentEnabled: false } });
+  // v25.0.47_14: iOS/微信内浏览器支付全放开（Native扫码收款），与 platformFeatureGate.js 矩阵同步
+  res.json({ success: true, data: { wechat, iosPaymentEnabled: true } });
 });
 
 // ==================== P8 分佣后台（第五章） ====================

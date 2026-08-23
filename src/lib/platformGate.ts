@@ -17,15 +17,19 @@
 
 export type RuntimePlatform = "ios" | "android" | "web" | "wechat" | "qq" | "unknown";
 
-// ==================== iOS 平台开关（本期战略） ====================
+// ==================== iOS 平台开关（v25.0.47_14 起全平台放开） ====================
 
-/** iOS 是否开放付费功能（本期 false：先上架，不开放任何付费） */
-export const IOS_PAYMENT_ENABLED = false;
+/**
+ * iOS 是否开放付费功能
+ * v25.0.47_14 (FIX-V14-PAY-MARKETING-VIRAL)：Native 扫码支付不依赖平台商店，
+ * iOS 全环境（Safari/微信/原生壳）恢复微信支付，消除会员入口死键。
+ */
+export const IOS_PAYMENT_ENABLED = true;
 
 /** iOS 是否开放商城/数字内容购买 */
 export const IOS_STORE_ENABLED = false;
 
-/** iOS 付费关闭期间的统一提示文案 */
+/** iOS 付费关闭期间的统一提示文案（历史遗留，仅在开关关闭时展示） */
 export const IOS_PAYMENT_DISABLED_TIP =
   "iOS 版暂未开放付费功能，现有免费功能可正常使用。";
 
@@ -48,8 +52,8 @@ export const PLATFORM_FEATURE_MATRIX: Record<string, Record<RuntimePlatform, boo
   hehun:         { web: true, android: true, ios: true, wechat: false, qq: false, unknown: true },
   fortuneConsult:{ web: true, android: true, ios: true, wechat: false, qq: false, unknown: true },
 
-  // —— 支付能力（iOS 本期 OFF） ——
-  payment:       { web: true, android: true, ios: IOS_PAYMENT_ENABLED, wechat: false, qq: false, unknown: true },
+  // —— 支付能力（v25.0.47_14：iOS/微信内浏览器全放开，Native扫码全场景收款；QQ小程序维持关闭） ——
+  payment:       { web: true, android: true, ios: IOS_PAYMENT_ENABLED, wechat: true, qq: false, unknown: true },
   store:         { web: true, android: true, ios: IOS_STORE_ENABLED, wechat: false, qq: false, unknown: true },
 
   // —— 学习工具类（ALL ON，小程序第一增长引擎） ——

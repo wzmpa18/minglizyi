@@ -12,8 +12,28 @@ import {
   type InviteOverview,
   type PointsTransactions,
 } from "@/lib/inviteApi";
+import {
+  VIRAL_TEMPLATES,
+  getViralTemplate,
+  cycleViralTemplate,
+  renderViralPoster,
+  SHARE_COPY_LIBRARY,
+  DEFAULT_SHARE_TEXT,
+  type ViralTemplateId,
+} from "@/lib/marketing/viralTemplates";
 
 const BRAND = "#7B2FBE";
+
+const posterSecondaryBtn: React.CSSProperties = {
+  padding: "10px 0",
+  borderRadius: "10px",
+  border: "1px solid #d5c7ea",
+  backgroundColor: "#fff",
+  color: BRAND,
+  fontSize: "13px",
+  fontWeight: 600,
+  cursor: "pointer",
+};
 
 function formatTime(timeStr: string): string {
   if (!timeStr) return "";
@@ -36,6 +56,15 @@ export default function InvitePage() {
   const [toast, setToast] = useState("");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
+  // v25.0.47_14: 邀请裂变海报（3套模板 + 完整海报导出，修复“保存相册只有二维码”）
+  const [activeViralId, setActiveViralId] = useState<ViralTemplateId>("VIRAL_MOMENTS");
+  const [posterUrl, setPosterUrl] = useState("");
+  const [posterGenerating, setPosterGenerating] = useState(false);
+  const [posterError, setPosterError] = useState("");
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const posterQrRef = useRef("");
+  const posterCodeRef = useRef<string | undefined>(undefined);
+
   const showToast = useCallback((msg: string) => {
     setToast(msg);
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -51,7 +80,7 @@ export default function InvitePage() {
         try {
           const QRCode = (await import("qrcode")).default;
           const url = await QRCode.toDataURL(linkData.inviteLink, {
-            width: 480,
+            width: 600,
             margin: 2,
             errorCorrectionLevel: "M",
             color: { dark: "#2D1A3E", light: "#FFFFFF" },
@@ -98,6 +127,112 @@ export default function InvitePage() {
       return false;
     }
   }, []);
+
+  // v25.0.47_14: 渲染完整裂变海报（背景+标题+卖点+二维码+邀请码+合规底栏）
+  const renderPosterByTemplate = useCallback(async (templateId: ViralTemplateId) => {
+    if (!posterQrRef.current) return;
+    setPosterGenerating(true);
+    setPosterError("");
+    try {
+      const result = await renderViralPoster(templateId, {
+        qrDataUrl: posterQrRef.current,
+        inviteCode: posterCodeRef.current,
+      });
+      if (result.complianceBlocked || !result.dataUrl) {
+        setPosterError("海报生成失败，请重试");
+        setPosterUrl("");
+        return;
+      }
+      setPosterUrl(result.dataUrl);
+    } catch (e) {
+      console.error("海报生成失败:", e);
+      setPosterError("海报生成失败，请重试");
+    } finally {
+      setPosterGenerating(false);
+    }
+  }, []);
+
+  // 二维码就绪后自动生成默认模板海报
+  useEffect(() => {
+    if (qrDataUrl && !posterUrl && !posterGenerating) {
+      posterQrRef.current = qrDataUrl;
+      posterCodeRef.current = link?.inviteCode;
+      void renderPosterByTemplate("VIRAL_MOMENTS");
+    }
+  }, [qrDataUrl, link, posterUrl, posterGenerating, renderPosterByTemplate]);
+
+  const switchToTemplate = useCallback(
+    (templateId: ViralTemplateId) => {
+      if (templateId === activeViralId && posterUrl) return;
+      setActiveViralId(templateId);
+      setPosterUrl("");
+      void renderPosterByTemplate(templateId);
+    },
+    [activeViralId, posterUrl, renderPosterByTemplate]
+  );
+
+  /** 「换一个风格」：循环切换3套模板 */
+  const handleSwitchStyle = useCallback(() => {
+    const next = cycleViralTemplate(getViralTemplate(activeViralId).variant.id);
+    switchToTemplate(next.id);
+  }, [activeViralId, switchToTemplate]);
+
+  /** 「使用通用版」：回到默认模板一（朋友圈种草版） */
+  const handleUseGeneric = useCallback(() => {
+    if (activeViralId === "VIRAL_MOMENTS" && posterUrl) {
+      showToast("当前已是通用版（种草版）");
+      return;
+    }
+    switchToTemplate("VIRAL_MOMENTS");
+    showToast("已切换为通用版素材");
+  }, [activeViralId, posterUrl, switchToTemplate, showToast]);
+
+  /** 保存完整海报图片（≥750×1334，含全部元素） */
+  const handleSavePoster = useCallback(async () => {
+    if (!posterUrl) {
+      showToast("海报生成中，请稍候");
+      return;
+    }
+    try {
+      const a = document.createElement("a");
+      a.href = posterUrl;
+      a.download = `yandao-invite-poster-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      showToast("完整海报已保存；若未弹出可长按海报图保存");
+    } catch {
+      showToast("保存失败，可长按海报图片保存");
+    }
+  }, [posterUrl, showToast]);
+
+  /** 系统分享：带海报图片 + 默认文案 */
+  const handleSharePoster = useCallback(async () => {
+    if (!posterUrl) {
+      showToast("海报生成中，请稍候");
+      return;
+    }
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+      try {
+        if (typeof navigator.canShare === "function") {
+          try {
+            const blob = await (await fetch(posterUrl)).blob();
+            const file = new File([blob], "yandao-invite-poster.png", { type: "image/png" });
+            if (navigator.canShare({ files: [file] })) {
+              await navigator.share({ title: "言道国学", text: DEFAULT_SHARE_TEXT, files: [file] });
+              return;
+            }
+          } catch { /* 降级 */ }
+        }
+        await navigator.share({ title: "言道国学", text: DEFAULT_SHARE_TEXT, url: link?.inviteLink });
+      } catch {
+        // 用户取消分享不算失败
+      }
+    } else {
+      const ok = await copyToClipboard(DEFAULT_SHARE_TEXT + (link?.inviteLink ? "\n" + link.inviteLink : ""));
+      showToast(ok ? "当前浏览器不支持系统分享，文案已复制" : "当前浏览器不支持系统分享");
+    }
+  }, [posterUrl, link, copyToClipboard, showToast]);
 
   const handleCopyCode = useCallback(async () => {
     if (!link?.inviteCode) return;
@@ -222,6 +357,149 @@ export default function InvitePage() {
           <span style={{ fontSize: "18px", opacity: 0.8 }}>›</span>
         </button>
 
+        {/* ===== v25.0.47_14 邀请裂变海报卡（完整海报导出，修复"保存相册只有二维码"） ===== */}
+        <div
+          style={{
+            backgroundColor: "#fff",
+            borderRadius: "14px",
+            padding: "16px",
+            marginBottom: "12px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "4px" }}>
+            <div style={{ fontSize: "15px", fontWeight: 700, color: "#333" }}>邀请裂变海报</div>
+            <span style={{ fontSize: "10px", padding: "2px 8px", borderRadius: "8px", backgroundColor: "#FFF3E0", color: "#E65100" }}>
+              保存即完整海报
+            </span>
+          </div>
+          <div style={{ fontSize: "11px", color: "#999", marginBottom: "12px", lineHeight: 1.5 }}>
+            {getViralTemplate(activeViralId).desc}
+          </div>
+
+          {/* 3套模板切换 */}
+          <div style={{ display: "flex", gap: "6px", marginBottom: "12px" }}>
+            {VIRAL_TEMPLATES.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => switchToTemplate(t.id)}
+                style={{
+                  flex: 1,
+                  padding: "8px 0",
+                  borderRadius: "10px",
+                  border: activeViralId === t.id ? `2px solid ${BRAND}` : "1px solid #e5e5e5",
+                  backgroundColor: activeViralId === t.id ? "#F5EFFB" : "#fff",
+                  color: activeViralId === t.id ? BRAND : "#666",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                {t.shortName}
+              </button>
+            ))}
+          </div>
+
+          {/* 海报预览（点击放大，长按可保存） */}
+          {posterGenerating ? (
+            <div style={{ textAlign: "center", padding: "40px 0", color: "#999", fontSize: "13px" }}>海报生成中...</div>
+          ) : posterError ? (
+            <div style={{ textAlign: "center", padding: "24px 0", color: "#e74c3c", fontSize: "13px" }}>
+              {posterError}
+              <div>
+                <button
+                  onClick={() => void renderPosterByTemplate(activeViralId)}
+                  style={{ marginTop: "8px", padding: "6px 18px", borderRadius: "16px", border: "1px solid #ddd", backgroundColor: "#fff", color: "#555", fontSize: "12px", cursor: "pointer" }}
+                >
+                  重试
+                </button>
+              </div>
+            </div>
+          ) : posterUrl ? (
+            <div style={{ textAlign: "center" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={posterUrl}
+                alt="邀请海报"
+                onClick={() => setPreviewOpen(true)}
+                style={{
+                  width: "100%",
+                  maxWidth: "270px",
+                  borderRadius: "12px",
+                  boxShadow: "0 4px 14px rgba(0,0,0,0.14)",
+                  cursor: "zoom-in",
+                  display: "block",
+                  margin: "0 auto",
+                }}
+              />
+              <div style={{ fontSize: "10px", color: "#bbb", marginTop: "8px" }}>
+                点击海报可放大 · 微信内长按海报图片也能保存到相册
+              </div>
+            </div>
+          ) : (
+            <div style={{ textAlign: "center", padding: "30px 0", color: "#999", fontSize: "13px" }}>
+              邀请二维码加载中，稍候自动生成海报...
+            </div>
+          )}
+
+          {/* 操作按钮 */}
+          {posterUrl && (
+            <>
+              <button
+                onClick={handleSavePoster}
+                disabled={posterGenerating}
+                style={{
+                  width: "100%",
+                  padding: "12px 0",
+                  borderRadius: "12px",
+                  border: "none",
+                  backgroundColor: posterGenerating ? "#ccc" : BRAND,
+                  color: "#fff",
+                  fontSize: "15px",
+                  fontWeight: 600,
+                  cursor: posterGenerating ? "not-allowed" : "pointer",
+                  marginTop: "12px",
+                  marginBottom: "8px",
+                }}
+              >
+                保存海报图片
+              </button>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
+                <button onClick={handleSwitchStyle} style={posterSecondaryBtn}>换一个风格</button>
+                <button onClick={handleUseGeneric} style={posterSecondaryBtn}>使用通用版</button>
+                <button onClick={handleSharePoster} style={posterSecondaryBtn}>系统分享</button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ===== v25.0.47_14 全场景分享文案库（一键复制即用） ===== */}
+        <div style={{ backgroundColor: "#fff", borderRadius: "14px", padding: "16px", marginBottom: "12px" }}>
+          <div style={{ fontSize: "15px", fontWeight: 700, color: "#333", marginBottom: "4px" }}>全场景分享文案</div>
+          <div style={{ fontSize: "11px", color: "#999", marginBottom: "12px" }}>按场景一键复制，配合海报发朋友圈/群聊/好友</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {SHARE_COPY_LIBRARY.map((sc) => (
+              <div key={sc.id} style={{ backgroundColor: "#fafafa", borderRadius: "10px", padding: "10px 12px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                  <span style={{ fontSize: "12px", fontWeight: 600, color: "#555" }}>
+                    {sc.title}
+                    <span style={{ fontSize: "10px", fontWeight: 400, color: "#aaa", marginLeft: "6px" }}>{sc.scene}</span>
+                  </span>
+                  <button
+                    onClick={async () => {
+                      const ok = await copyToClipboard(sc.text);
+                      showToast(ok ? `${sc.title}已复制` : "复制失败，请手动选择复制");
+                    }}
+                    style={{ fontSize: "11px", padding: "4px 12px", borderRadius: "12px", border: `1px solid ${BRAND}55`, backgroundColor: `${BRAND}08`, color: BRAND, cursor: "pointer", flexShrink: 0 }}
+                  >
+                    复制
+                  </button>
+                </div>
+                <div style={{ fontSize: "12px", color: "#444", lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{sc.text}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* ===== 专属邀请二维码卡 ===== */}
         <div
           style={{
@@ -277,7 +555,7 @@ export default function InvitePage() {
                 cursor: "pointer",
               }}
             >
-              保存相册
+              保存二维码
             </button>
             <button
               onClick={handleSystemShare}
@@ -506,6 +784,36 @@ export default function InvitePage() {
           邀请好友一起学习，共同进步。请遵守平台规则，禁止虚假邀请。
         </div>
       </div>
+
+      {/* v25.0.47_14: 海报全屏预览（微信内长按保存的入口） */}
+      {previewOpen && posterUrl && (
+        <div
+          onClick={() => setPreviewOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0,0,0,0.92)",
+            zIndex: 500,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={posterUrl}
+            alt="邀请海报大图"
+            style={{ maxWidth: "100%", maxHeight: "78vh", borderRadius: "10px" }}
+          />
+          <div style={{ color: "#fff", fontSize: "13px", marginTop: "16px", textAlign: "center", lineHeight: 1.8 }}>
+            长按海报图片可保存到相册 / 发送给朋友
+            <br />
+            <span style={{ fontSize: "11px", color: "#aaa" }}>点击空白处关闭</span>
+          </div>
+        </div>
+      )}
 
       {toast && (
         <div

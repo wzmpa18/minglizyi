@@ -20,11 +20,18 @@ import type {
 import { AUDIENCE_LIST } from "@/lib/marketing/audiences";
 import { PRODUCT_LIST, PRODUCTS } from "@/lib/marketing/products";
 import { CHANNEL_LIST, getChannel } from "@/lib/marketing/channels";
-import { recommend, switchStyle, getRatio, type RecommendationItem } from "@/lib/marketing/recommend";
+import { getRatio, type RecommendationItem } from "@/lib/marketing/recommend";
 import { renderPoster, type RenderCheck } from "@/lib/marketing/posterEngine";
 import { qrSelfTest, type QrSelfTestResult } from "@/lib/marketing/qrSelfTest";
 import { logMarketingEvent } from "@/lib/marketing/logEvents";
 import { getDisclaimer } from "@/lib/marketing/copyLibrary";
+import {
+  buildViralRecs,
+  cycleViralTemplate,
+  getViralTemplate,
+  SHARE_COPY_LIBRARY,
+  DEFAULT_SHARE_TEXT,
+} from "@/lib/marketing/viralTemplates";
 
 const BRAND = "#7B2FBE";
 const GENERIC = "__generic__";
@@ -66,6 +73,8 @@ export default function PosterAssistantPage() {
 
   const [toasts, setToasts] = useState<ToastMsg[]>([]);
   const posterCache = useRef<Map<string, string>>(new Map());
+  // v25.0.47_14: 校验类文字（合规通过/对比度/溢出/二维码自测）仅开发端可见（?dev=1），用户页面保持干净
+  const [showDevChecks, setShowDevChecks] = useState(false);
 
   const showToast = useCallback((text: string, type: ToastMsg["type"] = "info") => {
     const id = Date.now() + Math.random();
@@ -84,6 +93,7 @@ export default function PosterAssistantPage() {
     } catch { /* ignore */ }
     try {
       const q = new URLSearchParams(window.location.search);
+      if (q.get("dev") === "1") setShowDevChecks(true);
       const p = q.get("product");
       if (p && p in PRODUCTS && PRODUCTS[p as ProductId].enabled) setProduct(p as ProductId);
       const a = q.get("audience");
@@ -116,11 +126,13 @@ export default function PosterAssistantPage() {
 
   const buildRecs = useCallback(
     (pers: boolean) => {
-      const list = recommend(product, effectiveAudience, channel, pers);
+      // v25.0.47_14: 裂变模板推荐集——固定3套病毒式传播模板（种草版/引流版/学习版）
+      // pers=false（使用通用版）时同样返回3套，activeIdx 固定为 0（模板一种草版）
+      const list = buildViralRecs();
       setRecs(list);
-      setActiveIdx(0);
+      setActiveIdx(pers ? 0 : 0);
     },
-    [product, effectiveAudience, channel]
+    []
   );
 
   const goStep = useCallback(
@@ -224,31 +236,39 @@ export default function PosterAssistantPage() {
     [recs, renderRec]
   );
 
+  // 「换一个风格」：v25.0.47_14 循环切换3套裂变海报模板（种草→引流→学习→种草）
   const handleSwitchStyle = useCallback(() => {
     const current = recs[activeIdx];
     if (!current) return;
-    const next = switchStyle(current, 1);
+    const nextT = cycleViralTemplate(current.variant.id);
     const list = [...recs];
-    list[activeIdx] = next;
+    list[activeIdx] = {
+      variant: nextT.variant,
+      copy: nextT.copy,
+      ratio: current.ratio,
+      reason: nextT.desc,
+    };
     setRecs(list);
     logMarketingEvent({
       event: "style_switched",
       audience: effectiveAudience,
       product,
       channel,
-      template: next.variant.id,
-      copyId: next.copy.copyId,
+      template: nextT.variant.id,
+      copyId: nextT.copy.copyId,
     });
-    void renderRec(next, false);
+    void renderRec(list[activeIdx], false);
   }, [recs, activeIdx, effectiveAudience, product, channel, renderRec]);
 
-  // 使用通用版（第三十五条：不得把个性化营销设为唯一选择）
+  // 使用通用版（第三十五条：不得把个性化营销设为唯一选择）：回到默认模板一（朋友圈种草版）
   const handleUseGeneric = useCallback(() => {
     setPersonalized(false);
-    buildRecs(false);
+    const list = buildViralRecs();
+    setRecs(list);
+    setActiveIdx(0);
     setPosterUrl("");
-    showToast("已切换为通用版素材");
-  }, [buildRecs, showToast]);
+    showToast("已切换为通用版素材（朋友圈种草版）");
+  }, [showToast]);
 
   const saveBlocked = !!qrTest && !qrTest.passed;
 
@@ -321,6 +341,7 @@ export default function PosterAssistantPage() {
   );
 
   // 第三十四条：只记 share_started，不伪造 share_success
+  // v25.0.47_14: 系统分享自动带海报图片 + 默认种草文案（模板一配套）
   const handleSystemShare = useCallback(async () => {
     const rec = recs[activeIdx];
     if (!rec) return;
@@ -332,7 +353,7 @@ export default function PosterAssistantPage() {
       template: rec.variant.id,
       copyId: rec.copy.copyId,
     });
-    const shareText = getShareTextForChannel(rec, channel);
+    const shareText = DEFAULT_SHARE_TEXT;
     if (typeof navigator.share === "function") {
       try {
         if (posterUrl && typeof navigator.canShare === "function") {
@@ -592,27 +613,29 @@ export default function PosterAssistantPage() {
                     alt="推广海报"
                     style={{ width: "100%", maxWidth: "300px", borderRadius: "10px", boxShadow: "0 4px 14px rgba(0,0,0,0.12)" }}
                   />
-                  {/* 自检结果（第二十八条+第三十条） */}
-                  <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "4px", textAlign: "left", fontSize: "11px", color: "#666" }}>
-                    <CheckLine ok label="文案合规校验通过" />
-                    <CheckLine ok={!!checks?.textContrastOk} label="文字对比度检查" />
-                    <CheckLine ok={!!checks?.overflowOk} label="内容溢出检查" />
-                    <CheckLine ok={!!checks?.safeAreaOk} label="安全区检查" />
-                    {policy.qrAllowed ? (
-                      qrTest ? (
-                        <CheckLine ok={qrTest.passed} label={qrTest.passed ? "二维码解码自测通过（链接一致）" : `二维码自测未通过：${qrTest.reason}`} />
+                  {/* 自检结果：v25.0.47_14 起仅开发端（?dev=1）可见，用户页面不展示校验类文字 */}
+                  {showDevChecks && (
+                    <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "4px", textAlign: "left", fontSize: "11px", color: "#666" }}>
+                      <CheckLine ok label="文案合规校验通过" />
+                      <CheckLine ok={!!checks?.textContrastOk} label="文字对比度检查" />
+                      <CheckLine ok={!!checks?.overflowOk} label="内容溢出检查" />
+                      <CheckLine ok={!!checks?.safeAreaOk} label="安全区检查" />
+                      {policy.qrAllowed ? (
+                        qrTest ? (
+                          <CheckLine ok={qrTest.passed} label={qrTest.passed ? "二维码解码自测通过（链接一致）" : `二维码自测未通过：${qrTest.reason}`} />
+                        ) : (
+                          <CheckLine ok={false} label="二维码自测中..." />
+                        )
                       ) : (
-                        <CheckLine ok={false} label="二维码自测中..." />
-                      )
-                    ) : (
-                      <CheckLine ok label="内容种草图（本渠道不展示站外二维码）" />
-                    )}
-                    {checks?.warnings && checks.warnings.length > 0 && (
-                      <div style={{ color: "#c0392b", fontSize: "10px" }}>警告：{checks.warnings.join("；")}</div>
-                    )}
-                  </div>
+                        <CheckLine ok label="内容种草图（本渠道不展示站外二维码）" />
+                      )}
+                      {checks?.warnings && checks.warnings.length > 0 && (
+                        <div style={{ color: "#c0392b", fontSize: "10px" }}>警告：{checks.warnings.join("；")}</div>
+                      )}
+                    </div>
+                  )}
                   <div style={{ fontSize: "10px", color: "#bbb", marginTop: "8px" }}>
-                    {getDisclaimer(activeRec?.copy.disclaimer ?? "general")}
+                    保存后可直接发朋友圈 / 群聊；微信内长按海报图片也能保存
                   </div>
                 </>
               ) : null}
@@ -643,48 +666,27 @@ export default function PosterAssistantPage() {
                     marginBottom: "10px",
                   }}
                 >
-                  {saveBlocked ? "二维码自测未通过，禁止保存" : "保存海报图片"}
+                  {saveBlocked ? "二维码校验未通过，请重新生成" : "保存海报图片"}
                 </button>
 
-                {/* 渠道配套文案 */}
+                {/* v25.0.47_14 全场景分享文案库（4套一键复制，替换原渠道文案） */}
                 <div style={{ backgroundColor: "#fff", borderRadius: "12px", padding: "14px 16px", marginBottom: "10px" }}>
-                  <div style={{ fontSize: "13px", fontWeight: 600, color: "#333", marginBottom: "10px" }}>
-                    配套分享文案 · {policy.name}
+                  <div style={{ fontSize: "13px", fontWeight: 600, color: "#333", marginBottom: "4px" }}>
+                    全场景分享文案
                   </div>
-                  {activeRec && (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                      {(policy.copyFormat === "moments" || policy.copyFormat === "generic" || policy.copyFormat === "none") && (
-                        <CopyBlock
-                          title="图文配文（朋友圈/种草）"
-                          text={activeRec.copy.momentsCopy}
-                          onCopy={() => handleCopy(activeRec.copy.momentsCopy, "朋友圈文案")}
-                        />
-                      )}
-                      {policy.copyFormat === "group" && (
-                        <CopyBlock
-                          title="群分享短文案"
-                          text={activeRec.copy.groupCopy}
-                          onCopy={() => handleCopy(activeRec.copy.groupCopy, "群文案")}
-                        />
-                      )}
-                      {policy.copyFormat === "private" &&
-                        activeRec.copy.privateCopies.map((pc) => (
-                          <CopyBlock
-                            key={pc.tone}
-                            title={`私聊推荐 · ${pc.tone}`}
-                            text={pc.text}
-                            onCopy={() => handleCopy(pc.text, `${pc.tone}文案`)}
-                          />
-                        ))}
-                      {policy.copyFormat !== "private" && (
-                        <CopyBlock
-                          title="群/私聊一句话"
-                          text={activeRec.copy.groupCopy}
-                          onCopy={() => handleCopy(activeRec.copy.groupCopy, "短文案")}
-                        />
-                      )}
-                    </div>
-                  )}
+                  <div style={{ fontSize: "11px", color: "#999", marginBottom: "10px" }}>
+                    按场景一键复制，配合海报发朋友圈/群聊/好友
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    {SHARE_COPY_LIBRARY.map((sc) => (
+                      <CopyBlock
+                        key={sc.id}
+                        title={sc.title}
+                        text={sc.text}
+                        onCopy={() => handleCopy(sc.text, sc.title)}
+                      />
+                    ))}
+                  </div>
                   <div style={{ fontSize: "10px", color: "#bbb", marginTop: "10px" }}>
                     邀请奖励以平台活动规则为准：邀请朋友一起使用，符合活动规则可获得平台活动权益。
                   </div>

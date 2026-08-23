@@ -303,7 +303,8 @@ function drawSellingPoints(
   ctx: CanvasRenderingContext2D, w: number, y: number, unit: number,
   req: PosterRequest, p: PosterRequest["variant"]["palette"], warnings: string[]
 ): number {
-  const points = req.copy.sellingPoints.slice(0, 3); // 第三十九条：最多3个辅助点
+  // v25.0.47_14: 裂变模板支持最多4条卖点（社群引流版4条功能列表）
+  const points = req.copy.sellingPoints.slice(0, 4);
   const cardPad = 56 * unit;
   const rowH = 96 * unit;
   const cardH = points.length * rowH + 40 * unit;
@@ -319,10 +320,34 @@ function drawSellingPoints(
 
   let ry = y + 66 * unit;
   for (const pt of points) {
-    ctx.fillStyle = hexAlpha(p.accent, 0.9);
-    ctx.beginPath();
-    ctx.arc(cardPad + 56 * unit, ry, 12 * unit, 0, Math.PI * 2);
-    ctx.fill();
+    const iconCx = cardPad + 56 * unit;
+    if (req.variant.pointIcon === "check") {
+      // ✅ 角标：圆角方块 + 白色对勾
+      const s = 30 * unit;
+      ctx.fillStyle = p.accent;
+      roundRectPath(ctx, iconCx - s / 2, ry - s / 2, s, s, 8 * unit);
+      ctx.fill();
+      ctx.strokeStyle = "#FFFFFF";
+      ctx.lineWidth = 4 * unit;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.beginPath();
+      ctx.moveTo(iconCx - 8 * unit, ry);
+      ctx.lineTo(iconCx - 2 * unit, ry + 7 * unit);
+      ctx.lineTo(iconCx + 9 * unit, ry - 7 * unit);
+      ctx.stroke();
+    } else if (req.variant.pointIcon === "square") {
+      // ▪ 方块符号
+      const s = 18 * unit;
+      ctx.fillStyle = p.accent;
+      roundRectPath(ctx, iconCx - s / 2, ry - s / 2, s, s, 4 * unit);
+      ctx.fill();
+    } else {
+      ctx.fillStyle = hexAlpha(p.accent, 0.9);
+      ctx.beginPath();
+      ctx.arc(iconCx, ry, 12 * unit, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.fillStyle = p.text;
     ctx.textAlign = "left";
     ctx.font = `${32 * unit}px ${FONT}`;
@@ -406,9 +431,11 @@ function drawDisclaimer(
   ctx: CanvasRenderingContext2D, w: number, h: number, unit: number,
   req: PosterRequest, policy: ChannelPolicy, dark: boolean, warnings: string[]
 ): void {
-  const text = getDisclaimer(req.copy.disclaimer);
-  const size = Math.max(22, 24) * unit; // 第二十八条：禁止2px级免责声明
-  ctx.fillStyle = dark ? "rgba(255,255,255,0.62)" : "rgba(0,0,0,0.42)";
+  // v25.0.47_14: 合规提示弱化——统一放页面最底部，小字号浅颜色不占主视觉；
+  // 品牌出品方与合规口径合并为一行
+  const text = `${BRAND_ENTITY} 出品｜${getDisclaimer(req.copy.disclaimer)}`;
+  const size = 22 * unit;
+  ctx.fillStyle = dark ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.38)";
   ctx.font = `${size}px ${FONT}`;
   ctx.textAlign = "center";
   const lines = wrapText(ctx, text, w - 140 * unit).slice(0, 2);

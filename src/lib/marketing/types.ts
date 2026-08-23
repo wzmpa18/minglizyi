@@ -81,6 +81,8 @@ export interface TemplateVariant {
   };
   ratios: PosterRatio[];
   decorative: "mountain" | "paper" | "stars" | "grid" | "flow" | "avatar";
+  /** v25.0.47_14 裂变模板卖点图标样式：check=✅角标 square=▪方块 缺省=圆点 */
+  pointIcon?: "check" | "square";
 }
 
 export interface TemplateFamily {

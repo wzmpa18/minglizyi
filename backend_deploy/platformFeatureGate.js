@@ -8,7 +8,7 @@
 // 对被关闭能力直接返回 403，杜绝"仅隐藏按钮但 URL/API 仍可访问"。
 //
 // 矩阵摘要：
-// - iOS：支付 OFF（本期不开放任何付费，先过 TestFlight/App Store 审核）
+// - v25.0.47_14 起：支付 iOS/WECHAT 全放开（Native扫码收款不依赖平台商店，会员入口死键修复）
 // - WECHAT / QQ：预测/命理/占卜类 OFF（永久，审核通过后也不可远程打开）
 // ============================================================================
 
@@ -17,8 +17,8 @@
 // ==================== 平台功能矩阵 ====================
 
 const PLATFORM_FEATURE_MATRIX = {
-  // —— 支付能力 ——
-  payment: { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  // —— 支付能力（v25.0.47_14：iOS/微信内浏览器全放开，Native扫码全场景收款；QQ小程序维持关闭） ——
+  payment: { web: true, android: true, ios: true, wechat: true, qq: false, unknown: true },
   store:   { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
 
   // —— 预测/命理/占卜类（小程序永久关闭） ——
