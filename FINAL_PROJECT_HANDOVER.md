@@ -1,25 +1,25 @@
 # 言道国学 · FINAL_PROJECT_HANDOVER 最终交接报告
 
-> 版本：v25.0.47_12 ｜ Git：bbb29ec（GitHub wzmpa18/minglizyi main）｜ 日期：2026-08-23
+> 版本：v25.0.47_13 ｜ Git：019ab43（GitHub wzmpa18/minglizyi main）｜ 日期：2026-08-23
 > 本文档为唯一主交接文档。历史部署/验收报告已全部收纳于 `docs/reports/`（30 份原始报告 + 1 份整合完整版《20260822_全部报告整合_完整版.md》，全部集中在这一个文件夹），不再另行生成独立报告。
 
 ## 一、项目概况
 
 1. **项目**：言道国学（易学+中医学习 App/Web，Next.js 静态导出 + Node 后端 + SQLite）
 2. **产品定位**：传统文化学习平台——易学排盘工具（八字/紫微/奇门/六爻/梅花/大六壬/择日/手机号/姓名/合婚/塔罗/星座）、中医学习与医考、AI 深度解读（付费）、社区群聊、推广分佣
-3. **当前版本**：v25.0.47_12（buildId v25.0.47_12_D20260823）；含 RC-04~06 热修 + v25.0.47_9 支付解耦 + v25.0.47_10 运营管理中心封板 + v25.0.47_12 支付修复/定价对齐/深度报告提质/两级分佣/中医板块门控
+3. **当前版本**：v25.0.47_13（buildId v25.0.47_13_D20260823）；含 RC-04~06 热修 + v25.0.47_9 支付解耦 + v25.0.47_10 运营管理中心封板 + v25.0.47_12 支付修复/定价对齐/两级分佣/中医门控 + v25.0.47_13 商家转账提现落地/三级角色权限体系/抽屉导航
 4. **生产域名**：https://yandaoguoxue.yandao.vip（H5，微信内体验完整支付链路）
-5. **后台入口与登录方式**：https://yandaoguoxue.yandao.vip/admin/（**言道国学运营管理中心**，唯一正式入口）。**登录方法：打开后台地址 → 输入「管理员密钥」即可登录（没有用户名/密码组合，单一密钥体系，密钥即最高权限 SUPER_ADMIN）。密钥存放于服务器 `/www/yandaoguoxue-backend/.env` 文件中的 `ADMIN_API_KEY=` 一行（SSH 登录服务器 root@82.156.228.87 后执行 `grep '^ADMIN_API_KEY=' /www/yandaoguoxue-backend/.env` 即可查看，请妥善保管勿外泄）。后台 17 项固定菜单：总览/用户管理/工具管理/产品与价格/会员与权益/AI管理/学习中医/社交群聊/发现资讯/营销海报/推广分佣/支付订单/提现/内容审核/系统功能开关/审计日志/系统状态；移动端抽屉导航可用。**
+5. **后台入口与登录方式**：https://yandaoguoxue.yandao.vip/admin/（**言道国学运营管理中心**，唯一正式入口）。**三级角色密钥体系（v25.0.47_13）**：主管理员密钥（SUPER_ADMIN，全系统唯一最高权限）存放于服务器 `/www/yandaoguoxue-backend/.env` 的 `ADMIN_API_KEY=` 一行（SSH 登录 root@82.156.228.87 后执行 `grep '^ADMIN_API_KEY=' /www/yandaoguoxue-backend/.env` 查看，妥善保管勿外泄）；财务/运营子密钥由超级管理员在后台「密钥管理」页签发（明文仅一次性展示，SHA256 哈希存储）。**主密钥可修改**：服务器 .env 改 ADMIN_API_KEY 值 → `pm2 restart yandaoguoxue-backend` 即生效（密钥管理页有指引）。后台菜单按登录角色动态渲染，导航为抽屉式（默认收起+左上角汉堡按钮唤出，内容区全宽不遮挡）；权限由服务端强制校验（越权 403+审计留痕）**
 
 ## 二、目录与仓库
 
 | 位置 | 路径 |
 |---|---|
-| GitHub | https://github.com/wzmpa18/minglizyi（main = bbb29ec） |
+| GitHub | https://github.com/wzmpa18/minglizyi（main = 019ab43） |
 | 本地主仓库 | C:\Users\ZhuanZ\Projects\minglizyi |
 | 服务器源码仓 | /root/yandaoguoxue-source |
 | 生产后端 | /www/yandaoguoxue-backend（PM2: yandaoguoxue-backend, 端口 3001） |
-| 生产前端 | /root/yandaoguoxue/current → releases/v25.0.47_12 |
+| 生产前端 | /root/yandaoguoxue/current → releases/v25.0.47_13 |
 | 数据库 | /root/backend-auth/data/yandao_users.db（SQLite WAL, 18 表, 46 用户） |
 | 签名/证书 | Android keystore 与微信支付证书见 SECRET INVENTORY 一节 |
 
@@ -30,12 +30,13 @@
 - **AI**：POST /api/ai/chat（双格式兼容：{systemPrompt,userPrompt} 与 {messages}）；上游混元 tokenhub（HUNYUAN_API_URL/HUNYUAN_API_KEY，RC-04 修复后全站正常）
 - **支付**：微信支付 V3 JSAPI（wechatPayV3.js，公钥模式）；下单 POST /api/payment/create → 微信回调 /api/payment/callback/wechat（验签+解密+幂等）→ 订单 PAID → **权益交付 deliverOrderBenefits**（v25.0.47_8 新增：MEMBERSHIP 开通会员 users.member_level/membership_expiry 续费顺延；POINTS_RECHARGE 积分入账 user_assets+points_transactions）；benefit_delivered 持久化 + query 接口补交付兜底
 - **会员/权益**：服务端 users 表为唯一事实源（middleware/auth.js getMembershipFromDB）；前端 membershipStore 仅展示缓存
-- **分佣**：commissionEngine 两级分佣（v25.0.47_12：一级推荐人 15% + 二级推荐人 5%，按用户实付金额计算，COMMISSION/COMMISSION_L2 双记录独立幂等）；**月度结算模式**——佣金入账先冻结（FROZEN），每月 30 号统一结算转为可提现，每月 15 号后开放提现申请（后台分佣配置页可调结算日/开放日/比例）；订单 PAID 自动记账，退款冲正
+- **分佣**：commissionEngine 两级分佣（一级推荐人 15% + 二级推荐人 5%，按用户实付金额计算，COMMISSION/COMMISSION_L2 双记录独立幂等）；**月度结算模式**——佣金入账先冻结（FROZEN），每月最后 1 天统一结算转为可提现，每月 16 日-月末开放提现申请（后台分佣配置页可调）；订单 PAID 自动记账，退款冲正（全额全额扣回/部分按比例）
+- **提现（v25.0.47_13 全自动）**：wechatTransfer.js 微信商家转账 V3 对接——≤免审额度 200 元自动转账，超额度进财务人工审核；回调验签更新状态；单日单用户 2 万元限额；风控标记（新注册/短时多笔转人工）；全链路幂等；.env 开关 WITHDRAW_TRANSFER_ENABLED（当前 false，待商户权限开通）
 - **社区**：群聊/好友/动态（SQLite 持久化）
 - **资讯**：/api/news（已恢复，公网 200）
 - **中医板块门控（v25.0.47_12）**：工具矩阵新增 9 条中医条目（典籍/中药/方剂/经络/辨证/养生/伤寒/体质/医考），19 个中医页面接入 SectionGate 门控组件，后台「工具管理中心」可实时控制每个板块的开放/关闭/维护/会员专享（公网实测：改 OFF/会员专享后矩阵即时生效）
 
-## 三A、本次会话（2026-08-23）完成的 v25.0.47_12（指令 FIX-V12-PAY-CONTENT）
+## 三A、上次迭代（2026-08-23）完成的 v25.0.47_12（指令 FIX-V12-PAY-CONTENT）
 
 **五项任务全部完成并公网验证（三端 HEAD 一致 = bbb29ec）：**
 
@@ -51,6 +52,24 @@
 **构建事故与修复**：首次构建失败——herb/meridian 两页面的 SectionGate import 被插到 "use client" 指令之前导致整文件降级为 Server Component；已修复（use client 移回首行）并复构建通过；顺带发现 publicPricingRoutes.js 默认套餐未随定价对齐（公网显示旧价 39/366），已修复部署并二次公网验证
 
 **存量功能回归核验（全通过）**：微信 Native 支付全场景 ✓（6 单实测 codeUrl）；工具矩阵/功能开关/订单中心/分佣配置/佣金明细/会员价格后台 API 全 200 ✓；AI 服务端强制拦截 ✓（关→403 FEATURE_DISABLED→恢复正常）；驾驶舱 overview 20 项指标正常且版本显示 v25.0.47_12 ✓；审计日志记录矩阵/开关操作 ✓；权益发放幂等/退款冲正/移动端手势为存量逻辑未改动，由上述回归覆盖
+
+## 三B、本次会话（2026-08-23）完成的 v25.0.47_13（指令 FIX-WITHDRAW-V13-FINAL）
+
+**全部完成并公网验证（四端 HEAD 一致 = 019ab43：本地=GitHub=服务器源码仓=生产运行目录）：**
+
+1. **微信商家转账 V3 全量对接**（backend_deploy/wechatTransfer.js）：POST /v3/transfer/batches 发起转账（复用现有商户号/APIv3 密钥/证书序列号/私钥，零新增核心密钥）；回调强制验签（AES-256-GCM 解密+平台证书验签，防伪造篡改）；主动查单查终态；签名头修复为规范 WECHATPAY2-SHA256-RSA2048
+2. **全自动提现引擎**（commissionEngine.js）：用户申请→校验余额/门槛 10 元/提现窗口/单日限额 2 万→≤免审额度 200 元自动转账→回调更新→成功扣余额/失败退回并记录原因；超额度进财务人工审核队列；风控标记（新注册/短时多笔转人工）；全链路幂等（同一提现单仅发起一次）；退款扣回（全额全额/部分按比例）
+3. **结算规则对齐**：每月最后 1 天自动结算（settleDay=0）→ 每月 16 日-月末开放提现（withdrawOpenDay=16，后端强制拦截窗口外申请）
+4. **新增 .env 配置**：WITHDRAW_TRANSFER_ENABLED（总开关，默认 false）/ WITHDRAW_FREE_PASS_AMOUNT=200（免审额度）/ WITHDRAW_MIN_AMOUNT=10（最低门槛）
+5. **后台三级角色权限体系**（backend_deploy/adminRoles.js 统一模块）：SUPER_ADMIN（全权限）/ FINANCE_ADMIN（提现审核·报表·导出；禁改价/改开关/管密钥/封用户/改分佣比例）/ OPERATOR_ADMIN（用户管理·内容·工具开关·营销；禁一切资金操作）；服务端中间件强校验（越权 403+写审计 AUDIT_BLOCK_ROLE/AUDIT_BLOCK_SCOPE）；子密钥 SHA256 哈希存储 data/admin_roles.json（明文仅签发时一次性展示）；密钥管理页 /admin/keys（签发/禁用子密钥+主密钥修改指引）
+6. **后台抽屉式导航**：固定侧边栏改为全端抽屉（默认收起+顶部汉堡唤出+遮罩，内容区全宽），解决内容遮挡；菜单按角色 scope 动态渲染
+7. **后台财务端补全**：提现批量审核（单笔/批量+驳回填原因）、同步微信转账终态、佣金统计报表（日/月/年+层级+退款扣回）、提现记录 CSV 导出（按日期/状态筛选）
+8. **审计修复**：/audit 接口读未定义 AUDIT_FILE 恒返回空 → 改用 adminRoles.listAudit；越权 403 同步写入审计日志
+9. **深度报告字数放宽**：700-1000 字（目标 850，条理清晰不啰嗦）；公网实测姓名 988 字/手机号 890 字，五段式 5/5 完整
+
+**公网验收（scripts/verify_v13_final.sh + verify_v13_final_fix.sh，28 项 PASS / 0 FAIL）**：页面健康 8 路径 200；版本 v25.0.47_13；定价 SSOT 37/99/374/3600；主密钥 whoami=SUPER_ADMIN；财务密钥财务域 200 + 越权 5 项全 403（密钥管理/运营接口/改分佣配置/改价 PATCH·PUT/改 AI 配置）；运营密钥运营域 200 + 越权财务 403 + 越权密钥 403；审计日志含 ADMIN_KEY_CREATE+AUDIT_BLOCK_*；临时密钥签发-验证-禁用闭环；未登录提现 401；withdrawEnabled=false/minWithdraw=10/settleDay=0/withdrawOpenDay=16；深度报告字数结构双达标。
+
+**提现启用三步**（待项目方商户平台开通「商家转账到零钱」权限后）：① .env 置 WITHDRAW_TRANSFER_ENABLED=true ② pm2 restart yandaoguoxue-backend ③ 后台「提现」页即可看到自动转账流（≤200 元免审自动打款，>200 元人工审核）。
 
 ## 四、上次会话（2026-08-22 晚）完成的 RC-06 支付真实化
 
@@ -75,12 +94,12 @@
 | YIXUE / LIUYAO / ZIWEI 算法 | VERIFIED（冻结区，禁止改动） | |
 | MEMBERSHIP / ENTITLEMENT | VERIFIED | 服务端 SSOT，v25.0.47_8 权益交付闭环 |
 | WECHAT_PAY | **NATIVE VERIFIED（v25.0.47_9）** | Native 扫码支付全场景可用：微信侧实测下单成功返回 code_url；公众号参数已解耦（APPID 已配置用于下单字段，AppSecret 无需配置）；JSAPI 保留待公众号参数补充后自动启用 |
-| COMMISSION_L1/L2 | VERIFIED | 两级分佣自动记账（v25.0.47_12：一级15%+二级5%，月度结算30号/提现窗口15号，公网配置核验通过） |
-| WITHDRAWAL | IMPLEMENTED_NOT_VERIFIED | 需商家转账权限（见待办 2） |
-| ADMIN_CENTER | READY_FOR_OWNER_ACCEPTANCE | 统一后台 /admin 全功能，待项目方实操验收 |
+| COMMISSION_L1/L2 | VERIFIED | 两级分佣自动记账（一级15%+二级5%，月度结算每月最后1天/提现窗口16日-月末，v25.0.47_13 规则，公网配置核验通过） |
+| WITHDRAWAL | **READY（v25.0.47_13 接口对接完成）** | 商家转账 V3 全量对接+全自动提现引擎已上线；WITHDRAW_TRANSFER_ENABLED=false 待商户权限开通后置 true 即启用（见待办 2） |
+| ADMIN_CENTER | READY_FOR_OWNER_ACCEPTANCE | 统一后台 /admin 全功能+三级角色权限（v25.0.47_13）+抽屉导航，待项目方实操验收 |
 | ANDROID | VERIFIED | APK 可用（v25.0.47_6 包） |
 | IOS | IOS_SIGNING_BLOCKED_BY_PLA | Apple PLA 未接受（见待办 3） |
-| BACKUP / DEPLOYMENT / SOURCE_SYNC | VERIFIED | 每日 2 点 DB 备份；三端 HEAD 一致 f3eaeda |
+| BACKUP / DEPLOYMENT / SOURCE_SYNC | VERIFIED | 每日 2 点 DB 备份；四端 HEAD 一致 019ab43（本地=GitHub=服务器源码仓=生产运行目录） |
 | SOCIAL / GROUP_CHAT / DISCOVERY_NEWS / MARKETING / SHARE / DOWNLOAD | VERIFIED | 公网 200 回归通过 |
 
 ## 六、SECRET INVENTORY（只说位置，绝不写值）
@@ -93,7 +112,7 @@
 ## 七、项目方待办（按优先级）
 
 1. ~~提供公众号 APPID~~ **已完成（v25.0.47_9）**：APPID wxedc4b3ff9f707969 已配置并与商户号绑定，Native 扫码支付全场景可用（0.01 元实测下单成功）。**可选增强**：若后续补充 WECHAT_APP_SECRET（AppSecret 仅网页授权用，扫码支付不需要），微信内环境自动升级 JSAPI 免扫码支付+微信一键登录，仅需填 .env 一行+重启，无需改代码
-2. **微信商家转账权限**（分佣提现打款用）：商户平台申请开通
+2. **微信商家转账权限**（分佣提现打款用，v25.0.47_13 代码已全量对接）：微信商户平台申请开通「商家转账到零钱」→ 开通后告知开发者执行三步（.env 置 WITHDRAW_TRANSFER_ENABLED=true → pm2 restart → 0.01 元提现单联调）即全自动生效
 3. **iOS**：开发者账号接受 Apple PLA 后才能签名/TestFlight
 4. **后台实操验收**（指令第 23 章十项操作）
 
