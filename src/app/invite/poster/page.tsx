@@ -28,10 +28,12 @@ import { getDisclaimer } from "@/lib/marketing/copyLibrary";
 import {
   buildViralRecs,
   cycleViralTemplate,
-  getViralTemplate,
+  VIRAL_TEMPLATES,
+  applyAiCopyToCopySet,
   SHARE_COPY_LIBRARY,
   DEFAULT_SHARE_TEXT,
 } from "@/lib/marketing/viralTemplates";
+import { generateAiPosterCopies, type AiPosterCopy } from "@/lib/marketing/aiCopy";
 
 const BRAND = "#7B2FBE";
 const GENERIC = "__generic__";
@@ -75,6 +77,14 @@ export default function PosterAssistantPage() {
   const posterCache = useRef<Map<string, string>>(new Map());
   // v25.0.47_14: 校验类文字（合规通过/对比度/溢出/二维码自测）仅开发端可见（?dev=1），用户页面保持干净
   const [showDevChecks, setShowDevChecks] = useState(false);
+
+  // v25.0.47_22 MARKETING-POSTER-V2-AI：AI智能文案生成（3风格 + 一键应用 + 再来一组）
+  const [aiPickerOpen, setAiPickerOpen] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSets, setAiSets] = useState<AiPosterCopy[]>([]);
+  const [aiFallbackNote, setAiFallbackNote] = useState("");
+  const [appliedAi, setAppliedAi] = useState<AiPosterCopy | null>(null);
+  const aiSeqRef = useRef(0);
 
   const showToast = useCallback((text: string, type: ToastMsg["type"] = "info") => {
     const id = Date.now() + Math.random();
@@ -249,6 +259,7 @@ export default function PosterAssistantPage() {
       reason: nextT.desc,
     };
     setRecs(list);
+    setAppliedAi(null); // 换风格回落模板固定文案
     logMarketingEvent({
       event: "style_switched",
       audience: effectiveAudience,
@@ -266,9 +277,67 @@ export default function PosterAssistantPage() {
     const list = buildViralRecs();
     setRecs(list);
     setActiveIdx(0);
+    setAppliedAi(null);
     setPosterUrl("");
     showToast("已切换为通用版素材（朋友圈种草版）");
   }, [showToast]);
+
+  // v25.0.47_22 「✨ AI换文案」：生成3套风格文案供选择应用
+  const handleAiGenerate = useCallback(async () => {
+    if (aiLoading) return;
+    if (!qrDataUrl) {
+      showToast("邀请二维码加载中，请稍候", "error");
+      return;
+    }
+    setAiLoading(true);
+    setAiPickerOpen(true);
+    setAiFallbackNote("");
+    try {
+      aiSeqRef.current += 1;
+      const result = await generateAiPosterCopies(aiSeqRef.current);
+      setAiSets(result.sets);
+      if (result.usedFallback && result.error) {
+        setAiFallbackNote(result.error);
+      }
+    } catch {
+      setAiSets([]);
+      setAiFallbackNote("AI文案生成失败，请稍后重试");
+    } finally {
+      setAiLoading(false);
+    }
+  }, [aiLoading, qrDataUrl, showToast]);
+
+  /** 应用AI文案：替换当前选中推荐的文案并实时重渲染海报 */
+  const handleApplyAiCopy = useCallback(
+    (set: AiPosterCopy) => {
+      const current = recs[activeIdx];
+      if (!current) return;
+      const newCopy = applyAiCopyToCopySet(current.copy, set);
+      const list = [...recs];
+      list[activeIdx] = { ...current, copy: newCopy };
+      setRecs(list);
+      setAppliedAi(set);
+      setAiPickerOpen(false);
+      setPosterUrl("");
+      showToast(`已应用「${set.styleName}」文案`, "success");
+      setTimeout(() => void renderRec(list[activeIdx], false), 0);
+    },
+    [recs, activeIdx, renderRec, showToast]
+  );
+
+  /** 「恢复模板文案」：撤销AI文案覆盖 */
+  const handleResetAiCopy = useCallback(() => {
+    const current = recs[activeIdx];
+    if (!current || !appliedAi) return;
+    const base = VIRAL_TEMPLATES.find((t) => t.variant.id === current.variant.id) ?? VIRAL_TEMPLATES[0];
+    const list = [...recs];
+    list[activeIdx] = { ...current, copy: base.copy };
+    setRecs(list);
+    setAppliedAi(null);
+    setPosterUrl("");
+    showToast("已恢复模板默认文案");
+    setTimeout(() => void renderRec(list[activeIdx], false), 0);
+  }, [recs, activeIdx, appliedAi, renderRec, showToast]);
 
   const saveBlocked = !!qrTest && !qrTest.passed;
 
@@ -341,7 +410,7 @@ export default function PosterAssistantPage() {
   );
 
   // 第三十四条：只记 share_started，不伪造 share_success
-  // v25.0.47_14: 系统分享自动带海报图片 + 默认种草文案（模板一配套）
+  // v25.0.47_22: 系统分享文案优先使用已应用的AI朋友圈配文
   const handleSystemShare = useCallback(async () => {
     const rec = recs[activeIdx];
     if (!rec) return;
@@ -353,7 +422,7 @@ export default function PosterAssistantPage() {
       template: rec.variant.id,
       copyId: rec.copy.copyId,
     });
-    const shareText = DEFAULT_SHARE_TEXT;
+    const shareText = appliedAi?.momentsText || DEFAULT_SHARE_TEXT;
     if (typeof navigator.share === "function") {
       try {
         if (posterUrl && typeof navigator.canShare === "function") {
@@ -372,7 +441,7 @@ export default function PosterAssistantPage() {
       const ok = await copyText(shareText + (invite?.inviteLink ? "\n" + invite.inviteLink : ""));
       showToast(ok ? "已复制分享文案，可粘贴发送" : "当前浏览器不支持系统分享");
     }
-  }, [recs, activeIdx, posterUrl, invite, effectiveAudience, product, channel, copyText, showToast]);
+  }, [recs, activeIdx, posterUrl, invite, effectiveAudience, product, channel, copyText, showToast, appliedAi]);
 
   const policy = getChannel(channel);
   const activeRec = recs[activeIdx];
@@ -644,9 +713,25 @@ export default function PosterAssistantPage() {
             {/* 操作按钮 */}
             {posterUrl && (
               <>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "10px" }}>
-                  <button onClick={handleSwitchStyle} disabled={generating} style={secondaryBtn}>换一个风格</button>
-                  <button onClick={handleUseGeneric} disabled={generating || !personalized} style={secondaryBtn}>
+                {appliedAi && (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", backgroundColor: "#F5EFFB", borderRadius: "10px", padding: "8px 12px", marginBottom: "10px" }}>
+                    <span style={{ fontSize: "12px", color: BRAND, fontWeight: 600 }}>
+                      ✨ 已应用AI文案（{appliedAi.styleName}）
+                    </span>
+                    <button
+                      onClick={handleResetAiCopy}
+                      style={{ fontSize: "11px", padding: "4px 12px", borderRadius: "12px", border: `1px solid ${BRAND}55`, backgroundColor: "#fff", color: BRAND, cursor: "pointer" }}
+                    >
+                      恢复模板文案
+                    </button>
+                  </div>
+                )}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", marginBottom: "10px" }}>
+                  <button onClick={handleAiGenerate} disabled={generating || aiLoading} style={{ ...secondaryBtn, fontSize: "13px", borderColor: BRAND }}>
+                    {aiLoading ? "生成中..." : "✨ AI换文案"}
+                  </button>
+                  <button onClick={handleSwitchStyle} disabled={generating} style={{ ...secondaryBtn, fontSize: "13px" }}>换一个风格</button>
+                  <button onClick={handleUseGeneric} disabled={generating || !personalized} style={{ ...secondaryBtn, fontSize: "13px" }}>
                     {personalized ? "使用通用版" : "已通用版"}
                   </button>
                 </div>
@@ -743,6 +828,129 @@ export default function PosterAssistantPage() {
           </button>
         )}
       </div>
+
+      {/* v25.0.47_22: AI换文案选择弹层（3套风格 + 一键应用 + 再来一组） */}
+      {aiPickerOpen && (
+        <div
+          onClick={() => setAiPickerOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0,0,0,0.55)",
+            zIndex: 600,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-end",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: "#fff",
+              borderRadius: "18px 18px 0 0",
+              maxHeight: "82vh",
+              overflowY: "auto",
+              padding: "18px 16px calc(24px + env(safe-area-inset-bottom, 0px))",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+              <div style={{ fontSize: "16px", fontWeight: 700, color: "#333" }}>✨ AI智能文案</div>
+              <button
+                onClick={() => setAiPickerOpen(false)}
+                style={{ border: "none", backgroundColor: "transparent", fontSize: "18px", color: "#999", cursor: "pointer", padding: "4px 8px" }}
+                aria-label="关闭"
+              >
+                ✕
+              </button>
+            </div>
+            <div style={{ fontSize: "11px", color: "#999", marginBottom: "12px" }}>
+              生成3套不同风格的海报文案与配套分享话术，点击「应用」实时替换海报文案
+            </div>
+            {aiFallbackNote && (
+              <div style={{ fontSize: "11px", color: "#E65100", backgroundColor: "#FFF3E0", borderRadius: "8px", padding: "8px 10px", marginBottom: "10px" }}>
+                {aiFallbackNote}
+              </div>
+            )}
+            {aiLoading ? (
+              <div style={{ textAlign: "center", padding: "40px 0", color: "#999", fontSize: "13px" }}>
+                AI正在生成3套风格文案，约需10秒...
+              </div>
+            ) : aiSets.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "30px 0", color: "#999", fontSize: "13px" }}>
+                暂无可用文案，请点击下方重新生成
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "12px" }}>
+                {aiSets.map((s) => (
+                  <div
+                    key={s.styleId}
+                    style={{
+                      border: appliedAi?.styleId === s.styleId ? `2px solid ${BRAND}` : "1px solid #e8e8e8",
+                      borderRadius: "12px",
+                      padding: "12px 14px",
+                      backgroundColor: appliedAi?.styleId === s.styleId ? "#F5EFFB" : "#fafafa",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                      <span style={{ fontSize: "13px", fontWeight: 700, color: "#333" }}>
+                        {s.styleName}
+                        <span style={{ fontSize: "10px", fontWeight: 400, color: "#aaa", marginLeft: "6px" }}>{s.styleDesc}</span>
+                      </span>
+                      <button
+                        onClick={() => handleApplyAiCopy(s)}
+                        style={{ fontSize: "11px", padding: "5px 14px", borderRadius: "14px", border: "none", backgroundColor: BRAND, color: "#fff", fontWeight: 600, cursor: "pointer", flexShrink: 0 }}
+                      >
+                        {appliedAi?.styleId === s.styleId ? "已应用" : "应用"}
+                      </button>
+                    </div>
+                    <div style={{ fontSize: "13px", fontWeight: 600, color: "#333", marginBottom: "2px" }}>{s.title}</div>
+                    <div style={{ fontSize: "11px", color: "#888", marginBottom: "6px" }}>{s.subtitle}</div>
+                    <div style={{ fontSize: "11px", color: "#555", lineHeight: 1.7 }}>
+                      {s.sellingPoints.map((p, i) => (
+                        <div key={i}>✅ {p}</div>
+                      ))}
+                    </div>
+                    {(s.momentsText || s.groupText) && (
+                      <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px dashed #e5e5e5", display: "flex", flexDirection: "column", gap: "6px" }}>
+                        {s.momentsText && (
+                          <div style={{ display: "flex", alignItems: "flex-start", gap: "6px" }}>
+                            <span style={{ fontSize: "10px", color: "#999", flexShrink: 0, marginTop: "2px" }}>朋友圈</span>
+                            <span style={{ fontSize: "11px", color: "#666", lineHeight: 1.6, flex: 1 }}>{s.momentsText}</span>
+                          </div>
+                        )}
+                        {s.groupText && (
+                          <div style={{ display: "flex", alignItems: "flex-start", gap: "6px" }}>
+                            <span style={{ fontSize: "10px", color: "#999", flexShrink: 0, marginTop: "2px" }}>社群</span>
+                            <span style={{ fontSize: "11px", color: "#666", lineHeight: 1.6, flex: 1 }}>{s.groupText}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+              <button
+                onClick={() => void handleAiGenerate()}
+                disabled={aiLoading}
+                style={{ padding: "11px 0", borderRadius: "12px", border: `1px solid ${BRAND}55`, backgroundColor: "#fff", color: BRAND, fontSize: "13px", fontWeight: 600, cursor: aiLoading ? "not-allowed" : "pointer" }}
+              >
+                {aiLoading ? "生成中..." : "🔄 再来一组"}
+              </button>
+              <button
+                onClick={() => setAiPickerOpen(false)}
+                style={{ padding: "11px 0", borderRadius: "12px", border: "1px solid #ddd", backgroundColor: "#fafafa", color: "#666", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}
+              >
+                关闭
+              </button>
+            </div>
+            <div style={{ fontSize: "10px", color: "#bbb", textAlign: "center", marginTop: "10px" }}>
+              所有AI文案均经敏感词过滤；海报底部合规提示始终保留
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast */}
       {toasts.length > 0 && (

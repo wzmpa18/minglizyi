@@ -31,11 +31,15 @@ export async function renderPoster(
   req: PosterRequest,
   channelPolicy: ChannelPolicy
 ): Promise<RenderResult> {
+  const groupItems = req.copy.pointGroups?.flatMap((g) => g.items) ?? [];
   const compliance = validateCopySet([
     req.copy.title,
     req.copy.subtitle,
     ...req.copy.sellingPoints,
+    ...groupItems,
     req.copy.cta,
+    req.copy.benefitLine ?? "",
+    req.copy.qrNote ?? "",
     req.price ?? "",
   ]);
   if (!compliance.passed) {
@@ -272,15 +276,18 @@ function drawTitle(
   req: PosterRequest, dark: boolean, p: PosterRequest["variant"]["palette"], warnings: string[]
 ): number {
   const title = req.copy.title;
+  // v25.0.47_22 MARKETING-POSTER-V2-AI：主标题字号≤海报宽度1/8且自适应两行排布，
+  // 视觉重心靠上（营销规范：主标题最大最醒目，加粗）
+  const maxW = w - 160 * unit;
+  const maxTitleSize = Math.floor(w / 8); // 1080 → 135
+  const charsPerLine = Math.max(4, Math.ceil(title.length / 2));
+  let size = Math.min(maxTitleSize, Math.floor(maxW / charsPerLine));
   // A04 中老年圈层：字体更大（第三十八条 T01视觉要求）
-  const bigFont = req.audience === "A04";
-  let size = (title.length > 12 ? 58 : 72) * unit;
-  if (bigFont) size *= 1.15;
+  if (req.audience === "A04") size = Math.round(size * 1.12);
   ctx.textAlign = "center";
   ctx.fillStyle = dark ? "#FFFFFF" : p.text;
   ctx.font = `bold ${size}px ${FONT}`;
 
-  const maxW = w - 160 * unit;
   const lines = wrapText(ctx, title, maxW);
   if (lines.length > 2) warnings.push(`overflow:主标题超2行(${lines.length})`);
   for (const line of lines) {
@@ -289,12 +296,15 @@ function drawTitle(
     y += size * 1.18;
   }
 
+  // 副标题：支持\n显式分行（价值副标题两行结构），每行再防溢出换行
   ctx.font = `${30 * unit}px ${FONT}`;
   ctx.fillStyle = dark ? "rgba(255,255,255,0.82)" : p.subText;
-  const subLines = wrapText(ctx, req.copy.subtitle, maxW);
-  for (const line of subLines.slice(0, 2)) {
-    ctx.fillText(line, w / 2, y + 24 * unit);
-    y += 44 * unit;
+  const subParts = req.copy.subtitle.split("\n").slice(0, 3);
+  for (const part of subParts) {
+    for (const line of wrapText(ctx, part, maxW).slice(0, 2)) {
+      ctx.fillText(line, w / 2, y + 24 * unit);
+      y += 44 * unit;
+    }
   }
   return y + 40 * unit;
 }
@@ -303,10 +313,15 @@ function drawSellingPoints(
   ctx: CanvasRenderingContext2D, w: number, y: number, unit: number,
   req: PosterRequest, p: PosterRequest["variant"]["palette"], warnings: string[]
 ): number {
-  // v25.0.47_14: 裂变模板支持最多4条卖点（社群引流版4条功能列表）
+  // v25.0.47_22：分组两栏卖点（社群引流版信息密度布局），优先于常规卖点卡片
+  if (req.copy.pointGroups && req.copy.pointGroups.length >= 2) {
+    return drawGroupedPoints(ctx, w, y, unit, req, p, warnings);
+  }
+  // 常规卖点卡片：最多4条，行间距1.5倍（营销视觉规范）
   const points = req.copy.sellingPoints.slice(0, 4);
   const cardPad = 56 * unit;
-  const rowH = 96 * unit;
+  const font = 33 * unit;
+  const rowH = Math.round(font * 1.5 * 1.55); // 行高1.5倍+条目呼吸空间 ≈ 77*unit
   const cardH = points.length * rowH + 40 * unit;
 
   ctx.save();
@@ -350,11 +365,74 @@ function drawSellingPoints(
     }
     ctx.fillStyle = p.text;
     ctx.textAlign = "left";
-    ctx.font = `${32 * unit}px ${FONT}`;
+    ctx.font = `${font}px ${FONT}`;
     if (ctx.measureText(pt).width > w - cardPad * 2 - 130 * unit) warnings.push(`overflow:卖点过长(${pt.slice(0, 6)})`);
     ctx.fillText(pt, cardPad + 88 * unit, ry + 11 * unit);
     ry += rowH;
   }
+  ctx.textAlign = "center";
+  return y + cardH + 36 * unit;
+}
+
+/** v25.0.47_22：分组两栏卖点（【易学工具】/【中医学习】信息密度布局） */
+function drawGroupedPoints(
+  ctx: CanvasRenderingContext2D, w: number, y: number, unit: number,
+  req: PosterRequest, p: PosterRequest["variant"]["palette"], warnings: string[]
+): number {
+  const groups = req.copy.pointGroups!.slice(0, 2);
+  const cardPad = 48 * unit;
+  const colGap = 36 * unit;
+  const colW = (w - cardPad * 2 - colGap) / 2;
+  const itemFont = 26 * unit;
+  const itemLineH = Math.round(itemFont * 1.5);
+  const titleFont = 30 * unit;
+
+  // 预计算每列行数（每条最多2行）
+  ctx.font = `${itemFont}px ${FONT}`;
+  const colLines = groups.map((g) => {
+    let lines = 0;
+    for (const it of g.items.slice(0, 4)) {
+      lines += Math.max(1, wrapText(ctx, it, colW - 40 * unit).length);
+    }
+    return lines;
+  });
+  const maxLines = Math.max(...colLines, 3);
+  const cardH = 48 * unit + titleFont + 24 * unit + maxLines * itemLineH + 18 * unit * Math.max(groups[0].items.length, groups[1]?.items.length ?? 0) * 0.4 + 36 * unit;
+
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.14)";
+  ctx.shadowBlur = 24 * unit;
+  ctx.shadowOffsetY = 6 * unit;
+  ctx.fillStyle = p.cardBg;
+  roundRectPath(ctx, cardPad, y, w - cardPad * 2, cardH, 28 * unit);
+  ctx.fill();
+  ctx.restore();
+
+  groups.forEach((g, gi) => {
+    const cx = cardPad + gi * (colW + colGap);
+    let cy = y + 48 * unit + titleFont;
+    // 组标题【易学工具】
+    ctx.textAlign = "left";
+    ctx.font = `bold ${titleFont}px ${FONT}`;
+    ctx.fillStyle = p.accent;
+    ctx.fillText(`【${g.title}】`, cx, cy);
+    cy += 24 * unit;
+    ctx.font = `${itemFont}px ${FONT}`;
+    for (const it of g.items.slice(0, 4)) {
+      // ▪ 条目符号
+      const s = 12 * unit;
+      ctx.fillStyle = p.accent;
+      roundRectPath(ctx, cx + 2 * unit, cy - s, s, s, 3 * unit);
+      ctx.fill();
+      ctx.fillStyle = p.text;
+      const lines = wrapText(ctx, it, colW - 40 * unit).slice(0, 2);
+      if (wrapText(ctx, it, colW - 40 * unit).length > 2) warnings.push(`overflow:分组卖点过长(${it.slice(0, 6)})`);
+      lines.forEach((line, li) => {
+        ctx.fillText(line, cx + 26 * unit, cy + 8 * unit + li * itemLineH);
+      });
+      cy += Math.max(1, lines.length) * itemLineH + 16 * unit;
+    }
+  });
   ctx.textAlign = "center";
   return y + cardH + 36 * unit;
 }
@@ -378,8 +456,16 @@ function drawQrSection(
   p: PosterRequest["variant"]["palette"], req: PosterRequest, dark: boolean, warnings: string[],
   qrImg: HTMLImageElement | null
 ): void {
-  const qrSize = req.channel === "C09" ? 340 * unit : 250 * unit;
-  const bottomNeed = qrSize + 190 * unit;
+  // v25.0.47_22：二维码尺寸≥海报宽度1/4（长按识别率保障）
+  const qrSize = req.channel === "C09" ? 340 * unit : 280 * unit;
+  const benefitLines = req.copy.benefitLine
+    ? req.copy.benefitLine.split("\n").map((s) => s.trim()).filter(Boolean).slice(0, 2)
+    : [];
+  const extraNeed =
+    (req.copy.qrNote ? 38 * unit : 0) +
+    (req.inviteCode ? 40 * unit : 0) +
+    (benefitLines.length ? benefitLines.length * 44 * unit + 64 * unit : 0);
+  const bottomNeed = qrSize + 150 * unit + extraNeed;
   const avail = h - y - 130 * unit;
   let qrY = y + 30 * unit;
   if (avail < bottomNeed) {
@@ -400,15 +486,42 @@ function drawQrSection(
     warnings.push("safearea:二维码未加载");
   }
 
+  let by = qrY + qrSize + 56 * unit;
   ctx.fillStyle = p.accent;
   ctx.font = `bold ${34 * unit}px ${FONT}`;
   ctx.textAlign = "center";
-  ctx.fillText(req.copy.cta, w / 2, qrY + qrSize + 56 * unit);
+  ctx.fillText(req.copy.cta, w / 2, by);
+  by += 38 * unit;
+
+  // v25.0.47_22：二维码区下方小字标注（如「永久免费基础功能 · 无强制广告」）
+  if (req.copy.qrNote) {
+    ctx.fillStyle = dark ? "rgba(255,255,255,0.68)" : p.subText;
+    ctx.font = `${25 * unit}px ${FONT}`;
+    ctx.fillText(req.copy.qrNote, w / 2, by);
+    by += 40 * unit;
+  }
 
   if (req.inviteCode) {
     ctx.fillStyle = dark ? "rgba(255,255,255,0.6)" : p.subText;
     ctx.font = `${24 * unit}px ${FONT}`;
-    ctx.fillText(`邀请码：${req.inviteCode}`, w / 2, qrY + qrSize + 96 * unit);
+    ctx.fillText(`邀请码：${req.inviteCode}`, w / 2, by);
+    by += 44 * unit;
+  }
+
+  // v25.0.47_22：行动召唤条（浅底色福利条，突出福利感）
+  if (benefitLines.length > 0) {
+    const stripH = benefitLines.length * 44 * unit + 30 * unit;
+    const stripW = w - 200 * unit;
+    ctx.save();
+    ctx.fillStyle = hexAlpha(dark ? "#FFFFFF" : p.accent, dark ? 0.14 : 0.12);
+    roundRectPath(ctx, (w - stripW) / 2, by, stripW, stripH, 16 * unit);
+    ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = dark ? "#F5C542" : p.accent;
+    ctx.font = `bold ${27 * unit}px ${FONT}`;
+    benefitLines.forEach((line, i) => {
+      ctx.fillText(line, w / 2, by + 40 * unit + i * 44 * unit);
+    });
   }
 }
 
@@ -431,11 +544,11 @@ function drawDisclaimer(
   ctx: CanvasRenderingContext2D, w: number, h: number, unit: number,
   req: PosterRequest, policy: ChannelPolicy, dark: boolean, warnings: string[]
 ): void {
-  // v25.0.47_14: 合规提示弱化——统一放页面最底部，小字号浅颜色不占主视觉；
-  // 品牌出品方与合规口径合并为一行
+  // v25.0.47_22: 合规提示弱化——统一放页面最底部，小字号浅颜色(#AAAAAA)不占主视觉；
+  // 品牌出品方与合规口径合并为一行（营销规范：合规文字最弱化，不得干扰主视觉）
   const text = `${BRAND_ENTITY} 出品｜${getDisclaimer(req.copy.disclaimer)}`;
   const size = 22 * unit;
-  ctx.fillStyle = dark ? "rgba(255,255,255,0.55)" : "rgba(0,0,0,0.38)";
+  ctx.fillStyle = dark ? "rgba(255,255,255,0.45)" : "#AAAAAA";
   ctx.font = `${size}px ${FONT}`;
   ctx.textAlign = "center";
   const lines = wrapText(ctx, text, w - 140 * unit).slice(0, 2);

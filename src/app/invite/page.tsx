@@ -17,10 +17,12 @@ import {
   getViralTemplate,
   cycleViralTemplate,
   renderViralPoster,
+  applyAiCopyToCopySet,
   SHARE_COPY_LIBRARY,
   DEFAULT_SHARE_TEXT,
   type ViralTemplateId,
 } from "@/lib/marketing/viralTemplates";
+import { generateAiPosterCopies, type AiPosterCopy } from "@/lib/marketing/aiCopy";
 
 const BRAND = "#7B2FBE";
 
@@ -64,6 +66,14 @@ export default function InvitePage() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const posterQrRef = useRef("");
   const posterCodeRef = useRef<string | undefined>(undefined);
+
+  // v25.0.47_22 MARKETING-POSTER-V2-AI：AI智能文案生成（3风格 + 一键应用 + 再来一组）
+  const [aiPickerOpen, setAiPickerOpen] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSets, setAiSets] = useState<AiPosterCopy[]>([]);
+  const [aiFallbackNote, setAiFallbackNote] = useState("");
+  const [appliedAi, setAppliedAi] = useState<AiPosterCopy | null>(null);
+  const aiSeqRef = useRef(0);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -129,28 +139,33 @@ export default function InvitePage() {
   }, []);
 
   // v25.0.47_14: 渲染完整裂变海报（背景+标题+卖点+二维码+邀请码+合规底栏）
-  const renderPosterByTemplate = useCallback(async (templateId: ViralTemplateId) => {
-    if (!posterQrRef.current) return;
-    setPosterGenerating(true);
-    setPosterError("");
-    try {
-      const result = await renderViralPoster(templateId, {
-        qrDataUrl: posterQrRef.current,
-        inviteCode: posterCodeRef.current,
-      });
-      if (result.complianceBlocked || !result.dataUrl) {
+  // v25.0.47_22: 支持 AI 生成文案覆盖（copyOverride）
+  const renderPosterByTemplate = useCallback(
+    async (templateId: ViralTemplateId, copyOverride?: Parameters<typeof renderViralPoster>[1]["copyOverride"]) => {
+      if (!posterQrRef.current) return;
+      setPosterGenerating(true);
+      setPosterError("");
+      try {
+        const result = await renderViralPoster(templateId, {
+          qrDataUrl: posterQrRef.current,
+          inviteCode: posterCodeRef.current,
+          copyOverride,
+        });
+        if (result.complianceBlocked || !result.dataUrl) {
+          setPosterError("海报生成失败，请重试");
+          setPosterUrl("");
+          return;
+        }
+        setPosterUrl(result.dataUrl);
+      } catch (e) {
+        console.error("海报生成失败:", e);
         setPosterError("海报生成失败，请重试");
-        setPosterUrl("");
-        return;
+      } finally {
+        setPosterGenerating(false);
       }
-      setPosterUrl(result.dataUrl);
-    } catch (e) {
-      console.error("海报生成失败:", e);
-      setPosterError("海报生成失败，请重试");
-    } finally {
-      setPosterGenerating(false);
-    }
-  }, []);
+    },
+    []
+  );
 
   // 二维码就绪后自动生成默认模板海报
   useEffect(() => {
@@ -163,12 +178,13 @@ export default function InvitePage() {
 
   const switchToTemplate = useCallback(
     (templateId: ViralTemplateId) => {
-      if (templateId === activeViralId && posterUrl) return;
+      if (templateId === activeViralId && posterUrl && !appliedAi) return;
       setActiveViralId(templateId);
+      setAppliedAi(null); // 切换模板回落到该模板固定文案
       setPosterUrl("");
       void renderPosterByTemplate(templateId);
     },
-    [activeViralId, posterUrl, renderPosterByTemplate]
+    [activeViralId, posterUrl, appliedAi, renderPosterByTemplate]
   );
 
   /** 「换一个风格」：循环切换3套模板 */
@@ -179,13 +195,60 @@ export default function InvitePage() {
 
   /** 「使用通用版」：回到默认模板一（朋友圈种草版） */
   const handleUseGeneric = useCallback(() => {
-    if (activeViralId === "VIRAL_MOMENTS" && posterUrl) {
+    if (activeViralId === "VIRAL_MOMENTS" && posterUrl && !appliedAi) {
       showToast("当前已是通用版（种草版）");
       return;
     }
     switchToTemplate("VIRAL_MOMENTS");
     showToast("已切换为通用版素材");
-  }, [activeViralId, posterUrl, switchToTemplate, showToast]);
+  }, [activeViralId, posterUrl, appliedAi, switchToTemplate, showToast]);
+
+  /** v25.0.47_22 「✨ AI换文案」：生成3套风格文案供选择应用 */
+  const handleAiGenerate = useCallback(async () => {
+    if (aiLoading) return;
+    if (!posterQrRef.current) {
+      showToast("邀请二维码加载中，请稍候");
+      return;
+    }
+    setAiLoading(true);
+    setAiPickerOpen(true);
+    setAiFallbackNote("");
+    try {
+      aiSeqRef.current += 1;
+      const result = await generateAiPosterCopies(aiSeqRef.current);
+      setAiSets(result.sets);
+      if (result.usedFallback && result.error) {
+        setAiFallbackNote(result.error);
+      }
+    } catch {
+      setAiSets([]);
+      setAiFallbackNote("AI文案生成失败，请稍后重试");
+    } finally {
+      setAiLoading(false);
+    }
+  }, [aiLoading, showToast]);
+
+  /** 应用AI文案到当前海报：替换标题/副标题/卖点并实时重渲染 */
+  const handleApplyAiCopy = useCallback(
+    (set: AiPosterCopy) => {
+      const base = getViralTemplate(activeViralId);
+      setAppliedAi(set);
+      setAiPickerOpen(false);
+      setPosterUrl("");
+      void renderPosterByTemplate(activeViralId, applyAiCopyToCopySet(base.copy, set));
+      showToast(`已应用「${set.styleName}」文案`);
+    },
+    [activeViralId, renderPosterByTemplate, showToast]
+  );
+
+  /** 「恢复模板文案」：撤销AI文案覆盖 */
+  const handleResetAiCopy = useCallback(() => {
+    if (!appliedAi) return;
+    setAppliedAi(null);
+    setPosterUrl("");
+    void renderPosterByTemplate(activeViralId);
+    showToast("已恢复模板默认文案");
+  }, [appliedAi, activeViralId, renderPosterByTemplate, showToast]);
 
   /** 保存完整海报图片（≥750×1334，含全部元素） */
   const handleSavePoster = useCallback(async () => {
@@ -206,12 +269,13 @@ export default function InvitePage() {
     }
   }, [posterUrl, showToast]);
 
-  /** 系统分享：带海报图片 + 默认文案 */
+  /** 系统分享：带海报图片 + 文案（应用AI文案时优先用其朋友圈配文） */
   const handleSharePoster = useCallback(async () => {
     if (!posterUrl) {
       showToast("海报生成中，请稍候");
       return;
     }
+    const shareText = appliedAi?.momentsText || DEFAULT_SHARE_TEXT;
     if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
       try {
         if (typeof navigator.canShare === "function") {
@@ -219,20 +283,20 @@ export default function InvitePage() {
             const blob = await (await fetch(posterUrl)).blob();
             const file = new File([blob], "yandao-invite-poster.png", { type: "image/png" });
             if (navigator.canShare({ files: [file] })) {
-              await navigator.share({ title: "言道国学", text: DEFAULT_SHARE_TEXT, files: [file] });
+              await navigator.share({ title: "言道国学", text: shareText, files: [file] });
               return;
             }
           } catch { /* 降级 */ }
         }
-        await navigator.share({ title: "言道国学", text: DEFAULT_SHARE_TEXT, url: link?.inviteLink });
+        await navigator.share({ title: "言道国学", text: shareText, url: link?.inviteLink });
       } catch {
         // 用户取消分享不算失败
       }
     } else {
-      const ok = await copyToClipboard(DEFAULT_SHARE_TEXT + (link?.inviteLink ? "\n" + link.inviteLink : ""));
+      const ok = await copyToClipboard(shareText + (link?.inviteLink ? "\n" + link.inviteLink : ""));
       showToast(ok ? "当前浏览器不支持系统分享，文案已复制" : "当前浏览器不支持系统分享");
     }
-  }, [posterUrl, link, copyToClipboard, showToast]);
+  }, [posterUrl, link, copyToClipboard, showToast, appliedAi]);
 
   const handleCopyCode = useCallback(async () => {
     if (!link?.inviteCode) return;
@@ -373,7 +437,19 @@ export default function InvitePage() {
             </span>
           </div>
           <div style={{ fontSize: "11px", color: "#999", marginBottom: "12px", lineHeight: 1.5 }}>
-            {getViralTemplate(activeViralId).desc}
+            {appliedAi ? (
+              <>
+                <span style={{ color: BRAND, fontWeight: 600 }}>已应用AI文案（{appliedAi.styleName}）</span>
+                <button
+                  onClick={handleResetAiCopy}
+                  style={{ marginLeft: "8px", fontSize: "11px", padding: "1px 10px", borderRadius: "10px", border: `1px solid ${BRAND}55`, backgroundColor: `${BRAND}08`, color: BRAND, cursor: "pointer" }}
+                >
+                  恢复模板文案
+                </button>
+              </>
+            ) : (
+              getViralTemplate(activeViralId).desc
+            )}
           </div>
 
           {/* 3套模板切换 */}
@@ -407,7 +483,12 @@ export default function InvitePage() {
               {posterError}
               <div>
                 <button
-                  onClick={() => void renderPosterByTemplate(activeViralId)}
+                  onClick={() =>
+                    void renderPosterByTemplate(
+                      activeViralId,
+                      appliedAi ? applyAiCopyToCopySet(getViralTemplate(activeViralId).copy, appliedAi) : undefined
+                    )
+                  }
                   style={{ marginTop: "8px", padding: "6px 18px", borderRadius: "16px", border: "1px solid #ddd", backgroundColor: "#fff", color: "#555", fontSize: "12px", cursor: "pointer" }}
                 >
                   重试
@@ -463,7 +544,10 @@ export default function InvitePage() {
               >
                 保存海报图片
               </button>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                <button onClick={handleAiGenerate} disabled={aiLoading || posterGenerating} style={{ ...posterSecondaryBtn, borderColor: BRAND, backgroundColor: appliedAi ? "#F5EFFB" : "#fff" }}>
+                  {aiLoading ? "AI生成中..." : "✨ AI换文案"}
+                </button>
                 <button onClick={handleSwitchStyle} style={posterSecondaryBtn}>换一个风格</button>
                 <button onClick={handleUseGeneric} style={posterSecondaryBtn}>使用通用版</button>
                 <button onClick={handleSharePoster} style={posterSecondaryBtn}>系统分享</button>
@@ -811,6 +895,129 @@ export default function InvitePage() {
             长按海报图片可保存到相册 / 发送给朋友
             <br />
             <span style={{ fontSize: "11px", color: "#aaa" }}>点击空白处关闭</span>
+          </div>
+        </div>
+      )}
+
+      {/* v25.0.47_22: AI换文案选择弹层（3套风格 + 一键应用 + 再来一组） */}
+      {aiPickerOpen && (
+        <div
+          onClick={() => setAiPickerOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0,0,0,0.55)",
+            zIndex: 600,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-end",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: "#fff",
+              borderRadius: "18px 18px 0 0",
+              maxHeight: "82vh",
+              overflowY: "auto",
+              padding: "18px 16px calc(24px + env(safe-area-inset-bottom, 0px))",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+              <div style={{ fontSize: "16px", fontWeight: 700, color: "#333" }}>✨ AI智能文案</div>
+              <button
+                onClick={() => setAiPickerOpen(false)}
+                style={{ border: "none", backgroundColor: "transparent", fontSize: "18px", color: "#999", cursor: "pointer", padding: "4px 8px" }}
+                aria-label="关闭"
+              >
+                ✕
+              </button>
+            </div>
+            <div style={{ fontSize: "11px", color: "#999", marginBottom: "12px" }}>
+              生成3套不同风格的海报文案与配套分享话术，点击「应用」实时替换海报文案
+            </div>
+            {aiFallbackNote && (
+              <div style={{ fontSize: "11px", color: "#E65100", backgroundColor: "#FFF3E0", borderRadius: "8px", padding: "8px 10px", marginBottom: "10px" }}>
+                {aiFallbackNote}
+              </div>
+            )}
+            {aiLoading ? (
+              <div style={{ textAlign: "center", padding: "40px 0", color: "#999", fontSize: "13px" }}>
+                AI正在生成3套风格文案，约需10秒...
+              </div>
+            ) : aiSets.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "30px 0", color: "#999", fontSize: "13px" }}>
+                暂无可用文案，请点击下方重新生成
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "12px" }}>
+                {aiSets.map((s) => (
+                  <div
+                    key={s.styleId}
+                    style={{
+                      border: appliedAi?.styleId === s.styleId ? `2px solid ${BRAND}` : "1px solid #e8e8e8",
+                      borderRadius: "12px",
+                      padding: "12px 14px",
+                      backgroundColor: appliedAi?.styleId === s.styleId ? "#F5EFFB" : "#fafafa",
+                    }}
+                  >
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                      <span style={{ fontSize: "13px", fontWeight: 700, color: "#333" }}>
+                        {s.styleName}
+                        <span style={{ fontSize: "10px", fontWeight: 400, color: "#aaa", marginLeft: "6px" }}>{s.styleDesc}</span>
+                      </span>
+                      <button
+                        onClick={() => handleApplyAiCopy(s)}
+                        style={{ fontSize: "11px", padding: "5px 14px", borderRadius: "14px", border: "none", backgroundColor: BRAND, color: "#fff", fontWeight: 600, cursor: "pointer", flexShrink: 0 }}
+                      >
+                        {appliedAi?.styleId === s.styleId ? "已应用" : "应用"}
+                      </button>
+                    </div>
+                    <div style={{ fontSize: "13px", fontWeight: 600, color: "#333", marginBottom: "2px" }}>{s.title}</div>
+                    <div style={{ fontSize: "11px", color: "#888", marginBottom: "6px" }}>{s.subtitle}</div>
+                    <div style={{ fontSize: "11px", color: "#555", lineHeight: 1.7 }}>
+                      {s.sellingPoints.map((p, i) => (
+                        <div key={i}>✅ {p}</div>
+                      ))}
+                    </div>
+                    {(s.momentsText || s.groupText) && (
+                      <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px dashed #e5e5e5", display: "flex", flexDirection: "column", gap: "6px" }}>
+                        {s.momentsText && (
+                          <div style={{ display: "flex", alignItems: "flex-start", gap: "6px" }}>
+                            <span style={{ fontSize: "10px", color: "#999", flexShrink: 0, marginTop: "2px" }}>朋友圈</span>
+                            <span style={{ fontSize: "11px", color: "#666", lineHeight: 1.6, flex: 1 }}>{s.momentsText}</span>
+                          </div>
+                        )}
+                        {s.groupText && (
+                          <div style={{ display: "flex", alignItems: "flex-start", gap: "6px" }}>
+                            <span style={{ fontSize: "10px", color: "#999", flexShrink: 0, marginTop: "2px" }}>社群</span>
+                            <span style={{ fontSize: "11px", color: "#666", lineHeight: 1.6, flex: 1 }}>{s.groupText}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+              <button
+                onClick={() => void handleAiGenerate()}
+                disabled={aiLoading}
+                style={{ padding: "11px 0", borderRadius: "12px", border: `1px solid ${BRAND}55`, backgroundColor: "#fff", color: BRAND, fontSize: "13px", fontWeight: 600, cursor: aiLoading ? "not-allowed" : "pointer" }}
+              >
+                {aiLoading ? "生成中..." : "🔄 再来一组"}
+              </button>
+              <button
+                onClick={() => setAiPickerOpen(false)}
+                style={{ padding: "11px 0", borderRadius: "12px", border: "1px solid #ddd", backgroundColor: "#fafafa", color: "#666", fontSize: "13px", fontWeight: 600, cursor: "pointer" }}
+              >
+                关闭
+              </button>
+            </div>
+            <div style={{ fontSize: "10px", color: "#bbb", textAlign: "center", marginTop: "10px" }}>
+              所有AI文案均经敏感词过滤；海报底部合规提示始终保留
+            </div>
           </div>
         </div>
       )}

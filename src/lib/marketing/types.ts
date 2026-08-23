@@ -107,6 +107,12 @@ export interface CopySet {
   privateCopies: { tone: string; text: string }[];
   disclaimer: DisclaimerKind;
   status: "ACTIVE" | "DRAFT" | "DISABLED";
+  /** v25.0.47_22 MARKETING-POSTER-V2-AI：二维码下方行动召唤条（两行用\n分隔，浅底福利条） */
+  benefitLine?: string;
+  /** v25.0.47_22：二维码区下方小字标注（如「永久免费基础功能 · 无强制广告」） */
+  qrNote?: string;
+  /** v25.0.47_22：分组两栏卖点（社群引流版信息密度布局）；渲染时优先于 sellingPoints */
+  pointGroups?: { title: string; items: string[] }[];
 }
 
 export interface ComplianceResult {
