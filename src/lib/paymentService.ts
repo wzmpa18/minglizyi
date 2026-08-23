@@ -20,6 +20,8 @@ export type PaymentScenario =
   | "SINGLE_UNLOCK"
   | "MEMBERSHIP"
   | "POINTS_RECHARGE"
+  | "AI_PACKAGE"
+  | "BATCH_INTERPRET"
   | "CONSULT_SERVICE";
 
 /**
@@ -49,6 +51,8 @@ export interface CallPaymentParams {
     consultServiceId?: string;
     consultProviderId?: string;
     consultRequirement?: string;
+    /** BATCH_INTERPRET: 批量解读工具类型 */
+    batchTool?: string;
     openid?: string;
     returnUrl?: string;
   };
@@ -143,7 +147,10 @@ const API_BASE = "/api/payment";
 function getCurrentUserId(): string | null {
   if (typeof window === "undefined") return null;
   const profile = getUserProfile();
-  return profile?.userId || null;
+  const uid = profile?.userId;
+  if (uid === null || uid === undefined || uid === "") return null;
+  // v25.0.47_21: 强制字符串——后端只认字符串 userId（数字会返回"用户ID无效"）
+  return String(uid);
 }
 
 // ==================== 微信网页授权（openid获取，JSAPI支付前置） ====================

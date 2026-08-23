@@ -10,6 +10,7 @@
 // ============================================================================
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Activity,
   BarChart3,
@@ -50,6 +51,7 @@ interface StatsShape {
 
 export default function DashboardPage() {
   const mounted = useMounted();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [overview, setOverview] = useState<AdminOverviewData | null>(null);
   const [stats, setStats] = useState<StatsShape | null>(null);
@@ -139,7 +141,8 @@ export default function DashboardPage() {
           <span>内存 {String(serverInfo.memoryMB ?? "-")} MB</span>
           <span>Node {String(serverInfo.nodeVersion ?? "-")}</span>
           <span>PID {String(serverInfo.pid ?? "-")}</span>
-          <span>版本 {String(overview?.version || "-")}</span>
+          <span>Web {String(overview?.version || "-")}</span>
+          {overview?.appVersion ? <span>APP v{String(overview.appVersion)}</span> : null}
           <span>Commit {String(overview?.gitCommit || "-")}</span>
         </div>
         {healthEntries.length > 0 && (
@@ -154,8 +157,8 @@ export default function DashboardPage() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 14, marginBottom: 24 }}>
         <StatCard label="总用户数" value={num(users.total).toLocaleString()} sub={`今日新增 ${num(users.newToday)} · 7日活跃 ${num(users.active7d)}`} icon={<Users size={18} />} color={THEME.primary} />
         <StatCard label="当前会员数" value={num(membership.paid ?? membership.currentMembers).toLocaleString()} sub={`总会员 ${num(stMember.totalMembers).toLocaleString()}`} icon={<Crown size={18} />} color={THEME.warning} />
-        <StatCard label="今日实付金额" value={yuan(orders.todayRevenueYuan)} sub={`累计 ${yuan(orders.revenueYuan)}`} icon={<Coins size={18} />} color={THEME.success} />
-        <StatCard label="待处理订单" value={num(orders.pending).toLocaleString()} sub={`总订单 ${num(orders.total)} · 已支付 ${num(orders.paid)}`} icon={<Clock size={18} />} color={num(orders.pending) > 0 ? THEME.error : THEME.info} />
+        <StatCard label="今日实付金额" value={yuan(orders.todayRevenueYuan)} sub={`累计 ${yuan(orders.revenueYuan)} · 点击查看谁付费`} icon={<Coins size={18} />} color={THEME.success} onClick={() => router.push("/admin/orders?status=PAID")} />
+        <StatCard label="待处理订单" value={num(orders.pending).toLocaleString()} sub={`总订单 ${num(orders.total)} · 已支付 ${num(orders.paid)} · 点击查看明细`} icon={<Clock size={18} />} color={num(orders.pending) > 0 ? THEME.error : THEME.info} onClick={() => router.push("/admin/orders?status=PENDING")} />
         <StatCard label="今日 AI 调用" value={num(ai.callsToday).toLocaleString()} sub={`成功率 ${String(ai.successRate ?? "-")}`} icon={<Bot size={18} />} color={THEME.info} />
       </div>
 

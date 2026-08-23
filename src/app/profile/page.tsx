@@ -749,9 +749,11 @@ export default function ProfilePage() {
       if (remote === running) {
         setUpdateCheck({ checking: false, result: { latest: true, version: data.version || appVersion } });
       } else {
-        // 新版本已发布：刷新即加载新版（刷新前记录跳过自动reload标记，避免与VersionChecker自动刷新打架）
-        try { sessionStorage.setItem("yandao_auto_reloaded", "1"); } catch {}
+        // v25.0.47_21: 点击即启动更新——发现新版本直接清空缓存并刷新页面，一步完成，
+        // 不再要求用户二次点击；刷新后 VersionChecker 会展示「已更新至最新版本 vX」
+        try { sessionStorage.setItem("yandao_updated_to", data.version || remote); } catch {}
         setUpdateCheck({ checking: false, result: { latest: false, version: data.version || appVersion } });
+        await reloadWithCachePurge();
       }
     } catch {
       setUpdateCheck({ checking: false, result: { latest: true, version: appVersion || "未知" } });
@@ -1123,10 +1125,8 @@ export default function ProfilePage() {
               ? (updateCheck.result.latest ? `当前已是最新版本${updateCheck.result.version ? ` ${updateCheck.result.version}` : ""}` : `发现新版本 ${updateCheck.result.version}，点击立即更新`)
               : (appVersion ? `当前版本 ${appVersion}` : "检查是否有新版本")}
           onClick={() => {
-            if (updateCheck.result && !updateCheck.result.latest) {
-              void reloadWithCachePurge();
-              return;
-            }
+            // v25.0.47_21: 检查更新发现新版时 handleCheckUpdate 已直接执行清缓存刷新，
+            // 此处统一走检查入口即可
             void handleCheckUpdate();
           }}
           right={updateCheck.result && !updateCheck.result.latest ? (

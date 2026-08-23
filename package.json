@@ -1,6 +1,6 @@
 {
   "name": "06-app",
-  "version": "v25.0.47_20",
+  "version": "v25.0.47_21",
   "private": true,
   "scripts": {
     "dev": "node scripts/gen-version.js && next dev",

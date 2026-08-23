@@ -317,6 +317,11 @@ export default function AdminAnnouncementsPage() {
                 maxLength={60}
                 placeholder="如：APP v25.0.50 版本升级通知"
               />
+              <div style={{ fontSize: 11, color: THEME.textHint, marginTop: 4, lineHeight: 1.6 }}>
+                v25.0.47_21 版本联动：标题/内容中写 <b style={{ color: THEME.primary }}>{`{APP_VERSION}`}</b> 自动显示最新 APP 版本号、
+                <b style={{ color: THEME.primary }}>{`{WEB_VERSION}`}</b> 自动显示最新网页版本号（发布后永远与实际版本一致，无需手动改）。
+                例：<i>APP v{'{APP_VERSION}'} 版本升级通知</i>
+              </div>
             </div>
 
             <div style={{ marginBottom: 12 }}>

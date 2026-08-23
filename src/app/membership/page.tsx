@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BrandHeader } from "@/components/shared";
@@ -49,6 +49,8 @@ export default function MembershipPage() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [successInfo, setSuccessInfo] = useState<{ planName: string; level: MemberLevel } | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
+  // v25.0.47_21: 支付失败必须弹窗明确告知（P0：禁止静默失败，用户感知为死键）
+  const [payError, setPayError] = useState("");
   // v25.0.47_12 P0修复：未登录时在支付按钮上方悬浮登录引导（点击按钮立即可见反馈）
   const [needLogin, setNeedLogin] = useState(false);
   // v25.0.47_18: 未登录点购买升级为全屏登录引导弹窗（大按钮+明确反馈，杜绝"点了没反应"感）
@@ -75,6 +77,33 @@ export default function MembershipPage() {
       setRedeemEnabled(getToolConfig().redeem.enabled);
       setMyRedemptions(getMyRedemptions());
     } catch {}
+  }, []);
+
+  // v25.0.47_21 登录态联动：未登录点开通 → 登录页登录成功后回跳 /membership?autopay=1，
+  // 此处恢复原选中档位并自动唤起支付（已登录才唤起；未登录则保持正常展示）
+  const handlePayRef = useRef<(lvl?: MemberLevel) => Promise<void>>(async () => {});
+  useEffect(() => {
+    handlePayRef.current = handlePay;
+  });
+
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("autopay") !== "1") return;
+      window.history.replaceState({}, "", "/membership");
+      const saved = sessionStorage.getItem("yandao_membership_autopay");
+      if (saved) sessionStorage.removeItem("yandao_membership_autopay");
+      const levels: MemberLevel[] = ["monthly", "quarterly", "yearly", "lifetime"];
+      const level = levels.includes(saved as MemberLevel) ? (saved as MemberLevel) : null;
+      if (level) setSelectedPlan(level);
+      const profile = getUserProfile();
+      if (!profile || !profile.userId) return;
+      const t = setTimeout(() => {
+        void handlePayRef.current(level ?? undefined);
+      }, 400);
+      return () => clearTimeout(t);
+    } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleRedeem = () => {
@@ -129,14 +158,16 @@ export default function MembershipPage() {
   };
 
   // v25.0.47_8/9: 真实微信支付（JSAPI调起轮询 / Native扫码弹码，服务端权益交付）
-  const handlePay = async () => {
+  // v25.0.47_21: 支持 overrideLevel（登录回跳自动唤起支付时恢复原选中档位）
+  const handlePay = async (overrideLevel?: MemberLevel) => {
     if (isPaymentsBlocked()) {
-      setErrorMsg(IOS_PAYMENT_DISABLED_TIP);
+      setPayError(IOS_PAYMENT_DISABLED_TIP);
       return;
     }
-    const plan = PLANS.find((p) => p.level === selectedPlan);
+    const level = overrideLevel ?? selectedPlan;
+    const plan = PLANS.find((p) => p.level === level);
     if (!plan || plan.price === 0) {
-      setErrorMsg("该套餐为免费版本，无需开通");
+      setPayError("该套餐为免费版本，无需开通");
       return;
     }
     // 真实支付必须登录（服务端订单与权益交付均以 userId 为主键）
@@ -151,13 +182,17 @@ export default function MembershipPage() {
     setNeedLogin(false);
     // v25.0.47_9: 扫码支付全场景可用（非微信环境/微信内均可，微信内长按识别二维码）
     setErrorMsg("");
+    setPayError("");
     setPaying(true);
     try {
       const daysMap: Record<string, number> = { monthly: 30, quarterly: 90, yearly: 365, lifetime: -1 };
       const r = await payForMembership(plan.level, plan.price, daysMap[plan.level] ?? 30);
       if (!r || !r.success || !r.orderId) {
         setPaying(false);
-        setErrorMsg((r && (r.message || r.error)) || "支付发起失败，请稍后重试");
+        const msg = (r && (r.message || r.error)) || "支付发起失败，请稍后重试";
+        setErrorMsg(msg);
+        // v25.0.47_21: 弹窗级明确反馈，杜绝静默失败
+        setPayError(msg);
         return;
       }
       // v25.0.47_9: Native扫码支付——弹出付款二维码（全场景兜底通道）
@@ -181,6 +216,7 @@ export default function MembershipPage() {
     } catch {
       setPaying(false);
       setErrorMsg("支付异常，请稍后重试");
+      setPayError("支付异常，请稍后重试");
     }
   };
 
@@ -694,7 +730,7 @@ export default function MembershipPage() {
           </div>
         )}
         <button
-          onClick={handlePay}
+          onClick={() => void handlePay()}
           disabled={paying}
           style={{
             width: "100%",
@@ -811,12 +847,20 @@ export default function MembershipPage() {
               >
                 暂不登录
               </button>
-              <Link
-                href="/login"
+              <button
+                onClick={() => {
+                  // v25.0.47_21: 保留选中档位，登录成功后回跳本页并自动唤起支付
+                  try {
+                    sessionStorage.setItem("yandao_membership_autopay", selectedPlan);
+                    sessionStorage.setItem("yandao_login_redirect", "/membership?autopay=1");
+                  } catch { /* 隐私模式忽略 */ }
+                  router.push("/login");
+                }}
                 style={{
                   flex: 1,
                   padding: "10px 0",
                   borderRadius: "22px",
+                  border: "none",
                   backgroundColor: BRAND,
                   color: "#fff",
                   fontSize: "14px",
@@ -825,10 +869,11 @@ export default function MembershipPage() {
                   textDecoration: "none",
                   boxSizing: "border-box",
                   display: "block",
+                  cursor: "pointer",
                 }}
               >
                 立即登录
-              </Link>
+              </button>
             </div>
           </div>
         </div>
@@ -925,6 +970,95 @@ export default function MembershipPage() {
 
       {/* v25.0.47_9: Native扫码支付二维码弹层 */}
       {qrModal}
+
+      {/* v25.0.47_21: 支付失败弹窗（P0：明确反馈，禁止静默失败） */}
+      {payError && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            backgroundColor: "rgba(0,0,0,0.55)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: "24px",
+          }}
+          onClick={() => setPayError("")}
+        >
+          <div
+            style={{
+              backgroundColor: "#fff",
+              borderRadius: "18px",
+              padding: "28px 24px 20px",
+              textAlign: "center",
+              width: "100%",
+              maxWidth: "300px",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                width: "56px",
+                height: "56px",
+                borderRadius: "50%",
+                backgroundColor: "#fdecea",
+                margin: "0 auto 14px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#e74c3c" strokeWidth="2.5" strokeLinecap="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+            </div>
+            <div style={{ fontSize: "16px", fontWeight: 700, color: "#333" }}>支付未发起</div>
+            <div style={{ fontSize: "13px", color: "#999", marginTop: "8px", lineHeight: 1.6, wordBreak: "break-all" }}>
+              {payError}
+            </div>
+            <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
+              <button
+                onClick={() => setPayError("")}
+                style={{
+                  flex: 1,
+                  padding: "10px 0",
+                  borderRadius: "22px",
+                  border: "1px solid #ddd",
+                  backgroundColor: "#fff",
+                  color: "#666",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                知道了
+              </button>
+              <button
+                onClick={() => {
+                  setPayError("");
+                  void handlePay();
+                }}
+                style={{
+                  flex: 1,
+                  padding: "10px 0",
+                  borderRadius: "22px",
+                  border: "none",
+                  backgroundColor: BRAND,
+                  color: "#fff",
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                重试支付
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 旋转动画样式 */}
       <style>{`@keyframes yandao-spin { to { transform: rotate(360deg); } }`}</style>

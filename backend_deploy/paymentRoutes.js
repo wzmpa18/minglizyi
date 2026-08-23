@@ -272,6 +272,11 @@ function getOrdersDb() {
         db.exec('ALTER TABLE user_orders ADD COLUMN benefit_delivered INTEGER DEFAULT 0');
         console.log('[payment] user_orders 已添加 benefit_delivered 字段');
       }
+      // v25.0.47_21: 微信交易号持久化（后台订单明细展示"是谁通过哪笔交易支付"）
+      if (!cols.includes('transaction_id')) {
+        db.exec('ALTER TABLE user_orders ADD COLUMN transaction_id TEXT');
+        console.log('[payment] user_orders 已添加 transaction_id 字段');
+      }
     } catch (e) {
       console.error('[payment] benefit_delivered 迁移失败:', e.message);
     }
@@ -287,11 +292,11 @@ function persistOrder(order) {
   try {
     const db = getOrdersDb();
     if (!db) return;
-    db.prepare(`INSERT INTO user_orders (user_id, order_no, amount, order_type, status, payment_method, created_at, paid_at, benefit_delivered)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(order_no) DO UPDATE SET status=excluded.status, payment_method=excluded.payment_method, paid_at=excluded.paid_at, benefit_delivered=excluded.benefit_delivered`)
+    db.prepare(`INSERT INTO user_orders (user_id, order_no, amount, order_type, status, payment_method, created_at, paid_at, benefit_delivered, transaction_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(order_no) DO UPDATE SET status=excluded.status, payment_method=excluded.payment_method, paid_at=excluded.paid_at, benefit_delivered=excluded.benefit_delivered, transaction_id=CASE WHEN excluded.transaction_id IS NOT NULL AND excluded.transaction_id != '' THEN excluded.transaction_id ELSE user_orders.transaction_id END`)
       .run(String(order.userId || ''), order.orderId, Number(order.amount) || 0, order.type, order.status,
-           order.channel || '', order.createdAt, order.paidAt, order.benefitDelivered ? 1 : 0);
+           order.channel || '', order.createdAt, order.paidAt, order.benefitDelivered ? 1 : 0, order.transactionId || null);
   } catch (e) {
     console.error('[payment] 订单持久化失败:', e.message);
   }
@@ -302,7 +307,7 @@ function persistOrder(order) {
   try {
     const db = getOrdersDb();
     if (!db) return;
-    const rows = db.prepare(`SELECT order_no, user_id, amount, order_type, status, payment_method, created_at, paid_at, benefit_delivered
+    const rows = db.prepare(`SELECT order_no, user_id, amount, order_type, status, payment_method, created_at, paid_at, benefit_delivered, transaction_id
                              FROM user_orders WHERE created_at >= datetime('now', '-30 days') ORDER BY id DESC LIMIT 500`).all();
     for (const r of rows) {
       ordersStore.set(r.order_no, {
@@ -317,6 +322,7 @@ function persistOrder(order) {
         createdAt: r.created_at,
         paidAt: r.paid_at,
         benefitDelivered: !!r.benefit_delivered,
+        transactionId: r.transaction_id || null,
         extra: {},
       });
     }

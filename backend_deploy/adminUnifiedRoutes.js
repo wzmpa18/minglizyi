@@ -162,13 +162,19 @@ router.get('/overview', adminAuthUnified('SUPPORT_ADMIN'), (_req, res) => {
     } catch (e) { data.commission = { records: 0, totalYuan: '0.00', withdrawalsPending: 0 }; }
     try {
       const ver = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'current', 'version.json'), 'utf-8'));
-      data.version = ver.buildId || ver.version || '';
+      // v25.0.47_21: 版本口径统一——展示用简短 version（与公告/检查更新一致），buildId 作次选
+      data.version = ver.version || ver.buildId || '';
     } catch {
       try {
         const ver = JSON.parse(fs.readFileSync('/root/yandaoguoxue/current/version.json', 'utf-8'));
-        data.version = ver.buildId || ver.version || '';
+        data.version = ver.version || ver.buildId || '';
       } catch { data.version = 'unknown'; }
     }
+    // v25.0.47_21: 附带 APP 版本（与公告 {APP_VERSION} 同一数据源）
+    try {
+      const rel = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'app-release-config.json'), 'utf-8'));
+      data.appVersion = rel.latestVersion || '';
+    } catch { data.appVersion = ''; }
     const mem = process.memoryUsage();
     data.server = {
       uptimeHours: (process.uptime() / 3600).toFixed(1),
@@ -450,17 +456,37 @@ router.get('/moderation/blacklists', adminAuthUnified('SUPPORT_ADMIN', 'ops'), (
 
 // ==================== 订单后台（第二十章） ====================
 
+// v25.0.47_21 订单查询（订单中心：谁付的费一目了然）
+//   · 字段：订单号/用户ID/手机号/昵称/产品/金额/状态/时间/微信交易号/邀请人/返佣状态
+//   · 筛选：支付状态 + 下单日期区间（dateFrom/dateTo，YYYY-MM-DD）
+//   · 权限：仅 SUPER_ADMIN 与 FINANCE_ADMIN（运营角色无 finance scope，403 拦截，仅可见总览统计数字）
+function buildOrderFilters(req) {
+  let where = '1=1'; const params = [];
+  const status = req.query.status;
+  if (status) { where += ' AND o.status = ?'; params.push(status); }
+  const dateFrom = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.dateFrom || '')) ? req.query.dateFrom : '';
+  const dateTo = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.dateTo || '')) ? req.query.dateTo : '';
+  if (dateFrom) { where += " AND date(o.created_at) >= date(?)"; params.push(dateFrom); }
+  if (dateTo) { where += " AND date(o.created_at) <= date(?)"; params.push(dateTo); }
+  return { where, params };
+}
+
+const ORDER_SELECT = `SELECT o.order_no, o.user_id, u.phone, u.nickname, o.amount, o.order_type, o.status,
+                             o.payment_method, o.created_at, o.paid_at, o.transaction_id,
+                             ir.inviter_id, iu.nickname AS inviter_nickname, iu.phone AS inviter_phone
+                      FROM user_orders o
+                      LEFT JOIN users u ON u.user_id = o.user_id
+                      LEFT JOIN (SELECT invitee_id, inviter_id FROM user_invite_relation GROUP BY invitee_id) ir ON ir.invitee_id = o.user_id
+                      LEFT JOIN users iu ON iu.user_id = ir.inviter_id`;
+
 router.get('/orders', adminAuthUnified('FINANCE_ADMIN', 'finance'), (req, res) => {
   try {
     const udb = getUsersDb();
-    const status = req.query.status;
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const size = Math.min(100, parseInt(req.query.size, 10) || 20);
-    let where = '1=1'; const params = [];
-    if (status) { where = 'o.status = ?'; params.push(status); }
+    const { where, params } = buildOrderFilters(req);
     const total = udb.prepare(`SELECT COUNT(*) c FROM user_orders o WHERE ${where}`).get(...params).c;
-    const rows = udb.prepare(`SELECT o.order_no, o.user_id, u.nickname, o.amount, o.order_type, o.status, o.payment_method, o.created_at, o.paid_at
-                              FROM user_orders o LEFT JOIN users u ON u.user_id = o.user_id
+    const rows = udb.prepare(`${ORDER_SELECT}
                               WHERE ${where} ORDER BY o.id DESC LIMIT ? OFFSET ?`).all(...params, size, (page - 1) * size);
     // 关联返佣状态
     const rebates = udb.prepare('SELECT order_no, status FROM consumption_rebates').all();
@@ -469,6 +495,43 @@ router.get('/orders', adminAuthUnified('FINANCE_ADMIN', 'finance'), (req, res) =
   } catch (e) {
     console.error('[orders]', e.message);
     res.status(500).json({ success: false, error: '订单查询失败' });
+  }
+});
+
+// v25.0.47_21 订单导出 CSV（UTF-8 BOM，Excel 直接打开；与列表同筛选条件；限最近10000条）
+router.get('/orders/export', adminAuthUnified('FINANCE_ADMIN', 'finance'), (req, res) => {
+  try {
+    const udb = getUsersDb();
+    const { where, params } = buildOrderFilters(req);
+    const rows = udb.prepare(`${ORDER_SELECT}
+                              WHERE ${where} ORDER BY o.id DESC LIMIT 10000`).all(...params);
+    const rebates = udb.prepare('SELECT order_no, status FROM consumption_rebates').all();
+    const rebateMap = {}; for (const r of rebates) rebateMap[r.order_no] = r.status;
+    const STATUS_LABELS = { PENDING: '待支付', PAID: '已支付', REFUNDED: '已退款', CLOSED: '已关闭' };
+    const TYPE_LABELS = { MEMBERSHIP: '会员', SINGLE_UNLOCK: '单项解锁(B类工具)', POINTS_RECHARGE: '积分充值', AI_PACKAGE: 'AI增量包', BATCH_INTERPRET: '批量解读' };
+    const esc = (v) => {
+      const s = v === null || v === undefined ? '' : String(v);
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    const header = ['订单号', '用户ID', '手机号', '昵称', '购买产品', '实付金额(元)', '支付状态', '下单时间', '支付时间', '微信交易号', '支付方式', '邀请人昵称', '邀请人手机号', '返佣状态'];
+    const lines = [header.join(',')];
+    for (const r of rows) {
+      lines.push([
+        r.order_no, r.user_id, r.phone || '', r.nickname || '',
+        TYPE_LABELS[r.order_type] || r.order_type || '', r.amount,
+        STATUS_LABELS[r.status] || r.status, r.created_at, r.paid_at || '',
+        r.transaction_id || '', r.payment_method || '',
+        r.inviter_nickname || '', r.inviter_phone || '',
+        rebateMap[r.order_no] || '',
+      ].map(esc).join(','));
+    }
+    audit(req.admin, 'ORDER_EXPORT', `orders(filter:${where})`, null, `${rows.length}条`, '订单导出CSV', req);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="orders_${new Date().toISOString().slice(0, 10)}.csv"`);
+    res.send('\uFEFF' + lines.join('\r\n'));
+  } catch (e) {
+    console.error('[orders/export]', e.message);
+    res.status(500).json({ success: false, error: '订单导出失败' });
   }
 });
 

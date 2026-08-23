@@ -112,6 +112,34 @@ function sortForPublic(items) {
     });
 }
 
+// ==================== 版本占位符注入（v25.0.47_21） ====================
+// 公告标题/内容支持 {APP_VERSION} / {WEB_VERSION} 占位符，返回时替换为实时值，
+// 确保公告版本与实际运行版本永远一致（单一数据源，杜绝人工改版本号遗漏）
+//   APP_VERSION ← data/app-release-config.json 的 latestVersion（APP 发版数据源）
+//   WEB_VERSION ← 生产前端 current/version.json 的 version（Web 发版数据源）
+
+function getVersionPlaceholders() {
+    let appVersion = '';
+    let webVersion = '';
+    try {
+        const cfg = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'app-release-config.json'), 'utf-8'));
+        appVersion = cfg.latestVersion || '';
+    } catch (e) { /* 配置不存在时置空，占位符原样保留 */ }
+    try {
+        const v = JSON.parse(fs.readFileSync('/root/yandaoguoxue/current/version.json', 'utf-8'));
+        webVersion = v.version || '';
+    } catch (e) { /* 路径不可读时置空 */ }
+    return { appVersion, webVersion };
+}
+
+function applyVersionPlaceholders(text, ph) {
+    if (!text) return text;
+    let out = String(text);
+    if (ph.appVersion) out = out.split('{APP_VERSION}').join(ph.appVersion);
+    if (ph.webVersion) out = out.split('{WEB_VERSION}').join(ph.webVersion);
+    return out;
+}
+
 // ==================== 公开接口（首页公告栏调用，未登录可访问） ====================
 
 // GET /api/announcements/public?limit=5
@@ -120,12 +148,13 @@ router.get('/public', (req, res) => {
         const limit = Math.min(20, Math.max(1, parseInt(req.query.limit, 10) || 5));
         const now = Date.now();
         const active = sortForPublic(readAll().filter((item) => isActive(item, now))).slice(0, limit);
+        const ph = getVersionPlaceholders();
         res.json({
             success: true,
             announcements: active.map((item) => ({
                 id: item.id,
-                title: item.title,
-                content: item.content,
+                title: applyVersionPlaceholders(item.title, ph),
+                content: applyVersionPlaceholders(item.content, ph),
                 level: item.level,
                 pinned: item.pinned,
                 publishAt: item.publishAt,

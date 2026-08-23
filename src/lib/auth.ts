@@ -154,7 +154,7 @@ export function getLoginState(): LoginState {
 
   if (profileStr) {
     try {
-      profile = JSON.parse(profileStr);
+      profile = normalizeLegacyProfile(JSON.parse(profileStr));
     } catch {
       safeRemoveItem(USER_PROFILE_KEY);
       safeRemoveSessionItem(USER_PROFILE_KEY);
@@ -168,6 +168,15 @@ export function getLoginState(): LoginState {
   };
 }
 
+// v25.0.47_21: 旧版登录态 userId 存的是数字，后端支付/订单接口只认字符串——
+// 读取时统一规范化，一处修复所有消费方（支付下单/云同步/邀请分佣等）
+function normalizeLegacyProfile(p: UserProfile | null): UserProfile | null {
+  if (p && typeof p.userId === "number") {
+    return { ...p, userId: String(p.userId) };
+  }
+  return p;
+}
+
 export function getUserToken(): string | null {
   return safeGetItem(USER_TOKEN_KEY) || safeGetSessionItem(USER_TOKEN_KEY);
 }
@@ -177,7 +186,7 @@ export function getUserProfile(): UserProfile | null {
   if (!profileStr) profileStr = safeGetSessionItem(USER_PROFILE_KEY);
   if (!profileStr) return null;
   try {
-    return JSON.parse(profileStr);
+    return normalizeLegacyProfile(JSON.parse(profileStr));
   } catch {
     safeRemoveItem(USER_PROFILE_KEY);
     safeRemoveSessionItem(USER_PROFILE_KEY);

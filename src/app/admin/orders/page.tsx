@@ -8,11 +8,12 @@
 //   · 全部操作写审计日志
 // ============================================================================
 
-import { useCallback, useEffect, useState } from "react";
-import { Receipt, RefreshCw, AlertTriangle } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Receipt, RefreshCw, AlertTriangle, Download } from "lucide-react";
 import { THEME, styles, AdminCard, StatCard, Badge, LoadingSpinner, useMounted, useToast, ConfirmDialog } from "../_shared";
 import {
   fetchAdminOrders,
+  exportOrdersCsv,
   manualConfirmOrder,
   fetchPaymentStatus,
   type AdminOrder,
@@ -28,9 +29,10 @@ const ORDER_STATUS: Record<string, { label: string; type: "default" | "success" 
 
 const TYPE_LABELS: Record<string, string> = {
   MEMBERSHIP: "会员",
-  SINGLE_UNLOCK: "单项解锁",
+  SINGLE_UNLOCK: "单项解锁(B类工具)",
   POINTS_RECHARGE: "积分充值",
   AI_PACKAGE: "AI增量包",
+  BATCH_INTERPRET: "批量解读",
 };
 
 function fmtTime(iso?: string | null): string {
@@ -41,13 +43,17 @@ function fmtTime(iso?: string | null): string {
 export default function AdminOrdersPage() {
   const mounted = useMounted();
   const { show, toastNode } = useToast();
+  const urlStatusInit = useRef(false);
 
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [payment, setPayment] = useState<PaymentStatus | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   // 补单
   const [confirmTarget, setConfirmTarget] = useState<AdminOrder | null>(null);
@@ -55,23 +61,45 @@ export default function AdminOrdersPage() {
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
-    const data = await fetchAdminOrders(status, page, 20);
+    const data = await fetchAdminOrders(status, page, 20, { dateFrom, dateTo });
     if (data) {
       setOrders(data.orders || []);
       setTotal(data.total || 0);
     } else {
       show("订单加载失败，请检查密钥权限", "error");
     }
-  }, [status, page, show]);
+  }, [status, page, dateFrom, dateTo, show]);
 
   useEffect(() => {
     if (!mounted) return;
+    // v25.0.47_21：支持仪表盘「待处理订单/实付金额」卡片点击跳转带状态筛选（?status=PENDING/PAID）
+    if (!urlStatusInit.current) {
+      urlStatusInit.current = true;
+      try {
+        const q = new URLSearchParams(window.location.search).get("status");
+        if (q && ["PENDING", "PAID", "REFUNDED", "CLOSED"].includes(q) && q !== status) {
+          setStatus(q); // load 重建后本 effect 再跑一次，走完整加载
+          return;
+        }
+      } catch { /* ignore */ }
+    }
     (async () => {
       setLoading(true);
       await Promise.all([load(), fetchPaymentStatus().then(setPayment)]);
       setLoading(false);
     })();
   }, [mounted, load]);
+
+  const handleExport = async () => {
+    setExporting(true);
+    const r = await exportOrdersCsv(status, { dateFrom, dateTo });
+    setExporting(false);
+    if (r.ok) {
+      show(`已导出订单报表：${r.filename}（Excel 可直接打开）`);
+    } else {
+      show(r.error || "导出失败", "error");
+    }
+  };
 
   const handleConfirm = async () => {
     if (!confirmTarget) return;
@@ -155,9 +183,30 @@ export default function AdminOrdersPage() {
             <option value="REFUNDED">已退款</option>
             <option value="CLOSED">已关闭</option>
           </select>
+          <input
+            type="date"
+            value={dateFrom}
+            max={dateTo || undefined}
+            onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+            style={{ ...styles.input, width: 150 }}
+            title="下单日期起"
+          />
+          <span style={{ color: THEME.textHint }}>至</span>
+          <input
+            type="date"
+            value={dateTo}
+            min={dateFrom || undefined}
+            onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+            style={{ ...styles.input, width: 150 }}
+            title="下单日期止"
+          />
           <button onClick={load} style={styles.btnPrimary}>
             <RefreshCw size={13} style={{ verticalAlign: -1, marginRight: 4 }} />
             刷新
+          </button>
+          <button onClick={handleExport} disabled={exporting} style={{ ...styles.btnSecondary, opacity: exporting ? 0.5 : 1 }}>
+            <Download size={13} style={{ verticalAlign: -1, marginRight: 4 }} />
+            {exporting ? "导出中..." : "导出Excel报表"}
           </button>
           <span style={{ fontSize: 12, color: THEME.textHint }}>
             共 {total} 条 · 第 {page} 页
@@ -177,20 +226,22 @@ export default function AdminOrdersPage() {
             <thead>
               <tr>
                 <Th>订单号</Th>
-                <Th>用户</Th>
+                <Th>用户（手机号）</Th>
                 <Th>类型</Th>
                 <Th>金额</Th>
                 <Th>状态</Th>
                 <Th>渠道</Th>
+                <Th>微信交易号</Th>
+                <Th>邀请人</Th>
                 <Th>返佣</Th>
-                <Th>创建/支付时间</Th>
+                <Th>下单/支付时间</Th>
                 <Th>操作</Th>
               </tr>
             </thead>
             <tbody>
               {orders.length === 0 ? (
                 <tr>
-                  <Td colSpan={9} style={{ textAlign: "center", color: THEME.textHint, padding: 24 }}>
+                  <Td colSpan={11} style={{ textAlign: "center", color: THEME.textHint, padding: 24 }}>
                     暂无订单
                   </Td>
                 </tr>
@@ -201,8 +252,10 @@ export default function AdminOrdersPage() {
                     <tr key={o.order_no}>
                       <Td style={{ fontFamily: "monospace", fontSize: 11 }}>{o.order_no}</Td>
                       <Td>
-                        {o.nickname || o.user_id}
-                        <div style={{ fontSize: 10, color: THEME.textHint }}>ID {o.user_id}</div>
+                        <div>{o.nickname || "-"}</div>
+                        <div style={{ fontSize: 10, color: THEME.textHint }}>
+                          {o.phone ? o.phone.replace(/(\d{3})\d{4}(\d{4})/, "$1****$2") : "无手机号"} · ID {o.user_id}
+                        </div>
                       </Td>
                       <Td>{TYPE_LABELS[o.order_type] || o.order_type}</Td>
                       <Td style={{ fontWeight: 700 }}>¥{Number(o.amount).toFixed(2)}</Td>
@@ -210,6 +263,10 @@ export default function AdminOrdersPage() {
                         <Badge type={st.type}>{st.label}</Badge>
                       </Td>
                       <Td style={{ fontSize: 11 }}>{o.payment_method || "-"}</Td>
+                      <Td style={{ fontFamily: "monospace", fontSize: 10 }}>{o.transaction_id || "-"}</Td>
+                      <Td style={{ fontSize: 11 }}>
+                        {o.inviter_nickname || o.inviter_phone || (o.inviter_id ? `ID ${o.inviter_id}` : "-")}
+                      </Td>
                       <Td style={{ fontSize: 11 }}>{o.rebateStatus || "-"}</Td>
                       <Td style={{ fontSize: 11 }}>
                         {fmtTime(o.created_at)}

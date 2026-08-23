@@ -339,6 +339,7 @@ export async function deleteAnnouncement(
 
 export interface AdminOverviewData {
   version: string;
+  appVersion?: string;
   gitCommit: string;
   generatedAt?: string;
   server?: { uptimeHours?: string | number; memoryMB?: string | number; nodeVersion?: string; pid?: number };

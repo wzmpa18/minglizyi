@@ -145,6 +145,7 @@ export function StatCard({
   icon,
   color = THEME.primary,
   trend,
+  onClick,
 }: {
   label: string;
   value: ReactNode;
@@ -152,9 +153,11 @@ export function StatCard({
   icon?: ReactNode;
   color?: string;
   trend?: { value: number; label?: string };
+  onClick?: () => void;
 }) {
   return (
     <div
+      onClick={onClick}
       style={{
         backgroundColor: THEME.cardBg,
         borderRadius: 12,
@@ -162,7 +165,10 @@ export function StatCard({
         padding: 18,
         position: "relative",
         overflow: "hidden",
+        cursor: onClick ? "pointer" : undefined,
+        transition: onClick ? "box-shadow 0.2s, transform 0.2s" : undefined,
       }}
+      title={onClick ? "点击查看明细" : undefined}
     >
       <div
         style={{

@@ -114,6 +114,7 @@ export interface ModerationGroup {
 export interface AdminOrder {
   order_no: string;
   user_id: number;
+  phone?: string | null;
   nickname?: string | null;
   amount: number;
   order_type: string;
@@ -121,6 +122,10 @@ export interface AdminOrder {
   payment_method?: string;
   created_at: string;
   paid_at?: string | null;
+  transaction_id?: string | null;
+  inviter_id?: number | null;
+  inviter_nickname?: string | null;
+  inviter_phone?: string | null;
   rebateStatus?: string | null;
 }
 
@@ -359,14 +364,52 @@ export async function groupAction(
 export async function fetchAdminOrders(
   status = "",
   page = 1,
-  size = 20
+  size = 20,
+  filters: { dateFrom?: string; dateTo?: string } = {}
 ): Promise<{ orders: AdminOrder[]; total: number; page: number } | null> {
   const params = new URLSearchParams({ page: String(page), size: String(size) });
   if (status) params.set("status", status);
+  if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
+  if (filters.dateTo) params.set("dateTo", filters.dateTo);
   const res = await unifiedFetch<{ orders: AdminOrder[]; total: number; page: number }>(
     `/orders?${params.toString()}`
   );
   return res.success ? res.data! : null;
+}
+
+/** v25.0.47_21 导出订单 CSV（带鉴权头下载，与列表同筛选条件，Excel 可直接打开） */
+export async function exportOrdersCsv(
+  status = "",
+  filters: { dateFrom?: string; dateTo?: string } = {}
+): Promise<{ ok: boolean; error?: string; filename?: string }> {
+  const key = getAdminKey();
+  if (!key) return { ok: false, error: "未登录" };
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
+  if (filters.dateTo) params.set("dateTo", filters.dateTo);
+  try {
+    const res = await fetch(`${API_BASE}/orders/export?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${key}` },
+    });
+    if (!res.ok) return { ok: false, error: `导出失败 (${res.status})` };
+    const blob = await res.blob();
+    const disposition = res.headers.get("Content-Disposition") || "";
+    const m = /filename="?([^";]+)"?/.exec(disposition);
+    const filename = m ? m[1] : `orders_${new Date().toISOString().slice(0, 10)}.csv`;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    return { ok: true, filename };
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: `网络异常：${msg}` };
+  }
 }
 
 export async function manualConfirmOrder(
