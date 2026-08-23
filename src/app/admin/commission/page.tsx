@@ -9,7 +9,7 @@
 // ============================================================================
 
 import { useCallback, useEffect, useState } from "react";
-import { Coins, RefreshCw, CheckCircle2, XCircle, Snowflake, Settings2, FileText, Banknote } from "lucide-react";
+import { Coins, RefreshCw, CheckCircle2, XCircle, Snowflake, Settings2, FileText, Banknote, Download, BarChart3 } from "lucide-react";
 import { THEME, styles, AdminCard, StatCard, Badge, LoadingSpinner, useMounted, useToast, ConfirmDialog } from "../_shared";
 import {
   fetchCommissionConfig,
@@ -19,9 +19,14 @@ import {
   approveWithdrawal,
   rejectWithdrawal,
   runUnfreezeScan,
+  batchApproveWithdrawals,
+  syncWithdrawal,
+  fetchCommissionStats,
+  exportWithdrawalsCsv,
   type CommissionConfig,
   type AdminCommissionRecord,
   type AdminWithdrawal,
+  type CommissionStats,
 } from "@/lib/admin/unifiedService";
 
 const RECORD_STATUS: Record<string, { label: string; type: "success" | "warning" | "error" | "info" }> = {
@@ -34,13 +39,14 @@ const RECORD_STATUS: Record<string, { label: string; type: "success" | "warning"
 
 const WITHDRAW_STATUS: Record<string, { label: string; type: "success" | "warning" | "error" | "info" }> = {
   PENDING_REVIEW: { label: "待审核", type: "warning" },
+  TRANSFERING: { label: "转账中", type: "info" },
   PROCESSING: { label: "处理中", type: "info" },
   PAID: { label: "已到账", type: "success" },
   FAILED: { label: "失败", type: "error" },
   REJECTED: { label: "已驳回", type: "error" },
 };
 
-type TabKey = "config" | "records" | "withdrawals";
+type TabKey = "config" | "records" | "withdrawals" | "finance";
 
 function fmtTime(iso?: string | null): string {
   if (!iso) return "-";
@@ -80,6 +86,17 @@ export default function AdminCommissionPage() {
   const [rejectTarget, setRejectTarget] = useState<AdminWithdrawal | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // v25.0.47_13: 批量审核 / 状态同步 / 导出 / 财务报表
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [batchBusy, setBatchBusy] = useState(false);
+  const [syncingId, setSyncingId] = useState<number | null>(null);
+  const [exportFrom, setExportFrom] = useState("");
+  const [exportTo, setExportTo] = useState("");
+  const [exporting, setExporting] = useState(false);
+  const [stats, setStats] = useState<CommissionStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [statsDays, setStatsDays] = useState(30);
 
   const loadConfig = useCallback(async () => {
     const cfg = await fetchCommissionConfig();
@@ -190,6 +207,73 @@ export default function AdminCommissionPage() {
     loadRecords();
   };
 
+  // ==================== v25.0.47_13: 批量通过 / 状态同步 / 导出 / 报表 ====================
+  const pendingIds = withdrawals.filter((w) => w.status === "PENDING_REVIEW").map((w) => w.id);
+  const allSelected = pendingIds.length > 0 && selectedIds.length === pendingIds.length;
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedIds(allSelected ? [] : pendingIds);
+  };
+
+  const handleBatchApprove = async () => {
+    if (selectedIds.length === 0) {
+      show("请先勾选待审核的提现单", "error");
+      return;
+    }
+    setBatchBusy(true);
+    const r = await batchApproveWithdrawals(selectedIds, "财务批量审核通过");
+    setBatchBusy(false);
+    if ("ok" in r && typeof r.ok === "boolean" && r.ok === false && !("total" in r)) {
+      show((r as { error?: string }).error || "批量审核失败", "error");
+      return;
+    }
+    const data = r as { ok: number; total: number };
+    show(`批量审核完成：${data.ok}/${data.total} 笔成功（已发起转账或进入处理中）`);
+    setSelectedIds([]);
+    loadWithdrawals();
+  };
+
+  const handleSync = async (w: AdminWithdrawal) => {
+    setSyncingId(w.id);
+    const r = await syncWithdrawal(w.id);
+    setSyncingId(null);
+    if (r.ok) {
+      if (r.changed) show(`已同步：微信侧状态 ${r.state}，订单已落账`);
+      else show(`微信侧当前状态：${r.state}（未变化）`, "info");
+      loadWithdrawals();
+    } else {
+      show(r.error || "同步失败", "error");
+    }
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    const r = await exportWithdrawalsCsv({
+      from: exportFrom || undefined,
+      to: exportTo || undefined,
+      status: wStatus || undefined,
+    });
+    setExporting(false);
+    if (r.ok) show(`已导出 ${r.filename}（Excel 可直接打开）`);
+    else show(r.error || "导出失败", "error");
+  };
+
+  const loadStats = useCallback(async () => {
+    setStatsLoading(true);
+    const s = await fetchCommissionStats(statsDays);
+    if (s) setStats(s);
+    else show("报表加载失败（需财务管理员权限）", "error");
+    setStatsLoading(false);
+  }, [statsDays, show]);
+
+  useEffect(() => {
+    if (mounted && tab === "finance") loadStats();
+  }, [mounted, tab, loadStats]);
+
   if (!mounted || loading) {
     return (
       <div style={{ padding: 24 }}>
@@ -220,6 +304,7 @@ export default function AdminCommissionPage() {
             { key: "config", label: "分佣配置", icon: <Settings2 size={14} /> },
             { key: "records", label: "佣金明细", icon: <FileText size={14} /> },
             { key: "withdrawals", label: "提现审核", icon: <Banknote size={14} /> },
+            { key: "finance", label: "财务报表", icon: <BarChart3 size={14} /> },
           ] as { key: TabKey; label: string; icon: React.ReactNode }[]
         ).map((t) => (
           <button
@@ -541,10 +626,11 @@ export default function AdminCommissionPage() {
       {/* ===== 提现审核 Tab ===== */}
       {tab === "withdrawals" && (
         <AdminCard>
-          <div style={{ display: "flex", gap: 10, marginBottom: 14, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 10, marginBottom: 14, alignItems: "center", flexWrap: "wrap" }}>
             <select value={wStatus} onChange={(e) => setWStatus(e.target.value)} style={{ ...styles.input, width: 160 }}>
               <option value="">全部状态</option>
               <option value="PENDING_REVIEW">待审核</option>
+              <option value="TRANSFERING">转账中</option>
               <option value="PROCESSING">处理中</option>
               <option value="PAID">已到账</option>
               <option value="FAILED">失败</option>
@@ -553,12 +639,31 @@ export default function AdminCommissionPage() {
             <button onClick={loadWithdrawals} style={styles.btnPrimary}>
               刷新
             </button>
+            {pendingIds.length > 0 && (
+              <button onClick={handleBatchApprove} disabled={batchBusy || selectedIds.length === 0} style={{ ...styles.btnPrimary, opacity: selectedIds.length === 0 || batchBusy ? 0.5 : 1, cursor: selectedIds.length === 0 ? "not-allowed" : "pointer" }}>
+                <CheckCircle2 size={13} style={{ verticalAlign: -1, marginRight: 4 }} />
+                {batchBusy ? "批量处理中..." : `批量通过（${selectedIds.length}/${pendingIds.length}）`}
+              </button>
+            )}
             <span style={{ fontSize: 12, color: THEME.textHint }}>共 {withdrawTotal} 条</span>
+          </div>
+
+          {/* 导出区（财务对账） */}
+          <div style={{ display: "flex", gap: 10, marginBottom: 14, alignItems: "center", flexWrap: "wrap", padding: 10, backgroundColor: THEME.primaryBgLight, borderRadius: 8 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: THEME.textSub }}>导出对账：</span>
+            <input type="date" value={exportFrom} onChange={(e) => setExportFrom(e.target.value)} style={{ ...styles.input, width: 150 }} />
+            <span style={{ fontSize: 12, color: THEME.textHint }}>至</span>
+            <input type="date" value={exportTo} onChange={(e) => setExportTo(e.target.value)} style={{ ...styles.input, width: 150 }} />
+            <span style={{ fontSize: 11, color: THEME.textHint }}>按当前状态筛选（{wStatus || "全部"}）</span>
+            <button onClick={handleExport} disabled={exporting} style={{ ...styles.btnSecondary, display: "flex", alignItems: "center", gap: 4 }}>
+              <Download size={13} /> {exporting ? "导出中..." : "导出 CSV"}
+            </button>
           </div>
 
           <Table>
             <thead>
               <tr>
+                <Th>{pendingIds.length > 0 ? <input type="checkbox" checked={allSelected} onChange={toggleSelectAll} /> : ""}</Th>
                 <Th>提现单号</Th>
                 <Th>用户</Th>
                 <Th>金额</Th>
@@ -570,7 +675,7 @@ export default function AdminCommissionPage() {
             <tbody>
               {withdrawals.length === 0 ? (
                 <tr>
-                  <Td colSpan={6} style={{ textAlign: "center", color: THEME.textHint }}>
+                  <Td colSpan={7} style={{ textAlign: "center", color: THEME.textHint }}>
                     暂无提现记录
                   </Td>
                 </tr>
@@ -579,6 +684,11 @@ export default function AdminCommissionPage() {
                   const st = WITHDRAW_STATUS[w.status] || { label: w.status, type: "info" as const };
                   return (
                     <tr key={w.id}>
+                      <Td>
+                        {w.status === "PENDING_REVIEW" && (
+                          <input type="checkbox" checked={selectedIds.includes(w.id)} onChange={() => toggleSelect(w.id)} />
+                        )}
+                      </Td>
                       <Td style={{ fontFamily: "monospace", fontSize: 11 }}>{w.withdraw_no}</Td>
                       <Td>{w.user_id}</Td>
                       <Td style={{ fontWeight: 700 }}>¥{fmtCents(w.amount_cents)}</Td>
@@ -614,8 +724,18 @@ export default function AdminCommissionPage() {
                             </button>
                           </div>
                         )}
+                        {w.status === "TRANSFERING" && (
+                          <button
+                            onClick={() => handleSync(w)}
+                            disabled={syncingId === w.id}
+                            style={{ ...styles.btnSecondary, padding: "4px 10px", fontSize: 12 }}
+                          >
+                            <RefreshCw size={12} style={{ verticalAlign: -1, marginRight: 2, animation: syncingId === w.id ? "spin 1s linear infinite" : "none" }} />
+                            {syncingId === w.id ? "同步中..." : "同步微信状态"}
+                          </button>
+                        )}
                         {w.status === "PROCESSING" && (
-                          <span style={{ fontSize: 11, color: THEME.textHint }}>等待打款确认</span>
+                          <span style={{ fontSize: 11, color: THEME.textHint }}>人工打款流程</span>
                         )}
                       </Td>
                     </tr>
@@ -625,6 +745,94 @@ export default function AdminCommissionPage() {
             </tbody>
           </Table>
         </AdminCard>
+      )}
+
+      {/* ===== 财务报表 Tab（v25.0.47_13） ===== */}
+      {tab === "finance" && (
+        <>
+          <AdminCard>
+            <div style={{ display: "flex", gap: 10, marginBottom: 14, alignItems: "center", flexWrap: "wrap" }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: THEME.textMain }}>佣金统计报表</span>
+              <select value={statsDays} onChange={(e) => setStatsDays(Number(e.target.value))} style={{ ...styles.input, width: 140 }}>
+                <option value={7}>近 7 天</option>
+                <option value={30}>近 30 天</option>
+                <option value={90}>近 90 天</option>
+                <option value={180}>近 180 天</option>
+              </select>
+              <button onClick={loadStats} style={styles.btnPrimary}>刷新报表</button>
+            </div>
+            {statsLoading ? (
+              <LoadingSpinner text="统计中..." />
+            ) : stats ? (
+              <>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 12, marginBottom: 16 }}>
+                  <StatCard label="一级佣金累计" value={`¥${fmtCents(stats.levels.l1_cents || 0)}`} icon={<Coins size={18} />} color={THEME.primary} />
+                  <StatCard label="二级佣金累计" value={`¥${fmtCents(stats.levels.l2_cents || 0)}`} icon={<Coins size={18} />} color={THEME.primaryLight} />
+                  <StatCard label="冻结中佣金" value={`¥${fmtCents(stats.levels.frozen_cents || 0)}`} icon={<Snowflake size={18} />} color={THEME.warning} />
+                  <StatCard label="退款扣回累计" value={`¥${fmtCents(stats.levels.reversed_cents || 0)}`} icon={<XCircle size={18} />} color={THEME.error} />
+                </div>
+
+                <div style={{ fontSize: 13, fontWeight: 700, color: THEME.textMain, margin: "10px 0 8px" }}>月度佣金报表（近12个月）</div>
+                <Table>
+                  <thead>
+                    <tr><Th>月份</Th><Th>一级佣金</Th><Th>二级佣金</Th><Th>合计</Th><Th>笔数</Th></tr>
+                  </thead>
+                  <tbody>
+                    {stats.monthly.length === 0 ? (
+                      <tr><Td colSpan={5} style={{ textAlign: "center", color: THEME.textHint }}>暂无数据</Td></tr>
+                    ) : stats.monthly.map((m) => (
+                      <tr key={m.month}>
+                        <Td style={{ fontWeight: 600 }}>{m.month}</Td>
+                        <Td>¥{fmtCents(m.l1_cents || 0)}</Td>
+                        <Td>¥{fmtCents(m.l2_cents || 0)}</Td>
+                        <Td style={{ fontWeight: 700, color: THEME.success }}>¥{fmtCents(m.total_cents || 0)}</Td>
+                        <Td>{m.count}</Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+
+                <div style={{ fontSize: 13, fontWeight: 700, color: THEME.textMain, margin: "16px 0 8px" }}>提现状态汇总</div>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  {stats.withdrawSummary.length === 0 ? (
+                    <span style={{ fontSize: 12, color: THEME.textHint }}>暂无提现记录</span>
+                  ) : stats.withdrawSummary.map((s) => {
+                    const st = WITHDRAW_STATUS[s.status] || { label: s.status, type: "info" as const };
+                    return (
+                      <div key={s.status} style={{ padding: "10px 16px", borderRadius: 10, border: `1px solid ${THEME.border}`, backgroundColor: "#fff" }}>
+                        <Badge type={st.type}>{st.label}</Badge>
+                        <div style={{ fontSize: 18, fontWeight: 800, color: THEME.textMain, marginTop: 6 }}>¥{fmtCents(s.amount_cents || 0)}</div>
+                        <div style={{ fontSize: 11, color: THEME.textHint }}>{s.count} 笔</div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div style={{ fontSize: 13, fontWeight: 700, color: THEME.textMain, margin: "16px 0 8px" }}>退款扣回明细（最近50条）</div>
+                <Table>
+                  <thead>
+                    <tr><Th>订单号</Th><Th>推荐人</Th><Th>比例</Th><Th>扣回金额</Th><Th>时间</Th></tr>
+                  </thead>
+                  <tbody>
+                    {stats.reversals.length === 0 ? (
+                      <tr><Td colSpan={5} style={{ textAlign: "center", color: THEME.textHint }}>暂无退款扣回记录</Td></tr>
+                    ) : stats.reversals.map((r, i) => (
+                      <tr key={`${r.order_no}-${i}`}>
+                        <Td style={{ fontFamily: "monospace", fontSize: 11 }}>{r.order_no}</Td>
+                        <Td>{r.inviter_user_id}</Td>
+                        <Td>{r.ratio_percent}%</Td>
+                        <Td style={{ fontWeight: 700, color: THEME.error }}>¥{fmtCents(r.commission_cents)}</Td>
+                        <Td style={{ fontSize: 11 }}>{fmtTime(r.created_at)}</Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </>
+            ) : (
+              <div style={{ padding: 24, textAlign: "center", color: THEME.textHint, fontSize: 13 }}>报表加载失败</div>
+            )}
+          </AdminCard>
+        </>
       )}
 
       {/* ===== 审核通过弹窗 ===== */}

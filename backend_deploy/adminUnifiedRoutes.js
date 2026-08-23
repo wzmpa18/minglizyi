@@ -26,41 +26,18 @@ const path = require('path');
 const crypto = require('crypto');
 
 const DATA_DIR = path.join(__dirname, 'data');
-const AUDIT_FILE = path.join(DATA_DIR, 'admin_audit.json');
-const KEYS_FILE = path.join(DATA_DIR, 'admin_roles.json');
 const USERS_DB_PATH = process.env.DB_PATH || '/root/backend-auth/data/yandao_users.db';
 const SOCIAL_DB_PATH = path.join(DATA_DIR, 'social.db');
 
-const ROLES = { SUPER_ADMIN: 100, ADMIN: 80, CONTENT_ADMIN: 60, FINANCE_ADMIN: 60, SUPPORT_ADMIN: 40 };
+// v25.0.47_13: 统一角色权限模块（ROLES/ROLE_SCOPES/鉴权/审计/子密钥管理，全后台唯一事实源）
+const adminRoles = require('./adminRoles');
+const { ROLES, ROLE_LABELS, adminAuth, audit } = adminRoles;
+// 兼容旧名（本文件内部全部路由使用）
+const adminAuthUnified = adminAuth;
+
 const router = express.Router();
 
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-
-// ==================== 密钥与角色 ====================
-
-function loadKeys() {
-  try {
-    if (fs.existsSync(KEYS_FILE)) {
-      const j = JSON.parse(fs.readFileSync(KEYS_FILE, 'utf-8'));
-      if (j && j.keys) return j.keys;
-    }
-  } catch (e) { console.error('[AdminUnified] keys读取失败:', e.message); }
-  return {};
-}
-
-function resolveAdminKey(key) {
-  if (!key) return null;
-  const keys = loadKeys();
-  if (keys[key]) {
-    return { key, role: keys[key].role || 'ADMIN', name: keys[key].name || '管理员' };
-  }
-  // 向后兼容：环境变量主密钥 = SUPER_ADMIN
-  const envKey = process.env.ADMIN_API_KEY;
-  if (envKey && key === envKey) {
-    return { key, role: 'SUPER_ADMIN', name: '主密钥管理员' };
-  }
-  return null;
-}
 
 // v25.0.47_10: PM2 存活探测（驾驶舱后端状态）
 function pm2Alive() {
@@ -68,47 +45,6 @@ function pm2Alive() {
     const out = require('child_process').execSync('pm2 pid yandaoguoxue-backend 2>/dev/null').toString().trim();
     return /^\d+$/.test(out) && out !== '0';
   } catch (e) { return true; } // 探测失败默认存活（请求能到这里说明进程活着）
-}
-
-function adminAuthUnified(minRole) {
-  return (req, res, next) => {
-    const header = req.headers.authorization || '';
-    const token = header.startsWith('Bearer ') ? header.slice(7) : '';
-    const admin = resolveAdminKey(token);
-    if (!admin) return res.status(401).json({ success: false, error: '密钥无效' });
-    if (minRole && (ROLES[admin.role] || 0) < ROLES[minRole]) {
-      return res.status(403).json({ success: false, error: `权限不足（需要${minRole}）` });
-    }
-    req.admin = admin;
-    next();
-  };
-}
-
-// ==================== 审计日志 ====================
-
-function audit(admin, action, target, oldValue, newValue, reason, req) {
-  try {
-    const entry = {
-      id: Date.now() + '_' + crypto.randomBytes(3).toString('hex'),
-      operator: admin.name || 'unknown',
-      operatorRole: admin.role,
-      time: new Date().toISOString(),
-      action,
-      target: String(target || ''),
-      oldValue: oldValue === undefined ? null : oldValue,
-      newValue: newValue === undefined ? null : newValue,
-      reason: String(reason || ''),
-      ip: (req && req.headers['x-forwarded-for'] || req && req.socket && req.socket.remoteAddress || '').split(',')[0].trim(),
-      ua: String((req && req.headers['user-agent']) || '').slice(0, 200),
-    };
-    let logs = [];
-    try { logs = JSON.parse(fs.readFileSync(AUDIT_FILE, 'utf-8')); } catch { /* 新文件 */ }
-    logs.push(entry);
-    if (logs.length > 1000) logs = logs.slice(-1000); // 保留最近1000条
-    fs.writeFileSync(AUDIT_FILE, JSON.stringify(logs, null, 1));
-  } catch (e) {
-    console.error('[AdminUnified] 审计写入失败:', e.message);
-  }
 }
 
 // ==================== 数据库 ====================
@@ -141,47 +77,38 @@ function getSocialDb() {
 
 // ==================== 身份 ====================
 
-router.get('/whoami', adminAuthUnified('SUPPORT_ADMIN'), (req, res) => {
-  res.json({ success: true, data: { name: req.admin.name, role: req.admin.role, roleLevel: ROLES[req.admin.role] } });
+router.get('/whoami', adminAuthUnified(), (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      name: req.admin.name,
+      role: req.admin.role,
+      roleLevel: ROLES[req.admin.role],
+      roleLabel: ROLE_LABELS[req.admin.role] || req.admin.role,
+      scopes: adminRoles.ROLE_SCOPES[req.admin.role] || [],
+    },
+  });
 });
 
-// ==================== 密钥管理（SUPER_ADMIN） ====================
+// ==================== 密钥管理（SUPER_ADMIN，v25.0.47_13 哈希存储） ====================
 
 router.get('/keys', adminAuthUnified('SUPER_ADMIN'), (_req, res) => {
-  const keys = loadKeys();
-  const list = Object.entries(keys).map(([k, v]) => ({
-    keyMasked: k.slice(0, 4) + '****' + k.slice(-4),
-    role: v.role,
-    name: v.name,
-    createdAt: v.createdAt,
-  }));
-  res.json({ success: true, data: { keys: list, envKeyMapped: !!process.env.ADMIN_API_KEY } });
+  res.json({ success: true, data: { keys: adminRoles.listSubKeys(), envKeyMapped: !!process.env.ADMIN_API_KEY } });
 });
 
 router.post('/keys', adminAuthUnified('SUPER_ADMIN'), (req, res) => {
   const { role, name } = req.body || {};
-  if (!role || !ROLES[role]) return res.status(400).json({ success: false, error: '角色无效' });
-  if (role === 'SUPER_ADMIN') {
-    return res.status(400).json({ success: false, error: 'SUPER_ADMIN 仅允许环境变量主密钥，不可签发' });
-  }
-  const newKey = 'YDADM_' + crypto.randomBytes(16).toString('hex');
-  const keys = loadKeys();
-  keys[newKey] = { role, name: String(name || role).slice(0, 24), createdAt: new Date().toISOString() };
-  fs.writeFileSync(KEYS_FILE, JSON.stringify({ keys }, null, 2));
-  audit(req.admin, 'ADMIN_KEY_CREATE', name || role, null, { role }, '创建后台密钥', req);
-  res.json({ success: true, data: { key: newKey, role, name: name || role } });
+  const r = adminRoles.createSubKey(role, name);
+  if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+  audit(req.admin, 'ADMIN_KEY_CREATE', name || role, null, { role }, '创建后台子密钥（哈希落盘）', req);
+  // 明文仅本次返回，刷新后不可再查
+  res.json({ success: true, data: { key: r.key, role: r.role, name: r.name } });
 });
 
 router.delete('/keys/:masked', adminAuthUnified('SUPER_ADMIN'), (req, res) => {
-  // 按掩码匹配删除，避免密钥明文再传输
-  const masked = req.params.masked;
-  const keys = loadKeys();
-  const hit = Object.keys(keys).find(k => (k.slice(0, 4) + '****' + k.slice(-4)) === masked);
-  if (!hit) return res.status(404).json({ success: false, error: '密钥不存在' });
-  const old = { role: keys[hit].role, name: keys[hit].name };
-  delete keys[hit];
-  fs.writeFileSync(KEYS_FILE, JSON.stringify({ keys }, null, 2));
-  audit(req.admin, 'ADMIN_KEY_DELETE', old.name, old, null, '删除后台密钥', req);
+  const r = adminRoles.disableSubKey(req.params.masked);
+  if (!r.ok) return res.status(404).json({ success: false, error: r.error });
+  audit(req.admin, 'ADMIN_KEY_DISABLE', r.old.name, r.old, { status: 'disabled' }, (req.body && req.body.reason) || '禁用后台子密钥', req);
   res.json({ success: true });
 });
 
@@ -355,7 +282,7 @@ router.get('/audit', adminAuthUnified('ADMIN'), (req, res) => {
 
 // ==================== 社交/内容审核（第十七章） ====================
 
-router.get('/moderation/users', adminAuthUnified('SUPPORT_ADMIN'), (req, res) => {
+router.get('/moderation/users', adminAuthUnified('SUPPORT_ADMIN', 'ops'), (req, res) => {
   try {
     const udb = getUsersDb();
     const q = String(req.query.query || '').trim();
@@ -377,7 +304,7 @@ router.get('/moderation/users', adminAuthUnified('SUPPORT_ADMIN'), (req, res) =>
   }
 });
 
-router.post('/moderation/users/:userId/action', adminAuthUnified('SUPPORT_ADMIN'), (req, res) => {
+router.post('/moderation/users/:userId/action', adminAuthUnified('SUPPORT_ADMIN', 'ops'), (req, res) => {
   try {
     const udb = getUsersDb();
     const userId = parseInt(req.params.userId, 10);
@@ -411,7 +338,7 @@ router.post('/moderation/users/:userId/action', adminAuthUnified('SUPPORT_ADMIN'
   }
 });
 
-router.get('/moderation/posts', adminAuthUnified('SUPPORT_ADMIN'), (req, res) => {
+router.get('/moderation/posts', adminAuthUnified('SUPPORT_ADMIN', 'ops'), (req, res) => {
   try {
     const sdb = getSocialDb();
     const status = req.query.status;
@@ -428,7 +355,7 @@ router.get('/moderation/posts', adminAuthUnified('SUPPORT_ADMIN'), (req, res) =>
   }
 });
 
-router.post('/moderation/posts/:postId/action', adminAuthUnified('CONTENT_ADMIN'), (req, res) => {
+router.post('/moderation/posts/:postId/action', adminAuthUnified('CONTENT_ADMIN', 'ops'), (req, res) => {
   try {
     const sdb = getSocialDb();
     const { action, reason } = req.body || {};
@@ -446,7 +373,7 @@ router.post('/moderation/posts/:postId/action', adminAuthUnified('CONTENT_ADMIN'
   }
 });
 
-router.get('/moderation/reports', adminAuthUnified('SUPPORT_ADMIN'), (req, res) => {
+router.get('/moderation/reports', adminAuthUnified('SUPPORT_ADMIN', 'ops'), (req, res) => {
   try {
     const sdb = getSocialDb();
     const status = req.query.status;
@@ -463,7 +390,7 @@ router.get('/moderation/reports', adminAuthUnified('SUPPORT_ADMIN'), (req, res) 
   }
 });
 
-router.post('/moderation/reports/:id/action', adminAuthUnified('SUPPORT_ADMIN'), (req, res) => {
+router.post('/moderation/reports/:id/action', adminAuthUnified('SUPPORT_ADMIN', 'ops'), (req, res) => {
   try {
     const sdb = getSocialDb();
     const { action, reason } = req.body || {};
@@ -481,7 +408,7 @@ router.post('/moderation/reports/:id/action', adminAuthUnified('SUPPORT_ADMIN'),
   }
 });
 
-router.get('/moderation/groups', adminAuthUnified('SUPPORT_ADMIN'), (req, res) => {
+router.get('/moderation/groups', adminAuthUnified('SUPPORT_ADMIN', 'ops'), (req, res) => {
   try {
     const sdb = getSocialDb();
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
@@ -496,7 +423,7 @@ router.get('/moderation/groups', adminAuthUnified('SUPPORT_ADMIN'), (req, res) =
   }
 });
 
-router.post('/moderation/groups/:id/action', adminAuthUnified('CONTENT_ADMIN'), (req, res) => {
+router.post('/moderation/groups/:id/action', adminAuthUnified('CONTENT_ADMIN', 'ops'), (req, res) => {
   try {
     const sdb = getSocialDb();
     const { action, reason } = req.body || {};
@@ -514,7 +441,7 @@ router.post('/moderation/groups/:id/action', adminAuthUnified('CONTENT_ADMIN'), 
   }
 });
 
-router.get('/moderation/blacklists', adminAuthUnified('SUPPORT_ADMIN'), (_req, res) => {
+router.get('/moderation/blacklists', adminAuthUnified('SUPPORT_ADMIN', 'ops'), (_req, res) => {
   try {
     const sdb = getSocialDb();
     const rows = sdb.prepare('SELECT user_id, blocked_id, created_at FROM blacklists ORDER BY rowid DESC LIMIT 200').all();
@@ -526,7 +453,7 @@ router.get('/moderation/blacklists', adminAuthUnified('SUPPORT_ADMIN'), (_req, r
 
 // ==================== 订单后台（第二十章） ====================
 
-router.get('/orders', adminAuthUnified('FINANCE_ADMIN'), (req, res) => {
+router.get('/orders', adminAuthUnified('FINANCE_ADMIN', 'finance'), (req, res) => {
   try {
     const udb = getUsersDb();
     const status = req.query.status;
@@ -574,7 +501,7 @@ router.post('/orders/:orderId/confirm', adminAuthUnified('SUPER_ADMIN'), (req, r
 
 // ==================== 支付通道状态（第二十七章，不显示密钥） ====================
 
-router.get('/payment-status', adminAuthUnified('FINANCE_ADMIN'), (_req, res) => {
+router.get('/payment-status', adminAuthUnified('FINANCE_ADMIN', 'finance'), (_req, res) => {
   const wechat = {
     configured: false,
     missing: [],
@@ -604,7 +531,7 @@ router.get('/payment-status', adminAuthUnified('FINANCE_ADMIN'), (_req, res) => 
 
 // ==================== P8 分佣后台（第五章） ====================
 
-router.get('/commission/config', adminAuthUnified('FINANCE_ADMIN'), (_req, res) => {
+router.get('/commission/config', adminAuthUnified('FINANCE_ADMIN', 'finance'), (_req, res) => {
   const commissionEngine = require('./commissionEngine');
   res.json({ success: true, data: commissionEngine.getConfig() });
 });
@@ -624,7 +551,7 @@ router.put('/commission/config', adminAuthUnified('SUPER_ADMIN'), (req, res) => 
   res.json({ success: true, data: cfg });
 });
 
-router.get('/commission/records', adminAuthUnified('FINANCE_ADMIN'), (req, res) => {
+router.get('/commission/records', adminAuthUnified('FINANCE_ADMIN', 'finance'), (req, res) => {
   try {
     const commissionEngine = require('./commissionEngine');
     const db = commissionEngine.getDb();
@@ -649,7 +576,7 @@ router.get('/commission/records', adminAuthUnified('FINANCE_ADMIN'), (req, res) 
   }
 });
 
-router.get('/commission/withdrawals', adminAuthUnified('FINANCE_ADMIN'), (req, res) => {
+router.get('/commission/withdrawals', adminAuthUnified('FINANCE_ADMIN', 'finance'), (req, res) => {
   try {
     const commissionEngine = require('./commissionEngine');
     const db = commissionEngine.getDb();
@@ -670,58 +597,111 @@ router.get('/commission/withdrawals', adminAuthUnified('FINANCE_ADMIN'), (req, r
 });
 
 /**
- * 提现审核通过（P8第四章·自动打款流程）
- * 阶段一：状态 → PROCESSING（待人工打款/阶段二自动商家转账）
- * 阶段二（商家转账配置后）：自动调用微信转账，成功→PAID，失败→FAILED退回余额
+ * v25.0.47_13 提现审核通过（FIX-WITHDRAW-V13-FINAL 财务审核流）
+ * 幂等：同一提现单仅发起一次转账（executeTransfer 内部防重）
+ *   · 商家转账配置齐备 → 发起转账，状态 TRANSFERING，微信回调终态（PAID/FAILED）
+ *   · 未配置 → PROCESSING（线下人工打款兜底，财务线下完成后标记）
+ *   · 免审自动转账中断单（TRANSFERING 且无审核人）→ 审核人接手补发
+ * 超级管理员(100)与财务管理员(60)均可操作；运营角色被 scope=finance 拦截
  */
-router.post('/commission/withdrawals/:id/approve', adminAuthUnified('SUPER_ADMIN'), (req, res) => {
+router.post('/commission/withdrawals/:id/approve', adminAuthUnified('FINANCE_ADMIN', 'finance'), async (req, res) => {
   try {
     const { reason } = req.body || {};
     const commissionEngine = require('./commissionEngine');
     const db = commissionEngine.getDb();
     const w = db.prepare('SELECT * FROM withdrawals WHERE id = ?').get(parseInt(req.params.id, 10));
     if (!w) return res.status(404).json({ success: false, error: '提现申请不存在' });
-    if (w.status !== 'PENDING_REVIEW') return res.status(400).json({ success: false, error: '仅待审核状态可审核' });
-
-    // 阶段二自动打款（商家转账配置齐备时）
-    let transferResult = null;
-    let newStatus = 'PROCESSING';
-    let paidAt = null;
-    let transferNo = null;
-    try {
-      const wechatTransfer = require('./wechatTransfer');
-      const r = wechatTransfer.transfer({
-        withdrawNo: w.withdraw_no,
-        openid: w.openid,
-        amountCents: w.amount_cents,
-        note: commissionEngine.getConfig().transferNote,
-      });
-      transferResult = r;
-      if (r && r.success) { newStatus = 'PAID'; paidAt = new Date().toISOString(); transferNo = r.transferNo || null; }
-      else if (r && r.notConfigured) { /* 未配置 → 保持 PROCESSING 人工打款 */ }
-      else { newStatus = 'FAILED'; }
-    } catch (e) {
-      // wechatTransfer 模块不存在（阶段一）→ PROCESSING 人工打款
-      if (!/Cannot find module/.test(e.message)) console.error('[withdraw/approve] transfer:', e.message);
+    if (['PAID', 'FAILED', 'REJECTED'].includes(w.status)) {
+      return res.status(400).json({ success: false, error: `该提现单已是终态（${w.status}），不可重复审核` });
     }
-
-    db.prepare('UPDATE withdrawals SET status = ?, reviewed_by = ?, reviewed_at = ?, paid_at = ?, wechat_transfer_no = ?, fail_reason = ? WHERE id = ?')
-      .run(newStatus, `${req.admin.name}(${req.admin.role})`, new Date().toISOString(), paidAt, transferNo,
-           newStatus === 'FAILED' ? ((transferResult && transferResult.error) || '转账失败') : null, w.id);
-    if (newStatus === 'FAILED') {
-      // 失败退回可提现余额
-      db.prepare('UPDATE commission_accounts SET withdrawable_cents = withdrawable_cents + ?, updated_at = ? WHERE user_id = ?')
-        .run(w.amount_cents, new Date().toISOString(), w.user_id);
+    if (w.status !== 'PENDING_REVIEW' && !(w.status === 'TRANSFERING' && !w.reviewed_by)) {
+      return res.status(400).json({ success: false, error: `当前状态${w.status}不可审核（处理中请用「同步微信状态」）` });
     }
-    audit(req.admin, 'WITHDRAW_APPROVE', `withdraw:${w.withdraw_no}(user:${w.user_id}金额${(w.amount_cents / 100).toFixed(2)}元)`, w.status, newStatus, reason || '', req);
-    res.json({ success: true, data: { withdrawNo: w.withdraw_no, status: newStatus, transfer: transferResult } });
+    const r = await commissionEngine.executeTransfer(w.withdraw_no, { name: req.admin.name, role: req.admin.role });
+    if (r.ok) {
+      audit(req.admin, 'WITHDRAW_APPROVE', `withdraw:${w.withdraw_no}(user:${w.user_id}金额${(w.amount_cents / 100).toFixed(2)}元)`, w.status, r.status || 'TRANSFERING', reason || '审核通过并发起商家转账', req);
+      return res.json({ success: true, data: { withdrawNo: w.withdraw_no, status: r.status || 'TRANSFERING', transfer: r, mode: 'auto' } });
+    }
+    if (r.notConfigured) {
+      // 商家转账未配置 → 线下人工打款通道
+      db.prepare("UPDATE withdrawals SET status = 'PROCESSING', reviewed_by = ?, reviewed_at = ? WHERE id = ?")
+        .run(`${req.admin.name}(${req.admin.role})`, new Date().toISOString(), w.id);
+      audit(req.admin, 'WITHDRAW_APPROVE_MANUAL', `withdraw:${w.withdraw_no}(user:${w.user_id})`, w.status, 'PROCESSING', reason || '审核通过，线下人工打款', req);
+      return res.json({ success: true, data: { withdrawNo: w.withdraw_no, status: 'PROCESSING', mode: 'manual', message: '商家转账通道未配置，已转人工线下打款' } });
+    }
+    audit(req.admin, 'WITHDRAW_APPROVE_FAIL', `withdraw:${w.withdraw_no}(user:${w.user_id})`, w.status, 'FAILED', r.error || '转账受理失败', req);
+    res.status(400).json({ success: false, error: r.error || '转账受理失败，余额已退回' });
   } catch (e) {
     console.error('[withdraw/approve]', e.message);
     res.status(500).json({ success: false, error: '审核失败' });
   }
 });
 
-router.post('/commission/withdrawals/:id/reject', adminAuthUnified('SUPER_ADMIN'), (req, res) => {
+/** v25.0.47_13 批量审核通过（财务批量操作，逐单幂等） */
+router.post('/commission/withdrawals/batch-approve', adminAuthUnified('FINANCE_ADMIN', 'finance'), async (req, res) => {
+  try {
+    const { ids, reason } = req.body || {};
+    if (!Array.isArray(ids) || !ids.length || ids.length > 100) {
+      return res.status(400).json({ success: false, error: 'ids须为1-100条的数组' });
+    }
+    const commissionEngine = require('./commissionEngine');
+    const db = commissionEngine.getDb();
+    const results = [];
+    for (const id of ids) {
+      const w = db.prepare('SELECT * FROM withdrawals WHERE id = ?').get(parseInt(id, 10));
+      if (!w) { results.push({ id, ok: false, error: '不存在' }); continue; }
+      if (w.status !== 'PENDING_REVIEW' && !(w.status === 'TRANSFERING' && !w.reviewed_by)) {
+        results.push({ id, ok: false, error: `状态${w.status}不可审核` }); continue;
+      }
+      const r = await commissionEngine.executeTransfer(w.withdraw_no, { name: req.admin.name, role: req.admin.role });
+      if (r.ok) {
+        audit(req.admin, 'WITHDRAW_APPROVE', `withdraw:${w.withdraw_no}(user:${w.user_id}金额${(w.amount_cents / 100).toFixed(2)}元)`, w.status, r.status || 'TRANSFERING', (reason || '') + ' [批量]', req);
+        results.push({ id, ok: true, withdrawNo: w.withdraw_no, status: r.status || 'TRANSFERING' });
+      } else if (r.notConfigured) {
+        db.prepare("UPDATE withdrawals SET status = 'PROCESSING', reviewed_by = ?, reviewed_at = ? WHERE id = ?")
+          .run(`${req.admin.name}(${req.admin.role})`, new Date().toISOString(), w.id);
+        results.push({ id, ok: true, withdrawNo: w.withdraw_no, status: 'PROCESSING', mode: 'manual' });
+      } else {
+        results.push({ id, ok: false, withdrawNo: w.withdraw_no, error: r.error });
+      }
+    }
+    res.json({ success: true, data: { results, total: results.length, ok: results.filter(x => x.ok).length } });
+  } catch (e) {
+    console.error('[withdraw/batch-approve]', e.message);
+    res.status(500).json({ success: false, error: '批量审核失败' });
+  }
+});
+
+/** v25.0.47_13 同步微信转账终态（TRANSFERING 卡单对账：查微信侧真实状态并落账） */
+router.post('/commission/withdrawals/:id/sync', adminAuthUnified('FINANCE_ADMIN', 'finance'), async (req, res) => {
+  try {
+    const commissionEngine = require('./commissionEngine');
+    const db = commissionEngine.getDb();
+    const w = db.prepare('SELECT * FROM withdrawals WHERE id = ?').get(parseInt(req.params.id, 10));
+    if (!w) return res.status(404).json({ success: false, error: '提现申请不存在' });
+    if (w.status !== 'TRANSFERING') return res.status(400).json({ success: false, error: '仅处理中状态可同步' });
+    let wechatTransfer;
+    try { wechatTransfer = require('./wechatTransfer'); } catch (e) {
+      return res.status(400).json({ success: false, error: '转账模块不可用' });
+    }
+    if (!wechatTransfer.isConfigured()) return res.status(400).json({ success: false, error: '商家转账未配置' });
+    const q = await wechatTransfer.queryTransfer(w.withdraw_no);
+    if (!q.success) return res.status(400).json({ success: false, error: q.error || '查询失败' });
+    let result = { state: q.state, changed: false };
+    if (q.state === 'SUCCESS' || q.state === 'FAIL' || q.state === 'CANCELLED') {
+      const r = commissionEngine.markTransferResult(w.withdraw_no, q.state, q.failReason, q.transferNo);
+      result.changed = !!(r && r.ok && !r.skipped);
+      result.status = r.status;
+    }
+    audit(req.admin, 'WITHDRAW_SYNC', `withdraw:${w.withdraw_no}`, w.status, q.state, '同步微信转账状态', req);
+    res.json({ success: true, data: result });
+  } catch (e) {
+    console.error('[withdraw/sync]', e.message);
+    res.status(500).json({ success: false, error: '同步失败' });
+  }
+});
+
+router.post('/commission/withdrawals/:id/reject', adminAuthUnified('FINANCE_ADMIN', 'finance'), (req, res) => {
   try {
     const { reason } = req.body || {};
     if (!reason || String(reason).trim().length < 2) return res.status(400).json({ success: false, error: '必须填写驳回原因' });
@@ -746,11 +726,127 @@ router.post('/commission/withdrawals/:id/reject', adminAuthUnified('SUPER_ADMIN'
 });
 
 /** 手动触发解冻扫描（定时任务兜底） */
-router.post('/commission/run-unfreeze', adminAuthUnified('ADMIN'), (req, res) => {
+router.post('/commission/run-unfreeze', adminAuthUnified('ADMIN', 'finance'), (req, res) => {
   const commissionEngine = require('./commissionEngine');
   const n = commissionEngine.runUnfreeze();
   audit(req.admin, 'COMMISSION_UNFREEZE_RUN', 'commission_records', null, { unfrozen: n }, '手动触发解冻', req);
   res.json({ success: true, data: { unfrozen: n } });
+});
+
+/**
+ * v25.0.47_13 佣金统计报表（FIX-WITHDRAW-V13-FINAL 财务端）
+ * 日/月/年三维报表 + 分佣层级统计 + 退款扣回明细 + 提现汇总
+ */
+router.get('/commission/stats', adminAuthUnified('FINANCE_ADMIN', 'finance'), (req, res) => {
+  try {
+    const commissionEngine = require('./commissionEngine');
+    const db = commissionEngine.getDb();
+    const days = Math.min(180, Math.max(7, parseInt(req.query.days, 10) || 30));
+
+    const daily = db.prepare(`
+      SELECT substr(created_at, 1, 10) AS date,
+             SUM(CASE WHEN record_type = 'COMMISSION' THEN commission_cents ELSE 0 END) AS l1_cents,
+             SUM(CASE WHEN record_type = 'COMMISSION_L2' THEN commission_cents ELSE 0 END) AS l2_cents,
+             SUM(commission_cents) AS total_cents,
+             COUNT(*) AS count
+      FROM commission_records
+      WHERE record_type IN ('COMMISSION','COMMISSION_L2') AND status != 'REVERSED'
+        AND created_at >= date('now', ?)
+      GROUP BY date ORDER BY date DESC`).all(`-${days} days`);
+
+    const monthly = db.prepare(`
+      SELECT substr(created_at, 1, 7) AS month,
+             SUM(CASE WHEN record_type = 'COMMISSION' THEN commission_cents ELSE 0 END) AS l1_cents,
+             SUM(CASE WHEN record_type = 'COMMISSION_L2' THEN commission_cents ELSE 0 END) AS l2_cents,
+             SUM(commission_cents) AS total_cents,
+             COUNT(*) AS count
+      FROM commission_records
+      WHERE record_type IN ('COMMISSION','COMMISSION_L2') AND status != 'REVERSED'
+        AND created_at >= date('now', '-12 months')
+      GROUP BY month ORDER BY month DESC`).all();
+
+    const yearly = db.prepare(`
+      SELECT substr(created_at, 1, 4) AS year,
+             SUM(CASE WHEN record_type = 'COMMISSION' THEN commission_cents ELSE 0 END) AS l1_cents,
+             SUM(CASE WHEN record_type = 'COMMISSION_L2' THEN commission_cents ELSE 0 END) AS l2_cents,
+             SUM(commission_cents) AS total_cents,
+             COUNT(*) AS count
+      FROM commission_records
+      WHERE record_type IN ('COMMISSION','COMMISSION_L2') AND status != 'REVERSED'
+      GROUP BY year ORDER BY year DESC`).all();
+
+    const reversals = db.prepare(`
+      SELECT order_no, inviter_user_id, ratio_percent, commission_cents, note, created_at
+      FROM commission_records WHERE status = 'REVERSED' ORDER BY id DESC LIMIT 50`).all();
+
+    const levels = db.prepare(`
+      SELECT
+        SUM(CASE WHEN record_type = 'COMMISSION' THEN commission_cents ELSE 0 END) AS l1_cents,
+        SUM(CASE WHEN record_type = 'COMMISSION_L2' THEN commission_cents ELSE 0 END) AS l2_cents,
+        SUM(CASE WHEN status = 'REVERSED' THEN commission_cents ELSE 0 END) AS reversed_cents,
+        SUM(CASE WHEN status = 'FROZEN' THEN commission_cents ELSE 0 END) AS frozen_cents
+      FROM commission_records WHERE record_type IN ('COMMISSION','COMMISSION_L2')`).get();
+
+    const withdrawSummary = db.prepare(`
+      SELECT status, COUNT(*) AS count, SUM(amount_cents) AS amount_cents
+      FROM withdrawals GROUP BY status`).all();
+
+    res.json({
+      success: true,
+      data: {
+        daily, monthly, yearly,
+        levels: levels || { l1_cents: 0, l2_cents: 0, reversed_cents: 0, frozen_cents: 0 },
+        reversals,
+        withdrawSummary,
+      },
+    });
+  } catch (e) {
+    console.error('[commission/stats]', e.message);
+    res.status(500).json({ success: false, error: '统计查询失败' });
+  }
+});
+
+/**
+ * v25.0.47_13 提现记录导出（CSV/Excel兼容，按日期+状态筛选）
+ * 财务对账专用：转账记录、金额、状态、审核人、到账时间、失败原因
+ */
+router.get('/commission/withdrawals/export', adminAuthUnified('FINANCE_ADMIN', 'finance'), (req, res) => {
+  try {
+    const commissionEngine = require('./commissionEngine');
+    const db = commissionEngine.getDb();
+    const { from, to, status } = req.query;
+    let where = '1=1'; const params = [];
+    if (from) { where += ' AND w.created_at >= ?'; params.push(String(from) + 'T00:00:00'); }
+    if (to) { where += ' AND w.created_at <= ?'; params.push(String(to) + 'T23:59:59'); }
+    if (status) { where += ' AND w.status = ?'; params.push(String(status)); }
+    const rows = db.prepare(`
+      SELECT w.withdraw_no, w.user_id, u.nickname, w.amount_cents, w.status, w.wechat_transfer_no,
+             w.fail_reason, w.reviewed_by, w.created_at, w.reviewed_at, w.paid_at
+      FROM withdrawals w LEFT JOIN users u ON u.user_id = w.user_id
+      WHERE ${where} ORDER BY w.id DESC LIMIT 10000`).all(...params);
+
+    const esc = (v) => {
+      const s = v == null ? '' : String(v);
+      return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    };
+    const header = ['提现单号', '用户ID', '昵称', '金额(元)', '状态', '微信转账单号', '失败原因', '审核人', '申请时间', '审核时间', '到账时间'];
+    const lines = [header.join(',')];
+    for (const r of rows) {
+      lines.push([
+        esc(r.withdraw_no), r.user_id, esc(r.nickname || ''), (r.amount_cents / 100).toFixed(2),
+        r.status, esc(r.wechat_transfer_no || ''), esc(r.fail_reason || ''), esc(r.reviewed_by || ''),
+        esc(r.created_at || ''), esc(r.reviewed_at || ''), esc(r.paid_at || ''),
+      ].join(','));
+    }
+    const csv = '\uFEFF' + lines.join('\r\n');
+    audit(req.admin, 'WITHDRAW_EXPORT', `withdrawals(${rows.length}条)`, null, { from: from || '', to: to || '', status: status || '' }, '导出提现记录', req);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="withdrawals_${from || 'all'}_${to || 'all'}.csv"`);
+    res.send(csv);
+  } catch (e) {
+    console.error('[commission/withdrawals/export]', e.message);
+    res.status(500).json({ success: false, error: '导出失败' });
+  }
 });
 
 // ==================== 导出 ====================

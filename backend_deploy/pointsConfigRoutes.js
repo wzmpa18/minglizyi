@@ -86,7 +86,11 @@ function saveConfig(config) {
 function verifyAdmin(req) {
     const authHeader = req.headers['authorization'];
     if (!authHeader) return false;
-    return authHeader.replace('Bearer ', '') === ADMIN_KEY;
+    const token = authHeader.replace('Bearer ', '');
+    if (ADMIN_KEY && token === ADMIN_KEY) return true;
+    // v25.0.47_13: 统一角色体系——运营/内容子密钥亦可管理（scope=ops）；财务/客服不可
+    const admin = require('./adminRoles').resolveAdminKey(token);
+    return !!(admin && ['SUPER_ADMIN', 'ADMIN', 'OPERATOR_ADMIN', 'CONTENT_ADMIN'].includes(admin.role));
 }
 
 // GET /api/admin/points/config

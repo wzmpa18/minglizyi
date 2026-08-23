@@ -1,8 +1,9 @@
 /**
  * P8-DISTRIBUTION-COMMISSION-AUTO 阶段二：微信商家转账到零钱（V3）
+ * v25.0.47_13 FIX-WITHDRAW-V13-FINAL 全量对接
  *
  * 产品前提：微信商户平台开通「商家转账到零钱」产品权限，并完成转账场景报备。
- * 未配置/未开通时返回 notConfigured，提现保持 PROCESSING 走人工打款（强制审核红线不破）。
+ * 未配置/未开通时返回 notConfigured，提现走人工审核打款（强制审核红线不破）。
  *
  * 接口：
  *   发起转账 POST /v3/fund-app/mch-transfer/transfer-bills
@@ -11,10 +12,12 @@
  *
  * 复用 wechatPayV3 的商户配置（WECHAT_MCH_ID/WECHAT_APPID/APIv3密钥/商户私钥/证书序列号）。
  * 商家转账专属配置（.env）：
- *   WECHAT_TRANSFER_ENABLED=true           总开关（默认 false）
- *   WECHAT_TRANSFER_SCENE_ID=1001           转账场景ID（商户平台报备后获得）
- *   WECHAT_TRANSFER_DAILY_LIMIT_CENTS=...   单日限额（分）
- *   WECHAT_TRANSFER_SINGLE_MAX_CENTS=...    单笔限额（分）
+ *   WITHDRAW_TRANSFER_ENABLED=true            提现总开关（默认 false；兼容旧名 WECHAT_TRANSFER_ENABLED）
+ *   WITHDRAW_FREE_PASS_AMOUNT=200             免审额度（元，后台可动态覆盖）
+ *   WITHDRAW_MIN_AMOUNT=10                    最低提现门槛（元）
+ *   WECHAT_TRANSFER_SCENE_ID=1001             转账场景ID（商户平台报备后获得）
+ *   WECHAT_TRANSFER_DAILY_LIMIT_CENTS=...     单日限额（分）
+ *   WECHAT_TRANSFER_SINGLE_MAX_CENTS=...      单笔限额（分）
  */
 'use strict';
 
@@ -28,11 +31,18 @@ const API_HOST = 'api.mch.weixin.qq.com';
 // ==================== 配置 ====================
 
 function transferConfig() {
+  // v25.0.47_13: 主开关 WITHDRAW_TRANSFER_ENABLED（默认false），兼容旧名 WECHAT_TRANSFER_ENABLED
+  const masterEnv = process.env.WITHDRAW_TRANSFER_ENABLED;
+  const enabled = masterEnv != null && masterEnv !== ''
+    ? (masterEnv === 'true' || masterEnv === '1')
+    : (process.env.WECHAT_TRANSFER_ENABLED === 'true' || process.env.WECHAT_TRANSFER_ENABLED === '1');
   return {
-    enabled: process.env.WECHAT_TRANSFER_ENABLED === 'true',
+    enabled,
     sceneId: process.env.WECHAT_TRANSFER_SCENE_ID || '',
     dailyLimitCents: parseInt(process.env.WECHAT_TRANSFER_DAILY_LIMIT_CENTS, 10) || 0,
     singleMaxCents: parseInt(process.env.WECHAT_TRANSFER_SINGLE_MAX_CENTS, 10) || 0,
+    freePassAmountYuan: parseFloat(process.env.WITHDRAW_FREE_PASS_AMOUNT) || 200,
+    minAmountYuan: parseFloat(process.env.WITHDRAW_MIN_AMOUNT) || 10,
   };
 }
 
@@ -68,7 +78,7 @@ function buildAuthHeader(method, urlPath, bodyStr) {
   const nonce = crypto.randomBytes(16).toString('hex');
   const message = `${method}\n${urlPath}\n${timestamp}\n${nonce}\n${bodyStr}\n`;
   const signature = crypto.sign('RSA-SHA256', Buffer.from(message), getPrivateKey());
-  const auth = `WECHATPAY2-SHA256-RSA20488 mchid="${cfg.mchId}",nonce_str="${nonce}",signature="${signature.toString('base64')}",timestamp="${timestamp}",serial_no="${cfg.certSerialNo}"`;
+  const auth = `WECHATPAY2-SHA256-RSA2048 mchid="${cfg.mchId}",nonce_str="${nonce}",signature="${signature.toString('base64')}",timestamp="${timestamp}",serial_no="${cfg.certSerialNo}"`;
   return auth;
 }
 
@@ -211,23 +221,32 @@ async function cancelTransfer(withdrawNo, reason) {
 /**
  * 商家转账回调处理（微信异步通知转账结果）
  * 复用 wechatPayV3 的验签与解密。挂载：POST /api/payment/callback/transfer
- * @returns {{ok:boolean, withdrawNo?:string, state?:string, error?:string}}
+ *
+ * v25.0.47_13: 商家转账相关通知事件类型（商户平台「商家转账到零钱」）：
+ *   MCHTRANSFER.BILL.USER.CONFIRM（用户确认收款）/ MCHTRANSFER.BILL.TRANSFER.FINISH 等版本存在差异，
+ *   故不硬编码单一 event_type：验签通过后凡携带 resource.out_bill_no 的通知一律按转账结果解析，
+ *   终态（SUCCESS/FAIL/CANCELLED）由调用方 markTransferResult 幂等落账，非终态仅记日志。
+ * @returns {{ok:boolean, withdrawNo?:string, state?:string, failReason?:string, transferNo?:string, error?:string}}
  */
 async function handleTransferCallback(headers, rawBody) {
   try {
     const valid = await wechatPayV3.verifyCallbackSignature(headers, rawBody);
     if (!valid) return { ok: false, error: '签名验证失败' };
     const event = JSON.parse(rawBody);
-    if (!event || event.event_type !== 'TRANSPORT.BILL.TRANSFER' || !event.resource) {
-      return { ok: false, error: '非转账结果通知' };
+    if (!event || !event.resource) {
+      return { ok: false, error: '回调缺少resource' };
     }
     const resource = wechatPayV3.decryptCallbackResource(event.resource);
     if (!resource) return { ok: false, error: '解密失败' };
+    if (!resource.out_bill_no) {
+      return { ok: false, error: '回调缺少out_bill_no' };
+    }
     return {
       ok: true,
+      eventType: event.event_type || '',
       withdrawNo: resource.out_bill_no,
       transferNo: resource.transfer_bill_no || null,
-      state: resource.state,
+      state: resource.state || resource.transfer_status || null,
       failReason: resource.fail_reason || null,
     };
   } catch (e) {

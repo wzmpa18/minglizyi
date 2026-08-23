@@ -967,6 +967,50 @@ router.post('/callback/wechat', async (req, res) => {
 });
 
 // ============================================================================
+// POST /api/payment/callback/transfer — 微信商家转账回调（v25.0.47_13 提现终态落账）
+// 微信商户平台「商家转账到零钱」的转账结果通知地址配置为：
+//   https://yandao.vip/api/payment/callback/transfer
+// 流程：平台证书验签 → AEAD解密 → commissionEngine.markTransferResult 幂等落账
+// ============================================================================
+router.post('/callback/transfer', async (req, res) => {
+  try {
+    const headers = {};
+    for (const [key, value] of Object.entries(req.headers)) {
+      headers[key.toLowerCase()] = String(value);
+    }
+    const rawBody = req.rawBody || (typeof req.body === 'string' ? req.body : JSON.stringify(req.body));
+
+    let wechatTransfer;
+    try { wechatTransfer = require('./wechatTransfer'); } catch (e) {
+      console.error('[payment/callback/transfer] 转账模块不可用:', e.message);
+      return res.status(200).json({ code: 'FAIL', message: '转账模块不可用' });
+    }
+    const r = await wechatTransfer.handleTransferCallback(headers, rawBody);
+    if (!r.ok) {
+      console.error('[payment/callback/transfer] 处理失败:', r.error);
+      // 验签失败必须应答FAIL（微信不重试验签失败的通知，防止伪造回调）
+      return res.status(200).json({ code: 'FAIL', message: r.error || '处理失败' });
+    }
+    if (!r.withdrawNo) {
+      return res.status(200).json({ code: 'SUCCESS', message: '成功' });
+    }
+    const commissionEngine = require('./commissionEngine');
+    const stateMap = { SUCCESS: 'SUCCESS', FAIL: 'FAIL', FAILED: 'FAIL', CANCELLED: 'CANCELLED' };
+    const finalState = stateMap[r.state];
+    if (finalState) {
+      const result = commissionEngine.markTransferResult(r.withdrawNo, finalState, r.failReason, r.transferNo);
+      console.log(`[payment/callback/transfer] 提现终态 no=${r.withdrawNo} state=${r.state} → ${JSON.stringify(result)}`);
+    } else {
+      console.log(`[payment/callback/transfer] 非终态通知 no=${r.withdrawNo} state=${r.state}`);
+    }
+    return res.status(200).json({ code: 'SUCCESS', message: '成功' });
+  } catch (error) {
+    console.error('[payment/callback/transfer] error:', error);
+    return res.status(200).json({ code: 'FAIL', message: '处理异常' });
+  }
+});
+
+// ============================================================================
 // GET /api/payment/wechat/oauth-config — 构造公众号网页授权跳转URL
 // 用法：前端在微信浏览器内 fetch 本接口（带redirect_uri当前页地址），
 //       拿到 authorizeUrl 后 location.href 跳转；微信回跳带 ?code=xxx&state=pay
@@ -1062,41 +1106,15 @@ router.post('/callback/alipay', async (req, res) => {
 // 鉴权：统一角色密钥（admin-keys.json），不回显任何支付密钥
 // ============================================================================
 
-function _resolveAdminKeyPr(token) {
-  try {
-    // v25.0.47_10: 环境变量主密钥映射 SUPER_ADMIN（与 adminUnifiedRoutes 认证一致，项目方主账号最高权限）
-    const envKey = process.env.ADMIN_API_KEY;
-    if (envKey && token && token === envKey) return { name: 'env-admin', role: 'SUPER_ADMIN' };
-    const fsMod = require('fs');
-    const pathMod = require('path');
-    const keysFile = pathMod.join(__dirname, 'data', 'admin-keys.json');
-    if (!fsMod.existsSync(keysFile) || !token) return null;
-    const keys = JSON.parse(fsMod.readFileSync(keysFile, 'utf-8'));
-    const cryptoMod = require('crypto');
-    const h = cryptoMod.createHash('sha256').update(String(token)).digest('hex');
-    const hit = (keys.keys || []).find(k => k.keyHash === h && k.status === 'active');
-    return hit ? { name: hit.name, role: hit.role } : null;
-  } catch (e) { return null; }
-}
+// v25.0.47_13: 统一角色权限模块（adminRoles.js 全后台唯一事实源，含 scope 域校验）
+const _prAdminRoles = require('./adminRoles');
 
-const _PR_ROLES = { SUPER_ADMIN: 50, ADMIN: 40, CONTENT_ADMIN: 30, FINANCE_ADMIN: 30, SUPPORT_ADMIN: 20 };
-
-function _prAdminAuth(minRole) {
-  return (req, res, next) => {
-    const header = req.headers.authorization || '';
-    const token = header.startsWith('Bearer ') ? header.slice(7) : '';
-    const admin = _resolveAdminKeyPr(token);
-    if (!admin) return res.status(401).json({ success: false, error: '密钥无效' });
-    if (minRole && (_PR_ROLES[admin.role] || 0) < _PR_ROLES[minRole]) {
-      return res.status(403).json({ success: false, error: `权限不足（需要${minRole}）` });
-    }
-    req.admin = admin;
-    next();
-  };
+function _prAdminAuth(minRole, scope) {
+  return _prAdminRoles.adminAuth(minRole, scope);
 }
 
 // 订单详情（含权益交付状态/权益类型/发放时间/微信交易号）
-router.get('/admin/orders/:orderId', _prAdminAuth('FINANCE_ADMIN'), (req, res) => {
+router.get('/admin/orders/:orderId', _prAdminAuth('FINANCE_ADMIN', 'finance'), (req, res) => {
   try {
     const orderId = req.params.orderId;
     const order = ordersStore.get(orderId);

@@ -34,22 +34,24 @@ function authRequired(req, res, next) {
 router.get('/config', (_req, res) => {
   const cfg = commissionEngine.getConfig();
   const monthly = cfg.monthlySettleEnabled !== false;
+  const settleText = commissionEngine.settleDayText(cfg);
   res.json({
     success: true,
     data: {
       enabled: !!cfg.enabled,
-      withdrawEnabled: cfg.withdrawEnabled !== false, // v25.0.47_10: false=提现暂未开放
+      withdrawEnabled: commissionEngine.withdrawAvailable(cfg), // v25.0.47_13: env主开关 && 后台开关
       minWithdrawYuan: cfg.minWithdrawYuan,
       dailyWithdrawLimit: cfg.dailyWithdrawLimit,
       unfreezeDays: cfg.unfreezeDays,
       unfreezeEnabled: cfg.unfreezeEnabled !== false,
-      // v25.0.47_12: 月度结算/提现窗口规则（每月30号结算、15号后可提现）
+      // v25.0.47_13: 月度结算/提现窗口规则（每月最后1天结算、16日-月末开放提现）
       monthlySettleEnabled: monthly,
       settleDay: monthly ? cfg.settleDay : null,
       withdrawOpenDay: monthly ? cfg.withdrawOpenDay : null,
+      inWithdrawWindow: monthly ? commissionEngine.inWithdrawWindow(cfg) : true,
       taxNotice: cfg.taxNotice,
       withdrawTip: monthly
-        ? `佣金每月${cfg.settleDay}号统一结算，每月${cfg.withdrawOpenDay}号后可发起提现，提现转入绑定的微信零钱，到账时间1-3个工作日`
+        ? `佣金每月${settleText}统一结算，每月${cfg.withdrawOpenDay}日-月末开放提现，提现转入绑定的微信零钱，到账时间1-3个工作日`
         : '提现将转入绑定的微信零钱，到账时间1-3个工作日',
     },
   });
@@ -108,7 +110,7 @@ router.get('/my/withdrawals', authRequired, (req, res) => {
   }
 });
 
-router.post('/my/withdraw', authRequired, (req, res) => {
+router.post('/my/withdraw', authRequired, async (req, res) => {
   try {
     const { amount, openid } = req.body || {};
     const amountNum = Number(amount);
@@ -118,9 +120,10 @@ router.post('/my/withdraw', authRequired, (req, res) => {
     if ((amountNum * 100) % 1 !== 0) {
       return res.status(400).json({ success: false, error: '提现金额最多两位小数' });
     }
-    const r = commissionEngine.applyWithdrawal(req.user.userId, amountNum, openid);
+    // v25.0.47_13: applyWithdrawal 为 async（免审额度内自动发起商家转账），必须 await
+    const r = await commissionEngine.applyWithdrawal(req.user.userId, amountNum, openid);
     if (!r.ok) return res.status(400).json({ success: false, error: r.error });
-    res.json({ success: true, data: { withdrawNo: r.withdrawNo, amountYuan: (r.amountCents / 100).toFixed(2) } });
+    res.json({ success: true, data: { withdrawNo: r.withdrawNo, amountYuan: (r.amountCents / 100).toFixed(2), auto: !!r.auto } });
   } catch (e) {
     console.error('[Commission] withdraw error:', e.message);
     res.status(500).json({ success: false, error: '申请失败，请稍后重试' });

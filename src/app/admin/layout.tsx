@@ -36,38 +36,67 @@ import {
   Activity,
 } from "lucide-react";
 import { THEME, useMounted } from "./_shared";
-import { getAdminKey, setAdminKey, clearAdminKey, isAdminAuthed } from "@/lib/admin/client";
+import { getAdminKey, setAdminKey, clearAdminKey, isAdminAuthed, getAdminRole, setAdminRole } from "@/lib/admin/client";
 
 // ==================== 导航项配置 ====================
-// FINAL-ADMIN-COMMERCIAL-SEAL-02 第三章：后台左侧菜单固定 17 项
+// FINAL-ADMIN-COMMERCIAL-SEAL-02 第三章：后台左侧菜单（v25.0.47_13 增加密钥管理，共18项）
 // 所有既有子页面（unified/dashboard/ai-control 等）保留，统一从本导航进入
+// v25.0.47_13: scope 域——'finance'=财务菜单 / 'ops'=运营菜单 / 'super'=仅超管 / 'all'=全员
+// 前端仅按角色渲染菜单；权限最终裁决在服务端（adminRoles.js 强校验）
 
 interface NavItem {
   href: string;
   label: string;
   icon: ReactNode;
   desc: string;
+  scope: "all" | "finance" | "ops" | "super";
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/admin", label: "总览", icon: <LayoutDashboard size={18} />, desc: "老板驾驶舱·20项核心指标" },
-  { href: "/admin/moderation", label: "用户管理", icon: <Users size={18} />, desc: "搜索·封禁·禁言·风险记录" },
-  { href: "/admin/tool-control", label: "工具管理", icon: <Wrench size={18} />, desc: "14款工具·开关·收费·平台" },
-  { href: "/admin/pricing", label: "产品与价格", icon: <Tag size={18} />, desc: "价格SSOT·会员·AI产品" },
-  { href: "/admin/membership", label: "会员与权益", icon: <Crown size={18} />, desc: "等级·价格·权益·上下架" },
-  { href: "/admin/ai-control", label: "AI管理", icon: <Bot size={18} />, desc: "开关·配额·定价·健康" },
-  { href: "/admin/loc", label: "学习 / 中医", icon: <GraduationCap size={18} />, desc: "考试配置·积分·机构管理" },
-  { href: "/admin/moderation?tab=group", label: "社交 / 群聊", icon: <MessagesSquare size={18} />, desc: "群管理·举报处理·禁言" },
-  { href: "/admin/sources", label: "发现 / 资讯", icon: <Newspaper size={18} />, desc: "资讯增删改·排序·合规" },
-  { href: "/admin/marketing", label: "营销 / 海报", icon: <Megaphone size={18} />, desc: "海报模板·分享文案·渠道" },
-  { href: "/admin/commission", label: "推广 / 分佣", icon: <HandCoins size={18} />, desc: "比例·冻结期·佣金明细" },
-  { href: "/admin/orders", label: "支付 / 订单", icon: <Receipt size={18} />, desc: "订单查询·补单·权益重试" },
-  { href: "/admin/commission?tab=withdrawals", label: "提现", icon: <Banknote size={18} />, desc: "提现审核·转账状态" },
-  { href: "/admin/moderation?tab=report", label: "内容审核", icon: <Flag size={18} />, desc: "举报·动态·违规内容" },
-  { href: "/admin/feature-flags", label: "系统功能开关", icon: <ToggleLeft size={18} />, desc: "ON/OFF/维护·服务端强制" },
-  { href: "/admin/unified", label: "审计日志", icon: <ScrollText size={18} />, desc: "操作留痕·角色·密钥" },
-  { href: "/admin/dashboard", label: "系统状态", icon: <Activity size={18} />, desc: "数据看板·服务健康" },
+  { href: "/admin", label: "总览", icon: <LayoutDashboard size={18} />, desc: "老板驾驶舱·20项核心指标", scope: "all" },
+  { href: "/admin/moderation", label: "用户管理", icon: <Users size={18} />, desc: "搜索·封禁·禁言·风险记录", scope: "ops" },
+  { href: "/admin/tool-control", label: "工具管理", icon: <Wrench size={18} />, desc: "14款工具·开关·收费·平台", scope: "ops" },
+  { href: "/admin/pricing", label: "产品与价格", icon: <Tag size={18} />, desc: "价格SSOT·会员·AI产品", scope: "super" },
+  { href: "/admin/membership", label: "会员与权益", icon: <Crown size={18} />, desc: "等级·价格·权益·上下架", scope: "super" },
+  { href: "/admin/ai-control", label: "AI管理", icon: <Bot size={18} />, desc: "开关·配额·定价·健康", scope: "super" },
+  { href: "/admin/loc", label: "学习 / 中医", icon: <GraduationCap size={18} />, desc: "考试配置·积分·机构管理", scope: "ops" },
+  { href: "/admin/moderation?tab=group", label: "社交 / 群聊", icon: <MessagesSquare size={18} />, desc: "群管理·举报处理·禁言", scope: "ops" },
+  { href: "/admin/sources", label: "发现 / 资讯", icon: <Newspaper size={18} />, desc: "资讯增删改·排序·合规", scope: "ops" },
+  { href: "/admin/marketing", label: "营销 / 海报", icon: <Megaphone size={18} />, desc: "海报模板·分享文案·渠道", scope: "ops" },
+  { href: "/admin/commission", label: "推广 / 分佣", icon: <HandCoins size={18} />, desc: "比例·冻结期·佣金明细", scope: "finance" },
+  { href: "/admin/orders", label: "支付 / 订单", icon: <Receipt size={18} />, desc: "订单查询·补单·权益重试", scope: "finance" },
+  { href: "/admin/commission?tab=withdrawals", label: "提现", icon: <Banknote size={18} />, desc: "提现审核·转账状态·导出", scope: "finance" },
+  { href: "/admin/moderation?tab=report", label: "内容审核", icon: <Flag size={18} />, desc: "举报·动态·违规内容", scope: "ops" },
+  { href: "/admin/feature-flags", label: "系统功能开关", icon: <ToggleLeft size={18} />, desc: "ON/OFF/维护·服务端强制", scope: "super" },
+  { href: "/admin/unified", label: "审计日志", icon: <ScrollText size={18} />, desc: "操作留痕·角色·密钥", scope: "super" },
+  { href: "/admin/dashboard", label: "系统状态", icon: <Activity size={18} />, desc: "数据看板·服务健康", scope: "all" },
+  { href: "/admin/keys", label: "密钥管理", icon: <Shield size={18} />, desc: "子密钥签发·禁用·三级角色", scope: "super" },
 ];
+
+// v25.0.47_13: 角色 → 可见 scope（与服务端 adminRoles.ROLE_SCOPES 保持一致）
+const ROLE_SCOPES: Record<string, string[]> = {
+  SUPER_ADMIN: ["*"],
+  ADMIN: ["*"],
+  FINANCE_ADMIN: ["finance"],
+  OPERATOR_ADMIN: ["ops"],
+  CONTENT_ADMIN: ["ops"],
+  SUPPORT_ADMIN: ["ops"],
+};
+
+const ROLE_LABELS: Record<string, string> = {
+  SUPER_ADMIN: "超级管理员",
+  ADMIN: "管理员",
+  FINANCE_ADMIN: "财务管理员",
+  OPERATOR_ADMIN: "运营管理员",
+  CONTENT_ADMIN: "内容管理员",
+  SUPPORT_ADMIN: "客服支持",
+};
+
+function navVisible(item: NavItem, role: string | null): boolean {
+  const scopes = ROLE_SCOPES[role || ""] || [];
+  if (scopes.includes("*")) return true;
+  return item.scope === "all" || scopes.includes(item.scope);
+}
 
 // ==================== 登录门禁 ====================
 
@@ -221,9 +250,11 @@ function AdminLogin({ onLogin }: { onLogin: () => void }) {
 function Sidebar({
   active,
   onNavigate,
+  role,
 }: {
   active: string;
   onNavigate: () => void;
+  role: string | null;
 }) {
   const router = useRouter();
   const [confirmLogout, setConfirmLogout] = useState(false);
@@ -278,9 +309,9 @@ function Sidebar({
         </div>
       </div>
 
-      {/* 导航 */}
+      {/* 导航：按角色 scope 过滤（服务端 adminRoles.js 为最终权限裁决） */}
       <nav style={{ flex: 1, padding: "14px 12px", overflowY: "auto" }}>
-        {NAV_ITEMS.map((item) => {
+        {NAV_ITEMS.filter((item) => navVisible(item, role)).map((item) => {
           const base = item.href.split("?")[0];
           const isActive =
             base === "/admin" ? active === "/admin" : active.startsWith(base);
@@ -404,10 +435,37 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [authed, setAuthed] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
     setAuthed(isAdminAuthed());
   }, [pathname]);
+
+  // v25.0.47_13: 登录/刷新后通过 whoami 拉取真实角色并缓存（菜单渲染依据；服务端仍是权限最终裁决）
+  useEffect(() => {
+    if (!authed) {
+      setRole(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/unified/whoami", {
+          headers: { Authorization: `Bearer ${getAdminKey() || ""}` },
+        });
+        const json = await res.json();
+        if (!cancelled && res.ok && json.success && json.data?.role) {
+          setRole(json.data.role);
+          setAdminRole(json.data.role);
+        }
+      } catch {
+        /* 网络异常时保留缓存角色 */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authed, pathname]);
 
   // SSR 阶段返回占位，避免 hydration 不匹配
   if (!mounted) {
@@ -423,27 +481,25 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     return <AdminLogin onLogin={() => setAuthed(true)} />;
   }
 
-  // 已登录 → 控制台 Shell
+  // 已登录 → 控制台 Shell（v25.0.47_13：全端统一抽屉式导航，默认收起，内容区全宽不被遮挡）
   return (
     <div style={{ minHeight: "100vh", backgroundColor: THEME.bg }}>
       <style>{`#app-bottom-nav { display: none !important; }`}</style>
 
-      {/* 移动端遮罩 */}
+      {/* 遮罩：抽屉打开时覆盖内容区 */}
       {sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}
           style={{
             position: "fixed",
             inset: 0,
-            backgroundColor: "rgba(0,0,0,0.4)",
+            backgroundColor: "rgba(0,0,0,0.45)",
             zIndex: 99,
-            display: "none",
           }}
-          className="yd-admin-overlay"
         />
       )}
 
-      {/* 侧边栏 - 桌面端固定，移动端抽屉 */}
+      {/* 侧边栏抽屉：全端统一，默认收起 */}
       <div
         style={{
           position: "fixed",
@@ -451,72 +507,57 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           top: 0,
           zIndex: 100,
           transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)",
-          transition: "transform 0.3s",
+          transition: "transform 0.25s ease",
         }}
-        className="yd-admin-sidebar-mobile"
       >
-        <Sidebar active={pathname} onNavigate={() => setSidebarOpen(false)} />
-      </div>
-      <div className="yd-admin-sidebar-desktop">
-        <Sidebar active={pathname} onNavigate={() => setSidebarOpen(false)} />
+        <Sidebar active={pathname} onNavigate={() => setSidebarOpen(false)} role={role} />
       </div>
 
-      {/* 主内容区 */}
-      <div
-        style={{
-          marginLeft: 0,
-          minHeight: "100vh",
-        }}
-        className="yd-admin-content"
-      >
-        {/* 移动端顶栏 */}
+      {/* 主内容区：全宽，无左侧留白 */}
+      <div style={{ minHeight: "100vh" }}>
+        {/* 顶部工具栏：全端统一，汉堡按钮唤出抽屉 */}
         <div
-          className="yd-admin-topbar"
           style={{
-            display: "none",
             position: "sticky",
             top: 0,
             zIndex: 50,
             height: 52,
             backgroundColor: THEME.sidebarBg,
+            display: "flex",
             alignItems: "center",
             padding: "0 16px",
             gap: 12,
           }}
         >
           <button
-            onClick={() => setSidebarOpen(true)}
+            onClick={() => setSidebarOpen((v) => !v)}
+            aria-label="打开导航菜单"
             style={{ border: "none", background: "transparent", cursor: "pointer", color: "#fff", display: "flex" }}
           >
-            {sidebarOpen ? <X size={22} /> : <Menu size={22} />}
+          {sidebarOpen ? <X size={22} /> : <Menu size={22} />}
           </button>
           <span style={{ color: "#fff", fontSize: 15, fontWeight: 700 }}>言道国学 · 运营管理中心</span>
+          {role && (
+            <span
+              style={{
+                marginLeft: "auto",
+                color: "#fff",
+                fontSize: 12,
+                fontWeight: 600,
+                padding: "4px 12px",
+                borderRadius: 999,
+                backgroundColor: role === "SUPER_ADMIN" ? "rgba(220,38,38,0.85)" : "rgba(255,255,255,0.16)",
+              }}
+            >
+              {ROLE_LABELS[role] || role}
+            </span>
+          )}
         </div>
 
-        <div style={{ padding: "24px 28px", maxWidth: 1400 }}>
+        <div style={{ padding: "20px 24px", maxWidth: 1500, margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
           <div className="yd-admin-page-inner">{children}</div>
         </div>
       </div>
-
-      {/* 响应式样式：桌面显示固定侧边栏并留出左边距，移动端使用抽屉 */}
-      <style>{`
-        /* 桌面端 */
-        @media (min-width: 900px) {
-          .yd-admin-sidebar-mobile { display: none !important; }
-          .yd-admin-sidebar-desktop { display: block; }
-          .yd-admin-content { margin-left: 240px; }
-          .yd-admin-topbar { display: none !important; }
-          .yd-admin-overlay { display: none !important; }
-        }
-        /* 移动端 */
-        @media (max-width: 899px) {
-          .yd-admin-sidebar-mobile { display: block; }
-          .yd-admin-sidebar-desktop { display: none; }
-          .yd-admin-content { margin-left: 0; }
-          .yd-admin-topbar { display: flex !important; }
-          .yd-admin-page-inner { padding: 0; }
-        }
-      `}</style>
     </div>
   );
 }

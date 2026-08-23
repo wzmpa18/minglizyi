@@ -26,13 +26,15 @@ const USERS_DB_PATH = process.env.DB_PATH || '/root/backend-auth/data/yandao_use
 
 const DEFAULT_CONFIG = {
   enabled: true,                 // 分佣总开关
-  withdrawEnabled: false,        // v25.0.47_10 提现总开关（商家转账权限未开通，开通后置 true）
+  withdrawEnabled: false,        // v25.0.47_10 提现总开关（受 .env WITHDRAW_TRANSFER_ENABLED 主开关约束，双开关均开才可提现）
   unfreezeEnabled: true,         // 解冻期开关
   unfreezeDays: 7,               // 解冻天数（旧机制，v12 起由月度结算覆盖：settleDay）
-  settleDay: 30,                 // v25.0.47_12 月度结算日：每月30号统一结算（FROZEN→可提现）
-  withdrawOpenDay: 15,           // v25.0.47_12 提现窗口：每月15号以后（16号起）可发起提现
+  settleDay: 0,                  // v25.0.47_13 月度结算日：0=每月最后1天统一结算（FROZEN→可提现），正数=每月该号结算
+  withdrawOpenDay: 16,           // v25.0.47_13 提现窗口：每月16日-月末开放提现，其余时间强制拦截
   monthlySettleEnabled: true,    // v25.0.47_12 月度结算模式开关（关闭则回退 unfreezeDays 机制）
-  minWithdrawYuan: 10,           // 最低提现额（元）
+  minWithdrawYuan: 10,           // 最低提现门槛（元，可由 .env WITHDRAW_MIN_AMOUNT 初始化）
+  freePassAmountYuan: 200,       // v25.0.47_13 免审额度（元）：低于该额度自动发起转账免人工审核（.env WITHDRAW_FREE_PASS_AMOUNT 初始化）
+  dailyWithdrawAmountLimitYuan: 20000, // v25.0.47_13 单日单用户提现限额（元），超限自动拦截
   dailyWithdrawLimit: 1,         // 每日提现次数
   transferNote: '言道国学推荐收益', // 商家转账备注
   taxNotice: '收益需依法缴纳个人所得税，平台将按规定代扣代缴或由用户自行申报',
@@ -43,6 +45,8 @@ const DEFAULT_CONFIG = {
   },
   riskControl: {
     dailyEarningsAlertYuan: 1000,  // 单日收益超阈值冻结提现待人工审核
+    newAccountDays: 7,             // v25.0.47_13 注册不足N天的账号提现强制人工审核
+    forceReviewDailyCount: 2,      // v25.0.47_13 当天已发起N笔提现后再申请强制人工审核
     enabled: true,
   },
 };
@@ -62,13 +66,28 @@ function resolveRatios(cfg, orderType) {
 }
 
 function getConfig() {
+  let cfg;
   try {
     if (fs.existsSync(CONFIG_FILE)) {
       const saved = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
-      return { ...DEFAULT_CONFIG, ...saved, ratios: { ...DEFAULT_CONFIG.ratios, ...(saved.ratios || {}) }, riskControl: { ...DEFAULT_CONFIG.riskControl, ...(saved.riskControl || {}) } };
+      cfg = { ...DEFAULT_CONFIG, ...saved, ratios: { ...DEFAULT_CONFIG.ratios, ...(saved.ratios || {}) }, riskControl: { ...DEFAULT_CONFIG.riskControl, ...(saved.riskControl || {}) } };
+    } else {
+      cfg = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
     }
-  } catch (e) { console.error('[Commission] 配置读取失败，用默认值:', e.message); }
-  return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+  } catch (e) {
+    console.error('[Commission] 配置读取失败，用默认值:', e.message);
+    cfg = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+  }
+  // v25.0.47_13: .env 初始化（仅当文件配置未显式保存过对应字段时生效）
+  if (process.env.WITHDRAW_MIN_AMOUNT) {
+    const v = parseFloat(process.env.WITHDRAW_MIN_AMOUNT);
+    if (!isNaN(v) && v > 0 && cfg.minWithdrawYuan === DEFAULT_CONFIG.minWithdrawYuan) cfg.minWithdrawYuan = v;
+  }
+  if (process.env.WITHDRAW_FREE_PASS_AMOUNT) {
+    const v = parseFloat(process.env.WITHDRAW_FREE_PASS_AMOUNT);
+    if (!isNaN(v) && v >= 0 && cfg.freePassAmountYuan === DEFAULT_CONFIG.freePassAmountYuan) cfg.freePassAmountYuan = v;
+  }
+  return cfg;
 }
 
 function saveConfig(cfg) {
@@ -181,10 +200,19 @@ function ensureAccount(db, userId) {
   db.prepare('INSERT OR IGNORE INTO commission_accounts (user_id, updated_at) VALUES (?, ?)').run(parseInt(userId, 10), nowIso());
 }
 
-/** v25.0.47_12: 月度结算模式下，佣金入账后的下一次结算时间（每月 settleDay 号统一结算） */
+/** v25.0.47_13: 月度结算模式下，佣金入账后的下一次结算时间（settleDay=0 表示每月最后1天） */
 function nextSettleTime(cfg) {
-  const day = Math.min(28, Math.max(1, parseInt(cfg.settleDay, 10) || 30));
+  const raw = parseInt(cfg.settleDay, 10);
   const now = new Date();
+  // settleDay <= 0 → 每月最后一天
+  if (!raw || raw <= 0) {
+    let last = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    if (last.getTime() <= now.getTime()) {
+      last = new Date(now.getFullYear(), now.getMonth() + 2, 0, 23, 59, 59, 999);
+    }
+    return last.toISOString();
+  }
+  const day = Math.min(28, Math.max(1, raw));
   let settle = new Date(now.getFullYear(), now.getMonth(), day, 23, 59, 59, 999);
   if (settle.getTime() <= now.getTime()) {
     settle = new Date(now.getFullYear(), now.getMonth() + 1, day, 23, 59, 59, 999);
@@ -192,11 +220,30 @@ function nextSettleTime(cfg) {
   return settle.toISOString();
 }
 
-/** v25.0.47_12: 当前是否处于月度提现窗口（每月 withdrawOpenDay 号以后） */
+/** 结算日展示文案（settleDay=0 → 每月最后1天） */
+function settleDayText(cfg) {
+  const raw = parseInt(cfg.settleDay, 10);
+  return (!raw || raw <= 0) ? '最后1天' : `${raw}号`;
+}
+
+/** v25.0.47_13: 当前是否处于月度提现窗口（每月 withdrawOpenDay 日00:00 - 月末） */
 function inWithdrawWindow(cfg) {
-  const openDay = parseInt(cfg.withdrawOpenDay, 10) || 15;
+  const openDay = parseInt(cfg.withdrawOpenDay, 10) || 16;
   const d = new Date().getDate();
-  return d > openDay;
+  return d >= openDay;
+}
+
+/** v25.0.47_13: .env 主开关 WITHDRAW_TRANSFER_ENABLED（默认 false；双开关：env 主开关 && 后台 withdrawEnabled） */
+function transferMasterEnabled() {
+  const env = process.env.WITHDRAW_TRANSFER_ENABLED;
+  if (env != null && env !== '') return env === 'true' || env === '1';
+  const legacy = process.env.WECHAT_TRANSFER_ENABLED;
+  return legacy === 'true' || legacy === '1';
+}
+
+/** 提现功能是否真正可用（env 主开关 && 后台开关） */
+function withdrawAvailable(cfg) {
+  return transferMasterEnabled() && cfg.withdrawEnabled !== false;
 }
 
 // ==================== 核心：支付成功 → 自动分佣（两级，幂等） ====================
@@ -371,21 +418,28 @@ function accountSummary(userId) {
   ensureAccount(db, uid);
   const a = db.prepare('SELECT * FROM commission_accounts WHERE user_id = ?').get(uid);
   const cfg = getConfig();
+  // v25.0.47_13: 累计提现 = 已成功到账（PAID）金额合计
+  const withdrawn = db.prepare("SELECT COALESCE(SUM(amount_cents),0) s FROM withdrawals WHERE user_id = ? AND status = 'PAID'").get(uid).s;
   return {
     userId: String(uid),
     totalEarningsYuan: (a.total_earnings_cents / 100).toFixed(2),
     withdrawableYuan: (a.withdrawable_cents / 100).toFixed(2),
     frozenYuan: (a.frozen_cents / 100).toFixed(2),
     negativeYuan: (a.negative_cents / 100).toFixed(2),
+    withdrawnTotalYuan: (withdrawn / 100).toFixed(2),
     withdrawFrozen: !!a.withdraw_frozen,
     commissionEnabled: !!a.commission_enabled,
-    // v25.0.47_12: 月度结算/提现窗口信息（前端展示规则用）
+    // v25.0.47_13: 月度结算/提现窗口信息（前端展示规则用，settleDay=0 表示每月最后1天）
     settleRule: {
       monthlySettleEnabled: cfg.monthlySettleEnabled !== false,
       settleDay: cfg.monthlySettleEnabled !== false ? cfg.settleDay : null,
+      settleDayText: cfg.monthlySettleEnabled !== false ? settleDayText(cfg) : null,
       withdrawOpenDay: cfg.monthlySettleEnabled !== false ? cfg.withdrawOpenDay : null,
       inWithdrawWindow: cfg.monthlySettleEnabled !== false ? inWithdrawWindow(cfg) : true,
-      withdrawEnabled: cfg.withdrawEnabled !== false,
+      withdrawEnabled: withdrawAvailable(cfg),
+      minWithdrawYuan: cfg.minWithdrawYuan,
+      freePassAmountYuan: cfg.freePassAmountYuan,
+      dailyWithdrawAmountLimitYuan: cfg.dailyWithdrawAmountLimitYuan,
     },
   };
 }
@@ -404,52 +458,187 @@ function listWithdrawals(userId, limit = 50) {
                      FROM withdrawals WHERE user_id = ? ORDER BY id DESC LIMIT ?`).all(uid, limit);
 }
 
-/** 提现申请：校验（最低额/每日次数/余额/风控冻结）→ 扣减可提现 → PENDING_REVIEW */
-function applyWithdrawal(userId, amountYuan, openid) {
+/**
+ * v25.0.47_13 提现申请（FIX-WITHDRAW-V13-FINAL）
+ * 校验链：.env主开关/后台开关 → 提现窗口 → 最低门槛 → 余额 → 单日限额(次数+金额) → 风控标记
+ * 路由分支：
+ *   · 免审额度内 + 转账通道配置齐备 → 自动发起微信商家转账（TRANSFERING，回调终态）
+ *   · 超免审额度 / 风控标记 / 转账未配置 → PENDING_REVIEW 人工审核队列
+ * 注意：本函数为 async（自动转账分支需 await executeTransfer），调用方必须 await。
+ */
+async function applyWithdrawal(userId, amountYuan, openid) {
   const cfg = getConfig();
   const db = getDb();
   const uid = parseInt(userId, 10);
   if (!uid || isNaN(uid)) return { ok: false, error: '用户无效' };
 
-  // v25.0.47_10: 提现通道总开关（WITHDRAW_TRANSFER=DISABLED 时一律拒绝，不假装能提现）
-  if (cfg.withdrawEnabled === false) {
-    return { ok: false, error: '提现暂未开放：微信商家转账通道开通后将自动启用，收益会正常累计' };
+  // v25.0.47_13: .env 主开关 WITHDRAW_TRANSFER_ENABLED（默认 false，双开关全开才可提现）
+  if (!transferMasterEnabled()) {
+    return { ok: false, error: '提现暂未开放：商家转账通道启用后将自动开启，收益会正常累计' };
   }
-  // v25.0.47_12: 月度提现窗口——佣金每月 settleDay 号统一结算，withdrawOpenDay 号之后才可发起提现
+  if (cfg.withdrawEnabled === false) {
+    return { ok: false, error: '提现功能已由后台关闭，收益会正常累计' };
+  }
+  // v25.0.47_13: 月度提现窗口——每月最后1天结算，16日-月末开放提现
   if (cfg.monthlySettleEnabled !== false && !inWithdrawWindow(cfg)) {
-    return { ok: false, error: `佣金每月${cfg.settleDay}号统一结算，每月${cfg.withdrawOpenDay}号后开放提现；当前不在提现窗口内，收益正常累计` };
+    return { ok: false, error: `佣金每月${settleDayText(cfg)}统一结算，每月${cfg.withdrawOpenDay}日-月末开放提现；当前不在提现窗口内，收益正常累计` };
   }
   const amountCents = yuanToCents(amountYuan);
   const minCents = Math.round((parseFloat(cfg.minWithdrawYuan) || 10) * 100);
-  if (amountCents < minCents) return { ok: false, error: `最低提现额为${cfg.minWithdrawYuan}元` };
+  if (amountCents < minCents) return { ok: false, error: `最低提现门槛为${cfg.minWithdrawYuan}元` };
 
   ensureAccount(db, uid);
   const acct = db.prepare('SELECT * FROM commission_accounts WHERE user_id = ?').get(uid);
   if (acct.withdraw_frozen) return { ok: false, error: '账户提现已冻结，请联系客服' };
   if (acct.withdrawable_cents < amountCents) return { ok: false, error: '可提现余额不足' };
 
-  // 每日提现次数
   const today = new Date().toISOString().slice(0, 10);
+  // 每日提现次数
   const todayCount = db.prepare("SELECT COUNT(*) c FROM withdrawals WHERE user_id = ? AND created_at LIKE ?").get(uid, today + '%').c;
   if (todayCount >= (parseInt(cfg.dailyWithdrawLimit, 10) || 1)) {
     return { ok: false, error: `每日最多申请${cfg.dailyWithdrawLimit}次提现` };
+  }
+  // v25.0.47_13: 单日单用户提现金额限额（默认2万元，当日已申请金额+本次不可超限）
+  const dailyLimitCents = Math.round((parseFloat(cfg.dailyWithdrawAmountLimitYuan) || 20000) * 100);
+  const todayAmount = db.prepare("SELECT COALESCE(SUM(amount_cents),0) s FROM withdrawals WHERE user_id = ? AND created_at LIKE ? AND status != 'REJECTED'").get(uid, today + '%').s;
+  if (todayAmount + amountCents > dailyLimitCents) {
+    return { ok: false, error: `单日提现限额${(dailyLimitCents / 100).toFixed(0)}元（今日已申请${(todayAmount / 100).toFixed(2)}元），超出部分请明日再提` };
   }
 
   if (!openid || typeof openid !== 'string' || openid.length < 6) {
     return { ok: false, error: '缺少微信收款信息（openid），请先完成微信授权' };
   }
 
+  // v25.0.47_13 风控：新注册账号 / 短时间多笔提现 → 强制人工审核
+  let forceReview = false;
+  const reviewReasons = [];
+  try {
+    const rc = cfg.riskControl || {};
+    if (rc.enabled !== false) {
+      const u = db.prepare('SELECT created_at FROM users WHERE user_id = ?').get(uid);
+      const newDays = parseInt(rc.newAccountDays, 10) || 7;
+      if (u && u.created_at) {
+        const ageMs = Date.now() - new Date(u.created_at.replace(' ', 'T') + 'Z').getTime();
+        if (ageMs < newDays * 86400000) { forceReview = true; reviewReasons.push(`新注册账号(${newDays}天内)`); }
+      }
+      const fdc = parseInt(rc.forceReviewDailyCount, 10) || 2;
+      if (todayCount + 1 >= fdc) { forceReview = true; reviewReasons.push('当日多笔提现'); }
+      if (acct.withdrawable_cents < amountCents * 2 && amountCents >= Math.round((parseFloat(rc.dailyEarningsAlertYuan) || 1000) * 100)) {
+        forceReview = true; reviewReasons.push('大额提现');
+      }
+    }
+  } catch (e) { /* users 表结构差异不阻断主流程 */ }
+
+  // 免审额度（默认200元）：额度内且转账通道配置齐备 → 自动转账；否则人工审核
+  const freePassCents = Math.round((parseFloat(cfg.freePassAmountYuan) || 200) * 100);
+  let autoTransfer = false;
+  if (!forceReview && amountCents <= freePassCents) {
+    try {
+      const wechatTransfer = require('./wechatTransfer');
+      if (wechatTransfer.isConfigured()) autoTransfer = true;
+    } catch (e) { /* 模块缺失 → 人工审核 */ }
+  }
+
   const withdrawNo = 'WD' + Date.now() + crypto.randomBytes(3).toString('hex').toUpperCase();
+  const initStatus = autoTransfer ? 'TRANSFERING' : 'PENDING_REVIEW';
+  const note = reviewReasons.length ? '风控标记：' + reviewReasons.join('、') : null;
   const tx = db.transaction(() => {
-    db.prepare(`INSERT INTO withdrawals (withdraw_no, user_id, amount_cents, status, openid, created_at)
-                VALUES (?, ?, ?, 'PENDING_REVIEW', ?, ?)`)
-      .run(withdrawNo, uid, amountCents, String(openid).slice(0, 64), nowIso());
+    db.prepare(`INSERT INTO withdrawals (withdraw_no, user_id, amount_cents, status, openid, created_at, fail_reason)
+                VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run(withdrawNo, uid, amountCents, initStatus, String(openid).slice(0, 64), nowIso(), note);
     db.prepare('UPDATE commission_accounts SET withdrawable_cents = withdrawable_cents - ?, updated_at = ? WHERE user_id = ?')
       .run(amountCents, nowIso(), uid);
   });
   tx();
-  console.log(`[Commission] 提现申请 user=${uid} amount=${amountCents}分 no=${withdrawNo}`);
-  return { ok: true, withdrawNo, amountCents };
+  console.log(`[Commission] 提现申请 user=${uid} amount=${amountCents}分 no=${withdrawNo} 状态=${initStatus}${note ? ' ' + note : ''}`);
+
+  // 自动发起商家转账（受理失败即时退回余额并标记失败）
+  if (autoTransfer) {
+    const tr = await executeTransfer(withdrawNo, { name: '免审自动转账', role: 'AUTO' });
+    return { ok: true, withdrawNo, amountCents, auto: true, transfer: tr };
+  }
+  return { ok: true, withdrawNo, amountCents, auto: false };
+}
+
+/**
+ * v25.0.47_13 执行商家转账（幂等：同一提现单仅发起一次）
+ * @param {string} withdrawNo 提现单号
+ * @param {{name:string, role:string}} operator 审核人（免审自动 = AUTO）
+ */
+async function executeTransfer(withdrawNo, operator) {
+  const db = getDb();
+  const w = db.prepare('SELECT * FROM withdrawals WHERE withdraw_no = ?').get(String(withdrawNo));
+  if (!w) return { ok: false, error: '提现单不存在' };
+  // 幂等：终态单不可重复处理
+  if (w.status === 'PAID' || w.status === 'FAILED' || w.status === 'REJECTED') {
+    return { ok: true, skipped: true, status: w.status, reason: '该提现单已处理完成（幂等拦截）' };
+  }
+  // 免审自动转账路径：applyWithdrawal 已预置 TRANSFERING 且未标记审核人 → 允许继续发起
+  // 人工审核路径：仅 PENDING_REVIEW 可发起；已被人接手的 TRANSFERING（reviewed_by 非空）不可重复发起
+  const autoPending = w.status === 'TRANSFERING' && !w.reviewed_by;
+  if (w.status !== 'PENDING_REVIEW' && !autoPending) {
+    return { ok: false, error: `当前状态${w.status}不可发起转账` };
+  }
+  let wechatTransfer;
+  try { wechatTransfer = require('./wechatTransfer'); } catch (e) {
+    return { ok: false, error: '转账模块不可用' };
+  }
+  if (!wechatTransfer.isConfigured()) {
+    return { ok: false, notConfigured: true, error: '商家转账未配置（需开通产品权限并配置WITHDRAW_*变量），请人工线下打款' };
+  }
+  const cfg = getConfig();
+  // 标记处理中（防并发重复发起；autoPending 时补记审核人）
+  db.prepare("UPDATE withdrawals SET status = 'TRANSFERING', reviewed_by = ?, reviewed_at = ? WHERE withdraw_no = ? AND status IN ('PENDING_REVIEW', 'TRANSFERING')")
+    .run(`${operator.name}(${operator.role})`, nowIso(), String(withdrawNo));
+  const r = await wechatTransfer.transfer({
+    withdrawNo: w.withdraw_no,
+    openid: w.openid,
+    amountCents: w.amount_cents,
+    note: cfg.transferNote,
+  });
+  if (r.success) {
+    // 受理成功：等待微信回调终态（WAIT_USER_CONFIRM/TRANSFERING → PAID/FAILED）
+    db.prepare('UPDATE withdrawals SET wechat_transfer_no = ?, paid_at = ? WHERE withdraw_no = ?')
+      .run(r.transferNo || null, null, String(withdrawNo));
+    console.log(`[Commission] 转账已受理 no=${withdrawNo} state=${r.state} transferNo=${r.transferNo}`);
+    return { ok: true, state: r.state, transferNo: r.transferNo };
+  }
+  // 受理失败：退回余额 + FAILED
+  const tx = db.transaction(() => {
+    db.prepare("UPDATE withdrawals SET status = 'FAILED', fail_reason = ?, paid_at = NULL WHERE withdraw_no = ?")
+      .run(String(r.error || '转账失败').slice(0, 200), String(withdrawNo));
+    db.prepare('UPDATE commission_accounts SET withdrawable_cents = withdrawable_cents + ?, updated_at = ? WHERE user_id = ?')
+      .run(w.amount_cents, nowIso(), w.user_id);
+  });
+  tx();
+  console.error(`[Commission] 转账失败 no=${withdrawNo} err=${r.error}`);
+  return { ok: false, error: r.error };
+}
+
+/**
+ * v25.0.47_13 转账回调终态落账（幂等）
+ * @param {string} withdrawNo 商户转账单号（=提现单号）
+ * @param {string} state 微信终态 SUCCESS / FAIL / CANCELLED
+ */
+function markTransferResult(withdrawNo, state, failReason, transferNo) {
+  const db = getDb();
+  const w = db.prepare('SELECT * FROM withdrawals WHERE withdraw_no = ?').get(String(withdrawNo));
+  if (!w) return { ok: false, error: '提现单不存在' };
+  if (w.status === 'PAID' || w.status === 'FAILED') {
+    return { ok: true, skipped: true, status: w.status }; // 幂等：终态不重复处理
+  }
+  const success = state === 'SUCCESS';
+  const tx = db.transaction(() => {
+    db.prepare('UPDATE withdrawals SET status = ?, fail_reason = ?, paid_at = ?, wechat_transfer_no = COALESCE(?, wechat_transfer_no) WHERE withdraw_no = ?')
+      .run(success ? 'PAID' : 'FAILED', success ? null : String(failReason || '转账失败').slice(0, 200), success ? nowIso() : null, transferNo || null, String(withdrawNo));
+    if (!success) {
+      db.prepare('UPDATE commission_accounts SET withdrawable_cents = withdrawable_cents + ?, updated_at = ? WHERE user_id = ?')
+        .run(w.amount_cents, nowIso(), w.user_id);
+    }
+  });
+  tx();
+  console.log(`[Commission] 转账回调 no=${withdrawNo} state=${state} → ${success ? 'PAID' : 'FAILED(余额已退回)'}`);
+  return { ok: true, status: success ? 'PAID' : 'FAILED' };
 }
 
 // ==================== 导出 ====================
@@ -465,6 +654,12 @@ module.exports = {
   listRecords,
   listWithdrawals,
   applyWithdrawal,
+  executeTransfer,
+  markTransferResult,
+  withdrawAvailable,
+  transferMasterEnabled,
+  settleDayText,
+  inWithdrawWindow,
   yuanToCents,
   getDirectInviter,
 };

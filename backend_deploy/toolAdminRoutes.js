@@ -18,8 +18,6 @@ const router = express.Router();
 const DATA_DIR = path.join(__dirname, 'data');
 const MATRIX_FILE = path.join(DATA_DIR, 'tool-matrix.json');
 
-const ROLES = { SUPER_ADMIN: 50, ADMIN: 40, CONTENT_ADMIN: 30, FINANCE_ADMIN: 30, SUPPORT_ADMIN: 20 };
-
 // ==================== 默认工具矩阵（与正式 14 款工具对齐）====================
 // v25.0.47_12 定价对齐：B类单次解析工具统一零售价 9.9 元/次（择日/合婚转 ONE_TIME）
 const DEFAULT_MATRIX = {
@@ -70,64 +68,28 @@ function saveMatrix(tools, operator) {
   fs.writeFileSync(MATRIX_FILE, JSON.stringify({ tools, updatedAt: new Date().toISOString(), updatedBy: operator }, null, 2), 'utf-8');
 }
 
-// ==================== 鉴权（复用统一密钥体系）====================
+// ==================== 鉴权（v25.0.47_13 统一角色权限模块）====================
 
-function resolveAdminKey(token) {
-  try {
-    // v25.0.47_10: 环境变量主密钥映射 SUPER_ADMIN（与 adminUnifiedRoutes 认证一致）
-    const envKey = process.env.ADMIN_API_KEY;
-    if (envKey && token && token === envKey) return { name: 'env-admin', role: 'SUPER_ADMIN' };
-    const keysFile = path.join(DATA_DIR, 'admin-keys.json');
-    if (!fs.existsSync(keysFile) || !token) return null;
-    const keys = JSON.parse(fs.readFileSync(keysFile, 'utf-8'));
-    const h = crypto.createHash('sha256').update(String(token)).digest('hex');
-    const hit = (keys.keys || []).find(k => k.keyHash === h && k.status === 'active');
-    return hit ? { name: hit.name, role: hit.role } : null;
-  } catch { return null; }
-}
-
-function adminAuthUnified(minRole) {
-  return (req, res, next) => {
-    const header = req.headers.authorization || '';
-    const token = header.startsWith('Bearer ') ? header.slice(7) : '';
-    const admin = resolveAdminKey(token);
-    if (!admin) return res.status(401).json({ success: false, error: '密钥无效' });
-    if (minRole && (ROLES[admin.role] || 0) < ROLES[minRole]) {
-      return res.status(403).json({ success: false, error: `权限不足（需要${minRole}）` });
-    }
-    req.admin = admin;
-    next();
-  };
-}
-
-function audit(admin, action, target, oldValue, newValue, reason, req) {
-  try {
-    const logFile = path.join(DATA_DIR, 'admin-audit.json');
-    let logs = [];
-    if (fs.existsSync(logFile)) logs = JSON.parse(fs.readFileSync(logFile, 'utf-8'));
-    logs.unshift({
-      id: Date.now() + '_' + crypto.randomBytes(3).toString('hex'),
-      operator: admin.name || 'unknown', operatorRole: admin.role,
-      time: new Date().toISOString(), action, target: String(target || ''),
-      oldValue: oldValue === undefined ? null : oldValue,
-      newValue: newValue === undefined ? null : newValue,
-      reason: reason || '', ip: (req.headers['x-forwarded-for'] || '').split(',')[0] || '',
-    });
-    if (logs.length > 5000) logs = logs.slice(0, 5000);
-    fs.writeFileSync(logFile, JSON.stringify(logs, null, 2), 'utf-8');
-  } catch (e) { console.error('[toolMatrix] 审计写入失败:', e.message); }
-}
+const adminRoles = require('./adminRoles');
+const { ROLES } = adminRoles;
+// 兼容旧导出名
+const adminAuthUnified = (minRole, scope) => adminRoles.adminAuth(minRole, scope);
+const audit = adminRoles.audit;
 
 // ==================== 接口 ====================
 
-router.get('/', adminAuthUnified('ADMIN'), (_req, res) => {
+// v25.0.47_13: 工具开关配置属运营菜单 → OPERATOR_ADMIN(ops) 即可查看/操作；
+// 但收费模式/价格/会员要求/AI额度等资费字段仅 ADMIN 及以上（运营禁止修改价格）
+router.get('/', adminAuthUnified('OPERATOR_ADMIN', 'ops'), (_req, res) => {
   res.json({ success: true, data: loadMatrix() });
 });
 
 // 单工具更新（字段级 patch，白名单校验）
 const ALLOWED_FIELDS = ['status', 'payMode', 'price', 'memberLevel', 'aiEnabled', 'aiCreditCost', 'dailyLimit', 'shareEnabled', 'web', 'android', 'ios', 'wechatMp', 'qqMp'];
+// 运营角色可改字段（开关/维护/平台支持/分享）；资费字段（payMode/price/memberLevel/aiCreditCost/dailyLimit）需 ADMIN+
+const OPERATOR_FIELDS = ['status', 'shareEnabled', 'web', 'android', 'ios', 'wechatMp', 'qqMp'];
 
-router.put('/', adminAuthUnified('ADMIN'), (req, res) => {
+router.put('/', adminAuthUnified('OPERATOR_ADMIN', 'ops'), (req, res) => {
   const { toolId, patch, reason } = req.body || {};
   if (!toolId || !DEFAULT_MATRIX[toolId]) {
     return res.status(400).json({ success: false, error: '未知工具: ' + toolId });
@@ -138,6 +100,14 @@ router.put('/', adminAuthUnified('ADMIN'), (req, res) => {
   for (const k of Object.keys(patch)) {
     if (!ALLOWED_FIELDS.includes(k)) {
       return res.status(400).json({ success: false, error: `字段不允许修改: ${k}（红线字段禁止）` });
+    }
+  }
+  // v25.0.47_13: 运营角色改资费字段 → 服务端拦截（价格修改仅 ADMIN/SUPER_ADMIN）
+  const roleLevel = ROLES[req.admin.role] || 0;
+  if (roleLevel < ROLES.ADMIN) {
+    const illegal = Object.keys(patch).filter((k) => !OPERATOR_FIELDS.includes(k));
+    if (illegal.length) {
+      return res.status(403).json({ success: false, error: `运营角色无权修改资费字段（${illegal.join('、')}），请联系管理员` });
     }
   }
   if (patch.status && !['ON', 'OFF', 'MAINTENANCE'].includes(patch.status)) {

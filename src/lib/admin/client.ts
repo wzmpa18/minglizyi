@@ -22,6 +22,8 @@ import type {
 // ==================== 管理员密钥管理 ====================
 
 const ADMIN_KEY_STORAGE = "yandao_console_admin_key";
+// v25.0.47_13: 登录角色本地缓存（菜单按角色渲染用；权限裁决始终在服务端）
+const ADMIN_ROLE_STORAGE = "yandao_console_admin_role";
 
 /** 获取本地存储的管理员密钥 */
 export function getAdminKey(): string | null {
@@ -43,11 +45,32 @@ export function setAdminKey(key: string): void {
   }
 }
 
+/** v25.0.47_13: 获取本地缓存的角色（SUPER_ADMIN/FINANCE_ADMIN/OPERATOR_ADMIN等） */
+export function getAdminRole(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem(ADMIN_ROLE_STORAGE);
+  } catch {
+    return null;
+  }
+}
+
+/** v25.0.47_13: 缓存角色（登录成功/whoami 刷新时写入） */
+export function setAdminRole(role: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(ADMIN_ROLE_STORAGE, role);
+  } catch {
+    /* ignore */
+  }
+}
+
 /** 清除管理员密钥 */
 export function clearAdminKey(): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.removeItem(ADMIN_KEY_STORAGE);
+    localStorage.removeItem(ADMIN_ROLE_STORAGE);
   } catch {
     /* ignore */
   }

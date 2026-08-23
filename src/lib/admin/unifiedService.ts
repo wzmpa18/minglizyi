@@ -455,3 +455,76 @@ export async function runUnfreezeScan(): Promise<{ ok: boolean; unfrozen?: numbe
   });
   return { ok: !!res.success, unfrozen: res.data?.unfrozen, error: res.error };
 }
+
+// ==================== v25.0.47_13 提现财务端扩展 ====================
+
+export interface WithdrawBatchResult {
+  ok: number;
+  total: number;
+  results: { id: number; ok: boolean; withdrawNo?: string; status?: string; error?: string; mode?: string }[];
+}
+
+export async function batchApproveWithdrawals(ids: number[], reason?: string): Promise<WithdrawBatchResult | { ok: false; error: string }> {
+  const res = await unifiedFetch<WithdrawBatchResult>("/commission/withdrawals/batch-approve", {
+    method: "POST",
+    body: JSON.stringify({ ids, reason }),
+  });
+  if (res.success && res.data) return res.data;
+  return { ok: false as const, error: res.error || "批量审核失败" };
+}
+
+export async function syncWithdrawal(id: number): Promise<{ ok: boolean; state?: string; changed?: boolean; status?: string; error?: string }> {
+  const res = await unifiedFetch<{ state: string; changed: boolean; status?: string }>(
+    `/commission/withdrawals/${id}/sync`,
+    { method: "POST" }
+  );
+  return { ok: !!res.success, state: res.data?.state, changed: res.data?.changed, status: res.data?.status, error: res.error };
+}
+
+export interface CommissionStats {
+  daily: { date: string; l1_cents: number; l2_cents: number; total_cents: number; count: number }[];
+  monthly: { month: string; l1_cents: number; l2_cents: number; total_cents: number; count: number }[];
+  yearly: { year: string; l1_cents: number; l2_cents: number; total_cents: number; count: number }[];
+  levels: { l1_cents: number; l2_cents: number; reversed_cents: number; frozen_cents: number };
+  reversals: { order_no: string; inviter_user_id: number; ratio_percent: number; commission_cents: number; note?: string; created_at: string }[];
+  withdrawSummary: { status: string; count: number; amount_cents: number }[];
+}
+
+export async function fetchCommissionStats(days = 30): Promise<CommissionStats | null> {
+  const res = await unifiedFetch<CommissionStats>(`/commission/stats?days=${days}`);
+  return res.success ? res.data! : null;
+}
+
+/** 导出提现记录 CSV（带鉴权头下载，Excel 可直接打开） */
+export async function exportWithdrawalsCsv(
+  filters: { from?: string; to?: string; status?: string } = {}
+): Promise<{ ok: boolean; error?: string; filename?: string }> {
+  const key = getAdminKey();
+  if (!key) return { ok: false, error: "未登录" };
+  const params = new URLSearchParams();
+  if (filters.from) params.set("from", filters.from);
+  if (filters.to) params.set("to", filters.to);
+  if (filters.status) params.set("status", filters.status);
+  try {
+    const res = await fetch(`${API_BASE}/commission/withdrawals/export?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${key}` },
+    });
+    if (!res.ok) return { ok: false, error: `导出失败 (${res.status})` };
+    const blob = await res.blob();
+    const disposition = res.headers.get("Content-Disposition") || "";
+    const m = /filename="?([^";]+)"?/.exec(disposition);
+    const filename = m ? m[1] : `withdrawals_${new Date().toISOString().slice(0, 10)}.csv`;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    return { ok: true, filename };
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false, error: `网络异常：${msg}` };
+  }
+}

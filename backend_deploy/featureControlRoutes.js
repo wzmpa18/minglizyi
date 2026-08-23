@@ -18,8 +18,9 @@ const router = express.Router();
 const DATA_DIR = path.join(__dirname, 'data');
 const FLAGS_FILE = path.join(DATA_DIR, 'feature-flags.json');
 
-// 角色权限（与 adminUnifiedRoutes 一致）
-const ROLES = { SUPER_ADMIN: 50, ADMIN: 40, CONTENT_ADMIN: 30, FINANCE_ADMIN: 30, SUPPORT_ADMIN: 20 };
+// v25.0.47_13: 统一角色权限模块（adminRoles.js 全后台唯一事实源；系统开关=ADMIN及以上，运营/财务不可见）
+const adminRoles = require('./adminRoles');
+const ROLES = adminRoles.ROLES;
 
 // ==================== 默认开关矩阵（全 ON）====================
 // key: 开关ID  name: 显示名  enforcePaths: 服务端强制拦截的路径前缀/精确路径
@@ -63,53 +64,10 @@ function saveFlags(flags, operator) {
   fs.writeFileSync(FLAGS_FILE, JSON.stringify({ flags, updatedAt: new Date().toISOString(), updatedBy: operator }, null, 2), 'utf-8');
 }
 
-// ==================== 鉴权 ====================
+// ==================== 鉴权（v25.0.47_13 统一角色权限模块） ====================
 
-function resolveAdminKey(token) {
-  try {
-    // v25.0.47_10: 环境变量主密钥映射 SUPER_ADMIN（与 adminUnifiedRoutes 认证一致）
-    const envKey = process.env.ADMIN_API_KEY;
-    if (envKey && token && token === envKey) return { name: 'env-admin', role: 'SUPER_ADMIN' };
-    const keysFile = path.join(DATA_DIR, 'admin-keys.json');
-    if (!fs.existsSync(keysFile) || !token) return null;
-    const keys = JSON.parse(fs.readFileSync(keysFile, 'utf-8'));
-    const h = crypto.createHash('sha256').update(String(token)).digest('hex');
-    const hit = (keys.keys || []).find(k => k.keyHash === h && k.status === 'active');
-    return hit ? { name: hit.name, role: hit.role } : null;
-  } catch { return null; }
-}
-
-function adminAuthUnified(minRole) {
-  return (req, res, next) => {
-    const header = req.headers.authorization || '';
-    const token = header.startsWith('Bearer ') ? header.slice(7) : '';
-    const admin = resolveAdminKey(token);
-    if (!admin) return res.status(401).json({ success: false, error: '密钥无效' });
-    if (minRole && (ROLES[admin.role] || 0) < ROLES[minRole]) {
-      return res.status(403).json({ success: false, error: `权限不足（需要${minRole}）` });
-    }
-    req.admin = admin;
-    next();
-  };
-}
-
-function audit(admin, action, target, oldValue, newValue, reason, req) {
-  try {
-    const logFile = path.join(DATA_DIR, 'admin-audit.json');
-    let logs = [];
-    if (fs.existsSync(logFile)) logs = JSON.parse(fs.readFileSync(logFile, 'utf-8'));
-    logs.unshift({
-      id: Date.now() + '_' + crypto.randomBytes(3).toString('hex'),
-      operator: admin.name || 'unknown', operatorRole: admin.role,
-      time: new Date().toISOString(), action, target: String(target || ''),
-      oldValue: oldValue === undefined ? null : oldValue,
-      newValue: newValue === undefined ? null : newValue,
-      reason: reason || '', ip: (req.headers['x-forwarded-for'] || '').split(',')[0] || '',
-    });
-    if (logs.length > 5000) logs = logs.slice(0, 5000);
-    fs.writeFileSync(logFile, JSON.stringify(logs, null, 2), 'utf-8');
-  } catch (e) { console.error('[featureControl] 审计写入失败:', e.message); }
-}
+const adminAuthUnified = (minRole, scope) => adminRoles.adminAuth(minRole, scope);
+const audit = adminRoles.audit;
 
 // ==================== 管理接口 ====================
 

@@ -171,18 +171,15 @@ app.post('/api/ai/chat', async (req, res) => {
 console.log('[Server] ✅ AI代理路由已挂载: /api/ai/chat');
 
 // ==================== Admin 管理路由 ====================
-const ADMIN_KEY = process.env.ADMIN_API_KEY || "";
+// v25.0.47_13: 统一角色权限模块（adminRoles.js）——支持主密钥+子密钥（SUPER/FINANCE/OPERATOR三级角色）
+// stats 任意有效密钥可访问（登录校验+数据总览）；ai-config/membership-config 等价格配置类仅 ADMIN 及以上
+const adminRoles = require('./adminRoles');
 
-function adminAuth(req, res, next) {
-  if (!ADMIN_KEY) return res.status(503).json({ success: false, error: "管理密钥未配置(ADMIN_API_KEY)" });
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ success: false, error: "未授权访问" });
-  const token = authHeader.replace(/^Bearer\s+/i, "");
-  if (token !== ADMIN_KEY) return res.status(401).json({ success: false, error: "密钥无效" });
-  next();
+function adminAuth(minRole, scope) {
+  return adminRoles.adminAuth(minRole, scope);
 }
 
-app.get('/api/admin/stats', adminAuth, async (req, res) => {
+app.get('/api/admin/stats', adminAuth(), async (req, res) => {
   try {
     const section = req.query.section;
     const stats = {
@@ -266,7 +263,7 @@ function buildDefaultAIAdminConfig() {
     updatedAt: new Date().toISOString(),
   };
 }
-app.get('/api/admin/ai-config', adminAuth, async (req, res) => {
+app.get('/api/admin/ai-config', adminAuth('ADMIN'), async (req, res) => {
   try {
     const configPath = path.join(__dirname, 'data', 'admin-ai-config.json');
     let config = null;
@@ -314,7 +311,7 @@ app.get('/api/admin/ai-config', adminAuth, async (req, res) => {
   } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.patch('/api/admin/ai-config', adminAuth, async (req, res) => {
+app.patch('/api/admin/ai-config', adminAuth('ADMIN'), async (req, res) => {
   try {
     const configPath = path.join(__dirname, 'data', 'admin-ai-config.json');
     let config = null;
@@ -347,7 +344,7 @@ app.patch('/api/admin/ai-config', adminAuth, async (req, res) => {
   } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.put('/api/admin/ai-config', adminAuth, async (req, res) => {
+app.put('/api/admin/ai-config', adminAuth('ADMIN'), async (req, res) => {
   try {
     const configPath = path.join(__dirname, 'data', 'admin-ai-config.json');
     const config = { ...req.body, updatedAt: new Date().toISOString() };
@@ -358,7 +355,7 @@ app.put('/api/admin/ai-config', adminAuth, async (req, res) => {
   } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.get('/api/admin/membership-config', adminAuth, async (req, res) => {
+app.get('/api/admin/membership-config', adminAuth('ADMIN'), async (req, res) => {
   try {
     const configPath = path.join(__dirname, 'data', 'admin-membership-config.json');
     let config = null;
@@ -380,7 +377,7 @@ app.get('/api/admin/membership-config', adminAuth, async (req, res) => {
   } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.patch('/api/admin/membership-config', adminAuth, async (req, res) => {
+app.patch('/api/admin/membership-config', adminAuth('ADMIN'), async (req, res) => {
   try {
     const configPath = path.join(__dirname, 'data', 'admin-membership-config.json');
     let config = null;
@@ -397,7 +394,7 @@ app.patch('/api/admin/membership-config', adminAuth, async (req, res) => {
   } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 });
 
-app.put('/api/admin/membership-config', adminAuth, async (req, res) => {
+app.put('/api/admin/membership-config', adminAuth('ADMIN'), async (req, res) => {
   try {
     const configPath = path.join(__dirname, 'data', 'admin-membership-config.json');
     const config = { ...req.body, updatedAt: new Date().toISOString() };

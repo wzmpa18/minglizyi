@@ -180,6 +180,7 @@ export const COMMISSION_STATUS_LABELS: Record<string, string> = {
 /** 提现状态 → 中文文案 */
 export const WITHDRAW_STATUS_LABELS: Record<string, string> = {
   PENDING_REVIEW: "待审核",
+  TRANSFERING: "转账中",
   PROCESSING: "处理中",
   PAID: "已到账",
   FAILED: "失败",
