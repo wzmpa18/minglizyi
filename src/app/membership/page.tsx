@@ -311,7 +311,7 @@ export default function MembershipPage() {
 
         {/* ===== 套餐标题 ===== */}
         {!paymentsBlocked && (
-          <div style={{ padding: "8px 16px 4px", fontSize: "15px", fontWeight: 600, color: "#333" }}>
+          <div id="plan-section" style={{ padding: "8px 16px 4px", fontSize: "15px", fontWeight: 600, color: "#333" }}>
             选择会员套餐
           </div>
         )}
@@ -443,7 +443,7 @@ export default function MembershipPage() {
           </div>
           {status.level === "basic" ? (
             <div
-              onClick={() => { if (paymentsBlocked) { setErrorMsg(IOS_PAYMENT_DISABLED_TIP); return; } setSelectedPlan("yearly"); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+              onClick={() => { if (paymentsBlocked) { setErrorMsg(IOS_PAYMENT_DISABLED_TIP); return; } setSelectedPlan("yearly"); document.getElementById("plan-section")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
               style={{ marginTop: "12px", padding: "10px", borderRadius: "10px", backgroundColor: "#faf6ff", border: `1px solid ${BRAND}55`, textAlign: "center", fontSize: "13px", color: BRAND, fontWeight: 600, cursor: "pointer" }}
             >
               升级会员解锁全部中医功能 →
@@ -669,13 +669,22 @@ export default function MembershipPage() {
         )}
       </div>
 
-      {/* ===== 底部开通按钮（FINAL-RC-02: iOS 隐藏任何付费入口） ===== */}
+      {/* ===== 底部开通按钮（v25.0.47_23：fixed 悬浮底栏，任何滚动位置可见——点击会员卡片后无需滚动即见购买引导） ===== */}
       {!paymentsBlocked && (
+      <>
+      {/* 文档流占位：抵消 fixed 按钮栏高度，防止遮挡页面尾部内容 */}
+      <div style={{ height: "132px" }} aria-hidden="true" />
       <div
         style={{
-          padding: "12px 16px",
+          position: "fixed",
+          left: 0,
+          right: 0,
+          bottom: "calc(var(--bottom-nav-height, 56px) + env(safe-area-inset-bottom, 0px))",
+          padding: "10px 16px 12px",
           backgroundColor: "#fff",
           borderTop: "1px solid #eee",
+          boxShadow: "0 -2px 12px rgba(0,0,0,0.08)",
+          zIndex: 1001,
         }}
       >
         {/* v25.0.47_12 P0修复：支付反馈固定在按钮正上方，点击立即可见，杜绝"死键"体验 */}
@@ -749,6 +758,7 @@ export default function MembershipPage() {
             : `立即开通 · ¥${PLANS.find((p) => p.level === selectedPlan)?.price ?? 0}`}
         </button>
       </div>
+      </>
       )}
 
       <div className="page-bottom-nav-safe" aria-hidden="true" />
