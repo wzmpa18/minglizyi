@@ -23,6 +23,7 @@ function ZoneItem({
   right,
   onClick,
   noBorder,
+  href,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -30,13 +31,11 @@ function ZoneItem({
   right?: React.ReactNode;
   onClick?: () => void;
   noBorder?: boolean;
+  href?: string;
 }) {
-  return (
-    <button
-      onClick={onClick}
-      className="flex w-full items-center gap-3 bg-white px-4 py-3 text-left active:bg-gray-50"
-      style={{ borderBottom: noBorder ? "none" : "1px solid #f5f5f5" }}
-    >
+  // v25.0.49: 支持 href 原生锚点模式——关键跳转入口（会员中心等）不依赖 JS，任何浏览器/JS异常下都可点击跳转
+  const inner = (
+    <>
       <div className="flex h-7 w-7 shrink-0 items-center justify-center">{icon}</div>
       <div className="flex-1 min-w-0">
         <p className="text-sm text-gray-800">{label}</p>
@@ -46,6 +45,26 @@ function ZoneItem({
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
         <polyline points="9 18 15 12 9 6" />
       </svg>
+    </>
+  );
+  if (href) {
+    return (
+      <a
+        href={href}
+        className="flex w-full items-center gap-3 bg-white px-4 py-3 text-left active:bg-gray-50"
+        style={{ borderBottom: noBorder ? "none" : "1px solid #f5f5f5", textDecoration: "none" }}
+      >
+        {inner}
+      </a>
+    );
+  }
+  return (
+    <button
+      onClick={onClick}
+      className="flex w-full items-center gap-3 bg-white px-4 py-3 text-left active:bg-gray-50"
+      style={{ borderBottom: noBorder ? "none" : "1px solid #f5f5f5" }}
+    >
+      {inner}
     </button>
   );
 }
@@ -62,15 +81,20 @@ function Zone({
   defaultOpen?: boolean;
   storageKey?: string;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     if (!storageKey) return;
     try {
       const saved = localStorage.getItem(storageKey);
-      if (saved !== null) setOpen(saved === "1");
+      if (saved !== null) {
+        setOpen(saved === "1");
+        return;
+      }
     } catch {}
-  }, [storageKey]);
+    // v25.0.49: 首次访问（无折叠记忆）时按 defaultOpen 展开（如商业中心），避免会员入口藏太深
+    if (defaultOpen) setOpen(true);
+  }, [storageKey, defaultOpen]);
 
   const toggle = () => {
     setOpen((o) => {
@@ -421,7 +445,7 @@ function LogoutConfirmModal({ onClose }: { onClose: () => void }) {
 }
 
 // ==================== 关于我们弹窗 ====================
-function AboutUsModal({ onClose }: { onClose: () => void }) {
+function AboutUsModal({ onClose, version }: { onClose: () => void; version?: string }) {
   useBodyScrollLock(true);
   usePopupBackHandler(onClose, true);
 
@@ -449,7 +473,7 @@ function AboutUsModal({ onClose }: { onClose: () => void }) {
               <span className="text-2xl font-bold text-white">言</span>
             </div>
             <h4 className="text-lg font-bold text-gray-800">言道</h4>
-            <p className="text-xs text-gray-400">v25.0</p>
+            <p className="text-xs text-gray-400">{version || "v25.0"}</p>
           </div>
 
           <div>
@@ -691,6 +715,47 @@ export default function ProfilePage() {
   const [showQR, setShowQR] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
+
+  // v25.0.49: 版本号动态显示 + 手动检查更新
+  const [appVersion, setAppVersion] = useState<string>("");
+  const [updateCheck, setUpdateCheck] = useState<{ checking: boolean; result: null | { latest: boolean; version: string } }>({ checking: false, result: null });
+
+  useEffect(() => {
+    let stopped = false;
+    (async () => {
+      try {
+        const res = await fetch(`/version.json?t=${Date.now()}`, { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!stopped && data && typeof data.version === "string") setAppVersion(data.version);
+      } catch { /* 静默 */ }
+    })();
+    return () => { stopped = true; };
+  }, []);
+
+  // 手动检查更新：对比当前运行构建 ID 与服务器 version.json
+  const handleCheckUpdate = async () => {
+    setUpdateCheck({ checking: true, result: null });
+    try {
+      const res = await fetch(`/version.json?t=${Date.now()}`, { cache: "no-store" });
+      const data = res.ok ? await res.json() : null;
+      const remote = data && typeof data.buildId === "string" ? data.buildId : "";
+      const running = process.env.NEXT_PUBLIC_BUILD_ID || "dev";
+      if (!remote) {
+        setUpdateCheck({ checking: false, result: { latest: true, version: appVersion || "未知" } });
+        return;
+      }
+      if (remote === running) {
+        setUpdateCheck({ checking: false, result: { latest: true, version: data.version || appVersion } });
+      } else {
+        // 新版本已发布：刷新即加载新版（刷新前记录跳过自动reload标记，避免与VersionChecker自动刷新打架）
+        try { sessionStorage.setItem("yandao_auto_reloaded", "1"); } catch {}
+        setUpdateCheck({ checking: false, result: { latest: false, version: data.version || appVersion } });
+      }
+    } catch {
+      setUpdateCheck({ checking: false, result: { latest: true, version: appVersion || "未知" } });
+    }
+  };
 
   // 顶部核心资产：AI 剩余额度 / 积分余额
   const [aiRemaining, setAiRemaining] = useState<number | null>(null);
@@ -970,13 +1035,13 @@ export default function ProfilePage() {
         />
       </Zone>
 
-      {/* ===== 第四区：商业中心 ===== */}
-      <Zone title="商业中心" storageKey="yandao_zone_biz">
+      {/* ===== 第四区：商业中心（v25.0.49 默认展开：会员购买入口直达，杜绝"找不到入口/点了没反应"） ===== */}
+      <Zone title="商业中心" storageKey="yandao_zone_biz" defaultOpen>
         <ZoneItem
           icon={Ic.member}
           label="会员中心"
           sub={isMember ? "高级会员权益生效中" : "开通会员解锁全部权益"}
-          onClick={() => router.push("/membership")}
+          href="/membership/"
         />
         <ZoneItem
           icon={Ic.ai}
@@ -1047,6 +1112,26 @@ export default function ProfilePage() {
           label="通用设置"
           onClick={() => router.push("/profile/settings")}
         />
+        {/* v25.0.49: 检查更新——手动拉取服务器 version.json 对比当前构建，发现新版一键更新 */}
+        <ZoneItem
+          icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={BRAND} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36" /><polyline points="21 3 21 9 15 9" /><path d="M12 7v5l3 3" /></svg>}
+          label="检查更新"
+          sub={updateCheck.checking
+            ? "正在检查新版本..."
+            : updateCheck.result
+              ? (updateCheck.result.latest ? `当前已是最新版本${updateCheck.result.version ? ` ${updateCheck.result.version}` : ""}` : `发现新版本 ${updateCheck.result.version}，点击立即更新`)
+              : (appVersion ? `当前版本 ${appVersion}` : "检查是否有新版本")}
+          onClick={() => {
+            if (updateCheck.result && !updateCheck.result.latest) {
+              window.location.reload();
+              return;
+            }
+            void handleCheckUpdate();
+          }}
+          right={updateCheck.result && !updateCheck.result.latest ? (
+            <span style={{ fontSize: "11px", color: "#fff", backgroundColor: BRAND, borderRadius: "10px", padding: "2px 8px", fontWeight: 600 }}>新版本</span>
+          ) : undefined}
+        />
         <ZoneItem
           icon={Ic.about}
           label="关于我们"
@@ -1087,7 +1172,7 @@ export default function ProfilePage() {
         />
       )}
       {showLogoutConfirm && <LogoutConfirmModal onClose={() => setShowLogoutConfirm(false)} />}
-      {showAbout && <AboutUsModal onClose={() => setShowAbout(false)} />}
+      {showAbout && <AboutUsModal onClose={() => setShowAbout(false)} version={appVersion || undefined} />}
     </div>
   );
 }

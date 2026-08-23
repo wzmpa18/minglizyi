@@ -5405,13 +5405,26 @@ const CLASSICS_DATA: ClassicBook[] = [
   },
 ];
 
+// v25.0.49: 混元AI全量导入——外挂数据模块（现有典籍章节补全 + 新增典籍）
+// 生成管道：服务器混元AI批量生成 → scripts合入 classicsExtra.ts → 此处自动合并生效
+import { CHAPTER_APPENDS, EXTRA_BOOKS } from "./classicsExtra";
+
+// 合并后完整书库（内置数据 + 补全章节 + 新增典籍）
+function buildMergedBooks(): ClassicBook[] {
+  const merged = CLASSICS_DATA.map((b) => {
+    const extra = CHAPTER_APPENDS[b.id];
+    return extra && extra.length > 0 ? { ...b, chapters: [...b.chapters, ...extra] } : b;
+  });
+  return [...merged, ...EXTRA_BOOKS];
+}
+
 // 导出函数
 export function getAllBooks(): ClassicBook[] {
-  return CLASSICS_DATA;
+  return buildMergedBooks();
 }
 
 export function getBookById(id: string): ClassicBook | undefined {
-  return CLASSICS_DATA.find(b => b.id === id);
+  return buildMergedBooks().find(b => b.id === id);
 }
 
 export function getChapterById(bookId: string, chapterId: string): ClassicChapter | undefined {
@@ -5421,8 +5434,7 @@ export function getChapterById(bookId: string, chapterId: string): ClassicChapte
 
 export function searchClassics(keyword: string): Array<{ bookId: string; bookName: string; chapterId: string; chapterTitle: string; snippet: string }> {
   const results: Array<{ bookId: string; bookName: string; chapterId: string; chapterTitle: string; snippet: string }> = [];
-  const q = keyword.toLowerCase();
-  for (const book of CLASSICS_DATA) {
+  for (const book of buildMergedBooks()) {
     for (const chapter of book.chapters) {
       if (chapter.title.includes(keyword) || chapter.content.includes(keyword)) {
         const idx = chapter.content.indexOf(keyword);
