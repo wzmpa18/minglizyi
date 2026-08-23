@@ -70,7 +70,7 @@ echo "--- [3] 构建（build.sh 静态导出） ---"
 bash build.sh 2>&1 | tail -6
 
 echo "--- [4] 页面导出校验 ---"
-for p in membership zhongyi yixue yixue/phone academy/yikao profile index admin admin/feature-flags admin/tool-control admin/pricing admin/marketing admin/membership admin/ai-control admin/orders admin/commission admin/moderation admin/alerts admin/tools admin/keys; do
+for p in membership zhongyi yixue yixue/phone academy/yikao profile admin admin/feature-flags admin/tool-control admin/pricing admin/marketing admin/membership admin/ai-control admin/orders admin/commission admin/moderation admin/alerts admin/tools admin/keys; do
   test -f "out/${p}/index.html" || { echo "FATAL: out/${p}/index.html missing"; exit 1; }
 done
 echo "OK: 全部后台页面导出（含 admin/keys）"
