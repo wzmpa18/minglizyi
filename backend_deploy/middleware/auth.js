@@ -24,17 +24,20 @@ const JWT_SECRET = process.env.JWT_SECRET || 'yandao_default_jwt_secret_2026';
 const DB_PATH = process.env.DB_PATH || '/root/backend-auth/data/yandao_users.db';
 
 // ==================== 会员等级定义 ====================
+// v25.0.47_12: 补齐 quarterly 档位（季度会员99元已开售，缺失会导致权益归零）
 const MEMBER_LEVELS = {
   basic: 0,
   monthly: 1,
-  yearly: 2,
-  lifetime: 3,
+  quarterly: 2,
+  yearly: 3,
+  lifetime: 4,
 };
 
 // ==================== AI配额配置 ====================
 const AI_DAILY_LIMITS = {
   basic: 3,
   monthly: 50,
+  quarterly: 50,
   yearly: Infinity,
   lifetime: Infinity,
 };
