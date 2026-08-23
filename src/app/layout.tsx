@@ -11,6 +11,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import GlobalZoomProvider from "@/components/GlobalZoomProvider";
 import SwipeBackProvider from "@/components/SwipeBackProvider";
 import VersionChecker from "@/components/VersionChecker";
+import AppUpgradeChecker from "@/components/AppUpgradeChecker";
 import { ToastHost } from "@/components/ui";
 import { PromoFloat } from "@/components/marketing/PromoFloat";
 
@@ -59,6 +60,8 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: nativeApiPatchCode }} />
         <ThemeProvider>
           <VersionChecker />
+          {/* v25.0.48 原生壳升级检测：APP 内置资源版本落后时弹升级引导（网页版静默） */}
+          <AppUpgradeChecker />
           <SwipeBackProvider>
             <CloudSyncInit />
             <AuthRestoreInit />

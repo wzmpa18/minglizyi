@@ -9,9 +9,9 @@ import { getUserById, findUserById } from "@/lib/userStore";
 import { recordInviteLanding } from "@/lib/antiCheatStore";
 
 const BRAND = "#7B2FBE";
-// APK 直链 - 与 /download 页统一的正式包（FINAL-SEAL-03 品牌统一后旧文件名 guoxue-chuancheng-v1.0-release.apk 已从服务器删除，
-// 服务器侧已补挂同名别名文件兼容存量分享链接；新代码统一指向正式包名）
-const APK_URL = "https://yandaoguoxue.yandao.vip/app-download/yandao-guoxue-v25.0.47-release.apk";
+// APK 直链兜底值：实际下载地址运行时从 /api/public/app-version 动态获取（SSOT，
+// 服务器发布新 APK 后仅更新 app-release-config.json，前端零改动；接口失败时用此兜底）
+const APK_URL_FALLBACK = "https://yandaoguoxue.yandao.vip/app-download/yandao-guoxue-v25.0.48-release.apk";
 
 // ==================== 检测微信/QQ内置浏览器 ====================
 function isInAppBrowser(): boolean {
@@ -36,7 +36,22 @@ function FriendContent() {
   const [friendAdded, setFriendAdded] = useState(false);
   const [isInApp, setIsInApp] = useState(false);
   const [downloadTriggered, setDownloadTriggered] = useState(false);
+  const [apkUrl, setApkUrl] = useState(APK_URL_FALLBACK);
   const autoActionTriggered = useRef(false);
+
+  // 运行时拉取最新 APK 下载地址（SSOT：服务器发布新包只需更新 app-release-config.json）
+  useEffect(() => {
+    let stopped = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/public/app-version?t=${Date.now()}`, { cache: "no-store" });
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!stopped && json?.data?.downloadUrl) setApkUrl(json.data.downloadUrl);
+      } catch { /* 接口失败保持兜底地址 */ }
+    })();
+    return () => { stopped = true; };
+  }, []);
 
   useEffect(() => {
     // 检测是否在微信/QQ内置浏览器中
@@ -92,7 +107,7 @@ function FriendContent() {
     setDownloadTriggered(true);
     setToast("正在下载言道国学APP...");
     try {
-      window.location.href = APK_URL;
+      window.location.href = apkUrl;
     } catch {
       setToast("下载失败，请点击下方按钮重试");
     }

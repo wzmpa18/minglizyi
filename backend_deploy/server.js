@@ -455,6 +455,11 @@ const toolAdminRoutesMod = require('./toolAdminRoutes');
 app.use('/api/public/tool-matrix', toolAdminRoutesMod.publicRouter);
 console.log('[Server] ✅ 公开配置接口已挂载: /api/public/pricing | feature-flags | tool-matrix');
 
+// ==================== APP 版本发布接口（v25.0.48 升级提示） ====================
+const appVersionRoutes = require('./appVersionRoutes');
+app.use('/api/public/app-version', appVersionRoutes.router);
+console.log('[Server] ✅ APP版本接口已挂载: /api/public/app-version');
+
 // ==================== 健康检查 ====================
 
 

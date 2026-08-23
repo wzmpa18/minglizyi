@@ -436,10 +436,24 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const [authed, setAuthed] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [role, setRole] = useState<string | null>(null);
+  // v25.0.48 桌面端常驻侧栏（≥1280px 默认展开可折叠，内容区避让不遮挡；窄屏保持抽屉覆盖模式）
+  const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
     setAuthed(isAdminAuthed());
   }, [pathname]);
+
+  useEffect(() => {
+    const apply = () => {
+      const desktop = window.innerWidth >= 1280;
+      setIsDesktop(desktop);
+      if (desktop) setSidebarOpen(true);
+      else setSidebarOpen(false);
+    };
+    apply();
+    window.addEventListener("resize", apply);
+    return () => window.removeEventListener("resize", apply);
+  }, []);
 
   // v25.0.47_13: 登录/刷新后通过 whoami 拉取真实角色并缓存（菜单渲染依据；服务端仍是权限最终裁决）
   useEffect(() => {
@@ -481,13 +495,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     return <AdminLogin onLogin={() => setAuthed(true)} />;
   }
 
-  // 已登录 → 控制台 Shell（v25.0.47_13：全端统一抽屉式导航，默认收起，内容区全宽不被遮挡）
+  // 已登录 → 控制台 Shell（v25.0.48：桌面≥1280 常驻侧栏可折叠+内容区避让；窄屏抽屉覆盖不遮挡）
   return (
     <div style={{ minHeight: "100vh", backgroundColor: THEME.bg }}>
       <style>{`#app-bottom-nav { display: none !important; }`}</style>
 
-      {/* 遮罩：抽屉打开时覆盖内容区 */}
-      {sidebarOpen && (
+      {/* 遮罩：仅窄屏抽屉模式显示 */}
+      {!isDesktop && sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}
           style={{
@@ -499,7 +513,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         />
       )}
 
-      {/* 侧边栏抽屉：全端统一，默认收起 */}
+      {/* 侧边栏：桌面常驻（内容区 marginLeft 避让）；窄屏抽屉滑入 */}
       <div
         style={{
           position: "fixed",
@@ -510,12 +524,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           transition: "transform 0.25s ease",
         }}
       >
-        <Sidebar active={pathname} onNavigate={() => setSidebarOpen(false)} role={role} />
+        <Sidebar active={pathname} onNavigate={() => { if (!isDesktop) setSidebarOpen(false); }} role={role} />
       </div>
 
-      {/* 主内容区：全宽，无左侧留白 */}
-      <div style={{ minHeight: "100vh" }}>
-        {/* 顶部工具栏：全端统一，汉堡按钮唤出抽屉 */}
+      {/* 主内容区：桌面端侧栏展开时左移避让，收起/窄屏时全宽 */}
+      <div style={{ minHeight: "100vh", marginLeft: isDesktop && sidebarOpen ? 240 : 0, transition: "margin-left 0.25s ease" }}>
+        {/* 顶部工具栏：汉堡按钮切换侧栏（桌面折叠/窄屏抽屉） */}
         <div
           style={{
             position: "sticky",

@@ -6,7 +6,9 @@ import { makeQrDataUrl } from "@/lib/qrLocal";
 
 const BRAND = "#7B2FBE";
 const DOWNLOAD_URL = "https://yandaoguoxue.yandao.vip/friend";
-const APK_URL = "https://yandaoguoxue.yandao.vip/app-download/yandao-guoxue-v25.0.47-release.apk";
+// APK 直链兜底值：实际地址运行时从 /api/public/app-version 动态获取（SSOT，
+// 服务器发布新 APK 后仅更新 app-release-config.json，前端零改动）
+const APK_URL_FALLBACK = "https://yandaoguoxue.yandao.vip/app-download/yandao-guoxue-v25.0.48-release.apk";
 
 /** 功能亮点列表 */
 const FEATURES: { icon: string; title: string; desc: string }[] = [
@@ -21,15 +23,32 @@ const FEATURES: { icon: string; title: string; desc: string }[] = [
 export default function DownloadPage() {
   // P9：本地生成 APK 下载二维码，不依赖境外 qrserver 服务
   const [downloadQrUrl, setDownloadQrUrl] = useState("");
+  const [apkUrl, setApkUrl] = useState(APK_URL_FALLBACK);
 
+  // 运行时拉取最新 APK 下载地址（SSOT：服务器发布新包只需更新 app-release-config.json）
   useEffect(() => {
-    makeQrDataUrl(APK_URL, { width: 240, dark: "#7B2FBE" })
-      .then(setDownloadQrUrl)
-      .catch(() => {});
+    let stopped = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/public/app-version?t=${Date.now()}`, { cache: "no-store" });
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!stopped && json?.data?.downloadUrl) setApkUrl(json.data.downloadUrl);
+      } catch { /* 接口失败保持兜底地址 */ }
+    })();
+    return () => { stopped = true; };
   }, []);
 
+  // 二维码内容跟随最新下载地址
+  useEffect(() => {
+    if (!apkUrl) return;
+    makeQrDataUrl(apkUrl, { width: 240, dark: "#7B2FBE" })
+      .then(setDownloadQrUrl)
+      .catch(() => {});
+  }, [apkUrl]);
+
   const handleDownloadAPK = () => {
-    window.location.href = APK_URL;
+    window.location.href = apkUrl;
   };
 
   return (
@@ -57,7 +76,7 @@ export default function DownloadPage() {
         </div>
         <h1 className="text-2xl font-bold text-white">言道国学</h1>
         <p className="mt-2 text-sm text-white/85">
-          v25.0.47 | 更新日期 2026.08.22 | 原生离线版
+          v25.0.48 | 更新日期 2026.08.23 | 原生离线版
         </p>
         <p className="mt-1 text-xs text-white/60">
           传承千年智慧，感悟国学之美
