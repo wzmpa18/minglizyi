@@ -184,7 +184,8 @@ R4=$(curl -s -X POST ${DOMAIN}/api/payment/create -H 'Content-Type: application/
 echo "$R4" | grep -q 'codeUrl' && echo "PAY-WECHAT-UA(UA兜底识别) OK" || { echo "FATAL: 微信UA下单被拒"; exit 1; }
 
 echo "--- [11] 邀请页公网内容验证 ---"
-curl -sL -m 10 ${DOMAIN}/invite | grep -q '邀请' && echo "邀请页公网可访问 OK" || { echo "FATAL: 邀请页不可用"; exit 1; }
+INV_HTML=$(curl -sL -m 10 ${DOMAIN}/invite)
+echo "$INV_HTML" | grep -q '推广中心' && echo "邀请页(推广中心)公网可访问 OK" || { echo "FATAL: 邀请页不可用"; exit 1; }
 curl -sL -m 10 -o /dev/null -w 'invite/poster: %{http_code}\n' ${DOMAIN}/invite/poster
 
 echo "===== DEPLOY ${REL_TAG} COMPLETE (HEAD=${HEAD}, BUILD_ID=${BUILD_ID}) ====="
