@@ -41,15 +41,15 @@ const ADMIN_KEY = process.env.ADMIN_KEY;
     return j && j.success ? { total: j.data.total, n: (j.data.users || []).length, first: j.data.users?.[0]?.user_id } : null;
   }, { p, size });
   const total20 = await fetchUsers(1, 20);
-  log('默认 20 条/页', total20 && total20.n === Math.min(20, total20.total), `total=${total20 ? total20.total} n=${total20 ? total20.n}`);
+  log('默认 20 条/页', total20 && total20.n === Math.min(20, total20.total), `total=${total20 && total20.total} n=${total20 && total20.n}`);
   if (total20 && total20.total > 20) {
     const p2 = await fetchUsers(2, 20);
-    log('第 2 页返回下一批数据', p2 && p2.n > 0 && p2.first !== total20.first, `page2 first=${p2 ? p2.first}`);
+    log('第 2 页返回下一批数据', p2 && p2.n > 0 && p2.first !== total20.first, `page2 first=${p2 && p2.first}`);
     const pEnd = await fetchUsers(Math.ceil(total20.total / 20), 20);
-    log('末页条数=总数-前面页数', pEnd && pEnd.n === total20.total - (Math.ceil(total20.total / 20) - 1) * 20, `lastPage n=${pEnd ? pEnd.n}`);
+    log('末页条数=总数-前面页数', pEnd && pEnd.n === total20.total - (Math.ceil(total20.total / 20) - 1) * 20, `lastPage n=${pEnd && pEnd.n}`);
   }
   const all = await fetchUsers(1, 500);
-  log('size=500 全部拉取', all && all.n === all.total, `total=${all ? all.total} n=${all ? all.n}`);
+  log('size=500 全部拉取', all && all.n === all.total, `total=${all && all.total} n=${all && all.n}`);
 
   console.log('=== [4] 页面交互：翻页 ===');
   const overview1 = await page.locator('text=/共 \\d+ 条 · 第 1\\/\\d+ 页/').first().textContent().catch(() => '');
@@ -71,7 +71,7 @@ const ADMIN_KEY = process.env.ADMIN_KEY;
     const overview1b = await page.locator('text=/共 \\d+ 条 · 第 1\\/\\d+ 页/').first().isVisible().catch(() => false);
     log('点击页码 1 跳回第 1 页', overview1b);
   } else {
-    log('单页无需翻页（总数≤20）', true, `total=${total20 ? total20.total}`);
+    log('单页无需翻页（总数≤20）', true, `total=${total20 && total20.total}`);
   }
 
   console.log('=== [5] 切「全部显示」一页拉全量 ===');
