@@ -74,6 +74,7 @@ export interface ModerationUser {
   user_id: number;
   nickname: string;
   phone?: string;
+  email?: string;
   status: string;
   muted_until?: string | null;
   member_level?: string;

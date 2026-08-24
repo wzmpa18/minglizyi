@@ -294,13 +294,14 @@ router.get('/moderation/users', adminAuthUnified('SUPPORT_ADMIN', 'ops'), (req, 
     let where = '1=1'; const params = [];
     if (q) {
       if (/^\d+$/.test(q)) { where = 'user_id = ? OR phone LIKE ? OR nickname LIKE ?'; params.push(parseInt(q, 10), '%' + q + '%', '%' + q + '%'); }
-      else { where = 'nickname LIKE ? OR phone LIKE ?'; params.push('%' + q + '%', '%' + q + '%'); }
+      else { where = 'nickname LIKE ? OR phone LIKE ? OR email LIKE ?'; params.push('%' + q + '%', '%' + q + '%', '%' + q + '%'); }
     }
     const total = udb.prepare(`SELECT COUNT(*) c FROM users WHERE ${where}`).get(...params).c;
-    const rows = udb.prepare(`SELECT user_id, nickname, phone, member_level, status, muted_until, created_at, last_login_at
+    // v25.0.47_24: 用户管理需展示完整注册信息（手机号/邮箱）——后台已鉴权 SUPPORT_ADMIN/ops，去脱敏直出
+    const rows = udb.prepare(`SELECT user_id, nickname, phone, email, member_level, status, muted_until, created_at, last_login_at
                               FROM users WHERE ${where} ORDER BY user_id DESC LIMIT ? OFFSET ?`)
       .all(...params, size, (page - 1) * size);
-    res.json({ success: true, data: { total, page, size, users: rows.map(r => ({ ...r, phone: r.phone ? r.phone.slice(0, 3) + '****' + r.phone.slice(-4) : '' })) } });
+    res.json({ success: true, data: { total, page, size, users: rows } });
   } catch (e) {
     console.error('[moderation/users]', e.message);
     res.status(500).json({ success: false, error: '用户查询失败' });

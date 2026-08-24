@@ -128,7 +128,8 @@ export default function SettingsPage() {
   const [allowSearch, setAllowSearch] = useState(true);
   const [allowNearby, setAllowNearby] = useState(true);
   const [notifyEnabled, setNotifyEnabled] = useState(true);
-  const [zoomEnabled, setZoomEnabled] = useState(true);
+  // v25.0.47_24: 屏幕放大默认关闭（未显式开启过时显示关闭态）
+  const [zoomEnabled, setZoomEnabled] = useState(false);
   const [showBlacklist, setShowBlacklist] = useState(false);
 
   const [cacheSize, setCacheSize] = useState("0 KB");
@@ -163,7 +164,8 @@ export default function SettingsPage() {
     if (n !== null) setAllowNearby(n === "true");
     if (nf !== null) setNotifyEnabled(nf === "true");
     const zd = localStorage.getItem("yandao_zoom_disabled");
-    if (zd !== null) setZoomEnabled(zd !== "1");
+    // v25.0.47_24: 默认关闭——仅显式开启（"0"）才为开；历史用户曾关闭（"1"）保持关闭
+    setZoomEnabled(zd === "0");
     const storeNearby = getUserStoreAllowNearby();
     setAllowNearby(storeNearby);
   }, []);

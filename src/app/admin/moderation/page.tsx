@@ -202,10 +202,10 @@ export default function AdminModerationPage() {
           <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
             <input
               type="text"
-              placeholder="搜索昵称 / 用户ID"
+              placeholder="搜索昵称 / 用户ID / 手机号 / 邮箱"
               value={userQuery}
               onChange={(e) => setUserQuery(e.target.value)}
-              style={{ ...styles.input, width: 220 }}
+              style={{ ...styles.input, width: 260 }}
               onKeyDown={(e) => e.key === "Enter" && loadUsers()}
             />
             <button onClick={loadUsers} style={styles.btnPrimary}>
@@ -217,6 +217,8 @@ export default function AdminModerationPage() {
               <tr>
                 <Th>ID</Th>
                 <Th>昵称</Th>
+                <Th>手机号</Th>
+                <Th>邮箱</Th>
                 <Th>状态</Th>
                 <Th>禁言至</Th>
                 <Th>最近登录</Th>
@@ -225,12 +227,16 @@ export default function AdminModerationPage() {
             </thead>
             <tbody>
               {users.length === 0 ? (
-                <EmptyRow colSpan={6} />
+                <EmptyRow colSpan={8} />
               ) : (
                 users.map((u) => (
                   <tr key={u.user_id}>
                     <Td>{u.user_id}</Td>
                     <Td>{u.nickname}</Td>
+                    <Td style={{ whiteSpace: "nowrap" }}>{u.phone || "-"}</Td>
+                    <Td style={{ fontSize: 11, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {u.email || "-"}
+                    </Td>
                     <Td>
                       <Badge type={u.status === "banned" ? "error" : u.status === "muted" ? "warning" : "success"}>
                         {u.status === "banned" ? "已封禁" : u.status === "muted" ? "禁言中" : "正常"}

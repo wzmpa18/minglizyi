@@ -56,12 +56,15 @@ export default function GlobalZoomProvider({
   );
 
   // ====== 挂载时读取保存的缩放级别/关闭开关 + 首次提示 ======
+  // v25.0.47_24: 屏幕放大默认关闭——仅当用户在「我的-通用设置」显式开启（yandao_zoom_disabled === "0"）时才启用缩放交互
   useEffect(() => {
+    let explicitlyEnabled = false;
     try {
       const disabled = localStorage.getItem(DISABLED_KEY);
-      if (disabled === "1") setZoomDisabled(true);
+      explicitlyEnabled = disabled === "0";
+      if (!explicitlyEnabled) setZoomDisabled(true);
 
-      if (disabled !== "1") {
+      if (explicitlyEnabled) {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
           const val = parseFloat(saved);
@@ -72,13 +75,15 @@ export default function GlobalZoomProvider({
       }
     } catch {}
 
-    // 首次提示
+    // 首次提示（仅放大功能已开启时才展示）
     try {
       if (!localStorage.getItem(HINT_KEY)) {
-        setShowHint(true);
         localStorage.setItem(HINT_KEY, "1");
-        const timer = setTimeout(() => setShowHint(false), 3000);
-        return () => clearTimeout(timer);
+        if (explicitlyEnabled) {
+          setShowHint(true);
+          const timer = setTimeout(() => setShowHint(false), 3000);
+          return () => clearTimeout(timer);
+        }
       }
     } catch {}
   }, []);
