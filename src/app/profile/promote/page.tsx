@@ -493,6 +493,29 @@ export default function PromotePage() {
           </div>
         )}
 
+        {/* DEV-V22 合伙人渠道体系V2：申请成为渠道合伙人入口 */}
+        <div
+          onClick={() => router.push("/profile/partner/apply")}
+          style={{
+            marginTop: 18,
+            background: "linear-gradient(135deg, #B8860B 0%, #DAA520 100%)",
+            borderRadius: 14,
+            padding: "16px 18px",
+            color: "#fff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 800 }}>申请成为渠道合伙人</div>
+            <div style={{ fontSize: 11, opacity: 0.92, marginTop: 5, lineHeight: 1.6 }}>
+              渠道净收入50%佣金 · 直属培养奖励5%<br />专属邀请码 · 月度结算 · 统一提现
+            </div>
+          </div>
+          <div style={{ fontSize: 22, opacity: 0.9 }}>›</div>
+        </div>
+
         <p style={{ fontSize: 11, color: "#bbb", textAlign: "center", marginTop: 16, lineHeight: 1.7 }}>
           邀请奖励自动发放至积分账户<br />佣金收益可前往「我的钱包」查看与提现
         </p>

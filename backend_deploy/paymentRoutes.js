@@ -505,6 +505,20 @@ function updateOrderRecord(orderId, status, channel) {
     } catch (e) {
       console.error('[payment] 分佣记账失败:', e.message);
     }
+    // DEV-V22 合伙人渠道分佣V2：支付成功→渠道合伙人基础佣金50%+直属培养奖励5%（幂等，engine内部防重）
+    try {
+      const partnerEngine = require('./partnerEngine');
+      const pr = partnerEngine.grantPartnerCommission(order);
+      if (pr && pr.granted) {
+        order.partnerCommissionStatus = 'PARTNER_FROZEN';
+        order.partnerId = pr.partnerId;
+        console.log(`[payment] 合伙人渠道分佣已入账 orderId=${order.orderId} partner=${pr.partnerId} net=${pr.netCents}分 佣金=${pr.commissionCents}分 培养奖励=${pr.nurtureCents}分`);
+      } else if (pr && pr.reason && pr.reason !== 'NO_CHANNEL_PARTNER' && pr.reason !== 'PARTNER_SYSTEM_DISABLED') {
+        order.partnerCommissionStatus = 'NO_PARTNER:' + pr.reason;
+      }
+    } catch (e) {
+      console.error('[payment] 合伙人分佣记账失败:', e.message);
+    }
   }
   // P8：退款→退佣冲正（全额按订单原额比例冲回）
   if (status === ORDER_STATUS.REFUNDED) {
@@ -513,6 +527,12 @@ function updateOrderRecord(orderId, status, channel) {
       commissionEngine.reverseCommission(orderId);
     } catch (e) {
       console.error('[payment] 退佣冲正失败:', e.message);
+    }
+    // DEV-V22 合伙人退款冲正：扣回渠道佣金与培养奖励（幂等）
+    try {
+      require('./partnerEngine').reversePartnerCommission(orderId);
+    } catch (e) {
+      console.error('[payment] 合伙人冲正失败:', e.message);
     }
   }
   return order;

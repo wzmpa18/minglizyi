@@ -1,36 +1,17 @@
 "use client";
 
 /**
- * 右滑手势返回上一页 Hook
+ * v25.0.53 双侧边缘侧滑返回 Hook（DEV-V22-PARTNER-V2-BACKSWIPE）
  *
- * 功能概述：
- * - 从屏幕左边缘 20px 范围内开始触摸
- * - 水平右滑距离超过 80px
- * - 垂直移动距离小于 50px（防止误触）
- * - 触发 router.back()
+ * 交互规则（指令口径）：
+ * - 触发范围：所有二级及以下页面生效；首页及底部Tab主页面（/ /discover /friends /academy /profile）不触发
+ * - 触发区域：屏幕左右两侧边缘各 20dp（CSS px）宽度，从边缘向屏幕中心滑动即可触发
+ * - 冲突处理：页面内横向滚动组件（轮播图、横向列表）滑动时不触发全局返回
  *
- * 视觉反馈：
- * - 右滑过程中，当前页面随之向右移动（transform: translateX）
- * - 显示半透明遮罩 + 返回箭头
- * - 释放时如果距离不够，页面弹回原位
- * - 距离足够时，完成返回动画
- *
- * 防误触：
- * - 排除表单输入、对话框内操作
- * - 防止重复触发（debounce 500ms）
- * - 只在移动设备上启用（检测 touch 事件支持）
- * - 排除特定页面（首页、登录页、注册页）
- * - 不影响双指缩放、滚动等手势（单指判定 + 垂直阈值取消）
- *
- * 性能优化：
- * - 使用 requestAnimationFrame 进行动画渲染
- * - 直接操作 DOM style，避免 React 重渲染
- * - 阻尼效果模拟 iOS 弹性滚动
- *
- * 使用方式：
- *   const contentRef = useRef<HTMLDivElement>(null);
- *   useSwipeBack(contentRef);
- *   return <div ref={contentRef}>{children}</div>;
+ * 动效规范：
+ * - 跟手动画：滑动过程中当前页面跟随手指水平位移，露出侧边半透明黑色遮罩与返回箭头
+ * - 松手判定：滑动距离超过屏幕宽度 1/3 则完成返回，否则回弹回原页面
+ * - 与安卓系统返回键、底部导航返回逻辑并存互不冲突（不拦截系统返回，仅手势层路由 back）
  */
 
 import { useEffect, useRef } from "react";
@@ -38,11 +19,11 @@ import { usePathname, useRouter } from "next/navigation";
 
 // ==================== 常量配置 ====================
 
-/** 左边缘触发范围（px），触摸起始点 x 坐标需 <= 此值 */
-const EDGE_THRESHOLD = 30;
+/** 左右边缘触发范围（dp，WebView 中 1dp ≈ 1 CSS px），触摸起始点距任一边缘需 <= 此值 */
+const EDGE_THRESHOLD = 20;
 
-/** 触发返回的最小水平滑动距离（px） */
-const SWIPE_THRESHOLD = 60;
+/** 触发返回的滑动距离阈值：屏幕宽度的 1/3（动态计算） */
+const SWIPE_WIDTH_RATIO = 1 / 3;
 
 /** 最大允许垂直移动距离（px），超过则视为滚动并取消手势 */
 const VERTICAL_THRESHOLD = 50;
@@ -59,8 +40,16 @@ const DAMP_RATIO = 0.6;
 /** 阻尼系数（超过分界点后的位移衰减比例） */
 const DAMP_FACTOR = 0.4;
 
-/** 不启用右滑返回的页面路径 */
-const EXCLUDED_PATHS: readonly string[] = ["/", "/login", "/register"];
+/** 不启用侧滑返回的页面：首页 + 五个底部Tab主页面 + 登录/注册（精确匹配，子页面不受影响） */
+const EXCLUDED_PATHS: readonly string[] = [
+  "/",
+  "/discover",
+  "/friends",
+  "/academy",
+  "/profile",
+  "/login",
+  "/register",
+];
 
 /** 确认水平滑动的最小位移（px），用于区分点击和滑动 */
 const MIN_HORIZONTAL_MOVE = 10;
@@ -76,7 +65,9 @@ interface SwipeState {
   currentX: number;
   /** 当前触摸 y 坐标 */
   currentY: number;
-  /** 是否在追踪触摸（从左边缘开始） */
+  /** 本次手势从哪个边缘开始（left=左边缘右滑 / right=右边缘左滑） */
+  edge: "left" | "right" | null;
+  /** 是否在追踪触摸（从边缘开始） */
   isTracking: boolean;
   /** 是否已确认水平滑动（开始阻止默认行为并播放动画） */
   isSwiping: boolean;
@@ -118,7 +109,7 @@ function isInteractiveElement(el: HTMLElement | null): boolean {
 
 /**
  * 检查触摸目标是否在横向滚动容器内（如标签栏、轮播图）。
- * 如果用户正在横向滚动某个容器，则不触发右滑返回。
+ * 如果用户正在横向滚动某个容器，则不触发侧滑返回。
  */
 function isInsideHorizontalScroll(el: HTMLElement | null): boolean {
   if (!el) return false;
@@ -152,16 +143,16 @@ function isTouchDevice(): boolean {
  * 在屏幕宽度 DAMP_RATIO 比例内为 1:1 跟手，
  * 超过后按 DAMP_FACTOR 衰减，避免页面滑出过远。
  */
-function getDampedDistance(dx: number, screenWidth: number): number {
+function getDampedDistance(distance: number, screenWidth: number): number {
   const maxDx = screenWidth * DAMP_RATIO;
-  if (dx <= maxDx) return dx;
-  return maxDx + (dx - maxDx) * DAMP_FACTOR;
+  if (distance <= maxDx) return distance;
+  return maxDx + (distance - maxDx) * DAMP_FACTOR;
 }
 
 // ==================== Hook 实现 ====================
 
 /**
- * 右滑手势返回上一页
+ * 双侧边缘侧滑手势返回上一页
  *
  * @param contentRef 需要进行位移动画的内容容器引用
  */
@@ -177,6 +168,7 @@ export function useSwipeBack(
     startY: 0,
     currentX: 0,
     currentY: 0,
+    edge: null,
     isTracking: false,
     isSwiping: false,
     lastTrigger: 0,
@@ -253,6 +245,19 @@ export function useSwipeBack(
 
     // ==================== 辅助函数 ====================
 
+    /** 本次手势的有效位移：恒为正数，表示页面朝脱离边缘方向的移动量 */
+    function effectiveDx(): number {
+      const s = stateRef.current;
+      if (!s.edge) return 0;
+      const raw = s.currentX - s.startX;
+      return s.edge === "left" ? raw : -raw;
+    }
+
+    /** 返回触发阈值：屏幕宽度的 1/3 */
+    function swipeThreshold(): number {
+      return window.innerWidth * SWIPE_WIDTH_RATIO;
+    }
+
     /** 显示遮罩（背景），箭头透明度由 applyTransform 渐进控制 */
     function showOverlay(): void {
       // 临时隐藏 body 滚动，防止水平溢出产生滚动条
@@ -260,7 +265,25 @@ export function useSwipeBack(
       document.body.style.overflow = "hidden";
 
       const ov = overlayRef.current;
-      if (ov) ov.style.opacity = "1";
+      const ar = arrowRef.current;
+      const s = stateRef.current;
+      if (ov && ar && s.edge) {
+        // 箭头固定在本次手势的起始边缘侧
+        if (s.edge === "left") {
+          ov.style.justifyContent = "flex-start";
+          ov.style.paddingLeft = "20px";
+          ov.style.paddingRight = "0";
+          ar.style.transform = "";
+        } else {
+          ov.style.justifyContent = "flex-end";
+          ov.style.paddingRight = "20px";
+          ov.style.paddingLeft = "0";
+          ar.style.transform = "rotate(180deg)";
+        }
+        ov.style.opacity = "1";
+      } else if (ov) {
+        ov.style.opacity = "1";
+      }
     }
 
     /** 隐藏遮罩与箭头 */
@@ -282,23 +305,29 @@ export function useSwipeBack(
      * 应用位移变换（在 requestAnimationFrame 回调中调用）。
      * 直接操作 DOM style 以避免 React 重渲染，保证 60fps 流畅度。
      */
-    function applyTransform(dx: number): void {
+    function applyTransform(distance: number): void {
       const content = contentRef.current;
       if (!content) return;
 
+      const s = stateRef.current;
+      const dir = s.edge === "right" ? -1 : 1;
       const screenWidth = window.innerWidth;
-      const dampedDx = getDampedDistance(dx, screenWidth);
+      const damped = getDampedDistance(distance, screenWidth);
 
       content.style.transition = "none";
-      content.style.transform = `translateX(${dampedDx}px)`;
-      content.style.boxShadow = "-8px 0 24px rgba(0, 0, 0, 0.25)";
+      content.style.transform = `translateX(${damped * dir}px)`;
+      content.style.boxShadow =
+        dir > 0
+          ? "-8px 0 24px rgba(0, 0, 0, 0.25)"
+          : "8px 0 24px rgba(0, 0, 0, 0.25)";
 
       // 根据滑动进度渐进显示箭头
-      const progress = Math.min(dx / SWIPE_THRESHOLD, 1);
+      const progress = Math.min(distance / swipeThreshold(), 1);
       const ar = arrowRef.current;
       if (ar) {
+        const baseRotate = s.edge === "right" ? "rotate(180deg) " : "";
         ar.style.opacity = String(progress);
-        ar.style.transform = `scale(${0.8 + progress * 0.2})`;
+        ar.style.transform = `${baseRotate}scale(${0.8 + progress * 0.2})`;
       }
     }
 
@@ -320,10 +349,12 @@ export function useSwipeBack(
     /** 完成返回动画（滑动距离足够时） */
     function completeSwipe(): void {
       const content = contentRef.current;
+      const s = stateRef.current;
+      const dir = s.edge === "right" ? -1 : 1;
       if (content) {
         const screenWidth = window.innerWidth;
         content.style.transition = `transform ${ANIMATION_MS}ms ease-in`;
-        content.style.transform = `translateX(${screenWidth}px)`;
+        content.style.transform = `translateX(${screenWidth * dir}px)`;
       }
 
       window.setTimeout(() => {
@@ -368,7 +399,7 @@ export function useSwipeBack(
     function handleTouchStart(e: TouchEvent): void {
       const s = stateRef.current;
 
-      // 排除特定页面（首页、登录页、注册页）
+      // 排除首页、底部Tab主页面等（精确匹配，二级页面不受影响）
       if (EXCLUDED_PATHS.includes(pathnameRef.current)) return;
 
       // 仅单指触摸时追踪（避免与双指缩放冲突）
@@ -376,8 +407,16 @@ export function useSwipeBack(
 
       const touch = e.touches[0];
 
-      // 仅左边缘 EDGE_THRESHOLD 范围内开始
-      if (touch.clientX > EDGE_THRESHOLD) return;
+      // 双侧边缘 20dp 触发区：左边缘或右边缘
+      const w = window.innerWidth;
+      if (touch.clientX <= EDGE_THRESHOLD) {
+        s.edge = "left";
+      } else if (touch.clientX >= w - EDGE_THRESHOLD) {
+        s.edge = "right";
+      } else {
+        s.edge = null;
+        return;
+      }
 
       // 排除表单输入、对话框、抽屉等交互元素
       const target = e.target as HTMLElement | null;
@@ -403,6 +442,7 @@ export function useSwipeBack(
       if (e.touches.length !== 1) {
         s.isTracking = false;
         s.isSwiping = false;
+        s.edge = null;
         reset();
         return;
       }
@@ -411,19 +451,20 @@ export function useSwipeBack(
       s.currentX = touch.clientX;
       s.currentY = touch.clientY;
 
-      const dx = s.currentX - s.startX;
+      const distance = effectiveDx();
       const dy = Math.abs(s.currentY - s.startY);
 
       // 垂直移动超过阈值 → 视为滚动，取消手势
       if (dy > VERTICAL_THRESHOLD) {
         s.isTracking = false;
         s.isSwiping = false;
+        s.edge = null;
         reset();
         return;
       }
 
-      // 水平右滑且水平位移明显大于垂直位移 → 确认为返回手势
-      if (dx > MIN_HORIZONTAL_MOVE && dx > dy) {
+      // 朝屏幕中心滑动且水平位移明显大于垂直位移 → 确认为返回手势
+      if (distance > MIN_HORIZONTAL_MOVE && distance > dy) {
         if (!s.isSwiping) {
           s.isSwiping = true;
           showOverlay();
@@ -437,7 +478,7 @@ export function useSwipeBack(
           cancelAnimationFrame(rafRef.current);
         }
         rafRef.current = requestAnimationFrame(() => {
-          applyTransform(dx);
+          applyTransform(distance);
           rafRef.current = null;
         });
       }
@@ -447,7 +488,7 @@ export function useSwipeBack(
       const s = stateRef.current;
       if (!s.isTracking) return;
 
-      const dx = s.currentX - s.startX;
+      const distance = effectiveDx();
       const dy = Math.abs(s.currentY - s.startY);
 
       // 取消未执行的 rAF
@@ -456,8 +497,12 @@ export function useSwipeBack(
         rafRef.current = null;
       }
 
-      if (s.isSwiping && dx >= SWIPE_THRESHOLD && dy <= VERTICAL_THRESHOLD) {
-        // 满足返回条件 → 检查防抖和历史记录
+      if (
+        s.isSwiping &&
+        distance >= swipeThreshold() &&
+        dy <= VERTICAL_THRESHOLD
+      ) {
+        // 满足返回条件（屏幕宽度 1/3）→ 检查防抖和历史记录
         const now = Date.now();
         if (now - s.lastTrigger > DEBOUNCE_MS && window.history.length > 1) {
           s.lastTrigger = now;
@@ -473,6 +518,7 @@ export function useSwipeBack(
 
       s.isTracking = false;
       s.isSwiping = false;
+      s.edge = null;
     }
 
     function handleTouchCancel(): void {
@@ -492,6 +538,7 @@ export function useSwipeBack(
 
       s.isTracking = false;
       s.isSwiping = false;
+      s.edge = null;
     }
 
     // ==================== 注册事件监听 ====================

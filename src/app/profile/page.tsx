@@ -1092,6 +1092,12 @@ export default function ProfilePage() {
         />
         <ZoneItem
           icon={Ic.profit}
+          label="合伙人工作台"
+          sub="渠道佣金 · 培养奖励 · 推广物料"
+          onClick={() => router.push("/profile/partner")}
+        />
+        <ZoneItem
+          icon={Ic.profit}
           label="收益记录"
           onClick={() => router.push("/profile/promote")}
           noBorder

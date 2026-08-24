@@ -424,6 +424,8 @@ const extraRoutes = [
   { file: 'shareResultRoutes', path: '/api/share', name: '分享引擎' },
   { file: 'accountDeleteRoutes', path: '/api/account', name: '账号注销' },
   { file: 'commissionRoutes', path: '/api/commission', name: '佣金用户端' },
+  { file: 'partnerRoutes', path: '/api/partner', name: '合伙人V2用户端' },
+  { file: 'partnerRoutes', path: '/api/admin/partner', name: '合伙人V2管理端' },
   { file: 'adminUnifiedRoutes', path: '/api/admin/unified', name: '统一后台' },
   { file: 'featureControlRoutes', path: '/api/admin/feature-flags', name: '功能开关' },
   { file: 'toolAdminRoutes', path: '/api/admin/tool-matrix', name: '工具矩阵' },
@@ -446,6 +448,14 @@ for (const route of extraRoutes) {
   } catch (e) {
     console.log(`[Server] ⚠️ ${route.name}路由未加载: ${e.message}`);
   }
+}
+
+// DEV-V22 合伙人结算调度：每月1号自动生成上月结算单（幂等，进程内24h自检）
+try {
+  require('./partnerEngine').initScheduler();
+  console.log('[Server] ✅ 合伙人V2结算调度器已启动（每月1号自动出账）');
+} catch (e) {
+  console.log('[Server] ⚠️ 合伙人V2结算调度器未启动:', e.message);
 }
 
 // ==================== 公开配置接口（v25.0.47_10 价格SSOT/功能开关/工具矩阵 公开只读） ====================

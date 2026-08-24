@@ -863,6 +863,29 @@ export default function InvitePage() {
           </div>
         </div>
 
+        {/* DEV-V22 合伙人渠道体系V2：申请成为渠道合伙人入口 */}
+        <div
+          onClick={() => router.push("/profile/partner/apply")}
+          style={{
+            marginTop: "12px",
+            background: "linear-gradient(135deg, #B8860B 0%, #DAA520 100%)",
+            borderRadius: "14px",
+            padding: "16px 18px",
+            color: "#fff",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div>
+            <div style={{ fontSize: "15px", fontWeight: 800 }}>申请成为渠道合伙人</div>
+            <div style={{ fontSize: "11px", opacity: 0.92, marginTop: "5px", lineHeight: 1.6 }}>
+              渠道净收入50%佣金 · 直属培养奖励5%<br />专属邀请码 · 月度结算 · 统一提现
+            </div>
+          </div>
+          <div style={{ fontSize: "22px", opacity: 0.9 }}>›</div>
+        </div>
+
         {/* 底部免责声明 */}
         <div style={{ padding: "14px 4px 6px", textAlign: "center", fontSize: "11px", color: "#bbb" }}>
           邀请好友一起学习，共同进步。请遵守平台规则，禁止虚假邀请。
