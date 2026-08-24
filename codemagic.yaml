@@ -1,8 +1,49 @@
-# Codemagic CI/CD - 言道国学 iOS (FINAL-RC-02)
-# 工程: ios/ 已正式入库Git(Bundle ID com.yandao.guoxue/AppIcon/PrivacyInfo/LaunchScreen)
-# 签名: App Store Connect API Key (Key ID: UWQ354QP54) — 在Codemagic控制台 Teams→Integrations→App Store Connect 添加.p8密钥
+# Codemagic CI/CD - 言道国学 iOS (FINAL-RC-02) + Android 离线完整包 (v25.0.53 / DEV-V22)
+# 工程: ios/ 与 android/ 均已正式入库Git
+#
+# Android 签名（一次性配置）：
+#   Codemagic 控制台 → 应用 (wzmpa18/minglizyi) → Environment variables → 新增：
+#     名称: ANDROID_KEYSTORE_B64   值: yandao-release.keystore 文件的 base64（Secure 勾选）
+#     生成命令: base64 -w0 yandao-release.keystore
+#   keystore 密码/别名已写入 android/app/build.gradle signingConfigs（yandao2024/yandao）
+#   云端构建产物: app-release.apk（离线完整包，Web资源内置 assets/public，仅API走线上）
+#
+# iOS 签名: App Store Connect API Key (Key ID: UWQ354QP54) — 在Codemagic控制台 Teams→Integrations→App Store Connect 添加.p8密钥
 # Issuer ID: 需在ASC后台 Users and Access→Integrations 查看(形如xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)并配置到集成
 workflows:
+  android-workflow:
+    name: 言道国学 Android APK（离线完整安装包）
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      node: 20
+      java: 21
+    scripts:
+      - name: 安装依赖
+        script: |
+          npm ci --legacy-peer-deps
+      - name: Web构建(静态导出)
+        script: |
+          bash build.sh
+      - name: 同步Web资源到Android工程(www→assets/public)
+        script: |
+          rm -rf www && cp -a out www
+          npx cap sync android
+      - name: 恢复签名证书(加密变量ANDROID_KEYSTORE_B64)
+        script: |
+          echo "$ANDROID_KEYSTORE_B64" | base64 -d > yandao-release.keystore
+          keytool -list -v -keystore yandao-release.keystore -storepass yandao2024 -alias yandao | sed -n '1,8p'
+      - name: 构建APK
+        script: |
+          cd android && ./gradlew assembleRelease
+      - name: 校验版本号与签名
+        script: |
+          APK="android/app/build/outputs/apk/release/app-release.apk"
+          AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt | sort -V | tail -1)
+          "$AAPT" dump badging "$APK" | head -2
+          jarsigner -verify "$APK" && echo "签名校验 OK"
+    artifacts:
+      - android/app/build/outputs/apk/release/*.apk
   ios-workflow:
     name: 言道国学 iOS TestFlight
     max_build_duration: 60
