@@ -386,9 +386,11 @@ function reversePartnerCommission(orderNo, refundYuan) {
   try {
     const log = db.prepare("SELECT * FROM partner_order_log WHERE order_no = ?").get(String(orderNo));
     if (log && log.status === 'ACTIVE') {
-      const base = db.prepare("SELECT base_amount_cents FROM commission_records WHERE order_no = ? AND record_type = 'PARTNER_COMMISSION'").get(String(orderNo));
-      const refundCents = refundYuan != null ? yuanToCents(refundYuan) : (base ? base.base_amount_cents : log.net_cents);
-      const proportion = Math.min(1, refundCents / Math.max(1, log.gross_cents));
+      // 不传退款金额=全额退款（proportion=1 → 整单 REVERSED）；
+      // 传入金额=按退款金额/订单实付毛额比例缩放留痕（部分退款）
+      const proportion = refundYuan != null
+        ? Math.min(1, yuanToCents(refundYuan) / Math.max(1, log.gross_cents))
+        : 1;
       if (proportion >= 1) {
         db.prepare("UPDATE partner_order_log SET status = 'REVERSED' WHERE id = ?").run(log.id);
       } else if (proportion > 0) {
@@ -582,7 +584,7 @@ function partnerOverview(partnerId) {
     const placeholders = chanArr.map(() => '?').join(',');
     registered = chanArr.length;
     // 付费人数与实付总额（订单表 PAID 口径）
-    const ord = db.prepare(`SELECT COUNT(DISTINCT user_id) u, COALESCE(SUM(amount),0) a FROM user_orders WHERE user_id IN (${placeholders}) AND status IN ('PAID','paid')`).all(...chanArr);
+    const ord = db.prepare(`SELECT COUNT(DISTINCT user_id) u, COALESCE(SUM(amount),0) a FROM user_orders WHERE user_id IN (${placeholders}) AND status IN ('PAID','paid')`).get(...chanArr);
     paidUsers = ord.u || 0;
     grossCents = yuanToCents(ord.a || 0);
   }
@@ -867,7 +869,7 @@ function adminChannelOverview() {
     let registered = chanArr.length, paid = 0, gross = 0;
     if (chanArr.length) {
       const placeholders = chanArr.map(() => '?').join(',');
-      const o = db.prepare(`SELECT COUNT(DISTINCT user_id) u, COALESCE(SUM(amount),0) a FROM user_orders WHERE user_id IN (${placeholders}) AND status IN ('PAID','paid')`).all(...chanArr);
+      const o = db.prepare(`SELECT COUNT(DISTINCT user_id) u, COALESCE(SUM(amount),0) a FROM user_orders WHERE user_id IN (${placeholders}) AND status IN ('PAID','paid')`).get(...chanArr);
       paid = o.u || 0;
       gross = yuanToCents(o.a || 0);
     }
