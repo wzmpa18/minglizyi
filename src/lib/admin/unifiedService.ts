@@ -268,9 +268,10 @@ export async function fetchPaymentStatus(): Promise<PaymentStatus | null> {
 
 export async function fetchModerationUsers(
   query = "",
-  page = 1
+  page = 1,
+  size = 20
 ): Promise<{ users: ModerationUser[]; total: number } | null> {
-  const params = new URLSearchParams({ page: String(page) });
+  const params = new URLSearchParams({ page: String(page), size: String(size) });
   if (query) params.set("query", query);
   const res = await unifiedFetch<{ users: ModerationUser[]; total: number }>(
     `/moderation/users?${params.toString()}`

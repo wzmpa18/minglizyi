@@ -45,6 +45,9 @@ export default function AdminModerationPage() {
   const [users, setUsers] = useState<ModerationUser[]>([]);
   const [usersTotal, setUsersTotal] = useState(0);
   const [userQuery, setUserQuery] = useState("");
+  // v25.0.47_25: 用户列表分页（浏览全部用户，支持 20/50/100/全部 每页条数）
+  const [usersPage, setUsersPage] = useState(1);
+  const [usersPageSize, setUsersPageSize] = useState(20);
 
   const [posts, setPosts] = useState<ModerationPost[]>([]);
   const [postsTotal, setPostsTotal] = useState(0);
@@ -69,13 +72,19 @@ export default function AdminModerationPage() {
   const [actionHours, setActionHours] = useState(24);
   const [busy, setBusy] = useState(false);
 
-  const loadUsers = useCallback(async () => {
-    const d = await fetchModerationUsers(userQuery);
-    if (d) {
-      setUsers(d.users || []);
-      setUsersTotal(d.total || 0);
-    }
-  }, [userQuery]);
+  const loadUsers = useCallback(
+    async (pageToLoad?: number, sizeToLoad?: number) => {
+      const page = pageToLoad ?? usersPage;
+      const size = sizeToLoad ?? usersPageSize;
+      const d = await fetchModerationUsers(userQuery, page, size);
+      if (d) {
+        setUsers(d.users || []);
+        setUsersTotal(d.total || 0);
+        setUsersPage(page);
+      }
+    },
+    [userQuery, usersPage, usersPageSize]
+  );
 
   const loadPosts = useCallback(async () => {
     const d = await fetchModerationPosts(postStatus);
@@ -105,7 +114,7 @@ export default function AdminModerationPage() {
     if (!mounted) return;
     (async () => {
       setLoading(true);
-      await Promise.all([loadUsers(), loadPosts(), loadReports(), loadGroups()]);
+      await Promise.all([loadUsers(1), loadPosts(), loadReports(), loadGroups()]);
       setLoading(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -206,9 +215,9 @@ export default function AdminModerationPage() {
               value={userQuery}
               onChange={(e) => setUserQuery(e.target.value)}
               style={{ ...styles.input, width: 260 }}
-              onKeyDown={(e) => e.key === "Enter" && loadUsers()}
+              onKeyDown={(e) => e.key === "Enter" && loadUsers(1)}
             />
-            <button onClick={loadUsers} style={styles.btnPrimary}>
+            <button onClick={() => loadUsers(1)} style={styles.btnPrimary}>
               搜索
             </button>
           </div>
@@ -293,6 +302,16 @@ export default function AdminModerationPage() {
               )}
             </tbody>
           </Table>
+          {/* v25.0.47_25: 分页控件（分页浏览全部用户） */}
+          <Pager
+            total={usersTotal}
+            page={usersPage}
+            pageSize={usersPageSize}
+            onLoad={(p, s) => {
+              if (s !== undefined && s !== usersPageSize) setUsersPageSize(s);
+              loadUsers(p, s);
+            }}
+          />
         </AdminCard>
       )}
 
@@ -684,5 +703,86 @@ function EmptyRow({ colSpan }: { colSpan: number }) {
         暂无数据
       </Td>
     </tr>
+  );
+}
+
+// ==================== 分页控件（v25.0.47_25：用户列表分页浏览全部） ====================
+
+function Pager({
+  total,
+  page,
+  pageSize,
+  onLoad,
+}: {
+  total: number;
+  page: number;
+  pageSize: number;
+  onLoad: (page: number, size?: number) => void;
+}) {
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const cur = Math.min(page, totalPages);
+  const pages: (number | "…")[] = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    const start = Math.max(2, cur - 1);
+    const end = Math.min(totalPages - 1, cur + 1);
+    if (start > 2) pages.push("…");
+    for (let i = start; i <= end; i++) pages.push(i);
+    if (end < totalPages - 1) pages.push("…");
+    pages.push(totalPages);
+  }
+
+  const btn = (label: React.ReactNode, key: string, target: number, disabled?: boolean, active?: boolean) => (
+    <button
+      key={key}
+      disabled={disabled}
+      onClick={() => onLoad(target)}
+      style={{
+        minWidth: 28,
+        height: 28,
+        padding: "0 6px",
+        borderRadius: 6,
+        border: `1px solid ${active ? THEME.primary : THEME.border}`,
+        backgroundColor: active ? THEME.primary : "#fff",
+        color: active ? "#fff" : THEME.textSub,
+        fontSize: 12,
+        fontWeight: 600,
+        cursor: disabled ? "default" : "pointer",
+        opacity: disabled ? 0.4 : 1,
+      }}
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 12, flexWrap: "wrap" }}>
+      <span style={{ fontSize: 12, color: THEME.textSub, marginRight: 4 }}>
+        共 {total} 条 · 第 {cur}/{totalPages} 页
+      </span>
+      {btn("上一页", "prev", cur - 1, cur <= 1)}
+      {pages.map((p, i) =>
+        p === "…" ? (
+          <span key={`ellipsis-${i}`} style={{ fontSize: 12, color: THEME.textHint, padding: "0 2px" }}>
+            …
+          </span>
+        ) : (
+          btn(p, `p-${p}`, p, false, p === cur)
+        )
+      )}
+      {btn("下一页", "next", cur + 1, cur >= totalPages)}
+      <select
+        value={pageSize}
+        onChange={(e) => onLoad(1, Number(e.target.value))}
+        style={{ ...styles.input, width: 104, height: 28, padding: "0 4px", marginLeft: 4 }}
+      >
+        <option value={20}>20 条/页</option>
+        <option value={50}>50 条/页</option>
+        <option value={100}>100 条/页</option>
+        <option value={500}>全部显示</option>
+      </select>
+    </div>
   );
 }

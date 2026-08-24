@@ -290,7 +290,8 @@ router.get('/moderation/users', adminAuthUnified('SUPPORT_ADMIN', 'ops'), (req, 
     const udb = getUsersDb();
     const q = String(req.query.query || '').trim();
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
-    const size = Math.min(50, parseInt(req.query.size, 10) || 20);
+    // v25.0.47_25: 上限 50→500，支持「全部」一页拉取（用户管理分页浏览全部用户）
+    const size = Math.min(500, parseInt(req.query.size, 10) || 20);
     let where = '1=1'; const params = [];
     if (q) {
       if (/^\d+$/.test(q)) { where = 'user_id = ? OR phone LIKE ? OR nickname LIKE ?'; params.push(parseInt(q, 10), '%' + q + '%', '%' + q + '%'); }
