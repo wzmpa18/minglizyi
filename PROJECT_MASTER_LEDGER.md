@@ -1,7 +1,7 @@
 # 言道国学项目总账（PROJECT_MASTER_LEDGER）
 
 > **本文档是项目唯一权威账簿（Single Source of Truth）。**
-> 最后更新: 2026-08-24（生产版本 v25.0.47_25 + APK v25.0.52：ADMIN-USER-PAGER 后台用户列表分页浏览全部——用户管理表格下方新增分页控件（共 N 条 · 第 X/Y 页概览+上一页/页码窗口按钮/下一页+每页条数选择 20/50/100/**全部显示**），后端 /moderation/users 每页上限 50→500 支持「全部显示」一页拉全量，搜索自动重置第 1 页；公网 E2E 实测 16 PASS/0 FAIL（49 用户分 3 页翻页数据正确+全部显示 49 行=总数+末页 9 条=总数-前面页数+v24 回归手机号/邮箱列完整直出）；本版含后端变更（adminUnifiedRoutes.js 同步+PM2 重启）；前一版本 v25.0.47_24：ADMIN-USER-INFO-ZOOM-OFF 后台用户完整注册信息（手机号/邮箱列去脱敏直出+四字段搜索）+屏幕放大默认关闭（E2E 16 PASS）；指令 ADMIN-USER-PAGER）
+> 最后更新: 2026-08-25（生产版本 v25.0.47_26 + APK v25.0.53：DEV-V22-PARTNER-V2-BACKSWIPE 合伙人渠道体系V2 + APK双侧侧滑返回——①合伙人引擎 partnerEngine.js 全新模块（渠道净收入=实付-手续费-商店抽成-AI成本-普通两级佣金，基础佣金50%+直属培养奖励5%平台承担+平台保底45%，每月1号自动出账16日-月末提现同普通佣金节点，partner_order_log 逐单成本留痕）；②用户端工作台六页+管理端四模块（数据脱敏红线：手机号 136\*\*\*\*4128/用户ID部分隐藏/禁导出）；③支付钩子幂等入账+退款冲正；④APK 双侧边缘 20dp 侧滑返回（1/3屏宽阈值+五Tab排除+横向滚动豁免）；⑤E2E 全链路 74 PASS/0 FAIL+存量 13 页面 4 端点回归全绿；⑥APK v25.0.53(2053) 离线完整包发布（latest.apk+正式包名+别名三文件）+Codemagic android-workflow 云构建就绪；前一版本 v25.0.47_25：ADMIN-USER-PAGER 后台用户列表分页；指令 DEV-V22-PARTNER-V2-BACKSWIPE）
 > 历史详细记录见 `PROJECT_LEDGER_FINAL.md`（v25.0.0 ~ v25.0.20 阶段账，冻结归档）。
 > 本账簿只记录 v25.0.21 之后增量与当前全局事实；冲突时以本文为准。
 > 纪律：停止新增 xx_REPORT 编号报告，一切状态只更新本账簿。
@@ -16,9 +16,9 @@
 | 仓库 | https://github.com/wzmpa18/minglizyi（main 分支） |
 | 域名 | https://yandaoguoxue.yandao.vip（APP）/ www.yandao.vip（官网下载页） |
 | ICP 备案 | 粤ICP备2026071165号-4A（服务名：言道国学，域 yandao.vip） |
-| 当前生产版本 | **v25.0.47_25**（buildId v25.0.47_25_D20260824，2026-08-24 发布：ADMIN-USER-PAGER 后台用户列表分页浏览全部——①**分页控件 Pager**：用户管理表格下方新增「共 N 条 · 第 X/Y 页」概览+上一页/页码窗口按钮（≤7 页全显，>7 页首尾+当前±1 省略号）/下一页+每页条数下拉（20/50/100/**全部显示**=500），页码与条数切换即时加载，搜索自动重置第 1 页，上一页/末页边界禁用置灰；②**后端 size 上限 50→500**：/api/admin/unified/moderation/users 支持「全部显示」一页拉全量（当前 49 用户一页全览）；③**公网 E2E 实测 16 PASS/0 FAIL**（scripts/test_v25_live.js：分页控件四要素可见、接口 page=1/size=20 返回 20 条、page=2 首条 100064≠p1 首条 910083、末页 9 条=49-2×20、size=500 返回 49=总数、页面点击下一页概览第 2/3 页+数据切换、点击页码 1 跳回、切全部显示表格 49 行=总数+概览 1/1 页、v24 回归手机号/邮箱列完整无脱敏）；④本版含后端变更：adminUnifiedRoutes.js 同步+PM2 重启+健康检查；APP 经 Capacitor server.url 直载线上页面无需重建 APK |
-| Git HEAD | v25.0.47_25 代码提交 4d26aac（main，功能提交+总账收口提交；本地=GitHub=服务器源码仓=生产运行目录 四端一致；用户列表分页控件+后端 size 上限 500+发布脚本 release_v25_0_47_25.sh+E2E 测试脚本 test_v25_live.js；v24 提交 1aceff0/027f944） |
-| 正式 APK | **统一固定地址 https://yandaoguoxue.yandao.vip/app-download/latest.apk**（v25.0.52 / versionCode 2052，v2 签名，内置 v25.0.47_20 资源：首页死键移除+四柱白底红字+更新自动清缓存已同步进 APP；全站所有下载链接均指向该固定地址，发新包一处撤换全站自动指向）；服务器分发目录 /var/www/yandao.vip/app-download/（latest.apk 永久固定名+正式包名+别名 guoxue-chuancheng-v1.0-release.apk 三文件同源）；升级提示数据源 /www/yandaoguoxue-backend/data/app-release-config.json（latestVersionCode 2052）；旧包保留回滚 |
+| 当前生产版本 | **v25.0.47_26**（buildId v25.0.47_26_D20260824，2026-08-24 发布，指令 DEV-V22-PARTNER-V2-BACKSWIPE：①**合伙人渠道体系V2**——backend_deploy/partnerEngine.js 全新引擎：partners 表（申请/审核/等级 NORMAL·CORE/上级推荐人仅直属一级绑定隔代不绑定）+ partner_order_log 逐单成本留痕（实付/手续费/AI成本/普通两级佣金四项扣除明细）+ partner_settlements 月度结算单；结算唯一口径：渠道净收入=实付-支付手续费-商店抽成-AI成本估算率-普通用户两级分销佣金（15%+5%实发），基础佣金=净收入×50%，直属培养奖励=直属下级每笔净收入×5%（平台留存全额承担不扣下级分成），平台保底45%；用户渠道归属沿 invited_by 向上找最近已开通合伙人（任意深度，遇下级合伙人节点即截止归下级渠道），绑定永久生效仅超管可改；每月1号调度器自动生成上月结算单→财务审核转可提现→每月16日-月末提现与普通佣金同节点走微信商家转账；防作弊：禁自推/禁互推环/异常刷量订单超管标记 INVALID 自动扣回；②partnerRoutes.js 用户端+管理端双 API（用户端 /api/partner 六页数据全部脱敏 maskPhone 136\*\*\*\*4128/maskUserId，禁导出禁完整联系方式；管理端 /api/admin/partner 全量列表/审核升降级/改上级/用户明细/渠道总览/用户层级树/合伙人关系树/结算审核驳回调整/风控标记/参数配置，adminAuth 三级角色+audit 全程留痕）；③paymentRoutes 支付钩子（PAID 后 grantPartnerCommission 幂等入账 FROZEN + 退款 reversePartnerCommission 按比例冲正/全额整单 REVERSED）；④前端合伙人工作台 /profile/partner 六页（数据概览/我的用户脱敏/我的合伙人/佣金明细/推广物料含招募合伙人专属海报/权益说明）+申请页 apply+三入口（invite 落地页/promote 推广中心/profile 个人中心）；⑤超管 /admin/partners 四模块（合伙人管理/传播链路追溯/结算管理/风控审计）；⑥**APK 双侧边缘侧滑返回**：useSwipeBack 升级双侧边缘 20dp 触发+1/3 屏宽完成阈值+阻尼跟手动画+五 Tab 主页与登录注册页排除+横向滚动组件豁免+系统返回键并存；E2E 全链路 74 PASS/0 FAIL，存量 13 页面+4 端点回归全绿） |
+| Git HEAD | 692ca0c（main，本地=GitHub=服务器源码仓=生产运行目录 四端一致；v26 提交链 783f517 合伙人V2+侧滑返回 → c68b899 E2E修复收口 → 692ca0c Codemagic云构建收口+总账收口） |
+| 正式 APK | https://yandaoguoxue.yandao.vip/app-download/yandao-guoxue-v25.0.53-release.apk（v25.0.53 / versionCode 2053，v2 签名 CN=Yandao/O=DongguanYandaoTechnology，内置 v25.0.47_26 资源+双侧侧滑返回）；别名文件 guoxue-chuancheng-v1.0-release.apk 与 latest.apk 同包；历史包 v25.0.47~v25.0.52 保留分发目录作回滚；升级提示数据源 /www/yandaoguoxue-backend/data/app-release-config.json；云端构建 codemagic.yaml android-workflow（ANDROID_KEYSTORE_B64 加密变量，值见核心文档《06_Codemagic_ANDROID_KEYSTORE_B64.txt》） |
 
 ---
 
@@ -27,7 +27,7 @@
 | 项 | 值 |
 |----|-----|
 | 服务器 | 82.156.228.87（腾讯云轻量 北京，root） |
-| 前端发布 | /root/yandaoguoxue/releases/&lt;tag&gt; + current 软链（SPA 静态导出）；当前 current→v25.0.47_25，回滚目标 v25.0.47_24；目录现状 _5/_6/_8/_9/_17/_21/_22/_23/_24/_25 等多版（磁盘充足暂留，如需清理保留 _24+_25 即可） |
+| 前端发布 | /root/yandaoguoxue/releases/&lt;tag&gt; + current 软链（SPA 静态导出）；当前 current→v25.0.47_26，回滚目标 v25.0.47_25；目录现状 _5/_6/_8/_9/_17/_21/_22/_23/_24/_25/_26 等多版（磁盘充足暂留，如需清理保留 _25+_26 即可） |
 | 后端服务 | /www/yandaoguoxue-backend，PM2 名 yandaoguoxue-backend，端口 3001 |
 | 数据库 | PostgreSQL 15（127.0.0.1:5432/yandaoguoxue）+ SQLite（用户核心库 /root/backend-auth/data/yandao_users.db、academy.db、commission_accounts/records） |
 | Nginx | / → 静态前端；/api/* → 127.0.0.1:3001；/app-download/ → APK 分发 |
@@ -38,6 +38,7 @@
 
 **服务器磁盘（2026-08-22 最终清理后）**：12.1G / 50G（本次回收 4.4G：swapfile2 2G、android-sdk+.gradle+gradle zip 1.75G、.npm 275M、旧 releases 六版 158M、releases 根散落旧构建 20M、git bundle、散落脚本、旧备份目录归档删除）。
 
+| **v25.0.47_26** | 08-24 | **DEV-V22-PARTNER-V2-BACKSWIPE 合伙人渠道体系V2 + APK双侧侧滑返回（代码提交 783f517+c68b899+692ca0c，四端一致：本地=GitHub=服务器源码仓=生产运行目录；APK v25.0.53/versionCode 2053 离线完整包发布）**：①**合伙人引擎 partnerEngine.js**（partners 申请审核表+partner_order_log 逐单成本留痕+partner_settlements 月度结算单；结算唯一口径：渠道净收入=用户实付-支付手续费[0.6%可调]-应用商店抽成[APK微信支付不经商店=0]-AI调用成本估算率[10%可调]-该订单普通两级分销佣金[一级15%+二级5%实发口径]；基础佣金=净收入×50%+直属培养奖励=直属一级下级每笔净收入×5%[平台留存全额承担不扣下级分成]+平台保底45%；每月1号调度器自动生成上月结算单PENDING_REVIEW→财务审核转可提现→每月16日-月末提现与普通佣金同节点走微信商家转账；渠道归属沿 invited_by 任意深度向上找最近已开通合伙人[遇下级合伙人节点即截止归下级渠道]；合伙人推荐关系仅直属一级绑定隔代不绑定；防作弊禁自推/禁互推环/禁重复申请改绑/异常订单超管标记INVALID自动扣回）；②**partnerRoutes.js 用户端+管理端双API**（用户端 /api/partner 六页数据全脱敏 maskPhone 136****4128/maskUserId 禁导出禁完整联系方式禁微信身份信息；管理端 /api/admin/partner 全量列表/审核开通驳回禁用/等级NORMAL·CORE升降/改上级SUPER_ADMIN专属/完整用户明细/渠道总览/用户层级树/合伙人关系树/结算单审核驳回调整/风控标记/参数配置，adminAuth 三级角色+audit 全程留痕）；③**paymentRoutes 支付钩子**（订单PAID后 grantPartnerCommission 幂等入账FROZEN+退款 reversePartnerCommission 按退款金额/订单实付毛额比例冲正、全额退款整单REVERSED）；④**前端合伙人工作台 /profile/partner 六页**（数据概览八指标+近7/30日趋势/我的用户脱敏筛选排序/我的合伙人直属列表+月度业绩奖励明细/佣金明细[基础+培养+提现记录]/推广物料[专属邀请码+链接+3套海报+招募合伙人专属海报扫码自动绑推荐关系]/权益说明[等级+比例+周期+核心合伙人白牌贴牌定制APK高阶权益]）+申请页 apply+三入口（invite落地页/promote推广中心底部/profile个人中心）；⑤**超管 /admin/partners 四模块**（合伙人管理/传播链路追溯[渠道总览+用户层级树+合伙人关系树]/结算管理/风控审计）；⑥**APK 双侧边缘侧滑返回 useSwipeBack 升级**（双侧边缘20dp触发区+完成阈值1/3屏宽+阻尼跟手动画+半透明遮罩返回箭头渐进+首页五Tab主页与登录注册页排除+横向滚动组件轮播横滑列表豁免+多指/垂直滚动>50px取消+与系统返回键底部导航并存）；⑦**E2E 全链路 74 PASS/0 FAIL**（申请→推荐绑定→审核→渠道归属含隔代截止→分佣金额精确到分→全额/部分退款冲正→月度出账→审核转可提现→数据看板→脱敏校验→风控标记扣回；生产库副本/tmp隔离运行零写入）+存量13页面4端点回归全绿；⑧**APK v25.0.53(2053) 离线完整包**（服务器构建链 bash build.sh→cp -a out www→npx cap sync android→gradle assembleRelease[Gradle 8.9+JDK21+签名恢复]→发布 yandao-guoxue-v25.0.53-release.apk+latest.apk+别名guoxue-chuancheng-v1.0-release.apk三文件同源，app-release-config.json latestVersionCode 2053 触发存量用户升级弹窗，内置资源无 server.url 离线可浏览）+**Codemagic android-workflow 云构建就绪**（codemagic.yaml：npm ci→build.sh→www+cap sync→ANDROID_KEYSTORE_B64解码恢复keystore→gradlew assembleRelease→aapt badging+jarsigner签名校验→产物app-release.apk；一次性配置Codemagic控制台加密变量ANDROID_KEYSTORE_B64，值存核心文档06_Codemagic_ANDROID_KEYSTORE_B64.txt） |
 | **v25.0.47_25** | 08-24 | **ADMIN-USER-PAGER 后台用户列表分页浏览全部（代码提交 4d26aac，四端一致：本地=GitHub=服务器源码仓=生产运行目录；发布脚本 release_v25_0_47_25.sh 内容门禁 6 项全过[buildId v25 烧录/全部显示选项/条每页选择/上一页按钮/v24 搜索 placeholder 回归/IP 脱敏 0]+后端同步+PM2 重启健康检查+公网 7 路径 200+鉴权 401 复核；**本版含后端变更**：adminUnifiedRoutes.js size 上限 Math.min(50→500) 同步 /www/yandaoguoxue-backend+pm2 restart；APP 经 Capacitor server.url 直载线上页面无需重建 APK）**：①**分页控件（用户反馈「后台的用户列表，不能全部显示的吗？应该是多少页全部显示吧」）——用户管理表格下方新增 Pager 组件：「共 N 条 · 第 X/Y 页」概览+上一页/页码窗口按钮（totalPages≤7 全显，>7 显示首尾页+当前页±1 中间省略号）/下一页+每页条数下拉（20/50/100 条/页/全部显示=500）；当前页高亮紫底白字、首末页边界禁用置灰（opacity 0.4）；页码点击/翻页/条数切换即时调接口加载，搜索（Enter/按钮）自动重置第 1 页；fetchModerationUsers 增加 size 参数透传；②**后端 size 上限 50→500**：「全部显示」一页拉全量（当前 49 用户单页全览）；③**公网 E2E 实测 16 PASS/0 FAIL（scripts/test_v25_live.js，管理员密钥注入）**——分页控件四要素可见（概览/上一页/下一页/条数选择器）、接口 page=1&size=20 返回 20 条（total=49）、page=2 首条 user_id=100064≠第 1 页首条 910083（翻页数据正确切换）、末页 9 条=49-2×20（分页边界正确）、size=500 返回 49 条=总数（全部拉取）、页面点击「下一页」概览变第 2/3 页+表格数据切换、点击页码 1 跳回第 1 页、切「全部显示」表格 49 行=总数+概览第 1/1 页、v24 回归（表头手机号/邮箱列仍在+完整 11 位手机号渲染无脱敏星号）；④截图证据 .test-shots/v25-pager-default.png（默认 20 条/页第 1/3 页）/v25-pager-page2.png（第 2 页）/v25-pager-all.png（全部显示 49 条一页全览+分页概览 1/1） |
 | **v25.0.47_24** | 08-24 | **ADMIN-USER-INFO-ZOOM-OFF 后台用户完整注册信息+屏幕放大默认关闭（代码提交 1aceff0，四端一致：本地=GitHub=服务器源码仓=生产运行目录；发布脚本 release_v25_0_47_24.sh 内容门禁 5 项全过[buildId v24 烧录/搜索 placeholder 手机号邮箱/zoom 开关键/屏幕放大文案/IP 脱敏 0]+后端同步+PM2 重启健康检查+公网 8 路径 200+鉴权 401 复核；**本版含后端变更**：adminUnifiedRoutes.js scp 前先 git pull 同步至 /root/yandaoguoxue-source 再 cp 到 /www/yandaoguoxue-backend + pm2 restart；APP 经 Capacitor server.url 直载线上页面无需重建 APK）**：①**后台用户管理完整注册信息（用户反馈「后台需要可以看到用户的注册信息，完整手机号码或者注册邮箱」）**——/admin/moderation 用户 tab 表格新增「手机号」「邮箱」两列（原仅 ID/昵称/状态/禁言至/最近登录/操作 6 列，注册信息完全不可见）；后端 /api/admin/unified/moderation/users 去脱敏直出（原 `phone: r.phone ? r.phone.slice(0, 3) + '****' + r.phone.slice(-4) : ''` 脱敏改为完整返回 phone+email 两字段，后台已鉴权 SUPPORT_ADMIN/ops 运营角色）；搜索框升级「搜索昵称 / 用户ID / 手机号 / 邮箱」（非数字查询 where 由 nickname/phone 两字段扩为 nickname/phone/email 三字段 LIKE）；②**屏幕放大默认关闭（用户反馈「个人中心通用这里这个放大缩小的要默认关闭，现在是打开状态」）**——GlobalZoomProvider.tsx 挂载逻辑翻转：`yandao_zoom_disabled` 未设置（新用户/无痕首访）时默认 `zoomDisabled=true` 禁用全部缩放交互（双指捏拉/双击切换/Ctrl+滚轮/拖动查看），仅显式开启（==="0"）才启用并恢复 localStorage 记忆的缩放级别；首次「双指捏拉可放大页面」提示仅在已开启时展示（不再骚扰默认关闭的新用户）；profile/settings/page.tsx zoomEnabled 初始 useState(false)+读取逻辑改 `zd === "0"`；历史用户不受影响（曾开启="0"保持开、曾关闭="1"保持关）；③**公网 E2E 实测 16 PASS/0 FAIL（scripts/test_v24_live.js，管理员密钥注入+真实账号 13612674128）**——[A] 后台：表头手机号/邮箱列可见+搜索 placeholder 含手机号邮箱、接口返回 20 条 18 条含手机号 0 条脱敏（样例 19943724100 完整）、表格渲染完整号码、正则无 `\d{3}\*{4}\d{4}` 脱敏星号、按手机号 13612674128 搜索命中（ID 100029 美好未来）；[B] 放大：无痕登录后设置页屏幕放大默认灰底 rgb(209,213,219) 关闭态、开启后标记=0 重进紫底 rgb(123,47,190) 保持开、关闭后标记=1 重进灰底保持关、无痕首页无首次放大提示弹层；④**工程坑记录**——PowerShell `(Get-Content -Raw) -replace | Set-Content` 会给 package.json 写入 BOM 导致 `npm run build` 的 gen-version.js JSON.parse 失败，用 node 脚本 `s.replace(/^\uFEFF/,'')` 修复（项目已知坑再现，版本号替换改用 node -e 方式最稳） |
 | **v25.0.47_23** | 08-24 | **FIX-V23-MEMBER-BUY-GUIDE 会员购买引导即时可见（代码提交 5ad3a37，四端一致：本地=GitHub=服务器源码仓=生产运行目录；发布脚本 release_v25_0_47_23.sh 内容门禁 6 项全过[buildId v23 烧录/fixed 悬浮底栏/132px 占位/plan-section 锚点/safe-area 适配/IP 脱敏 0]+公网验证；v23 纯前端变更[3 文件无 backend_deploy 业务变更]后端不重启仅健康检查；APP 经 Capacitor server.url 直载线上页面无需重建 APK）**：①**「立即开通」按钮 fixed 悬浮底栏（核心修复）**——用户长期反馈「商业中心会员中心的会员按键点击后无购买引导」根因：按钮位于页面文档流最底部（会员权益介绍/兑换码/订单记录等多屏内容之后），用户点击会员卡片选中档位后需滚动多屏才能看到开通按钮，感知为「点了没反应」；修复：按钮容器改 position:fixed+left/right:0+bottom:calc(var(--bottom-nav-height,56px)+env(safe-area-inset-bottom,0px))+zIndex:1001+boxShadow 上投影（白底+顶部描边），**任何滚动位置恒定悬浮于底部导航上方**，点击卡片→按钮文案即时联动（「立即开通 · ¥37/99/374/3600」）→无障碍直达支付；132px 文档流占位 div（aria-hidden）抵消 fixed 栏高度防遮挡页面尾部内容（兑换码/订单记录仍可完整浏览）；②**中医区升级入口滚动修复**——会员状态卡「升级会员解锁全部中医功能 →」原 window.scrollTo({top:0}) 仅滚到页面顶部（用户仍需自行寻找套餐区），改为套餐标题 div 新增 id="plan-section"+scrollIntoView({behavior:"smooth",block:"start"}) 精确滚到套餐选择区；③**公网 E2E 实测 17 PASS/0 FAIL（scripts/test_membership_v23_live.js，480×900 移动视口+真实账号 13612674128）**——[1]登录（协议勾选 label:has-text("登录即同意") input[type=checkbox]+拦截/登录态校验）；[2]会员页未滚动按钮视口内可见（boundingBox y=782≤900）；[3]点击月度会员卡片按钮文案即时联动「立即开通 · ¥37」；[4]滚动 1800px 按钮位置恒定 y=782（fixed 生效）；[5]点击开通→支付二维码弹窗（「请使用微信扫一扫付款」+月度会员 ¥37.00）+取消支付可关闭弹窗；[6]四档位价格 SSOT 动态断言（测试脚本运行时 fetch /api/public/pricing 动态取服务端价 37/99/374/3600 作基准，后台改价不误报；修正本地旧常量 199/499 过时断言）；[7]未登录（无痕新上下文）按钮 fixed 可见+点击弹出登录引导；④**配套脚本三份**——test_membership_fixed_v23.js（修复前公网取证：证实按钮 y 超出视口）、test_v23_local_preview.js（本地构建预演）、test_membership_v23_live.js（公网实测权威版）；⑤**发布与验收（release_v25_0_47_23.sh）**——服务器 IP 校验（hostname -I 含 82.156.228.87）+内容门禁 6 项（grep 无匹配 pipefail 静默退出坑已修：`\|\| true` 兜底）+tar 解压 releases/v25.0.47_23+current 软链切换+nginx 缓存清理+公网验证（version.json v25.0.47_23_D20260824+membership 200+按钮 fixed 样式入包） |
@@ -87,12 +88,14 @@
 | WECHAT_PAYMENT（微信支付） | VERIFIED（v25.0.47_23 购买引导 fixed 悬浮底栏+E2E 17 PASS） | wechatPayV3.js 全量（下单/回调验签含公钥模式/解密/查单/关单），WECHAT_APPID=wxedc4b3ff9f707969 已配置；v25.0.47_23 会员购买引导即时可见：「立即开通」fixed 悬浮底栏（zIndex 1001 恒悬底部导航上方，点击会员卡片任何滚动位置无需滚动即见购买引导，132px 占位防遮挡尾部），公网 E2E 17 PASS/0 FAIL（真实账号 13612674128：登录协议勾选→按钮视口 y=782 可见→卡片点击文案联动→滚动 1800px fixed 恒定→二维码弹窗+价格+取消关闭→四档位 SSOT 动态断言 37/99/374/3600→未登录引导）；v25.0.47_21 修复旧登录态数字 userId 根因（auth.ts normalizeLegacyProfile+paymentService 强制 String），真实账号 E2E：会员页月度档点击开通→微信付款二维码弹窗→订单落库全 PASS；支付下单 web/wechat 双通道 codeUrl 公网实测；数字 userId 服务端拒绝「用户ID无效」；支付失败弹窗明确报错+未登录登录引导+登录回跳自动唤起支付；月/季/年/终身四档+B类工具+批量解读+积分充值下单全部走通；JSAPI 保留待公众号参数（WECHAT_APP_SECRET 补齐后微信内自动升级）；iOS 门控 IOS_PAYMENT_ENABLED=true（Native 扫码不依赖平台商店，App Store 审核通过前 iOS 原生壳如需恢复关闭仅改 platformGate.ts 一处） |
 | INVITE_POSTER_VIRAL（邀请裂变海报系统） | VERIFIED（v25.0.47_22） | v25.0.47_22 海报营销化升级+AI智能文案生成：三套社交裂变模板（朋友圈种草版4条结果型卖点+福利行动召唤条/社群引流版两栏分组6条卖点+永久免费标注/学习进阶版学习价值点+人群标注）+海报3:4竖版1080×1440+米色国风统一底色+渲染规范（主标题≤宽1/8加粗/二维码≥宽1/4/CTA上置/合规#AAAAAA/dense排版防重叠）；AI换文案（aiCopy.ts 3风格并行生成+敏感词过滤+3套兜底+一键应用实时渲染+再来一组+恢复模板文案）；分享文案库三场景一键复制；公网E2E 17 PASS/0 FAIL（真实账号：三模板切换/3:4尺寸/AI生成应用恢复/保存下载/文案库复制）；v14基础：海报引擎posterEngine.ts全要素画布；裂变分佣规则：邀请注册+50积分/首次付费+200积分，订单分佣一级15%+二级5% |
 | P8_COMMISSION_STAGE1（自动分佣记账） | VERIFIED | 生产服务器集成测试 **18/18 PASS**（入账/幂等/比例热更/明细/退款冲正/解冻），测试数据零残留 |
+| PARTNER_CHANNEL_V2（合伙人渠道体系V2） | VERIFIED（v25.0.47_26，E2E 74 PASS/0 FAIL） | partnerEngine.js 三表引擎（partners/partner_order_log 逐单成本留痕/partner_settlements）；结算唯一口径：渠道净收入=实付-手续费-商店抽成-AI成本-普通两级佣金，基础佣金50%+直属培养奖励5%（平台承担，不扣下级）+平台保底45%；渠道归属沿 invited_by 任意深度向上找最近已开通合伙人；每月1号自动出账→审核转可提现→16日-月末提现同普通佣金节点；用户端六页全脱敏（136\*\*\*\*4128/用户ID部分隐藏）禁导出；管理端四模块（审核/传播链路树/结算/风控标记INVALID扣回）adminAuth+audit；防作弊：禁自推/禁互推环/禁重复申请改绑；公网实测 /api/partner/my/status 401、/api/admin/partner/partners 401、工作台三页 200 |
+| APK_SWIPE_BACK（侧滑返回手势） | VERIFIED（v25.0.53 APK 内置，Web 触屏同步生效） | useSwipeBack+SwipeBackProvider：双侧边缘 20dp 触发区（左缘右滑/右缘左滑）+完成阈值 1/3 屏宽+阻尼跟手动画+半透明遮罩返回箭头渐进显示；首页/五 Tab 主页/登录注册排除；横向滚动容器（轮播/横滑列表）自动豁免；多指/垂直滚动>50px 取消；与系统返回键/底部导航并存（仅手势层 router.back 不拦截系统返回） |
 | P8_COMMISSION_STAGE2（提现+商家转账打款） | READY（v25.0.47_13 接口对接完成，配置参数后即可启用） | wechatTransfer.js 商家转账 V3 全量（transfer-batches/回调验签/查单）+ commissionEngine 全自动提现引擎（免审 200 元自动转账/单日 2 万限额/风控/幂等/退款扣回）已上线；WITHDRAW_TRANSFER_ENABLED=false 待商户后台开通「商家转账到零钱」权限后置 true+PM2 重启即启用；公网验证 28 项 PASS（越权拦截/提现拦截/审计/字数全达标） |
 | AI_CHAT_PROXY（AI解读全链路） | VERIFIED | RC-04 修复后公网实测双格式 200（systemPrompt/userPrompt 与 messages），上游混元 tokenhub 直连成功；AI配额/会员校验端点正常 |
 | LIUYAO_FUSHEN / MEIHUA_FUSHEN | VERIFIED（待用户真机终验） | v25.0.47_3 冒烟 13/13，HexagramRow 统一模型，FuShenCore 共享 |
 | GROUP_CHAT（群聊） | VERIFIED（待用户真机终验） | v25.0.47_4：聊天页输入框/发送/右上角群资料入口（成员/邀请/踢人/公告/禁言/转让/退出/解散） |
 | DISCOVER_EXTERNAL（发现精选） | VERIFIED | /api/news/public 返回真实资讯+来源标注，AI 摘要标注 |
-| ANDROID | VERIFIED（v25.0.47_15 死链修复后全链路可用） | 原生 APK（内置资源模式，API 改写脚本内联），MD5 三端一致；下载链路三入口公网实测 200：/download 页（正式包直链）、/friend 落地页（扫码注册→立即下载APP，v25.0.47_15 修复 404 死链：正式包+别名双文件）、注册/登录页下载按钮→/friend |
+| ANDROID | VERIFIED（v25.0.53 离线完整包+双侧侧滑返回，2026-08-25 发布） | 原生 APK（内置资源模式，API 改写脚本内联），v2 签名；下载链路公网实测 200：/download 页（latest.apk 固定地址）、/friend 落地页（扫码注册→立即下载APP，正式包+别名双文件）、注册/登录页下载按钮→/friend；升级链路 AppUpgradeChecker+app-release-config.json（latestVersionCode 2053）存量用户自动弹升级窗 |
 | WEBSITE（官网分发） | VERIFIED | 2026-08-22 DNS 切换完成（www.yandao.vip / yandao.vip A 记录 → 82.156.228.87 已生效，公网解析+200 验证）；官网/APP 站下载链接统一 v25.0.47 APK；旧 APK 404；「言道学外语」死链（APK 在旧服务器不可达）已改「敬请期待」防错；v25.0.47_15 补充：品牌统一删除的旧 APK 文件名已在服务器补挂别名（同MD5指向正式包），存量分享链路恢复 |
 | IOS | PARTIAL（管道就绪，PLA 未签） | 33 项就绪校验通过，xcarchive 产出验证，签名三件套入 Secrets |
 | CLEAN_SOURCE（本地工作区） | VERIFIED | 构建产物/verify/临时脚本/旧快照/node_scratch 全清，仅存正式源码 |
@@ -156,6 +159,28 @@
 
 **下载转化链路（v25.0.47_15 修复收口）**：新用户扫码海报 → /register?ref=xxx（注册页含「下载言道国学APP」按钮，全浏览器 a 标签可点）→ /friend 落地页（未登录非微信环境 0.5s 自动触发下载 + 手动「立即下载APP」兜底按钮；微信/QQ 内显示右上角「···」浏览器打开引导 + 「尝试下载」按钮）→ APK 直链（正式包 yandao-guoxue-v25.0.47-release.apk + 别名 guoxue-chuancheng-v1.0-release.apk 双文件，服务器 /var/www/yandao.vip/app-download/，Nginx alias + MIME application/vnd.android.package-archive + Content-Disposition attachment）。**运维注意：发布新 APK 时必须同步更新别名文件**（cp 新正式包 → guoxue-chuancheng-v1.0-release.apk），否则存量分享海报中的旧链接 404。
 
+### 5.7 合伙人渠道体系 V2（v25.0.47_26 上线，DEV-V22-PARTNER-V2）
+
+**角色与归属**：渠道合伙人由超级管理员审核开通（申请→后台审核队列→开通/驳回）；用户经合伙人渠道注册永久归属（复用 user_invite_relation/users.invited_by，不新建绑定体系）；渠道业绩=该合伙人邀请树全量（任意深度，遇下级合伙人节点即截止下钻归下级渠道）；订单渠道归属=沿 invited_by 向上找最近已开通合伙人（非本人）；合伙人推荐关系仅直属一级绑定有效（甲→乙→丙，甲与丙无关联），隔代不享受奖励；绑定关系永久生效，仅超级管理员可手动调整（/api/admin/partner/partners/:userId/referrer，SUPER_ADMIN 专属+审计）。
+
+**结算唯一口径（禁止多口径）**：
+- 渠道净收入 = 用户实付总金额 − 支付渠道手续费(0.6%可调) − 应用商店抽成(APK微信支付不经商店=0) − AI调用成本估算率(10%可调) − 该订单实际产生的普通用户两级分销佣金(一级15%+二级5%，实发口径)
+- 合伙人自身渠道佣金 = 渠道净收入 × 50%
+- 直属培养奖励 = 直属一级下级合伙人每笔渠道净收入 × 5%（资金来源：平台留存全额承担，不从下级分成扣除，下级50%不受影响）
+- 平台保底：存在直属下级合伙人的渠道，平台最低留存渠道净收入 45%
+- 逐单留痕：partner_order_log 每单记录实付/手续费/AI成本/普通佣金/净收入/基础佣金/培养奖励七项金额，结算单从留痕聚合生成（杜绝按费率反推的误差）
+
+**结算周期（与普通佣金完全同节点）**：每月 1 号调度器自动生成上月结算单（基础佣金+培养奖励+成本扣除明细，PENDING_REVIEW）→ 财务审核（通过转可提现/驳回/超管手动调整）→ 每月 16 日-月末开放提现，走既有 withdrawals/微信商家转账体系；合伙人佣金入账即 FROZEN，不参与普通佣金 7 天自动解冻，结算单审核通过才转可提现。
+
+**用户端工作台**（/profile/partner，六页）：数据概览（注册/付费/实付/基础佣金/培养奖励/已结算/待结算/可提现+近7/30日趋势）、我的用户（脱敏：手机号中间四位打码 136\*\*\*\*4128+用户ID部分隐藏+注册时间+是否付费+累计消费；支持时间/金额筛选；**禁止导出/禁止完整联系方式/禁止微信身份信息**）、我的合伙人（直属列表+单个月度业绩与奖励明细，不可见其下级用户隐私）、佣金明细（基础佣金逐单+培养奖励逐单+提现记录）、推广物料（专属邀请码/链接/3套海报+招募合伙人专属海报扫码自动绑推荐关系）、权益说明（等级/比例/周期+核心合伙人白牌贴牌定制APK高阶权益）。
+
+**申请入口**：邀请落地页 /invite、推广中心 /profile/promote 底部「申请成为渠道合伙人」；申请页填姓名/联系方式/推广资源/预计规模；经招募海报进入自动绑定推荐人，自主申请无上级。
+
+**超管后台**（/admin/partners，四模块）：合伙人管理（全量列表+审核开通驳回禁用+等级升降 NORMAL·CORE+改上级+完整用户明细）；传播链路追溯（渠道总览注册/付费/流水占比对比+任意用户完整上下级邀请树+合伙人推荐关系树）；结算管理（自动出账列表+审核/驳回/调整+共用财务提现审核流）；风控审计（全部操作留痕+禁自推/禁互推环/异常刷量虚假注册订单标记 INVALID 不计业绩奖励+手动扣回佣金/取消资格）。
+
+**验收**：E2E 全链路 74 PASS / 0 FAIL（申请→绑定→审核→渠道归属含隔代→分佣金额精确到分→全额/部分退款冲正→月度出账→审核转可提现→看板→脱敏→风控标记扣回；生产库副本 /tmp 隔离运行零写入）；公网实测路由鉴权 401/工作台三页 200。
+
+
 ---
 
 ## 六、统一运营后台（/admin，2026-08-23 v25.0.47_13 升级三级角色体系）
@@ -204,14 +229,14 @@
 
 ## 八、移动端打包状态
 
-### 8.1 Android ✅ VERIFIED
+### 8.1 Android ✅ VERIFIED（v25.0.53 / versionCode 2053，2026-08-25 发布）
 
-- 原生内置资源模式：前端静态导出文件打入 APK（无 server.url），API 经内联改写脚本指向生产域名
-- 当前版本 v25.0.52（versionCode 2052，2026-08-23 adf614e 重建）；内置 v25.0.47_20 资源（首页死键移除+四柱白底红字+更新自动清缓存已同步进 APP）；服务器构建（Gradle 8.9 本地发行版 /opt/gradle-8.9）
-- 升级链路：AppUpgradeChecker 启动/回前台检测 versionCode 落后即弹升级窗（app-release-config.json 为 SSOT，latestVersionCode 2052）
-- 分发：**统一固定地址 https://yandaoguoxue.yandao.vip/app-download/latest.apk**（全站所有下载链接指向；服务器 /var/www/yandao.vip/app-download/ 下 latest.apk 固定名+正式包名+别名 guoxue-chuancheng-v1.0-release.apk 三文件同源；发新包一处撤换全站自动指向，v25.0.47_19 起）
-- 签名：yandao-release.keystore（SECURE_EXTERNAL_ASSET，仓库根；wrong-0801.bak 为废弃误签备份勿用）；v2 签名 CN=Yandao, O=DongguanYandaoTechnology
-
+- 原生内置资源模式：前端静态导出全量打入 APK（webDir www → assets/public，无 server.url），API 经内联改写脚本 native-api-patch.js 指向生产域名——**离线完整安装包**（无网可浏览全部页面，付费/AI 等接口走线上）
+- v25.0.53 新增：全页面双侧边缘侧滑返回手势（见功能矩阵 APK_SWIPE_BACK）
+- 服务器构建链（/root/yandaoguoxue-source，/opt/android-sdk + Gradle 8.9 + JDK21）：bash build.sh → cp -a out www → npx cap sync android → ./gradlew assembleRelease → 发布分发目录+别名文件+app-release-config.json versionCode 更新（触发存量用户升级弹窗）
+- 云构建链（codemagic.yaml android-workflow，linux_x2+node20+java21）：npm ci → build.sh → www+cap sync → ANDROID_KEYSTORE_B64 解码 keystore → gradlew assembleRelease → aapt 版本校验+jarsigner 签名校验 → 产物 app-release.apk；一次性配置：Codemagic 控制台加密变量 ANDROID_KEYSTORE_B64（值=核心文档《06_Codemagic_ANDROID_KEYSTORE_B64.txt》，已 keytool 验证 yandao PrivateKeyEntry 有效）
+- 分发：/var/www/yandao.vip/app-download/yandao-guoxue-v25.0.53-release.apk + latest.apk + 别名 guoxue-chuancheng-v1.0-release.apk；历史包 v25.0.47~v25.0.52 保留
+- 签名：yandao-release.keystore（SECURE_EXTERNAL_ASSET，仓库根；PKCS12，yandao 别名，SHA256withRSA，有效期 2026-08-09~2126-07-16；wrong-0801.bak 为废弃误签备份勿用；密码见交接报告 SECRET INVENTORY，禁入 Git）
 ### 8.2 iOS ⏳ PARTIAL（管道就绪，唯一缺口 PLA）
 
 | 项 | 状态 |
