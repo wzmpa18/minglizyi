@@ -10,6 +10,7 @@ import { getAIQuotaInfo } from "@/lib/aiQuotaService";
 import { getFollowStats, getCurrentUserId } from "@/lib/userStore";
 import { fetchTracks, fetchProgress } from "@/lib/academyApi";
 import { reloadWithCachePurge } from "@/lib/cachePurge";
+import { detectNativeShell, fetchLatestRelease, LEGACY_SHELL_MAX_CODE } from "@/lib/nativeDetect";
 import { showToast } from "@/components/ui/Toast";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
@@ -735,49 +736,51 @@ export default function ProfilePage() {
     return () => { stopped = true; };
   }, []);
 
-  // 手动检查更新（v25.0.47_27 重写：原生壳与网页版双通道，点击必有明确反馈）
-  // - 原生壳内（app-native.json 仅 APK 内置资源存在，网页版 404）：
-  //   拉服务器 /api/public/app-version（壳内自动改写到线上）比对 versionCode，
-  //   有新版 → Toast 提示并立即跳转下载落地页安装新 APK；已是最新 → Toast 明确告知。
-  //   （旧逻辑缺陷：壳内 /version.json 走本地内置文件，永远比出"相同"，用户点了没反应）
-  // - 网页版：对比服务器 version.json 与当前构建 ID，有新版 → 清缓存刷新一步完成更新。
+  // 手动检查更新（v25.0.47_28 重写：三通道，点击必有明确反馈）
+  // ① 内置资源壳（app-native.json 可探测，versionCode ≥2048）：拉服务器 /api/public/app-version
+  //   比对 versionCode，有新版 → Toast+跳转下载落地页安装；已是最新 → Toast 明确告知。
+  // ② server.url 老壳（v25.0.47_3 及更早，Capacitor 桥存在但本地无 app-native.json）：
+  //   该类壳 versionCode ≤2047 必然过时且永远无法被旧检测触达（旧逻辑误报「已是最新」的根因），
+  //   直接判定有新版 → Toast+跳转下载页覆盖安装，一步转正为内置资源壳。
+  // ③ 浏览器：对比服务器 version.json 与当前构建 ID，有新版 → 清缓存刷新一步完成更新。
   const handleCheckUpdate = async () => {
     setUpdateCheck({ checking: true, result: null });
-    // ① 原生壳检测
-    try {
-      const nres = await fetch(`/app-native.json?t=${Date.now()}`, { cache: "no-store" });
-      if (nres.ok) {
-        const native = await nres.json();
-        if (native && typeof native.versionCode === "number") {
-          try {
-            const rres = await fetch(`/api/public/app-version?t=${Date.now()}`, { cache: "no-store" });
-            const json = rres.ok ? await rres.json() : null;
-            const rel = json && json.data;
-            if (rel && typeof rel.latestVersionCode === "number") {
-              if (rel.latestVersionCode > native.versionCode) {
-                setUpdateCheck({ checking: false, result: { latest: false, version: rel.latestVersion } });
-                showToast(`发现新版本 v${rel.latestVersion}，正在打开下载页…`, "success");
-                setTimeout(() => {
-                  window.location.href = rel.downloadPage || rel.downloadUrl || "/friend";
-                }, 700);
-              } else {
-                setUpdateCheck({ checking: false, result: { latest: true, version: native.versionName } });
-                showToast(`当前已是最新版本 v${native.versionName}`, "success");
-              }
-              return;
-            }
-            setUpdateCheck({ checking: false, result: { latest: true, version: native.versionName } });
-            showToast("版本服务暂不可用，请稍后再试", "error");
-            return;
-          } catch {
-            setUpdateCheck({ checking: false, result: { latest: true, version: native.versionName } });
-            showToast("网络异常，请检查网络后重试", "error");
-            return;
+    const shell = await detectNativeShell();
+    // ①② 原生壳（含老壳）检测
+    if (shell.isShell) {
+      try {
+        const rel = await fetchLatestRelease();
+        if (rel) {
+          const outdated = shell.versionCode === null
+            ? rel.latestVersionCode > LEGACY_SHELL_MAX_CODE
+            : rel.latestVersionCode > shell.versionCode;
+          if (outdated) {
+            setUpdateCheck({ checking: false, result: { latest: false, version: rel.latestVersion } });
+            showToast(
+              shell.versionCode === null
+                ? `检测到 APP 版本过旧，正在打开下载页，请下载安装 v${rel.latestVersion}…`
+                : `发现新版本 v${rel.latestVersion}，正在打开下载页…`,
+              "success",
+            );
+            setTimeout(() => {
+              window.location.href = rel.downloadPage || rel.downloadUrl || "/friend";
+            }, 900);
+          } else {
+            setUpdateCheck({ checking: false, result: { latest: true, version: `v${shell.versionName}` } });
+            showToast(`当前已是最新版本 v${shell.versionName}`, "success");
           }
+          return;
         }
+        setUpdateCheck({ checking: false, result: { latest: true, version: shell.versionName ? `v${shell.versionName}` : "" } });
+        showToast("版本服务暂不可用，请稍后再试", "error");
+        return;
+      } catch {
+        setUpdateCheck({ checking: false, result: { latest: true, version: shell.versionName ? `v${shell.versionName}` : "" } });
+        showToast("网络异常，请检查网络后重试", "error");
+        return;
       }
-    } catch { /* 非 APK 环境，继续走网页版检查 */ }
-    // ② 网页版检测：对比当前运行构建 ID 与服务器 version.json
+    }
+    // ③ 浏览器检测：对比当前运行构建 ID 与服务器 version.json
     try {
       const res = await fetch(`/version.json?t=${Date.now()}`, { cache: "no-store" });
       const data = res.ok ? await res.json() : null;

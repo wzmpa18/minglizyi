@@ -2,22 +2,30 @@
 
 import { useEffect, useState } from "react";
 import { reloadWithCachePurge } from "@/lib/cachePurge";
+import {
+  detectNativeShell,
+  fetchLatestRelease,
+  LEGACY_SHELL_MAX_CODE,
+  type AppReleaseInfo,
+} from "@/lib/nativeDetect";
 
 /**
- * APP 原生升级检测（v25.0.48 FIX-V16-UPGRADE-NOTICE）
+ * APP 原生升级检测（v25.0.47_28 FIX-V28-LEGACY-SHELL-RESCUE）
  *
  * 背景：APK 为内置资源模式，旧版 APP 无法通过网页 reload 获得修复，
  * 用户会一直停留在旧功能上。本组件让旧版 APP 在启动/回到前台时检测到新版本，
  * 引导用户下载新版 APK。
  *
- * 工作方式：
- * 1. fetch("/app-native.json") —— 仅原生壳内置资源中存在（构建 APK 时生成），
- *    网页版 404 → 静默退出（网页版刷新提示由 VersionChecker 负责）；
- *    原生壳内此请求走本地资源（native-api-patch 只改写 /api/ 前缀）。
- * 2. fetch("/api/public/app-version") —— 原生壳内被 native-api-patch 改写到线上
- *    服务器，返回最新 APP 版本（versionCode 递增）。
- * 3. 服务器 versionCode > 本地 versionCode → 弹升级提示。
- *    - 「立即升级」→ 新开窗口直达 APK 下载落地页（/friend，含微信引导与自动下载兜底）
+ * 工作方式（v25.0.47_28 三通道，探测统一收敛到 src/lib/nativeDetect.ts）：
+ * 1. detectNativeShell()：
+ *    - 内置资源壳（versionCode ≥2048）：fetch("/app-native.json") 拿本地精确版本；
+ *    - server.url 老壳（≤2047，直载线上页面、本地无 app-native.json）：
+ *      由 window.Capacitor.isNativePlatform() 识别——该类壳旧检测永远失效（误报已是最新），
+ *      本次补上强制升级引导；
+ *    - 浏览器：app-native.json 404 且无 Capacitor 桥 → 走网页版轮询刷新。
+ * 2. fetchLatestRelease()：服务器最新版本（壳内经 native-api-patch 改写到线上）。
+ * 3. 服务器 versionCode > 本地 versionCode（老壳用 LEGACY_SHELL_MAX_CODE 判定）→ 弹升级提示。
+ *    - 「立即升级」→ 直达 APK 下载落地页（/friend，单一分发源 latest.apk）
  *    - 「稍后再说」→ 本次会话不再提醒（sessionStorage）
  *    - forceUpdate 时无「稍后」按钮（强制更新）
  */
@@ -26,24 +34,8 @@ const DISMISS_KEY = "yandao_upgrade_dismissed_for";
 // v25.0.47_18: 网页版版本基准（会话内记录首次加载时的 version.json，部署新版后自动刷新）
 const WEB_VERSION_KEY = "yandao_web_version_baseline";
 
-interface AppNativeInfo {
-  versionName: string;
-  versionCode: number;
-  platform: string;
-}
-
-interface AppReleaseInfo {
-  latestVersion: string;
-  latestVersionCode: number;
-  downloadUrl: string;
-  downloadPage: string;
-  releaseNotes: string[];
-  forceUpdate: boolean;
-  publishedAt: string;
-}
-
 export default function AppUpgradeChecker() {
-  const [native, setNative] = useState<AppNativeInfo | null>(null);
+  const [native, setNative] = useState<{ versionCode: number | null; versionName: string | null } | null>(null);
   const [release, setRelease] = useState<AppReleaseInfo | null>(null);
   const [dismissed, setDismissed] = useState(false);
 
@@ -52,30 +44,26 @@ export default function AppUpgradeChecker() {
 
     const check = async () => {
       if (stopped) return;
-      // 1. 探测本地 APP 版本（仅原生壳内置资源里有）
-      let info: AppNativeInfo | null = null;
-      try {
-        const res = await fetch(`/app-native.json?t=${Date.now()}`, { cache: "no-store" });
-        if (res.ok) {
-          info = (await res.json()) as AppNativeInfo;
-        }
-      } catch { /* 静默 */ }
-      if (stopped || !info || typeof info.versionCode !== "number") {
-        // 网页版（app-native.json 不存在）：会话内基准版本 + 轮询检测新部署 → 自动刷新
+      // 1. 探测运行环境（内置资源壳 / server.url 老壳 / 浏览器）
+      const shell = await detectNativeShell();
+      if (stopped) return;
+      if (!shell.isShell) {
+        // 浏览器：会话内基准版本 + 轮询检测新部署 → 自动刷新
         // 解决"旧标签页停留在旧版"问题（用户不刷新也能拿到最新功能）
         void checkWebVersion();
         return;
       }
-      setNative(info);
+      setNative({ versionCode: shell.versionCode, versionName: shell.versionName });
 
       // 2. 拉取服务器最新版本（原生壳内自动改写到线上 API）
       try {
-        const res = await fetch(`/api/public/app-version?t=${Date.now()}`, { cache: "no-store" });
-        if (!res.ok) return;
-        const json = await res.json();
-        if (stopped || !json || !json.data) return;
-        const rel = json.data as AppReleaseInfo;
-        if (typeof rel.latestVersionCode !== "number") return;
+        const rel = await fetchLatestRelease();
+        if (stopped || !rel) return;
+        // 老壳（versionCode 未知）按 ≤2047 判定，必然落后于现行版本
+        const outdated = shell.versionCode === null
+          ? rel.latestVersionCode > LEGACY_SHELL_MAX_CODE
+          : rel.latestVersionCode > shell.versionCode;
+        if (!outdated) return;
 
         // 本次会话已对该版本点过「稍后」→ 不再弹
         try {
@@ -123,7 +111,11 @@ export default function AppUpgradeChecker() {
     };
   }, []);
 
-  const needsUpgrade = !!native && !!release && release.latestVersionCode > native.versionCode;
+  const needsUpgrade = !!native && !!release && (
+    native.versionCode === null
+      ? release.latestVersionCode > LEGACY_SHELL_MAX_CODE
+      : release.latestVersionCode > native.versionCode
+  );
   if (!needsUpgrade || dismissed) return null;
 
   const handleUpgrade = () => {
@@ -189,7 +181,7 @@ export default function AppUpgradeChecker() {
           发现新版本
         </div>
         <div style={{ fontSize: 13, color: "#8B7B9E", marginBottom: 14 }}>
-          v{native!.versionName} → v{release!.latestVersion}
+          {native!.versionName ? `v${native!.versionName} → v${release!.latestVersion}` : `检测到旧版 APP，最新版本 v${release!.latestVersion}`}
         </div>
 
         <div
