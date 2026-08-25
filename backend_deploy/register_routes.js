@@ -1198,6 +1198,7 @@ function buildUserResponse(user) {
     phone: user.phone || null,
     email: user.email || null,
     memberLevel: user.member_level || 'basic',
+    membershipExpiry: user.membership_expiry || null,
     inviteCode: user.invite_code || '',
   };
 }

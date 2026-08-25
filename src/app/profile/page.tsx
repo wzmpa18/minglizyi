@@ -900,7 +900,16 @@ export default function ProfilePage() {
         ? (localStorage.getItem("yandao_user_id") || "YD000000")
         : "YD000000");
 
-  const isMember = loginState.isLoggedIn && loginState.profile?.memberLevel === "premium";
+  const PAID_LEVELS = ["premium", "monthly", "quarterly", "yearly", "lifetime"];
+  const isMember = loginState.isLoggedIn && PAID_LEVELS.includes(loginState.profile?.memberLevel || "");
+  const memberLabel = (() => {
+    const lv = loginState.profile?.memberLevel;
+    if (!lv) return "普通用户";
+    const map: Record<string, string> = {
+      monthly: "月度会员", quarterly: "季度会员", yearly: "年度会员", lifetime: "终身会员", premium: "高级会员",
+    };
+    return map[lv] || "普通用户";
+  })();
 
   const goEditProfile = () => {
     if (!loginState.isLoggedIn) {
@@ -951,7 +960,7 @@ export default function ProfilePage() {
                     border: "1px solid rgba(255,255,255,0.35)",
                   }}
                 >
-                  {isMember ? "高级会员" : "普通用户"}
+                  {memberLabel}
                 </span>
                 {topTitle && (
                   <span
@@ -1090,7 +1099,7 @@ export default function ProfilePage() {
         <ZoneItem
           icon={Ic.member}
           label="会员中心"
-          sub={isMember ? "高级会员权益生效中" : "开通会员解锁全部权益"}
+          sub={isMember ? `${memberLabel}权益生效中` : "开通会员解锁全部权益"}
           href="/membership/"
         />
         <ZoneItem

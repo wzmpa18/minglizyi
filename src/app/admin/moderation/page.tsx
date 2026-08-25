@@ -228,6 +228,7 @@ export default function AdminModerationPage() {
                 <Th>昵称</Th>
                 <Th>手机号</Th>
                 <Th>邮箱</Th>
+                <Th>会员</Th>
                 <Th>状态</Th>
                 <Th>禁言至</Th>
                 <Th>最近登录</Th>
@@ -245,6 +246,15 @@ export default function AdminModerationPage() {
                     <Td style={{ whiteSpace: "nowrap" }}>{u.phone || "-"}</Td>
                     <Td style={{ fontSize: 11, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {u.email || "-"}
+                    </Td>
+                    <Td>
+                      {u.member_level && u.member_level !== "basic" ? (
+                        <Badge type={u.member_level === "lifetime" ? "warning" : "success"}>
+                          {{ monthly: "月度", quarterly: "季度", yearly: "年度", lifetime: "终身", premium: "高级" }[u.member_level] || u.member_level}
+                        </Badge>
+                      ) : (
+                        <Badge type="default">普通</Badge>
+                      )}
                     </Td>
                     <Td>
                       <Badge type={u.status === "banned" ? "error" : u.status === "muted" ? "warning" : "success"}>

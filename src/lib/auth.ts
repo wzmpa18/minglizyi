@@ -27,7 +27,8 @@ export interface UserProfile {
   userId: string;
   nickname: string;
   avatar?: string;
-  memberLevel: "guest" | "basic" | "premium";
+  memberLevel: "guest" | "basic" | "premium" | "monthly" | "quarterly" | "yearly" | "lifetime";
+  membershipExpiry?: string | null;
   phone?: string;
   email?: string;
   numberId?: string; // v20.1: 数字ID（6-8位纯数字），用于登录和加好友
