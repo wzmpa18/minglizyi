@@ -391,6 +391,9 @@ export default function AIInterpretButton({
               <div style={{ fontSize: "11px", opacity: 0.9, marginTop: "2px" }}>
                 解锁后可查看完整内容（24小时有效）
               </div>
+              <div style={{ fontSize: "10px", opacity: 0.95, marginTop: "6px", background: "rgba(255,255,255,0.18)", borderRadius: "6px", padding: "4px 8px" }}>
+                本单为单次解读解锁，非会员套餐 · 开通会员每日50次更划算 →
+              </div>
             </div>
             <div style={{ padding: "14px" }}>
               {unlockMsg && (
@@ -401,6 +404,7 @@ export default function AIInterpretButton({
               <div style={{ textAlign: "center", marginBottom: "12px" }}>
                 <span style={{ fontSize: "26px", fontWeight: "bold", color: "#7B2FBE" }}>¥{singlePrice}</span>
                 <span style={{ fontSize: "12px", color: "#999", marginLeft: "4px" }}>/ 次</span>
+                <div style={{ fontSize: "10px", color: "#999", marginTop: "4px" }}>支付后仅解锁本次解读，不含会员权益</div>
               </div>
               <button
                 onClick={handleSingleUnlock}
