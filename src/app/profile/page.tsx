@@ -10,6 +10,7 @@ import { getAIQuotaInfo } from "@/lib/aiQuotaService";
 import { getFollowStats, getCurrentUserId } from "@/lib/userStore";
 import { fetchTracks, fetchProgress } from "@/lib/academyApi";
 import { reloadWithCachePurge } from "@/lib/cachePurge";
+import { showToast } from "@/components/ui/Toast";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import IcpFooter from "@/components/IcpFooter";
@@ -734,9 +735,49 @@ export default function ProfilePage() {
     return () => { stopped = true; };
   }, []);
 
-  // 手动检查更新：对比当前运行构建 ID 与服务器 version.json
+  // 手动检查更新（v25.0.47_27 重写：原生壳与网页版双通道，点击必有明确反馈）
+  // - 原生壳内（app-native.json 仅 APK 内置资源存在，网页版 404）：
+  //   拉服务器 /api/public/app-version（壳内自动改写到线上）比对 versionCode，
+  //   有新版 → Toast 提示并立即跳转下载落地页安装新 APK；已是最新 → Toast 明确告知。
+  //   （旧逻辑缺陷：壳内 /version.json 走本地内置文件，永远比出"相同"，用户点了没反应）
+  // - 网页版：对比服务器 version.json 与当前构建 ID，有新版 → 清缓存刷新一步完成更新。
   const handleCheckUpdate = async () => {
     setUpdateCheck({ checking: true, result: null });
+    // ① 原生壳检测
+    try {
+      const nres = await fetch(`/app-native.json?t=${Date.now()}`, { cache: "no-store" });
+      if (nres.ok) {
+        const native = await nres.json();
+        if (native && typeof native.versionCode === "number") {
+          try {
+            const rres = await fetch(`/api/public/app-version?t=${Date.now()}`, { cache: "no-store" });
+            const json = rres.ok ? await rres.json() : null;
+            const rel = json && json.data;
+            if (rel && typeof rel.latestVersionCode === "number") {
+              if (rel.latestVersionCode > native.versionCode) {
+                setUpdateCheck({ checking: false, result: { latest: false, version: rel.latestVersion } });
+                showToast(`发现新版本 v${rel.latestVersion}，正在打开下载页…`, "success");
+                setTimeout(() => {
+                  window.location.href = rel.downloadPage || rel.downloadUrl || "/friend";
+                }, 700);
+              } else {
+                setUpdateCheck({ checking: false, result: { latest: true, version: native.versionName } });
+                showToast(`当前已是最新版本 v${native.versionName}`, "success");
+              }
+              return;
+            }
+            setUpdateCheck({ checking: false, result: { latest: true, version: native.versionName } });
+            showToast("版本服务暂不可用，请稍后再试", "error");
+            return;
+          } catch {
+            setUpdateCheck({ checking: false, result: { latest: true, version: native.versionName } });
+            showToast("网络异常，请检查网络后重试", "error");
+            return;
+          }
+        }
+      }
+    } catch { /* 非 APK 环境，继续走网页版检查 */ }
+    // ② 网页版检测：对比当前运行构建 ID 与服务器 version.json
     try {
       const res = await fetch(`/version.json?t=${Date.now()}`, { cache: "no-store" });
       const data = res.ok ? await res.json() : null;
@@ -744,19 +785,22 @@ export default function ProfilePage() {
       const running = process.env.NEXT_PUBLIC_BUILD_ID || "dev";
       if (!remote) {
         setUpdateCheck({ checking: false, result: { latest: true, version: appVersion || "未知" } });
+        showToast("版本服务暂不可用，请稍后再试", "error");
         return;
       }
       if (remote === running) {
         setUpdateCheck({ checking: false, result: { latest: true, version: data.version || appVersion } });
+        showToast(`当前已是最新版本 ${data.version || appVersion}`, "success");
       } else {
-        // v25.0.47_21: 点击即启动更新——发现新版本直接清空缓存并刷新页面，一步完成，
-        // 不再要求用户二次点击；刷新后 VersionChecker 会展示「已更新至最新版本 vX」
+        // 点击即启动更新——发现新版本直接清空缓存并刷新页面，一步完成
         try { sessionStorage.setItem("yandao_updated_to", data.version || remote); } catch {}
         setUpdateCheck({ checking: false, result: { latest: false, version: data.version || appVersion } });
+        showToast(`发现新版本 ${data.version || remote}，正在更新…`, "success");
         await reloadWithCachePurge();
       }
     } catch {
       setUpdateCheck({ checking: false, result: { latest: true, version: appVersion || "未知" } });
+      showToast("网络异常，请检查网络后重试", "error");
     }
   };
 
