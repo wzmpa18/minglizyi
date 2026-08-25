@@ -95,6 +95,11 @@ function isInteractiveElement(el: HTMLElement | null): boolean {
     return true;
   }
 
+  // 链接和按钮：防止侧滑手势干扰 Link 点击导航（APP WebView 尤其敏感）
+  if (el.closest("a, button")) {
+    return true;
+  }
+
   // 明确禁用滑动返回的区域
   if (
     el.closest(
@@ -399,8 +404,11 @@ export function useSwipeBack(
     function handleTouchStart(e: TouchEvent): void {
       const s = stateRef.current;
 
-      // 排除首页、底部Tab主页面等（精确匹配，二级页面不受影响）
-      if (EXCLUDED_PATHS.includes(pathnameRef.current)) return;
+      // 排除首页、底部Tab主页面等（trailingSlash:true 下 pathname 带尾斜杠，需规范化）
+      const normPath = pathnameRef.current !== "/" && pathnameRef.current.endsWith("/")
+        ? pathnameRef.current.slice(0, -1)
+        : pathnameRef.current;
+      if (EXCLUDED_PATHS.includes(normPath)) return;
 
       // 仅单指触摸时追踪（避免与双指缩放冲突）
       if (e.touches.length !== 1) return;
