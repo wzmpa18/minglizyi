@@ -8,14 +8,13 @@ import { reloadWithCachePurge } from "@/lib/cachePurge";
 //   · 检测到新版本（无论首次还是轮询中发现）弹出悬浮提示
 //   · 用户点击「立即更新」→ 清空 CacheStorage + 注销旧 Service Worker + 强制刷新，一步完成
 const RUNNING_BUILD_ID = process.env.NEXT_PUBLIC_BUILD_ID || "dev";
-const POLL_INTERVAL_MS = 30000;
-const FIRST_CHECK_MS = 2500;
-/** 更新完成后的一次性提示标记（检查更新/悬浮提示点击更新前写入，刷新后展示「已更新至最新版本」） */
+const POLL_INTERVAL_MS = 300000;
+const FIRST_CHECK_MS = 5000;
+const DISMISS_KEY = "yandao_vc_dismissed_for";
 const UPDATED_TO_KEY = "yandao_updated_to";
 
 export default function VersionChecker() {
   const [newVersion, setNewVersion] = useState<string | null>(null);
-  const [dismissed, setDismissed] = useState(false);
   const [updatedTo, setUpdatedTo] = useState<string | null>(null);
 
   useEffect(() => {
@@ -46,8 +45,11 @@ export default function VersionChecker() {
         const remote = data.buildId as string | undefined;
         if (!remote || remote === RUNNING_BUILD_ID) return;
         if (stopped) return;
-        setNewVersion((data.version as string) || remote.split("_")[0]);
-        setDismissed(false);
+        const ver = (data.version as string) || remote.split("_")[0];
+        try {
+          if (localStorage.getItem(DISMISS_KEY) === ver) return;
+        } catch { /* 隐私模式 */ }
+        setNewVersion(ver);
       } catch { /* 网络失败静默，下轮重试 */ }
     };
 
@@ -67,7 +69,7 @@ export default function VersionChecker() {
     };
   }, []);
 
-  if (!newVersion || dismissed) {
+  if (!newVersion) {
     return updatedTo ? <UpdatedToast version={updatedTo} /> : null;
   }
 
@@ -76,6 +78,11 @@ export default function VersionChecker() {
   const handleUpdateNow = () => {
     try { sessionStorage.setItem(UPDATED_TO_KEY, newVersion); } catch { /* ignore */ }
     void reloadWithCachePurge();
+  };
+
+  const handleDismiss = () => {
+    try { localStorage.setItem(DISMISS_KEY, newVersion); } catch { /* 隐私模式 */ }
+    setNewVersion(null);
   };
 
   return (
@@ -153,7 +160,7 @@ export default function VersionChecker() {
           立即更新
         </button>
         <button
-          onClick={() => setDismissed(true)}
+          onClick={handleDismiss}
           aria-label="稍后更新"
           style={{
             flexShrink: 0,

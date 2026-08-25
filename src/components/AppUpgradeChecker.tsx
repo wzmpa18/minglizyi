@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { reloadWithCachePurge } from "@/lib/cachePurge";
 import {
   detectNativeShell,
   fetchLatestRelease,
@@ -32,8 +31,6 @@ import {
  */
 
 const DISMISS_KEY = "yandao_upgrade_dismissed_for";
-// v25.0.47_18: 网页版版本基准（会话内记录首次加载时的 version.json，部署新版后自动刷新）
-const WEB_VERSION_KEY = "yandao_web_version_baseline";
 
 export default function AppUpgradeChecker() {
   const [native, setNative] = useState<{ versionCode: number | null; versionName: string | null } | null>(null);
@@ -45,55 +42,26 @@ export default function AppUpgradeChecker() {
 
     const check = async () => {
       if (stopped) return;
-      // 1. 探测运行环境（内置资源壳 / server.url 老壳 / 浏览器）
       const shell = await detectNativeShell();
       if (stopped) return;
       if (!shell.isShell) {
-        // 浏览器：会话内基准版本 + 轮询检测新部署 → 自动刷新
-        // 解决"旧标签页停留在旧版"问题（用户不刷新也能拿到最新功能）
-        void checkWebVersion();
         return;
       }
       setNative({ versionCode: shell.versionCode, versionName: shell.versionName });
 
-      // 2. 拉取服务器最新版本（原生壳内自动改写到线上 API）
       try {
         const rel = await fetchLatestRelease();
         if (stopped || !rel) return;
-        // 老壳（versionCode 未知）按 ≤2047 判定，必然落后于现行版本
         const outdated = shell.versionCode === null
           ? rel.latestVersionCode > LEGACY_SHELL_MAX_CODE
           : rel.latestVersionCode > shell.versionCode;
         if (!outdated) return;
 
-        // 本次会话已对该版本点过「稍后」→ 不再弹
         try {
-          if (sessionStorage.getItem(DISMISS_KEY) === String(rel.latestVersionCode)) return;
+          if (localStorage.getItem(DISMISS_KEY) === String(rel.latestVersionCode)) return;
         } catch { /* 隐私模式 */ }
         setRelease(rel);
       } catch { /* 网络失败静默，下次回到前台再查 */ }
-    };
-
-    const checkWebVersion = async () => {
-      try {
-        const res = await fetch(`/version.json?t=${Date.now()}`, { cache: "no-store" });
-        if (stopped || !res.ok) return;
-        const data = await res.json();
-        const ver = data && data.version;
-        if (typeof ver !== "string") return;
-        let baseline: string | null = null;
-        try { baseline = sessionStorage.getItem(WEB_VERSION_KEY); } catch { /* 隐私模式 */ }
-        if (!baseline) {
-          try { sessionStorage.setItem(WEB_VERSION_KEY, ver); } catch { /* ignore */ }
-          return;
-        }
-        if (baseline !== ver) {
-          // 服务器已部署新版本 → 先更新基准再刷新（避免刷新后循环）
-          try { sessionStorage.setItem(WEB_VERSION_KEY, ver); } catch { /* ignore */ }
-          // v25.0.47_20: 彻底清缓存后刷新，确保拿到全新构建
-          await reloadWithCachePurge();
-        }
-      } catch { /* 网络失败静默，下轮再查 */ }
     };
 
     const onVisible = () => {
@@ -101,13 +69,10 @@ export default function AppUpgradeChecker() {
     };
 
     const timer = setTimeout(() => void check(), 3000);
-    // 网页版每 60 秒轮询版本（部署新版后 ≤60s 内旧标签页自动刷新）
-    const poll = setInterval(() => void checkWebVersion(), 60000);
     document.addEventListener("visibilitychange", onVisible);
     return () => {
       stopped = true;
       clearTimeout(timer);
-      clearInterval(poll);
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
@@ -120,15 +85,12 @@ export default function AppUpgradeChecker() {
   if (!needsUpgrade || dismissed) return null;
 
   const handleUpgrade = () => {
-    // v25.0.47_29: 点击即标记本会话已处理，防止返回 APP 时 visibilitychange 重新检测反复弹窗
     try {
-      sessionStorage.setItem(DISMISS_KEY, String(release!.latestVersionCode));
+      localStorage.setItem(DISMISS_KEY, String(release!.latestVersionCode));
     } catch { /* 隐私模式 */ }
     setDismissed(true);
     const url = release!.downloadPage || release!.downloadUrl;
     if (isNativeShellSync()) {
-      // 壳内 window.open 行为不可控（多窗支持关闭时仍在 WebView 内导航），
-      // 统一 location.href 进落地页，由 /friend 壳感知逻辑拉起系统浏览器完成下载
       window.location.href = url;
       return;
     }
@@ -141,7 +103,7 @@ export default function AppUpgradeChecker() {
 
   const handleLater = () => {
     try {
-      sessionStorage.setItem(DISMISS_KEY, String(release!.latestVersionCode));
+      localStorage.setItem(DISMISS_KEY, String(release!.latestVersionCode));
     } catch { /* ignore */ }
     setDismissed(true);
   };
