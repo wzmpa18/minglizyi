@@ -28,6 +28,7 @@ export interface UserProfile {
   nickname: string;
   avatar?: string;
   memberLevel: "guest" | "basic" | "premium" | "monthly" | "quarterly" | "yearly" | "lifetime";
+  memberTier?: string;
   membershipExpiry?: string | null;
   phone?: string;
   email?: string;

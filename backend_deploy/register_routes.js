@@ -1187,6 +1187,10 @@ function buildUserResponse(user) {
     tags = [];
   }
 
+  const PAID_LEVELS = ['monthly', 'quarterly', 'yearly', 'lifetime', 'premium'];
+  const rawLevel = user.member_level || 'basic';
+  const isPaid = PAID_LEVELS.includes(rawLevel);
+
   return {
     userId: user.user_id,
     nickname: user.nickname || '',
@@ -1197,7 +1201,8 @@ function buildUserResponse(user) {
     tags,
     phone: user.phone || null,
     email: user.email || null,
-    memberLevel: user.member_level || 'basic',
+    memberLevel: isPaid ? 'premium' : rawLevel,
+    memberTier: rawLevel,
     membershipExpiry: user.membership_expiry || null,
     inviteCode: user.invite_code || '',
   };

@@ -903,12 +903,21 @@ export default function ProfilePage() {
   const PAID_LEVELS = ["premium", "monthly", "quarterly", "yearly", "lifetime"];
   const isMember = loginState.isLoggedIn && PAID_LEVELS.includes(loginState.profile?.memberLevel || "");
   const memberLabel = (() => {
+    const tier = loginState.profile?.memberTier;
     const lv = loginState.profile?.memberLevel;
-    if (!lv) return "普通用户";
-    const map: Record<string, string> = {
-      monthly: "月度会员", quarterly: "季度会员", yearly: "年度会员", lifetime: "终身会员", premium: "高级会员",
-    };
-    return map[lv] || "普通用户";
+    if (tier && tier !== "basic" && tier !== "guest") {
+      const map: Record<string, string> = {
+        monthly: "月度会员", quarterly: "季度会员", yearly: "年度会员", lifetime: "终身会员", premium: "高级会员",
+      };
+      return map[tier] || "普通用户";
+    }
+    if (lv && PAID_LEVELS.includes(lv)) {
+      const map: Record<string, string> = {
+        monthly: "月度会员", quarterly: "季度会员", yearly: "年度会员", lifetime: "终身会员", premium: "高级会员",
+      };
+      return map[lv] || "普通用户";
+    }
+    return "普通用户";
   })();
 
   const goEditProfile = () => {
