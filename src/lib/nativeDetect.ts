@@ -29,6 +29,28 @@ export interface NativeShellInfo {
 /** server.url 老壳的 versionCode 上限（v25.0.47_3 = 2047；v25.0.48 起为内置资源壳） */
 export const LEGACY_SHELL_MAX_CODE = 2047;
 
+/** 同步判断当前是否在原生壳内（任意时代 APK），浏览器恒 false */
+export function isNativeShellSync(): boolean {
+  if (typeof window === "undefined") return false;
+  const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
+  return !!(cap && typeof cap.isNativePlatform === "function" && cap.isNativePlatform());
+}
+
+/**
+ * https 直链 → Android intent:// URI。
+ * 原生壳 WebView 无法直接下载文件（无 DownloadListener 的壳 location.href 赋值 apk
+ * 地址会被静默吞掉——「正在下载」Toast 永远不动的根因）；intent:// 会被 WebView 的
+ * shouldOverrideUrlLoading 交给系统按 ACTION_VIEW 解析，拉起系统浏览器完成下载。
+ */
+export function buildAndroidIntentUrl(httpsUrl: string): string {
+  try {
+    const u = new URL(httpsUrl);
+    return `intent://${u.host}${u.pathname}${u.search}#Intent;scheme=https;action=android.intent.action.VIEW;end`;
+  } catch {
+    return httpsUrl;
+  }
+}
+
 export async function detectNativeShell(): Promise<NativeShellInfo> {
   if (typeof window === "undefined") {
     return { isShell: false, versionCode: null, versionName: null, source: "browser" };

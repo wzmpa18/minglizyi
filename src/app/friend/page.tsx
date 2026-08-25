@@ -7,6 +7,7 @@ import { addFriend, type Friend } from "@/lib/socialStore";
 import { sendFriendRequest } from "@/lib/socialApi";
 import { getUserById, findUserById } from "@/lib/userStore";
 import { recordInviteLanding } from "@/lib/antiCheatStore";
+import { isNativeShellSync, buildAndroidIntentUrl } from "@/lib/nativeDetect";
 
 const BRAND = "#7B2FBE";
 // APK 直链兜底值：实际下载地址运行时从 /api/public/app-version 动态获取（SSOT，
@@ -40,6 +41,13 @@ function FriendContent() {
   const [downloadTriggered, setDownloadTriggered] = useState(false);
   const [apkUrl, setApkUrl] = useState(APK_URL_FALLBACK);
   const autoActionTriggered = useRef(false);
+  // v25.0.47_29: 原生壳内 WebView 无法下载文件，需 intent:// 拉起系统浏览器
+  const [shellMode, setShellMode] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  useEffect(() => {
+    setShellMode(isNativeShellSync());
+  }, []);
 
   // 运行时拉取最新 APK 下载地址（SSOT：服务器发布新包只需更新 app-release-config.json）
   useEffect(() => {
@@ -103,16 +111,44 @@ function FriendContent() {
     }
   }, [referrerId]);
 
-  // 直接触发下载 - 使用 window.location 跳转（最可靠的方式）
+  // 触发下载（v25.0.47_29：壳内 WebView 无法下载文件——location.href 赋 apk 地址会被
+  // 静默吞掉（Toast「正在下载」永远不动即此因），改用 intent:// 拉起系统浏览器下载；
+  // 浏览器环境保持原 location.href 直下。壳判定用同步实时检测，避免自动触发闭包过期）
   const triggerDownload = () => {
-    if (downloadTriggered) return;
     setDownloadTriggered(true);
+    if (isNativeShellSync()) {
+      setToast("正在打开系统浏览器下载，请稍候…");
+      try {
+        window.location.href = buildAndroidIntentUrl(apkUrl);
+        setTimeout(() => setToast(""), 3500);
+      } catch {
+        setToast("打开浏览器失败，请点击「复制下载链接」后在浏览器粘贴打开");
+      }
+      return;
+    }
     setToast("正在下载言道国学APP...");
     try {
       window.location.href = apkUrl;
     } catch {
       setToast("下载失败，请点击下方按钮重试");
     }
+  };
+
+  // 复制直链兜底（壳内 intent 拉起失败时，用户可复制链接到任意浏览器打开）
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(apkUrl);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = apkUrl;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); } catch { /* ignore */ }
+      document.body.removeChild(ta);
+    }
+    setLinkCopied(true);
+    setToast("下载链接已复制，请在任意浏览器粘贴打开");
+    setTimeout(() => { setLinkCopied(false); setToast(""); }, 4000);
   };
 
   // 手动下载按钮
@@ -211,6 +247,28 @@ function FriendContent() {
         )}
       </div>
 
+      {/* 原生壳内下载引导（v25.0.47_29：壳内 WebView 无法直接下载，走系统浏览器） */}
+      {shellMode && (
+        <div
+          style={{
+            margin: "12px",
+            padding: "16px",
+            backgroundColor: "#EDE7F6",
+            borderRadius: 10,
+            border: "1px solid #D1C4E9",
+            textAlign: "center",
+          }}
+        >
+          <div style={{ fontSize: 14, fontWeight: 600, color: "#4527A0", marginBottom: 8 }}>
+            正在为您升级新版本
+          </div>
+          <div style={{ fontSize: 12, color: "#4527A0", lineHeight: 1.7 }}>
+            点击下载按钮将自动打开系统浏览器下载安装包；<br />
+            下载完成后下拉通知栏，点击安装即可升级
+          </div>
+        </div>
+      )}
+
       {/* 微信/QQ 内置浏览器引导 */}
       {isInApp && !isLoggedIn && (
         <div
@@ -250,8 +308,8 @@ function FriendContent() {
         </div>
       )}
 
-      {/* 已登录 - 自动加好友结果 */}
-      {isLoggedIn ? (
+      {/* 已登录且有邀请码 - 自动加好友结果（无邀请码时不显示此卡，避免「正在添加好友」假转圈） */}
+      {isLoggedIn && referrerId ? (
         <div style={{ margin: "12px", backgroundColor: "#fff", borderRadius: 12, padding: "20px", textAlign: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
           {friendAdded ? (
             <>
@@ -337,8 +395,8 @@ function FriendContent() {
             </button>
           </div>
         </div>
-      ) : !isInApp ? (
-        /* 未登录 - 简洁下载页面 */
+      ) : !isInApp || isLoggedIn ? (
+        /* 下载页面（未登录浏览器直下；已登录无邀请码时同样展示下载为主——升级场景） */
         <div style={{ margin: "12px", backgroundColor: "#fff", borderRadius: 12, padding: "24px", textAlign: "center", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
           <div
             style={{
@@ -364,7 +422,9 @@ function FriendContent() {
           </p>
           <p style={{ fontSize: 12, color: "#999", marginBottom: 16, lineHeight: 1.5 }}>
             {downloadTriggered
-              ? "请查看浏览器下载栏，安装后打开APP注册，邀请关系自动绑定，无需填写邀请码"
+              ? (shellMode
+                  ? "已为您打开系统浏览器下载，请查看浏览器下载进度，完成后下拉通知栏点击安装"
+                  : "请查看浏览器下载栏，安装后打开APP注册，邀请关系自动绑定，无需填写邀请码")
               : referrerId ? `已记录邀请人（ID:${referrerId}），下载APP注册后自动绑定，无需填写邀请码` : "扫码下载APP，即刻体验国学文化"}
           </p>
 
@@ -385,6 +445,27 @@ function FriendContent() {
           >
             {downloadTriggered ? "重新下载" : "立即下载APP"}
           </button>
+
+          {/* 壳内兜底：复制直链（浏览器拉起失败时仍可手动粘贴打开） */}
+          {shellMode && (
+            <div>
+              <button
+                onClick={handleCopyLink}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 8,
+                  border: `1px solid ${BRAND}`,
+                  backgroundColor: "#f5f0fa",
+                  color: BRAND,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                }}
+              >
+                {linkCopied ? "已复制 ✓" : "下载没反应？复制下载链接"}
+              </button>
+            </div>
+          )}
 
           {/* 注册引导 */}
           <div style={{ paddingTop: 12, borderTop: "1px solid #f0f0f0" }}>

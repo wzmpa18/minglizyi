@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { BrandHeader } from "@/components/shared";
 import { makeQrDataUrl } from "@/lib/qrLocal";
+import { isNativeShellSync, buildAndroidIntentUrl } from "@/lib/nativeDetect";
 
 const BRAND = "#7B2FBE";
 const DOWNLOAD_URL = "https://yandaoguoxue.yandao.vip/friend";
@@ -55,7 +56,8 @@ export default function DownloadPage() {
   }, [apkUrl]);
 
   const handleDownloadAPK = () => {
-    window.location.href = apkUrl;
+    // v25.0.47_29: 壳内 WebView 无法直接下载文件，intent:// 拉起系统浏览器完成下载
+    window.location.href = isNativeShellSync() ? buildAndroidIntentUrl(apkUrl) : apkUrl;
   };
 
   return (

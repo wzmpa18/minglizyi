@@ -5,6 +5,7 @@ import { reloadWithCachePurge } from "@/lib/cachePurge";
 import {
   detectNativeShell,
   fetchLatestRelease,
+  isNativeShellSync,
   LEGACY_SHELL_MAX_CODE,
   type AppReleaseInfo,
 } from "@/lib/nativeDetect";
@@ -119,7 +120,18 @@ export default function AppUpgradeChecker() {
   if (!needsUpgrade || dismissed) return null;
 
   const handleUpgrade = () => {
+    // v25.0.47_29: 点击即标记本会话已处理，防止返回 APP 时 visibilitychange 重新检测反复弹窗
+    try {
+      sessionStorage.setItem(DISMISS_KEY, String(release!.latestVersionCode));
+    } catch { /* 隐私模式 */ }
+    setDismissed(true);
     const url = release!.downloadPage || release!.downloadUrl;
+    if (isNativeShellSync()) {
+      // 壳内 window.open 行为不可控（多窗支持关闭时仍在 WebView 内导航），
+      // 统一 location.href 进落地页，由 /friend 壳感知逻辑拉起系统浏览器完成下载
+      window.location.href = url;
+      return;
+    }
     try {
       window.open(url, "_blank", "noopener,noreferrer");
     } catch {
