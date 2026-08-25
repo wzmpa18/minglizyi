@@ -9,6 +9,7 @@
 
 import { setLoginState, clearLoginState, getLoginState, getClientUserId, type UserProfile } from './auth';
 import { saveTokenPair, clearAllTokens } from './authInterceptor';
+import { syncMembershipFromProfile } from './membershipStore';
 
 // v20.2: 后端 API 基础地址（ai-proxy-server.js）
 const API_BASE_URL = "https://yandaoguoxue.yandao.vip";

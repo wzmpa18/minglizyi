@@ -204,6 +204,43 @@ export function setLoginState(token: string, profile: UserProfile): boolean {
       ...profile,
       loginTime: Date.now(),
     }));
+
+    // 同步会员状态到 yandao_membership_status（AI 权限系统读这个 key）
+    // 根因：后端改了 member_level 但前端 AI 从 yandao_membership_status 读，
+    // 该 key 仅支付成功时写入，导致后台补开会员后 AI 仍不可用
+    const PAID = ["monthly", "quarterly", "yearly", "lifetime", "premium"];
+    const tier = profile.memberTier || profile.memberLevel;
+    const isPaid = PAID.includes(tier);
+    const msKey = "yandao_membership_status";
+    if (isPaid && tier !== "premium") {
+      const msLevel = tier as "monthly" | "quarterly" | "yearly" | "lifetime";
+      const expMs = profile.membershipExpiry ? new Date(profile.membershipExpiry).getTime() : Infinity;
+      const now = Date.now();
+      if (expMs === Infinity || expMs > now) {
+        localStorage.setItem(msKey, JSON.stringify({
+          level: msLevel,
+          startTime: new Date().toISOString(),
+          expireTime: profile.membershipExpiry || null,
+          isActive: true,
+          daysRemaining: expMs === Infinity ? Infinity : Math.ceil((expMs - now) / 86400000),
+        }));
+      }
+    } else if (isPaid && tier === "premium" && profile.memberTier) {
+      // memberLevel=premium 是后端统一映射的，memberTier 才是真实档位
+      const msLevel = profile.memberTier as "monthly" | "quarterly" | "yearly" | "lifetime";
+      const expMs = profile.membershipExpiry ? new Date(profile.membershipExpiry).getTime() : Infinity;
+      const now = Date.now();
+      if (expMs === Infinity || expMs > now) {
+        localStorage.setItem(msKey, JSON.stringify({
+          level: msLevel,
+          startTime: new Date().toISOString(),
+          expireTime: profile.membershipExpiry || null,
+          isActive: true,
+          daysRemaining: expMs === Infinity ? Infinity : Math.ceil((expMs - now) / 86400000),
+        }));
+      }
+    }
+
     broadcastLoginState("login", token, profile);
     return true;
   } catch {

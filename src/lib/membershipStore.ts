@@ -245,6 +245,57 @@ const AI_USAGE_KEY = "yandao_ai_daily_usage";
 const BTOOL_USAGE_KEY = "yandao_btool_monthly_usage";
 const BTOOL_UNLOCKED_KEY = "yandao_btool_unlocked_records";
 
+/**
+ * 从后端 profile 同步会员状态到本地（登录/刷新资料时调用）
+ * 解决问题：后端改了 member_level 但前端 AI 权限系统从 yandao_membership_status 读，
+ * 该 key 仅支付成功时 activateMembership 写入，导致后台补开会员后 AI 仍不可用。
+ */
+export function syncMembershipFromProfile(tier: string | undefined, expiry: string | null | undefined) {
+  if (!tier || tier === "basic" || tier === "guest") {
+    const basic: MembershipStatus = {
+      level: "basic",
+      startTime: new Date().toISOString(),
+      expireTime: null,
+      isActive: true,
+      daysRemaining: Infinity,
+    };
+    safeSet(STATUS_KEY, basic);
+    return;
+  }
+
+  const paidLevels: MemberLevel[] = ["monthly", "quarterly", "yearly", "lifetime"];
+  if (!paidLevels.includes(tier as MemberLevel)) return;
+
+  const now = Date.now();
+  const expireTime = expiry || null;
+  const expireMs = expireTime ? new Date(expireTime).getTime() : Infinity;
+
+  if (expireMs !== Infinity && now >= expireMs) {
+    const basic: MembershipStatus = {
+      level: "basic",
+      startTime: new Date().toISOString(),
+      expireTime: null,
+      isActive: true,
+      daysRemaining: Infinity,
+    };
+    safeSet(STATUS_KEY, basic);
+    return;
+  }
+
+  const daysRemaining = expireMs === Infinity
+    ? Infinity
+    : Math.ceil((expireMs - now) / (24 * 60 * 60 * 1000));
+
+  const status: MembershipStatus = {
+    level: tier as MemberLevel,
+    startTime: new Date().toISOString(),
+    expireTime,
+    isActive: true,
+    daysRemaining,
+  };
+  safeSet(STATUS_KEY, status);
+}
+
 // ==================== safeGet/safeSet ====================
 
 function safeGet<T>(key: string, fallback: T): T {
