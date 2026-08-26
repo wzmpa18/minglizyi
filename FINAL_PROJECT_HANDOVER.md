@@ -20,13 +20,13 @@
 
 | 组件 | 版本 |
 |------|------|
-| Web（生产 current） | **v25.0.61**（buildId `v25.0.61_D20260826`，builtAt 2026-08-26T15:53:03Z） |
+| Web（生产 current） | **v25.0.62**（buildId `v25.0.62_D20260827`，builtAt 2026-08-26T16:53:19Z） |
 | 后端 API | package 1.1.0（PM2: yandaoguoxue-backend，online） |
-| Android APK | **v25.0.60 / versionCode 2059**（与 Web v25.0.60 同批次构建；Web 侧 61 仅后台展示增量） |
+| Android APK | **v25.0.60 / versionCode 2059**（APK 未随 Web 61/62 后台增量重建；下次 APK 发布走 §33 流程） |
 
 ## 3. 当前 Commit
 
-- 生产运行代码：**`2defc78`**（v25.0.61：后台备份状态展示 + SOCIAL_BACKUP_GATE 红灯 + package.json BOM 修复）。
+- 生产运行代码：**`2b1d6af`**（v25.0.62：academy.db 三库备份封口 D22 + 后台学习库备份展示 + 版本号）。
 - 本文档所在批次提交后，本地 / GitHub / 服务器源码仓 / 生产 四端 HEAD 必须一致（Git 四端一致原则，见总账第十五章）。接管后第一步：`git log --oneline -3` 四端核对。
 
 ## 4. GitHub
@@ -56,8 +56,8 @@
 
 ## 8. Web 生产目录
 
-`/root/yandaoguoxue/current` → 软链 `releases/v25.0.61`。
-`releases/` 现存：`v25.0.61`（生产）、`v25.0.60`、`v25.0.47_34`（历史回滚档）。**禁止删除 current 指向的目录**。
+`/root/yandaoguoxue/current` → 软链 `releases/v25.0.62`。
+`releases/` 现存：`v25.0.62`（生产）、`v25.0.61`、`v25.0.60`、`v25.0.47_34`（历史回滚档）。**禁止删除 current 指向的目录**。
 
 ## 9. Backend 目录
 
@@ -79,6 +79,7 @@
 |----|------|------|
 | 用户库（权威） | `/root/backend-auth/data/yandao_users.db` | 用户/订单/权益/分佣/邀请（73 用户） |
 | 社交库 | `/www/yandaoguoxue-backend/data/social.db` | 好友/私聊/群/动态/评论/举报 |
+| 学习库 | `/www/yandaoguoxue-backend/data/academy.db` | 学习平台（57MB）：study_progress 用户进度 + materials/questions/knowledge_points 内容 |
 | ⚠️ 0 字节残留 | `/root/backend-auth/data/social.db`、`…/academy.db` | 历史空壳文件，**不是**真库，勿误用 |
 
 ## 12. 数据表作用
@@ -87,10 +88,13 @@
 
 **社交库（15 表）**：`friendships`（好友边，无向对）、`friend_requests`、`friend_remarks`、`chat_messages`（私聊+群消息，`clientMsgId` 幂等）、`user_conversations`（会话未读）、`groups`（含 owner_id）、`follows`、`posts`（动态）、`comments`（扁平，无层级）、`likes`、`favorites`、`notifications`、`blacklists`、`reports`、`sensitive_logs`（敏感词）。
 
+**学习库（24 表）**：`materials`/`knowledge_points`/`questions`/`exams`/`exam_specs`/`certificates`/`categories`/`learning_paths`（内容与题库）、`study_progress`/`wrong_answers`（用户学习数据）、`ai_call_logs`（内容生成日志）、`organizations`/`org_members`/`org_earnings`（机构，当前空表）。
+
 ## 13. Backup 路径
 
-`/root/backup/`（33 个文件）。
-- 每日 **02:00** cron：`/root/backend-auth/backup_db.sh` → 备份**用户库 + 社交库**双库，保留 30 天，`quick_check` 校验，写状态文件 `backend data/backup_status.json`。
+`/root/backup/`。
+- 每日 **02:00** cron：`/root/backend-auth/backup_db.sh` → 备份**用户库 + 社交库 + 学习库（academy.db）三库**（D22 封口），保留 30 天，`integrity_check` 校验，写状态文件 `backend data/backup_status.json`（含 usersDb/socialDb/academyDb 三块）。
+- 学习库说明：`/www/yandaoguoxue-backend/data/academy.db`（57MB）= `study_progress`（用户学习进度）+ 13 万条学习内容（materials/questions/knowledge_points），AI 生成内容重建成本高，**必须备份**。
 - 特殊快照：`yandao_users_pre_fix100011_*.db`、`social_db_precleanup_*.db`（操作前快照，勿删）。
 - **异地备份未配置**（OFFSITE_BACKUP = PARTIAL）：coscmd 已装但 `/root/.cos.conf` 缺失。方案见 §29。
 
@@ -209,7 +213,7 @@ v25.0.60 / versionCode 2059 / 包名 `com.yandao.guoxue` / MD5 `e506971da1779ea7
 | DOWNLOAD | **VERIFIED** | 唯一源 200+MIME+MD5；301 收口；门禁脚本 |
 | ANDROID | **PARTIAL** | APK 三重验证（直链/二进制/版本）；真机全链路 DEVICE_UNAVAILABLE |
 | ADMIN | **VERIFIED** | /admin 唯一入口 + 三级角色 + 驾驶舱含备份状态 |
-| BACKUP | **VERIFIED**（本地） | 双库每日 02:00 + integrity_check + SOCIAL_BACKUP_GATE 红灯 + 恢复演练 ok |
+| BACKUP | **VERIFIED**（本地） | 三库（users+social+academy）每日 02:00 + integrity_check + SOCIAL_BACKUP_GATE 红灯 + 恢复演练 ok |
 | SOURCE_SYNC | **VERIFIED** | 四端一致 + GitHub clone 构建实证 |
 
 ## 27. 当前已知 PARTIAL
@@ -271,7 +275,7 @@ python scripts/ssh_exec.py run "cp /www/yandaoguoxue-backend/bak_xxx/server.js /
 
 ```bash
 # 1) 复制备份到临时目录（禁止覆盖生产！）
-python scripts/ssh_exec.py run "mkdir -p /tmp/yandao_restore_test && cp /root/backup/users_db_最新.db /tmp/yandao_restore_test/ && cp /root/backup/social_db_最新.db /tmp/yandao_restore_test/"
+python scripts/ssh_exec.py run "mkdir -p /tmp/yandao_restore_test && cp /root/backup/users_db_最新.db /tmp/yandao_restore_test/ && cp /root/backup/social_db_最新.db /tmp/yandao_restore_test/ && cp /root/backup/academy_db_最新.db /tmp/yandao_restore_test/"
 # 2) 完整性 + 关键表可读
 sqlite3 /tmp/yandao_restore_test/xxx.db "PRAGMA integrity_check;"
 sqlite3 /tmp/yandao_restore_test/social.db "SELECT COUNT(*) FROM friendships; SELECT COUNT(*) FROM chat_messages;"
@@ -345,4 +349,4 @@ sqlite3 /tmp/yandao_restore_test/social.db "SELECT COUNT(*) FROM friendships; SE
 
 ---
 
-**封板声明**：本文档对应 FINAL-HANDOVER-STABILITY-SEAL-20260826 批次。生产已封板（回归 26/26 全绿、四端一致、双库备份门禁在线）。推广门禁仅剩 2 项真机验证（§27.2/27.3），由项目方执行后即可扩大推广。
+**封板声明**：本文档对应 FINAL-HANDOVER-STABILITY-SEAL-20260826 批次（最终批次 v25.0.62 / commit 2b1d6af：D22 academy.db 三库备份封口）。生产已封板（回归 26/26 全绿、四端一致、三库备份门禁在线）。推广门禁仅剩 2 项真机验证（§27.2/27.3），由项目方执行后即可扩大推广。
