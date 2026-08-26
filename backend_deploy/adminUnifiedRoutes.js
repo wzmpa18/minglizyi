@@ -276,6 +276,36 @@ router.get('/overview', adminAuthUnified('SUPPORT_ADMIN'), (_req, res) => {
       else if (process.env.WECHAT_MCH_ID) data.health.payment = 'warn';
       else data.health.payment = 'down';
     } catch (e) { data.health = { server: 'ok', backend: 'ok', db: 'ok', ai: 'ok', payment: 'warn' }; }
+    // ===== v25.0.61 FINAL-HANDOVER 第二十八/四十六章：备份状态只读展示 + SOCIAL_BACKUP_GATE 红灯 =====
+    // 数据源：data/backup_status.json（backup_db.sh 每日备份完成后写入）；只读，不含任何密码/密钥
+    try {
+      const bs = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'backup_status.json'), 'utf-8'));
+      const ageH = bs.lastRun ? Math.floor((Date.now() - new Date(bs.lastRun).getTime()) / 3600000) : null;
+      data.backup = {
+        lastRun: bs.lastRun || null,
+        ageHours: (ageH !== null && !isNaN(ageH)) ? ageH : null,
+        gateOk: bs.gateOk !== false,
+        offsite: bs.offsite || 'not_configured',
+        // 订单表(user_orders)与用户库同文件 yandao_users.db，备份状态同源
+        usersDb: bs.usersDb || null,
+        socialDb: bs.socialDb || null,
+        ordersDb: bs.usersDb || null,
+        retainDays: bs.retainDays || null,
+      };
+    } catch (e) {
+      data.backup = { gateOk: false, offsite: 'unknown', error: 'backup_status.json 缺失（SOCIAL_BACKUP_GATE 未运行）' };
+    }
+    // 最近恢复演练时间（人工演练脚本写入 data/backup_drill.json）
+    try {
+      const dr = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'backup_drill.json'), 'utf-8'));
+      data.backup.lastDrill = dr.lastDrill || dr.time || null;
+      data.backup.lastDrillOk = dr.ok !== false;
+    } catch (e) { data.backup.lastDrill = null; }
+    // SOCIAL_BACKUP_GATE 红灯判定：门禁失败/状态文件缺失/超48小时未备份=down；超26小时=warn
+    const bk = data.backup || {};
+    if (bk.gateOk === false || bk.ageHours === null || bk.ageHours > 48) data.health.backup = 'down';
+    else if (bk.ageHours > 26) data.health.backup = 'warn';
+    else data.health.backup = 'ok';
 
     res.json({ success: true, data });
   } catch (e) {

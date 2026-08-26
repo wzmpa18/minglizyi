@@ -105,6 +105,15 @@ export default function DashboardPage() {
   const moderation = overview?.moderation || {};
   const commission = overview?.commission || {};
   const payment = overview?.payment || {};
+  // v25.0.61 FINAL-HANDOVER：备份状态（后端 /overview data.backup，只读）
+  const backup = (overview?.backup || {}) as {
+    gateOk?: boolean;
+    offsite?: string;
+    lastDrill?: string | null;
+    usersDb?: { ok?: boolean; lastSuccess?: string; size?: number };
+    socialDb?: { ok?: boolean; lastSuccess?: string; size?: number };
+    ordersDb?: { ok?: boolean; lastSuccess?: string; size?: number };
+  };
 
   const stUser = stats?.user || {};
   const stMember = stats?.membership || {};
@@ -135,6 +144,8 @@ export default function DashboardPage() {
           <HealthDot label="数据库" status={health.database || "正常"} />
           <HealthDot label="AI 服务" status={health.ai || (ai.enabled ? "正常" : "关闭")} />
           <HealthDot label="微信支付" status={health.payment || (payment.nativeReady ? "正常" : "待配置")} />
+          {/* v25.0.61 FINAL-HANDOVER 第四十六章：SOCIAL_BACKUP_GATE 红灯（备份门禁失败/超48h未备份） */}
+          <HealthDot label="数据备份" status={health.backup || "未知"} />
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 16, fontSize: 12, color: THEME.textSub, borderTop: `1px solid ${THEME.border}`, paddingTop: 12 }}>
           <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Server size={13} /> 运行 {String(serverInfo.uptimeHours ?? "-")} 小时</span>
@@ -144,6 +155,14 @@ export default function DashboardPage() {
           <span>Web {String(overview?.version || "-")}</span>
           {overview?.appVersion ? <span>APP v{String(overview.appVersion)}</span> : null}
           <span>Commit {String(overview?.gitCommit || "-")}</span>
+        </div>
+        {/* v25.0.61 FINAL-HANDOVER 第二十八章：备份状态只读显示（无任何密码/密钥） */}
+        <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${THEME.border}`, display: "flex", flexWrap: "wrap", gap: 16, fontSize: 12, color: THEME.textSub }}>
+          <span>用户库备份：{fmtBackupTime(backup?.usersDb?.lastSuccess)}</span>
+          <span>社交库备份：{fmtBackupTime(backup?.socialDb?.lastSuccess)}</span>
+          <span>订单库备份：{fmtBackupTime(backup?.ordersDb?.lastSuccess)}（与用户库同文件）</span>
+          <span>恢复演练：{fmtBackupTime(backup?.lastDrill)}</span>
+          <span>异地备份：{backup?.offsite === "configured" ? "已配置" : "未配置"}</span>
         </div>
         {healthEntries.length > 0 && (
           <div style={{ marginTop: 10, fontSize: 11, color: THEME.textHint }}>
@@ -310,10 +329,18 @@ function SectionTitle({ icon, children }: { icon: React.ReactNode; children: Rea
   );
 }
 
+// v25.0.61 FINAL-HANDOVER：备份时间显示（缺数据显示 "-"）
+function fmtBackupTime(t?: string | null): string {
+  if (!t) return "-";
+  const d = new Date(t);
+  if (isNaN(d.getTime())) return String(t);
+  return d.toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
+
 function HealthDot({ label, status }: { label: string; status: string }) {
   const s = String(status);
   const isBad = /故障|关闭|error|down|fail/i.test(s);
-  const isWarn = /待配置|维护|partial|warn/i.test(s);
+  const isWarn = /待配置|维护|partial|warn|未知/i.test(s);
   const color = isBad ? THEME.error : isWarn ? THEME.warning : THEME.success;
   return (
     <div

@@ -369,6 +369,20 @@ export interface AdminOverviewData {
     todaySuccessRate?: number | string;
   };
   health?: Record<string, string>;
+  /** v25.0.61 FINAL-HANDOVER 第二十八章：备份状态只读展示（SOCIAL_BACKUP_GATE） */
+  backup?: {
+    lastRun?: string | null;
+    ageHours?: number | null;
+    gateOk?: boolean;
+    offsite?: string;
+    lastDrill?: string | null;
+    lastDrillOk?: boolean;
+    retainDays?: number | null;
+    usersDb?: { ok?: boolean; file?: string; size?: number; lastSuccess?: string };
+    socialDb?: { ok?: boolean; file?: string; size?: number; lastSuccess?: string };
+    ordersDb?: { ok?: boolean; file?: string; size?: number; lastSuccess?: string };
+    error?: string;
+  };
   [k: string]: unknown;
 }
 
