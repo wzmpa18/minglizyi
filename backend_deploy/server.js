@@ -162,10 +162,14 @@ app.post('/api/ai/chat', async (req, res) => {
       ? (process.env.HUNYUAN_API_URL || 'https://tokenhub.tencentmaas.com/v1/chat/completions')
       : 'https://api.deepseek.com/v1/chat/completions');
 
+    // v25.0.60 AUDIT-20260826 D17: max_tokens 4096→8192（默认，AI_MAX_TOKENS 可调）
+    // 推理型模型(hy3)思考即消耗 token，4096 上限时复杂命理解读的推理就耗尽配额，
+    // 等待60秒后返回空内容（用户视角=AI不能用）。8192 给推理+正文留足空间。
+    const _maxTokens = parseInt(process.env.AI_MAX_TOKENS, 10) || 8192;
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-      body: JSON.stringify({ model: targetModel, messages: finalMessages, stream: false, max_tokens: 4096, temperature: 0.7 })
+      body: JSON.stringify({ model: targetModel, messages: finalMessages, stream: false, max_tokens: _maxTokens, temperature: 0.7 })
     });
 
     if (!response.ok) {
@@ -184,6 +188,29 @@ app.post('/api/ai/chat', async (req, res) => {
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || '';
     const usage = data.usage || {};
+    // v25.0.60 AUDIT-20260826 D17: 空内容保护——推理耗尽 token 时上游返回空 content，
+    // 原实现按 success:true 返回空串（前端白屏等待60秒无结果，健康统计还误计成功）。
+    // 现在明确报错提示重试，不扣配额（下方 content 判空天然跳过），健康统计计为失败。
+    if (!content) {
+      const _finish = data.choices?.[0]?.finish_reason || '';
+      console.error('[AI] 空内容返回 finish_reason=' + _finish + ' usage=' + JSON.stringify(usage));
+      try {
+        const _hp = require('path').join(__dirname, 'data', 'ai-health.json');
+        const _today = new Date().toISOString().slice(0, 10);
+        let _h = { date: _today, calls: 0, success: 0, fail: 0, totalLatencyMs: 0, lastSuccessAt: null, lastFailAt: null, lastError: '' };
+        try { _h = { ..._h, ...JSON.parse(require('fs').readFileSync(_hp, 'utf-8')) }; } catch (e) {}
+        if (_h.date !== _today) { _h = { date: _today, calls: 0, success: 0, fail: 0, totalLatencyMs: 0, lastSuccessAt: null, lastFailAt: null, lastError: '' }; }
+        _h.calls += 1; _h.fail += 1; _h.lastFailAt = new Date().toISOString();
+        _h.lastError = 'empty_content(' + _finish + ')';
+        require('fs').writeFileSync(_hp, JSON.stringify(_h), 'utf-8');
+      } catch (e) {}
+      return res.status(502).json({
+        success: false,
+        error: 'AI解读生成超时（内容为空），请简化问题后重试',
+        code: 'AI_EMPTY_CONTENT',
+        finishReason: _finish,
+      });
+    }
     // v25.0.60 P0-3/P1-7：生成成功后扣减配额（只对成功调用计费）
     if (_quotaOwner && content) {
       try {
