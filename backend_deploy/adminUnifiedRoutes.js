@@ -290,6 +290,7 @@ router.get('/overview', adminAuthUnified('SUPPORT_ADMIN'), (_req, res) => {
         usersDb: bs.usersDb || null,
         socialDb: bs.socialDb || null,
         ordersDb: bs.usersDb || null,
+        academyDb: bs.academyDb || null,
         retainDays: bs.retainDays || null,
       };
     } catch (e) {

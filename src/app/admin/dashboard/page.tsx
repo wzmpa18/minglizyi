@@ -113,6 +113,7 @@ export default function DashboardPage() {
     usersDb?: { ok?: boolean; lastSuccess?: string; size?: number };
     socialDb?: { ok?: boolean; lastSuccess?: string; size?: number };
     ordersDb?: { ok?: boolean; lastSuccess?: string; size?: number };
+    academyDb?: { ok?: boolean; lastSuccess?: string; size?: number };
   };
 
   const stUser = stats?.user || {};
@@ -160,6 +161,7 @@ export default function DashboardPage() {
         <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${THEME.border}`, display: "flex", flexWrap: "wrap", gap: 16, fontSize: 12, color: THEME.textSub }}>
           <span>用户库备份：{fmtBackupTime(backup?.usersDb?.lastSuccess)}</span>
           <span>社交库备份：{fmtBackupTime(backup?.socialDb?.lastSuccess)}</span>
+          <span>学习库备份：{fmtBackupTime(backup?.academyDb?.lastSuccess)}</span>
           <span>订单库备份：{fmtBackupTime(backup?.ordersDb?.lastSuccess)}（与用户库同文件）</span>
           <span>恢复演练：{fmtBackupTime(backup?.lastDrill)}</span>
           <span>异地备份：{backup?.offsite === "configured" ? "已配置" : "未配置"}</span>
