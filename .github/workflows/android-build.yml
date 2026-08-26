@@ -4,7 +4,7 @@ name: Android Build (apk)
 # - ubuntu runner + Capacitor Android 工程（远程加载模式）
 # - 签名：仓库根 yandao-release.keystore（经 ANDROID_KEYSTORE_B64 Secret 注入）
 #   Secret 配置：base64 -w0 yandao-release.keystore 的输出 → ANDROID_KEYSTORE_B64
-#   密码已在 android/app/build.gradle（yandao2024/yandao）
+#   签名口令见 android/app/build.gradle（构建配置必需，keystore 本体不入库）
 on:
   workflow_dispatch:
 
