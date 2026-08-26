@@ -1443,12 +1443,6 @@ export default function ZiweiPage() {
                               return (
                                 <div
                                   key={`star-${j}`}
-                                  // v25.0.24: 点击主星跳转学习模块对应知识点（工具→学习双向闭环）
-                                  onClick={star.isMajor ? (e: React.MouseEvent) => {
-                                    e.stopPropagation();
-                                    router.push(`/academy/learn?track=yixue&term=${encodeURIComponent(star.name)}`);
-                                  } : undefined}
-                                  title={star.isMajor ? `查看「${star.name}」学习知识点` : undefined}
                                   style={{ display: "flex", flexDirection: "column", alignItems: "center", lineHeight: "1", width: starColW, flexShrink: 0 }}
                                 >
                                   {star.name.split("").map((char, ci) => (
@@ -1684,95 +1678,6 @@ export default function ZiweiPage() {
               </div>
             </div>
           )}
-
-          {/* ---- v25.0.24: ZW-TIME 时间轴状态卡（命盘→大运→流年→流月→流日层级路径 + 流命宫 + 运限四化） ---- */}
-          {decadalData.length > 0 && (() => {
-            // v25.0.25 修正：改用按干支对齐后的引擎大限节点（原宫序/年龄序同索引取值会错宫）
-            // v25.0.41（20260819用户指令）：童限模式（起限前）无大限层，时间轴首段显示童限
-            const dn = tongxianActive ? null : zwDecadalAligned[selectedDaxian];
-            const txQiyun = decadalData[0]?.ageRange?.[0] || 0;
-            const yn = liunianYears[selectedLiunian];
-            const mn = selectedLiuyue >= 0 ? liuyueMonths[selectedLiuyue] : null;
-            const dayN = selectedLiuri >= 0 ? liuriDays[selectedLiuri] : null;
-            const hourN = selectedLiushi >= 0 ? liushiHours[selectedLiushi] : null;
-            const deepest = hourN && hourN.palaceIndex >= 0 ? hourN
-              : dayN && dayN.palaceIndex >= 0 ? dayN
-              : mn && mn.palaceIndex >= 0 ? mn
-              : yn && yn.palaceIndex >= 0 ? yn
-              : dn && dn.palaceIndex >= 0 ? dn : null;
-            const mut = hourN?.mutagen?.length === 4 ? hourN.mutagen
-              : dayN?.mutagen?.length === 4 ? dayN.mutagen
-              : mn?.mutagen?.length === 4 ? mn.mutagen
-              : yn?.mutagen?.length === 4 ? yn.mutagen
-              : dn?.mutagen?.length === 4 ? dn.mutagen : [];
-            const deepestPalaceName = hourN ? "流时宫"
-              : dayN ? "流日宫"
-              : mn ? "流月宫"
-              : yn ? "流年宫" : "大限宫";
-            return (
-              <div className="bg-white mb-2 border border-gray-300 rounded-lg p-2" style={{ background: "linear-gradient(135deg,#F3EDF7,#fff)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap", fontSize: "10px", lineHeight: "1.5" }}>
-                  <span style={{ background: BRAND_PURPLE, color: "#fff", fontWeight: "bold", padding: "1px 6px", borderRadius: "8px", fontSize: "9px" }}>ZW-TIME</span>
-                  <span style={{ color: "#666" }}>时间轴：</span>
-                  <span style={{ fontWeight: "bold", color: BRAND_PURPLE_DARK }}>
-                    {tongxianActive ? `童限(虚岁1-${txQiyun - 1}·起限前)` : `大限${dn ? `${dn.gan}${dn.zhi}(${dn.sub})` : "-"}`}
-                  </span>
-                  <span style={{ color: "#999" }}>›</span>
-                  <span style={{ fontWeight: "bold" }}>{yn ? `${yn.year}年${yn.gan}${yn.zhi}` : "-"}</span>
-                  {mn && (<><span style={{ color: "#999" }}>›</span><span style={{ fontWeight: "bold" }}>{mn.label}</span></>)}
-                  {dayN && (<><span style={{ color: "#999" }}>›</span><span style={{ fontWeight: "bold" }}>{dayN.lunarName}</span></>)}
-                  {hourN && (<><span style={{ color: "#999" }}>›</span><span style={{ fontWeight: "bold" }}>{hourN.zhi}时</span></>)}
-                </div>
-                {deepest && (
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", fontSize: "10px", marginTop: "4px", lineHeight: "1.5" }}>
-                    <span style={{ color: "#666" }}>{deepestPalaceName}：</span>
-                    <span style={{ fontWeight: "bold", color: BRAND_PURPLE }}>
-                      {deepest.palaceName ? `${deepest.palaceName}（${ZHI_NAMES[deepest.palaceIndex] || ""}宫）` : `${ZHI_NAMES[deepest.palaceIndex] || ""}宫`}
-                    </span>
-                    {mut.length === 4 && (
-                      <>
-                        <span style={{ color: "#999" }}>|</span>
-                        <span style={{ color: "#666" }}>运限四化：</span>
-                        {[["禄", "#16a34a"], ["权", "#ea580c"], ["科", "#2563eb"], ["忌", "#dc2626"]].map(([hua, color], k) => (
-                          <span key={hua} style={{ whiteSpace: "nowrap" }}>
-                            <span style={{ fontWeight: "bold" }}>{mut[k]}</span>
-                            <span style={{ color: color as string, fontWeight: "bold" }}>化{hua}</span>
-                          </span>
-                        ))}
-                      </>
-                    )}
-                  </div>
-                )}
-                {/* v25.0.25: 叠宫对照行（大限命宫叠本命宫 / 流年命宫叠大限宫+本命宫，zwOverlayAt 跨层查询） */}
-                {(() => {
-                  if (!dn && !yn) return null;
-                  const dxOk = dn && dn.palaceIndex >= 0;
-                  const lnOk = yn && yn.palaceIndex >= 0;
-                  if (!dxOk && !lnOk) return null;
-                  return (
-                    <div style={{ display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap", fontSize: "9px", marginTop: "3px", lineHeight: "1.5", color: "#555" }}>
-                      <span style={{ background: "#f3e8ff", color: BRAND_PURPLE_DARK, fontWeight: 700, padding: "0 4px", borderRadius: "6px", fontSize: "8px" }}>叠宫</span>
-                      {dxOk && (
-                        <span>
-                          <span style={{ color: "#d97706", fontWeight: 700 }}>大限命宫</span>叠本命{dn.palaceName}（{ZHI_NAMES[dn.palaceIndex]}宫）
-                        </span>
-                      )}
-                      {dxOk && lnOk && (
-                        <span>
-                          ｜<span style={{ color: "#2563eb", fontWeight: 700 }}>流年命宫</span>叠大限{zwOverlayAt(dn.palaceIndex, yn.palaceIndex)}宫·本命{yn.palaceName}（{ZHI_NAMES[yn.palaceIndex]}宫）
-                        </span>
-                      )}
-                      {!dxOk && lnOk && (
-                        <span>
-                          <span style={{ color: "#2563eb", fontWeight: 700 }}>流年命宫</span>叠本命{yn.palaceName}（{ZHI_NAMES[yn.palaceIndex]}宫）
-                        </span>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
-            );
-          })()}
 
           {/* ---- 底部时间表格（对标jishiyu：大限12宫、流年10年、流月12月，干支五行色） ---- */}
           {decadalData.length > 0 && (
@@ -2219,6 +2124,95 @@ export default function ZiweiPage() {
               )}
             </div>
           )}
+
+          {/* ---- v25.0.24: ZW-TIME 时间轴状态卡（20260826用户指令：从命盘下方移至页面最底部；含叠宫对照行/运限四化） ---- */}
+          {decadalData.length > 0 && (() => {
+            // v25.0.25 修正：改用按干支对齐后的引擎大限节点（原宫序/年龄序同索引取值会错宫）
+            // v25.0.41（20260819用户指令）：童限模式（起限前）无大限层，时间轴首段显示童限
+            const dn = tongxianActive ? null : zwDecadalAligned[selectedDaxian];
+            const txQiyun = decadalData[0]?.ageRange?.[0] || 0;
+            const yn = liunianYears[selectedLiunian];
+            const mn = selectedLiuyue >= 0 ? liuyueMonths[selectedLiuyue] : null;
+            const dayN = selectedLiuri >= 0 ? liuriDays[selectedLiuri] : null;
+            const hourN = selectedLiushi >= 0 ? liushiHours[selectedLiushi] : null;
+            const deepest = hourN && hourN.palaceIndex >= 0 ? hourN
+              : dayN && dayN.palaceIndex >= 0 ? dayN
+              : mn && mn.palaceIndex >= 0 ? mn
+              : yn && yn.palaceIndex >= 0 ? yn
+              : dn && dn.palaceIndex >= 0 ? dn : null;
+            const mut = hourN?.mutagen?.length === 4 ? hourN.mutagen
+              : dayN?.mutagen?.length === 4 ? dayN.mutagen
+              : mn?.mutagen?.length === 4 ? mn.mutagen
+              : yn?.mutagen?.length === 4 ? yn.mutagen
+              : dn?.mutagen?.length === 4 ? dn.mutagen : [];
+            const deepestPalaceName = hourN ? "流时宫"
+              : dayN ? "流日宫"
+              : mn ? "流月宫"
+              : yn ? "流年宫" : "大限宫";
+            return (
+              <div className="bg-white border border-gray-300 rounded-lg p-2" style={{ background: "linear-gradient(135deg,#F3EDF7,#fff)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap", fontSize: "10px", lineHeight: "1.5" }}>
+                  <span style={{ background: BRAND_PURPLE, color: "#fff", fontWeight: "bold", padding: "1px 6px", borderRadius: "8px", fontSize: "9px" }}>ZW-TIME</span>
+                  <span style={{ color: "#666" }}>时间轴：</span>
+                  <span style={{ fontWeight: "bold", color: BRAND_PURPLE_DARK }}>
+                    {tongxianActive ? `童限(虚岁1-${txQiyun - 1}·起限前)` : `大限${dn ? `${dn.gan}${dn.zhi}(${dn.sub})` : "-"}`}
+                  </span>
+                  <span style={{ color: "#999" }}>›</span>
+                  <span style={{ fontWeight: "bold" }}>{yn ? `${yn.year}年${yn.gan}${yn.zhi}` : "-"}</span>
+                  {mn && (<><span style={{ color: "#999" }}>›</span><span style={{ fontWeight: "bold" }}>{mn.label}</span></>)}
+                  {dayN && (<><span style={{ color: "#999" }}>›</span><span style={{ fontWeight: "bold" }}>{dayN.lunarName}</span></>)}
+                  {hourN && (<><span style={{ color: "#999" }}>›</span><span style={{ fontWeight: "bold" }}>{hourN.zhi}时</span></>)}
+                </div>
+                {deepest && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap", fontSize: "10px", marginTop: "4px", lineHeight: "1.5" }}>
+                    <span style={{ color: "#666" }}>{deepestPalaceName}：</span>
+                    <span style={{ fontWeight: "bold", color: BRAND_PURPLE }}>
+                      {deepest.palaceName ? `${deepest.palaceName}（${ZHI_NAMES[deepest.palaceIndex] || ""}宫）` : `${ZHI_NAMES[deepest.palaceIndex] || ""}宫`}
+                    </span>
+                    {mut.length === 4 && (
+                      <>
+                        <span style={{ color: "#999" }}>|</span>
+                        <span style={{ color: "#666" }}>运限四化：</span>
+                        {[["禄", "#16a34a"], ["权", "#ea580c"], ["科", "#2563eb"], ["忌", "#dc2626"]].map(([hua, color], k) => (
+                          <span key={hua} style={{ whiteSpace: "nowrap" }}>
+                            <span style={{ fontWeight: "bold" }}>{mut[k]}</span>
+                            <span style={{ color: color as string, fontWeight: "bold" }}>化{hua}</span>
+                          </span>
+                        ))}
+                      </>
+                    )}
+                  </div>
+                )}
+                {/* v25.0.25: 叠宫对照行（大限命宫叠本命宫 / 流年命宫叠大限宫+本命宫，zwOverlayAt 跨层查询） */}
+                {(() => {
+                  if (!dn && !yn) return null;
+                  const dxOk = dn && dn.palaceIndex >= 0;
+                  const lnOk = yn && yn.palaceIndex >= 0;
+                  if (!dxOk && !lnOk) return null;
+                  return (
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px", flexWrap: "wrap", fontSize: "9px", marginTop: "3px", lineHeight: "1.5", color: "#555" }}>
+                      <span style={{ background: "#f3e8ff", color: BRAND_PURPLE_DARK, fontWeight: 700, padding: "0 4px", borderRadius: "6px", fontSize: "8px" }}>叠宫</span>
+                      {dxOk && (
+                        <span>
+                          <span style={{ color: "#d97706", fontWeight: 700 }}>大限命宫</span>叠本命{dn.palaceName}（{ZHI_NAMES[dn.palaceIndex]}宫）
+                        </span>
+                      )}
+                      {dxOk && lnOk && (
+                        <span>
+                          ｜<span style={{ color: "#2563eb", fontWeight: 700 }}>流年命宫</span>叠大限{zwOverlayAt(dn.palaceIndex, yn.palaceIndex)}宫·本命{yn.palaceName}（{ZHI_NAMES[yn.palaceIndex]}宫）
+                        </span>
+                      )}
+                      {!dxOk && lnOk && (
+                        <span>
+                          <span style={{ color: "#2563eb", fontWeight: 700 }}>流年命宫</span>叠本命{yn.palaceName}（{ZHI_NAMES[yn.palaceIndex]}宫）
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            );
+          })()}
 
           {/* ---- 免责声明 ---- */}
           <div className="rounded-lg px-3 py-2.5 text-xs mb-2" style={{ backgroundColor: BRAND_PURPLE_BG, color: BRAND_PURPLE_LIGHT }}>
