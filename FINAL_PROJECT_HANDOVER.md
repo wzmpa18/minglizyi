@@ -26,8 +26,8 @@
 
 ## 3. 当前 Commit
 
-- 生产运行代码：**`2b1d6af`**（v25.0.62：academy.db 三库备份封口 D22 + 后台学习库备份展示 + 版本号）。
-- 本文档所在批次提交后，本地 / GitHub / 服务器源码仓 / 生产 四端 HEAD 必须一致（Git 四端一致原则，见总账第十五章）。接管后第一步：`git log --oneline -3` 四端核对。
+- **四端 HEAD 一致**：LOCAL = GITHUB = SERVER_SOURCE = 生产构建源（接管后第一步：`git log --oneline -3` 四端核对，见总账第十五章）。
+- D22 代码批次链：`37a3260`（三库备份+后台展示）→ `2b1d6af`（版本号 v25.0.62）；其后均为文档批次（本文档），不改变运行时代码。
 
 ## 4. GitHub
 
@@ -349,4 +349,4 @@ sqlite3 /tmp/yandao_restore_test/social.db "SELECT COUNT(*) FROM friendships; SE
 
 ---
 
-**封板声明**：本文档对应 FINAL-HANDOVER-STABILITY-SEAL-20260826 批次（最终批次 v25.0.62 / commit 2b1d6af：D22 academy.db 三库备份封口）。生产已封板（回归 26/26 全绿、四端一致、三库备份门禁在线）。推广门禁仅剩 2 项真机验证（§27.2/27.3），由项目方执行后即可扩大推广。
+**封板声明**：本文档对应 FINAL-HANDOVER-STABILITY-SEAL-20260826 批次（最终代码批次 v25.0.62：D22 academy.db 三库备份封口，代码止于 `2b1d6af`，其后仅文档批次）。生产已封板（回归 26/26 全绿、四端一致、三库备份门禁在线）。推广门禁仅剩 2 项真机验证（§27.2/27.3），由项目方执行后即可扩大推广。
