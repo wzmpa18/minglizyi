@@ -208,37 +208,36 @@ export function setLoginState(token: string, profile: UserProfile): boolean {
     // 同步会员状态到 yandao_membership_status（AI 权限系统读这个 key）
     // 根因：后端改了 member_level 但前端 AI 从 yandao_membership_status 读，
     // 该 key 仅支付成功时写入，导致后台补开会员后 AI 仍不可用
-    const PAID = ["monthly", "quarterly", "yearly", "lifetime", "premium"];
-    const tier = profile.memberTier || profile.memberLevel;
-    const isPaid = PAID.includes(tier);
+    //
+    // v25.0.60 AUDIT-20260826 P1-6 修复：V31 版本存在两个漏洞——
+    // ① memberTier 缺失且 level=premium 时不写入（旧后端响应路径下会员同步失效）；
+    // ② 档位为 basic/guest 时不清写，后台撤销会员后本地残留旧付费状态。
+    // 现统一为单一权威逻辑：以服务端 profile 为准，付费写真实档位，非付费清写 basic。
     const msKey = "yandao_membership_status";
-    if (isPaid && tier !== "premium") {
-      const msLevel = tier as "monthly" | "quarterly" | "yearly" | "lifetime";
-      const expMs = profile.membershipExpiry ? new Date(profile.membershipExpiry).getTime() : Infinity;
-      const now = Date.now();
-      if (expMs === Infinity || expMs > now) {
-        localStorage.setItem(msKey, JSON.stringify({
-          level: msLevel,
-          startTime: new Date().toISOString(),
-          expireTime: profile.membershipExpiry || null,
-          isActive: true,
-          daysRemaining: expMs === Infinity ? Infinity : Math.ceil((expMs - now) / 86400000),
-        }));
-      }
-    } else if (isPaid && tier === "premium" && profile.memberTier) {
-      // memberLevel=premium 是后端统一映射的，memberTier 才是真实档位
-      const msLevel = profile.memberTier as "monthly" | "quarterly" | "yearly" | "lifetime";
-      const expMs = profile.membershipExpiry ? new Date(profile.membershipExpiry).getTime() : Infinity;
-      const now = Date.now();
-      if (expMs === Infinity || expMs > now) {
-        localStorage.setItem(msKey, JSON.stringify({
-          level: msLevel,
-          startTime: new Date().toISOString(),
-          expireTime: profile.membershipExpiry || null,
-          isActive: true,
-          daysRemaining: expMs === Infinity ? Infinity : Math.ceil((expMs - now) / 86400000),
-        }));
-      }
+    const rawTier = profile.memberTier || profile.memberLevel || "basic";
+    // premium 是后端对旧 APK 的统一映射档，memberTier 缺失时按月度权益处理（v25.0.60 补漏）
+    const tier = rawTier === "premium" ? "monthly" : rawTier;
+    const PAID: Array<"monthly" | "quarterly" | "yearly" | "lifetime"> = ["monthly", "quarterly", "yearly", "lifetime"];
+    const now = Date.now();
+    const expMs = profile.membershipExpiry ? new Date(profile.membershipExpiry).getTime() : Infinity;
+    const isValidPaid = (PAID as string[]).includes(tier) && (expMs === Infinity || expMs > now);
+    if (isValidPaid) {
+      localStorage.setItem(msKey, JSON.stringify({
+        level: tier,
+        startTime: new Date().toISOString(),
+        expireTime: profile.membershipExpiry || null,
+        isActive: true,
+        daysRemaining: expMs === Infinity ? Infinity : Math.ceil((expMs - now) / 86400000),
+      }));
+    } else {
+      // 服务端明确为 basic/已过期/已撤销：清写 basic，防止本地残留付费状态
+      localStorage.setItem(msKey, JSON.stringify({
+        level: "basic",
+        startTime: new Date().toISOString(),
+        expireTime: null,
+        isActive: false,
+        daysRemaining: 0,
+      }));
     }
 
     broadcastLoginState("login", token, profile);

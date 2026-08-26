@@ -13,7 +13,7 @@ const path = require("path");
 const fs = require("fs");
 const { createPlatformFeatureGate } = require("./platformFeatureGate");
 
-const { authMiddleware, getMembershipFromDB, getAIQuotaFromDB, consumeAIQuotaInDB } = require("./middleware/auth");
+const { authMiddleware, getMembershipFromDB, getAIQuotaFromDB, consumeAIQuotaInDB, getAnonAIQuota, consumeAnonAIQuota, verifyToken } = require("./middleware/auth");
 
 const app = express();
 const PORT = process.env.API_PORT || 3001;
@@ -57,6 +57,48 @@ try {
 // 响应顶层返回 content/usage(前端 aiService.ts 契约), 同时保留 data.* 旧结构
 app.post('/api/ai/chat', async (req, res) => {
   try {
+    // ===== v25.0.60 AUDIT-20260826 P0-3 修复：AI 付费墙服务端强制 =====
+    // 鉴权 + 配额校验 + 成功后扣减（配额设施此前为死代码，本次正式接线）
+    // - 携带有效 Bearer Token：按用户数据库会员档位限额（basic 3 / monthly·quarterly 50 / yearly·lifetime 无限）
+    // - 无 Token（旧版 APK 过渡期）：按 IP 限额 AI_ANON_DAILY_LIMIT（默认 50/日；置 0 = 硬性 401）
+    //   旧版 APK 不携带 Authorization 头，直接硬性 401 会导致全体旧版用户 AI 立即不可用，
+    //   故保留按 IP 限额的软过渡通道；新版前端全覆盖后可置 0 收紧。
+    const _authUser = verifyToken(req.headers.authorization || '');
+    let _quotaOwner = null; // 配额记账主体：真实 userId 或 'anon:<ip>'
+    if (_authUser) {
+      _quotaOwner = _authUser.userId;
+      const _q = getAIQuotaFromDB(_authUser.userId);
+      if (_q.dailyLimit !== Infinity && _q.dailyUsed >= _q.dailyLimit) {
+        return res.status(429).json({
+          success: false,
+          error: `今日AI调用次数已用完（${_q.dailyLimit}次/日），明日重置或升级会员`,
+          code: 'AI_QUOTA_EXCEEDED',
+          dailyUsed: _q.dailyUsed,
+          dailyLimit: _q.dailyLimit,
+          level: _q.level,
+        });
+      }
+    } else {
+      const _anonLimit = parseInt(process.env.AI_ANON_DAILY_LIMIT, 10);
+      const _limit = Number.isFinite(_anonLimit) && _anonLimit >= 0 ? _anonLimit : 50;
+      if (_limit === 0) {
+        return res.status(401).json({ success: false, error: '请先登录后使用AI服务', code: 'UNAUTHORIZED' });
+      }
+      const _ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
+      const _q = getAnonAIQuota(_ip);
+      if (_q.dailyUsed >= _limit) {
+        return res.status(429).json({
+          success: false,
+          error: '当前网络今日AI体验次数已用完，登录后可获得会员额度',
+          code: 'AI_QUOTA_EXCEEDED',
+          dailyUsed: _q.dailyUsed,
+          dailyLimit: _limit,
+          level: 'anonymous',
+        });
+      }
+      _quotaOwner = 'anon:' + _ip;
+    }
+
     // ===== v25.0.47_10: AI 三重开关服务端强制（FINAL-ADMIN-COMMERCIAL-SEAL-02 第五/十三章）=====
     // ① 后台功能开关总中心（feature-flags 的 ai 开关）
     const _aiFlag = featureControlRoutes.getFlagStatus('ai');
@@ -142,6 +184,16 @@ app.post('/api/ai/chat', async (req, res) => {
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || '';
     const usage = data.usage || {};
+    // v25.0.60 P0-3/P1-7：生成成功后扣减配额（只对成功调用计费）
+    if (_quotaOwner && content) {
+      try {
+        if (_authUser) consumeAIQuotaInDB(_quotaOwner);
+        else {
+          const _ip = _quotaOwner.slice(5);
+          consumeAnonAIQuota(_ip);
+        }
+      } catch (e) { console.error('[AI] 配额扣减失败:', e.message); }
+    }
     // v25.0.47_10: AI健康埋点（后台AI控制中心指标）
     try {
       const _hp = require('path').join(__dirname, 'data', 'ai-health.json');
@@ -245,7 +297,7 @@ function buildDefaultAIAdminConfig() {
       { id: "phone_number", name: "手机号吉凶解读", category: "b_tool", enabled: true, price: 18, description: "基于数字能量学的手机号码分析" },
       { id: "license_plate", name: "车牌合号分析", category: "b_tool", enabled: true, price: 18, description: "基于数理的车牌号码文化参考" },
     ],
-    quotas: { basic: { daily: 3, monthly: 50 }, monthly: { daily: 50, monthly: 500 }, yearly: { daily: -1, monthly: -1 }, lifetime: { daily: -1, monthly: -1 } },
+    quotas: { basic: { daily: 3, monthly: 50 }, monthly: { daily: 50, monthly: 500 }, quarterly: { daily: 50, monthly: 500 }, yearly: { daily: -1, monthly: -1 }, lifetime: { daily: -1, monthly: -1 } }, // v25.0.60 P1-7: 补 quarterly 档（原缺失导致季度会员配额配置不完整）
     packages: [
       { id: "pack_10", name: "10次增量包", count: 10, price: 9.9, validity: 30, enabled: true },
       { id: "pack_50", name: "50次增量包", count: 50, price: 39.9, validity: 90, enabled: true },
@@ -253,11 +305,11 @@ function buildDefaultAIAdminConfig() {
       { id: "pack_500", name: "500次增量包", count: 500, price: 299, validity: 365, enabled: true },
     ],
     timePlans: [
-      { key: 'single', name: '单次解读', price: 2.9, duration: '1次', desc: '单次AI深度解读' },
-      { key: 'daily', name: '日卡', price: 9.9, duration: '24小时', desc: '当日无限次解读' },
-      { key: 'monthly', name: '月卡', price: 39.9, duration: '30天', desc: '全工具月度畅享' },
-      { key: 'quarterly', name: '季卡', price: 99.9, duration: '90天', desc: '季度无限解读' },
-      { key: 'yearly', name: '年卡', price: 199, duration: '365天', desc: '全年无限解读' },
+      { key: 'single', name: 'AI单次解读', price: 2.9, duration: '1次', desc: '单次AI深度解读（非会员）' },
+      { key: 'daily', name: 'AI日卡', price: 9.9, duration: '24小时', desc: '当日AI解读不限次' },
+      { key: 'monthly', name: 'AI月卡', price: 39.9, duration: '30天', desc: '30天AI解读畅享（与会员权益独立）' },
+      { key: 'quarterly', name: 'AI季卡', price: 99.9, duration: '90天', desc: '季度AI解读畅享（与会员权益独立）' },
+      { key: 'yearly', name: 'AI年卡', price: 199, duration: '365天', desc: '全年AI解读畅享（与会员权益独立）' },
     ],
     singleUnlockPrice: 9.9,
     updatedAt: new Date().toISOString(),
@@ -284,7 +336,7 @@ app.get('/api/admin/ai-config', adminAuth('ADMIN'), async (req, res) => {
           { id: "phone_number", name: "手机号吉凶解读", category: "b_tool", enabled: true, price: 18, description: "基于数字能量学的手机号码分析" },
           { id: "license_plate", name: "车牌合号分析", category: "b_tool", enabled: true, price: 18, description: "基于数理的车牌号码文化参考" },
         ],
-        quotas: { basic: { daily: 3, monthly: 50 }, monthly: { daily: 50, monthly: 500 }, yearly: { daily: -1, monthly: -1 }, lifetime: { daily: -1, monthly: -1 } },
+        quotas: { basic: { daily: 3, monthly: 50 }, monthly: { daily: 50, monthly: 500 }, quarterly: { daily: 50, monthly: 500 }, yearly: { daily: -1, monthly: -1 }, lifetime: { daily: -1, monthly: -1 } }, // v25.0.60 P1-7: 补 quarterly 档（原缺失导致季度会员配额配置不完整）
         packages: [
           { id: "pack_10", name: "10次增量包", count: 10, price: 9.9, validity: 30, enabled: true },
           { id: "pack_50", name: "50次增量包", count: 50, price: 39.9, validity: 90, enabled: true },
@@ -297,11 +349,11 @@ app.get('/api/admin/ai-config', adminAuth('ADMIN'), async (req, res) => {
     // v25.0.47_7 价格SSOT: AI时长套餐与单次解锁价兜底（管理后台可改，前端/api/payment/pricing读取）
     if (!Array.isArray(config.timePlans) || !config.timePlans.length) {
       config.timePlans = [
-        { key: 'single', name: '单次解读', price: 2.9, duration: '1次', desc: '单次AI深度解读' },
-        { key: 'daily', name: '日卡', price: 9.9, duration: '24小时', desc: '当日无限次解读' },
-        { key: 'monthly', name: '月卡', price: 39.9, duration: '30天', desc: '全工具月度畅享' },
-        { key: 'quarterly', name: '季卡', price: 99.9, duration: '90天', desc: '季度无限解读' },
-        { key: 'yearly', name: '年卡', price: 199, duration: '365天', desc: '全年无限解读' },
+        { key: 'single', name: 'AI单次解读', price: 2.9, duration: '1次', desc: '单次AI深度解读（非会员）' },
+        { key: 'daily', name: 'AI日卡', price: 9.9, duration: '24小时', desc: '当日AI解读不限次' },
+        { key: 'monthly', name: 'AI月卡', price: 39.9, duration: '30天', desc: '30天AI解读畅享（与会员权益独立）' },
+        { key: 'quarterly', name: 'AI季卡', price: 99.9, duration: '90天', desc: '季度AI解读畅享（与会员权益独立）' },
+        { key: 'yearly', name: 'AI年卡', price: 199, duration: '365天', desc: '全年AI解读畅享（与会员权益独立）' },
       ];
     }
     if (typeof config.singleUnlockPrice !== 'number' || !(config.singleUnlockPrice > 0)) {
@@ -579,7 +631,8 @@ app.post('/api/ai/quota/consume', authMiddleware, (req, res) => {
       data: {
         dailyUsed: quota.dailyUsed + 1,
         dailyLimit: limit,
-        remaining: limit === Infinity ? 'unlimited' : Math.max(0, limit - quota.dailyUsed - 1),
+        // P2-16 修复：与 GET /api/ai/quota 统一为 -1 表示无限（原为 'unlimited' 字符串，两接口口径不一致）
+        remaining: limit === Infinity ? -1 : Math.max(0, limit - quota.dailyUsed - 1),
         level: quota.level,
       },
     });

@@ -227,18 +227,26 @@ function requireMembership(minLevel) {
 // ==================== AI 配额校验 ====================
 
 /**
+ * 北京时间当日日期键（P1-10 修复：配额日界从 UTC 0 点改为北京时间 0 点，
+ * 原来用 toISOString().slice(0,10) 是 UTC 日期，北京时间早 8 点仍算"昨天"）
+ */
+function beijingToday() {
+  return new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
+}
+
+/**
  * 从数据库获取AI配额
  * @param {string} userId - 用户ID
- * @returns {object} - { dailyUsed, dailyLimit, level }
+ * @returns {object} - { dailyUsed, dailyLimit, remaining, level }
  */
 function getAIQuotaFromDB(userId) {
   const db = getDB();
   if (!db) {
-    return { dailyUsed: 0, dailyLimit: 999, level: 'unknown', source: 'fallback' };
+    return { dailyUsed: 0, dailyLimit: 999, remaining: 999, level: 'unknown', source: 'fallback' };
   }
 
   try {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = beijingToday();
 
     // 获取会员等级
     const membership = getMembershipFromDB(userId);
@@ -251,17 +259,46 @@ function getAIQuotaFromDB(userId) {
     ).get(userId, today);
 
     const dailyUsed = usage ? usage.used_count : 0;
+    // P2-16 修复：统一返回 remaining（-1 表示无限），与 consume 接口口径一致
+    const remaining = dailyLimit === Infinity ? -1 : Math.max(0, dailyLimit - dailyUsed);
 
     return {
       dailyUsed,
       dailyLimit,
+      remaining,
       level,
       source: 'database',
     };
   } catch (e) {
     console.error('[middleware/auth] 获取AI配额失败:', e.message);
-    return { dailyUsed: 0, dailyLimit: 3, level: 'basic', source: 'error_fallback' };
+    return { dailyUsed: 0, dailyLimit: 3, remaining: 3, level: 'basic', source: 'error_fallback' };
   }
+}
+
+/**
+ * 匿名（无登录态）AI配额：按 IP 计（P0-3 修复的过渡通道）
+ * 旧版 APK 的 /api/ai/chat 不携带 Authorization 头，硬性 401 会让全体旧版用户 AI 立即不可用，
+ * 故匿名请求按 IP 限额（默认 50 次/日，AI_ANON_DAILY_LIMIT 可调，置 0 = 硬性拒绝未登录调用）。
+ */
+function getAnonAIQuota(ip) {
+  const quota = getAIQuotaFromDB('anon:' + ip);
+  const anonLimit = parseAnonLimit();
+  return {
+    dailyUsed: quota.dailyUsed,
+    dailyLimit: anonLimit,
+    remaining: anonLimit === 0 ? 0 : Math.max(0, anonLimit - quota.dailyUsed),
+    level: 'anonymous',
+    source: 'anon-ip',
+  };
+}
+
+function parseAnonLimit() {
+  const n = parseInt(process.env.AI_ANON_DAILY_LIMIT, 10);
+  return Number.isFinite(n) && n >= 0 ? n : 50;
+}
+
+function consumeAnonAIQuota(ip) {
+  return consumeAIQuotaInDB('anon:' + ip);
 }
 
 /**
@@ -303,7 +340,7 @@ function consumeAIQuotaInDB(userId) {
   if (!db) return { success: false };
 
   try {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = beijingToday();
 
     db.prepare(`
       INSERT INTO ai_quota_usage (user_id, usage_date, used_count)
@@ -330,6 +367,9 @@ module.exports = {
   getMembershipFromDB,
   getAIQuotaFromDB,
   consumeAIQuotaInDB,
+  getAnonAIQuota,
+  consumeAnonAIQuota,
+  beijingToday,
   verifyToken,
   MEMBER_LEVELS,
   AI_DAILY_LIMITS,

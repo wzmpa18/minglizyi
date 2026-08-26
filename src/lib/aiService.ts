@@ -3,8 +3,11 @@
  * 所有 AI 调用通过本地 /api/ai/chat 服务端代理转发
  * 前端代码零密钥、零第三方 API 地址暴露
  * 双层缓存机制（localStorage + 服务端文件）+ 降级机制保持不变
+ * v25.0.60 AUDIT-20260826：携带登录 Token（服务端已强制鉴权+配额）+ quarterly 档位
  */
 "use client";
+
+import { getUserToken } from "./auth";
 
 // ==================== 类型定义 ====================
 export interface AIRequest {
@@ -86,10 +89,15 @@ export async function callAI(request: AIRequest): Promise<AIResponse> {
   }
 
   // 2. 调用本地服务端代理（服务端持有密钥，安全转发到第三方 AI）
+  //    v25.0.60 P0-3：服务端已强制鉴权+配额，登录用户携带 Bearer Token 按会员档位计额
   try {
+    const token = typeof window !== "undefined" ? getUserToken() : null;
     const res = await fetch("/api/ai/chat", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify({ systemPrompt, userPrompt, cacheKey: key, forceRefresh }),
     });
 
@@ -121,6 +129,9 @@ export async function callAI(request: AIRequest): Promise<AIResponse> {
       msg = "该功能已由平台暂时关闭，请稍后再试。";
     } else if (_code === "AI_MAINTENANCE" || _code === "FEATURE_MAINTENANCE") {
       msg = "该功能正在维护中，请稍后再试。";
+    } else if (_code === "AI_QUOTA_EXCEEDED") {
+      // v25.0.60：服务端配额强制后，透出真实配额提示（服务端 error 已含次数信息）
+      msg = error.message || "今日AI调用次数已用完，明日重置或升级会员。";
     } else if (_code === "AI_SERVICE_UNAVAILABLE") {
       msg = "AI通道临时故障，已为您保留经典解读内容，请稍后重试。";
     }
@@ -143,13 +154,15 @@ export interface AIQuotaStatus {
   dailyUsed: number;
   dailyLimit: number;
   remaining: number;
-  level: "basic" | "monthly" | "yearly" | "lifetime";
+  level: "basic" | "monthly" | "quarterly" | "yearly" | "lifetime";
   canUse: boolean;
   needPayment: boolean;
   message: string;
 }
 
 // 付费套餐配置（号码/车牌等专项工具）
+// v25.0.60 P2-11 修复：AI 时卡统一冠「AI」前缀，与平台会员（月度/季度/年度会员）明确区分，
+// 消除"月卡39.9 > 会员月费37"同键名 monthly 双口径混淆
 export interface PaidPlan {
   key: string;
   name: string;
@@ -159,11 +172,11 @@ export interface PaidPlan {
 }
 
 export const AI_PAID_PLANS: PaidPlan[] = [
-  { key: "single", name: "单次解读", price: 2.9, duration: "1次", desc: "单次AI深度解读" },
-  { key: "daily", name: "日卡", price: 9.9, duration: "24小时", desc: "当日无限次解读" },
-  { key: "monthly", name: "月卡", price: 39.9, duration: "30天", desc: "全工具月度畅享" },
-  { key: "quarterly", name: "季卡", price: 99.9, duration: "90天", desc: "季度无限解读" },
-  { key: "yearly", name: "年卡", price: 199, duration: "365天", desc: "全年无限解读" },
+  { key: "single", name: "AI单次解读", price: 2.9, duration: "1次", desc: "单次AI深度解读（非会员）" },
+  { key: "daily", name: "AI日卡", price: 9.9, duration: "24小时", desc: "当日AI解读不限次" },
+  { key: "monthly", name: "AI月卡", price: 39.9, duration: "30天", desc: "30天AI解读畅享（与会员权益独立）" },
+  { key: "quarterly", name: "AI季卡", price: 99.9, duration: "90天", desc: "季度AI解读畅享（与会员权益独立）" },
+  { key: "yearly", name: "AI年卡", price: 199, duration: "365天", desc: "全年AI解读畅享（与会员权益独立）" },
 ];
 
 // 检查用户AI配额
@@ -174,13 +187,17 @@ export function checkAIQuota(): AIQuotaStatus {
 
   try {
     // 获取会员状态
+    // v25.0.60 P0-4 修复：补 quarterly 档（原缺失导致季度会员 AI 权益归零）；
+    // premium 为后端对旧 APK 的统一映射档，按付费档处理
     const membershipRaw = localStorage.getItem("yandao_membership_status");
-    let level: "basic" | "monthly" | "yearly" | "lifetime" = "basic";
+    let level: "basic" | "monthly" | "quarterly" | "yearly" | "lifetime" = "basic";
     if (membershipRaw) {
       const ms = JSON.parse(membershipRaw);
-      if (ms.level === "lifetime") level = "lifetime";
-      else if (ms.level === "yearly" && ms.expireTime && new Date(ms.expireTime) > new Date()) level = "yearly";
-      else if (ms.level === "monthly" && ms.expireTime && new Date(ms.expireTime) > new Date()) level = "monthly";
+      const raw = ms.level === "premium" ? "monthly" : ms.level;
+      if (raw === "lifetime") level = "lifetime";
+      else if (raw === "yearly" || raw === "quarterly" || raw === "monthly") {
+        if (!ms.expireTime || new Date(ms.expireTime) > new Date()) level = raw;
+      }
     }
 
     // 检查付费套餐
@@ -197,6 +214,7 @@ export function checkAIQuota(): AIQuotaStatus {
     const limits: Record<string, number> = {
       basic: 0,
       monthly: 50,
+      quarterly: 50,
       yearly: Infinity,
       lifetime: Infinity,
     };
@@ -222,8 +240,8 @@ export function checkAIQuota(): AIQuotaStatus {
     if (level === "lifetime" || level === "yearly") {
       message = "会员特权：无限AI解读";
     } else if (hasPaidPlan) {
-      message = "付费套餐有效中：无限解读";
-    } else if (level === "monthly") {
+      message = "AI时卡有效中：无限解读";
+    } else if (level === "monthly" || level === "quarterly") {
       message = `今日剩余${remaining}次AI解读机会`;
     } else if (!canUse) {
       message = "AI解读需单次付费或开通会员后使用";
@@ -329,13 +347,14 @@ export function getUserPermissionLevel(): PermissionLevel {
     const token = localStorage.getItem("yandao_user_token");
     if (!token) return "visitor";
 
-    // 检查会员状态
+    // 检查会员状态（v25.0.60 P0-4：补 quarterly/premium 档，原缺失导致季度会员被降级为免费用户）
     const membershipRaw = localStorage.getItem("yandao_membership_status");
     if (membershipRaw) {
       const ms = JSON.parse(membershipRaw);
       if (ms.level === "lifetime") return "member";
-      if (ms.level === "yearly" && ms.expireTime && new Date(ms.expireTime) > new Date()) return "member";
-      if (ms.level === "monthly" && ms.expireTime && new Date(ms.expireTime) > new Date()) return "member";
+      if (ms.level === "yearly" || ms.level === "quarterly" || ms.level === "monthly" || ms.level === "premium") {
+        if (!ms.expireTime || new Date(ms.expireTime) > new Date()) return "member";
+      }
     }
 
     // 检查付费套餐

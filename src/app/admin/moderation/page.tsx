@@ -3,6 +3,7 @@
 // ============================================================================
 // 言道国学 - 社交/内容审核后台（FINAL-SEAL-03 第十七章）
 //   · 用户管理：搜索 / 封禁 / 解封 / 禁言（含时长与原因）
+//   · 会员调整：改档位/补发/撤销（v25.0.60 P1-9，改单不再依赖 SQL 直改库）
 //   · 动态管理：状态筛选 / 下架 / 恢复
 //   · 举报处理：待处理列表 / 处理 / 驳回
 //   · 群管理：群列表 / 关闭违规群 / 重开
@@ -10,11 +11,12 @@
 // ============================================================================
 
 import { useCallback, useEffect, useState } from "react";
-import { Users, FileText, Flag, UsersRound, RefreshCw, Ban, CheckCircle2, VolumeX, Unlock } from "lucide-react";
+import { Users, FileText, Flag, UsersRound, RefreshCw, Ban, CheckCircle2, VolumeX, Unlock, Crown } from "lucide-react";
 import { THEME, styles, AdminCard, Badge, LoadingSpinner, useMounted, useToast } from "../_shared";
 import {
   fetchModerationUsers,
   userAction,
+  userMembershipAction,
   fetchModerationPosts,
   postAction,
   fetchModerationReports,
@@ -71,6 +73,12 @@ export default function AdminModerationPage() {
   const [actionReason, setActionReason] = useState("");
   const [actionHours, setActionHours] = useState(24);
   const [busy, setBusy] = useState(false);
+
+  // v25.0.60 P1-9：会员调整弹窗
+  const [memberTarget, setMemberTarget] = useState<{ userId: number; nickname: string; current: string } | null>(null);
+  const [memberLevel, setMemberLevel] = useState("monthly");
+  const [memberDays, setMemberDays] = useState("");
+  const [memberReason, setMemberReason] = useState("");
 
   const loadUsers = useCallback(
     async (pageToLoad?: number, sizeToLoad?: number) => {
@@ -159,6 +167,32 @@ export default function AdminModerationPage() {
       reloadCurrent();
     } else {
       show(r.error || "操作失败", "error");
+    }
+  };
+
+  const submitMemberAction = async () => {
+    if (!memberTarget) return;
+    if (memberReason.trim().length < 2) {
+      show("必须填写调整原因（写入审计）", "error");
+      return;
+    }
+    setBusy(true);
+    const days = memberDays.trim() ? parseInt(memberDays, 10) : undefined;
+    if (memberDays.trim() && (!Number.isFinite(days) || !days || days <= 0)) {
+      show("自定义天数需为正整数", "error");
+      setBusy(false);
+      return;
+    }
+    const r = await userMembershipAction(memberTarget.userId, memberLevel, memberReason.trim(), days);
+    setBusy(false);
+    if (r.ok) {
+      show("会员调整成功（已记录审计）");
+      setMemberTarget(null);
+      setMemberDays("");
+      setMemberReason("");
+      loadUsers();
+    } else {
+      show(r.error || "调整失败", "error");
     }
   };
 
@@ -265,6 +299,20 @@ export default function AdminModerationPage() {
                     <Td style={{ fontSize: 11 }}>{fmtTime(u.last_login_at)}</Td>
                     <Td>
                       <div style={{ display: "flex", gap: 6 }}>
+                        <OpBtn
+                          label="会员"
+                          icon={<Crown size={11} />}
+                          onClick={() => {
+                            setMemberTarget({
+                              userId: u.user_id,
+                              nickname: u.nickname || String(u.user_id),
+                              current: u.member_level || "basic",
+                            });
+                            setMemberLevel(u.member_level && u.member_level !== "basic" ? u.member_level : "monthly");
+                            setMemberDays("");
+                            setMemberReason("");
+                          }}
+                        />
                         <OpBtn
                           label="禁言"
                           icon={<VolumeX size={11} />}
@@ -625,6 +673,84 @@ export default function AdminModerationPage() {
               </button>
               <button onClick={submitAction} disabled={busy} style={styles.btnPrimary}>
                 {busy ? "处理中..." : "确认执行"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== v25.0.60 P1-9：会员调整弹窗（写审计） ===== */}
+      {memberTarget && (
+        <div
+          onClick={() => setMemberTarget(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 10000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "rgba(0,0,0,0.45)",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ backgroundColor: "#fff", borderRadius: 12, padding: 20, width: 400, maxWidth: "92vw" }}
+          >
+            <h3 style={{ margin: "0 0 4px", fontSize: 15, fontWeight: 700, color: THEME.textMain }}>
+              <Crown size={14} style={{ verticalAlign: -2, marginRight: 4, color: "#d98324" }} />
+              会员调整 · {memberTarget.nickname}({memberTarget.userId})
+            </h3>
+            <div style={{ fontSize: 12, color: THEME.textSub, marginBottom: 12 }}>
+              当前档位：
+              <b>
+                {{ basic: "普通", monthly: "月度", quarterly: "季度", yearly: "年度", lifetime: "终身", premium: "高级(旧映射)" }[memberTarget.current] || memberTarget.current}
+              </b>
+            </div>
+
+            <label style={styles.label}>调整为</label>
+            <select value={memberLevel} onChange={(e) => setMemberLevel(e.target.value)} style={{ ...styles.input, marginBottom: 12 }}>
+              <option value="monthly">月度会员（30天）</option>
+              <option value="quarterly">季度会员（90天）</option>
+              <option value="yearly">年度会员（365天）</option>
+              <option value="lifetime">终身会员（永久）</option>
+              <option value="basic">撤销会员（降为普通）</option>
+            </select>
+
+            {memberLevel !== "basic" && memberLevel !== "lifetime" && (
+              <>
+                <label style={styles.label}>自定义天数（留空 = 按档位标准；有效期内操作将顺延）</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={3650}
+                  value={memberDays}
+                  onChange={(e) => setMemberDays(e.target.value)}
+                  placeholder="如补发 15 天填 15"
+                  style={{ ...styles.input, marginBottom: 12 }}
+                />
+              </>
+            )}
+
+            <label style={styles.label}>调整原因（必填，写入审计日志）</label>
+            <textarea
+              value={memberReason}
+              onChange={(e) => setMemberReason(e.target.value)}
+              rows={3}
+              placeholder="例如：用户充值错误，按客服工单改为月度会员"
+              style={{ ...styles.input, resize: "none" }}
+            />
+
+            <div style={{ fontSize: 11, color: THEME.textSub, marginTop: 8, lineHeight: 1.6 }}>
+              到期时间按北京时间当日 23:59:59 计；用户端下次进入「我的」页自动同步。
+            </div>
+
+            <div style={{ display: "flex", gap: 10, marginTop: 14, justifyContent: "flex-end" }}>
+              <button onClick={() => setMemberTarget(null)} style={styles.btnSecondary}>
+                取消
+              </button>
+              <button onClick={submitMemberAction} disabled={busy} style={styles.btnPrimary}>
+                {busy ? "处理中..." : "确认调整"}
               </button>
             </div>
           </div>

@@ -41,6 +41,7 @@ const DEFAULT_AI_TOOLS: AIToolConfig[] = [
 const DEFAULT_AI_QUOTAS: AIConfig["quotas"] = {
   basic: { daily: 3, monthly: 50 },
   monthly: { daily: 50, monthly: 500 },
+  quarterly: { daily: 50, monthly: 500 }, // v25.0.60 P1-7：补季度档（原缺失）
   yearly: { daily: -1, monthly: -1 },
   lifetime: { daily: -1, monthly: -1 },
 };

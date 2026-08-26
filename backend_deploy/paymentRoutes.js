@@ -266,20 +266,37 @@ function getOrdersDb() {
     db.pragma('journal_mode = WAL');
     db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_user_orders_order_no ON user_orders(order_no)');
     // v25.0.47_8: 权益交付持久化标记（0/1），重启后由 query 接口补交付
-    try {
-      const cols = db.prepare('PRAGMA table_info(user_orders)').all().map(c => c.name);
-      if (!cols.includes('benefit_delivered')) {
-        db.exec('ALTER TABLE user_orders ADD COLUMN benefit_delivered INTEGER DEFAULT 0');
-        console.log('[payment] user_orders 已添加 benefit_delivered 字段');
-      }
-      // v25.0.47_21: 微信交易号持久化（后台订单明细展示"是谁通过哪笔交易支付"）
-      if (!cols.includes('transaction_id')) {
-        db.exec('ALTER TABLE user_orders ADD COLUMN transaction_id TEXT');
-        console.log('[payment] user_orders 已添加 transaction_id 字段');
-      }
-    } catch (e) {
-      console.error('[payment] benefit_delivered 迁移失败:', e.message);
+  try {
+    const cols = db.prepare('PRAGMA table_info(user_orders)').all().map(c => c.name);
+    if (!cols.includes('benefit_delivered')) {
+      db.exec('ALTER TABLE user_orders ADD COLUMN benefit_delivered INTEGER DEFAULT 0');
+      console.log('[payment] user_orders 已添加 benefit_delivered 字段');
     }
+    // v25.0.47_21: 微信交易号持久化（后台订单明细展示"是谁通过哪笔交易支付"）
+    if (!cols.includes('transaction_id')) {
+      db.exec('ALTER TABLE user_orders ADD COLUMN transaction_id TEXT');
+      console.log('[payment] user_orders 已添加 transaction_id 字段');
+    }
+  } catch (e) {
+    console.error('[payment] benefit_delivered 迁移失败:', e.message);
+  }
+  // v25.0.60 AUDIT-20260826 P1-5: 按次/时卡权益服务端持久化（新增表，零破坏）
+  // 此前 SINGLE_UNLOCK/AI 时卡权益只存前端 localStorage，换设备/重装即丢失
+  try {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS user_entitlements (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        entitlement_key TEXT NOT NULL,
+        expire_at TEXT,
+        source_order_no TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, entitlement_key)
+      )
+    `);
+  } catch (e) {
+    console.error('[payment] user_entitlements 建表失败:', e.message);
+  }
     _ordersDb = db;
     return db;
   } catch (e) {
@@ -336,14 +353,57 @@ function persistOrder(order) {
 // v25.0.47_8 订单权益交付：订单首次 PAID 后发放真实权益（服务端唯一事实源）
 // - MEMBERSHIP: 更新 users.member_level + membership_expiry（续费在现有有效期上顺延）
 // - POINTS_RECHARGE: user_assets.points_balance 入账 + points_transactions 流水
+// - v25.0.60 AUDIT-20260826 P1-5: SINGLE_UNLOCK/AI时卡权益写入 user_entitlements（服务端持久化）
 // - 幂等：benefit_delivered 持久化标记；失败留待 query 接口补交付
 // ============================================================================
 const MEMBERSHIP_LEVEL_DAYS = { monthly: 30, quarterly: 90, yearly: 365, lifetime: -1 };
+// AI 时卡 → 天数映射（与前端 AI_PAID_PLANS 一致）
+const AI_PLAN_DAYS = { single: 1, daily: 1, monthly: 30, quarterly: 90, yearly: 365 };
+
+// P1-10 修复：到期时间统一取「北京时间当日 23:59:59」。
+// 原实现直接 base+days 存 UTC ISO 串，北京时间晚 8 点后购买的会员比应得时长少 8 小时；
+// 存北京当日末尾的 ISO 串与前端 new Date(...).getTime() 解析完全兼容。
+function beijingEndOfDay(ms) {
+  const d = new Date(ms + 8 * 3600 * 1000);
+  d.setUTCHours(23, 59, 59, 999);
+  return d.toISOString();
+}
 
 function deliverOrderBenefits(order) {
   if (!order || order.benefitDelivered) return;
   if (order.type !== 'MEMBERSHIP' && order.type !== 'POINTS_RECHARGE') {
-    // 其他场景（SINGLE_UNLOCK/CONSULT_SERVICE）权益由前端解锁标记管理，仅记录交付完成防重复判断
+    // v25.0.60 P1-5：SINGLE_UNLOCK/AI时卡权益服务端入库（换设备/重装不再丢失）
+    // B 类工具单次解锁（无 ai_plan_ 前缀）expire_at = NULL 表示永久
+    try {
+      const Database = require('better-sqlite3');
+      const dbPath = process.env.DB_PATH || '/root/backend-auth/data/yandao_users.db';
+      if (require('fs').existsSync(dbPath)) {
+        const db = new Database(dbPath);
+        try {
+          const uid = parseInt(order.userId, 10);
+          const targetId = order.extra && order.extra.unlockTargetId;
+          if (!isNaN(uid) && targetId) {
+            let expireAt = null;
+            const m = /^ai_plan_(\w+)$/.exec(targetId);
+            if (m && AI_PLAN_DAYS[m[1]]) {
+              expireAt = beijingEndOfDay(Date.now() + AI_PLAN_DAYS[m[1]] * 86400000);
+            }
+            db.prepare(`INSERT INTO user_entitlements (user_id, entitlement_key, expire_at, source_order_no)
+                        VALUES (?, ?, ?, ?)
+                        ON CONFLICT(user_id, entitlement_key)
+                        DO UPDATE SET expire_at = CASE
+                          WHEN user_entitlements.expire_at IS NULL THEN NULL
+                          WHEN excluded.expire_at IS NULL THEN user_entitlements.expire_at
+                          ELSE excluded.expire_at END,
+                          source_order_no = excluded.source_order_no`)
+              .run(uid, targetId, expireAt, order.orderId);
+            console.log(`[payment] 单项权益已入库 orderId=${order.orderId} userId=${uid} key=${targetId} expire=${expireAt || '永久'}`);
+          }
+        } finally { db.close(); }
+      }
+    } catch (e) {
+      console.error(`[payment] 单项权益入库失败 orderId=${order.orderId}:`, e.message);
+    }
     order.benefitDelivered = true;
     persistOrder(order);
     return;
@@ -373,13 +433,15 @@ function deliverOrderBenefits(order) {
               if (cur > base) base = cur;
             }
           } catch (e) {}
-          expireTime = new Date(base + days * 86400000).toISOString();
+          expireTime = beijingEndOfDay(base + days * 86400000);
         }
         const info = db.prepare('UPDATE users SET member_level = ?, membership_expiry = ? WHERE user_id = ?')
           .run(level, expireTime, uid);
         if (info.changes === 0) throw new Error('用户不存在: ' + uid);
+        // P2-12 修复：同步写 user_assets.member_expire_at（字段一直存在但从未写入）
         try {
-          db.prepare('UPDATE user_assets SET member_level = ? WHERE user_id = ?').run(level, uid);
+          db.prepare('UPDATE user_assets SET member_level = ?, member_expire_at = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?')
+            .run(level, expireTime, uid);
         } catch (e) {}
         console.log(`[payment] 会员权益已交付 orderId=${order.orderId} userId=${order.userId} level=${level} expire=${expireTime || '永久'}`);
       } else if (order.type === 'POINTS_RECHARGE') {

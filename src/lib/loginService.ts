@@ -9,7 +9,6 @@
 
 import { setLoginState, clearLoginState, getLoginState, getClientUserId, type UserProfile } from './auth';
 import { saveTokenPair, clearAllTokens } from './authInterceptor';
-import { syncMembershipFromProfile } from './membershipStore';
 
 // v20.2: 后端 API 基础地址（ai-proxy-server.js）
 const API_BASE_URL = "https://yandaoguoxue.yandao.vip";
@@ -1153,6 +1152,62 @@ export async function updateProfileToServer(params: UpdateProfileParams): Promis
   } catch (err: any) {
     console.error('[PROFILE_UPDATE] 请求失败:', err);
     return { success: false, message: '网络异常，请稍后重试' };
+  }
+}
+
+// ============================================================================
+// v25.0.60 AUDIT-20260826 P1-5: 登录后从服务端恢复已购权益
+// 此前按次解锁/AI时卡权益只存 localStorage，换设备/重装即丢失；
+// 服务端现已在订单交付时写入 user_entitlements 表，此函数在资料刷新后
+// 将服务端权益同步回本地标记（本地已有更晚到期时间时不覆盖）。
+// ============================================================================
+
+const AI_PAID_KEY = "yandao_ai_paid";
+const SINGLE_UNLOCK_KEY = "yandao_single_unlocks";
+
+export async function restoreEntitlementsFromServer(): Promise<void> {
+  const state = getLoginState();
+  if (!state.isLoggedIn || !state.token) return;
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/auth/entitlements`, {
+      headers: { Authorization: `Bearer ${state.token}` },
+      credentials: 'include',
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const list = data?.data?.entitlements as
+      Array<{ key: string; expireAt: string | null; permanent: boolean }> | undefined;
+    if (!Array.isArray(list)) return;
+
+    for (const e of list) {
+      try {
+        const m = /^ai_plan_(\w+)$/.exec(e.key);
+        if (m) {
+          // AI 时卡：本地无有效套餐或服务端到期更晚时写入
+          const raw = localStorage.getItem(AI_PAID_KEY);
+          const local = raw ? JSON.parse(raw) : null;
+          const localMs = local?.expireTime ? new Date(local.expireTime).getTime() : 0;
+          const serverMs = e.expireAt ? new Date(e.expireAt).getTime() : Infinity;
+          if (serverMs > localMs) {
+            localStorage.setItem(AI_PAID_KEY, JSON.stringify({
+              plan: m[1],
+              startTime: new Date().toISOString(),
+              expireTime: e.expireAt,
+            }));
+          }
+        } else {
+          // 单次解锁内容：追加缺失的解锁标记（永久）
+          const raw = localStorage.getItem(SINGLE_UNLOCK_KEY);
+          const unlocks: string[] = raw ? JSON.parse(raw) : [];
+          if (!unlocks.includes(e.key)) {
+            unlocks.push(e.key);
+            localStorage.setItem(SINGLE_UNLOCK_KEY, JSON.stringify(unlocks));
+          }
+        }
+      } catch { /* 单条失败不影响其余恢复 */ }
+    }
+  } catch (err) {
+    console.error('[ENTITLEMENTS] 恢复失败:', err);
   }
 }
 

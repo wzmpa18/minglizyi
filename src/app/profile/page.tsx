@@ -815,7 +815,7 @@ export default function ProfilePage() {
   const [topTitle, setTopTitle] = useState<string>("");
   const [studyStreak, setStudyStreak] = useState(0);
 
-  // 页面加载时从后端同步最新资料
+  // 页面加载时从后端同步最新资料 + 恢复服务端已购权益（v25.0.60 P1-5）
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!loginState.isLoggedIn || !loginState.token) return;
@@ -823,7 +823,7 @@ export default function ProfilePage() {
     let cancelled = false;
     (async () => {
       try {
-        const { fetchProfileFromServer } = await import("@/lib/loginService");
+        const { fetchProfileFromServer, restoreEntitlementsFromServer } = await import("@/lib/loginService");
         const result = await fetchProfileFromServer();
         if (!cancelled && result.success && result.user) {
           setLoginStateLocal({
@@ -832,6 +832,8 @@ export default function ProfilePage() {
             profile: result.user,
           });
         }
+        // v25.0.60 P1-5：同步服务端权益（AI时卡/单次解锁），换设备/重装后自动恢复
+        await restoreEntitlementsFromServer();
       } catch (err) {
         console.error("[Profile] 从服务器获取资料失败:", err);
       }
@@ -840,7 +842,7 @@ export default function ProfilePage() {
     return () => { cancelled = true; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 加载 AI 额度与积分余额
+  // 加载 AI 额度与积分余额（v25.0.60 P0-2：改调真实 /api/ai/quota；登录态变化时重查）
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
@@ -860,7 +862,7 @@ export default function ProfilePage() {
       const stats = getFollowStats(uid);
       setFollowStats(stats);
     } catch { /* ignore */ }
-  }, []);
+  }, [loginState.isLoggedIn]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 加载学堂数据：最高专业头衔 + 连续学习天数（学习打卡日期连续计算）
   useEffect(() => {
@@ -1003,7 +1005,7 @@ export default function ProfilePage() {
               style={{ backgroundColor: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)" }}
             >
               <span className="text-[10px] text-white/80">AI 额度</span>
-              <span className="text-sm font-bold text-white">{aiRemaining !== null ? aiRemaining : "--"}</span>
+              <span className="text-sm font-bold text-white">{aiRemaining === -1 ? "无限" : aiRemaining !== null ? aiRemaining : "--"}</span>
             </button>
             <button
               onClick={() => router.push("/points")}
@@ -1114,7 +1116,7 @@ export default function ProfilePage() {
         <ZoneItem
           icon={Ic.ai}
           label="AI 额度"
-          right={<span className="text-xs text-gray-400">{aiRemaining !== null ? `剩余 ${aiRemaining} 次` : ""}</span>}
+          right={<span className="text-xs text-gray-400">{aiRemaining === -1 ? "会员特权 · 无限次" : aiRemaining !== null ? `剩余 ${aiRemaining} 次` : ""}</span>}
           onClick={() => router.push(loginState.isLoggedIn ? "/yixue/ai" : "/login")}
         />
         <ZoneItem

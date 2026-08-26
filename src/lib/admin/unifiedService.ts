@@ -292,6 +292,20 @@ export async function userAction(
   return { ok: !!res.success, error: res.error };
 }
 
+// v25.0.60 P1-9：后台会员调整/补发（改单不再依赖 SQL 直改库）
+export async function userMembershipAction(
+  userId: number,
+  level: string,
+  reason: string,
+  days?: number
+): Promise<{ ok: boolean; error?: string }> {
+  const res = await unifiedFetch(`/moderation/users/${userId}/membership`, {
+    method: "POST",
+    body: JSON.stringify({ level, reason, days }),
+  });
+  return { ok: !!res.success, error: res.error };
+}
+
 export async function fetchModerationPosts(
   status = "",
   page = 1

@@ -355,10 +355,26 @@ function createAdditionalTables(db) {
       payment_method TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       paid_at DATETIME,
+      benefit_delivered INTEGER DEFAULT 0,
+      transaction_id TEXT,
       FOREIGN KEY (user_id) REFERENCES users(user_id)
     );
     CREATE INDEX IF NOT EXISTS idx_orders_user ON user_orders(user_id);
     CREATE INDEX IF NOT EXISTS idx_orders_status ON user_orders(status);
+  `);
+
+  // v25.0.60 AUDIT-20260826 P1-5: 用户权益表（按次解锁/AI时卡，服务端持久化）
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS user_entitlements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      entitlement_key TEXT NOT NULL,
+      expire_at TEXT,
+      source_order_no TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, entitlement_key)
+    );
+    CREATE INDEX IF NOT EXISTS idx_entitlements_user ON user_entitlements(user_id);
   `);
 
   // P9-推广中心：积分流水表（服务端发放，明细可查）
@@ -1570,6 +1586,33 @@ function createRouter() {
     } catch (error) {
       console.error('[AUTH /profile] error:', error);
       return jsonResponse(res, 500, false, '获取资料失败');
+    }
+  });
+
+  // ------------------------------------------------------------------
+  // GET /api/auth/entitlements — 获取用户已购权益（v25.0.60 P1-5 修复配套）
+  // 返回按次解锁/AI时卡权益（user_entitlements 表），前端登录后调用以恢复
+  // 换设备/重装后丢失的 localStorage 权益标记。过期权益自动过滤。
+  // ------------------------------------------------------------------
+  router.get('/entitlements', authMiddleware, (req, res) => {
+    try {
+      const db = initDatabase();
+      const userId = parseInt(req.user.userId, 10);
+      const rows = db.prepare(
+        'SELECT entitlement_key, expire_at, source_order_no FROM user_entitlements WHERE user_id = ?'
+      ).all(userId);
+      const now = Date.now();
+      const active = rows.filter(r => !r.expire_at || new Date(r.expire_at).getTime() > now);
+      return jsonResponse(res, 200, true, '获取权益成功', {
+        entitlements: active.map(r => ({
+          key: r.entitlement_key,
+          expireAt: r.expire_at,
+          permanent: !r.expire_at,
+        })),
+      });
+    } catch (error) {
+      console.error('[AUTH /entitlements] error:', error);
+      return jsonResponse(res, 500, false, '获取权益失败');
     }
   });
 

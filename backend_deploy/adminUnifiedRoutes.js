@@ -309,6 +309,61 @@ router.get('/moderation/users', adminAuthUnified('SUPPORT_ADMIN', 'ops'), (req, 
   }
 });
 
+// v25.0.60 AUDIT-20260826 P1-9: 后台会员调整/补发接口（此前改单只能 SQL 直改库）
+// POST /moderation/users/:userId/membership  body: { level, days?, reason }
+// - level: basic|monthly|quarterly|yearly|lifetime（basic = 撤销会员）
+// - days: 可选自定义天数（不传按档位标准：月30/季90/年365/终身永久）
+// - 续费逻辑与支付交付一致：现有有效期未过则顺延
+// - 变更写 users + user_assets，并记录审计日志
+router.post('/moderation/users/:userId/membership', adminAuthUnified('ADMIN', 'ops'), (req, res) => {
+  try {
+    const udb = getUsersDb();
+    const userId = parseInt(req.params.userId, 10);
+    const { level, days, reason } = req.body || {};
+    const VALID = ['basic', 'monthly', 'quarterly', 'yearly', 'lifetime'];
+    const LEVEL_DAYS = { monthly: 30, quarterly: 90, yearly: 365, lifetime: -1 };
+    if (!userId || !VALID.includes(level)) {
+      return res.status(400).json({ success: false, error: '参数无效（level 需为 basic/monthly/quarterly/yearly/lifetime）' });
+    }
+    if (!reason || !String(reason).trim()) {
+      return res.status(400).json({ success: false, error: '必须填写调整原因（审计留痕）' });
+    }
+    const user = udb.prepare('SELECT user_id, nickname, member_level, membership_expiry FROM users WHERE user_id = ?').get(userId);
+    if (!user) return res.status(404).json({ success: false, error: '用户不存在' });
+    const oldValue = { member_level: user.member_level, membership_expiry: user.membership_expiry };
+
+    let expireTime = null;
+    if (level !== 'basic') {
+      const std = LEVEL_DAYS[level];
+      const d = Number.isFinite(parseInt(days, 10)) && parseInt(days, 10) > 0 ? parseInt(days, 10) : std;
+      if (d > 0) {
+        let base = Date.now();
+        if (user.membership_expiry) {
+          const cur = new Date(user.membership_expiry).getTime();
+          if (cur > base) base = cur;
+        }
+        // 北京时间当日 23:59:59 到期（与支付交付口径一致）
+        const bd = new Date(base + d * 86400000 + 8 * 3600 * 1000);
+        bd.setUTCHours(23, 59, 59, 999);
+        expireTime = bd.toISOString();
+      }
+    }
+    udb.prepare('UPDATE users SET member_level = ?, membership_expiry = ?, updated_at = ? WHERE user_id = ?')
+      .run(level, expireTime, new Date().toISOString(), userId);
+    try {
+      udb.prepare('UPDATE user_assets SET member_level = ?, member_expire_at = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?')
+        .run(level, expireTime, userId);
+    } catch (e) {}
+    const after = udb.prepare('SELECT member_level, membership_expiry FROM users WHERE user_id = ?').get(userId);
+    audit(req.admin, 'USER_MEMBERSHIP', `user:${userId}(${user.nickname || ''})`, oldValue, after, reason, req);
+    console.log(`[admin] 会员调整 userId=${userId} ${oldValue.member_level}→${level} expire=${expireTime || (level === 'basic' ? '已撤销' : '永久')} by=${req.admin.name}`);
+    res.json({ success: true, data: after });
+  } catch (e) {
+    console.error('[moderation/user/membership]', e.message);
+    res.status(500).json({ success: false, error: '会员调整失败' });
+  }
+});
+
 router.post('/moderation/users/:userId/action', adminAuthUnified('SUPPORT_ADMIN', 'ops'), (req, res) => {
   try {
     const udb = getUsersDb();

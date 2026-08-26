@@ -636,8 +636,8 @@ export default function EventDivinationPanel({
               ))}
 
               {/* 开通会员提示 */}
-              <div style={{ marginTop: "8px", padding: "8px", background: "#f0f7ff", borderRadius: "6px", fontSize: "11px", color: "#1976d2" }}>
-                💡 年度/终身会员可享受全部工具无限AI解读，更划算！
+              <div style={{ marginTop: "8px", padding: "8px", background: "#f0f7ff", borderRadius: "6px", fontSize: "11px", color: "#1976d2", lineHeight: 1.5 }}>
+                💡 AI时卡仅为本工具AI解读权益，与平台会员相互独立；月度及以上会员已含AI解读额度，无需重复购买。年度/终身会员无限畅享更划算！
               </div>
 
               <button
