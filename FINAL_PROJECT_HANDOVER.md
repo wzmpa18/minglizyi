@@ -1,175 +1,348 @@
-# 言道国学 · FINAL_PROJECT_HANDOVER 最终交接报告
+# 言道国学 · FINAL_PROJECT_HANDOVER（唯一交接文档）
 
-> 版本：v25.0.47_17 ｜ APK：25.0.49 (versionCode 2049) ｜ Git：f88b12a+（GitHub wzmpa18/minglizyi main）｜ 日期：2026-08-23
-> 本文档为唯一主交接文档。历史部署/验收报告已全部收纳于 `docs/reports/`（30 份原始报告 + 1 份整合完整版《20260822_全部报告整合_完整版.md》，全部集中在这一个文件夹），不再另行生成独立报告。
-
-## 一、项目概况
-
-1. **项目**：言道国学（易学+中医学习 App/Web，Next.js 静态导出 + Node 后端 + SQLite）
-2. **产品定位**：传统文化学习平台——易学排盘工具（八字/紫微/奇门/六爻/梅花/大六壬/择日/手机号/姓名/合婚/塔罗/星座）、中医学习与医考、AI 深度解读（付费）、社区群聊、推广分佣
-3. **当前版本**：v25.0.47_17（buildId v25.0.47_17_D20260823）；APK v25.0.49（versionCode 2049，内置 v25.0.47_17 资源）。版本线：RC-04~06 热修 → v25.0.47_9 支付解耦 → _10 运营管理中心封板 → _12 支付/定价/分佣/中医门控 → _13 商家转账/三级角色/抽屉导航 → _14 支付死键/邀请裂变 → _15 APK死链修复 → _16 升级提示体系+桌面导航+APK重建+工作区净化 → **_17 全端统一抽屉+会员入口+检查更新+典籍AI全量导入**
-4. **生产域名**：https://yandaoguoxue.yandao.vip（H5，微信内体验完整支付链路）
-5. **后台入口与登录方式**：https://yandaoguoxue.yandao.vip/admin/（**言道国学运营管理中心**，唯一正式入口）。**三级角色密钥体系（v25.0.47_13）**：主管理员密钥（SUPER_ADMIN，全系统唯一最高权限）存放于服务器 `/www/yandaoguoxue-backend/.env` 的 `ADMIN_API_KEY=` 一行（SSH 登录 root@82.156.228.87 后执行 `grep '^ADMIN_API_KEY=' /www/yandaoguoxue-backend/.env` 查看，妥善保管勿外泄）；财务/运营子密钥由超级管理员在后台「密钥管理」页签发（明文仅一次性展示，SHA256 哈希存储）。**主密钥可修改**：服务器 .env 改 ADMIN_API_KEY 值 → `pm2 restart yandaoguoxue-backend` 即生效（密钥管理页有指引）。后台菜单按登录角色动态渲染，导航为抽屉式（默认收起+左上角汉堡按钮唤出，内容区全宽不遮挡）；权限由服务端强制校验（越权 403+审计留痕）**
-
-## 二、目录与仓库
-
-| 位置 | 路径 |
-|---|---|
-| GitHub | https://github.com/wzmpa18/minglizyi（main = f88b12a） |
-| 本地主仓库 | C:\Users\ZhuanZ\Projects\minglizyi |
-| 服务器源码仓 | /root/yandaoguoxue-source |
-| 生产后端 | /www/yandaoguoxue-backend（PM2: yandaoguoxue-backend, 端口 3001） |
-| 生产前端 | /root/yandaoguoxue/current → releases/v25.0.47_17 |
-| 数据库 | /root/backend-auth/data/yandao_users.db（SQLite WAL, 18 表, 46 用户） |
-| 签名/证书 | Android keystore 与微信支付证书见 SECRET INVENTORY 一节 |
-
-## 三、技术栈与架构
-
-- **前端**：Next.js 静态导出（bash build.sh：临时移除 api 路由 → next build → out/），烧录 buildId 防更新死循环
-- **后端**：Node + Express 风格路由（server.js 统一挂载，register_routes.js 注册），better-sqlite3
-- **AI**：POST /api/ai/chat（双格式兼容：{systemPrompt,userPrompt} 与 {messages}）；上游混元 tokenhub（HUNYUAN_API_URL/HUNYUAN_API_KEY，RC-04 修复后全站正常）
-- **支付**：微信支付 V3 JSAPI（wechatPayV3.js，公钥模式）；下单 POST /api/payment/create → 微信回调 /api/payment/callback/wechat（验签+解密+幂等）→ 订单 PAID → **权益交付 deliverOrderBenefits**（v25.0.47_8 新增：MEMBERSHIP 开通会员 users.member_level/membership_expiry 续费顺延；POINTS_RECHARGE 积分入账 user_assets+points_transactions）；benefit_delivered 持久化 + query 接口补交付兜底
-- **会员/权益**：服务端 users 表为唯一事实源（middleware/auth.js getMembershipFromDB）；前端 membershipStore 仅展示缓存
-- **分佣**：commissionEngine 两级分佣（一级推荐人 15% + 二级推荐人 5%，按用户实付金额计算，COMMISSION/COMMISSION_L2 双记录独立幂等）；**月度结算模式**——佣金入账先冻结（FROZEN），每月最后 1 天统一结算转为可提现，每月 16 日-月末开放提现申请（后台分佣配置页可调）；订单 PAID 自动记账，退款冲正（全额全额扣回/部分按比例）
-- **提现（v25.0.47_13 全自动）**：wechatTransfer.js 微信商家转账 V3 对接——≤免审额度 200 元自动转账，超额度进财务人工审核；回调验签更新状态；单日单用户 2 万元限额；风控标记（新注册/短时多笔转人工）；全链路幂等；.env 开关 WITHDRAW_TRANSFER_ENABLED（当前 false，待商户权限开通）
-- **社区**：群聊/好友/动态（SQLite 持久化）
-- **资讯**：/api/news（已恢复，公网 200）
-- **中医板块门控（v25.0.47_12）**：工具矩阵新增 9 条中医条目（典籍/中药/方剂/经络/辨证/养生/伤寒/体质/医考），19 个中医页面接入 SectionGate 门控组件，后台「工具管理中心」可实时控制每个板块的开放/关闭/维护/会员专享（公网实测：改 OFF/会员专享后矩阵即时生效）
-
-## 三A、上次迭代（2026-08-23）完成的 v25.0.47_12（指令 FIX-V12-PAY-CONTENT）
-
-**五项任务全部完成并公网验证（三端 HEAD 一致 = bbb29ec）：**
-
-1. **P0 会员支付死键修复**：会员页错误提示可见化（按钮上方悬浮提示+「去登录」引导，原提示埋在页面中部导致用户以为按钮无响应）；季度档位补齐展示；支付走既有 Native 链路。公网实测：月度 37/季度 99/年度 374/终身 3600 四档下单全部成功返回微信付款二维码（NATIVE codeUrl）
-2. **全量定价对齐（后台 SSOT）**：publicPricingRoutes/paymentRoutes/server.js 三处默认值同源对齐；公网 /api/public/pricing 返回 basic 0 / monthly 37 / quarterly 99 / yearly 374 / lifetime 3600；B 类工具统一 9.9 元（会员超出免费额度同价，取消阶梯折扣）；批量解读 basePrice 200 元 + 会员折扣（月度 95 折 190 / 季度 85 折 170 / 年度 8 折 160 / 终身免费）；服务端下单强制裁决（公网实测前端篡改 0.01 元全部被覆盖：server=37/99/374/3600/9.9/200，日志留痕）
-3. **深度解析报告提质**：新增 src/lib/deepReportPrompt.ts 统一五段式提示词（核心总论/四维拆解/典籍依据/正向建议/总结收尾），按工具领域自动匹配典籍（康熙字典/说文解字/系辞传/三命通会/滴天髓/钦定协纪辨方书等），合规红线（无恐吓/无绝对化/无越界承诺）；24 款工具经 EventDivinationPanel 复用 + zeri/ziwei/astro/tarot 独立页接入。**首轮实测报告仅 561-631 字未达标，已二次强化提示词（分段字数下限 110/330/120/130/70 + 自查扩写指令，总目标 820 字）并重新构建发布（releases/v25.0.47_12 内容替换，buildId 不变）**；复测 3 份报告（姓名 714 字/手机号 769 字/合婚 863 字）全部落入 700-900 字区间、五段完整、典籍引用、四维度覆盖、无恐吓词
-4. **两级分佣 + 月度提现**：一级 15% + 二级 5%（COMMISSION_L2 独立幂等记录，禁自购自返/同人去重）；佣金入账先冻结，每月 30 号统一结算（settleDay），每月 15 号后开放提现（withdrawOpenDay），后台「推广分佣」页可调全部参数；前端收入页展示结算规则+窗口外禁用按钮；公网配置核验：ratios {level1:15, level2:5}, settleDay 30, withdrawOpenDay 15, monthlySettleEnabled true；提现总开关仍为 DISABLED（商家转账权限未开通，佣金正常累计，权限开通后后台一键启用）
-5. **中医板块知识开放程度控制**：工具矩阵新增 9 条中医条目（zhongyi_classic/herb/formula/meridian/bianzheng/yangsheng/shanghan/constitution/exam），新增 SectionGate 门控组件 + sectionGate.ts 判定层（矩阵缓存 2 分钟/断网放行），19 个中医页面（含 exam 六个子页/constitution 三个子页/yangsheng 三个子页）全部接入，中医主页入口卡片按矩阵动态渲染（关闭隐藏/维护置灰/会员加锁引导开通）。公网实测：后台改 OFF → 公网矩阵即时 OFF；改会员专享 → 即时 MEMBERSHIP+monthly；恢复后正常
-6. **P1 缺陷修复（回归中发现）**：后端 middleware/auth.js 的 MEMBER_LEVELS/AI_DAILY_LIMITS 缺少 quarterly 档位——季度会员支付 99 元后会被按 basic（等级 0/AI 配额 3 次/天）处理导致权益归零；已补齐（quarterly 等级 2 介于 monthly 与 yearly 之间，AI 配额 50 次/天与月度对齐），语法校验 + PM2 重启 + 公网 health 200 验证通过
-
-**部署记录**：本地构建（buildId v25.0.47_12_D20260823，版本脚本支持 _NN 后缀）→ scp 上传 → releases/v25.0.47_12 → current 切流 → nginx 缓存清理 → 公网回归全 200；后端 7 个文件（server/paymentRoutes/publicPricingRoutes/toolAdminRoutes/adminUnifiedRoutes/commissionEngine/commissionRoutes）备份后替换 + node --check + PM2 重启（health 200）；**二次迭代（bbb29ec）**：auth.js quarterly 修复单独部署（语法校验+PM2 重启+health 200）+ 提示词强化后重新构建前端替换 releases/v25.0.47_12 内容（新特征字符串「目标 820 字」「扩写第二」烧录验证 YES）+ 全页面公网 200
-
-**构建事故与修复**：首次构建失败——herb/meridian 两页面的 SectionGate import 被插到 "use client" 指令之前导致整文件降级为 Server Component；已修复（use client 移回首行）并复构建通过；顺带发现 publicPricingRoutes.js 默认套餐未随定价对齐（公网显示旧价 39/366），已修复部署并二次公网验证
-
-**存量功能回归核验（全通过）**：微信 Native 支付全场景 ✓（6 单实测 codeUrl）；工具矩阵/功能开关/订单中心/分佣配置/佣金明细/会员价格后台 API 全 200 ✓；AI 服务端强制拦截 ✓（关→403 FEATURE_DISABLED→恢复正常）；驾驶舱 overview 20 项指标正常且版本显示 v25.0.47_12 ✓；审计日志记录矩阵/开关操作 ✓；权益发放幂等/退款冲正/移动端手势为存量逻辑未改动，由上述回归覆盖
-
-## 三B、本次会话（2026-08-23）完成的 v25.0.47_13（指令 FIX-WITHDRAW-V13-FINAL）
-
-**全部完成并公网验证（四端 HEAD 一致 = 019ab43：本地=GitHub=服务器源码仓=生产运行目录）：**
-
-1. **微信商家转账 V3 全量对接**（backend_deploy/wechatTransfer.js）：POST /v3/transfer/batches 发起转账（复用现有商户号/APIv3 密钥/证书序列号/私钥，零新增核心密钥）；回调强制验签（AES-256-GCM 解密+平台证书验签，防伪造篡改）；主动查单查终态；签名头修复为规范 WECHATPAY2-SHA256-RSA2048
-2. **全自动提现引擎**（commissionEngine.js）：用户申请→校验余额/门槛 10 元/提现窗口/单日限额 2 万→≤免审额度 200 元自动转账→回调更新→成功扣余额/失败退回并记录原因；超额度进财务人工审核队列；风控标记（新注册/短时多笔转人工）；全链路幂等（同一提现单仅发起一次）；退款扣回（全额全额/部分按比例）
-3. **结算规则对齐**：每月最后 1 天自动结算（settleDay=0）→ 每月 16 日-月末开放提现（withdrawOpenDay=16，后端强制拦截窗口外申请）
-4. **新增 .env 配置**：WITHDRAW_TRANSFER_ENABLED（总开关，默认 false）/ WITHDRAW_FREE_PASS_AMOUNT=200（免审额度）/ WITHDRAW_MIN_AMOUNT=10（最低门槛）
-5. **后台三级角色权限体系**（backend_deploy/adminRoles.js 统一模块）：SUPER_ADMIN（全权限）/ FINANCE_ADMIN（提现审核·报表·导出；禁改价/改开关/管密钥/封用户/改分佣比例）/ OPERATOR_ADMIN（用户管理·内容·工具开关·营销；禁一切资金操作）；服务端中间件强校验（越权 403+写审计 AUDIT_BLOCK_ROLE/AUDIT_BLOCK_SCOPE）；子密钥 SHA256 哈希存储 data/admin_roles.json（明文仅签发时一次性展示）；密钥管理页 /admin/keys（签发/禁用子密钥+主密钥修改指引）
-6. **后台抽屉式导航**：固定侧边栏改为全端抽屉（默认收起+顶部汉堡唤出+遮罩，内容区全宽），解决内容遮挡；菜单按角色 scope 动态渲染
-7. **后台财务端补全**：提现批量审核（单笔/批量+驳回填原因）、同步微信转账终态、佣金统计报表（日/月/年+层级+退款扣回）、提现记录 CSV 导出（按日期/状态筛选）
-8. **审计修复**：/audit 接口读未定义 AUDIT_FILE 恒返回空 → 改用 adminRoles.listAudit；越权 403 同步写入审计日志
-9. **深度报告字数放宽**：700-1000 字（目标 850，条理清晰不啰嗦）；公网实测姓名 988 字/手机号 890 字，五段式 5/5 完整
-
-**公网验收（scripts/verify_v13_final.sh + verify_v13_final_fix.sh，28 项 PASS / 0 FAIL）**：页面健康 8 路径 200；版本 v25.0.47_13；定价 SSOT 37/99/374/3600；主密钥 whoami=SUPER_ADMIN；财务密钥财务域 200 + 越权 5 项全 403（密钥管理/运营接口/改分佣配置/改价 PATCH·PUT/改 AI 配置）；运营密钥运营域 200 + 越权财务 403 + 越权密钥 403；审计日志含 ADMIN_KEY_CREATE+AUDIT_BLOCK_*；临时密钥签发-验证-禁用闭环；未登录提现 401；withdrawEnabled=false/minWithdraw=10/settleDay=0/withdrawOpenDay=16；深度报告字数结构双达标。
-
-**提现启用三步**（待项目方商户平台开通「商家转账到零钱」权限后）：① .env 置 WITHDRAW_TRANSFER_ENABLED=true ② pm2 restart yandaoguoxue-backend ③ 后台「提现」页即可看到自动转账流（≤200 元免审自动打款，>200 元人工审核）。
-
-## 三C、本次会话（2026-08-23 晚）完成的 v25.0.47_17（指令 FIX-V17-DRAWER-MEMBER-UPDATE-CLASSICS）
-
-**全部完成并公网验证（四端 HEAD 一致 = f88b12a：本地=GitHub=服务器源码仓=生产运行目录）：**
-
-1. **后台全端统一抽屉导航**：删除 v16 的 isDesktop 桌面常驻侧栏方案（用户判定「没有抽屉式」且内容仍被挤压），全端统一抽屉覆盖式——侧边栏 fixed+translateX(-100%) 默认收起，汉堡按钮唤出，遮罩层全端显示，内容区全宽零避让；桌面/移动体验完全一致
-2. **商业中心会员购买跳转修复**：ZoneItem 组件新增 href 参数（原生 `<a>` 锚点，不依赖 JS），会员中心入口 href="/membership/" 直达；商业中心 Zone defaultOpen 默认展开
-3. **版本号动态化+系统中心「检查更新」**：页脚 IcpFooter 与关于弹窗改 fetch /version.json 动态读取（解决版本号永远显示 v25.0）；系统中心新增「检查更新」按钮（手动检测新版本，发现新版显示角标，点击刷新即升级；与 v16 AppUpgradeChecker 自动检测双保险）
-4. **中医典籍混元 AI 全量导入（177 章）**：服务器 tcm_gen 混元批量生成管道产出 12 部典籍（素问/灵枢/金匮/温病/难经/神农本草 6 部补全 102 章+新增濒湖脉学/药性赋/汤头歌诀/千金要方/医宗金鉴/中藏经 6 部 75 章，含原文+白话提要）；classicsExtra.ts 外挂模块+classics.ts buildMergedBooks() 自动合并（阅读/搜索/详情全走合并数据）；工程细节：书 ID 映射（jingui→jinkui/shennong→bencao）+章节序号自动接续防冲突
-5. **APK v25.0.49 重建（versionCode 2048→2049）**：内置 v25.0.47_17 资源（8 项关键代码入包全命中）；app-release-config.json 更新至 2049，存量 v25.0.48 用户启动即弹升级窗
-
-**公网验收（deploy_release_v25_0_47_17.sh 全流程）**：内容门禁 v13~v17 全过（含 isDesktop 零残留/会员 href 锚点/classicsExtra 非空等 12 项 v17 新增）；21 路径全 200；version.json 确认 v25.0.47_17；生产 chunks 典籍数据命中；注册页下载按钮三环境；支付三环境（web/wechat/ios）下单回归全 codeUrl；本地公网独立复验 version.json/app-version 接口（2049）/APK 直链 11.22MB/在线 chunk UTF-8 解码 7 部新增典籍全部命中。
-
-**运维提醒**：本机 SSH 连服务器须用 `ssh -i ~/.ssh/id_rsa_yandao -o BatchMode=yes root@82.156.228.87`（known_hosts 已于 2026-08-23 清理过时条目，仅保留 github.com/yandao.vip/82.156.228.87 正确记录）。
-
-## 四、上次会话（2026-08-22 晚）完成的 RC-06 支付真实化
-
-**根因（用户报告"会员点击无法跳转支付"）**：
-1. 前端会员页 handlePay 是模拟支付（createOrder + setTimeout 1.5s 假开通），从未调用真实支付接口
-2. 后端订单 PAID 后只发返佣，未交付会员/积分权益
-3. .env 中 WECHAT_APPID / WECHAT_APP_SECRET 为**空值** → isPaymentEnabled()=false → 下单返回"支付通道即将开放"
-
-**修复（只完善不删除，全部功能保留）**：
-- 前端 6 文件：membership/page.tsx（真实支付+登录校验+微信环境校验）；EventDivinationPanel（AI 套餐购买+单次解锁）；AIInterpretButton；InterpretationDrawer；zhongyi/wenzhen（单次解锁）；paymentService.ts 新增 paySingleUnlockAndWait 统一入口
-- 后端 paymentRoutes.js：deliverOrderBenefits 权益交付 + user_orders.benefit_delivered 列 + updateOrderRecord/query 双挂载
-- 部署：scripts/deploy_release_v25_0_47_8.sh（内容门禁→构建→烧录校验→入包校验→发布→切流→公网回归全 200）
-
-**验证**：线上 JS 已含新支付逻辑（2 chunk 命中）；模拟 PAID 订单补交付测试通过（会员开通→还原）；AI/健康/价格 SSOT 接口回归正常。
-
-## 五、真实性矩阵（指令第 33 章口径）
-
-| 项 | 状态 | 说明 |
-|---|---|---|
-| AUTH / USER_DATA | VERIFIED | JWT+设备指纹，users 表 46 用户 |
-| AI_GATEWAY / AI_PAYWALL | VERIFIED | RC-04 修复后公网双格式实测 200 |
-| YIXUE / LIUYAO / ZIWEI 算法 | VERIFIED（冻结区，禁止改动） | |
-| MEMBERSHIP / ENTITLEMENT | VERIFIED | 服务端 SSOT，v25.0.47_8 权益交付闭环 |
-| WECHAT_PAY | **NATIVE VERIFIED（v25.0.47_9）** | Native 扫码支付全场景可用：微信侧实测下单成功返回 code_url；公众号参数已解耦（APPID 已配置用于下单字段，AppSecret 无需配置）；JSAPI 保留待公众号参数补充后自动启用 |
-| COMMISSION_L1/L2 | VERIFIED | 两级分佣自动记账（一级15%+二级5%，月度结算每月最后1天/提现窗口16日-月末，v25.0.47_13 规则，公网配置核验通过） |
-| WITHDRAWAL | **READY（v25.0.47_13 接口对接完成）** | 商家转账 V3 全量对接+全自动提现引擎已上线；WITHDRAW_TRANSFER_ENABLED=false 待商户权限开通后置 true 即启用（见待办 2） |
-| ADMIN_CENTER | READY_FOR_OWNER_ACCEPTANCE | 统一后台 /admin 全功能+三级角色权限（v25.0.47_13）+抽屉导航，待项目方实操验收 |
-| ANDROID | VERIFIED | APK 可用（v25.0.47_6 包） |
-| IOS | IOS_SIGNING_BLOCKED_BY_PLA | Apple PLA 未接受（见待办 3） |
-| BACKUP / DEPLOYMENT / SOURCE_SYNC | VERIFIED | 每日 2 点 DB 备份；四端 HEAD 一致 019ab43（本地=GitHub=服务器源码仓=生产运行目录） |
-| SOCIAL / GROUP_CHAT / DISCOVERY_NEWS / MARKETING / SHARE / DOWNLOAD | VERIFIED | 公网 200 回归通过 |
-
-## 六、SECRET INVENTORY（只说位置，绝不写值）
-
-- 生产密钥：/www/yandaoguoxue-backend/.env（HUNYUAN/AI、ADMIN_API_KEY、微信商户五件套、JWT）
-- 微信支付证书：/www/yandaoguoxue-backend/certs/（apiclient_key.pem / wxpay_pub_key.pem，权限 600）
-- Android keystore：本地 D:\最新言道学习APP 内项目资料（见项目方归档）
-- 源码仓与 GitHub 已确认无任何真实密钥（RC-05 移除硬编码兜底；env.example 为模板）
-
-## 七、项目方待办（按优先级）
-
-1. ~~提供公众号 APPID~~ **已完成（v25.0.47_9）**：APPID wxedc4b3ff9f707969 已配置并与商户号绑定，Native 扫码支付全场景可用（0.01 元实测下单成功）。**可选增强**：若后续补充 WECHAT_APP_SECRET（AppSecret 仅网页授权用，扫码支付不需要），微信内环境自动升级 JSAPI 免扫码支付+微信一键登录，仅需填 .env 一行+重启，无需改代码
-2. **微信商家转账权限**（分佣提现打款用，v25.0.47_13 代码已全量对接）：微信商户平台申请开通「商家转账到零钱」→ 开通后告知开发者执行三步（.env 置 WITHDRAW_TRANSFER_ENABLED=true → pm2 restart → 0.01 元提现单联调）即全自动生效
-3. **iOS**：开发者账号接受 Apple PLA 后才能签名/TestFlight
-4. **后台实操验收**（指令第 23 章十项操作）
-
-## 八、发布与回滚
-
-- 发布：cd /root/yandaoguoxue-source && bash scripts/deploy_release_<版本>.sh（含门禁/构建/校验/公网回归）
-- 回滚：ln -sfn /root/yandaoguoxue/releases/<旧版本> /root/yandaoguoxue/current && nginx -s reload
-- 后端单独热修：改 /www/yandaoguoxue-backend 后必须回灌 /root/yandaoguoxue-source/backend_deploy/ 再 git 提交推送（历史教训：RC-04 曾只改运行目录）
-
-## 九、新开发接管步骤
-
-1. git clone https://github.com/wzmpa18/minglizyi && npm install
-2. 读本文档 + PROJECT_MASTER_LEDGER.md（总账）
-3. SSH root@82.156.228.87（密钥 C:\Users\ZhuanZ\.ssh\id_rsa_yandao）
-4. 改动流程：源码仓改 → 构建 → 部署脚本 → 公网验证 → git 推送（勿直改生产目录）
-5. 禁止事项：不动易学冻结算法、不删生产表、不把密钥写进仓库/报告、不做第二套后台
+> 本文档是全项目唯一交接文件（2026-08-26 FINAL-HANDOVER-STABILITY-SEAL 封板批次）。
+> 目标：一位全新的 AI/开发只读本文档即可独立接管项目。历史细节见仓库根 `PROJECT_MASTER_LEDGER.md` 与《01_项目总账_宪法.md》（项目方持有副本）。
+> 本文档只写密钥**位置**，绝不写密钥**值**（第五十一章红线）。
 
 ---
-*报告归档：docs/reports/（30 份原始报告 + 1 份整合完整版，全部在一个文件夹；旧版交接/旧总账已归档其中）｜ 总账：PROJECT_MASTER_LEDGER.md ｜ 干净源码包：/root/YANDAOGUOXUE_FINAL_CLEAN_SOURCE/*
 
-## 十一、v25.0.47_10 统一运营管理中心封板（FINAL-ADMIN-COMMERCIAL-SEAL-02，2026-08-23）
+## 1. 项目是什么
 
-**项目方无需开发即可完成的操作（全部在 /admin 后台）**：
-- 开关功能：系统功能开关页（17项 ON/OFF/MAINTENANCE，服务端强制——关闭的 API 直接403，不只前端隐藏；实测关ai→AI调用被拒，恢复即通）
-- 修改价格：产品与价格中心（会员套餐/AI单次/AI时卡/额度包/B类工具价，二次确认，只影响新订单；前端实时读服务端价格免发版）
-- 修改会员权益/AI额度：会员与权益页 + AI管理页（每日次数/额度/单次价）
-- 工具管理：14款工具（八字/紫微/奇门/六爻/梅花/大六壬/择日/姓名/手机号/合婚/塔罗/星座等）启用/维护/收费/会员要求/平台开关；后台只控开关收费权限额度平台，不触碰排盘算法
-- 订单/支付：订单中心（含真实0.01订单可查、权益交付状态、佣金状态、微信交易号、重启持久化已验证）；支付状态页（Native+JSAPI、商户配置、不回显任何密钥）
-- 分佣/提现：佣金配置（比例/冻结天数/最低提现）；提现总开关 WITHDRAW_TRANSFER=DISABLED（商家转账未开通，用户端显示「暂未开放」）
-- 用户/社交/资讯/营销：用户搜索封禁禁言、群管理举报处理、资讯增删改排序、海报模板文案渠道
-- 系统状态：版本/Git Commit/PM2/数据库/AI/支付/三色健康
+**言道国学**（yandaoguoxue）：传统文化命理学习平台。
+- **命理工具**：八字、紫微斗数、奇门遁甲、六爻、梅花易数、姓名解析（算法全部本地计算，前端完成）。
+- **AI 深度解读**：以上工具结果接入 AI 深度分析（服务端代理转发上游大模型）。
+- **中医/学习**：中医百科（中药/经络/伤寒/问诊/养生/体质）+ 学习院（academy 课程/考试/证书）。
+- **社交**：好友、私聊、群聊（群主/管理员/成员三级）、动态流、点赞、收藏、评论、通知、拉黑、举报、后台审核。
+- **商业化**：会员订阅（月/季/年/终身）、单项解锁、AI 时卡、积分充值；微信支付；两级分佣（15%+5%）+ 合伙人渠道体系。
+- **形态**：Next.js 静态导出 Web（nginx 托管）+ Capacitor Android APK + Node.js(Koa) 后端 API。
 
-**本版关键验证记录（全部公网实测）**：
-1. 驾驶舱 overview：20项指标 + gitCommit=f8866b6 + health 五项三色（全绿）
-2. 服务端强制：feature-flags PUT ai=OFF → POST /api/ai/chat 403 FEATURE_DISABLED；恢复 ON 即通（缓存即时失效修复）
-3. 订单持久化：pm2 restart 后订单与真实0.01订单（YD20260822220152847047，PAID/benefit_delivered=1）均保留
-4. 分佣真实链（COMMISSION_L1 VERIFIED）：A(910080)邀B(910081)→B订单PAID（价格SSOT生效：请求0.01被服务端纠正为产品价9.9/39）→A待解冻13.68元（1.98+11.70）→解冻日2026-08-29→后台订单佣金状态 FROZEN(佣金1170分·比例30%·推荐人910080)
-5. 提现开关：/api/commission/config withdrawEnabled=false；applyWithdrawal 一律拒绝「提现暂未开放」
-6. AI错误分级：AI_DISABLED/AI_MAINTENANCE/AI_SERVICE_UNAVAILABLE 结构化返回，前端分级提示
-7. 公网：13路径全200 + /api/public/pricing|feature-flags|tool-matrix 全可用 + Native下单返回codeUrl
+## 2. 当前正式版本
 
-**推广门禁状态（FINAL-ADMIN-COMMERCIAL-SEAL-02 第四十章）**：
-WECHAT_PAY=VERIFIED ｜ ORDER_PERSISTENCE=VERIFIED ｜ ENTITLEMENT=VERIFIED ｜ MEMBERSHIP_PURCHASE=VERIFIED ｜ AI_PAYWALL=VERIFIED ｜ AI_SERVICE=VERIFIED ｜ PRODUCT_PRICE_SSOT=VERIFIED（v12 公网实测篡改 0.01 全部被服务端覆盖：37/99/374/3600/9.9/200） ｜ FEATURE_CONTROL=VERIFIED（v12 复验 AI 关→403→开恢复） ｜ COMMISSION_L1/L2=VERIFIED（两级 15%+5%+月度结算 30 号+提现窗口 15 号，公网配置核验） ｜ TCM_SECTION_GATE=VERIFIED（v12 中医板块门控：后台改状态公网即时生效） ｜ DEEP_REPORT_QUALITY=VERIFIED（v12 三份报告 727-815 字/五段式/典籍引用/无恐吓词） ｜ SHARE_DOWNLOAD=VERIFIED ｜ OFFICIAL_DOWNLOAD=VERIFIED ｜ ANDROID=VERIFIED ｜ ADMIN_CONTROL_CENTER=**ADMIN_OWNER_ACCEPTANCE（待项目方本人登录后台验收，通过后置 VERIFIED）** ｜ WITHDRAW_TRANSFER=DISABLED（商家转账未开通；月度结算 30 号/提现窗口 15 号规则已上线，佣金正常累计） ｜ IOS_PAYMENT=DISABLED（iOS数字商品后续走StoreKit/IAP）
+| 组件 | 版本 |
+|------|------|
+| Web（生产 current） | **v25.0.61**（buildId `v25.0.61_D20260826`，builtAt 2026-08-26T15:53:03Z） |
+| 后端 API | package 1.1.0（PM2: yandaoguoxue-backend，online） |
+| Android APK | **v25.0.60 / versionCode 2059**（与 Web v25.0.60 同批次构建；Web 侧 61 仅后台展示增量） |
 
-**项目方 OWNER 验收路径（通过后即 ADMIN_CONTROL_CENTER=VERIFIED）**：
-后台 https://yandaoguoxue.yandao.vip/admin/ → 登录（ADMIN_API_KEY）→ 总览看20项指标 → 系统功能开关页关闭再打开一个非关键功能 → 产品与价格页改一个测试产品价再恢复 → AI管理页改一个额度 → 营销页关一个模板再恢复 → 订单中心查真实0.01订单（YD20260822220152847047）与分佣测试订单 → 用户管理搜910081 → 推广分佣页看待解冻13.68元 → 审计日志核对以上操作全部留痕。
+## 3. 当前 Commit
+
+- 生产运行代码：**`2defc78`**（v25.0.61：后台备份状态展示 + SOCIAL_BACKUP_GATE 红灯 + package.json BOM 修复）。
+- 本文档所在批次提交后，本地 / GitHub / 服务器源码仓 / 生产 四端 HEAD 必须一致（Git 四端一致原则，见总账第十五章）。接管后第一步：`git log --oneline -3` 四端核对。
+
+## 4. GitHub
+
+`https://github.com/wzmpa18/minglizyi`（branch `main`）。
+- 服务器直连 GitHub 不稳（拉取用 git bundle 中转，推送走本地）。
+- **可恢复性已实证**：服务器从 GitHub 全新 clone → npm install（552 包）→ next build 成功 → 静态导出 1790 文件。
+- CI：`gh workflow run android-build.yml --repo wzmpa18/minglizyi --ref main`（iOS 同理 ios-build.yml）。
+
+## 5. 生产服务器
+
+腾讯云 **82.156.228.87**（root 登录；SSH 密钥 `~/.ssh/id_rsa_yandao`，本地 Windows 已配）。宝塔面板管理。
+⚠️ 同机还承载「言道学外语」与公司官网——**清理服务器时绝对不能碰**。
+
+## 6. 域名
+
+| 域名 | 用途 |
+|------|------|
+| `yandaoguoxue.yandao.vip` | 国学站（Web + API + APK 下载唯一源） |
+| `www.yandao.vip` / `yandao.vip` | 公司官网；其 `/app-download/*` 与 `/latest.apk` 均 301 到国学站唯一源 |
+
+## 7. 源码目录
+
+- **服务器源码仓**：`/root/yandaoguoxue-source`（git，与 GitHub 同步）。
+- **本地开发仓**：`C:\Users\ZhuanZ\Projects\minglizyi`（Windows，pnpm）。
+- 关键子目录：`src/`（Next.js 前端）、`backend_deploy/`（后端全部 .js，部署时整体同步到 /www/yandaoguoxue-backend）、`android/` `ios/`（Capacitor 壳）、`scripts/`（含 ssh_exec.py、发布/验证脚本）、`backend_deploy/scripts/`（运维门禁脚本）。
+
+## 8. Web 生产目录
+
+`/root/yandaoguoxue/current` → 软链 `releases/v25.0.61`。
+`releases/` 现存：`v25.0.61`（生产）、`v25.0.60`、`v25.0.47_34`（历史回滚档）。**禁止删除 current 指向的目录**。
+
+## 9. Backend 目录
+
+`/www/yandaoguoxue-backend`（PM2 fork 模式，入口 `server.js`，配置 `ecosystem.config.js`，密钥在 `.env`）。
+常用：`pm2 ls` / `pm2 logs yandaoguoxue-backend` / `pm2 reload yandaoguoxue-backend`。
+
+## 10. Nginx 配置
+
+`/www/server/panel/vhost/nginx/yandaoguoxue.vip.conf`（宝塔 vhost）。
+关键指令：
+- `location /api/` → proxy 到 127.0.0.1:3001，**`proxy_read_timeout 180s`**（AI 长请求防 504，勿删）。
+- `location = /latest.apk` → `return 301 …/app-download/latest.apk`（防根路径假 APK）。
+- `location /app-download/` → `alias /var/www/yandao.vip/app-download/`（唯一 APK 真源）。
+- 访问日志：`/www/wwwlogs/yandaoguoxue.yandao.vip.log`（每日 00:00 轮转，昨日日志 `-20260827` 后缀）。
+
+## 11. 数据库（全部 SQLite）
+
+| 库 | 路径 | 说明 |
+|----|------|------|
+| 用户库（权威） | `/root/backend-auth/data/yandao_users.db` | 用户/订单/权益/分佣/邀请（73 用户） |
+| 社交库 | `/www/yandaoguoxue-backend/data/social.db` | 好友/私聊/群/动态/评论/举报 |
+| ⚠️ 0 字节残留 | `/root/backend-auth/data/social.db`、`…/academy.db` | 历史空壳文件，**不是**真库，勿误用 |
+
+## 12. 数据表作用
+
+**用户库（21 表）**：`users`（账号+`member_level`+`membership_expiry` 权威会员字段）、`user_assets`（积分/星级，`member_expire_at` 仅派生兼容非权威）、`user_orders`（订单+`extra` JSON 持久化交付键）、`user_entitlements`（单项解锁/AI 时卡权益，换设备恢复）、`user_records`（姓名解析等历史记录）、`ai_quota_usage`（AI 日额度）、`points_transactions`（积分流水）、`user_ratings`、`device_registry`（设备）、`commission_accounts`/`commission_records`/`withdrawals`（分佣三件套）、`partners`/`partner_order_log`/`partner_settlements`（合伙人）、`invite_audit`/`invite_rewards`/`invite_friend_tasks`/`user_invite_relation`（邀请裂变）、`operation_logs`（运营日志）。
+
+**社交库（15 表）**：`friendships`（好友边，无向对）、`friend_requests`、`friend_remarks`、`chat_messages`（私聊+群消息，`clientMsgId` 幂等）、`user_conversations`（会话未读）、`groups`（含 owner_id）、`follows`、`posts`（动态）、`comments`（扁平，无层级）、`likes`、`favorites`、`notifications`、`blacklists`、`reports`、`sensitive_logs`（敏感词）。
+
+## 13. Backup 路径
+
+`/root/backup/`（33 个文件）。
+- 每日 **02:00** cron：`/root/backend-auth/backup_db.sh` → 备份**用户库 + 社交库**双库，保留 30 天，`quick_check` 校验，写状态文件 `backend data/backup_status.json`。
+- 特殊快照：`yandao_users_pre_fix100011_*.db`、`social_db_precleanup_*.db`（操作前快照，勿删）。
+- **异地备份未配置**（OFFSITE_BACKUP = PARTIAL）：coscmd 已装但 `/root/.cos.conf` 缺失。方案见 §29。
+
+## 14. APK 唯一地址（DOWNLOAD SSOT，永久冻结）
+
+**`https://yandaoguoxue.yandao.vip/app-download/latest.apk`**
+- 公网实测：HTTP 200 / `application/vnd.android.package-archive` / 11,501,732 B（>5MB）。
+- 磁盘真实路径：`/var/www/yandao.vip/app-download/latest.apk`（目录内**仅此一个** APK 文件）。
+- **任何新版本发布 = 替换这一个文件**，前端公开页面永远不许再出现带版本号的 APK 文件名；版本号包只做服务器内部归档。
+- 防回归门禁：`backend_deploy/scripts/apk_url_single_source_gate.sh`（发布前必跑：扫全仓旧地址 + 包名/versionCode/versionName/MD5 校验，任一失败禁止发布）。
+
+## 15. Android 版本
+
+v25.0.60 / versionCode 2059 / 包名 `com.yandao.guoxue` / MD5 `e506971da1779ea7a044ad5330878fc4`（SHA256 前缀 `46a01207…`）。
+- 此版起前端 AI 调用携带 Bearer Token（`src/lib/aiService.ts`）。
+- `data/app-release-config.json`：`downloadUrl` 已指向唯一源；`forceUpdate: false`。
+- 旧版 APK（≤2058）不带 token：AI 调用已被 401 封口（见 §20），用户升级即恢复。
+
+## 16. iOS 状态
+
+**PARTIAL**：Codemagic 管道就绪，唯一缺口是账号持有人（ZHIMIN WU）在 developer.apple.com 接受 PLA 协议；接受后 `gh workflow run ios-build.yml` 即出签名 ipa。
+
+## 17. 后台 URL
+
+`https://yandaoguoxue.yandao.vip/admin`（唯一管理入口；抽屉式导航，桌面/手机均不遮内容）。
+核心页：dashboard 驾驶舱、moderation 审核、ai-control、commission 分佣、alerts、announcements、feature-flags、poster-config、share-config。
+
+## 18. 后台权限体系
+
+三级角色（`backend_deploy/adminRoles.js` 服务端强校验）：**SUPER_ADMIN > ADMIN > SUPPORT_ADMIN**（另含 finance/ops scope）。
+- 密钥存后端 `data/admin_roles.json`；`.env` 的 `ADMIN_API_KEY` 自动映射为 SUPER_ADMIN（向后兼容）。
+- 鉴权方式：`Authorization: Bearer <key>`（不是 X-Admin-Key）。
+- 全部操作写 `data/admin_audit.json` 审计（operator/oldValue/newValue/ip/ua）。
+
+## 19. 支付架构
+
+微信支付（`paymentRoutes.js`）：**Native 扫码 + JSAPI** 双通道（nativeReady=true）。
+- 下单 → 微信回调 → 状态 PAID → `deliverOrderBenefits()` 交付：
+  - MEMBERSHIP → 更新 `users.member_level` + `membership_expiry`（权威 SSOT）。
+  - SINGLE_UNLOCK / AI 时卡 → 写 `user_entitlements`（`entitlement_key`=unlockTargetId，`expire_at`=NULL 表示永久；`extra` 已 D18 持久化到 `user_orders.extra`，进程重启不丢）。
+  - POINTS_RECHARGE → 积分流水。
+- 历史事实：4 笔 PAID（2 MEMBERSHIP 均有效；2 SINGLE_UNLOCK 为测试账号订单，extra 在 D18 修复前丢失、权益未落库，真实用户 SINGLE_UNLOCK 订单 = 0）。
+
+## 20. AI 架构
+
+`server.js` 内 `/api/ai/chat` 服务端代理（上游 TokenHub，密钥仅存服务器 `.env`）：
+- **鉴权**：Bearer Token 必须；无 token 一律 **401 AI_AUTH_REQUIRED**（`AI_ANON_DAILY_LIMIT=0` 已硬关闭匿名通道——2026-08-26 封板，比原定 2026-10-31 日落提前）。
+- **配额**：basic 3 次/日，monthly/quarterly 50 次/日，yearly/lifetime 无限；`ai_quota_usage` 记账；失败不扣额。
+- **并发锁**：同一主体同时仅 1 个在途请求（429 AI_CONCURRENT_LIMIT），防并行双烧 token。
+- **上游**：`max_tokens 8192` + 空内容保护（返回明确错误、不扣额、记日志）；输入 >8000 字拒绝。
+- **超时**：nginx `proxy_read_timeout 180s`；健康监控 `data/ai-health.json`（P50/95/99、>60s/>120s、空内容、连续失败≥5 红灯）。
+- 匿名通道证据：8/26 全天真实匿名调用仅 1 次（旧 APK WebView UA），Dalvik 原生 UA 4 次被 UA 门控拦截——旧 APK 群体可忽略，关闭无实质影响。
+
+## 21. 会员 / 权益
+
+- **权威 SSOT：`users.membership_expiry` + `users.member_level`**（写入宪法）。`user_assets.member_expire_at` 只能派生/兼容，禁止当第二权威源（存量 NULL 无功能影响）。
+- 档位：basic（免费）/ monthly / quarterly(99元) / yearly / lifetime。
+- 权益恢复：`GET /api/auth/entitlements` 登录即恢复（换设备/重装不丢）。
+- 后台会员调整全流程 24/24 验收通过（每步双表 DB + AI 权限即时生效 + 审计日志一致）。
+
+## 22. 分佣 / 合伙人
+
+- 两级分佣：**一级 15% + 二级 5%，层级冻结禁止再增**。
+- 表：`commission_accounts`（账户）/ `commission_records`（明细）/ `withdrawals`（提现，需审核）。
+- 合伙人渠道 V2：`partners` / `partner_order_log` / `partner_settlements`。
+- 后台 `/admin/commission` 可视化配置；合规红线已内置（层级封顶）。
+- 裂变：邀请海报（`/share` 引擎）+ `user_invite_relation`（`invited_by` 归因）+ `invite_rewards`。
+
+## 23. 社交架构
+
+`backend_deploy/socialApiRoutes.js`（挂载 `/api/social`，`authRequired` 中间件鉴权）+ `social.db`。
+- 好友：申请/接受/拒绝/删除/备注；无重复边（无向对唯一）。
+- 私聊：`clientMsgId` 幂等（快速双击/断网重试不重复）、`afterId` 增量分页、未读数、进入清零。
+- 群聊：服务端生成 groupId；群主/管理员/成员三级权限矩阵（越权 403）；**群主退群自动转让最早成员 → 最后成员退群自动解散**（无主群不变量已验证）；禁言（到期自动恢复）。
+- 动态：发布/点赞 toggle 幂等/收藏/评论（扁平）/举报；XSS 转义已验。
+- 治理：拉黑强制 403、举报后台可处理、动态下架、封禁全链路拦截（D19：AI/社交/authMiddleware 三处拦截 banned/deleted）。
+- 验收口径：主测 83 项 + 复核 17 项 = **100 项有效检查全过**（finalseal_social_retest.js 存档）。
+- 测试账号：**YDAO_TEST_A=910077 / B=910078 / C=910079**（生产库专用测试号，破坏性测试只准用它们）。
+
+## 24. 学习 / 中医
+
+- 学习院（academy）：课程/考试/证书/资料，进度接口 `/api/academy/*`（需登录）；资料库 `docs/materials/`。
+- 中医：`/zhongyi/*` 全静态页群（herb/meridian/shanghan/wenzhen/yangsheng/profile/shop）+ AI 问诊内容。
+- 医考引擎（yikao）为**冻结算法核心**，禁止改动。
+
+## 25. 分享 / 营销
+
+- 分享结果页：`/share/result/`（注意带尾斜杠才 200；`/share/` 无索引页 403 属正常）。
+- 海报引擎：html2canvas 生成完整海报（背景/标题/卖点/二维码/邀请码），`/admin/poster-config` 配置。
+- 分享配置：`/admin/share-config`（`share_config.json`；downloadUrl 已收口唯一源）。
+- 邀请归因：注册链路带邀请码 → `users.invited_by` / `user_invite_relation`；每日 03:30 cron `reconcile_invite_friends.js` 对账。
+- 裂变海报营销化（AI 智能文案）v25.0.47_22 已上线。
+
+## 26. 当前功能矩阵（2026-08-26 封板口径，只允许事实）
+
+| 模块 | 状态 | 一句话依据 |
+|------|------|-----------|
+| AI | **VERIFIED** | 攻击测试 A–H 23 项全过 + 匿名通道硬关闭 + 并发锁 + 健康监控 |
+| MEMBERSHIP | **VERIFIED** | 调整全流程 24/24 + 审计全覆盖 + SSOT 明确 |
+| PAYMENT | **VERIFIED** | Native/JSAPI 双通道 + D18 extra 持久化 |
+| ENTITLEMENT | **VERIFIED** | user_entitlements + 换设备恢复（2 笔历史测试单 extra 失落已如实记录，真实用户缺口=0） |
+| COMMISSION | **VERIFIED** | 两级分佣 + 提现审核 + 合规红线 |
+| FRIEND | **VERIFIED** | S1 全过含并发/幂等边界 |
+| PRIVATE_CHAT | **VERIFIED** | clientMsgId 幂等/分页/未读全过 |
+| GROUP_CHAT | **VERIFIED** | 三角色 + 无主群不变量直接验证 |
+| GROUP_ADMIN | **VERIFIED** | 权限矩阵 + 越权 403 |
+| SOCIAL_FEED | **VERIFIED** | 文字链路全过（图片 API 支持未端到端验收） |
+| COMMENT | **PARTIAL** | 基础评论可用；层级回复+删除 NOT_IMPLEMENTED（无 UI 入口，保持隐藏） |
+| LIKE | **VERIFIED** | toggle 幂等净效果正确 |
+| FAVORITE | **VERIFIED** | 收藏/取消/列表/重登正确 |
+| NOTIFICATION | **VERIFIED** | 通知触达+未读+已读不回弹（含群主转让通知） |
+| BLOCK | **VERIFIED** | 服务端强制 403 + 解除恢复 |
+| REPORT | **VERIFIED** | 分类/幂等/后台可查（当前待处理 0） |
+| MODERATION | **VERIFIED** | 下架/禁言/封禁全链路 + audit 四处一致 |
+| SHARE | **PARTIAL** | 服务端链路 VERIFIED；真机 Share Sheet/微信/QQ/归因未验 |
+| DOWNLOAD | **VERIFIED** | 唯一源 200+MIME+MD5；301 收口；门禁脚本 |
+| ANDROID | **PARTIAL** | APK 三重验证（直链/二进制/版本）；真机全链路 DEVICE_UNAVAILABLE |
+| ADMIN | **VERIFIED** | /admin 唯一入口 + 三级角色 + 驾驶舱含备份状态 |
+| BACKUP | **VERIFIED**（本地） | 双库每日 02:00 + integrity_check + SOCIAL_BACKUP_GATE 红灯 + 恢复演练 ok |
+| SOURCE_SYNC | **VERIFIED** | 四端一致 + GitHub clone 构建实证 |
+
+## 27. 当前已知 PARTIAL
+
+1. **OFFSITE_BACKUP**：异地备份未配置（coscmd 装了但 `/root/.cos.conf` 缺失）→ 状态只能写 PARTIAL。方案：腾讯 COS 每日加密上传，保留 7 日每日 + 4 周周备；需项目方提供 COS 密钥后开通，**禁止假开通**。
+2. **ANDROID 真机**：开发环境无 Android 物理设备（DEVICE_UNAVAILABLE），真机下载→安装→登录→AI→社交全链路待项目方执行（服务端已三重验证 APK）。
+3. **SHARE 真机**：排盘→分享→Share Sheet→微信/QQ→接收→注册→归因，真机链路未验。
+4. **iOS**：PLA 未签。
+5. **COMMENT**：见 §26。
+6. **hy3 极限场景**：5000+ 字提示词可能推理耗尽 8192 token（已有明确报错不扣额）；根治靠流式改造或提示词瘦身，**禁止堆 max_tokens**。
+7. **`/api/sync` 404 噪音**：旧 APK 调用不存在的端点（8/26 32 次），无功能影响；新版已无此调用。
+
+## 28. 当前 NOT_IMPLEMENTED（如实，禁止为全绿临时新增）
+
+1. 评论层级回复（API 无 parentId）。
+2. 评论删除（无端点，作者/他人均不可删）。
+3. 社交频率保护（好友申请/消息/评论/动态/举报均无服务端 rate limit；建议后续补 IP/用户级限频）。
+4. 动态图片端到端验收（API 支持 posts.images ≤9 张，未做真实上传验收）。
+
+## 29. 当前风险（按优先级）
+
+1. **单机单盘**：全部数据在一台腾讯云；异地备份（§27.1）是第一优先级。
+2. **旧 APK 用户 AI 不可用**：≤2058 版不带 token 被 401；观测影响 1-2 台设备；升级 latest.apk 即恢复——**推广前应引导存量用户升级**。
+3. **无社交限频**：恶意刷屏/刷申请无服务端拦截。
+4. **服务器直连 GitHub 不稳**：发布依赖本地推送 + bundle 中转，流程勿改（见 §30）。
+5. PM2 累计重启 194 次（历史累计，unstable_restarts=0，当前稳定 30m+ 无 error）。
+
+## 30. 部署步骤（小步发布，每批一个主题）
+
+```bash
+# 0) 前置：修改前备份 + git commit + health 记录
+# 1) 本地构建（自动生成 version.json）
+cd C:\Users\ZhuanZ\Projects\minglizyi && pnpm build        # 产物 out/
+# 2) 门禁（任一 FAIL 禁止发布）
+bash backend_deploy/scripts/apk_url_single_source_gate.sh   # APK 唯一源扫描+校验
+# 3) 上传 out/ → 服务器新 release 目录，切换软链
+python scripts/ssh_exec.py run "mkdir -p /root/yandaoguoxue/releases/vX.Y.Z"
+#    （或 scp -r out/* 到新目录；保持上一版目录不动）
+python scripts/ssh_exec.py run "ln -sfn /root/yandaoguoxue/releases/vX.Y.Z /root/yandaoguoxue/current && nginx -s reload"
+# 4) 后端改动：同步 backend_deploy/*.js → /www/yandaoguoxue-backend/，然后
+python scripts/ssh_exec.py run "cd /www/yandaoguoxue-backend && pm2 reload yandaoguoxue-backend"
+# 5) 自动回归（26 项，全绿才算完成）
+python scripts/ssh_exec.py run "bash /tmp/handover_regression_sweep.sh"
+# 6) Git 四端：本地 push GitHub → 服务器 bundle 同步（GitHub 拉取受阻时）
+#    服务器: git bundle create /tmp/x.bundle main → scp 回本地 → git fetch bundle main:main → push origin
+```
+⚠️ **禁止一次改 30 个无关模块**；每批 = 一个主题（下载/备份/社交修复/AI 安全）；失败立即回滚（§31）。
+
+## 31. 回滚步骤（秒级）
+
+```bash
+# Web：切回上一版软链
+python scripts/ssh_exec.py run "ln -sfn /root/yandaoguoxue/releases/v25.0.60 /root/yandaoguoxue/current && nginx -s reload"
+# 后端：当日回滚件在 /www/yandaoguoxue-backend/bak_finalseal_20260826_*（发布批次时留 .bak，下次发版后清除）
+python scripts/ssh_exec.py run "cp /www/yandaoguoxue-backend/bak_xxx/server.js /www/yandaoguoxue-backend/ && pm2 reload yandaoguoxue-backend"
+```
+
+## 32. 备份恢复步骤（已演练验证）
+
+```bash
+# 1) 复制备份到临时目录（禁止覆盖生产！）
+python scripts/ssh_exec.py run "mkdir -p /tmp/yandao_restore_test && cp /root/backup/users_db_最新.db /tmp/yandao_restore_test/ && cp /root/backup/social_db_最新.db /tmp/yandao_restore_test/"
+# 2) 完整性 + 关键表可读
+sqlite3 /tmp/yandao_restore_test/xxx.db "PRAGMA integrity_check;"
+sqlite3 /tmp/yandao_restore_test/social.db "SELECT COUNT(*) FROM friendships; SELECT COUNT(*) FROM chat_messages;"
+# 3) 真恢复（需停写窗口）：cp 覆盖 → pm2 reload → 回归扫描
+```
+
+## 33. APK 发布步骤
+
+1. 本地 `pnpm build` + Capacitor 构建（或 `gh workflow run android-build.yml` 云打包）。
+2. **门禁全过才准发**（`apk_url_single_source_gate.sh`）：HTTP 200 / Content-Type=application/vnd.android.package-archive / >5MB / 包名=com.yandao.guoxue / versionCode=当前发布值 / MD5=发布文件。
+3. 替换**唯一文件** `/var/www/yandao.vip/app-download/latest.apk`（旧版本号包禁止再放此目录）。
+4. 更新 `data/app-release-config.json`（latestVersion/versionCode/notes）。
+5. 全仓扫描确认无旧 APK 文件名外泄（门禁脚本内置）。
+
+## 34. 必须保护的数据（丢失不可逆）
+
+- `/root/backend-auth/data/yandao_users.db`（73 真实用户 + 订单 + 权益 + 分佣账）。
+- `/www/yandaoguoxue-backend/data/social.db`（全部社交关系与聊天记录）。
+- `/root/backup/`（30 天备份 + pre_* 操作前快照）。
+- 证书（宝塔 SSL，yandaoguoxue.yandao.vip）。
+- `data/admin_audit.json`（后台审计，只增不删）。
+- 上游 `.env`（AI/微信/ADMIN_API_KEY 等，见 §38 位置）。
+
+## 35. 禁止修改的算法核心（冻结）
+
+- 紫微 / 八字 / 奇门 / 六爻 / 梅花 / 姓名算法核心（`src/lib/` 与页面内算法）。
+- 医考引擎（yikao）。
+- 邀请归因体系（invited_by 链路）。
+- 数据库表结构（只许加列加表，禁止改列删表）。
+- 分佣两级 15%+5%（层级不得再增加）。
+- APK 唯一下载源（§14）与 `proxy_read_timeout 180s`。
+
+## 36. 历史重大坑及根因（新开发必读）
+
+| 坑 | 根因 | 防复发 |
+|----|------|--------|
+| AI 504（用户 100011 事件） | nginx 默认 proxy_read_timeout 60s，AI 长请求被切断 | 180s 已固化 + ai-health 延迟监控 |
+| AI 空内容烧钱 | 上游偶发空 content，仍算成功扣额 | 空内容保护：明确报错+不扣额+记日志 |
+| 会员权益换设备丢失 | 权益只存前端 localStorage | 服务端 user_entitlements + 登录恢复接口 |
+| Koa 中间件 ctx 丢失 | koa-connect 包 Express 中间件致 ctx.state 丢 | 原生 Koa 中间件重写（禁止再包） |
+| 订单 extra 重启丢失 | extra 只存内存 | D18 持久化 user_orders.extra |
+| 旧 APK 死链 10 处 | 官网/海报/分享配置散指旧版本号包名 | APK_URL_SINGLE_SOURCE_GATE 门禁 |
+| social.db 零备份 | 原备份脚本只备用户库 | SOCIAL_BACKUP_GATE（文件+size+integrity+红灯） |
+| 服务器构建失败 | PowerShell 写 package.json 带 UTF-8 BOM，JSON.parse 崩 | 2defc78 已修；改 JSON 用无 BOM 编码 |
+| 匿名 AI 被白嫖 | /api/ai/chat 无鉴权 | 401 硬关闭（AI_ANON_DAILY_LIMIT=0）+ UA 不可信原则 |
+
+## 37. 下一位开发最先检查什么（接管 Day-1 清单）
+
+1. `pm2 ls`（backend online）+ 公网 `curl -s https://yandaoguoxue.yandao.vip/api/health`。
+2. Git 四端 HEAD：本地 `git log -1` vs `git ls-remote origin main` vs 服务器 `/root/yandaoguoxue-source` vs 总账记录。
+3. 驾驶舱 `/admin` → health 六灯（backend/db/ai/payment/server/**backup**）应全绿（backup 灯 = SOCIAL_BACKUP_GATE）。
+4. `cat /www/yandaoguoxue-backend/data/backup_status.json`（gateOk 必须为 true；>48h 红灯说明 cron 挂了）。
+5. APK 唯一源 200 + MD5 比对（§15）。
+6. 跑一遍 `handover_regression_sweep.sh`（26 项全绿基线）。
+7. 有任何写生产操作：先用 YDAO_TEST_A/B/C（910077/78/79），只准写带 TEST 标识的数据，测试后只清 TEST 数据、保留 audit log。
+
+## 38. SECRET INVENTORY（只说位置，绝不写值）
+
+| 密钥 | 位置 |
+|------|------|
+| ADMIN_API_KEY | 服务器 `/www/yandaoguoxue-backend/.env`（自动映射 SUPER_ADMIN） |
+| 后台子密钥 | `data/admin_roles.json` |
+| JWT_SECRET | 同 `.env` |
+| AI 上游 Key | 同 `.env`（AI_API_KEY/相关变量，仅服务器持有） |
+| 微信支付商户私钥/APIv3 | 同 `.env` + 宝塔证书目录（变量名见 `.env.example`） |
+| Apple P8 | GitHub Secrets（ios-build workflow，名为见 `.github/workflows/`） |
+| Android keystore | Codemagic/GitHub Secrets（B64 见项目方文档 `06_Codemagic_ANDROID_KEYSTORE_B64.txt`，勿入库） |
+| 数据库 | 无独立密码（SQLite 文件权限即边界，root only） |
+| SSH | 本地 `~/.ssh/id_rsa_yandao`（服务器 root） |
+| 仓库卫生 | `.env.example` 只允许变量名；secret 扫描历史已完成（36f2005） |
+
+---
+
+**封板声明**：本文档对应 FINAL-HANDOVER-STABILITY-SEAL-20260826 批次。生产已封板（回归 26/26 全绿、四端一致、双库备份门禁在线）。推广门禁仅剩 2 项真机验证（§27.2/27.3），由项目方执行后即可扩大推广。

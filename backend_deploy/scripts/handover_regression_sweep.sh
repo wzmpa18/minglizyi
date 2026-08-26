@@ -23,15 +23,17 @@ page "/friends/"
 page "/messages/"
 page "/groups/"
 page "/discover/"
-page "/share/"
+page "/share/result/"
 page "/download/"
 page "/admin/"
 page "/login/"
 
 echo ""
 echo "===== B. 关键API（鉴权接口401/403也算正常响应） ====="
-api "/api/auth/health"
-api "/api/ai/quota"
+api "/api/health"
+echo "-- 无token AI额度(应401, 鉴权生效):"
+code=$(curl -sk -o /dev/null -m 15 -w '%{http_code}' "$BASE/api/ai/quota")
+[ "$code" = "401" ] && ok "AI额度无token被拒401" || bad "AI额度无token" "HTTP=$code(应401)"
 api "/version.json"
 echo "-- 匿名AI(应401):"
 code=$(curl -sk -o /dev/null -m 15 -w '%{http_code}' -X POST "$BASE/api/ai/chat" -H 'Content-Type: application/json' -d '{"messages":[{"role":"user","content":"hi"}]}')
@@ -47,9 +49,9 @@ echo ""
 echo "===== C. 社交冒烟（测试账号JWT，只读接口） ====="
 TOKEN=$(cd $BE && node -e "require('dotenv').config({path:'.env'}); console.log(require('jsonwebtoken').sign({userId:910077,phone:'19800000099'}, process.env.JWT_SECRET, {expiresIn:'10m'}))")
 soc(){ local code=$(curl -sk -o /dev/null -m 15 -w '%{http_code}' -H "Authorization: Bearer $TOKEN" "$BASE/api/social$1"); [ "$code" = "200" ] && ok "社交$1" || bad "社交$1" "HTTP=$code"; }
-soc "/friends"
+soc "/friends/list"
 soc "/groups"
-soc "/feed"
+soc "/posts"
 soc "/notifications"
 soc "/conversations"
 
