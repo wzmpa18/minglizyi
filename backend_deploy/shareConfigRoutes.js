@@ -48,11 +48,11 @@ const DEFAULT_CONFIG = {
     },
     // 合规文案（底部自动附带）
     complianceText: "内容仅供传统文化学习参考，不构成任何决策建议。",
-    // 下载链接
+    // 下载链接（FINAL-SEAL D20：全站APK直链唯一分发源，与 app-release-config.json SSOT 一致）
     urls: {
-        android: "https://www.yandao.vip/app-download/guoxue-chuancheng-v1.0-release.apk",
-        downloadPage: "https://www.yandao.vip/download",
-        register: "https://www.yandao.vip/register"
+        android: "https://yandaoguoxue.yandao.vip/app-download/latest.apk",
+        downloadPage: "https://yandaoguoxue.yandao.vip/friend",
+        register: "https://yandaoguoxue.yandao.vip/register"
     },
     // iOS 发布状态
     iosStatus: "pending", // pending | available

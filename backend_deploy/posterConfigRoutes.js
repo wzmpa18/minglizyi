@@ -57,10 +57,10 @@ const DEFAULT_CONFIG = {
     complianceText: "内容仅供传统文化学习参考，不构成任何决策建议。",
     // 品牌主体
     brandEntity: "东莞言道科技有限公司",
-    // 下载链接
+    // 下载链接（FINAL-SEAL D20：全站APK直链唯一分发源，与 app-release-config.json SSOT 一致）
     downloadUrls: {
-        android: "https://www.yandao.vip/app-download/guoxue-chuancheng-v1.0-release.apk",
-        downloadPage: "https://www.yandao.vip/download"
+        android: "https://yandaoguoxue.yandao.vip/app-download/latest.apk",
+        downloadPage: "https://yandaoguoxue.yandao.vip/friend"
     },
     // iOS 发布状态（pending | available）
     iosStatus: "pending",
