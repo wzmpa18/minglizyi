@@ -394,10 +394,38 @@ function authRequired(req, res, next) {
   if (!token) return res.status(401).json({ success: false, error: '请先登录' });
   try {
     req.user = jwt.verify(token, JWT_SECRET);
-    next();
   } catch {
     return res.status(401).json({ success: false, error: '登录已过期，请重新登录' });
   }
+  // v25.0.61 FINAL-SEAL D19：封禁/注销账号全社交链路拦截（后台封禁原先只在后台显示）
+  const udb = getUserDb();
+  if (udb) {
+    try {
+      const row = udb.prepare('SELECT status, deleted_at FROM users WHERE user_id = ? OR CAST(user_id AS TEXT) = ?').get(req.user.userId, String(req.user.userId));
+      if (row) {
+        if (row.deleted_at) return res.status(403).json({ success: false, error: '该账号已注销', code: 'ACCOUNT_DELETED' });
+        if (row.status === 'banned') return res.status(403).json({ success: false, error: '该账号已被封禁，如有疑问请联系客服', code: 'ACCOUNT_BANNED' });
+      }
+    } catch (e) { /* DB异常不阻断鉴权 */ }
+  }
+  next();
+}
+
+// v25.0.61 FINAL-SEAL D19：平台级禁言（users.muted_until）检查。
+// 后台设置的禁言原先无任何生效点；现发布动态/评论/私聊/群消息时拒绝，到期自动恢复（仅返回剩余分钟数）。
+function checkPlatformMute(userId) {
+  const udb = getUserDb();
+  if (!udb) return null;
+  try {
+    const row = udb.prepare('SELECT muted_until FROM users WHERE user_id = ? OR CAST(user_id AS TEXT) = ?').get(userId, String(userId));
+    if (row && row.muted_until) {
+      const until = new Date(row.muted_until).getTime();
+      if (Number.isFinite(until) && until > Date.now()) {
+        return { remainMinutes: Math.ceil((until - Date.now()) / 60000) };
+      }
+    }
+  } catch (e) {}
+  return null;
 }
 
 function userPublicInfo(userId) {
@@ -517,6 +545,8 @@ function createRouter() {
   router.post('/posts', authRequired, (req, res) => {
     try {
       if (!featureEnabled('posts_enabled')) return featureDisabled(res, '动态发布');
+      const _mute = checkPlatformMute(req.user.userId);
+      if (_mute) return res.status(403).json({ success: false, error: `你已被禁言（剩余约${_mute.remainMinutes}分钟），暂不能发布动态`, code: 'USER_MUTED' });
       const { content, images = [], tags = [], toolType = '', circle = '' } = req.body;
       if (!content || !String(content).trim()) {
         return res.status(400).json({ success: false, error: '动态内容不能为空' });
@@ -658,6 +688,8 @@ function createRouter() {
   router.post('/posts/:postId/comments', authRequired, (req, res) => {
     try {
       if (!featureEnabled('comments_enabled')) return featureDisabled(res, '评论');
+      const _mute = checkPlatformMute(req.user.userId);
+      if (_mute) return res.status(403).json({ success: false, error: `你已被禁言（剩余约${_mute.remainMinutes}分钟），暂不能评论`, code: 'USER_MUTED' });
       const { content } = req.body;
       if (!content || !String(content).trim()) return res.status(400).json({ success: false, error: '评论内容不能为空' });
       // 统一敏感词过滤：违规拦截并留痕（与私聊/群聊同规范）
@@ -844,6 +876,8 @@ function createRouter() {
   router.post('/messages/private/:peerId', authRequired, (req, res) => {
     try {
       if (!featureEnabled('private_chat_enabled')) return featureDisabled(res, '私聊');
+      const _mute = checkPlatformMute(req.user.userId);
+      if (_mute) return res.status(403).json({ success: false, error: `你已被禁言（剩余约${_mute.remainMinutes}分钟），暂不能发送消息`, code: 'USER_MUTED' });
       const { content, type = 'text', clientMsgId = '' } = req.body;
       if (!content || !String(content).trim()) return res.status(400).json({ success: false, error: '消息不能为空' });
 
@@ -1339,6 +1373,9 @@ function createRouter() {
     try {
       const { content, type = 'text', clientMsgId = '' } = req.body;
       if (!content || !String(content).trim()) return res.status(400).json({ success: false, error: '消息不能为空' });
+      // v25.0.61 D19：平台级禁言（群主/管理员同样受平台禁言约束）
+      const _pmute = checkPlatformMute(req.user.userId);
+      if (_pmute) return res.status(403).json({ success: false, error: `你已被禁言（剩余约${_pmute.remainMinutes}分钟），暂不能发送消息`, code: 'USER_MUTED' });
       const d = getDb();
       const row = d.prepare('SELECT * FROM groups WHERE id = ?').get(parseInt(req.params.id, 10));
       if (!row) return res.status(404).json({ success: false, error: '群不存在' });

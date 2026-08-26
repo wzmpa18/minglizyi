@@ -123,6 +123,28 @@ function verifyToken(authHeader) {
 // ==================== 认证中间件 ====================
 
 /**
+ * 检查用户账号状态（封禁/注销）— v25.0.61 FINAL-SEAL D19
+ * 后台封禁(users.status='banned')与注销(users.deleted_at)原先只在后台显示，
+ * 全链路（登录/AI/社交/资料）无一处拦截。此函数供 authMiddleware、AI路由、
+ * 登录接口统一调用。DB 异常时放行（不因统计字段故障阻断全站）。
+ * @param {string} userId - 用户ID
+ * @returns {object} - { ok, code, msg }
+ */
+function getUserActiveStatus(userId) {
+  const db = getDB();
+  if (!db) return { ok: true };
+  try {
+    const row = db.prepare('SELECT status, deleted_at FROM users WHERE user_id = ?').get(userId);
+    if (!row) return { ok: true };
+    if (row.deleted_at) return { ok: false, code: 'ACCOUNT_DELETED', msg: '该账号已注销' };
+    if (row.status === 'banned') return { ok: false, code: 'ACCOUNT_BANNED', msg: '该账号已被封禁，如有疑问请联系客服' };
+    return { ok: true };
+  } catch (e) {
+    return { ok: true };
+  }
+}
+
+/**
  * JWT 认证中间件
  * 验证请求头中的 Bearer Token，将用户信息附加到 req.user
  */
@@ -133,6 +155,15 @@ function authMiddleware(req, res, next) {
       success: false,
       error: '请先登录',
       code: 'UNAUTHORIZED',
+    });
+  }
+  // v25.0.61 D19：封禁/注销账号全链路拦截（含已发token的存量会话）
+  const status = getUserActiveStatus(user.userId);
+  if (!status.ok) {
+    return res.status(403).json({
+      success: false,
+      error: status.msg,
+      code: status.code,
     });
   }
   req.user = user;
@@ -369,6 +400,7 @@ module.exports = {
   consumeAIQuotaInDB,
   getAnonAIQuota,
   consumeAnonAIQuota,
+  getUserActiveStatus,
   beijingToday,
   verifyToken,
   MEMBER_LEVELS,

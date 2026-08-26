@@ -13,7 +13,7 @@ const path = require("path");
 const fs = require("fs");
 const { createPlatformFeatureGate } = require("./platformFeatureGate");
 
-const { authMiddleware, getMembershipFromDB, getAIQuotaFromDB, consumeAIQuotaInDB, getAnonAIQuota, consumeAnonAIQuota, verifyToken } = require("./middleware/auth");
+const { authMiddleware, getMembershipFromDB, getAIQuotaFromDB, consumeAIQuotaInDB, getAnonAIQuota, consumeAnonAIQuota, getUserActiveStatus, verifyToken } = require("./middleware/auth");
 
 const app = express();
 const PORT = process.env.API_PORT || 3001;
@@ -131,6 +131,11 @@ app.post('/api/ai/chat', async (req, res) => {
     const _authUser = verifyToken(req.headers.authorization || '');
     let _quotaOwner = null; // 配额记账主体：真实 userId 或 'anon:<ip>'
     if (_authUser) {
+      // v25.0.61 D19：封禁/注销账号拒绝调用AI（含存量token会话）
+      const _st = getUserActiveStatus(_authUser.userId);
+      if (!_st.ok) {
+        return res.status(403).json({ success: false, error: _st.msg, code: _st.code });
+      }
       _quotaOwner = _authUser.userId;
       const _q = getAIQuotaFromDB(_authUser.userId);
       if (_q.dailyLimit !== Infinity && _q.dailyUsed >= _q.dailyLimit) {
