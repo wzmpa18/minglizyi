@@ -103,8 +103,24 @@ function logAnonAIUA(ip, ua) {
   } catch (e) { /* 审计日志失败不阻断 */ }
 }
 
+// v25.0.61 FINAL-SEAL P2：同用户AI请求并发锁（单进程fork模式，内存锁即可）
+// 背景：配额预检查在上游调用前、扣减在成功后，两个并行请求都能通过预检查 → 双倍烧token。
+// 策略：同一用户同时只允许1个在途AI请求，其余立即429 AI_CONCURRENT_LIMIT（不调上游）。
+const _aiInflight = new Map();
+function acquireAIInflight(owner) {
+  const n = _aiInflight.get(owner) || 0;
+  if (n >= 1) return false;
+  _aiInflight.set(owner, n + 1);
+  return true;
+}
+function releaseAIInflight(owner) {
+  const n = _aiInflight.get(owner) || 1;
+  if (n <= 1) _aiInflight.delete(owner); else _aiInflight.set(owner, n - 1);
+}
+
 app.post('/api/ai/chat', async (req, res) => {
   const _t0 = Date.now();
+  let _inflightOwner = null;
   try {
     // ===== v25.0.60 AUDIT-20260826 P0-3 修复：AI 付费墙服务端强制 =====
     // 鉴权 + 配额校验 + 成功后扣减（配额设施此前为死代码，本次正式接线）
@@ -161,6 +177,16 @@ app.post('/api/ai/chat', async (req, res) => {
       }
       _quotaOwner = 'anon:' + _ip;
     }
+
+    // v25.0.61 P2：并发锁——同一主体同时只允许1个在途请求（防并行双扣token）
+    if (!acquireAIInflight(_quotaOwner)) {
+      return res.status(429).json({
+        success: false,
+        error: '请等待当前AI请求完成后再试',
+        code: 'AI_CONCURRENT_LIMIT',
+      });
+    }
+    _inflightOwner = _quotaOwner;
 
     // ===== v25.0.47_10: AI 三重开关服务端强制（FINAL-ADMIN-COMMERCIAL-SEAL-02 第五/十三章）=====
     // ① 后台功能开关总中心（feature-flags 的 ai 开关）
@@ -297,6 +323,8 @@ app.post('/api/ai/chat', async (req, res) => {
     // v25.0.47_10: AI健康埋点（失败）
     recordAIHealth('fail', Date.now() - _t0, err.message);
     res.json({ success: false, error: `AI 服务异常: ${err.message}`, code: 'AI_SERVICE_UNAVAILABLE' });
+  } finally {
+    if (_inflightOwner) releaseAIInflight(_inflightOwner);
   }
 });
 console.log('[Server] ✅ AI代理路由已挂载: /api/ai/chat');
