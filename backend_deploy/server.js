@@ -55,7 +55,56 @@ try {
 // ==================== AI 代理路由 ====================
 // RC-04 AI契约修复: 兼容前端 {systemPrompt,userPrompt} 与 {messages} 双格式;
 // 响应顶层返回 content/usage(前端 aiService.ts 契约), 同时保留 data.* 旧结构
+// v25.0.61 FINAL-SEAL P2-C：AI健康统计统一入口（延迟分位数/超时/空内容/连续失败）
+// latencies 保留最近200条采样；consecutiveFails>=5 时后台驾驶舱AI状态亮红灯
+function recordAIHealth(kind, latencyMs, errDetail) {
+  try {
+    const _p = require('path').join(__dirname, 'data', 'ai-health.json');
+    const _today = new Date().toISOString().slice(0, 10);
+    const _blank = () => ({ date: _today, calls: 0, success: 0, fail: 0, totalLatencyMs: 0, lastSuccessAt: null, lastFailAt: null, lastError: '', latencies: [], gt60s: 0, gt120s: 0, emptyContent: 0, consecutiveFails: 0 });
+    let _h = _blank();
+    try { _h = { ..._h, ...JSON.parse(require('fs').readFileSync(_p, 'utf-8')) }; } catch (e) {}
+    if (_h.date !== _today) _h = _blank();
+    _h.calls += 1;
+    if (Number.isFinite(latencyMs)) {
+      _h.totalLatencyMs += Math.round(latencyMs);
+      _h.latencies = (_h.latencies || []).concat(Math.round(latencyMs)).slice(-200);
+      if (latencyMs > 60000) _h.gt60s += 1;
+      if (latencyMs > 120000) _h.gt120s += 1;
+    }
+    if (kind === 'success') {
+      _h.success += 1; _h.lastSuccessAt = new Date().toISOString(); _h.consecutiveFails = 0;
+    } else {
+      _h.fail += 1; _h.lastFailAt = new Date().toISOString();
+      _h.lastError = String(errDetail || kind).slice(0, 200);
+      _h.consecutiveFails = (_h.consecutiveFails || 0) + 1;
+      if (kind === 'empty') _h.emptyContent = (_h.emptyContent || 0) + 1;
+    }
+    require('fs').writeFileSync(_p, JSON.stringify(_h), 'utf-8');
+  } catch (e) { /* 统计失败不阻断AI主流程 */ }
+}
+
+// v25.0.61 FINAL-SEAL P2-A：匿名AI调用UA审计日志（data/anon-ai-log.json，按日聚合，保留14天）
+// 用于统计仍依赖匿名通道的旧APK版本/UA分布，为 AI_ANON_EXPIRE_DATE 下线决策提供证据
+function logAnonAIUA(ip, ua) {
+  try {
+    const _p = require('path').join(__dirname, 'data', 'anon-ai-log.json');
+    const _today = new Date().toISOString().slice(0, 10);
+    let _log = {};
+    try { _log = JSON.parse(require('fs').readFileSync(_p, 'utf-8')); } catch (e) {}
+    if (!_log[_today]) _log[_today] = { calls: 0, ips: {}, uas: {} };
+    _log[_today].calls += 1;
+    _log[_today].ips[ip] = (_log[_today].ips[ip] || 0) + 1;
+    const _uaKey = String(ua).slice(0, 160);
+    _log[_today].uas[_uaKey] = (_log[_today].uas[_uaKey] || 0) + 1;
+    const _days = Object.keys(_log).sort();
+    while (_days.length > 14) { delete _log[_days.shift()]; }
+    require('fs').writeFileSync(_p, JSON.stringify(_log), 'utf-8');
+  } catch (e) { /* 审计日志失败不阻断 */ }
+}
+
 app.post('/api/ai/chat', async (req, res) => {
+  const _t0 = Date.now();
   try {
     // ===== v25.0.60 AUDIT-20260826 P0-3 修复：AI 付费墙服务端强制 =====
     // 鉴权 + 配额校验 + 成功后扣减（配额设施此前为死代码，本次正式接线）
@@ -79,18 +128,32 @@ app.post('/api/ai/chat', async (req, res) => {
         });
       }
     } else {
+      // ===== v25.0.61 FINAL-SEAL P2-A：匿名通道收紧（仅旧APK过渡专用） =====
+      // 审计结论(20260826)：生产真实匿名调用量=0（access log 中仅服务器自测 curl）；
+      // APK 为内置资源模式，旧版 APK 不携带 Authorization。策略：
+      //   1) 仅旧APK WebView UA（含 wv) / yandao 标识）可走匿名通道，普通浏览器/curl 一律 401；
+      //   2) 默认额度 50→5 次/IP/日（AI_ANON_DAILY_LIMIT 可覆盖，置 0 = 硬性 401）；
+      //   3) AI_ANON_EXPIRE_DATE（默认 2026-10-31）到期后硬性 401，完成匿名通道下线。
       const _anonLimit = parseInt(process.env.AI_ANON_DAILY_LIMIT, 10);
-      const _limit = Number.isFinite(_anonLimit) && _anonLimit >= 0 ? _anonLimit : 50;
-      if (_limit === 0) {
-        return res.status(401).json({ success: false, error: '请先登录后使用AI服务', code: 'UNAUTHORIZED' });
+      const _limit = Number.isFinite(_anonLimit) && _anonLimit >= 0 ? _anonLimit : 5;
+      const _expireDate = process.env.AI_ANON_EXPIRE_DATE || '2026-10-31';
+      let _expired = true;
+      try { _expired = new Date(_expireDate + 'T23:59:59+08:00').getTime() < Date.now(); } catch (e) {}
+      if (_limit === 0 || _expired) {
+        return res.status(401).json({ success: false, error: '请先登录后使用AI服务', code: 'AI_AUTH_REQUIRED' });
+      }
+      const _ua = String(req.headers['user-agent'] || '');
+      if (!/wv\)|yandao/i.test(_ua)) {
+        return res.status(401).json({ success: false, error: '请先登录后使用AI服务', code: 'AI_AUTH_REQUIRED' });
       }
       const _ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
+      logAnonAIUA(_ip, _ua);
       const _q = getAnonAIQuota(_ip);
       if (_q.dailyUsed >= _limit) {
         return res.status(429).json({
           success: false,
           error: '当前网络今日AI体验次数已用完，登录后可获得会员额度',
-          code: 'AI_QUOTA_EXCEEDED',
+          code: 'AI_QUOTA_EXHAUSTED',
           dailyUsed: _q.dailyUsed,
           dailyLimit: _limit,
           level: 'anonymous',
@@ -147,6 +210,18 @@ app.post('/api/ai/chat', async (req, res) => {
     if (!finalMessages || finalMessages.length === 0) {
       return res.json({ success: false, error: '缺少对话内容' });
     }
+    // ===== v25.0.61 FINAL-SEAL P2-B：输入长度硬限制 =====
+    // 防止单请求堆砌超长上下文导致上游成本失控（超长命盘×超长追问场景）。
+    // AI_INPUT_MAX_CHARS 默认 12000 字符；超限明确提示缩小范围，不调用上游、不扣配额。
+    const _inputMax = parseInt(process.env.AI_INPUT_MAX_CHARS, 10) || 12000;
+    const _inputLen = finalMessages.reduce((s, m) => s + String((m && m.content) || '').length, 0);
+    if (_inputLen > _inputMax) {
+      return res.status(400).json({
+        success: false,
+        error: `输入内容过长（约${_inputLen}字符，上限${_inputMax}字符），请缩小分析范围`,
+        code: 'AI_INPUT_TOO_LONG',
+      });
+    }
     // 20260816 UV-004: .env 实际配置 HUNYUAN_API_KEY(混元 OpenAI 兼容)，原代码只认 DEEPSEEK/OPENAI 导致线上 AI 整体不可用
     const deepseekKey = process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY || '';
     const hunyuanKey = process.env.HUNYUAN_API_KEY || '';
@@ -175,6 +250,8 @@ app.post('/api/ai/chat', async (req, res) => {
     if (!response.ok) {
       const errText = await response.text();
       console.error('[AI] API error:', response.status, errText);
+      // v25.0.61 P2-C：上游错误（含502/504）也计入健康统计（原实现漏记，超时表现为上游非200）
+      recordAIHealth('fail', Date.now() - _t0, 'upstream_' + response.status);
       let detail = `AI API 返回错误: ${response.status}`;
       try {
         const errJson = JSON.parse(errText);
@@ -194,16 +271,7 @@ app.post('/api/ai/chat', async (req, res) => {
     if (!content) {
       const _finish = data.choices?.[0]?.finish_reason || '';
       console.error('[AI] 空内容返回 finish_reason=' + _finish + ' usage=' + JSON.stringify(usage));
-      try {
-        const _hp = require('path').join(__dirname, 'data', 'ai-health.json');
-        const _today = new Date().toISOString().slice(0, 10);
-        let _h = { date: _today, calls: 0, success: 0, fail: 0, totalLatencyMs: 0, lastSuccessAt: null, lastFailAt: null, lastError: '' };
-        try { _h = { ..._h, ...JSON.parse(require('fs').readFileSync(_hp, 'utf-8')) }; } catch (e) {}
-        if (_h.date !== _today) { _h = { date: _today, calls: 0, success: 0, fail: 0, totalLatencyMs: 0, lastSuccessAt: null, lastFailAt: null, lastError: '' }; }
-        _h.calls += 1; _h.fail += 1; _h.lastFailAt = new Date().toISOString();
-        _h.lastError = 'empty_content(' + _finish + ')';
-        require('fs').writeFileSync(_hp, JSON.stringify(_h), 'utf-8');
-      } catch (e) {}
+      recordAIHealth('empty', Date.now() - _t0, 'empty_content(' + _finish + ')');
       return res.status(502).json({
         success: false,
         error: 'AI解读生成超时（内容为空），请简化问题后重试',
@@ -221,29 +289,13 @@ app.post('/api/ai/chat', async (req, res) => {
         }
       } catch (e) { console.error('[AI] 配额扣减失败:', e.message); }
     }
-    // v25.0.47_10: AI健康埋点（后台AI控制中心指标）
-    try {
-      const _hp = require('path').join(__dirname, 'data', 'ai-health.json');
-      const _today = new Date().toISOString().slice(0, 10);
-      let _h = { date: _today, calls: 0, success: 0, fail: 0, totalLatencyMs: 0, lastSuccessAt: null, lastFailAt: null, lastError: '' };
-      try { _h = { ..._h, ...JSON.parse(require('fs').readFileSync(_hp, 'utf-8')) }; } catch (e) {}
-      if (_h.date !== _today) { _h = { date: _today, calls: 0, success: 0, fail: 0, totalLatencyMs: 0, lastSuccessAt: null, lastFailAt: null, lastError: '' }; }
-      _h.calls += 1; _h.success += 1; _h.lastSuccessAt = new Date().toISOString();
-      require('fs').writeFileSync(_hp, JSON.stringify(_h), 'utf-8');
-    } catch (e) {}
+    // v25.0.47_10: AI健康埋点（成功，含延迟分位数统计）
+    recordAIHealth('success', Date.now() - _t0);
     res.json({ success: true, content, usage, cached: false, data: { content, usage } });
   } catch (err) {
     console.error('[AI] 代理错误:', err);
     // v25.0.47_10: AI健康埋点（失败）
-    try {
-      const _hp = require('path').join(__dirname, 'data', 'ai-health.json');
-      const _today = new Date().toISOString().slice(0, 10);
-      let _h = { date: _today, calls: 0, success: 0, fail: 0, totalLatencyMs: 0, lastSuccessAt: null, lastFailAt: null, lastError: '' };
-      try { _h = { ..._h, ...JSON.parse(require('fs').readFileSync(_hp, 'utf-8')) }; } catch (e) {}
-      if (_h.date !== _today) { _h = { date: _today, calls: 0, success: 0, fail: 0, totalLatencyMs: 0, lastSuccessAt: null, lastFailAt: null, lastError: '' }; }
-      _h.calls += 1; _h.fail += 1; _h.lastFailAt = new Date().toISOString(); _h.lastError = String(err.message || '').slice(0, 200);
-      require('fs').writeFileSync(_hp, JSON.stringify(_h), 'utf-8');
-    } catch (e) {}
+    recordAIHealth('fail', Date.now() - _t0, err.message);
     res.json({ success: false, error: `AI 服务异常: ${err.message}`, code: 'AI_SERVICE_UNAVAILABLE' });
   }
 });

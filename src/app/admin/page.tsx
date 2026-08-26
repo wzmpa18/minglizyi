@@ -348,7 +348,7 @@ export default function AdminCockpitPage() {
         <MetricCard
           label="今日 AI 调用"
           value={ai.callsToday ?? 0}
-          sub={`成功率 ${ai.successRate ?? "-"}%`}
+          sub={`成功率 ${ai.successRate ?? "-"}% · P95 ${ai.p95Ms != null ? (ai.p95Ms / 1000).toFixed(1) + "s" : "-"}`}
           icon={<Bot size={16} />}
           href="/admin/ai-control"
         />
@@ -435,6 +435,31 @@ export default function AdminCockpitPage() {
           </div>
           <div style={{ fontSize: 13, color: THEME.textSub }}>
             AI Provider：<b style={{ color: THEME.textMain }}>{ai.provider || "-"}</b>
+          </div>
+          <div style={{ fontSize: 13, color: THEME.textSub }}>
+            当前模型：<b style={{ color: THEME.textMain }}>{ai.model || "-"}</b>
+          </div>
+          <div style={{ fontSize: 13, color: THEME.textSub }}>
+            平均耗时：<b style={{ color: THEME.textMain }}>{ai.avgLatencyMs != null ? (Number(ai.avgLatencyMs) / 1000).toFixed(1) + "s" : "-"}</b>
+          </div>
+          <div style={{ fontSize: 13, color: THEME.textSub }}>
+            P50 / P95 / P99：
+            <b style={{ color: THEME.textMain }}>
+              {ai.p50Ms != null ? (ai.p50Ms / 1000).toFixed(1) + "s" : "-"} / {ai.p95Ms != null ? (ai.p95Ms / 1000).toFixed(1) + "s" : "-"} / {ai.p99Ms != null ? (ai.p99Ms / 1000).toFixed(1) + "s" : "-"}
+            </b>
+          </div>
+          <div style={{ fontSize: 13, color: THEME.textSub }}>
+            超60s / 超120s：
+            <b style={{ color: (ai.gt60s ?? 0) > 0 ? THEME.warning : THEME.textMain }}>
+              {ai.gt60s ?? 0} / {ai.gt120s ?? 0}
+            </b>
+          </div>
+          <div style={{ fontSize: 13, color: THEME.textSub }}>
+            空内容次数：<b style={{ color: (ai.emptyContent ?? 0) > 0 ? THEME.warning : THEME.textMain }}>{ai.emptyContent ?? 0}</b>
+          </div>
+          <div style={{ fontSize: 13, color: THEME.textSub }}>
+            连续失败：<b style={{ color: (ai.consecutiveFails ?? 0) >= 5 ? THEME.error : (ai.consecutiveFails ?? 0) > 0 ? THEME.warning : THEME.success }}>{ai.consecutiveFails ?? 0}</b>
+            <span style={{ color: THEME.textHint }}>（≥5 次亮红灯）</span>
           </div>
           <div style={{ fontSize: 13, color: THEME.textSub }}>
             最近成功 AI：<b style={{ color: THEME.textMain }}>{ai.lastSuccessAt ? new Date(ai.lastSuccessAt).toLocaleString("zh-CN") : "暂无"}</b>

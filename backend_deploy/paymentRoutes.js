@@ -277,6 +277,13 @@ function getOrdersDb() {
       db.exec('ALTER TABLE user_orders ADD COLUMN transaction_id TEXT');
       console.log('[payment] user_orders 已添加 transaction_id 字段');
     }
+    // v25.0.61 FINAL-SEAL D18: 订单extra持久化（JSON）。
+    // 原实现 extra（含 SINGLE_UNLOCK 的 unlockTargetId）只存内存，进程重启后
+    // query 补交付拿不到权益键，user_entitlements 永远补不上 → 换设备权益丢失。
+    if (!cols.includes('extra')) {
+      db.exec('ALTER TABLE user_orders ADD COLUMN extra TEXT');
+      console.log('[payment] user_orders 已添加 extra 字段');
+    }
   } catch (e) {
     console.error('[payment] benefit_delivered 迁移失败:', e.message);
   }
@@ -309,11 +316,12 @@ function persistOrder(order) {
   try {
     const db = getOrdersDb();
     if (!db) return;
-    db.prepare(`INSERT INTO user_orders (user_id, order_no, amount, order_type, status, payment_method, created_at, paid_at, benefit_delivered, transaction_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(order_no) DO UPDATE SET status=excluded.status, payment_method=excluded.payment_method, paid_at=excluded.paid_at, benefit_delivered=excluded.benefit_delivered, transaction_id=CASE WHEN excluded.transaction_id IS NOT NULL AND excluded.transaction_id != '' THEN excluded.transaction_id ELSE user_orders.transaction_id END`)
+    db.prepare(`INSERT INTO user_orders (user_id, order_no, amount, order_type, status, payment_method, created_at, paid_at, benefit_delivered, transaction_id, extra)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(order_no) DO UPDATE SET status=excluded.status, payment_method=excluded.payment_method, paid_at=excluded.paid_at, benefit_delivered=excluded.benefit_delivered, transaction_id=CASE WHEN excluded.transaction_id IS NOT NULL AND excluded.transaction_id != '' THEN excluded.transaction_id ELSE user_orders.transaction_id END, extra=CASE WHEN excluded.extra IS NOT NULL THEN excluded.extra ELSE user_orders.extra END`)
       .run(String(order.userId || ''), order.orderId, Number(order.amount) || 0, order.type, order.status,
-           order.channel || '', order.createdAt, order.paidAt, order.benefitDelivered ? 1 : 0, order.transactionId || null);
+           order.channel || '', order.createdAt, order.paidAt, order.benefitDelivered ? 1 : 0, order.transactionId || null,
+           order.extra ? JSON.stringify(order.extra) : null);
   } catch (e) {
     console.error('[payment] 订单持久化失败:', e.message);
   }
@@ -495,7 +503,36 @@ function createOrderRecord(orderData) {
  * 查询订单
  */
 function getOrderRecord(orderId) {
-  return ordersStore.get(orderId) || null;
+  const hit = ordersStore.get(orderId);
+  if (hit) return hit;
+  // v25.0.61 FINAL-SEAL D18：重启后内存订单丢失 → 从SQLite恢复（含extra JSON），
+  // 使 query 接口补交付可拿到 unlockTargetId，权益不再因重启永久丢失。
+  try {
+    const db = getOrdersDb();
+    if (db) {
+      const row = db.prepare('SELECT order_no, user_id, amount, order_type, status, payment_method, created_at, paid_at, benefit_delivered, transaction_id, extra FROM user_orders WHERE order_no = ?').get(orderId);
+      if (row) {
+        const restored = {
+          orderId: row.order_no,
+          userId: String(row.user_id || ''),
+          amount: Number(row.amount) || 0,
+          type: row.order_type,
+          status: row.status,
+          channel: row.payment_method || '',
+          createdAt: row.created_at,
+          paidAt: row.paid_at,
+          benefitDelivered: !!row.benefit_delivered,
+          transactionId: row.transaction_id || '',
+        };
+        try { restored.extra = row.extra ? JSON.parse(row.extra) : null; } catch (e) { restored.extra = null; }
+        ordersStore.set(orderId, restored);
+        return restored;
+      }
+    }
+  } catch (e) {
+    console.error('[payment] 订单SQLite恢复失败:', e.message);
+  }
+  return null;
 }
 
 /**

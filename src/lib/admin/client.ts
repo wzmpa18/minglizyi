@@ -353,6 +353,8 @@ export interface AdminOverviewData {
     enabled?: boolean; callsToday?: number; successToday?: number; failToday?: number;
     successRate?: number | string; lastSuccessAt?: string | null; lastFailAt?: string | null;
     lastError?: string; provider?: string; model?: string; avgLatencyMs?: number | string;
+    p50Ms?: number | null; p95Ms?: number | null; p99Ms?: number | null;
+    gt60s?: number; gt120s?: number; emptyContent?: number; consecutiveFails?: number;
   };
   social?: { groups?: number; posts?: number; postsToday?: number; comments?: number };
   moderation?: { pendingReports?: number; [k: string]: unknown };

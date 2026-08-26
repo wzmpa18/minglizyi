@@ -210,6 +210,18 @@ router.get('/overview', adminAuthUnified('SUPPORT_ADMIN'), (_req, res) => {
       data.ai.lastFailAt = h.lastFailAt || null;
       data.ai.lastError = h.lastError || '';
       data.ai.provider = process.env.HUNYUAN_API_KEY ? 'Hunyuan(混元)' : (process.env.DEEPSEEK_API_KEY ? 'DeepSeek' : '未配置');
+      // v25.0.61 FINAL-SEAL P2-C：延迟分位数/超时/空内容指标（后台驾驶舱AI健康页）
+      const lats = Array.isArray(h.latencies) ? h.latencies.slice().sort((a, b) => a - b) : [];
+      const pct = (arr, p) => (arr.length ? arr[Math.min(arr.length - 1, Math.floor(arr.length * p))] : null);
+      data.ai.avgLatencyMs = h.calls ? Math.round((h.totalLatencyMs || 0) / h.calls) : null;
+      data.ai.p50Ms = pct(lats, 0.5);
+      data.ai.p95Ms = pct(lats, 0.95);
+      data.ai.p99Ms = pct(lats, 0.99);
+      data.ai.gt60s = h.gt60s || 0;
+      data.ai.gt120s = h.gt120s || 0;
+      data.ai.emptyContent = h.emptyContent || 0;
+      data.ai.consecutiveFails = h.consecutiveFails || 0;
+      data.ai.model = process.env.HUNYUAN_MODEL || 'hy3';
     } catch (e) {
       data.ai = { ...data.ai, callsToday: 0, successToday: 0, failToday: 0, successRate: 100, provider: '未知' };
     }
@@ -254,6 +266,8 @@ router.get('/overview', adminAuthUnified('SUPPORT_ADMIN'), (_req, res) => {
       const aiFlag = require('./featureControlRoutes').getFlagStatus('ai');
       const aiH = data.ai || {};
       if (aiFlag !== 'ON') data.health.ai = 'down';
+      // v25.0.61 P2-C：连续5次失败=红灯（等价"连续5分钟5xx异常升高"的最小可靠信号）
+      else if ((aiH.consecutiveFails || 0) >= 5) data.health.ai = 'down';
       else if ((aiH.failToday || 0) > 0) data.health.ai = 'warn';
       else data.health.ai = 'ok';
       // 支付：NATIVE ready=ok；仅商户参数缺=warn；配置缺=down
