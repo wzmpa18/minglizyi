@@ -1,9 +1,11 @@
 # CURRENT_PROJECT_REALITY.md — 言道国学项目事实层
 
 > 生成时间：2026-08-27
-> 修正批次：FINAL-COMMERCIAL-ADMIN-AI-CLEANUP-03（商业核心最终收口）— **已完成部署，全链路回归通过**
+> 修正批次：COMMERCIAL-CLEANUP-03-FACT-SEAL（事实一致性封口）
+> 上一批次：FINAL-COMMERCIAL-ADMIN-AI-CLEANUP-03（已部署，功能修复方向认可）
 > 原则：源码存在 ≠ 生产执行，以运行时事实为准
-> 部署时间：2026-08-27 18:50 UTC+8
+> 本次解决：Commit回灌 + Entitlement唯一真相 + Backup数量纠偏
+> 最终Commit：f50115e（COMMERCIAL_CLEANUP_COMMIT）
 
 ---
 
@@ -11,11 +13,15 @@
 
 | 组件 | 版本 | 验证方式 |
 |------|------|----------|
-| CODE_HEAD | `2b1d6af` | 服务器源码仓 git log -1 |
-| DOCUMENT_HEAD | `6a88003` | 仅文档批次，不改变运行时代码 |
-| GITHUB_HEAD | `6a88003` | wzmpa18/minglizyi main |
-| SERVER_HEAD | `2b1d6af` | `/root/yandaoguoxue-source` |
-| PRODUCTION_BUILD_SOURCE | `2b1d6af` | 构建源码与服务器源码仓一致 |
+| COMMERCIAL_CLEANUP_COMMIT | `f50115e` | 本轮最终代码Commit（含COMMERCIAL-CLEANUP-03全部修复） |
+| CODE_HEAD | `c25a161` | 最后代码变更Commit（COMMERCIAL-CLEANUP-03核心修复） |
+| DOCUMENT_HEAD | `f50115e` | 文档+项目文件纳入后的最终Commit |
+| LOCAL_HEAD | `f50115e` | git rev-parse HEAD（本地） |
+| GITHUB_HEAD | `f50115e` | wzmpa18/minglizyi main（git ls-remote origin） |
+| SERVER_SOURCE_HEAD | `f50115e` | `/root/yandaoguoxue-source`（git reset --hard origin/main） |
+| PRODUCTION_BUILD_SOURCE | `f50115e` | 已提交源码与生产构建内容一致（RUNTIME_EQUIVALENT=YES） |
+| DIRTY_BUILD_FOUND | **YES**（历史） | 上一批次生产构建来自未提交工作区，本轮已commit回灌 |
+| RUNTIME_EQUIVALENT | **YES** | 提交后clean build与当前生产内容一致 |
 | Web（生产） | v25.0.62 | `/root/yandaoguoxue/current` → releases/v25.0.62 |
 | 后端 API | 1.1.0 | PM2: yandaoguoxue-backend, online |
 | Android APK | v25.0.60 / versionCode 2059 | 公网 latest.apk 验证通过 |
@@ -161,7 +167,7 @@ payForMembership, payForUnlock, paySingleUnlockAndWait, pollPaymentStatus
 | MEMBERSHIP_COUNT | **VERIFIED** | COMMERCIAL-CLEANUP-03: 排除过期会员，新增quarterly |
 | PENDING_ORDER_LIFECYCLE | **VERIFIED** | COMMERCIAL-CLEANUP-03: 24h自动EXPIRED，新增EXPIRED状态 |
 | PRICE_SSOT_FRONTEND | **VERIFIED** | COMMERCIAL-CLEANUP-03: pricingStore持久化缓存，不无声使用硬编码 |
-| ENTITLEMENT_STORAGE | **VERIFIED** | MEMBERSHIP→users表，SINGLE_UNLOCK/AI_PASS→user_entitlements表 |
+| ENTITLEMENT_STORAGE | **VERIFIED** | MEMBERSHIP→users表(member_level+expiry)；SINGLE_UNLOCK→user_assets表(type字段)；AI_PASS→IMPLEMENTED_NOT_PRODUCTION_PROVEN(0 PAID) |
 
 ---
 
@@ -182,7 +188,26 @@ payForMembership, payForUnlock, paySingleUnlockAndWait, pollPaymentStatus
 7. **activatePaidPlan移除** ✅：从EventDivinationPanel删除import和调用，标记@deprecated
 8. **PENDING订单生命周期** ✅：新增EXPIRED状态，24h自动过期清理
    - 生产验证：PENDING=1, EXPIRED=104, CLOSED=9, PAID=4
-9. **user_entitlements事实确认** ✅：MEMBERSHIP权益存users表（benefit_delivered=1），SINGLE_UNLOCK订单(2笔)无user_entitlements记录但benefit_delivered=1，权益落在user_assets表。当前数据一致、无缺失权益。
+9. **user_entitlements事实确认** ✅：user_entitlements表为空(0行)。MEMBERSHIP权益→users表（benefit_delivered=1，member_level+expiry）；SINGLE_UNLOCK PAID(2笔)→user_assets表（type=207），benefit_delivered=1但无user_entitlements记录。AI_PASS(0笔PAID)→IMPLEMENTED_NOT_PRODUCTION_PROVEN。数据一致、无缺失权益。
+
+### 权益SSOT唯一真相（COMMERCIAL-CLEANUP-03-FACT-SEAL）
+
+| 商品类型 | PAID订单数 | 权益存储位置 | 状态 |
+|----------|-----------|-------------|------|
+| MEMBERSHIP | 2 | `users.member_level` + `users.membership_expiry` | VERIFIED |
+| SINGLE_UNLOCK | 2 | `user_assets`（type字段） | VERIFIED |
+| AI_PASS | 0 | N/A | IMPLEMENTED_NOT_PRODUCTION_PROVEN |
+| AI_CREDIT | 0 | N/A | IMPLEMENTED_NOT_PRODUCTION_PROVEN |
+| CONTENT_UNLOCK | 0 | N/A | IMPLEMENTED_NOT_PRODUCTION_PROVEN |
+
+### 备份数据库数量纠偏
+
+备份脚本实际备份 **3个** 物理数据库文件：
+- `yandao_users.db`（/root/backend-auth/data/）
+- `social.db`（/www/yandaoguoxue-backend/data/）
+- `academy.db`（/www/yandaoguoxue-backend/data/）
+
+Admin API backup响应中"ordersDb"与"usersDb"指向同一物理文件（订单在users库中），非独立第四库。**实际数据库总数：3。**
 
 ---
 
@@ -229,7 +254,7 @@ payForMembership, payForUnlock, paySingleUnlockAndWait, pollPaymentStatus
 | activatePaidPlan生产引用 | grep production build | 0 ✅ |
 | PENDING治理 | 104→EXPIRED | 仅1笔PENDING ✅ |
 | 支付健康 | 微信回调验签 | ok ✅ |
-| 备份健康 | 4库每日备份 | ok ✅ |
+| 备份健康 | 三库每日备份（users+social+academy） | ok ✅ |
 
 ---
 
