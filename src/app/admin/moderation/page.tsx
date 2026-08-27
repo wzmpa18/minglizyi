@@ -263,6 +263,7 @@ export default function AdminModerationPage() {
                 <Th>手机号</Th>
                 <Th>邮箱</Th>
                 <Th>会员</Th>
+                <Th>邀请成员</Th>
                 <Th>状态</Th>
                 <Th>禁言至</Th>
                 <Th>最近登录</Th>
@@ -271,7 +272,7 @@ export default function AdminModerationPage() {
             </thead>
             <tbody>
               {users.length === 0 ? (
-                <EmptyRow colSpan={8} />
+                <EmptyRow colSpan={10} />
               ) : (
                 users.map((u) => (
                   <tr key={u.user_id}>
@@ -288,6 +289,20 @@ export default function AdminModerationPage() {
                         </Badge>
                       ) : (
                         <Badge type="default">普通</Badge>
+                      )}
+                    </Td>
+                    <Td>
+                      {u.invite_count ? (
+                        <div>
+                          <span style={{ fontWeight: 700, color: THEME.primary }}>
+                            {u.invite_count} 人
+                          </span>
+                          <div style={{ fontSize: 11, color: THEME.textHint }}>
+                            一级 {u.invite_level1 ?? 0} · 二级 {u.invite_level2 ?? 0}
+                          </div>
+                        </div>
+                      ) : (
+                        <span style={{ color: THEME.textHint }}>-</span>
                       )}
                     </Td>
                     <Td>

@@ -367,13 +367,26 @@ router.get('/moderation/users', adminAuthUnified('SUPPORT_ADMIN', 'ops'), (req, 
     const size = Math.min(500, parseInt(req.query.size, 10) || 20);
     let where = '1=1'; const params = [];
     if (q) {
-      if (/^\d+$/.test(q)) { where = 'user_id = ? OR phone LIKE ? OR nickname LIKE ?'; params.push(parseInt(q, 10), '%' + q + '%', '%' + q + '%'); }
-      else { where = 'nickname LIKE ? OR phone LIKE ? OR email LIKE ?'; params.push('%' + q + '%', '%' + q + '%', '%' + q + '%'); }
+      if (/^\d+$/.test(q)) { where = 'u.user_id = ? OR u.phone LIKE ? OR u.nickname LIKE ?'; params.push(parseInt(q, 10), '%' + q + '%', '%' + q + '%'); }
+      else { where = 'u.nickname LIKE ? OR u.phone LIKE ? OR u.email LIKE ?'; params.push('%' + q + '%', '%' + q + '%', '%' + q + '%'); }
     }
-    const total = udb.prepare(`SELECT COUNT(*) c FROM users WHERE ${where}`).get(...params).c;
+    const total = udb.prepare(`SELECT COUNT(*) c FROM users u WHERE ${where}`).get(...params).c;
     // v25.0.47_24: 用户管理需展示完整注册信息（手机号/邮箱）——后台已鉴权 SUPPORT_ADMIN/ops，去脱敏直出
-    const rows = udb.prepare(`SELECT user_id, nickname, phone, email, member_level, status, muted_until, created_at, last_login_at
-                              FROM users WHERE ${where} ORDER BY user_id DESC LIMIT ? OFFSET ?`)
+    // 邀请成员统计：按 user_invite_relation 聚合每位邀请人的一级/二级/总邀请数，展示会员是否邀请过会员及其后邀请的成员数
+    const rows = udb.prepare(`SELECT u.user_id, u.nickname, u.phone, u.email, u.member_level, u.status, u.muted_until, u.created_at, u.last_login_at,
+                                     COALESCE(ir.invite_count, 0) AS invite_count,
+                                     COALESCE(ir.invite_level1, 0) AS invite_level1,
+                                     COALESCE(ir.invite_level2, 0) AS invite_level2
+                              FROM users u
+                              LEFT JOIN (
+                                SELECT inviter_id,
+                                       COUNT(*) AS invite_count,
+                                       SUM(CASE WHEN level = 1 THEN 1 ELSE 0 END) AS invite_level1,
+                                       SUM(CASE WHEN level = 2 THEN 1 ELSE 0 END) AS invite_level2
+                                FROM user_invite_relation
+                                GROUP BY inviter_id
+                              ) ir ON ir.inviter_id = u.user_id
+                              WHERE ${where} ORDER BY u.user_id DESC LIMIT ? OFFSET ?`)
       .all(...params, size, (page - 1) * size);
     res.json({ success: true, data: { total, page, size, users: rows } });
   } catch (e) {

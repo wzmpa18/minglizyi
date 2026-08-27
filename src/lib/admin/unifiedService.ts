@@ -80,6 +80,12 @@ export interface ModerationUser {
   member_level?: string;
   created_at?: string;
   last_login_at?: string | null;
+  /** 邀请总人数（一级 + 二级） */
+  invite_count?: number;
+  /** 一级直属邀请人数 */
+  invite_level1?: number;
+  /** 二级邀请人数 */
+  invite_level2?: number;
 }
 
 export interface ModerationPost {
