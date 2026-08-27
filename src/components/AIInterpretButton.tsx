@@ -5,6 +5,7 @@ import {
   callAI,
   checkAIQuota,
   incrementAIUsage,
+  getAIErrorMessage,
   // v20.1: 三级权限
   getPermissionStatus,
   getUserPermissionLevel,
@@ -156,12 +157,15 @@ export default function AIInterpretButton({
           incrementAIUsage();
         }
       } else {
-        setError(result.error || "AI解读服务暂时不可用");
-        setContent("AI解读服务暂时不可用，请稍后重试。" + DISCLAIMER);
+        // COMMERCIAL-CLEANUP-03: 统一错误码映射
+        const errMsg = getAIErrorMessage(result.errorCode || "", result.error || "AI解读服务暂时不可用");
+        setError(errMsg);
+        setContent(errMsg + DISCLAIMER);
       }
     } catch (err: any) {
-      setError(err.message || "网络错误");
-      setContent("AI解读服务暂时不可用，请稍后重试。" + DISCLAIMER);
+      const errMsg = getAIErrorMessage((err as any).code || "", err.message || "网络错误");
+      setError(errMsg);
+      setContent(errMsg + DISCLAIMER);
     } finally {
       setLoading(false);
     }

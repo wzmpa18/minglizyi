@@ -350,7 +350,7 @@ app.get('/api/admin/stats', adminAuth(), async (req, res) => {
       user: { total: 0, active: 0, newToday: 0, newThisWeek: 0, newThisMonth: 0 },
       invite: { totalInvites: 0, successfulInvites: 0, pendingInvites: 0, conversionRate: 0 },
       pageViews: { total: 0, today: 0, topPages: [] },
-      membership: { totalMembers: 0, monthly: 0, yearly: 0, lifetime: 0, revenue: 0 },
+     membership: { totalMembers: 0, monthly: 0, quarterly: 0, yearly: 0, lifetime: 0, revenue: 0 },
       aiUsage: { totalCalls: 0, today: 0, successRate: 100, topTools: [] },
       generatedAt: new Date().toISOString(),
     };
@@ -369,11 +369,13 @@ app.get('/api/admin/stats', adminAuth(), async (req, res) => {
           stats.user.newThisWeek = weekUsers?.count || 0;
           const monthUsers = db.prepare("SELECT COUNT(*) as count FROM users WHERE created_at >= date('now', '-30 days')").get();
           stats.user.newThisMonth = monthUsers?.count || 0;
-          const memberCount = db.prepare("SELECT COUNT(*) as count FROM users WHERE member_level != 'basic'").get();
+          const memberCount = db.prepare("SELECT COUNT(*) as count FROM users WHERE member_level != 'basic' AND (membership_expiry IS NULL OR membership_expiry > datetime('now') OR member_level = 'lifetime')").get();
           stats.membership.totalMembers = memberCount?.count || 0;
-          const monthlyCount = db.prepare("SELECT COUNT(*) as count FROM users WHERE member_level = 'monthly'").get();
+          const monthlyCount = db.prepare("SELECT COUNT(*) as count FROM users WHERE member_level = 'monthly' AND (membership_expiry IS NULL OR membership_expiry > datetime('now'))").get();
           stats.membership.monthly = monthlyCount?.count || 0;
-          const yearlyCount = db.prepare("SELECT COUNT(*) as count FROM users WHERE member_level = 'yearly'").get();
+          const quarterlyCount = db.prepare("SELECT COUNT(*) as count FROM users WHERE member_level = 'quarterly' AND (membership_expiry IS NULL OR membership_expiry > datetime('now'))").get();
+          stats.membership.quarterly = quarterlyCount?.count || 0;
+          const yearlyCount = db.prepare("SELECT COUNT(*) as count FROM users WHERE member_level = 'yearly' AND (membership_expiry IS NULL OR membership_expiry > datetime('now'))").get();
           stats.membership.yearly = yearlyCount?.count || 0;
           const lifetimeCount = db.prepare("SELECT COUNT(*) as count FROM users WHERE member_level = 'lifetime'").get();
           stats.membership.lifetime = lifetimeCount?.count || 0;

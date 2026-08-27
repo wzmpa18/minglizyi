@@ -588,7 +588,7 @@ export function createOrder(
   return order;
 }
 
-/** 完成订单支付并激活会员 */
+/** @deprecated COMMERCIAL-CLEANUP-03: LEGACY——服务端支付回调是唯一权益交付权威，不再本地模拟激活 */
 export function completeOrder(orderId: string): {
   success: boolean;
   message: string;

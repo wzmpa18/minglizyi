@@ -4,9 +4,7 @@ import { useState, useCallback } from "react";
 import {
   checkAIQuota,
   incrementAIUsage,
-  activatePaidPlan,
-  getPaidPlanStatus,
-  AI_PAID_PLANS,
+  // COMMERCIAL-CLEANUP-03: activatePaidPlan/getPaidPlanStatus/AI_PAID_PLANS 已移除——AI权限由服务端SSOT决定
   getEventDivination,
   callAI,
   // v20.1: 三级权限体系
@@ -79,15 +77,15 @@ export default function EventDivinationPanel({
   const [showMasterPanel, setShowMasterPanel] = useState(false);
   const [showSingleUnlock, setShowSingleUnlock] = useState(false); // v20.1: 单次解锁弹窗
 
-  // v25.0.47_10: 价格 SSOT——展示与下单价格优先读服务端（后台改价实时生效），本地常量仅兜底
+  // COMMERCIAL-CLEANUP-03: 价格SSOT——展示与下单价格从服务端读取，不再使用 AI_PAID_PLANS 硬编码
   const { singleUnlockPrice: serverSinglePrice, timePlans: serverTimePlans } = useAiPricing();
   const singlePrice = serverSinglePrice ?? SINGLE_UNLOCK_PRICE;
-  const paidPlans = (serverTimePlans && serverTimePlans.length > 0 ? serverTimePlans : AI_PAID_PLANS) as typeof AI_PAID_PLANS;
+  const paidPlans = (serverTimePlans && serverTimePlans.length > 0 ? serverTimePlans : []) as Array<{ key: string; name: string; price: number; duration: string; features: string[] }>;
 
   // v20.1: 登录守卫 - 未登录用户不可使用AI/付费功能
   const { requireLogin, showLoginPrompt, setShowLoginPrompt } = useRequireLogin();
 
-  // v20.1: 三级权限检查
+  // v20.1: 三级权限检查（COMMERCIAL-CLEANUP-03: 移除 getPaidPlanStatus——AI权限由服务端SSOT决定）
   const checkAccess = useCallback((): boolean => {
     const perm = getPermissionStatus();
     setQuotaMsg(perm.message);
@@ -99,9 +97,8 @@ export default function EventDivinationPanel({
     }
 
     if (isPaidTool) {
-      // 付费工具：检查是否有付费套餐或高级会员
-      const paid = getPaidPlanStatus();
-      if (paid.active || perm.level === "member") {
+      // 付费工具：检查会员状态（服务端AI调用时二次鉴权）
+      if (perm.level === "member") {
         return true;
       }
       // 免费用户需要付费
@@ -251,7 +248,7 @@ export default function EventDivinationPanel({
     }
   }, [loading, toolName, chartContext, checkAccess, processContentByPermission]);
 
-  // v25.0.47_8: 付费套餐购买（真实微信支付，成功后本地激活套餐）
+  // COMMERCIAL-CLEANUP-03: 付费套餐购买——走真实微信支付，AI权限由服务端SSOT决定，不再本地激活
   const [purchasePaying, setPurchasePaying] = useState(false);
   const [purchaseMsg, setPurchaseMsg] = useState("");
   const handlePurchase = useCallback(async (planKey: string) => {
@@ -262,21 +259,16 @@ export default function EventDivinationPanel({
     setPurchaseMsg("");
     try {
       const r = await paySingleUnlockAndWait(`ai_plan_${planKey}`, plan.price, plan.name);
-      // v25.0.47_9: Native扫码支付——弹出付款二维码，扫码成功后激活套餐
       if (r.ticket) {
         openQR(r.ticket, () => {
-          activatePaidPlan(planKey);
           setShowPayment(false);
-          const quota = checkAIQuota();
-          setQuotaMsg(quota.message + " 套餐已激活，请重新点击解读");
+          setQuotaMsg("支付成功！AI套餐已生效，请重新点击解读");
         });
         return;
       }
       if (r.paid) {
-        activatePaidPlan(planKey);
         setShowPayment(false);
-        const quota = checkAIQuota();
-        setQuotaMsg(quota.message + " 套餐已激活，请重新点击解读");
+        setQuotaMsg("支付成功！AI套餐已生效，请重新点击解读");
       } else {
         setPurchaseMsg(r.message);
       }

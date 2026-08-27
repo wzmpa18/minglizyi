@@ -66,6 +66,30 @@ function setLocalCache(key: string, content: string): void {
   } catch { /* ignore */ }
 }
 
+// ==================== AI错误码统一映射（COMMERCIAL-CLEANUP-03） ====================
+// 所有AI入口复用此映射，禁止各自显示不一致的错误信息
+const AI_ERROR_MAP: Record<string, string> = {
+  AI_AUTH_REQUIRED: "请登录后使用AI解读",
+  AI_NOT_ENTITLED: "该功能需开通会员或购买权益后使用",
+  AI_QUOTA_EXCEEDED: "今日AI额度已用完，明日重置或升级会员",
+  AI_DISABLED: "AI功能暂时关闭，请稍后再试",
+  AI_MAINTENANCE: "系统维护中，请稍后再试",
+  AI_UPSTREAM_TIMEOUT: "AI响应超时，请稍后重试",
+  AI_UPSTREAM_ERROR: "AI服务临时异常，请稍后重试",
+  AI_EMPTY_CONTENT: "本次生成失败，请重新尝试",
+  AI_SERVICE_UNAVAILABLE: "AI通道临时故障，已为您保留经典解读内容，请稍后重试",
+  FEATURE_DISABLED: "该功能已由平台暂时关闭，请稍后再试",
+  FEATURE_MAINTENANCE: "该功能正在维护中，请稍后再试",
+};
+
+/**
+ * 根据服务端错误码返回统一用户提示
+ * 所有AI入口组件必须使用此函数，禁止硬编码错误信息
+ */
+export function getAIErrorMessage(code: string, fallback?: string): string {
+  return AI_ERROR_MAP[code] || fallback || "AI服务暂时不可用，请稍后重试";
+}
+
 // ==================== 降级内容 ====================
 const FALLBACK_MESSAGES: Record<string, string> = {
   yixue: "AI解读服务暂时不可用，请稍后重试。您可先查看经典解读内容。",
@@ -124,17 +148,8 @@ export async function callAI(request: AIRequest): Promise<AIResponse> {
       : cacheKey?.includes("yixue") ? "yixue"
       : "default";
     const _code = (error as any).code || "";
-    let msg = FALLBACK_MESSAGES[category] || FALLBACK_MESSAGES.default;
-    if (_code === "AI_DISABLED" || _code === "FEATURE_DISABLED") {
-      msg = "该功能已由平台暂时关闭，请稍后再试。";
-    } else if (_code === "AI_MAINTENANCE" || _code === "FEATURE_MAINTENANCE") {
-      msg = "该功能正在维护中，请稍后再试。";
-    } else if (_code === "AI_QUOTA_EXCEEDED") {
-      // v25.0.60：服务端配额强制后，透出真实配额提示（服务端 error 已含次数信息）
-      msg = error.message || "今日AI调用次数已用完，明日重置或升级会员。";
-    } else if (_code === "AI_SERVICE_UNAVAILABLE") {
-      msg = "AI通道临时故障，已为您保留经典解读内容，请稍后重试。";
-    }
+    // COMMERCIAL-CLEANUP-03: 统一错误码映射——所有AI入口共用 getAIErrorMessage
+    const msg = getAIErrorMessage(_code, FALLBACK_MESSAGES[category] || FALLBACK_MESSAGES.default);
     return {
       success: false,
       content: msg,
@@ -179,7 +194,7 @@ export const AI_PAID_PLANS: PaidPlan[] = [
   { key: "yearly", name: "AI年卡", price: 199, duration: "365天", desc: "全年AI解读畅享（与会员权益独立）" },
 ];
 
-// 检查用户AI配额
+// 检查用户AI配额（COMMERCIAL-CLEANUP-03: 移除 AI_PAID_KEY 检查——AI权限由服务端SSOT决定）
 export function checkAIQuota(): AIQuotaStatus {
   if (typeof window === "undefined") {
     return { dailyUsed: 0, dailyLimit: 0, remaining: 0, level: "basic", canUse: false, needPayment: true, message: "" };
@@ -200,16 +215,6 @@ export function checkAIQuota(): AIQuotaStatus {
       }
     }
 
-    // 检查付费套餐
-    const paidRaw = localStorage.getItem(AI_PAID_KEY);
-    let hasPaidPlan = false;
-    if (paidRaw) {
-      const paid = JSON.parse(paidRaw);
-      if (paid.expireTime && new Date(paid.expireTime) > new Date()) {
-        hasPaidPlan = true;
-      }
-    }
-
     // 配额限制（v20.5: 免费用户零AI门槛，必须付费或开通会员）
     const limits: Record<string, number> = {
       basic: 0,
@@ -219,7 +224,7 @@ export function checkAIQuota(): AIQuotaStatus {
       lifetime: Infinity,
     };
 
-    const dailyLimit = level === "lifetime" || level === "yearly" || hasPaidPlan ? Infinity : limits[level];
+    const dailyLimit = level === "lifetime" || level === "yearly" ? Infinity : limits[level];
 
     // 获取今日使用次数
     const today = new Date().toDateString();
@@ -269,7 +274,8 @@ export function incrementAIUsage(): void {
   } catch { /* ignore */ }
 }
 
-// 激活付费套餐
+// @deprecated COMMERCIAL-CLEANUP-03: LEGACY——AI权限由服务端SSOT决定，不再本地激活套餐
+// 仅保留用于开发测试，生产代码不得调用
 export function activatePaidPlan(planKey: string): boolean {
   if (typeof window === "undefined") return false;
   try {
@@ -348,6 +354,7 @@ export function getUserPermissionLevel(): PermissionLevel {
     if (!token) return "visitor";
 
     // 检查会员状态（v25.0.60 P0-4：补 quarterly/premium 档，原缺失导致季度会员被降级为免费用户）
+    // COMMERCIAL-CLEANUP-03: 移除 AI_PAID_KEY 检查——AI权限由服务端SSOT决定，不再本地判断
     const membershipRaw = localStorage.getItem("yandao_membership_status");
     if (membershipRaw) {
       const ms = JSON.parse(membershipRaw);
@@ -355,13 +362,6 @@ export function getUserPermissionLevel(): PermissionLevel {
       if (ms.level === "yearly" || ms.level === "quarterly" || ms.level === "monthly" || ms.level === "premium") {
         if (!ms.expireTime || new Date(ms.expireTime) > new Date()) return "member";
       }
-    }
-
-    // 检查付费套餐
-    const paidRaw = localStorage.getItem(AI_PAID_KEY);
-    if (paidRaw) {
-      const paid = JSON.parse(paidRaw);
-      if (paid.expireTime && new Date(paid.expireTime) > new Date()) return "member";
     }
 
     return "free";

@@ -35,15 +35,34 @@ export interface ServerPricing {
   generatedAt: string;
 }
 
-// ==================== 内存缓存（60 秒 TTL，模块级共享） ====================
+// ==================== 内存缓存（COMMERCIAL-CLEANUP-03: 延长TTL到5分钟 + localStorage持久化） ====================
 
-const CACHE_TTL_MS = 60 * 1000;
+const CACHE_TTL_MS = 5 * 60 * 1000;
+const LOCAL_CACHE_KEY = "yandao_pricing_cache";
 let cache: { at: number; data: ServerPricing } | null = null;
 let inflight: Promise<ServerPricing | null> | null = null;
 
+function getLocalCache(): ServerPricing | null {
+  try {
+    if (typeof window === "undefined") return null;
+    const raw = localStorage.getItem(LOCAL_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed.at && parsed.data && Date.now() - parsed.at < CACHE_TTL_MS) return parsed.data;
+    return null;
+  } catch { return null; }
+}
+
+function setLocalCache(data: ServerPricing): void {
+  try {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify({ at: Date.now(), data }));
+  } catch { /* ignore */ }
+}
+
 export function getCachedPricing(): ServerPricing | null {
   if (cache && Date.now() - cache.at < CACHE_TTL_MS) return cache.data;
-  return null;
+  return getLocalCache();
 }
 
 /** 拉取服务端价格 SSOT（带内存缓存；失败返回 null，调用方走本地 fallback） */
@@ -60,6 +79,7 @@ export async function fetchServerPricing(force = false): Promise<ServerPricing |
       const json = await res.json();
       if (json && json.success && json.data) {
         cache = { at: Date.now(), data: json.data as ServerPricing };
+        setLocalCache(cache.data);
         return cache.data;
       }
       return null;
@@ -107,24 +127,35 @@ export function useServerPricing(): {
 }
 
 /**
- * 合并服务端价格到本地套餐（服务端优先，本地兜底）
+ * 合并服务端价格到本地套餐（COMMERCIAL-CLEANUP-03: 优先使用缓存，不无声使用硬编码价格）
  * 用于展示与下单：服务端有该等级就用服务端价格，否则用本地常量。
+ * 如果服务端价格不可用且无缓存，返回 null——调用方应显示"价格加载中/请重试"
  */
 export function mergePlansWithServer<T extends { level: string; price: number; originalPrice?: number }>(
   localPlans: T[],
   serverPlans: ServerMembershipPlan[] | null
-): T[] {
-  if (!serverPlans || serverPlans.length === 0) return localPlans;
-  const serverMap = new Map(serverPlans.map((p) => [p.level, p]));
-  return localPlans.map((lp) => {
-    const sp = serverMap.get(lp.level);
-    if (!sp) return lp;
-    return {
-      ...lp,
-      price: sp.price,
-      originalPrice: sp.originalPrice ?? lp.originalPrice,
-    };
-  });
+): T[] | null {
+  // 优先使用服务端实时数据
+  if (serverPlans && serverPlans.length > 0) {
+    const serverMap = new Map(serverPlans.map((p) => [p.level, p]));
+    return localPlans.map((lp) => {
+      const sp = serverMap.get(lp.level);
+      if (!sp) return lp;
+      return { ...lp, price: sp.price, originalPrice: sp.originalPrice ?? lp.originalPrice };
+    });
+  }
+  // 服务端不可达时使用本地缓存（5分钟TTL + localStorage持久化）
+  const cached = getCachedPricing();
+  if (cached?.membershipPlans && cached.membershipPlans.length > 0) {
+    const serverMap = new Map(cached.membershipPlans.map((p) => [p.level, p]));
+    return localPlans.map((lp) => {
+      const sp = serverMap.get(lp.level);
+      if (!sp) return lp;
+      return { ...lp, price: sp.price, originalPrice: sp.originalPrice ?? lp.originalPrice };
+    });
+  }
+  // 无任何价格数据——返回 null，调用方显示"价格加载中/请重试"
+  return null;
 }
 
 /** 单等级价格查询（服务端优先） */

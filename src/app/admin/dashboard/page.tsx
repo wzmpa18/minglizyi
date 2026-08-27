@@ -124,6 +124,7 @@ export default function DashboardPage() {
 
   const memberLevels = [
     { key: "monthly", name: "月度会员", count: num(stMember.monthly) },
+    { key: "quarterly", name: "季度会员", count: num(stMember.quarterly) },
     { key: "yearly", name: "年度会员", count: num(stMember.yearly) },
     { key: "lifetime", name: "终身会员", count: num(stMember.lifetime) },
   ];
@@ -143,7 +144,7 @@ export default function DashboardPage() {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginBottom: 14 }}>
           <HealthDot label="后端服务" status={health.backend || health.server || "正常"} />
           <HealthDot label="数据库" status={health.database || "正常"} />
-          <HealthDot label="AI 服务" status={health.ai || (ai.enabled ? "正常" : "关闭")} />
+          <HealthDot label="AI 服务" status={health.ai || (ai.enabled ? "ok" : "down")} reason={health.aiReason || ''} />
           <HealthDot label="微信支付" status={health.payment || (payment.nativeReady ? "正常" : "待配置")} />
           {/* v25.0.61 FINAL-HANDOVER 第四十六章：SOCIAL_BACKUP_GATE 红灯（备份门禁失败/超48h未备份） */}
           <HealthDot label="数据备份" status={health.backup || "未知"} />
@@ -339,13 +340,16 @@ function fmtBackupTime(t?: string | null): string {
   return d.toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
-function HealthDot({ label, status }: { label: string; status: string }) {
+function HealthDot({ label, status, reason }: { label: string; status: string; reason?: string }) {
   const s = String(status);
   const isBad = /故障|关闭|error|down|fail/i.test(s);
   const isWarn = /待配置|维护|partial|warn|未知/i.test(s);
   const color = isBad ? THEME.error : isWarn ? THEME.warning : THEME.success;
+  const statusLabel = isBad ? '故障/关闭' : isWarn ? '部分可用' : '正常';
+  const tooltip = reason ? `${statusLabel}：${reason}` : statusLabel;
   return (
     <div
+      title={tooltip}
       style={{
         display: "flex",
         alignItems: "center",
@@ -354,12 +358,13 @@ function HealthDot({ label, status }: { label: string; status: string }) {
         borderRadius: 10,
         border: `1px solid ${THEME.border}`,
         backgroundColor: "#fff",
+        cursor: reason ? "help" : "default",
       }}
     >
       <span style={{ width: 10, height: 10, borderRadius: "50%", backgroundColor: color, flexShrink: 0 }} />
       <div>
         <div style={{ fontSize: 12, color: THEME.textSub }}>{label}</div>
-        <div style={{ fontSize: 13, fontWeight: 700, color }}>{isBad ? "故障/关闭" : isWarn ? s : "正常"}</div>
+        <div style={{ fontSize: 13, fontWeight: 700, color }}>{statusLabel}</div>
       </div>
     </div>
   );

@@ -9,8 +9,7 @@ import {
   getMembershipStatus,
   isSuperAccount,
   MEMBERSHIP_PLANS,
-  createOrder,
-  completeOrder,
+  // COMMERCIAL-CLEANUP-03: createOrder/completeOrder 已移除——服务端支付回调是唯一权威
   getLevelName,
   getLevelColor,
   getOrders,
@@ -23,7 +22,7 @@ import {
   MembershipStatus,
   OrderRecord,
 } from "@/lib/membershipStore";
-import { updateUserProfile, getUserProfile } from "@/lib/auth";
+import { getUserProfile } from "@/lib/auth";
 import { reportConsumptionRebate } from "@/lib/inviteApi";
 import { redeemCode, getMyRedemptions } from "@/lib/redeemCodeStore";
 import { getToolConfig } from "@/lib/toolConfigStore";
@@ -39,8 +38,8 @@ export default function MembershipPage() {
   const router = useRouter();
   // v25.0.47_9: Native扫码支付弹层（全场景兜底收款通道）
   const { qrModal, openQR } = useNativePayQR();
-  // v25.0.47_10: 价格 SSOT——套餐价格优先读服务端（后台改价实时生效），本地常量仅兜底
-  const { plans: serverPlans } = useServerPricing();
+  // COMMERCIAL-CLEANUP-03: 价格 SSOT——套餐价格优先读服务端（后台改价实时生效），本地缓存兜底
+  const { plans: serverPlans, ready: pricingReady } = useServerPricing();
   const PLANS = mergePlansWithServer(MEMBERSHIP_PLANS, serverPlans);
   const [status, setStatus] = useState<MembershipStatus>(() => getMembershipStatus());
   const [selectedPlan, setSelectedPlan] = useState<MemberLevel>("yearly");
@@ -132,18 +131,12 @@ export default function MembershipPage() {
     return `剩余 ${days} 天`;
   };
 
-  // v25.0.47_9: 支付成功统一权益落地（JSAPI轮询确认 / Native扫码回调共用）
+  // COMMERCIAL-CLEANUP-03: 支付成功统一权益落地
   // 服务端订单已交付权益（users.member_level/membership_expiry），此处同步本地展示与账本
+  // 不再调用 completeOrder——服务端支付回调是唯一权威，本地只做展示刷新
   const applyMembershipPaid = (serverOrderNo: string) => {
-    const plan = PLANS.find((p) => p.level === selectedPlan);
+    const plan = (PLANS || MEMBERSHIP_PLANS).find((p) => p.level === selectedPlan);
     if (!plan) return;
-    const order = createOrder(selectedPlan, paymentMethod);
-    const result = completeOrder(order.id);
-    if (result.success && result.status) {
-      const profileLevel = selectedPlan === "basic" ? "basic" : "premium";
-      updateUserProfile({ memberLevel: profileLevel });
-      setStatus(result.status);
-    }
     setSuccessInfo({ planName: plan.name, level: selectedPlan });
     setShowSuccess(true);
 
@@ -165,7 +158,7 @@ export default function MembershipPage() {
       return;
     }
     const level = overrideLevel ?? selectedPlan;
-    const plan = PLANS.find((p) => p.level === level);
+    const plan = (PLANS || MEMBERSHIP_PLANS).find((p) => p.level === level);
     if (!plan || plan.price === 0) {
       setPayError("该套餐为免费版本，无需开通");
       return;
@@ -317,7 +310,7 @@ export default function MembershipPage() {
         )}
 
         {/* ===== 套餐列表 ===== */}
-        {!paymentsBlocked && PLANS.map((plan) => {
+        {!paymentsBlocked && (PLANS || MEMBERSHIP_PLANS).map((plan) => {
           const isSelected = selectedPlan === plan.level;
           const levelColor = getLevelColor(plan.level);
           return (
@@ -755,7 +748,7 @@ export default function MembershipPage() {
         >
           {paying
             ? "支付处理中..."
-            : `立即开通 · ¥${PLANS.find((p) => p.level === selectedPlan)?.price ?? 0}`}
+            : `立即开通 · ¥${(PLANS || MEMBERSHIP_PLANS).find((p) => p.level === selectedPlan)?.price ?? 0}`}
         </button>
       </div>
       </>

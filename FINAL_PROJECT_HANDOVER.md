@@ -39,6 +39,8 @@
 ## 5. 生产服务器
 
 腾讯云 **82.156.228.87**（root 登录；SSH 密钥 `~/.ssh/id_rsa_yandao`，本地 Windows 已配）。宝塔面板管理。
+- 实例：`lhins-4ak6ifwg`（轻量应用服务器），地域：**北京（ap-beijing）**，系统盘 50GB（已用 15GB/30%）。
+- 腾讯云安全组件：云镜(YunJing) v5.4.4.213 / Stargate agent / TAT agent 均运行中。
 ⚠️ 同机还承载「言道学外语」与公司官网——**清理服务器时绝对不能碰**。
 
 ## 6. 域名
@@ -96,7 +98,8 @@
 - 每日 **02:00** cron：`/root/backend-auth/backup_db.sh` → 备份**用户库 + 社交库 + 学习库（academy.db）三库**（D22 封口），保留 30 天，`integrity_check` 校验，写状态文件 `backend data/backup_status.json`（含 usersDb/socialDb/academyDb 三块）。
 - 学习库说明：`/www/yandaoguoxue-backend/data/academy.db`（57MB）= `study_progress`（用户学习进度）+ 13 万条学习内容（materials/questions/knowledge_points），AI 生成内容重建成本高，**必须备份**。
 - 特殊快照：`yandao_users_pre_fix100011_*.db`、`social_db_precleanup_*.db`（操作前快照，勿删）。
-- **异地备份未配置**（OFFSITE_BACKUP = PARTIAL）：coscmd 已装但 `/root/.cos.conf` 缺失。方案见 §29。
+- **每周核心表导出**：每周一 08:00 cron → `/root/backend-auth/scripts/weekly_core_export.sh` → 导出 12 张核心表（users/orders/entitlements/commissions/withdrawals/partners/points/friendships/groups/study_progress）为 CSV → tar.gz 打包，保留 4 周。路径：`/root/backup/weekly_exports/`。
+- **异地备份**：腾讯云基础设施层提供快照备份能力（轻量服务器系统盘快照），但COS应用层异地同步未配置（coscmd 已装但 `/root/.cos.conf` 缺失）。腾讯云防护拉满方案见 `docs/TENCENT_CLOUD_PROTECTION_CHECKLIST.md`（D23 批次）。
 
 ## 14. APK 唯一地址（DOWNLOAD SSOT，永久冻结）
 
@@ -213,12 +216,12 @@ v25.0.60 / versionCode 2059 / 包名 `com.yandao.guoxue` / MD5 `e506971da1779ea7
 | DOWNLOAD | **VERIFIED** | 唯一源 200+MIME+MD5；301 收口；门禁脚本 |
 | ANDROID | **PARTIAL** | APK 三重验证（直链/二进制/版本）；真机全链路 DEVICE_UNAVAILABLE |
 | ADMIN | **VERIFIED** | /admin 唯一入口 + 三级角色 + 驾驶舱含备份状态 |
-| BACKUP | **VERIFIED**（本地） | 三库（users+social+academy）每日 02:00 + integrity_check + SOCIAL_BACKUP_GATE 红灯 + 恢复演练 ok |
+| BACKUP | **VERIFIED**（本地） | 三库每日 02:00 + 每周核心表导出 + integrity_check + SOCIAL_BACKUP_GATE 红灯 + 恢复演练 ok；腾讯云快照/安全加固方案已就绪（D23） |
 | SOURCE_SYNC | **VERIFIED** | 四端一致 + GitHub clone 构建实证 |
 
 ## 27. 当前已知 PARTIAL
 
-1. **OFFSITE_BACKUP**：异地备份未配置（coscmd 装了但 `/root/.cos.conf` 缺失）→ 状态只能写 PARTIAL。方案：腾讯 COS 每日加密上传，保留 7 日每日 + 4 周周备；需项目方提供 COS 密钥后开通，**禁止假开通**。
+1. **OFFSITE_BACKUP**：腾讯云基础设施层快照能力可用（轻量服务器系统盘快照），但 COS 应用层异地同步未配置（coscmd 装了但 `/root/.cos.conf` 缺失）。P0 优先：在腾讯云控制台开启自动快照策略（每日，保留 7 天）+ 跨地域复制（北京→上海）。完整操作清单见 `docs/TENCENT_CLOUD_PROTECTION_CHECKLIST.md`。
 2. **ANDROID 真机**：开发环境无 Android 物理设备（DEVICE_UNAVAILABLE），真机下载→安装→登录→AI→社交全链路待项目方执行（服务端已三重验证 APK）。
 3. **SHARE 真机**：排盘→分享→Share Sheet→微信/QQ→接收→注册→归因，真机链路未验。
 4. **iOS**：PLA 未签。
@@ -235,7 +238,7 @@ v25.0.60 / versionCode 2059 / 包名 `com.yandao.guoxue` / MD5 `e506971da1779ea7
 
 ## 29. 当前风险（按优先级）
 
-1. **单机单盘**：全部数据在一台腾讯云；异地备份（§27.1）是第一优先级。
+1. **单机单盘**：全部数据在一台腾讯云北京轻量服务器；**腾讯云快照是性价比最高的第一道防线**（控制台开启自动快照策略，3 分钟搞定）。COS 异地同步是第二道防线（需提供 API 密钥后开通）。完整方案见 `docs/TENCENT_CLOUD_PROTECTION_CHECKLIST.md`。
 2. **旧 APK 用户 AI 不可用**：≤2058 版不带 token 被 401；观测影响 1-2 台设备；升级 latest.apk 即恢复——**推广前应引导存量用户升级**。
 3. **无社交限频**：恶意刷屏/刷申请无服务端拦截。
 4. **服务器直连 GitHub 不稳**：发布依赖本地推送 + bundle 中转，流程勿改（见 §30）。

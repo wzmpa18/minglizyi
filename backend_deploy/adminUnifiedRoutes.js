@@ -126,12 +126,24 @@ router.get('/overview', adminAuthUnified('SUPPORT_ADMIN'), (_req, res) => {
       data.users.total = udb.prepare('SELECT COUNT(*) c FROM users').get().c;
       data.users.newToday = udb.prepare("SELECT COUNT(*) c FROM users WHERE created_at >= date('now')").get().c;
       data.users.active7d = udb.prepare("SELECT COUNT(*) c FROM users WHERE last_login_at >= datetime('now', '-7 days')").get().c;
-      data.membership.paid = udb.prepare("SELECT COUNT(*) c FROM users WHERE member_level != 'basic'").get().c;
+      // COMMERCIAL-CLEANUP-03: 会员统计必须使用SSOT——排除过期会员，终身会员永久计入
+      data.membership.paid = udb.prepare("SELECT COUNT(*) c FROM users WHERE member_level != 'basic' AND (membership_expiry IS NULL OR membership_expiry > datetime('now') OR member_level = 'lifetime')").get().c;
+      data.membership.monthly = udb.prepare("SELECT COUNT(*) c FROM users WHERE member_level = 'monthly' AND (membership_expiry IS NULL OR membership_expiry > datetime('now'))").get().c;
+      data.membership.quarterly = udb.prepare("SELECT COUNT(*) c FROM users WHERE member_level = 'quarterly' AND (membership_expiry IS NULL OR membership_expiry > datetime('now'))").get().c;
+      data.membership.yearly = udb.prepare("SELECT COUNT(*) c FROM users WHERE member_level = 'yearly' AND (membership_expiry IS NULL OR membership_expiry > datetime('now'))").get().c;
+      data.membership.lifetime = udb.prepare("SELECT COUNT(*) c FROM users WHERE member_level = 'lifetime'").get().c;
     } catch (e) { console.error('[overview] users:', e.message); }
+    // COMMERCIAL-CLEANUP-03: PENDING订单自动过期——超过24小时的PENDING订单自动标记为EXPIRED
+    try {
+      const expired = udb.prepare("UPDATE user_orders SET status = 'EXPIRED' WHERE status = 'PENDING' AND created_at < datetime('now', '-1 day')").run();
+      if (expired.changes > 0) console.log(`[overview] PENDING订单自动过期: ${expired.changes} 笔`);
+    } catch (e) { console.error('[overview] PENDING过期清理:', e.message); }
     try {
       data.orders.total = udb.prepare('SELECT COUNT(*) c FROM user_orders').get().c;
       data.orders.paid = udb.prepare("SELECT COUNT(*) c FROM user_orders WHERE status = 'PAID'").get().c;
       data.orders.pending = udb.prepare("SELECT COUNT(*) c FROM user_orders WHERE status = 'PENDING'").get().c;
+      data.orders.expired = udb.prepare("SELECT COUNT(*) c FROM user_orders WHERE status = 'EXPIRED'").get().c;
+      data.orders.closed = udb.prepare("SELECT COUNT(*) c FROM user_orders WHERE status = 'CLOSED'").get().c;
       const rev = udb.prepare("SELECT COALESCE(SUM(amount),0) s FROM user_orders WHERE status = 'PAID'").get();
       data.orders.revenueYuan = (Number(rev.s) || 0).toFixed(2);
     } catch (e) { console.error('[overview] orders:', e.message); }
@@ -262,14 +274,30 @@ router.get('/overview', adminAuthUnified('SUPPORT_ADMIN'), (_req, res) => {
       let dbOk = true;
       try { udb.prepare('SELECT 1').get(); sdb.prepare('SELECT 1').get(); } catch (e) { dbOk = false; }
       data.health.db = dbOk ? 'ok' : 'down';
-      // AI：开关关=红(down)；开且今日有失败=黄(warn)；开且无失败或无调用=绿
+      // AI：滚动窗口健康判定（COMMERCIAL-CLEANUP-03 修复：不再因为单次历史错误永久黄灯）
       const aiFlag = require('./featureControlRoutes').getFlagStatus('ai');
       const aiH = data.ai || {};
-      if (aiFlag !== 'ON') data.health.ai = 'down';
-      // v25.0.61 P2-C：连续5次失败=红灯（等价"连续5分钟5xx异常升高"的最小可靠信号）
-      else if ((aiH.consecutiveFails || 0) >= 5) data.health.ai = 'down';
-      else if ((aiH.failToday || 0) > 0) data.health.ai = 'warn';
-      else data.health.ai = 'ok';
+      const _calls = aiH.callsToday || 0;
+      const _success = aiH.successToday || 0;
+      const _fail = aiH.failToday || 0;
+      const _rate = _calls > 0 ? _success / _calls : 1;
+      const _consec = aiH.consecutiveFails || 0;
+      const _p95 = aiH.p95Ms || 0;
+      if (aiFlag !== 'ON') {
+        data.health.ai = 'down'; data.health.aiReason = 'AI功能已关闭';
+      } else if (_consec >= 5) {
+        data.health.ai = 'down'; data.health.aiReason = '连续失败' + _consec + '次';
+      } else if (_calls > 0 && _rate < 0.80) {
+        data.health.ai = 'down'; data.health.aiReason = '成功率' + Math.round(_rate * 100) + '%';
+      } else if (_p95 > 180000) {
+        data.health.ai = 'warn'; data.health.aiReason = 'P95延迟' + Math.round(_p95 / 1000) + '秒';
+      } else if (_calls > 0 && _rate < 0.95) {
+        data.health.ai = 'warn'; data.health.aiReason = '成功率' + Math.round(_rate * 100) + '%，' + _fail + '次失败';
+      } else if (_fail > 0 && _calls === 0) {
+        data.health.ai = 'warn'; data.health.aiReason = '今日无调用记录，昨日' + _fail + '次失败';
+      } else {
+        data.health.ai = 'ok'; data.health.aiReason = _calls > 0 ? '成功率' + Math.round(_rate * 100) + '%' : '暂无调用';
+      }
       // 支付：NATIVE ready=ok；仅商户参数缺=warn；配置缺=down
       const p = data.payment || {};
       if (p.nativeReady) data.health.payment = 'ok';
