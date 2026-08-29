@@ -1,7 +1,8 @@
 # 言道国学项目总账（PROJECT_MASTER_LEDGER）
 
 > **本文档是项目唯一权威账簿（Single Source of Truth）。**
-> 最后更新: 2026-08-25（生产版本 v25.0.47_30：FIX-V30-PAY-CARE 支付权益彻查+防再发机制——用户投诉「会员ID 100011 充值没开通会员」彻查结论：①订单 YD20260825173625902022 ¥39.9 实为 SINGLE_UNLOCK 单次深度解读（非会员套餐），支付成功且 benefit_delivered=1 权益已正常发放；用户误将单次解读当会员购买（单次 39.9>月费 37 价格结构易混淆），支付后又连续创建 7 个未完成 PENDING 订单反复尝试；②全量对账 5 笔 PAID 订单：真实用户订单权益全部正常发放，唯一漏发为 E2E 测试订单 TEST_RC06_DELIVER（无 transaction_id 无真实扣款，已归档）；910082 yearly 会员为 E2E 测试账号（无手机号）非漏发；③处理：用户 100011 客户关怀补偿开通月度会员至 2026-09-24（与生产 deliverOrderBenefits 同口径 users+user_assets 双表）+7 个僵尸 PENDING 订单关闭+operation_logs 三条留痕（修复前 DB 备份 /root/backup/yandao_users_pre_fix100011_20260825_175346.db）；⑥应老板要求改单（2026-08-25 追加）：订单 129 YD20260825173625902022 由 SINGLE_UNLOCK 正式转为 MEMBERSHIP（实付 39.9 金额不动，benefit_delivered=1 维持，operation_logs id=302 order_type_convert 留痕），订单记录与已发月度会员权益一致；用户无推荐人（invited_by/referrer_id 空）改单对佣金结算零影响；④防再发：部署 /root/backend-auth/scripts/payment_reconcile.sh 每日 03:30 cron 自动对账——查 PAID+benefit_delivered=0+支付超10分钟的沉默漏发订单，MEMBERSHIP 按金额映射档位（37/99/374/3600）自动补交付（续费顺延同口径）、SINGLE_UNLOCK 补标记、未知类型告警人工，告警日志 payment_audit_alerts.log；⑤产品层防混淆：单次解锁弹窗新增三处明确标识「本单为单次解读解锁，非会员套餐」+「支付后仅解锁本次解读，不含会员权益」；前一版本 v25.0.47_29+APK v25.0.55(2055)：FIX-V29-DOWNLOAD-RESCUE 升级下载链路根治）
+> 最后更新: 2026-08-29（FINAL-PRODUCTION-OPERATIONS-MASTER-SEAL-01 第一阶段·生产事实终检）
+> 上一批（2026-08-25，生产版本 v25.0.47_30）：FIX-V30-PAY-CARE 支付权益彻查+防再发机制——用户投诉「会员ID 100011 充值没开通会员」彻查结论：①订单 YD20260825173625902022 ¥39.9 实为 SINGLE_UNLOCK 单次深度解读（非会员套餐），支付成功且 benefit_delivered=1 权益已正常发放；用户误将单次解读当会员购买（单次 39.9>月费 37 价格结构易混淆），支付后又连续创建 7 个未完成 PENDING 订单反复尝试；②全量对账 5 笔 PAID 订单：真实用户订单权益全部正常发放，唯一漏发为 E2E 测试订单 TEST_RC06_DELIVER（无 transaction_id 无真实扣款，已归档）；910082 yearly 会员为 E2E 测试账号（无手机号）非漏发；③处理：用户 100011 客户关怀补偿开通月度会员至 2026-09-24（与生产 deliverOrderBenefits 同口径 users+user_assets 双表）+7 个僵尸 PENDING 订单关闭+operation_logs 三条留痕（修复前 DB 备份 /root/backup/yandao_users_pre_fix100011_20260825_175346.db）；⑥应老板要求改单（2026-08-25 追加）：订单 129 YD20260825173625902022 由 SINGLE_UNLOCK 正式转为 MEMBERSHIP（实付 39.9 金额不动，benefit_delivered=1 维持，operation_logs id=302 order_type_convert 留痕），订单记录与已发月度会员权益一致；用户无推荐人（invited_by/referrer_id 空）改单对佣金结算零影响；④防再发：部署 /root/backend-auth/scripts/payment_reconcile.sh 每日 03:30 cron 自动对账——查 PAID+benefit_delivered=0+支付超10分钟的沉默漏发订单，MEMBERSHIP 按金额映射档位（37/99/374/3600）自动补交付（续费顺延同口径）、SINGLE_UNLOCK 补标记、未知类型告警人工，告警日志 payment_audit_alerts.log；⑤产品层防混淆：单次解锁弹窗新增三处明确标识「本单为单次解读解锁，非会员套餐」+「支付后仅解锁本次解读，不含会员权益」；前一版本 v25.0.47_29+APK v25.0.55(2055)：FIX-V29-DOWNLOAD-RESCUE 升级下载链路根治）
 > 历史详细记录见 `PROJECT_LEDGER_FINAL.md`（v25.0.0 ~ v25.0.20 阶段账，冻结归档）。
 > 本账簿只记录 v25.0.21 之后增量与当前全局事实；冲突时以本文为准。
 > 纪律：停止新增 xx_REPORT 编号报告，一切状态只更新本账簿。
@@ -334,3 +335,174 @@ gh workflow run ios-build.yml --repo wzmpa18/minglizyi --ref main
 | 内容运营 | 资讯 /admin/sources；审核 /admin/moderation；分佣 /admin/commission | 项目方 |
 
 **红线**（冻结约束）：版本号保持 v25.0.47 直至全部验证；只允许修改指定区域（六爻 UI/群聊/底部导航/中医搜索/营销海报/资讯/分享/后台/分佣/提现）；紫微/八字/奇门/梅花算法核心、医考引擎、邀请体系、数据库结构禁止改动；分佣两级（一级 15%+二级 5%，层级不得再增加）；禁止新报告文件，只更新本账簿。
+
+---
+
+## 十二、FINAL-PRODUCTION-OPERATIONS-MASTER-SEAL-01 第一阶段（2026-08-29 · 生产事实终检 + 工程纪律封口）
+
+> 依据总指令《FINAL-PRODUCTION-OPERATIONS-MASTER-SEAL-01》第一~二十七部分执行。
+> 本阶段 = A.工程纪律封口 + B.生产事实终检 + C.Operations Reality Check 缺失实测。禁止新增大功能。
+> 责任红线：NO GUESS / NO DIRTY BUILD / NO HALF DEPLOY / NO SILENT DATA CHANGE / NO UNTRACKED HOTFIX / NO DUPLICATE SYSTEM / NO FAKE VERIFIED / NO CROSS-PROJECT TOUCH。
+
+### 12.1 工程纪律封口（A）
+
+| 项 | 结论 | 证据 |
+|----|------|------|
+| pnpm clean install | **PASS** | 全新 worktree（`git worktree add` HEAD=2a120f8）`pnpm install --frozen-lockfile` 20.3s 成功，lunar-lite@0.2.8 安装 |
+| pnpm build | **PASS** | 全新 worktree `pnpm build` 166/166 静态页生成，`✓ Compiled successfully` |
+| Runtime Commit | `3a4c7ee` | 四端运行代码 blob sha1 完全一致（见 12.3） |
+| Document Head（本地 main） | `2a120f8` | 本阶段 pnpm-build 修复提交（未含运行时逻辑改动） |
+| Git Runtime 四端 | **一致 = `3a4c7ee`** | 本地 / GitHub / 服务器源码仓 git blob sha1 三文件（server.js、adminUnifiedRoutes.js、middleware/auth.js）逐一对齐（见 12.3） |
+| NO_GUESS_RULE | 永久固化 | 见 12.4 事故一 |
+| ATOMIC_DEPLOY_RULE（BUILD_ALL_BEFORE_DEPLOY） | 永久固化 | 见 12.5 事故二；SOP 已更新 |
+| v25.0.63 邀请成员记录 | 已记录 | 见 12.6 |
+| 临时文件 | 已清理 | 本阶段只读核查脚本（readonly_*.py / _ro_*.py / verify_invite_fields.py）用时 10 分钟后删除；临时 worktree 已移除 |
+
+### 12.2 pnpm 问题封口结论（指令第十七~十八部分）
+
+- 根因一：`pnpm-workspace.yaml` 此前 `allowBuilds` 三项值为占位符 `set this to true or false`（3a4c7ee 提交内容），pnpm 解析为非法值 → 触发 `[ERR_PNPM_IGNORED_BUILDS]`。
+- 根因二：`package.json` 缺 `lunar-lite`（`iztro` 的幽灵依赖），`next build` 报 `Module not found: Can't resolve 'lunar-lite'`。
+- 修复提交：`2a120f8`（allowBuilds 布尔化 `cpu-features/sharp/ssh2=true` + lunar-lite@^0.2.8 显式依赖 + pnpm-lock.yaml 首次入库，共 3 文件 +6113 行）。
+- 最终 clean build 结果：**BUILD_PIPELINE = FULL PASS**（全新目录 install+build 均成功）。
+- 遗留事实（未改，记录待项目方决策）：`build.sh` 第15行与 `codemagic.yaml` 仍用 `npm run build`/`npm ci`，而 `package.json` 声明 `packageManager: pnpm`。**存在 npm/pnpm 混用**，属指令第十六部分待封口项，本阶段仅记录不改（改构建脚本需谨慎验证线上）。
+
+### 12.3 Git Runtime 四端一致性（指令第十九、二十部分）
+
+判定方式：比较 `git rev-parse HEAD:<path>`（git 自身 blob sha1，排除 Windows CRLF 干扰）。
+
+| 文件 | 本地 | GitHub | 服务器源码仓 | 生产运行目录 |
+|------|------|--------|--------------|--------------|
+| backend_deploy/server.js | `4f931196` | = | `4f931196` | md5 e98dc031 = 源码 blob |
+| backend_deploy/adminUnifiedRoutes.js | `43cdf3d9` | = | `43cdf3d9` | md5 f1aa1f66 = 源码 blob |
+| backend_deploy/middleware/auth.js | `4d43c6bd` | = | `4d43c6bd` | md5 af0a13cd = 源码 blob |
+
+- 本地 HEAD / GitHub origin /head / 服务器源码仓 HEAD 三者 commit 相同 = `3a4c7ee`。
+- 生产运行目录 `/www/yandaoguoxue-backend` **无 .git**，故用 md5 与服务器源码仓 blob 交叉比对：三文件全部一致，**生产运行代码 = 3a4c7ee**。
+- 说明：本地 main 领先 origin 1 个文档/构建修复提交 `2a120f8`（仅 pnpm 构建配置，非运行时逻辑），需 push 后四端文档头才对齐。
+
+### 12.4 事故一：NO_GUESS_ROUTE_INCIDENT（指令第二十四部分）
+
+- 事实：此前开发凭印象猜 Admin API 前缀，把路径写成 `/api/admin/moderation/users`，请求返回 404。
+- 真实路径：server.js 路由挂载数组 `{ file:'adminUnifiedRoutes', path:'/api/admin/unified' }` + 路由文件内 `router.get('/moderation/users')` → 正确前缀 `/api/admin/unified`。
+- 永久规则：**NO_GUESS_ROUTE**。调任何 API 前必须确认 `ROUTE_SOURCE / MOUNT_PREFIX / METHOD / AUTH / PARAMETERS / RESPONSE_SCHEMA`，缺一不可调用。
+
+### 12.5 事故二：NON_ATOMIC_DEPLOY_INCIDENT（指令第二十五部分）
+
+- 事实：此前前端 build 尚未完成，后端已 `pm2 reload` 上线，形成半部署。
+- 永久规则：**BUILD_ALL_BEFORE_DEPLOY**。发布必须原子化（指令第十三~十五部分），前端 build 全部通过并产出完整发布包后才允许后端切换；禁止边 build 边 deploy。
+
+### 12.6 v25.0.63 后台「邀请成员数」工程事件（指令第二十三、三十~三十四部分）
+
+- Version：`v25.0.63`
+- 功能：admin/moderation 用户管理列表新增 `invite_count`（一级+二级）、`invite_level1`（一级）、`invite_level2`（二级）三字段，后端 `adminUnifiedRoutes.js` LEFT JOIN `user_invite_relation` 聚合。
+- 功能 Commit：`cc166d5`（feat(admin): 用户管理新增邀请成员数展示(一级/二级/总数)）
+- 发版 Commit：`3a4c7ee`（chore(release): bump v25.0.63）
+- 生产验证：生产 `adminUnifiedRoutes.js` 已含 6 处 `invite_count/invite_level1/invite_level2` 关键字，md5 与源码 blob 一致；生产 Web `current → releases/v25.0.63`，buildId `v25.0.63_D20260827`。
+- 邀请关系只读：后台仅查看，禁改绑定；人工改绑需 SUPER_ADMIN + 原因 + audit（指令第三十三部分）。
+- 不新建第二套邀请系统（指令第三十四部分）：继续复用 `users.invited_by` + `user_invite_relation`。
+
+### 12.7 生产事实终检（B+C，指令第二十八~二十九部分）
+
+| 维度 | 事实 | 状态 |
+|------|------|------|
+| Web | `/root/yandaoguoxue/current → releases/v25.0.63`，buildId `v25.0.63_D20260827` | ✅ 200 |
+| Backend | PM2 `yandaoguoxue-backend` online，Node v22.23.0，`/api/health` 200（version 字段为 server.js 硬编码 v23.1） | ✅ |
+| PM2 | 1 进程 online，uptime 108m，restart 197 次 | ✅ |
+| DB | 三库：yandao_users.db（95 用户）、social.db（232K）、academy.db（56M） | ✅ |
+| AI | 服务端鉴权+配额生效；ai_call_logs 1909 条；ai-health.json 滚动窗口 | ✅ |
+| Payment | 4 笔 PAID（合计 ¥88.81）；微信回调验签通过 | ✅ |
+| Membership | basic 91 / monthly 2 / yearly 1 / lifetime 1（共 95，全 active） | ✅ |
+| Social | chat_messages 45 行全 text（无图片 base64） | ✅ |
+| Backup | /root/backup 27 个 .db（142M），三库 02:00 每日备份，retainDays 30 | ⚠️ offsite=not_configured |
+| APK | v25.0.60 / versionCode 2059（未随 Web 61/62/63 后台增量重建） | ✅ |
+| 磁盘 | /dev/vda1 50G，用 15G（30%） | ✅ |
+
+**经营数字交叉核验（后台 API = DB 真实统计）**：
+- 用户总数 95（全 active）；今日新增 0；7 日活跃 51。
+- 会员 4（monthly 2 / yearly 1 / lifetime 1，quarterly 0）。
+- 订单：PAID 4 笔 ¥88.81（MEMBERSHIP 2 笔 ¥78.9 + SINGLE_UNLOCK 2 笔 ¥9.91）；EXPIRED 105；CLOSED 9；今日 PAID 0。
+- 佣金 commission_records：4 笔 ¥13.68（1368 cents，全 COMMISSION 类型，FROZEN 未解冻）。
+- commission_accounts：8 用户，total_earnings 1368 cents，withdrawable 0，frozen 1368。
+- withdrawals：0 笔。
+- 邀请：`user_invite_relation` 48 行，**全 level=1**（无二级），distinct inviter 5 人，top 100000→32；`users.invited_by` 48 人。
+
+### 12.8 AI 成本与权益（指令第三十六~四十三部分）
+
+| 档位 | dailyLimit | 说明 |
+|------|-----------|------|
+| basic | 3 | 服务端 `AI_DAILY_LIMITS`（middleware/auth.js） |
+| monthly | 50 | 同上 |
+| quarterly | 50 | 同上 |
+| yearly | **Infinity（无限）** | ⚠️ 存在无限 AI |
+| lifetime | **Infinity（无限）** | ⚠️ 存在无限 AI |
+
+- **无限 AI 存在 = YES**（yearly + lifetime），已如实报告，不擅自改历史权益（指令第三十七~三十九部分）。
+- 服务端强制：所有限制在 `middleware/auth.js` 从数据库读取，前端仅显示（指令第四十一部分）。
+- AI Cost Center：**未建**（后台无今日/本月成本、按用户/功能/模型/档位/渠道/师傅的维度面板），属后续 Phase 1 交付。
+- AI 调用日志：已有 `ai_call_logs`（scene/tokens_in/tokens_out），但不含 `featureKey/model/estimatedCost/duration/status` 完整契约（指令第四十三部分待完善）。
+
+### 12.9 Partner 渠道（指令第四十四~六十三部分）
+
+- 现有 Partner 数：**0**（`partners` 表空）；partner_settlements 空；partner_order_log 0 行。
+- Partner 引擎：`partnerEngine.js` + `partnerRoutes.js`（用户端 /api/partner + 管理端 /api/admin/partner）V2 已实现，但**无真实 Partner 数据流入**。
+- 当前 Partner 50% 实现：结算口径 DISTRIBUTABLE_REVENUE = 实付 − 手续费 − 渠道可归因 AI 成本 − 普通推广佣金 − 退款；基础 50% + 培养奖励 5%。因无真实渠道数据，**未产生真实结算**。
+- **普通佣金重复风险（P1 COMMERCIAL ACCOUNTING RISK）**：Reality Check 确认普通佣金 Hook（commissionEngine 15%+5% 两级，commission_records 4 笔)与 Partner Hook（partnerEngine 50%）**独立执行**——若同一用户既是 Partner 又是直接推荐人，存在 L1 15% + Partner 50% 同时计提可能。指令第五十二~五十三部分要求统一 Commission Router，属后续 Phase 2。
+- 5% 培养奖励：现有 nurture 字段实现，仅直属一级，**未扩层**（指令第五十五~五十六部分）。
+- Partner Console：用户端 /profile/partner 六页 + 管理端 /admin/partners 已存在，未重新开发。
+- 还缺：真实 Partner 商业归属绑定（user→partner 渠道归属表字段）、合同字段（contractStart/End/Version/renewal）、月度 Settlement Snapshot 流水、透明账本视图。
+
+### 12.10 Provider（师傅）后端缺口（指令第六十四~七十部分）
+
+- 当前 Provider 系统：**仅前端 localStorage 原型**（/profile/consult/provider-apply 等），后端 **NOT_IMPLEMENTED**。
+- 差值承诺：`providers / provider_services / service_orders / provider_reviews / provider_settlements` 五表均未建。
+- 真实缺口：申请审核、擅长/介绍/服务项目/价格、预约、接单完成评价、退款、收益提现 全流程后端缺失。
+- 中医合规：定位为知识学习+健康教育参考，禁止宣传确诊/处方/治疗保证（指令第七十部分）。
+
+### 12.11 Offline / Cache / 对象存储 / 题库（指令第七十一~一百十七部分）
+
+| 维度 | 现状 | 状态 |
+|------|------|------|
+| APK 内置 | 原生 APK 内置易学资源（api 改写内联），versionCode 2059 | ✅ |
+| Offline Pack / Content Pack | **未建**（packId/version/sha256 清单体系缺失） | ⏳ 后续 Phase 5/6 |
+| Cache Manager / Server GC | **未建**（StorageManager 统一分类、自动垃圾治理未实现） | ⏳ 后续 Phase 7 |
+| 题目总量 | academy 13670（zhongyi 10294 / yikao 2757 / yixue 619） | ✅ |
+| 中医执业医师题数 | 10294（zhongyi track） | ✅ |
+| AI 生成题数 | 11353（source_id>0 OR govern_state=AI_GENERATED） | ✅ |
+| 审核题数 | approved 13412 / pending 4 / rejected 254 | ✅ |
+| Question Factory | **未建**（自动补题/库存预测/去重/质量反馈状态机缺失） | ⏳ 后续 Phase 9 |
+
+### 12.12 Storage / Backup / 灾备（指令第一百零五~一百十二部分）
+
+- 系统盘 30%（15G/50G）。
+- 最近 30 日备份增长：users.db 由 8/15 的 156K 增长到 8/27 的 492K（+336K）；social.db 232K；academy.db 56M。总备份盘 /root/backup = 142M。
+- 自动快照：**not_configured**（backup_status.json `offsite: not_configured`）。
+- COS：`coscmd`/`tccli` 已装但 `.cos.conf` 缺失 → **异地备份未生效**。
+- 腾讯云控制台自动快照（每日 03:00，保留 7~14 天）：需项目方在腾讯云控制台开启（已有《腾讯云控制台操作指令_照着点.md》）。
+- 恢复演练：backup_drill.json 存在（曾演练），未自动化每月一次。
+
+### 12.13 P0 / P1 / P2（本轮结论）
+
+- **P0（本轮明确不动）**：微信支付核心、会员真实支付主链、服务端价格 SSOT、AI 服务端 Auth/Quota、AI 健康监控、好友/私聊/群聊/群管理、分享已验正常部分、APK 下载唯一源、易学算法核心、医考现有正式引擎（指令第十一~十二部分冻结区）。
+- **P1（下一阶段解决）**：
+  1. AI Fair Usage + Cost Center（终止 yearly/lifetime 无限 AI 需先核对历史商品文案/PAID订单/权益快照，禁单方面取消）——Phase 1。
+  2. Commission Router 统一结算（消除普通佣金 + Partner 佣金重复计提）——Phase 2。
+- **P2**：Provider 完整后端（Phase 4）、Offline Core + Content Pack（Phase 5/6）、Cache Manager + Server GC（Phase 7）、对象存储 (user-content/public-content/backup 三桶)（Phase 8）、Question Factory（Phase 9）、异地备份 offsite（Phase 10）。
+
+**本轮明确不动**：Provider 大开发、Partner 重构、Offline 大开发、Question Factory 上线、数据库大迁移（指令第一百二十三部分）。
+
+**推荐下一 Phase**：Phase 1 —— AI Fair Usage + Cost Center（先盘点历史权益后设计可后台配置的 dailyRequests/monthlyRequests/maxConcurrent/maxInputChars/maxOutputTokens/dailyCostCap/monthlyCostCap/overageAllowed/overageProduct，服务端强制）。
+
+---
+
+### 12.14 真太阳时均时差算法升级（Spencer → Meeus，指令 v25.0.47_23）
+
+**根因**：均时差旧用 Spencer(1971) 傅里叶级数，注释/文档宣称 ±3 秒，实测最大偏差约 53 秒（≈0.9 分钟），精度不实；奇门模块另有独立 Spencer 内联实现，存在跨模块漂移风险。
+
+**修复**：
+- `src/algorithm-core/common/jieqi.ts`：均时差升级为 Meeus《Astronomical Algorithms》太阳位置低精度算法（儒略日 → 平黄经 → 中心差 → 视黄经 → 视赤经 → EoT），按 Date UTC 分量计算，与本地时区无关，精度约 ±2.4 秒。
+- `src/algorithm-core/modules/qimen/index.ts`：删除内联 Spencer，复用 `calcTrueSolarTime`，八字/紫微/奇门三模块统一同一实现。
+
+**验证（vs astronomy-engine 权威基准，2024/2025/2026 三年逐日全量）**：最大偏差 1.66 秒、RMS < 0.8 秒；极值 -14.20 分（2 月中旬）、+16.44 分（11 月上旬）、4 个过零点均与天文历书一致。✅ 满足 ≤±3 秒（实测 ±1.7 秒内）。
+
+**交付报告**：docs/reports/20260829_真太阳时均时差算法Meeus升级_完整报告.md
+**commit**：_待回填_｜**构建**：pnpm build exit 0｜**部署**：_待回填_｜**公网**：_待回填_

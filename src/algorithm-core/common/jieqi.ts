@@ -150,8 +150,11 @@ export function isQi(name: string): boolean {
 // ============================================================================
 // 真太阳时 = 标准时间 + 经度差修正 + 均时差
 //   - 经度差修正：(当地经度 - 时区基准经度) × 4 分钟/度
-//   - 均时差 EoT：采用 Spencer(1971) 傅里叶级数公式，精度约 ±3 秒，
-//     全年 4 次过零点，极值约 ±16.4 分钟，可与专业天文历书对标。
+//   - 均时差 EoT：采用 Meeus《Astronomical Algorithms》太阳位置低精度算法
+//     （平黄经 + 中心差 + 视黄经 + 视赤经），精度约 ±2.4 秒（0.01°），
+//     全年 4 次过零点，极值约 -14.2 ~ +16.4 分钟，可与专业天文历书对标。
+//   说明：旧版 Spencer(1971) 傅里叶级数最大偏差约 53 秒（≈0.9 分钟），
+//         不足以支撑「±3 秒」口径，故本版本净室升级为 Meeus 算法。
 // ============================================================================
 
 /**
@@ -173,6 +176,107 @@ export interface TrueSolarTimeResult {
 }
 
 /**
+ * 角度转弧度
+ */
+function toRadians(deg: number): number {
+  return (deg * Math.PI) / 180;
+}
+
+/**
+ * 弧度转角度
+ */
+function toDegrees(rad: number): number {
+  return (rad * 180) / Math.PI;
+}
+
+/**
+ * 计算儒略日 JD（公历日期，含当日 UTC 小数天）
+ *
+ * @param year - 公历年
+ * @param month - 公历月（1-12）
+ * @param day - 公历日（含小数部分，来自 UTC 小时）
+ */
+function julianDay(year: number, month: number, day: number, utcHours: number): number {
+  if (month <= 2) {
+    year -= 1;
+    month += 12;
+  }
+  const A = Math.floor(year / 100);
+  const B = 2 - A + Math.floor(A / 4);
+  return (
+    Math.floor(365.25 * (year + 4716)) +
+    Math.floor(30.6001 * (month + 1)) +
+    day +
+    utcHours / 24 +
+    B -
+    1524.5
+  );
+}
+
+/**
+ * 计算均时差 EoT（分钟）：Meeus《Astronomical Algorithms》太阳位置低精度算法
+ *
+ * 精度约 ±2.4 秒（0.01°），全年 4 次过零点，极值约 -14.2 ~ +16.4 分钟。
+ * 输入 date 视为绝对时刻（瞬时），按 UTC 分量计算儒略日，与服务器本地时区无关。
+ *
+ * @param date - 标准时间（绝对时刻）
+ * @returns 均时差（分钟，正值表示真太阳快于平太阳/钟表时间）
+ *
+ * @license MIT - 净室独立实现
+ * @reference Meeus, J. (1991). Astronomical Algorithms, 2nd ed. (太阳位置低精度算法)
+ */
+function meeusEquationOfTime(date: Date): number {
+  const y = date.getUTCFullYear();
+  const m = date.getUTCMonth() + 1;
+  const d = date.getUTCDate();
+  const utcHours =
+    date.getUTCHours() +
+    date.getUTCMinutes() / 60 +
+    date.getUTCSeconds() / 3600 +
+    date.getUTCMilliseconds() / 3600000;
+
+  const JD = julianDay(y, m, d, utcHours);
+  const T = (JD - 2451545.0) / 36525;
+
+  // 太阳平黄经 L0（度）
+  let L0 = 280.46646 + 36000.76983 * T + 0.0003032 * T * T;
+  L0 = ((L0 % 360) + 360) % 360;
+
+  // 太阳平近点角 M（弧度）
+  let M = 357.52911 + 35999.05029 * T - 0.0001537 * T * T;
+  M = toRadians(((M % 360) + 360) % 360);
+
+  // 中心差 C（度）
+  const C =
+    (1.914602 - 0.004817 * T - 0.000014 * T * T) * Math.sin(M) +
+    (0.019993 - 0.000101 * T) * Math.sin(2 * M) +
+    0.000289 * Math.sin(3 * M);
+
+  // 视黄经 λ（含光行差与章动近似）
+  const trueLongitude = L0 + C;
+  const omega = toRadians(125.04 - 1934.136 * T);
+  const lambda = toRadians(trueLongitude - 0.00569 - 0.00478 * Math.sin(omega));
+
+  // 平黄道倾角 ε0（度）与真黄道倾角 ε（弧度）
+  const eps0 =
+    23 + 26 / 60 + 21.448 / 3600 -
+    (46.815 * T + 0.00059 * T * T - 0.001813 * T * T * T) / 3600;
+  const eps = toRadians(eps0 + 0.00256 * Math.cos(omega));
+
+  // 视赤经 α（度）
+  const alpha = Math.atan2(Math.cos(eps) * Math.sin(lambda), Math.cos(lambda));
+  const alphaDeg = ((toDegrees(alpha) % 360) + 360) % 360;
+
+  // 均时差 E = L0 - 0.0057183 - α，单位度；换算为分钟并归一到 [-720, +720]
+  const Edeg = L0 - 0.0057183 - alphaDeg;
+  let Emins = Edeg * 4;
+  Emins = ((Emins % 1440) + 1440) % 1440;
+  if (Emins > 720) Emins -= 1440;
+
+  return Emins;
+}
+
+/**
  * 计算真太阳时（天文学级）
  *
  * 真太阳时 = 标准时间 + 经度时差 + 均时差
@@ -180,16 +284,17 @@ export interface TrueSolarTimeResult {
  *   标准时区基准经度：东八区为120度
  * - 均时差：地球公转轨道椭圆导致的日行差，与日期有关
  *
- * 均时差采用 Spencer(1971) 傅里叶级数公式（与 NOAA 太阳位置算法同源），
- * 精度约 ±3 秒，全年 4 次过零点、极值约 ±16.4 分钟，可直接对标天文历书。
+ * 均时差采用 Meeus《Astronomical Algorithms》太阳位置低精度算法，
+ * 精度约 ±2.4 秒（0.01°），全年 4 次过零点、极值约 -14.2 ~ +16.4 分钟，
+ * 可直接对标权威天文历书（美国海军天文台 / 天文年历）。
  *
- * @param date - 标准时间（本地时区时间，内部按本地年积日计算均时差）
+ * @param date - 标准时间（绝对时刻，内部按 UTC 分量计算均时差）
  * @param longitude - 观测地点经度（度，东经为正）
  * @param timezoneLongitude - 时区基准经度（度，默认120=东八区）
  * @returns 真太阳时校正结果
  *
  * @license MIT - 净室独立实现
- * @reference Spencer, J.W. (1971). Fourier Series Representation of the Position of the Sun.
+ * @reference Meeus, J. (1991). Astronomical Algorithms, 2nd ed.
  */
 export function calcTrueSolarTime(
   date: Date,
@@ -199,19 +304,8 @@ export function calcTrueSolarTime(
   // 经度时差：每度4分钟（当地经度相对120°E基准线的时差）
   const longitudeOffset = (longitude - timezoneLongitude) * 4;
 
-  // 年积日 N（1月1日为第1天）
-  const startOfYear = new Date(date.getFullYear(), 0, 1);
-  const dayOfYear = Math.floor((date.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000)) + 1;
-
-  // 均时差 EoT（分钟）：Spencer 傅里叶级数，日角 gamma = 2π(N-1)/365
-  const gamma = (2 * Math.PI / 365) * (dayOfYear - 1);
-  const equationOfTime =
-    229.18 *
-    (0.000075 +
-      0.001868 * Math.cos(gamma) -
-      0.032077 * Math.sin(gamma) -
-      0.014615 * Math.cos(2 * gamma) -
-      0.040849 * Math.sin(2 * gamma));
+  // 均时差 EoT（分钟）：Meeus 天文算法
+  const equationOfTime = meeusEquationOfTime(date);
 
   // 总偏移
   const totalOffset = longitudeOffset + equationOfTime;
