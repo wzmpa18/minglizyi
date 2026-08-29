@@ -52,7 +52,10 @@ const verificationStore = require('./verificationStore');
 // ============================================================================
 // 配置
 // ============================================================================
-const JWT_SECRET = process.env.JWT_SECRET || 'yandao_default_jwt_secret_2026';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  throw new Error('JWT_SECRET 未配置或长度不足32位，服务拒绝启动（fail-closed）。请在部署 .env 设置 ≥32 位随机密钥。');
+}
 const JWT_ACCESS_EXPIRES = process.env.JWT_ACCESS_EXPIRES || '7d';
 const JWT_REFRESH_EXPIRES = process.env.JWT_REFRESH_EXPIRES || '30d';
 const DB_PATH = process.env.DB_PATH || '/root/backend-auth/data/yandao_users.db';

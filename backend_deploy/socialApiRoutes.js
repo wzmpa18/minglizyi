@@ -27,7 +27,10 @@ const jwt = require('jsonwebtoken');
 
 const SOCIAL_DB_PATH = path.join(__dirname, 'data', 'social.db');
 const USER_DB_PATH = process.env.USER_DB_PATH || '/root/backend-auth/data/yandao_users.db';
-const JWT_SECRET = process.env.JWT_SECRET || 'yandao_default_jwt_secret_change_me';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  throw new Error('JWT_SECRET 未配置或长度不足32位，服务拒绝启动（fail-closed）。请在部署 .env 设置 ≥32 位随机密钥。');
+}
 
 function ensureDataDir() {
   const dir = path.dirname(SOCIAL_DB_PATH);

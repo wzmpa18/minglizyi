@@ -20,6 +20,11 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
+// v25.0.65 P0-SECURITY: 社交存储路由原全部无鉴权，可匿名读取任意用户聊天记录、
+// 读取/篡改存储统计、上传任意图片、执行过期清理。补用户JWT鉴权 + 属主校验 + 管理端密钥鉴权。
+const { authMiddleware } = require('./middleware/auth');
+const { adminAuth } = require('./adminRoles');
+
 // 存储配置
 const STORAGE_CONFIG = {
     imageDir: path.join(__dirname, 'data', 'chat_images'),
@@ -49,10 +54,13 @@ function ensureDirs() {
  * 上传聊天图片（base64格式，自动压缩）
  * Body: { image: "base64...", userId: "...", favorite: false }
  */
-router.post('/upload-image', (req, res) => {
+router.post('/upload-image', authMiddleware, (req, res) => {
     try {
         ensureDirs();
         const { image, userId, favorite } = req.body;
+        if (String(userId || '') && String(req.user.userId) !== String(userId)) {
+            return res.status(403).json({ success: false, error: '无权代他人上传图片' });
+        }
         
         if (!image) {
             return res.json({ success: false, error: '缺少图片数据' });
@@ -108,8 +116,12 @@ router.post('/upload-image', (req, res) => {
  * GET /api/social/image/:fileName
  * 获取聊天图片
  */
-router.get('/image/:fileName', (req, res) => {
-    const filePath = path.join(STORAGE_CONFIG.imageDir, req.params.fileName);
+router.get('/image/:fileName', authMiddleware, (req, res) => {
+    const fileName = req.params.fileName;
+    if (typeof fileName !== 'string' || !fileName || fileName.includes('..') || fileName.includes('/') || fileName.includes('\\')) {
+        return res.status(400).json({ error: '非法文件名' });
+    }
+    const filePath = path.join(STORAGE_CONFIG.imageDir, fileName);
     if (!fs.existsSync(filePath)) {
         return res.status(404).json({ error: '图片不存在或已过期' });
     }
@@ -123,13 +135,16 @@ router.get('/image/:fileName', (req, res) => {
  * 同步聊天记录到云端
  * Body: { userId, sessionId, messages: [...] }
  */
-router.post('/messages/sync', (req, res) => {
+router.post('/messages/sync', authMiddleware, (req, res) => {
     try {
         ensureDirs();
         const { userId, sessionId, messages } = req.body;
         
         if (!userId || !sessionId) {
             return res.json({ success: false, error: '缺少必要参数' });
+        }
+        if (String(req.user.userId) !== String(userId)) {
+            return res.status(403).json({ success: false, error: '无权同步他人聊天记录' });
         }
         
         const fileName = `${userId}_${sessionId}.json`;
@@ -157,9 +172,12 @@ router.post('/messages/sync', (req, res) => {
  * GET /api/social/messages/:userId/:sessionId
  * 获取云端聊天记录
  */
-router.get('/messages/:userId/:sessionId', (req, res) => {
+router.get('/messages/:userId/:sessionId', authMiddleware, (req, res) => {
     try {
         const { userId, sessionId } = req.params;
+        if (String(req.user.userId) !== String(userId)) {
+            return res.status(403).json({ success: false, error: '无权访问他人聊天记录' });
+        }
         const fileName = `${userId}_${sessionId}.json`;
         const filePath = path.join(STORAGE_CONFIG.messageDir, fileName);
         
@@ -180,7 +198,7 @@ router.get('/messages/:userId/:sessionId', (req, res) => {
  * GET /api/admin/storage/status
  * 获取存储空间状态（管理员）
  */
-router.get('/admin/storage/status', (req, res) => {
+router.get('/admin/storage/status', adminAuth('ADMIN'), (req, res) => {
     try {
         ensureDirs();
         
@@ -261,7 +279,7 @@ router.get('/admin/storage/status', (req, res) => {
  * POST /api/admin/storage/cleanup
  * 手动清理过期数据（管理员）
  */
-router.post('/admin/storage/cleanup', (req, res) => {
+router.post('/admin/storage/cleanup', adminAuth('ADMIN'), (req, res) => {
     try {
         ensureDirs();
         let cleanedImages = 0, cleanedSize = 0;

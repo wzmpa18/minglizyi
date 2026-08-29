@@ -505,4 +505,33 @@ gh workflow run ios-build.yml --repo wzmpa18/minglizyi --ref main
 **验证（vs astronomy-engine 权威基准，2024/2025/2026 三年逐日全量）**：最大偏差 1.66 秒、RMS < 0.8 秒；极值 -14.20 分（2 月中旬）、+16.44 分（11 月上旬）、4 个过零点均与天文历书一致。✅ 满足 ≤±3 秒（实测 ±1.7 秒内）。
 
 **交付报告**：docs/reports/20260829_真太阳时均时差算法Meeus升级_完整报告.md
-**commit**：_待回填_｜**构建**：pnpm build exit 0｜**部署**：_待回填_｜**公网**：_待回填_
+**commit**：`0be2158`(算法升级) → `6f6e3c6`(bump v25.0.64) → `f6eb387`(回填部署/公网结论)｜**构建**：本地 `pnpm build` exit 0；服务器 `bash build.sh`(npm static export) exit 0，`out/index.html` 存在、1791 文件｜**部署**：`git reset --hard origin/main` → 后端 server.js/adminUnifiedRoutes.js 同步(md5 一致) → `pm2 reload yandaoguoxue-backend` online、健康检查 `success:true` → 前端 `releases/v25.0.64` 原子切流 → nginx 清缓存+reload｜**公网**：`version.json=v25.0.64_D20260829`、`/`+`/yixue/bazi|ziwei|qimen|zeri`+`/membership`+`/login`+`/profile`+`/admin` 均 200、`/api/health=success:true`、Meeus 算法 chunk 上线（`280.46646` 入包）
+
+---
+
+### 12.15 P0 安全清零 + 工程收口（FINAL-P0-SECURITY-STATE-SEAL-02，2026-08-29）
+
+**范围**：先清零 P0 安全风险，不做大开发；禁止仅凭静态代码定罪，逐项先判定「生产活跃路径」再修复。
+
+**核实结论（生产真实执行路径）**：
+
+| 检查项 | 生产路径核实 | 判定 |
+|--------|------------|------|
+| JWT 默认回退密钥 | 生产 `.env` JWT_SECRET=64位非默认值；代码内 `yandao_default_jwt_secret_*` 为死代码回退 | **修复**：8 处 backend_deploy 路由文件（academyRoutes/accountDeleteRoutes/authRoutes/commissionRoutes/partnerRoutes/register_routes/socialApiRoutes/teamApiRoutes）+ middleware/auth.js 全部移除默认密钥回退，改为 fail-closed（未配置或 <32 位则拒绝启动） |
+| 社交存储越权 | `/api/social` 路由（socialStorageRoutes.js）原全部无鉴权，可匿名读任意用户聊天记录、读/改存储统计、传图、清理 | **修复**：上传/取图/同步/读取加 `authMiddleware`+属主校验，管理端加 `adminAuth('ADMIN')`，图片路径穿越加参数白名单校验 |
+| AI 单次解锁旁路 | 服务端经会员等级+AI 配额限流，订单金额以服务端 SSOT 为准 | 非 P0，生产路径无私钥旁路 |
+| 批量工具价格篡改 | `resolveServerPrice` 从 admin 配置读价，覆盖前端 amount | 非 P0，服务端 SSOT 已成立 |
+| 积分/钱包 localStorage | 积分不可兑核心付费权益；钱包为前端模拟数据无资金流 | 非 P0 |
+| Admin Key 本地存储 | 后台密钥落盘为 sha256 哈希，明文仅签发时返回一次 | 非 P0 |
+| 离线假 Token | 离线功能不发可伪造的 JWT | 非 P0 |
+
+**工程收口**：
+- 工作区文件分类：入库测试（`src/algorithm-core/tests/trueSolarTime.test.mts`+`package.json`，13/13 通过）；文档脱敏（20260816/20260822/20260829 三份混元 Key 前缀 `sk-l4iL8*` 全部改为 `sk-******` 脱敏占位，20260829 精度口径「零误差」改为可验证的 Meeus ±2.4s/实测 1.66~1.75s）；构建修复（`pnpm-workspace.yaml` 占位符 `esbuild: set this to true or false` → `esbuild: true`）；临时探针（`.gitignore` 增加 `tmp/` 忽略 Meeus 校验临时脚本）。
+- `src/lib/backend/` 两份为**非活跃遗留副本**（生产入口 `ecosystem.config.js` 指向 `backend_deploy/server.js`，无任何代码 require 该目录），其中仍含死代码默认密钥，属低优先级清理项，本指令按「先判生产活跃路径」原则**不予改动**。
+
+**回归**：
+- 后端 10 文件 `node --check` 全通过；`authMiddleware`→`req.user.userId`、`adminAuth('ADMIN')` 引用链核对正确。
+- 真太阳时 Golden 测试 13/13 通过（EoT vs astronomy-engine 最大偏差 ≤3s、跨日、时辰边界、奇门 Integration、八字/紫微页面提取一致性）。
+- clean checkout 构建：`pnpm install --frozen-lockfile`（lockfile up to date）+ `pnpm build` exit 0（54 路由无错误）。
+
+**提交**：见本阶段本地 commit（不推送）。**安全残余建议**：混元 Key 前缀曾在历史文档出现过（现已脱敏），建议择机在腾讯云控制台轮换混元 Key 作为卫生动作（非本次阻断项）。

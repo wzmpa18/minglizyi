@@ -65,3 +65,6 @@ docs/materials/nihaixia_raw/
 .test-shots/
 *.keystore*
 !android/app/*.keystore
+
+# Local algorithm verification scratch (Meeus true-solar-time probes, not source)
+tmp/

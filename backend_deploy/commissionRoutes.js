@@ -15,7 +15,10 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const commissionEngine = require('./commissionEngine');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'yandao_default_jwt_secret_change_me';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  throw new Error('JWT_SECRET 未配置或长度不足32位，服务拒绝启动（fail-closed）。请在部署 .env 设置 ≥32 位随机密钥。');
+}
 const router = express.Router();
 
 function authRequired(req, res, next) {

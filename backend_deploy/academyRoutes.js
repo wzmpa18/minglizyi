@@ -26,7 +26,10 @@ const QG = require('./qualityGate');
 
 const ACADEMY_DB_PATH = path.join(__dirname, 'data', 'academy.db');
 const FILE_DIR = path.join(__dirname, 'data', 'academy_files');
-const JWT_SECRET = process.env.JWT_SECRET || 'yandao_default_jwt_secret_change_me';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  throw new Error('JWT_SECRET 未配置或长度不足32位，服务拒绝启动（fail-closed）。请在部署 .env 设置 ≥32 位随机密钥。');
+}
 
 // ==================== 板块与等级配置 ====================
 // v25.0.20：三大板块（中医/易学/国学）+ 板块下自定义类目（categories 表）
