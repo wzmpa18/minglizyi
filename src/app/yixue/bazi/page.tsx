@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { leaveToolPage, isManagedBackNavigation } from "@/lib/leaveToolPage";
 import {
   solarToBazi,
+  calcTrueSolarTime,
   calculateAllShenSha,
   GAN_WUXING,
   ZHI_WUXING,
@@ -318,9 +319,10 @@ function calcBoneWeight(yearGanZhi: string, monthZhi: string, day: number, hourZ
 }
 
 // ===== TabChart - 核心命盘 - 严格对标jishiyu =====
-function TabChart({result,shensha,shengxiao,gender,lunarDateStr,solarDateStr,trueSolarStr,wangshuaiArr,onPillarClick}:{
+function TabChart({result,shensha,shengxiao,gender,lunarDateStr,solarDateStr,trueSolarStr,solarCorrection,wangshuaiArr,onPillarClick}:{
   result:BaziResult;shensha:ReturnType<typeof calculateAllShenSha>|null;shengxiao:string;
   gender:Gender;lunarDateStr:string;solarDateStr:string;trueSolarStr:string;
+  solarCorrection:string|null;
   wangshuaiArr:{label:string;wx:string;bg:string}[]|null;
   onPillarClick:(label:string,gan:string,zhi:string,shishenGan:string,nayin:string,canggan:string[])=>void;
 }){
@@ -389,6 +391,11 @@ function TabChart({result,shensha,shengxiao,gender,lunarDateStr,solarDateStr,tru
           <td className="text-[17px] text-[#333]">真太阳时：{trueSolarStr}</td>
         </tr>
       </tbody></table>
+      {solarCorrection && (
+        <div className="mt-1.5 text-[12px] text-[#8a6d3b]" style={{ lineHeight: "1.5" }}>
+          真太阳时修正：{solarCorrection}
+        </div>
+      )}
     </div>
 
     {/* 四柱命盘表格 - 白底无圆角阴影 */}
@@ -544,16 +551,17 @@ function TabChart({result,shensha,shengxiao,gender,lunarDateStr,solarDateStr,tru
 }
 
 // ===== TabBasic =====
-function TabBasic({result,shengxiao,dateStr,lunarDateStr,solarDateStr,trueSolarStr,taiYuan,taiXi,mingGong,shenGong,mingGua,wuxingStats,boneWeight,gender}:{
-  result:BaziResult;shengxiao:string;dateStr:string;lunarDateStr:string;solarDateStr:string;trueSolarStr:string;taiYuan:string;taiXi:string;mingGong:string;shenGong:string;mingGua:string;
+function TabBasic({result,shengxiao,dateStr,lunarDateStr,solarDateStr,trueSolarStr,solarCorrection,taiYuan,taiXi,mingGong,shenGong,mingGua,wuxingStats,boneWeight,gender}:{
+  result:BaziResult;shengxiao:string;dateStr:string;lunarDateStr:string;solarDateStr:string;trueSolarStr:string;solarCorrection:string|null;taiYuan:string;taiXi:string;mingGong:string;shenGong:string;mingGua:string;
   wuxingStats:Record<string,number>|null;boneWeight:ReturnType<typeof calcBoneWeight>;gender:Gender;
 }){
-  const rows:[string,string][]=[["农历",lunarDateStr],["北京时间",solarDateStr],["真太阳时",trueSolarStr],["出生节气",result.jieQiInfo?.prevJie||"立春"],["出生地区","北京地区"],["胎元",taiYuan],["胎息",taiXi],["命宫",mingGong],["身宫",shenGong],["命卦",mingGua]];
   return <div className="px-2 pt-2">
     <div className="bg-white mb-2 px-3 py-3">
       <table className="w-full border-collapse"><colgroup><col width="22%"/><col width="78%"/></colgroup><tbody>
         <tr><td rowSpan={10} className="text-center align-top pr-2 pt-1"><ShengxiaoIcon name={shengxiao} /></td><td className="text-[17px] text-[#333] pb-1">农历：{lunarDateStr}</td></tr>
-        {rows.slice(0,0).map(([l,v],i)=><tr key={i}><td className="text-[13px] text-[#999] text-right pr-1 align-top">{l}：</td><td className="text-[13px] text-[#333]">{v}</td></tr>)}
+        <tr><td className="text-[13px] text-[#999] text-right pr-1 align-top">北京时间：</td><td className="text-[13px] text-[#333]">{solarDateStr}</td></tr>
+        <tr><td className="text-[13px] text-[#999] text-right pr-1 align-top">真太阳时：</td><td className="text-[13px] text-[#333]">{trueSolarStr}</td></tr>
+        {solarCorrection && <tr><td className="text-[13px] text-[#999] text-right pr-1 align-top">真太阳时修正：</td><td className="text-[13px] text-[#333]">{solarCorrection}</td></tr>}
         <tr><td className="text-[13px] text-[#999] text-right pr-1 align-top">胎元：</td><td className="text-[13px] text-[#333]">{taiYuan}</td></tr>
         <tr><td className="text-[13px] text-[#999] text-right pr-1 align-top">胎息：</td><td className="text-[13px] text-[#333]">{taiXi}</td></tr>
         <tr><td className="text-[13px] text-[#999] text-right pr-1 align-top">命宫：</td><td className="text-[13px] text-[#333]">{mingGong}</td></tr>
@@ -1476,8 +1484,11 @@ export default function BaziPage(){
   const [name,setName]=useState(""); const [year,setYear]=useState(1990); const [month,setMonth]=useState(5);
   const [day,setDay]=useState(15); const [hour,setHour]=useState(12); const [gender,setGender]=useState<Gender>("male");
   const [calType,setCalType]=useState<"gongli"|"nongli"|"sizhu">("gongli");
-  const [zaoWanZi,setZaoWanZi]=useState(false); const [zhenTaiyang,setZhenTaiyang]=useState(false);
+  const [zaoWanZi,setZaoWanZi]=useState(false); const [zhenTaiyang,setZhenTaiyang]=useState(true);
   const [xiaLing,setXiaLing]=useState(false); const [saveName,setSaveName]=useState(false);
+  const [longitude,setLongitude]=useState(116.4);
+  const [solarCorrection,setSolarCorrection]=useState<string|null>(null);
+  const [trueSolarDisplay,setTrueSolarDisplay]=useState<string|null>(null);
   const [showForm,setShowForm]=useState(true); const [result,setResult]=useState<BaziResult|null>(null);
   // P1-REOPEN: 返回键关闭排盘弹窗且无结果时直接返回工具列表，不停留在空白初始态
   const router = useRouter();
@@ -1545,22 +1556,25 @@ export default function BaziPage(){
     }
   }, []);
 
-  const handleSubmit=useCallback((override?:{year:number;month:number;day:number;hour:number;gender:Gender})=>{
+  const handleSubmit=useCallback((override?:{year:number;month:number;day:number;hour:number;minute?:number;gender:Gender})=>{
     const y=override?.year??year; const m=override?.month??month;
     const d=override?.day??day; const h=override?.hour??hour;
+    const mi=override?.minute??0;
     const g=override?.gender??gender;
-    try{const bz=solarToBazi({year:y,month:m,day:d,hour:h,gender:g}) as BaziResult;setResult(bz);
+    try{const bz=solarToBazi({year:y,month:m,day:d,hour:h,minute:mi,gender:g}) as BaziResult;setResult(bz);
       const ss=calculateAllShenSha({yearGan:bz.pillars[0].gan as TianGan,yearZhi:bz.pillars[0].zhi as DiZhi,monthGan:bz.pillars[1].gan as TianGan,monthZhi:bz.pillars[1].zhi as DiZhi,dayGan:bz.dayGan as TianGan,dayZhi:bz.dayZhi as DiZhi,hourGan:bz.pillars[3].gan as TianGan,hourZhi:bz.pillars[3].zhi as DiZhi,gender:g});
-      setShensha(ss);setShowForm(false);savePaipanState("bazi",{input:{year:y,month:m,day:d,hour:h,gender:g,calType},result:bz,showForm:false,_ts:Date.now()});
+      setShensha(ss);setShowForm(false);savePaipanState("bazi",{input:{year:y,month:m,day:d,hour:h,minute:mi,gender:g,calType},result:bz,showForm:false,_ts:Date.now()});
       // 保存客户记录
       if(selectedClient){
-        try{saveRecord({clientId:selectedClient.id,type:"bazi",data:{...bz,inputParams:{year:y,month:m,day:d,hour:h,gender:g}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
+        try{saveRecord({clientId:selectedClient.id,type:"bazi",data:{...bz,inputParams:{year:y,month:m,day:d,hour:h,minute:mi,gender:g}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
       }
     }catch(e){console.error("排盘失败:",e);}
   },[year,month,day,hour,gender,selectedClient]);
 
   const pillars=result?.pillars||[]; const shengxiao=pillars[0]?getShengXiao(pillars[0].zhi as DiZhi):"";
   const dateStr=`${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")} ${String(hour).padStart(2,"0")}:00`;
+  // 真太阳时显示：勾选时用修正后的真实时间，否则回退为北京时间
+  const trueSolarTimeStr = trueSolarDisplay ?? dateStr;
   const lunarDateStr = result?.lunarDate || (result ? `${result.input?.solarDate} ${result.input?.time}` : '');
 
   const wuxingStats=useMemo(()=>{if(!result) return null;const s:Record<string,number>={"金":0,"木":0,"水":0,"火":0,"土":0};
@@ -1611,13 +1625,31 @@ export default function BaziPage(){
         setGender(opts.gender as Gender);
         setCalType(opts.calType === "solar" ? "gongli" : opts.calType === "lunar" ? "nongli" : "sizhu");
         setZaoWanZi(opts.zaoWanZi); setZhenTaiyang(opts.zhenTaiyang); setXiaLing(opts.xiaLing);
-        handleSubmit({year: dateVal.year, month: dateVal.month, day: dateVal.day, hour: dateVal.hour, gender: opts.gender as Gender});
+        // S2-4: 真太阳时校正——勾选后按出生地经度修正年月日时再排盘（与紫微/奇门同一算法）
+        let calcDate = { year: dateVal.year, month: dateVal.month, day: dateVal.day, hour: dateVal.hour, minute: dateVal.minute || 0 };
+        if (opts.zhenTaiyang) {
+          const std = new Date(dateVal.year, dateVal.month - 1, dateVal.day, dateVal.hour, dateVal.minute || 0);
+          const tst = calcTrueSolarTime(std, opts.longitude ?? longitude);
+          const t = tst.trueSolarTime;
+          calcDate = { year: t.getFullYear(), month: t.getMonth() + 1, day: t.getDate(), hour: t.getHours(), minute: t.getMinutes() };
+          const p2 = (n: number) => String(n).padStart(2, "0");
+          const lon = opts.longitude ?? longitude;
+          const sign = tst.totalOffset >= 0 ? "+" : "-";
+          const absMin = Math.abs(tst.totalOffset);
+          setTrueSolarDisplay(`${t.getFullYear()}-${p2(t.getMonth() + 1)}-${p2(t.getDate())} ${p2(t.getHours())}:${p2(t.getMinutes())}`);
+          setSolarCorrection(`${lon.toFixed(1)}°E · 经差${tst.longitudeOffset >= 0 ? "+" : ""}${tst.longitudeOffset.toFixed(1)}分 · 均时差${tst.equationOfTime >= 0 ? "+" : ""}${tst.equationOfTime.toFixed(1)}分 = 修正${sign}${Math.floor(absMin)}分`);
+        } else {
+          setTrueSolarDisplay(null);
+          setSolarCorrection(null);
+        }
+        if (opts.longitude !== undefined) setLongitude(opts.longitude);
+        handleSubmit({ ...calcDate, gender: opts.gender as Gender });
       }}
       initialDate={{year, month, day, hour, minute: 0}}
       initialOptions={{
         gender,
         calType: calType === "gongli" ? "solar" : calType === "nongli" ? "lunar" : "sizhu",
-        zaoWanZi, zhenTaiyang, xiaLing,
+        zaoWanZi, zhenTaiyang, xiaLing, longitude,
       }}
       showName={true} name={name} onNameChange={setName}
       showSaveName={true} saveName={saveName} onSaveNameChange={setSaveName}
@@ -1635,9 +1667,9 @@ export default function BaziPage(){
       <div className="flex border-b border-[#eee] bg-white/95 sticky top-10 z-30 overflow-x-auto">
         {tabOrder.map(tab=><button key={tab} onClick={()=>setActiveTab(tab)} className={`shrink-0 px-3 py-2.5 text-center text-[15px] font-bold border-none bg-transparent cursor-pointer transition-colors duration-200 border-b-[3px]`} style={{color: activeTab===tab ? BRAND_PURPLE : "#666", borderBottomColor: activeTab===tab ? BRAND_PURPLE : "transparent", borderBottomStyle:"solid"}}>{tabLabels[tab]}</button>)}
       </div>
-      {activeTab==="basic"&&<TabBasic result={result} shengxiao={shengxiao} dateStr={dateStr} lunarDateStr={lunarDateStr} solarDateStr={dateStr} trueSolarStr={dateStr} taiYuan={taiYuan} taiXi={taiXi} mingGong={mingGong} shenGong={shenGong} mingGua={mingGua} wuxingStats={wuxingStats} boneWeight={boneWeight} gender={gender}/>}
+      {activeTab==="basic"&&<TabBasic result={result} shengxiao={shengxiao} dateStr={dateStr} lunarDateStr={lunarDateStr} solarDateStr={dateStr} trueSolarStr={trueSolarTimeStr} solarCorrection={solarCorrection} taiYuan={taiYuan} taiXi={taiXi} mingGong={mingGong} shenGong={shenGong} mingGua={mingGua} wuxingStats={wuxingStats} boneWeight={boneWeight} gender={gender}/>}
       {activeTab==="chart"&&<>
-      <TabChart result={result} shensha={shensha} shengxiao={shengxiao} gender={gender} lunarDateStr={lunarDateStr} solarDateStr={dateStr} trueSolarStr={dateStr} wangshuaiArr={wangshuaiArr} onPillarClick={(label,gan,zhi,shishenGan,nayin,canggan)=>{
+      <TabChart result={result} shensha={shensha} shengxiao={shengxiao} gender={gender} lunarDateStr={lunarDateStr} solarDateStr={dateStr} trueSolarStr={trueSolarTimeStr} solarCorrection={solarCorrection} wangshuaiArr={wangshuaiArr} onPillarClick={(label,gan,zhi,shishenGan,nayin,canggan)=>{
         const interp = getPillarInterpretation(label,gan,zhi,shishenGan,nayin,canggan);
         setInterpretPanel(interp);
       }}/>

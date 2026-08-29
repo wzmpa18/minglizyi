@@ -60,7 +60,7 @@ try {
 function recordAIHealth(kind, latencyMs, errDetail) {
   try {
     const _p = require('path').join(__dirname, 'data', 'ai-health.json');
-    const _today = new Date().toISOString().slice(0, 10);
+    const _today = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10); // 中国时区(UTC+8)当日，避免UTC跨日错位
     const _blank = () => ({ date: _today, calls: 0, success: 0, fail: 0, totalLatencyMs: 0, lastSuccessAt: null, lastFailAt: null, lastError: '', latencies: [], gt60s: 0, gt120s: 0, emptyContent: 0, consecutiveFails: 0 });
     let _h = _blank();
     try { _h = { ..._h, ...JSON.parse(require('fs').readFileSync(_p, 'utf-8')) }; } catch (e) {}
@@ -89,7 +89,7 @@ function recordAIHealth(kind, latencyMs, errDetail) {
 function logAnonAIUA(ip, ua) {
   try {
     const _p = require('path').join(__dirname, 'data', 'anon-ai-log.json');
-    const _today = new Date().toISOString().slice(0, 10);
+    const _today = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10); // 中国时区(UTC+8)当日，避免UTC跨日错位
     let _log = {};
     try { _log = JSON.parse(require('fs').readFileSync(_p, 'utf-8')); } catch (e) {}
     if (!_log[_today]) _log[_today] = { calls: 0, ips: {}, uas: {} };

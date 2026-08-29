@@ -241,16 +241,24 @@ function getJigongTarget(isYang: boolean, method: JiGongMethod): BaGuaName {
  * 真太阳时修正
  * 真太阳时 = 钟表时间 + 经度差修正 + 均时差
  *   - 经度差修正 = (经度 - 120) × 4 分钟（东八区中央经线120°E）
- *   - 均时差 EoT = 9.87·sin(2B) - 7.53·cos(B) - 1.5·sin(B)，B = 2π(N-81)/364，N为年积日
+ *   - 均时差 EoT：Spencer(1971) 傅里叶级数公式，精度约 ±3 秒，
+ *     B 角 gamma = 2π(N-1)/365，N 为年积日（1月1日为第1天）
+ * 与 src/algorithm-core/common/jieqi.ts calcTrueSolarTime 保持同一公式，结果一致。
  */
 function applyTrueSolarTime(
   year: number, month: number, day: number, hour: number, minute: number, longitude: number,
 ): { y: number; m: number; d: number; h: number; mi: number; offsetMin: number; eotMin: number; lonMin: number } {
   const dt = Date.UTC(year, month - 1, day);
-  const startOfYear = Date.UTC(year, 0, 0);
-  const N = Math.floor((dt - startOfYear) / 86400000);
-  const B = (2 * Math.PI * (N - 81)) / 364;
-  const eotMin = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
+  const startOfYear = Date.UTC(year, 0, 1);
+  const N = Math.floor((dt - startOfYear) / 86400000) + 1;
+  const gamma = (2 * Math.PI / 365) * (N - 1);
+  const eotMin =
+    229.18 *
+    (0.000075 +
+      0.001868 * Math.cos(gamma) -
+      0.032077 * Math.sin(gamma) -
+      0.014615 * Math.cos(2 * gamma) -
+      0.040849 * Math.sin(2 * gamma));
   const lonMin = (longitude - 120) * 4;
   const offsetMin = eotMin + lonMin;
   const corrected = new Date(dt + hour * 3600000 + minute * 60000 + Math.round(offsetMin * 60000));

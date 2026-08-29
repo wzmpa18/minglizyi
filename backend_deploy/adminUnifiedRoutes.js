@@ -214,25 +214,30 @@ router.get('/overview', adminAuthUnified('SUPPORT_ADMIN'), (_req, res) => {
     try {
       const hp = path.join(DATA_DIR, 'ai-health.json');
       const h = JSON.parse(fs.readFileSync(hp, 'utf-8'));
-      data.ai.callsToday = h.calls || 0;
-      data.ai.successToday = h.success || 0;
-      data.ai.failToday = h.fail || 0;
-      data.ai.successRate = h.calls ? Math.round((h.success / h.calls) * 100) : 100;
+      // v25.0.64 跨日污染修复：只统计"中国时区当日"埋点；昨日的 calls/success/fail/consecutiveFails
+      // 一律归零，避免昨日低成功率/失败把今日误判成 down/warn 红灯。
+      // 口径与 server.js recordAIHealth 写入端一致（中国时区 UTC+8 当日）。
+      const _todayCn = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
+      const _isToday = h.date === _todayCn;
+      data.ai.callsToday = _isToday ? (h.calls || 0) : 0;
+      data.ai.successToday = _isToday ? (h.success || 0) : 0;
+      data.ai.failToday = _isToday ? (h.fail || 0) : 0;
+      data.ai.successRate = (_isToday && h.calls) ? Math.round((h.success / h.calls) * 100) : 100;
       data.ai.lastSuccessAt = h.lastSuccessAt || null;
       data.ai.lastFailAt = h.lastFailAt || null;
       data.ai.lastError = h.lastError || '';
       data.ai.provider = process.env.HUNYUAN_API_KEY ? 'Hunyuan(混元)' : (process.env.DEEPSEEK_API_KEY ? 'DeepSeek' : '未配置');
       // v25.0.61 FINAL-SEAL P2-C：延迟分位数/超时/空内容指标（后台驾驶舱AI健康页）
-      const lats = Array.isArray(h.latencies) ? h.latencies.slice().sort((a, b) => a - b) : [];
+      const lats = (_isToday && Array.isArray(h.latencies)) ? h.latencies.slice().sort((a, b) => a - b) : [];
       const pct = (arr, p) => (arr.length ? arr[Math.min(arr.length - 1, Math.floor(arr.length * p))] : null);
-      data.ai.avgLatencyMs = h.calls ? Math.round((h.totalLatencyMs || 0) / h.calls) : null;
+      data.ai.avgLatencyMs = (_isToday && h.calls) ? Math.round((h.totalLatencyMs || 0) / h.calls) : null;
       data.ai.p50Ms = pct(lats, 0.5);
       data.ai.p95Ms = pct(lats, 0.95);
       data.ai.p99Ms = pct(lats, 0.99);
-      data.ai.gt60s = h.gt60s || 0;
-      data.ai.gt120s = h.gt120s || 0;
-      data.ai.emptyContent = h.emptyContent || 0;
-      data.ai.consecutiveFails = h.consecutiveFails || 0;
+      data.ai.gt60s = _isToday ? (h.gt60s || 0) : 0;
+      data.ai.gt120s = _isToday ? (h.gt120s || 0) : 0;
+      data.ai.emptyContent = _isToday ? (h.emptyContent || 0) : 0;
+      data.ai.consecutiveFails = _isToday ? (h.consecutiveFails || 0) : 0;
       data.ai.model = process.env.HUNYUAN_MODEL || 'hy3';
     } catch (e) {
       data.ai = { ...data.ai, callsToday: 0, successToday: 0, failToday: 0, successRate: 100, provider: '未知' };
@@ -293,8 +298,6 @@ router.get('/overview', adminAuthUnified('SUPPORT_ADMIN'), (_req, res) => {
         data.health.ai = 'warn'; data.health.aiReason = 'P95延迟' + Math.round(_p95 / 1000) + '秒';
       } else if (_calls > 0 && _rate < 0.95) {
         data.health.ai = 'warn'; data.health.aiReason = '成功率' + Math.round(_rate * 100) + '%，' + _fail + '次失败';
-      } else if (_fail > 0 && _calls === 0) {
-        data.health.ai = 'warn'; data.health.aiReason = '今日无调用记录，昨日' + _fail + '次失败';
       } else {
         data.health.ai = 'ok'; data.health.aiReason = _calls > 0 ? '成功率' + Math.round(_rate * 100) + '%' : '暂无调用';
       }

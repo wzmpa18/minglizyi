@@ -439,7 +439,7 @@ export default function ZiweiPage() {
   const [gender, setGender] = useState<Gender>((sp?.get("g") as Gender) || "male");
   const [calType, setCalType] = useState<"gongli" | "nongli" | "sizhu">("gongli");
   const [zaoWanZi, setZaoWanZi] = useState(false);
-  const [zhenTaiyang, setZhenTaiyang] = useState(false);
+  const [zhenTaiyang, setZhenTaiyang] = useState(true);
   const [xiaLing, setXiaLing] = useState(false);
   // S2-4: 真太阳时修正说明（勾选真太阳时后排盘显示）
   const [solarCorrection, setSolarCorrection] = useState<string | null>(null);

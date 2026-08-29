@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import { Lunar } from "lunar-javascript";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
+import { REGIONS } from "@/data/regions";
 
 // ============================================================================
 // 类型定义
@@ -75,24 +76,21 @@ const DEFAULT_OPTIONS: DatePickerOptions = {
   longitude: 116.4,
 };
 
-/** 省份 → 代表经度（东经，省会/首府坐标） */
-const PROVINCE_LONGITUDES: Record<string, number> = {
-  "北京": 116.4, "上海": 121.5, "天津": 117.2, "重庆": 106.5,
-  "广东": 113.3, "浙江": 120.2, "江苏": 118.8, "四川": 104.1,
-  "湖北": 114.3, "湖南": 113.0, "山东": 117.0, "河南": 113.7,
-  "河北": 114.5, "福建": 119.3, "陕西": 108.9, "辽宁": 123.4,
-  "吉林": 125.3, "黑龙江": 126.6, "安徽": 117.3, "江西": 115.9,
-  "云南": 102.7, "贵州": 106.7, "甘肃": 103.8, "山西": 112.6,
-  "广西": 108.3, "海南": 110.3, "内蒙古": 111.7, "新疆": 87.6,
-  "西藏": 91.1, "宁夏": 106.3, "青海": 101.8,
-};
-
-/** 按经度反查最近的省份名（用于初始化选中项） */
-function provinceByLongitude(lng: number): string {
-  let best = "北京"; let bestDiff = Infinity;
-  for (const [p, v] of Object.entries(PROVINCE_LONGITUDES)) {
-    const diff = Math.abs(v - lng);
-    if (diff < bestDiff) { bestDiff = diff; best = p; }
+/** 按经度反查最近区县的三级索引（用于初始化选中项） */
+function nearestRegion(lng: number): { p: number; c: number; d: number } {
+  let best = { p: 0, c: 0, d: 0 };
+  let bestDiff = Infinity;
+  for (let pi = 0; pi < REGIONS.length; pi++) {
+    const cities = REGIONS[pi].cities;
+    for (let ci = 0; ci < cities.length; ci++) {
+      const districts = cities[ci].districts;
+      for (let di = 0; di < districts.length; di++) {
+        const v = districts[di].lng;
+        if (v == null) continue;
+        const diff = Math.abs(v - lng);
+        if (diff < bestDiff) { bestDiff = diff; best = { p: pi, c: ci, d: di }; }
+      }
+    }
   }
   return best;
 }
@@ -165,6 +163,10 @@ export default function DatePicker({
   const [date, setDate] = useState<DatePickerValue>(initialDate || createDefaultDate());
   const [options, setOptions] = useState<DatePickerOptions>({ ...DEFAULT_OPTIONS, ...(initialOptions || {}) });
   const [nameState, setNameState] = useState(name);
+  // 三级联动选中索引（省/市/县），经度仍以 options.longitude 为唯一真相
+  const [region, setRegion] = useState<{ p: number; c: number; d: number }>(() =>
+    nearestRegion((initialOptions && initialOptions.longitude) ?? 116.4)
+  );
 
   useEffect(() => {
     if (initialDate) setDate(initialDate);
@@ -177,6 +179,12 @@ export default function DatePicker({
   useEffect(() => {
     setNameState(name);
   }, [name]);
+
+  // 每次打开面板时，把三级下拉框同步到当前经度（防止上次手动微调后下拉框漂移）
+  useEffect(() => {
+    if (show) setRegion(nearestRegion(options.longitude ?? 116.4));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [show]);
 
   // ============================================================
   // 日期修改 - 使用原生select的onChange直接更新
@@ -220,6 +228,30 @@ export default function DatePicker({
   // 弹窗不再遮挡导航栏，导航栏保持可见可点击
   useBodyScrollLock(show, { hideNav: false });
   usePopupBackHandler(onClose, show);
+
+  // 三级联动派生值 + 切换处理
+  const prov = REGIONS[region.p] ?? REGIONS[0];
+  const cities = prov.cities ?? [];
+  const city = cities[Math.min(region.c, cities.length - 1)] ?? cities[0];
+  const districts = city ? city.districts : [];
+  const applyLng = (v: number | null | undefined) => {
+    if (v != null) setOptions(prev => ({ ...prev, longitude: v }));
+  };
+  const onProvinceChange = (pi: number) => {
+    const target = REGIONS[pi];
+    setRegion({ p: pi, c: 0, d: 0 });
+    const firstCity = target.cities[0];
+    applyLng(firstCity && firstCity.districts[0] ? firstCity.districts[0].lng : firstCity ? firstCity.lng : target.lng);
+  };
+  const onCityChange = (ci: number) => {
+    setRegion(prev => ({ ...prev, c: ci, d: 0 }));
+    const target = cities[ci];
+    applyLng(target && target.districts[0] ? target.districts[0].lng : target ? target.lng : city ? city.lng : null);
+  };
+  const onDistrictChange = (di: number) => {
+    setRegion(prev => ({ ...prev, d: di }));
+    applyLng(districts[di] ? districts[di].lng : null);
+  };
 
   if (!show) return null;
 
@@ -494,38 +526,48 @@ export default function DatePicker({
                 </div>
               </div>
 
-              {/* 6. 地区选择 - 仅勾选真太阳时时显示（省份映射经度 + 精细微调，用于真太阳时校正） */}
+              {/* 6. 地区选择 - 省/市/县三级联动 + 手动经度微调（真太阳时校正） */}
               {showRegion && options.zhenTaiyang && (
-                <div>
-                  <label className="mb-1 block text-sm text-gray-700">
+                <div className="space-y-2">
+                  <label className="block text-sm text-gray-700">
                     出生地（东经{" "}
-                    <span className="font-medium text-[#7B2FBE]">{(options.longitude ?? 0).toFixed(1)}°</span>
+                    <span className="font-medium text-[#7B2FBE]">{(options.longitude ?? 0).toFixed(4)}°</span>
                     ）
                   </label>
                   <select
-                    value={provinceByLongitude(options.longitude ?? 0)}
-                    onChange={(e) => {
-                      const lng = PROVINCE_LONGITUDES[e.target.value];
-                      if (lng !== undefined) {
-                        setOptions(prev => ({ ...prev, longitude: lng }));
-                      }
-                    }}
+                    value={region.p}
+                    onChange={(e) => onProvinceChange(parseInt(e.target.value, 10))}
                     className="w-full rounded-lg border border-gray-200 px-2 py-2 text-sm outline-none focus:border-[#7B2FBE] bg-white"
                   >
-                    {Object.keys(PROVINCE_LONGITUDES).map(p => (
-                      <option key={p} value={p}>{p}（{PROVINCE_LONGITUDES[p].toFixed(1)}°E）</option>
-                    ))}
+                    {REGIONS.map((p, i) => <option key={p.name} value={i}>{p.name}</option>)}
                   </select>
-                  <input
-                    type="range"
-                    min={73}
-                    max={135}
-                    step={0.1}
-                    value={options.longitude}
-                    onChange={(e) => setOptions(prev => ({ ...prev, longitude: parseFloat(e.target.value) }))}
-                    className="mt-2 w-full accent-[#7B2FBE]"
-                    style={{ padding: "8px 0", minHeight: "36px" }}
-                  />
+                  <select
+                    value={region.c}
+                    onChange={(e) => onCityChange(parseInt(e.target.value, 10))}
+                    className="w-full rounded-lg border border-gray-200 px-2 py-2 text-sm outline-none focus:border-[#7B2FBE] bg-white"
+                  >
+                    {cities.map((c, i) => <option key={c.name} value={i}>{c.name}</option>)}
+                  </select>
+                  <select
+                    value={region.d}
+                    onChange={(e) => onDistrictChange(parseInt(e.target.value, 10))}
+                    className="w-full rounded-lg border border-gray-200 px-2 py-2 text-sm outline-none focus:border-[#7B2FBE] bg-white"
+                  >
+                    {districts.map((d, i) => <option key={d.name} value={i}>{d.name}（{d.lng != null ? d.lng.toFixed(2) + "°" : "缺省"}）</option>)}
+                  </select>
+                  <div className="flex items-center gap-2">
+                    <span className="shrink-0 text-xs text-gray-500">手动经度</span>
+                    <input
+                      type="number"
+                      step={0.0001}
+                      min={73}
+                      max={135}
+                      value={options.longitude}
+                      onChange={(e) => { const v = parseFloat(e.target.value); if (!isNaN(v)) setOptions(prev => ({ ...prev, longitude: v })); }}
+                      className="flex-1 rounded-lg border border-gray-200 px-2 py-2 text-sm outline-none focus:border-[#7B2FBE] bg-white"
+                    />
+                    <span className="shrink-0 text-xs text-gray-400">°E</span>
+                  </div>
                   <div className="text-[11px] text-gray-400">真太阳时＝钟表时间＋经度差修正＋均时差</div>
                 </div>
               )}
