@@ -1,11 +1,32 @@
 # 言道国学项目总账（PROJECT_MASTER_LEDGER）
 
 > **本文档是项目唯一权威账簿（Single Source of Truth）。**
-> 最后更新: 2026-08-29（FINAL-PRODUCTION-OPERATIONS-MASTER-SEAL-01 第一阶段·生产事实终检）
+> 最后更新: 2026-08-29（P0-PRODUCTION-SEAL-AND-AI-COST-PHASE1-03：P0安全修复正式生产落地 + 生产攻击回归 + SSOT总账纠偏 + 真太阳时封板 + AI Fair Usage/Cost Center 第一阶段）
 > 上一批（2026-08-25，生产版本 v25.0.47_30）：FIX-V30-PAY-CARE 支付权益彻查+防再发机制——用户投诉「会员ID 100011 充值没开通会员」彻查结论：①订单 YD20260825173625902022 ¥39.9 实为 SINGLE_UNLOCK 单次深度解读（非会员套餐），支付成功且 benefit_delivered=1 权益已正常发放；用户误将单次解读当会员购买（单次 39.9>月费 37 价格结构易混淆），支付后又连续创建 7 个未完成 PENDING 订单反复尝试；②全量对账 5 笔 PAID 订单：真实用户订单权益全部正常发放，唯一漏发为 E2E 测试订单 TEST_RC06_DELIVER（无 transaction_id 无真实扣款，已归档）；910082 yearly 会员为 E2E 测试账号（无手机号）非漏发；③处理：用户 100011 客户关怀补偿开通月度会员至 2026-09-24（与生产 deliverOrderBenefits 同口径 users+user_assets 双表）+7 个僵尸 PENDING 订单关闭+operation_logs 三条留痕（修复前 DB 备份 /root/backup/yandao_users_pre_fix100011_20260825_175346.db）；⑥应老板要求改单（2026-08-25 追加）：订单 129 YD20260825173625902022 由 SINGLE_UNLOCK 正式转为 MEMBERSHIP（实付 39.9 金额不动，benefit_delivered=1 维持，operation_logs id=302 order_type_convert 留痕），订单记录与已发月度会员权益一致；用户无推荐人（invited_by/referrer_id 空）改单对佣金结算零影响；④防再发：部署 /root/backend-auth/scripts/payment_reconcile.sh 每日 03:30 cron 自动对账——查 PAID+benefit_delivered=0+支付超10分钟的沉默漏发订单，MEMBERSHIP 按金额映射档位（37/99/374/3600）自动补交付（续费顺延同口径）、SINGLE_UNLOCK 补标记、未知类型告警人工，告警日志 payment_audit_alerts.log；⑤产品层防混淆：单次解锁弹窗新增三处明确标识「本单为单次解读解锁，非会员套餐」+「支付后仅解锁本次解读，不含会员权益」；前一版本 v25.0.47_29+APK v25.0.55(2055)：FIX-V29-DOWNLOAD-RESCUE 升级下载链路根治）
 > 历史详细记录见 `PROJECT_LEDGER_FINAL.md`（v25.0.0 ~ v25.0.20 阶段账，冻结归档）。
 > 本账簿只记录 v25.0.21 之后增量与当前全局事实；冲突时以本文为准。
 > 纪律：停止新增 xx_REPORT 编号报告，一切状态只更新本账簿。
+
+---
+
+## 〇、Current Snapshot（当前事实快照 · 2026-08-29 核实）
+
+| 项 | 值 |
+|----|-----|
+| 数据核实日期 | 2026-08-29 |
+| 后端 Runtime Commit | `f694389`（chore(release) bump v25.0.65；含 `16608a5` P0 安全修复） |
+| 前端 Web 构建版本 | v25.0.64（本轮前端运行时零变更，按部署纪律未重切前端） |
+| 后端发布版本 | v25.0.65（P0 安全落地批次） |
+| Document Head | `f694389`（GitHub = 本地 = 服务器源码仓 一致） |
+| APK / versionCode | 25.0.60 / 2059（`/api/public/app-version` 生产下发值，published 2026-08-26） |
+| 生产服务器 | 82.156.228.87（腾讯云轻量 北京，root） |
+| 生产后端路径 | `/www/yandaoguoxue-backend`（PM2 `yandaoguoxue-backend`，端口 3001） |
+| 前端发布路径 | `/root/yandaoguoxue/releases/<tag>` + `/root/yandaoguoxue/current` 软链（nginx root 指向） |
+| 数据库架构 | SQLite（better-sqlite3）三库：`/root/backend-auth/data/yandao_users.db`（用户核心，97 用户）+ `/www/yandaoguoxue-backend/data/social.db`（社交）+ `/www/yandaoguoxue-backend/data/academy.db`（学堂，约 56MB）。PostgreSQL 15 为已迁出「学外语」项目进程残留，非本国学项目基础设施（见下方 §二 纠偏）。 |
+| 备份现状 | 三库每日 02:00 备份至 `/root/backup/`（2026-08-29 备份已存在），`PRAGMA integrity_check` = ok |
+| 用户/会员统计 | 97 用户（basic 93 / monthly 2 / yearly 1 / lifetime 1），统计日期 2026-08-29 |
+
+> 冲突裁决：历史章节中「当前生产版本 / Git HEAD / APK / 数据库」等字段若与本快照冲突，以本快照为准；历史字段原文保留不删（记 SUPERSEDED·HISTORICAL）。
 
 ---
 
@@ -30,7 +51,7 @@
 | 服务器 | 82.156.228.87（腾讯云轻量 北京，root） |
 | 前端发布 | /root/yandaoguoxue/releases/&lt;tag&gt; + **/root/yandaoguoxue/current 软链（nginx root 真实指向，v28 切流纠偏时确认；releases/current 软链为冗余同指）**；当前 current→v25.0.47_29，回滚目标 v25.0.47_28；目录现状 _5/_6/_8/_9/_17/_21/_22/_23/_24/_25/_26/_27/_28/_29 等多版（磁盘充足暂留，如需清理保留 _28+_29 即可） |
 | 后端服务 | /www/yandaoguoxue-backend，PM2 名 yandaoguoxue-backend，端口 3001 |
-| 数据库 | PostgreSQL 15（127.0.0.1:5432/yandaoguoxue）+ SQLite（用户核心库 /root/backend-auth/data/yandao_users.db、academy.db、commission_accounts/records） |
+| 数据库 | ~~PostgreSQL 15（SUPERSEDED·HISTORICAL：为已迁出「学外语」项目进程残留，经 2026-08-29 生产核实国学后端仅 `require('better-sqlite3')`×29、零 `require('pg')`/5432 连接）~~ → **SQLite（better-sqlite3）三库**：用户核心 `/root/backend-auth/data/yandao_users.db`（97 用户 + user_orders/user_assets/commission_accounts/commission_records/partner_settlements 等全表）、社交 `/www/yandaoguoxue-backend/data/social.db`、学堂 `/www/yandaoguoxue-backend/data/academy.db`（约 56MB） |
 | Nginx | / → 静态前端；/api/* → 127.0.0.1:3001；/app-download/ → APK 分发 |
 | SSL | Let's Encrypt（certbot，每日自动续期 cron） |
 | 备份 | 每日 02:00 users_db（cron /root/backend-auth/backup_db.sh → /root/backup/，保留7天）；03:00 一致性校验；周日 04:00 VACUUM+REINDEX；归档区 /root/backup/archive/（数据库备份+nginx配置+导入材料压缩包） |
