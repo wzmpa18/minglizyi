@@ -151,12 +151,20 @@ v25.0.60 / versionCode 2059 / 包名 `com.yandao.guoxue` / MD5 `e506971da1779ea7
 - **超时**：nginx `proxy_read_timeout 180s`；健康监控 `data/ai-health.json`（P50/95/99、>60s/>120s、空内容、连续失败≥5 红灯）。
 - 匿名通道证据：8/26 全天真实匿名调用仅 1 次（旧 APK WebView UA），Dalvik 原生 UA 4 次被 UA 门控拦截——旧 APK 群体可忽略，关闭无实质影响。
 
+### 20.1 AI Fair Usage + Cost Center 第一阶段（代码完成 · 未生产部署 · 2026-08-29/30）
+
+- **AI_USAGE_POLICY（服务端唯一事实源）**：`backend_deploy/aiUsagePolicy.js` 统一 AI 额度裁决，与会员功能权益（Membership Entitlement）**解耦**。档位：basic 3/日、monthly/quarterly 50/日、yearly/lifetime 无限（`LEGACY_UNLIMITED_PROTECTED`，禁止改为有限额度）。Fair Use 安全限流：`maxConcurrent=1` / `maxInputChars=12000` / `maxOutputTokens=8192`。后台改策略强制 bump `policyVersion`，禁止静默 UPDATE 导致历史权益瞬间变化。
+- **AI Cost Center**：`backend_deploy/aiCostCenter.js` 复用 `academy.db` 的 `ai_call_logs`（幂等扩展 11 个计量列），只记 `requestId/userId/model/tokens/estimatedCost` 等元数据，**不保存 prompt/命理输入/中医私人内容**。后台路由 `/api/admin/ai-cost/{summary,top-users,by-feature,by-model,by-membership,alerts}` + 页面 `/admin/ai-cost`。告警实时计算（单用户日成本/全站日成本/错误率/请求频率），仅告警状态、不自动封号。模型价格可配置（默认 `ESTIMATED`，待按混元/DeepSeek 真实账单季单价校准 `data/ai-pricing.json`）。
+- **配额裁决接线**：`middleware/auth.js` 的每日额度改为读 `aiUsagePolicy`（`getAIUsageDailyLimit`），原 `AI_DAILY_LIMITS` 仅作兜底常量；`server.js` 的 `/api/ai/chat` 接入成本日志（requestId 幂等 + 成功/失败/blocked 状态落库）。
+- **测试**：`backend_deploy/ai_phase1_test.js`（服务器隔离库运行，33 PASS / 0 FAIL，零真实模型调用、零真实用户数据）。本轮**未生产部署**，上线见 §30。
+
 ## 21. 会员 / 权益
 
 - **权威 SSOT：`users.membership_expiry` + `users.member_level`**（写入宪法）。`user_assets.member_expire_at` 只能派生/兼容，禁止当第二权威源（存量 NULL 无功能影响）。
 - 档位：basic（免费）/ monthly / quarterly(99元) / yearly / lifetime。
 - 权益恢复：`GET /api/auth/entitlements` 登录即恢复（换设备/重装不丢）。
 - 后台会员调整全流程 24/24 验收通过（每步双表 DB + AI 权限即时生效 + 审计日志一致）。
+- AI 额度与会员权益**解耦**：AI 每日额度由 `aiUsagePolicy.js` 唯一裁决（禁止前端文案 / middleware 常量 / 后台配置三套打架）；前端只展示剩余额度，localStorage 篡改不生效（服务端强制）。历史 yearly/lifetime 无限承诺已 `LEGACY_UNLIMITED_PROTECTED`。
 
 ## 22. 分佣 / 合伙人
 
@@ -228,6 +236,7 @@ v25.0.60 / versionCode 2059 / 包名 `com.yandao.guoxue` / MD5 `e506971da1779ea7
 5. **COMMENT**：见 §26。
 6. **hy3 极限场景**：5000+ 字提示词可能推理耗尽 8192 token（已有明确报错不扣额）；根治靠流式改造或提示词瘦身，**禁止堆 max_tokens**。
 7. **`/api/sync` 404 噪音**：旧 APK 调用不存在的端点（8/26 32 次），无功能影响；新版已无此调用。
+8. **AI Fair Usage + Cost Center 第一阶段**：代码完成 + 构建通过 + 隔离测试 33/33，**尚未生产部署**（授权仅到「开发与测试」，上线需按 §30 原子上线 + 项目方确认部署窗口）。
 
 ## 28. 当前 NOT_IMPLEMENTED（如实，禁止为全绿临时新增）
 

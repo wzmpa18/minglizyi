@@ -556,3 +556,40 @@ gh workflow run ios-build.yml --repo wzmpa18/minglizyi --ref main
 - clean checkout 构建：`pnpm install --frozen-lockfile`（lockfile up to date）+ `pnpm build` exit 0（54 路由无错误）。
 
 **提交**：见本阶段本地 commit（不推送）。**安全残余建议**：混元 Key 前缀曾在历史文档出现过（现已脱敏），建议择机在腾讯云控制台轮换混元 Key 作为卫生动作（非本次阻断项）。
+
+### 12.16 AI Fair Usage + Cost Center 第一阶段（P0-PRODUCTION-SEAL-AND-AI-COST-PHASE1-03，2026-08-29/30）
+
+**定位**：P0 安全修复已正式生产落地（`16608a5`/`f694389`）后，开始解决长期 AI 无限消耗问题；**绝不偷改历史购买承诺**。
+
+**历史 AI 权益核定（第三十二~三十四章，已核实前端购买页 + 服务端价格 SSOT）**：
+
+| 档位 | 历史购买承诺 | 本轮处理 |
+|------|------------|---------|
+| basic | 每日 3 次 | 保持现状 |
+| monthly | 每日 50 次通用 AI 问答 | 保持现状 |
+| quarterly | 每日 50 次通用 AI 问答 | 保持现状 |
+| yearly | 购买页明确写「通用AI问答无限次/无限畅享」 | **LEGACY_UNLIMITED_PROTECTED**，保持无限，仅施加 Fair Use 限流 |
+| lifetime | 购买页明确写「通用AI问答无限次/AI 解读终身畅用」 | **LEGACY_UNLIMITED_PROTECTED**，保持无限，仅施加 Fair Use 限流 |
+
+**代码交付（后端运行时 · 未部署）**：
+- 新增 `backend_deploy/aiUsagePolicy.js`：AI 额度服务端唯一事实源（Membership Entitlement ≠ AI Usage Entitlement）；`maxConcurrent=1`、`maxInputChars=12000`、`maxOutputTokens=8192`；可配置价格表（默认 `ESTIMATED`）；`updatePolicy` 强制 bump `policyVersion`，并**拒绝将 yearly/lifetime 改为有限额度**；数据路径支持 `AI_POLICY_DIR/FILE` 环境变量覆盖（测试隔离）。
+- 新增 `backend_deploy/aiCostCenter.js`：复用 `academy.db`→`ai_call_logs`（幂等扩展 11 计量列），只记计量元数据、**不存 prompt/命理/中医输入**；后台聚合路由 `/api/admin/ai-cost/{summary,top-users,by-feature,by-model,by-membership,alerts}`；告警实时计算（单用户日成本/全站日成本/错误率/请求频率），仅告警状态、不自动封号。
+- 改 `backend_deploy/server.js`：`/api/ai/chat` 接入成本日志（requestId 幂等 + 成功/失败/blocked 落库）；挂载 `/api/admin/ai-cost` 与 `/api/admin/ai-policy`（读/更新）。
+- 改 `backend_deploy/middleware/auth.js`：每日额度裁决改为读 `aiUsagePolicy`（`getAIUsageDailyLimit`），`AI_DAILY_LIMITS` 仅作兜底——**行为等价**（3/50/50/∞/∞）。
+
+**前端交付（需构建+发布 · 未部署）**：
+- 新增 `src/app/admin/ai-cost/page.tsx`（AI 成本中心：今日/本月汇总、Top 用户、按功能/模型/会员档、告警、政策只读展示）。
+- `src/app/admin/layout.tsx` 增导航项「AI成本中心」（scope=finance）；`src/lib/admin/client.ts` 增 `fetchAICostSummary/fetchAICostList/fetchAIPolicy/updateAIPolicy`。
+
+**测试与构建**：
+- `backend_deploy/ai_phase1_test.js`（服务器隔离库运行，`DB_PATH`/`AI_POLICY_FILE` 隔离，NODE_PATH 指向服务器 node_modules）：**33 PASS / 0 FAIL**；覆盖档位额度、历史无限保护、version bump、成本估算（UNKNOWN 不伪造）、配额 DB 裁决（basic 3 / monthly 50 / yearly·lifetime 无限）；**零真实模型调用、零真实用户数据**。
+- 后端 4 文件 `node --check` 全通过；`pnpm build` PASS（`/admin/ai-cost` 产物存在）。
+
+**部署状态**：本轮**未生产部署**（授权仅到「AI Phase 1 开发与测试」；第五十九章 → 准备 DEPLOYMENT PLAN，随本轮最终回复交付）。
+
+**待项目方决定的商业问题（第五十八章 STOP 类除外）**：
+1. 模型价格表校准：默认 `ESTIMATED`（0.000001/0.000002 元/token），需按腾讯云混元 `hy3` / DeepSeek 真实账单季单价校准 `data/ai-pricing.json`。
+2. 增量包 `overageProductId`（basic→`pack_10`、monthly/quarterly→`pack_50`）需与现有支付产品 ID 对齐确认。
+3. AI Phase 1 生产部署窗口与灰度方式（原子上线计划）需项目方确认。
+
+**下一主线**：COMMISSION ROUTER + PARTNER ACCOUNTING（普通 15%/5% 与 Partner 50% 当前为独立 Hook，存在重复计提风险，需合并内核）。
