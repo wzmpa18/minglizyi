@@ -18,6 +18,7 @@
 const jwt = require('jsonwebtoken');
 const path = require('path');
 const fs = require('fs');
+const aiUsagePolicy = require('../aiUsagePolicy');
 
 // ==================== 配置 ====================
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -37,6 +38,9 @@ const MEMBER_LEVELS = {
 };
 
 // ==================== AI配额配置 ====================
+// v25.0.65 AI Phase 1：统一 AI 额度唯一事实源。
+// 服务端裁决走 aiUsagePolicy（历史权益保护 + 政策版本化），
+// AI_DAILY_LIMITS 仅保留为兜底/兼容常量（与服务端 policy 默认值一致）。
 const AI_DAILY_LIMITS = {
   basic: 3,
   monthly: 50,
@@ -44,6 +48,19 @@ const AI_DAILY_LIMITS = {
   yearly: Infinity,
   lifetime: Infinity,
 };
+
+/**
+ * AI 每日额度唯一裁决：优先读取 aiUsagePolicy（历史权益保护、policyVersion 化），
+ * 读取失败时回退静态 AI_DAILY_LIMITS。yearly/lifetime 历史无限 → Infinity。
+ */
+function getAIUsageDailyLimit(level) {
+  try {
+    const dr = aiUsagePolicy.getUsagePolicy(level).dailyRequests;
+    return (typeof dr === 'number' && dr >= 0) ? dr : Infinity;
+  } catch (e) {
+    return AI_DAILY_LIMITS[level] || 3;
+  }
+}
 
 // ==================== 数据库连接 ====================
 let dbInstance = null;
@@ -285,7 +302,7 @@ function getAIQuotaFromDB(userId) {
     // 获取会员等级
     const membership = getMembershipFromDB(userId);
     const level = membership.level;
-    const dailyLimit = AI_DAILY_LIMITS[level] || 3;
+    const dailyLimit = getAIUsageDailyLimit(level);
 
     // 获取今日使用次数
     const usage = db.prepare(
@@ -349,7 +366,7 @@ function checkAIQuota(req, res, next) {
   req.aiQuota = quota;
 
   const level = req.membership?.level || quota.level;
-  const limit = AI_DAILY_LIMITS[level] || 3;
+  const limit = getAIUsageDailyLimit(level);
 
   if (quota.dailyUsed >= limit) {
     return res.status(429).json({
@@ -408,4 +425,5 @@ module.exports = {
   verifyToken,
   MEMBER_LEVELS,
   AI_DAILY_LIMITS,
+  getAIUsageDailyLimit,
 };

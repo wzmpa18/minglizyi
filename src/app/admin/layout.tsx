@@ -62,6 +62,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/admin/pricing", label: "产品与价格", icon: <Tag size={18} />, desc: "价格SSOT·会员·AI产品", scope: "super" },
   { href: "/admin/membership", label: "会员与权益", icon: <Crown size={18} />, desc: "等级·价格·权益·上下架", scope: "super" },
   { href: "/admin/ai-control", label: "AI管理", icon: <Bot size={18} />, desc: "开关·配额·定价·健康", scope: "super" },
+  { href: "/admin/ai-cost", label: "AI成本中心", icon: <Coins size={18} />, desc: "用量·tokens·成本·告警", scope: "finance" },
   { href: "/admin/loc", label: "学习 / 中医", icon: <GraduationCap size={18} />, desc: "考试配置·积分·机构管理", scope: "ops" },
   { href: "/admin/moderation?tab=group", label: "社交 / 群聊", icon: <MessagesSquare size={18} />, desc: "群管理·举报处理·禁言", scope: "ops" },
   { href: "/admin/sources", label: "发现 / 资讯", icon: <Newspaper size={18} />, desc: "资讯增删改·排序·合规", scope: "ops" },

@@ -571,3 +571,35 @@ export async function saveShareConfig(
   });
   return { ok: !!res.success, error: res.error };
 }
+
+// ==================== AI 成本中心 API（AI Phase 1） ====================
+
+/** 成本中心今日/本月汇总 */
+export async function fetchAICostSummary(): Promise<Record<string, any> | null> {
+  const res = await adminFetch<any>("/api/admin/ai-cost/summary");
+  return res.success ? res.data : null;
+}
+
+/** 成本中心列表（top-users / by-feature / by-model / by-membership / alerts） */
+export async function fetchAICostList(section: string): Promise<any[]> {
+  const res = await adminFetch<any[]>(`/api/admin/ai-cost/${section}`);
+  return res.success && Array.isArray(res.data) ? res.data : [];
+}
+
+/** 读取 AI_USAGE_POLICY（服务端唯一事实源） */
+export async function fetchAIPolicy(): Promise<Record<string, any> | null> {
+  const res = await adminFetch<any>("/api/admin/ai-policy");
+  return res.success ? res.data : null;
+}
+
+/** 更新 AI_USAGE_POLICY（服务端自动 bump policyVersion；禁止改 yearly/lifetime 为有限额度） */
+export async function updateAIPolicy(
+  patch: Record<string, any>
+): Promise<{ ok: boolean; error?: string; policyVersion?: string }> {
+  const res = await adminFetch<any>("/api/admin/ai-policy", {
+    method: "PUT",
+    body: JSON.stringify(patch),
+  });
+  if (!res.success) return { ok: false, error: res.error };
+  return { ok: true, policyVersion: res.data?.policyVersion };
+}

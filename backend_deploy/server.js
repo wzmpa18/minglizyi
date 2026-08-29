@@ -14,6 +14,16 @@ const fs = require("fs");
 const { createPlatformFeatureGate } = require("./platformFeatureGate");
 
 const { authMiddleware, getMembershipFromDB, getAIQuotaFromDB, consumeAIQuotaInDB, getAnonAIQuota, consumeAnonAIQuota, getUserActiveStatus, verifyToken } = require("./middleware/auth");
+// AI_USAGE_POLICY（额度唯一裁决）+ AI Cost Center（成本日志/后台统计）— AI Phase 1
+const aiUsagePolicy = require("./aiUsagePolicy");
+const aiCostCenter = require("./aiCostCenter");
+
+// AI Cost Center 表结构扩展（幂等 ALTER），失败不阻断服务启动
+try {
+  aiCostCenter.ensureSchema();
+} catch (e) {
+  console.error('[Server] aiCostCenter.ensureSchema 失败:', e.message);
+}
 
 const app = express();
 const PORT = process.env.API_PORT || 3001;
@@ -121,6 +131,35 @@ function releaseAIInflight(owner) {
 app.post('/api/ai/chat', async (req, res) => {
   const _t0 = Date.now();
   let _inflightOwner = null;
+  // AI Phase 1：成本计量元数据（requestId 幂等 + 成本日志，不保存敏感 prompt）
+  const _meta = {
+    requestId: (req.body && req.body.requestId) || require('crypto').randomUUID(),
+    featureKey: (req.body && (req.body.toolId || req.body.featureKey)) || 'ai_chat',
+    model: null,
+    membershipLevel: null,
+    providerId: null,
+    inputTokens: 0,
+    outputTokens: 0,
+  };
+  const _logCost = (status, errorCode) => {
+    try {
+      aiCostCenter.logAICall({
+        requestId: _meta.requestId,
+        userId: _authUser ? _authUser.userId : null,
+        featureKey: _meta.featureKey,
+        scene: 'ai_chat',
+        model: _meta.model || 'unknown',
+        membershipLevel: _meta.membershipLevel,
+        providerId: _meta.providerId,
+        inputTokens: _meta.inputTokens,
+        outputTokens: _meta.outputTokens,
+        estimatedCost: aiUsagePolicy.estimateCost(_meta.model, _meta.inputTokens, _meta.outputTokens).estimatedCost,
+        durationMs: Date.now() - _t0,
+        status,
+        errorCode: errorCode || null,
+      });
+    } catch (e) { /* 成本日志失败不阻断 */ }
+  };
   try {
     // ===== v25.0.60 AUDIT-20260826 P0-3 修复：AI 付费墙服务端强制 =====
     // 鉴权 + 配额校验 + 成功后扣减（配额设施此前为死代码，本次正式接线）
@@ -138,7 +177,9 @@ app.post('/api/ai/chat', async (req, res) => {
       }
       _quotaOwner = _authUser.userId;
       const _q = getAIQuotaFromDB(_authUser.userId);
+      _meta.membershipLevel = _q.level;
       if (_q.dailyLimit !== Infinity && _q.dailyUsed >= _q.dailyLimit) {
+        _logCost('blocked', 'AI_QUOTA_EXCEEDED');
         return res.status(429).json({
           success: false,
           error: `今日AI调用次数已用完（${_q.dailyLimit}次/日），明日重置或升级会员`,
@@ -181,10 +222,12 @@ app.post('/api/ai/chat', async (req, res) => {
         });
       }
       _quotaOwner = 'anon:' + _ip;
+      _meta.membershipLevel = 'anonymous';
     }
 
     // v25.0.61 P2：并发锁——同一主体同时只允许1个在途请求（防并行双扣token）
     if (!acquireAIInflight(_quotaOwner)) {
+      _logCost('blocked', 'AI_CONCURRENT_LIMIT');
       return res.status(429).json({
         success: false,
         error: '请等待当前AI请求完成后再试',
@@ -264,6 +307,8 @@ app.post('/api/ai/chat', async (req, res) => {
 
     const useHunyuan = !deepseekKey && !!hunyuanKey;
     const targetModel = model || (useHunyuan ? (process.env.HUNYUAN_MODEL || 'hy3') : 'deepseek-chat');
+    _meta.model = targetModel;
+    _meta.providerId = useHunyuan ? 'tencent' : 'deepseek';
     const apiUrl = process.env.AI_API_URL || (useHunyuan
       ? (process.env.HUNYUAN_API_URL || 'https://tokenhub.tencentmaas.com/v1/chat/completions')
       : 'https://api.deepseek.com/v1/chat/completions');
@@ -281,6 +326,7 @@ app.post('/api/ai/chat', async (req, res) => {
     if (!response.ok) {
       const errText = await response.text();
       console.error('[AI] API error:', response.status, errText);
+      _logCost('error', 'upstream_' + response.status);
       // v25.0.61 P2-C：上游错误（含502/504）也计入健康统计（原实现漏记，超时表现为上游非200）
       recordAIHealth('fail', Date.now() - _t0, 'upstream_' + response.status);
       let detail = `AI API 返回错误: ${response.status}`;
@@ -296,12 +342,15 @@ app.post('/api/ai/chat', async (req, res) => {
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || '';
     const usage = data.usage || {};
+    _meta.inputTokens = Number(usage.prompt_tokens) || 0;
+    _meta.outputTokens = Number(usage.completion_tokens) || 0;
     // v25.0.60 AUDIT-20260826 D17: 空内容保护——推理耗尽 token 时上游返回空 content，
     // 原实现按 success:true 返回空串（前端白屏等待60秒无结果，健康统计还误计成功）。
     // 现在明确报错提示重试，不扣配额（下方 content 判空天然跳过），健康统计计为失败。
     if (!content) {
       const _finish = data.choices?.[0]?.finish_reason || '';
       console.error('[AI] 空内容返回 finish_reason=' + _finish + ' usage=' + JSON.stringify(usage));
+      _logCost('error', 'AI_EMPTY_CONTENT');
       recordAIHealth('empty', Date.now() - _t0, 'empty_content(' + _finish + ')');
       return res.status(502).json({
         success: false,
@@ -322,9 +371,11 @@ app.post('/api/ai/chat', async (req, res) => {
     }
     // v25.0.47_10: AI健康埋点（成功，含延迟分位数统计）
     recordAIHealth('success', Date.now() - _t0);
+    _logCost('success');
     res.json({ success: true, content, usage, cached: false, data: { content, usage } });
   } catch (err) {
     console.error('[AI] 代理错误:', err);
+    _logCost('error', 'AI_SERVICE_UNAVAILABLE');
     // v25.0.47_10: AI健康埋点（失败）
     recordAIHealth('fail', Date.now() - _t0, err.message);
     res.json({ success: false, error: `AI 服务异常: ${err.message}`, code: 'AI_SERVICE_UNAVAILABLE' });
@@ -342,6 +393,39 @@ const adminRoles = require('./adminRoles');
 function adminAuth(minRole, scope) {
   return adminRoles.adminAuth(minRole, scope);
 }
+
+// ==================== AI Cost Center + AI_USAGE_POLICY 后台路由（AI Phase 1） ====================
+// 成本中心：今日/本月汇总、Top用户、按功能/模型/会员档、告警状态
+try {
+  app.use('/api/admin/ai-cost', aiCostCenter.makeCostRouter(adminAuth));
+  console.log('[Server] ✅ AI成本中心路由已挂载: /api/admin/ai-cost');
+} catch (e) {
+  console.error('[Server] 挂载 AI成本中心失败:', e.message);
+}
+
+// AI_USAGE_POLICY 读取（admin UI 展示剩余额度/政策）与更新（必须 bump policyVersion）
+app.get('/api/admin/ai-policy', adminAuth('ADMIN'), (req, res) => {
+  const p = aiUsagePolicy.getPolicy();
+  const pricing = aiUsagePolicy.getPricing();
+  res.json({
+    success: true,
+    data: {
+      policyVersion: p.policyVersion,
+      effectiveFrom: p.effectiveFrom,
+      legacyUnlimitedProtected: p.legacyUnlimitedProtected,
+      tiers: p.tiers,
+      pricing,
+    },
+  });
+});
+
+app.put('/api/admin/ai-policy', adminAuth('ADMIN'), (req, res) => {
+  const result = aiUsagePolicy.updatePolicy(req.body || {});
+  if (!result.ok) {
+    return res.status(400).json({ success: false, error: result.error });
+  }
+  res.json({ success: true, data: { policyVersion: result.policyVersion, policy: result.policy } });
+});
 
 app.get('/api/admin/stats', adminAuth(), async (req, res) => {
   try {
