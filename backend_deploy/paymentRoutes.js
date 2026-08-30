@@ -131,6 +131,8 @@ const ORDER_TYPES = {
   POINTS_RECHARGE: 'POINTS_RECHARGE',
   AI_PACKAGE: 'AI_PACKAGE',
   BATCH_INTERPRET: 'BATCH_INTERPRET',
+  // MASTER-05 第四十章：Provider 师傅服务订单（复用现有支付体系，禁止第二套支付）
+  SERVICE_ORDER: 'SERVICE_ORDER',
 };
 
 const ORDER_STATUS = {
@@ -148,6 +150,7 @@ const COMPLIANCE_TITLES = {
   POINTS_RECHARGE: '传统文化学习平台积分充值',
   AI_PACKAGE: '传统文化AI智能解读服务套餐',
   BATCH_INTERPRET: '传统文化号码批量解读服务',
+  SERVICE_ORDER: '传统文化学习咨询服务',
 };
 
 // ============================================================================
@@ -610,6 +613,47 @@ function updateOrderRecord(orderId, status, channel) {
     }
   }
   persistOrder(order);
+  // MASTER-05 第四十一~四十二章：SERVICE_ORDER 不进 Commission Router（Provider Revenue 独立账本），
+  // 支付成功只推进服务订单状态机（PAID），由 providerEngine 独立结算。
+  if (status === ORDER_STATUS.PAID && order.type === 'SERVICE_ORDER') {
+    try {
+      const providerEngine = require('./providerEngine');
+      const pr = providerEngine.onOrderPaid(order.orderId, order.amount);
+      if (pr && pr.ok) {
+        order.providerOrderStatus = pr.amountMismatch ? 'AMOUNT_MISMATCH_REFUND_PENDING' : 'SERVICE_PAID';
+        console.log(`[payment] Provider服务订单已联动 orderId=${order.orderId} → ${pr.orderNo || pr.status}`);
+      } else if (pr && pr.error) {
+        console.error(`[payment] Provider联动失败 orderId=${order.orderId} err=${pr.error}`);
+      }
+    } catch (e) {
+      console.error('[payment] Provider联动异常:', e.message);
+    }
+    persistOrder(order);
+    return order;
+  }
+  // 退款事实 → Provider 账务冲销联动（幂等；Provider 侧已处理则跳过）
+  if (status === ORDER_STATUS.REFUNDED && order.type === 'SERVICE_ORDER') {
+    try {
+      const providerEngine = require('./providerEngine');
+      const db = providerEngine.getDb();
+      const so = db.prepare('SELECT order_no, refund_cents, price_cents, status FROM service_orders WHERE payment_order_id = ?')
+        .get(String(orderId));
+      if (so && so.status !== 'REFUNDED') {
+        // 支付侧退款事实回灌：按剩余未退部分全额冲销（真实退款已在微信侧发生）
+        const remainCents = so.price_cents - so.refund_cents;
+        const r = providerEngine.refundOrder({
+          orderNo: so.order_no, refundAmount: remainCents / 100, full: remainCents >= so.price_cents,
+          admin: 'PAYMENT_REFUND_SYNC',
+        });
+        console.log(`[payment] Provider退款联动 orderId=${orderId} → ${JSON.stringify(r)}`);
+      }
+    } catch (e) {
+      console.error('[payment] Provider退款联动异常:', e.message);
+    }
+    // 第四十二/四十四章：SERVICE_ORDER 退款不走 Commission Router（Provider 独立冲销完毕）
+    persistOrder(order);
+    return order;
+  }
   // COMMISSION_ROUTER（AI-PRODUCTION-SEAL-AND-COMMISSION-ROUTER-04 第四十一~四十二部分）：
   // 分佣唯一结算入口——支付/退款只进 Router 一次，禁止 commissionEngine/partnerEngine 双引擎独立调用导致重复计提。
   if (status === ORDER_STATUS.PAID) {
@@ -765,6 +809,23 @@ function resolveServerPrice(type, extra, userId) {
       return { price: Number(sp) };
     }
 
+    // MASTER-05 第三十八章：SERVICE_ORDER 价格 SSOT——金额一律取 service_orders.price_cents
+    // （下单时已从 provider_services 快照），客户端传入 amount 仅作展示对照。
+    if (type === 'SERVICE_ORDER') {
+      const serviceOrderNo = extra && extra.serviceOrderNo;
+      if (!serviceOrderNo) return { price: null, reason: '缺少 serviceOrderNo' };
+      let providerEngine;
+      try { providerEngine = require('./providerEngine'); } catch (e) {
+        return { price: null, reason: 'Provider 引擎不可用' };
+      }
+      const db = providerEngine.getDb();
+      const so = db.prepare('SELECT * FROM service_orders WHERE order_no = ?').get(String(serviceOrderNo));
+      if (!so) return { price: null, reason: '服务订单不存在' };
+      if (String(so.buyer_user_id) !== String(userId)) return { price: null, reason: '仅下单人本人可支付该服务订单' };
+      if (so.status !== 'PENDING_PAYMENT') return { price: null, reason: '服务订单当前不可支付（' + so.status + '）' };
+      return { price: so.price_cents / 100 };
+    }
+
     // POINTS_RECHARGE / 其他：按充值面额，走外层范围校验
     return null;
   } catch (e) {
@@ -828,6 +889,21 @@ router.post('/create', async (req, res) => {
 
     // === 微信支付V3 JSAPI 下单流程 ===
     const order = createOrderRecord({ userId, type, amount: finalAmount, title, extra });
+
+    // MASTER-05 第三十八章：SERVICE_ORDER 支付单回绑服务订单（金额一致性校验，SSOT）
+    if (type === 'SERVICE_ORDER' && extra && extra.serviceOrderNo) {
+      try {
+        const bind = require('./providerEngine').bindPaymentOrder(extra.serviceOrderNo, order.orderId, order.amount);
+        if (!bind.ok) {
+          updateOrderRecord(order.orderId, ORDER_STATUS.CLOSED, null);
+          return jsonResponse(res, 400, false, bind.error);
+        }
+        console.log(`[payment/create] Provider服务订单已回绑 serviceOrder=${extra.serviceOrderNo} payment=${order.orderId}`);
+      } catch (e) {
+        console.error('[payment/create] Provider回绑失败:', e.message);
+      }
+    }
+
     const payChannel = channel || 'wechat';
 
     if (payChannel === 'wechat' && wechatPayV3.isConfigured()) {

@@ -27,7 +27,8 @@ const crypto = require('crypto');
 
 const DATA_DIR = path.join(__dirname, 'data');
 const USERS_DB_PATH = process.env.DB_PATH || '/root/backend-auth/data/yandao_users.db';
-const SOCIAL_DB_PATH = path.join(DATA_DIR, 'social.db');
+// MASTER-05：SOCIAL_DB_PATH 仅供隔离测试覆盖；生产默认路径不变
+const SOCIAL_DB_PATH = process.env.SOCIAL_DB_PATH || path.join(DATA_DIR, 'social.db');
 
 // v25.0.47_13: 统一角色权限模块（ROLES/ROLE_SCOPES/鉴权/审计/子密钥管理，全后台唯一事实源）
 const adminRoles = require('./adminRoles');
@@ -338,6 +339,66 @@ router.get('/overview', adminAuthUnified('SUPPORT_ADMIN'), (_req, res) => {
     if (bk.gateOk === false || bk.ageHours === null || bk.ageHours > 48) data.health.backup = 'down';
     else if (bk.ageHours > 26) data.health.backup = 'warn';
     else data.health.backup = 'ok';
+
+    // ===== MASTER-05 第一百二十一~一百二十二章：QF / Storage / Backup-DR 真实状态接入统一总控 =====
+    // 每个模块：真实引擎调用（真实 DB / 真实状态文件），禁止 hardcode
+    try {
+      const qf = require('./questionFactoryEngine');
+      const q = qf.overview();
+      data.questionFactory = q;   // 完整真实概览（库存/缺口/队列/审核/举报/蓝图）
+      data.health.questionFactory = 'ok';
+    } catch (e) {
+      data.questionFactory = { error: 'Question Factory 状态读取失败：' + e.message };
+      data.health.questionFactory = 'down';
+    }
+    try {
+      const backupEngine = require('./backupEngine');
+      const bov = backupEngine.overview();
+      data.dr = {
+        // 对象存储 + 备份/灾备（第一百零三~一百一十四章）真实状态
+        activeProvider: bov.storageCapability.activeProvider,
+        cosStatus: bov.storageCapability.providers.COS.status,
+        cosMissing: bov.storageCapability.providers.COS.missing || [],
+        encryption: bov.encryption.status,
+        encryptionMissing: bov.encryption.missing || [],
+        lastBackupAt: bov.backup.lastBackupAt,
+        lastBackupStatus: bov.backup.lastBackupStatus,
+        totalBackups: bov.backup.totalBackups,
+        retentionCount: bov.backup.retentionCount,
+        lastRestoreDrillAt: bov.drill.lastRestoreDrillAt,
+        drillResult: bov.drill.result,
+        drillStatus: bov.drill.status,
+        nextDrillDueAt: bov.drill.nextDueAt,
+        ownerActions: (bov.ownerActions.actions || []).map((a) => ({ code: a.code, status: a.status, title: a.title })),
+      };
+      // 灾备健康灯：COS BLOCKED 降黄（本地兜底可用）；演练 OVERDUE/无密钥=红
+      if (bov.encryption.status !== 'READY') data.health.backupDr = 'down';
+      else if (bov.drill.status === 'OVERDUE') data.health.backupDr = 'down';
+      else if (bov.drill.status === 'DUE' || bov.drill.status === 'NEVER_RUN') data.health.backupDr = 'warn';
+      else data.health.backupDr = 'ok';
+      data.health.storage = bov.storageCapability.activeProvider === 'LOCAL' ? 'warn' : 'ok';
+      data.health.storageReason = bov.storageCapability.providers.COS.note || 'LOCAL Provider 兜底运行（COS 凭证待 Owner 配置）';
+    } catch (e) {
+      data.dr = { error: '备份/灾备状态读取失败：' + e.message };
+      data.health.backupDr = 'down';
+    }
+    try {
+      const storageOps = require('./storageOpsEngine');
+      const rep = storageOps.storageReport();
+      data.storageOps = {
+        totalTrackedHuman: rep.totalTrackedHuman,
+        totalTrackedBytes: rep.totalTrackedBytes,
+        sections: Object.entries(rep.sections || {}).map(([k, v]) => ({ key: k, label: v.label, human: v.human, files: v.files })),
+        systemDisk: rep.systemDisk ? { usedPercent: rep.systemDisk.usedPercent, level: rep.systemDisk.level } : null,
+        thresholds: rep.thresholds,
+      };
+      if (rep.systemDisk && rep.systemDisk.level === 'RED') data.health.storageCapacity = 'down';
+      else if (rep.systemDisk && rep.systemDisk.level === 'YELLOW') data.health.storageCapacity = 'warn';
+      else data.health.storageCapacity = rep.systemDisk ? 'ok' : 'warn';
+    } catch (e) {
+      data.storageOps = { error: '存储容量状态读取失败：' + e.message };
+      data.health.storageCapacity = 'warn';
+    }
 
     res.json({ success: true, data });
   } catch (e) {

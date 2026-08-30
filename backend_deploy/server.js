@@ -695,6 +695,19 @@ const extraRoutes = [
   { file: 'commissionRoutes', path: '/api/commission', name: '佣金用户端' },
   { file: 'partnerRoutes', path: '/api/partner', name: '合伙人V2用户端' },
   { file: 'partnerRoutes', path: '/api/admin/partner', name: '合伙人V2管理端' },
+  { file: 'providerRoutes', path: '/api/provider', name: 'Provider师傅服务用户端' },
+  { file: 'providerRoutes', path: '/api/admin/provider', name: 'Provider师傅服务管理端' },
+  // MASTER-05 第五十四~六十五章：Offline-First（Content Pack/Manifest/幂等同步）
+  { file: 'offlinePackRoutes', path: '/api/offline', name: 'Offline内容包用户端' },
+  { file: 'offlinePackRoutes', path: '/api/admin/offline', name: 'Offline内容包管理端' },
+  // MASTER-05 第七十~七十四章：Server GC + 容量监控
+  { file: 'storageOpsRoutes', path: '/api/admin/storage', name: '存储GC与容量监控' },
+  // MASTER-05 第八十一~九十六章：Question Factory（题目工厂：蓝图/库存/队列/审核/质量/成本）
+  { file: 'questionFactoryRoutes', path: '/api/qf', name: 'Question Factory用户端' },
+  { file: 'questionFactoryRoutes', path: '/api/admin/qf', name: 'Question Factory管理端' },
+  // MASTER-05 第一百零三~一百一十四章：对象存储 + 备份/灾备（分区/Provider/加密/演练/Owner Actions）
+  { file: 'objectStorageRoutes', path: '/api/oss', name: '对象存储用户端' },
+  { file: 'objectStorageRoutes', path: '/api/admin/oss', name: '对象存储与备份管理端' },
   { file: 'adminUnifiedRoutes', path: '/api/admin/unified', name: '统一后台' },
   { file: 'featureControlRoutes', path: '/api/admin/feature-flags', name: '功能开关' },
   { file: 'toolAdminRoutes', path: '/api/admin/tool-matrix', name: '工具矩阵' },
@@ -725,6 +738,14 @@ try {
   console.log('[Server] ✅ 合伙人V2结算调度器已启动（每月1号自动出账）');
 } catch (e) {
   console.log('[Server] ⚠️ 合伙人V2结算调度器未启动:', e.message);
+}
+
+// MASTER-05 Provider 结算解冻调度：T+settleDays 到期 frozen → withdrawable（每6小时自检）
+try {
+  require('./providerEngine').initScheduler();
+  console.log('[Server] ✅ Provider结算解冻调度器已启动');
+} catch (e) {
+  console.log('[Server] ⚠️ Provider结算解冻调度器未启动:', e.message);
 }
 
 // ==================== 公开配置接口（v25.0.47_10 价格SSOT/功能开关/工具矩阵 公开只读） ====================

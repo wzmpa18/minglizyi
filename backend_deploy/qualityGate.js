@@ -262,13 +262,20 @@ function qHash2(q) {
   return sha256('q2:' + normText([q.type, q.difficulty, (q.options || []).length, q.answer, stemPattern].join('#')));
 }
 
-function checkQuestionDuplicate(d, q) {
+// excludeId：QF 自检复评场景传入题目自身 id，避免命中自身行误判 L1 完全重复（默认 0 = 不排除，原行为不变）
+function checkQuestionDuplicate(d, q, excludeId = 0) {
+  const ex = Number(excludeId) || 0;
   const h1 = qHash1(q);
-  if (d.prepare('SELECT id FROM questions WHERE q_hash1=? LIMIT 1').get(h1)) {
+  const hit1 = ex
+    ? d.prepare('SELECT id FROM questions WHERE q_hash1=? AND id != ? LIMIT 1').get(h1, ex)
+    : d.prepare('SELECT id FROM questions WHERE q_hash1=? LIMIT 1').get(h1);
+  if (hit1) {
     return { tier: 1, h1, h2: qHash2(q), dupOf: 'exact' };
   }
   const h2 = qHash2(q);
-  const sim = d.prepare('SELECT id, knowledge_id, stem FROM questions WHERE q_hash2=? LIMIT 1').get(h2);
+  const sim = ex
+    ? d.prepare('SELECT id, knowledge_id, stem FROM questions WHERE q_hash2=? AND id != ? LIMIT 1').get(h2, ex)
+    : d.prepare('SELECT id, knowledge_id, stem FROM questions WHERE q_hash2=? LIMIT 1').get(h2);
   if (sim) return { tier: 2, h1, h2, dupOf: sim.id, simStem: sim.stem };
   return { tier: 0, h1, h2, dupOf: 0 };
 }
@@ -338,8 +345,8 @@ function gateQuestion(d, q) {
   add('题型规范', ['single', 'multi', 'judge', 'fill', 'qa', 'case'].includes(type), 10);
   // 8 难度分级
   add('难度分级', ['easy', 'medium', 'hard'].includes(String(q.difficulty || '')), 5);
-  // 9 重复度检测（三级去重）
-  const dup = checkQuestionDuplicate(d, q);
+  // 9 重复度检测（三级去重；exclude_id 供自检复评排除自身）
+  const dup = checkQuestionDuplicate(d, q, Number(q.exclude_id) || 0);
   add('重复度检测', dup.tier === 0, 10, dup.tier === 1 ? 'L1完全重复' : dup.tier === 2 ? `L2结构相似#${dup.dupOf}` : '');
   // 10 来源溯源（经知识点→资料链路可追溯）
   const src = q.knowledge_id

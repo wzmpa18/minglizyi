@@ -22,7 +22,8 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
-const DATA_DIR = path.join(__dirname, 'data');
+// ADMIN_DATA_DIR 仅供隔离测试覆盖；生产默认目录不变
+const DATA_DIR = process.env.ADMIN_DATA_DIR || path.join(__dirname, 'data');
 const KEYS_FILE = path.join(DATA_DIR, 'admin_keys_v13.json');
 const AUDIT_FILE = path.join(DATA_DIR, 'admin_audit.json');
 

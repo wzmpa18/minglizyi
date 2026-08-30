@@ -25,12 +25,13 @@ const path = require('path');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
 
-const SOCIAL_DB_PATH = path.join(__dirname, 'data', 'social.db');
+const SOCIAL_DB_PATH = process.env.SOCIAL_DB_PATH || path.join(__dirname, 'data', 'social.db');
 const USER_DB_PATH = process.env.USER_DB_PATH || '/root/backend-auth/data/yandao_users.db';
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
   throw new Error('JWT_SECRET 未配置或长度不足32位，服务拒绝启动（fail-closed）。请在部署 .env 设置 ≥32 位随机密钥。');
 }
+const rateLimit = require('./socialRateLimit');
 
 function ensureDataDir() {
   const dir = path.dirname(SOCIAL_DB_PATH);
@@ -238,8 +239,13 @@ function initTables(d) {
     }
     d.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_chat_client_msg ON chat_messages(conversation_id, client_msg_id) WHERE client_msg_id != ''`);
     const ccols = d.prepare('PRAGMA table_info(comments)').all().map(c => c.name);
-    if (ccols.includes('id') && !ccols.includes('parent_id')) {
-      d.exec(`ALTER TABLE comments ADD COLUMN parent_id INTEGER DEFAULT 0`);
+    if (ccols.includes('id')) {
+      // 第一百一十八章：层级回复 parentId（列此前已加，保留幂等）
+      if (!ccols.includes('parent_id')) d.exec(`ALTER TABLE comments ADD COLUMN parent_id INTEGER DEFAULT 0`);
+      // 第一百一十八~一百十九章：评论删除（软删除保结构，子回复不悬空）
+      if (!ccols.includes('deleted')) d.exec(`ALTER TABLE comments ADD COLUMN deleted INTEGER DEFAULT 0`);
+      if (!ccols.includes('deleted_at')) d.exec(`ALTER TABLE comments ADD COLUMN deleted_at TEXT DEFAULT ''`);
+      if (!ccols.includes('deleted_by')) d.exec(`ALTER TABLE comments ADD COLUMN deleted_by TEXT DEFAULT ''`);
     }
   } catch (e) { console.error('[SocialApi] v25.0.42 群聊/消息列迁移异常(不阻断):', e.message); }
   // v25.0.42：存量会话回填 user_conversations（幂等 INSERT OR IGNORE，仅启动时一次）
@@ -457,6 +463,23 @@ function notify(userId, type, actor, content, link) {
     .run(String(userId), type, String(actor.userId || ''), actor.nickname || '', content || '', link || '');
 }
 
+// ==================== 第七十五~八十章：服务端社交限频 ====================
+// 三维度（userId / IP / endpoint category）+ 刷屏短期封锁 + 后台可调。
+// 必须挂在 authRequired 之后（需要 req.user.userId）；未登录接口按纯 IP 维度计数。
+function socialRateLimitGate(category) {
+  return (req, res, next) => {
+    const r = rateLimit.check({ category, userId: req.user && req.user.userId, req });
+    if (!r.allowed) {
+      res.set('Retry-After', String(r.retryAfterSec || 60));
+      return res.status(r.code || 429).json({
+        success: false, code: 'RATE_LIMITED', scope: r.scope, category,
+        retryAfterSec: r.retryAfterSec || 60, error: r.reason,
+      });
+    }
+    next();
+  };
+}
+
 function friendKeyPair(a, b) {
   const x = String(a), y = String(b);
   return x < y ? [x, y] : [y, x];
@@ -494,6 +517,8 @@ function rowToPost(row, currentUserId) {
 function createRouter() {
   const router = express.Router();
   router.use(express.json({ limit: '6mb' }));
+  // 第七十五~八十章：限频事件留痕接 social.db（引擎单实例注入，避免环依赖）
+  rateLimit.setDbProvider(() => { try { return getDb(); } catch { return null; } });
 
   // ==================== 动态广场 ====================
 
@@ -545,7 +570,7 @@ function createRouter() {
 
   // POST /api/social/posts  { content, images, tags, toolType, circle }
   // P6-I-PLUS 规则5：发布动态必须绑定圈层（排盘/证书分享按 toolType 自动匹配，无圈层拒绝发布）
-  router.post('/posts', authRequired, (req, res) => {
+  router.post('/posts', authRequired, socialRateLimitGate('post_publish'), (req, res) => {
     try {
       if (!featureEnabled('posts_enabled')) return featureDisabled(res, '动态发布');
       const _mute = checkPlatformMute(req.user.userId);
@@ -634,8 +659,8 @@ function createRouter() {
     }
   });
 
-  // POST /api/social/posts/:postId/report { reason } 举报动态（幂等：同人同动态仅一次）
-  router.post('/posts/:postId/report', authRequired, (req, res) => {
+  // POST /api/social/posts/:postId/report { reason } 举报动态
+  router.post('/posts/:postId/report', authRequired, socialRateLimitGate('report'), (req, res) => {
     try {
       const d = getDb();
       const postId = req.params.postId;
@@ -655,7 +680,7 @@ function createRouter() {
   });
 
   // POST /api/social/comments/:commentId/report { reason } 举报评论
-  router.post('/comments/:commentId/report', authRequired, (req, res) => {
+  router.post('/comments/:commentId/report', authRequired, socialRateLimitGate('report'), (req, res) => {
     try {
       const d = getDb();
       const commentId = req.params.commentId;
@@ -674,26 +699,54 @@ function createRouter() {
     }
   });
 
+  // 第一百一十八~一百二十章：评论读视图（两级结构：roots + replies；平铺兼容字段保留）
   // GET /api/social/posts/:postId/comments
   router.get('/posts/:postId/comments', (req, res) => {
     try {
-      const rows = getDb().prepare('SELECT * FROM comments WHERE post_id = ? ORDER BY id ASC LIMIT 200').all(req.params.postId);
-      res.json({
-        success: true,
-        comments: rows.map(r => ({ id: String(r.id), postId: r.post_id, authorId: r.user_id, authorName: r.nickname, content: r.content, createdAt: r.created_at })),
+      const rows = getDb().prepare('SELECT * FROM comments WHERE post_id = ? ORDER BY id ASC LIMIT 500').all(req.params.postId);
+      const map = new Map();
+      const flat = rows.map(r => {
+        const c = {
+          id: String(r.id), postId: r.post_id, parentId: String(r.parent_id || 0),
+          authorId: r.user_id, authorName: r.nickname, content: r.content,
+          deleted: !!(r.deleted), deletedAt: r.deleted_at || '', createdAt: r.created_at,
+          _pid: Number(r.parent_id || 0),
+        };
+        map.set(Number(r.id), c);
+        return c;
       });
+      // 两级组装：子回复挂回根评论（第三层自动拍平到第二层，防无限缩进）
+      const roots = [];
+      const replies = [];
+      for (const c of flat) {
+        delete c._pid;
+        let rootId = 0;
+        if (c.parentId !== '0') {
+          const parent = map.get(Number(c.parentId));
+          rootId = parent ? (parent.parentId !== '0' ? Number(parent.parentId) : Number(c.parentId)) : 0;
+        }
+        c.rootId = String(rootId);
+        if (rootId) replies.push(c); else roots.push(c);
+      }
+      for (const r of roots) r.replies = [];
+      for (const c of replies) {
+        const root = map.get(Number(c.rootId));
+        if (root && root.replies) root.replies.push(c); else roots.push(c);
+      }
+      res.json({ success: true, comments: flat, roots });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
     }
   });
 
-  // POST /api/social/posts/:postId/comments { content }
-  router.post('/posts/:postId/comments', authRequired, (req, res) => {
+  // 第一百一十八~一百二十章：评论/层级回复 { content, parentId? }
+  // parentId 必须指向同动态的未删除评论；回复回复自动拍平挂到根（两级展示，不无限缩进）
+  router.post('/posts/:postId/comments', authRequired, socialRateLimitGate('comment'), (req, res) => {
     try {
       if (!featureEnabled('comments_enabled')) return featureDisabled(res, '评论');
       const _mute = checkPlatformMute(req.user.userId);
       if (_mute) return res.status(403).json({ success: false, error: `你已被禁言（剩余约${_mute.remainMinutes}分钟），暂不能评论`, code: 'USER_MUTED' });
-      const { content } = req.body;
+      const { content, parentId = 0 } = req.body;
       if (!content || !String(content).trim()) return res.status(400).json({ success: false, error: '评论内容不能为空' });
       // 统一敏感词过滤：违规拦截并留痕（与私聊/群聊同规范）
       const cmText = String(content).trim().slice(0, 1000);
@@ -705,15 +758,53 @@ function createRouter() {
       const d = getDb();
       const post = d.prepare(`SELECT * FROM posts WHERE post_id = ?`).get(req.params.postId);
       if (!post) return res.status(404).json({ success: false, error: '动态不存在' });
+
+      // parentId 校验 + 两级拍平（父评论若本身是回复 → 挂到其根上）
+      let storedParentId = 0;
+      let parentRow = null;
+      const pid = parseInt(parentId, 10);
+      if (pid > 0) {
+        parentRow = d.prepare('SELECT * FROM comments WHERE id = ?').get(pid);
+        if (!parentRow || parentRow.deleted) return res.status(404).json({ success: false, error: '回复的目标评论不存在' });
+        if (String(parentRow.post_id) !== String(req.params.postId)) return res.status(400).json({ success: false, error: '只能回复同一条动态下的评论' });
+        storedParentId = Number(parentRow.parent_id || 0) > 0 ? Number(parentRow.parent_id) : pid;
+        parentRow = d.prepare('SELECT * FROM comments WHERE id = ?').get(storedParentId) || parentRow;
+      }
+
       const info = userPublicInfo(req.user.userId) || { nickname: '国学爱好者' };
-      const result = d.prepare('INSERT INTO comments (post_id, user_id, nickname, content) VALUES (?,?,?,?)')
-        .run(req.params.postId, String(req.user.userId), info.nickname, String(content).trim().slice(0, 1000));
+      const result = d.prepare('INSERT INTO comments (post_id, user_id, nickname, content, parent_id) VALUES (?,?,?,?,?)')
+        .run(req.params.postId, String(req.user.userId), info.nickname, String(content).trim().slice(0, 1000), storedParentId);
       d.prepare('UPDATE posts SET comment_count = comment_count + 1 WHERE post_id = ?').run(req.params.postId);
-      if (String(post.user_id) !== String(req.user.userId)) {
+      // 通知：根评论 → 动态作者；回复 → 被回复评论作者
+      if (parentRow) {
+        if (String(parentRow.user_id) !== String(req.user.userId)) {
+          notify(parentRow.user_id, 'comment', { userId: req.user.userId, nickname: info.nickname }, `回复了你的评论：${String(content).trim().slice(0, 30)}`, `/discover/${req.params.postId}`);
+        }
+      } else if (String(post.user_id) !== String(req.user.userId)) {
         notify(post.user_id, 'comment', { userId: req.user.userId, nickname: info.nickname }, `评论了你的动态：${String(content).trim().slice(0, 30)}`, `/discover/${req.params.postId}`);
       }
       const row = d.prepare('SELECT * FROM comments WHERE id = ?').get(result.lastInsertRowid);
-      res.json({ success: true, comment: { id: String(row.id), postId: row.post_id, authorId: row.user_id, authorName: row.nickname, content: row.content, createdAt: row.created_at } });
+      res.json({ success: true, comment: { id: String(row.id), postId: row.post_id, parentId: String(row.parent_id || 0), authorId: row.user_id, authorName: row.nickname, content: row.content, createdAt: row.created_at } });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 第一百一十九~一百二十章：评论作者删除自己的评论（软删除：内容占位保留结构）
+  // DELETE /api/social/comments/:commentId
+  router.delete('/comments/:commentId', authRequired, (req, res) => {
+    try {
+      const d = getDb();
+      const row = d.prepare('SELECT * FROM comments WHERE id = ?').get(parseInt(req.params.commentId, 10));
+      if (!row) return res.status(404).json({ success: false, error: '评论不存在' });
+      if (String(row.user_id) !== String(req.user.userId)) {
+        return res.status(403).json({ success: false, error: '只能删除自己发布的评论' });
+      }
+      if (row.deleted) return res.json({ success: true, alreadyDeleted: true });
+      d.prepare(`UPDATE comments SET deleted = 1, deleted_at = datetime('now','localtime'), deleted_by = ?, content = '该评论已删除' WHERE id = ?`)
+        .run(String(req.user.userId), row.id);
+      d.prepare('UPDATE posts SET comment_count = MAX(comment_count - 1, 0) WHERE post_id = ?').run(row.post_id);
+      res.json({ success: true, deleted: true, commentId: String(row.id) });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
     }
@@ -753,7 +844,7 @@ function createRouter() {
   // ==================== 好友 ====================
 
   // POST /api/social/friends/request { toId, message }
-  router.post('/friends/request', authRequired, (req, res) => {
+  router.post('/friends/request', authRequired, socialRateLimitGate('friend_request'), (req, res) => {
     try {
       if (!featureEnabled('friends_add_enabled')) return featureDisabled(res, '添加好友');
       const { toId, message = '' } = req.body;
@@ -876,7 +967,7 @@ function createRouter() {
   // POST /api/social/messages/private/:peerId { content, type: 'text' | 'image', clientMsgId? }
   // P7-整改-01：文字/图片消息；敏感词拦截留痕；单聊会话滚动覆盖仅保留最近100条
   // v25.0.42：黑名单拦截 + clientMsgId 幂等 + 统一会话模型（服务端未读）
-  router.post('/messages/private/:peerId', authRequired, (req, res) => {
+  router.post('/messages/private/:peerId', authRequired, socialRateLimitGate('private_message'), (req, res) => {
     try {
       if (!featureEnabled('private_chat_enabled')) return featureDisabled(res, '私聊');
       const _mute = checkPlatformMute(req.user.userId);
@@ -1304,7 +1395,7 @@ function createRouter() {
   });
 
   // POST /api/social/groups/:id/report { reason } 举报群（幂等：同人同群仅一次）
-  router.post('/groups/:id/report', authRequired, (req, res) => {
+  router.post('/groups/:id/report', authRequired, socialRateLimitGate('report'), (req, res) => {
     try {
       const d = getDb();
       const row = d.prepare('SELECT * FROM groups WHERE id = ?').get(parseInt(req.params.id, 10));
@@ -1322,7 +1413,7 @@ function createRouter() {
   });
 
   // POST /api/social/messages/:msgId/report { reason } 举报消息（私聊/群聊通用）
-  router.post('/messages/:msgId/report', authRequired, (req, res) => {
+  router.post('/messages/:msgId/report', authRequired, socialRateLimitGate('report'), (req, res) => {
     try {
       const d = getDb();
       const msg = d.prepare('SELECT * FROM chat_messages WHERE id = ?').get(parseInt(req.params.msgId, 10));
@@ -1372,7 +1463,7 @@ function createRouter() {
 
   // POST /api/social/groups/:id/messages { content, clientMsgId? }
   // v25.0.42：全员禁言/成员禁言拦截 + clientMsgId 幂等 + 群昵称 + 统一会话模型 + 通知链接query修复
-  router.post('/groups/:id/messages', authRequired, (req, res) => {
+  router.post('/groups/:id/messages', authRequired, socialRateLimitGate('group_message'), (req, res) => {
     try {
       const { content, type = 'text', clientMsgId = '' } = req.body;
       if (!content || !String(content).trim()) return res.status(400).json({ success: false, error: '消息不能为空' });
@@ -1715,6 +1806,87 @@ function createRouter() {
       }
     }
     res.json({ success: true, user: { ...info, postCount: posts, followerCount: followers, followingCount: following, ...rel } });
+  });
+
+  // ==================== 管理端（第八十/一百一十八~一百二十章：限频可调 + 评论管理删除） ====================
+  // 挂载于 /api/social/admin/*（socialStorageRoutes 同模式）；密钥鉴权 + 审计留痕
+  const { adminAuth, audit } = require('./adminRoles');
+
+  // 第八十章：限频配置读取
+  router.get('/admin/rate-limit/config', adminAuth('OPERATOR_ADMIN', 'ops'), (req, res) => {
+    res.json({ success: true, data: rateLimit.getConfig() });
+  });
+
+  // 第八十章：限频配置调整（服务端配置 + Audit）
+  router.put('/admin/rate-limit/config', adminAuth('OPERATOR_ADMIN', 'ops'), (req, res) => {
+    const before = rateLimit.getConfig();
+    const r = rateLimit.updateConfig(req.body || {});
+    if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+    audit(req.admin, 'SOCIAL_RATE_LIMIT_CONFIG', 'social_rate_limit',
+      { enabled: before.enabled, limits: before.limits, flood: before.flood },
+      { enabled: r.config.enabled, limits: r.config.limits, flood: r.config.flood },
+      req.body.reason || '后台调整社交限频', req);
+    res.json({ success: true, data: r.config });
+  });
+
+  // 限频运行状态（活跃计数/封锁列表/近期违规留痕）
+  router.get('/admin/rate-limit/stats', adminAuth('OPERATOR_ADMIN', 'ops'), (req, res) => {
+    res.json({ success: true, data: rateLimit.stats() });
+  });
+
+  // 手动解除短期封锁（误伤处置）
+  router.post('/admin/rate-limit/unblock', adminAuth('OPERATOR_ADMIN', 'ops'), (req, res) => {
+    const { category, userId } = req.body || {};
+    if (!category || !userId) return res.status(400).json({ success: false, error: 'category/userId 必填' });
+    const r = rateLimit.unblock(String(category), String(userId));
+    audit(req.admin, 'SOCIAL_RATE_LIMIT_UNBLOCK', `${category}:${userId}`, 'blocked', 'unblocked', req.body.reason || '人工解除限频封锁', req);
+    res.json({ success: true, data: r });
+  });
+
+  // 第一百一十九章：管理员删除任意评论（按权限；软删除保留层级结构）
+  router.delete('/admin/comments/:commentId', adminAuth('OPERATOR_ADMIN', 'ops'), (req, res) => {
+    try {
+      const d = getDb();
+      const row = d.prepare('SELECT * FROM comments WHERE id = ?').get(parseInt(req.params.commentId, 10));
+      if (!row) return res.status(404).json({ success: false, error: '评论不存在' });
+      if (!row.deleted) {
+        d.prepare(`UPDATE comments SET deleted = 1, deleted_at = datetime('now','localtime'), deleted_by = ?, content = '该评论已被管理员删除' WHERE id = ?`)
+          .run(String((req.admin && req.admin.name) || 'admin'), row.id);
+        d.prepare('UPDATE posts SET comment_count = MAX(comment_count - 1, 0) WHERE post_id = ?').run(row.post_id);
+      }
+      audit(req.admin, 'SOCIAL_COMMENT_ADMIN_DELETE', `comment#${req.params.commentId}`,
+        JSON.stringify({ deleted: !!row.deleted, content: String(row.content).slice(0, 100) }),
+        'deleted', req.body.reason || '管理员删除违规评论', req);
+      res.json({ success: true, deleted: true, commentId: String(row.id) });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 第一百一十九章：后台评论列表（按动态/状态过滤，供管理删除入口）
+  router.get('/admin/comments', adminAuth('OPERATOR_ADMIN', 'ops'), (req, res) => {
+    try {
+      const d = getDb();
+      const postId = String(req.query.postId || '').trim();
+      const onlyDeleted = req.query.deleted === '1';
+      let sql = 'SELECT * FROM comments WHERE 1=1';
+      const args = [];
+      if (postId) { sql += ' AND post_id = ?'; args.push(postId); }
+      if (onlyDeleted) sql += ' AND deleted = 1';
+      sql += ' ORDER BY id DESC LIMIT 200';
+      const rows = d.prepare(sql).all(...args);
+      res.json({
+        success: true,
+        data: rows.map(r => ({
+          id: String(r.id), postId: r.post_id, parentId: String(r.parent_id || 0),
+          authorId: r.user_id, authorName: r.nickname, content: String(r.content).slice(0, 200),
+          deleted: !!r.deleted, deletedAt: r.deleted_at || '', deletedBy: r.deleted_by || '',
+          createdAt: r.created_at,
+        })),
+      });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
   });
 
   return router;

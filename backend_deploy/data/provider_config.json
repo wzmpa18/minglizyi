@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "platformFeePercent": 10,
+  "settleDays": 7,
+  "minPriceYuan": 10,
+  "maxPriceYuan": 2000,
+  "maxDeliveryDays": 30,
+  "entryAuditRequired": true,
+  "minWithdrawYuan": 10,
+  "withdrawOpenDay": 1,
+  "dailyWithdrawLimit": 5,
+  "dailyWithdrawAmountLimitYuan": 20000,
+  "zhongyiCategories": [
+    "ZHONGYI",
+    "ZHONGYI_EDU",
+    "TCM"
+  ]
+}

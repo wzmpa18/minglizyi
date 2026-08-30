@@ -24,7 +24,8 @@ const crypto = require('crypto');
 // P6-TCM-02 质量治理层：嵌入流水线节点，不替换任何原有步骤
 const QG = require('./qualityGate');
 
-const ACADEMY_DB_PATH = path.join(__dirname, 'data', 'academy.db');
+// MASTER-05：支持 ACADEMY_DB_PATH 环境变量覆盖（默认路径不变，仅隔离测试使用）
+const ACADEMY_DB_PATH = process.env.ACADEMY_DB_PATH || path.join(__dirname, 'data', 'academy.db');
 const FILE_DIR = path.join(__dirname, 'data', 'academy_files');
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
@@ -2214,3 +2215,14 @@ function createRouter() {
 }
 
 module.exports = { createRouter };
+// MASTER-05 第八十一~九十六章：Question Factory 复用现有生成/审核体系（禁止第二套生成引擎），
+// 仅导出内部能力供 questionFactoryEngine 调用，不复制任何逻辑
+module.exports.getDb = getDb;
+module.exports.callAI = callAI;
+module.exports.extractJson = extractJson;
+module.exports.gatedQuestionInsert = gatedQuestionInsert;
+module.exports.genqSystemFor = genqSystemFor;
+module.exports.genqLevelText = genqLevelText;
+module.exports.getActiveExamSpec = getActiveExamSpec;
+module.exports.trackName = trackName;
+module.exports.currentAIModel = currentAIModel;

@@ -279,6 +279,12 @@ function processPaidOrder(order) {
   if (!cfg.enabled) return { ok: false, reason: 'ROUTER_DISABLED' };
   if (!order || !order.orderId || !order.userId) return { ok: false, reason: 'INVALID_ORDER' };
 
+  // MASTER-05 第四十二章：Provider 服务订单走 providerEngine 独立账本（PROVIDER_REVENUE），
+  // 禁止进入 Partner Revenue / Referral Commission 分佣链（防御性第二道闸）。
+  if (String(order.type || '').toUpperCase() === 'SERVICE_ORDER') {
+    return { ok: false, reason: 'SKIP_PROVIDER_ORDER' };
+  }
+
   const db = getDb();
   const orderNo = String(order.orderId);
 
@@ -390,6 +396,13 @@ function processPaidOrder(order) {
 function processRefund(orderId, refundAmount) {
   const db = getDb();
   const orderNo = String(orderId);
+
+  // MASTER-05 第四十二章：Provider 服务订单退款由 providerEngine.refundOrder 独立冲销，
+  // 禁止走本 Router（避免与 Provider 独立账本双重处理）。
+  try {
+    const so = db.prepare('SELECT id FROM service_orders WHERE payment_order_id = ? OR order_no = ?').get(orderNo, orderNo);
+    if (so) return { ok: true, skipped: true, reason: 'PROVIDER_ORDER_HANDLED_BY_PROVIDER_ENGINE' };
+  } catch (e) { /* service_orders 表不存在（模块未启用）则继续 */ }
 
   const referral = commissionEngine.reverseCommission(orderNo, refundAmount);
   const partner = partnerEngine.reversePartnerCommission(orderNo, refundAmount);
