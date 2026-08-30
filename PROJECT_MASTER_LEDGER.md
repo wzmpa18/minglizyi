@@ -19,7 +19,7 @@
 | 后端 Runtime Commit | `d9bde64`（MASTER-05 六模块后端运行版本；SEO 批次零后端变更、零 PM2 重启，运行时维持 `d9bde64` 不变；下限 `530f39e` Commission Router 唯一结算引擎 + 双身份 PARTNER_NET_OF_REFERRAL） |
 | 前端 Web 构建版本 | **v25.0.67**（buildId `v25.0.67_D20260831`，builtAt 2026-08-30T16:25:08Z；SEO 批次：13个C端差异化关键词落地页（/tools/×6+/learn/×3+/app/×4）+1个B端行业方案页（/b/）+4个目录索引页+robots.txt+sitemap.xml 24 URL；含 v25.0.66 全部既有功能；公网 version.json 已验证） |
 | 后端发布版本 | v25.0.66（维持不变——MASTER-05 最终运营完成批次：QF/OSS/Offline/存储GC/统一后台全部挂载生产并公网验证；SEO 批次纯静态前端增量） |
-| Document Head | 本地=GitHub origin/main=服务器源码仓 `/root/yandaoguoxue-source` = **`add0f56` 四端一致（unpushed=0，2026-08-31 核实）**；提交链：`d9bde64`（MASTER-05 封板）→ `add0f56`（SEO 增长引擎首批：seoPagesConfig+生成器+质量门禁+18页+robots/sitemap+bump v25.0.67）；生产 Web current → v25.0.67 |
+| Document Head | 本地=GitHub origin/main=服务器源码仓 `/root/yandaoguoxue-source` 三端 HEAD 一致同步（2026-08-31 核实，发布基线 `add0f56` + 文档回灌收尾提交随基线一并同步，git bundle 中转；unpushed=0）；提交链：`d9bde64`（MASTER-05 封板）→ `4fd6cc5`（MASTER-05 回灌）→ `add0f56`（SEO 增长引擎首批：seoPagesConfig+生成器+质量门禁+18页+robots/sitemap+bump v25.0.67，**生产构建源**）→ 文档回灌提交（总账十二.21+交接+部署验证脚本）；生产 Web current → v25.0.67 |
 | SEO 落地页部署 | `https://yandaoguoxue.yandao.vip/{tools,learn,app,b}/*.html` 独立静态页（nginx try_files 直出，no-cache；独立于 APP，零后端逻辑改动；配置唯一源 backend_deploy/seo/seoPagesConfig.json，生成器+质量门禁 174 项可复跑） |
 | APK / versionCode | 25.0.60 / 2059（`/api/public/app-version` 生产下发值，本轮无 Android 原生变更，APK 不重建；Offline 经 Web 层 /offline 页面实现，内置壳 WebView 可用） |
 | 生产服务器 | 82.156.228.87（腾讯云轻量 北京，root） |
