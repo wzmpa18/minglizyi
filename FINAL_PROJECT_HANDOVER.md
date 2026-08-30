@@ -20,14 +20,14 @@
 
 | 组件 | 版本 |
 |------|------|
-| Web（生产 current） | **v25.0.62**（buildId `v25.0.62_D20260827`，builtAt 2026-08-26T16:53:19Z） |
+| Web（生产 current） | **v25.0.65**（buildId `v25.0.65_D20260830`，builtAt 2026-08-30T01:22:05Z，含 `/admin/ai-cost` AI 成本中心） |
 | 后端 API | package 1.1.0（PM2: yandaoguoxue-backend，online） |
-| Android APK | **v25.0.60 / versionCode 2059**（APK 未随 Web 61/62 后台增量重建；下次 APK 发布走 §33 流程） |
+| Android APK | **v25.0.60 / versionCode 2059**（本轮无 Android 原生变更，APK 不重建） |
 
 ## 3. 当前 Commit
 
-- **四端 HEAD 一致**：LOCAL = GITHUB = SERVER_SOURCE = 生产构建源（接管后第一步：`git log --oneline -3` 四端核对，见总账第十五章）。
-- D22 代码批次链：`37a3260`（三库备份+后台展示）→ `2b1d6af`（版本号 v25.0.62）；其后均为文档批次（本文档），不改变运行时代码。
+- **四端 HEAD 一致**：LOCAL = GITHUB = SERVER_SOURCE = 生产构建源（接管后第一步：`git log --oneline -3` 四端核对）。
+- 当前代码批次：`530f39e`（feat(commission-router)：分佣唯一结算引擎 + 双身份 REVIEW_REQUIRED + 隔离测试 77 PASS）→ `2ba05a8`（fix _logCost 作用域 bug）→ `d5cb12e`（requestId 幂等 + 权益快照 + overage 禁用）→ `8403123`（version.json v25.0.65）→ `16608a5`（P0 安全修复，下限）。生产运行目录 MD5 与源仓库一致。
 
 ## 4. GitHub
 
@@ -151,12 +151,14 @@ v25.0.60 / versionCode 2059 / 包名 `com.yandao.guoxue` / MD5 `e506971da1779ea7
 - **超时**：nginx `proxy_read_timeout 180s`；健康监控 `data/ai-health.json`（P50/95/99、>60s/>120s、空内容、连续失败≥5 红灯）。
 - 匿名通道证据：8/26 全天真实匿名调用仅 1 次（旧 APK WebView UA），Dalvik 原生 UA 4 次被 UA 门控拦截——旧 APK 群体可忽略，关闭无实质影响。
 
-### 20.1 AI Fair Usage + Cost Center 第一阶段（代码完成 · 未生产部署 · 2026-08-29/30）
+### 20.1 AI Fair Usage + Cost Center 第一阶段（已生产部署 · 2026-08-30）
 
 - **AI_USAGE_POLICY（服务端唯一事实源）**：`backend_deploy/aiUsagePolicy.js` 统一 AI 额度裁决，与会员功能权益（Membership Entitlement）**解耦**。档位：basic 3/日、monthly/quarterly 50/日、yearly/lifetime 无限（`LEGACY_UNLIMITED_PROTECTED`，禁止改为有限额度）。Fair Use 安全限流：`maxConcurrent=1` / `maxInputChars=12000` / `maxOutputTokens=8192`。后台改策略强制 bump `policyVersion`，禁止静默 UPDATE 导致历史权益瞬间变化。
-- **AI Cost Center**：`backend_deploy/aiCostCenter.js` 复用 `academy.db` 的 `ai_call_logs`（幂等扩展 11 个计量列），只记 `requestId/userId/model/tokens/estimatedCost` 等元数据，**不保存 prompt/命理输入/中医私人内容**。后台路由 `/api/admin/ai-cost/{summary,top-users,by-feature,by-model,by-membership,alerts}` + 页面 `/admin/ai-cost`。告警实时计算（单用户日成本/全站日成本/错误率/请求频率），仅告警状态、不自动封号。模型价格可配置（默认 `ESTIMATED`，待按混元/DeepSeek 真实账单季单价校准 `data/ai-pricing.json`）。
-- **配额裁决接线**：`middleware/auth.js` 的每日额度改为读 `aiUsagePolicy`（`getAIUsageDailyLimit`），原 `AI_DAILY_LIMITS` 仅作兜底常量；`server.js` 的 `/api/ai/chat` 接入成本日志（requestId 幂等 + 成功/失败/blocked 状态落库）。
-- **测试**：`backend_deploy/ai_phase1_test.js`（服务器隔离库运行，33 PASS / 0 FAIL，零真实模型调用、零真实用户数据）。本轮**未生产部署**，上线见 §30。
+- **AI Cost Center**：`backend_deploy/aiCostCenter.js` 复用 `academy.db` 的 `ai_call_logs`（幂等扩展 11 个计量列，存量 1909 条未破坏），只记 `requestId/userId/model/tokens/estimatedCost` 等元数据，**不保存 prompt/命理输入/中医私人内容**。后台路由 `/api/admin/ai-cost/{summary,top-users,by-feature,by-model,by-membership,alerts}`（挂 `adminAuth('ADMIN')`，未登录/伪造 token 均 401）+ 页面 `/admin/ai-cost`。告警实时计算，仅告警状态、不自动封号。模型价格可配置（默认 `ESTIMATED`，待按混元/DeepSeek 真实账单校准）。
+- **配额裁决接线**：`middleware/auth.js` 每日额度读 `aiUsagePolicy`；`server.js` `/api/ai/chat` 接入成本日志（requestId 幂等 + 成功/失败/blocked 落库）；`server.js` 启动时 `aiCostCenter.ensureSchema()`。
+- **overage**：`pack_10`/`pack_50` 无真实商品交付逻辑 → `overageAllowed=false, overageProductId=null`（DISABLED），不虚构增量包。
+- **测试**：`backend_deploy/ai_phase1_test.js`（服务器隔离库）**33 PASS / 0 FAIL**，零真实模型调用、零真实用户数据。
+- **生产状态**：已部署（后端 MD5 与源仓库一致 + PM2 online + health 200 + DB 幂等迁移 + 前端 v25.0.65 同批含成本中心页面）。
 
 ## 21. 会员 / 权益
 
@@ -173,6 +175,15 @@ v25.0.60 / versionCode 2059 / 包名 `com.yandao.guoxue` / MD5 `e506971da1779ea7
 - 合伙人渠道 V2：`partners` / `partner_order_log` / `partner_settlements`。
 - 后台 `/admin/commission` 可视化配置；合规红线已内置（层级封顶）。
 - 裂变：邀请海报（`/share` 引擎）+ `user_invite_relation`（`invited_by` 归因）+ `invite_rewards`。
+
+### 22.1 Commission Router（唯一结算引擎 · 2026-08-30 上线）
+
+- 定位：`backend_deploy/commissionRouter.js` 是分佣唯一入口，替代 `paymentRoutes.js` 对 `commissionEngine.grantCommission` / `partnerEngine.grantPartnerCommission` 的独立双调用（**旧双引擎残留 = 0**），杜绝重复计提。
+- 入口：PAID → `processPaidOrder(order)`；REFUNDED → `processRefund(orderId, refundAmount)`；对账 → `reconcileOrder`（read-only，不一致只告警不改历史佣金）。
+- 快照：`commission_router_snapshots`（order_no UNIQUE 幂等，首次新订单幂等建表），记录 `gross/paymentFee/referralL1+L2/aiCost/partnerRevenue/nurtureRevenue/refund/platformRevenue` 全部分计账，`conservation_ok` 守恒校验（gross = 各分项之和）。
+- 双身份策略（Partner 同时为下单用户 L1 直接推荐人）：`REVIEW_REQUIRED`（默认）·`STACK_ALLOWED`·`REFERRAL_PRIORITY`·`PARTNER_PRIORITY`·`PARTNER_NET_OF_REFERRAL`。**默认 REVIEW_REQUIRED：普通 L1/L2 照发，Partner 侧暂停自动结算，待项目方决策（BUSINESS_DECISION_REQUIRED）**。
+- 金额单位：整数「分」，禁止 JS float 直接算钱。
+- 测试：`backend_deploy/commission_router_test.js` 隔离库 77 PASS / 0 FAIL，零真实支付。
 
 ## 23. 社交架构
 
@@ -207,7 +218,7 @@ v25.0.60 / versionCode 2059 / 包名 `com.yandao.guoxue` / MD5 `e506971da1779ea7
 | MEMBERSHIP | **VERIFIED** | 调整全流程 24/24 + 审计全覆盖 + SSOT 明确 |
 | PAYMENT | **VERIFIED** | Native/JSAPI 双通道 + D18 extra 持久化 |
 | ENTITLEMENT | **VERIFIED** | user_entitlements + 换设备恢复（2 笔历史测试单 extra 失落已如实记录，真实用户缺口=0） |
-| COMMISSION | **VERIFIED** | 两级分佣 + 提现审核 + 合规红线 |
+| COMMISSION | **VERIFIED** | 两级分佣 + 提现审核 + 合规红线 + Commission Router 唯一结算引擎（防重复计提） |
 | FRIEND | **VERIFIED** | S1 全过含并发/幂等边界 |
 | PRIVATE_CHAT | **VERIFIED** | clientMsgId 幂等/分页/未读全过 |
 | GROUP_CHAT | **VERIFIED** | 三角色 + 无主群不变量直接验证 |
@@ -236,7 +247,7 @@ v25.0.60 / versionCode 2059 / 包名 `com.yandao.guoxue` / MD5 `e506971da1779ea7
 5. **COMMENT**：见 §26。
 6. **hy3 极限场景**：5000+ 字提示词可能推理耗尽 8192 token（已有明确报错不扣额）；根治靠流式改造或提示词瘦身，**禁止堆 max_tokens**。
 7. **`/api/sync` 404 噪音**：旧 APK 调用不存在的端点（8/26 32 次），无功能影响；新版已无此调用。
-8. **AI Fair Usage + Cost Center 第一阶段**：代码完成 + 构建通过 + 隔离测试 33/33，**尚未生产部署**（授权仅到「开发与测试」，上线需按 §30 原子上线 + 项目方确认部署窗口）。
+8. **AI Fair Usage + Cost Center 第一阶段**：已生产部署（33 PASS 隔离测试 + 后端/前端 v25.0.65 同批上线 + DB 幂等迁移）。遗留：模型价格表仍 `ESTIMATED` 待按混元/DeepSeek 真实账单校准后，Partner 结算方可从 ESTIMATED 转 FINALIZED。
 
 ## 28. 当前 NOT_IMPLEMENTED（如实，禁止为全绿临时新增）
 
@@ -244,6 +255,9 @@ v25.0.60 / versionCode 2059 / 包名 `com.yandao.guoxue` / MD5 `e506971da1779ea7
 2. 评论删除（无端点，作者/他人均不可删）。
 3. 社交频率保护（好友申请/消息/评论/动态/举报均无服务端 rate limit；建议后续补 IP/用户级限频）。
 4. 动态图片端到端验收（API 支持 posts.images ≤9 张，未做真实上传验收）。
+5. Provider（师傅）后端：NOT_IMPLEMENTED（本轮不实现）。
+6. Offline / Question Factory：继续排队（本轮不实现）。
+7. 双身份自动结算（Partner 同时为 L1 推荐人）：默认 REVIEW_REQUIRED 暂停 Partner 自动结算，待项目方决策，未做自动双拿。
 
 ## 29. 当前风险（按优先级）
 

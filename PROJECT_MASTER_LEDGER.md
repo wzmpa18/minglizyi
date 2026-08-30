@@ -1,7 +1,8 @@
 # 言道国学项目总账（PROJECT_MASTER_LEDGER）
 
 > **本文档是项目唯一权威账簿（Single Source of Truth）。**
-> 最后更新: 2026-08-29（P0-PRODUCTION-SEAL-AND-AI-COST-PHASE1-03：P0安全修复正式生产落地 + 生产攻击回归 + SSOT总账纠偏 + 真太阳时封板 + AI Fair Usage/Cost Center 第一阶段）
+> 最后更新: 2026-08-30（AI-PRODUCTION-SEAL-AND-COMMISSION-ROUTER-04：AI Phase 1 正式生产上线 + 历史无限权益保护 + AI 成本中心生产验收 + Commission Router 唯一结算引擎 + Partner 50% 账务闭环 + 防重复计提）
+> 上一批（2026-08-29）：P0-PRODUCTION-SEAL-AND-AI-COST-PHASE1-03（P0安全修复正式生产落地 + 生产攻击回归 + SSOT总账纠偏 + 真太阳时封板 + AI Fair Usage/Cost Center 第一阶段）
 > 上一批（2026-08-25，生产版本 v25.0.47_30）：FIX-V30-PAY-CARE 支付权益彻查+防再发机制——用户投诉「会员ID 100011 充值没开通会员」彻查结论：①订单 YD20260825173625902022 ¥39.9 实为 SINGLE_UNLOCK 单次深度解读（非会员套餐），支付成功且 benefit_delivered=1 权益已正常发放；用户误将单次解读当会员购买（单次 39.9>月费 37 价格结构易混淆），支付后又连续创建 7 个未完成 PENDING 订单反复尝试；②全量对账 5 笔 PAID 订单：真实用户订单权益全部正常发放，唯一漏发为 E2E 测试订单 TEST_RC06_DELIVER（无 transaction_id 无真实扣款，已归档）；910082 yearly 会员为 E2E 测试账号（无手机号）非漏发；③处理：用户 100011 客户关怀补偿开通月度会员至 2026-09-24（与生产 deliverOrderBenefits 同口径 users+user_assets 双表）+7 个僵尸 PENDING 订单关闭+operation_logs 三条留痕（修复前 DB 备份 /root/backup/yandao_users_pre_fix100011_20260825_175346.db）；⑥应老板要求改单（2026-08-25 追加）：订单 129 YD20260825173625902022 由 SINGLE_UNLOCK 正式转为 MEMBERSHIP（实付 39.9 金额不动，benefit_delivered=1 维持，operation_logs id=302 order_type_convert 留痕），订单记录与已发月度会员权益一致；用户无推荐人（invited_by/referrer_id 空）改单对佣金结算零影响；④防再发：部署 /root/backend-auth/scripts/payment_reconcile.sh 每日 03:30 cron 自动对账——查 PAID+benefit_delivered=0+支付超10分钟的沉默漏发订单，MEMBERSHIP 按金额映射档位（37/99/374/3600）自动补交付（续费顺延同口径）、SINGLE_UNLOCK 补标记、未知类型告警人工，告警日志 payment_audit_alerts.log；⑤产品层防混淆：单次解锁弹窗新增三处明确标识「本单为单次解读解锁，非会员套餐」+「支付后仅解锁本次解读，不含会员权益」；前一版本 v25.0.47_29+APK v25.0.55(2055)：FIX-V29-DOWNLOAD-RESCUE 升级下载链路根治）
 > 历史详细记录见 `PROJECT_LEDGER_FINAL.md`（v25.0.0 ~ v25.0.20 阶段账，冻结归档）。
 > 本账簿只记录 v25.0.21 之后增量与当前全局事实；冲突时以本文为准。
@@ -9,22 +10,22 @@
 
 ---
 
-## 〇、Current Snapshot（当前事实快照 · 2026-08-29 核实）
+## 〇、Current Snapshot（当前事实快照 · 2026-08-30 核实）
 
 | 项 | 值 |
 |----|-----|
-| 数据核实日期 | 2026-08-29 |
-| 后端 Runtime Commit | `f694389`（chore(release) bump v25.0.65；含 `16608a5` P0 安全修复） |
-| 前端 Web 构建版本 | v25.0.64（本轮前端运行时零变更，按部署纪律未重切前端） |
-| 后端发布版本 | v25.0.65（P0 安全落地批次） |
-| Document Head | `f694389`（GitHub = 本地 = 服务器源码仓 一致） |
-| APK / versionCode | 25.0.60 / 2059（`/api/public/app-version` 生产下发值，published 2026-08-26） |
+| 数据核实日期 | 2026-08-30 |
+| 后端 Runtime Commit | `530f39e`（feat(commission-router)：分佣唯一结算引擎 + 双身份 REVIEW_REQUIRED + 隔离测试 77 PASS；`2ba05a8` fix _logCost 作用域 bug；`d5cb12e` requestId 幂等 + 权益快照；下限 `16608a5` P0 安全修复） |
+| 前端 Web 构建版本 | **v25.0.65**（buildId `v25.0.65_D20260830`，builtAt 2026-08-30T01:22:05Z，含 `/admin/ai-cost` AI 成本中心页面） |
+| 后端发布版本 | v25.0.65（AI Phase 1 生产上线 + Commission Router 批次） |
+| Document Head | `530f39e`（GitHub = 本地 = 服务器源码仓 = 生产运行目录 MD5 一致） |
+| APK / versionCode | 25.0.60 / 2059（`/api/public/app-version` 生产下发值，本轮无 Android 原生变更，APK 不重建） |
 | 生产服务器 | 82.156.228.87（腾讯云轻量 北京，root） |
 | 生产后端路径 | `/www/yandaoguoxue-backend`（PM2 `yandaoguoxue-backend`，端口 3001） |
-| 前端发布路径 | `/root/yandaoguoxue/releases/<tag>` + `/root/yandaoguoxue/current` 软链（nginx root 指向） |
-| 数据库架构 | SQLite（better-sqlite3）三库：`/root/backend-auth/data/yandao_users.db`（用户核心，97 用户）+ `/www/yandaoguoxue-backend/data/social.db`（社交）+ `/www/yandaoguoxue-backend/data/academy.db`（学堂，约 56MB）。PostgreSQL 15 为已迁出「学外语」项目进程残留，非本国学项目基础设施（见下方 §二 纠偏）。 |
-| 备份现状 | 三库每日 02:00 备份至 `/root/backup/`（2026-08-29 备份已存在），`PRAGMA integrity_check` = ok |
-| 用户/会员统计 | 97 用户（basic 93 / monthly 2 / yearly 1 / lifetime 1），统计日期 2026-08-29 |
+| 前端发布路径 | `/root/yandaoguoxue/releases/<tag>` + `/root/yandaoguoxue/current` 软链（nginx root 指向，current → v25.0.65） |
+| 数据库架构 | SQLite（better-sqlite3）三库：`/root/backend-auth/data/yandao_users.db`（用户核心，97 用户，含 `commission_records`/`user_orders` 等；Router 快照表 `commission_router_snapshots` 首次新订单时幂等建表）+ `/www/yandaoguoxue-backend/data/social.db`（社交）+ `/www/yandaoguoxue-backend/data/academy.db`（学堂，约 56MB，`ai_call_logs` 已扩展 11 计量列、1909 条）。PostgreSQL 15 为已迁出「学外语」项目进程残留，非本国学项目基础设施（见下方 §二 纠偏）。 |
+| 备份现状 | 三库每日 02:00 备份至 `/root/backup/`（2026-08-30 备份已存在），`PRAGMA integrity_check` = ok |
+| 用户/会员统计 | 97 用户（basic 93 / monthly 2 / yearly 1 / lifetime 1），统计日期 2026-08-30 |
 
 > 冲突裁决：历史章节中「当前生产版本 / Git HEAD / APK / 数据库」等字段若与本快照冲突，以本快照为准；历史字段原文保留不删（记 SUPERSEDED·HISTORICAL）。
 
@@ -593,3 +594,31 @@ gh workflow run ios-build.yml --repo wzmpa18/minglizyi --ref main
 3. AI Phase 1 生产部署窗口与灰度方式（原子上线计划）需项目方确认。
 
 **下一主线**：COMMISSION ROUTER + PARTNER ACCOUNTING（普通 15%/5% 与 Partner 50% 当前为独立 Hook，存在重复计提风险，需合并内核）。
+
+### 12.17 AI Phase 1 生产上线 + Commission Router 唯一结算引擎（AI-PRODUCTION-SEAL-AND-COMMISSION-ROUTER-04，2026-08-30）
+
+**定位**：在 P0 安全清零 + 真太阳时冻结 + AI 权益核定完成的基础上，两阶段收口——（A）AI Phase 1 正式安全生产部署；（B）把普通 15%/5%、Partner 50%、培养 5% 三个独立 Hook 收敛为唯一 `COMMISSION_ROUTER`。
+
+**PHASE A — AI Phase 1 生产上线（已部署）**：
+- 后端 `aiUsagePolicy.js` / `aiCostCenter.js` / `server.js` / `middleware/auth.js` 实际生产运行；`ai_call_logs` 在 `academy.db` 幂等扩展 11 计量列（`request_id/user_id/feature_key/model/membership_level/partner_id/provider_id/estimated_cost/duration_ms/status/error_code`），存量 1909 条未破坏。
+- `server.js` 启动时调用 `aiCostCenter.ensureSchema()`；`/api/admin/ai-cost` 挂载于 `adminAuth('ADMIN')`（未登录/伪造 token 均 401 回归通过）。
+- 历史无限权益保护：yearly/lifetime `LEGACY_UNLIMITED_PROTECTED`；basic 3/日、monthly/quarterly 50/日保持现状；`maxConcurrent=1`、`maxInputChars=12000`、`maxOutputTokens=8192`。
+- 价格表 `data/ai-pricing.json` source=`ESTIMATED`；overage `pack_10`/`pack_50` 无真实商品交付逻辑 → `overageAllowed=false, overageProductId=null`（DISABLED），不虚构增量包。
+- 前端 `v25.0.65_D20260830` 含 `/admin/ai-cost` 成本中心页面，与后端同批切换。
+- 隔离测试 `ai_phase1_test.js` 33 PASS / 0 FAIL，零真实模型调用、零真实用户数据。
+- **生产 Deployment 事实**：后端 MD5 与源仓库一致 + PM2 online + `/api/health` 200；DB 迁移幂等；前端 current → v25.0.65。
+
+**PHASE B — Commission Router（已开发 + 已部署）**：
+- 新增 `backend_deploy/commissionRouter.js`：唯一结算入口 `processPaidOrder` / `processRefund` / `reconcileOrder` / `resolveReviewOrder` / `listReviewRequired`。复用 `commissionEngine.getDb()`（同一份 `commission_records` 账本），快照表 `commission_router_snapshots`（order_no UNIQUE 幂等）首次新订单时 `CREATE TABLE IF NOT EXISTS` 幂等建表。
+- 双身份策略 `DOUBLE_IDENTITY_POLICIES`：`REVIEW_REQUIRED`（默认）/ `STACK_ALLOWED` / `REFERRAL_PRIORITY` / `PARTNER_PRIORITY` / `PARTNER_NET_OF_REFERRAL`。**默认 REVIEW_REQUIRED：双身份订单普通 L1 照发（现状权益），Partner 侧暂停自动结算，标 BUSINESS_DECISION_REQUIRED 待项目方决策，绝不擅自双拿。**
+- 金额全程整数「分」；每笔守恒校验 `gross = paymentFee + referral(L1+L2) + aiCost + refund + partnerRevenue + nurtureRevenue + platformRevenue`（`conservation_ok` 标记）。
+- 比例冻结：L1=15% / L2=5% / Partner 50% / 培养 5%（平台承担，不扣下级 Partner），全部禁止修改。
+- 集成 `paymentRoutes.js`：PAID→`processPaidOrder`、REFUNDED→`processRefund`；**旧双引擎独立调用残留 = 0**（生产 grep 验证），杜绝重复计提。
+- 隔离测试 `commission_router_test.js` **77 PASS / 0 FAIL**（无推荐/L1/L1+L2/仅 Partner/双身份/培养/全额退款/部分退款/重复回调/金额守恒/幂等），零真实支付、零真实用户数据。
+- **生产 Deployment 事实**：`commissionRouter.js`/`paymentRoutes.js`/`server.js` 生产 MD5 与源仓库一致；`/api/payment/create` 未登录 400（参数校验前置，非鉴权旁路）；今日 error 日志无异常；`commission_router_config.json` 已生成（`formulaVersion=1.0.0`、`effectiveFrom=2026-08-30`、`doubleIdentityPolicy=REVIEW_REQUIRED`）。
+
+**待项目方决策（BUSINESS_DECISION_REQUIRED，STOP 类）**：
+1. 双身份（Partner 同时为下单用户 L1 直接推荐人）是否允许双拿？五种策略已实现，默认 REVIEW_REQUIRED 暂停 Partner 自动结算。历史 Partner 数当前=0，无真实资金风险，属最安全架构窗口。
+2. 模型价格表按腾讯云混元/DeepSeek 真实账单校准（当前 ESTIMATED）后方可将 Partner 结算从 ESTIMATED 转 FINALIZED。
+
+**提交**：`530f39e`（commission-router，含 77 PASS 测试）等，四端一致。文档头集中在本文与 FINAL_PROJECT_HANDOVER.md，未新增碎片报告。
