@@ -736,7 +736,9 @@ gh workflow run ios-build.yml --repo wzmpa18/minglizyi --ref main
 | 平台 | 验证 URL |
 |------|---------|
 | 百度 | `https://yandaoguoxue.yandao.vip/baidu_verify_codeva-mdfUGkzbxU.html` |
-| 头条 | `https://yandaoguoxue.yandao.vip/U447glXVJ3l8Obskdb3h.html` |
+| 头条 | `https://yandaoguoxue.yandao.vip/U447glXVJ3l8Obskdb3h.html`（+ `/ByteDanceVerify.html` 双文件名，见第二批） |
 | 谷歌 | `https://yandaoguoxue.yandao.vip/google5ebbc484799c2806.html` |
 
 **附带说明（自动备份待确认项）**：轻量服务器不支持自动快照策略（腾讯云产品限制）；软件层已有三库每日 02:00 备份+backupEngine 加密备份链在运行；云硬盘「设置自动备份」为付费功能，是否购买由项目方决策（OWNER_ACTION）。
+
+**第二批（同日 02:47，主站双域名 + 头条根因修复）**：项目方在百度/谷歌平台追加了主站 `www.yandao.vip`（头条尚未添加主站）。①**头条失败根因确诊**：平台真实下载文件名为 `ByteDanceVerify.html`（内容 `U447glXVJ3l8Obskdb3h`），KIKI 误以内容码当文件名存成 `U447glXVJ3l8Obskdb3h.html`——平台抓取 `/ByteDanceVerify.html` 时 try_files fallback 返回 SPA 主页 → 验证失败；修复：`/root/yandaoguoxue/verify/` 补部署 `ByteDanceVerify.html`（原 U447 文件保留，双文件名全覆盖）+ nginx 两 server 块追加精确 location，公网两个 URL 均返回 `U447glXVJ3l8Obskdb3h`。②**主站验证部署**：`/www/yandao-verify/` 持久目录（与官网静态目录 `/www/yandao-company` 解耦）+ `yandao.vip.conf` 80/443 两 server 块精确 location（server_name yandao.vip www.yandao.vip 双域名全覆盖，配置备份 `.bak_verify2_20260831_024739`）；百度主站 `baidu_verify_codeva-JdVUh0FlbC.html` → `fe012a0e3cdf568620573514eabf8fe2`，谷歌主站 `google5ebbc484799c2806.html`（与子域同 token，Google 同账号）→ 标准格式串；公网 www/apex 双域名+服务器侧+本地 WebFetch 双通道全部实测通过。③回归：主站首页 200 / 国学站首页 200 / 国学站旧百度文件仍正确 / API health 正常 / `nginx -t` 通过热加载，零回归。④文件入仓：`public/ByteDanceVerify.html`（国学站下次构建自动携带）+ `backend_deploy/seo/verify-main/`（主站两文件副本存档）+ `backend_deploy/deploy_verify2.sh`（幂等可复跑）。主站验证 URL：`https://www.yandao.vip/baidu_verify_codeva-JdVUh0FlbC.html`、`https://www.yandao.vip/google5ebbc484799c2806.html`。
