@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://yandaoguoxue.yandao.vip/sitemap.xml
