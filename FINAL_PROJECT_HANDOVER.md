@@ -61,6 +61,7 @@
 `/root/yandaoguoxue/current` → 软链 `releases/v25.0.67`。
 `releases/` 现存多版（_5~_29/_62~_67 等；回滚目标 v25.0.66）。**禁止删除 current 指向的目录**。
 SEO 静态落地页在 current 内：`/tools/`、`/learn/`、`/app/`、`/b/` + `robots.txt` + `sitemap.xml`（nginx try_files 直出；新增页面用 `backend_deploy/seo/` 配置+生成器+门禁流水线，勿手改 HTML）。
+站长平台验证文件（百度/头条/谷歌）：`/root/yandaoguoxue/verify/` 持久目录（nginx 精确 location root 指向，与发版切流解耦；源码仓 public/ 亦有副本双保险）；验证 URL 见总账十二.22。
 
 ## 9. Backend 目录
 
@@ -266,7 +267,7 @@ v25.0.60 / versionCode 2059 / 包名 `com.yandao.guoxue` / MD5 `e506971da1779ea7
 | SEO_PIPELINE | **VERIFIED** | 配置唯一源 seoPagesConfig.json + 生成器 generateSeoPages.js + 质量门禁 seoQualityGate.js（174项 PASS，SUPP-01 三项强制+扩展校验） |
 | SEO_COMPLIANCE | **VERIFIED** | 每页 ICP 备案悬挂+工信部链接+免责声明+canonical+JSON-LD；描述全部基于 APP 真实能力（14工具/8工具/22典籍/Meeus） |
 | ROBOTS_SITEMAP | **VERIFIED** | robots.txt 指向 sitemap；sitemap.xml 24 URL（6主站+14落地页+4目录），公网实测 |
-| SEARCH_SUBMIT | **NOT_STARTED**（后续批次） | 百度/头条/谷歌站长平台主动提交 sitemap，需 Owner 控制台操作或账号授权 |
+| SEARCH_SUBMIT | **VERIFIED**（文件层） | 三平台验证文件公网可访问（nginx 精确 location → /root/yandaoguoxue/verify/ 持久目录，与发版解耦；文件入源码仓 public/ 双保险）；平台侧「完成验证」点击与 sitemap 提交待 Owner |
 
 ## 27. 当前已知 PARTIAL
 

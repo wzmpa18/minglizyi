@@ -715,6 +715,28 @@ gh workflow run ios-build.yml --repo wzmpa18/minglizyi --ref main
 
 **技术定位与边界（SUPP-01 第二节澄清口径）**：SEO 落地页=独立静态 HTML（不是 APP 内部页面），部署于网站服务器 `/tools/`、`/learn/`、`/app/`、`/b/` 目录，是搜索引擎与 APP 下载之间的外部获客桥梁；nginx try_files 直出（no-cache），不触碰 APP 功能/逻辑/数据；页面所有功能描述对应 APP 真实能力，「无广告、基础免费」与 APP 实际体验一致（免费范围=排盘基础功能+典籍全文+基础题库，生产 tool-matrix FREE 实证）。
 
-**下一步（后续批次，非本轮）**：①通用关键词第二批页面扩展（沿用配置+生成器+门禁流水线）；②百度/头条/谷歌站长平台主动提交 sitemap 加速收录（控制台 Owner 操作或账号授权）；③收录后搜索词引流效果监测。
+**下一步（后续批次，非本轮）**：①通用关键词第二批页面扩展（沿用配置+生成器+门禁流水线）；②站长平台验证（已完成验证文件部署，见十二.22）；③收录后搜索词引流效果监测。
 
 **纪律核查**：NO GUESS（14 工具/8 工具/22 典籍/Meeus 全部代码核实）；NO FAKE VERIFIED（公网 42/42 实测，站长平台提交未做如实列下一步）；NO DIRTY BUILD（构建+双重门禁 174+服务器门禁）；NO HALF DEPLOY（切流后热路径立检+全量公网验证后封板）；NO REPORT SPRAWL（本记录即唯一回灌）；NO CROSS-PROJECT TOUCH（仅新增静态页，零改动既有系统）。
+
+---
+
+## 十二.22 站长平台验证文件部署修复（百度/头条/谷歌，2026-08-31）
+
+**背景**：项目方经腾讯云控制台「执行命令」（KIKI）将三平台验证文件 `echo >` 写入 `/root/yandaoguoxue/`（站点外壳目录），命令 ExitCode 0 但三平台验证全部失败。
+
+**根因确诊（SSH 实测）**：文件内容本身正确（与本地 Downloads 三文件逐字节一致：百度 `c46a85ba...` 32 字节 / 头条 `U447glXVJ3l8Obskdb3h` 20 字节 / 谷歌标准格式 53 字节），但**写错位置**——nginx root = `/root/yandaoguoxue/current`（软链 releases/v25.0.67），外壳目录不在服务路径；`try_files $uri $uri/ $uri.html /index.html` 找不到文件后 fallback 主页返回 200，三平台抓取到的是 SPA 主页 HTML 而非验证码（200 状态码具迷惑性）。
+
+**修复方案（持久化解耦）**：①新建持久目录 `/root/yandaoguoxue/verify/`（与 releases 发版切流完全解耦，验证文件永不随发版丢失）；②nginx 两个 server 块（80/443）各插入 3 条精确 `location = /xxx.html { root /root/yandaoguoxue/verify; }`（插入前备份配置 `.bak_verify_20260831_023540`，python 精确锚点插入幂等可复跑，`nginx -t` 通过后热加载）；③三文件同步入源码仓 `public/`（下次构建产物自动携带，双保险）；④部署脚本 `/root/yandaoguoxue/deploy_verify_files.sh`。
+
+**公网验证（内容级，服务器侧+本地外部 WebFetch 双通道）**：`/baidu_verify_codeva-mdfUGkzbxU.html` → `c46a85ba4b27cd7d75e1697c18b1f406` ✅；`/U447glXVJ3l8Obskdb3h.html` → `U447glXVJ3l8Obskdb3h` ✅；`/google5ebbc484799c2806.html` → `google-site-verification: google5ebbc484799c2806.html` ✅；HTTP 80 跟随 301 后同样正确。主站/SEO 页/API 无回归（nginx 仅增三条精确 location，零触碰既有规则）。
+
+**待项目方操作（非软件项）**：三平台控制台点击「确认验证文件可正常访问 → 完成验证」（URL 见下）；平台侧验证通过后即可提交 sitemap 加速收录。
+
+| 平台 | 验证 URL |
+|------|---------|
+| 百度 | `https://yandaoguoxue.yandao.vip/baidu_verify_codeva-mdfUGkzbxU.html` |
+| 头条 | `https://yandaoguoxue.yandao.vip/U447glXVJ3l8Obskdb3h.html` |
+| 谷歌 | `https://yandaoguoxue.yandao.vip/google5ebbc484799c2806.html` |
+
+**附带说明（自动备份待确认项）**：轻量服务器不支持自动快照策略（腾讯云产品限制）；软件层已有三库每日 02:00 备份+backupEngine 加密备份链在运行；云硬盘「设置自动备份」为付费功能，是否购买由项目方决策（OWNER_ACTION）。
