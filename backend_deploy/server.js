@@ -134,6 +134,7 @@ app.post('/api/ai/chat', async (req, res) => {
   // AI Phase 1：成本计量元数据（requestId 幂等 + 成本日志，不保存敏感 prompt）
   const _meta = {
     requestId: (req.body && req.body.requestId) || require('crypto').randomUUID(),
+    userId: null,
     featureKey: (req.body && (req.body.toolId || req.body.featureKey)) || 'ai_chat',
     model: null,
     membershipLevel: null,
@@ -145,7 +146,7 @@ app.post('/api/ai/chat', async (req, res) => {
     try {
       aiCostCenter.logAICall({
         requestId: _meta.requestId,
-        userId: _authUser ? _authUser.userId : null,
+        userId: _meta.userId,
         featureKey: _meta.featureKey,
         scene: 'ai_chat',
         model: _meta.model || 'unknown',
@@ -182,6 +183,7 @@ app.post('/api/ai/chat', async (req, res) => {
     //   旧版 APK 不携带 Authorization 头，直接硬性 401 会导致全体旧版用户 AI 立即不可用，
     //   故保留按 IP 限额的软过渡通道；新版前端全覆盖后可置 0 收紧。
     const _authUser = verifyToken(req.headers.authorization || '');
+    _meta.userId = _authUser ? _authUser.userId : null; // 供 _logCost 使用（_authUser 为块级作用域，_logCost 无法直接访问）
     let _quotaOwner = null; // 配额记账主体：真实 userId 或 'anon:<ip>'
     if (_authUser) {
       // v25.0.61 D19：封禁/注销账号拒绝调用AI（含存量token会话）
