@@ -23,10 +23,12 @@ fs.mkdirSync(TMP_DIR, { recursive: true });
 process.env.DB_PATH = path.join(TMP_DIR, 'users.db');
 process.env.AI_POLICY_FILE = path.join(TMP_DIR, 'ai-usage-policy.json');
 process.env.AI_PRICING_FILE = path.join(TMP_DIR, 'ai-pricing.json');
+process.env.AI_COST_DB_PATH = path.join(TMP_DIR, 'academy.db');
 process.env.JWT_SECRET = 'ai-phase1-test-secret-0123456789abcdef-32chars';
 
 const policy = require('./aiUsagePolicy');
 const auth = require('./middleware/auth');
+const costCenter = require('./aiCostCenter');
 
 // ---- 准备隔离用户表 ----
 const Database = require('better-sqlite3');
@@ -130,8 +132,87 @@ q = auth.getAIQuotaFromDB('u_basic');
 const beforeFail = q.dailyUsed;
 eq(beforeFail, 3, '失败请求前 basic dailyUsed=3（未额外扣减）');
 
+console.log('=== 7) 额度边界：basic 第4次拒绝 / monthly 第51次拒绝 ===');
+// basic：消费 3 次后 dailyUsed=3 >= limit=3 → 服务端应返回 429 AI_QUOTA_EXCEEDED
+q = auth.getAIQuotaFromDB('u_basic');
+eq(q.remaining, 0, 'basic 消费3次后 remaining=0');
+ok(q.dailyUsed >= q.dailyLimit, 'basic 第4次请求将被拒绝（dailyUsed>=dailyLimit → 429 AI_QUOTA_EXCEEDED）');
+// monthly：消费 50 次后 dailyUsed=50 >= limit=50
+q = auth.getAIQuotaFromDB('u_monthly');
+eq(q.remaining, 0, 'monthly 消费50次后 remaining=0');
+ok(q.dailyUsed >= q.dailyLimit, 'monthly 第51次请求将被拒绝（429 AI_QUOTA_EXCEEDED）');
+// yearly/lifetime：remaining=-1（无限），永不因额度被拒
+q = auth.getAIQuotaFromDB('u_yearly');
+eq(q.dailyLimit, Infinity, 'yearly dailyLimit=Infinity');
+eq(q.remaining, -1, 'yearly remaining=-1（无限）');
+q = auth.getAIQuotaFromDB('u_lifetime');
+eq(q.remaining, -1, 'lifetime remaining=-1（无限）');
+
+console.log('=== 8) localStorage 伪造会员无效（服务端只读 DB，无客户端等级入口）===');
+// getMembershipFromDB 只接受 userId，从 DB 读取 member_level；前端 localStorage 无法注入会员。
+const mBasic = auth.getMembershipFromDB('u_basic');
+eq(mBasic.level, 'basic', '服务端会员等级由 DB 决定（u_basic → basic）');
+ok(mBasic.source === 'database', '会员等级来源=database（非前端/localStorage）');
+const mYearly = auth.getMembershipFromDB('u_yearly');
+eq(mYearly.level, 'yearly', '服务端会员等级由 DB 决定（u_yearly → yearly）');
+
+console.log('=== 9) 并发/输入/输出上限（Fair Use 安全限流，无限档也受限）===');
+for (const lv of ['basic', 'monthly', 'quarterly', 'yearly', 'lifetime']) {
+  eq(policy.getUsagePolicy(lv).maxConcurrent, 1, `${lv} maxConcurrent=1`);
+}
+eq(policy.getUsagePolicy('basic').maxInputChars, 12000, 'basic maxInputChars=12000');
+eq(policy.getUsagePolicy('basic').maxOutputTokens, 8192, 'basic maxOutputTokens=8192');
+eq(policy.DEFAULT_MAX_INPUT_CHARS, 12000, 'DEFAULT_MAX_INPUT_CHARS=12000');
+eq(policy.DEFAULT_MAX_OUTPUT_TOKENS, 8192, 'DEFAULT_MAX_OUTPUT_TOKENS=8192');
+ok(policy.getUsagePolicy('lifetime').legacyUnlimited === true && policy.getUsagePolicy('lifetime').maxConcurrent === 1,
+  'lifetime 无限但仍有并发=1 限流（TECHNICAL FAIR USE，非改有限次数）');
+
+console.log('=== 10) 权益快照 + 历史权益映射 ===');
+const snap = policy.buildEntitlementSnapshot('yearly', 'membership_yearly');
+eq(snap.membershipPlan, 'yearly', '快照 membershipPlan=yearly');
+eq(snap.productId, 'membership_yearly', '快照 productId=membership_yearly');
+eq(snap.policyVersion, policy.getPolicyVersion(), '快照 policyVersion=当前政策版本');
+ok(snap.entitlementSnapshot.legacyUnlimited === true, '快照 legacyUnlimited=true（yearly 无限）');
+eq(typeof snap.purchasedAt, 'string', '快照 purchasedAt 为时间串');
+const legYearly = policy.resolveEffectivePolicy('yearly', null);
+ok(legYearly.legacyUnlimited === true && legYearly.dailyRequests === -1, '无 snapshot → LEGACY 映射 yearly 无限');
+const legBasic = policy.resolveEffectivePolicy('basic', null);
+eq(legBasic.dailyRequests, 3, '无 snapshot → LEGACY 映射 basic=3/日');
+const snapResolved = policy.resolveEffectivePolicy('yearly', { entitlementSnapshot: { dailyRequests: -1, monthlyRequests: -1, legacyUnlimited: true } });
+ok(snapResolved.legacyUnlimited === true, '有 snapshot → 用 snapshot 固化权益');
+ok(policy.LEGACY_POLICY_MAPPING.yearly.legacyUnlimited === true, 'LEGACY_POLICY_MAPPING.yearly.legacyUnlimited=true');
+ok(policy.LEGACY_POLICY_MAPPING.lifetime.legacyUnlimited === true, 'LEGACY_POLICY_MAPPING.lifetime.legacyUnlimited=true');
+eq(policy.LEGACY_POLICY_MAPPING.basic.dailyRequests, 3, 'LEGACY_POLICY_MAPPING.basic=3/日');
+eq(policy.LEGACY_POLICY_MAPPING.monthly.dailyRequests, 50, 'LEGACY_POLICY_MAPPING.monthly=50/日');
+
+console.log('=== 11) overage 禁用 + 定价字段合规 ===');
+eq(policy.getUsagePolicy('basic').overageAllowed, false, 'basic overageAllowed=false');
+eq(policy.getUsagePolicy('basic').overageProductId, null, 'basic overageProductId=null');
+eq(policy.getUsagePolicy('monthly').overageAllowed, false, 'monthly overageAllowed=false');
+eq(policy.getUsagePolicy('monthly').overageProductId, null, 'monthly overageProductId=null');
+eq(policy.getUsagePolicy('quarterly').overageAllowed, false, 'quarterly overageAllowed=false');
+const pr = policy.getPricing();
+eq(pr.source, 'ESTIMATED', 'pricing source=ESTIMATED（未校准禁止伪装 CALIBRATED）');
+ok(typeof pr.version === 'string' && pr.version.length > 0, 'pricing version 存在');
+ok(pr.models['deepseek-chat'] && pr.models['deepseek-chat'].inputUnitPrice !== undefined, 'pricing 字段为 inputUnitPrice（非 inputPricePerToken）');
+ok(pr.models['hy3'] && pr.models['hy3'].outputUnitPrice !== undefined, 'pricing 字段为 outputUnitPrice');
+
+console.log('=== 12) requestId 幂等（aiCostCenter，隔离 DB，不碰生产 academy.db）===');
+costCenter.ensureSchema();
+ok(costCenter.hasSucceededRequest('req-nonexistent') === false, '未记录 requestId → 判重 false');
+costCenter.logAICall({ requestId: 'req-001', userId: 'u_basic', featureKey: 'ai_chat', scene: 'ai_chat', model: 'deepseek-chat', membershipLevel: 'basic', inputTokens: 100, outputTokens: 50, estimatedCost: 0.0002, durationMs: 100, status: 'success' });
+ok(costCenter.hasSucceededRequest('req-001') === true, '已成功记账 requestId → 判重 true（服务端将返 409）');
+ok(costCenter.hasSucceededRequest(null) === false, '空 requestId → 判重 false');
+ok(costCenter.hasSucceededRequest('') === false, '空串 requestId → 判重 false');
+costCenter.logAICall({ requestId: 'req-002', status: 'error', errorCode: 'upstream_500' });
+ok(costCenter.hasSucceededRequest('req-002') === false, 'error 状态不构成幂等（不扣额度，可重试）');
+// 幂等只认 success：同一 requestId 若仅为 blocked/error，不算已成功处理
+costCenter.logAICall({ requestId: 'req-003', status: 'blocked', errorCode: 'AI_QUOTA_EXCEEDED' });
+ok(costCenter.hasSucceededRequest('req-003') === false, 'blocked 状态不构成幂等');
+
 console.log('=== 清理隔离文件 ===');
 try { db.close(); } catch (e) {}
+try { costCenter.getDb().close(); } catch (e) {}
 try { fs.rmSync(TMP_DIR, { recursive: true, force: true }); } catch (e) {}
 
 console.log(`\n=== AI Phase 1 测试结果：${pass} PASS / ${fail} FAIL ===`);

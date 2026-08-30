@@ -16,7 +16,7 @@ const path = require('path');
 const express = require('express');
 const Database = require('better-sqlite3');
 
-const ACADEMY_DB_PATH = path.join(__dirname, 'data', 'academy.db');
+const ACADEMY_DB_PATH = process.env.AI_COST_DB_PATH || path.join(__dirname, 'data', 'academy.db');
 
 let _db = null;
 function getDb() {
