@@ -100,6 +100,18 @@ const FALLBACK_MESSAGES: Record<string, string> = {
 
 // ==================== 核心调用 ====================
 // 所有请求通过本地 /api/ai/chat 服务端代理转发，密钥仅存服务端环境变量
+
+// AI Phase 1（第二十七部分）：为每次逻辑请求生成 requestId，供服务端幂等去重
+// （网络重试/重复提交同一请求体时 requestId 不变，服务端据此避免重复扣额度/记成本）。
+function genRequestId(): string {
+  try {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      return crypto.randomUUID();
+    }
+  } catch (e) { /* 忽略，走降级 */ }
+  return "ai_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 10);
+}
+
 export async function callAI(request: AIRequest): Promise<AIResponse> {
   const { systemPrompt, userPrompt, cacheKey, forceRefresh } = request;
   const key = cacheKey || `${systemPrompt?.slice(0, 50) || ""}_${userPrompt.slice(0, 50)}`;
@@ -122,7 +134,7 @@ export async function callAI(request: AIRequest): Promise<AIResponse> {
         "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify({ systemPrompt, userPrompt, cacheKey: key, forceRefresh }),
+      body: JSON.stringify({ systemPrompt, userPrompt, cacheKey: key, forceRefresh, requestId: genRequestId() }),
     });
 
     if (!res.ok) {

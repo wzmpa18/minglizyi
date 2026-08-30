@@ -160,6 +160,20 @@ app.post('/api/ai/chat', async (req, res) => {
       });
     } catch (e) { /* 成本日志失败不阻断 */ }
   };
+
+  // AI Phase 1（第二十七部分）：requestId 幂等——相同请求重复提交（网络重试/重复回调）
+  // 不得重复扣额度/记成本；若该 requestId 已有成功记账，直接拒绝。
+  if (req.body && typeof req.body.requestId === 'string' && req.body.requestId) {
+    if (aiCostCenter.hasSucceededRequest(req.body.requestId)) {
+      return res.status(409).json({
+        success: false,
+        error: '重复请求：该请求已成功处理，请勿重复提交',
+        code: 'AI_DUPLICATE_REQUEST',
+        requestId: req.body.requestId,
+      });
+    }
+  }
+
   try {
     // ===== v25.0.60 AUDIT-20260826 P0-3 修复：AI 付费墙服务端强制 =====
     // 鉴权 + 配额校验 + 成功后扣减（配额设施此前为死代码，本次正式接线）
@@ -286,8 +300,10 @@ app.post('/api/ai/chat', async (req, res) => {
     }
     // ===== v25.0.61 FINAL-SEAL P2-B：输入长度硬限制 =====
     // 防止单请求堆砌超长上下文导致上游成本失控（超长命盘×超长追问场景）。
-    // AI_INPUT_MAX_CHARS 默认 12000 字符；超限明确提示缩小范围，不调用上游、不扣配额。
-    const _inputMax = parseInt(process.env.AI_INPUT_MAX_CHARS, 10) || 12000;
+    // 上限以 AI_USAGE_POLICY 档位 maxInputChars 为唯一事实源（默认 12000 字符），
+    // AI_INPUT_MAX_CHARS 仅作应急覆盖；超限明确提示缩小范围，不调用上游、不扣配额。
+    const _levelPolicy = aiUsagePolicy.getUsagePolicy(_meta.membershipLevel || 'basic');
+    const _inputMax = parseInt(process.env.AI_INPUT_MAX_CHARS, 10) || _levelPolicy.maxInputChars || aiUsagePolicy.DEFAULT_MAX_INPUT_CHARS;
     const _inputLen = finalMessages.reduce((s, m) => s + String((m && m.content) || '').length, 0);
     if (_inputLen > _inputMax) {
       return res.status(400).json({
@@ -316,7 +332,8 @@ app.post('/api/ai/chat', async (req, res) => {
     // v25.0.60 AUDIT-20260826 D17: max_tokens 4096→8192（默认，AI_MAX_TOKENS 可调）
     // 推理型模型(hy3)思考即消耗 token，4096 上限时复杂命理解读的推理就耗尽配额，
     // 等待60秒后返回空内容（用户视角=AI不能用）。8192 给推理+正文留足空间。
-    const _maxTokens = parseInt(process.env.AI_MAX_TOKENS, 10) || 8192;
+    // AI Phase 1：以上限以档位 maxOutputTokens 为唯一事实源，AI_MAX_TOKENS 仅作应急覆盖。
+    const _maxTokens = parseInt(process.env.AI_MAX_TOKENS, 10) || _levelPolicy.maxOutputTokens || aiUsagePolicy.DEFAULT_MAX_OUTPUT_TOKENS;
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },

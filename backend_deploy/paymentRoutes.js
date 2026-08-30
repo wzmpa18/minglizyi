@@ -24,6 +24,8 @@
 
 const express = require('express');
 const wechatPayV3 = require('./wechatPayV3');
+// AI Phase 1（第十二部分）：新购买会员/增量包时持久化权益快照（policyVersion 可追溯）
+const aiUsagePolicy = require('./aiUsagePolicy');
 
 const router = express.Router();
 
@@ -425,6 +427,18 @@ function deliverOrderBenefits(order) {
     const db = new Database(dbPath);
     try {
       db.pragma('busy_timeout = 5000');
+      // AI Phase 1（第十二部分）：权益快照表（幂等建表；仅新购买写入，不触碰/不回写历史用户）
+      db.exec(`CREATE TABLE IF NOT EXISTS entitlement_snapshots (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        product_id TEXT,
+        membership_plan TEXT NOT NULL,
+        policy_version TEXT NOT NULL,
+        entitlement_snapshot TEXT NOT NULL,
+        purchased_at TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now','localtime'))
+      );`);
+      db.exec(`CREATE INDEX IF NOT EXISTS idx_entitle_snap_user ON entitlement_snapshots(user_id, created_at);`);
       const uid = parseInt(order.userId, 10);
       if (isNaN(uid)) throw new Error('userId 无效: ' + order.userId);
 
@@ -453,6 +467,16 @@ function deliverOrderBenefits(order) {
             .run(level, expireTime, uid);
         } catch (e) {}
         console.log(`[payment] 会员权益已交付 orderId=${order.orderId} userId=${order.userId} level=${level} expire=${expireTime || '永久'}`);
+        // AI Phase 1（第十一~十二部分）：新购买会员即持久化权益快照，policyVersion 可追溯
+        try {
+          const snap = aiUsagePolicy.buildEntitlementSnapshot(level, (order.extra && order.extra.productId) || ('membership_' + level));
+          db.prepare(`INSERT INTO entitlement_snapshots
+            (user_id, product_id, membership_plan, policy_version, entitlement_snapshot, purchased_at)
+            VALUES (?, ?, ?, ?, ?, ?)`)
+            .run(order.userId, snap.productId, snap.membershipPlan, snap.policyVersion, JSON.stringify(snap.entitlementSnapshot), snap.purchasedAt);
+        } catch (e) {
+          console.error(`[payment] 权益快照写入失败 orderId=${order.orderId}:`, e.message);
+        }
       } else if (order.type === 'POINTS_RECHARGE') {
         const points = parseInt(order.extra && order.extra.pointsAmount, 10);
         if (!points || points <= 0) throw new Error('pointsAmount 无效');

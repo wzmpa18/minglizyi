@@ -113,6 +113,27 @@ function logAICall(r) {
   }
 }
 
+/**
+ * 幂等查询（第二十七部分）：该 requestId 是否已有「成功」记账。
+ * 成功调用会扣用户额度 + 记成本；同一 requestId 因网络重试/重复提交再次到达时，
+ * 若已存在 success 记录则视为重复，调用方应直接拒绝而不重复扣额度/记成本。
+ * 注：blocked/error 不扣额度，故不需要幂等拦截。
+ * @param {string} requestId
+ * @returns {boolean}
+ */
+function hasSucceededRequest(requestId) {
+  if (!requestId) return false;
+  try {
+    const row = getDb().prepare(
+      `SELECT 1 FROM ai_call_logs WHERE request_id = ? AND status = 'success' LIMIT 1`
+    ).get(requestId);
+    return !!row;
+  } catch (e) {
+    console.error('[aiCostCenter] 幂等查询失败:', e.message);
+    return false;
+  }
+}
+
 // ==================== 后台成本中心路由 ====================
 
 function oneRow(sql, ...args) {
@@ -274,4 +295,4 @@ function makeCostRouter(adminAuth) {
   return r;
 }
 
-module.exports = { ACADEMY_DB_PATH, getDb, ensureSchema, logAICall, makeCostRouter, cnDate };
+module.exports = { ACADEMY_DB_PATH, getDb, ensureSchema, logAICall, hasSucceededRequest, makeCostRouter, cnDate };

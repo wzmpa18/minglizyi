@@ -52,8 +52,8 @@ const DEFAULT_POLICY = {
       maxOutputTokens: 8192,
       dailyCostCap: null,
       monthlyCostCap: null,
-      overageAllowed: true,
-      overageProductId: 'pack_10',
+      overageAllowed: false,
+      overageProductId: null,
       legacyUnlimited: false,
     },
     monthly: {
@@ -64,8 +64,8 @@ const DEFAULT_POLICY = {
       maxOutputTokens: 8192,
       dailyCostCap: null,
       monthlyCostCap: null,
-      overageAllowed: true,
-      overageProductId: 'pack_50',
+      overageAllowed: false,
+      overageProductId: null,
       legacyUnlimited: false,
     },
     quarterly: {
@@ -76,8 +76,8 @@ const DEFAULT_POLICY = {
       maxOutputTokens: 8192,
       dailyCostCap: null,
       monthlyCostCap: null,
-      overageAllowed: true,
-      overageProductId: 'pack_50',
+      overageAllowed: false,
+      overageProductId: null,
       legacyUnlimited: false,
     },
     yearly: {
@@ -118,17 +118,37 @@ const ANON_POLICY = {
   legacyUnlimited: false,
 };
 
+// ==================== 历史用户权益映射（第十二部分） ====================
+// 历史库未逐用户保存 entitlement snapshot，故以「档位级」映射兼容历史用户：
+//   - 历史 yearly/lifetime 购买页明确「无限畅享 / AI 解读终身畅用」→ 永久 LEGACY_UNLIMITED（仅 Fair Use 限流）
+//   - 历史 basic/monthly/quarterly 维持既定 3/50/50 每日口径（历史事实，本轮不改变）
+// 未来若调整当前 tiers，此映射仍固化历史口径，避免历史承诺被新政策回溯改写。
+const LEGACY_POLICY_MAPPING = {
+  basic:     { dailyRequests: 3,  monthlyRequests: -1, legacyUnlimited: false },
+  monthly:   { dailyRequests: 50, monthlyRequests: -1, legacyUnlimited: false },
+  quarterly: { dailyRequests: 50, monthlyRequests: -1, legacyUnlimited: false },
+  yearly:    { dailyRequests: -1, monthlyRequests: -1, legacyUnlimited: true },
+  lifetime:  { dailyRequests: -1, monthlyRequests: -1, legacyUnlimited: true },
+};
+
+// 合理默认上限（第八部分）：够正常用户使用，但不无限放大 AI 成本；
+// 与 DEFAULT_POLICY tiers 及 ANON_POLICY 的 maxInputChars/maxOutputTokens 保持一致。
+const DEFAULT_MAX_INPUT_CHARS = 12000;
+const DEFAULT_MAX_OUTPUT_TOKENS = 8192;
+
 // ==================== 默认模型价目表（可配置，禁止硬编码死价） ====================
 // 第四十四章：价格必须可配置（effectiveFrom/effectiveTo 区间），后台可在文件校准。
 // 以下为「估算默认值」，costSource 会标记 ESTIMATED，待按腾讯云/DeepSeek 真实账单季单价校准。
 const DEFAULT_PRICING = {
   source: 'ESTIMATED',
-  note: '默认估算单价，请在 data/ai-pricing.json 按供应商真实账单季单价校准。',
+  version: '1.0.0',
   effectiveFrom: '2026-08-29',
+  effectiveTo: null,
+  note: '默认估算单价（source=ESTIMATED），未经腾讯云/DeepSeek 真实账单校准。请在 data/ai-pricing.json 按供应商真实账单季单价校准后再切 CALIBRATED；未校准前禁止在 UI 显示为「实际成本/真实成本/已结算成本」。',
   models: {
-    'deepseek-chat': { inputPricePerToken: 0.000001, outputPricePerToken: 0.000002, currency: 'CNY' },
-    'hy3':           { inputPricePerToken: 0.000001, outputPricePerToken: 0.000002, currency: 'CNY' },
-    'hunyuan-lite':  { inputPricePerToken: 0.000001, outputPricePerToken: 0.000002, currency: 'CNY' },
+    'deepseek-chat': { inputUnitPrice: 0.000001, outputUnitPrice: 0.000002, currency: 'CNY', effectiveFrom: '2026-08-29', effectiveTo: null },
+    'hy3':           { inputUnitPrice: 0.000001, outputUnitPrice: 0.000002, currency: 'CNY', effectiveFrom: '2026-08-29', effectiveTo: null },
+    'hunyuan-lite':  { inputUnitPrice: 0.000001, outputUnitPrice: 0.000002, currency: 'CNY', effectiveFrom: '2026-08-29', effectiveTo: null },
   },
 };
 
@@ -217,6 +237,49 @@ function getUsagePolicy(level) {
   };
 }
 
+/**
+ * 为「新购买」生成权益快照（第十二部分），供订单交付时持久化。
+ * @param {string} level 会员等级
+ * @param {string} productId 商品标识（如 membership_yearly / pack_50）
+ * @returns {object} { productId, membershipPlan, policyVersion, entitlementSnapshot, purchasedAt }
+ */
+function buildEntitlementSnapshot(level, productId) {
+  const t = tierPolicy(level);
+  return {
+    productId: productId || ('membership_' + level),
+    membershipPlan: level,
+    policyVersion: getPolicyVersion(),
+    entitlementSnapshot: {
+      dailyRequests: t.dailyRequests,
+      monthlyRequests: t.monthlyRequests,
+      maxConcurrent: t.maxConcurrent,
+      maxInputChars: t.maxInputChars,
+      maxOutputTokens: t.maxOutputTokens,
+      legacyUnlimited: !!t.legacyUnlimited,
+    },
+    purchasedAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * 解析某主体实际应生效的额度政策（第十一~十二部分）：
+ *   - 有显式 snapshot（新购买已保存）→ 用 snapshot 固化该购买时的权益；
+ *   - 否则历史用户 → 用 LEGACY_POLICY_MAPPING（档位级兼容）；
+ *   - 兜底 → 当前 tiers。
+ * @param {string} level 会员等级
+ * @param {object|null} snapshot 已持久化的 entitlementSnapshot（或含 entitlementSnapshot 的对象）
+ */
+function resolveEffectivePolicy(level, snapshot) {
+  if (snapshot && snapshot.entitlementSnapshot) {
+    return { ...getUsagePolicy(level), ...snapshot.entitlementSnapshot };
+  }
+  const legacy = LEGACY_POLICY_MAPPING[level];
+  if (legacy) {
+    return { ...getUsagePolicy(level), ...legacy };
+  }
+  return getUsagePolicy(level);
+}
+
 // ==================== 模型价目 / 成本估算 ====================
 
 function loadPricing() {
@@ -224,8 +287,10 @@ function loadPricing() {
   if (!disk || !disk.models) return structuredClone(DEFAULT_PRICING);
   return {
     source: disk.source || DEFAULT_PRICING.source,
+    version: disk.version || DEFAULT_PRICING.version,
     effectiveFrom: disk.effectiveFrom || DEFAULT_PRICING.effectiveFrom,
     effectiveTo: disk.effectiveTo || null,
+    note: disk.note || DEFAULT_PRICING.note,
     models: { ...DEFAULT_PRICING.models, ...(disk.models || {}) },
   };
 }
@@ -239,21 +304,24 @@ function getPricing() {
  * @param {string} model 模型名
  * @param {number} inputTokens 输入 token 数
  * @param {number} outputTokens 输出 token 数
- * @returns {object} { estimatedCost, costSource, inputPricePerToken, outputPricePerToken }
+ * @returns {object} { estimatedCost, costSource, inputUnitPrice, outputUnitPrice, currency }
  */
 function estimateCost(model, inputTokens, outputTokens) {
   const p = getPricing();
   const m = (p.models && p.models[model]) || null;
   if (!m) {
-    return { estimatedCost: null, costSource: 'UNKNOWN', inputPricePerToken: null, outputPricePerToken: null };
+    return { estimatedCost: null, costSource: 'UNKNOWN', inputUnitPrice: null, outputUnitPrice: null, currency: null };
   }
-  const cost = (Number(inputTokens) || 0) * m.inputPricePerToken + (Number(outputTokens) || 0) * m.outputPricePerToken;
+  const inP = Number(m.inputUnitPrice) || 0;
+  const outP = Number(m.outputUnitPrice) || 0;
+  const cost = (Number(inputTokens) || 0) * inP + (Number(outputTokens) || 0) * outP;
   const rounded = Math.round(cost * 10000) / 10000; // 4 位小数（元）
   return {
     estimatedCost: rounded,
     costSource: p.source === 'CALIBRATED' ? 'CALIBRATED' : 'ESTIMATED',
-    inputPricePerToken: m.inputPricePerToken,
-    outputPricePerToken: m.outputPricePerToken,
+    inputUnitPrice: inP,
+    outputUnitPrice: outP,
+    currency: m.currency || 'CNY',
   };
 }
 
@@ -299,12 +367,17 @@ function updatePolicy(patch) {
 module.exports = {
   DEFAULT_POLICY,
   ANON_POLICY,
+  LEGACY_POLICY_MAPPING,
+  DEFAULT_MAX_INPUT_CHARS,
+  DEFAULT_MAX_OUTPUT_TOKENS,
   getPolicy,
   getPolicyVersion,
   tierPolicy,
   getUsagePolicy,
   isLegacyUnlimited,
   isUnlimitedLimit,
+  buildEntitlementSnapshot,
+  resolveEffectivePolicy,
   getPricing,
   estimateCost,
   updatePolicy,
