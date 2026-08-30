@@ -12,6 +12,7 @@ import GlobalZoomProvider from "@/components/GlobalZoomProvider";
 import SwipeBackProvider from "@/components/SwipeBackProvider";
 import VersionChecker from "@/components/VersionChecker";
 import AppUpgradeChecker from "@/components/AppUpgradeChecker";
+import OfflineInit from "@/components/OfflineInit";
 import { ToastHost } from "@/components/ui";
 import { PromoFloat } from "@/components/marketing/PromoFloat";
 
@@ -67,6 +68,7 @@ export default function RootLayout({
             <AuthRestoreInit />
             <InviteCaptureInit />
             <ReminderSchedulerInit />
+            <OfflineInit />
             <GlobalZoomProvider>
               {children}
             </GlobalZoomProvider>

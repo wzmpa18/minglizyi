@@ -1188,6 +1188,13 @@ export default function ProfilePage() {
           label="通用设置"
           onClick={() => router.push("/profile/settings")}
         />
+        {/* v25.0.66: 离线内容包管理——下载内容包断网学习/存储用量/离线记录同步（MASTER-05第五十四~七十四章） */}
+        <ZoneItem
+          icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={BRAND} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>}
+          label="离线内容"
+          sub="下载内容包，断网也能学习"
+          onClick={() => router.push("/offline")}
+        />
         {/* v25.0.49: 检查更新——手动拉取服务器 version.json 对比当前构建，发现新版一键更新 */}
         <ZoneItem
           icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={BRAND} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36" /><polyline points="21 3 21 9 15 9" /><path d="M12 7v5l3 3" /></svg>}
