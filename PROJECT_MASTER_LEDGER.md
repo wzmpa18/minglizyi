@@ -1,8 +1,9 @@
 # 言道国学项目总账（PROJECT_MASTER_LEDGER）
 
 > **本文档是项目唯一权威账簿（Single Source of Truth）。**
-> 最后更新: 2026-08-30（AI-PRODUCTION-SEAL-AND-COMMISSION-ROUTER-04：AI Phase 1 正式生产上线 + 历史无限权益保护 + AI 成本中心生产验收 + Commission Router 唯一结算引擎 + Partner 50% 账务闭环 + 防重复计提）
-> 上一批（2026-08-29）：P0-PRODUCTION-SEAL-AND-AI-COST-PHASE1-03（P0安全修复正式生产落地 + 生产攻击回归 + SSOT总账纠偏 + 真太阳时封板 + AI Fair Usage/Cost Center 第一阶段）
+> 最后更新: 2026-08-30（FINAL-OPERATIONS-COMPLETION-MASTER-05 最终封板：Provider师傅后端闭环 + Partner归属闭环 + Offline-First + Cache/GC + Question Factory + 对象存储/备份灾备 + 社交限频+评论层级 + 统一后台总控 + 全量生产回归 + v25.0.66 生产发布 + 公网验证 21/21 PASS + 四端SSOT一致 d9bde64）
+> 上一批（2026-08-30 中）：AI-PRODUCTION-SEAL-AND-COMMISSION-ROUTER-04（AI Phase 1 正式生产上线 + 历史无限权益保护 + AI 成本中心生产验收 + Commission Router 唯一结算引擎 + Partner 50% 账务闭环 + 防重复计提）
+> 上上批（2026-08-29）：P0-PRODUCTION-SEAL-AND-AI-COST-PHASE1-03（P0安全修复正式生产落地 + 生产攻击回归 + SSOT总账纠偏 + 真太阳时封板 + AI Fair Usage/Cost Center 第一阶段）
 > 上一批（2026-08-25，生产版本 v25.0.47_30）：FIX-V30-PAY-CARE 支付权益彻查+防再发机制——用户投诉「会员ID 100011 充值没开通会员」彻查结论：①订单 YD20260825173625902022 ¥39.9 实为 SINGLE_UNLOCK 单次深度解读（非会员套餐），支付成功且 benefit_delivered=1 权益已正常发放；用户误将单次解读当会员购买（单次 39.9>月费 37 价格结构易混淆），支付后又连续创建 7 个未完成 PENDING 订单反复尝试；②全量对账 5 笔 PAID 订单：真实用户订单权益全部正常发放，唯一漏发为 E2E 测试订单 TEST_RC06_DELIVER（无 transaction_id 无真实扣款，已归档）；910082 yearly 会员为 E2E 测试账号（无手机号）非漏发；③处理：用户 100011 客户关怀补偿开通月度会员至 2026-09-24（与生产 deliverOrderBenefits 同口径 users+user_assets 双表）+7 个僵尸 PENDING 订单关闭+operation_logs 三条留痕（修复前 DB 备份 /root/backup/yandao_users_pre_fix100011_20260825_175346.db）；⑥应老板要求改单（2026-08-25 追加）：订单 129 YD20260825173625902022 由 SINGLE_UNLOCK 正式转为 MEMBERSHIP（实付 39.9 金额不动，benefit_delivered=1 维持，operation_logs id=302 order_type_convert 留痕），订单记录与已发月度会员权益一致；用户无推荐人（invited_by/referrer_id 空）改单对佣金结算零影响；④防再发：部署 /root/backend-auth/scripts/payment_reconcile.sh 每日 03:30 cron 自动对账——查 PAID+benefit_delivered=0+支付超10分钟的沉默漏发订单，MEMBERSHIP 按金额映射档位（37/99/374/3600）自动补交付（续费顺延同口径）、SINGLE_UNLOCK 补标记、未知类型告警人工，告警日志 payment_audit_alerts.log；⑤产品层防混淆：单次解锁弹窗新增三处明确标识「本单为单次解读解锁，非会员套餐」+「支付后仅解锁本次解读，不含会员权益」；前一版本 v25.0.47_29+APK v25.0.55(2055)：FIX-V29-DOWNLOAD-RESCUE 升级下载链路根治）
 > 历史详细记录见 `PROJECT_LEDGER_FINAL.md`（v25.0.0 ~ v25.0.20 阶段账，冻结归档）。
 > 本账簿只记录 v25.0.21 之后增量与当前全局事实；冲突时以本文为准。
@@ -10,22 +11,25 @@
 
 ---
 
-## 〇、Current Snapshot（当前事实快照 · 2026-08-30 核实）
+## 〇、Current Snapshot（当前事实快照 · 2026-08-30 最终封板核实）
 
 | 项 | 值 |
 |----|-----|
-| 数据核实日期 | 2026-08-30 |
-| 后端 Runtime Commit | `530f39e`（feat(commission-router)：分佣唯一结算引擎 + 双身份 REVIEW_REQUIRED + 隔离测试 77 PASS；`2ba05a8` fix _logCost 作用域 bug；`d5cb12e` requestId 幂等 + 权益快照；下限 `16608a5` P0 安全修复） |
-| 前端 Web 构建版本 | **v25.0.65**（buildId `v25.0.65_D20260830`，builtAt 2026-08-30T01:22:05Z，含 `/admin/ai-cost` AI 成本中心页面） |
-| 后端发布版本 | v25.0.65（AI Phase 1 生产上线 + Commission Router 批次） |
-| Document Head | 本地 `b493913`（领先 origin/main 2 提交未 push：`657dc5f` 双身份切换[生产已部署]+`b493913` Partner 归属闭环[未部署]）；GitHub origin/main = `f4e1557`；生产运行代码 = 双身份 Router 版（生产 commissionRouter.js 与 657dc5f 内容一致，SSH 核实）；生产 Web current → v25.0.65 |
-| APK / versionCode | 25.0.60 / 2059（`/api/public/app-version` 生产下发值，本轮无 Android 原生变更，APK 不重建） |
+| 数据核实日期 | 2026-08-30（MASTER-05 最终封板核实，SSH+公网实测） |
+| 后端 Runtime Commit | `d9bde64`（MASTER-05 六模块后端正式落地：Provider/对象存储+备份灾备/Offline Pack/社交限频+评论层级/Question Factory/统一后台总控；`ac45013` 六模块 + `7a0750d` Offline前端四库 + `6a16c4e` bump v25.0.66 + `d9bde64` /offline页面接线；下限 `530f39e` Commission Router 唯一结算引擎 + 双身份 PARTNER_NET_OF_REFERRAL） |
+| 前端 Web 构建版本 | **v25.0.66**（buildId `v25.0.66_D20260830`，builtAt 2026-08-30T15:17:31Z；含 /offline 离线内容管理页+OfflineInit根布局挂载+个人中心离线入口+六模块用户端页面；公网 version.json 已验证） |
+| 后端发布版本 | v25.0.66（MASTER-05 最终运营完成批次：QF路由 /api/qf+/api/admin/qf、对象存储+备份 /api/oss+/api/admin/oss、Offline /api/offline+/api/admin/offline、存储GC /api/admin/storage、统一后台 /api/admin/unified 全部挂载生产并公网验证） |
+| Document Head | 本地=GitHub origin/main=服务器源码仓 `/root/yandaoguoxue-source` = **`d9bde64` 四端一致（unpushed=0）**；生产运行文件与源码仓 MD5 一致（questionFactoryRoutes.js `4f3dfa21`/objectStorageRoutes.js `8a30974d` SSH 核实）；生产 Web current → v25.0.66 |
+| APK / versionCode | 25.0.60 / 2059（`/api/public/app-version` 生产下发值，本轮无 Android 原生变更，APK 不重建；Offline 经 Web 层 /offline 页面实现，内置壳 WebView 可用） |
 | 生产服务器 | 82.156.228.87（腾讯云轻量 北京，root） |
-| 生产后端路径 | `/www/yandaoguoxue-backend`（PM2 `yandaoguoxue-backend`，端口 3001） |
-| 前端发布路径 | `/root/yandaoguoxue/releases/<tag>` + `/root/yandaoguoxue/current` 软链（nginx root 指向，current → v25.0.65） |
-| 数据库架构 | SQLite（better-sqlite3）三库：`/root/backend-auth/data/yandao_users.db`（用户核心，97 用户，含 `commission_records`/`user_orders` 等；Router 快照表 `commission_router_snapshots` 首次新订单时幂等建表）+ `/www/yandaoguoxue-backend/data/social.db`（社交）+ `/www/yandaoguoxue-backend/data/academy.db`（学堂，约 56MB，`ai_call_logs` 已扩展 11 计量列、1909 条）。PostgreSQL 15 为已迁出「学外语」项目进程残留，非本国学项目基础设施（见下方 §二 纠偏）。 |
-| 备份现状 | 三库每日 02:00 备份至 `/root/backup/`（2026-08-30 备份已存在），`PRAGMA integrity_check` = ok |
-| 用户/会员统计 | 97 用户（basic 93 / monthly 2 / yearly 1 / lifetime 1），统计日期 2026-08-30 |
+| 生产后端路径 | `/www/yandaoguoxue-backend`（PM2 `yandaoguoxue-backend`，端口 3001，2026-08-30 23:39 重启 online，新模块路由启动日志全 ✅） |
+| 前端发布路径 | `/root/yandaoguoxue/releases/<tag>` + `/root/yandaoguoxue/current` 软链（nginx root 指向，current → v25.0.66） |
+| 数据库架构 | SQLite（better-sqlite3）三库：`/root/backend-auth/data/yandao_users.db`（用户核心，98 用户，含 `commission_records`/`user_orders`/`providers`/`provider_services`/`service_orders` 等；Router 快照表 `commission_router_snapshots`）+ `/www/yandaoguoxue-backend/data/social.db`（社交，含社交限频表）+ `/www/yandaoguoxue-backend/data/academy.db`（学堂，约 56MB，含 Question Factory 蓝图/队列/质量表）。PostgreSQL 15 为已迁出「学外语」项目进程残留，非本国学项目基础设施（见下方 §二 纠偏）。 |
+| 备份现状 | 三库每日 02:00 备份至 `/root/backup/`（2026-08-30 备份已存在），`PRAGMA integrity_check` = ok；本轮新增 backupEngine 软件链（三库备份→AES-256-GCM 加密→对象存储 adapter→manifest+hash→retention→restore drill），备份状态接口 /api/admin/oss/backup/list 公网验证 PASS；COS 异地备份 = BLOCKED_EXTERNAL_CONFIG（无凭证，adapter+dry-run 已完成，未伪称 VERIFIED） |
+| 用户/会员统计 | 98 用户（basic 94 / monthly 2 / yearly 1 / lifetime 1），统计日期 2026-08-30（统一后台 overview 真实 DB 数据：total 98 / newToday 1 / active7d 53 / paid 4 / orders total 118 paid 4） |
+| 本轮生产验证 | **公网 21/21 PASS**（verify_modules3.sh：统一后台 whoami+overview、QF blueprints+inventory+queue+quality、OSS overview+capability+backup/list+drill-status+owner-actions、存储GC report+forbidden+config、Offline manifest+admin packs、社交 circles、health、价格SSOT、app-version、version.json v25.0.66） |
+| MASTER-05 测试矩阵 | 隔离 E2E 累计：Partner 归属 134 + Router 基线 112 + Provider 167 + Offline 后端 76 + QF 119 + 社交限频 64 + 对象存储/备份 159 + 统一后台总控 24 + 全量回归 12 套件 + 算法门禁 46/46（真太阳时 Golden 冻结复跑）——全部隔离测试零真实付款、零生产污染 |
+| 最终状态 | **PRODUCTION_READY_WITH_EXTERNAL_ACTIONS**（软件内部 P0=0 / P1=0 / SOFTWARE_INTERNAL_REMAINING=0；剩余仅 Owner Action：腾讯云快照、COS Secret 配置、iOS PLA、Android/Share 真机验收） |
 
 > 冲突裁决：历史章节中「当前生产版本 / Git HEAD / APK / 数据库」等字段若与本快照冲突，以本快照为准；历史字段原文保留不删（记 SUPERSEDED·HISTORICAL）。
 
@@ -50,7 +54,7 @@
 | 项 | 值 |
 |----|-----|
 | 服务器 | 82.156.228.87（腾讯云轻量 北京，root） |
-| 前端发布 | /root/yandaoguoxue/releases/&lt;tag&gt; + **/root/yandaoguoxue/current 软链（nginx root 真实指向，v28 切流纠偏时确认；releases/current 软链为冗余同指）**；当前 current→v25.0.47_29，回滚目标 v25.0.47_28；目录现状 _5/_6/_8/_9/_17/_21/_22/_23/_24/_25/_26/_27/_28/_29 等多版（磁盘充足暂留，如需清理保留 _28+_29 即可） |
+| 前端发布 | /root/yandaoguoxue/releases/&lt;tag&gt; + **/root/yandaoguoxue/current 软链（nginx root 真实指向，v28 切流纠偏时确认；releases/current 软链为冗余同指）**；当前 current→**v25.0.66**，回滚目标 v25.0.65；目录现状 _5~_29/_65/_66 等多版（磁盘充足暂留，如需清理保留 _65+_66 即可） |
 | 后端服务 | /www/yandaoguoxue-backend，PM2 名 yandaoguoxue-backend，端口 3001 |
 | 数据库 | ~~PostgreSQL 15（SUPERSEDED·HISTORICAL：为已迁出「学外语」项目进程残留，经 2026-08-29 生产核实国学后端仅 `require('better-sqlite3')`×29、零 `require('pg')`/5432 连接）~~ → **SQLite（better-sqlite3）三库**：用户核心 `/root/backend-auth/data/yandao_users.db`（97 用户 + user_orders/user_assets/commission_accounts/commission_records/partner_settlements 等全表）、社交 `/www/yandaoguoxue-backend/data/social.db`、学堂 `/www/yandaoguoxue-backend/data/academy.db`（约 56MB） |
 | Nginx | / → 静态前端；/api/* → 127.0.0.1:3001；/app-download/ → APK 分发 |
@@ -657,3 +661,35 @@ gh workflow run ios-build.yml --repo wzmpa18/minglizyi --ref main
 **回归**：`commission_router_test.js` 112 PASS / 0 FAIL（双身份基线无回归）；`p8_commission_e2e_test.js` 本地因硬编码服务器路径无法运行（历史遗留，非本轮引入）。
 
 **部署状态**：代码已 commit（`b493913`）+ 隔离测试全绿，**未部署生产**（按指令第一百三十五~一百三十七章分批纪律，随 Release A「Partner 最终闭环」批次统一构建部署）。表结构迁移全部 `CREATE TABLE IF NOT EXISTS` / `ALTER TABLE ADD COLUMN` 幂等，生产上线零破坏。
+
+---
+
+## 十二.20 MASTER-05 最终封板（六模块生产落地 + v25.0.66 + 全量回归 + 公网验证，2026-08-30）
+
+**定位**：FINAL-OPERATIONS-COMPLETION-MASTER-05 全指令（175 章）完成批次。Partnet 12.19 代码随本批一并上线。四端 SSOT 一致 `d9bde64`（本地=GitHub=服务器源码仓；生产运行文件 MD5 与源码仓一致：questionFactoryRoutes.js `4f3dfa21` / objectStorageRoutes.js `8a30974d`）。
+
+**提交链（Release A~F 合并为一次最终批次上线）**：`ac45013`（六模块后端+全量回归矩阵）→ `7a0750d`（Offline 前端四库：StorageManager/PackDownloader/offlineSyncClient/appAutoClean）→ `6a16c4e`（bump v25.0.66+构建门禁）→ `d9bde64`（/offline 页面真实接线+OfflineInit 根布局+个人中心入口）。12.18/12.19 提交（657dc5f/b493913）在前。
+
+**六模块生产事实（全部挂载 server.js extraRoutes + PM2 启动日志全 ✅ + 公网实测）**：
+
+| 模块 | 指令章节 | 路由前缀 | 隔离测试 | 公网验证 |
+|------|---------|---------|---------|---------|
+| Provider 师傅体系（引擎+申请/审核/服务/订单/评价/退款/结算/争议/解冻调度） | 第 31~53 章 | /api/provider + /api/admin/provider | 167 PASS | 路由挂载日志 ✅ |
+| Offline Pack（Manifest/SHA256/幂等同步事件/Server GC/容量监控） | 第 54~74 章 | /api/offline + /api/admin/offline + /api/admin/storage | 76 PASS | manifest+admin/packs PASS |
+| 社交限频引擎（六类接口：好友申请/私聊/群聊/动态/评论/举报）+ 评论层级两级拍平 + 作者/管理员软删除 | 第 75~80/118~120 章 | 内嵌 socialApiRoutes | 64 PASS | /api/social/circles PASS |
+| Question Factory（蓝图/库存/生成队列/AI 生成五态/去重 Exact+Structural+Semantic PARTIAL/质量指标/坏题自动复审/成本控制/Owner Actions） | 第 81~96 章 | /api/qf + /api/admin/qf | 119 PASS | blueprints+inventory+queue+quality 4 接口 PASS |
+| 对象存储（统一 ObjectStorageService：LOCAL/COS 双 Provider+三逻辑分区+访问控制）+ 备份灾备（三库备份→AES-256-GCM→adapter→manifest→retention→restore drill 演练+生产路径保护） | 第 97~114 章 | /api/oss + /api/admin/oss | 159 PASS | overview+capability+backup/list+drill-status+owner-actions 5 接口 PASS |
+| 统一后台总控（/overview 接入 QF/Storage/Backup-DR 真实状态+健康灯） | 第 121~123 章 | /api/admin/unified | 24 PASS | whoami+overview PASS（98 用户真实 DB 数据） |
+
+**Offline 前端（第 54~74 章用户侧）**：`src/lib/storageManager.ts`（六分区 TEMP_CACHE/MEDIA_CACHE/AI_CACHE/OFFLINE_PACK/USER_PRIVATE_DATA/SYSTEM_DATA 分策略）+ `src/lib/packDownloader.ts`（SHA256 校验+.part 临时+原子 rename+失败清理）+ `src/lib/offlineSyncClient.ts`（离线事件队列 eventId 幂等+网络恢复 autoFlush）+ `src/lib/appAutoClean.ts`（每日首启/升级清理，红线分区结构性跳过）+ `src/app/offline/page.tsx`（离线内容管理页：Manifest 更新检查/下载/删除/存储用量/待同步队列+手动冲刷）+ `src/components/OfflineInit.tsx`（根布局挂载：installAutoFlush+runAutoClean+延迟 flush，失败静默）+ profile 离线内容入口。零类型错误。
+
+**全量回归（第 124~130 章）**：final_regression_run.js 12 套件全 OK（对象存储+备份 159/Provider 167/分佣路由 112+134/Partner 归因/AI 阶段 1/算法回归/Question Factory 119/社交限频 64/Offline 76/gap 回归 124+127+128 章）；算法门禁 46/46（八字金锚点 1984-02-05 甲子、奇门阴阳遁 2026-08-30 阴遁、真太阳时 Golden 冻结复跑）；既有 .test.ts 历史漂移单列信息口径不阻断门禁（P8 佣金 ratios.MEMBERSHIP 旧字段读取失败定性历史漂移，生产代码零依赖旧字段）。
+
+**构建部署（第 131~136 章 BUILD_ALL_BEFORE_DEPLOY）**：本地 pnpm build（v25.0.66 buildId 烧录）→ 产物+六模块后端文件同步服务器 → PM2 重启（新路由启动日志 8 条 ✅：Offline×2/存储GC/QF×2/OSS×2/统一后台）→ current → v25.0.66 原子切流 → 公网验证 21/21 PASS（verify_modules3.sh，Bearer 鉴权实测：密钥本身正常，此前验证失败为 PowerShell→SSH 引号剥离导致 header 丢失，非生产问题）。
+
+**最终状态（第 141~153 章）**：
+- P0 = 0、软件内部 P1 = 0、SOFTWARE_INTERNAL_REMAINING = 0
+- FINAL LEVEL = **PRODUCTION_READY_WITH_EXTERNAL_ACTIONS**
+- Owner Actions（仅限项目方本人完成）：①腾讯云控制台快照策略（OWNER_ACTION_TENCENT_SNAPSHOT）；②COS Secret 配置到 /www/yandaoguoxue-backend/.env（OWNER_ACTION_COS_SECRET，软件链+dry-run 已备，禁聊天粘贴 Secret）；③Apple PLA 签署（OWNER_ACTION_IOS_PLA，软件不重复开发）；④Android 真机验收（OWNER_ACTION_ANDROID_DEVICE_TEST）；⑤Share 真机验收（OWNER_ACTION_SHARE_DEVICE_TEST）。
+
+**纪律核查（第 174 章 NO_* 全项）**：NO GUESS（所有验证 SSH+公网实测）；NO FAKE VERIFIED（COS=BLOCKED_EXTERNAL_CONFIG 不伪称 VERIFIED，iOS/真机列 Owner Action）；NO SECRET OUTPUT（报告不含任何 Secret 值）；NO CLIENT-SIDE MONEY AUTHORITY（QF/Provider 价格全服务端 SSOT）；NO DUPLICATE SYSTEM（复用 academy.db 题库/现有支付引擎/现有邀请树）；NO HISTORICAL DATA REWRITE（Router 前佣金不动）；NO REAL PAYMENT TEST（全部隔离测试零真实付款）；NO DIRTY BUILD（构建门禁全过）；NO HALF DEPLOY（公网 21/21 验证后才封板）；NO REPORT SPRAWL（无新建碎片报告，本记录即唯一回灌）；NO CROSS-PROJECT TOUCH（仅触碰言道国学）。

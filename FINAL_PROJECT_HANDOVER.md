@@ -20,14 +20,14 @@
 
 | 组件 | 版本 |
 |------|------|
-| Web（生产 current） | **v25.0.65**（buildId `v25.0.65_D20260830`，builtAt 2026-08-30T01:22:05Z，含 `/admin/ai-cost` AI 成本中心） |
-| 后端 API | package 1.1.0（PM2: yandaoguoxue-backend，online） |
-| Android APK | **v25.0.60 / versionCode 2059**（本轮无 Android 原生变更，APK 不重建） |
+| Web（生产 current） | **v25.0.66**（buildId `v25.0.66_D20260830`，builtAt 2026-08-30T15:17:31Z；MASTER-05 最终批次：`/offline` 离线内容管理页+OfflineInit 根布局+六模块用户端） |
+| 后端 API | package 1.1.0（PM2: yandaoguoxue-backend，online；新路由 QF/OSS/Offline/存储GC/统一后台 全挂载） |
+| Android APK | **v25.0.60 / versionCode 2059**（本轮无 Android 原生变更，APK 不重建；Offline 走 Web 层 /offline 页面） |
 
 ## 3. 当前 Commit
 
-- **四端 HEAD 一致**：LOCAL = GITHUB = SERVER_SOURCE = 生产构建源（接管后第一步：`git log --oneline -3` 四端核对）。
-- 当前代码批次：`530f39e`（feat(commission-router)：分佣唯一结算引擎 + 双身份 REVIEW_REQUIRED + 隔离测试 77 PASS）→ `2ba05a8`（fix _logCost 作用域 bug）→ `d5cb12e`（requestId 幂等 + 权益快照 + overage 禁用）→ `8403123`（version.json v25.0.65）→ `16608a5`（P0 安全修复，下限）。生产运行目录 MD5 与源仓库一致。
+- **四端 HEAD 一致**：LOCAL = GITHUB origin/main = SERVER_SOURCE = 生产构建源 = **`d9bde64`**（unpushed=0，2026-08-30 核实；接管后第一步：`git log --oneline -3` 四端核对）。
+- 当前代码批次：`657dc5f`（双身份 PARTNER_NET_OF_REFERRAL）→ `b493913`（Partner 归属快照/合同/改绑审计/结算快照/逐单账）→ `852c5fd`（总账回灌）→ `ac45013`（**MASTER-05 六模块后端**：Provider/对象存储+备份灾备/Offline Pack/社交限频+评论层级/Question Factory/统一后台总控+全量回归矩阵）→ `7a0750d`（Offline 前端四库）→ `6a16c4e`（bump v25.0.66）→ `d9bde64`（/offline 页面接线，HEAD）。生产运行目录 MD5 与源仓库一致（questionFactoryRoutes `4f3dfa21`/objectStorageRoutes `8a30974d`）。
 
 ## 4. GitHub
 
@@ -58,8 +58,8 @@
 
 ## 8. Web 生产目录
 
-`/root/yandaoguoxue/current` → 软链 `releases/v25.0.62`。
-`releases/` 现存：`v25.0.62`（生产）、`v25.0.61`、`v25.0.60`、`v25.0.47_34`（历史回滚档）。**禁止删除 current 指向的目录**。
+`/root/yandaoguoxue/current` → 软链 `releases/v25.0.66`。
+`releases/` 现存多版（_5~_29/_62~_66 等；回滚目标 v25.0.65）。**禁止删除 current 指向的目录**。
 
 ## 9. Backend 目录
 
@@ -79,18 +79,18 @@
 
 | 库 | 路径 | 说明 |
 |----|------|------|
-| 用户库（权威） | `/root/backend-auth/data/yandao_users.db` | 用户/订单/权益/分佣/邀请（73 用户） |
+| 用户库（权威） | `/root/backend-auth/data/yandao_users.db` | 用户/订单/权益/分佣/邀请/Provider（98 用户，2026-08-30） |
 | 社交库 | `/www/yandaoguoxue-backend/data/social.db` | 好友/私聊/群/动态/评论/举报 |
 | 学习库 | `/www/yandaoguoxue-backend/data/academy.db` | 学习平台（57MB）：study_progress 用户进度 + materials/questions/knowledge_points 内容 |
 | ⚠️ 0 字节残留 | `/root/backend-auth/data/social.db`、`…/academy.db` | 历史空壳文件，**不是**真库，勿误用 |
 
 ## 12. 数据表作用
 
-**用户库（21 表）**：`users`（账号+`member_level`+`membership_expiry` 权威会员字段）、`user_assets`（积分/星级，`member_expire_at` 仅派生兼容非权威）、`user_orders`（订单+`extra` JSON 持久化交付键）、`user_entitlements`（单项解锁/AI 时卡权益，换设备恢复）、`user_records`（姓名解析等历史记录）、`ai_quota_usage`（AI 日额度）、`points_transactions`（积分流水）、`user_ratings`、`device_registry`（设备）、`commission_accounts`/`commission_records`/`withdrawals`（分佣三件套）、`partners`/`partner_order_log`/`partner_settlements`（合伙人）、`invite_audit`/`invite_rewards`/`invite_friend_tasks`/`user_invite_relation`（邀请裂变）、`operation_logs`（运营日志）。
+**用户库（21+8 表）**：`users`（账号+`member_level`+`membership_expiry` 权威会员字段）、`user_assets`（积分/星级，`member_expire_at` 仅派生兼容非权威）、`user_orders`（订单+`extra` JSON 持久化交付键）、`user_entitlements`（单项解锁/AI 时卡权益，换设备恢复）、`user_records`（姓名解析等历史记录）、`ai_quota_usage`（AI 日额度）、`points_transactions`（积分流水）、`user_ratings`、`device_registry`（设备）、`commission_accounts`/`commission_records`/`withdrawals`（分佣三件套）、`commission_router_snapshots`（Router 快照幂等）、`partners`/`partner_order_log`/`partner_settlements`（合伙人）+ MASTER-05 新表：`partner_attribution`（归属快照）/`partner_attribution_rebind_log`（改绑审计）/`partner_contracts`（合同）/`partner_channel_codes`（渠道子码）/`providers`/`provider_services`/`service_orders`/`provider_reviews`/`provider_settlements`（Provider 五表）、`invite_audit`/`invite_rewards`/`invite_friend_tasks`/`user_invite_relation`（邀请裂变）、`operation_logs`（运营日志）。
 
-**社交库（15 表）**：`friendships`（好友边，无向对）、`friend_requests`、`friend_remarks`、`chat_messages`（私聊+群消息，`clientMsgId` 幂等）、`user_conversations`（会话未读）、`groups`（含 owner_id）、`follows`、`posts`（动态）、`comments`（扁平，无层级）、`likes`、`favorites`、`notifications`、`blacklists`、`reports`、`sensitive_logs`（敏感词）。
+**社交库（15+1 表）**：`friendships`（好友边，无向对）、`friend_requests`、`friend_remarks`、`chat_messages`（私聊+群消息，`clientMsgId` 幂等）、`user_conversations`（会话未读）、`groups`（含 owner_id）、`follows`、`posts`（动态）、`comments`（**含 parentId 两级层级**，作者/管理员软删除 deleted 列）、`likes`、`favorites`、`notifications`、`blacklists`、`reports`、`sensitive_logs`（敏感词）+ `rate_limit_events`（社交限频计数）。
 
-**学习库（24 表）**：`materials`/`knowledge_points`/`questions`/`exams`/`exam_specs`/`certificates`/`categories`/`learning_paths`（内容与题库）、`study_progress`/`wrong_answers`（用户学习数据）、`ai_call_logs`（内容生成日志）、`organizations`/`org_members`/`org_earnings`（机构，当前空表）。
+**学习库（24+5 表）**：`materials`/`knowledge_points`/`questions`/`exams`/`exam_specs`/`certificates`/`categories`/`learning_paths`（内容与题库）、`study_progress`/`wrong_answers`（用户学习数据）、`ai_call_logs`（内容生成日志）、`organizations`/`org_members`/`org_earnings`（机构，当前空表）+ Question Factory 新表：`exam_blueprints`（蓝图）/`qf_generation_queue`（生成队列）/`qf_quality_metrics`（质量指标）。
 
 ## 13. Backup 路径
 
@@ -100,6 +100,7 @@
 - 特殊快照：`yandao_users_pre_fix100011_*.db`、`social_db_precleanup_*.db`（操作前快照，勿删）。
 - **每周核心表导出**：每周一 08:00 cron → `/root/backend-auth/scripts/weekly_core_export.sh` → 导出 12 张核心表（users/orders/entitlements/commissions/withdrawals/partners/points/friendships/groups/study_progress）为 CSV → tar.gz 打包，保留 4 周。路径：`/root/backup/weekly_exports/`。
 - **异地备份**：腾讯云基础设施层提供快照备份能力（轻量服务器系统盘快照），但COS应用层异地同步未配置（coscmd 已装但 `/root/.cos.conf` 缺失）。腾讯云防护拉满方案见 `docs/TENCENT_CLOUD_PROTECTION_CHECKLIST.md`（D23 批次）。
+- **MASTER-05 备份软件链（2026-08-30 上线）**：`backend_deploy/backupEngine.js` + `objectStorageEngine.js`——三库备份→AES-256-GCM 加密→ObjectStorageService（LOCAL 现行/COS adapter 就绪）→manifest+sha256→retention 策略→restore drill 恢复演练（目标目录生产路径保护 assertNotProductionPath）；管理接口 `/api/admin/oss/backup/*`（run/list/config/restore/drill/drill-status）公网验证 PASS；密钥仅从环境变量 `BACKUP_ENCRYPTION_KEY` 读取，与备份物理分离。COS 异地 = BLOCKED_EXTERNAL_CONFIG（凭证未配，dry-run 已通，不伪称 VERIFIED）。
 
 ## 14. APK 唯一地址（DOWNLOAD SSOT，永久冻结）
 
@@ -224,7 +225,7 @@ v25.0.60 / versionCode 2059 / 包名 `com.yandao.guoxue` / MD5 `e506971da1779ea7
 | GROUP_CHAT | **VERIFIED** | 三角色 + 无主群不变量直接验证 |
 | GROUP_ADMIN | **VERIFIED** | 权限矩阵 + 越权 403 |
 | SOCIAL_FEED | **VERIFIED** | 文字链路全过（图片 API 支持未端到端验收） |
-| COMMENT | **PARTIAL** | 基础评论可用；层级回复+删除 NOT_IMPLEMENTED（无 UI 入口，保持隐藏） |
+| COMMENT | **VERIFIED** | 基础评论 + parentId 两级层级拍平 + 作者/管理员软删除（MASTER-05 第 118~120 章，64 PASS E2E 内含） |
 | LIKE | **VERIFIED** | toggle 幂等净效果正确 |
 | FAVORITE | **VERIFIED** | 收藏/取消/列表/重登正确 |
 | NOTIFICATION | **VERIFIED** | 通知触达+未读+已读不回弹（含群主转让通知） |
@@ -235,8 +236,26 @@ v25.0.60 / versionCode 2059 / 包名 `com.yandao.guoxue` / MD5 `e506971da1779ea7
 | DOWNLOAD | **VERIFIED** | 唯一源 200+MIME+MD5；301 收口；门禁脚本 |
 | ANDROID | **PARTIAL** | APK 三重验证（直链/二进制/版本）；真机全链路 DEVICE_UNAVAILABLE |
 | ADMIN | **VERIFIED** | /admin 唯一入口 + 三级角色 + 驾驶舱含备份状态 |
-| BACKUP | **VERIFIED**（本地） | 三库每日 02:00 + 每周核心表导出 + integrity_check + SOCIAL_BACKUP_GATE 红灯 + 恢复演练 ok；腾讯云快照/安全加固方案已就绪（D23） |
-| SOURCE_SYNC | **VERIFIED** | 四端一致 + GitHub clone 构建实证 |
+| BACKUP | **VERIFIED**（本地） | 三库每日 02:00 + 每周核心表导出 + integrity_check + SOCIAL_BACKUP_GATE 红灯 + 恢复演练 ok + MASTER-05 加密备份软件链（AES-256-GCM+manifest+retention+drill）；腾讯云快照/安全加固方案已就绪（D23） |
+| SOURCE_SYNC | **VERIFIED** | 四端一致 d9bde64 + GitHub clone 构建实证 |
+
+**MASTER-05 新模块矩阵（2026-08-30 最终封板口径）**：
+
+| 模块 | 状态 | 证据 |
+|------|------|------|
+| SOCIAL_RATE_LIMIT | **VERIFIED** | 六类接口限频（好友申请/私聊/群聊/动态/评论/举报），userId+IP 双维度，429+短期窗口，后台可调+Audit；64 PASS |
+| PARTNER_ATTRIBUTION | **VERIFIED** | 归属快照（版本递增+REBOUND 保留）+改绑审计+3年合同+渠道子码；134 PASS |
+| PARTNER_ACCOUNTING | **VERIFIED** | 结算快照字段全集+逐单透明账（脱敏）+双身份 PARTNER_NET_OF_REFERRAL 生产落地 |
+| PROVIDER | **VERIFIED** | 五表+申请审核+服务+订单状态机+支付复用（SERVICE_ORDER 类型）+评价防刷+退款+争议+解冻调度；167 PASS |
+| OFFLINE_CORE/PACK | **VERIFIED** | Manifest+SHA256+.part 原子+幂等同步事件（eventId）+/offline 页面+六分区 StorageManager+自动清理红线跳过；76 PASS |
+| SERVER_GC | **VERIFIED** | /api/admin/storage（report/gc/forbidden/config）+Release 保留+禁止区；公网验证 PASS |
+| QUESTION_FACTORY | **VERIFIED** | 蓝图/库存/生成队列/AI 五态/Exact+Structural 去重（Semantic=PARTIAL 如实）/质量指标/坏题自动复审/成本控制；119 PASS |
+| OBJECT_STORAGE | **VERIFIED**（LOCAL） | 统一 ObjectStorageService+三逻辑分区+访问控制；LOCAL Provider 生产运行，COS=BLOCKED_EXTERNAL_CONFIG |
+| USER_STORAGE | **VERIFIED** | 四类型（SYSTEM_CONTENT/USER_PRIVATE/ORG_PRIVATE/PUBLIC_CONTRIBUTION）+三层（RAW/PARSED/AI_STRUCTURED） |
+| UNIFIED_ADMIN | **VERIFIED** | /api/admin/unified overview 接入 QF/Storage/Backup-DR 真实状态+健康灯；24 PASS |
+| COS_OFFSITE | **BLOCKED_EXTERNAL_CONFIG** | adapter+dry-run 完成不伪称 VERIFIED；Owner Action 配 Secret |
+| TENCENT_SNAPSHOT | **BLOCKED_EXTERNAL_OWNER_ACTION** | 控制台操作，AI 无法替代 |
+| IOS | **BLOCKED_EXTERNAL_OWNER_ACTION** | PLA 未签，软件不重复开发 |
 
 ## 27. 当前已知 PARTIAL
 
@@ -249,23 +268,20 @@ v25.0.60 / versionCode 2059 / 包名 `com.yandao.guoxue` / MD5 `e506971da1779ea7
 7. **`/api/sync` 404 噪音**：旧 APK 调用不存在的端点（8/26 32 次），无功能影响；新版已无此调用。
 8. **AI Fair Usage + Cost Center 第一阶段**：已生产部署（33 PASS 隔离测试 + 后端/前端 v25.0.65 同批上线 + DB 幂等迁移）。遗留：模型价格表仍 `ESTIMATED` 待按混元/DeepSeek 真实账单校准后，Partner 结算方可从 ESTIMATED 转 FINALIZED。
 
-## 28. 当前 NOT_IMPLEMENTED（如实，禁止为全绿临时新增）
+## 28. 当前 NOT_IMPLEMENTED / 已消化（如实，禁止为全绿临时新增）
 
-1. 评论层级回复（API 无 parentId）。
-2. 评论删除（无端点，作者/他人均不可删）。
-3. 社交频率保护（好友申请/消息/评论/动态/举报均无服务端 rate limit；建议后续补 IP/用户级限频）。
-4. 动态图片端到端验收（API 支持 posts.images ≤9 张，未做真实上传验收）。
-5. Provider（师傅）后端：NOT_IMPLEMENTED（本轮不实现）。
-6. Offline / Question Factory：继续排队（本轮不实现）。
-7. 双身份自动结算（Partner 同时为 L1 推荐人）：默认 REVIEW_REQUIRED 暂停 Partner 自动结算，待项目方决策，未做自动双拿。
+1. ~~评论层级回复~~ / ~~评论删除~~ / ~~社交频率保护~~ / ~~Provider 后端~~ / ~~Offline / Question Factory~~ / ~~双身份自动结算~~ —— **以上 6 项已于 MASTER-05（2026-08-30）全部完成并生产上线**，见 §26 新模块矩阵与总账 12.20。
+2. 动态图片端到端验收（API 支持 posts.images ≤9 张，未做真实上传验收）——剩余。
+3. QF 语义去重（Semantic）：**PARTIAL 如实**——Embedding 能力未稳定接入，仅 Exact+Structural 生效，未假装实现。
 
 ## 29. 当前风险（按优先级）
 
-1. **单机单盘**：全部数据在一台腾讯云北京轻量服务器；**腾讯云快照是性价比最高的第一道防线**（控制台开启自动快照策略，3 分钟搞定）。COS 异地同步是第二道防线（需提供 API 密钥后开通）。完整方案见 `docs/TENCENT_CLOUD_PROTECTION_CHECKLIST.md`。
+1. **单机单盘**：全部数据在一台腾讯云北京轻量服务器；**腾讯云快照是性价比最高的第一道防线**（控制台开启自动快照策略，3 分钟搞定）。COS 异地同步是第二道防线（需提供 API 密钥后开通，MASTER-05 adapter+dry-run 已备）。完整方案见 `docs/TENCENT_CLOUD_PROTECTION_CHECKLIST.md`。
 2. **旧 APK 用户 AI 不可用**：≤2058 版不带 token 被 401；观测影响 1-2 台设备；升级 latest.apk 即恢复——**推广前应引导存量用户升级**。
-3. **无社交限频**：恶意刷屏/刷申请无服务端拦截。
+3. ~~无社交限频~~ **已消化**：MASTER-05 六类接口限频已上线（好友申请 10/时、私聊 30/分、群聊 30/分、动态 6/10分、评论 20/10分、举报 10/时；后台可调）。
 4. **服务器直连 GitHub 不稳**：发布依赖本地推送 + bundle 中转，流程勿改（见 §30）。
-5. PM2 累计重启 194 次（历史累计，unstable_restarts=0，当前稳定 30m+ 无 error）。
+5. PM2 累计重启 204 次（历史累计，unstable_restarts=0，当前稳定无 error）。
+6. **PowerShell→SSH 引号剥离坑**（本轮实测确诊）：Windows PowerShell 经 ssh 传双引号命令时引号被剥离，`Authorization: Bearer` header 变空值——**生产鉴权本身正常**；后续远程 curl 验证一律写 .sh 脚本上传执行（verify_modules3.sh 模式），勿内联。
 
 ## 30. 部署步骤（小步发布，每批一个主题）
 
