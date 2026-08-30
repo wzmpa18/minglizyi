@@ -45,9 +45,12 @@ const DOUBLE_IDENTITY_POLICIES = {
 
 const DEFAULT_CONFIG = {
   enabled: true,
-  formulaVersion: '1.0.0',               // ROUTER_FORMULA_VERSION
+  formulaVersion: '1.1.0',               // ROUTER_FORMULA_VERSION（1.1.0 = 双身份正式采用 PARTNER_NET_OF_REFERRAL）
   effectiveFrom: '2026-08-30',           // ROUTER_EFFECTIVE_FROM（新订单据此切 Router）
-  doubleIdentityPolicy: DOUBLE_IDENTITY_POLICIES.REVIEW_REQUIRED,
+  // FINAL-OPERATIONS-COMPLETION-MASTER-05 第四章：商业决策已由项目方确定
+  //   PARTNER_NET_OF_REFERRAL：普通 L1 15% + L2 5% 正常照发；
+  //   Partner 50% 基数必须先扣除普通推广佣金（partnerEngine 净收入口径）。
+  doubleIdentityPolicy: DOUBLE_IDENTITY_POLICIES.PARTNER_NET_OF_REFERRAL,
   moneyUnit: 'cents',
   enforceConservation: true,             // 金额守恒校验
   enforceIdempotency: true,              // 幂等拦截
@@ -115,6 +118,8 @@ function ensureSchema() {
       partner_attribution_id INTEGER,
       double_identity INTEGER NOT NULL DEFAULT 0,
       double_identity_policy TEXT,
+      -- 费率快照（第十二章：rateSnapshot，入账时点的比例留档）
+      rate_snapshot TEXT,
       -- 金额（分，第五十五~五十六部分）
       gross_cents INTEGER NOT NULL DEFAULT 0,
       payment_fee_cents INTEGER NOT NULL DEFAULT 0,
@@ -135,6 +140,34 @@ function ensureSchema() {
     );
     CREATE INDEX IF NOT EXISTS idx_router_review ON commission_router_snapshots(status);
   `);
+  // 已建旧表的环境幂等补列（只加不删，符合总账冻结规则）
+  const cols = db.prepare("PRAGMA table_info(commission_router_snapshots)").all().map(c => c.name);
+  if (cols.length && !cols.includes('rate_snapshot')) {
+    db.exec('ALTER TABLE commission_router_snapshots ADD COLUMN rate_snapshot TEXT');
+  }
+}
+
+/** 费率快照（第十二章 rateSnapshot）：入账时点各比例留档，防事后改率争议 */
+function buildRateSnapshot() {
+  const rates = { referralL1Percent: 15, referralL2Percent: 5, partnerPercent: 50, nurturePercent: 5 };
+  try {
+    const cc = commissionEngine.getConfig && commissionEngine.getConfig();
+    if (cc && cc.ratios) {
+      rates.referralL1Percent = parseInt(cc.ratios.level1, 10) || 15;
+      rates.referralL2Percent = parseInt(cc.ratios.level2, 10) || 5;
+    }
+  } catch (e) { /* 用默认值 */ }
+  try {
+    const pc = partnerEngine.getConfig && partnerEngine.getConfig();
+    if (pc) {
+      rates.partnerPercent = Number(pc.commissionPercent) || 50;
+      rates.nurturePercent = Number(pc.nurturePercent) || 5;
+      rates.paymentFeePercent = Number(pc.feePercent) || 0;
+      rates.storePercent = Number(pc.storePercent) || 0;
+      rates.aiCostPercent = Number(pc.aiCostPercent) || 0;
+    }
+  } catch (e) { /* 用默认值 */ }
+  return JSON.stringify(rates);
 }
 
 // ==================== 身份解析 ====================
@@ -192,6 +225,7 @@ function buildSnapshot(db, order, ids, results) {
     order_no: orderNo,
     payer_user_id: parseInt(order.userId, 10) || 0,
     formula_version: getConfig().formulaVersion,
+    rate_snapshot: buildRateSnapshot(),
     direct_referrer_id: ids.directReferrerId,
     level2_referrer_id: ids.level2ReferrerId,
     partner_attribution_id: ids.partnerAttributionId,
@@ -213,15 +247,15 @@ function buildSnapshot(db, order, ids, results) {
 
 function insertSnapshot(db, snap, status, note) {
   db.prepare(`INSERT INTO commission_router_snapshots (
-      order_no, payer_user_id, formula_version, direct_referrer_id, level2_referrer_id,
+      order_no, payer_user_id, formula_version, rate_snapshot, direct_referrer_id, level2_referrer_id,
       partner_attribution_id, double_identity, double_identity_policy,
       gross_cents, payment_fee_cents, referral_l1_cents, referral_l2_cents,
       ai_cost_cents, ai_cost_source, partner_revenue_cents, nurture_revenue_cents,
       refund_cents, platform_revenue_cents, conservation_ok, status, note, created_at, updated_at
     ) VALUES (
-      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
     )`).run(
-    snap.order_no, snap.payer_user_id, snap.formula_version, snap.direct_referrer_id, snap.level2_referrer_id,
+    snap.order_no, snap.payer_user_id, snap.formula_version, snap.rate_snapshot, snap.direct_referrer_id, snap.level2_referrer_id,
     snap.partner_attribution_id, snap.double_identity, snap.double_identity_policy,
     snap.gross_cents, snap.payment_fee_cents, snap.referral_l1_cents, snap.referral_l2_cents,
     snap.ai_cost_cents, snap.ai_cost_source, snap.partner_revenue_cents, snap.nurture_revenue_cents,
@@ -270,7 +304,11 @@ function processPaidOrder(order) {
     callPartner();
   } else if (policy === DOUBLE_IDENTITY_POLICIES.STACK_ALLOWED ||
              policy === DOUBLE_IDENTITY_POLICIES.PARTNER_NET_OF_REFERRAL) {
-    // 项目方明确允许双拿 / 净额（partnerEngine 已扣普通佣金成本）
+    // PARTNER_NET_OF_REFERRAL（项目方已决策 · FINAL-MASTER-05）：
+    //   普通 L1 15% / L2 5% 照发 → partnerEngine.grantPartnerCommission 内部先扣除
+    //   该订单普通两级佣金实发额（normalCents）再计 50%：
+    //   net = gross - paymentFee - aiCost - (L1 + L2) - refund
+    //   partnerRevenue = net × 50%（禁止按 gross 直接 ×50%，第六章）
     callReferral();
     callPartner();
   } else if (policy === DOUBLE_IDENTITY_POLICIES.REFERRAL_PRIORITY) {
@@ -288,6 +326,10 @@ function processPaidOrder(order) {
   if (ids.doubleIdentity && policy === DOUBLE_IDENTITY_POLICIES.REVIEW_REQUIRED) {
     status = SETTLEMENT_STATUS.REVIEW_REQUIRED;
     note = `双身份订单：Partner(${ids.partnerAttributionId}) 同时为 L1 推荐人，Partner 侧待项目方决策（BUSINESS_DECISION_REQUIRED）`;
+  } else if (ids.doubleIdentity && policy === DOUBLE_IDENTITY_POLICIES.PARTNER_NET_OF_REFERRAL) {
+    // 第15~17章：AI 成本口径为 ESTIMATED，快照记 ESTIMATED；月度结算单仍走 PENDING_REVIEW → 财务确认 → FINALIZED
+    status = SETTLEMENT_STATUS.ESTIMATED;
+    note = `双身份订单按 PARTNER_NET_OF_REFERRAL：L1/L2 照发，Partner 50% 基数=毛收入-手续费-AI成本-普通佣金-退款（aiCost=${'ESTIMATED'}）`;
   } else if (ids.doubleIdentity) {
     status = SETTLEMENT_STATUS.SETTLED;
     note = `双身份订单按策略 ${policy} 结算`;
@@ -394,10 +436,15 @@ function reconcileOrder(orderNo) {
   }
 
   const discrepancies = [];
-  if (actual.referralL1 !== snap.referral_l1_cents) discrepancies.push(`L1快照=${snap.referral_l1_cents} 实际=${actual.referralL1}`);
-  if (actual.referralL2 !== snap.referral_l2_cents) discrepancies.push(`L2快照=${snap.referral_l2_cents} 实际=${actual.referralL2}`);
-  if (actual.partner !== snap.partner_revenue_cents) discrepancies.push(`partner快照=${snap.partner_revenue_cents} 实际=${actual.partner}`);
-  if (actual.nurture !== snap.nurture_revenue_cents) discrepancies.push(`nurture快照=${snap.nurture_revenue_cents} 实际=${actual.nurture}`);
+  // 退款订单：账本记录已按冲正比例 REVERSED，快照分项保留原始入账事实（历史口径），
+  // 二者数值差异属正常业务，不做分项比对（退款守恒由引擎冲正比例保证）。
+  const refunded = snap.status === SETTLEMENT_STATUS.REVERSED || snap.status === SETTLEMENT_STATUS.PARTIAL_REFUND;
+  if (!refunded) {
+    if (actual.referralL1 !== snap.referral_l1_cents) discrepancies.push(`L1快照=${snap.referral_l1_cents} 实际=${actual.referralL1}`);
+    if (actual.referralL2 !== snap.referral_l2_cents) discrepancies.push(`L2快照=${snap.referral_l2_cents} 实际=${actual.referralL2}`);
+    if (actual.partner !== snap.partner_revenue_cents) discrepancies.push(`partner快照=${snap.partner_revenue_cents} 实际=${actual.partner}`);
+    if (actual.nurture !== snap.nurture_revenue_cents) discrepancies.push(`nurture快照=${snap.nurture_revenue_cents} 实际=${actual.nurture}`);
+  }
 
   const isDoubleDraft = snap.status === SETTLEMENT_STATUS.REVIEW_REQUIRED && snap.double_identity === 1;
 
@@ -472,6 +519,7 @@ module.exports = {
   saveConfig,
   getDb,
   ensureSchema,
+  buildRateSnapshot,
   resolveIdentities,
   processPaidOrder,
   processRefund,
