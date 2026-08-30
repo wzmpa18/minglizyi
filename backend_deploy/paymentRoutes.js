@@ -610,53 +610,49 @@ function updateOrderRecord(orderId, status, channel) {
     }
   }
   persistOrder(order);
-  // P8-DISTRIBUTION-COMMISSION-AUTO：支付成功→一级分佣自动记账（幂等，commissionEngine 内部防重）
+  // COMMISSION_ROUTER（AI-PRODUCTION-SEAL-AND-COMMISSION-ROUTER-04 第四十一~四十二部分）：
+  // 分佣唯一结算入口——支付/退款只进 Router 一次，禁止 commissionEngine/partnerEngine 双引擎独立调用导致重复计提。
   if (status === ORDER_STATUS.PAID) {
     try {
-      const commissionEngine = require('./commissionEngine');
-      const cr = commissionEngine.grantCommission(order);
-      if (cr && cr.granted) {
-        // v25.0.47_10: 分佣结果回写订单（后台订单中心显示真实佣金状态）
-        order.commissionStatus = 'COMMISSION_FROZEN';
-        order.commissionCents = cr.commissionCents;
-        order.commissionInviterId = cr.inviterId;
+      const commissionRouter = require('./commissionRouter');
+      const rr = commissionRouter.processPaidOrder(order);
+      if (rr && rr.ok) {
+        const cr = rr.referral;
+        if (cr && cr.granted) {
+          // v25.0.47_10: 分佣结果回写订单（后台订单中心显示真实佣金状态）
+          order.commissionStatus = 'COMMISSION_FROZEN';
+          order.commissionCents = cr.commissionCents;
+          order.commissionInviterId = cr.inviterId;
+          console.log(`[payment] 一级分佣已入账 orderId=${order.orderId} inviter=${cr.inviterId} commission=${cr.commissionCents}分`);
+        } else if (cr && cr.reason) {
+          order.commissionStatus = 'NO_COMMISSION:' + cr.reason;
+        }
+        const pr = rr.partner;
+        if (pr && pr.granted) {
+          order.partnerCommissionStatus = 'PARTNER_FROZEN';
+          order.partnerId = pr.partnerId;
+          console.log(`[payment] 合伙人渠道分佣已入账 orderId=${order.orderId} partner=${pr.partnerId} net=${pr.netCents}分 佣金=${pr.commissionCents}分 培养奖励=${pr.nurtureCents}分`);
+        } else if (rr.reviewRequired) {
+          // 双身份订单（Partner 同时为 L1 推荐人）默认 REVIEW_REQUIRED，Partner 侧待项目方决策
+          order.partnerCommissionStatus = 'PARTNER_REVIEW_REQUIRED';
+          console.log(`[payment] 双身份订单标 REVIEW_REQUIRED（Partner 侧待决策） orderId=${order.orderId}`);
+        } else if (pr && pr.reason && pr.reason !== 'NO_CHANNEL_PARTNER' && pr.reason !== 'PARTNER_SYSTEM_DISABLED') {
+          order.partnerCommissionStatus = 'NO_PARTNER:' + pr.reason;
+        }
         persistOrder(order);
-        console.log(`[payment] 一级分佣已入账 orderId=${order.orderId} inviter=${cr.inviterId} commission=${cr.commissionCents}分`);
-      } else if (cr && cr.reason) {
-        order.commissionStatus = 'NO_COMMISSION:' + cr.reason;
-        persistOrder(order);
+      } else if (rr && rr.reason && rr.reason !== 'DUPLICATE') {
+        console.warn(`[payment] 分佣Router返回异常 orderId=${order.orderId} reason=${rr.reason}`);
       }
     } catch (e) {
-      console.error('[payment] 分佣记账失败:', e.message);
-    }
-    // DEV-V22 合伙人渠道分佣V2：支付成功→渠道合伙人基础佣金50%+直属培养奖励5%（幂等，engine内部防重）
-    try {
-      const partnerEngine = require('./partnerEngine');
-      const pr = partnerEngine.grantPartnerCommission(order);
-      if (pr && pr.granted) {
-        order.partnerCommissionStatus = 'PARTNER_FROZEN';
-        order.partnerId = pr.partnerId;
-        console.log(`[payment] 合伙人渠道分佣已入账 orderId=${order.orderId} partner=${pr.partnerId} net=${pr.netCents}分 佣金=${pr.commissionCents}分 培养奖励=${pr.nurtureCents}分`);
-      } else if (pr && pr.reason && pr.reason !== 'NO_CHANNEL_PARTNER' && pr.reason !== 'PARTNER_SYSTEM_DISABLED') {
-        order.partnerCommissionStatus = 'NO_PARTNER:' + pr.reason;
-      }
-    } catch (e) {
-      console.error('[payment] 合伙人分佣记账失败:', e.message);
+      console.error('[payment] 分佣Router记账失败:', e.message);
     }
   }
-  // P8：退款→退佣冲正（全额按订单原额比例冲回）
+  // 退款→退佣冲正（COMMISSION_ROUTER 唯一冲正入口，全额/按比例，幂等）
   if (status === ORDER_STATUS.REFUNDED) {
     try {
-      const commissionEngine = require('./commissionEngine');
-      commissionEngine.reverseCommission(orderId);
+      require('./commissionRouter').processRefund(orderId);
     } catch (e) {
       console.error('[payment] 退佣冲正失败:', e.message);
-    }
-    // DEV-V22 合伙人退款冲正：扣回渠道佣金与培养奖励（幂等）
-    try {
-      require('./partnerEngine').reversePartnerCommission(orderId);
-    } catch (e) {
-      console.error('[payment] 合伙人冲正失败:', e.message);
     }
   }
   return order;
