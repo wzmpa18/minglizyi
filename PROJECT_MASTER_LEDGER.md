@@ -18,7 +18,7 @@
 | 后端 Runtime Commit | `530f39e`（feat(commission-router)：分佣唯一结算引擎 + 双身份 REVIEW_REQUIRED + 隔离测试 77 PASS；`2ba05a8` fix _logCost 作用域 bug；`d5cb12e` requestId 幂等 + 权益快照；下限 `16608a5` P0 安全修复） |
 | 前端 Web 构建版本 | **v25.0.65**（buildId `v25.0.65_D20260830`，builtAt 2026-08-30T01:22:05Z，含 `/admin/ai-cost` AI 成本中心页面） |
 | 后端发布版本 | v25.0.65（AI Phase 1 生产上线 + Commission Router 批次） |
-| Document Head | `530f39e`（GitHub = 本地 = 服务器源码仓 = 生产运行目录 MD5 一致） |
+| Document Head | 本地 `b493913`（领先 origin/main 2 提交未 push：`657dc5f` 双身份切换[生产已部署]+`b493913` Partner 归属闭环[未部署]）；GitHub origin/main = `f4e1557`；生产运行代码 = 双身份 Router 版（生产 commissionRouter.js 与 657dc5f 内容一致，SSH 核实）；生产 Web current → v25.0.65 |
 | APK / versionCode | 25.0.60 / 2059（`/api/public/app-version` 生产下发值，本轮无 Android 原生变更，APK 不重建） |
 | 生产服务器 | 82.156.228.87（腾讯云轻量 北京，root） |
 | 生产后端路径 | `/www/yandaoguoxue-backend`（PM2 `yandaoguoxue-backend`，端口 3001） |
@@ -622,3 +622,38 @@ gh workflow run ios-build.yml --repo wzmpa18/minglizyi --ref main
 2. 模型价格表按腾讯云混元/DeepSeek 真实账单校准（当前 ESTIMATED）后方可将 Partner 结算从 ESTIMATED 转 FINALIZED。
 
 **提交**：`530f39e`（commission-router，含 77 PASS 测试）等，四端一致。文档头集中在本文与 FINAL_PROJECT_HANDOVER.md，未新增碎片报告。
+
+### 12.18 双身份正式采用 PARTNER_NET_OF_REFERRAL（FINAL-OPERATIONS-COMPLETION-MASTER-05 第四~十七章，2026-08-30）
+
+**商业决策（指令第四章，项目方已确定，无需再问）**：`doubleIdentityPolicy = PARTNER_NET_OF_REFERRAL` 正式启用——普通 L1 15% + L2 5% 照发；Partner 50% 基数 = DISTRIBUTABLE_REVENUE（实付 − 手续费 − AI 成本 − 普通推广佣金 − 退款），禁止对毛收入直接拿 50%。
+
+- `commissionRouter.js`：`DEFAULT_CONFIG.doubleIdentityPolicy` 切换为 `PARTNER_NET_OF_REFERRAL`，`formulaVersion` 升 **1.1.0**；`rateSnapshot` 费率快照入 `commission_router_snapshots` 留档。
+- 退款守恒口径修正：快照分项 = **原始入账事实**（退款不改历史分项，`refund_cents` 单列），对账跳过退款订单分项校验。
+- ROUTER_EFFECTIVE_FROM（2026-08-30）之前历史佣金**不重算**（指令第十一章）。
+- 隔离测试 `commission_router_test.js` **112 PASS / 0 FAIL**（Partner=L1 / Partner=L1+有L2 / 全额退款 / 部分退款 / 培养 / 重复 PAID 回调 / 重复 refund 回调 / 金额守恒 / 幂等，第十三章全场景）。
+- 金额纪律：全程整数「分」，禁止 JS float 算钱（第十四章）。
+- **提交**：`657dc5f`。**生产已落地（2026-08-30 SSH 核实）**：生产 `commissionRouter.js` 含 `PARTNER_NET_OF_REFERRAL`，生产 `data/commission_router_config.json` = `formulaVersion 1.1.0 + doubleIdentityPolicy PARTNER_NET_OF_REFERRAL`，PM2 online 94m，`/api/health` 200。Git 尚未 push GitHub（本地领先 origin 2 提交，见 12.19 部署状态）。
+
+### 12.19 Partner 商业归属最终闭环（FINAL-OPERATIONS-COMPLETION-MASTER-05 第十八~三十章，2026-08-30）
+
+**定位**：Partner 渠道归属、合同、改绑审计、结算快照、逐单透明账、用户列表、邀请只读统计、渠道子码——8 个模块一次成型。**复用 `users.invited_by` + `user_invite_relation`，零新建第二棵邀请树（第十八章）**。
+
+**新增/改造文件（提交 `b493913`，4 文件 1455 行，未部署生产）**：
+
+| 文件 | 内容 |
+|------|------|
+| `backend_deploy/partnerEngine.js`（改） | 新表 4 张：`partner_attribution`（归属快照，`attribution_version` 版本递增）/ `partner_attribution_rebind_log`（改绑审计）/ `partner_contracts`（合同）/ `partner_channel_codes`（渠道子码）；旧表补列：`partner_order_log.refund_cents`、`partner_settlements.refund_cents/ai_cost_source/formula_version/contract_version/final_amount_cents`；`findChannelPartner` 快照优先 + 首次归属 `persistAttributionSnapshot` 落库；`channelUserIds` 合并快照 ACTIVE 用户（改绑用户计入渠道）；`maskUserId` 短 UID 彻底脱敏（≤4 位返回 `****`）；`generateMonthlySettlements` 补全结算快照字段（合同版本关联） |
+| `backend_deploy/partnerAttribution.js`（新） | `rebindAttribution`（SUPER_ADMIN 改绑：原因≥2 字符 + 版本递增 + 旧版本标 REBOUND 保留 + rebind_log 审计）；`createContract/renewContract/terminateContract/updateContractPolicy`（3 年默认合同，期限与收益规则分离，`NET50_POSTEXPIRY_STOP`/`NET50_POSTEXPIRY_CONTINUE` 两种口径，到期扫描 `expireDueContracts` 每日调度 `initScheduler`）；`partnerOrders`（Partner 逐单脱敏账 ESTIMATED 口径）/ `adminPartnerOrders`（管理端不脱敏）；`partnerUsersDetailed`（第 27 章字段全集：UID/昵称/脱敏手机/注册/最后活跃/会员等级/累计消费/最近消费/模块次数/是否付费）；`userInviteStats`（TOTAL_RELATIONS 只读）；`createChannelCode/listChannelCodes/setChannelCodeStatus`（子码 CRUD）；`partnerMySettlements/myContract`（本人视图）；`listAttributions/getAttributionDetail`（管理端版本链+审计链） |
+| `backend_deploy/partnerRoutes.js`（改） | 用户端新增 `/my/orders`（逐单账）、`/my/settlements`、`/my/contracts`，升级 `/my/users`（字段全集）；管理端新增 `/attribution`、`/attribution/lookup`、`/attribution/rebind`（SUPER_ADMIN+audit）、`/contracts` CRUD、`/partners/:userId/channel-codes`、`/invite-stats`；启动时合同到期扫描调度 |
+| `backend_deploy/partner_attribution_test.js`（新） | 14 场景隔离测试 **134 PASS / 0 FAIL** |
+
+**核心行为规则**：
+- 第十九~二十章：首次合法归属（INVITE_CHAIN 链式解析或 ADMIN_REBIND）后，`invited_by` 后续变化**不再静默改绑**（快照优先）；改绑仅 SUPER_ADMIN + 原因 + Audit Log，版本链全保留（v1 REBOUND / v2 ACTIVE）。
+- 第二十二~二十三章：合同期限（`contract_start/end`，默认 3 年 1~10 年可配）与历史渠道收益规则（`revenue_right_policy`）**分开记录**；STOP 口径到期停止新计佣（`effective_to = contract_end`，到期日当天即失效）；CONTINUE 口径到期继续计佣（`effective_to = NULL`）；合同到期/终止**不删除历史归属/订单/佣金**（renewal_status=EXPIRED/TERMINATED 仅状态标记）；终止当日即停（`effective_to = 终止日`）。
+- 第二十四~二十五章：月度结算单含 `refund_cents`（退款留痕）、`ai_cost_source=ESTIMATED`（第 15~16 章：估算成本禁冒充真实成本）、`formula_version`、`contract_version`、`final_amount_cents`（=base+nurture，整数分守恒）；幂等（同月重复生成 0 新建）；Partner 逐单账字段全集（订单时间/类型/脱敏用户/实付/手续费/普通佣金成本/预计 AI 成本/退款/可分配净收入/Partner 50%/结算状态）。
+- 第二十六~二十七章：Partner 端一切接口仅脱敏字段（`maskUserId`/`maskPhone`），禁输出聊天正文/Prompt/命理输入/完整手机号；用户列表仅第 27 章白名单字段。
+- 第二十九~三十章：邀请统计只读（`readonly: true`），后台可查谁邀请了他/直接邀请数/二级关系数/TOTAL_RELATIONS，禁改写关系。
+
+**回归**：`commission_router_test.js` 112 PASS / 0 FAIL（双身份基线无回归）；`p8_commission_e2e_test.js` 本地因硬编码服务器路径无法运行（历史遗留，非本轮引入）。
+
+**部署状态**：代码已 commit（`b493913`）+ 隔离测试全绿，**未部署生产**（按指令第一百三十五~一百三十七章分批纪律，随 Release A「Partner 最终闭环」批次统一构建部署）。表结构迁移全部 `CREATE TABLE IF NOT EXISTS` / `ALTER TABLE ADD COLUMN` 幂等，生产上线零破坏。
