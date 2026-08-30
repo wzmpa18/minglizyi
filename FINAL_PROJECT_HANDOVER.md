@@ -22,7 +22,7 @@
 |------|------|
 | Web（生产 current） | **v25.0.67**（buildId `v25.0.67_D20260831`，builtAt 2026-08-30T16:25:08Z；SEO 批次：13个C端差异化关键词落地页+B端方案页+robots/sitemap 部署于 /tools/ /learn/ /app/ /b/；含 v25.0.66 全部功能） |
 | 后端 API | package 1.1.0（PM2: yandaoguoxue-backend，online；新路由 QF/OSS/Offline/存储GC/统一后台 全挂载；SEO 批次零后端变更未重启） |
-| Android APK | **v25.0.60 / versionCode 2059**（本轮无 Android 原生变更，APK 不重建；Offline 走 Web 层 /offline 页面） |
+| Android APK | **v25.0.67 / versionCode 2067**（2026-08-31 重建对齐线上 Web：SEO 18 页烧录内置、统一分发源 latest.apk 原子替换、升级提示 2067+公告已发布、单一来源门禁 18/18 PASS；构建脚本 `backend_deploy/build_android_v25_0_67.sh` 可复跑） |
 
 ## 3. 当前 Commit
 
@@ -107,17 +107,18 @@ SEO 静态落地页在 current 内：`/tools/`、`/learn/`、`/app/`、`/b/` + `
 ## 14. APK 唯一地址（DOWNLOAD SSOT，永久冻结）
 
 **`https://yandaoguoxue.yandao.vip/app-download/latest.apk`**
-- 公网实测：HTTP 200 / `application/vnd.android.package-archive` / 11,501,732 B（>5MB）。
+- 公网实测：HTTP 200 / `application/vnd.android.package-archive` / 11,714,186 B（>5MB）。
 - 磁盘真实路径：`/var/www/yandao.vip/app-download/latest.apk`（目录内**仅此一个** APK 文件）。
 - **任何新版本发布 = 替换这一个文件**，前端公开页面永远不许再出现带版本号的 APK 文件名；版本号包只做服务器内部归档。
 - 防回归门禁：`backend_deploy/scripts/apk_url_single_source_gate.sh`（发布前必跑：扫全仓旧地址 + 包名/versionCode/versionName/MD5 校验，任一失败禁止发布）。
 
 ## 15. Android 版本
 
-v25.0.60 / versionCode 2059 / 包名 `com.yandao.guoxue` / MD5 `e506971da1779ea7a044ad5330878fc4`（SHA256 前缀 `46a01207…`）。
+v25.0.67 / versionCode 2067 / 包名 `com.yandao.guoxue` / MD5 `288ed27772e231936b28365193aea647`（SHA256 前缀 `a5ed355e…`；2026-08-31 构建，内置资源=生产 v25.0.67 全量含 SEO 18 页，签名证书与历史一致）。
 - 此版起前端 AI 调用携带 Bearer Token（`src/lib/aiService.ts`）。
 - `data/app-release-config.json`：`downloadUrl` 已指向唯一源；`forceUpdate: false`。
 - 旧版 APK（≤2058）不带 token：AI 调用已被 401 封口（见 §20），用户升级即恢复。
+- 手机 v25.0.60/2059 及更早：启动后 AppUpgradeChecker 比对服务器 2067 自动弹升级引导 → /friend → latest.apk。
 
 ## 16. iOS 状态
 
