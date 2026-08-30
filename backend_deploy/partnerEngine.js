@@ -133,7 +133,86 @@ function getDb() {
     );
     CREATE UNIQUE INDEX IF NOT EXISTS idx_settlement_partner_period ON partner_settlements(partner_id, period);
     CREATE INDEX IF NOT EXISTS idx_settlement_status ON partner_settlements(status);
+
+    -- FINAL-OPERATIONS-COMPLETION-MASTER-05 第十九章：Partner Attribution Snapshot（渠道用户归属快照）
+    CREATE TABLE IF NOT EXISTS partner_attribution (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      partner_id INTEGER NOT NULL,
+      channel_code TEXT DEFAULT '',
+      source TEXT NOT NULL DEFAULT 'INVITE_CHAIN',
+      bound_at TEXT NOT NULL,
+      contract_id INTEGER,
+      effective_from TEXT,
+      effective_to TEXT,
+      attribution_version INTEGER NOT NULL DEFAULT 1,
+      status TEXT NOT NULL DEFAULT 'ACTIVE',
+      rebind_reason TEXT,
+      rebind_by TEXT,
+      rebind_at TEXT,
+      updated_at TEXT
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_attr_user_ver ON partner_attribution(user_id, attribution_version);
+    CREATE INDEX IF NOT EXISTS idx_attr_partner ON partner_attribution(partner_id, status);
+    CREATE INDEX IF NOT EXISTS idx_attr_active ON partner_attribution(user_id, status);
+
+    CREATE TABLE IF NOT EXISTS partner_attribution_rebind_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      from_partner_id INTEGER,
+      to_partner_id INTEGER NOT NULL,
+      reason TEXT NOT NULL,
+      operator TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_rebind_log_user ON partner_attribution_rebind_log(user_id);
+
+    CREATE TABLE IF NOT EXISTS partner_contracts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      partner_id INTEGER NOT NULL,
+      contract_no TEXT NOT NULL UNIQUE,
+      contract_start TEXT NOT NULL,
+      contract_end TEXT,
+      contract_years INTEGER NOT NULL DEFAULT 3,
+      contract_version TEXT NOT NULL DEFAULT 'V1',
+      renewal_status TEXT NOT NULL DEFAULT 'ACTIVE',
+      revenue_right_policy TEXT NOT NULL DEFAULT 'NET50_POSTEXPIRY_STOP',
+      status TEXT NOT NULL DEFAULT 'ACTIVE',
+      note TEXT DEFAULT '',
+      created_at TEXT,
+      updated_at TEXT,
+      reviewed_by TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_contract_partner ON partner_contracts(partner_id, status);
+
+    CREATE TABLE IF NOT EXISTS partner_channel_codes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      partner_id INTEGER NOT NULL,
+      code TEXT NOT NULL UNIQUE,
+      label TEXT DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'ACTIVE',
+      created_at TEXT,
+      updated_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_channel_code_partner ON partner_channel_codes(partner_id, status);
   `);
+  const polCols = db.prepare("PRAGMA table_info(partner_order_log)").all().map(c => c.name);
+  if (polCols.length && !polCols.includes('refund_cents')) {
+    db.exec('ALTER TABLE partner_order_log ADD COLUMN refund_cents INTEGER NOT NULL DEFAULT 0');
+  }
+  const setCols = db.prepare("PRAGMA table_info(partner_settlements)").all().map(c => c.name);
+  if (setCols.length) {
+    const additions = [
+      ['refund_cents', 'INTEGER NOT NULL DEFAULT 0'],
+      ['ai_cost_source', "TEXT DEFAULT 'ESTIMATED'"],
+      ['formula_version', "TEXT DEFAULT '1.1.0'"],
+      ['contract_version', 'TEXT'],
+      ['final_amount_cents', 'INTEGER NOT NULL DEFAULT 0'],
+    ];
+    for (const [name, type] of additions) {
+      if (!setCols.includes(name)) db.exec(`ALTER TABLE partner_settlements ADD COLUMN ${name} ${type}`);
+    }
+  }
   _db = db;
   return db;
 }
@@ -211,12 +290,24 @@ function applyPartner(params) {
 
 /**
  * 订单渠道归属：沿 users.invited_by 向上找最近的已开通合伙人（跳过下单人本人）
+ * MASTER-05 第十九~二十章：快照优先——
+ *   1. 存在 ACTIVE 归属快照且在有效期内 → 直接返回快照 partner_id
+ *      （首次合法归属后，后续 invited_by 变化不再静默改绑归属）
+ *   2. 无快照 → 沿链动态解析（原逻辑不变，禁止第二棵邀请树）→ 落库快照
+ *   3. 快照过期（effective_to < 今天，合同到期 POSTEXPIRY_STOP）→ null 停止计佣，
+ *      历史归属行/订单/佣金全部保留（第二十三章）
  * @returns {number|null} 合伙人 user_id
  */
 function findChannelPartner(userId) {
   const db = getDb();
   let cur = parseInt(userId, 10);
   if (!cur || isNaN(cur)) return null;
+  // 快照优先（表由 getDb ensureSchema 建立）
+  const snap = db.prepare("SELECT partner_id, effective_to FROM partner_attribution WHERE user_id = ? AND status = 'ACTIVE' ORDER BY attribution_version DESC LIMIT 1").get(cur);
+  if (snap) {
+    if (snap.effective_to && String(snap.effective_to) <= new Date().toISOString().slice(0, 10)) return null;
+    return snap.partner_id;
+  }
   for (let i = 0; i < 64; i++) {
     let row;
     try {
@@ -225,10 +316,44 @@ function findChannelPartner(userId) {
     if (!row || !row.invited_by) return null;
     const up = parseInt(row.invited_by, 10);
     if (!up || isNaN(up) || up === cur) return null;
-    if (isApprovedPartner(up)) return up;
+    if (isApprovedPartner(up)) {
+      persistAttributionSnapshot(cur, up);
+      return up;
+    }
     cur = up;
   }
   return null;
+}
+
+/** 首次合法归属落库快照（第十九章字段全集；已有任何版本记录则不动，禁止静默改绑） */
+function persistAttributionSnapshot(userId, partnerId) {
+  const db = getDb();
+  try {
+    const existing = db.prepare('SELECT 1 FROM partner_attribution WHERE user_id = ? LIMIT 1').get(userId);
+    if (existing) return;
+    let contractId = null;
+    let effectiveTo = null;
+    try {
+      const c = db.prepare("SELECT id, contract_end, revenue_right_policy FROM partner_contracts WHERE partner_id = ? AND status = 'ACTIVE' ORDER BY id DESC LIMIT 1").get(partnerId);
+      if (c) {
+        contractId = c.id;
+        // 合同期限与收益规则分开（第二十二章）：CONTINUE 到期后历史渠道用户继续计佣
+        if (String(c.revenue_right_policy) !== 'NET50_POSTEXPIRY_CONTINUE') effectiveTo = c.contract_end || null;
+      }
+    } catch (e) { /* partner_contracts 未建时忽略 */ }
+    let channelCode = '';
+    try {
+      const u = db.prepare('SELECT invite_code FROM users WHERE user_id = ?').get(partnerId);
+      channelCode = (u && u.invite_code) ? String(u.invite_code).slice(0, 50) : '';
+    } catch (e) { /* ignore */ }
+    const now = nowIso();
+    db.prepare(`INSERT INTO partner_attribution (user_id, partner_id, channel_code, source, bound_at, contract_id, effective_from, effective_to, attribution_version, status, updated_at)
+      VALUES (?, ?, ?, 'INVITE_CHAIN', ?, ?, ?, ?, 1, 'ACTIVE', ?)`)
+      .run(userId, partnerId, channelCode, now, contractId, now.slice(0, 10), effectiveTo, now);
+    console.log(`[Partner] 归属快照落库 user=${userId} partner=${partnerId} contract=${contractId || '无'}`);
+  } catch (e) {
+    console.error('[Partner] 归属快照落库失败:', e.message);
+  }
 }
 
 /**
@@ -238,6 +363,16 @@ function findChannelPartner(userId) {
 function channelUserIds(partnerId) {
   const db = getDb();
   const pid = parseInt(partnerId, 10);
+  const set = new Set();
+  // 快照优先：归属快照 ACTIVE 用户（含 SUPER_ADMIN 改绑用户，与 findChannelPartner 同口径）
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const snaps = db.prepare("SELECT user_id, effective_to FROM partner_attribution WHERE partner_id = ? AND status = 'ACTIVE'").all(pid);
+    for (const s of snaps) {
+      if (s.effective_to && String(s.effective_to) <= today) continue; // 到期/终止后不计入
+      set.add(s.user_id);
+    }
+  } catch (e) { /* partner_attribution 未建：回退链式 */ }
   const rows = db.prepare(`
     WITH RECURSIVE chan(uid, blocked) AS (
       SELECT u.user_id,
@@ -251,7 +386,7 @@ function channelUserIds(partnerId) {
     )
     SELECT uid FROM chan
   `).all({ pid });
-  const set = new Set(rows.map(r => r.uid));
+  for (const r of rows) set.add(r.uid);
   return set;
 }
 
@@ -383,6 +518,7 @@ function reversePartnerCommission(orderNo, refundYuan) {
     console.log(`[Partner] 冲正 order=${orderNo} type=${rec.record_type} reverse=${reverseCents}分`);
   }
   // 成本留痕同步：全额退款→REVERSED；部分退款→按剩余比例缩放各项金额保持精确
+  // MASTER-05 第二十四/二十五章：refund_cents 累计留痕（逐单透明账与月度结算快照的退款数据源）
   try {
     const log = db.prepare("SELECT * FROM partner_order_log WHERE order_no = ?").get(String(orderNo));
     if (log && log.status === 'ACTIVE') {
@@ -392,12 +528,13 @@ function reversePartnerCommission(orderNo, refundYuan) {
         ? Math.min(1, yuanToCents(refundYuan) / Math.max(1, log.gross_cents))
         : 1;
       if (proportion >= 1) {
-        db.prepare("UPDATE partner_order_log SET status = 'REVERSED' WHERE id = ?").run(log.id);
+        db.prepare("UPDATE partner_order_log SET status = 'REVERSED', refund_cents = gross_cents WHERE id = ?").run(log.id);
       } else if (proportion > 0) {
         const keep = 1 - proportion;
         const scale = (v) => Math.round(v * keep);
-        db.prepare(`UPDATE partner_order_log SET gross_cents=?, fee_cost_cents=?, ai_cost_cents=?, normal_commission_cents=?, net_cents=?, base_commission_cents=?, nurture_cents=? WHERE id = ?`)
-          .run(scale(log.gross_cents), scale(log.fee_cost_cents), scale(log.ai_cost_cents), scale(log.normal_commission_cents), scale(log.net_cents), scale(log.base_commission_cents), scale(log.nurture_cents), log.id);
+        const refundTotal = Math.min(log.gross_cents, (log.refund_cents || 0) + yuanToCents(refundYuan));
+        db.prepare(`UPDATE partner_order_log SET gross_cents=?, fee_cost_cents=?, ai_cost_cents=?, normal_commission_cents=?, net_cents=?, base_commission_cents=?, nurture_cents=?, refund_cents=? WHERE id = ?`)
+          .run(scale(log.gross_cents), scale(log.fee_cost_cents), scale(log.ai_cost_cents), scale(log.normal_commission_cents), scale(log.net_cents), scale(log.base_commission_cents), scale(log.nurture_cents), refundTotal, log.id);
       }
     }
   } catch (e) {
@@ -445,12 +582,21 @@ function prevPeriod() {
 
 /**
  * 生成某月结算单（幂等：合伙人+周期唯一；全部金额取自 partner_order_log 逐单精确留痕）
+ * MASTER-05 第二十四章：结算快照补全口径——
+ *   refund_cents / ai_cost_source / formula_version / contract_version / final_amount_cents
  * @param {string} period 'YYYY-MM'
  * @param {string} operator
  */
 function generateMonthlySettlements(period, operator) {
   const db = getDb();
   const p = /^\d{4}-\d{2}$/.test(period || '') ? period : prevPeriod();
+  // 公式版本取 Commission Router 当前配置（运行时延迟 require，避免加载期循环依赖）
+  let formulaVersion = '1.1.0';
+  try {
+    const router = require('./commissionRouter');
+    const rc = router.getConfig && router.getConfig();
+    if (rc && rc.formulaVersion) formulaVersion = String(rc.formulaVersion);
+  } catch (e) { /* 默认 1.1.0 */ }
   const partners = db.prepare("SELECT user_id FROM partners WHERE status = 'APPROVED'").all();
   let created = 0;
   for (const { user_id: pid } of partners) {
@@ -460,23 +606,31 @@ function generateMonthlySettlements(period, operator) {
     const agg = db.prepare(`SELECT COALESCE(SUM(gross_cents),0) gross, COALESCE(SUM(fee_cost_cents),0) fee,
         COALESCE(SUM(ai_cost_cents),0) ai, COALESCE(SUM(normal_commission_cents),0) normal,
         COALESCE(SUM(net_cents),0) net, COALESCE(SUM(base_commission_cents),0) base,
-        COALESCE(SUM(nurture_cents),0) nurture_out
+        COALESCE(SUM(nurture_cents),0) nurture_out, COALESCE(SUM(refund_cents),0) refund
       FROM partner_order_log WHERE partner_id = ? AND created_at LIKE ? AND status = 'ACTIVE'`).get(pid, p + '%');
     // 培养奖励收入侧：作为上级获得的 PARTNER_NURTURE（经结算单审核转可提现）
     const nurtureRecv = db.prepare("SELECT COALESCE(SUM(commission_cents),0) s FROM commission_records WHERE inviter_user_id = ? AND record_type = 'PARTNER_NURTURE' AND created_at LIKE ? AND status != 'REVERSED'").get(pid, p + '%').s;
+    // 合同版本（第二十四章 contractVersion；无合同时 NULL）
+    let contractVersion = null;
+    try {
+      const c = db.prepare("SELECT contract_version FROM partner_contracts WHERE partner_id = ? AND status = 'ACTIVE' ORDER BY id DESC LIMIT 1").get(pid);
+      contractVersion = c ? c.contract_version : null;
+    } catch (e) { /* ignore */ }
+    const finalCents = agg.base + nurtureRecv;
 
     if (agg.base === 0 && nurtureRecv === 0) {
-      db.prepare(`INSERT OR IGNORE INTO partner_settlements (partner_id, period, status, created_at) VALUES (?, ?, 'EMPTY', ?)`)
-        .run(pid, p, nowIso());
+      db.prepare(`INSERT OR IGNORE INTO partner_settlements (partner_id, period, status, created_at, ai_cost_source, formula_version, contract_version) VALUES (?, ?, 'EMPTY', ?, 'ESTIMATED', ?, ?)`)
+        .run(pid, p, nowIso(), formulaVersion, contractVersion);
       continue;
     }
-    db.prepare(`INSERT OR IGNORE INTO partner_settlements (partner_id, period, gross_cents, fee_cost_cents, ai_cost_cents, normal_commission_cents, net_cents, base_commission_cents, nurture_received_cents, nurture_paid_out_cents, status, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING_REVIEW', ?)`)
-      .run(pid, p, agg.gross, agg.fee, agg.ai, agg.normal, agg.net, agg.base, nurtureRecv, agg.nurture_out, nowIso());
+    db.prepare(`INSERT OR IGNORE INTO partner_settlements (partner_id, period, gross_cents, fee_cost_cents, ai_cost_cents, normal_commission_cents, net_cents, base_commission_cents, nurture_received_cents, nurture_paid_out_cents, status, created_at, refund_cents, ai_cost_source, formula_version, contract_version, final_amount_cents)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING_REVIEW', ?, ?, 'ESTIMATED', ?, ?, ?)`)
+      .run(pid, p, agg.gross, agg.fee, agg.ai, agg.normal, agg.net, agg.base, nurtureRecv, agg.nurture_out, nowIso(),
+        agg.refund, formulaVersion, contractVersion, finalCents);
     created++;
   }
-  console.log(`[Partner] 结算单生成 period=${p} 新建=${created} by=${operator || 'auto'}`);
-  return { period: p, created, total: partners.length };
+  console.log(`[Partner] 结算单生成 period=${p} 新建=${created} by=${operator || 'auto'} formulaVersion=${formulaVersion}`);
+  return { period: p, created, total: partners.length, formulaVersion };
 }
 
 /**
@@ -531,9 +685,10 @@ function adjustSettlement(settlementId, deltaYuan, reason, admin) {
   if (s.status !== 'PENDING_REVIEW') return { ok: false, error: '仅待审核状态可调整' };
   if (!reason || String(reason).trim().length < 2) return { ok: false, error: '必须填写调整原因' };
   const deltaCents = yuanToCents(Math.abs(Number(deltaYuan) || 0)) * (Number(deltaYuan) < 0 ? -1 : 1);
-  db.prepare('UPDATE partner_settlements SET adjust_cents = adjust_cents + ?, note = COALESCE(note,\'\') || ? WHERE id = ?')
-    .run(deltaCents, ` | 调整${deltaCents}分(${String(reason).slice(0, 80)})`, s.id);
-  return { ok: true, deltaCents };
+  const finalCents = (s.base_commission_cents || 0) + (s.nurture_received_cents || 0) + (s.adjust_cents || 0) + deltaCents;
+  db.prepare('UPDATE partner_settlements SET adjust_cents = adjust_cents + ?, final_amount_cents = ?, note = COALESCE(note,\'\') || ? WHERE id = ?')
+    .run(deltaCents, finalCents, ` | 调整${deltaCents}分(${String(reason).slice(0, 80)})`, s.id);
+  return { ok: true, deltaCents, finalCents };
 }
 
 /**
@@ -558,8 +713,9 @@ function runSettlementScheduler() {
 // ==================== 数据看板（合伙人端·脱敏） ====================
 
 function maskUserId(uid) {
-  const s = String(uid || '');
-  if (s.length <= 4) return s.replace(/.(?=.{1})/g, '*');
+  const s = String(uid == null ? '' : uid);
+  if (!s) return '';
+  if (s.length <= 4) return '****'; // 短ID不泄露首尾数字
   return s.slice(0, 2) + '****' + s.slice(-2);
 }
 
@@ -951,6 +1107,13 @@ function adminSettlements(opts) {
       baseCommissionYuan: (s.base_commission_cents / 100).toFixed(2),
       nurtureReceivedYuan: (s.nurture_received_cents / 100).toFixed(2),
       adjustYuan: (s.adjust_cents / 100).toFixed(2),
+      // MASTER-05 第二十四章：退款/口径/公式版本/合同版本/最终金额
+      refundYuan: ((s.refund_cents || 0) / 100).toFixed(2),
+      aiCostSource: s.ai_cost_source || 'ESTIMATED',
+      formulaVersion: s.formula_version || '1.1.0',
+      contractVersion: s.contract_version || '',
+      finalAmountYuan: ((s.final_amount_cents != null ? s.final_amount_cents
+        : (s.base_commission_cents + s.nurture_received_cents + (s.adjust_cents || 0))) / 100).toFixed(2),
       status: s.status, createdAt: s.created_at, reviewedAt: s.reviewed_at, reviewedBy: s.reviewed_by,
       rejectReason: s.reject_reason || '',
     })),
