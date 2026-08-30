@@ -20,14 +20,14 @@
 
 | 组件 | 版本 |
 |------|------|
-| Web（生产 current） | **v25.0.66**（buildId `v25.0.66_D20260830`，builtAt 2026-08-30T15:17:31Z；MASTER-05 最终批次：`/offline` 离线内容管理页+OfflineInit 根布局+六模块用户端） |
-| 后端 API | package 1.1.0（PM2: yandaoguoxue-backend，online；新路由 QF/OSS/Offline/存储GC/统一后台 全挂载） |
+| Web（生产 current） | **v25.0.67**（buildId `v25.0.67_D20260831`，builtAt 2026-08-30T16:25:08Z；SEO 批次：13个C端差异化关键词落地页+B端方案页+robots/sitemap 部署于 /tools/ /learn/ /app/ /b/；含 v25.0.66 全部功能） |
+| 后端 API | package 1.1.0（PM2: yandaoguoxue-backend，online；新路由 QF/OSS/Offline/存储GC/统一后台 全挂载；SEO 批次零后端变更未重启） |
 | Android APK | **v25.0.60 / versionCode 2059**（本轮无 Android 原生变更，APK 不重建；Offline 走 Web 层 /offline 页面） |
 
 ## 3. 当前 Commit
 
-- **四端 HEAD 一致**：LOCAL = GITHUB origin/main = SERVER_SOURCE = 生产构建源 = **`d9bde64`**（unpushed=0，2026-08-30 核实；接管后第一步：`git log --oneline -3` 四端核对）。
-- 当前代码批次：`657dc5f`（双身份 PARTNER_NET_OF_REFERRAL）→ `b493913`（Partner 归属快照/合同/改绑审计/结算快照/逐单账）→ `852c5fd`（总账回灌）→ `ac45013`（**MASTER-05 六模块后端**：Provider/对象存储+备份灾备/Offline Pack/社交限频+评论层级/Question Factory/统一后台总控+全量回归矩阵）→ `7a0750d`（Offline 前端四库）→ `6a16c4e`（bump v25.0.66）→ `d9bde64`（/offline 页面接线，HEAD）。生产运行目录 MD5 与源仓库一致（questionFactoryRoutes `4f3dfa21`/objectStorageRoutes `8a30974d`）。
+- **四端 HEAD 一致**：LOCAL = GITHUB origin/main = SERVER_SOURCE = 生产构建源 = **`add0f56`**（unpushed=0，2026-08-31 核实；接管后第一步：`git log --oneline -3` 四端核对）。
+- 当前代码批次：`657dc5f`（双身份 PARTNER_NET_OF_REFERRAL）→ `b493913`（Partner 归属快照/合同/改绑审计/结算快照/逐单账）→ `852c5fd`（总账回灌）→ `ac45013`（**MASTER-05 六模块后端**：Provider/对象存储+备份灾备/Offline Pack/社交限频+评论层级/Question Factory/统一后台总控+全量回归矩阵）→ `7a0750d`（Offline 前端四库）→ `6a16c4e`（bump v25.0.66）→ `d9bde64`（/offline 页面接线）→ `4fd6cc5`（MASTER-05 封板回灌）→ **`add0f56`（SEO 增长引擎首批：seoPagesConfig+生成器+质量门禁+18页+robots/sitemap+bump v25.0.67，HEAD）**。后端运行时维持 `d9bde64`（SEO 批次零后端变更）。
 
 ## 4. GitHub
 
@@ -58,8 +58,9 @@
 
 ## 8. Web 生产目录
 
-`/root/yandaoguoxue/current` → 软链 `releases/v25.0.66`。
-`releases/` 现存多版（_5~_29/_62~_66 等；回滚目标 v25.0.65）。**禁止删除 current 指向的目录**。
+`/root/yandaoguoxue/current` → 软链 `releases/v25.0.67`。
+`releases/` 现存多版（_5~_29/_62~_67 等；回滚目标 v25.0.66）。**禁止删除 current 指向的目录**。
+SEO 静态落地页在 current 内：`/tools/`、`/learn/`、`/app/`、`/b/` + `robots.txt` + `sitemap.xml`（nginx try_files 直出；新增页面用 `backend_deploy/seo/` 配置+生成器+门禁流水线，勿手改 HTML）。
 
 ## 9. Backend 目录
 
@@ -237,7 +238,7 @@ v25.0.60 / versionCode 2059 / 包名 `com.yandao.guoxue` / MD5 `e506971da1779ea7
 | ANDROID | **PARTIAL** | APK 三重验证（直链/二进制/版本）；真机全链路 DEVICE_UNAVAILABLE |
 | ADMIN | **VERIFIED** | /admin 唯一入口 + 三级角色 + 驾驶舱含备份状态 |
 | BACKUP | **VERIFIED**（本地） | 三库每日 02:00 + 每周核心表导出 + integrity_check + SOCIAL_BACKUP_GATE 红灯 + 恢复演练 ok + MASTER-05 加密备份软件链（AES-256-GCM+manifest+retention+drill）；腾讯云快照/安全加固方案已就绪（D23） |
-| SOURCE_SYNC | **VERIFIED** | 四端一致 d9bde64 + GitHub clone 构建实证 |
+| SOURCE_SYNC | **VERIFIED** | 四端一致 add0f56 + GitHub clone 构建实证 |
 
 **MASTER-05 新模块矩阵（2026-08-30 最终封板口径）**：
 
@@ -256,6 +257,16 @@ v25.0.60 / versionCode 2059 / 包名 `com.yandao.guoxue` / MD5 `e506971da1779ea7
 | COS_OFFSITE | **BLOCKED_EXTERNAL_CONFIG** | adapter+dry-run 完成不伪称 VERIFIED；Owner Action 配 Secret |
 | TENCENT_SNAPSHOT | **BLOCKED_EXTERNAL_OWNER_ACTION** | 控制台操作，AI 无法替代 |
 | IOS | **BLOCKED_EXTERNAL_OWNER_ACTION** | PLA 未签，软件不重复开发 |
+
+**SEO 增长引擎模块（2026-08-31 v25.0.67 批次口径）**：
+
+| 模块 | 状态 | 证据 |
+|------|------|------|
+| SEO_LANDING_PAGES | **VERIFIED** | 13个C端差异化关键词页+1个B端方案页+4目录索引，nginx try_files 直出；公网 42/42 PASS（14页全200+内容级三要素实测） |
+| SEO_PIPELINE | **VERIFIED** | 配置唯一源 seoPagesConfig.json + 生成器 generateSeoPages.js + 质量门禁 seoQualityGate.js（174项 PASS，SUPP-01 三项强制+扩展校验） |
+| SEO_COMPLIANCE | **VERIFIED** | 每页 ICP 备案悬挂+工信部链接+免责声明+canonical+JSON-LD；描述全部基于 APP 真实能力（14工具/8工具/22典籍/Meeus） |
+| ROBOTS_SITEMAP | **VERIFIED** | robots.txt 指向 sitemap；sitemap.xml 24 URL（6主站+14落地页+4目录），公网实测 |
+| SEARCH_SUBMIT | **NOT_STARTED**（后续批次） | 百度/头条/谷歌站长平台主动提交 sitemap，需 Owner 控制台操作或账号授权 |
 
 ## 27. 当前已知 PARTIAL
 

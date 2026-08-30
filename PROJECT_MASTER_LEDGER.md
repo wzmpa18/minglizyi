@@ -1,7 +1,7 @@
 # 言道国学项目总账（PROJECT_MASTER_LEDGER）
 
 > **本文档是项目唯一权威账簿（Single Source of Truth）。**
-> 最后更新: 2026-08-30（FINAL-OPERATIONS-COMPLETION-MASTER-05 最终封板：Provider师傅后端闭环 + Partner归属闭环 + Offline-First + Cache/GC + Question Factory + 对象存储/备份灾备 + 社交限频+评论层级 + 统一后台总控 + 全量生产回归 + v25.0.66 生产发布 + 公网验证 21/21 PASS + 四端SSOT一致 d9bde64）
+> 最后更新: 2026-08-31（SEO-GROWTH-ENGINE-SUPP-01 批次：程序化搜索增长引擎首批落地——13个C端差异化关键词静态落地页+1个B端行业方案页+robots/sitemap，v25.0.67 生产发布+公网验证 42/42 PASS+四端SSOT一致 add0f56；前批 2026-08-30 FINAL-OPERATIONS-COMPLETION-MASTER-05 最终封板：六模块后端+全量回归+公网 21/21）
 > 上一批（2026-08-30 中）：AI-PRODUCTION-SEAL-AND-COMMISSION-ROUTER-04（AI Phase 1 正式生产上线 + 历史无限权益保护 + AI 成本中心生产验收 + Commission Router 唯一结算引擎 + Partner 50% 账务闭环 + 防重复计提）
 > 上上批（2026-08-29）：P0-PRODUCTION-SEAL-AND-AI-COST-PHASE1-03（P0安全修复正式生产落地 + 生产攻击回归 + SSOT总账纠偏 + 真太阳时封板 + AI Fair Usage/Cost Center 第一阶段）
 > 上一批（2026-08-25，生产版本 v25.0.47_30）：FIX-V30-PAY-CARE 支付权益彻查+防再发机制——用户投诉「会员ID 100011 充值没开通会员」彻查结论：①订单 YD20260825173625902022 ¥39.9 实为 SINGLE_UNLOCK 单次深度解读（非会员套餐），支付成功且 benefit_delivered=1 权益已正常发放；用户误将单次解读当会员购买（单次 39.9>月费 37 价格结构易混淆），支付后又连续创建 7 个未完成 PENDING 订单反复尝试；②全量对账 5 笔 PAID 订单：真实用户订单权益全部正常发放，唯一漏发为 E2E 测试订单 TEST_RC06_DELIVER（无 transaction_id 无真实扣款，已归档）；910082 yearly 会员为 E2E 测试账号（无手机号）非漏发；③处理：用户 100011 客户关怀补偿开通月度会员至 2026-09-24（与生产 deliverOrderBenefits 同口径 users+user_assets 双表）+7 个僵尸 PENDING 订单关闭+operation_logs 三条留痕（修复前 DB 备份 /root/backup/yandao_users_pre_fix100011_20260825_175346.db）；⑥应老板要求改单（2026-08-25 追加）：订单 129 YD20260825173625902022 由 SINGLE_UNLOCK 正式转为 MEMBERSHIP（实付 39.9 金额不动，benefit_delivered=1 维持，operation_logs id=302 order_type_convert 留痕），订单记录与已发月度会员权益一致；用户无推荐人（invited_by/referrer_id 空）改单对佣金结算零影响；④防再发：部署 /root/backend-auth/scripts/payment_reconcile.sh 每日 03:30 cron 自动对账——查 PAID+benefit_delivered=0+支付超10分钟的沉默漏发订单，MEMBERSHIP 按金额映射档位（37/99/374/3600）自动补交付（续费顺延同口径）、SINGLE_UNLOCK 补标记、未知类型告警人工，告警日志 payment_audit_alerts.log；⑤产品层防混淆：单次解锁弹窗新增三处明确标识「本单为单次解读解锁，非会员套餐」+「支付后仅解锁本次解读，不含会员权益」；前一版本 v25.0.47_29+APK v25.0.55(2055)：FIX-V29-DOWNLOAD-RESCUE 升级下载链路根治）
@@ -11,25 +11,25 @@
 
 ---
 
-## 〇、Current Snapshot（当前事实快照 · 2026-08-30 最终封板核实）
+## 〇、Current Snapshot（当前事实快照 · 2026-08-31 SEO 增长引擎批次核实）
 
 | 项 | 值 |
 |----|-----|
-| 数据核实日期 | 2026-08-30（MASTER-05 最终封板核实，SSH+公网实测） |
-| 后端 Runtime Commit | `d9bde64`（MASTER-05 六模块后端正式落地：Provider/对象存储+备份灾备/Offline Pack/社交限频+评论层级/Question Factory/统一后台总控；`ac45013` 六模块 + `7a0750d` Offline前端四库 + `6a16c4e` bump v25.0.66 + `d9bde64` /offline页面接线；下限 `530f39e` Commission Router 唯一结算引擎 + 双身份 PARTNER_NET_OF_REFERRAL） |
-| 前端 Web 构建版本 | **v25.0.66**（buildId `v25.0.66_D20260830`，builtAt 2026-08-30T15:17:31Z；含 /offline 离线内容管理页+OfflineInit根布局挂载+个人中心离线入口+六模块用户端页面；公网 version.json 已验证） |
-| 后端发布版本 | v25.0.66（MASTER-05 最终运营完成批次：QF路由 /api/qf+/api/admin/qf、对象存储+备份 /api/oss+/api/admin/oss、Offline /api/offline+/api/admin/offline、存储GC /api/admin/storage、统一后台 /api/admin/unified 全部挂载生产并公网验证） |
-| Document Head | 本地=GitHub origin/main=服务器源码仓 `/root/yandaoguoxue-source` = **`d9bde64` 四端一致（unpushed=0）**；生产运行文件与源码仓 MD5 一致（questionFactoryRoutes.js `4f3dfa21`/objectStorageRoutes.js `8a30974d` SSH 核实）；生产 Web current → v25.0.66 |
+| 数据核实日期 | 2026-08-31（SEO-GROWTH-ENGINE-SUPP-01 批次核实，SSH+公网实测；前次 2026-08-30 MASTER-05 封板） |
+| 后端 Runtime Commit | `d9bde64`（MASTER-05 六模块后端运行版本；SEO 批次零后端变更、零 PM2 重启，运行时维持 `d9bde64` 不变；下限 `530f39e` Commission Router 唯一结算引擎 + 双身份 PARTNER_NET_OF_REFERRAL） |
+| 前端 Web 构建版本 | **v25.0.67**（buildId `v25.0.67_D20260831`，builtAt 2026-08-30T16:25:08Z；SEO 批次：13个C端差异化关键词落地页（/tools/×6+/learn/×3+/app/×4）+1个B端行业方案页（/b/）+4个目录索引页+robots.txt+sitemap.xml 24 URL；含 v25.0.66 全部既有功能；公网 version.json 已验证） |
+| 后端发布版本 | v25.0.66（维持不变——MASTER-05 最终运营完成批次：QF/OSS/Offline/存储GC/统一后台全部挂载生产并公网验证；SEO 批次纯静态前端增量） |
+| Document Head | 本地=GitHub origin/main=服务器源码仓 `/root/yandaoguoxue-source` = **`add0f56` 四端一致（unpushed=0，2026-08-31 核实）**；提交链：`d9bde64`（MASTER-05 封板）→ `add0f56`（SEO 增长引擎首批：seoPagesConfig+生成器+质量门禁+18页+robots/sitemap+bump v25.0.67）；生产 Web current → v25.0.67 |
+| SEO 落地页部署 | `https://yandaoguoxue.yandao.vip/{tools,learn,app,b}/*.html` 独立静态页（nginx try_files 直出，no-cache；独立于 APP，零后端逻辑改动；配置唯一源 backend_deploy/seo/seoPagesConfig.json，生成器+质量门禁 174 项可复跑） |
 | APK / versionCode | 25.0.60 / 2059（`/api/public/app-version` 生产下发值，本轮无 Android 原生变更，APK 不重建；Offline 经 Web 层 /offline 页面实现，内置壳 WebView 可用） |
 | 生产服务器 | 82.156.228.87（腾讯云轻量 北京，root） |
-| 生产后端路径 | `/www/yandaoguoxue-backend`（PM2 `yandaoguoxue-backend`，端口 3001，2026-08-30 23:39 重启 online，新模块路由启动日志全 ✅） |
-| 前端发布路径 | `/root/yandaoguoxue/releases/<tag>` + `/root/yandaoguoxue/current` 软链（nginx root 指向，current → v25.0.66） |
+| 生产后端路径 | `/www/yandaoguoxue-backend`（PM2 `yandaoguoxue-backend`，端口 3001，online；SEO 批次未重启，运行 d9bde64 版本路由） |
+| 前端发布路径 | `/root/yandaoguoxue/releases/<tag>` + `/root/yandaoguoxue/current` 软链（nginx root 指向，current → v25.0.67；v25.0.66 保留可回滚） |
 | 数据库架构 | SQLite（better-sqlite3）三库：`/root/backend-auth/data/yandao_users.db`（用户核心，98 用户，含 `commission_records`/`user_orders`/`providers`/`provider_services`/`service_orders` 等；Router 快照表 `commission_router_snapshots`）+ `/www/yandaoguoxue-backend/data/social.db`（社交，含社交限频表）+ `/www/yandaoguoxue-backend/data/academy.db`（学堂，约 56MB，含 Question Factory 蓝图/队列/质量表）。PostgreSQL 15 为已迁出「学外语」项目进程残留，非本国学项目基础设施（见下方 §二 纠偏）。 |
-| 备份现状 | 三库每日 02:00 备份至 `/root/backup/`（2026-08-30 备份已存在），`PRAGMA integrity_check` = ok；本轮新增 backupEngine 软件链（三库备份→AES-256-GCM 加密→对象存储 adapter→manifest+hash→retention→restore drill），备份状态接口 /api/admin/oss/backup/list 公网验证 PASS；COS 异地备份 = BLOCKED_EXTERNAL_CONFIG（无凭证，adapter+dry-run 已完成，未伪称 VERIFIED） |
+| 备份现状 | 三库每日 02:00 备份至 `/root/backup/`（2026-08-30 备份已存在），`PRAGMA integrity_check` = ok；backupEngine 软件链（三库备份→AES-256-GCM 加密→对象存储 adapter→manifest+hash→retention→restore drill），备份状态接口 /api/admin/oss/backup/list 公网验证 PASS；COS 异地备份 = BLOCKED_EXTERNAL_CONFIG（无凭证，adapter+dry-run 已完成，未伪称 VERIFIED） |
 | 用户/会员统计 | 98 用户（basic 94 / monthly 2 / yearly 1 / lifetime 1），统计日期 2026-08-30（统一后台 overview 真实 DB 数据：total 98 / newToday 1 / active7d 53 / paid 4 / orders total 118 paid 4） |
-| 本轮生产验证 | **公网 21/21 PASS**（verify_modules3.sh：统一后台 whoami+overview、QF blueprints+inventory+queue+quality、OSS overview+capability+backup/list+drill-status+owner-actions、存储GC report+forbidden+config、Offline manifest+admin packs、社交 circles、health、价格SSOT、app-version、version.json v25.0.66） |
-| MASTER-05 测试矩阵 | 隔离 E2E 累计：Partner 归属 134 + Router 基线 112 + Provider 167 + Offline 后端 76 + QF 119 + 社交限频 64 + 对象存储/备份 159 + 统一后台总控 24 + 全量回归 12 套件 + 算法门禁 46/46（真太阳时 Golden 冻结复跑）——全部隔离测试零真实付款、零生产污染 |
-| 最终状态 | **PRODUCTION_READY_WITH_EXTERNAL_ACTIONS**（软件内部 P0=0 / P1=0 / SOFTWARE_INTERNAL_REMAINING=0；剩余仅 Owner Action：腾讯云快照、COS Secret 配置、iOS PLA、Android/Share 真机验收） |
+| 本轮生产验证 | **公网 42/42 PASS**（verify_seo_v25_0_67.sh：版本基线 4（v25.0.67/首页/API health//offline 回归）+14落地页全200+4目录索引+robots/sitemap 24URL+SUPP-01差异化三要素内容级实测（标题公式/固定模块/CTA话术）+合规基建 7（ICP悬挂/工信部链接/APK唯一源/canonical/JSON-LD/免责声明/APK端点）+疑问词抽查 2）；前批 MASTER-05 公网 21/21 PASS |
+| 最终状态 | **PRODUCTION_READY_WITH_EXTERNAL_ACTIONS**（软件内部 P0=0 / P1=0 / SOFTWARE_INTERNAL_REMAINING=0；剩余 Owner Action：腾讯云快照、COS Secret 配置、iOS PLA、Android/Share 真机验收；SEO 后续批次：通用关键词页扩展+百度/头条站长平台主动提交收录——见十二.21） |
 
 > 冲突裁决：历史章节中「当前生产版本 / Git HEAD / APK / 数据库」等字段若与本快照冲突，以本快照为准；历史字段原文保留不删（记 SUPERSEDED·HISTORICAL）。
 
@@ -693,3 +693,28 @@ gh workflow run ios-build.yml --repo wzmpa18/minglizyi --ref main
 - Owner Actions（仅限项目方本人完成）：①腾讯云控制台快照策略（OWNER_ACTION_TENCENT_SNAPSHOT）；②COS Secret 配置到 /www/yandaoguoxue-backend/.env（OWNER_ACTION_COS_SECRET，软件链+dry-run 已备，禁聊天粘贴 Secret）；③Apple PLA 签署（OWNER_ACTION_IOS_PLA，软件不重复开发）；④Android 真机验收（OWNER_ACTION_ANDROID_DEVICE_TEST）；⑤Share 真机验收（OWNER_ACTION_SHARE_DEVICE_TEST）。
 
 **纪律核查（第 174 章 NO_* 全项）**：NO GUESS（所有验证 SSH+公网实测）；NO FAKE VERIFIED（COS=BLOCKED_EXTERNAL_CONFIG 不伪称 VERIFIED，iOS/真机列 Owner Action）；NO SECRET OUTPUT（报告不含任何 Secret 值）；NO CLIENT-SIDE MONEY AUTHORITY（QF/Provider 价格全服务端 SSOT）；NO DUPLICATE SYSTEM（复用 academy.db 题库/现有支付引擎/现有邀请树）；NO HISTORICAL DATA REWRITE（Router 前佣金不动）；NO REAL PAYMENT TEST（全部隔离测试零真实付款）；NO DIRTY BUILD（构建门禁全过）；NO HALF DEPLOY（公网 21/21 验证后才封板）；NO REPORT SPRAWL（无新建碎片报告，本记录即唯一回灌）；NO CROSS-PROJECT TOUCH（仅触碰言道国学）。
+
+---
+
+## 十二.21 SEO 程序化搜索增长引擎·首批落地（SUPP-01 差异化优势强化，v25.0.67，2026-08-31）
+
+**定位**：补充指令 DEV-SEO-GROWTH-ENGINE-V1.0-SUPP-01（差异化优势强化 + SEO 落地页定位澄清）执行批次。核心目标：以「全功能、无广告、基础免费」三差异点解决行业同质化，把搜索流量转化为 APP 下载。纯静态前端增量——零后端变更、零 APP 代码改动、零 PM2 重启。
+
+**工程体系（配置驱动，可复跑可扩展）**：
+- `backend_deploy/seo/seoPagesConfig.json`：14 个页面唯一配置源（13 C端 + 1 B端），每页含差异化标题公式/痛点首段/功能模块/FAQ/CTA；`shared.whyChooseUs`（功能更全/体验更干净/更良心三点固定模块）+ `shared.bAdvantage`（垂直领域现成经验/可模块化交付/懂合规懂审核）+ `facts`（14款排盘工具/8款实用工具/22部典籍/免费范围——全部来自代码核实的真实能力，不夸大）；
+- `backend_deploy/seo/generateSeoPages.js`：生成器（每页：差异化 meta/OG/canonical/JSON-LD（SoftwareApplication+FAQPage）+ hero 徽章 + 痛点锚定 + 功能介绍 + 「为什么选择言道国学」固定模块 + FAQ + 二维码 CTA + 免责声明 + ICP 备案悬挂；目录索引页 4 个 + robots.txt + sitemap.xml 24 URL）；
+- `backend_deploy/seo/seoQualityGate.js`：发布质量门禁 174 项 PASS / 0 FAIL（SUPP-01 三项强制：①每页≥2处差异化表述 ②固定模块在位 ③CTA 体现无广告/免费/全功能；扩展：标题公式/canonical/description/APK唯一下源/JSON-LD/无占位符/禁用裸CTA「立即下载、点击下载」/sitemap 覆盖/robots 指向）。
+
+**首批 13 个 C 端差异化关键词页**（SUPP-01 第四节高转化长尾词+疑问词优先）：
+- /tools/×6：无广告的排盘软件、免费八字排盘工具无广告、排盘工具免费不付费、不用会员的排盘工具、排盘工具哪个好用无广告、有没有无广告的排盘软件；
+- /learn/×3：免费中医题库无广告、免费的中医刷题软件、中医典籍免费查阅APP；
+- /app/×4：没有广告的国学APP、什么国学APP没有广告、全功能国学APP推荐（×2 变体）。
+**B 端参考页**：/b/yixue-zhongyi-fangan.html（易学中医行业APP开发方案，「我们的优势」三差异模块，CTA 导向官网 www.yandao.vip）。
+
+**部署与验证（第 131~136 章全流程纪律）**：本地构建 v25.0.67（buildId `v25.0.67_D20260831`，SEO 18 页+robots+sitemap 入 out/，主站/`_next`//offline 回归项齐）→ tar 上传 5.8MB → 服务器内容门禁（版本烧录+SEO 18页齐全+差异化三要素源文件级+ICP+主站回归+IP 零泄漏）→ **current 原子切流 v25.0.66→v25.0.67** → 公网验证 **42/42 PASS**（verify_seo_v25_0_67.sh：版本基线 4 + 14 落地页全 200 + 4 目录索引 + robots/sitemap 24 URL + SUPP-01 三要素公网内容级实测 + 合规基建 7 + 疑问词抽查 2；另有本地外部视角 WebFetch 复核页面渲染）。
+
+**技术定位与边界（SUPP-01 第二节澄清口径）**：SEO 落地页=独立静态 HTML（不是 APP 内部页面），部署于网站服务器 `/tools/`、`/learn/`、`/app/`、`/b/` 目录，是搜索引擎与 APP 下载之间的外部获客桥梁；nginx try_files 直出（no-cache），不触碰 APP 功能/逻辑/数据；页面所有功能描述对应 APP 真实能力，「无广告、基础免费」与 APP 实际体验一致（免费范围=排盘基础功能+典籍全文+基础题库，生产 tool-matrix FREE 实证）。
+
+**下一步（后续批次，非本轮）**：①通用关键词第二批页面扩展（沿用配置+生成器+门禁流水线）；②百度/头条/谷歌站长平台主动提交 sitemap 加速收录（控制台 Owner 操作或账号授权）；③收录后搜索词引流效果监测。
+
+**纪律核查**：NO GUESS（14 工具/8 工具/22 典籍/Meeus 全部代码核实）；NO FAKE VERIFIED（公网 42/42 实测，站长平台提交未做如实列下一步）；NO DIRTY BUILD（构建+双重门禁 174+服务器门禁）；NO HALF DEPLOY（切流后热路径立检+全量公网验证后封板）；NO REPORT SPRAWL（本记录即唯一回灌）；NO CROSS-PROJECT TOUCH（仅新增静态页，零改动既有系统）。
