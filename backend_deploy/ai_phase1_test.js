@@ -88,10 +88,12 @@ ok(policy.isLegacyUnlimited('lifetime'), 'lifetime 拒绝后仍为无限');
 
 console.log('=== 4) policyVersion 变更必须 bump ===');
 const v0 = policy.getPolicyVersion();
-r = policy.updatePolicy({ tiers: { basic: { maxConcurrent: 2 } } });
-ok(r.ok === true, '调整 basic 并发允许成功', JSON.stringify(r));
+// 用 dailyCostCap（仅告警阈值，Phase 1 不硬性封禁）触发 bump，避免污染后续 maxConcurrent 断言
+r = policy.updatePolicy({ tiers: { basic: { dailyCostCap: 500 } } });
+ok(r.ok === true, '调整 basic 成本告警阈值允许成功', JSON.stringify(r));
 ok(r.policyVersion !== v0, 'policyVersion 已 bump', `v0=${v0} new=${r && r.policyVersion}`);
 eq(policy.getUsagePolicy('basic').dailyRequests, 3, 'basic 日均次数在 bump 后不变');
+eq(policy.getUsagePolicy('basic').maxConcurrent, 1, 'basic 并发在 bump 后不变');
 
 console.log('=== 5) 成本估算（可配置价格表，不硬编码）===');
 const est = policy.estimateCost('deepseek-chat', 1000, 500);
