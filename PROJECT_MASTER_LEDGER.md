@@ -1,7 +1,7 @@
 # 言道国学项目总账（PROJECT_MASTER_LEDGER）
 
 > **本文档是项目唯一权威账簿（Single Source of Truth）。**
-> 最后更新: 2026-08-31（十二.23 批次：APK v25.0.67/2067 重建对齐线上 Web+统一分发源 latest.apk+升级提示/公告生效+主站 robots/sitemap 假文件修复；同日 SEO-GROWTH-ENGINE-SUPP-01 批次：程序化搜索增长引擎首批落地——13个C端差异化关键词静态落地页+1个B端行业方案页+robots/sitemap，v25.0.67 生产发布+公网验证 42/42 PASS+四端SSOT一致 add0f56；前批 2026-08-30 FINAL-OPERATIONS-COMPLETION-MASTER-05 最终封板：六模块后端+全量回归+公网 21/21）
+> 最后更新: 2026-08-31（十二.24 批次：IndexNow 免登录主动推送双站 28 URL 202 受理+百度/头条/IndexNow 推送工具固化入仓；十二.23 批次：APK v25.0.67/2067 重建对齐线上 Web+统一分发源 latest.apk+升级提示/公告生效+主站 robots/sitemap 假文件修复；同日 SEO-GROWTH-ENGINE-SUPP-01 批次：程序化搜索增长引擎首批落地——13个C端差异化关键词静态落地页+1个B端行业方案页+robots/sitemap，v25.0.67 生产发布+公网验证 42/42 PASS+四端SSOT一致 add0f56；前批 2026-08-30 FINAL-OPERATIONS-COMPLETION-MASTER-05 最终封板：六模块后端+全量回归+公网 21/21）
 > 上一批（2026-08-30 中）：AI-PRODUCTION-SEAL-AND-COMMISSION-ROUTER-04（AI Phase 1 正式生产上线 + 历史无限权益保护 + AI 成本中心生产验收 + Commission Router 唯一结算引擎 + Partner 50% 账务闭环 + 防重复计提）
 > 上上批（2026-08-29）：P0-PRODUCTION-SEAL-AND-AI-COST-PHASE1-03（P0安全修复正式生产落地 + 生产攻击回归 + SSOT总账纠偏 + 真太阳时封板 + AI Fair Usage/Cost Center 第一阶段）
 > 上一批（2026-08-25，生产版本 v25.0.47_30）：FIX-V30-PAY-CARE 支付权益彻查+防再发机制——用户投诉「会员ID 100011 充值没开通会员」彻查结论：①订单 YD20260825173625902022 ¥39.9 实为 SINGLE_UNLOCK 单次深度解读（非会员套餐），支付成功且 benefit_delivered=1 权益已正常发放；用户误将单次解读当会员购买（单次 39.9>月费 37 价格结构易混淆），支付后又连续创建 7 个未完成 PENDING 订单反复尝试；②全量对账 5 笔 PAID 订单：真实用户订单权益全部正常发放，唯一漏发为 E2E 测试订单 TEST_RC06_DELIVER（无 transaction_id 无真实扣款，已归档）；910082 yearly 会员为 E2E 测试账号（无手机号）非漏发；③处理：用户 100011 客户关怀补偿开通月度会员至 2026-09-24（与生产 deliverOrderBenefits 同口径 users+user_assets 双表）+7 个僵尸 PENDING 订单关闭+operation_logs 三条留痕（修复前 DB 备份 /root/backup/yandao_users_pre_fix100011_20260825_175346.db）；⑥应老板要求改单（2026-08-25 追加）：订单 129 YD20260825173625902022 由 SINGLE_UNLOCK 正式转为 MEMBERSHIP（实付 39.9 金额不动，benefit_delivered=1 维持，operation_logs id=302 order_type_convert 留痕），订单记录与已发月度会员权益一致；用户无推荐人（invited_by/referrer_id 空）改单对佣金结算零影响；④防再发：部署 /root/backend-auth/scripts/payment_reconcile.sh 每日 03:30 cron 自动对账——查 PAID+benefit_delivered=0+支付超10分钟的沉默漏发订单，MEMBERSHIP 按金额映射档位（37/99/374/3600）自动补交付（续费顺延同口径）、SINGLE_UNLOCK 补标记、未知类型告警人工，告警日志 payment_audit_alerts.log；⑤产品层防混淆：单次解锁弹窗新增三处明确标识「本单为单次解读解锁，非会员套餐」+「支付后仅解锁本次解读，不含会员权益」；前一版本 v25.0.47_29+APK v25.0.55(2055)：FIX-V29-DOWNLOAD-RESCUE 升级下载链路根治）
@@ -758,3 +758,17 @@ gh workflow run ios-build.yml --repo wzmpa18/minglizyi --ref main
 **验证（服务器+本地外部双通道）**：①升级接口返回 25.0.67/2067+downloadUrl=latest.apk；②公告接口返回 a_v25_0_67_release（置顶）；③`/app-download/latest.apk` 200+MIME application/vnd.android.package-archive+11714186B（MD5 288ed27772e231936b28365193aea647 与服务器一致）；④**APK_URL_SINGLE_SOURCE_GATE 18/18 PASS**（HTTP/二进制/包名/2067/25.0.67/公网-服务器 MD5 一致/分发目录单一文件/三处公开入口无非法 APK 直链/三个配置端点 downloadUrl 一致/根路径 301）；⑤国学站 sitemap 24 URL 与主站 sitemap 4 URL 公网可达。
 
 **站长平台主动提交状态（如实）**：本会话无浏览器自动化能力（浏览器插件未暴露工具），平台侧「完成验证/Sitemap提交/链接提交」无法代点；已把服务器侧全部就绪（三平台验证文件公网可达+双站 robots/sitemap 真实内容）；百度 API 推送通道（`http://data.zz.baidu.com/urls?site=…&token=…`）待项目方从平台「普通收录→API推送」页复制接口调用地址后即可全自动推送 24+4 URL；头条为纯网页操作（Sitemap提交+URL提交），需项目方 3 步点击（清单已交付）。
+
+---
+
+## 十二.24 IndexNow 免登录主动推送 + 百度/头条推送工具固化（2026-08-31）
+
+**背景**：项目方要求「主动加速抓取，不要等引擎自己来」。百度/头条/谷歌平台侧需登录会话无法代操作，但 **IndexNow 是免登录的官方主动推送协议**（必应 Yandex Seznam Naver 系全支持），可全自动执行。
+
+**部署**：①密钥生成（GUID 随机 32 hex）——国学站 `6adb2132052f4657a159f7302971f5c2`、主站 `7f9989ce602348f4bb3bb968879a640f`；②密钥文件落位——国学站仓库 `public/{key}.txt`（未来每次构建自动携带）+ 服务器 `/root/yandaoguoxue/current/{key}.txt`（current 软链内即时生效，try_files 直出**零 nginx 改动**）；主站仓库 `backend_deploy/seo/verify-main/{key}.txt` + 服务器 `/www/yandao-company/{key}.txt`（与 robots/sitemap 同目录同机制）；③公网内容级验证：两密钥文件返回值与密钥逐一相符 PASS。
+
+**推送结果**：`backend_deploy/seo/indexnow_push.sh`（node 组 JSON + curl POST api.indexnow.org）——国学站 24 URL → HTTP 202 受理；主站 4 URL → HTTP 202 受理。202 含义：请求已受理、引擎稍后抓密钥文件确认所有权后纳入抓取队列（非最终收录承诺）。
+
+**工具固化**：Temp 草稿转正式仓库件——`backend_deploy/seo/baidu_push.sh`（百度普通收录 API 推送+sitemap API 提交，一跑双提交）、`baidu_urls_guoxue.txt`（24 URL）、`baidu_urls_main.txt`（4 URL）、`indexnow_push.sh`（IndexNow 协议推送）。URL 清单与两站 sitemap.xml 逐一一致（单一来源）。
+
+**爬虫基线（当日实测）**：Googlebot 已抓 `/robots.txt`；Bytespider 于 02:50 重访 `ByteDanceVerify.html` 且命中修复后的 21B 正确内容（推送前 7 次命中为 7739B 兜底页，即头条验证失败根因的日志证据）；`/tools/wuguang-paipan.html` 已被引擎访问 200；**Baiduspider 零到访**——百度侧必须靠项目方提供 API token 主动推送，别等自然抓取。
