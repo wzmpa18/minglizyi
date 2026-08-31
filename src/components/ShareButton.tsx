@@ -12,6 +12,7 @@ import {
   copyLinkReal,
   systemShareReal,
   makeShareQr,
+  verifyShareQr,
   logShareAction,
   type ShareEngineInput,
   type ShareTokenData,
@@ -203,7 +204,7 @@ export function ShareButton({
     }
   }, [ensureShareUrl, getCurrentUserInfo, showToast]);
 
-  // 二维码（本地生成，展示可长按识别）
+  // 二维码（本地生成 + 内容自检，展示可长按识别）
   const handleShowQr = useCallback(async () => {
     setShowMenu(false);
     setGenerating(true);
@@ -211,6 +212,12 @@ export function ShareButton({
       const link = await ensureShareUrl();
       if (!link) { setGenerating(false); return; }
       const qr = await makeShareQr(link);
+      // Share P1：二维码内容自检 Decode(QR) === 分享URL，失败不展示错误码图
+      const ok = await verifyShareQr(qr, link);
+      if (!ok) {
+        showToast("二维码校验失败，请重试");
+        return;
+      }
       setQrImage(qr);
       logShareAction("qr_code");
     } catch (e) {
@@ -221,7 +228,7 @@ export function ShareButton({
     }
   }, [ensureShareUrl, showToast]);
 
-  // 系统分享（真实Web Share API；取消≠成功）
+  // 系统分享（v25.0.68：APP走@capacitor/share真实调起系统面板；Web走Web Share API；取消≠成功）
   const handleSystemShare = useCallback(async () => {
     setShowMenu(false);
     setGenerating(true);
@@ -230,7 +237,8 @@ export function ShareButton({
       if (!link) { setGenerating(false); return; }
       const status = await systemShareReal({ title, text: description || title, url: link });
       if (status === "success") {
-        showToast("分享成功");
+        // 语义精确：面板真实打开 ≠ 用户已完成分享
+        showToast("系统分享面板已打开");
         logShareAction("system_share");
         handleShareSuccess();
       } else if (status === "cancelled") {

@@ -516,6 +516,60 @@ export {
 } from './modules/astro';
 
 // ============================================================================
+// 十四C、七政四余模块 (modules/qizheng/) — NICHE-TOOLS-07 v25.0.68 新增
+// 净室实现：天文层 天文历算引擎 2.1.19（MIT）；宫制/宿度/洞微大限古法映射
+// ============================================================================
+export {
+  type QizhengInput,
+  type QizhengResult,
+  type StarPosition,
+  type PalaceInfo,
+  type MansionInfo,
+  type DongweiRow,
+  type StarFrame,
+  type MingGongMode,
+  QIZHENG_ENGINE_VERSION,
+  QI_CONFIG,
+  QIZHENG_CITIES,
+  RENSHI_GONG_NAMES,
+  calcQizhengChart,
+  xianDuAtAge,
+  qiLongitude,
+  luoLongitude,
+  beiLongitude,
+} from './modules/qizheng';
+
+// ============================================================================
+// 十四D、专业电子罗盘模块 (modules/compass/) — NICHE-TOOLS-08 v25.0.68 新增
+// 磁偏角层：NOAA WMM2025（美国政府公共领域，2025-2030 有效）
+// 传感器航向解算/二十四山判读/磁场干扰判定见客户端 useCompassSensor 与本模块
+// ============================================================================
+export {
+  type WmmField,
+  type ShanReading,
+  type InterferenceLevel,
+  type InterferenceResult,
+  type NorthMode,
+  type CompassReadingResult,
+  COMPASS_ENGINE_VERSION,
+  SHAN_24,
+  BAGUA_8,
+  normalizeDeg,
+  decimalYear,
+  wmm2025Field,
+  compassDeclination,
+  shanForHeading,
+  oppositeShan,
+  baguaForHeading,
+  toTrueHeading,
+  toMagneticHeading,
+  angleDiff,
+  CircularSmoother,
+  magneticInterference,
+  buildCompassReading,
+} from './modules/compass';
+
+// ============================================================================
 // 十五、手机号吉凶模块 (modules/phone/) — v18.4 新增
 // ============================================================================
 export {

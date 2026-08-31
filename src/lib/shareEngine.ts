@@ -132,15 +132,52 @@ export async function copyLinkReal(url: string): Promise<boolean> {
 }
 
 /**
- * 系统分享（Web Share API）
- * 返回：{ status: 'success' | 'cancelled' | 'unsupported' | 'error' }
- * 用户取消（AbortError）明确不算成功。
+ * 系统分享 v2（Share P0 修复 · v25.0.68）：
+ *
+ * 根因（APP_SHARE_ROOT_CAUSE）：Capacitor Android WebView 中 navigator.share()
+ * 存在且 resolve，但宿主 WebView 未实现 Web Share chooser —— 面板从未弹出，
+ * 而 systemShareReal v1 把 resolve 误判为 "success"，产生"分享成功"假提示。
+ *
+ * 修复语义：
+ *   1. 原生 APP：优先 @capacitor/share 插件（真实调起 Android/iOS 系统分享面板）
+ *      - 原生路径失败直接返回 error，绝不回落到 WebView navigator.share 假成功陷阱
+ *   2. Web：Web Share API（浏览器原生面板，真实可用）
+ *   - success = 分享面板真实打开 / 系统真实接受
+ *   - cancelled = 用户明确取消
+ *   - unsupported = 环境不支持（由调用方降级复制链接）
  */
 export async function systemShareReal(params: {
   title: string;
   text?: string;
   url: string;
 }): Promise<"success" | "cancelled" | "unsupported" | "error"> {
+  // 1) 原生 APP：Capacitor Share 插件优先（修复核心）
+  if (typeof window !== "undefined") {
+    let nativePlatform = false;
+    try {
+      const { Capacitor } = await import("@capacitor/core");
+      nativePlatform = Capacitor.isNativePlatform();
+      if (nativePlatform) {
+        const { Share } = await import("@capacitor/share");
+        await Share.share({
+          title: params.title,
+          text: params.text || params.title,
+          url: params.url,
+          dialogTitle: "分享言道国学",
+        });
+        return "success";
+      }
+    } catch (e) {
+      if (nativePlatform) {
+        // 确认原生平台后插件调用失败：直接 error，绝不回落 WebView navigator.share 假成功陷阱
+        const err = e as { message?: string };
+        if (/cancel/i.test(String(err?.message || ""))) return "cancelled";
+        return "error";
+      }
+      // 平台判定本身失败：按 Web 路径继续
+    }
+  }
+  // 2) Web：Web Share API（真实浏览器分享面板）
   if (typeof navigator === "undefined" || typeof navigator.share !== "function") {
     return "unsupported";
   }
@@ -156,15 +193,47 @@ export async function systemShareReal(params: {
   }
 }
 
-/** 生成分享链接二维码（本地qrcode包，无境外依赖） */
+/**
+ * 生成分享链接二维码（本地qrcode包，无境外依赖）
+ * v25.0.68：CJS/ESM 双兼容导入（修 Web 端动态导入 default 缺失隐患）+ 内容自检
+ */
 export async function makeShareQr(url: string): Promise<string> {
-  const QRCode = (await import("qrcode")).default;
+  const mod = await import("qrcode");
+  const QRCode = ((mod as unknown as { default?: typeof mod }).default ?? mod) as typeof mod;
   return QRCode.toDataURL(url, {
     width: 300,
     margin: 2,
     errorCorrectionLevel: "M",
     color: { dark: "#2D1A3E", light: "#FFFFFF" },
   });
+}
+
+/**
+ * 二维码内容自检（Share P1）：Decode(QR) 必须等于预期分享 URL
+ * 用 jsqr 从 dataURL 还原像素解码；失败返回 false，调用方按失败处理
+ */
+export async function verifyShareQr(dataUrl: string, expectedUrl: string): Promise<boolean> {
+  try {
+    const img = new Image();
+    img.decoding = "sync";
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error("image load failed"));
+      img.src = dataUrl;
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return false;
+    ctx.drawImage(img, 0, 0);
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const jsQR = (await import("jsqr")).default;
+    const decoded = jsQR(data.data, canvas.width, canvas.height);
+    return !!decoded && decoded.data === expectedUrl;
+  } catch {
+    return false;
+  }
 }
 
 /** 记录分享行为日志（静默，不阻塞主流程） */
