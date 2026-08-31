@@ -86,7 +86,55 @@ export interface ModerationUser {
   invite_level1?: number;
   /** 二级邀请人数 */
   invite_level2?: number;
+  /** v25.0.71 当日登录次数（北京时间自然日） */
+  today_login_count?: number;
+  /** v25.0.71 当日在线时长（秒） */
+  today_active_seconds?: number;
+  /** v25.0.71 当日工具使用次数 */
+  today_tool_events?: number;
+  /** v25.0.71 当日最后活跃时间 */
+  today_last_active_at?: string | null;
 }
+
+/** v25.0.71 活跃用户日报单行 */
+export interface ActivityDailyUser {
+  user_id: number;
+  nickname: string;
+  phone?: string;
+  email?: string;
+  member_level?: string;
+  status: string;
+  last_login_at?: string | null;
+  login_count: number;
+  active_seconds: number;
+  tool_events: number;
+  last_active_at?: string | null;
+}
+
+export interface ActivityDailyTrendItem {
+  stat_date: string;
+  active_users: number;
+  total_active_seconds: number;
+  total_tool_events: number;
+}
+
+export interface ActivityDailyData {
+  date: string;
+  today: string;
+  page: number;
+  size: number;
+  total: number;
+  stat: {
+    active_users: number;
+    total_logins: number;
+    total_active_seconds: number;
+    total_tool_events: number;
+  };
+  trend: ActivityDailyTrendItem[];
+  users: ActivityDailyUser[];
+}
+
+export type ActivityDailySort = "duration" | "logins" | "tools" | "lastActive";
 
 export interface ModerationPost {
   post_id: string;
@@ -296,6 +344,27 @@ export async function userAction(
     body: JSON.stringify({ action, hours, reason }),
   });
   return { ok: !!res.success, error: res.error };
+}
+
+// v25.0.71 活跃用户日报：每天查看各活跃用户的登录次数/在线时长/工具使用
+export async function fetchActivityDaily(
+  date = "",
+  page = 1,
+  size = 20,
+  query = "",
+  sort: ActivityDailySort = "duration"
+): Promise<ActivityDailyData | null> {
+  const params = new URLSearchParams({
+    page: String(page),
+    size: String(size),
+    sort,
+  });
+  if (date) params.set("date", date);
+  if (query) params.set("query", query);
+  const res = await unifiedFetch<ActivityDailyData>(
+    `/moderation/activity/daily?${params.toString()}`
+  );
+  return res.success ? res.data! : null;
 }
 
 // v25.0.60 P1-9：后台会员调整/补发（改单不再依赖 SQL 直改库）

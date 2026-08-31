@@ -105,6 +105,18 @@ export function trackToolEvent(
   }
   pruneDaily(evt);
   persist(store);
+  sessionToolEvents += 1; // v25.0.71 供活跃心跳上报（本地计数，仅聚合值上报）
+}
+
+// —— v25.0.71 会话工具事件计数（活跃心跳用：UserActivityInit 每 60 秒消费一次） ——
+let sessionToolEvents = 0;
+
+/** 取走当前会话累计的工具事件数（读后清零，由活跃心跳随 activeSeconds 一并上报） */
+export function consumeSessionToolEvents(): number {
+  if (typeof window === "undefined") return 0;
+  const n = sessionToolEvents;
+  sessionToolEvents = 0;
+  return n;
 }
 
 /** 最近 n 天汇总（默认 30，供后台/运营报表） */

@@ -42,6 +42,15 @@ const DEFAULT_FLAGS = {
   upload:     { name: '上传',       status: 'ON', desc: '图片/文件上传' },
   storefront: { name: '橱窗',       status: 'ON', desc: '用户橱窗展示' },
   newsLinks:  { name: '资讯外链',   status: 'ON', desc: '资讯站外链接跳转' },
+  // v25.0.71 七政四余断语六节开关（总开关+六节分开关，控制七政排盘页断语面板展示；
+  //   断语为前端知识库引擎输出，服务端经 /api/public/feature-flags 镜像下发开关状态）
+  qizheng_duanyu:            { name: '七政断语-总开关', status: 'ON', desc: '七政四余排盘断语面板总开关（关闭后断语面板整体隐藏）' },
+  qizheng_duanyu_yuandian:   { name: '七政断语-垣殿得地', status: 'ON', desc: '卷三：入垣/升殿/庙旺乐喜/忌躔' },
+  qizheng_duanyu_huayao:     { name: '七政断语-十干化曜', status: 'ON', desc: '卷一§1.6：年干化曜与文魁官印催禄喜' },
+  qizheng_duanyu_shensha:    { name: '七政断语-神煞吉凶', status: 'ON', desc: '卷四：阳刃/的煞/咸池/劫亡/驿马/孤寡/空亡/月煞/值难' },
+  qizheng_duanyu_geju:       { name: '七政断语-身命格局', status: 'ON', desc: '卷六/卷七：三主强弱/日月夹命/金水辅日/五残星/昼夜向背' },
+  qizheng_duanyu_gongduan:   { name: '七政断语-十二宫断', status: 'ON', desc: '卷七§7.3：逐人事宫所守星曜断语' },
+  qizheng_duanyu_gefu:       { name: '七政断语-歌赋引用', status: 'ON', desc: '卷八：玉衡经性情断语与断命总纲' },
 };
 
 function loadFlags() {

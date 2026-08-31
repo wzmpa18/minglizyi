@@ -11,7 +11,7 @@
 // ============================================================================
 
 import { useCallback, useEffect, useState } from "react";
-import { Users, FileText, Flag, UsersRound, RefreshCw, Ban, CheckCircle2, VolumeX, Unlock, Crown } from "lucide-react";
+import { Users, FileText, Flag, UsersRound, RefreshCw, Ban, CheckCircle2, VolumeX, Unlock, Crown, Activity } from "lucide-react";
 import { THEME, styles, AdminCard, Badge, LoadingSpinner, useMounted, useToast } from "../_shared";
 import {
   fetchModerationUsers,
@@ -23,17 +23,31 @@ import {
   reportAction,
   fetchModerationGroups,
   groupAction,
+  fetchActivityDaily,
   type ModerationUser,
   type ModerationPost,
   type ModerationReport,
   type ModerationGroup,
+  type ActivityDailyData,
+  type ActivityDailySort,
 } from "@/lib/admin/unifiedService";
 
-type TabKey = "users" | "posts" | "reports" | "groups";
+type TabKey = "users" | "activity" | "posts" | "reports" | "groups";
 
 function fmtTime(iso?: string | null): string {
   if (!iso) return "-";
   return iso.slice(0, 16).replace("T", " ");
+}
+
+/** 秒 → 「X小时Y分」/「Y分钟」/「Z秒」可读时长 */
+function fmtDuration(sec?: number | null): string {
+  if (!sec || sec <= 0) return "0分钟";
+  if (sec < 60) return `${sec}秒`;
+  const m = Math.floor(sec / 60);
+  if (m < 60) return `${m}分钟`;
+  const h = Math.floor(m / 60);
+  const rm = m % 60;
+  return rm > 0 ? `${h}小时${rm}分` : `${h}小时`;
 }
 
 export default function AdminModerationPage() {
@@ -61,6 +75,14 @@ export default function AdminModerationPage() {
 
   const [groups, setGroups] = useState<ModerationGroup[]>([]);
   const [groupsTotal, setGroupsTotal] = useState(0);
+
+  // v25.0.71 活跃用户日报：每天查看各活跃用户登录次数/在线时长/工具使用
+  const [activityData, setActivityData] = useState<ActivityDailyData | null>(null);
+  const [activityDate, setActivityDate] = useState(""); // 空 = 北京时间今天
+  const [activityQuery, setActivityQuery] = useState("");
+  const [activitySort, setActivitySort] = useState<ActivityDailySort>("duration");
+  const [activityPage, setActivityPage] = useState(1);
+  const [activityPageSize, setActivityPageSize] = useState(20);
 
   // 通用操作弹窗（原因必填）
   const [actionTarget, setActionTarget] = useState<{
@@ -118,6 +140,25 @@ export default function AdminModerationPage() {
     }
   }, []);
 
+  const loadActivity = useCallback(
+    async (pageToLoad?: number, sizeToLoad?: number) => {
+      const page = pageToLoad ?? activityPage;
+      const size = sizeToLoad ?? activityPageSize;
+      const d = await fetchActivityDaily(activityDate, page, size, activityQuery, activitySort);
+      if (d) {
+        setActivityData(d);
+        setActivityPage(page);
+      }
+    },
+    [activityDate, activityPage, activityPageSize, activityQuery, activitySort]
+  );
+
+  useEffect(() => {
+    if (!mounted || tab !== "activity") return;
+    loadActivity(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, tab, activityDate, activitySort]);
+
   useEffect(() => {
     if (!mounted) return;
     (async () => {
@@ -130,6 +171,7 @@ export default function AdminModerationPage() {
 
   const reloadCurrent = () => {
     if (tab === "users") loadUsers();
+    else if (tab === "activity") loadActivity();
     else if (tab === "posts") loadPosts();
     else if (tab === "reports") loadReports();
     else loadGroups();
@@ -211,6 +253,7 @@ export default function AdminModerationPage() {
         {(
           [
             { key: "users", label: `用户（${usersTotal}）`, icon: <Users size={14} /> },
+            { key: "activity", label: `活跃用户${activityData ? `（${activityData.stat?.active_users ?? 0}）` : ""}`, icon: <Activity size={14} /> },
             { key: "posts", label: `动态（${postsTotal}）`, icon: <FileText size={14} /> },
             { key: "reports", label: `举报（${reportsTotal}）`, icon: <Flag size={14} /> },
             { key: "groups", label: `群聊（${groupsTotal}）`, icon: <UsersRound size={14} /> },
@@ -266,13 +309,14 @@ export default function AdminModerationPage() {
                 <Th>邀请成员</Th>
                 <Th>状态</Th>
                 <Th>禁言至</Th>
+                <Th>当日活跃</Th>
                 <Th>最近登录</Th>
                 <Th>操作</Th>
               </tr>
             </thead>
             <tbody>
               {users.length === 0 ? (
-                <EmptyRow colSpan={10} />
+                <EmptyRow colSpan={11} />
               ) : (
                 users.map((u) => (
                   <tr key={u.user_id}>
@@ -311,6 +355,25 @@ export default function AdminModerationPage() {
                       </Badge>
                     </Td>
                     <Td style={{ fontSize: 11 }}>{u.muted_until ? fmtTime(u.muted_until) : "-"}</Td>
+                    <Td style={{ fontSize: 11 }}>
+                      {u.today_active_seconds || u.today_login_count || u.today_tool_events ? (
+                        <div>
+                          <span style={{ fontWeight: 700, color: THEME.primary }}>
+                            {fmtDuration(u.today_active_seconds)}
+                          </span>
+                          <div style={{ fontSize: 11, color: THEME.textHint }}>
+                            登录 {u.today_login_count ?? 0} 次 · 工具 {u.today_tool_events ?? 0} 次
+                          </div>
+                          {u.today_last_active_at && (
+                            <div style={{ fontSize: 10, color: THEME.textHint }}>
+                              最后 {fmtTime(u.today_last_active_at)}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span style={{ color: THEME.textHint }}>今日未活跃</span>
+                      )}
+                    </Td>
                     <Td style={{ fontSize: 11 }}>{fmtTime(u.last_login_at)}</Td>
                     <Td>
                       <div style={{ display: "flex", gap: 6 }}>
@@ -383,6 +446,168 @@ export default function AdminModerationPage() {
             onLoad={(p, s) => {
               if (s !== undefined && s !== usersPageSize) setUsersPageSize(s);
               loadUsers(p, s);
+            }}
+          />
+        </AdminCard>
+      )}
+
+      {/* ===== v25.0.71 活跃用户日报 ===== */}
+      {tab === "activity" && (
+        <AdminCard>
+          <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
+            <input
+              type="date"
+              value={activityDate}
+              max={activityData?.today || undefined}
+              onChange={(e) => {
+                setActivityDate(e.target.value);
+                setActivityPage(1);
+              }}
+              style={{ ...styles.input, width: 160 }}
+              title="北京时间自然日，可回看最近 90 天"
+            />
+            <input
+              type="text"
+              placeholder="搜索昵称 / 手机号 / 用户ID"
+              value={activityQuery}
+              onChange={(e) => setActivityQuery(e.target.value)}
+              style={{ ...styles.input, width: 220 }}
+              onKeyDown={(e) => e.key === "Enter" && loadActivity(1)}
+            />
+            <select
+              value={activitySort}
+              onChange={(e) => setActivitySort(e.target.value as ActivityDailySort)}
+              style={{ ...styles.input, width: 150 }}
+            >
+              <option value="duration">按在线时长排序</option>
+              <option value="logins">按登录次数排序</option>
+              <option value="tools">按工具使用排序</option>
+              <option value="lastActive">按最后活跃排序</option>
+            </select>
+            <button onClick={() => loadActivity(1)} style={styles.btnPrimary}>
+              <RefreshCw size={12} style={{ verticalAlign: -1, marginRight: 4 }} />
+              查询
+            </button>
+            <span style={{ fontSize: 11, color: THEME.textHint }}>
+              口径：北京时间自然日；在线时长=页面前台可见时长（60秒心跳上报）
+            </span>
+          </div>
+
+          {activityData && (
+            <>
+              {/* 当日汇总指标条 */}
+              <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
+                {[
+                  { label: "活跃用户", value: String(activityData.stat?.active_users ?? 0), sub: `${activityData.date}（北京时间）` },
+                  { label: "总登录次数", value: String(activityData.stat?.total_logins ?? 0), sub: "含注册与各端登录" },
+                  { label: "总在线时长", value: fmtDuration(activityData.stat?.total_active_seconds), sub: "全部活跃用户合计" },
+                  { label: "总工具使用", value: `${activityData.stat?.total_tool_events ?? 0} 次`, sub: "埋点口径 tool_* 事件" },
+                ].map((m) => (
+                  <div
+                    key={m.label}
+                    style={{
+                      flex: 1,
+                      minWidth: 150,
+                      border: `1px solid ${THEME.border}`,
+                      borderRadius: 8,
+                      padding: "10px 14px",
+                    }}
+                  >
+                    <div style={{ fontSize: 11, color: THEME.textSub }}>{m.label}</div>
+                    <div style={{ fontSize: 20, fontWeight: 700, color: THEME.primary, margin: "2px 0" }}>{m.value}</div>
+                    <div style={{ fontSize: 10, color: THEME.textHint }}>{m.sub}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* 近 7 日趋势 */}
+              {activityData.trend && activityData.trend.length > 0 && (
+                <div style={{ marginBottom: 14, border: `1px solid ${THEME.border}`, borderRadius: 8, padding: "10px 14px" }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: THEME.textMain, marginBottom: 8 }}>近 7 日活跃趋势</div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {[...activityData.trend]
+                      .sort((a, b) => (a.stat_date < b.stat_date ? -1 : 1))
+                      .map((t) => (
+                        <div
+                          key={t.stat_date}
+                          style={{
+                            flex: 1,
+                            minWidth: 90,
+                            borderRadius: 6,
+                            padding: "6px 10px",
+                            backgroundColor: t.stat_date === activityData.date ? "#f3e8ff" : "#f7f7f8",
+                            fontSize: 11,
+                            color: THEME.textSub,
+                          }}
+                        >
+                          <div style={{ fontWeight: 600 }}>{t.stat_date.slice(5)}</div>
+                          <div>
+                            活跃 <b style={{ color: THEME.primary }}>{t.active_users}</b>
+                          </div>
+                          <div>时长 {fmtDuration(t.total_active_seconds)}</div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          <Table>
+            <thead>
+              <tr>
+                <Th>ID</Th>
+                <Th>昵称</Th>
+                <Th>手机号</Th>
+                <Th>会员</Th>
+                <Th>状态</Th>
+                <Th>登录次数</Th>
+                <Th>在线时长</Th>
+                <Th>工具使用</Th>
+                <Th>最后活跃</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {!activityData || activityData.users.length === 0 ? (
+                <EmptyRow colSpan={9} />
+              ) : (
+                activityData.users.map((a) => (
+                  <tr key={a.user_id}>
+                    <Td>{a.user_id}</Td>
+                    <Td>{a.nickname}</Td>
+                    <Td style={{ whiteSpace: "nowrap" }}>{a.phone || "-"}</Td>
+                    <Td>
+                      {a.member_level && a.member_level !== "basic" ? (
+                        <Badge type={a.member_level === "lifetime" ? "warning" : "success"}>
+                          {{ monthly: "月度", quarterly: "季度", yearly: "年度", lifetime: "终身", premium: "高级" }[a.member_level] || a.member_level}
+                        </Badge>
+                      ) : (
+                        <Badge type="default">普通</Badge>
+                      )}
+                    </Td>
+                    <Td>
+                      <Badge type={a.status === "banned" ? "error" : "success"}>
+                        {a.status === "banned" ? "已封禁" : "正常"}
+                      </Badge>
+                    </Td>
+                    <Td>
+                      <b style={{ color: THEME.primary }}>{a.login_count}</b>
+                    </Td>
+                    <Td style={{ fontWeight: 700 }}>{fmtDuration(a.active_seconds)}</Td>
+                    <Td>{a.tool_events} 次</Td>
+                    <Td style={{ fontSize: 11 }}>{fmtTime(a.last_active_at)}</Td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </Table>
+          <Pager
+            total={activityData?.total ?? 0}
+            page={activityPage}
+            pageSize={activityPageSize}
+            onLoad={(p, s) => {
+              if (s !== undefined && s !== activityPageSize) setActivityPageSize(s);
+              loadActivity(p, s);
             }}
           />
         </AdminCard>

@@ -1,13 +1,17 @@
 "use client";
 
-// 七政四余排盘工具页 - NICHE-TOOLS v25.0.68
+// 七政四余排盘工具页 - NICHE-TOOLS v25.0.68 / 断语面板 v25.0.71
 // ============================================================================
 // 功能：出生信息排盘（今制/恒星制）、真太阳时校正、十二人事宫、二十八宿宿度、
 //       十一曜（七政四余）宫度分布、命宫命度/身宫身度、洞微大限行限查询、
 //       客户记录保存、统一分享、AI 解读。
 // 盘面：Moira 式圆盘（外圈二十八宿 → 十二地支宫 → 内区星曜；0° 黄经在上，
 //       顺时针展开；命度/身度以红/蓝标于外缘）。
-// 协议：排盘数据与判读口径由算法层输出；本页不生成吉凶断语。
+// 断语：v25.0.71 接入断语引擎（qizheng-duanyu，果老星宗八卷知识库），
+//       六节断语（垣殿/化曜/神煞/格局/十二宫断/歌赋），逐条标注出处；
+//       后台「系统功能开关」七项断语开关（总开关+六节）经 /api/public/feature-flags
+//       镜像控制展示，关闭的节不渲染、不进 AI 上下文。
+// 协议：排盘数据与判读口径由算法层输出；断语由知识库引擎输出并受后台开关管控。
 // ============================================================================
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -28,6 +32,13 @@ import {
   type MingGongMode,
   type StarFrame,
 } from "@/algorithm-core/modules/qizheng";
+import {
+  calcQizhengDuanyu,
+  DUANYU_ENGINE_VERSION,
+  type DuanyuItem,
+  type DuanyuSectionKey,
+} from "@/algorithm-core/modules/qizheng-duanyu";
+import { fetchFeatureFlags, flagOn } from "@/lib/featureFlags";
 import SharedBirthLocationSelector, { type RegionIndices, regionAt } from "@/components/shared/region-selector";
 
 const BRAND = "#7B2FBE";
@@ -55,6 +66,13 @@ const STAR_AREA = "#0e1526";
 
 const WUXING_STAR_COLOR: Record<string, string> = {
   "金": "#ffd54f", "木": "#81c784", "水": "#4fc3f7", "火": "#ff8a65", "土": "#d4b56a",
+};
+
+/** 断语分级徽标样式 */
+const DUANYU_LEVEL_META: Record<DuanyuItem["level"], { label: string; badge: string }> = {
+  ji: { label: "吉", badge: "bg-emerald-100 text-emerald-700" },
+  xiong: { label: "凶", badge: "bg-red-100 text-red-600" },
+  zhong: { label: "中性", badge: "bg-gray-100 text-gray-500" },
 };
 
 const HOURS = ["00:00-01:00", "01:00-03:00", "03:00-05:00", "05:00-07:00", "07:00-09:00", "09:00-11:00",
@@ -166,6 +184,50 @@ export default function QizhengPage() {
     return xianDuAtAge(result, xianAge);
   }, [result, xianAge]);
 
+  // ==================== 断语（v25.0.71） ====================
+  // 后台「系统功能开关」镜像：总开关 qizheng_duanyu + 六节分开关
+  const [featureFlags, setFeatureFlags] = useState<Record<string, string>>({});
+  const [dyOpenSections, setDyOpenSections] = useState<Set<DuanyuSectionKey>>(new Set(["yuandian"]));
+
+  useEffect(() => {
+    fetchFeatureFlags().then(setFeatureFlags).catch(() => { /* 拉取失败按全开兜底 */ });
+  }, []);
+
+  const duanyu = useMemo(() => {
+    if (!result) return null;
+    try {
+      return calcQizhengDuanyu(result);
+    } catch {
+      return null;
+    }
+  }, [result]);
+
+  const duanyuMasterOn = flagOn(featureFlags, "qizheng_duanyu");
+  const duanyuMasterMaint = featureFlags.qizheng_duanyu === "MAINTENANCE";
+  const visibleDySections = useMemo(() => {
+    if (!duanyu || !duanyuMasterOn) return [];
+    return duanyu.sections.filter((s) => flagOn(featureFlags, `qizheng_duanyu_${s.key}`));
+  }, [duanyu, duanyuMasterOn, featureFlags]);
+
+  const duanyuSummary = useMemo(() => {
+    const all = visibleDySections.flatMap((s) => s.items);
+    return {
+      ji: all.filter((i) => i.level === "ji").length,
+      xiong: all.filter((i) => i.level === "xiong").length,
+      zhong: all.filter((i) => i.level === "zhong").length,
+      total: all.length,
+    };
+  }, [visibleDySections]);
+
+  const toggleDySection = useCallback((key: DuanyuSectionKey) => {
+    setDyOpenSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
+
   // 星曜径向避让排布（按黄经排序，近距径向递减）
   const starLayout = useMemo(() => {
     if (!result) return [];
@@ -205,8 +267,18 @@ export default function QizhengPage() {
       "洞微行限：",
       ...result.dongwei.rows.map((r) => `${r.renshiGong}（${r.palaceBranch}宫）${r.startAge}-${Math.ceil(r.endAge) - 1}岁 共${r.years}年${r.isTongxian ? "（童限）" : ""}`),
     ];
+    // v25.0.71：可见断语（受后台开关管控，关闭的节不进 AI 上下文）
+    if (visibleDySections.length > 0) {
+      lines.push("知识库断语（果老星宗八卷，逐条含出处）：");
+      for (const sec of visibleDySections) {
+        lines.push(`【${sec.name}】`);
+        for (const it of sec.items) {
+          lines.push(`[${DUANYU_LEVEL_META[it.level].label}] ${it.title}：${it.text}（${it.source}）`);
+        }
+      }
+    }
     return lines.join("\n");
-  }, [result, frameText, birthText]);
+  }, [result, frameText, birthText, visibleDySections]);
 
   // ==================== 未排盘：介绍页 ====================
   if (!result) {
@@ -226,6 +298,7 @@ export default function QizhengPage() {
             <p>· 今制/恒星制双星制可选，真太阳时按出生地经度校正</p>
             <p>· 命宫（遇卯安命/日出定命）、命度、身度、度主全链路</p>
             <p>· 洞微大限行限表与任意虚岁行限度查询</p>
+            <p>· 断语六节（垣殿/化曜/神煞/格局/十二宫断/歌赋），逐条标注古籍出处</p>
           </div>
           <button
             onClick={() => setShowForm(true)}
@@ -584,6 +657,84 @@ export default function QizhengPage() {
           </div>
         </div>
       </div>
+
+      {/* 断语解读（v25.0.71 果老星宗八卷知识库，受后台七项开关管控） */}
+      {duanyu && (duanyuMasterOn || duanyuMasterMaint) && (
+        <div className="mt-2 bg-white px-3 py-3">
+          <div className="mb-1 flex items-center justify-between">
+            <span className="text-sm font-bold" style={{ color: BRAND }}>断语解读（果老星宗）</span>
+            {duanyuMasterOn && (
+              <span className="text-[10px] text-gray-500">
+                {duanyu.yearGanzhi.gan}{duanyu.yearGanzhi.zhi}年 · 共{duanyuSummary.total}条
+              </span>
+            )}
+          </div>
+          {duanyuMasterMaint ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-center text-xs text-amber-700">
+              断语功能维护中，稍后再试（后台开关：MAINTENANCE）
+            </div>
+          ) : visibleDySections.length === 0 ? (
+            <div className="rounded-lg bg-[#f5f0fa] p-3 text-center text-xs text-gray-500">
+              本盘暂无命中的可见断语
+            </div>
+          ) : (
+            <>
+              <div className="mb-2 flex flex-wrap gap-2 text-[10px]">
+                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-emerald-700">吉 {duanyuSummary.ji}</span>
+                <span className="rounded-full bg-red-50 px-2 py-0.5 text-red-600">凶 {duanyuSummary.xiong}</span>
+                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-gray-500">中性 {duanyuSummary.zhong}</span>
+                <span className="text-gray-400">分级为古籍通行口径提示，非绝对祸福断言</span>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {visibleDySections.map((sec) => {
+                  const open = dyOpenSections.has(sec.key);
+                  return (
+                    <div key={sec.key} className="py-1">
+                      <button
+                        type="button"
+                        onClick={() => toggleDySection(sec.key)}
+                        className="flex w-full items-center justify-between py-2 text-left active:opacity-70"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <span className="text-xs font-semibold text-gray-800">{sec.name}</span>
+                          <span className="rounded-full bg-[#f5f0fa] px-1.5 py-0.5 text-[9px] text-gray-500">{sec.items.length}</span>
+                        </span>
+                        <span className="text-xs text-gray-400">{open ? "收起 ▲" : "展开 ▼"}</span>
+                      </button>
+                      {open && (
+                        <div className="space-y-2 pb-2">
+                          <p className="text-[10px] leading-relaxed text-gray-400">{sec.desc}</p>
+                          {sec.items.map((it) => {
+                            const meta = DUANYU_LEVEL_META[it.level];
+                            return (
+                              <div key={it.id} className="rounded-lg border border-gray-100 p-2.5">
+                                <div className="flex items-center gap-1.5">
+                                  <span className={`rounded px-1.5 py-0.5 text-[9px] font-semibold ${meta.badge}`}>{meta.label}</span>
+                                  <span className="text-xs font-semibold text-gray-800">{it.title}</span>
+                                </div>
+                                <p className="mt-1.5 text-[11px] leading-relaxed text-gray-600">{it.text}</p>
+                                {it.verse && (
+                                  <p className="mt-1.5 rounded bg-[#faf6ec] p-2 text-[10px] leading-relaxed text-[#8a6d3b]">
+                                    「{it.verse}」
+                                  </p>
+                                )}
+                                <p className="mt-1.5 text-[9px] text-gray-400">出处：{it.source}</p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+          <p className="mt-1.5 text-[9px] text-gray-400">
+            断语引擎：{DUANYU_ENGINE_VERSION} · 逐条标注知识库卷节出处，仅供传统文化学习参考
+          </p>
+        </div>
+      )}
 
       {/* AI 解读 */}
       <div className="mt-2 bg-white px-3 py-3">

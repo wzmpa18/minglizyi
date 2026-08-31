@@ -437,10 +437,16 @@ router.get('/moderation/users', adminAuthUnified('SUPPORT_ADMIN', 'ops'), (req, 
     const total = udb.prepare(`SELECT COUNT(*) c FROM users u WHERE ${where}`).get(...params).c;
     // v25.0.47_24: 用户管理需展示完整注册信息（手机号/邮箱）——后台已鉴权 SUPPORT_ADMIN/ops，去脱敏直出
     // 邀请成员统计：按 user_invite_relation 聚合每位邀请人的一级/二级/总邀请数，展示会员是否邀请过会员及其后邀请的成员数
+    // v25.0.71: 关联当日活跃（user_activity_daily，北京时间自然日口径：登录次数/在线时长/工具使用）
+    const todayKey = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
     const rows = udb.prepare(`SELECT u.user_id, u.nickname, u.phone, u.email, u.member_level, u.status, u.muted_until, u.created_at, u.last_login_at,
                                      COALESCE(ir.invite_count, 0) AS invite_count,
                                      COALESCE(ir.invite_level1, 0) AS invite_level1,
-                                     COALESCE(ir.invite_level2, 0) AS invite_level2
+                                     COALESCE(ir.invite_level2, 0) AS invite_level2,
+                                     COALESCE(uad.login_count, 0) AS today_login_count,
+                                     COALESCE(uad.active_seconds, 0) AS today_active_seconds,
+                                     COALESCE(uad.tool_events, 0) AS today_tool_events,
+                                     uad.last_active_at AS today_last_active_at
                               FROM users u
                               LEFT JOIN (
                                 SELECT inviter_id,
@@ -450,12 +456,85 @@ router.get('/moderation/users', adminAuthUnified('SUPPORT_ADMIN', 'ops'), (req, 
                                 FROM user_invite_relation
                                 GROUP BY inviter_id
                               ) ir ON ir.inviter_id = u.user_id
+                              LEFT JOIN user_activity_daily uad ON uad.user_id = u.user_id AND uad.stat_date = ?
                               WHERE ${where} ORDER BY u.user_id DESC LIMIT ? OFFSET ?`)
-      .all(...params, size, (page - 1) * size);
-    res.json({ success: true, data: { total, page, size, users: rows } });
+      .all(todayKey, ...params, size, (page - 1) * size);
+    res.json({ success: true, data: { total, page, size, today: todayKey, users: rows } });
   } catch (e) {
     console.error('[moderation/users]', e.message);
     res.status(500).json({ success: false, error: '用户查询失败' });
+  }
+});
+
+// v25.0.71 活跃用户日报：GET /moderation/activity/daily?date=YYYY-MM-DD&page=&size=&query=&sort=
+// 每天查看各活跃用户的登录次数、在线时长（active_seconds）、工具使用次数（tool_events）
+// - date 缺省=北京时间今天；支持最近 90 天内任意日期
+// - sort: duration（默认，按在线时长降序）/ logins / tools / lastActive
+router.get('/moderation/activity/daily', adminAuthUnified('SUPPORT_ADMIN', 'ops'), (req, res) => {
+  try {
+    const udb = getUsersDb();
+    const beijingToday = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
+    let date = String(req.query.date || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) date = beijingToday;
+    // 限制最近 90 天
+    const minDate = new Date(Date.now() + 8 * 3600 * 1000 - 90 * 86400000).toISOString().slice(0, 10);
+    if (date < minDate || date > beijingToday) {
+      return res.status(400).json({ success: false, error: `日期需在 ${minDate} ~ ${beijingToday} 之间` });
+    }
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const size = Math.min(500, parseInt(req.query.size, 10) || 20);
+    const q = String(req.query.query || '').trim();
+    const sort = String(req.query.sort || 'duration');
+
+    let where = 'uad.stat_date = ?';
+    const params = [date];
+    if (q) {
+      where += ' AND (u.nickname LIKE ? OR u.phone LIKE ? OR CAST(u.user_id AS TEXT) = ?)';
+      params.push(`%${q}%`, `%${q}%`, q);
+    }
+    // 活跃定义：当日有任一活跃记录（登录/心跳/工具任一 >0）
+    where += ' AND (uad.login_count > 0 OR uad.active_seconds > 0 OR uad.tool_events > 0)';
+
+    const ORDER = {
+      duration: 'uad.active_seconds DESC, uad.tool_events DESC, u.user_id DESC',
+      logins: 'uad.login_count DESC, uad.active_seconds DESC, u.user_id DESC',
+      tools: 'uad.tool_events DESC, uad.active_seconds DESC, u.user_id DESC',
+      lastActive: 'uad.last_active_at DESC',
+    }[sort] || 'uad.active_seconds DESC, uad.tool_events DESC, u.user_id DESC';
+
+    const total = udb.prepare(
+      `SELECT COUNT(*) c FROM user_activity_daily uad JOIN users u ON u.user_id = uad.user_id WHERE ${where}`
+    ).get(...params).c;
+    const rows = udb.prepare(
+      `SELECT u.user_id, u.nickname, u.phone, u.email, u.member_level, u.status, u.last_login_at,
+              uad.login_count, uad.active_seconds, uad.tool_events, uad.last_active_at
+       FROM user_activity_daily uad
+       JOIN users u ON u.user_id = uad.user_id
+       WHERE ${where}
+       ORDER BY ${ORDER}
+       LIMIT ? OFFSET ?`
+    ).all(...params, size, (page - 1) * size);
+
+    // 当日汇总 + 近 7 日趋势（供顶部指标条）
+    const stat = udb.prepare(
+      `SELECT COUNT(*) AS active_users,
+              COALESCE(SUM(login_count), 0) AS total_logins,
+              COALESCE(SUM(active_seconds), 0) AS total_active_seconds,
+              COALESCE(SUM(tool_events), 0) AS total_tool_events
+       FROM user_activity_daily WHERE stat_date = ? AND (login_count > 0 OR active_seconds > 0 OR tool_events > 0)`
+    ).get(date);
+    const trend = udb.prepare(
+      `SELECT stat_date, COUNT(*) AS active_users, COALESCE(SUM(active_seconds), 0) AS total_active_seconds, COALESCE(SUM(tool_events), 0) AS total_tool_events
+       FROM user_activity_daily WHERE stat_date >= ? AND stat_date <= ? GROUP BY stat_date ORDER BY stat_date DESC`
+    ).all(
+      new Date(Date.now() + 8 * 3600 * 1000 - 6 * 86400000).toISOString().slice(0, 10),
+      beijingToday
+    );
+
+    res.json({ success: true, data: { date, today: beijingToday, page, size, total, stat, trend, users: rows } });
+  } catch (e) {
+    console.error('[moderation/activity/daily]', e.message);
+    res.status(500).json({ success: false, error: '活跃日报查询失败' });
   }
 });
 

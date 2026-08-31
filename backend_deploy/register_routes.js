@@ -515,7 +515,52 @@ function createAdditionalTables(db) {
     CREATE INDEX IF NOT EXISTS idx_logs_action ON operation_logs(action);
   `);
 
+  // v25.0.71 用户活跃统计表（每日每用户一行：登录次数/在线时长/工具使用次数）
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS user_activity_daily (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      stat_date TEXT NOT NULL,
+      login_count INTEGER NOT NULL DEFAULT 0,
+      active_seconds INTEGER NOT NULL DEFAULT 0,
+      tool_events INTEGER NOT NULL DEFAULT 0,
+      last_active_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, stat_date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_uad_date ON user_activity_daily(stat_date);
+    CREATE INDEX IF NOT EXISTS idx_uad_user_date ON user_activity_daily(user_id, stat_date);
+  `);
+
   console.log('[register_routes] P1 架构加固表创建完成');
+}
+
+// ============================================================================
+// 用户活跃统计（v25.0.71）
+// ============================================================================
+
+/** 北京时间当日 YYYY-MM-DD（活跃统计口径：东八区自然日） */
+function beijingDateKey() {
+  return new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
+}
+
+/**
+ * 记录一次登录活跃（login_count +1）
+ * 在 /login、/login-code、/register 成功时调用
+ */
+function recordLoginActivity(db, userId) {
+  try {
+    const d = beijingDateKey();
+    db.prepare(`
+      INSERT INTO user_activity_daily (user_id, stat_date, login_count, active_seconds, tool_events, last_active_at)
+      VALUES (?, ?, 1, 0, 0, CURRENT_TIMESTAMP)
+      ON CONFLICT(user_id, stat_date) DO UPDATE SET
+        login_count = login_count + 1,
+        last_active_at = CURRENT_TIMESTAMP
+    `).run(userId, d);
+  } catch (e) {
+    console.error('[activity] recordLoginActivity:', e.message);
+  }
 }
 
 // ============================================================================
@@ -1414,6 +1459,7 @@ function createRouter() {
       // 更新最后登录时间
       const db = initDatabase();
       db.prepare('UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE user_id = ?').run(user.userId);
+      recordLoginActivity(db, user.userId); // v25.0.71 注册即记活跃
 
       return jsonResponse(res, 200, true, '注册成功', {
         user: buildUserResponse(user),
@@ -1540,6 +1586,7 @@ function createRouter() {
       // 更新最后登录时间
       const db = initDatabase();
       db.prepare('UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE user_id = ?').run(user.user_id);
+      recordLoginActivity(db, user.user_id); // v25.0.71 登录活跃埋点
 
       // 记录操作日志
       logOperation(db, user.user_id, 'login', '密码登录成功', getClientIp(req));
@@ -1886,6 +1933,7 @@ function createRouter() {
       }
 
       db.prepare('UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE user_id = ?').run(user.user_id);
+      recordLoginActivity(db, user.user_id); // v25.0.71 验证码登录活跃埋点
 
       const tokenPair = generateTokenPair({
         userId: user.user_id,
@@ -2090,6 +2138,36 @@ function createRouter() {
     } catch (error) {
       console.error('[AUTH /points/transactions] error:', error);
       return jsonResponse(res, 500, false, '获取积分明细失败');
+    }
+  });
+
+  // ------------------------------------------------------------------
+  // POST /api/auth/activity/heartbeat — 用户活跃心跳（v25.0.71）
+  // 前端已登录用户每 60 秒上报一次页面可见秒数与期间工具使用次数，
+  // 服务端限幅后累加进 user_activity_daily（北京时间自然日口径）。
+  // body: { activeSeconds?: number, toolEvents?: number }
+  // ------------------------------------------------------------------
+  router.post('/activity/heartbeat', authMiddleware, (req, res) => {
+    try {
+      const userId = parseInt(req.user.userId, 10);
+      // 限幅防刷：单次心跳在线秒数最多 120（心跳周期 60s 留 2 倍余量）、工具事件最多 100
+      const activeSeconds = Math.max(0, Math.min(120, parseInt(req.body?.activeSeconds, 10) || 0));
+      const toolEvents = Math.max(0, Math.min(100, parseInt(req.body?.toolEvents, 10) || 0));
+      const db = initDatabase();
+      const d = beijingDateKey();
+      db.prepare(`
+        INSERT INTO user_activity_daily (user_id, stat_date, login_count, active_seconds, tool_events, last_active_at)
+        VALUES (?, ?, 0, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(user_id, stat_date) DO UPDATE SET
+          active_seconds = active_seconds + excluded.active_seconds,
+          tool_events = tool_events + excluded.tool_events,
+          last_active_at = CURRENT_TIMESTAMP
+      `).run(userId, d, activeSeconds, toolEvents);
+      return jsonResponse(res, 200, true, 'ok', { date: d, activeSeconds, toolEvents });
+    } catch (error) {
+      console.error('[AUTH /activity/heartbeat] error:', error.message);
+      // 心跳失败静默（不向前端报错，避免打扰主流程）
+      return jsonResponse(res, 200, true, 'ok');
     }
   });
 

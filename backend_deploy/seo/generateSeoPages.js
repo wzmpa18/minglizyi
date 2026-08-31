@@ -9,6 +9,13 @@
  * 输入：backend_deploy/seo/seoPagesConfig.json（唯一配置源）
  * 输出：public/{tools,learn,app,b}/*.html + 各目录 index.html + public/robots.txt + public/sitemap.xml
  *
+ * 目录可配（夜间流水线用，见 growthPipeline.cjs）：
+ *   SEO_OUTPUT_DIR    生成输出目录（默认 仓库 public/；服务器夜间流水线=staging/）
+ *   SEO_REFERENCE_DIR lastmod 判定参考目录（默认 = SEO_OUTPUT_DIR；服务器=线上 web 根）
+ *
+ * 伪 Freshness 禁令（指令065章）：内容未变化的页面不重写文件（保留 mtime），
+ * sitemap lastmod 取该页真实变更日期（参考目录文件 mtime），不得恒为当天。
+ *
  * 纪律：
  *  - 所有功能描述严格基于 APP 真实能力（不夸大、不虚构），数字来自代码核实：
  *    14款专业排盘工具 / 8款实用工具 / 22部中医典籍 / 医考分级题库 / 社群 / Meeus真太阳时
@@ -22,7 +29,43 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const CONFIG_PATH = path.join(__dirname, 'seoPagesConfig.json');
-const PUBLIC_DIR = path.join(ROOT, 'public');
+const OUTPUT_DIR = process.env.SEO_OUTPUT_DIR
+  ? path.resolve(process.env.SEO_OUTPUT_DIR)
+  : path.join(ROOT, 'public');
+const REFERENCE_DIR = process.env.SEO_REFERENCE_DIR
+  ? path.resolve(process.env.SEO_REFERENCE_DIR)
+  : OUTPUT_DIR;
+const TODAY = new Date().toISOString().slice(0, 10);
+
+/** 内容未变化时跳过写入（保留文件 mtime，禁止伪 freshness） */
+function writeIfChanged(outFile, content) {
+  let existing = null;
+  try {
+    existing = fs.readFileSync(outFile, 'utf8');
+  } catch {
+    existing = null;
+  }
+  if (existing === content) return false;
+  fs.mkdirSync(path.dirname(outFile), { recursive: true });
+  fs.writeFileSync(outFile, content, 'utf8');
+  return true;
+}
+
+/** lastmod = 页面真实变更日期：内容相对参考目录有变化（或新页）→ 当天；无变化 → 参考文件 mtime */
+function lastmodFor(refFile, content) {
+  let existing = null;
+  try {
+    existing = fs.readFileSync(refFile, 'utf8');
+  } catch {
+    return TODAY;
+  }
+  if (existing !== content) return TODAY;
+  try {
+    return fs.statSync(refFile).mtime.toISOString().slice(0, 10);
+  } catch {
+    return TODAY;
+  }
+}
 
 function esc(s) {
   return String(s == null ? '' : s)
@@ -365,16 +408,15 @@ ${(site._sharedWhy || [])
 </html>`;
 }
 
-function renderSitemap(site, seoUrls, mainUrls) {
-  const today = new Date().toISOString().slice(0, 10);
+function renderSitemap(site, seoEntries, mainUrls) {
   const urls = [];
   for (const u of mainUrls) {
     urls.push(
       `  <url><loc>${esc(site.domain + u.path)}</loc><changefreq>${u.changefreq}</changefreq><priority>${u.priority}</priority></url>`
     );
   }
-  for (const u of seoUrls) {
-    urls.push(`  <url><loc>${esc(u)}</loc><changefreq>weekly</changefreq><priority>0.8</priority><lastmod>${today}</lastmod></url>`);
+  for (const e of seoEntries) {
+    urls.push(`  <url><loc>${esc(e.url)}</loc><changefreq>weekly</changefreq><priority>0.8</priority><lastmod>${e.lastmod}</lastmod></url>`);
   }
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -413,31 +455,37 @@ async function main() {
 
   const qrSvg = await renderQrSvg(site.qrTarget);
 
-  const seoUrls = [];
+  const seoEntries = [];
   let count = 0;
   for (const p of pages) {
     p._disclaimer = shared.disclaimer;
     const html = await renderPage(site, shared, p, qrSvg);
-    const out = path.join(PUBLIC_DIR, p.file);
-    fs.mkdirSync(path.dirname(out), { recursive: true });
-    fs.writeFileSync(out, html, 'utf8');
-    seoUrls.push(`${site.domain}/${p.file}`);
+    const out = path.join(OUTPUT_DIR, p.file);
+    const changed = writeIfChanged(out, html);
+    const lastmod = lastmodFor(path.join(REFERENCE_DIR, p.file), html);
+    seoEntries.push({ url: `${site.domain}/${p.file}`, lastmod });
     count++;
-    console.log(`[GEN] ${p.file} (${p.keyword})`);
+    console.log(`[GEN] ${p.file} (${p.keyword})${changed ? '' : ' [unchanged]'}`);
   }
 
   // 目录索引页
   for (const [dir, list] of Object.entries(byDir)) {
     const html = renderIndexPage(site, dir, list[0].dirLabel, list);
-    fs.writeFileSync(path.join(PUBLIC_DIR, dir, 'index.html'), html, 'utf8');
-    seoUrls.push(`${site.domain}/${dir}/`);
+    writeIfChanged(path.join(OUTPUT_DIR, dir, 'index.html'), html);
+    seoEntries.push({
+      url: `${site.domain}/${dir}/`,
+      lastmod: lastmodFor(path.join(REFERENCE_DIR, dir, 'index.html'), html),
+    });
     console.log(`[GEN] ${dir}/index.html (${list.length} pages)`);
   }
 
   // sitemap + robots
-  fs.writeFileSync(path.join(PUBLIC_DIR, 'sitemap.xml'), renderSitemap(site, seoUrls, cfg.mainSiteUrls), 'utf8');
-  fs.writeFileSync(path.join(PUBLIC_DIR, 'robots.txt'), renderRobots(site), 'utf8');
-  console.log(`[GEN] sitemap.xml (${seoUrls.length} urls) + robots.txt`);
+  writeIfChanged(
+    path.join(OUTPUT_DIR, 'sitemap.xml'),
+    renderSitemap(site, seoEntries, cfg.mainSiteUrls)
+  );
+  writeIfChanged(path.join(OUTPUT_DIR, 'robots.txt'), renderRobots(site));
+  console.log(`[GEN] sitemap.xml (${seoEntries.length} urls) + robots.txt`);
 
   console.log(`\nDONE: ${count} pages + ${Object.keys(byDir).length} index pages + sitemap + robots`);
 }
