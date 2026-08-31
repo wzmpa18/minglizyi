@@ -21,7 +21,7 @@ check() { # check <描述> <期望> <实际>
 }
 
 echo "=== [1] Web 版本与四工具页 ==="
-BV=$(curl -sk -m 10 "$BASE/version.json" | grep -o '"version": *"[^"]*"' | head -1 | grep -o 'v[0-9._]*')
+BV=$(curl -sk -m 10 "$BASE/version.json" | sed -n 's/.*"version": *"v\([0-9._]*\)".*/v\1/p' | head -1)
 check "version.json 烧录 $VERSION" "$VERSION" "$BV"
 
 for p in "yixue/compass/" "yixue/qizheng/" "yixue/liji/" "yixue/luban/" "yixue/"; do
