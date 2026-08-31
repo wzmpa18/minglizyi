@@ -21,7 +21,6 @@ import type { Client } from "@/lib/clientStore";
 import {
   calcQizhengChart,
   xianDuAtAge,
-  QIZHENG_CITIES,
   QIZHENG_ENGINE_VERSION,
   type QizhengInput,
   type QizhengResult,
@@ -29,6 +28,7 @@ import {
   type MingGongMode,
   type StarFrame,
 } from "@/algorithm-core/modules/qizheng";
+import SharedBirthLocationSelector, { type RegionIndices, regionAt } from "@/components/shared/region-selector";
 
 const BRAND = "#7B2FBE";
 const RAD = Math.PI / 180;
@@ -67,7 +67,7 @@ export default function QizhengPage() {
   const [showForm, setShowForm] = useState(false);
   const [result, setResult] = useState<QizhengResult | null>(null);
   const [name, setName] = useState("");
-  const [cityIdx, setCityIdx] = useState(0);
+  const [regionIdx, setRegionIdx] = useState<RegionIndices>({ p: 0, c: 0, d: 0 });
   const [frame, setFrame] = useState<StarFrame>("tropical");
   const [mingMode, setMingMode] = useState<MingGongMode>("mao");
   const [dongweiStart, setDongweiStart] = useState<9 | 10>(10);
@@ -83,8 +83,8 @@ export default function QizhengPage() {
     try {
       const raw = localStorage.getItem(PAIPAN_KEY);
       if (raw) {
-        const s = JSON.parse(raw) as { cityIdx?: number; frame?: StarFrame; mingMode?: MingGongMode; dongweiStart?: 9 | 10 };
-        if (typeof s.cityIdx === "number") setCityIdx(s.cityIdx);
+        const s = JSON.parse(raw) as { regionIdx?: RegionIndices; frame?: StarFrame; mingMode?: MingGongMode; dongweiStart?: 9 | 10 };
+        if (s.regionIdx && typeof s.regionIdx.p === "number") setRegionIdx(s.regionIdx);
         if (s.frame === "sidereal" || s.frame === "tropical") setFrame(s.frame);
         if (s.mingMode === "mao" || s.mingMode === "sunrise") setMingMode(s.mingMode);
         if (s.dongweiStart === 9 || s.dongweiStart === 10) setDongweiStart(s.dongweiStart);
@@ -106,11 +106,12 @@ export default function QizhengPage() {
   useEffect(() => {
     if (!mounted) return;
     try {
-      localStorage.setItem(PAIPAN_KEY, JSON.stringify({ cityIdx, frame, mingMode, dongweiStart }));
+      localStorage.setItem(PAIPAN_KEY, JSON.stringify({ regionIdx, frame, mingMode, dongweiStart }));
     } catch { /* ignore */ }
-  }, [mounted, cityIdx, frame, mingMode, dongweiStart]);
+  }, [mounted, regionIdx, frame, mingMode, dongweiStart]);
 
-  const city = QIZHENG_CITIES[Math.min(cityIdx, QIZHENG_CITIES.length - 1)];
+  // 出生地：省→市→区县三级联动（与八字同一数据源 src/data/regions.ts）
+  const region = regionAt(regionIdx);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -124,8 +125,9 @@ export default function QizhengPage() {
     const input: QizhengInput = {
       year: dateVal.year, month: dateVal.month, day: dateVal.day,
       hour: dateVal.hour, minute: dateVal.minute,
-      lat: city.lat, lon: city.lon, tzOffset: city.tz,
-      placeName: city.name, gender: opts.gender,
+      lat: region.lat ?? 39.9042, lon: region.lng, tzOffset: 8,
+      placeName: `${region.province}${region.city ? region.city : ""}${region.district ? region.district : ""}`,
+      gender: opts.gender,
       frame, mingGongMode: mingMode, dongweiStart,
     };
     try {
@@ -137,7 +139,7 @@ export default function QizhengPage() {
         frame,
         mingMode,
         dongweiStart,
-        lat: Math.round(city.lat * 10) / 10,
+        lat: region.lat != null ? Math.round(region.lat * 10) / 10 : 0,
       });
       trackToolEvent("qizheng", "tool_calculate");
       if (selectedClient) {
@@ -157,7 +159,7 @@ export default function QizhengPage() {
       trackToolEvent("qizheng", "tool_error", { phase: "calc" });
       showToast(`排盘失败：${e instanceof Error ? e.message : "输入参数异常"}`);
     }
-  }, [city, frame, mingMode, dongweiStart, selectedClient, showToast]);
+  }, [region, frame, mingMode, dongweiStart, selectedClient, showToast]);
 
   const xian = useMemo(() => {
     if (!result || xianAge === "" || xianAge < 1 || xianAge > 120) return null;
@@ -242,21 +244,13 @@ export default function QizhengPage() {
           extraOptions={
             <div className="mt-3 space-y-3">
               <div>
-                <div className="mb-1.5 text-xs text-gray-500">出生城市（经纬度与日出日落解算）</div>
-                <div className="grid grid-cols-4 gap-1">
-                  {QIZHENG_CITIES.slice(0, 20).map((c, i) => (
-                    <button
-                      key={c.name}
-                      type="button"
-                      onClick={() => setCityIdx(i)}
-                      className={`rounded py-1.5 text-xs font-medium transition-all ${i === cityIdx ? "text-white" : "bg-gray-100 text-gray-600"}`}
-                      style={i === cityIdx ? { backgroundColor: BRAND } : {}}
-                    >
-                      {c.name}
-                    </button>
-                  ))}
-                </div>
-                <p className="mt-1 text-[10px] text-gray-400">当前：{city.name}（{city.lat.toFixed(2)}°N, {city.lon.toFixed(2)}°E）</p>
+                <div className="mb-1.5 text-xs text-gray-500">出生地点（省/市/区县三级 · 与八字同一数据源，供经纬度与日出日落解算）</div>
+                <SharedBirthLocationSelector
+                  lng={region.lng}
+                  indices={regionIdx}
+                  onIndicesChange={setRegionIdx}
+                  label="出生地"
+                />
               </div>
               <div>
                 <div className="mb-1.5 text-xs text-gray-500">星制</div>
@@ -680,21 +674,14 @@ export default function QizhengPage() {
         extraOptions={
           <div className="mt-3 space-y-3">
             <div>
-              <div className="mb-1.5 text-xs text-gray-500">出生城市</div>
-              <div className="grid grid-cols-4 gap-1">
-                {QIZHENG_CITIES.slice(0, 20).map((c, i) => (
-                  <button
-                    key={c.name}
-                    type="button"
-                    onClick={() => setCityIdx(i)}
-                    className={`rounded py-1.5 text-xs font-medium transition-all ${i === cityIdx ? "text-white" : "bg-gray-100 text-gray-600"}`}
-                    style={i === cityIdx ? { backgroundColor: BRAND } : {}}
-                  >
-                    {c.name}
-                  </button>
-                ))}
-              </div>
-              <p className="mt-1 text-[10px] text-gray-400">当前：{city.name}</p>
+              <div className="mb-1.5 text-xs text-gray-500">出生地点（省/市/区县三级）</div>
+              <SharedBirthLocationSelector
+                lng={region.lng}
+                indices={regionIdx}
+                onIndicesChange={setRegionIdx}
+                label="出生地"
+                showQuickCities={false}
+              />
             </div>
             <div className="flex rounded-full border border-gray-200 p-0.5">
               {([["tropical", "今制"], ["sidereal", "恒星制"]] as Array<[StarFrame, string]>).map(([k, label]) => (

@@ -153,12 +153,14 @@ export default function XuankongFeixingPage() {
     if (interp) setInterpretPanel(interp);
   }, []);
 
-  // URL参数clientId + 回填检查
+  // URL参数clientId/shan + 回填检查（shan=坐山预填，与专业罗盘玄空Profile联动）
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     const cid = params.get("clientId");
     if (cid) { const c = getClient(cid); if (c) setSelectedClient(c); }
+    const shan = params.get("shan");
+    if (shan && (ER_SHI_SI_SHAN as readonly string[]).includes(shan)) setZuoShan(shan);
     const prefill = getPrefillData("xuankong-feixing");
     if (prefill) { try { setResult(prefill); setHasResult(true); clearPrefillData("xuankong-feixing"); } catch(e){} }
   }, []);
@@ -174,16 +176,17 @@ export default function XuankongFeixingPage() {
     };
   }, [hasResult]);
 
-  // localStorage 持久化：恢复排盘状态
+  // localStorage 持久化：恢复排盘状态（URL shan 参数优先，不覆盖联动预填）
   useEffect(() => {
     const saved = loadPaipanState("xuankong");
+    const urlShan = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("shan") : null;
     if (saved && saved.input) {
       const inp = saved.input as any;
       if (inp.buildYear) setBuildYear(inp.buildYear);
       if (inp.month) setMonth(inp.month);
       if (inp.day) setDay(inp.day);
       if (inp.hour) setHour(inp.hour);
-      if (inp.zuoShan) setZuoShan(inp.zuoShan);
+      if (inp.zuoShan && !(urlShan && (ER_SHI_SI_SHAN as readonly string[]).includes(urlShan))) setZuoShan(inp.zuoShan);
       if (inp.floor) setFloor(inp.floor);
     }
   }, []);

@@ -5,10 +5,12 @@
 //       距星选取经《钦定仪象考成》黄道宿度表反推对拍验证：
 //       奎=η And、尾=ε Sco、觜参星位互换（觜前参后古宿序），
 //       二十四宿宿宽与古表差<1.5°，宿界与星位一一对应可复算；
-//       罗睺/计都（白道升降交点平黄经）、月孛（白道远地点平黄经）采用
-//       Meeus《Astronomical Algorithms》2nd 公布级数公式（算法性事实）；
-//       紫炁为虚拟曜，采用钟义明周期 27.9876 年（≈0.0352173 度/日），
-//       历元常数取自日本七政占星研究者公开公式，历元基准 J2000.0；
+//       罗睺/计都取月亮瞬时轨道面真交点（Meeus 法），
+//       罗计口径依项目方 KB"交初为罗睺（天首），交中为计都"：
+//       罗睺=降交点、计都=升交点（沈括《梦溪笔谈》交初=降交体系，
+//       清乾隆七年起官历同此，与参考资料 Moira 盘实测一致，偏差≤0.014°）；
+//       紫炁为虚拟曜，周日 10227.1792 日（《元史·步四余》），
+//       历元 J2000 黄经 189.41°（1985/2022 两例 Moira 盘反推，残差≤0.05°）；
 //       宫制/宿度/命宫/命度/洞微大限规则依据项目方权威资料
 //       （qizheng_source_clean.txt："宫必含其宿，宿必在其宫"，
 //        四日度在四正，宿度为洞微大限主体）与九紫辰公开考据
@@ -222,12 +224,13 @@ const norm360 = (x: number): number => ((x % 360) + 360) % 360;
 
 /**
  * 紫炁（虚拟曜）计算常数 —— 项目方可按后台资料整体替换
- * 行速：0.0352173 度/日（周期 27.9876 年，钟义明考证值，古籍概说 28 日 1 度）
- * 历元：J2000.0 黄经 300°（依日本七政研究者公开公式，历元基准为本引擎约定）
+ * 行速：360/10227.1792 = 0.03520032 度/日（《元史·步四余》紫炁周日 10227.1792 日）
+ * 历元：J2000.0 黄经 189.41°（1985/2022 两例 Moira 盘实测反推，两例一致 0.05° 内；
+ *       残差 A=0.01°、B=0.05°，与 Moira 1.49 版口径一致）
  */
 export const QI_CONFIG = {
-  speedDegPerDay: 0.0352173,
-  epochLonDeg: 300,
+  speedDegPerDay: 0.03520032,
+  epochLonDeg: 189.41,
   epochJd: 2451545.0,
 };
 
@@ -448,6 +451,24 @@ function meanLunarNodeLon(date: Date): number {
   );
 }
 
+/**
+ * 真升交点黄经（Meeus 瞬时轨道面法线法）：
+ * 月亮地心状态向量（EQJ）旋至真黄道坐标（ECT），h = r × v 为轨道面法向量，
+ * 交线方向 = ẑ × h（黄道坐标），其黄经即真升交点。
+ * 与 Moira 1.49 实测偏差 0.004–0.014°（1985/2022 三例，PHASE3 对拍）。
+ */
+function trueLunarNodeLon(date: Date): number {
+  const time = Astronomy.MakeTime(date);
+  const sv = Astronomy.GeoMoonState(time);
+  const rot = Astronomy.Rotation_EQJ_ECT(time);
+  const p = Astronomy.RotateVector(rot, new Astronomy.Vector(sv.x, sv.y, sv.z, time));
+  const v = Astronomy.RotateVector(rot, new Astronomy.Vector(sv.vx, sv.vy, sv.vz, time));
+  const hx = p.y * v.z - p.z * v.y;
+  const hy = p.z * v.x - p.x * v.z;
+  const lon = (Math.atan2(hx, -hy) * 180) / Math.PI;
+  return norm360(lon);
+}
+
 /** 月孛：白道远地点平黄经 =（月亮平黄经 - 平近点角）+ 180°（Meeus 47.1/47.4/47.6） */
 function meanLunarApogeeLon(date: Date): number {
   const T = (julianDay(date) - 2451545.0) / 36525;
@@ -462,9 +483,9 @@ export function qiLongitude(date: Date): number {
   return norm360(QI_CONFIG.epochLonDeg + QI_CONFIG.speedDegPerDay * d);
 }
 
-/** 罗睺黄经（供测试） */
+/** 罗睺黄经（供测试）：真降交点（口径：交初=罗睺=天首=降交点） */
 export function luoLongitude(date: Date): number {
-  return meanLunarNodeLon(date);
+  return norm360(trueLunarNodeLon(date) + 180);
 }
 
 /** 月孛黄经（供测试） */
@@ -673,18 +694,41 @@ export function calcQizhengChart(input: QizhengInput): QizhengResult {
 
   const yuLonOf = (key: string, d: Date): number => {
     if (key === "qi") return qiLongitude(d);
-    if (key === "luo") return meanToTrue(meanLunarNodeLon(d), d);
-    if (key === "ji") return meanToTrue(norm360(meanLunarNodeLon(d) + 180), d);
+    // 罗计口径（项目方 KB："交初为罗睺，交中为计都"，罗睺=天首）：
+    // 交初=白道降交点（沈括《梦溪笔谈》体系，清代官历乾隆七年起同此，
+    // 并经项目方参考资料 Moira 盘 1985/2022 两例实测交叉验证），
+    // 故罗睺=降交点（升交点+180°），计都=升交点；
+    // 交点取真交点（瞬时轨道面，Moira 同口径，偏差≤0.014°）。
+    if (key === "luo") return norm360(trueLunarNodeLon(d) + 180);
+    if (key === "ji") return trueLunarNodeLon(d);
     return meanToTrue(meanLunarApogeeLon(d), d); // bei
+  };
+  // 罗计行速：真交点含月球短周期摄动（±1° 量级振荡），直接差分会破坏古法
+  // "罗计恒逆"，故速度取平交点长期速率（-0.053°/日，恒逆）。
+  const yuSpeedOf = (key: string, d: Date): number => {
+    if (key === "luo" || key === "ji") {
+      let diff = meanLunarNodeLon(new Date(d.getTime() + 86400000)) - meanLunarNodeLon(d);
+      if (diff > 180) diff -= 360;
+      if (diff < -180) diff += 360;
+      return diff;
+    }
+    return Number.NaN;
   };
   for (const def of YU_DEFS) {
     const lonNow = yuLonOf(def.key, date);
-    const lonPlus = yuLonOf(def.key, new Date(utcMs + 86400000));
-    const lonMinus = yuLonOf(def.key, new Date(utcMs - 86400000));
-    let diff = lonPlus - lonMinus;
-    if (diff > 180) diff -= 360;
-    if (diff < -180) diff += 360;
-    rawStars.push({ key: def.key, name: def.name, symbol: def.symbol, kind: "yu", wuxing: def.wuxing, lon: lonNow, speed: diff / 2 });
+    const fixedSpeed = yuSpeedOf(def.key, date);
+    let speed: number;
+    if (!Number.isNaN(fixedSpeed)) {
+      speed = fixedSpeed;
+    } else {
+      const lonPlus = yuLonOf(def.key, new Date(utcMs + 86400000));
+      const lonMinus = yuLonOf(def.key, new Date(utcMs - 86400000));
+      let diff = lonPlus - lonMinus;
+      if (diff > 180) diff -= 360;
+      if (diff < -180) diff += 360;
+      speed = diff / 2;
+    }
+    rawStars.push({ key: def.key, name: def.name, symbol: def.symbol, kind: "yu", wuxing: def.wuxing, lon: lonNow, speed });
   }
 
   // ---- 命宫 ----

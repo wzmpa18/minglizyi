@@ -27,6 +27,9 @@ export type ToolEvent =
   | "image_import"
   | "center_set"
   | "overlay_locked"
+  | "profile_switch"
+  | "ring_toggle"
+  | "dial_zoom"
   | "chart_generated"
   | "profile_used";
 

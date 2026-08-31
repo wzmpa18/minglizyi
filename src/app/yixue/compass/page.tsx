@@ -1,18 +1,21 @@
 "use client";
 
-// 专业电子罗盘工具页 - NICHE-TOOLS-08 v25.0.68
+// 专业电子罗盘工具页 - NICHE-TOOLS-08 v25.0.69
 // ============================================================================
 // 功能：实时方位测量（Rotation Vector/iOS磁力计/加速度计+磁力计降级链）、
 //       磁北/真北切换（WMM2025 磁偏角修正）、磁场干扰监测、手动测向模式、
-//       二十四山/八卦/坐向/兼向判读、客户记录保存、统一分享。
+//       多门派 Profile 专业盘（三合12圈层/三元/玄空，LUOPAN_PROFILE_ENGINE）、
+//       圈层开关（Ring Visibility）+ 全屏放大、逐圈层读数面板、
+//       玄空Profile坐向一键跳转飞星排盘、客户记录保存、统一分享。
 // 协议：物理量与判读口径由算法层输出；本页不生成吉凶断语，释义仅作方位描述。
 // ============================================================================
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ClientSelector from "@/components/ClientSelector";
-import { CompassDial } from "@/components/CompassDial";
+import { LuopanDial } from "@/components/LuopanDial";
 import { ShareButton } from "@/components/ShareButton";
 import { useCompassSensor } from "@/hooks/useCompassSensor";
+import SharedBirthLocationSelector, { type RegionIndices, nearestRegion } from "@/components/shared/region-selector";
 import { saveRecord } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 import { trackToolEvent } from "@/lib/toolAnalytics";
@@ -26,24 +29,18 @@ import {
   wmm2025Field,
   type NorthMode,
 } from "@/algorithm-core/modules/compass";
+import {
+  LUOPAN_PROFILE_ENGINE_VERSION,
+  SCHOOL_OPTIONS,
+  getProfile,
+  readProfile,
+  type LuopanSchool,
+} from "@/algorithm-core/modules/luopan-profile";
 
 const BRAND = "#B8860B";
 
-// 常用城市预设（经纬度为市政中心近似值）
-const CITY_PRESETS: Array<{ name: string; lat: number; lon: number }> = [
-  { name: "北京", lat: 39.9042, lon: 116.4074 },
-  { name: "上海", lat: 31.2304, lon: 121.4737 },
-  { name: "广州", lat: 23.1291, lon: 113.2644 },
-  { name: "深圳", lat: 22.5431, lon: 114.0579 },
-  { name: "成都", lat: 30.5728, lon: 104.0668 },
-  { name: "杭州", lat: 30.2741, lon: 120.1551 },
-  { name: "武汉", lat: 30.5928, lon: 114.3055 },
-  { name: "西安", lat: 34.3416, lon: 108.9398 },
-  { name: "哈尔滨", lat: 45.8038, lon: 126.5350 },
-  { name: "乌鲁木齐", lat: 43.8256, lon: 87.6168 },
-  { name: "香港", lat: 22.3193, lon: 114.1694 },
-  { name: "台北", lat: 25.0330, lon: 121.5654 },
-];
+const SCHOOL_KEY = "yandao_compass_school";
+const RINGS_KEY = "yandao_compass_rings_v1";
 
 const SOURCE_LABEL: Record<string, string> = {
   absolute: "Rotation Vector 绝对方位",
@@ -73,10 +70,20 @@ export default function CompassPage() {
   const [locName, setLocName] = useState("北京");
   const [locManual, setLocManual] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [regionIdx, setRegionIdx] = useState<RegionIndices>(() => nearestRegion(116.4074));
+  const [showRegionSel, setShowRegionSel] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [toast, setToast] = useState("");
   const [savedCount, setSavedCount] = useState(0);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  // 专业盘：门派 Profile / 圈层可见性 / 全屏缩放
+  const [school, setSchool] = useState<LuopanSchool>("sanhe");
+  const [hiddenBySchool, setHiddenBySchool] = useState<Record<string, string[]>>({});
+  const [showRingPanel, setShowRingPanel] = useState(false);
+  const [showReadings, setShowReadings] = useState(true);
+  const [zoomed, setZoomed] = useState(false);
+  const [zoomSize, setZoomSize] = useState(600);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -101,6 +108,13 @@ export default function CompassPage() {
       }
       const nm = localStorage.getItem("yandao_compass_north") as NorthMode | null;
       if (nm === "magnetic" || nm === "true") setNorthMode(nm);
+      const sc = localStorage.getItem(SCHOOL_KEY) as LuopanSchool | null;
+      if (sc === "sanhe" || sc === "sanyuan" || sc === "xuankong") setSchool(sc);
+      const rg = localStorage.getItem(RINGS_KEY);
+      if (rg) {
+        const m = JSON.parse(rg) as Record<string, string[]>;
+        if (m && typeof m === "object") setHiddenBySchool(m);
+      }
     } catch { /* ignore */ }
   }, []);
 
@@ -113,6 +127,14 @@ export default function CompassPage() {
   useEffect(() => {
     try { localStorage.setItem("yandao_compass_north", northMode); } catch { /* ignore */ }
   }, [northMode]);
+
+  useEffect(() => {
+    try { localStorage.setItem(SCHOOL_KEY, school); } catch { /* ignore */ }
+  }, [school]);
+
+  useEffect(() => {
+    try { localStorage.setItem(RINGS_KEY, JSON.stringify(hiddenBySchool)); } catch { /* ignore */ }
+  }, [hiddenBySchool]);
 
   // 传感器不可用 → 自动切手动
   useEffect(() => {
@@ -169,6 +191,54 @@ export default function CompassPage() {
     [headingMagnetic, wmm.declination, northMode],
   );
 
+  // 专业盘：Profile / 圈层可见性 / 各圈层读数
+  const profile = useMemo(() => getProfile(school), [school]);
+  const visibleRingIds = useMemo(() => {
+    const hidden = new Set(hiddenBySchool[school] ?? []);
+    return new Set(profile.rings.filter((r) => !hidden.has(r.id)).map((r) => r.id));
+  }, [profile, hiddenBySchool, school]);
+
+  const ringReadings = useMemo(() => {
+    if (!reading) return [];
+    return readProfile(school, reading.heading).filter((r) => visibleRingIds.has(r.ringId));
+  }, [reading, school, visibleRingIds]);
+
+  const visibleCount = visibleRingIds.size;
+  const hiddenCount = profile.rings.length - visibleCount;
+
+  const switchSchool = useCallback((s: LuopanSchool) => {
+    setSchool(s);
+    trackToolEvent("compass", "profile_switch", { school: s });
+  }, []);
+
+  const toggleRing = useCallback((ringId: string) => {
+    setHiddenBySchool((prev) => {
+      const hidden = new Set(prev[school] ?? []);
+      if (hidden.has(ringId)) hidden.delete(ringId);
+      else {
+        // 至少保留一个圈层
+        const curVisible = getProfile(school).rings.filter((r) => !hidden.has(r.id)).length;
+        if (curVisible <= 1) return prev;
+        hidden.add(ringId);
+      }
+      trackToolEvent("compass", "ring_toggle", { ringId, hidden: hidden.has(ringId) });
+      return { ...prev, [school]: [...hidden] };
+    });
+  }, [school]);
+
+  const resetRings = useCallback(() => {
+    setHiddenBySchool((prev) => ({ ...prev, [school]: [] }));
+    trackToolEvent("compass", "ring_toggle", { reset: true });
+  }, [school]);
+
+  const openZoom = useCallback(() => {
+    if (typeof window !== "undefined") {
+      setZoomSize(Math.max(320, Math.min(760, Math.min(window.innerWidth, window.innerHeight) - 48)));
+    }
+    setZoomed(true);
+    trackToolEvent("compass", "dial_zoom", { school });
+  }, [school]);
+
   // GPS 定位
   const locate = useCallback(() => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
@@ -178,8 +248,11 @@ export default function CompassPage() {
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setLat(Math.round(pos.coords.latitude * 10000) / 10000);
-        setLon(Math.round(pos.coords.longitude * 10000) / 10000);
+        const la = Math.round(pos.coords.latitude * 10000) / 10000;
+        const lo = Math.round(pos.coords.longitude * 10000) / 10000;
+        setLat(la);
+        setLon(lo);
+        setRegionIdx(nearestRegion(lo));
         setLocName("GPS定位");
         setLocManual(false);
         setLocating(false);
@@ -187,7 +260,7 @@ export default function CompassPage() {
       },
       () => {
         setLocating(false);
-        showToast("定位失败（未授权或信号弱），可手动选择城市");
+        showToast("定位失败（未授权或信号弱），可展开选择测量地");
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
     );
@@ -214,13 +287,15 @@ export default function CompassPage() {
           sitting: reading.sittingShan,
           zuoXiang: reading.zuoXiang,
           bagua: reading.bagua.name,
+          school,
+          ringReadings: ringReadings.map((r) => ({ ring: r.ringName, label: r.label, note: r.note ?? "" })),
           field: {
             measuredMicroT: sensor.fieldMicroT,
             expectedNanoT: Math.round(wmm.f),
             level: interference.level,
           },
           measuredAt: new Date().toISOString(),
-          engine: COMPASS_ENGINE_VERSION,
+          engine: `${COMPASS_ENGINE_VERSION} / ${LUOPAN_PROFILE_ENGINE_VERSION}`,
         },
         note: "",
         status: "pending",
@@ -231,7 +306,7 @@ export default function CompassPage() {
     } catch {
       showToast("保存失败，请重试");
     }
-  }, [selectedClient, reading, locName, lat, lon, northMode, sensor.fieldMicroT, wmm.f, interference.level, showToast]);
+  }, [selectedClient, reading, locName, lat, lon, northMode, school, ringReadings, sensor.fieldMicroT, wmm.f, interference.level, showToast]);
 
   const declText = wmm.declination >= 0
     ? `${Math.abs(wmm.declination).toFixed(2)}° 东偏`
@@ -249,7 +324,8 @@ export default function CompassPage() {
       {/* 引擎徽标 */}
       <div className="flex items-center justify-between bg-white px-3 py-2">
         <div className="text-xs text-gray-500">
-          磁偏角层：<span className="font-semibold" style={{ color: BRAND }}>WMM2025（NOAA 公共领域）</span>
+          圈层引擎：<span className="font-semibold" style={{ color: BRAND }}>{LUOPAN_PROFILE_ENGINE_VERSION.split("（")[0]}</span>
+          <span className="ml-1 text-gray-400">· 磁偏角 WMM2025</span>
         </div>
         <div className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium" style={{ color: BRAND }}>
           {mounted ? new Date().getFullYear() : 2026} 年有效
@@ -258,13 +334,28 @@ export default function CompassPage() {
 
       {/* 罗盘盘面 */}
       <div className="bg-white px-3 pt-4 pb-3">
-        <CompassDial
+        <LuopanDial
+          profile={profile}
           heading={reading ? reading.heading : null}
-          shanReading={reading ? reading.facing : null}
+          visibleRingIds={visibleRingIds}
           northMode={northMode}
           interference={interference.level}
           size={344}
         />
+
+        {/* 盘面操作条：门派名 + 全屏缩放 */}
+        <div className="mt-2 flex items-center justify-between">
+          <span className="text-[11px] text-gray-500">
+            {profile.name} · {visibleCount}/{profile.rings.length} 圈层{hiddenCount > 0 ? `（已隐藏 ${hiddenCount}）` : ""}
+          </span>
+          <button
+            onClick={openZoom}
+            className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-semibold active:scale-95"
+            style={{ color: BRAND }}
+          >
+            放大盘面
+          </button>
+        </div>
 
         {/* 实时读数条 */}
         <div className="mt-3 rounded-xl bg-[#221c14] px-4 py-3 text-center">
@@ -354,6 +445,79 @@ export default function CompassPage() {
         )}
       </div>
 
+      {/* 门派 Profile 选择 */}
+      <div className="mt-2 bg-white px-3 py-3">
+        <div className="mb-2 text-xs text-gray-500">罗盘门派（圈层体系 Profile）</div>
+        <div className="flex rounded-full border border-gray-200 p-0.5">
+          {SCHOOL_OPTIONS.map((o) => (
+            <button
+              key={o.id}
+              onClick={() => switchSchool(o.id)}
+              className={`flex-1 rounded-full py-2 text-sm font-medium transition-all ${
+                school === o.id ? "text-white" : "text-gray-500"
+              }`}
+              style={school === o.id ? { backgroundColor: BRAND } : {}}
+            >
+              {o.name}
+            </button>
+          ))}
+        </div>
+        <p className="mt-1.5 text-[10px] leading-relaxed text-gray-400">
+          {SCHOOL_OPTIONS.find((o) => o.id === school)?.desc}。六十四卦圈等未经权威考证的圈层按「仅收录已验证圈层」原则暂不纳入。
+        </p>
+      </div>
+
+      {/* 圈层开关（Ring Visibility） */}
+      <div className="mt-2 bg-white px-3 py-3">
+        <button
+          onClick={() => setShowRingPanel((v) => !v)}
+          className="flex w-full items-center justify-between"
+        >
+          <span className="text-xs text-gray-500">
+            圈层开关（{visibleCount}/{profile.rings.length} 显示中）
+          </span>
+          <span className="text-xs text-gray-400">{showRingPanel ? "收起 ▲" : "展开 ▼"}</span>
+        </button>
+        {showRingPanel && (
+          <div className="mt-2">
+            <div className="grid grid-cols-2 gap-1.5">
+              {profile.rings.map((r) => {
+                const on = visibleRingIds.has(r.id);
+                return (
+                  <button
+                    key={r.id}
+                    onClick={() => toggleRing(r.id)}
+                    className={`flex items-center justify-between rounded-lg border px-2.5 py-2 text-left text-[11px] transition-all active:scale-[0.98] ${
+                      on ? "border-amber-200 bg-amber-50/70 text-gray-700" : "border-gray-200 bg-gray-50 text-gray-400"
+                    }`}
+                  >
+                    <span className="truncate">{r.name}</span>
+                    <span
+                      className="ml-1 inline-block h-3.5 w-3.5 shrink-0 rounded-full border"
+                      style={{
+                        backgroundColor: on ? BRAND : "#e5e5e5",
+                        borderColor: on ? BRAND : "#d0d0d0",
+                      }}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <button
+                onClick={resetRings}
+                className="flex-1 rounded-full border border-gray-200 bg-gray-50 py-1.5 text-[11px] font-medium text-gray-600 active:scale-95"
+              >
+                全部显示
+              </button>
+            </div>
+            <p className="mt-1.5 text-[10px] leading-relaxed text-gray-400">
+              隐藏不用的圈层后，剩余圈层自动放宽环带、字号随之放大；每个圈层的排布依据（SOURCE/RULE/TEST）可在读数面板逐圈查看。
+            </p>
+          </div>
+        )}
+      </div>
+
       {/* 北基准切换 */}
       <div className="mt-2 bg-white px-3 py-3">
         <div className="mb-2 text-xs text-gray-500">北基准（坐向判读口径）</div>
@@ -389,25 +553,30 @@ export default function CompassPage() {
             {locating ? "定位中…" : "GPS 定位"}
           </button>
         </div>
-        <div className="grid grid-cols-6 gap-1">
-          {CITY_PRESETS.map((c) => {
-            const active = !locManual && c.name === locName;
-            return (
-              <button
-                key={c.name}
-                onClick={() => {
-                  setLat(c.lat); setLon(c.lon); setLocName(c.name); setLocManual(false);
-                }}
-                className={`rounded py-1.5 text-xs font-medium transition-all ${
-                  active ? "text-white" : "bg-gray-100 text-gray-600 active:bg-gray-200"
-                }`}
-                style={active ? { backgroundColor: BRAND } : {}}
-              >
-                {c.name}
-              </button>
-            );
-          })}
-        </div>
+        <button
+          onClick={() => setShowRegionSel((v) => !v)}
+          className="flex w-full items-center justify-between rounded-lg border border-gray-200 px-3 py-2 text-xs active:bg-gray-50"
+        >
+          <span className="text-gray-600">{locManual ? "自定义坐标（见下方输入框）" : `当前：${locName}（省/市/区县选择）`}</span>
+          <span className="text-gray-400">{showRegionSel ? "收起 ▲" : "展开选择 ▼"}</span>
+        </button>
+        {showRegionSel && (
+          <div className="mt-2 rounded-lg bg-gray-50 p-2">
+            <SharedBirthLocationSelector
+              lng={lon}
+              indices={regionIdx}
+              onIndicesChange={setRegionIdx}
+              onSelectionChange={(sel) => {
+                if (sel.lat != null) setLat(sel.lat);
+                setLon(sel.lng);
+                setLocName(`${sel.province.replace(/省|市|自治区|壮族自治区|回族自治区|维吾尔自治区|特别行政区/g, "")}·${sel.district || sel.city}`);
+                setLocManual(false);
+              }}
+              label="测量地"
+              showManualLng={false}
+            />
+          </div>
+        )}
         <div className="mt-2 flex items-center gap-2">
           <input
             type="number" step="0.0001" min={-90} max={90}
@@ -521,6 +690,46 @@ export default function CompassPage() {
         </div>
       )}
 
+      {/* 逐圈层读数面板 */}
+      {ringReadings.length > 0 && (
+        <div className="mt-2 bg-white px-3 py-3">
+          <button
+            onClick={() => setShowReadings((v) => !v)}
+            className="flex w-full items-center justify-between"
+          >
+            <span className="text-sm font-bold" style={{ color: BRAND }}>
+              逐圈层读数（{profile.name.split("（")[0]}）
+            </span>
+            <span className="text-xs text-gray-400">{showReadings ? "收起 ▲" : "展开 ▼"}</span>
+          </button>
+          {showReadings && (
+            <div className="mt-2 divide-y divide-gray-100">
+              {ringReadings.map((r) => (
+                <div key={r.ringId} className="flex items-start justify-between gap-2 py-1.5">
+                  <span className="shrink-0 text-[11px] text-gray-500">{r.ringName}</span>
+                  <span className="text-right">
+                    <span className="text-xs font-bold text-gray-800">{r.label}</span>
+                    {r.note && <span className="ml-1 text-[10px] text-gray-400">{r.note}</span>}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+          {school === "xuankong" && reading && (
+            <a
+              href={`/yixue/xuankong-feixing?shan=${encodeURIComponent(reading.sittingShan)}`}
+              className="mt-2 block w-full rounded-full border border-amber-200 bg-amber-50 py-2.5 text-center text-sm font-semibold active:scale-[0.98]"
+              style={{ color: BRAND }}
+            >
+              用此坐向（{reading.sittingShan}山）排玄空飞星盘
+            </a>
+          )}
+          <p className="mt-1.5 text-[10px] leading-relaxed text-gray-400">
+            读数位＝盘面顶点（天心十道所指）；分金「旺相/空亡」等仅为通行分类名称，非吉凶断语。
+          </p>
+        </div>
+      )}
+
       {/* 客户记录 */}
       <div className="mt-2 bg-white px-3 py-3">
         <div className="mb-2 text-xs text-gray-500">客户测量记录（可选）</div>
@@ -551,15 +760,19 @@ export default function CompassPage() {
               summary: `${northMode === "true" ? "真北" : "磁北"} ${reading.heading.toFixed(1)}° · ${reading.zuoXiang}${reading.facing.isJian ? "（兼向）" : ""} · ${locName}`,
               payload: {
                 summaryLines: [
+                  `门派：${SCHOOL_OPTIONS.find((o) => o.id === school)?.name ?? school}`,
                   `北基准：${northMode === "true" ? "真北" : "磁北"}`,
                   `航向：${reading.heading.toFixed(1)}°（磁北 ${reading.magneticHeading.toFixed(1)}° / 真北 ${reading.trueHeading.toFixed(1)}°）`,
                   `坐向：${reading.zuoXiang}`,
                   `向山：${reading.facing.shan}（${reading.facing.direction}，${reading.facing.gua}卦）`,
                   reading.facing.isJian ? `兼向：${reading.facing.jianText}（山界骑缝）` : "立向：正向",
+                  ...ringReadings
+                    .filter((r) => ["dipan24", "dipan-fenjin120", "chuanshan72", "toudi60", "xuankong-yinyang", "xiu28"].includes(r.ringId))
+                    .map((r) => `${r.ringName}：${r.label}${r.note ? `（${r.note}）` : ""}`),
                   `位置：${locName}（${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E）`,
                   `磁偏角：${declText}（WMM2025）`,
                   `磁场状态：${interference.message}`,
-                  `引擎：${COMPASS_ENGINE_VERSION}`,
+                  `引擎：${COMPASS_ENGINE_VERSION} / ${LUOPAN_PROFILE_ENGINE_VERSION}`,
                 ],
               },
             }}
@@ -577,6 +790,33 @@ export default function CompassPage() {
         </p>
       </div>
       <div style={{ height: "20px" }} />
+
+      {/* 全屏放大盘面（圈层缩放） */}
+      {zoomed && (
+        <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-black/95 px-2 py-3">
+          <div className="text-xs text-[#e8c96a]">
+            {profile.name} · {reading ? reading.heading.toFixed(1) : "--.-"}° {reading ? reading.zuoXiang : ""}
+          </div>
+          <div className="mt-2 overflow-auto">
+            <LuopanDial
+              profile={profile}
+              heading={reading ? reading.heading : null}
+              visibleRingIds={visibleRingIds}
+              northMode={northMode}
+              interference={interference.level}
+              size={zoomSize}
+            />
+          </div>
+          <div className="mt-3 flex w-full max-w-[420px] items-center gap-2 px-3">
+            <button
+              onClick={() => setZoomed(false)}
+              className="flex-1 rounded-full border border-amber-300/60 bg-amber-50/10 py-2.5 text-sm font-semibold text-[#e8c96a] active:scale-[0.98]"
+            >
+              关闭
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Toast */}
       {toast && (

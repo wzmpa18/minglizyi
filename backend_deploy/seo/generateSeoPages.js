@@ -203,10 +203,25 @@ function renderFeatures(page) {
     .map((f) => `<div class="card"><h3>${esc(f.title)}</h3><p>${esc(f.desc)}</p></div>`)
     .join('\n');
   return `<section class="alt"><div class="wrap">
-<h2>言道国学对应能力</h2>
+<h2>${esc(page.featuresTitle || '言道国学对应能力')}</h2>
 <div class="grid">
 ${cards}
 </div>
+</div></section>`;
+}
+
+/** Guide 页可选「使用步骤」区块（PHASE8 小众五Cluster 指南页专用） */
+function renderSteps(page) {
+  if (!page.steps || page.steps.length === 0) return '';
+  const items = page.steps
+    .map(
+      (s, i) =>
+        `<div class="item"><div class="num">${i + 1}</div><div><h3>${esc(s.title)}</h3><p>${esc(s.desc)}</p></div></div>`
+    )
+    .join('\n');
+  return `<section class="why"><div class="wrap">
+<h2>${esc(page.stepsTitle || '怎么用：一步一步来')}</h2>
+${items}
 </div></section>`;
 }
 
@@ -285,6 +300,7 @@ async function renderPage(site, shared, page, qrSvg) {
   html += renderHero(site, page);
   html += renderPain(page);
   html += renderFeatures(page);
+  html += renderSteps(page);
   if (page.type === 'B') {
     html += renderBAdvantage(shared, page);
   } else {
@@ -381,12 +397,18 @@ async function main() {
   const shared = cfg.shared;
   const pages = cfg.pages;
 
-  // 同目录互链（每页 3 个相关页）
+  // 同目录互链（每页 3 个相关页；同 cluster 优先互链：Core↔Guide 强内链）
   const byDir = {};
   for (const p of pages) (byDir[p.dir] = byDir[p.dir] || []).push(p);
   for (const p of pages) {
     const sibs = byDir[p.dir].filter((x) => x.file !== p.file);
-    p._related = sibs.slice(0, 3);
+    if (p.cluster) {
+      const same = sibs.filter((x) => x.cluster === p.cluster);
+      const rest = sibs.filter((x) => x.cluster !== p.cluster);
+      p._related = [...same, ...rest].slice(0, 3);
+    } else {
+      p._related = sibs.slice(0, 3);
+    }
   }
 
   const qrSvg = await renderQrSvg(site.qrTarget);

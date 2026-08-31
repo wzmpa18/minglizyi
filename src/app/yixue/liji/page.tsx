@@ -1,17 +1,19 @@
 "use client";
 
-// 立极尺工具页 - NICHE-TOOLS-08 v25.0.68
+// 立极尺工具页 - NICHE-TOOLS-08 v25.0.69
 // ============================================================================
 // 功能：户型图导入（相册/相机，EXIF 方向自适应+降采样防 OOM）、透明罗盘叠加
-//       （与电子罗盘共用 CompassDial 渲染器）、立极点点选/拖动、盘面拖动/缩放/
-//       旋转/锁定、±0.1°±1° 精调、参考向线对齐（R = D − H）、一键居中、
-//       透明度滑杆、简易/专业圈层切换、点测山向判读、高清导出、本地工程保存、统一分享。
+//       （简易盘与专业门派盘可切换，专业盘与电子罗盘共用 LUOPAN_PROFILE_ENGINE
+//       圈层体系：三合/三元/玄空 Profile + 圈层可见性开关）、立极点点选/拖动、
+//       盘面拖动/缩放/旋转/锁定、±0.1°±1° 精调、参考向线对齐（R = D − H）、
+//       一键居中、透明度滑杆、点测山向判读、高清导出、本地工程保存、统一分享。
 // 隐私：户型图全程本地处理（§72），分享仅文本结果，不上传图纸（§73）。
 // 协议：几何换算全部走 liji 引擎层；山向判读复用 compass 口径；本页不输出吉凶断语。
 // ============================================================================
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CompassDial } from "@/components/CompassDial";
+import { LuopanDial } from "@/components/LuopanDial";
 import { ShareButton } from "@/components/ShareButton";
 import { captureDomToDataUrl } from "@/lib/posterCapture";
 import { saveDataUrl } from "@/lib/saveImage";
@@ -33,6 +35,12 @@ import {
   buildCompassReading,
 } from "@/algorithm-core/modules/compass";
 import type { CompassReadingResult } from "@/algorithm-core/modules/compass";
+import {
+  LUOPAN_PROFILE_ENGINE_VERSION,
+  SCHOOL_OPTIONS,
+  getProfile,
+  type LuopanSchool,
+} from "@/algorithm-core/modules/luopan-profile";
 
 const BRAND = "#B8860B";
 const PROJECT_KEY = "yandao_liji_project_v1";
@@ -59,6 +67,34 @@ const MemoDial = memo(function MemoDial({
   );
 });
 
+/** 专业门派盘叠加（与电子罗盘共用 LUOPAN_PROFILE_ENGINE 圈层体系） */
+const MemoProDial = memo(function MemoProDial({
+  heading,
+  size,
+  school,
+  hiddenRings,
+}: {
+  heading: number;
+  size: number;
+  school: LuopanSchool;
+  hiddenRings: string[];
+}) {
+  const profile = useMemo(() => getProfile(school), [school]);
+  const visibleRingIds = useMemo(() => {
+    const hidden = new Set(hiddenRings);
+    return new Set(profile.rings.filter((r) => !hidden.has(r.id)).map((r) => r.id));
+  }, [profile, hiddenRings]);
+  return (
+    <LuopanDial
+      profile={profile}
+      heading={heading}
+      visibleRingIds={visibleRingIds}
+      size={size}
+      overlay
+    />
+  );
+});
+
 type ClickMode = "none" | "center" | "facing" | "measure";
 
 interface ProjectSnapshot {
@@ -71,6 +107,10 @@ interface ProjectSnapshot {
   rotation: number;
   opacity: number;
   variant: "simple" | "full";
+  /** 专业盘门派（v25.0.69 起保存；旧工程缺省为三合） */
+  school?: LuopanSchool;
+  /** 专业盘隐藏圈层 id（v25.0.69 起保存） */
+  hiddenRings?: string[];
   facingPoint: { x: number; y: number } | null;
   facingShan: string;
   savedAt: string;
@@ -161,6 +201,11 @@ export default function LijiPage() {
   const [variant, setVariant] = useState<"simple" | "full">("full");
   const [locked, setLocked] = useState(false);
   const [clickMode, setClickMode] = useState<ClickMode>("none");
+
+  // 专业盘：门派 Profile + 圈层可见性（与电子罗盘同引擎同口径）
+  const [school, setSchool] = useState<LuopanSchool>("sanhe");
+  const [hiddenRings, setHiddenRings] = useState<string[]>([]);
+  const [showRingPanel, setShowRingPanel] = useState(false);
 
   // 对齐参考（向线）
   const [facingPoint, setFacingPoint] = useState<{ x: number; y: number } | null>(null);
@@ -255,6 +300,7 @@ export default function LijiPage() {
     try {
       const snap: ProjectSnapshot = {
         imgSrc, fitW, fitH, center, dial, dialSize, rotation, opacity, variant,
+        school, hiddenRings,
         facingPoint, facingShan, savedAt: new Date().toISOString(),
       };
       localStorage.setItem(PROJECT_KEY, JSON.stringify(snap));
@@ -265,7 +311,7 @@ export default function LijiPage() {
     } catch {
       showToast("保存失败：本机存储空间不足");
     }
-  }, [imgSrc, fitW, fitH, center, dial, dialSize, rotation, opacity, variant, facingPoint, facingShan, showToast]);
+  }, [imgSrc, fitW, fitH, center, dial, dialSize, rotation, opacity, variant, school, hiddenRings, facingPoint, facingShan, showToast]);
 
   const restoreProject = useCallback(() => {
     try {
@@ -282,6 +328,8 @@ export default function LijiPage() {
       setRotation(p.rotation);
       setOpacity(p.opacity);
       setVariant(p.variant);
+      if (p.school === "sanhe" || p.school === "sanyuan" || p.school === "xuankong") setSchool(p.school);
+      setHiddenRings(Array.isArray(p.hiddenRings) ? p.hiddenRings : []);
       setFacingPoint(p.facingPoint);
       setFacingShan(p.facingShan);
       setMeasure(null);
@@ -496,6 +544,9 @@ export default function LijiPage() {
         type: "liji",
         data: {
           rotation,
+          variant,
+          school: variant === "full" ? school : null,
+          hiddenRings: variant === "full" ? hiddenRings : [],
           centerRatio: {
             x: Math.round((center.x / fitW) * 1000) / 1000,
             y: Math.round((center.y / fitH) * 1000) / 1000,
@@ -512,7 +563,7 @@ export default function LijiPage() {
           } : null,
           note: "立极尺定向记录（图纸仅本地保存，未上传）",
           measuredAt: new Date().toISOString(),
-          engine: LIJI_ENGINE_VERSION,
+          engine: `${LIJI_ENGINE_VERSION} / ${variant === "full" ? LUOPAN_PROFILE_ENGINE_VERSION : COMPASS_ENGINE_VERSION}`,
         },
         note: "",
         status: "pending",
@@ -668,7 +719,7 @@ export default function LijiPage() {
                   </svg>
                 </div>
 
-                {/* Layer 2 罗盘叠加（拖动/缩放/旋转/锁定） */}
+                {/* Layer 2 罗盘叠加（拖动/缩放/旋转/锁定；简易盘或专业门派盘） */}
                 <div
                   style={{
                     position: "absolute",
@@ -682,7 +733,11 @@ export default function LijiPage() {
                     filter: locked ? "drop-shadow(0 0 6px rgba(184,134,11,0.45))" : undefined,
                   }}
                 >
-                  <MemoDial heading={dialHeading} size={dialSize} variant={variant} />
+                  {variant === "full" ? (
+                    <MemoProDial heading={dialHeading} size={dialSize} school={school} hiddenRings={hiddenRings} />
+                  ) : (
+                    <MemoDial heading={dialHeading} size={dialSize} variant={variant} />
+                  )}
                 </div>
               </div>
             ) : (
@@ -911,7 +966,7 @@ export default function LijiPage() {
               <span className="font-semibold tabular-nums" style={{ color: BRAND }}>{dialSize}px</span>
             </div>
             <input
-              type="range" min={100} max={400} step={4}
+              type="range" min={100} max={560} step={4}
               value={dialSize}
               onChange={(e) => setDialSize(parseInt(e.target.value, 10))}
               className="w-full accent-[#B8860B]"
@@ -924,12 +979,76 @@ export default function LijiPage() {
                   className={`flex-1 rounded-full py-2 text-sm font-medium ${variant === v ? "text-white" : "text-gray-500"}`}
                   style={variant === v ? { backgroundColor: BRAND } : {}}
                 >
-                  {v === "simple" ? "简易二十四山" : "专业多层盘"}
+                  {v === "simple" ? "简易二十四山" : "专业门派盘"}
                 </button>
               ))}
             </div>
+            {variant === "full" && (
+              <div className="mt-2 rounded-lg bg-gray-50 p-2">
+                <div className="mb-1.5 text-[11px] font-medium text-gray-600">门派与圈层（{getProfile(school).rings.length - hiddenRings.length}/{getProfile(school).rings.length} 圈层显示）</div>
+                <div className="flex rounded-full border border-gray-200 bg-white p-0.5">
+                  {SCHOOL_OPTIONS.map((o) => (
+                    <button
+                      key={o.id}
+                      onClick={() => {
+                        setSchool(o.id);
+                        setHiddenRings([]);
+                        trackToolEvent("liji", "profile_switch", { school: o.id });
+                      }}
+                      className={`flex-1 rounded-full py-1.5 text-[11px] font-medium ${school === o.id ? "text-white" : "text-gray-500"}`}
+                      style={school === o.id ? { backgroundColor: BRAND } : {}}
+                    >
+                      {o.name}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setShowRingPanel((v) => !v)}
+                  className="mt-1.5 flex w-full items-center justify-between px-0.5 text-[10px] text-gray-500"
+                >
+                  <span>圈层开关</span>
+                  <span className="text-gray-400">{showRingPanel ? "收起 ▲" : "展开 ▼"}</span>
+                </button>
+                {showRingPanel && (
+                  <div className="mt-1 grid grid-cols-2 gap-1">
+                    {getProfile(school).rings.map((r) => {
+                      const on = !hiddenRings.includes(r.id);
+                      return (
+                        <button
+                          key={r.id}
+                          onClick={() => {
+                            setHiddenRings((prev) => {
+                              const cur = getProfile(school).rings.filter((x) => !prev.includes(x.id)).length;
+                              if (prev.includes(r.id)) return prev.filter((x) => x !== r.id);
+                              if (cur <= 1) return prev;
+                              return [...prev, r.id];
+                            });
+                            trackToolEvent("liji", "ring_toggle", { ringId: r.id });
+                          }}
+                          className={`flex items-center justify-between rounded border px-1.5 py-1 text-left text-[10px] ${
+                            on ? "border-amber-200 bg-amber-50/70 text-gray-700" : "border-gray-200 bg-white text-gray-400"
+                          }`}
+                        >
+                          <span className="truncate">{r.name}</span>
+                          <span
+                            className="ml-1 inline-block h-3 w-3 shrink-0 rounded-full border"
+                            style={{
+                              backgroundColor: on ? BRAND : "#e5e5e5",
+                              borderColor: on ? BRAND : "#d0d0d0",
+                            }}
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                <p className="mt-1.5 text-[10px] leading-relaxed text-gray-400">
+                  专业盘与电子罗盘共用 {LUOPAN_PROFILE_ENGINE_VERSION.split("（")[0]}，圈层口径一致；隐藏圈层后剩余环带自动放宽。
+                </p>
+              </div>
+            )}
             <p className="mt-1.5 text-[10px] leading-relaxed text-gray-400">
-              简易＝仅二十四山圈，看清户型优先；专业＝度数＋二十四山＋后天八卦。缩放：双指捏合或按钮，
+              简易＝仅二十四山圈，看清户型优先；专业＝门派多圈层盘（三合12圈/三元/玄空）。缩放：双指捏合或按钮，
               图面与罗盘同组缩放；拖动罗盘需在「自由拖动」模式且未锁定。
             </p>
           </div>
@@ -1016,7 +1135,8 @@ export default function LijiPage() {
                         ? `点测判读：${measure.reading.zuoXiang}（${measure.reading.facing.shan}向 ${measure.reading.heading.toFixed(1)}°）`
                         : "点测判读：未测",
                       `原始图纸：${srcW}×${srcH}px（仅本机处理，未上传）`,
-                      `引擎：${LIJI_ENGINE_VERSION} / 山向口径：${COMPASS_ENGINE_VERSION.split("（")[0]}（与电子罗盘同源）`,
+                      `叠加盘：${variant === "full" ? `${SCHOOL_OPTIONS.find((o) => o.id === school)?.name ?? school}（专业门派盘）` : "简易二十四山盘"}`,
+                      `引擎：${LIJI_ENGINE_VERSION} / ${variant === "full" ? LUOPAN_PROFILE_ENGINE_VERSION : `山向口径：${COMPASS_ENGINE_VERSION.split("（")[0]}（与电子罗盘同源）`}`,
                     ],
                   },
                 }}
