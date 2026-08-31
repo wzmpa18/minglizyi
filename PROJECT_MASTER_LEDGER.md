@@ -790,3 +790,27 @@ gh workflow run ios-build.yml --repo wzmpa18/minglizyi --ref main
 **主站访问日志补缺**：yandao.vip.conf 此前**无任何 access_log**（爬虫到访不可观测，SEO 监控盲区）——双 server 块增加 `access_log /www/wwwlogs/www.yandao.vip.log`（备份 bak_accesslog_*，重载后实测 curl 请求落账 200/20B）。
 
 **头条主站验证成功确认（项目方回执+日志实证）**：09:27:16 Bytespider（36.110.131.174，HTTP/2）抓取 `www.yandao.vip/ByteDanceVerify.html` → 200/20B（补配的 access_log 完整记录此验证爬取，闭环十二.25 部署→平台通过因果链）；项目方在平台确认验证通过，随即进入主站 Sitemap 提交页（截图实证，页面规则"只能添加验证通过后站点的网址"成立）；主站 sitemap.xml 公网自检 200/text/xml/691B（4 URL）+ robots.txt 200/text/plain，符合平台提交条件。同日日志另见真实安卓用户（YandaoGuoxueAndroid UA）请求 `/api/announcements/public` 与 `/api/public/app-version` 均返回 200——v25.0.67 升级公告与版本接口已触达存量用户。
+
+---
+
+## 十二.26 易学四工具上线 + v25.0.68/v25.0.69 双版本封板（NICHE-TOOLS-07，2026-08-31）
+
+**背景（项目方指令）**：新增四个易学专业工具——七政四余、专业罗盘、立极尺、鲁班尺/丁兰尺（基础功能免费，全平台 web/android/ios）。项目方明确三条技术纪律：①七政四余**禁止直接抄任何完整七政开源代码**——Astronomy Engine（MIT）只做独立天文计算基座与对拍基准，Horosa（AGPL-3.0）只做功能/结果研究参考必须净室开发，Swiss Ephemeris（AGPL/商业双许可）弃用；②罗盘不需要找开源罗盘 APP——Android Rotation Vector 传感器自带，磁偏角用 **NOAA WMM2025**（美国政府公共领域，2025-2029 有效）做可版本化正式引擎，Android GeomagneticField（WMM-2020）降级为系统 fallback/交叉验证；③参考断语与排盘样式（七政四余 WORD 资料，项目方提供）。
+
+**四引擎净室实现与黄金测试（314/314 全过）**：
+- **七政四余** src/algorithm-core/modules/qizheng/index.ts——十一曜（七政+四余紫炁/月孛/罗睺/计都）黄经计算、二十八宿宿度制（今制/恒星制双制度）、十二人事宫、命宫命度/身宫身度、洞微大限行限；太阳黄经与 Astronomy Engine 对拍 ±0.02°、太阴 ±1°、宿界总和=360°/宫界=360°/大限年龄连续无缝三大拓扑不变量、命宫=太阳宫+卯-生时古法规则、极圈/夜子时/日期回退边界。86 项。
+- **专业罗盘** src/algorithm-core/modules/compass/index.ts——WMM2025 引擎（NOAA 官方系数净室键入，开发期揪出两处抄写笔误：(5,5)gdot 1.9→0.9、(12,12)h 2.2→0.2；勒让德导数递推 dpcup 笔误同步修正）与 NOAA 官方测试值对拍、磁北/真北切换、二十四山/八卦/坐向兼向判读、磁场干扰监测、circular smoothing 平滑。126 项 + 传感器数学交叉验证 25 项。
+- **立极尺** src/algorithm-core/modules/liji/index.ts——户型图本地导入（不上传）、罗盘叠加透明度、立极点定位、±0.1° 精调、点测山向。20 项。
+- **鲁班尺/丁兰尺** src/algorithm-core/modules/ruler/index.ts——多尺制（现代通用/明清正宗/民间大尺）、八格四分位吉凶判读、双尺合参、曲尺压白、最近吉尺寸推荐。57 项。
+
+**Share P0 修复（v25.0.68 前置）**：APP 排盘分享在 WebView 中 navigator.share 假成功（页面提示成功但系统分享面板未弹）——安装 @capacitor/share 原生插件，shareEngine.ts 改原生优先，增加分享二维码自检；APK 内 SharePlugin 类二进制核验在位。
+
+**v25.0.68 部署与 APK**：四工具页面（/yixue/qizheng/ /yixue/compass/ /yixue/liji/ /yixue/luban/）+ 工具矩阵统一接入；部署脚本 ackend_deploy/deploy_v25_0_68.sh（曾修 capacitor.settings.gradle 标准npm布局路径、tar 下划线命名两处构建坑）；公网验证 38/38（verify_v25_0_68.sh，曾修版本号正则误匹配 version 单词的 v）；APK v25.0.68/versionCode **2068**（MD5 7dbd06ab622afd022ff0d63d6b64d377，SHA256  8aee0b1a662364c2ff2d5af21067b002a4fe2d2694fb14da2e6ec10f4e99316，11887650 字节，apksigner 验签通过，统一分发源 latest.apk 原子替换，升级公告发布 2026-08-31T18:00:42+08:00）。
+
+**v25.0.69 SEO 四工具集群页 + 后端矩阵登记**：①seoPagesConfig.json 新增四工具 C 型集群页（差异化标题公式/痛点/功能锚定/FAQ/toolUrl 在线用直链）；②generateSeoPages.js 支持 toolUrl 字段渲染「网页版在线使用」入口+toollink 样式；③生成 	ools/qizheng-siyu.html（七政四余排盘_果老星宗二十八宿宿度）、	ools/luopan.html（手机罗盘_二十四山坐向+磁偏角真北校正）、	ools/liji-ruler.html（立极尺_户型图叠加罗盘定坐向）、	ools/luban-ruler.html（鲁班尺在线查询_丁兰尺双尺合参）+ 目录索引更新 + sitemap 22→28 URL，质量门禁 222 项全过；④	oolAdminRoutes.js DEFAULT_MATRIX 登记四工具 FREE/ON（工具矩阵总数 23→27，SEO「免费」口径 SSOT 实证）；⑤部署脚本 deploy_v25_0_69.sh（内容门禁/矩阵登记/PM2 重启/原子切流）+ 公网验证 erify_v25_0_69.sh **68/68 PASS**（版本切流/四新页内容级/老 SEO 18 页回归/sitemap/矩阵/四工具网页版/合规基建/IP 零泄漏/APK 端点）。
+
+**搜索引擎推送**：IndexNow 推送 10 URL（四新页+tools 索引+四工具网页版+sitemap）→ **HTTP 200 受理**（node 版推送器 ackend_deploy/seo/indexnow_push_local.cjs，规避 PowerShell curl 引号转义坑）；百度当日配额已尽（over quota）→ 四新页 URL 插入服务器队列头部（/root/backend-auth/data/baidu_push_queue.txt 指针 0），次日 09:10 cron 自动推首批 10 条。
+
+**老功能回归（切流不伤存量）**：①算法层净室对拍 42/42——八字（2000-01-01 日柱戊午权威锚点、1984 立春 02-04 23:19 节气换年边界前后双测）、紫微（十二宫/身宫标记）、奇门（九宫/阴阳遁/确定性/即时起盘）、中医（中药库/方剂库规模与检索）；②四工具黄金测试复跑 314/314（七政 86+罗盘 126+传感器数学 25+立极尺 20+鲁班尺 57）；③线上 APK 完好（v25.0.69 纯 Web 批次未触碰 APK，latest.apk MD5 复核一致）；④老工具矩阵 8 抽查全在位。
+
+**Git**：2a148da（四工具代码）→ 6fd3289/53fe12/3707220（v25.0.68 构建坑修复）→ d8f476a（v25.0.69 SEO 批次），已推送 GitHub origin（94e796b..d8f476a）；work-* 本地验证草稿目录入 .gitignore 不入仓。

@@ -9,7 +9,7 @@
 ## 1. 项目是什么
 
 **言道国学**（yandaoguoxue）：传统文化命理学习平台。
-- **命理工具**：八字、紫微斗数、奇门遁甲、六爻、梅花易数、姓名解析（算法全部本地计算，前端完成）。
+- **命理工具**：八字、紫微斗数、奇门遁甲、六爻、梅花易数、姓名解析（算法全部本地计算，前端完成）+ **四专业工具（v25.0.68 起）**：七政四余（十一曜/二十八宿宿度/洞微大限）、专业罗盘（WMM2025 磁偏角真北校正/二十四山）、立极尺（户型图叠加罗盘）、鲁班尺丁兰尺（双尺合参）。
 - **AI 深度解读**：以上工具结果接入 AI 深度分析（服务端代理转发上游大模型）。
 - **中医/学习**：中医百科（中药/经络/伤寒/问诊/养生/体质）+ 学习院（academy 课程/考试/证书）。
 - **社交**：好友、私聊、群聊（群主/管理员/成员三级）、动态流、点赞、收藏、评论、通知、拉黑、举报、后台审核。
@@ -20,14 +20,14 @@
 
 | 组件 | 版本 |
 |------|------|
-| Web（生产 current） | **v25.0.67**（buildId `v25.0.67_D20260831`，builtAt 2026-08-30T16:25:08Z；SEO 批次：13个C端差异化关键词落地页+B端方案页+robots/sitemap 部署于 /tools/ /learn/ /app/ /b/；含 v25.0.66 全部功能） |
-| 后端 API | package 1.1.0（PM2: yandaoguoxue-backend，online；新路由 QF/OSS/Offline/存储GC/统一后台 全挂载；SEO 批次零后端变更未重启） |
-| Android APK | **v25.0.67 / versionCode 2067**（2026-08-31 重建对齐线上 Web：SEO 18 页烧录内置、统一分发源 latest.apk 原子替换、升级提示 2067+公告已发布、单一来源门禁 18/18 PASS；构建脚本 `backend_deploy/build_android_v25_0_67.sh` 可复跑） |
+| Web（生产 current） | **v25.0.69**（buildId `v25.0.69_D20260831`，builtAt 2026-08-31T11:48:17Z；四工具 SEO 集群页批次：七政四余/罗盘/立极尺/鲁班尺 4 落地页+目录索引+sitemap 28 URL+在线用直链；含 v25.0.68 四工具全部功能与 v25.0.67 SEO 批次） |
+| 后端 API | package 1.1.0（PM2: yandaoguoxue-backend，online；v25.0.69 批次唯一后端变更=toolAdminRoutes DEFAULT_MATRIX 登记四工具 FREE/ON，矩阵总数 27；新路由 QF/OSS/Offline/存储GC/统一后台 全挂载） |
+| Android APK | **v25.0.68 / versionCode 2068**（2026-08-31 18:00 发布：四工具上线——专业罗盘 WMM2025/七政四余/立极尺/鲁班尺丁兰尺+Share 原生分享修复、统一分发源 latest.apk 原子替换、升级公告已发布；构建脚本 `backend_deploy/build_android_v25_0_68.sh` 可复跑；v25.0.69 为纯 Web SEO 批次未动 APK） |
 
 ## 3. 当前 Commit
 
 - **四端 HEAD 一致**：LOCAL = GITHUB origin/main = SERVER_SOURCE = 生产构建源（2026-08-31 核实；发布基线 `add0f56`，其后的文档回灌提交经 git bundle 中转同步服务器（服务器直连 GitHub 不稳），unpushed=0；接管后第一步：`git log --oneline -3` 四端核对）。
-- 当前代码批次：`657dc5f`（双身份 PARTNER_NET_OF_REFERRAL）→ `b493913`（Partner 归属快照/合同/改绑审计/结算快照/逐单账）→ `852c5fd`（总账回灌）→ `ac45013`（**MASTER-05 六模块后端**：Provider/对象存储+备份灾备/Offline Pack/社交限频+评论层级/Question Factory/统一后台总控+全量回归矩阵）→ `7a0750d`（Offline 前端四库）→ `6a16c4e`（bump v25.0.66）→ `d9bde64`（/offline 页面接线）→ `4fd6cc5`（MASTER-05 封板回灌）→ `add0f56`（SEO 增长引擎首批：seoPagesConfig+生成器+质量门禁+18页+robots/sitemap+bump v25.0.67）→ `3370fe4`（APK v25.0.67/2067 重建+统一分发源+升级公告+主站 robots/sitemap 修复）→ **`7624c15`（IndexNow 免登录主动推送双站 28 URL 202 受理+百度/头条/IndexNow 推送工具固化入仓，HEAD）**。后端运行时维持 `d9bde64`（SEO/APK/推送批次零后端变更）。
+- 当前代码批次：`657dc5f`（双身份 PARTNER_NET_OF_REFERRAL）→ `b493913`（Partner 归属快照/合同/改绑审计/结算快照/逐单账）→ `852c5fd`（总账回灌）→ `ac45013`（**MASTER-05 六模块后端**：Provider/对象存储+备份灾备/Offline Pack/社交限频+评论层级/Question Factory/统一后台总控+全量回归矩阵）→ `7a0750d`（Offline 前端四库）→ `6a16c4e`（bump v25.0.66）→ `d9bde64`（/offline 页面接线）→ `4fd6cc5`（MASTER-05 封板回灌）→ `add0f56`（SEO 增长引擎首批：seoPagesConfig+生成器+质量门禁+18页+robots/sitemap+bump v25.0.67）→ `3370fe4`（APK v25.0.67/2067 重建+统一分发源+升级公告+主站 robots/sitemap 修复）→ `7624c15`（IndexNow 免登录主动推送双站 28 URL 202 受理+百度/头条/IndexNow 推送工具固化入仓）→ `2a148da`（**NICHE-TOOLS-07 四工具引擎上线 v25.0.68**：七政四余净室引擎/罗盘 WMM2025/立极尺/鲁班尺丁兰尺+Share 原生修复+APK 2068）→ `6fd3289`/`f53fe12`/`3707220`（v25.0.68 构建/验证脚本三坑修复）→ **`d8f476a`（v25.0.69 四工具 SEO 集群页+矩阵登记+IndexNow 推送，HEAD）**。后端运行时已随 v25.0.69 重启（矩阵登记生效，PM2 online）。四工具代码位置：`src/algorithm-core/modules/qizheng|compass|liji|ruler/index.ts`（净室开发：Astronomy Engine MIT 只做对拍基准、Horosa AGPL 只做结果参考未抄一行、Swiss Ephemeris 弃用；WMM2025 系数 NOAA 公共领域净室键入）。
 
 ## 4. GitHub
 
@@ -58,7 +58,7 @@
 
 ## 8. Web 生产目录
 
-`/root/yandaoguoxue/current` → 软链 `releases/v25.0.67`。
+`/root/yandaoguoxue/current` → 软链 `releases/v25.0.69`。
 `releases/` 现存多版（_5~_29/_62~_67 等；回滚目标 v25.0.66）。**禁止删除 current 指向的目录**。
 SEO 静态落地页在 current 内：`/tools/`、`/learn/`、`/app/`、`/b/` + `robots.txt` + `sitemap.xml`（nginx try_files 直出；新增页面用 `backend_deploy/seo/` 配置+生成器+门禁流水线，勿手改 HTML）。IndexNow 主动推送密钥文件在 current 根：`/6adb2132052f4657a159f7302971f5c2.txt`（仓库 public/ 同名副本，未来构建自动携带；推送脚本 `backend_deploy/seo/indexnow_push.sh`）。
 站长平台验证文件（百度/头条/谷歌）：`/root/yandaoguoxue/verify/` 持久目录（nginx 精确 location root 指向，与发版切流解耦；源码仓 public/ 亦有副本双保险）；头条另有 `/ByteDanceVerify.html` 双文件名（真实下载文件名）；验证 URL 见总账十二.22。主站 `www.yandao.vip` 验证文件：`/www/yandao-verify/` 持久目录（yandao.vip.conf 精确 location；副本存 backend_deploy/seo/verify-main/；部署脚本 backend_deploy/deploy_verify2.sh 幂等可复跑）——含百度 `baidu_verify_codeva-JdVUh0FlbC.html`、谷歌 `google5ebbc484799c2806.html`、**头条 `ByteDanceVerify.html`（验证码 9/rZXunUHfGFCjR0DaQ8，与国学站 U447glXVJ3l8Obskdb3h 按站点独立）**；主站 IndexNow 密钥 `/www/yandao-company/7f9989ce602348f4bb3bb968879a640f.txt`（副本同 verify-main/）。主站访问日志：`/www/wwwlogs/www.yandao.vip.log`（十二.25 补配）。百度普通收录每日自动推送：`/root/backend-auth/scripts/baidu_daily_push.sh`（cron 10 9 * * *，队列/指针/env 在 /root/backend-auth/data/，token 不入仓库）。
@@ -114,11 +114,12 @@ SEO 静态落地页在 current 内：`/tools/`、`/learn/`、`/app/`、`/b/` + `
 
 ## 15. Android 版本
 
-v25.0.67 / versionCode 2067 / 包名 `com.yandao.guoxue` / MD5 `288ed27772e231936b28365193aea647`（SHA256 前缀 `a5ed355e…`；2026-08-31 构建，内置资源=生产 v25.0.67 全量含 SEO 18 页，签名证书与历史一致）。
+v25.0.68 / versionCode 2068 / 包名 `com.yandao.guoxue` / MD5 `7dbd06ab622afd022ff0d63d6b64d377`（SHA256 `08aee0b1a662364c2ff2d5af21067b002a4fe2d2694fb14da2e6ec10f4e99316`；2026-08-31 18:00 发布，四工具上线批次：七政四余/罗盘/立极尺/鲁班尺丁兰尺 + @capacitor/share 原生分享修复（WebView navigator.share 假成功根除），apksigner 验签通过，签名证书与历史一致）。
 - 此版起前端 AI 调用携带 Bearer Token（`src/lib/aiService.ts`）。
-- `data/app-release-config.json`：`downloadUrl` 已指向唯一源；`forceUpdate: false`。
+- `data/app-release-config.json`：`latestVersion 25.0.68 / latestVersionCode 2068`，`downloadUrl` 已指向唯一源；`forceUpdate: false`。
 - 旧版 APK（≤2058）不带 token：AI 调用已被 401 封口（见 §20），用户升级即恢复。
-- 手机 v25.0.60/2059 及更早：启动后 AppUpgradeChecker 比对服务器 2067 自动弹升级引导 → /friend → latest.apk。
+- 手机 v25.0.67/2067 及更早：启动后 AppUpgradeChecker 比对服务器 2068 自动弹升级引导 → /friend → latest.apk。
+- v25.0.69 为纯 Web SEO 批次（四工具落地页+矩阵登记），**未重建 APK**——next.apk 仍是 2068，四工具功能已在 2068 内。
 
 ## 16. iOS 状态
 
@@ -260,15 +261,29 @@ v25.0.67 / versionCode 2067 / 包名 `com.yandao.guoxue` / MD5 `288ed27772e23193
 | TENCENT_SNAPSHOT | **BLOCKED_EXTERNAL_OWNER_ACTION** | 控制台操作，AI 无法替代 |
 | IOS | **BLOCKED_EXTERNAL_OWNER_ACTION** | PLA 未签，软件不重复开发 |
 
-**SEO 增长引擎模块（2026-08-31 v25.0.67 批次口径）**：
+**NICHE-TOOLS-07 四工具矩阵（2026-08-31 v25.0.68/v25.0.69 封板口径）**：
 
 | 模块 | 状态 | 证据 |
 |------|------|------|
-| SEO_LANDING_PAGES | **VERIFIED** | 13个C端差异化关键词页+1个B端方案页+4目录索引，nginx try_files 直出；公网 42/42 PASS（14页全200+内容级三要素实测） |
-| SEO_PIPELINE | **VERIFIED** | 配置唯一源 seoPagesConfig.json + 生成器 generateSeoPages.js + 质量门禁 seoQualityGate.js（174项 PASS，SUPP-01 三项强制+扩展校验） |
-| SEO_COMPLIANCE | **VERIFIED** | 每页 ICP 备案悬挂+工信部链接+免责声明+canonical+JSON-LD；描述全部基于 APP 真实能力（14工具/8工具/22典籍/Meeus） |
-| ROBOTS_SITEMAP | **VERIFIED** | robots.txt 指向 sitemap；sitemap.xml 24 URL（6主站+14落地页+4目录），公网实测 |
-| SEARCH_SUBMIT | **VERIFIED**（文件层） | 国学站+主站 www.yandao.vip 验证文件公网可访问（双持久目录+nginx 精确 location；头条按真实文件名 ByteDanceVerify.html 双文件名部署）；平台侧「完成验证」点击与 sitemap 提交待 Owner |
+| QIZHENG_ENGINE | **VERIFIED** | 十一曜+二十八宿宿度（今制/恒星制）+十二人事宫+命身宫度+洞微大限；Astronomy Engine 对拍±0.02°+三大拓扑不变量+古法规则+边界鲁棒，86 PASS（净室开发，Horosa 只做结果参考未抄代码） |
+| COMPASS_ENGINE | **VERIFIED** | WMM2025 磁偏角引擎（NOAA 公共领域系数净室键入，GeomagneticField 为 fallback）+磁北真北切换+二十四山+干扰监测；126+25 PASS |
+| LIJI_ENGINE | **VERIFIED** | 户型图本地处理+罗盘叠加+立极定位+±0.1°精调；20 PASS |
+| LUBAN_ENGINE | **VERIFIED** | 多尺制+分位吉凶+双尺合参+曲尺压白+吉尺寸推荐；57 PASS |
+| FOUR_TOOLS_PAGES | **VERIFIED** | /yixue/qizheng/ /yixue/compass/ /yixue/liji/ /yixue/luban/ 四页公网 200，黄金测试合计 314/314 |
+| SHARE_NATIVE | **VERIFIED**（服务端+二进制） | @capacitor/share 原生插件替代 WebView 假成功；APK 内 SharePlugin 二进制核验；真机 Share Sheet 见 §27 PARTIAL |
+| SEO_CLUSTER_V25_0_69 | **VERIFIED** | 四落地页+sitemap 28 URL+矩阵登记 FREE/ON+IndexNow 200 受理+百度队列待推；verify_v25_0_69 68/68 |
+| OLD_TOOLS_REGRESSION | **VERIFIED** | 八字（2000-01-01 戊午锚点+立春边界双测）/紫微/奇门/中医算法净室对拍 42/42；老 SEO 18 页+矩阵 8 抽查全在位 |
+
+**SEO 增长引擎模块（2026-08-31 v25.0.69 批次口径）**：
+
+| 模块 | 状态 | 证据 |
+|------|------|------|
+| SEO_LANDING_PAGES | **VERIFIED** | 18个C端差异化关键词页+1个B端方案页+4目录索引（v25.0.69 增四工具集群页：qizheng-siyu/luopan/liji-ruler/luban-ruler，含 toolUrl「网页版在线使用」直链），nginx try_files 直出；公网 verify_v25_0_69 68/68 PASS |
+| SEO_PIPELINE | **VERIFIED** | 配置唯一源 seoPagesConfig.json + 生成器 generateSeoPages.js（toolUrl 字段支持）+ 质量门禁 seoQualityGate.js（222项 PASS，SUPP-01 三项强制+扩展校验） |
+| SEO_COMPLIANCE | **VERIFIED** | 每页 ICP 备案悬挂+工信部链接+免责声明+canonical+JSON-LD；描述全部基于 APP 真实能力（四工具含 WMM2025/二十八宿/洞微大限/双尺合参真实锚定） |
+| ROBOTS_SITEMAP | **VERIFIED** | robots.txt 指向 sitemap；sitemap.xml 28 URL（6主站+18落地页+4目录），公网实测 |
+| SEARCH_SUBMIT | **VERIFIED**（文件层+API层） | 国学站+主站 www.yandao.vip 验证文件公网可访问（双持久目录+nginx 精确 location；头条按真实文件名 ByteDanceVerify.html 双文件名部署）；平台侧「完成验证」点击与 sitemap 提交待 Owner；IndexNow 四工具批次 10 URL HTTP 200 受理（indexnow_push_local.cjs）；百度队列头部已插四新页，次日 09:10 cron 自动推 |
+| TOOL_MATRIX_SSOT | **VERIFIED** | 后端 DEFAULT_MATRIX 登记四工具 qizheng/compass/liji/luban 全部 FREE/ON（矩阵总数 27），`/api/public/tool-matrix` 公网实证，SEO「免费」口径单一事实源 |
 
 ## 27. 当前已知 PARTIAL
 
