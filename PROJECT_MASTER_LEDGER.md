@@ -1,7 +1,7 @@
 # 言道国学项目总账（PROJECT_MASTER_LEDGER）
 
 > **本文档是项目唯一权威账簿（Single Source of Truth）。**
-> 最后更新: 2026-08-31（十二.24 批次：IndexNow 免登录主动推送双站 28 URL 202 受理+百度/头条/IndexNow 推送工具固化入仓；十二.23 批次：APK v25.0.67/2067 重建对齐线上 Web+统一分发源 latest.apk+升级提示/公告生效+主站 robots/sitemap 假文件修复；同日 SEO-GROWTH-ENGINE-SUPP-01 批次：程序化搜索增长引擎首批落地——13个C端差异化关键词静态落地页+1个B端行业方案页+robots/sitemap，v25.0.67 生产发布+公网验证 42/42 PASS+四端SSOT一致 add0f56；前批 2026-08-30 FINAL-OPERATIONS-COMPLETION-MASTER-05 最终封板：六模块后端+全量回归+公网 21/21）
+> 最后更新: 2026-08-31（十二.25 批次：百度 API 推送双站落地 14 URL+头条主站 ByteDanceVerify 补部署+每日自动推送队列 cron+主站 access_log 补缺；十二.24 批次：IndexNow 免登录主动推送双站 28 URL 202 受理+推送工具固化入仓；十二.23 批次：APK v25.0.67/2067 重建对齐线上 Web+统一分发源 latest.apk+升级提示/公告生效+主站 robots/sitemap 假文件修复；同日 SEO-GROWTH-ENGINE-SUPP-01 批次：程序化搜索增长引擎首批落地——13个C端差异化关键词静态落地页+1个B端行业方案页+robots/sitemap，v25.0.67 生产发布+公网验证 42/42 PASS+四端SSOT一致 add0f56；前批 2026-08-30 FINAL-OPERATIONS-COMPLETION-MASTER-05 最终封板：六模块后端+全量回归+公网 21/21）
 > 上一批（2026-08-30 中）：AI-PRODUCTION-SEAL-AND-COMMISSION-ROUTER-04（AI Phase 1 正式生产上线 + 历史无限权益保护 + AI 成本中心生产验收 + Commission Router 唯一结算引擎 + Partner 50% 账务闭环 + 防重复计提）
 > 上上批（2026-08-29）：P0-PRODUCTION-SEAL-AND-AI-COST-PHASE1-03（P0安全修复正式生产落地 + 生产攻击回归 + SSOT总账纠偏 + 真太阳时封板 + AI Fair Usage/Cost Center 第一阶段）
 > 上一批（2026-08-25，生产版本 v25.0.47_30）：FIX-V30-PAY-CARE 支付权益彻查+防再发机制——用户投诉「会员ID 100011 充值没开通会员」彻查结论：①订单 YD20260825173625902022 ¥39.9 实为 SINGLE_UNLOCK 单次深度解读（非会员套餐），支付成功且 benefit_delivered=1 权益已正常发放；用户误将单次解读当会员购买（单次 39.9>月费 37 价格结构易混淆），支付后又连续创建 7 个未完成 PENDING 订单反复尝试；②全量对账 5 笔 PAID 订单：真实用户订单权益全部正常发放，唯一漏发为 E2E 测试订单 TEST_RC06_DELIVER（无 transaction_id 无真实扣款，已归档）；910082 yearly 会员为 E2E 测试账号（无手机号）非漏发；③处理：用户 100011 客户关怀补偿开通月度会员至 2026-09-24（与生产 deliverOrderBenefits 同口径 users+user_assets 双表）+7 个僵尸 PENDING 订单关闭+operation_logs 三条留痕（修复前 DB 备份 /root/backup/yandao_users_pre_fix100011_20260825_175346.db）；⑥应老板要求改单（2026-08-25 追加）：订单 129 YD20260825173625902022 由 SINGLE_UNLOCK 正式转为 MEMBERSHIP（实付 39.9 金额不动，benefit_delivered=1 维持，operation_logs id=302 order_type_convert 留痕），订单记录与已发月度会员权益一致；用户无推荐人（invited_by/referrer_id 空）改单对佣金结算零影响；④防再发：部署 /root/backend-auth/scripts/payment_reconcile.sh 每日 03:30 cron 自动对账——查 PAID+benefit_delivered=0+支付超10分钟的沉默漏发订单，MEMBERSHIP 按金额映射档位（37/99/374/3600）自动补交付（续费顺延同口径）、SINGLE_UNLOCK 补标记、未知类型告警人工，告警日志 payment_audit_alerts.log；⑤产品层防混淆：单次解锁弹窗新增三处明确标识「本单为单次解读解锁，非会员套餐」+「支付后仅解锁本次解读，不含会员权益」；前一版本 v25.0.47_29+APK v25.0.55(2055)：FIX-V29-DOWNLOAD-RESCUE 升级下载链路根治）
@@ -772,3 +772,19 @@ gh workflow run ios-build.yml --repo wzmpa18/minglizyi --ref main
 **工具固化**：Temp 草稿转正式仓库件——`backend_deploy/seo/baidu_push.sh`（百度普通收录 API 推送+sitemap API 提交，一跑双提交）、`baidu_urls_guoxue.txt`（24 URL）、`baidu_urls_main.txt`（4 URL）、`indexnow_push.sh`（IndexNow 协议推送）。URL 清单与两站 sitemap.xml 逐一一致（单一来源）。
 
 **爬虫基线（当日实测）**：Googlebot 已抓 `/robots.txt`；Bytespider 于 02:50 重访 `ByteDanceVerify.html` 且命中修复后的 21B 正确内容（推送前 7 次命中为 7739B 兜底页，即头条验证失败根因的日志证据）；`/tools/wuguang-paipan.html` 已被引擎访问 200；**Baiduspider 零到访**——百度侧必须靠项目方提供 API token 主动推送，别等自然抓取。
+
+---
+
+## 十二.25 百度 API 推送落地 + 头条主站验证文件补部署 + 每日自动推送队列（2026-08-31）
+
+**背景**：项目方提供两个百度 API 调用地址（普通收录→API推送），并反馈「头条验证 www.yandao.vip 所有权失败」。截图三张确认：头条站点中国学站已验证、主站显示"验证站点"未通过；谷歌 GSC 国学站已验证；用户已在头条 Sitemap 提交页填好国学站地址待点提交。
+
+**头条主站验证失败根因（非部署错误）**：主站 ByteDanceVerify.html **此前从未被提供/部署**——03:53 项目方才下载主站验证文件（`ByteDanceVerify (1).html`，验证码 `9/rZXunUHfGFCjR0DaQ8`，与国学站 `U447glXVJ3l8Obskdb3h` 按站点独立），10:20 重下载内容一致未变（平台未重置码）。此前主站 `/ByteDanceVerify.html` 命中 SPA 兜底返回首页 HTML（200 但内容不符）→ 平台判定失败。**修复**：文件写入 `/www/yandao-verify/ByteDanceVerify.html`（20B 精确内容）+ nginx yandao.vip.conf 双 server 块精确 location（备份 bak_toutiao_main_*）+ 平滑重载；公网内容级实测 200+`9/rZXunUHfGFCjR0DaQ8` PASS；仓库副本 `backend_deploy/seo/verify-main/ByteDanceVerify.html`。项目方仅需平台再点一次「完成验证」。
+
+**百度 API 推送（项目方 token 实测）**：两个 token 仅差一字符（`XDoAl0cTWQjzSas1` 主站 l 有效 / `XDoAI0cTWQjzSas1` 国学站 I 抄写变体 401 无效）——**结论：token 为账号级，site 参数决定站点归属与配额池**，主站 token 推国学站 URL 有效。配额实测为**每站每日 10 条独立计算**：主站 4 URL（全部 sitemap 页）一次性 `success:4`；国学站 24 URL 超限拒整批（over quota）→ 分两批 `success:6`（wuguang-paipan/mianfei-bazi-paipan/paipan-nage-haoyong/mianfei-zhongyi-tiku/zhongyi-dianji-mianfei/meiyou-guanggao-guoxue 六核心 SEO 页）+ `success:4`（首页/quangongneng-guoxue/yixue-zhongyi-fangan/mianfei-zhongyi-shuati），当日 10/10 用尽 `remain:0`。
+
+**sitemap API 实测废弃**：`data.zz.baidu.com/sitemap` 对带协议/裸域名 site 参数一律返回 "site is wrong"（HTML Bad Request）——旧接口已停用，sitemap 提交只能走平台网页端（sitemap 配额与 API 推送独立不共享）；仓库 `baidu_push.sh` 已移除该段并注明。
+
+**每日自动推送队列（剩余 14 URL 免人工）**：`backend_deploy/seo/baidu_daily_push.sh`（队列推进制：指针文件记录进度，每日推 ≤10，超额/失败不推进次日自动重试，推完静默退出）部署至 `/root/backend-auth/scripts/`；队列 `/root/backend-auth/data/baidu_push_queue.txt`（14 URL：5 个 SEO 落地页+4 个频道索引+5 个功能页，优先级排序）；指针初始化 0；token 入 `/root/backend-auth/data/baidu_push.env`（600 权限，**不入仓库**，模板 `baidu_push.env.example` 注明替换位）；cron `10 9 * * *` 日志 `/root/backup/baidu_push.log`。**当日试跑实测**：命中 over quota → 指针保持 0 → 次日 09:10 自动推 10 条、第三日推完最后 4 条，容错逻辑验证通过。
+
+**主站访问日志补缺**：yandao.vip.conf 此前**无任何 access_log**（爬虫到访不可观测，SEO 监控盲区）——双 server 块增加 `access_log /www/wwwlogs/www.yandao.vip.log`（备份 bak_accesslog_*，重载后实测 curl 请求落账 200/20B）。

@@ -61,7 +61,7 @@
 `/root/yandaoguoxue/current` → 软链 `releases/v25.0.67`。
 `releases/` 现存多版（_5~_29/_62~_67 等；回滚目标 v25.0.66）。**禁止删除 current 指向的目录**。
 SEO 静态落地页在 current 内：`/tools/`、`/learn/`、`/app/`、`/b/` + `robots.txt` + `sitemap.xml`（nginx try_files 直出；新增页面用 `backend_deploy/seo/` 配置+生成器+门禁流水线，勿手改 HTML）。IndexNow 主动推送密钥文件在 current 根：`/6adb2132052f4657a159f7302971f5c2.txt`（仓库 public/ 同名副本，未来构建自动携带；推送脚本 `backend_deploy/seo/indexnow_push.sh`）。
-站长平台验证文件（百度/头条/谷歌）：`/root/yandaoguoxue/verify/` 持久目录（nginx 精确 location root 指向，与发版切流解耦；源码仓 public/ 亦有副本双保险）；头条另有 `/ByteDanceVerify.html` 双文件名（真实下载文件名）；验证 URL 见总账十二.22。主站 `www.yandao.vip` 验证文件：`/www/yandao-verify/` 持久目录（yandao.vip.conf 精确 location；副本存 backend_deploy/seo/verify-main/；部署脚本 backend_deploy/deploy_verify2.sh 幂等可复跑）；主站 IndexNow 密钥 `/www/yandao-company/7f9989ce602348f4bb3bb968879a640f.txt`（副本同 verify-main/）。
+站长平台验证文件（百度/头条/谷歌）：`/root/yandaoguoxue/verify/` 持久目录（nginx 精确 location root 指向，与发版切流解耦；源码仓 public/ 亦有副本双保险）；头条另有 `/ByteDanceVerify.html` 双文件名（真实下载文件名）；验证 URL 见总账十二.22。主站 `www.yandao.vip` 验证文件：`/www/yandao-verify/` 持久目录（yandao.vip.conf 精确 location；副本存 backend_deploy/seo/verify-main/；部署脚本 backend_deploy/deploy_verify2.sh 幂等可复跑）——含百度 `baidu_verify_codeva-JdVUh0FlbC.html`、谷歌 `google5ebbc484799c2806.html`、**头条 `ByteDanceVerify.html`（验证码 9/rZXunUHfGFCjR0DaQ8，与国学站 U447glXVJ3l8Obskdb3h 按站点独立）**；主站 IndexNow 密钥 `/www/yandao-company/7f9989ce602348f4bb3bb968879a640f.txt`（副本同 verify-main/）。主站访问日志：`/www/wwwlogs/www.yandao.vip.log`（十二.25 补配）。百度普通收录每日自动推送：`/root/backend-auth/scripts/baidu_daily_push.sh`（cron 10 9 * * *，队列/指针/env 在 /root/backend-auth/data/，token 不入仓库）。
 
 ## 9. Backend 目录
 
