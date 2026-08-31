@@ -788,3 +788,5 @@ gh workflow run ios-build.yml --repo wzmpa18/minglizyi --ref main
 **每日自动推送队列（剩余 14 URL 免人工）**：`backend_deploy/seo/baidu_daily_push.sh`（队列推进制：指针文件记录进度，每日推 ≤10，超额/失败不推进次日自动重试，推完静默退出）部署至 `/root/backend-auth/scripts/`；队列 `/root/backend-auth/data/baidu_push_queue.txt`（14 URL：5 个 SEO 落地页+4 个频道索引+5 个功能页，优先级排序）；指针初始化 0；token 入 `/root/backend-auth/data/baidu_push.env`（600 权限，**不入仓库**，模板 `baidu_push.env.example` 注明替换位）；cron `10 9 * * *` 日志 `/root/backup/baidu_push.log`。**当日试跑实测**：命中 over quota → 指针保持 0 → 次日 09:10 自动推 10 条、第三日推完最后 4 条，容错逻辑验证通过。
 
 **主站访问日志补缺**：yandao.vip.conf 此前**无任何 access_log**（爬虫到访不可观测，SEO 监控盲区）——双 server 块增加 `access_log /www/wwwlogs/www.yandao.vip.log`（备份 bak_accesslog_*，重载后实测 curl 请求落账 200/20B）。
+
+**头条主站验证成功确认（项目方回执+日志实证）**：09:27:16 Bytespider（36.110.131.174，HTTP/2）抓取 `www.yandao.vip/ByteDanceVerify.html` → 200/20B（补配的 access_log 完整记录此验证爬取，闭环十二.25 部署→平台通过因果链）；项目方在平台确认验证通过，随即进入主站 Sitemap 提交页（截图实证，页面规则"只能添加验证通过后站点的网址"成立）；主站 sitemap.xml 公网自检 200/text/xml/691B（4 URL）+ robots.txt 200/text/plain，符合平台提交条件。同日日志另见真实安卓用户（YandaoGuoxueAndroid UA）请求 `/api/announcements/public` 与 `/api/public/app-version` 均返回 200——v25.0.67 升级公告与版本接口已触达存量用户。
