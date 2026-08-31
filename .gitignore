@@ -68,3 +68,10 @@ docs/materials/nihaixia_raw/
 
 # Local algorithm verification scratch (Meeus true-solar-time probes, not source)
 tmp/
+
+# Local tool-launch verification scratch (four-tools session, not source)
+work-compass/
+work-liji/
+work-qizheng/
+work-ruler/
+work-verify/

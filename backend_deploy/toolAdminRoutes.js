@@ -45,8 +45,13 @@ const DEFAULT_MATRIX = {
   zhongyi_bianzheng:   { name: '中医·辨证学',    status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
   zhongyi_yangsheng:   { name: '中医·养生功法',  status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
   zhongyi_shanghan:    { name: '中医·伤寒六经',  status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
-  zhongyi_constitution:{ name: '中医·体质测评',  status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
-  zhongyi_exam:        { name: '中医·医考刷题',  status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
+  zhongyi_constitution:{ name: '中医·体质测评',  status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic',    aiEnabled: true, aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
+  zhongyi_exam:        { name: '中医·医考刷题',  status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic',    aiEnabled: true, aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
+  // ==================== v25.0.68: 易学四工具上线（NICHE-TOOLS-07，基础功能免费） ====================
+  qizheng: { name: '七政四余',   status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic', aiEnabled: true, aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
+  compass:  { name: '专业罗盘',   status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic', aiEnabled: false, aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
+  liji:     { name: '立极尺',     status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic', aiEnabled: false, aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
+  luban:    { name: '鲁班尺丁兰尺', status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic', aiEnabled: false, aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
 };
 
 function loadMatrix() {

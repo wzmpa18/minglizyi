@@ -102,6 +102,8 @@ header.site a.home{color:#fff;font-size:13px;border:1px solid rgba(255,255,255,.
 .badge{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.35);padding:4px 12px;border-radius:14px;font-size:12px;}
 .cta-big{display:inline-block;background:#FFC107;color:#4A2B00;font-weight:700;font-size:16px;padding:13px 34px;border-radius:26px;box-shadow:0 4px 14px rgba(0,0,0,.18);}
 .hero .tip{font-size:12px;opacity:.85;margin-top:12px;}
+.hero .toollink{font-size:13px;margin-top:10px;}
+.hero .toollink a{color:#FFD54F;text-decoration:underline;}
 section{padding:30px 0;}
 section.alt{background:var(--card);}
 h2{font-size:19px;margin-bottom:16px;padding-left:10px;border-left:4px solid var(--brand);}
@@ -176,11 +178,15 @@ function renderHeader(site, page) {
 
 function renderHero(site, page) {
   const badges = (page.heroBadges || []).map((b) => `<span class="badge">${esc(b)}</span>`).join('');
+  const toolLink = page.toolUrl
+    ? `<p class="toollink">不用下载先试试：<a href="${esc(site.domain)}${esc(page.toolUrl)}">网页版在线使用 →</a></p>`
+    : '';
   return `<section class="hero"><div class="wrap">
 <h1>${esc(page.h1)}</h1>
 <div class="badges">${badges}</div>
 <a class="cta-big" href="${esc(site.apkUrl)}" rel="nofollow">${esc(page.cta)}</a>
 <p class="tip">安卓APK直装 · 无广告 · 基础功能永久免费</p>
+${toolLink}
 </div></section>`;
 }
 
