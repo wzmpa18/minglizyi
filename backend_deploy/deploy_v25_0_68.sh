@@ -10,7 +10,7 @@
 set -euo pipefail
 VERSION="v25.0.68"
 RELEASE_DIR="/root/yandaoguoxue/releases/${VERSION}"
-TAR="/root/yandaoguoxue/out_${VERSION}.tar.gz"
+TAR="/root/yandaoguoxue/out_v25_0_68.tar.gz"
 BASE="https://yandaoguoxue.yandao.vip"
 
 echo "=== [0] 服务器校验（部署纪律：唯一生产服务器 82.156.228.87） ==="
