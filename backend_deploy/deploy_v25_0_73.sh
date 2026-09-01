@@ -63,7 +63,7 @@ grep -q '免费无广告' "$RELEASE_DIR/tools/shouji-haoma-nengliang.html" || { 
 grep -q '<urlset' "$RELEASE_DIR/sitemap.xml" || { echo "FAIL: sitemap 缺失"; fail=1; }
 SM_N=$(grep -c '<loc>' "$RELEASE_DIR/sitemap.xml")
 echo "sitemap URL 数: $SM_N"
-[ "$SM_N" = "53" ] || { echo "FAIL: sitemap URL 数非 53"; fail=1; }
+[ "$SM_N" = "59" ] || { echo "FAIL: sitemap URL 数非 59（53 SEO + 6 主站）"; fail=1; }
 grep -q 'Sitemap:' "$RELEASE_DIR/robots.txt" || { echo "FAIL: robots.txt 未指向 sitemap"; fail=1; }
 
 # 工具索引页含新集群入口
