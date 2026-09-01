@@ -32,6 +32,7 @@ export default function WechatOaIdentityInit() {
         const res = await fetch("/api/wechat/official/me", { credentials: "include" });
         const json = await res.json();
         if (json?.data?.wechat) return; // 已识别，无需再走 OAuth
+        if (json?.data?.oauthEnabled === false) return; // 服务号未认证/未开通OAuth：静默跳过，防微信报错页
         const redirect = encodeURIComponent(window.location.href);
         window.location.replace(`/api/wechat/official/oauth/authorize?redirect=${redirect}`);
       } catch { /* 静默：识别失败不影响浏览 */ }

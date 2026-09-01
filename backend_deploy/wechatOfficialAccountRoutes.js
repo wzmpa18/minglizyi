@@ -112,8 +112,11 @@ function createRouter() {
   });
 
   // ---------- 第十三章：网页 OAuth ----------
+  // 未认证服务号无网页授权权限：跳微信会落到报错页。WECHAT_OA_OAUTH_ENABLED!=true 时静默回跳（认证后置true）
+  function oauthEnabled() { return process.env.WECHAT_OA_OAUTH_ENABLED === 'true' && !!process.env.WECHAT_OA_APP_SECRET; }
   router.get('/oauth/authorize', (req, res) => {
     const redirect = String(req.query.redirect || 'https://yandaoguoxue.yandao.vip/');
+    if (!oauthEnabled()) return res.redirect(302, redirect);
     const state = createOAuthState(redirect);
     if (!state) return res.status(400).json({ success: false, error: 'redirect 不在白名单' });
     const cb = encodeURIComponent('https://yandaoguoxue.yandao.vip/api/wechat/official/oauth/callback');
@@ -143,10 +146,10 @@ function createRouter() {
   // ---------- 微信身份查询（网页版识别，不自动建账号：第十九/二十章） ----------
   router.get('/me', (req, res) => {
     const identity = readIdentity(req);
-    if (!identity) return res.json({ success: true, data: { wechat: null } });
+    if (!identity) return res.json({ success: true, data: { wechat: null, oauthEnabled: oauthEnabled() } });
     const row = getDb().prepare("SELECT b.user_id, f.subscribe, f.nickname FROM wechat_user_binding b LEFT JOIN wechat_oa_followers f ON f.openid = b.openid WHERE b.openid = ? AND b.bind_status = 'BOUND'").get(identity.openid);
     const masked = identity.openid.length > 8 ? `${identity.openid.slice(0, 4)}****${identity.openid.slice(-4)}` : '****';
-    return res.json({ success: true, data: { wechat: { openidMasked: masked, subscribe: row ? !!row.subscribe : null, nickname: row ? row.nickname : '', boundUserId: row ? row.user_id : null } } });
+    return res.json({ success: true, data: { wechat: { openidMasked: masked, subscribe: row ? !!row.subscribe : null, nickname: row ? row.nickname : '', boundUserId: row ? row.user_id : null }, oauthEnabled: oauthEnabled() } });
   });
 
   // ---------- 第十五章：openid 绑定（已登录用户主动绑定） ----------
