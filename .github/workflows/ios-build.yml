@@ -1,12 +1,16 @@
 name: iOS Build (ipa)
 
-# 言道国学 iOS 打包管道（FINAL-CLEAN-RC-01）
-# - macOS runner + Capacitor iOS 工程（v25.0.47 原生内置资源模式：www/ 内置 web 资源 + API 经 native-api-patch.js 改写线上）
-# - 签名：App Store Connect API（P8 密钥）自动签名
+# 言道国学 iOS 打包管道（v25.0.77 重构：归档/签名分离）
+# 签名策略（geolibre 同源问题解法）：Automatic 开发签名归档会要求注册设备
+#   （"no devices to generate provisioning profile"），且显式 Apple Distribution
+#   会报 "conflicting provisioning settings"。正确姿势：归档阶段 CODE_SIGNING_ALLOWED=NO
+#   产出未签名 xcarchive，再由 -exportArchive + ASC API 密钥完成 App Store 分发签名
+#   ——自动创建 Apple Distribution 证书、注册 App ID、生成 App Store profile，无需设备。
+# - 签名：App Store Connect API（P8 密钥）
 #   Secrets 必需：
 #     APP_STORE_CONNECT_KEY       — AuthKey_UWQ354QP54.p8 全文内容
 #     APP_STORE_CONNECT_ISSUER_ID — App Store Connect 后台 → 用户和访问 → 集成 → 密钥 页的 Issuer ID
-#   Key ID 已内联（UWQ354QP54，非敏感标识）
+#   Key ID 已内联（UWQ354QP54，非敏感标识）Team ID 内联（WM586465ZD）
 # - Issuer ID 未配置时：产出未签名 xcarchive（可在任意 Mac 上完成签名导出）
 on:
   workflow_dispatch:
@@ -23,6 +27,7 @@ jobs:
     timeout-minutes: 60
     env:
       KEY_ID: UWQ354QP54
+      TEAM_ID: WM586465ZD
       APP_NAME: 言道国学
       BUNDLE_ID: com.yandao.guoxue
 
@@ -37,9 +42,8 @@ jobs:
           cache: npm
 
       # Capacitor 8.5.0 预编译框架（capacitor-swift-pm 二进制包）的 Swift 模块接口
-      # 需 Xcode 16+ 编译器消费——macos-14 默认 Xcode 15.4 下 @capacitor/share 插件
-      # Swift 源码报 getString 双参数/CAPPluginCall 无 reject（Swift 扩展不可见）。
-      # 固定 Xcode 16.4（Capacitor 8.5 构建基线，macos-15 镜像默认）。
+      # 需 Xcode 16+ 编译器消费——Xcode 15.4 下 @capacitor/share 插件 Swift 源码报
+      # getString 双参数/CAPPluginCall 无 reject（Swift 扩展不可见）。固定 16.4。
       - name: Select Xcode 16.4
         run: sudo xcode-select -s /Applications/Xcode_16.4.app
 
@@ -71,7 +75,7 @@ jobs:
         run: |
           if [ -n "${{ secrets.APP_STORE_CONNECT_KEY }}" ] && [ -n "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}" ]; then
             echo "mode=signed" >> "$GITHUB_OUTPUT"
-            echo "签名模式：App Store Connect API（P8）"
+            echo "签名模式：App Store Connect API（P8）—— exportArchive 分发签名"
           else
             echo "mode=unsigned" >> "$GITHUB_OUTPUT"
             echo "::warning::未配置 APP_STORE_CONNECT_KEY / APP_STORE_CONNECT_ISSUER_ID Secrets，将产出未签名 xcarchive"
@@ -83,34 +87,8 @@ jobs:
           mkdir -p "$HOME/private_keys"
           printf '%s\n' "${{ secrets.APP_STORE_CONNECT_KEY }}" > "$HOME/private_keys/AuthKey_${KEY_ID}.p8"
 
-      - name: Archive (signed)
-        id: signed_archive
-        if: steps.creds.outputs.mode == 'signed'
-        continue-on-error: true
-        run: |
-          cd ios/App
-          xcodebuild archive \
-            -project App.xcodeproj \
-            -scheme App \
-            -configuration Release \
-            -destination 'generic/platform=iOS' \
-            -archivePath "$RUNNER_TEMP/App.xcarchive" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$HOME/private_keys/AuthKey_${KEY_ID}.p8" \
-            -authenticationKeyID "$KEY_ID" \
-            -authenticationKeyIssuerID "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}"
-
-      - name: Note signing failure
-        if: steps.creds.outputs.mode == 'signed' && steps.signed_archive.outcome == 'failure'
-        run: |
-          echo "### ⚠️ 签名归档失败，已降级产出未签名 xcarchive" >> $GITHUB_STEP_SUMMARY
-          echo "常见根因（查看 Archive (signed) 步骤日志确认）：" >> $GITHUB_STEP_SUMMARY
-          echo "- **PLA Update available** → 账号持有人 ZHIMIN WU 登录 https://developer.apple.com/account 接受最新《计划许可协议》后重跑" >> $GITHUB_STEP_SUMMARY
-          echo "- 其他错误 → 检查 Bundle ID 注册 / 证书 / 密钥权限" >> $GITHUB_STEP_SUMMARY
-          echo "::warning::签名失败已降级为未签名产物；解决后重跑本 workflow 即出签名 ipa"
-
-      - name: Archive (unsigned fallback)
-        if: steps.creds.outputs.mode == 'unsigned' || steps.signed_archive.outcome == 'failure'
+      # 归档一律未签名（Automatic 开发签名会要求注册设备——见文件头注释）
+      - name: Archive (unsigned)
         run: |
           cd ios/App
           rm -rf "$RUNNER_TEMP/App.xcarchive"
@@ -122,8 +100,11 @@ jobs:
             -archivePath "$RUNNER_TEMP/App.xcarchive" \
             CODE_SIGNING_ALLOWED=NO
 
-      - name: Export ipa
-        if: steps.creds.outputs.mode == 'signed' && steps.signed_archive.outcome == 'success'
+      # 分发签名在导出阶段完成：自动创建 Apple Distribution 证书+注册 App ID+生成 App Store profile
+      - name: Export ipa (distribution signing)
+        id: export
+        if: steps.creds.outputs.mode == 'signed'
+        continue-on-error: true
         run: |
           cat > "$RUNNER_TEMP/ExportOptions.plist" <<'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
@@ -132,10 +113,12 @@ jobs:
           <dict>
             <key>method</key>
             <string>app-store-connect</string>
-            <key>destination</key>
-            <string>export</string>
+            <key>teamID</key>
+            <string>WM586465ZD</string>
             <key>signingStyle</key>
             <string>automatic</string>
+            <key>uploadSymbols</key>
+            <true/>
             <key>stripSwiftSymbols</key>
             <true/>
           </dict>
@@ -152,7 +135,7 @@ jobs:
           ls -la "$RUNNER_TEMP/export"
 
       - name: Upload ipa artifact
-        if: steps.creds.outputs.mode == 'signed' && steps.signed_archive.outcome == 'success'
+        if: steps.creds.outputs.mode == 'signed' && steps.export.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: yandao-guoxue-ios-ipa
@@ -160,20 +143,19 @@ jobs:
           retention-days: 14
 
       - name: Upload to TestFlight
-        if: steps.creds.outputs.mode == 'signed' && steps.signed_archive.outcome == 'success' && inputs.upload_testflight
+        if: steps.creds.outputs.mode == 'signed' && steps.export.outcome == 'success' && inputs.upload_testflight
         run: |
           IPA=$(ls "$RUNNER_TEMP/export/"*.ipa | head -1)
           xcrun altool --upload-app --type ios -f "$IPA" --apiKey "$KEY_ID" --api-issuer "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}"
 
       - name: Upload unsigned xcarchive artifact
-        if: steps.creds.outputs.mode == 'unsigned' || steps.signed_archive.outcome == 'failure'
+        if: steps.creds.outputs.mode == 'unsigned' || steps.export.outcome == 'failure'
         run: |
           cd "$RUNNER_TEMP"
           zip -r -q App.xcarchive.zip App.xcarchive
-        # 产物在下一步上传
 
       - name: Upload archive artifact
-        if: steps.creds.outputs.mode == 'unsigned' || steps.signed_archive.outcome == 'failure'
+        if: steps.creds.outputs.mode == 'unsigned' || steps.export.outcome == 'failure'
         uses: actions/upload-artifact@v4
         with:
           name: yandao-guoxue-ios-xcarchive-unsigned
@@ -185,11 +167,12 @@ jobs:
           echo "### iOS 构建结果" >> $GITHUB_STEP_SUMMARY
           echo "- 模式: ${{ steps.creds.outputs.mode }}" >> $GITHUB_STEP_SUMMARY
           echo "- Bundle: $BUNDLE_ID" >> $GITHUB_STEP_SUMMARY
-          echo "- 资源: 原生内置 (v25.0.47_D20260822, API 改写到 https://yandaoguoxue.yandao.vip)" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.creds.outputs.mode }}" = "signed" ] && [ "${{ steps.signed_archive.outcome }}" = "success" ]; then
-            echo "- 产物: signed ipa (TestFlight 上传: ${{ inputs.upload_testflight }})" >> $GITHUB_STEP_SUMMARY
+          echo "- 资源: 原生内置 (API 改写到 https://yandaoguoxue.yandao.vip)" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.creds.outputs.mode }}" = "signed" ] && [ "${{ steps.export.outcome }}" = "success" ]; then
+            echo "- 产物: 签名 ipa（exportArchive 分发签名；TestFlight 上传: ${{ inputs.upload_testflight }}）" >> $GITHUB_STEP_SUMMARY
           elif [ "${{ steps.creds.outputs.mode }}" = "signed" ]; then
-            echo "- 产物: 未签名 xcarchive（签名失败已降级，见上方诊断；解决 PLA 后重跑即出签名 ipa）" >> $GITHUB_STEP_SUMMARY
+            echo "- 产物: 未签名 xcarchive（exportArchive 签名失败已降级，见 Export ipa 步骤日志）" >> $GITHUB_STEP_SUMMARY
+            echo "- 常见根因：PLA 未接受（账号持有人登录 developer.apple.com 接受协议）/ App ID 占用 / 密钥权限不足" >> $GITHUB_STEP_SUMMARY
           else
             echo "- 产物: 未签名 xcarchive（需补 APP_STORE_CONNECT_KEY / ISSUER_ID Secrets 后重跑可出签名 ipa）" >> $GITHUB_STEP_SUMMARY
           fi
