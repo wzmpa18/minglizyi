@@ -20,14 +20,14 @@
 
 | 组件 | 版本 |
 |------|------|
-| Web（生产 current） | **v25.0.69**（buildId `v25.0.69_D20260831`，builtAt 2026-08-31T11:48:17Z；四工具 SEO 集群页批次：七政四余/罗盘/立极尺/鲁班尺 4 落地页+目录索引+sitemap 28 URL+在线用直链；含 v25.0.68 四工具全部功能与 v25.0.67 SEO 批次） |
-| 后端 API | package 1.1.0（PM2: yandaoguoxue-backend，online；v25.0.69 批次唯一后端变更=toolAdminRoutes DEFAULT_MATRIX 登记四工具 FREE/ON，矩阵总数 27；新路由 QF/OSS/Offline/存储GC/统一后台 全挂载） |
-| Android APK | **v25.0.68 / versionCode 2068**（2026-08-31 18:00 发布：四工具上线——专业罗盘 WMM2025/七政四余/立极尺/鲁班尺丁兰尺+Share 原生分享修复、统一分发源 latest.apk 原子替换、升级公告已发布；构建脚本 `backend_deploy/build_android_v25_0_68.sh` 可复跑；v25.0.69 为纯 Web SEO 批次未动 APK） |
+| Web（生产 current） | **v25.0.72**（buildId `v25.0.72_D20260901`，builtAt 2026-09-01T00:31:00.583Z；七政四余学习资料+题库入易学学习区（135KP/141题）+断语面板学习链接+中医正骨专区恢复（¥89 付费+后台三态开关）；含 v25.0.68~71 全部功能：四工具/罗盘多门派Profile/SEO 28页/断语引擎六节/用户活跃统计） |
+| 后端 API | package 1.1.0（PM2: yandaoguoxue-backend，online；v25.0.72 批次后端变更=academyRoutes 正骨专区服务端门控（access/类目隐藏/内容403/答案隐藏）+paymentRoutes 两修复（价格SSOT loadMatrix/订单回灌恢复extra）+toolAdminRoutes 登记正骨 zhongyi_zhenggu ONE_TIME ¥89 三态开关；矩阵总数 28；QF/OSS/Offline/存储GC/统一后台 全挂载） |
+| Android APK | **v25.0.72 / versionCode 2070**（2026-09-01 发布：正骨专区+七政学习资料批次（叠加 v25.0.70 罗盘多门派/v25.0.71 断语引擎）；统一分发源 latest.apk 原子替换（12,040,252 字节）、18 项单一来源门禁 PASS、升级公告已发布；构建脚本 `backend_deploy/build_android_v25_0_72.sh` 可复跑） |
 
 ## 3. 当前 Commit
 
-- **四端 HEAD 一致**：LOCAL = GITHUB origin/main = SERVER_SOURCE = 生产构建源（2026-08-31 核实；发布基线 `add0f56`，其后的文档回灌提交经 git bundle 中转同步服务器（服务器直连 GitHub 不稳），unpushed=0；接管后第一步：`git log --oneline -3` 四端核对）。
-- 当前代码批次：`657dc5f`（双身份 PARTNER_NET_OF_REFERRAL）→ `b493913`（Partner 归属快照/合同/改绑审计/结算快照/逐单账）→ `852c5fd`（总账回灌）→ `ac45013`（**MASTER-05 六模块后端**：Provider/对象存储+备份灾备/Offline Pack/社交限频+评论层级/Question Factory/统一后台总控+全量回归矩阵）→ `7a0750d`（Offline 前端四库）→ `6a16c4e`（bump v25.0.66）→ `d9bde64`（/offline 页面接线）→ `4fd6cc5`（MASTER-05 封板回灌）→ `add0f56`（SEO 增长引擎首批：seoPagesConfig+生成器+质量门禁+18页+robots/sitemap+bump v25.0.67）→ `3370fe4`（APK v25.0.67/2067 重建+统一分发源+升级公告+主站 robots/sitemap 修复）→ `7624c15`（IndexNow 免登录主动推送双站 28 URL 202 受理+百度/头条/IndexNow 推送工具固化入仓）→ `2a148da`（**NICHE-TOOLS-07 四工具引擎上线 v25.0.68**：七政四余净室引擎/罗盘 WMM2025/立极尺/鲁班尺丁兰尺+Share 原生修复+APK 2068）→ `6fd3289`/`f53fe12`/`3707220`（v25.0.68 构建/验证脚本三坑修复）→ **`d8f476a`（v25.0.69 四工具 SEO 集群页+矩阵登记+IndexNow 推送，HEAD）**。后端运行时已随 v25.0.69 重启（矩阵登记生效，PM2 online）。四工具代码位置：`src/algorithm-core/modules/qizheng|compass|liji|ruler/index.ts`（净室开发：Astronomy Engine MIT 只做对拍基准、Horosa AGPL 只做结果参考未抄一行、Swiss Ephemeris 弃用；WMM2025 系数 NOAA 公共领域净室键入）。
+- **四端 HEAD 一致**：LOCAL = GITHUB origin/main = SERVER_SOURCE = 生产构建源（2026-09-01 核实；发布基线 `cf99433`，其后的文档回灌提交经 git bundle 中转同步服务器（服务器直连 GitHub 不稳），unpushed=0；接管后第一步：`git log --oneline -3` 四端核对）。
+- 当前代码批次：`657dc5f`（双身份 PARTNER_NET_OF_REFERRAL）→ `b493913`（Partner 归属快照/合同/改绑审计/结算快照/逐单账）→ `852c5fd`（总账回灌）→ `ac45013`（**MASTER-05 六模块后端**：Provider/对象存储+备份灾备/Offline Pack/社交限频+评论层级/Question Factory/统一后台总控+全量回归矩阵）→ `7a0750d`（Offline 前端四库）→ `6a16c4e`（bump v25.0.66）→ `d9bde64`（/offline 页面接线）→ `4fd6cc5`（MASTER-05 封板回灌）→ `add0f56`（SEO 增长引擎首批：seoPagesConfig+生成器+质量门禁+18页+robots/sitemap+bump v25.0.67）→ `3370fe4`（APK v25.0.67/2067 重建+统一分发源+升级公告+主站 robots/sitemap 修复）→ `7624c15`（IndexNow 免登录主动推送双站 28 URL 202 受理+百度/头条/IndexNow 推送工具固化入仓）→ `2a148da`（**NICHE-TOOLS-07 四工具引擎上线 v25.0.68**：七政四余净室引擎/罗盘 WMM2025/立极尺/鲁班尺丁兰尺+Share 原生修复+APK 2068）→ `6fd3289`/`f53fe12`/`3707220`（v25.0.68 构建/验证脚本三坑修复）→ `d8f476a`（v25.0.69 四工具 SEO 集群页+矩阵登记+IndexNow 推送）→ `875ebfc`（v25.0.70 小众工具收尾：罗盘多门派Profile+立极尺专业盘+SEO五Cluster+Growth编排器）→ `5ece32b`（v25.0.71 七政断语引擎六节+开关管控+用户活跃统计）→ **`cf99433`（v25.0.72 七政学习资料+正骨专区¥89付费+支付两修复，HEAD）**。后端运行时已随 v25.0.72 重启（正骨门控+支付修复生效，PM2 online，fixture 生产实测全过）。四工具代码位置：`src/algorithm-core/modules/qizheng|compass|liji|ruler/index.ts`（净室开发：Astronomy Engine MIT 只做对拍基准、Horosa AGPL 只做结果参考未抄一行、Swiss Ephemeris 弃用；WMM2025 系数 NOAA 公共领域净室键入）。
 
 ## 4. GitHub
 

@@ -1,7 +1,7 @@
 # 言道国学项目总账（PROJECT_MASTER_LEDGER）
 
 > **本文档是项目唯一权威账簿（Single Source of Truth）。**
-> 最后更新: 2026-08-31（十二.25 批次：百度 API 推送双站落地 14 URL+头条主站 ByteDanceVerify 补部署+每日自动推送队列 cron+主站 access_log 补缺；十二.24 批次：IndexNow 免登录主动推送双站 28 URL 202 受理+推送工具固化入仓；十二.23 批次：APK v25.0.67/2067 重建对齐线上 Web+统一分发源 latest.apk+升级提示/公告生效+主站 robots/sitemap 假文件修复；同日 SEO-GROWTH-ENGINE-SUPP-01 批次：程序化搜索增长引擎首批落地——13个C端差异化关键词静态落地页+1个B端行业方案页+robots/sitemap，v25.0.67 生产发布+公网验证 42/42 PASS+四端SSOT一致 add0f56；前批 2026-08-30 FINAL-OPERATIONS-COMPLETION-MASTER-05 最终封板：六模块后端+全量回归+公网 21/21）
+> 最后更新: 2026-09-01（十二.27~29 批次：v25.0.70 小众工具收尾（罗盘多门派Profile+立极尺专业盘+SEO五Cluster）/ v25.0.71 七政断语引擎六节+后台七项开关+用户活跃统计 / **v25.0.72 七政四余学习资料+题库入易学学习区+中医正骨专区恢复上线（¥89付费+三态开关+后台改价SSOT）+支付链路两修复+Growth Pipeline cron 落地+APK 2070**；前次 2026-08-31（十二.25 批次：百度 API 推送双站落地 14 URL+头条主站 ByteDanceVerify 补部署+每日自动推送队列 cron+主站 access_log 补缺；十二.24 批次：IndexNow 免登录主动推送双站 28 URL 202 受理+推送工具固化入仓；十二.23 批次：APK v25.0.67/2067 重建对齐线上 Web+统一分发源 latest.apk+升级提示/公告生效+主站 robots/sitemap 假文件修复；同日 SEO-GROWTH-ENGINE-SUPP-01 批次：程序化搜索增长引擎首批落地——13个C端差异化关键词静态落地页+1个B端行业方案页+robots/sitemap，v25.0.67 生产发布+公网验证 42/42 PASS+四端SSOT一致 add0f56；前批 2026-08-30 FINAL-OPERATIONS-COMPLETION-MASTER-05 最终封板：六模块后端+全量回归+公网 21/21）
 > 上一批（2026-08-30 中）：AI-PRODUCTION-SEAL-AND-COMMISSION-ROUTER-04（AI Phase 1 正式生产上线 + 历史无限权益保护 + AI 成本中心生产验收 + Commission Router 唯一结算引擎 + Partner 50% 账务闭环 + 防重复计提）
 > 上上批（2026-08-29）：P0-PRODUCTION-SEAL-AND-AI-COST-PHASE1-03（P0安全修复正式生产落地 + 生产攻击回归 + SSOT总账纠偏 + 真太阳时封板 + AI Fair Usage/Cost Center 第一阶段）
 > 上一批（2026-08-25，生产版本 v25.0.47_30）：FIX-V30-PAY-CARE 支付权益彻查+防再发机制——用户投诉「会员ID 100011 充值没开通会员」彻查结论：①订单 YD20260825173625902022 ¥39.9 实为 SINGLE_UNLOCK 单次深度解读（非会员套餐），支付成功且 benefit_delivered=1 权益已正常发放；用户误将单次解读当会员购买（单次 39.9>月费 37 价格结构易混淆），支付后又连续创建 7 个未完成 PENDING 订单反复尝试；②全量对账 5 笔 PAID 订单：真实用户订单权益全部正常发放，唯一漏发为 E2E 测试订单 TEST_RC06_DELIVER（无 transaction_id 无真实扣款，已归档）；910082 yearly 会员为 E2E 测试账号（无手机号）非漏发；③处理：用户 100011 客户关怀补偿开通月度会员至 2026-09-24（与生产 deliverOrderBenefits 同口径 users+user_assets 双表）+7 个僵尸 PENDING 订单关闭+operation_logs 三条留痕（修复前 DB 备份 /root/backup/yandao_users_pre_fix100011_20260825_175346.db）；⑥应老板要求改单（2026-08-25 追加）：订单 129 YD20260825173625902022 由 SINGLE_UNLOCK 正式转为 MEMBERSHIP（实付 39.9 金额不动，benefit_delivered=1 维持，operation_logs id=302 order_type_convert 留痕），订单记录与已发月度会员权益一致；用户无推荐人（invited_by/referrer_id 空）改单对佣金结算零影响；④防再发：部署 /root/backend-auth/scripts/payment_reconcile.sh 每日 03:30 cron 自动对账——查 PAID+benefit_delivered=0+支付超10分钟的沉默漏发订单，MEMBERSHIP 按金额映射档位（37/99/374/3600）自动补交付（续费顺延同口径）、SINGLE_UNLOCK 补标记、未知类型告警人工，告警日志 payment_audit_alerts.log；⑤产品层防混淆：单次解锁弹窗新增三处明确标识「本单为单次解读解锁，非会员套餐」+「支付后仅解锁本次解读，不含会员权益」；前一版本 v25.0.47_29+APK v25.0.55(2055)：FIX-V29-DOWNLOAD-RESCUE 升级下载链路根治）
@@ -15,20 +15,20 @@
 
 | 项 | 值 |
 |----|-----|
-| 数据核实日期 | 2026-08-31（SEO-GROWTH-ENGINE-SUPP-01 批次核实，SSH+公网实测；前次 2026-08-30 MASTER-05 封板） |
-| 后端 Runtime Commit | `d9bde64`（MASTER-05 六模块后端运行版本；SEO 批次零后端变更、零 PM2 重启，运行时维持 `d9bde64` 不变；下限 `530f39e` Commission Router 唯一结算引擎 + 双身份 PARTNER_NET_OF_REFERRAL） |
-| 前端 Web 构建版本 | **v25.0.67**（buildId `v25.0.67_D20260831`，builtAt 2026-08-30T16:25:08Z；SEO 批次：13个C端差异化关键词落地页（/tools/×6+/learn/×3+/app/×4）+1个B端行业方案页（/b/）+4个目录索引页+robots.txt+sitemap.xml 24 URL；含 v25.0.66 全部既有功能；公网 version.json 已验证） |
-| 后端发布版本 | v25.0.66（维持不变——MASTER-05 最终运营完成批次：QF/OSS/Offline/存储GC/统一后台全部挂载生产并公网验证；SEO 批次纯静态前端增量） |
-| Document Head | 本地=GitHub origin/main=服务器源码仓 `/root/yandaoguoxue-source` 三端 HEAD 一致同步（2026-08-31 核实，发布基线 `add0f56` + 文档回灌收尾提交随基线一并同步，git bundle 中转；unpushed=0）；提交链：`d9bde64`（MASTER-05 封板）→ `4fd6cc5`（MASTER-05 回灌）→ `add0f56`（SEO 增长引擎首批：seoPagesConfig+生成器+质量门禁+18页+robots/sitemap+bump v25.0.67，**生产构建源**）→ 文档回灌提交（总账十二.21+交接+部署验证脚本）；生产 Web current → v25.0.67 |
-| SEO 落地页部署 | `https://yandaoguoxue.yandao.vip/{tools,learn,app,b}/*.html` 独立静态页（nginx try_files 直出，no-cache；独立于 APP，零后端逻辑改动；配置唯一源 backend_deploy/seo/seoPagesConfig.json，生成器+质量门禁 174 项可复跑） |
-| APK / versionCode | **25.0.67 / 2067**（`/api/public/app-version` 生产下发值；2026-08-31 重建对齐线上 Web v25.0.67：SEO 18 页烧录内置、统一分发目录 `/var/www/yandao.vip/app-download/latest.apk` 唯一文件、单一来源门禁 18/18 PASS、v25.0.67 升级公告已发布；手机 v25.0.60/2059 启动即弹升级引导） |
+| 数据核实日期 | 2026-09-01（v25.0.72 批次核实，SSH+公网实测：version.json/升级接口/APK 指纹/工具矩阵/academy.db 计数/Growth cron/PM2；前次 2026-08-31 SEO 批次） |
+| 后端 Runtime Commit | `cf99433`（v25.0.72 后端批次：academyRoutes 正骨专区服务端门控+paymentRoutes 两修复（价格SSOT/extra回灌）+toolAdminRoutes 矩阵登记 zhongyi_zhenggu；PM2 已重启生效，fixture A/B/CLEAN 生产实测全过；下限 `530f39e` Commission Router 唯一结算引擎 + 双身份 PARTNER_NET_OF_REFERRAL） |
+| 前端 Web 构建版本 | **v25.0.72**（buildId `v25.0.72_D20260901`，builtAt 2026-09-01T00:31:00.583Z；本批：七政四余学习资料+题库（135KP/141题）入易学学习区+断语面板学习链接+中医正骨专区（¥89付费+后台开关）；含 v25.0.68~71 全部功能（四工具/罗盘多门派Profile/SEO 28页/断语引擎六节/用户活跃统计）；公网 version.json 已验证） |
+| 后端发布版本 | v25.0.72（academy 正骨门控+支付两修复+工具矩阵登记；前批 v25.0.71 断语开关+活跃统计、v25.0.66 MASTER-05 QF/OSS/Offline/存储GC/统一后台全部在产） |
+| Document Head | 本地=GitHub origin/main=服务器源码仓 `/root/yandaoguoxue-source` 三端 HEAD 一致同步（2026-08-31 核实，发布基线 `add0f56` + 文档回灌收尾提交随基线一并同步，git bundle 中转；unpushed=0）；提交链：`d9bde64`（MASTER-05 封板）→ `add0f56`（v25.0.67 SEO 首批）→ `d8f476a`（v25.0.69 四工具 SEO 集群页）→ `875ebfc`（v25.0.70 小众工具收尾）→ `5ece32b`（v25.0.71 断语引擎+活跃统计）→ `cf99433`（v25.0.72 七政学习资料+正骨专区+支付修复，**生产构建源**）→ 文档回灌提交（总账十二.27~29+交接基线更新）；生产 Web current → v25.0.72 |
+| SEO 落地页部署 | `https://yandaoguoxue.yandao.vip/{tools,learn,app,b}/*.html` 独立静态页（nginx try_files 直出，no-cache；独立于 APP，零后端逻辑改动；配置唯一源 backend_deploy/seo/seoPagesConfig.json，生成器+质量门禁 294 项可复跑；Growth Pipeline 每日 03:20 cron 自动生成+门禁+推送（伪 Freshness 纪律：内容未变不重写，核查 PASS）） |
+| APK / versionCode | **25.0.72 / 2070**（`/api/public/app-version` 生产下发值；2026-09-01 重建对齐线上 Web v25.0.72：正骨专区+七政学习链接+五工具+SEO 28 页烧录内置、统一分发目录 `/var/www/yandao.vip/app-download/latest.apk` 唯一文件（12,040,252 字节，MD5 aa19cdf55138a30e04aae54205ab5b29）、单一来源门禁 18/18 PASS、v25.0.72 升级公告已发布） |
 | 生产服务器 | 82.156.228.87（腾讯云轻量 北京，root） |
 | 生产后端路径 | `/www/yandaoguoxue-backend`（PM2 `yandaoguoxue-backend`，端口 3001，online；SEO 批次未重启，运行 d9bde64 版本路由） |
 | 前端发布路径 | `/root/yandaoguoxue/releases/<tag>` + `/root/yandaoguoxue/current` 软链（nginx root 指向，current → v25.0.67；v25.0.66 保留可回滚） |
 | 数据库架构 | SQLite（better-sqlite3）三库：`/root/backend-auth/data/yandao_users.db`（用户核心，98 用户，含 `commission_records`/`user_orders`/`providers`/`provider_services`/`service_orders` 等；Router 快照表 `commission_router_snapshots`）+ `/www/yandaoguoxue-backend/data/social.db`（社交，含社交限频表）+ `/www/yandaoguoxue-backend/data/academy.db`（学堂，约 56MB，含 Question Factory 蓝图/队列/质量表）。PostgreSQL 15 为已迁出「学外语」项目进程残留，非本国学项目基础设施（见下方 §二 纠偏）。 |
 | 备份现状 | 三库每日 02:00 备份至 `/root/backup/`（2026-08-30 备份已存在），`PRAGMA integrity_check` = ok；backupEngine 软件链（三库备份→AES-256-GCM 加密→对象存储 adapter→manifest+hash→retention→restore drill），备份状态接口 /api/admin/oss/backup/list 公网验证 PASS；COS 异地备份 = BLOCKED_EXTERNAL_CONFIG（无凭证，adapter+dry-run 已完成，未伪称 VERIFIED） |
 | 用户/会员统计 | 98 用户（basic 94 / monthly 2 / yearly 1 / lifetime 1），统计日期 2026-08-30（统一后台 overview 真实 DB 数据：total 98 / newToday 1 / active7d 53 / paid 4 / orders total 118 paid 4） |
-| 本轮生产验证 | **公网 42/42 PASS**（verify_seo_v25_0_67.sh：版本基线 4（v25.0.67/首页/API health//offline 回归）+14落地页全200+4目录索引+robots/sitemap 24URL+SUPP-01差异化三要素内容级实测（标题公式/固定模块/CTA话术）+合规基建 7（ICP悬挂/工信部链接/APK唯一源/canonical/JSON-LD/免责声明/APK端点）+疑问词抽查 2）；前批 MASTER-05 公网 21/21 PASS |
+| 本轮生产验证 | **v25.0.72 全链验证 PASS**（Web：version.json/正骨页 301→200+「正骨专区」指纹/中医入口卡/线上 JS chunks「查看学习资料」+zhongyi/zhenggu 路由；fixture A16/B8/CLEAN2 生产实测；APK：aapt badging 2070/25.0.72+内容门禁+apksigner 验签+18 项单一来源门禁；Growth：--no-push 24页+4索引+门禁 294/0+伪 Freshness PASS）；前批 v25.0.67 公网 42/42 PASS |
 | 最终状态 | **PRODUCTION_READY_WITH_EXTERNAL_ACTIONS**（软件内部 P0=0 / P1=0 / SOFTWARE_INTERNAL_REMAINING=0；剩余 Owner Action：腾讯云快照、COS Secret 配置、iOS PLA、Android/Share 真机验收；SEO 后续批次：通用关键词页扩展+百度/头条站长平台主动提交收录——见十二.21） |
 
 > 冲突裁决：历史章节中「当前生产版本 / Git HEAD / APK / 数据库」等字段若与本快照冲突，以本快照为准；历史字段原文保留不删（记 SUPERSEDED·HISTORICAL）。
@@ -54,7 +54,7 @@
 | 项 | 值 |
 |----|-----|
 | 服务器 | 82.156.228.87（腾讯云轻量 北京，root） |
-| 前端发布 | /root/yandaoguoxue/releases/&lt;tag&gt; + **/root/yandaoguoxue/current 软链（nginx root 真实指向，v28 切流纠偏时确认；releases/current 软链为冗余同指）**；当前 current→**v25.0.66**，回滚目标 v25.0.65；目录现状 _5~_29/_65/_66 等多版（磁盘充足暂留，如需清理保留 _65+_66 即可） |
+| 前端发布 | /root/yandaoguoxue/releases/&lt;tag&gt; + **/root/yandaoguoxue/current 软链（nginx root 真实指向，v28 切流纠偏时确认；releases/current 软链为冗余同指）**；当前 current→**v25.0.72**，回滚目标 v25.0.71；目录现状 _5~_29/_65~_72 等多版（磁盘充足暂留） |
 | 后端服务 | /www/yandaoguoxue-backend，PM2 名 yandaoguoxue-backend，端口 3001 |
 | 数据库 | ~~PostgreSQL 15（SUPERSEDED·HISTORICAL：为已迁出「学外语」项目进程残留，经 2026-08-29 生产核实国学后端仅 `require('better-sqlite3')`×29、零 `require('pg')`/5432 连接）~~ → **SQLite（better-sqlite3）三库**：用户核心 `/root/backend-auth/data/yandao_users.db`（97 用户 + user_orders/user_assets/commission_accounts/commission_records/partner_settlements 等全表）、社交 `/www/yandaoguoxue-backend/data/social.db`、学堂 `/www/yandaoguoxue-backend/data/academy.db`（约 56MB） |
 | Nginx | / → 静态前端；/api/* → 127.0.0.1:3001；/app-download/ → APK 分发 |
@@ -814,3 +814,48 @@ gh workflow run ios-build.yml --repo wzmpa18/minglizyi --ref main
 **老功能回归（切流不伤存量）**：①算法层净室对拍 42/42——八字（2000-01-01 日柱戊午权威锚点、1984 立春 02-04 23:19 节气换年边界前后双测）、紫微（十二宫/身宫标记）、奇门（九宫/阴阳遁/确定性/即时起盘）、中医（中药库/方剂库规模与检索）；②四工具黄金测试复跑 314/314（七政 86+罗盘 126+传感器数学 25+立极尺 20+鲁班尺 57）；③线上 APK 完好（v25.0.69 纯 Web 批次未触碰 APK，latest.apk MD5 复核一致）；④老工具矩阵 8 抽查全在位。
 
 **Git**：2a148da（四工具代码）→ 6fd3289/53fe12/3707220（v25.0.68 构建坑修复）→ d8f476a（v25.0.69 SEO 批次），已推送 GitHub origin（94e796b..d8f476a）；work-* 本地验证草稿目录入 .gitignore 不入仓。
+
+## 十二.27 v25.0.70 小众工具收尾——罗盘多门派 Profile 引擎+立极尺专业盘+七政三级地点+SEO 五 Cluster（2026-09-01）
+
+**罗盘门派圈层引擎（luopan-profile）**：三合 12 圈层（三针/穿山 72 龙/透地 60 龙/120 分金/28 宿/节气/拨砂）+ 三元/玄空 Profile，134 验证点全过；LuopanDial 渲染器（多门派圈层动态渲染、扇区高亮、标签自适应、圈层开关）；罗盘页门派选择+圈层开关+全屏+逐圈读数+玄空飞星坐向联动跳转。
+**立极尺**：叠加专业盘（门派 Profile+圈层可见性）、工程快照 v2。**七政四余**：出生地点复用八字省市区三级联动（SharedBirthLocationSelector）。**玄空飞星**：shan URL 参数预填（与罗盘玄空 Profile 联动）。
+**SEO 五 Cluster**：玄空 Core 页+五 Guide 页（七政/罗盘/立极尺/玄空/鲁班尺），tools 10→16 页，Core↔Guide cluster 互链，生成器增强（featuresTitle/steps 区块）。
+**Growth Pipeline 编排器**：backend_deploy/seo/growthPipeline.cjs 一条命令编排生成→质量门禁→公网内容指纹探测（SPA fallback 假 200 防护）→IndexNow 推送→百度队列追加。
+**验证与版本**：质量门禁 294/0 PASS；构建产物烧录验证 40/40；版本 v25.0.70/versionCode 2069（commit 875ebfc）。
+
+## 十二.28 v25.0.71 七政断语引擎六节+后台七项开关管控+用户活跃统计（2026-09-01）
+
+**断语引擎**（src/algorithm-core/modules/qizheng-duanyu/index.ts，967 行）：八卷知识库驱动六节断语（垣殿得地/化曜/神煞/格局/十二宫断/歌赋），每条断语标注出处（知识库卷节+古籍页码）+吉凶分级（吉/凶/中性），禁止生死断言；332 项金样本测试全过（scripts/test_qizheng_duanyu.ts）；排盘核心计算零改动，金样本断言同时验证排盘数据一致性。
+**后台开关管控**：qizheng_duanyu 总开关+六节分开关（backend_deploy/featureControlRoutes.js + src/lib/featureFlags.ts），后台「系统功能开关」页可配置；开关服务故障 fail-open 不阻断排盘核心功能。
+**用户活跃统计**：UserActivityInit.tsx 心跳上报（在线时长）+ register_routes.js 埋点（登录次数/工具使用次数）+ adminUnifiedRoutes.js 后台接口（最后活跃时间/90 天历史）；后台用户列表新增「当日活跃」列+活跃用户 Tab（日期回看/搜索/排序/趋势展示）。
+**版本**：v25.0.71 全量上线，公网 buildId v25.0.71_D20260901（commit 5ece32b）。
+
+## 十二.29 v25.0.72 七政四余学习资料+题库入易学学习区 + 中医正骨专区恢复上线（¥89 付费+后台开关）+支付链路两修复+Growth Pipeline cron 落地（2026-09-01）
+
+**背景（项目方指令）**：①七政四余相关资料由 AI 整理成学习资料与题库，放入易学学习区；②恢复中医学习区「正骨」科目，增加后台可关闭开关，板块单独付费 ¥89 解锁，价格可随时后台调整。
+
+**A. 七政四余学习资料+题库（track=yixue / category=七政四余）**：
+- 数据源与断语引擎同源：七政四余标准化知识库八卷 42 节（总论→排盘→垣殿→化曜神煞→限度→格局→观星要诀→歌赋）。
+- 入库事实：知识点本批新增 106（backend_deploy/qizheng_kb_data.js 50 + qizheng_kb_data2.js 56）+存量 29（08-16 批）= **135 条全 approved**；题目本批新增 99（qizheng_question_data.js）+存量 42 = **141 条全 approved**；141 题全部关联知识点（DISTINCT knowledge_id=112，0 悬空）；导入前校验修复 4 处 kpTitle 匹配错误（缺顿号）。
+- 幂等导入脚本 backend_deploy/import_qizheng_v25_0_72.js：kpHash（标题+内容归一化 SHA256）与 q_hash（题型+题干+选项+答案归一化）去重，可重复执行不重复入库。
+- 前端：七政排盘页断语面板新增「查看学习资料」链接（→ /academy/learn?track=yixue&category=七政四余；学习区 page.tsx 支持 ?category= 类目直选）。
+
+**B. 中医正骨专区恢复（category=中华非遗正骨）**：
+- 数据核查在库：**15 部资料、212 知识点、266 题**完整（academy.db 实测）。
+- 商业化：backend_deploy/toolAdminRoutes.js DEFAULT_MATRIX 新增 `zhongyi_zhenggu`（payMode ONE_TIME / price 89 / status ON；后台「工具管理中心」可随时改价+三态开关 ON/OFF/MAINTENANCE，价格 SSOT 唯一源）。
+- 服务端门控（backend_deploy/academyRoutes.js）：`/api/academy/zhenggu/access`（权益+价格+状态三合一查询）；未解锁用户中医类目列表**隐藏**正骨类目；materials/knowledge/questions 接口 403 拦截（OFF→已购用户 403 下线提示 / MAINTENANCE→403 维护提示）；未解锁用户题目答案隐藏。
+- 支付权益：SINGLE_UNLOCK + extra.unlockTargetId=zhongyi_zhenggu → user_entitlements 永久权益；支付成功 activateSingleUnlock 前端即时生效+access 刷新。
+- 前端：/zhongyi/zhenggu 专区页（登录守卫+Paywall+微信扫码支付+解锁后资料/知识点/题库三区）；/zhongyi 主页新增入口卡「非遗正骨·15部资料·266题」（含价格徽标）。
+
+**C. 支付链路两修复（fixture 实测暴露的生产缺陷，backend_deploy/paymentRoutes.js）**：
+- 修复1 价格 SSOT 分裂：resolveServerPrice 原直读 tool-matrix.json saved 文件（新工具从未在后台保存过时缺键→回落 AI 默认 9.9 元），与门控侧 loadMatrix() 合并口径（89 元）分裂；T1 实测前端伪造 amount=1 下单，服务端必须裁决 89。修复：改用 toolAdminRoutes.loadMatrix() 合并口径。
+- 修复2 权益漏发：订单重启回灌（30 天订单恢复）原将 extra 置空 {}，导致「回调丢失+重启后 query 补交付」拿不到 unlockTargetId——权益漏发且被误标 benefitDelivered（永久丢失）；修复：回灌时解析恢复 extra JSON。
+
+**D. Fixture 验证（backend_deploy/zhenggu_fixture_v25_0_72.js，生产服务器实测）**：Phase A 16 项（价格 SSOT/下单裁决/门控拦截三态/类目隐藏/未解锁答案隐藏）+ Phase B 8 项（支付回调丢失+重启后 query 补交付→权益正确入库）+ CLEAN 2 项（测试订单/权益清理）全过。
+
+**E. 部署与公网验证**：
+- Web v25.0.72：服务器构建（buildId `v25.0.72_D20260901`，builtAt 2026-09-01T00:31:00.583Z）+内容门禁+原子切流 current→releases/v25.0.72；公网实测：version.json v25.0.72、正骨页 301→200 含「正骨专区」指纹、中医入口卡在位、线上 JS chunks 含「查看学习资料」（chunks/1qun_aq7i0mna.js）与 zhongyi/zhenggu 路由（chunks/0fymbmz9vw41b.js）。
+- APK **v25.0.72 / versionCode 2070**：12,040,252 字节，MD5 `aa19cdf55138a30e04aae54205ab5b29`，SHA256 `13dab2d4a6d140d58e74f0efad821f98881ea2be42db1e328684b5ca56fcceb8`，apksigner 验签通过；内容门禁（正骨专区页+中医入口+七政学习链接+五工具页+五引擎烧录+SEO 28 页回归全过）；统一分发源 /var/www/yandao.vip/app-download/**latest.apk 唯一文件**（D20 门禁 18 项 PASS）；app-release-config.json 升 2070；升级公告 a_v25_0_72_release 生效（构建脚本 backend_deploy/build_android_v25_0_72.sh 可复跑）。
+- Growth Pipeline cron 落地：运行器 /root/backend-auth/seo/run_growth_pipeline.sh（源码仓运行模式：cd /root/yandaoguoxue-source/backend_deploy/seo，生成器输出与质量门禁检查目录天然对齐）；cron `20 3 * * *`（日志 /root/backup/growth_pipeline.log，次日首跑）；--no-push 复跑 24 页+4 索引+门禁 294 PASS/0 FAIL；**伪 Freshness 纪律核查 PASS**（二次运行 lastmod 稳定 28×2026-08-31 不变、文件 mtime 不变、内容未变不重写）；百度推送队列 33 条、IndexNow 清单 28 URL。
+
+**F. 生产事实快照（2026-09-01 09:20 CST SSH+公网实测）**：PM2 yandaoguoxue-backend online；升级接口 latestVersion 25.0.72/latestVersionCode 2070；工具矩阵 zhongyi_zhenggu=ON/ONE_TIME/89；user_entitlements 正骨权益 0 条（上线首日无购买，符合预期）；磁盘 16G/50G（31%）。
