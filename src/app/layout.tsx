@@ -6,6 +6,7 @@ import BottomNav from "@/components/BottomNav";
 import CloudSyncInit from "@/components/CloudSyncInit";
 import AuthRestoreInit from "@/components/AuthRestoreInit";
 import UserActivityInit from "@/components/UserActivityInit";
+import WechatOaIdentityInit from "@/components/WechatOaIdentityInit";
 import InviteCaptureInit from "@/components/InviteCaptureInit";
 import ReminderSchedulerInit from "@/components/ReminderSchedulerInit";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -69,6 +70,8 @@ export default function RootLayout({
             <AuthRestoreInit />
             {/* v25.0.71 用户活跃心跳：已登录用户每 60 秒上报在线秒数与工具使用数 */}
             <UserActivityInit />
+            {/* v25.0.75 微信内打开网页版：静默 OAuth 识别身份（不建账号，第十九~二十章） */}
+            <WechatOaIdentityInit />
             <InviteCaptureInit />
             <ReminderSchedulerInit />
             <OfflineInit />

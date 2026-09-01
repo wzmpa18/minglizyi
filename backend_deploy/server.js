@@ -711,6 +711,8 @@ const extraRoutes = [
   { file: 'adminUnifiedRoutes', path: '/api/admin/unified', name: '统一后台' },
   { file: 'featureControlRoutes', path: '/api/admin/feature-flags', name: '功能开关' },
   { file: 'toolAdminRoutes', path: '/api/admin/tool-matrix', name: '工具矩阵' },
+  // WECHAT-OFFICIAL-ACCOUNT-AI-CONTENT-FINAL-SEAL-10：微信服务号接入 + 公众号内容自动化
+  { file: 'wechatOfficialAccountRoutes', path: '/api/wechat/official', name: '微信服务号' },
 ];
 
 for (const route of extraRoutes) {

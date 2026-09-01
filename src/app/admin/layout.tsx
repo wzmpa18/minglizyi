@@ -36,6 +36,7 @@ import {
   ScrollText,
   Activity,
   Bell,
+  Send,
 } from "lucide-react";
 import { THEME, useMounted } from "./_shared";
 import { getAdminKey, setAdminKey, clearAdminKey, isAdminAuthed, getAdminRole, setAdminRole } from "@/lib/admin/client";
@@ -67,6 +68,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/admin/moderation?tab=group", label: "社交 / 群聊", icon: <MessagesSquare size={18} />, desc: "群管理·举报处理·禁言", scope: "ops" },
   { href: "/admin/sources", label: "发现 / 资讯", icon: <Newspaper size={18} />, desc: "资讯增删改·排序·合规", scope: "ops" },
   { href: "/admin/marketing", label: "营销 / 海报", icon: <Megaphone size={18} />, desc: "海报模板·分享文案·渠道", scope: "ops" },
+  { href: "/admin/wechat-oa", label: "公众号运营", icon: <Send size={18} />, desc: "服务号·菜单·选题·AI稿件·草稿箱", scope: "super" },
   { href: "/admin/commission", label: "推广 / 分佣", icon: <HandCoins size={18} />, desc: "比例·冻结期·佣金明细", scope: "finance" },
   { href: "/admin/orders", label: "支付 / 订单", icon: <Receipt size={18} />, desc: "订单查询·补单·权益重试", scope: "finance" },
   { href: "/admin/partners", label: "合伙人渠道", icon: <UsersRound size={18} />, desc: "合伙人管理·传播链路·上下级·结算", scope: "finance" },
