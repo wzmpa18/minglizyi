@@ -26,7 +26,8 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 60
     env:
-      KEY_ID: UWQ354QP54
+      # Key ID 可被仓库 secret ASC_KEY_ID 覆盖（更换 Admin 密钥时无需改代码）
+      KEY_ID: ${{ secrets.ASC_KEY_ID || 'UWQ354QP54' }}
       TEAM_ID: WM586465ZD
       APP_NAME: 言道国学
       BUNDLE_ID: com.yandao.guoxue
