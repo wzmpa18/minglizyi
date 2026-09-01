@@ -26,7 +26,7 @@ import { getUserProfile } from "@/lib/auth";
 import { reportConsumptionRebate } from "@/lib/inviteApi";
 import { redeemCode, getMyRedemptions } from "@/lib/redeemCodeStore";
 import { getToolConfig } from "@/lib/toolConfigStore";
-import { isPaymentsBlocked, IOS_PAYMENT_DISABLED_TIP } from "@/lib/platformGates";
+import { isPaymentsBlocked, IOS_PAYMENT_DISABLED_TIP } from "@/lib/platformGate";
 import { payForMembership, pollPaymentStatus } from "@/lib/paymentService";
 import { useNativePayQR } from "@/components/PayQRCodeModal";
 import { useServerPricing, mergePlansWithServer } from "@/lib/pricingStore";

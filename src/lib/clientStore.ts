@@ -12,7 +12,7 @@
  */
 
 import { getClientUserId } from "./auth";
-import { syncRecordToBackend } from "./recordSync";
+import { syncRecordToBackend, canCloudSyncRecords } from "./recordSync";
 
 // ==================== 类型定义 ====================
 export interface Client {
@@ -194,6 +194,8 @@ function asyncSyncCreateRecord(record: ServiceRecord): void {
   // native-api-patch 改写后同样 404，排盘记录只落 localStorage，/records 页读后端永远为空。
   // 改走 recordSync.syncRecordToBackend（name/qiming 已验证可用的正式链路）；
   // 未登录/离线/失败时入离线队列，登录后由 flushPendingRecordSync 补传。
+  // v25.0.77: 非会员仅本地保存——syncRecordToBackend 会员门禁返回 false，
+  // 记录入离线队列，升级会员后登录自动补传上云。
   if (!isOnline()) {
     addPendingOp("createRecord", record);
     return;
@@ -207,6 +209,8 @@ function asyncSyncCreateRecord(record: ServiceRecord): void {
 }
 
 function asyncSyncUpdateRecord(id: string, data: Partial<ServiceRecord>): void {
+  // v25.0.77: 非会员不发起云端更新（记录状态仅本地生效）
+  if (!canCloudSyncRecords()) return;
   if (isOnline()) {
     apiFetch(`/api/records/${id}`, { method: "PUT", body: JSON.stringify(data) })
       .catch(() => addPendingOp("updateRecord", { id, data }));
@@ -216,6 +220,8 @@ function asyncSyncUpdateRecord(id: string, data: Partial<ServiceRecord>): void {
 }
 
 function asyncSyncDeleteRecord(id: string): void {
+  // v25.0.77: 非会员不发起云端删除（仅本地删除 + 队列清理）
+  if (!canCloudSyncRecords()) return;
   if (isOnline()) {
     apiFetch(`/api/records/${id}`, { method: "DELETE" })
       .catch(() => addPendingOp("deleteRecord", { id }));
@@ -468,6 +474,25 @@ export function getRecord(id: string): ServiceRecord | null {
   return records.find((r) => r.id === id) || null;
 }
 
+/** v25.0.77: 仍在离线队列（未上云）的本地记录——会员视图与云端记录合并展示用 */
+export function getUnsyncedLocalRecords(type?: string): ServiceRecord[] {
+  const pendingIds = new Set(
+    getPendingOps()
+      .filter((o) => o.op === "createRecord" && o.payload?.id)
+      .map((o) => o.payload.id as string)
+  );
+  if (pendingIds.size === 0) return [];
+  return getRecords(undefined, type).filter((r) => pendingIds.has(r.id));
+}
+
+/** v25.0.77: 本地删除时清理队列中对应的待同步记录，防升级会员后已删记录"复活"上云 */
+function removePendingCreateRecord(recordId: string): void {
+  const ops = getPendingOps().filter(
+    (o) => !(o.op === "createRecord" && o.payload?.id === recordId)
+  );
+  safeSet(PENDING_OPS_KEY, ops);
+}
+
 export function saveRecord(
   recordData: Omit<ServiceRecord, "id" | "createdAt" | "updatedAt">
 ): ServiceRecord {
@@ -526,6 +551,7 @@ export function updateRecordStatus(
 export function deleteRecord(id: string): void {
   const records = safeGet<ServiceRecord[]>(RECORDS_KEY, []).filter((r) => r.id !== id);
   safeSet(RECORDS_KEY, records);
+  removePendingCreateRecord(id);
   asyncSyncDeleteRecord(id);
 }
 

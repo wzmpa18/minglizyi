@@ -8,6 +8,7 @@ import { sendFriendRequest } from "@/lib/socialApi";
 import { getUserById, findUserById } from "@/lib/userStore";
 import { recordInviteLanding } from "@/lib/antiCheatStore";
 import { isNativeShellSync, buildAndroidIntentUrl } from "@/lib/nativeDetect";
+import { useIOSNativeShell } from "@/lib/iosNativeGate";
 
 const BRAND = "#7B2FBE";
 // APK 直链兜底值：实际下载地址运行时从 /api/public/app-version 动态获取（SSOT，
@@ -590,6 +591,37 @@ function FriendContent() {
 
 // ==================== 页面导出（Suspense 包装 searchParams） ====================
 export default function FriendPage() {
+  // v25.0.77: iOS 壳内不展示安卓 APK 下载落地内容（Guideline 2.5.2）
+  const iosNative = useIOSNativeShell();
+  if (iosNative) {
+    return (
+      <div
+        style={{
+          maxWidth: "420px",
+          margin: "0 auto",
+          minHeight: "100vh",
+          backgroundColor: "#f5f5f5",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "0 24px",
+          textAlign: "center",
+        }}
+      >
+        <div
+          className="flex h-20 w-20 items-center justify-center rounded-3xl mb-4"
+          style={{ backgroundColor: "#f5f0fa", border: "2px solid #7B2FBE" }}
+        >
+          <span className="text-3xl font-bold" style={{ color: "#7B2FBE" }}>言</span>
+        </div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: "#333" }}>您已在言道国学 App 内</div>
+        <div style={{ fontSize: 13, color: "#999", marginTop: 10, lineHeight: 1.7 }}>
+          当前无需下载安装包，返回 App 即可继续使用全部功能。
+        </div>
+      </div>
+    );
+  }
   return (
     <Suspense
       fallback={

@@ -8,7 +8,10 @@
 // 对被关闭能力直接返回 403，杜绝"仅隐藏按钮但 URL/API 仍可访问"。
 //
 // 矩阵摘要：
-// - v25.0.47_14 起：支付 iOS/WECHAT 全放开（Native扫码收款不依赖平台商店，会员入口死键修复）
+// - v25.0.77（IOS-APPSTORE-FINAL-RELEASE-SEAL-11）：iOS 原生壳支付关闭——
+//   Apple App Review 3.1.1 要求 App 内数字内容购买走 IAP，首版未建内购，
+//   全部购买入口在 iOS 壳内拦截（与前端 platformGate.ts 同口径三层防护）；
+//   已购会员权益登录恢复不受影响。后续接入 IAP 后再评估放开。
 // - WECHAT / QQ：预测/命理/占卜类 OFF（永久，审核通过后也不可远程打开）
 // ============================================================================
 
@@ -17,8 +20,8 @@
 // ==================== 平台功能矩阵 ====================
 
 const PLATFORM_FEATURE_MATRIX = {
-  // —— 支付能力（v25.0.47_14：iOS/微信内浏览器全放开，Native扫码全场景收款；QQ小程序维持关闭） ——
-  payment: { web: true, android: true, ios: true, wechat: true, qq: false, unknown: true },
+  // —— 支付能力（v25.0.77：iOS 原生壳关闭——App Store 合规；QQ小程序维持关闭） ——
+  payment: { web: true, android: true, ios: false, wechat: true, qq: false, unknown: true },
   store:   { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
 
   // —— 预测/命理/占卜类（小程序永久关闭） ——

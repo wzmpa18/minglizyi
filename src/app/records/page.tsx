@@ -3,19 +3,22 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { BrandHeader } from "@/components/shared";
 import { useToolBack } from "@/lib/useToolBack";
-import { fetchRecordsFromBackend, deleteRecordFromBackend, isLoggedIn } from "@/lib/recordSync";
+import { fetchRecordsFromBackend, deleteRecordFromBackend, isLoggedIn, canCloudSyncRecords } from "@/lib/recordSync";
+import { getRecords, deleteRecord, getUnsyncedLocalRecords } from "@/lib/clientStore";
 import { useRouter } from "next/navigation";
 
 import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
 
 interface BackendRecord {
-  id: number;
+  id: number | string;
   record_type: string;
   record_data: any;
   note: string;
   status: string;
   created_at: string;
+  _local?: boolean;
+  _pendingSync?: boolean;
 }
 
 const RECORD_TYPE_MAP: Record<string, { label: string; icon: string; color: string }> = {
@@ -50,18 +53,47 @@ export default function RecordsPage() {
   const [records, setRecords] = useState<BackendRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<string>("");
-  const [loggedIn, setLoggedIn] = useState(true);
+  const [viewMode, setViewMode] = useState<"visitor" | "local" | "cloud">("local");
 
+  // v25.0.77: 三态视图——未登录/非会员看本地记录（本地保存模式），会员看云端+待同步合并
   const loadRecords = useCallback(async () => {
     setLoading(true);
-    if (!isLoggedIn()) {
-      setLoggedIn(false);
+    const member = isLoggedIn() && canCloudSyncRecords();
+    if (!member) {
+      // 本地保存模式：未登录与非会员的记录都在 localStorage
+      const local = getRecords(undefined, filterType || undefined);
+      setViewMode(isLoggedIn() ? "local" : "visitor");
+      setRecords(
+        local.map((r) => ({
+          id: r.id,
+          record_type: r.type,
+          record_data: r.data,
+          note: r.note,
+          status: r.status,
+          created_at: r.createdAt,
+          _local: true,
+        }))
+      );
       setLoading(false);
       return;
     }
-    setLoggedIn(true);
-    const data = await fetchRecordsFromBackend(filterType || undefined);
-    setRecords(data);
+    setViewMode("cloud");
+    const cloud = await fetchRecordsFromBackend(filterType || undefined);
+    const pendingLocal = getUnsyncedLocalRecords(filterType || undefined);
+    const merged: BackendRecord[] = [
+      ...cloud,
+      ...pendingLocal.map((r) => ({
+        id: r.id,
+        record_type: r.type,
+        record_data: r.data,
+        note: r.note,
+        status: r.status,
+        created_at: r.createdAt,
+        _local: true,
+        _pendingSync: true,
+      })),
+    ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    setRecords(merged);
     setLoading(false);
   }, [filterType]);
 
@@ -69,13 +101,18 @@ export default function RecordsPage() {
     loadRecords();
   }, [loadRecords]);
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (record: BackendRecord) => {
     if (!confirm("确定要删除这条记录吗？")) return;
-    const success = await deleteRecordFromBackend(id);
-    if (success) {
-      setRecords(records.filter((r) => r.id !== id));
+    if (record._local) {
+      deleteRecord(String(record.id));
+      setRecords(records.filter((r) => r.id !== record.id));
     } else {
-      alert("删除失败，请稍后重试");
+      const success = await deleteRecordFromBackend(Number(record.id));
+      if (success) {
+        setRecords(records.filter((r) => r.id !== record.id));
+      } else {
+        alert("删除失败，请稍后重试");
+      }
     }
   };
 
@@ -170,23 +207,34 @@ export default function RecordsPage() {
             <div className="inline-block w-8 h-8 border-3 border-gray-200 border-t-purple-500 rounded-full animate-spin mb-3" style={{ borderTopColor: BRAND }} />
             <div className="text-sm">加载中...</div>
           </div>
-        ) : !loggedIn ? (
-          <div className="text-center py-20">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ddd" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-            <div className="text-sm text-gray-500 mb-2">请先登录查看排盘记录</div>
-            <button
-              onClick={() => router.push("/login")}
-              className="rounded-full px-6 py-2 text-sm font-semibold text-white"
-              style={{ backgroundColor: BRAND }}
-            >
-              去登录
-            </button>
-          </div>
-        ) : records.length === 0 ? (
+        ) : (
+          <>
+            {viewMode !== "cloud" && (
+              <div
+                className="rounded-xl p-3 mb-3 flex items-center gap-2.5"
+                style={{ backgroundColor: "#f5f0fa", border: "1px solid #e5dbf5" }}
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={BRAND} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                </svg>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-semibold" style={{ color: BRAND }}>
+                    本地保存模式
+                  </div>
+                  <div className="text-[11px] text-gray-500 leading-snug mt-0.5">
+                    记录仅保存在本设备{viewMode === "visitor" ? "，登录后开通会员可云端同步" : "，开通会员后自动云端同步并支持跨设备查看"}
+                  </div>
+                </div>
+                <button
+                  onClick={() => router.push(viewMode === "visitor" ? "/login" : "/membership")}
+                  className="shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold text-white"
+                  style={{ backgroundColor: BRAND }}
+                >
+                  {viewMode === "visitor" ? "去登录" : "开通会员"}
+                </button>
+              </div>
+            )}
+            {records.length === 0 ? (
           <div className="text-center py-20 text-gray-400">
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#ddd" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-3">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -219,6 +267,11 @@ export default function RecordsPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
                           <span className="text-sm font-semibold text-gray-700">{info.label}</span>
+                          {record._pendingSync && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-full font-semibold" style={{ backgroundColor: "#fff7e6", color: "#b07d2b" }}>
+                              同步中
+                            </span>
+                          )}
                           <span className="text-[10px] text-gray-400">{formatTime(record.created_at)}</span>
                         </div>
                         <div className="text-xs text-gray-500 mt-0.5 truncate">
@@ -227,7 +280,7 @@ export default function RecordsPage() {
                       </div>
                     </div>
                     <button
-                      onClick={() => handleDelete(record.id)}
+                      onClick={() => handleDelete(record)}
                       className="shrink-0 ml-2 p-1 text-gray-300 hover:text-red-400 transition-colors"
                     >
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -239,6 +292,8 @@ export default function RecordsPage() {
                 </div>
               );
             })}
+          </>
+            )}
           </>
         )}
       </div>

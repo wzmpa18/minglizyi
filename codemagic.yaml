@@ -69,9 +69,8 @@ workflows:
         script: |
           cat public/version.json
           grep -A1 "MARKETING_VERSION" ios/App/App.xcodeproj/project.pbxproj | head -2
-      - name: CocoaPods安装
-        script: |
-          cd ios/App && pod install
+      # 依赖管理为 SPM（CapApp-SPM + capacitor-swift-pm 8.5.0，见 project.pbxproj 的
+      # XCLocalSwiftPackageReference），xcodebuild 自动解析拉取——无 Podfile，禁用 pod install
       - name: 构建IPA
         script: |
           xcode-project build-ipa \

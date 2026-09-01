@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { BrandHeader } from "@/components/shared";
 import { makeQrDataUrl } from "@/lib/qrLocal";
 import { isNativeShellSync, buildAndroidIntentUrl } from "@/lib/nativeDetect";
+import { useIOSNativeShell } from "@/lib/iosNativeGate";
 
 const BRAND = "#7B2FBE";
 const DOWNLOAD_URL = "https://yandaoguoxue.yandao.vip/friend";
@@ -23,6 +24,8 @@ const FEATURES: { icon: string; title: string; desc: string }[] = [
 ];
 
 export default function DownloadPage() {
+  // v25.0.77: iOS 壳内不展示安卓 APK 下载内容（Guideline 2.5.2 禁止引导安装其他应用）
+  const iosNative = useIOSNativeShell();
   // P9：本地生成 APK 下载二维码，不依赖境外 qrserver 服务
   const [downloadQrUrl, setDownloadQrUrl] = useState("");
   const [apkUrl, setApkUrl] = useState(APK_URL_FALLBACK);
@@ -60,6 +63,32 @@ export default function DownloadPage() {
     window.location.href = isNativeShellSync() ? buildAndroidIntentUrl(apkUrl) : apkUrl;
   };
 
+  if (iosNative) {
+    return (
+      <div
+        className="min-h-screen"
+        style={{ backgroundColor: "#f5f5f5", maxWidth: "420px", margin: "0 auto" }}
+      >
+        <BrandHeader title="下载APP" showBack />
+        <div className="flex flex-col items-center px-6 pt-16 pb-8 text-center">
+          <div
+            className="flex h-24 w-24 items-center justify-center rounded-3xl mb-4"
+            style={{
+              backgroundColor: "#f5f0fa",
+              border: "2px solid #7B2FBE",
+            }}
+          >
+            <span className="text-4xl font-bold" style={{ color: BRAND }}>言</span>
+          </div>
+          <h1 className="text-xl font-bold text-gray-800">您已在言道国学 App 内</h1>
+          <p className="mt-3 text-sm leading-relaxed text-gray-500">
+            当前无需下载安装包，直接返回即可继续使用全部功能。
+          </p>
+        </div>
+        <div className="page-bottom-nav-safe" aria-hidden="true" />
+      </div>
+    );
+  }
   return (
     <div
       className="min-h-screen"

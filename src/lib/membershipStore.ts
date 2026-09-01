@@ -381,6 +381,12 @@ export function activateMembership(level: MemberLevel): MembershipStatus {
   };
 
   safeSet(STATUS_KEY, status);
+
+  // v25.0.77: 升级会员当场补传本地离线队列的排盘记录（动态import防循环依赖）
+  import("./clientStore")
+    .then((m) => m.flushPendingRecordSync())
+    .catch(() => {});
+
   return status;
 }
 

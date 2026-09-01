@@ -11,6 +11,7 @@ import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import { listFrozenRewards, listAppeals, submitAppeal, type FrozenReward, type AppealRecord } from "@/lib/antiCheatStore";
 import { releaseMaturedFrozenRewards } from "@/lib/inviteStore";
+import { useIOSNativeShell } from "@/lib/iosNativeGate";
 
 const BRAND = "#7B2FBE";
 
@@ -32,6 +33,8 @@ function formatTime(iso: string): string {
 
 // ==================== 主页面 ====================
 export default function PromotePage() {
+  // v25.0.77: iOS 壳内下载文案切换（Guideline 2.5.2——不引导安装安卓包）
+  const iosNative = useIOSNativeShell();
   const router = useRouter();
   const [userId, setUserId] = useState("");
   const [inviteCode, setInviteCode] = useState("");
@@ -612,10 +615,10 @@ export default function PromotePage() {
         {/* 行动指令 */}
         <div style={{ padding: "0 24px 16px", textAlign: "center" }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: "#333" }}>
-            长按识别二维码，立即下载安卓版
+            {iosNative ? "长按识别二维码，进入言道国学" : "长按识别二维码，立即下载安卓版"}
           </div>
           <div style={{ fontSize: 12, color: "#999", marginTop: 4 }}>
-            iOS 版本暂未发布
+            {iosNative ? "iOS 版可在 App Store 获取" : "iOS 版本暂未发布"}
           </div>
         </div>
 
@@ -700,10 +703,10 @@ export default function PromotePage() {
                   />
                 </div>
                 <div style={{ marginTop: 8, fontSize: 12, fontWeight: 700, color: "#333" }}>
-                  长按识别二维码，立即下载安卓版
+                  {iosNative ? "长按识别二维码，进入言道国学" : "长按识别二维码，立即下载安卓版"}
                 </div>
                 <div style={{ fontSize: 11, color: "#999", marginTop: 2 }}>
-                  iOS 版本暂未发布
+                  {iosNative ? "iOS 版可在 App Store 获取" : "iOS 版本暂未发布"}
                 </div>
               </div>
 

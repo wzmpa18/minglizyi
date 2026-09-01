@@ -1,16 +1,16 @@
 // ============================================================================
-// 平台支付门控 - v25.0.47_14 (FIX-V14-PAY-MARKETING-VIRAL)
-// v25.0.47_14 起支付全平台放开：Native 扫码支付（页面展示付款二维码，
-// 微信扫码/长按识别付款）不依赖平台商店，iOS Safari/微信均可正常收款。
-//   - Web / Android / iOS / 微信内置浏览器：微信支付全部开放
-//   - 历史遗留：v25.0.47_10 曾因 App Store 审核策略临时关闭 iOS 付费
-// 与后端 /api/admin/unified/payment-status 的 iosPaymentEnabled 保持一致。
+// 平台支付门控（遗留兼容文件——正式 SSOT 见 src/lib/platformGate.ts）
+// v25.0.77 (IOS-APPSTORE-FINAL-RELEASE-SEAL-11)：iOS 原生壳支付关闭——
+// Apple App Review 3.1.1 要求 App 内数字内容购买走 IAP，首版未建内购，
+// 全部购买入口在 iOS 壳内拦截；已购会员权益登录恢复不受影响。
+// 此前 v25.0.47_14 曾全平台放开（Native 扫码不依赖平台商店），
+// v25.0.77 起为 App Store 上架合规重新收口，与本文件值保持一致。
 // ============================================================================
 
-export const IOS_PAYMENT_ENABLED = true;
+export const IOS_PAYMENT_ENABLED = false;
 
 export const IOS_PAYMENT_DISABLED_TIP =
-  "iOS 版暂不支持网页支付购买，数字商品将通过 App Store 内购提供，敬请期待后续版本。";
+  "iOS 版暂未开放购买功能，您已获得的会员权益登录后可正常使用。";
 
 export function isIOSDevice(): boolean {
   if (typeof navigator === "undefined") return false;

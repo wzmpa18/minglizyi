@@ -1272,6 +1272,22 @@ function buildUserResponse(user) {
   };
 }
 
+// v25.0.77: 云端同步为会员权益——服务端口径与前端 canCloudSyncRecords 一致，
+// 防登录的免费用户绕过前端直接调接口写库（本地保存不受影响，仅拦云端写入）
+function isPaidMember(user) {
+  if (!user) return false;
+  const PAID_LEVELS = ['monthly', 'quarterly', 'yearly', 'lifetime', 'premium'];
+  const level = user.member_level || 'basic';
+  if (!PAID_LEVELS.includes(level)) return false;
+  if (level === 'lifetime') return true;
+  if (!user.membership_expiry) return true;
+  try {
+    return new Date(user.membership_expiry).getTime() > Date.now();
+  } catch {
+    return false;
+  }
+}
+
 // ============================================================================
 // 创建并返回 Express Router
 // ============================================================================
@@ -1761,6 +1777,13 @@ function createRouter() {
       }
       if (!record_data) {
         return jsonResponse(res, 400, false, '记录数据不能为空');
+      }
+
+      // v25.0.77: 云端同步为会员权益（服务端强制，与前端门禁同口径）
+      const gateDb = initDatabase();
+      const gateUser = gateDb.prepare('SELECT member_level, membership_expiry FROM users WHERE user_id = ?').get(userId);
+      if (!isPaidMember(gateUser)) {
+        return jsonResponse(res, 403, false, '云端同步为会员专享权益，记录已保留在本设备');
       }
 
       // record_data 序列化为 JSON 字符串存储

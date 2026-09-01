@@ -17,21 +17,21 @@
 
 export type RuntimePlatform = "ios" | "android" | "web" | "wechat" | "qq" | "unknown";
 
-// ==================== iOS 平台开关（v25.0.47_14 起全平台放开） ====================
+// ==================== iOS 平台开关 ====================
 
 /**
  * iOS 是否开放付费功能
- * v25.0.47_14 (FIX-V14-PAY-MARKETING-VIRAL)：Native 扫码支付不依赖平台商店，
- * iOS 全环境（Safari/微信/原生壳）恢复微信支付，消除会员入口死键。
+ * v25.0.77 (IOS-APPSTORE-FINAL-RELEASE-SEAL-11)：App Store 上架合规收口——
+ * Apple App Review 3.1.1：App 内数字内容/会员/解锁必须走 IAP。
+ * 首版未建设 StoreKit 内购，iOS 原生壳内全部购买入口关闭（UI 隐藏 + 请求层拦截
+ * + 服务端 platformFeatureGate 最终裁决三层防护）；已购会员权益登录后正常恢复使用。
+ * 后续版本接入 IAP 后再评估放开。
  */
-export const IOS_PAYMENT_ENABLED = true;
+export const IOS_PAYMENT_ENABLED = false;
 
-/** iOS 是否开放商城/数字内容购买 */
-export const IOS_STORE_ENABLED = false;
-
-/** iOS 付费关闭期间的统一提示文案（历史遗留，仅在开关关闭时展示） */
+/** iOS 付费关闭期间的统一提示文案（仅在开关关闭时展示） */
 export const IOS_PAYMENT_DISABLED_TIP =
-  "iOS 版暂未开放付费功能，现有免费功能可正常使用。";
+  "iOS 版暂未开放购买功能，您已获得的会员权益登录后可正常使用。";
 
 // ==================== 平台功能矩阵 ====================
 // 与 backend_deploy/platformFeatureGate.js 中的矩阵保持一致。
@@ -52,9 +52,9 @@ export const PLATFORM_FEATURE_MATRIX: Record<string, Record<RuntimePlatform, boo
   hehun:         { web: true, android: true, ios: true, wechat: false, qq: false, unknown: true },
   fortuneConsult:{ web: true, android: true, ios: true, wechat: false, qq: false, unknown: true },
 
-  // —— 支付能力（v25.0.47_14：iOS/微信内浏览器全放开，Native扫码全场景收款；QQ小程序维持关闭） ——
+  // —— 支付能力（v25.0.77：iOS 原生壳关闭——App Store 合规，数字购买待 IAP；QQ小程序维持关闭） ——
   payment:       { web: true, android: true, ios: IOS_PAYMENT_ENABLED, wechat: true, qq: false, unknown: true },
-  store:         { web: true, android: true, ios: IOS_STORE_ENABLED, wechat: false, qq: false, unknown: true },
+  store:         { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
 
   // —— 学习工具类（ALL ON，小程序第一增长引擎） ——
   materialToExam: { web: true, android: true, ios: true, wechat: true, qq: true, unknown: true },

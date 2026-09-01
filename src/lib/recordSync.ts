@@ -9,11 +9,28 @@
  */
 
 import { getUserToken } from "./auth";
+import { getMembershipStatus } from "./membershipStore";
 
 const API_BASE_URL = "https://yandaoguoxue.yandao.vip";
 
 function getAccessToken(): string | null {
   return getUserToken();
+}
+
+/**
+ * v25.0.77: 云端同步为会员权益——非会员（含未登录）仅本地保存。
+ * 用 getUserToken（含sessionStorage登录模式）+ getMembershipStatus（统一处理
+ * 档位/到期降级/超管账号），避免 aiService.getUserPermissionLevel 漏判
+ * 「不记住登录」的会员。所有云端同步入口统一走此判定。
+ */
+export function canCloudSyncRecords(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    if (!getUserToken()) return false;
+    return getMembershipStatus().level !== "basic";
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -39,6 +56,10 @@ export async function syncRecordToBackend(
     const token = getAccessToken();
     if (!token) {
       // 未登录，不同步到后端
+      return false;
+    }
+    // v25.0.77: 非会员仅本地保存（记录仍在离线队列，升级会员后自动补传）
+    if (!canCloudSyncRecords()) {
       return false;
     }
 

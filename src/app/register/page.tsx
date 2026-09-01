@@ -1,10 +1,11 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { BrandHeader } from "@/components/shared";
 import { sendSmsCode, sendEmailCode, registerWithPhone, registerWithEmail, checkUserExist } from "@/lib/loginService";
 import { recordInviteLanding } from "@/lib/antiCheatStore";
+import { useIOSNativeShell } from "@/lib/iosNativeGate";
 
 const BRAND = "#7B2FBE";
 
@@ -29,6 +30,8 @@ function EyeIcon({ show }: { show: boolean }) {
 type RegisterMode = "phone" | "email";
 
 export default function RegisterPage() {
+  // v25.0.77: iOS 壳内隐藏安卓下载引导（Guideline 2.5.2）
+  const iosNative = useIOSNativeShell();
   const router = useRouter();
 
   const [registerMode, setRegisterMode] = useState<RegisterMode>("phone");
@@ -863,40 +866,43 @@ export default function RegisterPage() {
           {loading ? "注册中..." : "注册"}
         </button>
 
-        {/* v25.0.47_14: 下载APP入口（新用户扫码落地必见，全浏览器兼容：普通/系统/微信内置浏览器均可点击） */}
-        <a
-          href="https://yandaoguoxue.yandao.vip/friend"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: 8,
-            width: "100%",
-            height: 48,
-            border: `1.5px solid ${BRAND}`,
-            borderRadius: 12,
-            backgroundColor: "#fff",
-            color: BRAND,
-            fontSize: 15,
-            fontWeight: 600,
-            textDecoration: "none",
-            marginBottom: 8,
-            cursor: "pointer",
-            boxSizing: "border-box",
-          }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-          下载言道国学APP
-        </a>
-        <div style={{ textAlign: "center", fontSize: 11, color: "#aaa", marginBottom: 16 }}>
-          安卓安装包 · 手机浏览器打开即可下载 · 网页版功能完全一致
-        </div>
+        {/* v25.0.77: iOS 壳内隐藏安卓下载引导（Guideline 2.5.2） */}
+        {iosNative ? null : (<>
+          {/* v25.0.47_14: 下载APP入口（新用户扫码落地必见，全浏览器兼容：普通/系统/微信内置浏览器均可点击） */}
+          <a
+            href="https://yandaoguoxue.yandao.vip/friend"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              width: "100%",
+              height: 48,
+              border: `1.5px solid ${BRAND}`,
+              borderRadius: 12,
+              backgroundColor: "#fff",
+              color: BRAND,
+              fontSize: 15,
+              fontWeight: 600,
+              textDecoration: "none",
+              marginBottom: 8,
+              cursor: "pointer",
+              boxSizing: "border-box",
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            下载言道国学APP
+          </a>
+          <div style={{ textAlign: "center", fontSize: 11, color: "#aaa", marginBottom: 16 }}>
+            安卓安装包 · 手机浏览器打开即可下载 · 网页版功能完全一致
+          </div>
+          </>) }
 
         {/* 已有账号？去登录 */}
         <div style={{ textAlign: "center" }}>

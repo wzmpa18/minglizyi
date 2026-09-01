@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -15,6 +15,7 @@ import { showToast } from "@/components/ui/Toast";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import IcpFooter from "@/components/IcpFooter";
+import { useIOSNativeShell } from "@/lib/iosNativeGate";
 
 const BRAND = "#7B2FBE";
 
@@ -708,6 +709,8 @@ const Ic = {
 
 // ==================== 主页面组件（六大分区冻结架构） ====================
 export default function ProfilePage() {
+  // v25.0.77: iOS 壳内隐藏检查更新（App 更新走 App Store，Guideline 2.5.2）
+  const iosNative = useIOSNativeShell();
   const router = useRouter();
 
   const [loginState, setLoginStateLocal] = useState<LoginState>(() => {
@@ -1195,24 +1198,27 @@ export default function ProfilePage() {
           sub="下载内容包，断网也能学习"
           onClick={() => router.push("/offline")}
         />
-        {/* v25.0.49: 检查更新——手动拉取服务器 version.json 对比当前构建，发现新版一键更新 */}
-        <ZoneItem
-          icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={BRAND} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36" /><polyline points="21 3 21 9 15 9" /><path d="M12 7v5l3 3" /></svg>}
-          label="检查更新"
-          sub={updateCheck.checking
-            ? "正在检查新版本..."
-            : updateCheck.result
-              ? (updateCheck.result.latest ? `当前已是最新版本${updateCheck.result.version ? ` ${updateCheck.result.version}` : ""}` : `发现新版本 ${updateCheck.result.version}，点击立即更新`)
-              : (appVersion ? `当前版本 ${appVersion}` : "检查是否有新版本")}
-          onClick={() => {
-            // v25.0.47_21: 检查更新发现新版时 handleCheckUpdate 已直接执行清缓存刷新，
-            // 此处统一走检查入口即可
-            void handleCheckUpdate();
-          }}
-          right={updateCheck.result && !updateCheck.result.latest ? (
-            <span style={{ fontSize: "11px", color: "#fff", backgroundColor: BRAND, borderRadius: "10px", padding: "2px 8px", fontWeight: 600 }}>新版本</span>
-          ) : undefined}
-        />
+        {/* v25.0.77: iOS 壳内隐藏检查更新（App 更新统一走 App Store，Guideline 2.5.2） */}
+        {iosNative ? null : (<>
+          {/* v25.0.49: 检查更新——手动拉取服务器 version.json 对比当前构建，发现新版一键更新 */}
+          <ZoneItem
+            icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={BRAND} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36" /><polyline points="21 3 21 9 15 9" /><path d="M12 7v5l3 3" /></svg>}
+            label="检查更新"
+            sub={updateCheck.checking
+              ? "正在检查新版本..."
+              : updateCheck.result
+                ? (updateCheck.result.latest ? `当前已是最新版本${updateCheck.result.version ? ` ${updateCheck.result.version}` : ""}` : `发现新版本 ${updateCheck.result.version}，点击立即更新`)
+                : (appVersion ? `当前版本 ${appVersion}` : "检查是否有新版本")}
+            onClick={() => {
+              // v25.0.47_21: 检查更新发现新版时 handleCheckUpdate 已直接执行清缓存刷新，
+              // 此处统一走检查入口即可
+              void handleCheckUpdate();
+            }}
+            right={updateCheck.result && !updateCheck.result.latest ? (
+              <span style={{ fontSize: "11px", color: "#fff", backgroundColor: BRAND, borderRadius: "10px", padding: "2px 8px", fontWeight: 600 }}>新版本</span>
+            ) : undefined}
+          />
+          </>) }
         <ZoneItem
           icon={Ic.about}
           label="关于我们"
