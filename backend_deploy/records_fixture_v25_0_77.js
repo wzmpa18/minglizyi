@@ -36,6 +36,8 @@ function ensureUsers() {
     VALUES (?, ?, 'fixture', 'fixture-member', 'lifetime', NULL)`).run(MEMBER_ID, String(MEMBER_ID));
   db.prepare(`INSERT OR IGNORE INTO users (user_id, phone, password_hash, nickname, member_level, membership_expiry)
     VALUES (?, ?, 'fixture', 'fixture-free', 'basic', NULL)`).run(FREE_ID, String(FREE_ID));
+  db.prepare(`UPDATE users SET member_level='lifetime', membership_expiry=NULL WHERE user_id=?`).run(MEMBER_ID);
+  db.prepare(`UPDATE users SET member_level='basic', membership_expiry=NULL WHERE user_id=?`).run(FREE_ID);
 }
 
 async function main() {

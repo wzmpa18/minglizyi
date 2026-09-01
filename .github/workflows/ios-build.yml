@@ -19,7 +19,7 @@ on:
 jobs:
   build:
     name: Archive & Export
-    runs-on: macos-14
+    runs-on: macos-15
     timeout-minutes: 60
     env:
       KEY_ID: UWQ354QP54
@@ -35,6 +35,13 @@ jobs:
         with:
           node-version: 22
           cache: npm
+
+      # Capacitor 8.5.0 预编译框架（capacitor-swift-pm 二进制包）的 Swift 模块接口
+      # 需 Xcode 16+ 编译器消费——macos-14 默认 Xcode 15.4 下 @capacitor/share 插件
+      # Swift 源码报 getString 双参数/CAPPluginCall 无 reject（Swift 扩展不可见）。
+      # 固定 Xcode 16.4（Capacitor 8.5 构建基线，macos-15 镜像默认）。
+      - name: Select Xcode 16.4
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app
 
       - name: Install dependencies
         run: npm ci
