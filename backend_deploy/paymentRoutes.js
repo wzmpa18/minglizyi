@@ -1,4 +1,4 @@
-﻿// ============================================================================
+// ============================================================================
 // 支付路由模块 - v20.4
 // 提供支付下单、查询、关闭、回调相关的 Express 路由
 // 路由前缀：/api/payment
@@ -338,9 +338,14 @@ function persistOrder(order) {
   try {
     const db = getOrdersDb();
     if (!db) return;
-    const rows = db.prepare(`SELECT order_no, user_id, amount, order_type, status, payment_method, created_at, paid_at, benefit_delivered, transaction_id
+    const rows = db.prepare(`SELECT order_no, user_id, amount, order_type, status, payment_method, created_at, paid_at, benefit_delivered, transaction_id, extra
                              FROM user_orders WHERE created_at >= datetime('now', '-30 days') ORDER BY id DESC LIMIT 500`).all();
     for (const r of rows) {
+      // v25.0.72: 回灌时恢复 extra JSON（含 SINGLE_UNLOCK 的 unlockTargetId）。
+      // 此前回灌将 extra 置空 {}，导致「回调丢失+重启后 query 补交付」拿不到
+      // unlockTargetId——权益漏发且被误标 benefitDelivered（永久丢失）。
+      let restoredExtra = {};
+      try { restoredExtra = r.extra ? JSON.parse(r.extra) : {}; } catch (e) { restoredExtra = {}; }
       ordersStore.set(r.order_no, {
         orderId: r.order_no,
         userId: String(r.user_id || ''),
@@ -354,7 +359,7 @@ function persistOrder(order) {
         paidAt: r.paid_at,
         benefitDelivered: !!r.benefit_delivered,
         transactionId: r.transaction_id || null,
-        extra: {},
+        extra: restoredExtra,
       });
     }
     console.log(`[payment] 已回灌 ${rows.length} 条近30天订单到内存缓存`);
@@ -745,7 +750,11 @@ function resolveServerPrice(type, extra, userId) {
   try {
     const aiCfg = readAdminConfig('admin-ai-config.json');
     const memberCfg = readAdminConfig('admin-membership-config.json');
-    const toolMatrix = readAdminConfig('tool-matrix.json');
+    // v25.0.72: 工具矩阵改走 loadMatrix() 合并口径（DEFAULT_MATRIX ∪ saved），与学院门控/
+    // 后台工具管理中心同源。此前直读 saved 文件：新工具未在后台保存过时 saved 缺键 →
+    // 支付侧回落 AI 默认 9.9 元而门控侧按默认 89 元展示，价格口径分裂（fixture T1 实测暴露）。
+    let toolMatrix = null;
+    try { toolMatrix = require('./toolAdminRoutes').loadMatrix(); } catch (e) { toolMatrix = readAdminConfig('tool-matrix.json'); }
 
     if (type === 'BATCH_INTERPRET') {
       const batchCfg = readBatchConfig();

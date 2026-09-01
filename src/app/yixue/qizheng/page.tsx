@@ -15,6 +15,7 @@
 // ============================================================================
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import ClientSelector from "@/components/ClientSelector";
 import { ShareButton } from "@/components/ShareButton";
 import { trackToolEvent } from "@/lib/toolAnalytics";
@@ -663,11 +664,21 @@ export default function QizhengPage() {
         <div className="mt-2 bg-white px-3 py-3">
           <div className="mb-1 flex items-center justify-between">
             <span className="text-sm font-bold" style={{ color: BRAND }}>断语解读（果老星宗）</span>
-            {duanyuMasterOn && (
-              <span className="text-[10px] text-gray-500">
-                {duanyu.yearGanzhi.gan}{duanyu.yearGanzhi.zhi}年 · 共{duanyuSummary.total}条
-              </span>
-            )}
+            <span className="flex items-center gap-2">
+              {duanyuMasterOn && (
+                <span className="text-[10px] text-gray-500">
+                  {duanyu.yearGanzhi.gan}{duanyu.yearGanzhi.zhi}年 · 共{duanyuSummary.total}条
+                </span>
+              )}
+              {/* v25.0.72：跳转易学学习区·七政四余类目（八卷135知识点+141题，可追溯出处） */}
+              <Link
+                href="/academy/learn?track=yixue&category=%E4%B8%83%E6%94%BF%E5%9B%9B%E4%BD%99"
+                className="rounded-full border px-2 py-0.5 text-[10px] active:opacity-70"
+                style={{ borderColor: BRAND + "44", color: BRAND }}
+              >
+                查看学习资料
+              </Link>
+            </span>
           </div>
           {duanyuMasterMaint ? (
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-center text-xs text-amber-700">

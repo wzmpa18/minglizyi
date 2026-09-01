@@ -45,8 +45,13 @@ const DEFAULT_MATRIX = {
   zhongyi_bianzheng:   { name: '中医·辨证学',    status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
   zhongyi_yangsheng:   { name: '中医·养生功法',  status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
   zhongyi_shanghan:    { name: '中医·伤寒六经',  status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
-  zhongyi_constitution:{ name: '中医·体质测评',  status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic',    aiEnabled: true, aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
-  zhongyi_exam:        { name: '中医·医考刷题',  status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic',    aiEnabled: true, aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
+  zhongyi_constitution:{ name: '中医·体质测评',  status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
+  zhongyi_exam:        { name: '中医·医考刷题',  status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic',    aiEnabled: true,  aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
+  // v25.0.72 中医·正骨专区：单独付费板块（ONE_TIME 89 元，后台工具管理中心可改价/关闭）
+  // status 为后台总开关（OFF=下线 MAINTENANCE=维护）；价格为服务端价格 SSOT，
+  // 支付下单 SINGLE_UNLOCK + unlockTargetId='zhongyi_zhenggu' 从本矩阵裁决金额；
+  // 键名与 zhongyi_* 板块门控同族，中医主页入口卡复用 gateOf("zhongyi_"+key) 渲染
+  zhongyi_zhenggu:     { name: '中医·正骨专区',  status: 'ON', payMode: 'ONE_TIME', price: 89, memberLevel: 'basic', aiEnabled: false, aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
   // ==================== v25.0.68: 易学四工具上线（NICHE-TOOLS-07，基础功能免费） ====================
   qizheng: { name: '七政四余',   status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic', aiEnabled: true, aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
   compass:  { name: '专业罗盘',   status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic', aiEnabled: false, aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },

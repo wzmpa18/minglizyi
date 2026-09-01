@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BrandHeader } from "@/components/shared";
 import {
   fetchKnowledge,
@@ -51,22 +51,30 @@ export default function AcademyLearnPage() {
   }, [track, category]);
 
   useEffect(() => {
-    // URL ?track= 预选板块；?term= 术语筛选（工具页星曜跳转）
+    void load();
+  }, [load]);
+
+  // URL ?track= 直选板块标记（该次切换不清除 ?category= 直选类目，仅一次）
+  const urlTrack = useRef<string>("");
+  useEffect(() => {
+    // URL ?track= 预选板块；?term= 术语筛选（工具页星曜跳转）；?category= 类目直选（七政断语面板跳转）
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const q = params.get("track");
-      if (q) setTrack(q);
+      if (q) { urlTrack.current = q; setTrack(q); }
+      const c = params.get("category");
+      if (c) setCategory(c);
       const t = params.get("term");
       if (t) setTerm(t);
     }
   }, []);
 
   useEffect(() => {
-    void load();
-  }, [load]);
-
-  useEffect(() => {
-    setCategory("");
+    if (track && track === urlTrack.current) {
+      urlTrack.current = "";
+    } else if (track) {
+      setCategory("");
+    }
     if (!track) { setCategories([]); return; }
     fetchCategories(track)
       .then((r) => setCategories(r && r.success && r.categories ? r.categories : []))

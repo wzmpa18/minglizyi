@@ -533,6 +533,62 @@ function myOrgIds(req) {
   } catch { return []; }
 }
 
+// ==================== v25.0.72 正骨专区付费门控 ====================
+// 板块=「中华非遗正骨」（track=zhongyi 独立类目，15部资料/212知识点/266题在库）
+// 控制源：工具矩阵 SSOT（tool-matrix.json zhenggu 条目，后台「工具管理中心」实时可调）
+//   status: ON/OFF/MAINTENANCE（后台总开关） payMode: ONE_TIME price: 89（价格 SSOT，可调）
+// 权益源：user_entitlements 表 entitlement_key='zhongyi_zhenggu'（SINGLE_UNLOCK 支付成功后服务端入库，永久）
+// 服务端强制：正骨内容 API（资料/知识点/题目）未解锁一律拒绝，管理员放行
+
+const ZHENGGU_CATEGORY = '中华非遗正骨';
+const ZHENGGU_TOOL_ID = 'zhongyi_zhenggu';
+
+// 读取工具矩阵正骨条目（与 toolAdminRoutes.loadMatrix 同口径合并：文件缺失/缺键回退默认）
+function zhengguToolEntry() {
+  try {
+    const mod = require('./toolAdminRoutes');
+    const t = mod.loadMatrix().tools[ZHENGGU_TOOL_ID];
+    if (t) return t;
+  } catch (e) { console.error('[academy] 正骨工具矩阵读取失败:', e.message); }
+  return { name: '中医·正骨专区', status: 'ON', payMode: 'ONE_TIME', price: 89, memberLevel: 'basic' };
+}
+
+// 用户是否已解锁正骨专区（user_entitlements 永久/未过期权益；FREE 模式全员解锁）
+function zhengguUnlocked(req) {
+  const t = zhengguToolEntry();
+  if (t.payMode === 'FREE') return true;
+  if (isAdmin(req)) return true;
+  if (t.payMode !== 'ONE_TIME') return false;
+  try {
+    const dbPath = process.env.DB_PATH || '/root/backend-auth/data/yandao_users.db';
+    if (!fs.existsSync(dbPath)) return false;
+    const db = new Database(dbPath, { readonly: true });
+    try {
+      const uid = parseInt(req.user.userId, 10);
+      if (isNaN(uid)) return false;
+      const row = db.prepare('SELECT expire_at FROM user_entitlements WHERE user_id = ? AND entitlement_key = ?').get(uid, ZHENGGU_TOOL_ID);
+      if (!row) return false;
+      if (!row.expire_at) return true;
+      const exp = new Date(row.expire_at).getTime();
+      return !isNaN(exp) && exp > Date.now();
+    } finally { db.close(); }
+  } catch (e) { return false; }
+}
+
+// 正骨门控：返回 null=放行；返回对象=拒绝（含用户可读原因与付费信息）
+function zhengguGateBlock(req) {
+  const t = zhengguToolEntry();
+  if (t.status === 'OFF') return { code: 403, error: '正骨专区内容暂已下线，敬请期待后续更新' };
+  if (t.status === 'MAINTENANCE') return { code: 403, error: '正骨专区正在升级维护中，稍后即可恢复访问' };
+  if (t.payMode === 'DISABLED' || t.payMode === 'AI_CREDIT') return { code: 403, error: '正骨专区当前不可访问' };
+  if (!zhengguUnlocked(req)) {
+    const price = Number(t.price) > 0 ? Number(t.price) : 89;
+    return { code: 402, error: '正骨专区为单独付费内容，解锁后可学习全部资料', paywall: { toolId: ZHENGGU_TOOL_ID, payMode: 'ONE_TIME', price } };
+  }
+  return null;
+}
+
+
 // ==================== AI 通道（复用 /api/ai/chat 同款配置） ====================
 // P6-I 原则2：所有 AI 调用写入 ai_call_logs（场景/关联对象/token 估算），重复内容走库缓存不调 AI
 
@@ -1068,9 +1124,13 @@ function createRouter() {
     try {
       const d = getDb();
       const { track = '' } = req.query;
-      const rows = track
+      let rows = track
         ? d.prepare(`SELECT * FROM categories WHERE status='active' AND track=? ORDER BY sort, id`).all(track)
         : d.prepare(`SELECT * FROM categories WHERE status='active' ORDER BY track, sort, id`).all();
+      // v25.0.72：未解锁用户类目列表隐藏正骨类目（与组卷排除同口径；解锁/管理员照常可见）
+      if (normTrack(track) === 'zhongyi' && !zhengguUnlocked(req)) {
+        rows = rows.filter(r => r.name !== ZHENGGU_CATEGORY);
+      }
       const matCnt = d.prepare(`SELECT category, COUNT(*) AS c FROM materials GROUP BY category`);
       const cntMap = Object.fromEntries(matCnt.all().map(r => [r.category, r.c]));
       res.json({
@@ -1110,6 +1170,26 @@ function createRouter() {
       if (used > 0) return res.status(400).json({ success: false, error: `该类目下有 ${used} 份资料，请先移除资料` });
       getDb().prepare(`UPDATE categories SET status='deleted' WHERE id=?`).run(id);
       res.json({ success: true });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // ---------- v25.0.72 正骨专区访问态（开关+价格SSOT+权益，一次查询） ----------
+  router.get('/zhenggu/access', authRequired, (req, res) => {
+    try {
+      const t = zhengguToolEntry();
+      res.json({
+        success: true,
+        access: {
+          toolId: ZHENGGU_TOOL_ID,
+          category: ZHENGGU_CATEGORY,
+          status: t.status || 'ON',
+          payMode: t.payMode || 'ONE_TIME',
+          price: Number(t.price) > 0 ? Number(t.price) : 89,
+          unlocked: zhengguUnlocked(req),
+        },
+      });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
     }
@@ -1168,6 +1248,11 @@ function createRouter() {
     try {
       const d = getDb();
       const { track = '', category = '', status = '', mine = '' } = req.query;
+      // v25.0.72：正骨类目资料强制门控（未解锁返回付费信息，服务端拒绝）
+      if (category === ZHENGGU_CATEGORY) {
+        const block = zhengguGateBlock(req);
+        if (block) return res.status(block.code).json({ success: false, error: block.error, paywall: block.paywall || null });
+      }
       const me = String(req.user.userId);
       let sql = 'SELECT * FROM materials WHERE 1=1';
       const params = [];
@@ -1202,6 +1287,11 @@ function createRouter() {
     try {
       const row = getDb().prepare('SELECT * FROM materials WHERE id = ?').get(parseInt(req.params.id, 10));
       if (!row) return res.status(404).json({ success: false, error: '资料不存在' });
+      // v25.0.72：正骨类目资料详情强制门控（按资料归属类目判定）
+      if (row.category === ZHENGGU_CATEGORY) {
+        const block = zhengguGateBlock(req);
+        if (block) return res.status(block.code).json({ success: false, error: block.error, paywall: block.paywall || null });
+      }
       if (row.status !== 'approved' && String(row.uploader_id) !== String(req.user.userId) && !isAdmin(req)) {
         return res.status(403).json({ success: false, error: '资料审核中，暂不可见' });
       }
@@ -1256,6 +1346,20 @@ function createRouter() {
     try {
       const d = getDb();
       const { track = '', category = '', status = '', materialId = '' } = req.query;
+      // v25.0.72：正骨类目知识点强制门控（类目直查与按资料查均判定归属）
+      let zhengguScope = category === ZHENGGU_CATEGORY;
+      if (!zhengguScope && materialId) {
+        const mid = parseInt(materialId, 10);
+        if (!isNaN(mid)) {
+          let mat = d.prepare('SELECT category, dedup_of FROM materials WHERE id=?').get(mid);
+          if (mat && mat.dedup_of) mat = d.prepare('SELECT category FROM materials WHERE id=?').get(mat.dedup_of) || mat;
+          if (mat && mat.category === ZHENGGU_CATEGORY) zhengguScope = true;
+        }
+      }
+      if (zhengguScope) {
+        const block = zhengguGateBlock(req);
+        if (block) return res.status(block.code).json({ success: false, error: block.error, paywall: block.paywall || null });
+      }
       let sql = `SELECT k.*, m.track AS m_track, m.category AS m_category FROM knowledge_points k LEFT JOIN materials m ON k.material_id = m.id WHERE 1=1`;
       const params = [];
       if (track) {
@@ -1459,6 +1563,14 @@ function createRouter() {
     try {
       const d = getDb();
       const { track = '', category = '', status = '', type = '' } = req.query;
+      // v25.0.72：正骨类目题目强制门控
+      let zhengguWithAnswer = false;
+      if (category === ZHENGGU_CATEGORY) {
+        const block = zhengguGateBlock(req);
+        if (block) return res.status(block.code).json({ success: false, error: block.error, paywall: block.paywall || null });
+        // 已解锁用户（付费购买）练习需展示参考答案与解析
+        zhengguWithAnswer = true;
+      }
       let sql = 'SELECT * FROM questions WHERE 1=1';
       const params = [];
       if (track) {
@@ -1472,7 +1584,7 @@ function createRouter() {
       if (isAdmin(req)) { if (status) { sql += ' AND status = ?'; params.push(status); } }
       else { sql += ` AND status = 'approved'`; }
       sql += ' ORDER BY id DESC LIMIT 300';
-      res.json({ success: true, questions: d.prepare(sql).all(...params).map(q => questionVo(q, isAdmin(req))) });
+      res.json({ success: true, questions: d.prepare(sql).all(...params).map(q => questionVo(q, isAdmin(req) || zhengguWithAnswer)) });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
     }
@@ -1521,10 +1633,14 @@ function createRouter() {
       const level = Math.min(3, Math.max(1, parseInt(levelStr, 10) || 1));
       const cfg = getExamConfig()[level];
       const picked = [];
+      // v25.0.72：中医赛道组卷排除正骨类目题目（未解锁用户不得经组卷接触到付费内容；管理员放行）
+      const excludeZhenggu = normTrack(track) === 'zhongyi' && !zhengguUnlocked(req);
       const pickBy = (type, difficulty, n) => {
         if (n <= 0) return;
-        const rows = d.prepare(`SELECT * FROM questions WHERE status='approved' AND track=? AND type=? AND difficulty=? ORDER BY RANDOM() LIMIT ?`)
-          .all(track, type, difficulty, n);
+        const rows = d.prepare(`SELECT * FROM questions WHERE status='approved' AND track=? AND type=? AND difficulty=?`
+          + (excludeZhenggu ? ` AND (category IS NULL OR category != ?)` : '')
+          + ` ORDER BY RANDOM() LIMIT ?`)
+          .all(...(excludeZhenggu ? [track, type, difficulty, ZHENGGU_CATEGORY, n] : [track, type, difficulty, n]));
         picked.push(...rows);
       };
       for (const [type, n] of Object.entries({ single: cfg.single, multi: cfg.multi, judge: cfg.judge, fill: cfg.fill || 0, qa: cfg.qa || 0, case: cfg.case || 0 })) {

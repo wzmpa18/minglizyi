@@ -170,6 +170,16 @@ const ENTRIES = [
     bgColor: "#E8F5E9",
     Icon: YangshengIcon,
   },
+  // v25.0.72 中华非遗正骨专区（单独付费 ¥89，后台工具管理中心 zhongyi_zhenggu 可改价/关闭）
+  {
+    key: "zhenggu",
+    title: "正骨专区",
+    desc: "非遗正骨·15部资料·266题",
+    href: "/zhongyi/zhenggu",
+    color: "#7B2FBE",
+    bgColor: "#F3EDF7",
+    Icon: ZhengguIcon,
+  },
 ];
 
 function HerbIcon({ color }: { color: string }) {
@@ -178,6 +188,20 @@ function HerbIcon({ color }: { color: string }) {
       <path d="M12 2C8 6 6 10 6 14c0 3.31 2.69 6 6 6s6-2.69 6-6c0-4-2-8-6-12z" />
       <path d="M12 8v12" />
       <path d="M8 12h8" />
+    </svg>
+  );
+}
+
+// 正骨专区图标（骨骼手法意象：脊柱节段+双侧手法弧线）
+function ZhengguIcon({ color }: { color: string }) {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="3" width="6" height="3" rx="1" />
+      <rect x="9" y="8" width="6" height="3" rx="1" />
+      <rect x="9" y="13" width="6" height="3" rx="1" />
+      <rect x="9" y="18" width="6" height="3" rx="1" />
+      <path d="M5 6c-1.5 2-1.5 4 0 6" />
+      <path d="M19 6c1.5 2 1.5 4 0 6" />
     </svg>
   );
 }
@@ -599,6 +623,8 @@ export default function ZhongyiHome() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
           {ENTRIES.map((e) => {
             const gate = gateOf("zhongyi_" + e.key);
+            const matrixEntry = matrixTools["zhongyi_" + e.key];
+            const paidBadge = matrixEntry && matrixEntry.payMode === "ONE_TIME" && Number(matrixEntry.price) > 0;
             if (!gate.allowed && gate.status === "OFF") return null;
             if (!gate.allowed && gate.status === "MAINTENANCE") {
               return (
@@ -668,6 +694,11 @@ export default function ZhongyiHome() {
                     {e.title}
                     {!gate.allowed && gate.needLevelName && (
                       <span style={{ fontSize: 11, color: "#C77700", marginLeft: 4 }}>🔒会员</span>
+                    )}
+                    {paidBadge && (
+                      <span style={{ fontSize: 11, color: "#C77700", marginLeft: 4 }}>
+                        ¥{Number(matrixEntry.price)}
+                      </span>
                     )}
                   </div>
                   <div style={{ fontSize: "12px", color: "#999", marginTop: "2px" }}>{e.desc}</div>
