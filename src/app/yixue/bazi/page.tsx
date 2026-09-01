@@ -1565,9 +1565,7 @@ export default function BaziPage(){
       const ss=calculateAllShenSha({yearGan:bz.pillars[0].gan as TianGan,yearZhi:bz.pillars[0].zhi as DiZhi,monthGan:bz.pillars[1].gan as TianGan,monthZhi:bz.pillars[1].zhi as DiZhi,dayGan:bz.dayGan as TianGan,dayZhi:bz.dayZhi as DiZhi,hourGan:bz.pillars[3].gan as TianGan,hourZhi:bz.pillars[3].zhi as DiZhi,gender:g});
       setShensha(ss);setShowForm(false);savePaipanState("bazi",{input:{year:y,month:m,day:d,hour:h,minute:mi,gender:g,calType},result:bz,showForm:false,_ts:Date.now()});
       // 保存客户记录
-      if(selectedClient){
-        try{saveRecord({clientId:selectedClient.id,type:"bazi",data:{...bz,inputParams:{year:y,month:m,day:d,hour:h,minute:mi,gender:g}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
-      }
+      try{saveRecord({clientId:selectedClient?selectedClient.id:"",type:"bazi",data:{...bz,inputParams:{year:y,month:m,day:d,hour:h,minute:mi,gender:g}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
     }catch(e){console.error("排盘失败:",e);}
   },[year,month,day,hour,gender,selectedClient]);
 

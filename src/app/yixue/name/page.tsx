@@ -578,19 +578,17 @@ export default function NameAnalysisPage() {
           } : null,
         }, `姓名解析: ${trimmed}`).catch(() => {});
 
-        // 保存客户记录
-        if (selectedClient) {
-          try {
-            saveRecord({
-              clientId: selectedClient.id,
-              type: "name",
-              data: { ...r, fullName: trimmed, gender, baziAnalysis },
-              note: "",
-              status: "pending",
-            });
-          } catch (e) {
-            console.error("保存记录失败:", e);
-          }
+        // 保存客户记录（v25.0.74: 未选客户也保存，clientId 留空）
+        try {
+          saveRecord({
+            clientId: selectedClient ? selectedClient.id : "",
+            type: "name",
+            data: { ...r, fullName: trimmed, gender, baziAnalysis },
+            note: "",
+            status: "pending",
+          });
+        } catch (e) {
+          console.error("保存记录失败:", e);
         }
 
         // 滚动到结果

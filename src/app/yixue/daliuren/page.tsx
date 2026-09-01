@@ -455,9 +455,7 @@ export default function DaLiuRenPage() {
     setShowForm(false);
     savePaipanState("daliuren",{input:params as any,showForm:false,_ts:Date.now()});
     // 保存客户记录
-    if(selectedClient){
-      try{saveRecord({clientId:selectedClient.id,type:"daliuren",data:{...result,inputParams:params},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
-    }
+    try{saveRecord({clientId:selectedClient?selectedClient.id:"",type:"daliuren",data:{...result,inputParams:params},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
   }, [selectedClient]);
 
   // 不自动排盘，用户必须点击排盘按钮

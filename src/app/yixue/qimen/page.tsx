@@ -240,9 +240,7 @@ export default function QimenPage() {
       setInterpretPanel(null);
       savePaipanState("qimen",{input:{...formData, year: y, month: mo, day: d, hour: h},showForm:false,_ts:Date.now()});
       // 保存客户记录
-      if(selectedClient){
-        try{saveRecord({clientId:selectedClient.id,type:"qimen",data:{...r,inputParams:{...formData, year: y, month: mo, day: d, hour: h}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
-      }
+      try{saveRecord({clientId:selectedClient?selectedClient.id:"",type:"qimen",data:{...r,inputParams:{...formData, year: y, month: mo, day: d, hour: h}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
     } catch (e) {
       console.error("排盘错误:", e);
       const errMsg = e instanceof Error ? e.message : "未知错误";

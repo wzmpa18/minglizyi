@@ -12,6 +12,7 @@
  */
 
 import { getClientUserId } from "./auth";
+import { syncRecordToBackend } from "./recordSync";
 
 // ==================== 类型定义 ====================
 export interface Client {
@@ -101,6 +102,16 @@ export function getSyncStatus(): string {
   return safeGet<string>(SYNC_STATUS_KEY, "synced");
 }
 
+/**
+ * v25.0.74: 手动触发离线队列补传（含排盘记录）。
+ * initCloudSync 有模块级 promise 缓存——APP 启动时未登录则空跑一次，登录后再调
+ * 直接返回缓存 promise 不会重放队列；登录成功路径改调本函数确保补传。
+ */
+export function flushPendingRecordSync(): void {
+  if (typeof window === "undefined") return;
+  replayPendingOps().catch(() => {});
+}
+
 // ==================== 云端API封装 ====================
 async function apiFetch<T = any>(url: string, options?: RequestInit): Promise<T | null> {
   try {
@@ -163,13 +174,36 @@ function asyncSyncDeleteClient(id: string): void {
   }
 }
 
-function asyncSyncCreateRecord(record: ServiceRecord): void {
-  if (isOnline()) {
-    apiFetch("/api/records", { method: "POST", body: JSON.stringify(record) })
-      .catch(() => addPendingOp("createRecord", record));
-  } else {
-    addPendingOp("createRecord", record);
+/** 后端 /records/save 单条上限 500KB；超限时降级为精简 payload，防离线队列永久积压 */
+function makeBackendPayload(record: ServiceRecord): unknown {
+  try {
+    const s = JSON.stringify(record.data);
+    if (s != null && s.length > 480000) {
+      const d = record.data as Record<string, unknown> | null;
+      return { _truncated: true, inputParams: d && typeof d === "object" ? d.inputParams ?? null : null };
+    }
+    return record.data;
+  } catch {
+    return { _error: "unserializable" };
   }
+}
+
+function asyncSyncCreateRecord(record: ServiceRecord): void {
+  // v25.0.74: 修复云端保存死路径——原 POST /api/records 在后端从未挂载（真实路径
+  // /api/auth/records/save 且需 JWT 鉴权），Web 端打到静态 nginx 404、安卓端经
+  // native-api-patch 改写后同样 404，排盘记录只落 localStorage，/records 页读后端永远为空。
+  // 改走 recordSync.syncRecordToBackend（name/qiming 已验证可用的正式链路）；
+  // 未登录/离线/失败时入离线队列，登录后由 flushPendingRecordSync 补传。
+  if (!isOnline()) {
+    addPendingOp("createRecord", record);
+    return;
+  }
+  const payload = makeBackendPayload(record);
+  syncRecordToBackend(record.type, payload, record.note)
+    .then((ok) => {
+      if (!ok) addPendingOp("createRecord", record);
+    })
+    .catch(() => addPendingOp("createRecord", record));
 }
 
 function asyncSyncUpdateRecord(id: string, data: Partial<ServiceRecord>): void {
@@ -279,11 +313,9 @@ async function replayPendingOps(): Promise<void> {
           break;
         }
         case "createRecord": {
-          const r = await apiFetch<ServiceRecord>("/api/records", {
-            method: "POST",
-            body: JSON.stringify(op.payload),
-          });
-          success = !!r;
+          // v25.0.74: 与 asyncSyncCreateRecord 同口径走正式后端链路（原 /api/records 死路径）
+          const ok = await syncRecordToBackend(op.payload.type, makeBackendPayload(op.payload), op.payload.note);
+          success = ok === true;
           break;
         }
         case "updateRecord": {

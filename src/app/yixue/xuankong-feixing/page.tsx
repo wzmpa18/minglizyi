@@ -141,8 +141,8 @@ export default function XuankongFeixingPage() {
       setLoading(false);
       savePaipanState("xuankong",{input:{buildYear:effYear,month,day,hour,zuoShan,floor},showForm:false,_ts:Date.now()});
       // 保存客户记录
-      if(selectedClient && r){
-        try{saveRecord({clientId:selectedClient.id,type:"xuankong-feixing",data:{...r,inputParams:{zuoShan,xiangShan,buildYear:effYear,floor}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
+      if(r){
+        try{saveRecord({clientId:selectedClient?selectedClient.id:"",type:"xuankong-feixing",data:{...r,inputParams:{zuoShan,xiangShan,buildYear:effYear,floor}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
       }
     }, 200);
   }, [zuoShan, xiangShan, buildYear, floor, selectedClient]);

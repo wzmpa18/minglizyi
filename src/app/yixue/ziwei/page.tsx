@@ -521,9 +521,7 @@ export default function ZiweiPage() {
       setShowForm(false);
       savePaipanState("ziwei",{input:{year:y,month:m,day:d,hour:h,gender:g,calType},showForm:false,_ts:Date.now()});
       // 保存客户记录
-      if(selectedClient){
-        try{saveRecord({clientId:selectedClient.id,type:"ziwei",data:{...res,inputParams:{year:y,month:m,day:d,hour:h,gender:g}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
-      }
+      try{saveRecord({clientId:selectedClient?selectedClient.id:"",type:"ziwei",data:{...res,inputParams:{year:y,month:m,day:d,hour:h,gender:g}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "计算失败");
     }

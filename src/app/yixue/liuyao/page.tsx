@@ -455,9 +455,7 @@ export default function LiuyaoPage() {
       // P1-08 修复：保存最新计算结果 r，而非旧状态 result
       savePaipanState("liuyao",{input:{dateStr,hour,minute,method,question,manualYaos,numUpper,numLower,numDong,coinResults},result:r,showForm:false,_ts:Date.now()});
       // 保存客户记录
-      if(selectedClient){
-        try{saveRecord({clientId:selectedClient.id,type:"liuyao",data:{...r,inputParams:input},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
-      }
+      try{saveRecord({clientId:selectedClient?selectedClient.id:"",type:"liuyao",data:{...r,inputParams:input},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
     } catch (e) {
       setError(e instanceof Error ? e.message : "排盘失败");
     }

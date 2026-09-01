@@ -331,8 +331,8 @@ export default function TaiyiSanshiPage() {
       setInterpretPanel(null);
       savePaipanState("taiyi",{input:{taiyiYear:y,taiyiMonth:mo,taiyiDay:d,taiyiHour:h,desc},showForm:false,_ts:Date.now()});
       // 保存客户记录
-      if(selectedClient && r){
-        try{saveRecord({clientId:selectedClient.id,type:"taiyi-sanshi",data:{...r,inputParams:{taiyiYear:y,taiyiMonth:mo,taiyiDay:d,taiyiHour:h,desc}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
+      if(r){
+        try{saveRecord({clientId:selectedClient?selectedClient.id:"",type:"taiyi-sanshi",data:{...r,inputParams:{taiyiYear:y,taiyiMonth:mo,taiyiDay:d,taiyiHour:h,desc}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
       }
     }, 200);
   }, [taiyiYear, taiyiMonth, taiyiDay, taiyiHour, selectedClient, desc]);

@@ -101,8 +101,8 @@ export default function ZeriPage() {
       setLoading(false);
       savePaipanState("zeri",{input:{eventType:ev.id,startYear,startMonth,startDay,endYear,endMonth,endDay,userShengXiao},showForm:false,_ts:Date.now()});
       // 保存客户记录
-      if(selectedClient && r.length > 0){
-        try{saveRecord({clientId:selectedClient.id,type:"zeri",data:{results:r,inputParams:{eventType:ev.id,startYear,startMonth,startDay,endYear,endMonth,endDay,userShengXiao}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
+      if(r.length > 0){
+        try{saveRecord({clientId:selectedClient?selectedClient.id:"",type:"zeri",data:{results:r,inputParams:{eventType:ev.id,startYear,startMonth,startDay,endYear,endMonth,endDay,userShengXiao}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
       }
     }, 200);
   }, [eventType, startYear, startMonth, startDay, endYear, endMonth, endDay, userShengXiao, selectedClient, zeriCfg, enabledEventTypes]);

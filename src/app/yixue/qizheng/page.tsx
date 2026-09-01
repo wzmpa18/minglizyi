@@ -161,19 +161,18 @@ export default function QizhengPage() {
         lat: region.lat != null ? Math.round(region.lat * 10) / 10 : 0,
       });
       trackToolEvent("qizheng", "tool_calculate");
-      if (selectedClient) {
-        try {
-          saveRecord({
-            clientId: selectedClient.id, type: "qizheng",
-            data: { input, mingGong: res.mingGong.branch, shenGong: res.shenGong.branch,
-              mingDu: `${res.mingDu.xiuFullName}${res.mingDu.xiuDegree.toFixed(1)}°`,
-              chuxian: res.dongwei.chuxianText },
-            note: "", status: "pending",
-          });
-          setSavedCount((c) => c + 1);
-          showToast("排盘结果已保存到客户档案");
-        } catch { /* 保存失败不阻断排盘 */ }
-      }
+      // v25.0.74: 未选客户也保存（用户反馈排盘记录不能保存）；clientId 留空挂"未指定"
+      try {
+        saveRecord({
+          clientId: selectedClient ? selectedClient.id : "", type: "qizheng",
+          data: { input, mingGong: res.mingGong.branch, shenGong: res.shenGong.branch,
+            mingDu: `${res.mingDu.xiuFullName}${res.mingDu.xiuDegree.toFixed(1)}°`,
+            chuxian: res.dongwei.chuxianText },
+          note: "", status: "pending",
+        });
+        setSavedCount((c) => c + 1);
+        showToast(selectedClient ? "排盘结果已保存到客户档案" : "排盘记录已保存");
+      } catch { /* 保存失败不阻断排盘 */ }
     } catch (e) {
       trackToolEvent("qizheng", "tool_error", { phase: "calc" });
       showToast(`排盘失败：${e instanceof Error ? e.message : "输入参数异常"}`);

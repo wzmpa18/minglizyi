@@ -23,10 +23,25 @@ const RECORD_TYPE_MAP: Record<string, { label: string; icon: string; color: stri
   qiming: { label: "智能起名", icon: "起", color: "#2E8B57" },
   bazi: { label: "八字排盘", icon: "八", color: "#D4A017" },
   ziwei: { label: "紫微斗数", icon: "紫", color: "#1E6FBF" },
-  liuren: { label: "大六壬", icon: "壬", color: "#D94040" },
+  daliuren: { label: "大六壬", icon: "壬", color: "#D94040" },
   liuyao: { label: "六爻排盘", icon: "爻", color: "#A0522D" },
   meihua: { label: "梅花易数", icon: "梅", color: "#9B59B6" },
   qimen: { label: "奇门遁甲", icon: "奇", color: "#E67E22" },
+  // v25.0.74: 补齐全部实际入库类型（原映射仅 8 种且 liuren 为错误键，实际保存用 daliuren）
+  qizheng: { label: "七政四余", icon: "七", color: "#8d6708" },
+  compass: { label: "专业罗盘", icon: "盘", color: "#B8860B" },
+  xiaoliuren: { label: "小六壬", icon: "小", color: "#00BCD4" },
+  hehun: { label: "八字合婚", icon: "合", color: "#F44336" },
+  huangli: { label: "黄历查询", icon: "历", color: "#795548" },
+  "taiyi-sanshi": { label: "太乙三式", icon: "太", color: "#673AB7" },
+  "xuankong-feixing": { label: "玄空飞星", icon: "玄", color: "#3F51B5" },
+  liji: { label: "立极尺", icon: "极", color: "#2f7bd4" },
+  luban: { label: "鲁班尺", icon: "鲁", color: "#a0522d" },
+  phone: { label: "号码吉凶", icon: "号", color: "#009688" },
+  carplate: { label: "车牌吉凶", icon: "车", color: "#FF5722" },
+  zeri: { label: "择日", icon: "择", color: "#8BC34A" },
+  jiemeng: { label: "解梦", icon: "梦", color: "#E040FB" },
+  "tcm-constitution": { label: "体质测评", icon: "质", color: "#7B2FBE" },
 };
 
 export default function RecordsPage() {
@@ -77,14 +92,34 @@ export default function RecordsPage() {
   const getRecordSummary = (record: BackendRecord): string => {
     try {
       const data = record.record_data;
+      if (!data || typeof data !== "object") return record.note || "排盘记录";
       if (record.record_type === "name" && data?.fullName) {
         return `姓名：${data.fullName}`;
       }
       if (record.record_type === "qiming" && data?.surname) {
         return `${data.surname}姓${data.gender === "male" ? "男" : "女"}宝起名`;
       }
-      if (data?.note) return data.note;
-      return record.note || "点击查看详情";
+      // v25.0.74: 各工具摘要（排盘时间/号码/车牌/梦境等）
+      if (data.phoneNumber) return `号码：${data.phoneNumber}`;
+      if (data.plateNumber) return `车牌：${data.plateNumber}`;
+      if (data.query) return `梦见：${String(data.query).slice(0, 20)}`;
+      const ip = data.inputParams;
+      if (ip && typeof ip === "object") {
+        if (ip.year != null && ip.month != null && ip.day != null) {
+          const g = ip.gender === "male" ? "男" : ip.gender === "female" ? "女" : "";
+          return `${ip.year}-${ip.month}-${ip.day}${ip.hour != null ? ` ${ip.hour}时` : ""}${g ? ` ${g}` : ""}排盘`;
+        }
+        if (ip.zuoShan && ip.xiangShan) return `${ip.zuoShan}山${ip.xiangShan}向·玄空飞星`;
+        if (ip.eventType) return "择日记录";
+        if (ip.taiyiYear != null) return `太乙 ${ip.taiyiYear}年局`;
+      }
+      if (data.input && typeof data.input === "object") {
+        const i = data.input;
+        if (i.placeName) return `${i.year}-${i.month}-${i.day} ${i.placeName}`;
+        if (i.year != null) return `${i.year}-${i.month}-${i.day}排盘`;
+      }
+      if (data.note) return data.note;
+      return record.note || "排盘记录";
     } catch {
       return "记录详情";
     }

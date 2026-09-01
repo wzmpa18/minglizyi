@@ -45,8 +45,8 @@ export default function PhonePage() {
       setHasResult(true);
       setLoading(false);
       // 保存客户记录
-      if(selectedClient && r){
-        try{saveRecord({clientId:selectedClient.id,type:"phone",data:{...r,phoneNumber:cleaned},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
+      if(r){
+        try{saveRecord({clientId:selectedClient?selectedClient.id:"",type:"phone",data:{...r,phoneNumber:cleaned},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
       }
     }, 200);
   }, [cleaned, isValid, selectedClient]);

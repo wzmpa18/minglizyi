@@ -1041,8 +1041,11 @@ export function logout(): void {
 
 async function syncLocalData(userId: string): Promise<void> {
   try {
-    const { initCloudSync } = await import('./clientStore');
+    const { initCloudSync, flushPendingRecordSync } = await import('./clientStore');
     initCloudSync();
+    // v25.0.74: initCloudSync 有 promise 缓存，登录后可能不重放离线队列；
+    // 显式补传未登录期间入队的排盘记录
+    flushPendingRecordSync();
   } catch {}
 }
 

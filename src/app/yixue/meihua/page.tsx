@@ -532,9 +532,7 @@ export default function MeihuaPage() {
       setShowPopup(false);
       // P1-08 修复：保存最新结果 r
       savePaipanState("meihua",{input:{year:y,month:mo,day:d,hour:h,desc,divMethod,manualNumbers,charInput,directionIdx},result:r,showForm:false,_ts:Date.now()});
-      if(selectedClient){
-        try{saveRecord({clientId:selectedClient.id,type:"meihua",data:{...r,inputParams:{year:y,month:mo,day:d,hour:h,method:divMethod}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
-      }
+      try{saveRecord({clientId:selectedClient?selectedClient.id:"",type:"meihua",data:{...r,inputParams:{year:y,month:mo,day:d,hour:h,method:divMethod}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
     } catch (e) {
       setError(e instanceof Error ? e.message : "起卦失败");
     }
