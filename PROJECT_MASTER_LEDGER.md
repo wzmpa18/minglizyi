@@ -268,16 +268,18 @@
 - 云构建链（codemagic.yaml android-workflow，linux_x2+node20+java21）：npm ci → build.sh → www+cap sync → ANDROID_KEYSTORE_B64 解码 keystore → gradlew assembleRelease → aapt 版本校验+jarsigner 签名校验 → 产物 app-release.apk；一次性配置：Codemagic 控制台加密变量 ANDROID_KEYSTORE_B64（值=核心文档《06_Codemagic_ANDROID_KEYSTORE_B64.txt》，已 keytool 验证 yandao PrivateKeyEntry 有效）
 - 分发：/var/www/yandao.vip/app-download/yandao-guoxue-v25.0.53-release.apk + latest.apk + 别名 guoxue-chuancheng-v1.0-release.apk；历史包 v25.0.47~v25.0.52 保留
 - 签名：yandao-release.keystore（SECURE_EXTERNAL_ASSET，仓库根；PKCS12，yandao 别名，SHA256withRSA，有效期 2026-08-09~2126-07-16；wrong-0801.bak 为废弃误签备份勿用；密码见交接报告 SECRET INVENTORY，禁入 Git）
-### 8.2 iOS ⏳ PARTIAL（管道就绪，唯一缺口 PLA）
+### 8.2 iOS ✅ DONE（2026-09-02 TestFlight 上传成功，build 1.0(1) 处理 VALID）
 
 | 项 | 状态 |
 |----|------|
-| 工程 | ios/App（Capacitor），Bundle ID com.yandao.guoxue，DEVELOPMENT_TEAM=WM586465ZD |
+| 工程 | ios/App（Capacitor），Bundle ID com.yandaoguoxue.app（ASC 实际注册 ID，2026-09-02 对齐；Android 包名 com.yandao.guoxue 不变），DEVELOPMENT_TEAM=WM586465ZD |
 | 就绪校验 | 33 项全通过（scripts/ios-build-readiness-verify.mjs） |
-| 云打包 | GitHub Actions ios-build.yml（签名失败自动降级未签名 xcarchive） |
-| 签名材料 | APP_STORE_CONNECT_KEY / KEY_ID=UWQ354QP54 / ISSUER_ID=ee663add-…-8110 全入 Secrets |
-| API 认证 | ES256 JWT 实测有效 |
-| **唯一缺口** | ⚠️ 账号持有人 ZHIMIN WU 登录 developer.apple.com/account 接受最新 PLA → 重跑 workflow 即出签名 ipa → TestFlight |
+| 云打包 | GitHub Actions ios-build.yml（Xcode 26.3 / iOS 26 SDK——ASC 2026 强制；签名失败自动降级未签名 xcarchive） |
+| 签名方式 | 手动签名：Apple Distribution .p12 + App Store profile 资产化入 Secrets（2026-09-02 经 ASC API 创建，有效期至 2027-09-02） |
+| Secrets | IOS_DIST_CERT_P12_B64 / IOS_DIST_P12_PASSWORD / IOS_APPSTORE_PROFILE_B64 / APP_STORE_CONNECT_KEY / APP_STORE_CONNECT_ISSUER_ID / ASC_KEY_ID |
+| API 认证 | ES256 JWT 实测有效（Admin 级：可列用户/建分发证书/建 profile） |
+| TestFlight | ✅ build 1.0(1) 上传成功，processingState=VALID（2026-09-02，run 33576919156） |
+| 历史误判修正 | 2026-09-01 所记「PLA 缺口/密钥角色不足」均不成立——真因是 bundle ID 未注册 + Xcode SDK 版本过低，均已修复 |
 
 ---
 
