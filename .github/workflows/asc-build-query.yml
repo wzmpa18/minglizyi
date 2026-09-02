@@ -6,25 +6,11 @@ jobs:
   query:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Query builds via ASC API
         env:
-          KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
-          ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          KID: ${{ secrets.ASC_KEY_ID }}
-        run: |
-          mkdir -p /tmp/keys
-          printf '%s\n' "$KEY" > /tmp/keys/AuthKey_${KID}.p8
-          pip3 install --quiet pyjwt cryptography 2>/dev/null || pip3 install --quiet jwt cryptography
-          python3 - <<'EOF'
-          import time, json, base64, subprocess, os
-          kid = os.environ['KID']; iss = os.environ['ISSUER']
-          key = open(f'/tmp/keys/AuthKey_{kid}.p8').read()
-          header = base64.urlsafe_b64encode(json.dumps({"alg":"ES256","kid":kid,"typ":"JWT"}).encode()).rstrip(b'=').decode()
-          now = int(time.time())
-          payload = base64.urlsafe_b64encode(json.dumps({"iss":iss,"iat":now,"exp":now+1200,"aud":"appstoreconnect-v1"}).encode()).rstrip(b'=').decode()
-          import jwt as pyjwt
-          token = pyjwt.encode({"iss":iss,"iat":now,"exp":now+1200,"aud":"appstoreconnect-v1"}, key, algorithm="ES256", headers={"kid":kid})
-          out = subprocess.run(['curl','-s','-w','\n%{http_code}','-H',f'Authorization: Bearer {token}',
-              'https://api.appstoreconnect.apple.com/v1/builds?filter[app]=6807592575&sort=-uploadedDate&limit=5&fields[builds]=version,uploadedDate,processingState,usesNonExemptEncryption'], capture_output=True, text=True).stdout
-          print(out)
-          EOF
+          ASC_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+          ASC_ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          ASC_KID: ${{ secrets.ASC_KEY_ID }}
+        run: node scripts/asc_builds_query_workflow.js
