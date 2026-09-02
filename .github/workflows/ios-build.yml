@@ -47,11 +47,11 @@ jobs:
           node-version: 22
           cache: npm
 
-      # Capacitor 8.5.0 预编译框架（capacitor-swift-pm 二进制包）的 Swift 模块接口
-      # 需 Xcode 16+ 编译器消费——Xcode 15.4 下 @capacitor/share 插件 Swift 源码报
-      # getString 双参数/CAPPluginCall 无 reject（Swift 扩展不可见）。固定 16.4。
-      - name: Select Xcode 16.4
-        run: sudo xcode-select -s /Applications/Xcode_16.4.app
+      # ASC 2026 起强制要求 iOS 26 SDK（Xcode 26+）构建才可上传——Xcode 16.4（iOS 18.5 SDK）
+      # 会被 altool 409 拒绝（SDK version issue）。macos-15-arm64 镜像含 Xcode 26.3。
+      # Capacitor 8.5.0 二进制框架（capacitor-swift-pm）兼容 Xcode 26。
+      - name: Select Xcode 26.3
+        run: sudo xcode-select -s /Applications/Xcode_26.3.app
 
       - name: Install dependencies
         run: npm ci
