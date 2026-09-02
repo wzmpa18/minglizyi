@@ -193,7 +193,8 @@ jobs:
         if: steps.creds.outputs.mode == 'signed' && steps.export.outcome == 'success' && inputs.upload_testflight
         run: |
           IPA=$(ls "$RUNNER_TEMP/export/"*.ipa | head -1)
-          xcrun altool --upload-app --type ios -f "$IPA" --apiKey "$KEY_ID" --api-issuer "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}"
+          # Xcode 16 altool 参数为驼峰格式：--apiKey / --apiIssuer（--api-issuer 会被当作未知项忽略）
+          xcrun altool --upload-app --type ios -f "$IPA" --apiKey "$KEY_ID" --apiIssuer "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}"
 
       - name: Upload unsigned xcarchive artifact
         if: steps.creds.outputs.mode == 'unsigned' || steps.export.outcome == 'failure'
