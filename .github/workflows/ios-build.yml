@@ -1,17 +1,21 @@
 name: iOS Build (ipa)
 
-# 言道国学 iOS 打包管道（v25.0.77 重构：归档/签名分离）
-# 签名策略（geolibre 同源问题解法）：Automatic 开发签名归档会要求注册设备
-#   （"no devices to generate provisioning profile"），且显式 Apple Distribution
-#   会报 "conflicting provisioning settings"。正确姿势：归档阶段 CODE_SIGNING_ALLOWED=NO
-#   产出未签名 xcarchive，再由 -exportArchive + ASC API 密钥完成 App Store 分发签名
-#   ——自动创建 Apple Distribution 证书、注册 App ID、生成 App Store profile，无需设备。
-# - 签名：App Store Connect API（P8 密钥）
-#   Secrets 必需：
-#     APP_STORE_CONNECT_KEY       — AuthKey_UWQ354QP54.p8 全文内容
-#     APP_STORE_CONNECT_ISSUER_ID — App Store Connect 后台 → 用户和访问 → 集成 → 密钥 页的 Issuer ID
-#   Key ID 已内联（UWQ354QP54，非敏感标识）Team ID 内联（WM586465ZD）
-# - Issuer ID 未配置时：产出未签名 xcarchive（可在任意 Mac 上完成签名导出）
+# 言道国学 iOS 打包管道（v25.0.78：手动签名——分发证书+App Store profile 资产化）
+# 背景：ASC 团队实际注册的 App ID 是 com.yandaoguoxue.app（App 记录「言道国学」也在用它），
+#   原 com.yandao.guoxue 从未注册——exportArchive 云签名自动注册链路报 Cloud signing
+#   permission error（2026-09-02 实测：密钥本身为 Admin 级，可正常创建证书/profile，
+#   失败仅因 bundle ID 未注册）。Android 包名保持 com.yandao.guoxue 不变，两者互不影响。
+# 签名资产（2026-09-02 经 ASC API 创建，有效期至 2027-09-02）：
+#   Apple Distribution 证书 id=6YJFBTVSBX（.p12 含私钥+证书）
+#   App Store profile name=yandao guoxue iOS App Store 20260902（uuid 917802a5-6e9b-432d-9710-ca862a4007fc）
+# Secrets 必需：
+#   IOS_DIST_CERT_P12_B64     — dist.p12 文件 base64
+#   IOS_DIST_P12_PASSWORD     — .p12 导出密码
+#   IOS_APPSTORE_PROFILE_B64  — .mobileprovision 文件 base64
+#   APP_STORE_CONNECT_KEY     — AuthKey_UWQ354QP54.p8 全文内容（TestFlight 上传用）
+#   APP_STORE_CONNECT_ISSUER_ID — App Store Connect 后台 Issuer ID
+# 流程：未签名归档（CODE_SIGNING_ALLOWED=NO）→ 导入 keychain+profile →
+#   exportArchive manual signing（provisioningProfiles 指定）→ 可选 altool 上传 TestFlight
 on:
   workflow_dispatch:
     inputs:
@@ -26,11 +30,12 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 60
     env:
-      # Key ID 可被仓库 secret ASC_KEY_ID 覆盖（更换 Admin 密钥时无需改代码）
+      # Key ID 可被仓库 secret ASC_KEY_ID 覆盖
       KEY_ID: ${{ secrets.ASC_KEY_ID || 'UWQ354QP54' }}
       TEAM_ID: WM586465ZD
       APP_NAME: 言道国学
-      BUNDLE_ID: com.yandao.guoxue
+      BUNDLE_ID: com.yandaoguoxue.app
+      PROFILE_NAME: yandao guoxue iOS App Store 20260902
 
     steps:
       - name: Checkout
@@ -74,21 +79,44 @@ jobs:
       - name: Check signing credentials
         id: creds
         run: |
-          if [ -n "${{ secrets.APP_STORE_CONNECT_KEY }}" ] && [ -n "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}" ]; then
+          if [ -n "${{ secrets.IOS_DIST_CERT_P12_B64 }}" ] && [ -n "${{ secrets.IOS_DIST_P12_PASSWORD }}" ] && [ -n "${{ secrets.IOS_APPSTORE_PROFILE_B64 }}" ]; then
             echo "mode=signed" >> "$GITHUB_OUTPUT"
-            echo "签名模式：App Store Connect API（P8）—— exportArchive 分发签名"
+            echo "签名模式：手动签名（分发证书 .p12 + App Store profile 资产化）"
           else
             echo "mode=unsigned" >> "$GITHUB_OUTPUT"
-            echo "::warning::未配置 APP_STORE_CONNECT_KEY / APP_STORE_CONNECT_ISSUER_ID Secrets，将产出未签名 xcarchive"
+            echo "::warning::缺少 IOS_DIST_CERT_P12_B64 / IOS_DIST_P12_PASSWORD / IOS_APPSTORE_PROFILE_B64 Secrets，将产出未签名 xcarchive"
           fi
 
+      # TestFlight 上传需要 ASC API 密钥（altool 从 ~/private_keys/ 读取）
       - name: Write API key
-        if: steps.creds.outputs.mode == 'signed'
+        if: inputs.upload_testflight
         run: |
           mkdir -p "$HOME/private_keys"
           printf '%s\n' "${{ secrets.APP_STORE_CONNECT_KEY }}" > "$HOME/private_keys/AuthKey_${KEY_ID}.p8"
 
-      # 归档一律未签名（Automatic 开发签名会要求注册设备——见文件头注释）
+      - name: Import signing assets
+        if: steps.creds.outputs.mode == 'signed'
+        run: |
+          set -e
+          KEYCHAIN_DB=ci-build.keychain-db
+          KEYCHAIN_PW=$(head -c 24 /dev/urandom | base64 | tr -d '/+=')
+          security create-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN_DB"
+          security unlock-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN_DB"
+          security set-keychain-settings -t 3600 -u "$KEYCHAIN_DB"
+          echo "${{ secrets.IOS_DIST_CERT_P12_B64 }}" | base64 -d > "$RUNNER_TEMP/dist.p12"
+          security import "$RUNNER_TEMP/dist.p12" -k "$KEYCHAIN_DB" -P "${{ secrets.IOS_DIST_P12_PASSWORD }}" -T /usr/bin/codesign -T /usr/bin/security
+          security list-keychains -d user -s "$KEYCHAIN_DB" $(security list-keychains -d user | tr -d '"')
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PW" "$KEYCHAIN_DB"
+          security find-identity -v -p codesigning "$KEYCHAIN_DB"
+
+          PP_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PP_DIR"
+          echo "${{ secrets.IOS_APPSTORE_PROFILE_B64 }}" | base64 -d > "$RUNNER_TEMP/app.mobileprovision"
+          PP_UUID=$(security cms -D -i "$RUNNER_TEMP/app.mobileprovision" | /usr/libexec/PlistBuddy -c 'Print :UUID' /dev/stdin)
+          cp "$RUNNER_TEMP/app.mobileprovision" "$PP_DIR/$PP_UUID.mobileprovision"
+          echo "profile 安装完成: $PP_UUID.mobileprovision"
+
+      # 归档一律未签名（签名在导出阶段完成，避免归档期签名资产依赖）
       - name: Archive (unsigned)
         run: |
           cd ios/App
@@ -101,8 +129,8 @@ jobs:
             -archivePath "$RUNNER_TEMP/App.xcarchive" \
             CODE_SIGNING_ALLOWED=NO
 
-      # 分发签名在导出阶段完成：自动创建 Apple Distribution 证书+注册 App ID+生成 App Store profile
-      - name: Export ipa (distribution signing)
+      # 分发签名：manual 模式，provisioningProfiles 按 profile 名称匹配
+      - name: Export ipa (manual signing)
         id: export
         if: steps.creds.outputs.mode == 'signed'
         continue-on-error: true
@@ -117,7 +145,14 @@ jobs:
             <key>teamID</key>
             <string>WM586465ZD</string>
             <key>signingStyle</key>
-            <string>automatic</string>
+            <string>manual</string>
+            <key>signingCertificate</key>
+            <string>Apple Distribution</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.yandaoguoxue.app</key>
+              <string>yandao guoxue iOS App Store 20260902</string>
+            </dict>
             <key>uploadSymbols</key>
             <true/>
             <key>stripSwiftSymbols</key>
@@ -128,12 +163,10 @@ jobs:
           xcodebuild -exportArchive \
             -archivePath "$RUNNER_TEMP/App.xcarchive" \
             -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
-            -exportPath "$RUNNER_TEMP/export" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$HOME/private_keys/AuthKey_${KEY_ID}.p8" \
-            -authenticationKeyID "$KEY_ID" \
-            -authenticationKeyIssuerID "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}"
+            -exportPath "$RUNNER_TEMP/export"
           ls -la "$RUNNER_TEMP/export"
+          IPA=$(ls "$RUNNER_TEMP/export/"*.ipa | head -1)
+          echo "ipa_size=$(du -h "$IPA" | cut -f1)" >> "$GITHUB_OUTPUT"
 
       - name: Upload ipa artifact
         if: steps.creds.outputs.mode == 'signed' && steps.export.outcome == 'success'
@@ -164,16 +197,17 @@ jobs:
           retention-days: 14
 
       - name: Build summary
+        if: always()
         run: |
           echo "### iOS 构建结果" >> $GITHUB_STEP_SUMMARY
-          echo "- 模式: ${{ steps.creds.outputs.mode }}" >> $GITHUB_STEP_SUMMARY
+          echo "- 模式: ${{ steps.creds.outputs.mode }}（手动签名）" >> $GITHUB_STEP_SUMMARY
           echo "- Bundle: $BUNDLE_ID" >> $GITHUB_STEP_SUMMARY
           echo "- 资源: 原生内置 (API 改写到 https://yandaoguoxue.yandao.vip)" >> $GITHUB_STEP_SUMMARY
           if [ "${{ steps.creds.outputs.mode }}" = "signed" ] && [ "${{ steps.export.outcome }}" = "success" ]; then
-            echo "- 产物: 签名 ipa（exportArchive 分发签名；TestFlight 上传: ${{ inputs.upload_testflight }}）" >> $GITHUB_STEP_SUMMARY
+            echo "- 产物: 签名 ipa（manual 签名；TestFlight 上传: ${{ inputs.upload_testflight }}）" >> $GITHUB_STEP_SUMMARY
           elif [ "${{ steps.creds.outputs.mode }}" = "signed" ]; then
-            echo "- 产物: 未签名 xcarchive（exportArchive 签名失败已降级，见 Export ipa 步骤日志）" >> $GITHUB_STEP_SUMMARY
-            echo "- 常见根因：PLA 未接受（账号持有人登录 developer.apple.com 接受协议）/ App ID 占用 / 密钥权限不足" >> $GITHUB_STEP_SUMMARY
+            echo "- 产物: 未签名 xcarchive（exportArchive 失败已降级，见 Export ipa 步骤日志）" >> $GITHUB_STEP_SUMMARY
+            echo "- 常见根因：profile 与 Bundle ID 不匹配 / .p12 密码错误 / 证书过期" >> $GITHUB_STEP_SUMMARY
           else
-            echo "- 产物: 未签名 xcarchive（需补 APP_STORE_CONNECT_KEY / ISSUER_ID Secrets 后重跑可出签名 ipa）" >> $GITHUB_STEP_SUMMARY
+            echo "- 产物: 未签名 xcarchive（需补签名 Secrets 后重跑可出签名 ipa）" >> $GITHUB_STEP_SUMMARY
           fi

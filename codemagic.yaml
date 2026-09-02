@@ -54,7 +54,7 @@ workflows:
       cocoapods: default
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.yandao.guoxue
+        bundle_identifier: com.yandaoguoxue.app
     scripts:
       - name: 安装依赖
         script: |
