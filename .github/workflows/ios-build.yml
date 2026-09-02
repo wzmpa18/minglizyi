@@ -90,12 +90,19 @@ jobs:
       # TestFlight 上传需要 ASC API 密钥（altool 从 ~/private_keys/ 读取）
       - name: Write API key
         if: inputs.upload_testflight
+        env:
+          ASC_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
         run: |
           mkdir -p "$HOME/private_keys"
-          printf '%s\n' "${{ secrets.APP_STORE_CONNECT_KEY }}" > "$HOME/private_keys/AuthKey_${KEY_ID}.p8"
+          printf '%s\n' "$ASC_KEY" > "$HOME/private_keys/AuthKey_${KEY_ID}.p8"
 
       - name: Import signing assets
         if: steps.creds.outputs.mode == 'signed'
+        env:
+          DIST_P12_B64: ${{ secrets.IOS_DIST_CERT_P12_B64 }}
+          DIST_P12_PASSWORD: ${{ secrets.IOS_DIST_P12_PASSWORD }}
+          PROFILE_B64: ${{ secrets.IOS_APPSTORE_PROFILE_B64 }}
+          EXPECTED_PROFILE_UUID: 917802a5-6e9b-432d-9710-ca862a4007fc
         run: |
           set -e
           KEYCHAIN_DB=ci-build.keychain-db
@@ -103,16 +110,22 @@ jobs:
           security create-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN_DB"
           security unlock-keychain -p "$KEYCHAIN_PW" "$KEYCHAIN_DB"
           security set-keychain-settings -t 3600 -u "$KEYCHAIN_DB"
-          echo "${{ secrets.IOS_DIST_CERT_P12_B64 }}" | base64 -d > "$RUNNER_TEMP/dist.p12"
-          security import "$RUNNER_TEMP/dist.p12" -k "$KEYCHAIN_DB" -P "${{ secrets.IOS_DIST_P12_PASSWORD }}" -T /usr/bin/codesign -T /usr/bin/security
+          printf '%s' "$DIST_P12_B64" | base64 -d > "$RUNNER_TEMP/dist.p12"
+          security import "$RUNNER_TEMP/dist.p12" -k "$KEYCHAIN_DB" -P "$DIST_P12_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
           security list-keychains -d user -s "$KEYCHAIN_DB" $(security list-keychains -d user | tr -d '"')
-          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PW" "$KEYCHAIN_DB"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PW" "$KEYCHAIN_DB" || true
           security find-identity -v -p codesigning "$KEYCHAIN_DB"
 
           PP_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
           mkdir -p "$PP_DIR"
-          echo "${{ secrets.IOS_APPSTORE_PROFILE_B64 }}" | base64 -d > "$RUNNER_TEMP/app.mobileprovision"
-          PP_UUID=$(security cms -D -i "$RUNNER_TEMP/app.mobileprovision" | /usr/libexec/PlistBuddy -c 'Print :UUID' /dev/stdin)
+          printf '%s' "$PROFILE_B64" | base64 -d > "$RUNNER_TEMP/app.mobileprovision"
+          # PlistBuddy 读管道 /dev/stdin 不可 seek 会失败（Cannot parse a NULL or zero-length
+          # data），plutil 从 stdin 解析是管道安全的
+          PP_UUID=$(security cms -D -i "$RUNNER_TEMP/app.mobileprovision" | plutil -extract UUID raw -o - -)
+          if [ "$PP_UUID" != "$EXPECTED_PROFILE_UUID" ]; then
+            echo "FATAL: profile UUID 不匹配（实际 $PP_UUID，期望 $EXPECTED_PROFILE_UUID）——Secret 与工作流 UUID 常量需同步更新"
+            exit 1
+          fi
           cp "$RUNNER_TEMP/app.mobileprovision" "$PP_DIR/$PP_UUID.mobileprovision"
           echo "profile 安装完成: $PP_UUID.mobileprovision"
 
