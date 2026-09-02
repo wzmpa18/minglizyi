@@ -266,19 +266,20 @@
 - v25.0.53 新增：全页面双侧边缘侧滑返回手势（见功能矩阵 APK_SWIPE_BACK）
 - 服务器构建链（/root/yandaoguoxue-source，/opt/android-sdk + Gradle 8.9 + JDK21）：bash build.sh → cp -a out www → npx cap sync android → ./gradlew assembleRelease → 发布分发目录+别名文件+app-release-config.json versionCode 更新（触发存量用户升级弹窗）
 - 云构建链（codemagic.yaml android-workflow，linux_x2+node20+java21）：npm ci → build.sh → www+cap sync → ANDROID_KEYSTORE_B64 解码 keystore → gradlew assembleRelease → aapt 版本校验+jarsigner 签名校验 → 产物 app-release.apk；一次性配置：Codemagic 控制台加密变量 ANDROID_KEYSTORE_B64（值=核心文档《06_Codemagic_ANDROID_KEYSTORE_B64.txt》，已 keytool 验证 yandao PrivateKeyEntry 有效）
-- 分发：/var/www/yandao.vip/app-download/yandao-guoxue-v25.0.53-release.apk + latest.apk + 别名 guoxue-chuancheng-v1.0-release.apk；历史包 v25.0.47~v25.0.52 保留
+- 分发：/var/www/yandao.vip/app-download/yandao-guoxue-v25.0.79-release.apk（2026-09-02 整改版，versionCode 2072：入口改名+黄历古籍定性+AI合规烧入 APK，公网 MD5 终验一致）+ latest.apk + 别名 guoxue-chuancheng.apk；历史包保留
 - 签名：yandao-release.keystore（SECURE_EXTERNAL_ASSET，仓库根；PKCS12，yandao 别名，SHA256withRSA，有效期 2026-08-09~2126-07-16；wrong-0801.bak 为废弃误签备份勿用；密码见交接报告 SECRET INVENTORY，禁入 Git）
-### 8.2 iOS ✅ DONE（2026-09-02 TestFlight 上传成功，build 1.0(1) 处理 VALID）
+### 8.2 iOS ✅ 提审就绪（2026-09-02 v25.0.79 整改完成，仅差定价——见 IOS-APPSTORE-SUBMIT-13）
 
 | 项 | 状态 |
 |----|------|
 | 工程 | ios/App（Capacitor），Bundle ID com.yandaoguoxue.app（ASC 实际注册 ID，2026-09-02 对齐；Android 包名 com.yandao.guoxue 不变），DEVELOPMENT_TEAM=WM586465ZD |
-| 就绪校验 | 33 项全通过（scripts/ios-build-readiness-verify.mjs） |
-| 云打包 | GitHub Actions ios-build.yml（Xcode 26.3 / iOS 26 SDK——ASC 2026 强制；签名失败自动降级未签名 xcarchive） |
-| 签名方式 | 手动签名：Apple Distribution .p12 + App Store profile 资产化入 Secrets（2026-09-02 经 ASC API 创建，有效期至 2027-09-02） |
-| Secrets | IOS_DIST_CERT_P12_B64 / IOS_DIST_P12_PASSWORD / IOS_APPSTORE_PROFILE_B64 / APP_STORE_CONNECT_KEY / APP_STORE_CONNECT_ISSUER_ID / ASC_KEY_ID |
-| API 认证 | ES256 JWT 实测有效（Admin 级：可列用户/建分发证书/建 profile） |
-| TestFlight | ✅ build 1.0(1) 上传成功，processingState=VALID（2026-09-02，run 33576919156） |
+| 云打包 | GitHub Actions ios-build.yml（Xcode 26.3 / iOS 26 SDK）；签名：Apple Distribution .p12 + App Store profile（Secrets 资产化） |
+| TestFlight | ✅ build 2（CURRENT_PROJECT_VERSION=2，v25.0.77）上传成功 VALID 且已关联 App Store 版本；出口合规 usesNonExemptEncryption=false |
+| v25.0.79 整改 | ✅ Web 源码 dcadb47+a1fec51：入口改名（手机号码解析/车牌号民俗解读）、全局吉凶清零（古籍数据除外）、黄历古籍定性（《钦定协纪辨方书》注解+吉神宜趋移除+十二时辰历注）、AI Prompt 红线+固定免责声明、隐私政策 5 收集项（罗盘位置不上传不存储）、社群标签整改；公网 Playwright 渲染级验证全过 |
+| 截图 | ✅ 8 张全部 COMPLETE：iPhone 6.5″（1242×2688）×4 + iPad Pro 12.9″（2048×2732）×4（iPad 为提审探测发现的必需项，本批补齐）；敏感词扫描 NONE |
+| 元数据 | ✅ 主要分类=教育 / 次要分类=参考（本批补设）；版权声明=不含第三方内容；审核备注=教育类应用文案 |
+| 提审勘误 | 旧端点 POST /v1/submissions 已废弃；现行：POST /v1/reviewSubmissions → reviewSubmissionItems → PATCH submitted=true；草稿 a8bea0c3 已建 |
+| 🔴 唯一卡点 | **App 免费定价未设置**——pricing API 需 Admin/Account Holder 角色（当前 Key UWQ354QP54 为 App Manager 无定价权限）；Owner Action：网页 appstoreconnect.apple.com/apps/6807592575/distribution/pricing 设 ¥0（30 秒）或提供 Admin Key → 跑 scripts/asc_submit_review2.js 完成提审 |
 | 历史误判修正 | 2026-09-01 所记「PLA 缺口/密钥角色不足」均不成立——真因是 bundle ID 未注册 + Xcode SDK 版本过低，均已修复 |
 
 ---
