@@ -88,7 +88,7 @@ export const PALACE_INTERPRETATIONS: Record<string, PalaceInterpretation> = {
   "迁移": {
     palace: "迁移",
     title: "迁移宫 · 外出之运",
-    summary: "迁移宫主外出运、远行吉凶、社交能力、在外发展之机遇。",
+    summary: "迁移宫主外出运、远行顺逆、社交能力、在外发展之机遇。",
     details: [
       "迁移宫旺，适合外出发展，有贵人相助；弱则宜守不宜攻。",
       "紫微、天府在迁移宫，外出有贵气，受人尊重；天机在迁移宫，常奔波在外。",

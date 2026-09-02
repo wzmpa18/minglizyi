@@ -199,7 +199,7 @@ export function calcXuankong(zuoShan: string, xiangShan: string, yun: number, fl
 
     // 旺山旺向：当运星到山到向
     if (ss === yun && xs === yun) {
-      jiXiong = "旺"; desc = "旺山旺向，丁财两旺，大吉之局";
+      jiXiong = "旺"; desc = "旺山旺向，丁财两旺，当运旺局";
     }
     // 双星会向：山星向星都在向方且为当运
     else if (i === xiangGong && ss === yun && xs === yun) {
@@ -207,15 +207,15 @@ export function calcXuankong(zuoShan: string, xiangShan: string, yun: number, fl
     }
     // 上山下水：山星到向、向星到山，损丁破财
     else if (i === xiangGong && ss === yun && i === zuoGong && xs === yun) {
-      jiXiong = "死"; desc = "上山下水，损丁破财，大凶之局";
+      jiXiong = "死"; desc = "上山下水，损丁破财，衰败之局";
     }
     // 吉星组合
     else if ([1, 6, 8, 9].includes(ss) && [1, 6, 8, 9].includes(xs)) {
-      jiXiong = "生"; desc = "吉星组合，主吉利旺运";
+      jiXiong = "生"; desc = "生气组合，主旺运";
     }
     // 凶星组合
     else if ([2, 5, 7].includes(ss) && [2, 5, 7].includes(xs)) {
-      jiXiong = "煞"; desc = "凶星组合，需防疾病是非";
+      jiXiong = "煞"; desc = "煞星组合，需防疾病是非";
     }
     // 三碧是非
     else if (ss === 3 || xs === 3) {
@@ -226,7 +226,7 @@ export function calcXuankong(zuoShan: string, xiangShan: string, yun: number, fl
       jiXiong = "退"; desc = "退气之宫，运势渐退";
     }
     else {
-      jiXiong = "平"; desc = "平宫，吉凶参半";
+      jiXiong = "平"; desc = "平宫，顺逆参半";
     }
 
     gongAnalysis[i] = { shanStar: ss, xiangStar: xs, jiXiong, desc };

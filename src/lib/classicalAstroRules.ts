@@ -54,7 +54,7 @@ export function getDignity(planetName: string, signIndex: number): DignityResult
   if (d.fall.includes(signIndex)) {
     return { kind: "fall", label: "入弱", note: "行星处困顿之地，性难舒展，宜借他星之力、以时势补不足。" };
   }
-  return { kind: null, label: "平", note: "不居庙旺，亦无陷弱，行星处平常之位，吉凶随相位与宫位而定。" };
+  return { kind: null, label: "平", note: "不居庙旺，亦无陷弱，行星处平常之位，属性随相位与宫位而定。" };
 }
 
 /** 尊贵体系说明（术语科普，后台可替换文案） */
@@ -70,7 +70,7 @@ export const DIGNITY_NOTES: Array<{ term: string; note: string }> = [
 export const CLASSICAL_JUDGEMENT_RULES: string[] = [
   "观星先察庙旺：行星入庙入旺者，其所主宫位之事得力；落陷入弱者，其事多经反复而后成。",
   "顺逆有别：行星顺行，其事循常而进；行星逆行，多主内省、延迟、旧事重提，非凶，乃势之回环。",
-  "相位定交涉：吉相位（六合、拱）主助力流通，紧张相位（刑、冲）主砥砺磨合；无绝对之吉凶，惟强弱与向背。",
+  "相位定交涉：吉相位（六合、拱）主助力流通，紧张相位（刑、冲）主砥砺磨合；无绝对之顺逆，惟强弱与向背。",
   "宫位定领域：行星所落宫位，为其力量施展之领域；宫主星飞入何宫，其事之因由系于彼处。",
   "命主为纲：上升星座之守护星为命主星，命主之庙旺落陷与所居宫位，为通盘判断之纲领。",
 ];

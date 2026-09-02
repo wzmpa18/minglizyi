@@ -1,4 +1,4 @@
-// 车牌号吉凶算法模块 - 零改动提取自 src/app/yixue/carplate/page.tsx
+// 车牌号数理解析算法模块 - 零改动提取自 src/app/yixue/carplate/page.tsx
 
 // ============================================================================
 // 常量
@@ -49,7 +49,7 @@ const SHULI_HINTS: Record<number, string> = {
   22:"秋草逢霜，怀才不遇",26:"变怪之数，波澜重叠",27:"欲望无止，自我强烈",28:"遭难之数，四海漂泊",
   34:"破家之数，见识浅少",36:"波澜重叠，沉浮万状",40:"智谋胆力，冒险投机",43:"散财破产，诸事不遂",
   44:"破家亡身，暗藏惨淡",46:"浪里淘金，须防劫财",53:"曲卷难星，外祥内苦",54:"石上栽花，多难悲运",
-  55:"善恶互见，吉中带凶",56:"浪里行舟，历尽艰辛",59:"寒蝉悲风，意志衰退",60:"无谋之人，漂泊不定",
+  55:"善恶互见，起伏互现",56:"浪里行舟，历尽艰辛",59:"寒蝉悲风，意志衰退",60:"无谋之人，漂泊不定",
   62:"衰败之数，内外不和",64:"骨肉分离，一生多难",66:"岩头走马，进退维谷",69:"坐立不安，常陷逆境",
   70:"残菊逢霜，寂寞悲凉",72:"劳苦相伴，未雨绸缪",74:"残花经霜，沉沦逆境",76:"倾覆离散，劳而无功",
   79:"云头望月，前途无光",
@@ -61,7 +61,7 @@ for (let i = 1; i <= 81; i++) {
   else jx = "半吉";
   SHULI_DESC[i] = {
     jx,
-    desc: SHULI_HINTS[i] || (jx === "吉" ? "吉祥之数，万事如意" : jx === "凶" ? "坎坷之数，需谨慎行事" : "吉凶参半，稳中求进"),
+    desc: SHULI_HINTS[i] || (jx === "吉" ? "吉祥之数，万事如意" : jx === "凶" ? "坎坷之数，需谨慎行事" : "数理中平，稳中求进"),
     hint: jx === "吉" ? "吉" : jx === "凶" ? "凶" : "中平",
   };
 }
@@ -94,7 +94,7 @@ interface CarplateResult {
   inauspiciousFound: string[];
   // 综合评分
   score: number;
-  grade: "大吉" | "吉" | "半吉" | "凶" | "大凶";
+  grade: "优选" | "良好" | "中等" | "欠佳" | "偏低";
   gradeDesc: string;
   // 数字寓意
   meanings: string[];
@@ -175,7 +175,7 @@ function analyzeCarplate(plate: string): CarplateResult | null {
 
   // 数字寓意
   const meanings: string[] = [];
-  if (digits.includes("8")) meanings.push('含8，谐音"发"，主财运兴旺');
+  if (digits.includes("8")) meanings.push('含8，谐音"发"，民俗寓意兴旺');
   if (digits.includes("9")) meanings.push('含9，谐音"久"，主长久稳定');
   if (digits.includes("6")) meanings.push('含6，谐音"顺"，主诸事顺利');
   if (digits.includes("0")) meanings.push("含0，圆满之象，主团圆完美");
@@ -211,13 +211,13 @@ function analyzeCarplate(plate: string): CarplateResult | null {
   // 限制范围
   score = Math.max(20, Math.min(100, score));
 
-  let grade: "大吉" | "吉" | "半吉" | "凶" | "大凶";
+  let grade: "优选" | "良好" | "中等" | "欠佳" | "偏低";
   let gradeDesc: string;
-  if (score >= 85) { grade = "大吉"; gradeDesc = "大吉车牌，出行平安，路路亨通"; }
-  else if (score >= 70) { grade = "吉"; gradeDesc = "吉利车牌，有助出行顺利，运势平稳"; }
-  else if (score >= 55) { grade = "半吉"; gradeDesc = "吉凶参半，谨慎驾驶可保平安"; }
-  else if (score >= 40) { grade = "凶"; gradeDesc = "车牌带凶，行车需格外小心，注意安全"; }
-  else { grade = "大凶"; gradeDesc = "车牌凶性明显，建议更换或化解"; }
+  if (score >= 85) { grade = "优选"; gradeDesc = "数理结构上佳，民俗视为顺遂之数"; }
+  else if (score >= 70) { grade = "良好"; gradeDesc = "数理结构良好，数字搭配协调"; }
+  else if (score >= 55) { grade = "中等"; gradeDesc = "数理表现中等，各有侧重，仅供参考"; }
+  else if (score >= 40) { grade = "欠佳"; gradeDesc = "数理结构欠佳，请注意行车安全"; }
+  else { grade = "偏低"; gradeDesc = "数理结构偏弱，请理性看待"; }
 
   return {
     plate: input,
@@ -235,11 +235,11 @@ function analyzeCarplate(plate: string): CarplateResult | null {
 
 function getScoreColor(grade: string): string {
   switch (grade) {
-    case "大吉": return "#ed4d49";
-    case "吉": return "#ed4d49";
-    case "半吉": return "#ffa500";
-    case "凶": return "#0074e4";
-    case "大凶": return "#666";
+    case "优选": return "#ed4d49";
+    case "良好": return "#ed4d49";
+    case "中等": return "#ffa500";
+    case "欠佳": return "#0074e4";
+    case "偏低": return "#666";
     default: return "#333";
   }
 }

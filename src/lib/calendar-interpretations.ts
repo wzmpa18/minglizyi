@@ -83,7 +83,7 @@ export function getCalendarGanzhiInterpretation(ganzhi: string): { title: string
       items: [{
         type: "ganzhi",
         title: ganzhi + "解读",
-        content: ganzhi + "为六十甲子之一，蕴含天地阴阳五行之变化。具体吉凶需结合八字整体判断。",
+        content: ganzhi + "为六十甲子之一，蕴含天地阴阳五行之变化。具体含义需结合八字整体研读。",
         source: "《协纪辨方书》",
       }],
     };

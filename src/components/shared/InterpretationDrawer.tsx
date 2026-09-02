@@ -47,7 +47,7 @@ export interface InterpretationDrawerProps {
 const DEFAULT_TYPE_COLORS: Record<string, { bg: string; fg: string; label: string }> = {
   source: { bg: "#fef3c7", fg: "#92400e", label: "原文出处" },
   summary: { bg: "#e0f2fe", fg: "#0369a1", label: "基础释义" },
-  jixiong: { bg: "#fef2f2", fg: "#dc2626", label: "吉凶定性" },
+  jixiong: { bg: "#fef2f2", fg: "#dc2626", label: "典籍定性" },
   usage: { bg: "#f0fdf4", fg: "#15803d", label: "使用说明" },
   ai: { bg: "#f3e8ff", fg: "#7B2FBE", label: "AI 参考" },
   default: { bg: "#f3f4f6", fg: "#374151", label: "解读" },
@@ -89,7 +89,7 @@ export default function InterpretationDrawer({
       setAiLoading(true); setAiError(false); setAiLocked(false);
       try {
         const result = await callAI({
-          systemPrompt: "你是专业易学大师。请补充解读：1.吉凶定性 2.使用说明 3.经典引述。标注「AI 参考」。",
+          systemPrompt: "你是传统文化研究者。请补充解读：1.名词释义与典籍出处 2.使用说明 3.古籍原文引述（注明出处典籍）。严禁输出吉凶祸福等结论性判断，仅作文史资料讲解。结尾标注「本内容收录古代传统文史资料，仅用于国学、历法学术研究」。标注「AI 参考」。",
           userPrompt: `工具：${aiEnhance!.toolName}\n${aiEnhance!.context}\n${aiEnhance!.existingClassic ? "已有：" + aiEnhance!.existingClassic : ""}`,
           cacheKey: `drawer_${aiEnhance!.toolName}_${aiEnhance!.context.slice(0, 60)}`,
         });

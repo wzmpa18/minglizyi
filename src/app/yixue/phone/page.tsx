@@ -151,9 +151,9 @@ export default function PhonePage() {
               <span>● 号段运营商分析</span>
               <span>● 数字能量八星解读</span>
               <span>● 五行数理分析</span>
-              <span>● 吉凶等级评分</span>
+              <span>● 数理等级评分</span>
               <span>● 适合行业建议</span>
-              <span>● 81数理吉凶</span>
+              <span>● 81数理解析</span>
             </div>
           </div>
 
@@ -162,7 +162,7 @@ export default function PhonePage() {
               <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" />
             </svg>
             <p className="mt-3 text-sm">输入11位手机号后点击"开始分析"</p>
-            <p className="mt-1 text-xs text-gray-300">数字能量学 · 八星解运</p>
+            <p className="mt-1 text-xs text-gray-300">数字能量学 · 民俗数理</p>
           </div>
         </div>
       )}
@@ -187,7 +187,7 @@ export default function PhonePage() {
               </div>
               <div className="text-center">
                 <div className="text-xl font-bold" style={{ color: getPhoneScoreColor(result.grade) }}>{result.grade}</div>
-                <div className="text-xs text-gray-500">吉凶等级</div>
+                <div className="text-xs text-gray-500">数理等级</div>
               </div>
             </div>
             <p className="mt-2 text-center text-xs text-gray-600">{result.gradeDesc}</p>
@@ -221,7 +221,7 @@ export default function PhonePage() {
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold" style={{ color: star.type === "吉" ? "#00a879" : "#ed4d49" }}>
-                        {star.name}（{star.type}星）{count > 0 && `×${count}`}
+                        {star.name}{count > 0 && ` ×${count}`}
                       </span>
                       <span className="text-[10px] text-gray-400">{star.pairs.slice(0, 4).join("/")}</span>
                     </div>
@@ -273,7 +273,7 @@ export default function PhonePage() {
             <div className="mb-1 flex items-center justify-between">
               <span className="text-xs font-bold" style={{ color: BRAND }}>81数理（尾号{result.tailCode}）</span>
               <span className={`text-xs font-bold rounded px-2 py-0.5 ${result.shuliJiXiong === "吉" ? "bg-emerald-100 text-emerald-700" : result.shuliJiXiong === "凶" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
-                第{result.shuliNum}数·{result.shuliJiXiong}
+                第{result.shuliNum}数
               </span>
             </div>
           </div>
@@ -314,7 +314,7 @@ export default function PhonePage() {
           {/* v19.6: AI深度解读 + 事情断法（付费功能） */}
           <EventDivinationPanel
             toolName="手机号码"
-            chartContext={`号码: ${result.phone}\n运营商: ${result.carrier}\n评分: ${result.score}\n等级: ${result.grade}\n五行: ${JSON.stringify(result.wuxingCount)}\n八星组合: ${result.baxingMatches.map(m => m.star.name).join(",")}\n81数理: 第${result.shuliNum}数·${result.shuliJiXiong}`}
+            chartContext={`号码: ${result.phone}\n运营商: ${result.carrier}\n评分: ${result.score}\n等级: ${result.grade}\n五行: ${JSON.stringify(result.wuxingCount)}\n八星组合: ${result.baxingMatches.map(m => m.star.name).join(",")}\n81数理: 第${result.shuliNum}数`}
             isPaidTool={true}
           />
         </div>
@@ -324,8 +324,8 @@ export default function PhonePage() {
       <div className="px-3 py-2">
         <ShareButton
           type="tool"
-          title="手机号吉凶分析结果"
-          description="手机号吉凶分析"
+          title="手机号码解析结果"
+          description="手机号码数理解析"
           variant="block"
           label="分享排盘结果"
           shareData={{
@@ -352,7 +352,7 @@ export default function PhonePage() {
       {/* 免责声明 */}
       <div className="mx-3 mt-4 rounded-lg border border-red-100 bg-red-50/50 p-3">
         <p className="text-xs leading-relaxed text-gray-500">
-          <strong>免责声明：</strong>本页面内容仅供传统文化参考，不构成任何决策建议。数字能量学为民间数字文化研究，手机号码吉凶与个人运势无科学关联，请理性看待。
+          <strong>免责声明：</strong>本页面内容仅供传统文化参考，不构成任何决策建议。数字能量学为民间数字文化研究，手机号数理与个人生活无科学关联，请理性看待。
         </p>
       </div>
       <div style={{ height: "20px" }} />

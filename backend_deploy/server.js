@@ -511,7 +511,7 @@ function buildDefaultAIAdminConfig() {
       { id: "ai_hehun", name: "合婚AI解读", category: "general_ai", enabled: true, price: 0, description: "合婚分析AI解读" },
       { id: "ai_tcm", name: "中医AI问诊", category: "general_ai", enabled: true, price: 0, description: "中医智能问诊辅助" },
       { id: "name_analysis", name: "姓名深度解析", category: "b_tool", enabled: true, price: 9.9, description: "基于姓名学典籍的深度文化解读" },
-      { id: "phone_number", name: "手机号吉凶解读", category: "b_tool", enabled: true, price: 18, description: "基于数字能量学的手机号码分析" },
+      { id: "phone_number", name: "手机号数理解读", category: "b_tool", enabled: true, price: 18, description: "基于数字能量学的手机号码分析" },
       { id: "license_plate", name: "车牌合号分析", category: "b_tool", enabled: true, price: 18, description: "基于数理的车牌号码文化参考" },
     ],
     quotas: { basic: { daily: 3, monthly: 50 }, monthly: { daily: 50, monthly: 500 }, quarterly: { daily: 50, monthly: 500 }, yearly: { daily: -1, monthly: -1 }, lifetime: { daily: -1, monthly: -1 } }, // v25.0.60 P1-7: 补 quarterly 档（原缺失导致季度会员配额配置不完整）
@@ -550,7 +550,7 @@ app.get('/api/admin/ai-config', adminAuth('ADMIN'), async (req, res) => {
           { id: "ai_hehun", name: "合婚AI解读", category: "general_ai", enabled: true, price: 0, description: "合婚分析AI解读" },
           { id: "ai_tcm", name: "中医AI问诊", category: "general_ai", enabled: true, price: 0, description: "中医智能问诊辅助" },
           { id: "name_analysis", name: "姓名深度解析", category: "b_tool", enabled: true, price: 9.9, description: "基于姓名学典籍的深度文化解读" },
-          { id: "phone_number", name: "手机号吉凶解读", category: "b_tool", enabled: true, price: 18, description: "基于数字能量学的手机号码分析" },
+          { id: "phone_number", name: "手机号数理解读", category: "b_tool", enabled: true, price: 18, description: "基于数字能量学的手机号码分析" },
           { id: "license_plate", name: "车牌合号分析", category: "b_tool", enabled: true, price: 18, description: "基于数理的车牌号码文化参考" },
         ],
         quotas: { basic: { daily: 3, monthly: 50 }, monthly: { daily: 50, monthly: 500 }, quarterly: { daily: 50, monthly: 500 }, yearly: { daily: -1, monthly: -1 }, lifetime: { daily: -1, monthly: -1 } }, // v25.0.60 P1-7: 补 quarterly 档（原缺失导致季度会员配额配置不完整）

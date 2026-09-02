@@ -36,7 +36,7 @@ import { PostToSquareButton } from "@/components/PostToSquareButton";
 // ============================================================================
 const INTERPRET_TYPE_COLORS: Record<string, { bg: string; fg: string; label: string }> = {
   palm: { bg: "#f3e8ff", fg: "#7B2FBE", label: "掌诀" },
-  jiXiong: { bg: "#fef2f2", fg: "#dc2626", label: "吉凶" },
+  jiXiong: { bg: "#fef2f2", fg: "#dc2626", label: "定性" },
   wuxing: { bg: "#eff6ff", fg: "#1e6fbf", label: "五行" },
   direction: { bg: "#f0faf0", fg: "#16a34a", label: "方位" },
 };

@@ -156,7 +156,7 @@ export default function CarplatePage() {
               className="flex-1 rounded-full py-2.5 text-sm font-semibold text-white transition-all active:scale-[0.98] disabled:opacity-50"
               style={{ backgroundColor: isValid && !loading ? BRAND : "#ccc" }}
             >
-              {loading ? "分析中..." : "开始测算"}
+              {loading ? "分析中..." : "开始分析"}
             </button>
           </div>
 
@@ -164,11 +164,11 @@ export default function CarplatePage() {
             <div className="text-xs font-bold" style={{ color: BRAND }}>分析内容</div>
             <div className="mt-1 grid grid-cols-2 gap-1 text-[10px] text-gray-600">
               <span>● 字母数字五行分析</span>
-              <span>● 81数理吉凶</span>
+              <span>● 81数理解析</span>
               <span>● 吉祥组合检测</span>
               <span>● 数字寓意解读</span>
               <span>● 五行平衡分析</span>
-              <span>● 综合吉凶评分</span>
+              <span>● 综合数理评分</span>
             </div>
           </div>
 
@@ -179,7 +179,7 @@ export default function CarplatePage() {
               <circle cx="5.5" cy="18.5" r="2.5" />
               <circle cx="18.5" cy="18.5" r="2.5" />
             </svg>
-            <p className="mt-3 text-sm">输入车牌号后点击"开始测算"</p>
+            <p className="mt-3 text-sm">输入车牌号后点击"开始分析"</p>
             <p className="mt-1 text-xs text-gray-300">车牌数理 · 五行平安</p>
           </div>
         </div>
@@ -202,7 +202,7 @@ export default function CarplatePage() {
               </div>
               <div className="text-center">
                 <div className="text-xl font-bold" style={{ color: getCarplateScoreColor(result.grade) }}>{result.grade}</div>
-                <div className="text-xs text-gray-500">吉凶等级</div>
+                <div className="text-xs text-gray-500">数理等级</div>
               </div>
             </div>
             <p className="mt-2 text-center text-xs text-gray-600">{result.gradeDesc}</p>
@@ -239,7 +239,7 @@ export default function CarplatePage() {
             <div className="mb-1 flex items-center justify-between">
               <span className="text-xs font-bold" style={{ color: BRAND }}>81数理（数字总和{result.totalSum}）</span>
               <span className={`text-xs font-bold rounded px-2 py-0.5 ${result.shuliJiXiong === "吉" ? "bg-emerald-100 text-emerald-700" : result.shuliJiXiong === "凶" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
-                第{result.shuliNum}数·{result.shuliJiXiong}
+                第{result.shuliNum}数
               </span>
             </div>
             <p className="mt-1 text-[11px] text-gray-600 leading-relaxed">{result.shuliDesc}</p>
@@ -287,7 +287,7 @@ export default function CarplatePage() {
           <div className="mb-3 rounded-lg border border-blue-100 bg-blue-50/50 p-2.5">
             <div className="mb-1 text-xs font-bold text-blue-700">行车平安提示</div>
             <p className="text-[10px] text-gray-600 leading-relaxed">
-              无论车牌吉凶，安全驾驶始终是第一位的。遵守交通规则、不酒驾、不疲劳驾驶、系好安全带，才是保平安的根本。
+              无论车牌数理，安全驾驶始终是第一位的。遵守交通规则、不酒驾、不疲劳驾驶、系好安全带，才是保平安的根本。
             </p>
           </div>
 
@@ -298,14 +298,14 @@ export default function CarplatePage() {
               className="flex-1 rounded-full py-2 text-sm font-semibold text-white transition-all active:scale-[0.98] disabled:opacity-50"
               style={{ backgroundColor: BRAND }}
             >
-              重新测算
+              重新分析
             </button>
           </div>
 
           {/* v19.6: AI深度解读 + 事情断法（付费功能） */}
           <EventDivinationPanel
             toolName="车牌号码"
-            chartContext={`车牌: ${result.province}${result.cityLetter}${result.numberPart}\n评分: ${result.score}\n等级: ${result.grade}\n五行: ${JSON.stringify(result.wuxingCount)}\n吉祥组合: ${result.auspiciousFound.join(",")}\n不利组合: ${result.inauspiciousFound.join(",")}\n81数理: 第${result.shuliNum}数·${result.shuliJiXiong}`}
+            chartContext={`车牌: ${result.province}${result.cityLetter}${result.numberPart}\n评分: ${result.score}\n等级: ${result.grade}\n五行: ${JSON.stringify(result.wuxingCount)}\n吉祥组合: ${result.auspiciousFound.join(",")}\n不利组合: ${result.inauspiciousFound.join(",")}\n81数理: 第${result.shuliNum}数`}
             isPaidTool={true}
           />
         </div>
@@ -315,8 +315,8 @@ export default function CarplatePage() {
       <div className="px-3 py-2">
         <ShareButton
           type="tool"
-          title="车牌号码吉凶"
-          description="车牌号码分析"
+          title="车牌号民俗解读"
+          description="车牌号民俗数理分析"
           variant="block"
           label="分享排盘结果"
           shareData={{
@@ -331,7 +331,7 @@ export default function CarplatePage() {
                 `五行：${Object.entries(result.wuxingCount || {}).map(([k, v]) => k + String(v)).join(" ")}`,
                 `吉祥组合：${result.auspiciousFound.join("、") || "无"}`,
                 `不利组合：${result.inauspiciousFound.join("、") || "无"}`,
-                `81数理：第${result.shuliNum}数·${result.shuliJiXiong}`,
+                `81数理：第${result.shuliNum}数`,
               ],
             },
           }}
@@ -343,7 +343,7 @@ export default function CarplatePage() {
       {/* 免责声明 */}
       <div className="mx-3 mt-4 rounded-lg border border-red-100 bg-red-50/50 p-3">
         <p className="text-xs leading-relaxed text-gray-500">
-          <strong>免责声明：</strong>本页面内容仅供传统文化参考，不构成任何决策建议。车牌号吉凶与行车安全无科学关联，请遵守交通法规，安全驾驶。
+          <strong>免责声明：</strong>本页面内容仅供传统文化参考，不构成任何决策建议。车牌号数理与行车安全无科学关联，请遵守交通法规，安全驾驶。
         </p>
       </div>
       <div style={{ height: "20px" }} />

@@ -51,15 +51,16 @@ export interface AIInterpretButtonProps {
   cacheKey?: string;
 }
 
-const DEFAULT_SYSTEM_PROMPT = `你是资深易学解读师。请基于提供的排盘数据进行专业解读。
+const DEFAULT_SYSTEM_PROMPT = `你是传统文化研究者。请基于提供的排盘数据进行文史讲解。
 要求：
 1. 内容结构清晰，分段落阐述
-2. 语言通俗易懂，避免过于玄乎的表述
-3. 避免绝对化、宿命论表述
-4. 不涉及医疗、投资、法律等违规建议
-5. 结尾必须标注：「以上内容仅供传统文化学习参考，不构成人生决策建议」`;
+2. 只作名词释义、历史背景、天文历法科普与古籍原文引述，注明典籍出处
+3. 严禁输出吉、凶、祸福、旺衰、财运、姻缘、运势等结论性判断与预测，不作人生决策建议
+4. 语言通俗易懂，避免绝对化、宿命论表述
+5. 不涉及医疗、投资、法律等违规建议
+6. 结尾必须标注：「本内容收录古代传统文史资料，仅用于国学、历法学术研究，不构成运势预测与人生决策建议」`;
 
-const DISCLAIMER = "\n\n以上内容仅供传统文化学习参考，不构成人生决策建议";
+const DISCLAIMER = "\n\n本内容收录古代传统文史资料，仅用于国学、历法学术研究，不构成运势预测与人生决策建议。";
 
 export default function AIInterpretButton({
   toolName,
@@ -292,7 +293,7 @@ export default function AIInterpretButton({
                 textAlign: "center",
               }}
             >
-              以上内容仅供传统文化学习参考，不构成人生决策建议
+              本内容收录古代传统文史资料，仅用于国学、历法学术研究，不构成运势预测与人生决策建议
             </div>
           )}
         </div>

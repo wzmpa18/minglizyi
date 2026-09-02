@@ -1,4 +1,4 @@
-﻿// 手机号吉凶算法模块 - 零改动提取自 src/app/yixue/phone/page.tsx
+﻿// 手机号数理解析算法模块 - 零改动提取自 src/app/yixue/phone/page.tsx
 
 // ============================================================================
 // 常量
@@ -38,7 +38,7 @@ const BAXING_STARS: BaXingStar[] = [
   {
     name: "天医", type: "吉",
     pairs: ["13", "31", "68", "86", "94", "49", "72", "27"],
-    meaning: "天医星主财运、感情、婚姻，是正财星。有天医数字者，财运亨通，易得意外之财，感情美满。",
+    meaning: "天医星在传统数理中主感情、婚姻，民俗视为吉庆之星，主和顺美满。",
     career: "适合金融、财务、医疗、养生行业",
     wealth: "正财旺，赚钱容易，财源广进",
     marriage: "感情顺利，婚姻美满，易得正缘",
@@ -67,7 +67,7 @@ const BAXING_STARS: BaXingStar[] = [
     pairs: ["11", "22", "33", "44", "55", "66", "77", "88", "99", "00"],
     meaning: "伏位星主稳定、蓄势、等待。有伏位数字者，性格稳重，做事踏实，但有时过于保守。",
     career: "适合稳定工作、研究、学术、技术",
-    wealth: "财运稳定，积少成多，需主动出击",
+    wealth: "收入平稳，积少成多，需主动出击",
     marriage: "感情稳定，但缺乏激情",
     health: "注意隐藏性疾病，定期体检",
   },
@@ -93,7 +93,7 @@ const BAXING_STARS: BaXingStar[] = [
     name: "五鬼", type: "凶",
     pairs: ["18", "81", "97", "79", "63", "36", "42", "24"],
     meaning: "五鬼星主变动、血光、暗财。有五鬼数字者，思想活跃但多变，容易遇突发变故，有暗财但不稳定。",
-    career: "适合策划、创意、宗教、玄学、贸易",
+    career: "适合策划、创意、文史、贸易",
     wealth: "暗财多，偏财旺，但来去不定",
     marriage: "感情多变，易有三角关系",
     health: "注意心脏、血液、意外灾祸",
@@ -127,7 +127,7 @@ const INDUSTRY_SUGGESTIONS: Record<string, string[]> = {
   "伏位": ["科研学术", "技术研发", "行政管理", "银行证券", "数据分析"],
   "六煞": ["美容美发", "餐饮服务", "服装时尚", "房产中介", "心理咨询"],
   "祸害": ["律师辩护", "销售口才", "教育培训", "媒体主持", "保险代理"],
-  "五鬼": ["策划创意", "宗教玄学", "互联网IT", "国际贸易", "侦探调查"],
+  "五鬼": ["策划创意", "文创研究", "互联网IT", "国际贸易", "侦探调查"],
   "绝命": ["金融投资", "军警执法", "体育竞技", "创业冒险", "外科医生"],
 };
 
@@ -160,7 +160,7 @@ interface PhoneAnalysisResult {
   shuliJiXiong: "吉" | "凶" | "半吉";
   // 综合评分
   score: number;
-  grade: "大吉" | "吉" | "半吉" | "凶" | "大凶";
+  grade: "优选" | "良好" | "中等" | "欠佳" | "偏低";
   gradeDesc: string;
   // 适合行业
   suitableIndustries: string[];
@@ -217,10 +217,10 @@ function analyzePhone(phone: string): PhoneAnalysisResult | null {
   const fiveCount = (digits.match(/5/g) || []).length;
   if (zeroCount > 0) specialNotes.push(`号码含${zeroCount}个0，0主空、灵，代表虚空、灵动，也主消散`);
   if (fiveCount > 0) specialNotes.push(`号码含${fiveCount}个5，5主土、中，代表桥梁、连接，有加强作用`);
-  if (digits.includes("00")) specialNotes.push("号码含连0，需注意财运空耗");
+  if (digits.includes("00")) specialNotes.push("号码含连0，民俗数理中主虚耗，仅供参考");
   if (digits.includes("55")) specialNotes.push("号码含连5，伏位能量加强，更稳定");
   // 检查后四位特殊组合
-  if (tailCode === "8888") specialNotes.push("尾号8888为大吉号，旺财旺运");
+  if (tailCode === "8888") specialNotes.push("尾号8888，民俗视为兴旺之数");
   if (tailCode === "9999") specialNotes.push("尾号9999为长久号，事业持久");
   if (tailCode === "6666") specialNotes.push("尾号6666为大顺号，万事顺利");
   if (/(.)\1{2,}/.test(tailCode)) specialNotes.push("尾号含豹子号，能量集中");
@@ -242,13 +242,13 @@ function analyzePhone(phone: string): PhoneAnalysisResult | null {
   // 限制范围
   score = Math.max(20, Math.min(100, score));
 
-  let grade: "大吉" | "吉" | "半吉" | "凶" | "大凶";
+  let grade: "优选" | "良好" | "中等" | "欠佳" | "偏低";
   let gradeDesc: string;
-  if (score >= 85) { grade = "大吉"; gradeDesc = "大吉之号，运势亨通，诸事顺遂"; }
-  else if (score >= 70) { grade = "吉"; gradeDesc = "吉号，整体运势良好，可助事业财运"; }
-  else if (score >= 55) { grade = "半吉"; gradeDesc = "吉凶参半，需注意扬长避短"; }
-  else if (score >= 40) { grade = "凶"; gradeDesc = "号码带凶，需谨慎使用，建议化解"; }
-  else { grade = "大凶"; gradeDesc = "号码凶性较强，建议更换"; }
+  if (score >= 85) { grade = "优选"; gradeDesc = "数理结构上佳，五行配置均衡"; }
+  else if (score >= 70) { grade = "良好"; gradeDesc = "数理结构良好，数字搭配协调"; }
+  else if (score >= 55) { grade = "中等"; gradeDesc = "数理表现中等，各有侧重，仅供参考"; }
+  else if (score >= 40) { grade = "欠佳"; gradeDesc = "数理结构欠佳，民俗数理仅供参考"; }
+  else { grade = "偏低"; gradeDesc = "数理结构偏弱，请理性看待"; }
 
   // 适合行业
   const suitableIndustries: string[] = [];
@@ -284,11 +284,11 @@ function analyzePhone(phone: string): PhoneAnalysisResult | null {
 
 function getScoreColor(grade: string): string {
   switch (grade) {
-    case "大吉": return "#ed4d49";
-    case "吉": return "#ed4d49";
-    case "半吉": return "#ffa500";
-    case "凶": return "#0074e4";
-    case "大凶": return "#666";
+    case "优选": return "#ed4d49";
+    case "良好": return "#ed4d49";
+    case "中等": return "#ffa500";
+    case "欠佳": return "#0074e4";
+    case "偏低": return "#666";
     default: return "#333";
   }
 }

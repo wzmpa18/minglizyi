@@ -7,7 +7,7 @@
 
 export const FEED_TAGS = [
   "八字", "奇门", "六爻", "紫微", "风水",
-  "中医", "感情", "事业", "财运", "生活", "国学杂谈",
+  "中医", "感情", "事业", "历法文化", "生活", "国学杂谈",
 ] as const;
 
 export type FeedTag = (typeof FEED_TAGS)[number];
@@ -31,8 +31,8 @@ export const TOOL_TAG_MAP: Record<string, FeedTag> = {
   "二十四节气": "生活",
   "姓名解析": "生活",
   "智能起名": "生活",
-  "手机号吉凶": "生活",
-  "车牌号吉凶": "生活",
+  "手机号码解析": "生活",
+  "车牌号民俗解读": "生活",
   "周公解梦": "生活",
   "神煞": "八字",
   "干支": "八字",
@@ -69,6 +69,7 @@ export const TAG_COLORS: Record<string, { bg: string; fg: string }> = {
   "感情": { bg: "#fde8f1", fg: "#c2185b" },
   "事业": { bg: "#eaf7e8", fg: "#2e7d32" },
   "财运": { bg: "#fdf6e0", fg: "#9a7d0a" },
+  "历法文化": { bg: "#fdf6e0", fg: "#9a7d0a" },
   "生活": { bg: "#eef1f4", fg: "#566573" },
   "国学杂谈": { bg: "#f0ebe4", fg: "#7d6608" },
 };

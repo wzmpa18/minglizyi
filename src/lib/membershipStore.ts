@@ -33,7 +33,7 @@ export const B_TOOLS: Record<BToolType, BToolConfig> = {
   },
   phone_number: {
     type: "phone_number",
-    name: "手机号吉凶解读",
+    name: "手机号数理解读",
     price: 9.9,
     description: "基于数字能量学的手机号码分析",
   },

@@ -1149,7 +1149,7 @@ export default function LijiPage() {
       {/* 免责声明 */}
       <div className="mx-3 mt-4 rounded-lg border border-red-100 bg-red-50/50 p-3">
         <p className="text-xs leading-relaxed text-gray-500">
-          <strong>免责声明：</strong>本工具仅提供户型图立极定位与方位标注功能，不输出吉凶判断、财位或化解建议，
+          <strong>免责声明：</strong>本工具仅提供户型图立极定位与方位标注功能，不作玄学论断、财位或化解建议，
           不构成任何决策依据。定向精度取决于图纸比例与对齐操作的严谨程度，重要堪峦作业请以现场实测复核。
         </p>
         <p className="mt-1 text-xs text-gray-400">

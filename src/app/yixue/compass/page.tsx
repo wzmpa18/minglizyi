@@ -725,7 +725,7 @@ export default function CompassPage() {
             </a>
           )}
           <p className="mt-1.5 text-[10px] leading-relaxed text-gray-400">
-            读数位＝盘面顶点（天心十道所指）；分金「旺相/空亡」等仅为通行分类名称，非吉凶断语。
+            读数位＝盘面顶点（天心十道所指）；分金「旺相/空亡」等仅为通行分类名称，非玄学断语。
           </p>
         </div>
       )}
@@ -783,7 +783,7 @@ export default function CompassPage() {
       {/* 免责声明 */}
       <div className="mx-3 mt-4 rounded-lg border border-red-100 bg-red-50/50 p-3">
         <p className="text-xs leading-relaxed text-gray-500">
-          <strong>免责声明：</strong>本页面内容仅供传统文化学习与参考，不构成任何决策建议。电子罗盘精度受设备传感器质量、校准状态与周边铁磁环境影响，重要堪舆测量建议以专业罗盘复合校验。坐向释义为通行方位口径，不构成吉凶断语。
+          <strong>免责声明：</strong>本页面内容仅供传统文化学习与参考，不构成任何决策建议。电子罗盘精度受设备传感器质量、校准状态与周边铁磁环境影响，重要堪舆测量建议以专业罗盘复合校验。坐向释义为通行方位口径，不作玄学论断。
         </p>
         <p className="mt-1 text-xs text-gray-400">
           算法依据：NOAA/NCEI《World Magnetic Model 2025 Technical Report》（公共领域）；二十四山通行口径

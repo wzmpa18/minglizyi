@@ -484,19 +484,19 @@ export default function BatchNumberMatching({ toolType }: BatchNumberMatchingPro
     const top3Text = matchResult.top3
       .map(
         (r, i) =>
-          `第${i + 1}名: ${r.number} (匹配度${r.matchScore}, 吉凶${r.auspiciousScore}, 综合${r.totalScore}, 等级${r.matchLevel})\n  推荐理由: ${r.recommendation}`
+          `第${i + 1}名: ${r.number} (匹配度${r.matchScore}, 数理${r.auspiciousScore}, 综合${r.totalScore}, 等级${r.matchLevel})\n  推荐理由: ${r.recommendation}`
       )
       .join("\n");
 
-    const systemPrompt = `你是资深易学数字能量分析专家，精通八字五行理论与数字能量学。请基于用户的八字五行分析和号码匹配结果，生成一份深度的号码选择分析报告。
+    const systemPrompt = `你是传统文化研究者，熟悉八字五行理论与传统数理文化。请基于用户的八字五行分析和号码匹配结果，生成一份数理文化讲解报告。
 
 报告要求：
-1. 开头简要总结用户八字五行特征（日主、喜用神、忌神、身强身弱）
-2. 详细分析TOP3推荐号码的五行优势与推荐理由
-3. 对全部号码的整体格局做综合评价
-4. 给出号码选择的整体建议和注意事项
+1. 开头简要说明用户八字五行特征（日主、喜用神、忌神、身强身弱）的术语含义
+2. 讲解TOP3号码的五行配置与数理结构特点（仅作数理结构描述）
+3. 对全部号码的整体格局做综合描述
+4. 严禁输出吉、凶、祸福、财运、运势等结论性判断，不作号码选择的决策建议
 5. 语言专业但不晦涩，适合普通用户阅读理解
-6. 结尾必须标注：「以上内容仅供传统文化学习参考，不构成人生决策建议」`;
+6. 结尾必须标注：「本内容收录古代传统文史资料，仅用于国学、历法学术研究，不构成运势预测与人生决策建议」`;
 
     const userPrompt = `【八字五行分析】
 日主：${bazi.dayMaster}（${bazi.dayMasterWuxing}）
@@ -1233,7 +1233,7 @@ ${numberLabel}类型：${isPhone ? "手机号" : "车牌号"}
                         </th>
                         <th className="px-2 py-2 text-left">{numberLabel}</th>
                         <th className="px-2 py-2 text-center">匹配度</th>
-                        <th className="px-2 py-2 text-center">吉凶</th>
+                        <th className="px-2 py-2 text-center">数理</th>
                         <th className="px-2 py-2 text-center">综合</th>
                         <th className="px-2 py-2 text-center rounded-r-lg">
                           等级
@@ -1495,7 +1495,7 @@ function TopCard({
       {/* 评分 */}
       <div className="mt-2.5 grid grid-cols-3 gap-2">
         <ScoreBar label="匹配度" value={item.matchScore} />
-        <ScoreBar label="吉凶" value={item.auspiciousScore} />
+        <ScoreBar label="数理" value={item.auspiciousScore} />
         <ScoreBar label="综合" value={item.totalScore} highlight />
       </div>
 

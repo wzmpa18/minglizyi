@@ -48,16 +48,16 @@ interface EventDivinationPanelProps {
   isPaidTool?: boolean; // 号码/车牌等需要付费的工具
 }
 
-const DISCLAIMER = "\n\n以上内容仅供传统文化学习参考，不构成人生决策建议";
+const DISCLAIMER = "\n\n本内容收录古代传统文史资料，仅用于国学、历法学术研究，不构成运势预测与人生决策建议。";
 
-// 快捷问题模板
+// 快捷问题模板（v25.0.79 合规整改：仅学习型问题，不作运势/决策询问）
 const QUICK_QUESTIONS = [
-  "近期事业运势如何？",
-  "今年适合投资吗？",
-  "健康状况需要注意什么？",
-  "感情婚姻运势如何？",
-  "近三个月财运怎样？",
-  "适合创业还是守业？",
+  "这一盘面的核心术语是什么意思？",
+  "此盘结构的历史源流如何？",
+  "涉及哪些典籍原文与出处？",
+  "盘面结构有哪些特点？",
+  "相关的天文历法背景是什么？",
+  "初学者应从哪些概念入手？",
 ];
 
 export default function EventDivinationPanel({
@@ -313,7 +313,7 @@ export default function EventDivinationPanel({
               cursor: "pointer",
             }}
           >
-            🔮 事情断法
+            🔮 事项解读
           </button>
           <button
             onClick={() => { if (!requireLogin()) return; setActiveMode("deep"); setContent(""); setError(""); handleDeepInterpretation(); }}
@@ -422,7 +422,7 @@ export default function EventDivinationPanel({
                 opacity: loading || !userQuestion.trim() ? 0.6 : 1,
               }}
             >
-              {loading ? "🤖 AI断事中..." : "🔮 开始断事"}
+              {loading ? "🤖 AI解读中..." : "🔮 开始解读"}
             </button>
           </div>
         )}
@@ -460,7 +460,7 @@ export default function EventDivinationPanel({
             </div>
             {content && !loading && (
               <div style={{ padding: "6px 12px", background: "#fafafa", borderTop: "1px solid #eee", fontSize: "10px", color: "#999", textAlign: "center" }}>
-                以上内容仅供传统文化学习参考，不构成人生决策建议
+                本内容收录古代传统文史资料，仅用于国学、历法学术研究，不构成运势预测与人生决策建议
               </div>
             )}
           </div>
@@ -492,7 +492,7 @@ export default function EventDivinationPanel({
                   后续深度内容已锁定
                 </div>
                 <div style={{ fontSize: "11px", color: "#999", marginTop: "2px" }}>
-                  包含流月流日、深度详批、专项断法等完整解读
+                  包含流月流日、深度详批、专项解读等完整内容
                 </div>
               </div>
               {/* 两个解锁按钮 */}
@@ -601,7 +601,7 @@ export default function EventDivinationPanel({
                       )}
                     </div>
                     <div style={{ fontSize: "11px", color: "#999", marginTop: "2px" }}>
-                      {plan.desc} · {plan.duration}
+                      {plan.duration}
                     </div>
                   </div>
                   <div style={{ textAlign: "right" }}>
@@ -700,7 +700,7 @@ export default function EventDivinationPanel({
                 </div>
                 <div>
                   <div style={{ fontSize: "14px", fontWeight: "bold", color: "#333" }}>完整深度解读</div>
-                  <div style={{ fontSize: "11px", color: "#999" }}>流月流日 + 深度详批 + 专项断法</div>
+                  <div style={{ fontSize: "11px", color: "#999" }}>流月流日 + 深度详批 + 专项解读</div>
                 </div>
               </div>
 

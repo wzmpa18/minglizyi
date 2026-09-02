@@ -1360,7 +1360,7 @@ export default function QimingPage() {
             </div>
             <div className="mt-1 grid grid-cols-2 gap-1 text-[10px] text-gray-600">
               <span>● 五格数理最大化</span>
-              <span>● 81数理吉凶筛选</span>
+              <span>● 81数理筛选</span>
               <span>● 五行平衡搭配</span>
               <span>● 生肖喜用字匹配</span>
               <span>● 男女用字区分</span>

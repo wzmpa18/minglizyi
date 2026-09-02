@@ -393,6 +393,11 @@ export default function HuangliPage() {
           </div>
         )}
 
+        {/* ===== 古籍来源注解（黄历定性：传统历书古籍资料展示） ===== */}
+        <div className="mb-2.5 rounded-[10px] bg-amber-50 px-3.5 py-2.5 text-center text-[13px] font-medium leading-relaxed text-amber-700 border border-amber-100">
+          📜 内容整理自《钦定协纪辨方书》等传统历书古籍，仅供民俗文化学习参考
+        </div>
+
         {/* ===== 当日宜忌 ===== */}
         <div className="mb-2.5 grid grid-cols-2 gap-2.5">
           <div className="rounded-[10px] border border-green-100 bg-white p-3.5 shadow-sm">
@@ -541,9 +546,9 @@ export default function HuangliPage() {
           </div>
         </div>
 
-        {/* ===== 十二时辰吉凶 ===== */}
+        {/* ===== 十二时辰历注 ===== */}
         <div className="mb-2.5 rounded-[10px] bg-white p-3.5 shadow-sm">
-          <div className="mb-2 text-center text-sm font-semibold text-gray-600">十二时辰吉凶 · 点击查看详解</div>
+          <div className="mb-2 text-center text-sm font-semibold text-gray-600">十二时辰历注 · 点击查看详解</div>
           <div className="grid grid-cols-4 gap-1.5">
             {shichenData.map((sc) => (
               <div
@@ -609,7 +614,7 @@ export default function HuangliPage() {
         <div className="rounded-lg bg-[#f9f9f9] p-3 text-center border border-gray-200">
           <p className="mb-1 text-xs font-semibold text-gray-400">免责声明</p>
           <p className="text-[11px] leading-relaxed text-gray-400">
-            宜忌、冲煞、神煞等内容整理自传统择日典籍，内容仅供文化娱乐参考，不构成任何专业建议或决策依据。请理性看待，切勿迷信。
+            宜忌、冲煞、神煞等历注内容整理自《钦定协纪辨方书》等传统历书古籍，仅供民俗文化学习参考，不构成任何专业建议或决策依据。请理性看待，切勿迷信。
           </p>
         </div>
       </div>

@@ -292,11 +292,6 @@ export default function HomePage(){
             </div>
           </div>
 
-          <Collapse title="吉神宜趋 / 凶煞宜忌">
-            <div className="mb-2"><div className="mb-1 text-xs font-semibold" style={{color:"#00a879"}}>吉神宜趋</div><div className="flex flex-wrap gap-1">{today.jiShen.slice(0,15).map((s,i)=><span key={i} className="rounded px-1.5 py-0.5 text-[11px]" style={{backgroundColor:"#e6f7f0",color:"#00a879"}}>{s}</span>)}</div></div>
-            <div><div className="mb-1 text-xs font-semibold" style={{color:"#ed4d49"}}>凶煞宜忌</div><div className="flex flex-wrap gap-1">{today.xiongSha.slice(0,15).map((s,i)=><span key={i} className="rounded px-1.5 py-0.5 text-[11px]" style={{backgroundColor:"#fde8e8",color:"#ed4d49"}}>{s}</span>)}</div></div>
-          </Collapse>
-
           <Collapse title="节气与物候">
             <div className="text-xs text-gray-700 space-y-1">
               <div>当前节气：<span className="font-semibold" style={{color:BRAND}}>{today.jieqi}</span></div>
@@ -331,7 +326,7 @@ export default function HomePage(){
               </div>
             ):(
               <div className="text-xs text-gray-500">
-                <div className="mb-2">设置您的八字日干，可获得今日个性化养生、出行、求财建议</div>
+                <div className="mb-2">设置您的八字日干，可获得今日个性化养生与出行参考</div>
                 <button onClick={()=>setShowBaziInput(true)} className="rounded-lg px-3 py-1.5 text-white text-xs" style={{backgroundColor:BRAND}}>设置我的八字</button>
               </div>
             )}
@@ -342,20 +337,22 @@ export default function HomePage(){
               <div className="mb-1 font-semibold" style={{color:BRAND}}>▶ {today.pillars[0].ganzhi}年诗</div>
               <div className="pl-3">{today.dimu.shi}</div>
               <div className="pl-3">{today.dimu.ji}</div>
-              <div className="mt-2 text-[10px] text-gray-400">地母经年占预测农事收成与年景，仅供参考</div>
+              <div className="mt-2 text-[10px] text-gray-400">地母经为古代农事文献，内容仅作文史资料参考</div>
             </div>
           </Collapse>
 
-          {/* 宜忌放最底 */}
+          {/* 每日黄历事类（民俗中性表述，详细历注见老黄历工具） */}
           <div className="rounded-xl p-3" style={{backgroundColor:"#fafafa"}}>
+            <div className="mb-2 text-xs text-gray-500">今日黄历事类 · 民俗参考</div>
             <div className="mb-2 flex flex-wrap gap-1.5">
-              <span className="rounded px-1.5 py-0.5 text-xs font-bold text-white" style={{backgroundColor:"#00a879"}}>宜</span>
-              {today.yi.length>0?today.yi.map((y,i)=><span key={i} className="rounded px-1.5 py-0.5 text-xs" style={{backgroundColor:"#e6f7f0",color:"#00a879"}}>{y}</span>):<span className="text-xs text-gray-400">诸事不宜</span>}
+              <span className="rounded px-1.5 py-0.5 text-xs font-bold text-white" style={{backgroundColor:"#00a879"}}>适合</span>
+              {today.yi.length>0?today.yi.map((y,i)=><span key={i} className="rounded px-1.5 py-0.5 text-xs" style={{backgroundColor:"#e6f7f0",color:"#00a879"}}>{y}</span>):<span className="text-xs text-gray-400">无特别标注</span>}
             </div>
             <div className="flex flex-wrap gap-1.5">
-              <span className="rounded px-1.5 py-0.5 text-xs font-bold text-white" style={{backgroundColor:"#ed4d49"}}>忌</span>
+              <span className="rounded px-1.5 py-0.5 text-xs font-bold text-white" style={{backgroundColor:"#ed4d49"}}>避开</span>
               {today.ji.length>0?today.ji.map((j,i)=><span key={i} className="rounded px-1.5 py-0.5 text-xs" style={{backgroundColor:"#fde8e8",color:"#ed4d49"}}>{j}</span>):<span className="text-xs text-gray-400">无</span>}
             </div>
+            <div className="mt-2 text-center text-[13px] leading-relaxed" style={{color:"#8a6d1a"}}>📜 内容整理自《钦定协纪辨方书》等传统历书古籍，仅供民俗文化学习参考</div>
           </div>
 
           <IcpFooter />

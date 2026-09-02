@@ -986,7 +986,7 @@ export default function ZiweiPage() {
         return `生年干支：${result.heavenlyStem}${result.earthlyBranch}\n命宫：${result.earthlyBranchOfSoulPalace}\n身宫：${result.earthlyBranchOfBodyPalace}\n五行局：${result.fiveElementsClass}\n四化：${sihua}\n十二宫星曜分布：\n${palaceSummary}`;
       })();
 
-      const userPrompt = `请对以下紫微斗数命盘进行${scopeText}：\n${baseContext}\n\n请从性格天赋、事业财运、感情婚恋、健康注意等方面进行分析。`;
+      const userPrompt = `请对以下紫微斗数命盘进行${scopeText}：\n${baseContext}\n\n请围绕：核心术语释义、宫位与星曜的历史源流、典籍原文与出处（如《紫微斗数全书》）等方面进行文史讲解，不作吉凶祸福与运势预测。`;
 
       const aiResult = await callAI({
         systemPrompt,
@@ -996,17 +996,17 @@ export default function ZiweiPage() {
 
       if (aiResult.success) {
         let text = aiResult.content || "";
-        if (!text.includes("仅供传统文化学习参考")) {
-          text += "\n\n以上内容仅供传统文化学习参考，不构成人生决策建议";
+        if (!text.includes("仅用于国学、历法学术研究")) {
+          text += "\n\n本内容收录古代传统文史资料，仅用于国学、历法学术研究，不构成运势预测与人生决策建议。";
         }
         setAiContent(text);
         // v19.6: AI调用成功后增加使用次数
         incrementAIUsage();
       } else {
-        setAiContent("AI解读服务暂时不可用，请稍后重试。\n\n以上内容仅供传统文化学习参考，不构成人生决策建议");
+        setAiContent("AI解读服务暂时不可用，请稍后重试。\n\n本内容收录古代传统文史资料，仅用于国学、历法学术研究，不构成运势预测与人生决策建议。");
       }
     } catch {
-      setAiContent("AI解读服务暂时不可用，请稍后重试。\n\n以上内容仅供传统文化学习参考，不构成人生决策建议");
+      setAiContent("AI解读服务暂时不可用，请稍后重试。\n\n本内容收录古代传统文史资料，仅用于国学、历法学术研究，不构成运势预测与人生决策建议。");
     } finally {
       setAiInterpreting(false);
     }
@@ -2214,7 +2214,7 @@ export default function ZiweiPage() {
 
           {/* ---- 免责声明 ---- */}
           <div className="rounded-lg px-3 py-2.5 text-xs mb-2" style={{ backgroundColor: BRAND_PURPLE_BG, color: BRAND_PURPLE_LIGHT }}>
-            以上内容仅供传统文化学习参考，不构成人生决策建议。命运掌握在自己手中，积极面对生活每一天。
+            本内容收录古代传统文史资料，仅用于国学、历法学术研究，不构成运势预测与人生决策建议。命运掌握在自己手中，积极面对生活每一天。
           </div>
 
           {/* ---- 底部品牌 ---- */}

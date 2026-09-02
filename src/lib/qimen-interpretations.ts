@@ -127,7 +127,7 @@ export const JIUXING_INTERPRETATIONS: Record<string, QimenStarInterpretation> = 
     summary: "天芮星与天禽星同宫于坤二，合称芮禽。天芮主疾病，天禽主中正。",
     details: [
       "天芮星主疾病灾殃，天禽星主中正平和。",
-      "二星同宫，吉凶参半，以天芮为主，以天禽为辅。",
+      "二星同宫，顺逆参半，以天芮为主，以天禽为辅。",
       "宜求医、修道、祭祀，不宜征战、嫁娶。",
       "天禽星寄于坤二宫，故坤宫为后天八卦之至重。"
     ],
@@ -414,7 +414,7 @@ export const JIUGONG_INTERPRETATIONS: Record<string, QimenPalaceInterpretation> 
       "中宫为太极之位，土德中和，统御四方。",
       "中宫天禽星居之，主公正廉洁，为统帅之星。",
       "中宫不单独排盘，寄于坤二宫，与天芮同宫。",
-      "中宫无门，寄死门于坤宫，故中宫吉凶寓于坤宫。"
+      "中宫无门，寄死门于坤宫，故中宫属性寓于坤宫。"
     ],
     source: "《奇门遁甲统宗·九宫论》"
   },

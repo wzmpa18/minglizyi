@@ -931,7 +931,7 @@ export default function NameAnalysisPage() {
             </div>
             <div className="mt-1 grid grid-cols-2 gap-1 text-[10px] text-gray-600">
               <span>● 五格数理分析</span>
-              <span>● 81数理吉凶判定</span>
+              <span>● 81数理判读</span>
               <span>● 八字排盘定喜用神</span>
               <span>● 喜用神五行匹配</span>
               <span>● 五行平衡分析</span>

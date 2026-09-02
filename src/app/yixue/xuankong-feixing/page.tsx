@@ -465,7 +465,7 @@ export default function XuankongFeixingPage() {
 
           {/* 各宫详解 */}
           <div className="mt-4 space-y-2">
-            <div className="text-sm font-bold" style={{ color: BRAND }}>各宫飞星组合吉凶</div>
+            <div className="text-sm font-bold" style={{ color: BRAND }}>各宫飞星组合</div>
             {LUOSHU_ORDER.map((gong) => {
               const analysis = result.gongAnalysis[gong];
               const zmd = result.zhaiMingData[gong];
@@ -492,7 +492,7 @@ export default function XuankongFeixingPage() {
 
           {/* 九星说明 */}
           <div className="mt-3 rounded-lg border border-gray-200 p-2.5">
-            <div className="mb-1.5 text-xs font-bold" style={{ color: BRAND }}>九星吉凶释义</div>
+            <div className="mb-1.5 text-xs font-bold" style={{ color: BRAND }}>九星释义</div>
             <div className="grid grid-cols-3 gap-1 text-[10px]">
               {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
                 <div key={n} className="flex items-center gap-1">
@@ -521,7 +521,7 @@ export default function XuankongFeixingPage() {
           {/* AI智能解读 */}
           <EventDivinationPanel
             toolName="玄空飞星"
-            chartContext={`元运: ${result.yunName}\n建造年: ${buildYear}年\n坐山: ${result.zuoShan}(${result.zuoInfo.direction}) 朝向: ${result.xiangShan}(${result.xiangInfo.direction})\n楼层: ${floor}楼(${result.floorWuxing})\n山星${result.shanShun ? "顺飞" : "逆飞"}\n各宫飞星吉凶: ${LUOSHU_ORDER.map(g => GONG_NAMES[g].name+g+"宫 山"+result.zhaiMingData[g].shan+"向"+result.zhaiMingData[g].xiang+"运"+result.zhaiMingData[g].yun+"("+result.gongAnalysis[g].jiXiong+")").join("; ")}`}
+            chartContext={`元运: ${result.yunName}\n建造年: ${buildYear}年\n坐山: ${result.zuoShan}(${result.zuoInfo.direction}) 朝向: ${result.xiangShan}(${result.xiangInfo.direction})\n楼层: ${floor}楼(${result.floorWuxing})\n山星${result.shanShun ? "顺飞" : "逆飞"}\n各宫飞星组合: ${LUOSHU_ORDER.map(g => GONG_NAMES[g].name+g+"宫 山"+result.zhaiMingData[g].shan+"向"+result.zhaiMingData[g].xiang+"运"+result.zhaiMingData[g].yun+"("+result.gongAnalysis[g].jiXiong+")").join("; ")}`}
             isPaidTool={false}
           />
         </div>
@@ -546,7 +546,7 @@ export default function XuankongFeixingPage() {
                 `坐山：${result.zuoShan}（${result.zuoInfo.direction}） 朝向：${result.xiangShan}（${result.xiangInfo.direction}）`,
                 `楼层：${floor}楼（${result.floorWuxing}）`,
                 `山星${result.shanShun ? "顺飞" : "逆飞"}`,
-                `各宫飞星吉凶：${LUOSHU_ORDER.map(g => GONG_NAMES[g].name+g+"宫 山"+result.zhaiMingData[g].shan+"向"+result.zhaiMingData[g].xiang+"运"+result.zhaiMingData[g].yun+"("+result.gongAnalysis[g].jiXiong+")").join("；")}`,
+                `各宫飞星组合：${LUOSHU_ORDER.map(g => GONG_NAMES[g].name+g+"宫 山"+result.zhaiMingData[g].shan+"向"+result.zhaiMingData[g].xiang+"运"+result.zhaiMingData[g].yun+"("+result.gongAnalysis[g].jiXiong+")").join("；")}`,
               ],
             },
           }}

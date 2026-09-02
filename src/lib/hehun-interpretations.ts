@@ -53,7 +53,7 @@ export const GRADE_DETAILS: Record<string, GradeDetail> = {
     title: "中等婚 · 中等",
     summary: "八字有合有冲，五行互补与相克并存。此乃中等婚配，婚姻平淡，需互谅互让，方能长久。",
     details: [
-      "中等婚者，八字半合半冲，吉凶参半。",
+      "中等婚者，八字半合半冲，顺逆参半。",
       "夫妻需多加沟通，互相包容理解。",
       "事业财运平稳，但需共同努力。",
       "子女缘一般，晚年需多加调养。"
@@ -145,7 +145,7 @@ export const SHENGXIAO_PAIR_DETAILS: Record<string, ShengxiaoPairDetail> = {
     pair: "一般",
     summary: "生肖配对无冲无合，关系平淡，需看八字整体配合。",
     details: [
-      "生肖配对一般，无特别吉凶。",
+      "生肖配对一般，无特别冲合。",
       "需结合八字整体分析，不可仅凭生肖判断。",
       "婚姻关系主要看双方八字五行配合。"
     ],

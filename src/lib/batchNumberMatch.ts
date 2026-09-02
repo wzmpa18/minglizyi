@@ -241,7 +241,7 @@ export function matchNumberWithBazi(
 
   matchScore = Math.max(10, Math.min(100, matchScore));
 
-  // 综合评分 = 匹配度 * 0.6 + 吉凶 * 0.4
+  // 综合评分 = 匹配度 * 0.6 + 数理 * 0.4
   const totalScore = Math.round(matchScore * 0.6 + auspiciousScore * 0.4);
 
   // 匹配等级
@@ -255,14 +255,14 @@ export function matchNumberWithBazi(
   const analysis = `号码五行：${wuxingBalance}。` +
     (favorableHits.length > 0 ? `命中喜用神【${favorableHits.join("、")}】，` : "未命中喜用神，") +
     (unfavorableHits.length > 0 ? `含忌神【${unfavorableHits.join("、")}】，` : "") +
-    `吉凶评分${auspiciousScore}，匹配度${matchScore}。`;
+    `数理评分${auspiciousScore}，匹配度${matchScore}。`;
 
   // 推荐理由
   let recommendation = "";
   if (matchLevel === "极佳") {
-    recommendation = "强烈推荐！此号码五行与八字高度契合，吉凶评分优秀，是最佳选择。";
+    recommendation = "强烈推荐！此号码五行与八字高度契合，数理评分优秀，是最佳选择。";
   } else if (matchLevel === "优良") {
-    recommendation = "推荐！此号码五行与八字较为匹配，整体吉凶良好，值得考虑。";
+    recommendation = "推荐！此号码五行与八字较为匹配，整体数理表现良好，值得考虑。";
   } else if (matchLevel === "一般") {
     recommendation = "此号码五行匹配度一般，可作备选，建议优先考虑评分更高的号码。";
   } else {

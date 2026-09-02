@@ -34,7 +34,7 @@ const DEFAULT_AI_TOOLS: AIToolConfig[] = [
   { id: "ai_tcm", name: "中医AI问诊", category: "general_ai", enabled: true, price: 0, description: "中医智能问诊辅助" },
   // B 类高价值付费工具
   { id: "name_analysis", name: "姓名深度解析", category: "b_tool", enabled: true, price: 9.9, description: "基于姓名学典籍的深度文化解读" },
-  { id: "phone_number", name: "手机号吉凶解读", category: "b_tool", enabled: true, price: 18, description: "基于数字能量学的手机号码分析" },
+  { id: "phone_number", name: "手机号数理解读", category: "b_tool", enabled: true, price: 18, description: "基于数字能量学的手机号码分析" },
   { id: "license_plate", name: "车牌合号分析", category: "b_tool", enabled: true, price: 18, description: "基于数理的车牌号码文化参考" },
 ];
 

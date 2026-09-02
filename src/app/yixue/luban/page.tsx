@@ -484,8 +484,8 @@ export default function LubanPage() {
           </div>
           <div className="mt-2 rounded-lg bg-gray-50 px-3 py-2 text-[11px] leading-relaxed text-gray-600">
             合参口径：{dual.bothLucky
-              ? "阳尺落吉位，且阴尺无大凶字，传统匠作可参用。"
-              : "按所选尺制，该尺寸未同时满足阳尺吉位与阴尺避大凶，传统做法多另择尺寸；吉凶为传统尺文表述，非必然结果。"}
+              ? "阳尺落优选刻度，且阴尺避病离诸字，传统匠作可参用。"
+              : "按所选尺制，该尺寸未同时满足阳尺与阴尺的优选刻度，传统做法多另择尺寸；尺文含义为传统匠作文献表述，非必然结果。"}
             （鲁班尺制式：{lubanProfile.name} / 丁兰尺制式：{dinglanProfile.name}）
           </div>
           <div className="mt-2 rounded-lg border border-amber-100 bg-amber-50/40 p-2.5">
@@ -617,9 +617,9 @@ export default function LubanPage() {
       {/* 免责声明 */}
       <div className="mx-3 mt-4 rounded-lg border border-red-100 bg-red-50/50 p-3">
         <p className="text-xs leading-relaxed text-gray-500">
-          <strong>免责声明：</strong>本工具按公开传统匠作通行排布呈现尺文与吉凶标注，仅供传统文化学习与参考，
+          <strong>免责声明：</strong>本工具按公开传统匠作通行排布呈现尺文标注，仅供传统文化学习与参考，
           不构成施工、交易或决策建议。不同地域、流派与历史时期存在多种尺制版本，结果以所选制式为准；
-          吉凶为传统尺文表述，非必然结果。
+          尺文含义为传统文献表述，非必然结果。
         </p>
       </div>
       <div style={{ height: "20px" }} />

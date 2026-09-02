@@ -555,6 +555,13 @@ export default function WannianliPage() {
           </div>
           )}
 
+          {/* 古籍来源注解（历注定性：传统历书古籍资料展示） */}
+          {(!fieldConfig || fieldConfig.showYiJi) && (
+          <div className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-center text-[13px] font-medium leading-relaxed text-amber-700 border border-amber-100">
+            📜 内容整理自《钦定协纪辨方书》等传统历书古籍，仅供民俗文化学习参考
+          </div>
+          )}
+
           {/* 冲煞/建星 */}
           {(!fieldConfig || fieldConfig.showChongSha) && (
             <div className="mb-2 grid grid-cols-2 gap-2 text-center text-xs">
@@ -881,7 +888,7 @@ export default function WannianliPage() {
         <div className="rounded-lg border border-gray-200 bg-[#f9f9f9] p-3 text-center">
           <p className="mb-1 text-xs font-semibold text-gray-400">免责声明</p>
           <p className="text-[11px] leading-relaxed text-gray-400">
-            节气日期为精确天文计算，宜忌内容整理自传统择日典籍，内容仅供文化娱乐参考，不构成任何专业建议或决策依据。记事提醒数据仅本人可见，可在记事管理页导出或彻底删除。请理性看待，切勿迷信。
+            节气日期为精确天文计算，宜忌等历注内容整理自《钦定协纪辨方书》等传统历书古籍，仅供民俗文化学习参考，不构成任何专业建议或决策依据。记事提醒数据仅本人可见，可在记事管理页导出或彻底删除。请理性看待，切勿迷信。
           </p>
         </div>
       </div>

@@ -48,7 +48,7 @@ export const JIANCHU_DETAILS: Record<string, { summary: string; details: string[
   },
   "平": {
     jixiong: "中",
-    summary: "平日主平常、平淡。平日宜修饰、修造，诸事皆可，但无特别吉凶。",
+    summary: "平日主平常、平淡。平日宜修饰、修造，诸事皆可，历注上无特别标注。",
     details: [
       "平者，平常也，无吉无凶。",
       "宜：修饰、修造、泥饰。",

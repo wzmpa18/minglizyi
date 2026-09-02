@@ -256,8 +256,6 @@ export function checkAIQuota(): AIQuotaStatus {
     let message = "";
     if (level === "lifetime" || level === "yearly") {
       message = "会员特权：无限AI解读";
-    } else if (hasPaidPlan) {
-      message = "AI时卡有效中：无限解读";
     } else if (level === "monthly" || level === "quarterly") {
       message = `今日剩余${remaining}次AI解读机会`;
     } else if (!canUse) {
@@ -509,22 +507,30 @@ export function generateContentKey(toolName: string, context: string): string {
 
 // ==================== 事情断法（事件AI解读） ====================
 
+// v25.0.79 AppStore合规：AI输出统一红线——只作文史释义，禁止结论性判断
+const AI_COMPLIANCE_RULES = `【输出红线（最高优先级）】
+1. 只作名词释义、历史背景、天文历法科普、古籍原文罗列与典籍出处标注；
+2. 严禁输出结论性判断与预测，不得出现「吉」「凶」「大吉」「大凶」「祸福」「旺衰」「财运」「姻缘」「运势」「趋吉避凶」「改运」「化解」「断事」等词及其同义表述；
+3. 严禁给出人生决策建议（如是否换号、是否结婚、是否投资等），仅提供传统文化研究参考；
+4. 引用古籍原文须标注出处，格式：【摘自《XX古籍》，仅为古代文史资料】；
+5. 结尾必须标注：「本内容收录古代传统文史资料，仅用于国学、历法学术研究，不构成运势预测与人生决策建议。」`;
+
 export async function getEventDivination(
   toolName: string,
   chartContext: string,
   userQuestion: string
 ): Promise<string> {
-  const systemPrompt = `你是资深易学断事专家，精通${toolName}等传统术数。用户将基于排盘结果提出具体问题（如投资、健康、感情、事业等），请结合排盘数据进行针对性分析。
+  const systemPrompt = `你是传统文化研究学者，熟悉${toolName}等传统术数的历史源流与典籍文献。用户将基于排盘资料提出问题（如学习、健康、感情、事业等），请结合排盘资料进行针对性的文化解读。
 
 要求：
-1. 先简要分析排盘数据中与问题相关的要素
-2. 针对用户的问题给出专业断事分析
-3. 给出吉凶趋势判断和注意事项
+1. 先简要说明排盘资料中与问题相关的术语与结构要素
+2. 结合典籍文献对相关问题作文化视角的分析（名词释义、历史背景、传统说法）
+3. 引用典籍须标注出处
 4. 语言客观中肯，避免绝对化表述
 5. 不涉及医疗诊断、投资建议等违规内容
-6. 结尾必须标注：「以上内容仅供传统文化学习参考，不构成人生决策建议」`;
+${AI_COMPLIANCE_RULES}`;
 
-  const userPrompt = `【${toolName}排盘数据】\n${chartContext}\n\n【用户提问】\n${userQuestion}\n\n请结合排盘数据，针对用户的问题进行断事分析。`;
+  const userPrompt = `【${toolName}排盘数据】\n${chartContext}\n\n【用户提问】\n${userQuestion}\n\n请结合排盘资料，针对用户的问题进行文化视角的解读。`;
 
   const result = await callAI({
     systemPrompt,
@@ -542,17 +548,16 @@ export async function getPhoneAIInterpretation(
   phoneNumber: string,
   analysisData: string
 ): Promise<string> {
-  const systemPrompt = `你是数字能量学专家，精通八星数字能量、五行数理、81数理等数字文化研究。请基于号码分析结果，给出深度AI解读。
+  const systemPrompt = `你是数字文化研究学者，熟悉八星数字能量、五行数理、81数理等传统数字文化文献。请基于号码分析结果，给出深度文化解读。
 
 要求：
-1. 综合分析号码的数字能量格局
-2. 解读八星组合的能量特征和对使用者的影响
-3. 五行平衡分析及调和建议
-4. 号码与使用者运势的关联解读
-5. 给出使用建议
-6. 结尾必须标注：「以上内容仅供传统文化学习参考，不构成人生决策建议」`;
+1. 综合说明号码的数理结构
+2. 解读八星组合的传统含义与文化源流
+3. 五行分布的传统文化说明
+4. 给出学习研究建议
+${AI_COMPLIANCE_RULES}`;
 
-  const userPrompt = `手机号码：${phoneNumber}\n分析数据：\n${analysisData}\n\n请给出深度AI解读。`;
+  const userPrompt = `手机号码：${phoneNumber}\n分析数据：\n${analysisData}\n\n请给出深度文化解读。`;
 
   const result = await callAI({
     systemPrompt,
@@ -568,17 +573,15 @@ export async function getCarplateAIInterpretation(
   plateNumber: string,
   analysisData: string
 ): Promise<string> {
-  const systemPrompt = `你是车牌数理专家，精通五行数理、81数理、数字能量等传统文化研究。请基于车牌分析结果，给出深度AI解读。
+  const systemPrompt = `你是车牌数理文化研究学者，熟悉五行数理、81数理等传统文献。请基于车牌分析结果，给出深度文化解读。
 
 要求：
-1. 综合分析车牌的数理格局
-2. 解读五行分布及平衡状况
-3. 吉祥/不利组合的能量影响分析
-4. 对行车平安的传统文化解读
-5. 给出使用建议
-6. 结尾必须标注：「以上内容仅供传统文化学习参考，不构成人生决策建议」`;
+1. 综合说明车牌的数理结构
+2. 解读五行分布与传统组合说法的文化源流
+3. 提醒用户遵守交通法规、安全驾驶
+${AI_COMPLIANCE_RULES}`;
 
-  const userPrompt = `车牌号码：${plateNumber}\n分析数据：\n${analysisData}\n\n请给出深度AI解读。`;
+  const userPrompt = `车牌号码：${plateNumber}\n分析数据：\n${analysisData}\n\n请给出深度文化解读。`;
 
   const result = await callAI({
     systemPrompt,
@@ -597,7 +600,8 @@ export async function getYixueInterpretation(
   context: string,
   existingClassic?: string
 ): Promise<string> {
-  const systemPrompt = `你是传统文化研究同好，精通八字、紫微斗数、奇门遁甲、六爻、梅花易数、大六壬、小六壬、太乙三式、玄空飞星等传统术数。请用中文回答，内容结构清晰，包含：1.经典原文出处 2.基础释义 3.吉凶定性 4.使用说明。如已有经典解读内容，请在此基础上补充完善，不要重复已有内容。补充内容标注「AI 参考」。`;
+  const systemPrompt = `你是传统文化研究同好，熟悉八字、紫微斗数、奇门遁甲、六爻、梅花易数、大六壬、小六壬、太乙三式、玄空飞星等传统术数典籍。请用中文回答，内容结构清晰，包含：1.经典原文出处 2.名词释义 3.使用说明。如已有经典解读内容，请在此基础上补充完善，不要重复已有内容。补充内容标注「AI 参考」。
+${AI_COMPLIANCE_RULES}`;
   const userPrompt = `工具：${toolName}\n上下文：${context}\n${existingClassic ? `已有经典解读：${existingClassic}\n请在以上基础上补充完善。` : "请提供完整解读。"}`;
   const result = await callAI({
     systemPrompt,
