@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Send } from "lucide-react";
+import { Send, ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 // ==================== 类型定义 ====================
 
@@ -140,6 +141,7 @@ function MessageBubble({ message }: { message: AIMessage }) {
 // ==================== 主页面组件 ====================
 
 export default function AIPage() {
+  const router = useRouter();
   const [messages, setMessages] = useState<AIMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -201,8 +203,23 @@ export default function AIPage() {
       {/* ========== 红色 Header ========== */}
       <header
         className="sticky top-0 z-40 flex items-center px-4"
-        style={{ backgroundColor: "#7B2FBE", height: "48px" }}
+        style={{
+          backgroundColor: "#7B2FBE",
+          height: "calc(48px + env(safe-area-inset-top, 0px))",
+          paddingTop: "env(safe-area-inset-top, 0px)",
+        }}
       >
+        {/* v25.0.78 P4：AI 助手为独立开发页，补返回键（其余缺返回键页面由全局悬浮键兜底） */}
+        <button
+          onClick={() => {
+            if (window.history.length > 1) router.back();
+            else router.push("/");
+          }}
+          aria-label="返回"
+          className="mr-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white active:bg-white/20"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </button>
         <div className="flex items-center gap-2">
           <span className="text-xl">🤖</span>
           <h1 className="text-lg font-bold text-white">言道AI助手</h1>

@@ -73,6 +73,9 @@ export default function ZhongyiLayout({ children }: { children: React.ReactNode 
           backdropFilter: "blur(16px)",
           WebkitBackdropFilter: "blur(16px)",
           borderBottom: "1px solid rgba(45, 90, 39, 0.3)",
+          // v25.0.80: iOS 刘海屏顶栏避让（返回键被灵动岛遮挡问题）
+          height: "calc(64px + env(safe-area-inset-top, 0px))",
+          paddingTop: "env(safe-area-inset-top, 0px)",
         }}
       >
         {!isHome && (

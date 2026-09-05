@@ -936,7 +936,8 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: "#f5f5f5", maxWidth: "420px", margin: "0 auto", paddingBottom: "80px" }}>
       {/* ===== 顶部用户信息栏（固定） ===== */}
-      <div style={{ backgroundColor: BRAND }} className="px-4 pt-7 pb-5">
+      {/* v25.0.80: iOS 刘海屏避让（pt-7 → calc，Android 安全区 0 零影响） */}
+      <div style={{ backgroundColor: BRAND, paddingTop: "calc(28px + env(safe-area-inset-top, 0px))" }} className="px-4 pb-5">
         <div className="flex items-center gap-3">
           {/* 左侧：头像 + 昵称 + 会员等级，点击进入个人资料编辑页 */}
           <button className="flex min-w-0 flex-1 items-center gap-3 text-left" onClick={goEditProfile}>

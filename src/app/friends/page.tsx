@@ -685,7 +685,7 @@ function AddFriendView({
       {/* Header */}
       <header
         className="sticky top-0 z-40 flex items-center gap-2 px-2"
-        style={{ backgroundColor: BRAND, height: "48px" }}
+        style={{ backgroundColor: BRAND, height: "calc(48px + env(safe-area-inset-top, 0px))", paddingTop: "env(safe-area-inset-top, 0px)" }}
       >
         <button
           onClick={handleBack}
@@ -1247,7 +1247,7 @@ function FriendRequestsPanel({
     >
       <header
         className="sticky top-0 z-40 flex items-center gap-2 px-2"
-        style={{ backgroundColor: BRAND, height: "48px" }}
+        style={{ backgroundColor: BRAND, height: "calc(48px + env(safe-area-inset-top, 0px))", paddingTop: "env(safe-area-inset-top, 0px)" }}
       >
         <button onClick={onBack} className="flex h-10 w-10 items-center justify-center">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1365,7 +1365,7 @@ function BlacklistPanel({ onBack }: { onBack: () => void }) {
     >
       <header
         className="sticky top-0 z-40 flex items-center gap-2 px-2"
-        style={{ backgroundColor: BRAND, height: "48px" }}
+        style={{ backgroundColor: BRAND, height: "calc(48px + env(safe-area-inset-top, 0px))", paddingTop: "env(safe-area-inset-top, 0px)" }}
       >
         <button onClick={onBack} className="flex h-10 w-10 items-center justify-center">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1734,33 +1734,29 @@ export default function FriendsPage() {
     setBlacklist(getBlacklist());
 
     // 后端真实好友/群组/申请（登录后跨设备跨用户可见）
+    // v25.0.78 P7-通讯录隐私：服务端好友列表为唯一事实源，整体替换本地缓存——
+    // 本地残留（换账号/历史数据/仅本地添加的陌生人）不再进入通讯录；同ID仅保留本地备注与标签
     void apiFetchFriends().then((r) => {
       const serverFriends = r && r.success ? r.friends : undefined;
       if (serverFriends) {
         setFriends((prev) => {
           const localById = new Map(prev.map((f) => [f.id, f]));
-          for (const sf of serverFriends) {
-            const existing = localById.get(sf.userId);
-            if (!existing) {
-              prev.push({
-                id: sf.userId,
-                name: sf.nickname || "言道用户",
-                avatar: sf.avatar || (sf.nickname || "友").slice(0, 1),
-                online: false,
-                lastSeen: sf.friendSince || new Date().toISOString(),
-                note: "",
-                tags: [],
-                addedAt: sf.friendSince || new Date().toISOString(),
-              });
-            } else {
-              // 服务端昵称/头像较新时同步（保留本地备注与标签）
-              existing.name = sf.nickname || existing.name;
-              existing.avatar = sf.avatar || existing.avatar;
-            }
-          }
+          const next: Friend[] = serverFriends.map((sf) => {
+            const local = localById.get(sf.userId);
+            return {
+              id: sf.userId,
+              name: sf.nickname || local?.name || "言道用户",
+              avatar: sf.avatar || local?.avatar || (sf.nickname || "友").slice(0, 1),
+              online: false,
+              lastSeen: sf.friendSince || new Date().toISOString(),
+              note: local?.note || "",
+              tags: local?.tags || [],
+              addedAt: sf.friendSince || local?.addedAt || new Date().toISOString(),
+            };
+          });
           // v25.0.38 P0-1：同步结果持久化到本地，保证聊天页/信息页等读缓存处昵称一致
-          saveFriends([...prev]);
-          return [...prev];
+          saveFriends(next);
+          return next;
         });
       }
     }).catch(() => {});
@@ -1861,10 +1857,15 @@ export default function FriendsPage() {
     };
     addFriend(newFriend);
     // 服务端申请（数字ID）同步受理，对方账号同步成为好友
+    // v25.0.78 P7：等待服务端受理完成再刷新——通讯录改为服务端整体替换后，
+    // 立即刷新会在服务端落库前把刚通过的好友冲掉
     if (/^\d+$/.test(req.id)) {
-      void apiRespondFriendRequest(req.id, "accept").catch(() => {});
+      void apiRespondFriendRequest(req.id, "accept")
+        .catch(() => {})
+        .finally(() => loadData());
+    } else {
+      loadData();
     }
-    loadData();
   };
 
   const handleRejectRequest = (req: FriendRequest) => {
@@ -1879,10 +1880,14 @@ export default function FriendsPage() {
   const handleDeleteFriend = () => {
     if (deleteConfirmId) {
       removeFriend(deleteConfirmId);
-      void apiRemoveFriend(deleteConfirmId).catch(() => {});
-      setDeleteConfirmId(null);
-      setActionMenu(null);
-      loadData();
+      // v25.0.78 P7：等待服务端删除完成再刷新，避免整体替换时服务端仍返回该好友
+      void apiRemoveFriend(deleteConfirmId)
+        .catch(() => {})
+        .finally(() => {
+          setDeleteConfirmId(null);
+          setActionMenu(null);
+          loadData();
+        });
     }
   };
 

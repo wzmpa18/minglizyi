@@ -69,6 +69,21 @@ function verifyAdmin(req) {
 // ==================== 校验 ====================
 
 const LEVELS = ['info', 'important', 'urgent'];
+// v25.0.80: 平台定向——announcement 只在指定平台展示。
+// 支持单值或逗号分隔多值（如 "android,web"）；all=全部平台（默认，存量数据按 all 处理）
+const PLATFORMS = ['all', 'ios', 'android', 'web'];
+
+function parsePlatformList(val) {
+    return String(val || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+}
+
+function isValidPlatformValue(val) {
+    const list = parsePlatformList(val);
+    return list.length > 0 && list.every((p) => PLATFORMS.includes(p));
+}
 
 function validate(body) {
     if (!body.title || String(body.title).trim().length < 2) return '标题不能少于2个字';
@@ -76,6 +91,7 @@ function validate(body) {
     if (!body.content || String(body.content).trim().length < 2) return '内容不能少于2个字';
     if (String(body.content).trim().length > 2000) return '内容不能超过2000个字';
     if (body.level && !LEVELS.includes(body.level)) return `级别必须是 ${LEVELS.join(' / ')} 之一`;
+    if (body.platform && !isValidPlatformValue(body.platform)) return `平台必须是 ${PLATFORMS.join(' / ')} 的组合（逗号分隔）`;
     if (body.publishAt && isNaN(new Date(body.publishAt).getTime())) return '发布时间格式不正确';
     if (body.expiresAt && body.expiresAt !== null && isNaN(new Date(body.expiresAt).getTime())) return '过期时间格式不正确';
     if (body.link && !/^https?:\/\//.test(String(body.link))) return '跳转链接必须以 http(s):// 开头';
@@ -88,6 +104,7 @@ function normalize(body, existing) {
         title: String(body.title).trim(),
         content: String(body.content).trim(),
         level: LEVELS.includes(body.level) ? body.level : 'info',
+        platform: isValidPlatformValue(body.platform) ? parsePlatformList(body.platform).join(',') : (existing ? existing.platform : 'all'),
         pinned: body.pinned === true,
         published: body.published !== false,
         publishAt: body.publishAt || (existing ? existing.publishAt : new Date().toISOString()),
@@ -142,12 +159,38 @@ function applyVersionPlaceholders(text, ph) {
 
 // ==================== 公开接口（首页公告栏调用，未登录可访问） ====================
 
-// GET /api/announcements/public?limit=5
+/**
+ * v25.0.80: 解析请求方平台（优先级：显式参数 > X-Client-Platform 头 > UA 原生壳标记）。
+ * UA 标记（YandaoGuoxueIOS / YandaoGuoxueAndroid 由 capacitor appendUserAgent 注入）
+ * 保证已上架的旧版本 APP 壳（不带 platform 参数）也能被正确过滤，
+ * 例如 iOS 审核版不再看到"安卓 APK 升级"类公告。
+ */
+function resolveClientPlatform(req) {
+    const q = String(req.query.platform || '').toLowerCase();
+    if (PLATFORMS.includes(q) && q !== 'all') return q;
+    const h = String(req.headers['x-client-platform'] || '').toLowerCase();
+    if (PLATFORMS.includes(h) && h !== 'all') return h;
+    const ua = String(req.headers['user-agent'] || '');
+    if (/YandaoGuoxueIOS/i.test(ua)) return 'ios';
+    if (/YandaoGuoxueAndroid/i.test(ua)) return 'android';
+    return 'web';
+}
+
+function matchesPlatform(itemPlatform, clientPlatform) {
+    const list = parsePlatformList(itemPlatform || 'all');
+    if (list.length === 0 || list.includes('all')) return true;
+    return list.includes(clientPlatform);
+}
+
+// GET /api/announcements/public?limit=5&platform=ios
 router.get('/public', (req, res) => {
     try {
         const limit = Math.min(20, Math.max(1, parseInt(req.query.limit, 10) || 5));
+        const clientPlatform = resolveClientPlatform(req);
         const now = Date.now();
-        const active = sortForPublic(readAll().filter((item) => isActive(item, now))).slice(0, limit);
+        const active = sortForPublic(
+            readAll().filter((item) => isActive(item, now) && matchesPlatform(item.platform, clientPlatform))
+        ).slice(0, limit);
         const ph = getVersionPlaceholders();
         res.json({
             success: true,
@@ -156,6 +199,7 @@ router.get('/public', (req, res) => {
                 title: applyVersionPlaceholders(item.title, ph),
                 content: applyVersionPlaceholders(item.content, ph),
                 level: item.level,
+                platform: item.platform || 'all',
                 pinned: item.pinned,
                 publishAt: item.publishAt,
                 link: item.link || null,

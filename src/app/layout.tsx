@@ -12,6 +12,7 @@ import ReminderSchedulerInit from "@/components/ReminderSchedulerInit";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import GlobalZoomProvider from "@/components/GlobalZoomProvider";
 import SwipeBackProvider from "@/components/SwipeBackProvider";
+import GlobalBackButton from "@/components/GlobalBackButton";
 import VersionChecker from "@/components/VersionChecker";
 import AppUpgradeChecker from "@/components/AppUpgradeChecker";
 import OfflineInit from "@/components/OfflineInit";
@@ -79,6 +80,8 @@ export default function RootLayout({
               {children}
             </GlobalZoomProvider>
           </SwipeBackProvider>
+          {/* v25.0.78 P4-全页返回键：原生壳内二级页面悬浮返回（页面自带返回键时自动隐藏） */}
+          <GlobalBackButton />
           <BottomNav />
           {/* P7-弹窗统一-01：全站统一营销浮窗（后台开关+页面白名单+频次+冷却期+永久关闭） */}
           <PromoFloat />

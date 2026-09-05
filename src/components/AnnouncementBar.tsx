@@ -14,6 +14,7 @@
 // ============================================================================
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { getRuntimePlatform } from "@/lib/platformGate";
 
 const BRAND = "#7B2FBE";
 
@@ -22,6 +23,7 @@ interface AnnouncementItem {
   title: string;
   content: string;
   level: "info" | "important" | "urgent";
+  platform?: string;
   pinned: boolean;
   publishAt: string;
   link: string | null;
@@ -42,7 +44,13 @@ export default function AnnouncementBar() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(`/api/announcements/public?limit=20&t=${Date.now()}`, { cache: "no-store" });
+      // v25.0.80: 携带平台标识（参数 + 请求头双通道），服务端按平台过滤公告，
+      // iOS 壳不再看到安卓升级提示；旧版 APP 壳靠 UA 标记兜底过滤
+      const platform = getRuntimePlatform();
+      const res = await fetch(`/api/announcements/public?limit=20&platform=${platform}&t=${Date.now()}`, {
+        cache: "no-store",
+        headers: { "X-Client-Platform": platform },
+      });
       const json = await res.json();
       if (json && json.success && Array.isArray(json.announcements) && json.announcements.length > 0) {
         setItems(json.announcements);

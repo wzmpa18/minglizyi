@@ -24,7 +24,6 @@ import { solarToBazi } from "@/algorithm-core";
 import type { Gender } from "@/algorithm-core";
 import { Lunar, LunarYear, LunarMonth } from "lunar-javascript";
 import SolarDatePicker from "@/components/shared/SolarDatePicker";
-import { syncRecordToBackend } from "@/lib/recordSync";
 
 // ============================================================================
 // 常量
@@ -559,32 +558,25 @@ export default function NameAnalysisPage() {
           _ts: Date.now(),
         });
 
-        // v21.3: 同步记录到后端（跨设备查看）
-        syncRecordToBackend("name", {
-          fullName: trimmed,
-          surnameLength,
-          gender,
-          birthDate: effectiveBirthDate,
-          birthHour,
-          birthMinute,
-          calType,
-          result: r,
-          baziAnalysis: baziAnalysis ? {
-            dayMaster: baziAnalysis.dayMaster,
-            dayMasterWuxing: baziAnalysis.dayMasterWuxing,
-            isStrong: baziAnalysis.isStrong,
-            favorableElements: baziAnalysis.favorableElements,
-            baziText: baziAnalysis.baziText,
-          } : null,
-        }, `姓名解析: ${trimmed}`).catch(() => {});
-
         // 保存客户记录（v25.0.74: 未选客户也保存，clientId 留空）
+        // v25.0.80: 移除手动 syncRecordToBackend——saveRecord 内部已含云同步（会员），
+        // 两者并存会让会员每次解析重复入库两条；数据字段合并进 saveRecord 保持云端内容不缩水
         try {
           saveRecord({
             clientId: selectedClient ? selectedClient.id : "",
             type: "name",
-            data: { ...r, fullName: trimmed, gender, baziAnalysis },
-            note: "",
+            data: {
+              ...r,
+              fullName: trimmed,
+              surnameLength,
+              gender,
+              birthDate: effectiveBirthDate,
+              birthHour,
+              birthMinute,
+              calType,
+              baziAnalysis,
+            },
+            note: `姓名解析: ${trimmed}`,
             status: "pending",
           });
         } catch (e) {

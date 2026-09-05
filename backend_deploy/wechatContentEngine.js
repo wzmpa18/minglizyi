@@ -157,27 +157,44 @@ async function callAI(messages, maxTokens) {
   const apiKey = process.env.HUNYUAN_API_KEY || process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY || '';
   if (!apiKey) throw new Error('AI服务未配置');
   const useHunyuan = !!process.env.HUNYUAN_API_KEY;
-  const model = process.env.HUNYUAN_MODEL || 'hy3';
+  // 公众号文章生成可用 WECHAT_CONTENT_MODEL 覆盖默认模型（hy3深度推理token消耗大且易触发网关超时）
+  const model = process.env.WECHAT_CONTENT_MODEL || process.env.HUNYUAN_MODEL || 'hy3';
   const apiUrl = process.env.HUNYUAN_API_URL || 'https://tokenhub.tencentmaas.com/v1/chat/completions';
   const started = Date.now();
-  const res = await fetch(apiUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({ model, messages, max_tokens: maxTokens, temperature: 0.7 }),
-  });
-  const data = await res.json();
-  const usage = data.usage || {};
-  const tokensIn = usage.prompt_tokens || 0;
-  const tokensOut = usage.completion_tokens || 0;
-  let cost = 0;
-  try { cost = aiUsagePolicy.estimateCost(model, tokensIn, tokensOut) || 0; } catch { }
-  try {
-    getDb().prepare(`INSERT INTO ai_call_logs(scene, tokens_in, tokens_out, request_id, user_id, feature_key, model, provider_id, estimated_cost, duration_ms, status)
-      VALUES('wechat_content', ?, ?, ?, '', 'wechat_content', ?, ?, ?, ?, 'success')`)
-      .run(tokensIn, tokensOut, `woa_${Date.now()}`, model, useHunyuan ? 'tencent' : 'deepseek', cost, Date.now() - started);
-  } catch { }
-  if (!res.ok || !data.choices || !data.choices[0]) throw new Error(`AI调用失败: ${res.status}`);
-  return { content: data.choices[0].message.content, model, cost };
+  // 网关瞬断（空体/截断）重试：同参数最多3次，间隔5s
+  let lastErr = null;
+  for (let i = 0; i < 3; i++) {
+    try {
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({ model, messages, max_tokens: maxTokens, temperature: 0.7 }),
+      });
+      const raw = await res.text();
+      if (!raw || !raw.trim()) throw new Error('AI响应为空（网关超时）');
+      let data;
+      try { data = JSON.parse(raw); } catch { throw new Error('AI响应JSON截断（网关超时）'); }
+      const usage = data.usage || {};
+      const tokensIn = usage.prompt_tokens || 0;
+      const tokensOut = usage.completion_tokens || 0;
+      let cost = 0;
+      try { cost = aiUsagePolicy.estimateCost(model, tokensIn, tokensOut) || 0; } catch { }
+      try {
+        getDb().prepare(`INSERT INTO ai_call_logs(scene, tokens_in, tokens_out, request_id, user_id, feature_key, model, provider_id, estimated_cost, duration_ms, status)
+          VALUES('wechat_content', ?, ?, ?, '', 'wechat_content', ?, ?, ?, ?, 'success')`)
+          .run(tokensIn, tokensOut, `woa_${Date.now()}`, model, useHunyuan ? 'tencent' : 'deepseek', cost, Date.now() - started);
+      } catch { }
+      if (!res.ok || !data.choices || !data.choices[0]) throw new Error(`AI调用失败: ${res.status}`);
+      const ch = data.choices[0];
+      const content = (ch.message && ch.message.content) || '';
+      if (!content.trim()) throw new Error(`AI内容为空（finish=${ch.finish_reason}，推理耗尽token）`);
+      return { content, model, cost };
+    } catch (e) {
+      lastErr = e;
+      if (i < 2) await new Promise((r) => setTimeout(r, 5000));
+    }
+  }
+  throw lastErr;
 }
 
 function todayAiCost() {
@@ -191,8 +208,8 @@ function todayAiCost() {
 const SAFETY_PATTERNS = [
   { type: 'MEDICAL_RISK', re: /(治愈|根治|包治|疗效显著|药到病除|痊愈率|不用去医院|自行用药|处方参考)/ },
   { type: 'SUPERSTITION', re: /(改命|转运消灾|化解灾难|破财免灾|算命很准|命中注定无法改变|趋吉避凶必|改运)/ },
-  { type: 'ABSOLUTE_ADS', re: /(最好|第一|顶级|百分百|必看|震惊|国家级|全网最|史上最|不然后悔|错过再等)/ },
-  { type: 'FINANCIAL_PROMISE', re: /(稳赚|暴富|收益翻倍|必回本|发财|投资必赚|财运亨通)/ },
+  { type: 'ABSOLUTE_ADS', re: /(顶级|百分百|必看|震惊|国家级|全网最|史上最|不然后悔|错过再等|全网第一|排名第一|史上第一)/ },
+  { type: 'FINANCIAL_PROMISE', re: /(稳赚|暴富|收益翻倍|必回本|投资必赚|财运亨通|就能发财|便能发财|必能发财|助你发财)/ },
   { type: 'PRIVACY', re: /(身份证号|手机号泄露|银行卡号)/ },
 ];
 function safetyGate(text) {

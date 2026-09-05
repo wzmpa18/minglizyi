@@ -41,10 +41,18 @@ async function stageGenerate() {
   if (s.automation !== 'ON') return `自动化开关为 ${s.automation}，跳过`;
   const approved = contentEngine.listTopics(today()).filter((t) => t.status === 'APPROVED');
   const results = [];
+  let okCount = 0;
   for (const t of approved.slice(0, s.dailyArticleLimit)) {
-    try { results.push(await contentEngine.generateArticle(t.topic_id)); } catch (e) { results.push({ error: e.message }); }
+    try {
+      const r = await contentEngine.generateArticle(t.topic_id);
+      okCount++;
+      results.push(r);
+    } catch (e) {
+      console.error(`[generate] 选题#${t.topic_id} ${t.keyword} 失败: ${e.message}`);
+      results.push({ error: e.message });
+    }
   }
-  return `生成 ${results.length} 篇（限额 ${s.dailyArticleLimit}）`;
+  return `生成成功 ${okCount} 篇 / 尝试 ${results.length} 篇（限额 ${s.dailyArticleLimit}）`;
 }
 
 async function stageSafetySync() {
@@ -63,8 +71,8 @@ async function stageSafetySync() {
     }
     if (safety.pass) passed++;
   }
-  // 草稿同步（WECHAT_DRAFT_SYNC=ON 且凭据已配置时才尝试；失败不阻断）
-  let synced = 0, syncNote = '未启用';
+  // 草稿同步（draftSync=ON 且凭据已配置时才尝试；失败不阻断）
+  let synced = 0, syncNote = '无待同步';
   if (s.draftSync === 'ON' && process.env.WECHAT_OA_APP_SECRET) {
     const tokenManager = require('./wechatTokenManager');
     if (tokenManager.isConfigured()) {
@@ -82,6 +90,7 @@ async function stageSafetySync() {
       syncNote = 'AppSecret未配置';
     }
   }
+  if (synced > 0) syncNote = '成功';
   return `Safety ${passed}过/${blocked}拦截；草稿同步 ${synced} 篇（${syncNote}）`;
 }
 

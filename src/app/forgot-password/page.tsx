@@ -68,6 +68,9 @@ export default function ForgotPasswordPage() {
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPhone(formatPhone(e.target.value));
     setError("");
+    // 换手机号后旧验证码失效：停止倒计时并清空已填验证码
+    setCountdown(0);
+    setSmsCode("");
   };
 
   const handleSmsCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -78,6 +81,9 @@ export default function ForgotPasswordPage() {
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value.trim());
     setError("");
+    // 换邮箱后旧验证码失效：停止倒计时并清空已填验证码
+    setCountdown(0);
+    setEmailCode("");
   };
 
   const handleEmailCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -278,7 +284,7 @@ export default function ForgotPasswordPage() {
           }}
         >
           <button
-            onClick={() => { setFindMode("phone"); setError(""); }}
+            onClick={() => { setFindMode("phone"); setError(""); setCountdown(0); }}
             style={{
               flex: 1,
               padding: "10px 0",
@@ -295,7 +301,7 @@ export default function ForgotPasswordPage() {
             手机号找回
           </button>
           <button
-            onClick={() => { setFindMode("email"); setError(""); }}
+            onClick={() => { setFindMode("email"); setError(""); setCountdown(0); }}
             style={{
               flex: 1,
               padding: "10px 0",

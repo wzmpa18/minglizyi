@@ -29,6 +29,7 @@ interface FormState {
   title: string;
   content: string;
   level: AnnouncementLevel;
+  platform: string;
   pinned: boolean;
   published: boolean;
   publishAt: string;
@@ -40,6 +41,7 @@ const EMPTY_FORM: FormState = {
   title: "",
   content: "",
   level: "info",
+  platform: "all",
   pinned: false,
   published: true,
   publishAt: new Date().toISOString().slice(0, 16),
@@ -47,11 +49,24 @@ const EMPTY_FORM: FormState = {
   link: "",
 };
 
+const PLATFORM_LABELS: Record<string, string> = {
+  ios: "iOS",
+  android: "安卓",
+  web: "网页版",
+};
+
+function platformLabel(val?: string): string {
+  const list = String(val || "all").split(",").map(s => s.trim()).filter(Boolean);
+  if (list.length === 0 || list.includes("all")) return "全部平台";
+  return list.map(p => PLATFORM_LABELS[p] || p).join("+");
+}
+
 function toFormState(item: AnnouncementAdminItem): FormState {
   return {
     title: item.title,
     content: item.content,
     level: item.level,
+    platform: item.platform || "all",
     pinned: item.pinned,
     published: item.published,
     publishAt: item.publishAt.slice(0, 16),
@@ -133,6 +148,7 @@ export default function AdminAnnouncementsPage() {
       title: form.title.trim(),
       content: form.content.trim(),
       level: form.level,
+      platform: form.platform,
       pinned: form.pinned,
       published: form.published,
       publishAt: new Date(form.publishAt).toISOString(),
@@ -236,6 +252,7 @@ export default function AdminAnnouncementsPage() {
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", marginBottom: 4 }}>
                         <Badge type={st.badge}>{st.label}</Badge>
                         <Badge type={lv.badge}>{lv.label}</Badge>
+                        <Badge type="info">{platformLabel(item.platform)}</Badge>
                         {item.pinned && (
                           <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 8px", borderRadius: 6, backgroundColor: THEME.warningBg, color: THEME.warning, fontSize: 11, fontWeight: 700 }}>
                             <Pin size={10} /> 置顶
@@ -356,6 +373,29 @@ export default function AdminAnnouncementsPage() {
                   value={form.publishAt}
                   onChange={e => setForm({ ...form, publishAt: e.target.value })}
                 />
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 12 }}>
+              <label style={styles.label}>展示平台（iOS 壳内不展示安卓专属公告，如 APK 升级提示）</label>
+              <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+                {(["ios", "android", "web"] as const).map(p => (
+                  <label key={p} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: THEME.textMain, cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={form.platform === "all" || form.platform.split(",").includes(p)}
+                      onChange={e => {
+                        const current = form.platform === "all" ? ["ios", "android", "web"] : form.platform.split(",").filter(Boolean);
+                        const next = e.target.checked ? Array.from(new Set([...current, p])) : current.filter(x => x !== p);
+                        setForm({ ...form, platform: next.length >= 3 ? "all" : (next.length === 0 ? "all" : next.join(",")) });
+                      }}
+                    />
+                    {PLATFORM_LABELS[p]}
+                  </label>
+                ))}
+                <span style={{ fontSize: 11, color: THEME.textHint, alignSelf: "center" }}>
+                  当前：{platformLabel(form.platform)}
+                </span>
               </div>
             </div>
 

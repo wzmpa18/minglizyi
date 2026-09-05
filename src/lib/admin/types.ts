@@ -175,6 +175,8 @@ export interface AnnouncementAdminItem {
   title: string;
   content: string;
   level: AnnouncementLevel;
+  /** 展示平台：all | ios | android | web 或逗号分隔组合（v25.0.80） */
+  platform?: string;
   pinned: boolean;
   published: boolean;
   publishAt: string;

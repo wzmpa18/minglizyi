@@ -199,6 +199,11 @@ export function getUserProfile(): UserProfile | null {
 export function setLoginState(token: string, profile: UserProfile): boolean {
   if (!isBrowser()) return false;
   try {
+    // v25.0.78 P7：换账号登录（userId 变化）时清理上一账号的社交本地数据
+    const prevProfile = getUserProfile();
+    if (prevProfile && String(prevProfile.userId) !== String(profile.userId)) {
+      clearSocialLocalData();
+    }
     safeSetItem(USER_TOKEN_KEY, token);
     safeSetItem(USER_PROFILE_KEY, JSON.stringify({
       ...profile,
@@ -290,6 +295,33 @@ export function updateUserProfile(partial: Partial<UserProfile>): boolean {
   }
 }
 
+// v25.0.78 P7-通讯录隐私：登出/换账号时清理社交本地数据
+// 键名与 socialStore.ts / userStore.ts 保持一致；yandao_user_id 为设备级游客匿名ID，保留不清
+const SOCIAL_CLEAR_KEYS = [
+  "yandao_friends_list",
+  "yandao_friend_requests",
+  "yandao_groups_list",
+  "yandao_blacklist",
+  "yandao_user_directory",
+  "yandao_follows",
+];
+const SOCIAL_CLEAR_PREFIXES = [
+  "yandao_friends_chat_",
+  "yandao_group_messages_",
+];
+function clearSocialLocalData(): void {
+  if (!isBrowser()) return;
+  try {
+    for (const k of SOCIAL_CLEAR_KEYS) localStorage.removeItem(k);
+    const doomed: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && SOCIAL_CLEAR_PREFIXES.some((p) => k.startsWith(p))) doomed.push(k);
+    }
+    for (const k of doomed) localStorage.removeItem(k);
+  } catch { /* ignore */ }
+}
+
 export function clearLoginState(): boolean {
   if (!isBrowser()) return false;
   try {
@@ -297,6 +329,8 @@ export function clearLoginState(): boolean {
     safeRemoveItem(USER_PROFILE_KEY);
     safeRemoveSessionItem(USER_TOKEN_KEY);
     safeRemoveSessionItem(USER_PROFILE_KEY);
+    // v25.0.78 P7：登出清理社交本地数据，防止同设备下一账号看到上一账号的通讯录/聊天记录
+    clearSocialLocalData();
     broadcastLoginState("logout", null, null);
     return true;
   } catch {

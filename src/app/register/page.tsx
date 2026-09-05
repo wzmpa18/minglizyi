@@ -118,6 +118,9 @@ export default function RegisterPage() {
     setError("");
     setPhoneExistMsg("");
     setPhoneAvailMsg("");
+    // 换手机号后旧验证码失效：停止倒计时并清空已填验证码
+    setCountdown(0);
+    setSmsCode("");
   };
 
   // v20.1: 手机号失焦实时校验唯一性
@@ -151,6 +154,9 @@ export default function RegisterPage() {
     setError("");
     setEmailExistMsg("");
     setEmailAvailMsg("");
+    // 换邮箱后旧验证码失效：停止倒计时并清空已填验证码
+    setCountdown(0);
+    setEmailCode("");
   };
 
   // v20.1: 邮箱失焦实时校验唯一性
@@ -402,7 +408,7 @@ export default function RegisterPage() {
           }}
         >
           <button
-            onClick={() => { setRegisterMode("phone"); setError(""); }}
+            onClick={() => { setRegisterMode("phone"); setError(""); setCountdown(0); }}
             style={{
               flex: 1,
               padding: "10px 0",
@@ -419,7 +425,7 @@ export default function RegisterPage() {
             手机号注册
           </button>
           <button
-            onClick={() => { setRegisterMode("email"); setError(""); }}
+            onClick={() => { setRegisterMode("email"); setError(""); setCountdown(0); }}
             style={{
               flex: 1,
               padding: "10px 0",

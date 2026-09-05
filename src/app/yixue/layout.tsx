@@ -85,7 +85,9 @@ export default function YixueLayout({ children }: { children: React.ReactNode })
     <div className="flex min-h-screen flex-col" style={{ backgroundColor: "#ededed", maxWidth: "420px", margin: "0 auto" }}>
       <header
         className="sticky top-0 z-50 grid w-full items-center"
-        style={{ gridTemplateColumns: "44px 1fr 44px", backgroundColor: "#7B2FBE", minHeight: "48px", padding: "0" }}
+        // v25.0.80: iOS 刘海屏顶栏避让——viewport-fit=cover 下补 safe-area-inset-top，
+        // 否则返回键/分享键被灵动岛遮挡（Android 安全区为 0，零影响）
+        style={{ gridTemplateColumns: "44px 1fr 44px", backgroundColor: "#7B2FBE", minHeight: "calc(48px + env(safe-area-inset-top, 0px))", padding: "0", paddingTop: "env(safe-area-inset-top, 0px)" }}
       >
         <button
           onClick={handleBack}

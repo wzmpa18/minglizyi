@@ -21,7 +21,7 @@ import qimingData from "@/data/qiming_chars.json";
 import { ShareButton } from "@/components/ShareButton";
 import { Lunar, LunarYear, LunarMonth } from "lunar-javascript";
 import SolarDatePicker from "@/components/shared/SolarDatePicker";
-import { syncRecordToBackend } from "@/lib/recordSync";
+import { saveRecord } from "@/lib/clientStore";
 
 // ============================================================================
 // 常量
@@ -875,28 +875,40 @@ export default function QimingPage() {
         _ts: Date.now(),
       });
 
-      // v21.3: 同步记录到后端（跨设备查看）
-      syncRecordToBackend("qiming", {
-        surname,
-        isCompound,
-        gender,
-        preferredWuxing,
-        zodiac,
-        nameLength,
-        birthDate: effectiveBirthDate,
-        birthHour,
-        birthMinute,
-        calType,
-        customRequirement,
-        suggestions: results.slice(0, 5),
-        baziAnalysis: baziAnalysis ? {
-          dayMaster: baziAnalysis.dayMaster,
-          dayMasterWuxing: baziAnalysis.dayMasterWuxing,
-          isStrong: baziAnalysis.isStrong,
-          favorableElements: baziAnalysis.favorableElements,
-          baziText: baziAnalysis.baziText,
-        } : null,
-      }, `智能起名: ${surname}姓${gender === "male" ? "男" : "女"}宝`).catch(() => {});
+      // v25.0.80: 统一走 saveRecord（本地保存 + 会员云端同步二合一）。
+      // 原先仅 syncRecordToBackend 云同步，未登录/非会员无本地记录，"我的测算"看不到历史；
+      // 也不再手动调 syncRecordToBackend，避免会员重复入库（saveRecord 内部已含云同步）。
+      try {
+        saveRecord({
+          clientId: "",
+          type: "qiming",
+          data: {
+            surname,
+            isCompound,
+            gender,
+            preferredWuxing,
+            zodiac,
+            nameLength,
+            birthDate: effectiveBirthDate,
+            birthHour,
+            birthMinute,
+            calType,
+            customRequirement,
+            suggestions: results.slice(0, 5),
+            baziAnalysis: baziAnalysis ? {
+              dayMaster: baziAnalysis.dayMaster,
+              dayMasterWuxing: baziAnalysis.dayMasterWuxing,
+              isStrong: baziAnalysis.isStrong,
+              favorableElements: baziAnalysis.favorableElements,
+              baziText: baziAnalysis.baziText,
+            } : null,
+          },
+          note: `智能起名: ${surname}姓${gender === "male" ? "男" : "女"}宝`,
+          status: "pending",
+        });
+      } catch (e) {
+        console.error("保存起名记录失败:", e);
+      }
 
       setTimeout(() => {
         const el = document.getElementById("qiming-result");

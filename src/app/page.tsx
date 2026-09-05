@@ -229,7 +229,8 @@ export default function HomePage(){
   return(
     <div className="mx-auto min-h-screen w-full" style={{maxWidth:"420px",backgroundColor:"#f5f5f5"}}>
       {/* 顶部品牌区 */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white">
+      {/* v25.0.80: iOS 刘海屏避让（viewport-fit=cover 下补 safe-area-inset-top，Android 为 0 零影响） */}
+      <div className="flex items-center justify-between px-4 py-3 bg-white" style={{ paddingTop: "calc(12px + env(safe-area-inset-top, 0px))" }}>
         <div className="flex items-center gap-2"><div><span className="font-bold" style={{fontSize:"24px",color:BRAND}}>言道</span><div style={{fontSize:"10px",fontWeight:"normal",opacity:0.65,lineHeight:"1.4",color:BRAND}}>yandao.vip 分享下载有礼</div></div></div>
       </div>
 

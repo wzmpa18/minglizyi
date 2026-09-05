@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Solar, LunarTime } from "lunar-javascript";
 import ClientSelector from "@/components/ClientSelector";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
@@ -39,6 +40,7 @@ const SHICHEN_LIST = [
 ];
 
 export default function HuangliPage() {
+  const router = useRouter();
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date(2026, 0, 1));
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
   const [saveTip, setSaveTip] = useState("");
@@ -196,21 +198,34 @@ export default function HuangliPage() {
 
   return (
     <div className="min-h-screen bg-[#ededed] pb-[80px]">
-      {/* ===== 顶部日期导航栏 ===== */}
+      {/* ===== 顶部日期导航栏（v25.0.78 P4：最左补返回键） ===== */}
       <div
-        className="flex items-center justify-between px-4 py-3 text-white"
+        className="flex items-center gap-2 px-4 py-3 text-white"
         style={{ background: `linear-gradient(135deg, ${BRAND} 0%, #9B5ECF 100%)` }}
       >
         <button
+          onClick={() => {
+            if (window.history.length > 1) router.back();
+            else router.push("/");
+          }}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/20 text-white active:bg-white/30"
+          aria-label="返回"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 12H5" />
+            <path d="M12 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <button
           onClick={goPrev}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-white active:bg-white/30"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/20 text-white active:bg-white/30"
           aria-label="上一天"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 18l-6-6 6-6" />
           </svg>
         </button>
-        <div className="text-center">
+        <div className="flex-1 text-center">
           <div className="text-base font-bold">
             {y}年{m}月{d}日 星期{weekday}
           </div>

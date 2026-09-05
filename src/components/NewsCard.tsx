@@ -2,6 +2,7 @@
 
 import React from "react";
 import { ShareButton } from "./ShareButton";
+import { isNativeShellSync } from "@/lib/nativeDetect";
 
 export interface NewsCardProps {
   title: string;
@@ -37,6 +38,13 @@ export default function NewsCard({
 }: NewsCardProps) {
   const handleClick = () => {
     // 使用系统浏览器打开原链接，不内嵌 WebView
+    // v25.0.78 P6：原生壳内 window.open 会被 WKWebView / Android WebView 静默拦截
+    // （Android WebChromeClient 未实现 onCreateWindow），点击无任何反应——
+    // 改为主框架跳转：外部域名由 Capacitor 导航代理转交系统浏览器打开，壳内页面不离开
+    if (isNativeShellSync()) {
+      window.location.href = sourceUrl;
+      return;
+    }
     window.open(sourceUrl, "_blank", "noopener,noreferrer");
   };
 
