@@ -1,11 +1,13 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { callAI, getPermissionStatus } from "@/lib/aiService";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
+import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
 
 export default function YixueAIPage() {
+  useIOSLearningRedirect("ai"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<{ role: string; content: string }[]>([
     { role: "assistant", content: "你好！我是易学学习助手，可以解答命理基础问题、排盘疑问。请问有什么可以帮助你的？" },

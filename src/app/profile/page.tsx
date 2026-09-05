@@ -452,6 +452,7 @@ function LogoutConfirmModal({ onClose }: { onClose: () => void }) {
 function AboutUsModal({ onClose, version }: { onClose: () => void; version?: string }) {
   useBodyScrollLock(true);
   usePopupBackHandler(onClose, true);
+  const iosNative = useIOSNativeShell();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6" onClick={onClose}>
@@ -491,7 +492,7 @@ function AboutUsModal({ onClose, version }: { onClose: () => void; version?: str
             <ul className="space-y-1.5 text-xs text-gray-500">
               <li className="flex items-start gap-2">
                 <span style={{ color: BRAND }}>•</span>
-                <span>易学排盘与AI解读</span>
+                <span>{iosNative ? "易学系统学习（课程·题库·典籍）" : "易学排盘与AI解读"}</span>
               </li>
               <li className="flex items-start gap-2">
                 <span style={{ color: BRAND }}>•</span>

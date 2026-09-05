@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 // 七政四余排盘工具页 - NICHE-TOOLS v25.0.68 / 断语面板 v25.0.71
 // ============================================================================
@@ -41,6 +41,7 @@ import {
 } from "@/algorithm-core/modules/qizheng-duanyu";
 import { fetchFeatureFlags, flagOn } from "@/lib/featureFlags";
 import SharedBirthLocationSelector, { type RegionIndices, regionAt } from "@/components/shared/region-selector";
+import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
 
 const BRAND = "#7B2FBE";
 const RAD = Math.PI / 180;
@@ -82,6 +83,7 @@ const HOURS = ["00:00-01:00", "01:00-03:00", "03:00-05:00", "05:00-07:00", "07:0
 const PAIPAN_KEY = "yandao_qizheng_input";
 
 export default function QizhengPage() {
+  useIOSLearningRedirect("qizheng"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const [mounted, setMounted] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [result, setResult] = useState<QizhengResult | null>(null);

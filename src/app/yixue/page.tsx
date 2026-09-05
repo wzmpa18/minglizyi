@@ -1,9 +1,10 @@
-﻿"use client";
+"use client";
 
 import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { solarToLunar, getLunarDateString } from "@/lib/lunar";
 import { solarToBazi, GAN, ZHI } from "@/algorithm-core";
+import { isIOSNative } from "@/lib/platformGate";
 
 // 五行颜色映射
 const WUXING_COLOR: Record<string, string> = {
@@ -56,6 +57,39 @@ const TOOLS = [
   { href: "/yixue/jieqi", label: "二十四节气", icon: "jieqi" },
 ];
 
+// ============ IOS-4.3B-RECOVERY：iOS 版易学学习中心 ============
+// iOS 正式产品 Profile：易学板块定位为「易学学习中心」（COURSE/KNOWLEDGE/REFERENCE/QUIZ），
+// 不提供排盘/预测工具入口。九大学科 + 历法工具 + 学习闭环，全部为真实学习功能。
+// Web/Android 保持完整排盘工具版，完全不变。
+
+const IOS_SUBJECTS = [
+  { key: "yixue_basic", name: "易学基础", desc: "阴阳五行 · 太极两仪 · 河图洛书 · 易经源流", icon: "易" },
+  { key: "bazi", name: "八字基础", desc: "天干地支 · 四柱结构 · 十神 · 排盘原理", icon: "八" },
+  { key: "ziwei", name: "紫微斗数基础", desc: "十二宫 · 十四主星 · 辅星 · 四化", icon: "紫" },
+  { key: "qizheng", name: "七政四余", desc: "七政四余 · 星曜 · 二十八宿 · 十二宫位", icon: "政" },
+  { key: "qimen", name: "奇门基础", desc: "九宫八卦 · 八门九星 · 三奇六仪", icon: "奇" },
+  { key: "liuyao", name: "六爻基础", desc: "卦象装纳 · 六亲世应 · 用神", icon: "爻" },
+  { key: "meihua", name: "梅花易数基础", desc: "体用生克 · 卦气旺衰 · 断卦步骤", icon: "梅" },
+  { key: "daliuren", name: "大六壬基础", desc: "四课三传 · 神将 · 课体结构", icon: "壬" },
+  { key: "calendar", name: "传统历法", desc: "农历节气 · 干支纪年 · 岁时节令", icon: "历" },
+];
+
+const IOS_TOOLS = [
+  { href: "/yixue/wannianli", label: "万年历", icon: "历" },
+  { href: "/yixue/huangli", label: "老黄历", icon: "黄" },
+  { href: "/yixue/jieqi", label: "二十四节气", icon: "节" },
+  { href: "/yixue/compass", label: "专业罗盘", icon: "罗" },
+  { href: "/yixue/liji", label: "立极尺", icon: "极" },
+  { href: "/yixue/luban", label: "鲁班尺", icon: "鲁" },
+];
+
+const IOS_STUDY_LOOP = [
+  { href: "/academy/learn?track=yixue", label: "章节学习", icon: "📖", desc: "知识点 · 打卡进度" },
+  { href: "/academy/question-bank?track=yixue", label: "章节练习", icon: "✏️", desc: "单选 · 多选 · 判断" },
+  { href: "/academy/wrong-book", label: "错题复习", icon: "📝", desc: "错题重练 · 巩固" },
+  { href: "/academy/favorites", label: "我的收藏", icon: "⭐", desc: "收藏知识点与题目" },
+];
+
 // 简化图标（用文字替代图标，后续第二步替换为真实图标）
 function ToolIcon({ icon }: { icon: string }) {
   const iconMap: Record<string, string> = {
@@ -100,6 +134,7 @@ function ToolIcon({ icon }: { icon: string }) {
 export default function YixueHome() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
+  const iosProfile = mounted && isIOSNative();
 
   const todayData = useMemo(() => {
     const now = mounted ? new Date() : new Date(2026, 0, 1, 12, 0, 0);
@@ -160,6 +195,128 @@ export default function YixueHome() {
 
   const { gongliStr, dayNum, weekDay, nongliStr, pillars } = todayData;
 
+  // ============ iOS 版：易学学习中心 ============
+  if (iosProfile) {
+    return (
+      <div className="mx-auto w-full" style={{ maxWidth: "420px" }}>
+        {/* 今日干支（传统历法数据，仅展示，不链接排盘） */}
+        <div
+          className="grid w-full bg-[#eee] px-2 py-1.5"
+          style={{
+            gridTemplateColumns: "50% 12.5% 12.5% 12.5% 12.5%",
+            height: "80px",
+          }}
+        >
+          <div className="grid h-full" style={{ gridTemplateColumns: "35% 65%" }}>
+            <div className="flex flex-col items-center justify-center">
+              <span className="text-xs text-gray-500">今日</span>
+              <span
+                className="text-[45px] font-bold leading-[50px]"
+                style={{ color: "#7B2FBE" }}
+              >
+                {dayNum}
+              </span>
+            </div>
+            <div className="flex flex-col justify-center">
+              <span className="text-xs text-gray-500">{gongliStr}</span>
+              <span className="text-[15px] font-medium">{nongliStr}</span>
+              <span className="text-[15px]">{weekDay}</span>
+            </div>
+          </div>
+          {pillars.map((p, i) => (
+            <div
+              key={i}
+              className="flex flex-col items-center justify-center"
+            >
+              <span className="text-xs text-gray-500">{p.label}</span>
+              <span className={`text-[15px] font-bold ${WUXING_COLOR[GAN_WUXING_MAP[p.gan] || ""] || ""}`}>
+                {p.gan}
+              </span>
+              <span className={`text-[15px] font-bold ${WUXING_COLOR[ZHI_WUXING_MAP[p.zhi] || ""] || ""}`}>
+                {p.zhi}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        <div className="overflow-hidden bg-[#f5f5f5] px-4 py-1.5">
+          <p className="text-center text-xs text-gray-500">
+            易学启蒙 · 系统学习传统文化
+          </p>
+        </div>
+
+        {/* 学科目录 */}
+        <div className="px-3 pt-3">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="text-base font-bold text-gray-800">易学学习中心</h2>
+            <Link href="/academy" className="text-xs" style={{ color: "#7B2FBE" }}>
+              全部学堂 ›
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {IOS_SUBJECTS.map((s) => (
+              <Link
+                key={s.key}
+                href={`/academy/yixue/${s.key}`}
+                className="flex items-center gap-2.5 rounded-2xl bg-white p-3 shadow-sm active:opacity-90"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-base font-bold text-white" style={{ backgroundColor: "#7B2FBE" }}>
+                  {s.icon}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gray-800">{s.name}</p>
+                  <p className="truncate text-[10px] text-gray-500">{s.desc}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* 学习闭环 */}
+        <div className="px-3 pt-4">
+          <h2 className="mb-2 text-base font-bold text-gray-800">学习闭环</h2>
+          <div className="grid grid-cols-4 gap-2">
+            {IOS_STUDY_LOOP.map((it) => (
+              <Link
+                key={it.href}
+                href={it.href}
+                className="flex flex-col items-center gap-1 rounded-2xl bg-white py-3 shadow-sm active:opacity-90"
+              >
+                <span className="text-xl">{it.icon}</span>
+                <span className="text-xs font-medium text-gray-700">{it.label}</span>
+                <span className="px-1 text-center text-[9px] leading-tight text-gray-400">{it.desc}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* 传统历法与工具 */}
+        <div className="px-3 pt-4 pb-2">
+          <h2 className="mb-2 text-base font-bold text-gray-800">传统历法与工具</h2>
+          <div className="flex flex-wrap justify-center gap-1.5 px-0 py-1">
+            {IOS_TOOLS.map((tool) => (
+              <Link
+                key={tool.href}
+                href={tool.href}
+                className="flex w-[70px] flex-col items-center gap-1 rounded-[15px] bg-[#eee] py-2.5 text-center shadow-[0_2px_5px_#888888] transition-all active:scale-[0.96] active:shadow-sm"
+              >
+                <ToolIcon icon={tool.icon} />
+                <span className="text-xs font-medium text-gray-700">{tool.label}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* 免责声明 */}
+        <div className="mt-4 px-4 pb-4 text-center text-[11px] text-gray-400">
+          <p>易学学习中心提供课程、典籍、术语与练习，供传统文化学习研究。</p>
+          <p className="mt-1">言道 · 传承中华智慧</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ============ Web/Android 版：完整排盘工具版（保持不变） ============
   return (
     <div className="mx-auto w-full" style={{ maxWidth: "420px" }}>
       {/* 对标 jishiyu app-day-info: 5列 grid */}

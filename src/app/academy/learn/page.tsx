@@ -38,7 +38,7 @@ export default function AcademyLearnPage() {
     setLoading(true);
     try {
       const [k, p] = await Promise.all([
-        fetchKnowledge(track ? { track, category: category || undefined } : category ? { category } : undefined),
+        fetchKnowledge(track ? { track, category: category || undefined, limit: 1000 } : category ? { category, limit: 1000 } : { limit: 1000 }),
         fetchProgress(),
       ]);
       if (k && k.success && k.points) setPoints(k.points);

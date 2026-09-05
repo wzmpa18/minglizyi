@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -30,6 +30,7 @@ import { useToolBack } from "@/lib/useToolBack";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { ShareButton } from "@/components/ShareButton";
 import { PostToSquareButton } from "@/components/PostToSquareButton";
+import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
 
 // ============================================================================
 // 解读类型标签颜色
@@ -176,6 +177,7 @@ function PalmCell({
 // 主组件
 // ============================================================================
 export default function XiaoliurenPage() {
+  useIOSLearningRedirect("xiaoliuren"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const pageKey = "yixue_xiaoliuren"; const { showResult, setShowResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   // ---- 输入状态 ----
   const [showPopup, setShowPopup] = useState(true);

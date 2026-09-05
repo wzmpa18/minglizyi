@@ -14,6 +14,7 @@ import EventDivinationPanel from "@/components/EventDivinationPanel";
 
 import { ShareButton } from "@/components/ShareButton";
 import { PostToSquareButton } from "@/components/PostToSquareButton";
+import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
 // ============================================================================
 // 常量
 // ============================================================================
@@ -104,6 +105,7 @@ function getJiXiongColor(jx: string): { bg: string; text: string } {
 // 主组件
 // ============================================================================
 export default function XuankongFeixingPage() {
+  useIOSLearningRedirect("xuankong-feixing"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const pageKey = "yixue_xuankong_feixing"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   const currentYear = 2026;
   const defaultYun = getYunFromYear(currentYear);

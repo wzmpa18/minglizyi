@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -26,6 +26,7 @@ import { useToolBack } from "@/lib/useToolBack";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { ShareButton } from "@/components/ShareButton";
 import { PostToSquareButton } from "@/components/PostToSquareButton";
+import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
 
 // ============================================================================
 // 解读类型标签颜色
@@ -291,6 +292,7 @@ function AnalysisItem({
 // ============================================================================
 
 export default function HehunPage() {
+  useIOSLearningRedirect("hehun"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const pageKey = "yixue_hehun"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   const router = useRouter();
 

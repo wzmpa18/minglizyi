@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { Solar } from "lunar-javascript";
@@ -18,6 +18,7 @@ import AIInterpretButton from "@/components/AIInterpretButton";
 import { buildDeepReportSystemPrompt } from "@/lib/deepReportPrompt";
 
 import { ShareButton } from "@/components/ShareButton";
+import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
 // ============================================================================
 // 常量
 // ============================================================================
@@ -35,6 +36,7 @@ const INTERPRET_TYPE_COLORS: Record<string, { bg: string; fg: string; label: str
 // 主组件
 // ============================================================================
 export default function ZeriPage() {
+  useIOSLearningRedirect("zeri"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const pageKey = "yixue_zeri"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   // P6-TOOL-04：事项分类与展示字段全部来自 LOC 后台配置（toolConfigStore），规则版本可追溯
   const zeriCfg = useMemo(() => getToolConfig().zeri, []);

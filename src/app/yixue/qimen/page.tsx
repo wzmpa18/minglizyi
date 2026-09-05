@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -17,6 +17,7 @@ import { useToolBack } from "@/lib/useToolBack";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { ShareButton } from "@/components/ShareButton";
 import { PostToSquareButton } from "@/components/PostToSquareButton";
+import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
 
 // ============================================================================
 // 常量
@@ -169,6 +170,7 @@ function SegmentedRow<T extends string>({
 // ============================================================================
 
 export default function QimenPage() {
+  useIOSLearningRedirect("qimen"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const pageKey = "yixue_qimen"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   const [showForm, setShowForm] = useState(true);
   const [result, setResult] = useState<QimenResult | null>(null);

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useCallback, useEffect } from "react";
 import ClientSelector from "@/components/ClientSelector";
@@ -11,6 +11,7 @@ import type { CarplateResult } from "@/algorithm-core";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
 import BatchNumberMatching from "@/components/BatchNumberMatching";
 import { ShareButton } from "@/components/ShareButton";
+import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
 // ============================================================================
 // 常量
 // ============================================================================
@@ -21,6 +22,7 @@ const BRAND = "#7B2FBE";
 // 主组件
 // ============================================================================
 export default function CarplatePage() {
+  useIOSLearningRedirect("carplate"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const pageKey = "yixue_carplate"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   const [activeTab, setActiveTab] = useState<"single" | "batch">("single");
   const [plateNumber, setPlateNumber] = useState("");

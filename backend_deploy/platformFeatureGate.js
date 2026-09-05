@@ -24,18 +24,46 @@ const PLATFORM_FEATURE_MATRIX = {
   payment: { web: true, android: true, ios: false, wechat: true, qq: false, unknown: true },
   store:   { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
 
-  // —— 预测/命理/占卜类（小程序永久关闭） ——
-  bazi:           { web: true, android: true, ios: true, wechat: false, qq: false, unknown: true },
-  ziwei:          { web: true, android: true, ios: true, wechat: false, qq: false, unknown: true },
-  qimen:          { web: true, android: true, ios: true, wechat: false, qq: false, unknown: true },
-  liuyao:         { web: true, android: true, ios: true, wechat: false, qq: false, unknown: true },
-  daliuren:       { web: true, android: true, ios: true, wechat: false, qq: false, unknown: true },
-  xiaoliuren:     { web: true, android: true, ios: true, wechat: false, qq: false, unknown: true },
-  meihua:         { web: true, android: true, ios: true, wechat: false, qq: false, unknown: true },
-  tarot:          { web: true, android: true, ios: true, wechat: false, qq: false, unknown: true },
-  astrology:      { web: true, android: true, ios: true, wechat: false, qq: false, unknown: true },
-  hehun:          { web: true, android: true, ios: true, wechat: false, qq: false, unknown: true },
-  fortuneConsult: { web: true, android: true, ios: true, wechat: false, qq: false, unknown: true },
+  // —— 预测/排盘/占卜类 ——
+  // iOS：永久 OFF（IOS-4.3B-RECOVERY-EDUCATION-EDITION-14：App Store 4.3(b) 整改——
+  //   iOS 版正式产品定位为"国学/中医/传统文化学习"，不提供 fortune-telling 功能。
+  //   正式产品 Profile 而非审核模式：所有 iOS 用户一致，不随审核状态/设备/账户变化）
+  // WECHAT / QQ：永久关闭
+  bazi:           { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  ziwei:          { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  qimen:          { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  liuyao:         { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  daliuren:       { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  xiaoliuren:     { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  meihua:         { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  tarot:          { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  astrology:      { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  hehun:          { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  fortuneConsult: { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  taiyiSanshi:    { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  xuankong:       { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  yizhangjing:    { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  zeri:           { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  name:           { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  qiming:         { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  phone:          { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  carplate:       { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  chenggu:        { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  jiemeng:        { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  yixueAI:        { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+
+  // —— 历法/工具/查询类（iOS 保留：传统历法与工具） ——
+  compass:        { web: true, android: true, ios: true, wechat: true, qq: true, unknown: true },
+  liji:           { web: true, android: true, ios: true, wechat: true, qq: true, unknown: true },
+  luban:          { web: true, android: true, ios: true, wechat: true, qq: true, unknown: true },
+  wannianli:      { web: true, android: true, ios: true, wechat: true, qq: true, unknown: true },
+  huangli:        { web: true, android: true, ios: true, wechat: true, qq: true, unknown: true },
+  jieqi:          { web: true, android: true, ios: true, wechat: true, qq: true, unknown: true },
+  ganzhi:         { web: true, android: true, ios: true, wechat: true, qq: true, unknown: true },
+  wuxing:         { web: true, android: true, ios: true, wechat: true, qq: true, unknown: true },
+  nayin:          { web: true, android: true, ios: true, wechat: true, qq: true, unknown: true },
+  shensha:        { web: true, android: true, ios: true, wechat: true, qq: true, unknown: true },
+  kongwang:       { web: true, android: true, ios: true, wechat: true, qq: true, unknown: true },
 
   // —— 学习工具类（ALL ON） ——
   materialToExam: { web: true, android: true, ios: true, wechat: true, qq: true, unknown: true },
@@ -56,8 +84,9 @@ const PAYMENT_BLOCK_PATHS = [
   "/api/ai-quota/purchase",
 ];
 
-// 小程序端（wechat/qq）永久关闭的预测/命理类端点前缀。
-// 当前服务端尚无对应路由（矩阵先行），小程序接入后按此清单强制拦截。
+// 小程序端（wechat/qq）永久关闭 + iOS 端（IOS-4.3B-RECOVERY）关闭的预测/命理类端点前缀。
+// 注：多数排盘工具为前端算法（离线可算），本清单为服务端纵深防御层——
+// 凡命中前缀的 API（AI 解读/记录辅助/后续新增算路）在 iOS 壳内直接 403。
 const FORTUNE_BLOCK_PREFIXES = [
   "/api/yixue/bazi",
   "/api/yixue/ziwei",
@@ -69,7 +98,19 @@ const FORTUNE_BLOCK_PREFIXES = [
   "/api/yixue/tarot",
   "/api/yixue/astro",
   "/api/yixue/hehun",
+  "/api/yixue/zeri",
+  "/api/yixue/name",
+  "/api/yixue/qiming",
+  "/api/yixue/phone",
+  "/api/yixue/carplate",
+  "/api/yixue/chenggu",
+  "/api/yixue/jiemeng",
+  "/api/yixue/yizhangjing",
+  "/api/yixue/taiyi",
+  "/api/yixue/xuankong",
+  "/api/yixue/ai",
   "/api/fortune",
+  "/api/ai/fortune",
 ];
 
 // ==================== 平台识别 ====================
@@ -116,15 +157,18 @@ function createPlatformFeatureGate() {
         }
       }
 
-      // 2) 预测/命理类：WECHAT / QQ 永久关闭
-      if (platform === "wechat" || platform === "qq") {
+      // 2) 预测/命理类：WECHAT / QQ 永久关闭；iOS 永久关闭（IOS-4.3B-RECOVERY）
+      if (platform === "wechat" || platform === "qq" || platform === "ios") {
         const p = String(req.path || "");
         for (let i = 0; i < FORTUNE_BLOCK_PREFIXES.length; i++) {
           if (p.indexOf(FORTUNE_BLOCK_PREFIXES[i]) === 0) {
             return res.status(403).json({
               success: false,
               error: "PLATFORM_FEATURE_DISABLED",
-              message: "该功能在小程序端不可用。",
+              message:
+                platform === "ios"
+                  ? "该功能在 iOS 版不可用。iOS 版为国学/中医/传统文化学习版。"
+                  : "该功能在小程序端不可用。",
               platform: platform,
             });
           }

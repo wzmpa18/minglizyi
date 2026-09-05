@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useToolBack } from "@/lib/useToolBack";
@@ -22,6 +22,7 @@ import { ShareButton } from "@/components/ShareButton";
 import { Lunar, LunarYear, LunarMonth } from "lunar-javascript";
 import SolarDatePicker from "@/components/shared/SolarDatePicker";
 import { saveRecord } from "@/lib/clientStore";
+import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
 
 // ============================================================================
 // 常量
@@ -690,6 +691,7 @@ function SuggestionCard({
 // ============================================================================
 
 export default function QimingPage() {
+  useIOSLearningRedirect("qiming"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const pageKey = "yixue_qiming";
   const { showResult, savedParams, saveParams, goToResult } = useToolBack({
     pageKey,

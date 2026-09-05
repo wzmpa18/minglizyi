@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -16,6 +16,7 @@ import EventDivinationPanel from "@/components/EventDivinationPanel";
 
 import { ShareButton } from "@/components/ShareButton";
 import { PostToSquareButton } from "@/components/PostToSquareButton";
+import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
 // ============================================================================
 // 常量
 // ============================================================================
@@ -293,6 +294,7 @@ function calcTaiyi(year: number, month: number, day: number, hour: number): Taiy
 // 主组件
 // ============================================================================
 export default function TaiyiSanshiPage() {
+  useIOSLearningRedirect("taiyi-sanshi"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const pageKey = "yixue_taiyi_sanshi"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   const [taiyiYear, setTaiyiYear] = useState(2026);
   const [taiyiMonth, setTaiyiMonth] = useState(1);

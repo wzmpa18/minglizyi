@@ -7,6 +7,7 @@ import type { Client } from "@/lib/clientStore";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
 
 import { ShareButton } from "@/components/ShareButton";
+import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
 // ============================================================================
 // 常量
 // ============================================================================
@@ -175,6 +176,7 @@ function searchDreams(query: string): MatchResult[] {
 // 主组件
 // ============================================================================
 export default function JiemengPage() {
+  useIOSLearningRedirect("jiemeng"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("全部");
   const [hasResult, setHasResult] = useState(false);

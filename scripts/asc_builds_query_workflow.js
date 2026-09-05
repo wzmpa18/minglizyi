@@ -11,7 +11,7 @@ function makeJwt() {
   const payload = { iss: ISSUER_ID, iat: now, exp: now + 1200, aud: 'appstoreconnect-v1' };
   const enc = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
   const signingInput = `${enc(header)}.${enc(payload)}`;
-  const signature = crypto.createSign('SHA256').update(signingInput).sign(P8, 'base64url');
+  const signature = crypto.createSign('SHA256').update(signingInput).sign({ key: P8, dsaEncoding: 'ieee-p1363' }, 'base64url');
   return `${signingInput}.${signature}`;
 }
 

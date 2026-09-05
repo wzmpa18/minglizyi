@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>言道国学 iOS 重新提审回执 - 2026-09-03</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: "PingFang SC", "Microsoft YaHei", -apple-system, sans-serif; background: #f0f2f5; color: #1a1a2e; padding: 32px 16px; }
+  .receipt { max-width: 860px; margin: 0 auto; background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0,0,0,.08); overflow: hidden; }
+  .header { background: linear-gradient(135deg, #5b21b6, #7c3aed); color: #fff; padding: 36px 40px; }
+  .header .badge { display: inline-block; background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.4); border-radius: 999px; padding: 6px 16px; font-size: 13px; letter-spacing: 1px; margin-bottom: 14px; }
+  .header h1 { font-size: 26px; font-weight: 700; margin-bottom: 8px; }
+  .header p { font-size: 14px; opacity: .92; }
+  .status-band { display: flex; align-items: center; gap: 14px; background: #ecfdf5; border-bottom: 1px solid #a7f3d0; padding: 20px 40px; }
+  .status-dot { width: 12px; height: 12px; border-radius: 50%; background: #10b981; box-shadow: 0 0 0 4px rgba(16,185,129,.18); }
+  .status-band .label { font-size: 13px; color: #065f46; }
+  .status-band .value { font-size: 20px; font-weight: 700; color: #047857; }
+  .section { padding: 26px 40px; border-bottom: 1px solid #eef0f4; }
+  .section:last-child { border-bottom: none; }
+  .section h2 { font-size: 16px; font-weight: 700; color: #5b21b6; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .section h2::before { content: ""; width: 4px; height: 16px; border-radius: 2px; background: #7c3aed; display: inline-block; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td { padding: 10px 12px; border-bottom: 1px solid #f0f1f5; vertical-align: top; }
+  td.k { color: #6b7280; white-space: nowrap; width: 170px; }
+  td.v { font-weight: 600; color: #111827; word-break: break-all; }
+  .pill { display: inline-block; padding: 3px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .pill.green { background: #ecfdf5; color: #047857; }
+  .checklist { list-style: none; }
+  .checklist li { display: flex; gap: 10px; padding: 9px 0; font-size: 14px; line-height: 1.55; border-bottom: 1px dashed #eef0f4; }
+  .checklist li:last-child { border-bottom: none; }
+  .check { color: #10b981; font-weight: 700; flex-shrink: 0; }
+  .warn { color: #d97706; font-weight: 700; flex-shrink: 0; }
+  .note-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 14px 18px; font-size: 13px; color: #92400e; line-height: 1.7; margin-top: 14px; }
+  .footer { padding: 22px 40px; background: #faf9fc; font-size: 12px; color: #9ca3af; text-align: center; }
+  code { background: #f3f4f6; padding: 2px 7px; border-radius: 5px; font-size: 12.5px; font-family: Consolas, monospace; color: #374151; }
+</style>
+</head>
+<body>
+<div class="receipt">
+  <div class="header">
+    <div class="badge">APP STORE CONNECT · 重新提审回执</div>
+    <h1>言道国学（Yandao Guoxue）iOS 版重新提交审核</h1>
+    <p>Guideline 2.1 - Information Needed 补件后重新提审 · 2026年9月3日</p>
+  </div>
+
+  <div class="status-band">
+    <div class="status-dot"></div>
+    <div>
+      <div class="label">当前审核状态（API 实时查询）</div>
+      <div class="value">WAITING_FOR_REVIEW · 等待审核</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>提交信息</h2>
+    <table>
+      <tr><td class="k">App 名称 / Bundle ID</td><td class="v">言道国学 · com.yandaoguoxue.app（App ID 6807592575）</td></tr>
+      <tr><td class="k">版本 / 构建</td><td class="v">言道 v25.0.77 · Build 2（VALID）</td></tr>
+      <tr><td class="k">提交单 ID</td><td class="v"><code>a8bea0c3-7244-4c2a-b655-3192af447954</code></td></tr>
+      <tr><td class="k">重新提交时间</td><td class="v">2026-09-03 12:47:33（北京时间）</td></tr>
+      <tr><td class="k">版本状态流转</td><td class="v">REJECTED → <span class="pill green">WAITING_FOR_REVIEW</span></td></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>本次补件内容（对应苹果 Guideline 2.1 六项要求）</h2>
+    <ul class="checklist">
+      <li><span class="check">✔</span><div><b>真机录屏已上传</b>：YandaoGuoxue_iOS_Review_Demo.mp4（25.68MB），已挂载至 App 审核信息附件。录屏完整覆盖：启动 App（0s）→ 邮箱注册（30-75s）→ 进入 App → 学习内容 → UGC 内容投诉（135-180s）→ 黑名单管理/屏蔽（240-285s）→ 账号注销（300s）→ 重新登录（345-371s）。</div></li>
+      <li><span class="check">✔</span><div><b>应用目的与目标用户</b>：英文说明已写入 Notes（定位为中医备考与古籍文化学习平台，不含占卜/命理预测服务）。</div></li>
+      <li><span class="check">✔</span><div><b>演示账号</b>：793398563@qq.com / wzm12345678，已填入 App 审核信息"需要登录"字段，并经生产环境实测登录成功（userId 910142）。</div></li>
+      <li><span class="check">✔</span><div><b>外部服务清单</b>：自有云服务器、AI 知识讲解接口、短信登录服务，无第三方占卜平台集成。</div></li>
+      <li><span class="check">✔</span><div><b>地区差异声明</b>：全球功能内容一致，无地区特殊内容。</div></li>
+      <li><span class="check">✔</span><div><b>材料授权声明</b>：典籍均来自公开发行的古籍，用于学术研究，无未授权版权内容。</div></li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>提交前自检结果</h2>
+    <ul class="checklist">
+      <li><span class="check">✔</span><div>商店描述已移除"命理、占卜"字眼（温馨提示句现为"不提供任何医疗诊断服务"）；关键词与推广文本无测算/吉凶/占卜/命理预测类字眼。</div></li>
+      <li><span class="check">✔</span><div>内购自检：iOS 端支付功能已三层关闭（UI 隐藏 + 请求拦截 + 服务端 platformFeatureGate 裁决，IOS_PAYMENT_ENABLED=false），无内购商品需求，符合 3.1.1。</div></li>
+      <li><span class="check">✔</span><div>截图 8 张全部 COMPLETE（iPhone 6.5" × 4 + iPad Pro 12.9" × 4），均为真实使用界面。</div></li>
+      <li><span class="check">✔</span><div>构建出口合规（usesNonExemptEncryption=false）与 IDFA 申报（usesIdfa=false）均已设置。</div></li>
+    </ul>
+    <div class="note-box">
+      <b>待人工操作（1 项）</b>：App Store Connect API 不提供 Resolution Center 回复接口，请登录 App Store Connect → App 审核 → 在审核消息对话框中粘贴回复模板（内容见交付说明，与 Notes 中英文一致，账号已填好）。其余全部事项已通过 API 完成并经回读校验。
+    </div>
+  </div>
+
+  <div class="footer">回执生成时间：2026-09-03 · 数据来源：App Store Connect API 实时查询（appStoreVersions / reviewSubmissions / appStoreReviewDetails / appStoreReviewAttachments）</div>
+</div>
+</body>
+</html>

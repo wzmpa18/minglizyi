@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -34,6 +34,7 @@ import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
 import { calculateDaLiuRen, tianYiGuiRen, type DaLiuRenResult, type SanChuanItem, type SiKeItem, type PanMap, type DaLiuRenInputParams } from "@/algorithm-core/modules/daliuren";
+import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
 // ============================================================================
 // 颜色常量（严格对标截图）
 // ============================================================================
@@ -388,6 +389,7 @@ function InputPanel({
 // ============================================================================
 
 export default function DaLiuRenPage() {
+  useIOSLearningRedirect("daliuren"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const pageKey = "yixue_daliuren"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   const [showForm, setShowForm] = useState(true);
   // P1-REOPEN: 返回键关闭排盘弹窗且无结果时直接返回工具列表

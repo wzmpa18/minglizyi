@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { getYearGanZhi, hourToZhi } from "@/algorithm-core";
@@ -6,6 +6,7 @@ import type { Gender } from "@/algorithm-core";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
 
 import { ShareButton } from "@/components/ShareButton";
+import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
 // ============================================================================
 // 称骨数据
 // ============================================================================
@@ -329,6 +330,7 @@ function getPiyu(totalQian: number, gender: Gender): string {
 // ============================================================================
 
 export default function ChengguPage() {
+  useIOSLearningRedirect("chenggu"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const [year, setYear] = useState(1990);
   const [month, setMonth] = useState(1);
   const [day, setDay] = useState(1);

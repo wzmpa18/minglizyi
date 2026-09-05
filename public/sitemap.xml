@@ -5,6 +5,16 @@
   <url><loc>https://yandaoguoxue.yandao.vip/yixue/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://yandaoguoxue.yandao.vip/zhongyi/</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
   <url><loc>https://yandaoguoxue.yandao.vip/academy/</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://yandaoguoxue.yandao.vip/academy/yixue/</loc><changefreq>weekly</changefreq><priority>0.7</priority><lastmod>2026-09-05</lastmod></url>
+  <url><loc>https://yandaoguoxue.yandao.vip/academy/yixue/yixue_basic/</loc><changefreq>weekly</changefreq><priority>0.6</priority><lastmod>2026-09-05</lastmod></url>
+  <url><loc>https://yandaoguoxue.yandao.vip/academy/yixue/bazi/</loc><changefreq>weekly</changefreq><priority>0.6</priority><lastmod>2026-09-05</lastmod></url>
+  <url><loc>https://yandaoguoxue.yandao.vip/academy/yixue/ziwei/</loc><changefreq>weekly</changefreq><priority>0.6</priority><lastmod>2026-09-05</lastmod></url>
+  <url><loc>https://yandaoguoxue.yandao.vip/academy/yixue/qizheng/</loc><changefreq>weekly</changefreq><priority>0.6</priority><lastmod>2026-09-05</lastmod></url>
+  <url><loc>https://yandaoguoxue.yandao.vip/academy/yixue/qimen/</loc><changefreq>weekly</changefreq><priority>0.6</priority><lastmod>2026-09-05</lastmod></url>
+  <url><loc>https://yandaoguoxue.yandao.vip/academy/yixue/liuyao/</loc><changefreq>weekly</changefreq><priority>0.6</priority><lastmod>2026-09-05</lastmod></url>
+  <url><loc>https://yandaoguoxue.yandao.vip/academy/yixue/meihua/</loc><changefreq>weekly</changefreq><priority>0.6</priority><lastmod>2026-09-05</lastmod></url>
+  <url><loc>https://yandaoguoxue.yandao.vip/academy/yixue/daliuren/</loc><changefreq>weekly</changefreq><priority>0.6</priority><lastmod>2026-09-05</lastmod></url>
+  <url><loc>https://yandaoguoxue.yandao.vip/academy/yixue/calendar/</loc><changefreq>weekly</changefreq><priority>0.6</priority><lastmod>2026-09-05</lastmod></url>
   <url><loc>https://yandaoguoxue.yandao.vip/invite/</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://yandaoguoxue.yandao.vip/tools/wuguang-paipan.html</loc><changefreq>weekly</changefreq><priority>0.8</priority><lastmod>2026-08-31</lastmod></url>
   <url><loc>https://yandaoguoxue.yandao.vip/tools/mianfei-bazi-paipan.html</loc><changefreq>weekly</changefreq><priority>0.8</priority><lastmod>2026-08-31</lastmod></url>

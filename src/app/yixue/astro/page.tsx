@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { DatePicker } from "@/components/shared";
@@ -13,6 +13,7 @@ import { buildDeepReportSystemPrompt } from "@/lib/deepReportPrompt";
 import { ShareButton } from "@/components/ShareButton";
 
 import { getDignity, DIGNITY_NOTES, CLASSICAL_ASTRO_VERSION as CLASSICAL_VERSION } from "@/lib/classicalAstroRules";
+import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
 
 // ============================================================================
 // 常量
@@ -34,6 +35,7 @@ const TERM_NOTES: Array<{ term: string; note: string }> = [
 // 主组件
 // ============================================================================
 export default function AstroPage() {
+  useIOSLearningRedirect("astro"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const astroCfg = useMemo(() => getToolConfig().astro, []);
   const [birth, setBirth] = useState({ year: 2000, month: 1, day: 1, hour: 12, minute: 0 });
   const [cityIdx, setCityIdx] = useState(0);

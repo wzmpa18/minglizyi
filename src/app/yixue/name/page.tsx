@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useToolBack } from "@/lib/useToolBack";
@@ -24,6 +24,7 @@ import { solarToBazi } from "@/algorithm-core";
 import type { Gender } from "@/algorithm-core";
 import { Lunar, LunarYear, LunarMonth } from "lunar-javascript";
 import SolarDatePicker from "@/components/shared/SolarDatePicker";
+import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
 
 // ============================================================================
 // 常量
@@ -353,6 +354,7 @@ function WuxingBalanceBar({ balance }: { balance: Record<string, number> }) {
 // 主页面组件
 // ============================================================================
 export default function NameAnalysisPage() {
+  useIOSLearningRedirect("name"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const pageKey = "yixue_name";
   const { showResult, savedParams, saveParams, goToResult } = useToolBack({
     pageKey,

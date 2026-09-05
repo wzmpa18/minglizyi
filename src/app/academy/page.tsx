@@ -31,6 +31,7 @@ const ZONES: ZoneDef[] = [
     desc: "八字 · 紫微 · 六爻 · 易学知识点精读与题库",
     trackKey: "yixue",
     entries: [
+      { key: "center", label: "🏛️ 易学学习中心", url: "/academy/yixue" },
       { key: "learn", label: "📖 知识学习", url: "/academy/learn?track=yixue" },
       { key: "bank", label: "📝 题库练习", url: "/academy/question-bank" },
       { key: "exam", label: "🎓 等级考试", url: "/academy/exam" },

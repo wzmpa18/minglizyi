@@ -603,7 +603,7 @@ ${numberLabel}类型：${isPhone ? "手机号" : "车牌号"}
   return (
     <div
       className="min-h-screen bg-gray-50"
-      style={{ paddingBottom: "calc(96px + var(--bottom-nav-height, 56px) + env(safe-area-inset-bottom, 0px))" }}
+      style={{ paddingBottom: "calc(96px + var(--bottom-nav-height, 64px) + env(safe-area-inset-bottom, 0px))" }}
     >
       {/* ---------- 顶部引导 ---------- */}
       <div
@@ -1388,7 +1388,7 @@ ${numberLabel}类型：${isPhone ? "手机号" : "车牌号"}
       {/* ---------- 底部免责声明 ---------- */}
       <div
         className="fixed left-0 right-0 z-30 border-t border-gray-100 bg-white/95 px-4 py-2 backdrop-blur"
-        style={{ bottom: "calc(var(--bottom-nav-height, 56px) + env(safe-area-inset-bottom, 0px))" }}
+        style={{ bottom: "calc(var(--bottom-nav-height, 64px) + env(safe-area-inset-bottom, 0px))" }}
       >
         <p className="text-center text-[10px] text-gray-400">
           仅供传统文化参考，不构成任何决策建议

@@ -58,6 +58,7 @@ export default function QuestionBankPage() {
         ...(track ? { track } : {}),
         ...(category ? { category } : {}),
         ...(type ? { type } : {}),
+        limit: 1000,
       });
       if (r && r.success && r.questions) setQuestions(r.questions);
       else setQuestions([]);

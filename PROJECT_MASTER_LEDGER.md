@@ -907,3 +907,58 @@ gh workflow run ios-build.yml --repo wzmpa18/minglizyi --ref main
 - **生产事实快照（2026-09-01 00:2x CST SSH+公网实测）**：current → releases/v25.0.74；公网 version.json = buildId `v25.0.74_D20260901`；升级接口 latestVersion 25.0.74/latestVersionCode 2071；PM2 yandaoguoxue-backend online（重启后正常）；磁盘 15G/50G（30%）。
 
 **收尾**：僵尸后台构建任务（上午遗留的 v25.0.72 编译卡死进程）终止；本地 sync_v25_0_74.bundle 用后即删；三端 HEAD 一致（本地=GitHub=服务器源码仓 `9afd6b1`+文档回灌提交）；android/app/build.gradle 版本号本地仓对齐 2071/25.0.74 提交。
+
+## 十二.32 v25.0.75/76 微信服务号全量接入 + OAuth 未认证防护（2026-09-01）
+
+**定位**：微信公众号生态全量接入批次（提交 `03d7443`→`1901864`）。v25.0.75 = 服务号后端 17 模块 + 公众号运营后台；v25.0.76 = OAuth 未认证防护。
+
+**工程内容**：
+- **v25.0.75 服务号后端（17 模块）**：Callback 验签幂等 / 事件持久化 / OAuth 绑定 / JS-SDK 签名 / 自定义菜单 / 选题引擎 / AI 文章生成（wechatContentEngine，复用混元 tokenhub 凭据）/ SafetyGate 合规门禁 / 查重（Jaccard 二元语法）/ 草稿箱 / TokenManager / wechatContentScheduler 调度器；前端 `/admin/wechat` 公众号运营后台 + 微信内打开静默认身份识别（免登录）；cron 内容流水线上线（ai_call_logs scene 记账）。
+- **v25.0.76 OAuth 防护**：authorize 入口加 `WECHAT_OA_OAUTH_ENABLED` 守卫（未开通静默跳回防微信报错页）+ `/me` 返回 oauthEnabled + 前端识别组件按状态跳过；平台联调与权益探测脚本入库；package.json 去 UTF-8 BOM（PowerShell 写入副作用致 gen-version 解析失败修复）。
+
+**运营事实**：服务号已发布文章改错清单（8 篇已发文章勘误指引）见 `docs/reports/20260902_服务号已发布文章修改清单_改错指引.html`。
+
+## 十二.33 v25.0.77/78 iOS 上架打包 CI 链路收口 + TestFlight 上传成功（2026-09-01/02）
+
+**定位**：iOS App Store 上架合规收口（SEAL-11）+ 签名链修复 TestFlight 上传成功（SIGN-FIX-12）。提交链 `4290249`→`35f2a4b`。
+
+**v25.0.77（CI 链路收口）**：
+- CI 基座：macos-15 + Xcode 16.4（Capacitor 8.5.0 二进制框架需 Xcode 16+ 编译器，Xcode 15.4 下 @capacitor/share Swift 扩展编译失败）；package-lock.json 同步（补 @capacitor/share@8.0.1 + tsx@4.23.13 锁定，修 npm ci 17s 中断）。
+- 签名方案三步迭代：移除 Release 显式 CODE_SIGN_IDENTITY（Automatic 风格冲突）→ 归档/签名分离（exportArchive 分发签名）→ ASC API 自动创建分发证书/App ID/App Store profile（无需注册设备）。
+- 收口结论：CI 链路全通，唯一阻塞 = 云签名权限（Admin 角色 API Key）。
+
+**v25.0.78（TestFlight 上传成功）**：
+- Bundle ID 对齐 ASC 实际注册的 `com.yandaoguoxue.app` + 手动签名方案。
+- 三连坑修复：签名资产导入健壮性（PlistBuddy /dev/stdin 不可 seek → plutil 提取 + UUID 常量校验）；altool 参数驼峰化 `--apiIssuer`（Xcode 16 altool 不识别连字参数）；Xcode 16.4→26.3（ASC 2026 强制 iOS 26 SDK 上传，altool 409 SDK version issue；macos-15-arm64 镜像自带 Xcode 26.3）。
+- **成果**：iOS build 1.0(1) 上传 TestFlight processingState=VALID。
+- 附带修复（P6）：NewsCard 原生壳内 window.open 被 WKWebView/Android WebView 静默拦截 → 改主框架跳转（Capacitor 导航代理转交系统浏览器）。
+
+## 十二.34 v25.0.79 iOS 提审整改 + 安卓同步 + Guideline 2.1 资料补件重提（2026-09-02/03）
+
+**定位**：按苹果整改指令全端合规整改（SUBMIT-13，提交 `dcadb47`+`a1fec51`）→ 提审 → Guideline 2.1 拒审 → 资料补件重提。报告 `docs/reports/20260902_v25.0.79_iOS提审整改与安卓同步批次报告_IOS-APPSTORE-SUBMIT-13.md`。
+
+**整改内容**：入口改名（手机号吉凶→手机号码解析 / 车牌号吉凶→车牌号民俗解读 / 结果等级吉凶→优选良好欠佳）；黄历古籍定性（《钦定协纪辨方书》注解 / 十二时辰吉凶→历注 / 宜忌→适合避开 / 首页吉神宜趋折叠区移除）；全局吉凶清零（UI 层，古籍原文除外）；AI 输出合规红线（禁吉凶祸福旺衰财运姻缘运势，只许名词释义/历史背景/天文历法科普/古籍罗列/典籍出处 + 固定免责声明尾部）；隐私政策补充（罗盘临时位置不上传不存储不关联）。
+
+**Web 部署**：out/ 1931 文件（buildId `v25.0.79_D20260902`）→ 内容门禁（新文案 17-24 chunks 命中 / 4 页面无吉凶 / 主站回归 42 tools + 59 sitemap + IP 零泄漏）→ **current 原子切流 releases/v25.0.79** → 公网 Playwright 渲染级验证（首页/黄历/手机号页实测无吉凶）。
+
+**安卓 APK v25.0.79 / versionCode 2072**：build_android_v25_0_79.sh（服务器 Gradle 8.9），内置资源与 Web 生产一致（1931 文件）；内容门禁（新文案 17-24 chunks / 旧文案 0 chunks）；三份分发 MD5 一致 `f1a50c4beebd546c9dd00c230b8bda1c`（12,174,027 bytes）；app-release-config.json → 25.0.79/2072 + 升级公告；公网版本接口与 APK MD5 终验一致。
+
+**iOS 提审推进**：截图 8 张全 COMPLETE（iPhone 6.5″ 4 + iPad Pro 12.9″ 4，敏感词扫描全过，iPad 为提审探测新发现必需项）；元数据（分类教育/参考 + 版权声明 DOES_NOT_USE_THIRD_PARTY_CONTENT + 审核备注烧入）；**提审端点勘误**（旧 POST /v1/submissions 404，现行 reviewSubmissions → reviewSubmissionItems → PATCH submitted）；定价 Owner Action（App Manager Key 403，Admin 角色才可设价）完成后 build 1.0(2) 关联提交。
+
+**Guideline 2.1 资料补件重提（2026-09-03）**：苹果以「Information Needed」拒审 → 补件重提：① 371 秒屏幕录制（覆盖启动/注册/登录/账号注销/UGC 内容举报/用户拉黑全流程）上传至 reviewSubmission；② 演示账号 793398563@qq.com / wzm12345678；③ 审核备注英文说明。状态 WAITING_FOR_REVIEW（submission `a8bea0c3-7244-4c2a-b655-3192af447954`）。回执 `docs/reports/20260903-appstore-resubmit-receipt.html`；用户需人工回复 ASC 审核留言（同英文内容）。
+
+## 十二.35 v25.0.80 提审期间用户真机反馈六问题修复（源码就绪待部署，2026-09-03）
+
+**定位**：App Store 审核期间（WAITING_FOR_REVIEW）用户真机测试反馈六问题修复批次。**纯源码修复未部署**（审核期间不动线上 Web v25.0.79 / APK 2072），等审核结果一次性部署。报告 `docs/reports/20260903_v25.0.80_用户反馈六问题修复批次报告_USER-FEEDBACK-SIX-FIXES.md`。
+
+**六问题与修复**：
+1. **Gmail 收不到验证码（DNS 根因，唯一即刻生效项）**：DNSPod 面板 @ 主机 SPF/MX 记录 DISABLE（早期切 CDN 与 CNAME 冲突被一并暂停，网站改回 A 记录后忘恢复；SES 域名验证状态是历史快照不自动复查）→ DNSPod API DeleteRecord+CreateRecord 重建 ENABLE（SPF `v=spf1 include:qcloudmail.com ~all` + MX mxbiz1.qq.com 优先级5），权威 DNS classical.dnspod.net 直查生效。邮件认证链全通：SPF+DKIM+DMARC+MX。
+2. **换邮箱后倒计时不停止**：register/forgot-password 页 handleEmailChange/handlePhoneChange/tab 切换 → setCountdown(0) + 清空已填验证码。
+3. **iOS 二级页面无返回键**：四层方案——新建 GlobalBackButton（layout.tsx 挂载，仅原生壳显示，一级 tab/落地页/admin 白名单，DOM 轮询检测页面自带返回键防双键，z-40 低于全屏弹窗，刘海屏 safe-area 避让，SwipeBackProvider 外挂载避 P0-1 事故）；/ai、/yixue/huangli、/yixue/wannianli 三页顶栏补键；全站扫描（BrandHeader 约60页自带/包装页/悬浮兜底约30页）；Android 双重保障复核（MainActivity OnBackPressedCallback + SwipeBackProvider 双端右滑）。
+4. **排盘不能保存**：验证 v25.0.74+v25.0.77 修复在位（auth/records/save JWT 链路 + 离线队列补传 + 13 工具页去守卫 + 非会员本地保存兜底 + records 页 22 类型映射），11 个排盘页均有「保存记录」按钮。用户看到不能保存因线上仍 v25.0.74 前运行时 + 旧内置资源，部署本批即生效。
+5. **行业资讯不能打开 + AI 定时维护**：NewsCard 原生壳内改主框架跳转（iOS WebViewDelegationHandler L100-119 → UIApplication.open / Android Bridge.launchIntent → ACTION_VIEW，双端 Capacitor 导航代理源码级验证）；新建 newsAiScheduler.js（cron 每日 07:10，混元 12 主题池生成 → 模板池 24 条降级 → 合规三重门禁 → Jaccard 去重 >0.55 拒绝 → 来源标注站内频道不冒充权威机构 → 幂等 state + 原子写 tmp+rename → ai_ 前缀上限 60），deploy_news_ai_v25_0_78.sh 幂等安装 crontab，本地全流程测试通过。
+6. **新注册用户通讯录出现大量陌生用户**：根因 = 本地用户目录与好友列表客户端合并策略（一键建群拉人后「见过的人」入本地目录被 friends 页合并展示）→ friends 页改 `/api/social/friends/list` 服务端唯一事实源整体替换 + auth.ts 登出清理社交本地数据（好友/请求/群/黑名单/目录/关注/聊天消息键）；一键建群拉人不受影响（群成员 ≠ 通讯录可见）。
+
+**构建终验**：v25.0.80 build PASS（Compiled successfully 27.8s / 174 静态页 / builtAt 2026-09-03 20:21）；四特征入包——GlobalBackButton `0u36arl2-v_yq.js`、NewsCard 主框架跳转 `0u36arl2-v_yq.js`+`1y_kd1jq0cdbz.js`、倒计时重置双页 `3a3mmuv_da7l1.js`+`3w7n9xu9tsm4z.js`、friends 服务端列表 3 chunks。
+
+**审核结果后的部署顺序（一次性解决）**：① deploy_v25_0_80.sh（Web）→ ② deploy_news_ai_v25_0_78.sh（资讯 AI 维护+cron+首跑）→ ③ Android 重打包 versionCode 2073（内置 v25.0.80）→ ④ iOS 视审核结果重提/下版本带上。

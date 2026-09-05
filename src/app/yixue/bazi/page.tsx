@@ -38,6 +38,7 @@ import { getPillarInterpretation, getShenshaInterpretation } from "@/lib/bazi-in
 import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
 import { useToolBack } from "@/lib/useToolBack";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
+import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
 
 // ===== 五行颜色 - 严格对标jishiyu =====
 // 注意: 五行颜色为传统命理数据色(火=红)，品牌紫色(#7B2FBE)仅用于UI chrome
@@ -1480,6 +1481,7 @@ function TabNotes({storageKey}:{storageKey:string}){
 
 // ===== main =====
 export default function BaziPage(){
+  useIOSLearningRedirect("bazi"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const pageKey = "yixue_bazi"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   const [name,setName]=useState(""); const [year,setYear]=useState(1990); const [month,setMonth]=useState(5);
   const [day,setDay]=useState(15); const [hour,setHour]=useState(12); const [gender,setGender]=useState<Gender>("male");

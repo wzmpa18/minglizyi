@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Solar, Lunar } from "lunar-javascript";
 import IcpFooter from "@/components/IcpFooter";
 import AnnouncementBar from "@/components/AnnouncementBar";
+import { isIOSNative } from "@/lib/platformGate";
 
 const BRAND = "#7B2FBE";
 
@@ -135,6 +136,23 @@ function Collapse({title,children,defaultOpen=false,titleColor}:{title:string;ch
   return(<div className="mb-2 overflow-hidden rounded-xl bg-gray-50"><button onClick={()=>setOpen(!open)} className="flex w-full items-center justify-between px-3 py-2.5 text-left"><span className="text-sm font-semibold" style={{color:titleColor||"#333"}}>{title}</span><span className="text-gray-400 text-sm transition-transform" style={{transform:open?"rotate(180deg)":"none"}}>▼</span></button>{open&&<div className="px-3 pb-3">{children}</div>}</div>);
 }
 
+// 今日宜/忌标签组（Web 常显区块与 iOS 折叠区块共用）
+function YiJiChips({yi,ji}:{yi:string[];ji:string[]}){
+  return(
+    <div>
+      <div className="mb-2 flex flex-wrap gap-1.5">
+        <span className="rounded px-1.5 py-0.5 text-xs font-bold text-white" style={{backgroundColor:"#00a879"}}>适合</span>
+        {yi.length>0?yi.map((y,i)=><span key={i} className="rounded px-1.5 py-0.5 text-xs" style={{backgroundColor:"#e6f7f0",color:"#00a879"}}>{y}</span>):<span className="text-xs text-gray-400">无特别标注</span>}
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        <span className="rounded px-1.5 py-0.5 text-xs font-bold text-white" style={{backgroundColor:"#ed4d49"}}>避开</span>
+        {ji.length>0?ji.map((j,i)=><span key={i} className="rounded px-1.5 py-0.5 text-xs" style={{backgroundColor:"#fde8e8",color:"#ed4d49"}}>{j}</span>):<span className="text-xs text-gray-400">无</span>}
+      </div>
+      <div className="mt-2 text-center text-[13px] leading-relaxed" style={{color:"#8a6d1a"}}>📜 内容整理自《钦定协纪辨方书》等传统历书古籍，仅供民俗文化学习参考</div>
+    </div>
+  );
+}
+
 function getWXRelation(dayWx:string,otherWx:string):string{
   if(dayWx===otherWx)return"比和";
   const s:Record<string,string>={"木":"火","火":"土","土":"金","金":"水","水":"木"};
@@ -178,6 +196,11 @@ export default function HomePage(){
   const[userDayGan,setUserDayGan]=useState<string|null>(null);
   const[userDayZhi,setUserDayZhi]=useState<string|null>(null);
   const[mounted,setMounted]=useState(false);
+
+  // IOS-4.3B-RECOVERY：iOS 正式产品 Profile（国学/中医/传统文化学习）。
+  // 首页第一眼必须是学习产品：易学排盘入口 → 易学学习；隐藏八字个性化模块；
+  // 历法数据保留，择吉预测元素降级。Web/Android 完全不变。
+  const iosProfile=mounted&&isIOSNative();
 
   useEffect(()=>{setMounted(true);try{const s=localStorage.getItem("yandao_user_bazi");if(s){const o=JSON.parse(s);setUserDayGan(o.dayGan||null);setUserDayZhi(o.dayZhi||null);}}catch{}},[]);
 
@@ -237,15 +260,41 @@ export default function HomePage(){
       {/* 官方公告栏（永久功能：升级/维护通知，未登录可见） */}
       <AnnouncementBar />
 
-      {/* 双大按钮 */}
+      {/* 双大按钮（IOS-4.3B：iOS 版第一入口为"易学学习"——教育定位；Web/Android 保持易学排盘） */}
       <div className="mt-3 flex gap-3 px-3">
-        <Link href="/yixue" className="flex flex-1 flex-col items-center justify-center rounded-2xl text-white shadow-lg" style={{height:"100px",background:`linear-gradient(135deg,${BRAND} 0%,#9B5ECF 100%)`,borderRadius:"16px"}}>
-          <BaguaIcon/><span className="mt-1 text-base font-bold">易学排盘</span>
-        </Link>
+        {iosProfile?(
+          <Link href="/academy/yixue" className="flex flex-1 flex-col items-center justify-center rounded-2xl text-white shadow-lg" style={{height:"100px",background:`linear-gradient(135deg,${BRAND} 0%,#9B5ECF 100%)`,borderRadius:"16px"}}>
+            <BaguaIcon/><span className="mt-1 text-base font-bold">易学学习</span>
+          </Link>
+        ):(
+          <Link href="/yixue" className="flex flex-1 flex-col items-center justify-center rounded-2xl text-white shadow-lg" style={{height:"100px",background:`linear-gradient(135deg,${BRAND} 0%,#9B5ECF 100%)`,borderRadius:"16px"}}>
+            <BaguaIcon/><span className="mt-1 text-base font-bold">易学排盘</span>
+          </Link>
+        )}
         <Link href="/zhongyi" className="flex flex-1 flex-col items-center justify-center rounded-2xl shadow-md" style={{height:"100px",backgroundColor:"#EDE4F7",borderRadius:"16px",color:BRAND}}>
           <MedicineIcon/><span className="mt-1 text-base font-bold">中医学习</span>
         </Link>
       </div>
+
+      {/* IOS-4.3B §13/§14/§16：iOS 版历法与提醒工具化入口（黄历日历 + 生日/节气提醒） */}
+      {iosProfile&&(
+        <div className="mx-3 mt-3 grid grid-cols-2 gap-3">
+          <Link href="/yixue/huangli" className="flex items-center gap-2 rounded-2xl bg-white px-3 py-3 shadow-sm active:opacity-90">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl text-lg" style={{backgroundColor:"#EEF2FB",color:"#2D5CA0"}}>📅</span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-gray-800">传统历法黄历</p>
+              <p className="text-[10px] text-gray-500">农历 · 干支 · 节气 · 节日</p>
+            </div>
+          </Link>
+          <Link href="/yixue/wannianli/events" className="flex items-center gap-2 rounded-2xl bg-white px-3 py-3 shadow-sm active:opacity-90">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl text-lg" style={{backgroundColor:"#FBEEF6",color:BRAND}}>🎂</span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-gray-800">生日·纪念日提醒</p>
+              <p className="text-[10px] text-gray-500">农历生日 · 节气 · 纪念日</p>
+            </div>
+          </Link>
+        </div>
+      )}
 
       {/* 言道学堂入口（v25.0.44：三板块配色区分——上紫/中绿/下深蓝，传统文化色系） */}
       <Link href="/academy" className="mx-3 mt-3 flex items-center gap-3 rounded-2xl px-4 py-3 text-white shadow-md active:opacity-90" style={{background:"linear-gradient(135deg,#1E6B45 0%,#31996A 100%)"}}>
@@ -276,20 +325,20 @@ export default function HomePage(){
           <div className="mt-3 flex justify-around gap-2 rounded-xl bg-white/15 py-2">{today.pillars.map(p=><Pillar key={p.label} label={p.label} ganzhi={p.ganzhi}/>)}</div>
         </div>
 
-        {/* 基础信息 */}
+        {/* 基础信息（IOS-4.3B §15：iOS 隐藏冲煞/喜神/财神/福神等择吉方位类，保留历注文化数据） */}
         <div className="px-3 py-3">
           <div className="rounded-xl bg-gray-50 p-3 text-xs leading-relaxed text-gray-700">
             <div className="grid grid-cols-2 gap-y-1">
-              <div><span className="text-gray-500">冲煞：</span>{today.chong} {today.sha}</div>
+              {!iosProfile&&<div><span className="text-gray-500">冲煞：</span>{today.chong} {today.sha}</div>}
               <div><span className="text-gray-500">建星：</span>{today.jianxing}</div>
               <div><span className="text-gray-500">值日：</span>{today.tianshenType}{today.tianshen}</div>
               <div><span className="text-gray-500">纳音：</span>{today.nayin}</div>
               <div><span className="text-gray-500">胎神：</span>{today.taiXin}</div>
               <div><span className="text-gray-500">星宿：</span>{today.xingxiu}</div>
-              <div><span className="text-gray-500">喜神：</span>{today.xiShen}</div>
-              <div><span className="text-gray-500">财神：</span>{today.caiShen}</div>
+              {!iosProfile&&<div><span className="text-gray-500">喜神：</span>{today.xiShen}</div>}
+              {!iosProfile&&<div><span className="text-gray-500">财神：</span>{today.caiShen}</div>}
               <div className="col-span-2"><span className="text-gray-500">彭祖：</span>{today.pengzuGan} {today.pengzuZhi}</div>
-              <div className="col-span-2"><span className="text-gray-500">福神：</span>{today.fuShen}</div>
+              {!iosProfile&&<div className="col-span-2"><span className="text-gray-500">福神：</span>{today.fuShen}</div>}
             </div>
           </div>
 
@@ -313,7 +362,8 @@ export default function HomePage(){
             </div>
           </div>
 
-          {/* 八字个性化建议 */}
+          {/* 八字个性化建议（IOS-4.3B：iOS 隐藏——八字个性化属 fortune-telling 范畴，教育版不提供） */}
+          {!iosProfile&&(
           <Collapse title="今日个性化建议" defaultOpen={!!userDayGan} titleColor={BRAND}>
             {userDayGan?(
               <div className="text-xs text-gray-700">
@@ -332,6 +382,7 @@ export default function HomePage(){
               </div>
             )}
           </Collapse>
+          )}
 
           <Collapse title="地母经" titleColor={BRAND}>
             <div className="text-xs leading-6 text-gray-700" style={{fontFamily:"serif"}}>
@@ -342,26 +393,25 @@ export default function HomePage(){
             </div>
           </Collapse>
 
-          {/* 每日黄历事类（民俗中性表述，详细历注见老黄历工具） */}
+          {/* 每日黄历事类（民俗中性表述，详细历注见老黄历工具）
+              IOS-4.3B §15：iOS 版默认折叠为"传统民俗文化参考"，不突出择吉预测 */}
+          {iosProfile?(
+            <Collapse title="传统民俗参考 · 今日宜忌" titleColor="#8a6d1a">
+              <YiJiChips yi={today.yi} ji={today.ji}/>
+            </Collapse>
+          ):(
           <div className="rounded-xl p-3" style={{backgroundColor:"#fafafa"}}>
             <div className="mb-2 text-xs text-gray-500">今日黄历事类 · 民俗参考</div>
-            <div className="mb-2 flex flex-wrap gap-1.5">
-              <span className="rounded px-1.5 py-0.5 text-xs font-bold text-white" style={{backgroundColor:"#00a879"}}>适合</span>
-              {today.yi.length>0?today.yi.map((y,i)=><span key={i} className="rounded px-1.5 py-0.5 text-xs" style={{backgroundColor:"#e6f7f0",color:"#00a879"}}>{y}</span>):<span className="text-xs text-gray-400">无特别标注</span>}
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              <span className="rounded px-1.5 py-0.5 text-xs font-bold text-white" style={{backgroundColor:"#ed4d49"}}>避开</span>
-              {today.ji.length>0?today.ji.map((j,i)=><span key={i} className="rounded px-1.5 py-0.5 text-xs" style={{backgroundColor:"#fde8e8",color:"#ed4d49"}}>{j}</span>):<span className="text-xs text-gray-400">无</span>}
-            </div>
-            <div className="mt-2 text-center text-[13px] leading-relaxed" style={{color:"#8a6d1a"}}>📜 内容整理自《钦定协纪辨方书》等传统历书古籍，仅供民俗文化学习参考</div>
+            <YiJiChips yi={today.yi} ji={today.ji}/>
           </div>
+          )}
 
           <IcpFooter />
         </div>
       </div>
 
-      {/* 八字输入弹窗 */}
-      {showBaziInput&&(
+      {/* 八字输入弹窗（IOS-4.3B：iOS 版不提供——触发入口已隐藏，此处为防御性守卫） */}
+      {showBaziInput&&!iosProfile&&(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={()=>setShowBaziInput(false)}>
           <div className="w-[320px] rounded-2xl bg-white p-4" onClick={e=>e.stopPropagation()}>
             <div className="mb-3 text-center text-base font-bold" style={{color:BRAND}}>设置您的八字日干</div>

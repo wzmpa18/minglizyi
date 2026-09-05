@@ -20,14 +20,14 @@
 
 | 组件 | 版本 |
 |------|------|
-| Web（生产 current） | **v25.0.72**（buildId `v25.0.72_D20260901`，builtAt 2026-09-01T00:31:00.583Z；七政四余学习资料+题库入易学学习区（135KP/141题）+断语面板学习链接+中医正骨专区恢复（¥89 付费+后台三态开关）；含 v25.0.68~71 全部功能：四工具/罗盘多门派Profile/SEO 28页/断语引擎六节/用户活跃统计） |
-| 后端 API | package 1.1.0（PM2: yandaoguoxue-backend，online；v25.0.72 批次后端变更=academyRoutes 正骨专区服务端门控（access/类目隐藏/内容403/答案隐藏）+paymentRoutes 两修复（价格SSOT loadMatrix/订单回灌恢复extra）+toolAdminRoutes 登记正骨 zhongyi_zhenggu ONE_TIME ¥89 三态开关；矩阵总数 28；QF/OSS/Offline/存储GC/统一后台 全挂载） |
-| Android APK | **v25.0.72 / versionCode 2070**（2026-09-01 发布：正骨专区+七政学习资料批次（叠加 v25.0.70 罗盘多门派/v25.0.71 断语引擎）；统一分发源 latest.apk 原子替换（12,040,252 字节）、18 项单一来源门禁 PASS、升级公告已发布；构建脚本 `backend_deploy/build_android_v25_0_72.sh` 可复跑） |
+| Web（生产 current） | **v25.0.79**（buildId `v25.0.79_D20260902`，2026-09-02 上线；iOS 提审整改批次：入口改名（手机号码解析/车牌号民俗解读）+全局吉凶清零+黄历古籍定性（《钦定协纪辨方书》注解）+AI 输出合规红线与免责声明+隐私政策补充；含 v25.0.74~78 全部功能：排盘云端保存链路/安卓返回手势/微信服务号17模块/NewsCard 原生壳跳转修复。**本地工作区另有 v25.0.80 六问题修复已构建未部署**（等苹果审核结果一次性部署，见总账十二.35）） |
+| 后端 API | package 1.1.0（PM2: yandaoguoxue-backend，online；v25.0.72 批次后端变更=academyRoutes 正骨专区服务端门控+paymentRoutes 两修复（价格SSOT/订单回灌）+toolAdminRoutes 正骨三态开关；**v25.0.75/76 批次新增微信服务号后端 17 模块**（wechatContentEngine AI 文章生成+SafetyGate 查重+TokenManager+调度器 cron 流水线+OAuth 防护守卫，ai_call_logs 记账）；矩阵总数 28；QF/OSS/Offline/存储GC/统一后台 全挂载。**v25.0.80 批次待部署后端**：newsAiScheduler.js 资讯 AI 维护（cron 07:10） |
+| Android APK | **v25.0.79 / versionCode 2072**（2026-09-02 发布：iOS 提审整改同步安卓，内置资源与 Web 生产一致（1931 文件）；统一分发源 latest.apk 原子替换（12,174,027 字节，MD5 `f1a50c4beebd546c9dd00c230b8bda1c`，三份分发名 MD5 一致）、公网版本接口与 APK MD5 终验一致、升级公告已发布；构建脚本 `backend_deploy/build_android_v25_0_79.sh` 可复跑。**审核结果后需重打包 2073（内置 v25.0.80）**） |
 
 ## 3. 当前 Commit
 
 - **四端 HEAD 一致**：LOCAL = GITHUB origin/main = SERVER_SOURCE = 生产构建源（2026-09-01 核实；发布基线 `cf99433`，其后的文档回灌提交经 git bundle 中转同步服务器（服务器直连 GitHub 不稳），unpushed=0；接管后第一步：`git log --oneline -3` 四端核对）。
-- 当前代码批次：`657dc5f`（双身份 PARTNER_NET_OF_REFERRAL）→ `b493913`（Partner 归属快照/合同/改绑审计/结算快照/逐单账）→ `852c5fd`（总账回灌）→ `ac45013`（**MASTER-05 六模块后端**：Provider/对象存储+备份灾备/Offline Pack/社交限频+评论层级/Question Factory/统一后台总控+全量回归矩阵）→ `7a0750d`（Offline 前端四库）→ `6a16c4e`（bump v25.0.66）→ `d9bde64`（/offline 页面接线）→ `4fd6cc5`（MASTER-05 封板回灌）→ `add0f56`（SEO 增长引擎首批：seoPagesConfig+生成器+质量门禁+18页+robots/sitemap+bump v25.0.67）→ `3370fe4`（APK v25.0.67/2067 重建+统一分发源+升级公告+主站 robots/sitemap 修复）→ `7624c15`（IndexNow 免登录主动推送双站 28 URL 202 受理+百度/头条/IndexNow 推送工具固化入仓）→ `2a148da`（**NICHE-TOOLS-07 四工具引擎上线 v25.0.68**：七政四余净室引擎/罗盘 WMM2025/立极尺/鲁班尺丁兰尺+Share 原生修复+APK 2068）→ `6fd3289`/`f53fe12`/`3707220`（v25.0.68 构建/验证脚本三坑修复）→ `d8f476a`（v25.0.69 四工具 SEO 集群页+矩阵登记+IndexNow 推送）→ `875ebfc`（v25.0.70 小众工具收尾：罗盘多门派Profile+立极尺专业盘+SEO五Cluster+Growth编排器）→ `5ece32b`（v25.0.71 七政断语引擎六节+开关管控+用户活跃统计）→ **`cf99433`（v25.0.72 七政学习资料+正骨专区¥89付费+支付两修复，HEAD）**。后端运行时已随 v25.0.72 重启（正骨门控+支付修复生效，PM2 online，fixture 生产实测全过）。四工具代码位置：`src/algorithm-core/modules/qizheng|compass|liji|ruler/index.ts`（净室开发：Astronomy Engine MIT 只做对拍基准、Horosa AGPL 只做结果参考未抄一行、Swiss Ephemeris 弃用；WMM2025 系数 NOAA 公共领域净室键入）。
+- 当前代码批次：`657dc5f`（双身份 PARTNER_NET_OF_REFERRAL）→ `b493913`（Partner 归属快照/合同/改绑审计/结算快照/逐单账）→ `852c5fd`（总账回灌）→ `ac45013`（**MASTER-05 六模块后端**：Provider/对象存储+备份灾备/Offline Pack/社交限频+评论层级/Question Factory/统一后台总控+全量回归矩阵）→ `7a0750d`（Offline 前端四库）→ `6a16c4e`（bump v25.0.66）→ `d9bde64`（/offline 页面接线）→ `4fd6cc5`（MASTER-05 封板回灌）→ `add0f56`（SEO 增长引擎首批：seoPagesConfig+生成器+质量门禁+18页+robots/sitemap+bump v25.0.67）→ `3370fe4`（APK v25.0.67/2067 重建+统一分发源+升级公告+主站 robots/sitemap 修复）→ `7624c15`（IndexNow 免登录主动推送双站 28 URL 202 受理+百度/头条/IndexNow 推送工具固化入仓）→ `2a148da`（**NICHE-TOOLS-07 四工具引擎上线 v25.0.68**：七政四余净室引擎/罗盘 WMM2025/立极尺/鲁班尺丁兰尺+Share 原生修复+APK 2068）→ `6fd3289`/`f53fe12`/`3707220`（v25.0.68 构建/验证脚本三坑修复）→ `d8f476a`（v25.0.69 四工具 SEO 集群页+矩阵登记+IndexNow 推送）→ `875ebfc`（v25.0.70 小众工具收尾：罗盘多门派Profile+立极尺专业盘+SEO五Cluster+Growth编排器）→ `5ece32b`（v25.0.71 七政断语引擎六节+开关管控+用户活跃统计）→ `cf99433`（v25.0.72 七政学习资料+正骨专区¥89付费+支付两修复）→ `9afd6b1`（v25.0.74 排盘云端保存+安卓返回手势）→ `03d7443`（v25.0.75 微信服务号17模块）→ `bbf0188`（v25.0.76 OAuth防护）→ `4290249`（v25.0.77 iOS合规收口）→ `35f2a4b`（v25.0.78 TestFlight VALID）→ `dcadb47`+`a1fec51`（v25.0.79 整改+安卓2072）→ **`9366314`（v25.0.79 报告+台账8.1/8.2，HEAD）**。**本地工作区有 v25.0.80 六问题修复未提交**（30 文件改动+8 新文件：GlobalBackButton/newsAiScheduler/DNS修复脚本/批次报告；接管后先 `git status` 核对再决定提交时机）。后端运行时已随 v25.0.72 重启（正骨门控+支付修复生效，PM2 online，fixture 生产实测全过）。四工具代码位置：`src/algorithm-core/modules/qizheng|compass|liji|ruler/index.ts`（净室开发：Astronomy Engine MIT 只做对拍基准、Horosa AGPL 只做结果参考未抄一行、Swiss Ephemeris 弃用；WMM2025 系数 NOAA 公共领域净室键入）。
 
 ## 4. GitHub
 
@@ -58,8 +58,8 @@
 
 ## 8. Web 生产目录
 
-`/root/yandaoguoxue/current` → 软链 `releases/v25.0.69`。
-`releases/` 现存多版（_5~_29/_62~_67 等；回滚目标 v25.0.66）。**禁止删除 current 指向的目录**。
+`/root/yandaoguoxue/current` → 软链 `releases/v25.0.79`（2026-09-02 切流，1931 文件；公网 version.json buildId `v25.0.79_D20260902`）。
+`releases/` 现存多版（_5~_29/_62~_79；回滚目标 v25.0.74）。**禁止删除 current 指向的目录**。
 SEO 静态落地页在 current 内：`/tools/`、`/learn/`、`/app/`、`/b/` + `robots.txt` + `sitemap.xml`（nginx try_files 直出；新增页面用 `backend_deploy/seo/` 配置+生成器+门禁流水线，勿手改 HTML）。IndexNow 主动推送密钥文件在 current 根：`/6adb2132052f4657a159f7302971f5c2.txt`（仓库 public/ 同名副本，未来构建自动携带；推送脚本 `backend_deploy/seo/indexnow_push.sh`）。
 站长平台验证文件（百度/头条/谷歌）：`/root/yandaoguoxue/verify/` 持久目录（nginx 精确 location root 指向，与发版切流解耦；源码仓 public/ 亦有副本双保险）；头条另有 `/ByteDanceVerify.html` 双文件名（真实下载文件名）；验证 URL 见总账十二.22。主站 `www.yandao.vip` 验证文件：`/www/yandao-verify/` 持久目录（yandao.vip.conf 精确 location；副本存 backend_deploy/seo/verify-main/；部署脚本 backend_deploy/deploy_verify2.sh 幂等可复跑）——含百度 `baidu_verify_codeva-JdVUh0FlbC.html`、谷歌 `google5ebbc484799c2806.html`、**头条 `ByteDanceVerify.html`（验证码 9/rZXunUHfGFCjR0DaQ8，与国学站 U447glXVJ3l8Obskdb3h 按站点独立）**；主站 IndexNow 密钥 `/www/yandao-company/7f9989ce602348f4bb3bb968879a640f.txt`（副本同 verify-main/）。主站访问日志：`/www/wwwlogs/www.yandao.vip.log`（十二.25 补配）。百度普通收录每日自动推送：`/root/backend-auth/scripts/baidu_daily_push.sh`（cron 10 9 * * *，队列/指针/env 在 /root/backend-auth/data/，token 不入仓库）。
 
@@ -114,16 +114,16 @@ SEO 静态落地页在 current 内：`/tools/`、`/learn/`、`/app/`、`/b/` + `
 
 ## 15. Android 版本
 
-v25.0.68 / versionCode 2068 / 包名 `com.yandao.guoxue` / MD5 `7dbd06ab622afd022ff0d63d6b64d377`（SHA256 `08aee0b1a662364c2ff2d5af21067b002a4fe2d2694fb14da2e6ec10f4e99316`；2026-08-31 18:00 发布，四工具上线批次：七政四余/罗盘/立极尺/鲁班尺丁兰尺 + @capacitor/share 原生分享修复（WebView navigator.share 假成功根除），apksigner 验签通过，签名证书与历史一致）。
+v25.0.79 / versionCode 2072 / 包名 `com.yandao.guoxue` / MD5 `f1a50c4beebd546c9dd00c230b8bda1c`（12,174,027 bytes；2026-09-02 发布，iOS 提审整改同步安卓批次：入口改名/吉凶清零/古籍定性/AI 合规整改，内置资源 releases/v25.0.79 与 Web 生产完全一致 1931 文件；服务器 Gradle 8.9 构建 `backend_deploy/build_android_v25_0_79.sh` 可复跑；APK 内容门禁：新文案 17-24 chunks 命中、旧文案「手机号吉凶」「车牌号吉凶」0 chunks；apksigner 验签 CN=Yandao 与历史一致）。
+- v25.0.74 起 MainActivity 注册 OnBackPressedCallback 接管返回（WebView canGoBack→goBack()，首页双击退出防误触；兼容 KEYCODE_BACK 与 Android 13+ 手势两派发路径）。
 - 此版起前端 AI 调用携带 Bearer Token（`src/lib/aiService.ts`）。
-- `data/app-release-config.json`：`latestVersion 25.0.68 / latestVersionCode 2068`，`downloadUrl` 已指向唯一源；`forceUpdate: false`。
-- 旧版 APK（≤2058）不带 token：AI 调用已被 401 封口（见 §20），用户升级即恢复。
-- 手机 v25.0.67/2067 及更早：启动后 AppUpgradeChecker 比对服务器 2068 自动弹升级引导 → /friend → latest.apk。
-- v25.0.69 为纯 Web SEO 批次（四工具落地页+矩阵登记），**未重建 APK**——next.apk 仍是 2068，四工具功能已在 2068 内。
+- `data/app-release-config.json`：`latestVersion 25.0.79 / latestVersionCode 2072`，`downloadUrl` 指向唯一源；`forceUpdate: false`。
+- 旧版手机（≤2071）：启动后 AppUpgradeChecker 比对服务器 2072 自动弹升级引导 → latest.apk。
+- **苹果审核结果后需重打包 versionCode 2073（内置 v25.0.80：全局悬浮返回键/倒计时重置/通讯录服务端化/NewsCard 主框架跳转）**。
 
 ## 16. iOS 状态
 
-**PARTIAL**：Codemagic 管道就绪，唯一缺口是账号持有人（ZHIMIN WU）在 developer.apple.com 接受 PLA 协议；接受后 `gh workflow run ios-build.yml` 即出签名 ipa。
+**审核中（WAITING_FOR_REVIEW）**——App ID 6807592575 / Bundle ID `com.yandaoguoxue.app` / iOS build 1.0(2) TestFlight VALID 已关联提审。历程：v25.0.77/78 CI 链收口（Xcode 26.3 强制、altool `--apiIssuer`、ASC API 自动签名）→ v25.0.79 按苹果整改指令全端合规（分类教育/参考、版权声明、8 张截图、隐私政策）→ 提审后 **Guideline 2.1（Information Needed）拒审** → 2026-09-03 资料补件重提（371 秒屏幕录制：启动/注册/登录/账号注销/UGC 举报/拉黑 + 演示账号 793398563@qq.com / wzm12345678 + 审核备注英文说明），submission `a8bea0c3-7244-4c2a-b655-3192af447954`。回执 `docs/reports/20260903-appstore-resubmit-receipt.html`。**注意**：①审核留言需项目方人工回复（同英文内容）；②若再拒/通过后发新版，把 v25.0.80 修复（返回键/倒计时/通讯录/NewsCard）编入；③ASC 定价管理需 Admin/Account Holder 角色 Key（当前 UWQ354QP54 App Manager 403）。
 
 ## 17. 后台 URL
 

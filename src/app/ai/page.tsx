@@ -1,8 +1,9 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Send, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
 
 // ==================== 类型定义 ====================
 
@@ -141,6 +142,7 @@ function MessageBubble({ message }: { message: AIMessage }) {
 // ==================== 主页面组件 ====================
 
 export default function AIPage() {
+  useIOSLearningRedirect("ai"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const router = useRouter();
   const [messages, setMessages] = useState<AIMessage[]>([]);
   const [inputValue, setInputValue] = useState("");

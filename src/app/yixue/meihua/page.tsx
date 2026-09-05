@@ -27,6 +27,7 @@ import { useToolBack } from "@/lib/useToolBack";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { ShareButton } from "@/components/ShareButton";
 import { PostToSquareButton } from "@/components/PostToSquareButton";
+import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
 
 // ============================================================================
 // 五行颜色 (与 jishiyu 完全一致)
@@ -366,6 +367,7 @@ const DIRECTION_MAP: { dir: string; num: number; trigram: TrigramName }[] = [
 // 主组件
 // ============================================================================
 export default function MeihuaPage() {
+  useIOSLearningRedirect("meihua"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const pageKey = "yixue_meihua"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   // ---- 输入状态 ----
   const [showPopup, setShowPopup] = useState(true);

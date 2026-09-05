@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { calculateLiuyao } from "@/algorithm-core";
@@ -11,6 +11,7 @@ import { useToolBack } from "@/lib/useToolBack";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { ShareButton } from "@/components/ShareButton";
 import { PostToSquareButton } from "@/components/PostToSquareButton";
+import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
 
 // ============================================================================
 // 品牌色 & 常量
@@ -256,6 +257,7 @@ function YaoRow({
 // ============================================================================
 
 export default function LiuyaoPage() {
+  useIOSLearningRedirect("liuyao"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const pageKey = "yixue_liuyao"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   // 输入状态
   const [question, setQuestion] = useState("");

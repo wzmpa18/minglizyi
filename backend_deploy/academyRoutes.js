@@ -1345,7 +1345,7 @@ function createRouter() {
   router.get('/knowledge', authRequired, (req, res) => {
     try {
       const d = getDb();
-      const { track = '', category = '', status = '', materialId = '' } = req.query;
+      const { track = '', category = '', status = '', materialId = '', limit: limitStr = '' } = req.query;
       // v25.0.72：正骨类目知识点强制门控（类目直查与按资料查均判定归属）
       let zhengguScope = category === ZHENGGU_CATEGORY;
       if (!zhengguScope && materialId) {
@@ -1379,7 +1379,7 @@ function createRouter() {
       }
       if (isAdmin(req)) { if (status) { sql += ' AND k.status = ?'; params.push(status); } }
       else { sql += ` AND k.status = 'approved'`; }
-      sql += ' ORDER BY k.id DESC LIMIT 300';
+      sql += ` ORDER BY k.id DESC LIMIT ${Math.min(1000, Math.max(1, parseInt(limitStr, 10) || 300))}`;
       const rows = d.prepare(sql).all(...params).map(r => knowledgeVo({ ...r, track: r.track || r.m_track || '', category: r.category || r.m_category || '' }));
       res.json({ success: true, points: rows });
     } catch (e) {
@@ -1562,7 +1562,7 @@ function createRouter() {
   router.get('/questions', authRequired, (req, res) => {
     try {
       const d = getDb();
-      const { track = '', category = '', status = '', type = '' } = req.query;
+      const { track = '', category = '', status = '', type = '', limit: limitStr = '' } = req.query;
       // v25.0.72：正骨类目题目强制门控
       let zhengguWithAnswer = false;
       if (category === ZHENGGU_CATEGORY) {
@@ -1583,7 +1583,7 @@ function createRouter() {
       if (type) { sql += ' AND type = ?'; params.push(type); }
       if (isAdmin(req)) { if (status) { sql += ' AND status = ?'; params.push(status); } }
       else { sql += ` AND status = 'approved'`; }
-      sql += ' ORDER BY id DESC LIMIT 300';
+      sql += ` ORDER BY id DESC LIMIT ${Math.min(1000, Math.max(1, parseInt(limitStr, 10) || 300))}`;
       res.json({ success: true, questions: d.prepare(sql).all(...params).map(q => questionVo(q, isAdmin(req) || zhengguWithAnswer)) });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });

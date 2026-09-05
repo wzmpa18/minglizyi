@@ -40,8 +40,9 @@
   --theme-warning: #F59E0B;
   --font-scale: 1;
 
-  /* v25.0.47：底部导航高度唯一来源（BottomNav 与全站底部避让计算只引用此变量，禁止写死 56px） */
-  --bottom-nav-height: 56px;
+  /* v25.0.47：底部导航高度唯一来源（BottomNav 与全站底部避让计算只引用此变量，禁止写死）
+     v25.0.80：用户反馈"底部导航栏太小"——高度 56px → 64px，配合图标 24→26、文字 11→12px */
+  --bottom-nav-height: 64px;
 }
 
 /* ===== 深色主题变体 ===== */
@@ -438,7 +439,7 @@ body.modal-open.nav-hide #app-bottom-nav {
 
 /* 底部安全区：底部导航栏高度 + 系统安全区 */
 .modal-safe-bottom {
-  height: calc(var(--bottom-nav-height, 56px) + env(safe-area-inset-bottom, 0px));
+  height: calc(var(--bottom-nav-height, 64px) + env(safe-area-inset-bottom, 0px));
   flex-shrink: 0;
 }
 
@@ -541,7 +542,7 @@ body.modal-open.nav-hide #app-bottom-nav {
    用于无布局级避让的独立页面（登录/注册/订单/设置等）
    ============================================ */
 .page-bottom-nav-safe {
-  height: calc(var(--bottom-nav-height, 56px) + 16px + env(safe-area-inset-bottom, 0px));
+  height: calc(var(--bottom-nav-height, 64px) + 16px + env(safe-area-inset-bottom, 0px));
   flex-shrink: 0;
 }
 
@@ -553,12 +554,12 @@ body.modal-open.nav-hide #app-bottom-nav {
    （导航隐藏页 /friends/chat 不适用，维持 bottom:0）
    ============================================ */
 .bottom-action-clear-nav {
-  bottom: calc(var(--bottom-nav-height, 56px) + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--bottom-nav-height, 64px) + env(safe-area-inset-bottom, 0px));
 }
 
 /* v25.0.47：内容区避让（操作栏上移后，页面滚动内容需同步多留导航高度） */
 .page-content-clear-nav {
-  padding-bottom: calc(var(--bottom-nav-height, 56px) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(var(--bottom-nav-height, 64px) + env(safe-area-inset-bottom, 0px));
 }
 
 /* ============================================

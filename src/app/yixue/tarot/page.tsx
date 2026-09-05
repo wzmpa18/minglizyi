@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
@@ -16,6 +16,7 @@ import { useToolBack } from "@/lib/useToolBack";
 import AIInterpretButton from "@/components/AIInterpretButton";
 import { buildDeepReportSystemPrompt } from "@/lib/deepReportPrompt";
 import { ShareButton } from "@/components/ShareButton";
+import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
 
 const BRAND = "#7B2FBE";
 const SUIT_MARK: Record<string, string> = { major: "✦", wands: "杖", cups: "杯", swords: "剑", pentacles: "币" };
@@ -24,6 +25,7 @@ const SUIT_COLOR: Record<string, string> = {
 };
 
 export default function TarotPage() {
+  useIOSLearningRedirect("tarot"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const tarotCfg = useMemo(() => getToolConfig().tarot, []);
   const pageKey = "yixue_tarot";
   const { showResult, setShowResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });

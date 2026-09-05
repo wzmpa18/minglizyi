@@ -140,12 +140,13 @@ export interface KnowledgeVo {
   track: string; category: string; tags: string[]; difficulty: string; status: string; sourceText: string; createdAt: string;
 }
 
-export async function fetchKnowledge(opts?: { track?: string; category?: string; status?: string; materialId?: string }) {
+export async function fetchKnowledge(opts?: { track?: string; category?: string; status?: string; materialId?: string; limit?: number }) {
   const q = new URLSearchParams();
   if (opts?.track) q.set("track", opts.track);
   if (opts?.category) q.set("category", opts.category);
   if (opts?.status) q.set("status", opts.status);
   if (opts?.materialId) q.set("materialId", opts.materialId);
+  if (opts?.limit) q.set("limit", String(opts.limit));
   return api<{ success: boolean; points?: KnowledgeVo[] }>(`/api/academy/knowledge?${q.toString()}`);
 }
 
@@ -171,12 +172,13 @@ export async function generateQuestions(data: { track: string; level: number; co
   });
 }
 
-export async function fetchQuestions(opts?: { track?: string; category?: string; status?: string; type?: string }) {
+export async function fetchQuestions(opts?: { track?: string; category?: string; status?: string; type?: string; limit?: number }) {
   const q = new URLSearchParams();
   if (opts?.track) q.set("track", opts.track);
   if (opts?.category) q.set("category", opts.category);
   if (opts?.status) q.set("status", opts.status);
   if (opts?.type) q.set("type", opts.type);
+  if (opts?.limit) q.set("limit", String(opts.limit));
   return api<{ success: boolean; questions?: QuestionVo[] }>(`/api/academy/questions?${q.toString()}`);
 }
 

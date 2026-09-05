@@ -26,6 +26,11 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   generateBuildId: () => BUILD_ID,
+  // 本机构建内存受限（可用 ~3GB），静态页生成并发过高会 Zone OOM
+  experimental: {
+    cpus: 2,
+    turbopackMemoryLimit: 2048,
+  },
   env: {
     NEXT_PUBLIC_BUILD_ID: BUILD_ID,
   },

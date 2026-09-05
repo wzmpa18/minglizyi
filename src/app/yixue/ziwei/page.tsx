@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { calculateZiwei, solarToBazi, calcTrueSolarTime } from "@/algorithm-core";
@@ -33,6 +33,7 @@ import { ShareButton } from "@/components/ShareButton";
 import { PostToSquareButton } from "@/components/PostToSquareButton";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
+import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
 
 // ====================================================================
 // 品牌色 & 常量
@@ -423,6 +424,7 @@ function getAuxStars(palaceIdx: number, ziweiIdx: number, tianfuIdx: number, yea
 // ====================================================================
 
 export default function ZiweiPage() {
+  useIOSLearningRedirect("ziwei"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const pageKey = "yixue_ziwei"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
 
   // v20.1: 登录守卫

@@ -39,18 +39,47 @@ export const IOS_PAYMENT_DISABLED_TIP =
 // 支付能力：iOS OFF（本期不开放任何付费）
 
 export const PLATFORM_FEATURE_MATRIX: Record<string, Record<RuntimePlatform, boolean>> = {
-  // —— 预测/命理类（小程序永久关闭，服务端强制） ——
-  bazi:          { web: true, android: true, ios: true, wechat: false, qq: false, unknown: true },
-  ziwei:         { web: true, android: true, ios: true, wechat: false, qq: false, unknown: true },
-  qimen:         { web: true, android: true, ios: true, wechat: false, qq: false, unknown: true },
-  liuyao:        { web: true, android: true, ios: true, wechat: false, qq: false, unknown: true },
-  daliuren:      { web: true, android: true, ios: true, wechat: false, qq: false, unknown: true },
-  xiaoliuren:    { web: true, android: true, ios: true, wechat: false, qq: false, unknown: true },
-  meihua:        { web: true, android: true, ios: true, wechat: false, qq: false, unknown: true },
-  tarot:         { web: true, android: true, ios: true, wechat: false, qq: false, unknown: true },
-  astrology:     { web: true, android: true, ios: true, wechat: false, qq: false, unknown: true },
-  hehun:         { web: true, android: true, ios: true, wechat: false, qq: false, unknown: true },
-  fortuneConsult:{ web: true, android: true, ios: true, wechat: false, qq: false, unknown: true },
+  // —— 预测/排盘/占卜类 ——
+  // Web/Android：完整保留（正式产品能力，服务端算法不变）
+  // iOS：永久 OFF（IOS-4.3B-RECOVERY-EDUCATION-EDITION-14：App Store 4.3(b) 整改——
+  //   iOS 版正式产品定位为"国学/中医/传统文化学习"，不提供 fortune-telling 功能。
+  //   这是正式产品 Profile 而非审核模式：所有 iOS 用户一致，不随审核状态变化）
+  // WECHAT/QQ OFF：小程序合规（服务端强制，审核通过后也不可远程打开）
+  bazi:          { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  ziwei:         { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  qimen:         { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  liuyao:        { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  daliuren:      { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  xiaoliuren:    { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  meihua:        { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  tarot:         { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  astrology:     { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  hehun:         { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  fortuneConsult:{ web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  taiyiSanshi:   { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  xuankong:      { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  yizhangjing:   { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  zeri:          { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  name:          { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  qiming:        { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  phone:         { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  carplate:      { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  chenggu:       { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  jiemeng:       { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+  yixueAI:       { web: true, android: true, ios: false, wechat: false, qq: false, unknown: true },
+
+  // —— 历法/工具/查询类（iOS 保留：传统历法与工具，归入易学学习中心-传统历法与工具区） ——
+  compass:       { web: true, android: true, ios: true, wechat: true, qq: true, unknown: true },
+  liji:          { web: true, android: true, ios: true, wechat: true, qq: true, unknown: true },
+  luban:         { web: true, android: true, ios: true, wechat: true, qq: true, unknown: true },
+  wannianli:     { web: true, android: true, ios: true, wechat: true, qq: true, unknown: true },
+  huangli:       { web: true, android: true, ios: true, wechat: true, qq: true, unknown: true },
+  jieqi:         { web: true, android: true, ios: true, wechat: true, qq: true, unknown: true },
+  ganzhi:        { web: true, android: true, ios: true, wechat: true, qq: true, unknown: true },
+  wuxing:        { web: true, android: true, ios: true, wechat: true, qq: true, unknown: true },
+  nayin:         { web: true, android: true, ios: true, wechat: true, qq: true, unknown: true },
+  shensha:       { web: true, android: true, ios: true, wechat: true, qq: true, unknown: true },
+  kongwang:      { web: true, android: true, ios: true, wechat: true, qq: true, unknown: true },
 
   // —— 支付能力（v25.0.77：iOS 原生壳关闭——App Store 合规，数字购买待 IAP；QQ小程序维持关闭） ——
   payment:       { web: true, android: true, ios: IOS_PAYMENT_ENABLED, wechat: true, qq: false, unknown: true },
