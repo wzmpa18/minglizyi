@@ -66,6 +66,20 @@ docs/materials/nihaixia_raw/
 *.keystore*
 !android/app/*.keystore
 
+# Local browser profiles with login sessions - never commit (contain cookies)
+.edge-*/
+
+# Build logs
+*.log
+
+# Search-console/App-Connect screenshots and state dumps (contain account info, public repo)
+scripts/qz-shots/asc_*.png
+scripts/qz-shots/asc_*.txt
+scripts/qz-shots/gsc_*.png
+scripts/qz-shots/gsc_state.txt
+scripts/qz-shots/baidu_*.png
+scripts/qz-shots/baidu_console_state.txt
+
 # Local algorithm verification scratch (Meeus true-solar-time probes, not source)
 tmp/
 

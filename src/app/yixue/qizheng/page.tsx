@@ -591,13 +591,15 @@ export default function QizhengPage() {
     tongjing: "#00acc1", tongluo: "#26a69a", dingxing: "#00bcd4", dingdu: "#4dd0e1",
     shensha: "#d81b60", huayao: "#fbc02d", daxian: "#1e88e5",
   };
+  // v25.0.85 视觉收口：默认开启核心专业图层（三方/神煞/化曜），首屏即专业盘；
+  // 存储键升 v2，老用户本地旧状态（全关）不再压制新默认，可再自行调整
   const [layerOn, setLayerOn] = useState<Record<LayerKey, boolean>>({
-    shou: false, chong: false, sanfang: false, gong: false, jia: false,
+    shou: false, chong: false, sanfang: true, gong: false, jia: false,
     tongjing: false, tongluo: false, dingxing: false, dingdu: false,
-    shensha: false, huayao: false, daxian: false,
+    shensha: true, huayao: true, daxian: false,
   });
   const [layersOpen, setLayersOpen] = useState(false);
-  const LAYER_STATE_KEY = "yandao_qizheng_layers";
+  const LAYER_STATE_KEY = "yandao_qizheng_layers_v2";
 
   useEffect(() => {
     try {
@@ -936,12 +938,28 @@ export default function QizhengPage() {
               fill="rgba(123,47,190,0.18)" stroke="#7B2FBE" strokeWidth={1.2} />
             <path d={sectorPath(R_RENSHI_IN, R_RENSHI_OUT, result.palaces[result.shenGong.branchIndex].startLon, result.palaces[result.shenGong.branchIndex].startLon + result.palaces[result.shenGong.branchIndex].width)}
               fill="rgba(33,150,243,0.14)" stroke="#2196F3" strokeWidth={1} />
-            {/* 第四圈层·二十八宿（宿名按宿主五行着色） */}
+            {/* v25.0.85 视觉收口：人事宫内缘标注洞微行限岁段（如 6-15；童限带"童"） */}
+            {result.dongwei.rows.map((row, i) => {
+              const mid = row.startLon + row.width / 2;
+              const [ax, ay] = px(R_RENSHI_IN + 5, mid);
+              const flip = mid > 90 && mid < 270;
+              const endAge = Math.ceil(row.endAge) - 1;
+              const label = `${row.isTongxian ? "童" : ""}${row.startAge}-${endAge}`;
+              return (
+                <text key={`dx-row-${i}`} x={ax} y={ay} textAnchor="middle" dominantBaseline="central"
+                  fontSize={5.8} fill="#7a6a4a" fontWeight={600}
+                  transform={`rotate(${flip ? mid + 180 : mid} ${ax} ${ay})`}>
+                  {flip ? label.split("").reverse().join("") : label}
+                </text>
+              );
+            })}
+            {/* 第四圈层·二十八宿（宿名按宿主五行着色；v25.0.85 视觉收口：内缘增标宿宽） */}
             {result.mansions.map((m) => {
               const a1 = m.startLon;
               const a2 = m.startLon + m.width;
               const mid = a1 + m.width / 2;
               const [tx, ty] = px((R_XIU_IN + R_XIU_OUT) / 2, mid);
+              const [dx, dy] = px(R_XIU_IN + 5.5, mid);
               return (
                 <g key={m.name}>
                   <path d={sectorPath(R_XIU_IN, R_XIU_OUT, a1, a2)} fill="#efe4c8" stroke={PAN_LINE} strokeWidth={0.5} />
@@ -949,6 +967,11 @@ export default function QizhengPage() {
                     fontSize={10} fill={XIU_TEXT_COLOR[m.wuxing] ?? "#5a4526"} fontWeight={600}
                     transform={`rotate(${mid} ${tx} ${ty})`}>
                     {m.name}
+                  </text>
+                  <text x={dx} y={dy} textAnchor="middle" dominantBaseline="central"
+                    fontSize={5.5} fill="#a08a5f"
+                    transform={`rotate(${mid} ${dx} ${dy})`}>
+                    {`${Math.round(m.width)}°`}
                   </text>
                 </g>
               );
@@ -1037,7 +1060,8 @@ export default function QizhengPage() {
                 </g>
               );
             })}
-            {/* 星曜（七政五行配色 + 四余分色，v25.0.84 P1-3 H2） */}
+            {/* 星曜（七政五行配色 + 四余分色，v25.0.84 P1-3 H2）；
+                v25.0.85 视觉收口：星曜下增标"宿度+垣/殿+顺逆"专业参数行（如 井8°垣） */}
             {starLayout.map(({ s, r }) => {
               const [x, y] = px(r, s.lon);
               const color = starColor(s);
@@ -1051,27 +1075,42 @@ export default function QizhengPage() {
                     fontSize={7.5} fill="#c9d4ee">
                     {s.name}
                   </text>
-                  {s.retrograde && (
-                    <text x={x} y={y + 15} textAnchor="middle" fontSize={7} fill="#ff8a80">逆</text>
-                  )}
+                  <text x={x} y={y + 14} textAnchor="middle" dominantBaseline="central" fontSize={6.2}>
+                    <tspan fill="#9fb3d9">{`${s.xiuName}${s.xiuDegree.toFixed(0)}°`}</tspan>
+                    {s.inYuan && <tspan fill="#e8c96a"> 垣</tspan>}
+                    {s.shengDian && <tspan fill="#e8c96a"> 殿</tspan>}
+                    {s.retrograde && <tspan fill="#ff8a80"> 逆</tspan>}
+                  </text>
+                  <title>{`${s.name}：${s.palaceBranch}宫${s.palaceDegree.toFixed(1)}° ${s.xiuFullName}${s.xiuDegree.toFixed(1)}° ${s.renshiGong}宫${s.inYuan ? " 入垣" : ""}${s.shengDian ? " 升殿" : ""}${s.retrograde ? " 逆行" : " 顺行"}`}</title>
                 </g>
               );
             })}
             {/* 天心十字 */}
             <line x1={C} y1={C - 93} x2={C} y2={C + 93} stroke="rgba(232,201,106,0.4)" strokeWidth={0.8} />
             <line x1={C - 93} y1={C} x2={C + 93} y2={C} stroke="rgba(232,201,106,0.4)" strokeWidth={0.8} />
-            {/* 命度 / 身度标记（跨十二人事宫环外缘，v25.0.84 P1-3 收于 viewBox 内） */}
+            {/* 命度 / 身度标记（跨十二人事宫环外缘，v25.0.84 P1-3 收于 viewBox 内）；
+                v25.0.85 视觉收口：外缘点旁增"命/身"字标（垂直向偏移，避让径向线） */}
             <g>
               <line x1={px(R_RENSHI_IN, result.mingDu.lon)[0]} y1={px(R_RENSHI_IN, result.mingDu.lon)[1]}
                 x2={px(R_RENSHI_OUT, result.mingDu.lon)[0]} y2={px(R_RENSHI_OUT, result.mingDu.lon)[1]}
                 stroke="#e53935" strokeWidth={2} />
               <circle cx={px(175, result.mingDu.lon)[0]} cy={px(175, result.mingDu.lon)[1]} r={3} fill="#e53935" />
+              <text
+                x={px(175, result.mingDu.lon)[0] + 6 * Math.cos(result.mingDu.lon * RAD)}
+                y={px(175, result.mingDu.lon)[1] + 6 * Math.sin(result.mingDu.lon * RAD)}
+                textAnchor="middle" dominantBaseline="central"
+                fontSize={7} fill="#e53935" fontWeight={700}>命</text>
             </g>
             <g>
               <line x1={px(R_RENSHI_IN, result.shenDu.lon)[0]} y1={px(R_RENSHI_IN, result.shenDu.lon)[1]}
                 x2={px(R_RENSHI_OUT, result.shenDu.lon)[0]} y2={px(R_RENSHI_OUT, result.shenDu.lon)[1]}
                 stroke="#4fc3f7" strokeWidth={2} />
               <circle cx={px(175, result.shenDu.lon)[0]} cy={px(175, result.shenDu.lon)[1]} r={3} fill="#4fc3f7" />
+              <text
+                x={px(175, result.shenDu.lon)[0] - 6 * Math.cos(result.shenDu.lon * RAD)}
+                y={px(175, result.shenDu.lon)[1] - 6 * Math.sin(result.shenDu.lon * RAD)}
+                textAnchor="middle" dominantBaseline="central"
+                fontSize={7} fill="#4fc3f7" fontWeight={700}>身</text>
             </g>
             {/* 第一圈层·命理核心（v25.0.84 P1-3：加命度/身度宿度，提升信息密度） */}
             <circle cx={C} cy={C} r={R_CORE} fill={PAN_DARK} stroke={PAN_LINE} strokeWidth={1} />
@@ -1095,6 +1134,9 @@ export default function QizhengPage() {
             </>
           )}
           <span>盘面：0° 黄经在上顺时针（今制＝黄道分点起量）</span>
+          <span>｜星下小字＝宿度＋垣/殿/逆</span>
+          <span>｜宿环小字＝宿宽</span>
+          <span>｜人事宫内缘小字＝行限岁段</span>
         </div>
         {/* 五行配色图例（v25.0.84 P1-3 H2：七政五行 + 四余分色，由内到外五圈层） */}
         <div className={`mt-1 flex flex-wrap justify-center gap-x-2.5 gap-y-0.5 pb-2 text-[9px] ${chartFull ? "text-gray-300" : "text-gray-500"}`}>
