@@ -7,7 +7,7 @@
 //   tool_share / tool_export / tool_error
 // 专项口径（§89）：罗盘 sensor_available / sensor_accuracy / true_north_enabled /
 //   manual_mode；立极尺 image_import / center_set / overlay_locked / export；
-//   七政 chart_generated / profile_used。
+//   七政 chart_generated / profile_used / history_restore / layer_toggle。
 // 存储本地（localStorage），按天分桶保留 90 天；后续后台 30 天报表由此口径回灌。
 // 红线：仅记录事件计数与匿名维度值，不含任何用户身份与户型图数据（§72 隐私）。
 // ============================================================================
@@ -31,7 +31,10 @@ export type ToolEvent =
   | "ring_toggle"
   | "dial_zoom"
   | "chart_generated"
-  | "profile_used";
+  | "profile_used"
+  | "history_restore"
+  | "layer_toggle"
+  | "liunian_used";
 
 export const TOOL_ANALYTICS_VERSION = "tool-analytics-v1.0.0";
 

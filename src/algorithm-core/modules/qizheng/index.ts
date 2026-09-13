@@ -22,9 +22,10 @@
 // ============================================================================
 
 import * as Astronomy from "astronomy-engine";
+import { calcTrueSolarTime } from "../../common/jieqi";
 
 /** 引擎数据版本（合规可追溯标识） */
-export const QIZHENG_ENGINE_VERSION = "七政四余引擎 v25.0.68（天文层：天文历算引擎 2.1.19）";
+export const QIZHENG_ENGINE_VERSION = "七政四余引擎 v25.0.81（天文层：天文历算引擎 2.1.19；真太阳时复用 common/jieqi Meeus 冻结实现）";
 
 // ============================================================================
 // 一、类型定义
@@ -395,29 +396,6 @@ function julianDay(date: Date): number {
   return Astronomy.MakeTime(date).ut + 2451545.0;
 }
 
-/** 均时差 EoT（分钟）—— Meeus 28.1（y=tan²(ε/2)，ε为黄赤交角） */
-function equationOfTimeMin(date: Date): number {
-  const T = (julianDay(date) - 2451545.0) / 36525;
-  const eps = Astronomy.e_tilt(Astronomy.MakeTime(date)).tobl;
-  const L0 = norm360(280.46646 + 36000.76983 * T + 0.0003032 * T * T);
-  const e = 0.016708634 - 0.000042037 * T - 0.0000001267 * T * T;
-  const M = norm360(357.52911 + 35999.05029 * T - 0.0001537 * T * T);
-  const Mr = M * D2R;
-  const C = Math.sin(Mr) * (1.914602 - 0.004817 * T - 0.000014 * T * T)
-    + Math.sin(2 * Mr) * (0.019993 - 0.000101 * T)
-    + Math.sin(3 * Mr) * 0.000289;
-  const trueLon = L0 + C;
-  const lambda = trueLon - 0.00569 - 0.00478 * Math.sin(norm360(125.04 - 1934.136 * T) * D2R);
-  const y = Math.tan(eps / 2 * D2R) ** 2;
-  const eot =
-    y * Math.sin(2 * (L0 * D2R))
-    - 2 * e * Math.sin(Mr)
-    + 4 * e * y * Math.sin(Mr) * Math.cos(2 * (L0 * D2R))
-    - 0.5 * y * y * Math.sin(4 * (L0 * D2R))
-    - 1.25 * e * e * Math.sin(2 * Mr);
-  return eot * R2D * 4; // 弧度→度→分钟（×4）
-}
-
 /** 距星真黄道经度（EQJ 单位向量 → 真黄道坐标 ECT） */
 function starEclipticLon(star: StarDatum, time: Astronomy.AstroTime): number {
   const x = Math.cos(star.dec * D2R) * Math.cos(star.ra * D2R);
@@ -617,10 +595,13 @@ export function calcQizhengChart(input: QizhengInput): QizhengResult {
   const date = new Date(utcMs);
 
   // ---- 真太阳时与时辰 ----
+  // 均时差复用项目公共冻结实现（common/jieqi Meeus，20260829 净室升级口径），
+  // 七政不再自带独立 EoT 路径（FINAL-SEAL-17 §6）。
   const tzBaseLon = tz * 15;
-  const longitudeOffsetMin = (lon - tzBaseLon) * 4;
-  const eotMin = equationOfTimeMin(date);
-  const totalOffsetMin = longitudeOffsetMin + eotMin;
+  const trueSolarCalc = calcTrueSolarTime(date, lon, tzBaseLon);
+  const longitudeOffsetMin = trueSolarCalc.longitudeOffset;
+  const eotMin = trueSolarCalc.equationOfTime;
+  const totalOffsetMin = trueSolarCalc.totalOffset;
   // 真太阳时按"本地钟面分钟 + 总校正"计算（日期边界取模回绕，时辰随之定）
   const localMinutes = hour * 60 + minute;
   const tsTotal = ((localMinutes + totalOffsetMin) % 1440 + 1440) % 1440;

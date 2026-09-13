@@ -5,6 +5,7 @@ import { Lunar } from "lunar-javascript";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import { REGIONS } from "@/data/regions";
+import { chinaDstInfo } from "@/algorithm-core/common/dst";
 
 // ============================================================================
 // 类型定义
@@ -39,6 +40,9 @@ export interface DatePickerProps {
   showGender?: boolean;
   showCalType?: boolean;
   showToggles?: boolean;
+  /** 独立夏令时开关（v25.0.82 P0-3）：引擎内置真太阳时的工具（如七政四余）
+   *  不显示"真太阳时"开关（避免误解为可关闭），仅显示夏令时开关 */
+  showXiaLing?: boolean;
   showRegion?: boolean;
   showName?: boolean;
   name?: string;
@@ -149,6 +153,7 @@ export default function DatePicker({
   showGender = true,
   showCalType = true,
   showToggles = true,
+  showXiaLing = false,
   showRegion = false,
   showName = false,
   name = "",
@@ -525,6 +530,43 @@ export default function DatePicker({
                   </button>
                 </div>
               </div>
+
+              {/* 5b. 独立夏令时开关（v25.0.82 P0-3）：供引擎内置真太阳时的工具（如七政四余）使用，
+                   不显示"真太阳时"开关（引擎必开、避免误解），仅显示夏令时；
+                   出生时间落在 1986-1991 中国夏令时区间时动态提示核对 */}
+              {showOptions && !showToggles && showXiaLing && (
+                <div className="flex flex-col">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm text-gray-700">夏令时</span>
+                      <button
+                        type="button"
+                        onClick={() => setOptions(prev => ({ ...prev, xiaLing: !prev.xiaLing }))}
+                        className={`relative h-6 w-11 rounded-full transition-colors ${
+                          options.xiaLing ? "bg-[#7B2FBE]" : "bg-gray-300"
+                        }`}
+                      >
+                        <span
+                          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                            options.xiaLing ? "left-[22px]" : "left-0.5"
+                          }`}
+                        />
+                      </button>
+                    </div>
+                    {chinaDstInfo(date.year, date.month, date.day, date.hour, date.minute).active && (
+                      <span className="text-[10px] leading-tight text-amber-600">
+                        {date.year}年中国夏令时期间
+                      </span>
+                    )}
+                  </div>
+                  {chinaDstInfo(date.year, date.month, date.day, date.hour, date.minute).active && !options.xiaLing && (
+                    <p className="mt-1 text-[10px] leading-snug text-amber-600">
+                      该出生时间处于中国夏令时期间（{chinaDstInfo(date.year, date.month, date.day, date.hour, date.minute).rangeText}）。
+                      若录入的是当时钟面时间，请开启"夏令时"以减去 1 小时；若已按标准时间录入则无需开启。
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* 6. 地区选择 - 省/市/县三级联动 + 手动经度微调（真太阳时校正） */}
               {showRegion && options.zhenTaiyang && (

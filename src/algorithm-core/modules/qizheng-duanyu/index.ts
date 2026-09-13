@@ -257,13 +257,18 @@ const YUHENG_XINGQING: Record<string, { text: string }> = {
 // 干支工具
 // ---------------------------------------------------------------------------
 
+/** 公历年干支（立春分界年：立春 Y 至次年立春为 Y 年干支；流年模式按年直取） */
+export function ganzhiOfYear(year: number): { gan: string; zhi: string } {
+  const gi = ((year - 4) % 10 + 10) % 10;
+  const zi = ((year - 4) % 12 + 12) % 12;
+  return { gan: GANS[gi], zhi: ZHIS[zi] };
+}
+
 /** 年干支（立春分界：2月4日前属上一年；立春实际在2月3-5日间，±1日误差属传统口径） */
 export function yearGanzhi(year: number, month: number, day: number): { gan: string; zhi: string } {
   let y = year;
   if (month < 2 || (month === 2 && day < 4)) y = year - 1;
-  const gi = ((y - 4) % 10 + 10) % 10;
-  const zi = ((y - 4) % 12 + 12) % 12;
-  return { gan: GANS[gi], zhi: ZHIS[zi] };
+  return ganzhiOfYear(y);
 }
 
 /** 六甲旬空亡（按年干支） */
@@ -291,6 +296,58 @@ function chong(branch: string): string {
 /** 马前一位（攀鞍） */
 function maQian(branch: string): string {
   return ZHIS[(ZHIS.indexOf(branch as (typeof ZHIS)[number]) + 1) % 12];
+}
+
+// ---------------------------------------------------------------------------
+// 流年共用接口（P1-2）：本命神煞节与流年模式共用同一套卷四神煞表 / 卷一化曜表，
+// 不另建第二套数据；流年调用时传入流年干支即可。
+// ---------------------------------------------------------------------------
+
+/** 年干支起神煞落宫表（卷四全套：阳刃飞刃/的煞咸池劫煞亡神/驿马将星华盖攀鞍/孤辰寡宿/空亡） */
+export function nianZhiShensha(gan: string, zhi: string): Array<{
+  id: string; name: string; branch: string; level: DuanyuLevel; text: string; source: string; verse?: string;
+}> {
+  const items: Array<{ id: string; name: string; branch: string; level: DuanyuLevel; text: string; source: string; verse?: string }> = [];
+  const yr = YANG_REN[gan];
+  if (yr) {
+    items.push(
+      { id: "yangren", name: "阳刃", branch: yr, level: "xiong", text: "刃为刀刃，最忌身命坐刃、限行刃地；金掌刃愈烈，火罗加刃主血光。", source: "知识库卷四§4.2.1（张果星宗 p16、p65）" },
+      { id: "feiren", name: "飞刃（唐符）", branch: chong(yr), level: "xiong", text: "飞刃为阳刃对冲之宫；唐符即飞刃，忌身命坐之。", source: "知识库卷四§4.2.1（张果星宗 p16、p88-89）" },
+    );
+  }
+  const sanhe = SANHE[zhi];
+  if (sanhe) {
+    items.push(
+      { id: "deshao", name: "的煞（破碎）", branch: sanhe.deshao, level: "xiong", text: "的煞即破碎，忌身命坐之、限行犯之，主破财官非。", source: "知识库卷四§4.5.1（张果星宗 p18、p61）" },
+      { id: "xianchi", name: "咸池（桃花）", branch: sanhe.xianchi, level: "xiong", text: "咸池主风流；会金水孛者愈甚，桃花带马主背夫远逃。", source: "知识库卷四§4.5.2（张果星宗 p18、p95）" },
+      { id: "jiesha", name: "劫煞", branch: sanhe.jie, level: "xiong", text: "劫煞主盗贼、横祸；劫亡合命值限加凶星，主遭刑犯罪。", source: "知识库卷四§4.5.3（张果星宗 p16、p83）" },
+      { id: "wangshen", name: "亡神", branch: sanhe.wang, level: "xiong", text: "亡神主销铄、官非；与劫煞同看。", source: "知识库卷四§4.5.3（张果星宗 p16、p83）" },
+      { id: "yima", name: "驿马", branch: sanhe.ma, level: "zhong", text: "马星主迁移流动，马入身命主奔走四方。", source: "知识库卷四§4.5.4（张果星宗 p16、p65）" },
+      { id: "jiangxing", name: "将星", branch: sanhe.jiang, level: "ji", text: "将星入命，主掌权柄威望。", source: "知识库卷四§4.5.4（张果星宗 p16）" },
+      { id: "huagai", name: "华盖", branch: sanhe.huagai, level: "zhong", text: "华盖守身命清贵孤高，日月居之主僧道。", source: "知识库卷四§4.5.4/§4.5.6（张果星宗 p16、p76）" },
+      { id: "panan", name: "攀鞍", branch: maQian(sanhe.ma), level: "zhong", text: "攀鞍在马前一位，与驿马相辅主贵显。", source: "知识库卷四§4.5.4（张果星宗 p16）" },
+    );
+  }
+  const guchen = GU_CHEN[zhi];
+  if (guchen) {
+    items.push(
+      { id: "guchen", name: "孤辰", branch: guchen.gu, level: "xiong", text: "孤辰寡宿守身命及妻妾宫，主人孤寡。", source: "知识库卷四§4.5.5（张果星宗 p16、p61）" },
+      { id: "guasu", name: "寡宿", branch: guchen.gua, level: "xiong", text: "孤辰寡宿守身命，主人孤寡；参看妻妾宫有无吉星解救。", source: "知识库卷四§4.5.5（张果星宗 p16、p61）" },
+    );
+  }
+  const [kong1, kong2] = xunKong(gan, zhi);
+  items.push(
+    { id: "kongwang1", name: "空亡", branch: kong1, level: "xiong", text: `${gan}${zhi}旬中${kong1}${kong2}空；坐之主成败反复，忌限行空亡。`, source: "知识库卷四§4.5.7（张果星宗 p16、p88）" },
+    { id: "kongwang2", name: "空亡", branch: kong2, level: "xiong", text: `同旬空亡（${gan}${zhi}旬中${kong1}${kong2}空）。`, source: "知识库卷四§4.5.7（张果星宗 p16、p88）" },
+  );
+  return items;
+}
+
+/** 年干起十干化曜（卷一§1.6.2）：返回十化曜 → 对应星 key（流年化曜与本命化曜共用表） */
+export function huayaoStarKeysForGan(gan: string): Array<{ huaName: string; starKey: string }> {
+  const row = HUAYAO_TABLE[gan];
+  if (!row) return [];
+  return HUAYAO_SEQ.map((name) => ({ huaName: name, starKey: SHORT_KEY[row[name]] ?? "" }));
 }
 
 // ---------------------------------------------------------------------------

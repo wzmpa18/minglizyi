@@ -4,6 +4,8 @@
  * 学科页为 COURSE / KNOWLEDGE / REFERENCE / QUIZ，不提供排盘/预测入口。
  */
 
+import { QIZHENG_LEARNING_TOPICS, type QizhengLearningTopic } from "./qizhengLearningTopics";
+
 export interface YixueSubject {
   key: string;
   name: string;
@@ -12,6 +14,8 @@ export interface YixueSubject {
   categories: string[];
   intro: string;
   structure: string[];
+  /** 可选：专题化学习路径（有则按专题分组，否则按章节分组） */
+  topics?: QizhengLearningTopic[];
 }
 
 export const YIXUE_SUBJECTS: YixueSubject[] = [
@@ -64,12 +68,13 @@ export const YIXUE_SUBJECTS: YixueSubject[] = [
     desc: "七政四余 · 星曜 · 二十八宿 · 十二宫位",
     categories: ["七政四余"],
     intro:
-      "七政四余为传统星命学体系。学习七政（日月五星）、四余、十二宫、二十八宿、星曜知识与宿度概念，研读命宫/身宫与洞微大限等传统理论及典籍资料。",
+      "七政四余为传统星命学体系。按十五专题循序渐进：入门导读 → 七政/四余星曜 → 宫位/人事宫/二十八宿 → 星制排盘 → 安身立命 → 神煞化曜 → 星格格局 → 大限流年 → 术语案例。共 135 条知识点与 141 道章节练习，研读命宫/身宫与洞微大限等传统理论及典籍资料。",
     structure: [
       "七政：日 月 金 木 水 火 土",
       "四余：紫炁 月孛 罗睺 计都",
       "十二宫位 · 二十八宿 · 宿度",
     ],
+    topics: QIZHENG_LEARNING_TOPICS,
   },
   {
     key: "qimen",

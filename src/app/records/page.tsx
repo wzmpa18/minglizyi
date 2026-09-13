@@ -152,7 +152,7 @@ export default function RecordsPage() {
       }
       if (data.input && typeof data.input === "object") {
         const i = data.input;
-        if (i.placeName) return `${i.year}-${i.month}-${i.day} ${i.placeName}`;
+        if (i.placeName) return `${i.year}-${i.month}-${i.day} ${i.placeName}${data.star_system ? (data.star_system === "sidereal" ? " · 恒星制" : " · 今制") : ""}`;
         if (i.year != null) return `${i.year}-${i.month}-${i.day}排盘`;
       }
       if (data.note) return data.note;

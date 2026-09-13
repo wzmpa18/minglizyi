@@ -8,6 +8,7 @@ import { useParams } from "next/navigation";
 import { BrandHeader } from "@/components/shared";
 import { PageLoginGuard } from "@/components/PageLoginGuard";
 import { getSubject, YIXUE_SUBJECTS } from "@/lib/yixueSubjects";
+import { qizhengTopicOfPoint } from "@/lib/qizhengLearningTopics";
 import {
   fetchKnowledge,
   fetchQuestions,
@@ -37,6 +38,7 @@ export default function YixueSubjectPage() {
   const [notes, setNotes] = useState<StudyNote[]>([]);
   const [loading, setLoading] = useState(true);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [openQuizId, setOpenQuizId] = useState<string | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState("");
@@ -58,8 +60,8 @@ export default function YixueSubjectPage() {
         ...kpReqs,
         ...qReqs,
       ]);
-      const kpResps = rest.slice(0, subject.categories.length);
-      const qResps = rest.slice(subject.categories.length);
+      const kpResps = rest.slice(0, subject.categories.length) as Array<{ success?: boolean; points?: KnowledgeVo[] } | null | undefined>;
+      const qResps = rest.slice(subject.categories.length) as Array<{ success?: boolean; questions?: QuestionVo[] } | null | undefined>;
       const allPoints: KnowledgeVo[] = [];
       kpResps.forEach((r) => { if (r && r.success && r.points) allPoints.push(...r.points); });
       allPoints.sort((a, b) => (a.chapter || "").localeCompare(b.chapter || "", "zh") || String(a.id).localeCompare(String(b.id)));
@@ -93,16 +95,53 @@ export default function YixueSubjectPage() {
     return Array.from(map.entries());
   }, [points]);
 
+  // 专题模式（subject.topics 存在时启用：知识点/练习按 15 专题归组，打卡精确到知识点）
+  const hasTopics = (subject.topics?.length ?? 0) > 0;
+
+  const kpKey = useCallback(
+    (p: KnowledgeVo) => (hasTopics ? `yixue:qz-kp-${p.id}` : `yixue:${p.chapter || p.title}`),
+    [hasTopics]
+  );
+
+  const topicGroups = useMemo(() => {
+    if (!hasTopics || !subject.topics) return null;
+    const byId = new Map(points.map((p) => [Number(p.id), p]));
+    return subject.topics
+      .map((t) => ({ topic: t, kps: t.pointIds.map((id) => byId.get(id)).filter(Boolean) as KnowledgeVo[] }))
+      .filter((g) => g.kps.length > 0);
+  }, [points, subject, hasTopics]);
+
+  const quizGroups = useMemo(() => {
+    if (!hasTopics || !subject.topics) return null;
+    const groups = subject.topics.map((t) => ({ topic: t, qs: [] as QuestionVo[] }));
+    const byKey = new Map(groups.map((g) => [g.topic.key, g]));
+    const misc: QuestionVo[] = [];
+    for (const q of questions) {
+      const t = qizhengTopicOfPoint(q.knowledgeId);
+      const g = t ? byKey.get(t.key) : undefined;
+      if (g) g.qs.push(q);
+      else misc.push(q);
+    }
+    const out = groups.filter((g) => g.qs.length > 0);
+    if (misc.length > 0) {
+      out.push({
+        topic: { key: "qz-misc", seq: 99, name: "综合练习", icon: "综", desc: "跨专题综合题目", pointIds: [] },
+        qs: misc,
+      });
+    }
+    return out;
+  }, [questions, subject, hasTopics]);
+
   const checkedCount = useMemo(
-    () => points.filter((p) => checked.has(`yixue:${p.chapter || p.title}`)).length,
-    [points, checked]
+    () => points.filter((p) => checked.has(kpKey(p))).length,
+    [points, checked, kpKey]
   );
 
   const handleCheckin = async (p: KnowledgeVo) => {
-    const k = `yixue:${p.chapter || p.title}`;
+    const k = kpKey(p);
     if (checked.has(k)) return;
     try {
-      const r = await checkinProgress("yixue", p.chapter || p.title);
+      const r = await checkinProgress("yixue", hasTopics ? `qz-kp-${p.id}` : p.chapter || p.title);
       if (r && r.success) {
         setChecked((prev) => new Set(prev).add(k));
         showToast("学习打卡成功 +1");
@@ -119,6 +158,71 @@ export default function YixueSubjectPage() {
   };
 
   const isObjective = (q: QuestionVo) => ["single", "multi", "judge"].includes(q.type);
+
+  // 练习题卡片（专题分组/平铺共用）
+  const renderQuestion = (q: QuestionVo) => {
+    const open = revealed.has(String(q.id));
+    const isWrong = wrongs.has(String(q.id));
+    return (
+      <div key={q.id} className="rounded-2xl bg-white p-3.5 shadow-sm">
+        <div className="mb-1.5 flex items-center gap-1.5">
+          <span className="rounded bg-[#f7f2fb] px-1.5 py-0.5 text-[9px] text-gray-500">{q.category}</span>
+          {isWrong && <span className="rounded bg-[#fdecea] px-1.5 py-0.5 text-[9px] font-semibold" style={{ color: "#c0392b" }}>错题</span>}
+        </div>
+        <p className="text-[13px] font-semibold leading-relaxed text-gray-800">{q.stem}</p>
+
+        {isObjective(q) && (q.options || []).length > 0 && (
+          <div className="mt-2 space-y-1.5">
+            {q.options.map((opt, i) => {
+              const val = ["A", "B", "C", "D", "E", "F"][i] || String(i);
+              const picked = answers[String(q.id)] === val;
+              const isAns = open && (q.answer || "").includes(val);
+              return (
+                <button
+                  key={i}
+                  onClick={() => !open && setAnswers((prev) => ({ ...prev, [String(q.id)]: val }))}
+                  className="flex w-full items-start gap-2 rounded-xl border px-3 py-2 text-left text-[12px] leading-relaxed"
+                  style={{
+                    borderColor: isAns ? "#27ae60" : picked ? BRAND : "#eee",
+                    backgroundColor: isAns ? "#e8f5e9" : picked ? "#f7f2fb" : "#fff",
+                    color: "#444",
+                  }}
+                >
+                  <span className="font-bold" style={{ color: isAns ? "#27ae60" : picked ? BRAND : "#999" }}>{val}</span>
+                  <span>{opt}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="mt-2.5 flex items-center gap-2">
+          <button
+            onClick={() => setRevealed((prev) => new Set(prev).add(String(q.id)))}
+            className="rounded-full px-3.5 py-1.5 text-[11px] font-bold text-white"
+            style={{ backgroundColor: BRAND }}
+          >查看答案解析</button>
+          <button
+            onClick={() => {
+              const fav = toggleFavorite({ questionId: String(q.id), stem: q.stem, track: "yixue", category: q.category, answer: q.answer || "", analysis: q.analysis || "" });
+              showToast(fav ? "已收藏" : "已取消收藏");
+            }}
+            className="rounded-full px-3.5 py-1.5 text-[11px] font-bold"
+            style={{ backgroundColor: isFavorited(String(q.id)) ? "#fff7e6" : "#f0f0f0", color: isFavorited(String(q.id)) ? "#e67e22" : "#999" }}
+          >{isFavorited(String(q.id)) ? "★ 已收藏" : "☆ 收藏"}</button>
+        </div>
+
+        {open && (
+          <div className="mt-2 rounded-xl bg-[#f9f9f9] p-2.5">
+            <p className="text-[11px]">
+              参考答案：<span className="font-bold" style={{ color: "#27ae60" }}>{q.answer || "—"}</span>
+            </p>
+            {q.analysis && <p className="mt-1 text-[11px] leading-relaxed text-gray-500">解析：{q.analysis}</p>}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="mx-auto w-full" style={{ maxWidth: "420px", minHeight: "100vh", backgroundColor: "#f5f5f5" }}>
@@ -148,7 +252,7 @@ export default function YixueSubjectPage() {
 
         {/* Tab 切换 */}
         <div className="mb-3 flex gap-1.5">
-          {([["points", `知识点 ${points.length}`], ["quiz", `章节练习 ${questions.length}`], ["notes", `学习笔记 ${notes.length}`]] as Array<[Tab, string]>).map(([t, label]) => (
+          {([["points", hasTopics ? `学习专题 ${points.length}` : `知识点 ${points.length}`], ["quiz", hasTopics ? `专题练习 ${questions.length}` : `章节练习 ${questions.length}`], ["notes", `学习笔记 ${notes.length}`]] as Array<[Tab, string]>).map(([t, label]) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -160,8 +264,71 @@ export default function YixueSubjectPage() {
 
         {loading && <p className="py-8 text-center text-sm text-gray-400">加载中…</p>}
 
-        {/* 知识点（章节目录 + 术语解释 + 打卡） */}
+        {/* 知识点（专题模式：15 专题归组 / 章节模式：章节目录 + 术语解释 + 打卡） */}
         {!loading && tab === "points" && (
+          topicGroups ? (
+            topicGroups.length === 0 ? (
+              <p className="py-8 text-center text-sm text-gray-400">知识点整理中，敬请期待</p>
+            ) : (
+              <div className="space-y-2">
+                {topicGroups.map(({ topic, kps }) => {
+                  const done = kps.filter((p) => checked.has(kpKey(p))).length;
+                  const open = openId === topic.key;
+                  return (
+                    <div key={topic.key} className="overflow-hidden rounded-2xl bg-white shadow-sm">
+                      <button
+                        onClick={() => setOpenId(open ? null : topic.key)}
+                        className="flex w-full items-center gap-2.5 px-3.5 py-3"
+                      >
+                        <span
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white"
+                          style={{ backgroundColor: BRAND }}
+                        >{topic.icon}</span>
+                        <span className="flex-1 min-w-0 text-left">
+                          <span className="flex items-center gap-1.5">
+                            <span className="text-[10px] text-gray-400">专题 {topic.seq}</span>
+                            <span className="text-sm font-bold text-gray-800">{topic.name}</span>
+                          </span>
+                          <span className="mt-0.5 block truncate text-[10px] text-gray-400">{topic.desc}</span>
+                        </span>
+                        <span className="flex shrink-0 items-center gap-2">
+                          <span className="text-[10px] font-semibold" style={{ color: done === kps.length ? "#27ae60" : "#999" }}>{done}/{kps.length}</span>
+                          <span className="text-xs text-gray-400">{open ? "▲" : "▼"}</span>
+                        </span>
+                      </button>
+                      {open && (
+                        <div className="border-t border-gray-100 px-3.5 py-2">
+                          {kps.map((p) => (
+                            <div key={p.id} className="border-b border-gray-50 py-2.5 last:border-0">
+                              <div className="flex items-start justify-between gap-2">
+                                <p className="text-[13px] font-semibold text-gray-800">{p.title}</p>
+                                <button
+                                  onClick={() => handleCheckin(p)}
+                                  className="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold"
+                                  style={{
+                                    backgroundColor: checked.has(kpKey(p)) ? "#e8f5e9" : "#f0f0f0",
+                                    color: checked.has(kpKey(p)) ? "#27ae60" : "#999",
+                                  }}
+                                >{checked.has(kpKey(p)) ? "✓ 已学" : "打卡"}</button>
+                              </div>
+                              <p className="mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-gray-600">{p.content}</p>
+                              {(p.tags || []).length > 0 && (
+                                <div className="mt-1.5 flex flex-wrap gap-1">
+                                  {p.tags.slice(0, 6).map((tg) => (
+                                    <span key={tg} className="rounded bg-[#f7f2fb] px-1.5 py-0.5 text-[9px] text-gray-500">#{tg}</span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )
+          ) : (
           chapters.length === 0 ? (
             <p className="py-8 text-center text-sm text-gray-400">知识点整理中，敬请期待</p>
           ) : (
@@ -188,10 +355,10 @@ export default function YixueSubjectPage() {
                               onClick={() => handleCheckin(p)}
                               className="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold"
                               style={{
-                                backgroundColor: checked.has(`yixue:${p.chapter || p.title}`) ? "#e8f5e9" : "#f0f0f0",
-                                color: checked.has(`yixue:${p.chapter || p.title}`) ? "#27ae60" : "#999",
+                                backgroundColor: checked.has(kpKey(p)) ? "#e8f5e9" : "#f0f0f0",
+                                color: checked.has(kpKey(p)) ? "#27ae60" : "#999",
                               }}
-                            >{checked.has(`yixue:${p.chapter || p.title}`) ? "✓ 已学" : "打卡"}</button>
+                            >{checked.has(kpKey(p)) ? "✓ 已学" : "打卡"}</button>
                           </div>
                           <p className="mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-gray-600">{p.content}</p>
                           {(p.tags || []).length > 0 && (
@@ -209,77 +376,48 @@ export default function YixueSubjectPage() {
               ))}
             </div>
           )
+          )
         )}
 
-        {/* 章节练习（作答 + 答案解析 + 收藏 + 错题标记） */}
+        {/* 专题练习（专题模式按 15 专题归组 / 章节模式平铺；作答 + 答案解析 + 收藏 + 错题标记） */}
         {!loading && tab === "quiz" && (
           questions.length === 0 ? (
             <p className="py-8 text-center text-sm text-gray-400">练习题生成中，敬请期待</p>
-          ) : (
+          ) : quizGroups ? (
             <div className="space-y-2.5">
-              {questions.map((q) => {
-                const open = revealed.has(String(q.id));
-                const isWrong = wrongs.has(String(q.id));
+              {quizGroups.map(({ topic, qs }) => {
+                const open = openQuizId === topic.key;
                 return (
-                  <div key={q.id} className="rounded-2xl bg-white p-3.5 shadow-sm">
-                    <div className="mb-1.5 flex items-center gap-1.5">
-                      <span className="rounded bg-[#f7f2fb] px-1.5 py-0.5 text-[9px] text-gray-500">{q.category}</span>
-                      {isWrong && <span className="rounded bg-[#fdecea] px-1.5 py-0.5 text-[9px] font-semibold" style={{ color: "#c0392b" }}>错题</span>}
-                    </div>
-                    <p className="text-[13px] font-semibold leading-relaxed text-gray-800">{q.stem}</p>
-
-                    {isObjective(q) && (q.options || []).length > 0 && (
-                      <div className="mt-2 space-y-1.5">
-                        {q.options.map((opt, i) => {
-                          const val = ["A", "B", "C", "D", "E", "F"][i] || String(i);
-                          const picked = answers[String(q.id)] === val;
-                          const isAns = open && (q.answer || "").includes(val);
-                          return (
-                            <button
-                              key={i}
-                              onClick={() => !open && setAnswers((prev) => ({ ...prev, [String(q.id)]: val }))}
-                              className="flex w-full items-start gap-2 rounded-xl border px-3 py-2 text-left text-[12px] leading-relaxed"
-                              style={{
-                                borderColor: isAns ? "#27ae60" : picked ? BRAND : "#eee",
-                                backgroundColor: isAns ? "#e8f5e9" : picked ? "#f7f2fb" : "#fff",
-                                color: "#444",
-                              }}
-                            >
-                              <span className="font-bold" style={{ color: isAns ? "#27ae60" : picked ? BRAND : "#999" }}>{val}</span>
-                              <span>{opt}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    <div className="mt-2.5 flex items-center gap-2">
-                      <button
-                        onClick={() => setRevealed((prev) => new Set(prev).add(String(q.id)))}
-                        className="rounded-full px-3.5 py-1.5 text-[11px] font-bold text-white"
+                  <div key={topic.key} className="overflow-hidden rounded-2xl bg-white shadow-sm">
+                    <button
+                      onClick={() => setOpenQuizId(open ? null : topic.key)}
+                      className="flex w-full items-center gap-2.5 px-3.5 py-3"
+                    >
+                      <span
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
                         style={{ backgroundColor: BRAND }}
-                      >查看答案解析</button>
-                      <button
-                        onClick={() => {
-                          const fav = toggleFavorite({ questionId: String(q.id), stem: q.stem, track: "yixue", category: q.category, answer: q.answer || "", analysis: q.analysis || "" });
-                          showToast(fav ? "已收藏" : "已取消收藏");
-                        }}
-                        className="rounded-full px-3.5 py-1.5 text-[11px] font-bold"
-                        style={{ backgroundColor: isFavorited(String(q.id)) ? "#fff7e6" : "#f0f0f0", color: isFavorited(String(q.id)) ? "#e67e22" : "#999" }}
-                      >{isFavorited(String(q.id)) ? "★ 已收藏" : "☆ 收藏"}</button>
-                    </div>
-
+                      >{topic.icon}</span>
+                      <span className="flex-1 min-w-0 text-left">
+                        <span className="text-sm font-bold text-gray-800">{topic.name} · 练习</span>
+                        <span className="mt-0.5 block truncate text-[10px] text-gray-400">{topic.desc}</span>
+                      </span>
+                      <span className="flex shrink-0 items-center gap-2">
+                        <span className="text-[10px] text-gray-400">{qs.length} 题</span>
+                        <span className="text-xs text-gray-400">{open ? "▲" : "▼"}</span>
+                      </span>
+                    </button>
                     {open && (
-                      <div className="mt-2 rounded-xl bg-[#f9f9f9] p-2.5">
-                        <p className="text-[11px]">
-                          参考答案：<span className="font-bold" style={{ color: "#27ae60" }}>{q.answer || "—"}</span>
-                        </p>
-                        {q.analysis && <p className="mt-1 text-[11px] leading-relaxed text-gray-500">解析：{q.analysis}</p>}
+                      <div className="space-y-2.5 border-t border-gray-100 p-3">
+                        {qs.map((q) => renderQuestion(q))}
                       </div>
                     )}
                   </div>
                 );
               })}
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {questions.map((q) => renderQuestion(q))}
             </div>
           )
         )}
