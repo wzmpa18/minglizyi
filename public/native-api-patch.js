@@ -44,6 +44,15 @@
     return;
   }
 
+  // iOS 教育版（工具暂不上架，App Review 要求仅学习内容）：
+  // 隐藏网页版 SEO 工具导航区块（data-seo-nav），原生壳内只见学习内容；Web/安卓不受影响
+  if (platform === "ios") {
+    document.documentElement.classList.add("ios-edu-shell");
+    var eduStyle = document.createElement("style");
+    eduStyle.textContent = ".ios-edu-shell [data-seo-nav]{display:none!important}";
+    (document.head || document.documentElement).appendChild(eduStyle);
+  }
+
   var origin = window.location.origin;
   var origFetch = window.fetch.bind(window);
 

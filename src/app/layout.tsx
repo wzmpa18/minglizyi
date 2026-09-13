@@ -20,8 +20,11 @@ import { ToastHost } from "@/components/ui";
 import { PromoFloat } from "@/components/marketing/PromoFloat";
 
 export const metadata: Metadata = {
-  title: "言道国学",
-  description: "基于传统命理学典籍，提供八字、紫微斗数、奇门遁甲、六爻等排盘功能，仅供文化学习与参考。",
+  title: {
+    default: "言道国学——八字紫微奇门六爻免费在线排盘与国学学习平台",
+    template: "%s｜言道国学",
+  },
+  description: "言道国学提供八字、紫微斗数、奇门遁甲、六爻、七政四余、玄空飞星等免费在线排盘工具，附万年历、老黄历、中医典籍与学习题库，基于传统典籍整理，适合国学爱好者学习参考。",
 };
 
 // v25.0.47 原生内置资源模式：构建时读取 API 改写脚本源码（单一事实源 public/native-api-patch.js）

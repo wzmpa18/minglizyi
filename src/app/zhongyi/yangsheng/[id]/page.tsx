@@ -1,10 +1,15 @@
 import { SectionGate } from "@/components/SectionGate";
+import type { Metadata } from "next";
 // v20.1: Server component wrapper for static export
 import ClientPage from "./ClientPage";
 
 export function generateStaticParams() {
   return [{ id: "placeholder" }];
 }
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: true },
+};
 
 function PageOriginal() {
   return <ClientPage />;
