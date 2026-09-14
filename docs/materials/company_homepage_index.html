@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>言道科技 - 东莞言道科技有限公司</title>
+  <meta name="description" content="东莞言道科技有限公司，专注全栈开发与垂直领域应用。自营产品：国学传承（中医古籍易学学习）、数字管家（电影视频修复与文件管理）、言道学外语、本地生活。提供小程序/App/网站定制开发、软件技术顾问、软著上架代办等技术服务。">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; background: #0a1628; color: #e8edf5; line-height: 1.6; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: rgba(10,22,40,0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(64,128,255,0.15); }
+    nav .container { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+    nav .logo { font-size: 22px; font-weight: 700; color: #4dabf7; letter-spacing: 1px; text-decoration: none; }
+    nav .logo span { color: #74c0fc; }
+    nav .nav-links { display: flex; gap: 32px; list-style: none; }
+    nav .nav-links a { color: #8899b4; text-decoration: none; font-size: 14px; transition: color 0.2s; }
+    nav .nav-links a:hover { color: #4dabf7; }
+    .hero { padding: 160px 0 100px; text-align: center; }
+    .hero .badge { display: inline-block; padding: 6px 16px; border: 1px solid rgba(77,171,247,0.3); border-radius: 20px; color: #4dabf7; font-size: 13px; margin-bottom: 24px; }
+    .hero h1 { font-size: 48px; font-weight: 800; color: #fff; margin-bottom: 16px; letter-spacing: 2px; }
+    .hero h1 .accent { background: linear-gradient(135deg, #4dabf7, #748ffc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .hero .subtitle { font-size: 20px; color: #8899b4; margin-bottom: 40px; }
+    .hero .cta { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+    .hero .cta a { padding: 14px 36px; border-radius: 8px; font-size: 16px; font-weight: 600; text-decoration: none; transition: all 0.3s; }
+    .hero .cta .primary { background: linear-gradient(135deg, #4dabf7, #748ffc); color: #fff; }
+    .hero .cta .primary:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(77,171,247,0.3); }
+    .hero .cta .secondary { border: 2px solid rgba(77,171,247,0.4); color: #4dabf7; }
+    .hero .cta .secondary:hover { background: rgba(77,171,247,0.1); }
+    .hero .cta .gold { background: linear-gradient(135deg, #f59f00, #fcc419); color: #1a2233; box-shadow: 0 4px 16px rgba(245,159,0,0.3); }
+    .hero .cta .gold:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(245,159,0,0.4); }
+    .section-title { text-align: center; margin-bottom: 60px; }
+    .section-title h2 { font-size: 32px; font-weight: 700; color: #fff; margin-bottom: 12px; }
+    .section-title p { font-size: 16px; color: #8899b4; }
+    .business { padding: 80px 0; background: rgba(255,255,255,0.02); }
+    .business-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+    .business-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 40px; }
+    .business-card h3 { font-size: 22px; color: #4dabf7; margin-bottom: 8px; }
+    .business-card .card-desc { font-size: 14px; color: #8899b4; margin-bottom: 24px; }
+    .business-card .service-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+    .business-card .service-list li { padding: 12px 16px; background: rgba(77,171,247,0.06); border-radius: 8px; border-left: 3px solid rgba(77,171,247,0.4); font-size: 15px; color: #c8d6e5; }
+    .business-card .product-list { display: flex; flex-direction: column; gap: 16px; }
+    .business-card .product-item { display: flex; align-items: center; gap: 16px; padding: 16px; background: rgba(77,171,247,0.06); border-radius: 12px; }
+    .business-card .product-item .icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+    .business-card .product-item .icon.lang { background: linear-gradient(135deg, #4dabf7, #748ffc); }
+    .business-card .product-item .icon.guoxue { background: linear-gradient(135deg, #f59f00, #fcc419); }
+    .business-card .product-item .icon.life { background: linear-gradient(135deg, #20c997, #12b886); }
+    .business-card .product-item .icon.data { background: linear-gradient(135deg, #339af0, #22b8cf); }
+    .business-card .product-item .info h4 { font-size: 16px; color: #fff; margin-bottom: 4px; }
+    .business-card .product-item .info p { font-size: 13px; color: #8899b4; }
+    .products { padding: 80px 0; }
+    .products-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(255px, 1fr)); gap: 24px; }
+    .product-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; overflow: hidden; transition: all 0.3s; }
+    .product-card:hover { transform: translateY(-4px); border-color: rgba(77,171,247,0.3); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+    .product-card .card-header { padding: 40px 32px 24px; text-align: center; }
+    .product-card .card-header .p-icon { width: 64px; height: 64px; border-radius: 16px; display: inline-flex; align-items: center; justify-content: center; font-size: 32px; margin-bottom: 16px; }
+    .product-card .card-header h3 { font-size: 20px; color: #fff; margin-bottom: 8px; }
+    .product-card .card-header p { font-size: 14px; color: #8899b4; }
+    .product-card .card-body { padding: 0 32px 24px; }
+    .product-card .card-body .features { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+    .product-card .card-body .features li { font-size: 14px; color: #c8d6e5; padding-left: 20px; position: relative; }
+    .product-card .card-body .features li::before { content: "✓"; position: absolute; left: 0; color: #4dabf7; font-weight: bold; }
+    .product-card .card-footer { padding: 0 32px 32px; text-align: center; }
+    .product-card .card-footer a { display: inline-block; padding: 10px 28px; border-radius: 6px; font-size: 14px; font-weight: 600; text-decoration: none; transition: all 0.2s; }
+    .product-card .card-footer .download { background: linear-gradient(135deg, #4dabf7, #748ffc); color: #fff; }
+    .product-card .card-footer .download:hover { transform: translateY(-1px); }
+    .product-card .card-footer .download-gold { background: linear-gradient(135deg, #f59f00, #fcc419); color: #1a2233; font-size: 15px; padding: 12px 32px; box-shadow: 0 4px 16px rgba(245,159,0,0.25); }
+    .product-card .card-footer .download-gold:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(245,159,0,0.35); }
+    .product-card.guoxue-card { border-color: rgba(245,159,0,0.25); box-shadow: 0 4px 24px rgba(245,159,0,0.08); }
+    .product-card.guoxue-card:hover { border-color: rgba(245,159,0,0.5); box-shadow: 0 12px 36px rgba(245,159,0,0.15); }
+    .product-card .card-header .guoxue-badge { display: inline-block; margin-top: 10px; padding: 4px 12px; background: linear-gradient(135deg, #f59f00, #fcc419); color: #1a2233; font-size: 12px; font-weight: 700; border-radius: 12px; }
+    .product-card .card-footer .coming { background: rgba(255,255,255,0.06); color: #8899b4; cursor: default; }
+    .card-footer .btn-stack { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+    .p-icon.lang { background: linear-gradient(135deg, #4dabf7, #748ffc); }
+    .p-icon.guoxue { background: linear-gradient(135deg, #f59f00, #fcc419); }
+    .p-icon.life { background: linear-gradient(135deg, #20c997, #12b886); }
+    .p-icon.data { background: linear-gradient(135deg, #339af0, #22b8cf); }
+    .product-card .card-footer .visit { background: linear-gradient(135deg, #339af0, #22b8cf); color: #fff; }
+    .product-card .card-footer .visit:hover { transform: translateY(-1px); }
+    .product-card .card-header .dev-badge { display: inline-block; margin-top: 10px; padding: 4px 12px; background: rgba(255,255,255,0.08); color: #8899b4; font-size: 12px; font-weight: 700; border-radius: 12px; }
+    .advantages { padding: 80px 0; background: rgba(255,255,255,0.02); }
+    .advantages-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+    .adv-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 32px; text-align: center; transition: all 0.3s; }
+    .adv-card:hover { transform: translateY(-2px); border-color: rgba(77,171,247,0.2); }
+    .adv-card .adv-icon { font-size: 36px; margin-bottom: 16px; }
+    .adv-card h4 { font-size: 18px; color: #fff; margin-bottom: 8px; }
+    .adv-card p { font-size: 14px; color: #8899b4; }
+    .about { padding: 80px 0; }
+    .about-content { max-width: 720px; margin: 0 auto; text-align: center; }
+    .about-content p { font-size: 16px; color: #c8d6e5; line-height: 1.8; margin-bottom: 16px; }
+    footer { border-top: 1px solid rgba(255,255,255,0.08); padding: 40px 0; }
+    footer .footer-content { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; }
+    footer .footer-links { display: flex; gap: 24px; }
+    footer .footer-links a { color: #8899b4; text-decoration: none; font-size: 14px; }
+    footer .footer-links a:hover { color: #4dabf7; }
+    footer .copyright { font-size: 13px; color: #667; }
+    footer .beian { font-size: 13px; color: #667; margin-top: 8px; }
+    footer .beian a { color: #667; text-decoration: none; }
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 32px; }
+      .hero .subtitle { font-size: 16px; }
+      .business-grid, .products-grid { grid-template-columns: 1fr; }
+      .advantages-grid { grid-template-columns: repeat(2, 1fr); }
+      nav .nav-links { display: none; }
+      footer .footer-content { flex-direction: column; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="container">
+      <a href="/" class="logo">言道<span>科技</span></a>
+      <ul class="nav-links">
+        <li><a href="#business">业务范围</a></li>
+        <li><a href="#products">产品介绍</a></li>
+        <li><a href="#advantages">技术优势</a></li>
+        <li><a href="#about">关于我们</a></li>
+        <li><a href="#contact-section">联系我们</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <section class="hero" id="hero">
+    <div class="container">
+      <div class="badge">东莞言道科技有限公司</div>
+      <h1>技术驱动 · 专注<span class="accent">全栈开发</span>与<span class="accent">垂直领域</span>应用</h1>
+      <p class="subtitle">我们不光自己做产品，也帮你把想法变成产品。快速交付，源码在手。</p>
+      <div class="cta">
+        <a href="https://www.yandao.vip/app-download/latest.apk" class="gold">📱 下载 言道国学APP</a>
+        <a href="https://shuziguajia.yandao.vip/" class="secondary">🖥️ 数字管家官网</a>
+        <a href="#contact-section" class="primary">业务合作</a>
+        <a href="#products" class="secondary">查看案例</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="business" id="business">
+    <div class="container">
+      <div class="section-title">
+        <h2>业务范围</h2>
+        <p>技术服务与自营产品两大板块，全方位满足您的需求</p>
+      </div>
+      <div class="business-grid">
+        <div class="business-card">
+          <h3>技术服务</h3>
+          <p class="card-desc">原型速建 · 源码交付 · 售后无忧</p>
+          <ul class="service-list">
+            <li>小程序 / App / 网站 全栈定制开发</li>
+            <li>软件技术顾问与架构咨询</li>
+            <li>软著申请 / 应用商店上架代办</li>
+            <li>前端框架：React / Uni-app / 原生小程序</li>
+            <li>后端技术：Node.js / Python / Java</li>
+            <li>30天内高效交付，全程源码可控</li>
+          </ul>
+        </div>
+        <div class="business-card">
+          <h3>自营产品矩阵</h3>
+          <p class="card-desc">持续运营中的垂直领域应用</p>
+          <div class="product-list">
+            <div class="product-item">
+              <div class="icon guoxue">📚</div>
+              <div class="info">
+                <h4>国学传承 <span style="color:#fcc419;font-size:12px;font-weight:700;margin-left:8px;">⭐ 热门 · 已上线</span></h4>
+                <p style="margin-bottom:6px;">中医学习、古籍研读、易学课程、传统历法，中医题库刷题备考</p>
+                <a href="https://yandaoguoxue.yandao.vip/" style="display:inline-block;padding:4px 12px;background:linear-gradient(135deg,#f59f00,#fcc419);color:#1a2233;font-size:12px;font-weight:700;border-radius:6px;text-decoration:none;">🌐 访问网页版</a>
+                <a href="https://www.yandao.vip/app-download/latest.apk" style="display:inline-block;padding:4px 12px;background:rgba(255,255,255,0.08);color:#c8d6e5;font-size:12px;font-weight:700;border-radius:6px;text-decoration:none;margin-left:6px;">📱 下载APP</a>
+              </div>
+            </div>
+            <div class="product-item">
+              <div class="icon lang">🌍</div>
+              <div class="info">
+                <h4>言道学外语 <span style="color:#4dabf7;font-size:12px;font-weight:700;margin-left:8px;">✅ 已上线</span></h4>
+                <p style="margin-bottom:6px;">AI语言学习，支持10种语言，游戏化闯关</p>
+                <a href="https://xuewaiyu.yandao.vip/xuewaiyu/" style="display:inline-block;padding:4px 12px;background:linear-gradient(135deg,#4dabf7,#748ffc);color:#fff;font-size:12px;font-weight:700;border-radius:6px;text-decoration:none;">🌐 访问网页版</a>
+                <a href="https://xuewaiyu.yandao.vip/xuewaiyu/download.html" style="display:inline-block;padding:4px 12px;background:rgba(255,255,255,0.08);color:#c8d6e5;font-size:12px;font-weight:700;border-radius:6px;text-decoration:none;margin-left:6px;">📱 下载APP</a>
+              </div>
+            </div>
+            <div class="product-item">
+              <div class="icon data">🖥️</div>
+              <div class="info">
+                <h4>数字管家 <span style="color:#22b8cf;font-size:12px;font-weight:700;margin-left:8px;">✅ 已上线</span></h4>
+                <p style="margin-bottom:6px;">本地优先的私人数字资产管家：电影视频修复、文件整理去重、备份恢复、NAS管理</p>
+                <a href="https://shuziguajia.yandao.vip/" style="display:inline-block;padding:4px 12px;background:linear-gradient(135deg,#339af0,#22b8cf);color:#fff;font-size:12px;font-weight:700;border-radius:6px;text-decoration:none;">🌐 访问网页版</a>
+                <a href="https://shuziguajia.yandao.vip/download.html" style="display:inline-block;padding:4px 12px;background:rgba(255,255,255,0.08);color:#c8d6e5;font-size:12px;font-weight:700;border-radius:6px;text-decoration:none;margin-left:6px;">💻 下载APP</a>
+              </div>
+            </div>
+            <div class="product-item">
+              <div class="icon life">🏪</div>
+              <div class="info"><h4>本地生活 <span style="color:#8899b4;font-size:12px;font-weight:700;margin-left:8px;">🚧 正在开发中</span></h4><p>连接本地商家与服务</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="products" id="products">
+    <div class="container">
+      <div class="section-title">
+        <h2>自营产品</h2>
+        <p>每一款产品都是我们技术实力的最好证明</p>
+      </div>
+      <div class="products-grid">
+        <div class="product-card guoxue-card">
+          <div class="card-header">
+            <div class="p-icon guoxue">📚</div>
+            <h3>国学传承</h3>
+            <p>传统文化与中医学习平台</p>
+            <span class="guoxue-badge">⭐ 热门推荐 · 已上线</span>
+          </div>
+          <div class="card-body">
+            <ul class="features">
+              <li>中医学习 / 医考题库刷题</li>
+              <li>古籍原文阅读与检索</li>
+              <li>易学结构化课程（紫微/梅花/六爻等）</li>
+              <li>传统历法 · 农历节气提醒</li>
+              <li>模拟考试 · 错题复习</li>
+              <li>学习进度记录</li>
+            </ul>
+          </div>
+          <div class="card-footer">
+            <div class="btn-stack">
+              <a href="https://yandaoguoxue.yandao.vip/" class="download-gold">🌐 访问网页版</a>
+              <a href="https://www.yandao.vip/app-download/latest.apk" class="download">📱 下载APP（Android）</a>
+            </div>
+          </div>
+        </div>
+        <div class="product-card">
+          <div class="card-header">
+            <div class="p-icon lang">🌍</div>
+            <h3>言道学外语</h3>
+            <p>AI驱动的语言学习平台</p>
+            <span class="guoxue-badge" style="background:linear-gradient(135deg,#4dabf7,#748ffc);">✅ 已上线</span>
+          </div>
+          <div class="card-body">
+            <ul class="features">
+              <li>支持10种语言学习</li>
+              <li>AI智能对话练习</li>
+              <li>游戏化闯关模式</li>
+              <li>实时口语评测</li>
+              <li>个性化学习路径</li>
+            </ul>
+          </div>
+          <div class="card-footer">
+            <div class="btn-stack">
+              <a href="https://xuewaiyu.yandao.vip/xuewaiyu/" class="visit">🌐 访问网页版</a>
+              <a href="https://xuewaiyu.yandao.vip/xuewaiyu/download.html" class="download">📱 下载APP（Android）</a>
+            </div>
+          </div>
+        </div>
+        <div class="product-card">
+          <div class="card-header">
+            <div class="p-icon data">🖥️</div>
+            <h3>数字管家</h3>
+            <p>本地优先的私人数字资产管家</p>
+            <span class="guoxue-badge" style="background:linear-gradient(135deg,#339af0,#22b8cf);">✅ 已上线</span>
+          </div>
+          <div class="card-body">
+            <ul class="features">
+              <li>电影视频体检与修复</li>
+              <li>优质片源识别 · 版本管理</li>
+              <li>文件整理 · 重复清理</li>
+              <li>3-2-1 备份与恢复</li>
+              <li>NAS / WebDAV 管理</li>
+              <li>本地处理 · 隐私安全</li>
+            </ul>
+          </div>
+          <div class="card-footer">
+            <div class="btn-stack">
+              <a href="https://shuziguajia.yandao.vip/" class="visit">🌐 访问网页版</a>
+              <a href="https://shuziguajia.yandao.vip/download.html" class="download">💻 下载APP（Windows）</a>
+            </div>
+          </div>
+        </div>
+        <div class="product-card">
+          <div class="card-header">
+            <div class="p-icon life">🏪</div>
+            <h3>本地生活</h3>
+            <p>连接本地商家与服务</p>
+            <span class="dev-badge">🚧 正在开发中</span>
+          </div>
+          <div class="card-body">
+            <ul class="features">
+              <li>本地商家入驻</li>
+              <li>优惠活动发布</li>
+              <li>在线预约服务</li>
+              <li>社区互动交流</li>
+            </ul>
+          </div>
+          <div class="card-footer">
+            <span class="coming">正在开发中，敬请期待</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="advantages" id="advantages">
+    <div class="container">
+      <div class="section-title">
+        <h2>技术优势</h2>
+        <p>为什么选择言道科技</p>
+      </div>
+      <div class="advantages-grid">
+        <div class="adv-card"><div class="adv-icon">💻</div><h4>全栈开发</h4><p>React / Uni-app / 小程序<br>原生开发全覆盖</p></div>
+        <div class="adv-card"><div class="adv-icon">🤖</div><h4>AI驱动开发</h4><p>利用AI技术提升<br>开发效率与质量</p></div>
+        <div class="adv-card"><div class="adv-icon">📦</div><h4>源码交付</h4><p>完整源码交付<br>无隐藏费用</p></div>
+        <div class="adv-card"><div class="adv-icon">🚀</div><h4>高效交付</h4><p>30天内完成<br>从原型到上线</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="about" id="about">
+    <div class="container">
+      <div class="section-title"><h2>关于我们</h2></div>
+      <div class="about-content">
+        <p>东莞言道科技有限公司成立于2024年，专注于软件定制与垂直领域应用。我们持续运营「国学传承」「数字管家」「言道学外语」等产品，「本地生活」正在开发中，同时也为客户提供高性价比的全栈开发服务。</p>
+        <p>我们相信技术的力量，更相信真诚的合作。无论是创业初期的MVP原型，还是成熟产品的迭代升级，我们都将以专业的态度和过硬的技术，为您提供最优质的服务。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="about" id="contact-section">
+    <div class="container">
+      <div class="section-title"><h2>联系我们</h2><p>期待与您的合作</p></div>
+      <div class="about-content">
+        <div style="display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; margin-top: 20px;">
+          <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 24px 32px; min-width: 280px;">
+            <div style="font-size: 28px; margin-bottom: 12px;">📧</div>
+            <div style="font-size: 14px; color: #8899b4; margin-bottom: 4px;">商务合作邮箱</div>
+            <a href="mailto:wzmpa18@gmail.com" style="color: #4dabf7; font-size: 15px; text-decoration: none;">wzmpa18@gmail.com</a>
+          </div>
+          <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 24px 32px; min-width: 280px;">
+            <div style="font-size: 28px; margin-bottom: 12px;">📮</div>
+            <div style="font-size: 14px; color: #8899b4; margin-bottom: 4px;">咨询邮箱</div>
+            <a href="mailto:wuzhimin666@163.com" style="color: #4dabf7; font-size: 15px; text-decoration: none;">wuzhimin666@163.com</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-links">
+          <a href="#about">关于我们</a>
+          <a href="#business">业务合作</a>
+          <a href="#products">产品介绍</a>
+          <a href="#contact-section">联系我们</a>
+        </div>
+        <div>
+          <div class="copyright">© 2024-2026 东莞言道科技有限公司 版权所有</div>
+          <div class="copyright" style="margin-top:4px;">邮箱：wzmpa18@gmail.com | wuzhimin666@163.com</div>
+          <div class="beian"><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener">粤ICP备2026071165号-2</a></div>
+        </div>
+      </div>
+    </div>
+  </footer>
+<script>
+// 清除旧AILOS SPA Service Worker，防止劫持公司首页
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+    registrations.forEach(function(registration) {
+      registration.unregister();
+      console.log('[言道科技] 已注销旧SW:', registration.scope);
+    });
+  });
+}
+</script>
+</body>
+</html>
