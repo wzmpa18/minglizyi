@@ -34,13 +34,15 @@ for (const p of all) {
 }
 out = out.replace("</urlset>", additions.join("") + "</urlset>");
 
-// 3) 刷新本次改动的已有页面 lastmod
+// 3) 刷新本次改动的已有页面 lastmod（先清除旧 lastmod 再写入新的，避免重复标签）
 const changed = ["/", "/yixue/", "/zhongyi/", "/academy/", "/academy/yixue/", "/b/", "/app/", "/learn/", "/tools/", "/download/"];
 for (const p of changed) {
   const loc = BASE + p;
-  const re = new RegExp(`(<url><loc>${loc.replace(/\//g, "\\/")}<\\/loc><changefreq>[a-z]+<\\/changefreq><priority>[\\d.]+<\\/priority>)`);
+  const re = new RegExp(`(<url><loc>${loc.replace(/\//g, "\\/")}<\\/loc><changefreq>[a-z]+<\\/changefreq><priority>[\\d.]+<\\/priority>)(<lastmod>[\\d-]+<\\/lastmod>)*`);
   out = out.replace(re, `$1<lastmod>${TODAY}</lastmod>`);
 }
+// 4) 兜底：把重复连续的 lastmod 压成一个（每条 url 只保留一个）
+out = out.replace(/(<lastmod>\d{4}-\d{2}-\d{2}<\/lastmod>)(?:<lastmod>\d{4}-\d{2}-\d{2}<\/lastmod>)+/g, "$1");
 
 fs.writeFileSync(PUB, out, "utf8");
 console.log(`tools in nav: ${hrefs.length}, extra: ${extra.length}, added: ${additions.length}`);

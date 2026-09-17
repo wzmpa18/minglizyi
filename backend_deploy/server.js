@@ -317,48 +317,97 @@ app.post('/api/ai/chat', async (req, res) => {
     // 20260816 UV-004: .env 实际配置 HUNYUAN_API_KEY(混元 OpenAI 兼容)，原代码只认 DEEPSEEK/OPENAI 导致线上 AI 整体不可用
     const deepseekKey = process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY || '';
     const hunyuanKey = process.env.HUNYUAN_API_KEY || '';
-    const apiKey = deepseekKey || hunyuanKey;
+    // 20260917 v25.0.87 智谱免费接入：glm-4.5-flash 免费模型优先，失败自动回退 deepseek/混元（provider 链）
+    const zhipuKey = process.env.ZHIPU_API_KEY || '';
 
-    if (!apiKey) {
+    const _providerChain = [];
+    if (zhipuKey) _providerChain.push({
+      id: 'zhipu', key: zhipuKey,
+      url: process.env.ZHIPU_API_URL || 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+      model: process.env.ZHIPU_MODEL || 'glm-4.5-flash',
+      // glm-4.5-flash 默认深度思考：8192 max_tokens 会被 reasoning_tokens 吃光导致正文为空（同混元hy3故障），
+      // 默认关闭思考保证正文空间，需要时通过 ZHIPU_THINKING=enabled 打开
+      extra: { thinking: { type: process.env.ZHIPU_THINKING || 'disabled' } },
+    });
+    if (deepseekKey) _providerChain.push({
+      id: 'deepseek', key: deepseekKey,
+      url: process.env.AI_API_URL || 'https://api.deepseek.com/v1/chat/completions',
+      model: model || 'deepseek-chat',
+    });
+    if (hunyuanKey) _providerChain.push({
+      id: 'tencent', key: hunyuanKey,
+      url: process.env.HUNYUAN_API_URL || 'https://tokenhub.tencentmaas.com/v1/chat/completions',
+      model: process.env.HUNYUAN_MODEL || 'hy3',
+    });
+
+    if (_providerChain.length === 0) {
       return res.json({ success: false, error: 'AI 服务未配置', code: 'AI_SERVICE_UNAVAILABLE' });
     }
 
-    const useHunyuan = !deepseekKey && !!hunyuanKey;
-    const targetModel = model || (useHunyuan ? (process.env.HUNYUAN_MODEL || 'hy3') : 'deepseek-chat');
-    _meta.model = targetModel;
-    _meta.providerId = useHunyuan ? 'tencent' : 'deepseek';
-    const apiUrl = process.env.AI_API_URL || (useHunyuan
-      ? (process.env.HUNYUAN_API_URL || 'https://tokenhub.tencentmaas.com/v1/chat/completions')
-      : 'https://api.deepseek.com/v1/chat/completions');
+    _meta.model = _providerChain[0].model;
+    _meta.providerId = _providerChain[0].id;
 
     // v25.0.60 AUDIT-20260826 D17: max_tokens 4096→8192（默认，AI_MAX_TOKENS 可调）
     // 推理型模型(hy3)思考即消耗 token，4096 上限时复杂命理解读的推理就耗尽配额，
     // 等待60秒后返回空内容（用户视角=AI不能用）。8192 给推理+正文留足空间。
     // AI Phase 1：以上限以档位 maxOutputTokens 为唯一事实源，AI_MAX_TOKENS 仅作应急覆盖。
     const _maxTokens = parseInt(process.env.AI_MAX_TOKENS, 10) || _levelPolicy.maxOutputTokens || aiUsagePolicy.DEFAULT_MAX_OUTPUT_TOKENS;
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-      body: JSON.stringify({ model: targetModel, messages: finalMessages, stream: false, max_tokens: _maxTokens, temperature: 0.7 })
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error('[AI] API error:', response.status, errText);
-      _logCost('error', 'upstream_' + response.status);
-      // v25.0.61 P2-C：上游错误（含502/504）也计入健康统计（原实现漏记，超时表现为上游非200）
-      recordAIHealth('fail', Date.now() - _t0, 'upstream_' + response.status);
-      let detail = `AI API 返回错误: ${response.status}`;
+    // v25.0.87 provider 链逐个尝试：智谱(免费) -> deepseek -> 混元，全部失败才对用户报错
+    let data = null;
+    let _lastFailDetail = '';
+    for (const _p of _providerChain) {
       try {
-        const errJson = JSON.parse(errText);
-        if (errJson.error && (errJson.error.message_zh || errJson.error.message)) {
-          detail = errJson.error.message_zh || errJson.error.message;
+        const response = await fetch(_p.url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_p.key}` },
+          body: JSON.stringify({ model: _p.model, messages: finalMessages, stream: false, max_tokens: _maxTokens, temperature: 0.7, ...(_p.extra || {}) })
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          console.error(`[AI] ${_p.id} API error:`, response.status, errText);
+          _logCost('error', 'upstream_' + response.status);
+          // v25.0.61 P2-C：上游错误（含502/504）也计入健康统计（原实现漏记，超时表现为上游非200）
+          recordAIHealth('fail', Date.now() - _t0, 'upstream_' + response.status);
+          let detail = `HTTP ${response.status}`;
+          try {
+            const errJson = JSON.parse(errText);
+            if (errJson.error && (errJson.error.message_zh || errJson.error.message)) {
+              detail = errJson.error.message_zh || errJson.error.message;
+            }
+          } catch {}
+          _lastFailDetail = `${_p.id}: ${detail}`;
+          continue; // 回退下一个 provider
         }
-      } catch {}
-      return res.status(response.status).json({ success: false, error: detail, code: 'AI_SERVICE_UNAVAILABLE' });
+
+        const _d = await response.json();
+        const _c = _d.choices?.[0]?.message?.content || '';
+        if (!_c) {
+          console.error(`[AI] ${_p.id} 空内容返回 finish_reason=` + (_d.choices?.[0]?.finish_reason || '') + ' usage=' + JSON.stringify(_d.usage));
+          _lastFailDetail = `${_p.id}: 空内容返回`;
+          continue; // 回退下一个 provider
+        }
+        data = _d;
+        _meta.model = _p.model;
+        _meta.providerId = _p.id;
+        break;
+      } catch (e) {
+        console.error(`[AI] ${_p.id} call failed:`, e.message);
+        _lastFailDetail = `${_p.id}: ${e.message}`;
+        continue;
+      }
     }
 
-    const data = await response.json();
+    if (!data) {
+      _logCost('error', 'AI_EMPTY_CONTENT');
+      recordAIHealth('fail', Date.now() - _t0, 'all_providers_failed');
+      return res.status(502).json({
+        success: false,
+        error: 'AI解读生成失败，请简化问题后重试',
+        code: 'AI_EMPTY_CONTENT',
+        detail: _lastFailDetail,
+      });
+    }
     const content = data.choices?.[0]?.message?.content || '';
     const usage = data.usage || {};
     _meta.inputTokens = Number(usage.prompt_tokens) || 0;

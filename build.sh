@@ -29,4 +29,7 @@ else
   exit 1
 fi
 
+echo "[Build] Step 5: Injecting canonical tags (SEO)..."
+node scripts/seo-fix/inject-canonical.js || { echo "[Build] WARN: canonical injection failed"; }
+
 echo "[Build] Complete!"
