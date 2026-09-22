@@ -2,19 +2,20 @@
 // 言道国学 - 公众号内容引擎（指令书第三十四~五十八章 / 七十九~八十三章）
 // WECHAT_CONTENT_OPPORTUNITY_ENGINE + WECHAT_CONTENT_SAFETY_GATE
 // - 选题：内部真实数据优先（工具使用/学习进度/知识库量），公开趋势无真实API时记 UNKNOWN
-// - 文章：AI 生成原创内容（腾讯混元），结构化 JSON 输出 → 服务端确定性渲染 HTML
+// - 文章：AI 生成原创内容（2026-09-23 起智谱 glm-4.5-flash 免费优先），结构化 JSON 输出 → 服务端确定性渲染 HTML
 // - Safety Gate：医疗风险/封建迷信/绝对化广告/金融承诺/隐私 五类拦截
 // - 查重：标题二元语法 Jaccard 相似度 vs 历史文章
 // - 双保险：AUTO_PUBLISH / AUTO_MASS_SEND 恒为 false（第六十二章代码层禁止）
 // ============================================================================
 const { getDb, getAuthDb, getSetting, setSetting } = require('./wechatOaDb');
 const aiUsagePolicy = require('./aiUsagePolicy');
+const { profileFor, solarTermForBatch } = require('./wechatBenchmarkProfiles');
 
 const DEFAULT_SETTINGS = {
   automation: 'ON',            // ON / OFF / MAINTENANCE（第八十章）
   draftSync: 'ON',             // ON / OFF（第八十一章）
   dailyArticleLimit: 3,        // 1~5（第四十四章）
-  maxArticleTokens: 6000,
+  maxArticleTokens: 8000,
   dailyCostCap: 20,            // CNY/日 成本保护（第八十三章）
   topicTopN: 8,                // 每日选题 TOP N（第四十一章）
   authorName: '言道国学',
@@ -43,6 +44,10 @@ const CLUSTERS = [
   { id: 'carplate', name: '车牌号数字文化', toolUrl: '/yixue/carplate', learnUrl: '/academy/learn', recordTypes: ['carplate'], tracks: ['carplate'], chapterKeys: ['车牌'] },
   { id: 'zhongyi', name: '中医学习', toolUrl: '/zhongyi', learnUrl: '/academy/learn', recordTypes: ['tcm-constitution'], tracks: ['zhongyi', 'zhenggu'], chapterKeys: [] },
   { id: 'yikao', name: '医考题库', toolUrl: '/academy/question-bank', learnUrl: '/academy/question-bank', recordTypes: [], tracks: ['zhongyi_zhiye', 'yikao'], chapterKeys: [] },
+  // 2026-09-23 产品布局集群（用户指令）：学外语/数字管家产品相关的文化内容长期轮换，纯文化视角零广告
+  // 战略保底分：无本站工具使用数据，靠 strategicFloor 保证稳定进入每日选题 TOP8
+  { id: 'xuewaiyu', name: '语言文化', toolUrl: '/', learnUrl: '/', recordTypes: [], tracks: [], chapterKeys: [], strategicFloor: 55 },
+  { id: 'shuziguanjia', name: '数字文化', toolUrl: '/', learnUrl: '/', recordTypes: [], tracks: [], chapterKeys: [], strategicFloor: 55 },
 ];
 
 // ---------- 内部需求数据（第三十五/三十八章：真实数据，不伪造） ----------
@@ -99,13 +104,19 @@ function internalDemandScore(cluster, data) {
   for (const tr of cluster.tracks) kpCount += data.kp[tr] || 0;
   // 归一化加权：工具使用权重最高（真实付费/使用意图），学习次之，知识库存量为内容底气
   const raw = toolUse * 3 + studyRows * 2 + Math.min(kpCount, 500) * 0.2;
-  return Math.min(100, Math.round(raw));
+  const score = Math.min(100, Math.round(raw));
+  // 产品布局集群（学外语/数字管家）无本站工具数据，用战略保底分保证进入轮换
+  return Math.max(score, cluster.strategicFloor || 0);
 }
 
 function contentGapScore(cluster) {
   const db = getDb();
   try {
-    const row = db.prepare("SELECT COUNT(*) AS n FROM wechat_articles WHERE status != 'ARCHIVED' AND status != 'DELETED' AND digest LIKE ?").get(`%${cluster.name}%`);
+    // 2026-09-23：digest 模糊匹配不可靠（换标题/角度就漏判），改为按选题集群精确计数防主题重复
+    const row = db.prepare(`
+      SELECT COUNT(*) AS n FROM wechat_articles a
+      JOIN wechat_topic_candidates t ON a.topic_id = t.topic_id
+      WHERE a.status NOT IN ('ARCHIVED','DELETED') AND t.cluster = ?`).get(cluster.id);
     const existing = row ? row.n : 0;
     return Math.max(0, 100 - existing * 20);
   } catch { return 50; }
@@ -128,11 +139,24 @@ function generateTopics(runDate) {
       content_gap_score: gap, final_score: final,
     });
   }
+  // 节气系列选题（2026-09-21 强化：批次日距节气0~3天时，注入置顶节气选题，保证系列连贯不重复）
+  const st = solarTermForBatch(runDate);
+  if (st) {
+    // 已删文章不算已发（2026-09-23修复：寒露稿曾被删，排除DELETED后10/8批次可重新生成，兑现秋分文末钩子）
+    const used = db.prepare("SELECT COUNT(*) AS n FROM wechat_articles WHERE status != 'DELETED' AND topic_id IN (SELECT topic_id FROM wechat_topic_candidates WHERE keyword = ?)").get(`节气·${st.term}`);
+    if (!used.n) {
+      rows.push({
+        keyword: `节气·${st.term}`, cluster: 'jieqi', source: 'SOLAR_TERM',
+        source_score: null, internal_score: 100,
+        trend_score: null, content_gap_score: 100, final_score: 100,
+      });
+    }
+  }
   rows.sort((a, b) => b.final_score - a.final_score);
   const top = rows.slice(0, s.topicTopN);
-  const insert = db.prepare(`INSERT INTO wechat_topic_candidates(keyword, cluster, source, source_score, internal_score, trend_score, content_gap_score, final_score, status, run_date)
-    VALUES(@keyword, @cluster, @source, @source_score, @internal_score, @trend_score, @content_gap_score, @final_score, 'PENDING', @run_date)`);
-  const tx = db.transaction(() => { for (const r of top) insert.run({ ...r, source_score: null, run_date: runDate }); });
+  const insert = db.prepare(`INSERT INTO wechat_topic_candidates(keyword, cluster, source, source_score, internal_score, trend_score, content_gap_score, final_score, status, pinned, run_date)
+    VALUES(@keyword, @cluster, @source, @source_score, @internal_score, @trend_score, @content_gap_score, @final_score, @status, @pinned, @run_date)`);
+  const tx = db.transaction(() => { for (const r of top) insert.run({ ...r, source_score: null, run_date: runDate, status: r.source === 'SOLAR_TERM' ? 'APPROVED' : 'PENDING', pinned: r.source === 'SOLAR_TERM' ? 1 : 0 }); });
   tx();
   return { total: top.length, top: top.slice(0, 8) };
 }
@@ -153,48 +177,86 @@ function addManualTopic(keyword, cluster, runDate) {
 }
 
 // ---------- AI 调用（scene=wechat_content 进 AI Cost Center，第八十二章） ----------
+// 2026-09-23：智谱 glm-4.5-flash（免费）优先 → 混元 tokenhub → deepseek，逐个降级
 async function callAI(messages, maxTokens) {
-  const apiKey = process.env.HUNYUAN_API_KEY || process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY || '';
-  if (!apiKey) throw new Error('AI服务未配置');
-  const useHunyuan = !!process.env.HUNYUAN_API_KEY;
-  // 公众号文章生成可用 WECHAT_CONTENT_MODEL 覆盖默认模型（hy3深度推理token消耗大且易触发网关超时）
-  const model = process.env.WECHAT_CONTENT_MODEL || process.env.HUNYUAN_MODEL || 'hy3';
-  const apiUrl = process.env.HUNYUAN_API_URL || 'https://tokenhub.tencentmaas.com/v1/chat/completions';
+  const providers = [];
+  if (process.env.ZHIPU_API_KEY) {
+    providers.push({
+      id: 'zhipu', key: process.env.ZHIPU_API_KEY,
+      url: process.env.ZHIPU_API_URL || 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+      model: process.env.ZHIPU_MODEL || 'glm-4.5-flash',
+      // glm-4.5 系列默认深度思考会吃光 max_tokens 导致正文为空，公众号场景必须禁用
+      extra: { thinking: { type: 'disabled' } },
+    });
+  }
+  if (process.env.HUNYUAN_API_KEY) {
+    providers.push({
+      id: 'tencent', key: process.env.HUNYUAN_API_KEY,
+      url: process.env.HUNYUAN_API_URL || 'https://tokenhub.tencentmaas.com/v1/chat/completions',
+      // WECHAT_CONTENT_MODEL 仅覆盖混元通道（智谱走 ZHIPU_MODEL）
+      model: process.env.WECHAT_CONTENT_MODEL || process.env.HUNYUAN_MODEL || 'hy3',
+    });
+  }
+  if (process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY) {
+    providers.push({
+      id: 'deepseek', key: process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY,
+      url: process.env.AI_API_URL || 'https://api.deepseek.com/v1/chat/completions',
+      model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
+    });
+  }
+  if (!providers.length) throw new Error('AI服务未配置');
   const started = Date.now();
-  // 网关瞬断（空体/截断）重试：同参数最多3次，间隔5s
   let lastErr = null;
-  for (let i = 0; i < 3; i++) {
-    try {
-      const res = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-        body: JSON.stringify({ model, messages, max_tokens: maxTokens, temperature: 0.7 }),
-      });
-      const raw = await res.text();
-      if (!raw || !raw.trim()) throw new Error('AI响应为空（网关超时）');
-      let data;
-      try { data = JSON.parse(raw); } catch { throw new Error('AI响应JSON截断（网关超时）'); }
-      const usage = data.usage || {};
-      const tokensIn = usage.prompt_tokens || 0;
-      const tokensOut = usage.completion_tokens || 0;
-      let cost = 0;
-      try { cost = aiUsagePolicy.estimateCost(model, tokensIn, tokensOut) || 0; } catch { }
+  for (const p of providers) {
+    // 免费智谱限流（429）退避重试最多5次（15/30/60/60s）守住零成本；其他错误2次后降级
+    const maxTries = p.id === 'zhipu' ? 5 : 2;
+    let backoffMs = 15000;
+    for (let i = 0; i < maxTries; i++) {
       try {
-        getDb().prepare(`INSERT INTO ai_call_logs(scene, tokens_in, tokens_out, request_id, user_id, feature_key, model, provider_id, estimated_cost, duration_ms, status)
-          VALUES('wechat_content', ?, ?, ?, '', 'wechat_content', ?, ?, ?, ?, 'success')`)
-          .run(tokensIn, tokensOut, `woa_${Date.now()}`, model, useHunyuan ? 'tencent' : 'deepseek', cost, Date.now() - started);
-      } catch { }
-      if (!res.ok || !data.choices || !data.choices[0]) throw new Error(`AI调用失败: ${res.status}`);
-      const ch = data.choices[0];
-      const content = (ch.message && ch.message.content) || '';
-      if (!content.trim()) throw new Error(`AI内容为空（finish=${ch.finish_reason}，推理耗尽token）`);
-      return { content, model, cost };
-    } catch (e) {
-      lastErr = e;
-      if (i < 2) await new Promise((r) => setTimeout(r, 5000));
+        const res = await fetch(p.url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${p.key}` },
+          body: JSON.stringify({ model: p.model, messages, max_tokens: maxTokens, temperature: 0.7, stream: false, ...(p.extra || {}) }),
+        });
+        const raw = await res.text();
+        if (res.status === 429) {
+          let detail = '';
+          try { const j = JSON.parse(raw); detail = String((j.error && j.error.code) || (j.error && j.error.message) || '').slice(0, 60); } catch { }
+          throw Object.assign(new Error(`AI限流429(${detail})`), { rateLimited: true });
+        }
+        if (!raw || !raw.trim()) throw new Error('AI响应为空（网关超时）');
+        let data;
+        try { data = JSON.parse(raw); } catch { throw new Error('AI响应JSON截断（网关超时）'); }
+        if (!res.ok || !data.choices || !data.choices[0]) throw new Error(`AI调用失败: ${res.status} ${String(raw).slice(0, 120)}`);
+        const ch = data.choices[0];
+        const content = (ch.message && ch.message.content) || '';
+        if (!content.trim()) throw new Error(`AI内容为空（finish=${ch.finish_reason}，推理耗尽token）`);
+        const usage = data.usage || {};
+        const tokensIn = usage.prompt_tokens || 0;
+        const tokensOut = usage.completion_tokens || 0;
+        let cost = 0;
+        try { const est = aiUsagePolicy.estimateCost(p.model, tokensIn, tokensOut); cost = (est && typeof est.estimatedCost === 'number') ? est.estimatedCost : 0; } catch { }
+        try {
+          getDb().prepare(`INSERT INTO ai_call_logs(scene, tokens_in, tokens_out, request_id, user_id, feature_key, model, provider_id, estimated_cost, duration_ms, status)
+            VALUES('wechat_content', ?, ?, ?, '', 'wechat_content', ?, ?, ?, ?, 'success')`)
+            .run(tokensIn, tokensOut, `woa_${Date.now()}`, p.model, p.id, cost, Date.now() - started);
+        } catch { }
+        return { content, model: p.model, cost };
+      } catch (e) {
+        lastErr = e;
+        console.error(`[callAI] ${p.id} 第${i + 1}次失败: ${e.message}`);
+        if (e.rateLimited) {
+          if (i < maxTries - 1) await new Promise((r) => setTimeout(r, backoffMs));
+          backoffMs = Math.min(backoffMs * 2, 60000);
+        } else if (i < 1) {
+          await new Promise((r) => setTimeout(r, 5000));
+        } else {
+          break; // 非限流错误2次后换下一个provider
+        }
+      }
     }
   }
-  throw lastErr;
+  throw lastErr || new Error('AI全部provider失败');
 }
 
 function todayAiCost() {
@@ -243,28 +305,45 @@ function dedupGate(title) {
   return { pass: true };
 }
 
-// ---------- 文章生成（第四十二~五十三章） ----------
-const ARTICLE_STYLES = ['科普型', '教程型', '问答型', '清单型', '学习型', '热点关联型', '产品使用技巧型'];
+// ---------- 文章生成（第四十二~五十三章；2026-09-21 对标强化版） ----------
+const ARTICLE_STYLES = ['科普型', '教程型', '问答型', '清单型', '学习型', '热点关联型'];
 
 function buildArticlePrompt(topic, cluster, style) {
-  const s = settings();
-  return `你是一位严谨的国学文化科普作者，为微信公众号"言道国学研习"撰写一篇${style}原创文章。
+  const bp = profileFor(topic.cluster);
+  let termNote = '';
+  if (topic.cluster === 'jieqi') {
+    const st = solarTermForBatch(topic.run_date || new Date().toISOString().slice(0, 10));
+    const termName = topic.keyword.replace('节气·', '');
+    if (st && st.term === termName) {
+      const diff = Math.round((new Date(st.date + 'T00:00:00') - new Date(topic.run_date + 'T00:00:00')) / 86400000);
+      const phase = diff > 0 ? `还差${diff}天（节气将至，标题可用"后天${termName}"等措辞）` : diff === 0 ? '就是当天（标题可用"今天${termName}"）' : `已过${-diff}天（标题可用"${termName}刚过"）`;
+      termNote = `（节气主题：${termName}，交节日期 ${st.date}，本文发布时${phase}。文章围绕${termName}的天文含义、物候、典籍与当季起居展开，主题提示：${st.theme}）`;
+    } else {
+      termNote = `（节气主题，文章围绕"${topic.keyword.replace('节气·', '')}"的天文含义、物候、典籍与当季起居展开）`;
+    }
+  }
+  return `你是一位深耕国学文化的资深作者，为微信公众号"言道国学研习"撰写一篇${style}深度原创文章。
 
-主题：${topic.keyword}（集群：${cluster.name}）
-事实依据（必须以此为唯一事实源，不得虚构数据）：
-- 这是"言道国学"APP内的真实工具方向，网站地址 https://yandaoguoxue.yandao.vip${cluster.toolUrl}
-- 面向对国学文化感兴趣、但零基础的读者
-- 内容定位：传统文化知识科普与学习方法分享，采用"文化参考"口径，不作吉凶祸福断言
+主题：${topic.keyword}（方向：${cluster.name}）${termNote}
 
-写作要求：
-1. 标题避免绝对化、不使用震惊体；不用"必看""第一""百分百"等词
-2. 正文800~1600字，价值优先，营销内容不超过两成，只在文末自然引导一次
-3. 结构：导语（1段）→ 正文3~4个小节（每节有小标题）→ 知识要点（3~5条）→ 结尾
-4. 中医类内容只讲学习知识、典籍、经络基础，禁止任何诊断、处方、疗效表述
-5. 严禁出现：改命/转运/治愈/根治/稳赚/收益承诺等表述
-6. 结尾引导语固定为："${s.ctaText}"
-7. 输出必须是合法JSON（不要markdown代码块包裹），结构：
-{"title":"...","digest":"60字内摘要","intro":"导语","sections":[{"h":"小标题","p":"本节正文"}],"knowledgePoints":["要点1","要点2"],"cta":"结尾引导段"}`;
+对标打法（只借鉴结构方法论，绝不复制任何现存文章的内容、金句或表述）：
+- 对标标杆：${bp.benchmark}
+- 结构公式：${bp.formula}
+- 本题材禁忌：${bp.taboo}
+
+写作铁律（逐条自检后再输出）：
+1. 纯干货。全文不得出现任何APP、工具、课程、网站、下载、会员等推广内容，一个字都不带
+2. 结构硬指标：sections 必须有 4~6 个小节，每小节 paragraphs 给 2~3 段，每段 90~160 字；正文（开场+全部小节段落合计）必须达到 1600~2200 字，不足 1600 字视为不合格，必须扩写细节后再输出。信息密度优先：具体数字、典籍出处、可操作的细节
+3. 去AI味：长短句交错，一两句一段；禁用"与此同时""不仅如此""值得注意的是""让我们来看看"等过渡词；允许出现极短句作停顿
+4. 观点后置且少而准：先铺事实，全文只在关键处下2~3个判断，判断要锋利可被转发
+5. 典籍引用不超过3处，每处必须给准确出处（书名+篇名）
+6. 健康/命理题材守边界：只讲文化知识与方法，不作诊断、疗效、吉凶断言
+7. 结尾给一句"能带走的话"：读者可以原样复述给别人，与标题呼应
+8. 标题给3个候选（数字利益型/悬念反差型/时效钩子型），各不超过28字，避免绝对化与震惊体
+9. JSON字符串值内严禁出现未转义的英文双引号：引用词语一律用中文引号""，书名用《》，避免解析失败
+
+输出必须是合法JSON（不要markdown代码块包裹），结构：
+{"titleCandidates":["标题1","标题2","标题3"],"digest":"60字内摘要","intro":"场景开场段落（2~4句，从读者正在经历的细节切入）","sections":[{"h":"小节标题","paragraphs":["段落1","段落2"]}],"takeaway":"结尾带走的一句话"}`;
 }
 
 function parseAIJson(text) {
@@ -273,22 +352,162 @@ function parseAIJson(text) {
   const start = t.indexOf('{');
   const end = t.lastIndexOf('}');
   if (start >= 0 && end > start) t = t.slice(start, end + 1);
-  return JSON.parse(t);
+  try {
+    return JSON.parse(t);
+  } catch (e) {
+    const KNOWN_KEYS = 'titleCandidates|digest|intro|sections|takeaway|h|paragraphs';
+    let repaired = t;
+    // 修复2：glm偶发漏写冒号——已知key换行后直接跟值（V8报错特征："Expected ':' after property name ... column 1"）
+    repaired = repaired.replace(new RegExp(`"(${KNOWN_KEYS})"\\s*(?=["[{])`, 'g'), '"$1":');
+    // 修复3：已知key后误用全角冒号（冒号在引号外）
+    repaired = repaired.replace(new RegExp(`"(${KNOWN_KEYS})"\\s*：`, 'g'), '"$1":');
+    // 修复4：全角冒号写进key字符串内部（实测高频："takeaway："值"，V8同样报Expected ':'）——该引号实为value开口引号
+    // 注意：必须在修复1（CJK引号转义）之前执行，否则：先被当作内容引号转义，此模式即失效
+    repaired = repaired.replace(new RegExp(`"(${KNOWN_KEYS})\\s*："`, 'g'), '"$1": "');
+    // 修复1：模型在正文里输出未转义英文双引号（紧邻CJK判定为内容引号，转义为\u0022）
+    const CJK = '\u4e00-\u9fff\u3400-\u4dbf\u3000-\u303f\uff00-\uffef';
+    const reAfter = new RegExp(`([${CJK}])"(?![,:}\\]\\s]|$)`, 'g');
+    const reBefore = new RegExp(`(?<![{\\[:,\\s])"([${CJK}])`, 'g');
+    repaired = repaired.replace(reAfter, '$1\\u0022').replace(reBefore, '\\u0022$1');
+    if (repaired !== t) {
+      try { return JSON.parse(repaired); } catch (e2) { dumpParseFail(t); throw e2; }
+    }
+    dumpParseFail(t);
+    throw e;
+  }
 }
+
+// 解析失败的原始输出落盘，便于针对性加固（仅失败时写）
+function dumpParseFail(raw) {
+  try {
+    const fs = require('fs');
+    const dir = require('path').join(__dirname, 'data');
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const dump = require('path').join(dir, `ai_parse_fail_${Date.now()}.json`);
+    fs.writeFileSync(dump, raw);
+    console.error(`[parseAIJson] 解析失败原始输出已存: ${dump}`);
+  } catch { }
+}
+
+function articleWordCount(a) {
+  return (a.intro + ' ' + a.sections.map((x) => (x.paragraphs || [x.p || '']).join(' ')).join(' ') + ' ' + (a.takeaway || '')).replace(/\s/g, '').length;
+}
+
+// 2026-09-23 扩写兜底：glm-4.5-flash 首稿常仅约1000字（实测996/937/1176），低于1500字触发一次免费扩写
+// 扩写走纯文本标记格式（【开场】/【小节N】），响应不涉及JSON，从根上规避解析失败
+// 目标字数感知：按缺口精确控制补写量，防止过冲超2500字上限（实测曾1019→2735过冲作废）
+function buildExpandPrompt(parsed, wc) {
+  const target = 1850;
+  const need = Math.max(300, target - wc);
+  const partsCount = parsed.sections.length + 1;
+  const perPart = Math.max(70, Math.round(need / partsCount));
+  const secList = parsed.sections.map((s, i) => {
+    const body = (s.paragraphs || [s.p || '']).join(' ').slice(0, 200);
+    return `【小节${i + 1}】\n（本节标题：${s.h}）\n（本节已有内容节选：${body}…）`;
+  }).join('\n');
+  return `你为公众号"言道国学研习"写了一篇文章，当前正文约 ${wc} 字，未达到 1600~2200 字的硬性要求。请补写新段落。
+
+补写总量（严格执行）：补写内容合计约 ${need} 字（允许上下浮动100字，补写后全文约 ${target} 字，绝不能超过 ${target + 200} 字）。共 ${partsCount} 个部分，每个部分补写 1 段，每段约 ${perPart} 字。
+
+扩写铁律：
+1. 不注水：补充具体史实细节、典籍原文出处（书名+篇名）、数字与年代、可操作的生活细节
+2. 严禁出现任何APP、工具、课程、网站、下载、会员等推广内容
+3. 只输出补写的新段落本身，不要复述已有内容，不要任何解释
+4. 输出纯文本（不要JSON、不要markdown代码块），引用词语用中文引号""
+5. 严格按此格式（标记行独占一行，标记行上不写其他文字；段落间空行）：
+
+【开场】
+（补写的开场段落）
+
+【小节1】
+（补写的新段落）
+
+【小节2】
+（补写的新段落）
+
+文章现有结构：
+${secList}`;
+}
+
+function mergeExpand(parsed, raw) {
+  const s = String(raw || '').replace(/```[a-z]*\n?/gi, '').trim();
+  const parts = s.split(/【(开场|小节\d+)】/);
+  for (let i = 1; i < parts.length; i += 2) {
+    const tag = parts[i];
+    const paras = (parts[i + 1] || '')
+      .split(/\n\s*\n/)
+      .map((block) => block
+        .split('\n')
+        .filter((line) => {
+          const t = line.trim();
+          if (!t) return false;
+          if (/^[（(][^）)]*[）)]$/.test(t)) return false; // （本节标题：xxx）提示行
+          if (/^(小节标题|本节标题)[:：]/.test(t)) return false;
+          return true;
+        })
+        .join('\n')
+        .trim())
+      .filter((x) => x.length > 15);
+    if (!paras.length) continue;
+    if (tag === '开场') {
+      parsed.intro = (parsed.intro || '') + '\n' + paras.join('\n');
+    } else {
+      const idx = parseInt(tag.replace('小节', ''), 10) - 1;
+      const sec = parsed.sections[idx];
+      if (sec) {
+        sec.paragraphs = (sec.paragraphs || (sec.p ? [sec.p] : [])).concat(paras);
+        delete sec.p;
+      }
+    }
+  }
+  return parsed;
+}
+
+// 公众号粘贴兼容排版（2026-09-21：内联样式+扁平p结构，无h3/ul/class依赖）
+const LAYOUT = {
+  bodyP: 'font-size:15px;line-height:1.75;color:#3a3a3a;margin:0 0 22px;',
+  secNum: 'text-align:center;font-size:13px;letter-spacing:4px;color:#b08a3e;margin:52px 0 0;font-weight:bold;',
+  secTitle: 'text-align:center;font-size:19px;font-weight:bold;color:#2b2b2b;margin:12px 0 26px;letter-spacing:1px;',
+  takeaway: 'text-align:center;font-size:18px;font-weight:bold;color:#8b4a2b;margin:34px 0;letter-spacing:2px;line-height:1.6;',
+};
 
 function renderArticleHtml(article, cluster) {
   const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  let html = `<p>${esc(article.intro)}</p>`;
-  for (const sec of article.sections || []) {
-    html += `<h3>${esc(sec.h)}</h3><p>${esc(sec.p)}</p>`;
+  let html = '';
+  const intro = String(article.intro || '');
+  for (const seg of intro.split('\n').filter(Boolean)) {
+    html += `<p style="${LAYOUT.bodyP}">${esc(seg)}</p>`;
   }
-  html += `<h3>知识要点</h3><ul>`;
-  for (const kp of article.knowledgePoints || []) html += `<li>${esc(kp)}</li>`;
-  html += `</ul>`;
-  html += `<p><strong>相关工具</strong>：<a href="https://yandaoguoxue.yandao.vip${cluster.toolUrl}?source=wechat_oa&utm_medium=official_account">${esc(cluster.name)}在线工具</a></p>`;
-  html += `<p>${esc(article.cta)}</p>`;
-  html += `<p><em>本文为传统文化学习资料，内容仅供文化参考。数据来源：言道国学APP工具与学堂知识库。</em></p>`;
+  (article.sections || []).forEach((sec, i) => {
+    const num = String(i + 1).padStart(2, '0');
+    html += `<p style="${LAYOUT.secNum}">— ${num} —</p>`;
+    html += `<p style="${LAYOUT.secTitle}">${esc(sec.h)}</p>`;
+    for (const seg of (sec.paragraphs || (sec.p ? [sec.p] : []))) {
+      html += `<p style="${LAYOUT.bodyP}">${esc(seg)}</p>`;
+    }
+  });
+  if (article.takeaway) {
+    html += `<p style="${LAYOUT.takeaway}">${esc(article.takeaway)}</p>`;
+  }
   return html;
+}
+
+// 节气配图上传（本地素材 → 微信永久素材 URL；未配置凭据或图缺失时静默跳过）
+async function uploadTermImage(term) {
+  const fs = require('fs');
+  const path = require('path');
+  const imgPath = path.join(__dirname, 'data', 'solar-term-images', `${term}.jpg`);
+  if (!fs.existsSync(imgPath)) return null;
+  if (!process.env.WECHAT_OA_APP_SECRET) return null;
+  const { getAccessToken } = require('./wechatTokenManager');
+  const token = await getAccessToken();
+  const buf = fs.readFileSync(imgPath);
+  const form = new FormData();
+  form.append('media', new Blob([buf], { type: 'image/jpeg' }), `${term}.jpg`);
+  const res = await fetch(`https://api.weixin.qq.com/cgi-bin/material/add_material?access_token=${token}&type=image`, { method: 'POST', body: form });
+  const data = await res.json();
+  if (!data.url) throw new Error(`节气图上传失败: ${data.errcode || ''} ${data.errmsg || ''}`);
+  return data.url;
 }
 
 async function generateArticle(topicId) {
@@ -298,18 +517,48 @@ async function generateArticle(topicId) {
   if (todayAiCost() >= s.dailyCostCap) throw new Error('已达当日AI成本上限，停止生成（成本保护）');
   const topic = db.prepare('SELECT * FROM wechat_topic_candidates WHERE topic_id = ?').get(topicId);
   if (!topic) throw new Error('选题不存在');
-  const cluster = CLUSTERS.find((c) => c.id === topic.cluster) || CLUSTERS[0];
+  const cluster = CLUSTERS.find((c) => c.id === topic.cluster) || (topic.cluster === 'jieqi'
+    ? { id: 'jieqi', name: '节气文化', toolUrl: '/', learnUrl: '/', recordTypes: [], tracks: [], chapterKeys: [] }
+    : CLUSTERS[0]);
   const style = ARTICLE_STYLES[Math.floor(Math.random() * ARTICLE_STYLES.length)];
-  const { content, model, cost } = await callAI(
+  let { content, model, cost } = await callAI(
     [{ role: 'user', content: buildArticlePrompt(topic, cluster, style) }],
     s.maxArticleTokens,
   );
-  const parsed = parseAIJson(content);
-  if (!parsed.title || !parsed.sections || !parsed.sections.length) throw new Error('AI输出结构不完整');
-  const contentHtml = renderArticleHtml(parsed, cluster);
-  const wordCount = (parsed.intro + ' ' + parsed.sections.map((x) => x.p).join(' ') + ' ' + (parsed.knowledgePoints || []).join(' ')).replace(/\s/g, '').length;
-  const safety = safetyGate(parsed.title + ' ' + parsed.intro + ' ' + parsed.sections.map((x) => x.h + ' ' + x.p).join(' '));
-  const dup = dedupGate(parsed.title);
+  let parsed = parseAIJson(content);
+  if (!parsed.intro || !parsed.sections || !parsed.sections.length) throw new Error('AI输出结构不完整');
+  let wordCount = articleWordCount(parsed);
+  if (wordCount < 1500) {
+    try {
+      const exp = await callAI([{ role: 'user', content: buildExpandPrompt(parsed, wordCount) }], s.maxArticleTokens);
+      const before = wordCount;
+      parsed = mergeExpand(parsed, exp.content);
+      wordCount = articleWordCount(parsed);
+      if (wordCount > before) {
+        model = `${model}+expand(${exp.model})`;
+        cost += exp.cost || 0;
+        console.log(`[expand] 标记式扩写: ${before} → ${wordCount}字`);
+      }
+    } catch (e) { console.error(`[expand] 扩写失败，沿用原稿: ${e.message}`); }
+  }
+  // 标题候选按查重结果兜底选择（2026-09-21：防标题重复）
+  const candidates = parsed.titleCandidates && parsed.titleCandidates.length ? parsed.titleCandidates : [parsed.title || topic.keyword];
+  let title = candidates[0];
+  let dup = dedupGate(title);
+  for (let i = 1; i < candidates.length && !dup.pass; i++) {
+    title = candidates[i];
+    dup = dedupGate(title);
+  }
+  if (!title) throw new Error('AI未输出标题');
+  let contentHtml = renderArticleHtml(parsed, cluster);
+  // 节气文章配图：上传本地节气图并插入正文开头（失败不阻断）
+  if (topic.cluster === 'jieqi') {
+    try {
+      const termImg = await uploadTermImage(topic.keyword.replace('节气·', ''));
+      if (termImg) contentHtml = `<p style="text-align:center;margin:0 0 26px;"><img src="${termImg}" style="max-width:100%;border-radius:6px;"></p>` + contentHtml;
+    } catch (e) { console.error(`[termImage] 节气图处理跳过: ${e.message}`); }
+  }
+  const safety = safetyGate(title + ' ' + parsed.intro + ' ' + parsed.sections.map((x) => x.h + ' ' + (x.paragraphs || [x.p || '']).join(' ')).join(' '));
   const sourceRefs = [
     { type: 'APP_TOOL_FACT', note: `集群 ${cluster.name} 工具使用数据` },
     { type: 'ACADEMY_KNOWLEDGE', note: '言道学堂知识库' },
@@ -317,7 +566,7 @@ async function generateArticle(topicId) {
   ];
   const info = db.prepare(`INSERT INTO wechat_articles(topic_id, title, digest, content_html, author, source_refs, safety_status, safety_reasons, status, ai_model, word_count)
     VALUES(?,?,?,?,?,?,?,?,?,?,?)`)
-    .run(topicId, parsed.title, parsed.digest || '', contentHtml, s.authorName, JSON.stringify(sourceRefs),
+    .run(topicId, title, parsed.digest || '', contentHtml, s.authorName, JSON.stringify(sourceRefs),
       safety.pass ? 'PASS' : 'BLOCKED', JSON.stringify(safety.reasons),
       safety.pass ? (dup.pass ? 'SAFETY_PASSED' : 'DUPLICATE') : 'RISK_BLOCKED',
       model, wordCount);
@@ -342,6 +591,78 @@ function dashboardStats() {
     followers, todayNew, todayUnfollow, todayArticles, synced, riskBlocked, pendingReview, bindings,
     aiCostToday: todayAiCost(), lastJob, today,
   };
+}
+
+// ---------- 批次日/批次计数（调度器 v25.0.75+ 依赖，2026-09-23 补齐） ----------
+function isBatchDay(dateStr) {
+  const days = String(settings().batchDays || '1,8,15,22').split(',').map((x) => parseInt(String(x).trim(), 10)).filter((n) => n > 0);
+  const d = new Date((dateStr || new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10)) + 'T00:00:00');
+  return days.includes(d.getDate());
+}
+
+function pendingReviewCount() {
+  const row = getDb().prepare("SELECT COUNT(*) AS n FROM wechat_articles WHERE status IN ('SAFETY_PASSED','WECHAT_DRAFT','OWNER_REVIEWED')").get();
+  return row.n;
+}
+
+function monthlyBatchCount(dateStr) {
+  const month = String(dateStr || new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10)).slice(0, 7);
+  const row = getDb().prepare("SELECT COUNT(DISTINCT run_date) AS n FROM wechat_content_jobs WHERE stage = 'generate' AND status = 'SUCCESS' AND run_date LIKE ?").get(month + '-%');
+  return row.n;
+}
+
+// 批次选题质量门禁自动批准：final_score ≥ topicQualityFloor 的 PENDING 选题按分批（上限 maxDraftsPerBatch）
+function autoApproveBatchTopics(runDate) {
+  const s = settings();
+  const db = getDb();
+  const floor = Number(s.topicQualityFloor) || 40;
+  const cap = Number(s.maxDraftsPerBatch) || 5;
+  const rows = db.prepare("SELECT topic_id, final_score FROM wechat_topic_candidates WHERE run_date = ? AND status = 'PENDING' ORDER BY pinned DESC, final_score DESC").all(runDate);
+  let approved = 0;
+  for (const r of rows) {
+    if (approved >= cap) break;
+    if ((r.final_score || 0) >= floor) {
+      db.prepare("UPDATE wechat_topic_candidates SET status = 'APPROVED', updated_at = datetime('now','localtime') WHERE topic_id = ?").run(r.topic_id);
+      approved++;
+    }
+  }
+  return approved;
+}
+
+// 已发布状态回写（根因修复：用户在公众平台发布后 DB 停留 WECHAT_DRAFT → 待审积压误触发暂停锁）
+// 比对 freepublish 已发布标题，命中的 WECHAT_DRAFT 文章标记为 PUBLISHED
+async function syncPublishedFromWechat() {
+  if (!process.env.WECHAT_OA_APP_SECRET) return 0;
+  const { getAccessToken } = require('./wechatTokenManager');
+  const db = getDb();
+  const drafts = db.prepare("SELECT article_id, title FROM wechat_articles WHERE status = 'WECHAT_DRAFT'").all();
+  if (!drafts.length) return 0;
+  const token = await getAccessToken();
+  const publishedTitles = new Set();
+  let offset = 0;
+  while (offset < 100) {
+    const res = await fetch(`https://api.weixin.qq.com/cgi-bin/freepublish/batchget?access_token=${token}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ offset, count: 20, no_content: 1 }),
+    });
+    const data = await res.json();
+    if (data.errcode && data.errcode !== 0) throw new Error(`WECHAT_API_ERROR ${data.errcode}: ${data.errmsg}`);
+    for (const it of data.item || []) {
+      for (const ni of (it.content && it.content.news_item) || []) {
+        if (ni.title) publishedTitles.add(String(ni.title).trim());
+      }
+    }
+    offset += 20;
+    if (offset >= (data.total_count || 0)) break;
+  }
+  let updated = 0;
+  for (const d of drafts) {
+    if (publishedTitles.has(String(d.title).trim())) {
+      db.prepare("UPDATE wechat_articles SET status = 'PUBLISHED', updated_at = datetime('now','localtime') WHERE article_id = ?").run(d.article_id);
+      updated++;
+    }
+  }
+  return updated;
 }
 
 // ---------- 菜单（第二十五~三十章） ----------
@@ -376,5 +697,6 @@ module.exports = {
   generateTopics, listTopics, topicAction, addManualTopic,
   generateArticle, safetyGate, dedupGate,
   dashboardStats, buildMenuJson, todayAiCost,
+  isBatchDay, pendingReviewCount, monthlyBatchCount, autoApproveBatchTopics, syncPublishedFromWechat,
   AUTO_PUBLISH, AUTO_MASS_SEND,
 };
