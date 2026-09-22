@@ -23,7 +23,7 @@ import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import MasterExchangePanel from "./MasterExchangePanel";
 // v25.0.47_12 深度报告提质：五段式/700-900字/典籍引用/合规语气（共享标准）
-import { buildDeepReportSystemPrompt } from "@/lib/deepReportPrompt";
+import { buildDeepReportSystemPrompt, buildBaziDeepReportSystemPrompt } from "@/lib/deepReportPrompt";
 
 /**
  * v19.6: 事情断法 + AI深度解读 组件
@@ -221,15 +221,23 @@ export default function EventDivinationPanel({
     setContent("");
 
     try {
-      // v25.0.47_12: 深度报告提质——五段式结构/700-900字/典籍引用/合规语气
-      const systemPrompt = buildDeepReportSystemPrompt(toolName);
+      // v25.0.87: 八字工具走专用四部分白话精批（格局总论+大运逐段+四领域专项+典籍末标）；
+      // 其余工具维持五段式学术报告。八字换 cacheKey v2 防止旧学术化缓存命中。
+      const isBaziTool = /八字|四柱|精批/.test(toolName);
+      const systemPrompt = isBaziTool
+        ? buildBaziDeepReportSystemPrompt()
+        : buildDeepReportSystemPrompt(toolName);
 
-      const userPrompt = `【${toolName}排盘数据】\n${chartContext}\n\n请严格按照系统要求输出五段式深度解读报告（700-900字）。`;
+      const userPrompt = isBaziTool
+        ? `【八字排盘资料】\n${chartContext}\n\n请严格按照系统要求输出四部分白话精批解读：第一部分格局核心总论、第二部分大运逐段详解（每步大运单独成段不可省略）、第三部分分领域专项解读（婚姻感情/财运事业/学业文昌/健康体质）、第四部分结尾总结+典籍标注。`
+        : `【${toolName}排盘数据】\n${chartContext}\n\n请严格按照系统要求输出五段式深度解读报告（700-900字）。`;
 
       const result = await callAI({
         systemPrompt,
         userPrompt,
-        cacheKey: `deep_${toolName}_${chartContext.slice(0, 80)}`,
+        cacheKey: isBaziTool
+          ? `bazi_deep_v2_${chartContext.slice(0, 160)}`
+          : `deep_${toolName}_${chartContext.slice(0, 80)}`,
       });
 
       incrementAIUsage();

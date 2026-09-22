@@ -35,7 +35,9 @@ import { PostToSquareButton } from "@/components/PostToSquareButton";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 import { getPillarInterpretation, getShenshaInterpretation } from "@/lib/bazi-interpretations";
-import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
+import { savePaipanState, loadPaipanState, clearPaipanState, savePaipanHistory, getPaipanHistoryList, deletePaipanHistory, clearPaipanHistory, markPaipanHistorySynced } from "@/lib/paipanPersistence";
+import type { PaipanHistoryRecord } from "@/lib/paipanPersistence";
+import { getUserPermissionLevel } from "@/lib/aiService";
 import { useToolBack } from "@/lib/useToolBack";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
@@ -1498,6 +1500,13 @@ export default function BaziPage(){
   const [activeTab,setActiveTab]=useState<"basic"|"chart"|"detail"|"jingpi"|"xingge"|"notes">("chart");
   const [selectedClient,setSelectedClient]=useState<Client|null>(null);
   const [interpretPanel, setInterpretPanel] = useState<{pillarLabel:string; items:Array<{type:string;title:string;content:string;source:string}>} | null>(null);
+  // v25.0.87: 排盘历史记录（本地 + 会员云端）
+  const [showHistory,setShowHistory]=useState(false);
+  const [historyList,setHistoryList]=useState<PaipanHistoryRecord[]>([]);
+  const [cloudRecords,setCloudRecords]=useState<Array<{objectKey:string;title:string;ts:number}>>([]);
+  const [cloudLoading,setCloudLoading]=useState(false);
+  const [cloudMsg,setCloudMsg]=useState("");
+  const [isMember,setIsMember]=useState(false);
 
   // 监听layout的edit事件和back事件（v25.0.44：返回键按浏览顺序返回，弹窗打开时仅收起弹窗，结果页放行给layout返回工具列表）
   useEffect(() => {
@@ -1558,6 +1567,111 @@ export default function BaziPage(){
     }
   }, []);
 
+  // v25.0.87: 初始化——刷新本地历史列表 + 会员身份
+  useEffect(() => {
+    setHistoryList(getPaipanHistoryList("bazi"));
+    setIsMember(getUserPermissionLevel() === "member");
+  }, []);
+
+  // v25.0.87: 恢复一条历史记录（本地或云端）——还原全部参数 + 排盘结果 + 神煞
+  const restoreHistoryRecord = useCallback((rec: PaipanHistoryRecord) => {
+    const inp = (rec.input || {}) as any;
+    if (inp.year) setYear(inp.year);
+    if (inp.month) setMonth(inp.month);
+    if (inp.day) setDay(inp.day);
+    if (inp.hour !== undefined) setHour(inp.hour);
+    if (inp.gender) setGender(inp.gender);
+    if (inp.calType) setCalType(inp.calType);
+    if (inp.useTrueSolar !== undefined) setZhenTaiyang(!!inp.useTrueSolar);
+    if (inp.longitude !== undefined) setLongitude(inp.longitude);
+    if (inp.name !== undefined) setName(inp.name);
+    if (inp._trueSolarDisplay !== undefined) setTrueSolarDisplay(inp._trueSolarDisplay || null);
+    if (inp._solarCorrection !== undefined) setSolarCorrection(inp._solarCorrection || null);
+    if (rec.result) {
+      const bz = rec.result as BaziResult;
+      setResult(bz);
+      try {
+        const ss = calculateAllShenSha({
+          yearGan: bz.pillars[0].gan as TianGan, yearZhi: bz.pillars[0].zhi as DiZhi,
+          monthGan: bz.pillars[1].gan as TianGan, monthZhi: bz.pillars[1].zhi as DiZhi,
+          dayGan: bz.dayGan as TianGan, dayZhi: bz.dayZhi as DiZhi,
+          hourGan: bz.pillars[3].gan as TianGan, hourZhi: bz.pillars[3].zhi as DiZhi,
+          gender: inp.gender || "male",
+        });
+        setShensha(ss);
+      } catch (e) { console.error("恢复神煞失败:", e); }
+      setShowForm(false);
+      savePaipanState("bazi", { input: { ...inp }, result: bz, showForm: false, _ts: Date.now() });
+    }
+    setShowHistory(false);
+  }, []);
+
+  // v25.0.87: 打开历史弹窗（会员同步拉取云端备份列表）
+  const openHistory = useCallback(async () => {
+    setHistoryList(getPaipanHistoryList("bazi"));
+    setShowHistory(true);
+    setCloudMsg("");
+    const member = getUserPermissionLevel() === "member";
+    setIsMember(member);
+    if (member) {
+      setCloudLoading(true);
+      try {
+        const token = typeof window !== "undefined" ? localStorage.getItem("yandao_user_token") : null;
+        const res = await fetch("/api/oss/paipan-records?toolKey=bazi", {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        const data = await res.json();
+        setCloudRecords(data && data.success && data.records ? data.records : []);
+      } catch { setCloudRecords([]); }
+      finally { setCloudLoading(false); }
+    }
+  }, []);
+
+  // v25.0.87: 会员上传单条记录到云端储存桶
+  const uploadRecordToCloud = useCallback(async (rec: PaipanHistoryRecord) => {
+    if (cloudLoading) return;
+    setCloudLoading(true); setCloudMsg("");
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("yandao_user_token") : null;
+      const res = await fetch("/api/oss/paipan-record", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ toolKey: "bazi", record: { id: rec.id, title: rec.title, input: rec.input, result: rec.result, _ts: rec._ts } }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        markPaipanHistorySynced("bazi", rec.id, data.objectKey);
+        setHistoryList(getPaipanHistoryList("bazi"));
+        setCloudMsg("已备份到云端");
+        const lres = await fetch("/api/oss/paipan-records?toolKey=bazi", { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+        const ldata = await lres.json();
+        setCloudRecords(ldata && ldata.success && ldata.records ? ldata.records : []);
+      } else {
+        setCloudMsg((data && data.error) || "云端备份失败");
+      }
+    } catch { setCloudMsg("云端备份失败，请稍后重试"); }
+    finally { setCloudLoading(false); }
+  }, [cloudLoading]);
+
+  // v25.0.87: 会员从云端恢复一条记录
+  const restoreCloudRecord = useCallback(async (objectKey: string) => {
+    if (cloudLoading) return;
+    setCloudLoading(true); setCloudMsg("");
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("yandao_user_token") : null;
+      const res = await fetch(`/api/oss/paipan-record?key=${encodeURIComponent(objectKey)}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const data = await res.json();
+      if (res.ok && data.success && data.record) {
+        restoreHistoryRecord(data.record as PaipanHistoryRecord);
+      } else {
+        setCloudMsg((data && data.error) || "云端记录读取失败");
+      }
+    } catch { setCloudMsg("云端记录读取失败，请稍后重试"); }
+    finally { setCloudLoading(false); }
+  }, [cloudLoading, restoreHistoryRecord]);
+
   const handleSubmit=useCallback((override?:{year:number;month:number;day:number;hour:number;minute?:number;gender:Gender})=>{
     const y=override?.year??year; const m=override?.month??month;
     const d=override?.day??day; const h=override?.hour??hour;
@@ -1566,10 +1680,16 @@ export default function BaziPage(){
     try{const bz=solarToBazi({year:y,month:m,day:d,hour:h,minute:mi,gender:g}) as BaziResult;setResult(bz);
       const ss=calculateAllShenSha({yearGan:bz.pillars[0].gan as TianGan,yearZhi:bz.pillars[0].zhi as DiZhi,monthGan:bz.pillars[1].gan as TianGan,monthZhi:bz.pillars[1].zhi as DiZhi,dayGan:bz.dayGan as TianGan,dayZhi:bz.dayZhi as DiZhi,hourGan:bz.pillars[3].gan as TianGan,hourZhi:bz.pillars[3].zhi as DiZhi,gender:g});
       setShensha(ss);setShowForm(false);savePaipanState("bazi",{input:{year:y,month:m,day:d,hour:h,minute:mi,gender:g,calType},result:bz,showForm:false,_ts:Date.now()});
+      // v25.0.87: 保存排盘历史记录（完整参数+结果，同参数自动去重置顶）
+      try{savePaipanHistory("bazi",{
+        input:{year:y,month:m,day:d,hour:h,minute:mi,gender:g,calType,useTrueSolar:zhenTaiyang,longitude,name,zaoWanZi,xiaLing,_trueSolarDisplay:trueSolarDisplay,_solarCorrection:solarCorrection},
+        result:bz,
+        title:`${g==="male"?"男":"女"}命 ${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")} ${String(h).padStart(2,"0")}:${String(mi).padStart(2,"0")} ${bz.pillars.map(p=>p.gan+p.zhi).join(" ")}`,
+      });}catch(e){console.error("保存历史记录失败:",e);}
       // 保存客户记录
       try{saveRecord({clientId:selectedClient?selectedClient.id:"",type:"bazi",data:{...bz,inputParams:{year:y,month:m,day:d,hour:h,minute:mi,gender:g}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
     }catch(e){console.error("排盘失败:",e);}
-  },[year,month,day,hour,gender,selectedClient]);
+  },[year,month,day,hour,gender,selectedClient,calType,zhenTaiyang,longitude,name,zaoWanZi,xiaLing,trueSolarDisplay,solarCorrection]);
 
   const pillars=result?.pillars||[]; const shengxiao=pillars[0]?getShengXiao(pillars[0].zhi as DiZhi):"";
   const dateStr=`${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")} ${String(hour).padStart(2,"0")}:00`;
@@ -1605,14 +1725,48 @@ export default function BaziPage(){
   const tabLabels:Record<string,string>={basic:"基本",chart:"命盘",detail:"详盘",jingpi:"精批",xingge:"性格",notes:"笔记"};
   const tabOrder:("basic"|"chart"|"detail"|"jingpi"|"xingge"|"notes")[]=["basic","chart","detail","jingpi","xingge","notes"];
 
-  // v18.9: AI详批整体上下文
+  // v25.0.87: AI详批整体上下文（白话精批增强版）
+  // 供 EventDivinationPanel 深度解读使用：四柱全量（藏干十神纳音）+ 五行 + 强弱格局
+  // + 神煞 + 起运交运 + 大运逐段（含天干十神/藏干/纳音/流年干支年龄），支撑四部分白话精批
   const baziOverallContext = result ? (() => {
     const p = result.pillars;
     const dayGanWx = GAN_WUXING[result.dayGan as TianGan] || "";
-    const pillarStr = ["年柱","月柱","日柱","时柱"].map((l,i)=>`${l}: ${p[i]?.gan||""}${p[i]?.zhi||""}（十神:${p[i]?.shishen?.gan||"日主"}）`).join("\n");
-    const wxStr = wuxingStats ? Object.entries(wuxingStats).map(([k,v])=>`${k}:${v}`).join(" ") : "";
-    const dayunStr = result.dayun?.dayunList?.slice(0,8).map(d=>`${d.gan}${d.zhi}(${Math.floor(d.startAge)}-${Math.floor(d.startAge)+9}岁)`).join(" ") || "";
-    return `日主: ${result.dayGan}（${dayGanWx}）\n性别: ${gender==="male"?"男":"女"}\n${pillarStr}\n五行统计: ${wxStr}\n大运概览: ${dayunStr}`;
+    const birthStr = result.input?.solarDate ? `${result.input.solarDate} ${result.input.time || ""}` : dateStr;
+
+    // 四柱：干支 + 纳音 + 天干十神 + 藏干（含支藏十神）
+    const pillarStr = ["年柱", "月柱", "日柱", "时柱"].map((l, i) => {
+      const pp = p[i];
+      if (!pp) return "";
+      const cg = (pp.canggan || []).map((g, idx) => {
+        const ss = i === 2 && idx === 0 ? "日主" : (pp.shishen?.zhi?.[idx] || "");
+        return `${g}${ss ? `(${ss})` : ""}`;
+      }).join(" ");
+      const ganSS = i === 2 ? "日主" : (pp.shishen?.gan || "");
+      return `${l}: ${pp.gan}${pp.zhi} 纳音:${pp.nayin || getNaYin(pp.ganzhi) || "-"} 天干十神:${ganSS} 藏干:${cg}`;
+    }).filter(Boolean).join("\n");
+
+    // 五行统计
+    const wxStr = wuxingStats ? Object.entries(wuxingStats).map(([k, v]) => `${k}${v}`).join(" ") : "";
+
+    // 神煞（仅传名称，中性呈现）
+    const shenshaStr = shensha ? ["年柱", "月柱", "日柱", "时柱"].map(pl => {
+      const arr = (shensha.byPillar as any)?.[pl] as Array<{ name: string }> | undefined;
+      return `${pl}: ${arr && arr.length ? arr.map(s => s.name).join("、") : "无"}`;
+    }).join("\n") : "";
+
+    // 起运与交运
+    const dy = result.dayun;
+    const qiyunStr = dy ? `出生后${Math.floor(dy.startAge)}岁起运（${dy.direction}），起运时间约${dy.startDate}；每逢${dy.jiaoyunGan1}、${dy.jiaoyunGan2}之年交脱大运` : "";
+
+    // 大运逐段：干支 + 年龄/年份区间 + 天干十神 + 藏干（含十神）+ 纳音 + 流年干支
+    const dayunStr = (dy?.dayunList || []).slice(0, 12).map((d, di) => {
+      const a0 = Math.floor(d.startAge);
+      const cg = (d.canggan || getCangGan(d.zhi as DiZhi) || []).map((g: TianGan) => `${g}(${getShiShen(result.dayGan as TianGan, g) || ""})`).join(" ");
+      const lnStr = (d.liunian || []).map(ln => `${ln.gan}${ln.zhi}(${ln.year}年,${Math.floor(ln.age)}岁,${ln.shishenGan || getShiShen(result.dayGan as TianGan, ln.gan as TianGan) || ""})`).join("、");
+      return `第${di + 1}运 ${d.gan}${d.zhi}运 ${a0}-${a0 + 9}岁(${d.startYear}-${d.startYear + 9}年) 天干十神:${d.shishenGan || getShiShen(result.dayGan as TianGan, d.gan as TianGan) || ""} 藏干:${cg} 纳音:${d.nayin || getNaYin(d.gan + d.zhi) || "-"}\n  流年: ${lnStr}`;
+    }).join("\n");
+
+    return `【排盘基本信息】\n性别: ${gender === "male" ? "男（乾造）" : "女（坤造）"}\n公历: ${birthStr}\n农历: ${lunarDateStr || "未知"}\n\n【四柱（含藏干十神纳音）】\n日主: ${result.dayGan}（${dayGanWx}）\n${pillarStr}\n\n【五行统计】${wxStr}\n【日主强弱】${result.shenQiangRuo?.result || "未知"}\n【格局】${result.mainPattern || "未定"}（${result.patternType || ""}）${result.patterns && result.patterns.length ? `；兼带: ${result.patterns.join("、")}` : ""}\n【胎元】${taiYuan} 【命宫】${mingGong} 【身宫】${shenGong} 【命卦】${mingGua}\n\n【神煞】\n${shenshaStr}\n\n【起运】${qiyunStr}\n\n【大运与流年】\n${dayunStr}`;
   })() : "";
 
   return <div className="bg-[#ededed] min-h-screen flex justify-center">
@@ -1666,6 +1820,18 @@ export default function BaziPage(){
       {/* Tab导航 - 紫色选中态 */}
       <div className="flex border-b border-[#eee] bg-white/95 sticky top-10 z-30 overflow-x-auto">
         {tabOrder.map(tab=><button key={tab} onClick={()=>setActiveTab(tab)} className={`shrink-0 px-3 py-2.5 text-center text-[15px] font-bold border-none bg-transparent cursor-pointer transition-colors duration-200 border-b-[3px]`} style={{color: activeTab===tab ? BRAND_PURPLE : "#666", borderBottomColor: activeTab===tab ? BRAND_PURPLE : "transparent", borderBottomStyle:"solid"}}>{tabLabels[tab]}</button>)}
+      </div>
+      {/* v25.0.87: 排盘历史记录入口（全Tab可见） */}
+      <div className="bg-white border-b border-[#eee] px-3 py-1.5 flex items-center justify-between">
+        <button
+          onClick={openHistory}
+          className="flex items-center gap-1 text-[12px] font-bold cursor-pointer border-none bg-transparent"
+          style={{ color: BRAND_PURPLE }}
+        >
+          <span>📋 历史记录</span>
+          <span style={{ background: BRAND_PURPLE_BG, borderRadius: "8px", padding: "0 6px", fontSize: "10px", color: BRAND_PURPLE }}>{historyList.length}</span>
+        </button>
+        <button onClick={()=>setShowForm(true)} className="text-[11px] cursor-pointer border-none bg-transparent" style={{ color: "#999" }}>修改资料重新排盘</button>
       </div>
       {activeTab==="basic"&&<TabBasic result={result} shengxiao={shengxiao} dateStr={dateStr} lunarDateStr={lunarDateStr} solarDateStr={dateStr} trueSolarStr={trueSolarTimeStr} solarCorrection={solarCorrection} taiYuan={taiYuan} taiXi={taiXi} mingGong={mingGong} shenGong={shenGong} mingGua={mingGua} wuxingStats={wuxingStats} boneWeight={boneWeight} gender={gender}/>}
       {activeTab==="chart"&&<>
@@ -1738,6 +1904,87 @@ export default function BaziPage(){
           isPaidTool={false}
         />
       </div>
+
+      {/* v25.0.87: 排盘历史记录弹窗（本地恢复 + 会员云端备份） */}
+      {showHistory && (
+        <div
+          style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: "16px" }}
+          onClick={() => setShowHistory(false)}
+        >
+          <div
+            style={{ background: "#fff", borderRadius: "12px", maxWidth: "380px", width: "100%", maxHeight: "80vh", display: "flex", flexDirection: "column", overflow: "hidden" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: "14px 16px", background: "linear-gradient(135deg, #7B2FBE, #9B5ECF)", color: "white", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: "15px", fontWeight: "bold" }}>📋 排盘历史记录</div>
+                <div style={{ fontSize: "11px", opacity: 0.9, marginTop: "2px" }}>点击记录可直接恢复排盘结果</div>
+              </div>
+              <button onClick={() => setShowHistory(false)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "white", width: "26px", height: "26px", borderRadius: "50%", cursor: "pointer", fontSize: "15px" }}>x</button>
+            </div>
+
+            <div style={{ flex: 1, overflowY: "auto", padding: "12px" }}>
+              {cloudMsg && (
+                <div style={{ marginBottom: "8px", padding: "6px 10px", background: cloudMsg.includes("失败") ? "#fee" : "#f0faf4", borderRadius: "6px", fontSize: "11px", color: cloudMsg.includes("失败") ? "#c62828" : "#2e7d32", textAlign: "center" }}>{cloudMsg}</div>
+              )}
+
+              {/* 本地记录 */}
+              {historyList.length === 0 ? (
+                <div style={{ textAlign: "center", color: "#999", fontSize: "12px", padding: "24px 0" }}>暂无排盘记录，排盘后自动保存到本机</div>
+              ) : (
+                historyList.map((rec) => (
+                  <div key={rec.id} style={{ border: "1px solid #eee", borderRadius: "8px", padding: "8px 10px", marginBottom: "8px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "6px" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: "12px", color: "#333", fontWeight: "bold", wordBreak: "break-all" }}>{rec.title}</div>
+                        <div style={{ fontSize: "10px", color: "#999", marginTop: "2px" }}>
+                          {rec._ts ? new Date(rec._ts).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) : ""}
+                          {rec.cloudSynced ? " · 已备份云端" : ""}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: "6px", marginTop: "6px" }}>
+                      <button onClick={() => restoreHistoryRecord(rec)} style={{ flex: 1, padding: "5px", borderRadius: "6px", border: "none", background: BRAND_PURPLE, color: "white", fontSize: "11px", fontWeight: "bold", cursor: "pointer" }}>恢复</button>
+                      {isMember && !rec.cloudSynced && (
+                        <button onClick={() => uploadRecordToCloud(rec)} disabled={cloudLoading} style={{ flex: 1, padding: "5px", borderRadius: "6px", border: `1px solid ${BRAND_PURPLE}`, background: "#fff", color: BRAND_PURPLE, fontSize: "11px", fontWeight: "bold", cursor: cloudLoading ? "not-allowed" : "pointer", opacity: cloudLoading ? 0.6 : 1 }}>☁ 备份云端</button>
+                      )}
+                      <button onClick={() => { deletePaipanHistory("bazi", rec.id); setHistoryList(getPaipanHistoryList("bazi")); }} style={{ padding: "5px 10px", borderRadius: "6px", border: "1px solid #ddd", background: "#fff", color: "#c62828", fontSize: "11px", cursor: "pointer" }}>删除</button>
+                    </div>
+                  </div>
+                ))
+              )}
+
+              {historyList.length > 0 && (
+                <button onClick={() => { if (window.confirm("确定清空全部本地排盘记录吗？")) { clearPaipanHistory("bazi"); setHistoryList([]); } }} style={{ width: "100%", padding: "6px", borderRadius: "6px", border: "1px solid #ddd", background: "#fafafa", color: "#999", fontSize: "11px", cursor: "pointer", marginTop: "4px" }}>清空本地记录</button>
+              )}
+
+              {/* 云端备份（会员） */}
+              <div style={{ marginTop: "12px", paddingTop: "10px", borderTop: "1px dashed #e0d0f0" }}>
+                <div style={{ fontSize: "12px", fontWeight: "bold", color: BRAND_PURPLE, marginBottom: "6px" }}>☁ 云端备份 {isMember ? "" : "（会员专享）"}</div>
+                {!isMember ? (
+                  <div style={{ fontSize: "11px", color: "#999", lineHeight: 1.6 }}>开通会员后，可将排盘记录上传到云端储存桶，换设备也能一键恢复。</div>
+                ) : cloudLoading && cloudRecords.length === 0 ? (
+                  <div style={{ fontSize: "11px", color: "#999", textAlign: "center", padding: "8px 0" }}>云端记录加载中...</div>
+                ) : cloudRecords.length === 0 ? (
+                  <div style={{ fontSize: "11px", color: "#999", padding: "4px 0" }}>云端暂无备份记录，点击本地记录的「备份云端」即可上传。</div>
+                ) : (
+                  cloudRecords.map((c) => (
+                    <div key={c.objectKey} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "6px", border: "1px solid #eee", borderRadius: "8px", padding: "6px 10px", marginBottom: "6px" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: "11px", color: "#333", wordBreak: "break-all" }}>{c.title}</div>
+                        <div style={{ fontSize: "10px", color: "#999" }}>{c.ts ? new Date(c.ts).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) : ""}</div>
+                      </div>
+                      <button onClick={() => restoreCloudRecord(c.objectKey)} disabled={cloudLoading} style={{ padding: "5px 12px", borderRadius: "6px", border: `1px solid ${BRAND_PURPLE}`, background: "#fff", color: BRAND_PURPLE, fontSize: "11px", fontWeight: "bold", cursor: cloudLoading ? "not-allowed" : "pointer" }}>恢复</button>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div style={{ fontSize: "10px", color: "#bbb", textAlign: "center", marginTop: "10px", lineHeight: 1.5 }}>记录保存在本机浏览器；云端备份仅会员可用，不上传不丢失。</div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>}
 
     {/* 统一免责声明 */}

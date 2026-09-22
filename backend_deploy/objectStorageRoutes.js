@@ -1,4 +1,4 @@
-/**
+﻿/**
  * objectStorageRoutes.js — 对象存储 + 备份/灾备路由（FINAL-MASTER-05 第一百零三~一百一十四章）
  *
  * 用户端（JWT，挂载 /api/oss）：
@@ -37,6 +37,7 @@ const jwt = require('jsonwebtoken');
 const OSS = require('./objectStorageEngine');
 const backup = require('./backupEngine');
 const { adminAuth, audit } = require('./adminRoles');
+const { getMembershipFromDB, MEMBER_LEVELS } = require('./middleware/auth');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
@@ -343,6 +344,123 @@ function createRouter() {
     if (!r.ok) return res.status(400).json({ success: false, error: r.error });
     audit(req.admin, 'OSS_OWNER_ACTION_ACK', req.params.code, null, String((req.body || {}).note || '').slice(0, 200), 'Owner 外部动作完成回填', req);
     res.json({ success: true, data: r });
+  }));
+
+  // ==================== v25.0.87: 排盘记录云端备份（会员专享） ====================
+  // 设计：记录为结构化 JSON，落 user_content 私有分区（owner=userId，引擎层强制校验）；
+  //      每用户独立索引文件（title/ts/objectKey），列表按索引 + statObject 存活校验。
+  const PAIPAN_INDEX_DIR = path.join(__dirname, 'data', 'paipan-cloud-index');
+  const PAIPAN_MAX_RECORD_BYTES = 512 * 1024;   // 单条记录上限 512KB
+  const PAIPAN_MAX_RECORDS = 100;               // 每用户云端记录上限
+  const PAIPAN_TOOL_RE = /^[a-z0-9_-]{1,32}$/;   // 工具标识白名单格式
+
+  // 会员门控：付费档（monthly/quarterly/yearly/lifetime/premium）方可云端备份。
+  // 不用 requireMembership('monthly')：premium 不在 MEMBER_LEVELS 会被误拦。
+  const PAID_LEVELS = ['monthly', 'quarterly', 'yearly', 'lifetime', 'premium'];
+  function requirePaipanMember(req, res, next) {
+    const m = getMembershipFromDB(req.user.userId);
+    const rank = MEMBER_LEVELS[m.level] || 0;
+    if (PAID_LEVELS.includes(m.level) || rank >= (MEMBER_LEVELS.monthly || 1)) return next();
+    return res.status(403).json({
+      success: false,
+      error: '云端备份为会员专享，开通会员后即可把排盘记录同步到云端',
+      code: 'MEMBER_ONLY',
+      currentLevel: m.level,
+    });
+  }
+
+  function readPaipanIndex(userId) {
+    try {
+      const f = path.join(PAIPAN_INDEX_DIR, `${String(userId).replace(/[^a-zA-Z0-9_-]/g, '')}.json`);
+      if (!fs.existsSync(f)) return [];
+      const arr = JSON.parse(fs.readFileSync(f, 'utf-8'));
+      return Array.isArray(arr) ? arr : [];
+    } catch { return []; }
+  }
+
+  function writePaipanIndex(userId, list) {
+    if (!fs.existsSync(PAIPAN_INDEX_DIR)) fs.mkdirSync(PAIPAN_INDEX_DIR, { recursive: true });
+    const f = path.join(PAIPAN_INDEX_DIR, `${String(userId).replace(/[^a-zA-Z0-9_-]/g, '')}.json`);
+    fs.writeFileSync(f, JSON.stringify(list), 'utf-8');
+  }
+
+  // POST /paipan-record — 上传一条排盘记录（会员）
+  router.post('/paipan-record', authRequired, requirePaipanMember, guardAsync(async (req, res) => {
+    const b = req.body || {};
+    const toolKey = String(b.toolKey || '');
+    const rec = b.record;
+    if (!PAIPAN_TOOL_RE.test(toolKey)) {
+      return res.status(400).json({ success: false, error: 'toolKey 非法' });
+    }
+    if (!rec || typeof rec !== 'object' || Array.isArray(rec) || !rec.id) {
+      return res.status(400).json({ success: false, error: '记录格式非法（缺少 id）' });
+    }
+    let buf;
+    try { buf = Buffer.from(JSON.stringify(rec), 'utf-8'); } catch {
+      return res.status(400).json({ success: false, error: '记录序列化失败' });
+    }
+    if (!buf.length) return res.status(400).json({ success: false, error: '记录内容为空' });
+    if (buf.length > PAIPAN_MAX_RECORD_BYTES) {
+      return res.status(400).json({ success: false, error: `记录超过上限 ${Math.floor(PAIPAN_MAX_RECORD_BYTES / 1024)}KB` });
+    }
+    OSS.ensureTmpDir();
+    const tmp = path.join(UPLOAD_TMP_DIR, `paipan_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.json`);
+    fs.writeFileSync(tmp, buf);
+    try {
+      const recId = String(rec.id).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 40) || 'rec';
+      const objectKey = `u${req.user.userId}/paipan/${toolKey}/${Date.now()}_${recId}.json`;
+      const r = await OSS.ObjectStorageService.putObject({
+        partition: 'user_content', objectKey, filePath: tmp, owner: req.user.userId,
+      });
+      if (!r.ok) return res.status(400).json({ success: false, error: r.error });
+      // 更新用户索引：同工具同 id 覆盖置顶，超限裁剪最旧
+      const idx = readPaipanIndex(req.user.userId);
+      const entry = { objectKey, toolKey, recordId: String(rec.id).slice(0, 40), title: String(rec.title || '').slice(0, 120), ts: Number(rec._ts) || Date.now() };
+      const next = [entry, ...idx.filter(e => !(e.toolKey === toolKey && e.recordId === entry.recordId))].slice(0, PAIPAN_MAX_RECORDS);
+      writePaipanIndex(req.user.userId, next);
+      res.json({ success: true, objectKey, size: r.size, provider: r.provider });
+    } finally {
+      try { fs.unlinkSync(tmp); } catch { /* ignore */ }
+    }
+  }));
+
+  // GET /paipan-records?toolKey=xxx — 云端记录列表（会员；statObject 存活校验过滤脏索引）
+  router.get('/paipan-records', authRequired, requirePaipanMember, guardAsync(async (req, res) => {
+    const toolKey = String(req.query.toolKey || '');
+    if (!PAIPAN_TOOL_RE.test(toolKey)) {
+      return res.status(400).json({ success: false, error: 'toolKey 非法' });
+    }
+    const idx = readPaipanIndex(req.user.userId).filter(e => e.toolKey === toolKey);
+    const records = [];
+    for (const e of idx.slice(0, PAIPAN_MAX_RECORDS)) {
+      const st = await OSS.ObjectStorageService.statObject({ partition: 'user_content', objectKey: e.objectKey });
+      if (st.ok) records.push({ objectKey: e.objectKey, title: e.title, ts: e.ts });
+    }
+    res.json({ success: true, records });
+  }));
+
+  // GET /paipan-record?key=xxx — 读取单条云端记录（会员；PRIVATE owner 强制校验在引擎层）
+  router.get('/paipan-record', authRequired, requirePaipanMember, guardAsync(async (req, res) => {
+    const objectKey = String(req.query.key || '').trim();
+    if (!objectKey || objectKey.includes('..')) {
+      return res.status(400).json({ success: false, error: 'key 非法' });
+    }
+    const st = await OSS.ObjectStorageService.statObject({ partition: 'user_content', objectKey });
+    if (!st.ok) return res.status(404).json({ success: false, error: '云端记录不存在' });
+    OSS.ensureTmpDir();
+    const dest = path.join(UPLOAD_TMP_DIR, `ppget_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.json`);
+    const r = await OSS.ObjectStorageService.getObject({ partition: 'user_content', objectKey, destPath: dest, requester: req.user.userId });
+    if (!r.ok) {
+      return res.status(r.status === 403 ? 403 : 404).json({ success: false, error: r.error });
+    }
+    try {
+      const record = JSON.parse(fs.readFileSync(dest, 'utf-8'));
+      res.json({ success: true, record });
+    } catch (e) {
+      res.status(500).json({ success: false, error: '云端记录解析失败' });
+    } finally {
+      try { fs.unlinkSync(dest); } catch { /* ignore */ }
+    }
   }));
 
   return router;
