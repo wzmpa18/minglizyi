@@ -222,21 +222,22 @@ export default function EventDivinationPanel({
 
     try {
       // v25.0.87: 八字工具走专用四部分白话精批（格局总论+大运逐段+四领域专项+典籍末标）；
-      // 其余工具维持五段式学术报告。八字换 cacheKey v2 防止旧学术化缓存命中。
+      // 其余工具维持五段式学术报告。八字换 cacheKey 防止旧学术化缓存命中。
+      // v25.0.89: 字数放开（2000-3500字皆可）+有用性标准，cacheKey 升 v3 防旧 1500 字缓存命中。
       const isBaziTool = /八字|四柱|精批/.test(toolName);
       const systemPrompt = isBaziTool
         ? buildBaziDeepReportSystemPrompt()
         : buildDeepReportSystemPrompt(toolName);
 
       const userPrompt = isBaziTool
-        ? `【八字排盘资料】\n${chartContext}\n\n请严格按照系统要求输出四部分白话精批解读：第一部分格局核心总论、第二部分大运逐段详解（每步大运单独成段不可省略）、第三部分分领域专项解读（婚姻感情/财运事业/学业文昌/健康体质）、第四部分结尾总结+典籍标注。`
+        ? `【八字排盘资料】\n${chartContext}\n\n请严格按照系统要求输出四部分白话精批解读：第一部分格局核心总论、第二部分大运逐段详解（每步大运单独成段不可省略）、第三部分分领域专项解读（婚姻感情/财运事业/学业文昌/健康体质）、第四部分结尾总结+典籍标注。篇幅以讲透为准、不设上限，但每段都要落到本命盘的具体配置，不要模板话。`
         : `【${toolName}排盘数据】\n${chartContext}\n\n请严格按照系统要求输出五段式深度解读报告（700-900字）。`;
 
       const result = await callAI({
         systemPrompt,
         userPrompt,
         cacheKey: isBaziTool
-          ? `bazi_deep_v2_${chartContext.slice(0, 160)}`
+          ? `bazi_deep_v3_${chartContext.slice(0, 160)}`
           : `deep_${toolName}_${chartContext.slice(0, 80)}`,
       });
 
