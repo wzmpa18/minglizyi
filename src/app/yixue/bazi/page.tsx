@@ -41,6 +41,7 @@ import { getUserPermissionLevel } from "@/lib/aiService";
 import { useToolBack } from "@/lib/useToolBack";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
+import { LoginPromptModal } from "@/components/LoginPromptModal";
 
 // ===== 五行颜色 - 严格对标jishiyu =====
 // 注意: 五行颜色为传统命理数据色(火=红)，品牌紫色(#7B2FBE)仅用于UI chrome
@@ -1507,6 +1508,9 @@ export default function BaziPage(){
   const [cloudLoading,setCloudLoading]=useState(false);
   const [cloudMsg,setCloudMsg]=useState("");
   const [isMember,setIsMember]=useState(false);
+  // v25.0.87: 游客模式——基础排盘开放，解读类Tab与记录保存需注册
+  const [isVisitor,setIsVisitor]=useState(false);
+  const [showLoginPrompt,setShowLoginPrompt]=useState(false);
 
   // 监听layout的edit事件和back事件（v25.0.44：返回键按浏览顺序返回，弹窗打开时仅收起弹窗，结果页放行给layout返回工具列表）
   useEffect(() => {
@@ -1567,11 +1571,18 @@ export default function BaziPage(){
     }
   }, []);
 
-  // v25.0.87: 初始化——刷新本地历史列表 + 会员身份
+  // v25.0.87: 初始化——刷新本地历史列表 + 会员身份 + 游客身份
   useEffect(() => {
     setHistoryList(getPaipanHistoryList("bazi"));
-    setIsMember(getUserPermissionLevel() === "member");
+    const level = getUserPermissionLevel();
+    setIsMember(level === "member");
+    setIsVisitor(level === "visitor");
   }, []);
+
+  // v25.0.87: 游客身份落到受限Tab（如恢复状态残留）时回落到命盘
+  useEffect(() => {
+    if (isVisitor && ["jingpi","xingge","notes"].includes(activeTab)) setActiveTab("chart");
+  }, [isVisitor, activeTab]);
 
   // v25.0.87: 恢复一条历史记录（本地或云端）——还原全部参数 + 排盘结果 + 神煞
   const restoreHistoryRecord = useCallback((rec: PaipanHistoryRecord) => {
@@ -1606,8 +1617,12 @@ export default function BaziPage(){
     setShowHistory(false);
   }, []);
 
-  // v25.0.87: 打开历史弹窗（会员同步拉取云端备份列表）
+  // v25.0.87: 打开历史弹窗（游客引导注册；会员同步拉取云端备份列表）
   const openHistory = useCallback(async () => {
+    if (getUserPermissionLevel() === "visitor") {
+      setShowLoginPrompt(true);
+      return;
+    }
     setHistoryList(getPaipanHistoryList("bazi"));
     setShowHistory(true);
     setCloudMsg("");
@@ -1680,14 +1695,16 @@ export default function BaziPage(){
     try{const bz=solarToBazi({year:y,month:m,day:d,hour:h,minute:mi,gender:g}) as BaziResult;setResult(bz);
       const ss=calculateAllShenSha({yearGan:bz.pillars[0].gan as TianGan,yearZhi:bz.pillars[0].zhi as DiZhi,monthGan:bz.pillars[1].gan as TianGan,monthZhi:bz.pillars[1].zhi as DiZhi,dayGan:bz.dayGan as TianGan,dayZhi:bz.dayZhi as DiZhi,hourGan:bz.pillars[3].gan as TianGan,hourZhi:bz.pillars[3].zhi as DiZhi,gender:g});
       setShensha(ss);setShowForm(false);savePaipanState("bazi",{input:{year:y,month:m,day:d,hour:h,minute:mi,gender:g,calType},result:bz,showForm:false,_ts:Date.now()});
-      // v25.0.87: 保存排盘历史记录（完整参数+结果，同参数自动去重置顶）
-      try{savePaipanHistory("bazi",{
-        input:{year:y,month:m,day:d,hour:h,minute:mi,gender:g,calType,useTrueSolar:zhenTaiyang,longitude,name,zaoWanZi,xiaLing,_trueSolarDisplay:trueSolarDisplay,_solarCorrection:solarCorrection},
-        result:bz,
-        title:`${g==="male"?"男":"女"}命 ${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")} ${String(h).padStart(2,"0")}:${String(mi).padStart(2,"0")} ${bz.pillars.map(p=>p.gan+p.zhi).join(" ")}`,
-      });}catch(e){console.error("保存历史记录失败:",e);}
-      // 保存客户记录
-      try{saveRecord({clientId:selectedClient?selectedClient.id:"",type:"bazi",data:{...bz,inputParams:{year:y,month:m,day:d,hour:h,minute:mi,gender:g}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
+      // v25.0.87: 排盘历史记录（完整参数+结果，同参数自动去重置顶）——记录保存需注册，游客不落记录
+      if(getUserPermissionLevel()!=="visitor"){
+        try{savePaipanHistory("bazi",{
+          input:{year:y,month:m,day:d,hour:h,minute:mi,gender:g,calType,useTrueSolar:zhenTaiyang,longitude,name,zaoWanZi,xiaLing,_trueSolarDisplay:trueSolarDisplay,_solarCorrection:solarCorrection},
+          result:bz,
+          title:`${g==="male"?"男":"女"}命 ${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")} ${String(h).padStart(2,"0")}:${String(mi).padStart(2,"0")} ${bz.pillars.map(p=>p.gan+p.zhi).join(" ")}`,
+        });}catch(e){console.error("保存历史记录失败:",e);}
+        // 保存客户记录
+        try{saveRecord({clientId:selectedClient?selectedClient.id:"",type:"bazi",data:{...bz,inputParams:{year:y,month:m,day:d,hour:h,minute:mi,gender:g}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
+      }
     }catch(e){console.error("排盘失败:",e);}
   },[year,month,day,hour,gender,selectedClient,calType,zhenTaiyang,longitude,name,zaoWanZi,xiaLing,trueSolarDisplay,solarCorrection]);
 
@@ -1723,7 +1740,8 @@ export default function BaziPage(){
   },[result,day,gender,pillars]);
 
   const tabLabels:Record<string,string>={basic:"基本",chart:"命盘",detail:"详盘",jingpi:"精批",xingge:"性格",notes:"笔记"};
-  const tabOrder:("basic"|"chart"|"detail"|"jingpi"|"xingge"|"notes")[]=["basic","chart","detail","jingpi","xingge","notes"];
+  // v25.0.87: 游客仅开放基础排盘（基本/命盘/详盘），精批/性格/笔记解读类Tab需注册后可见
+  const tabOrder:("basic"|"chart"|"detail"|"jingpi"|"xingge"|"notes")[]=isVisitor?["basic","chart","detail"]:["basic","chart","detail","jingpi","xingge","notes"];
 
   // v25.0.87: AI详批整体上下文（白话精批增强版）
   // 供 EventDivinationPanel 深度解读使用：四柱全量（藏干十神纳音）+ 五行 + 强弱格局
@@ -1986,6 +2004,9 @@ export default function BaziPage(){
         </div>
       )}
     </div>}
+
+    {/* v25.0.87: 游客记录保存/AI解读引导注册登录弹窗 */}
+    <LoginPromptModal show={showLoginPrompt} onClose={() => setShowLoginPrompt(false)} />
 
     {/* 统一免责声明 */}
     <div style={{ padding: "10px 12px", fontSize: "10px", color: "#999", textAlign: "center" }}>内容仅供文化娱乐参考，不构成任何专业建议</div>

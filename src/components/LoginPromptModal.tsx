@@ -35,6 +35,16 @@ export function LoginPromptModal({
     router.push("/login");
   };
 
+  // v25.0.87: 引导注册——游客点击 AI 解读等需登录功能时可直接跳转注册页
+  const handleGoRegister = () => {
+    onClose();
+    if (typeof window !== "undefined") {
+      const currentPath = window.location.pathname + window.location.search;
+      sessionStorage.setItem("yandao_login_redirect", currentPath);
+    }
+    router.push("/register");
+  };
+
   return (
     <div
       className="modal-overlay-center"
@@ -54,7 +64,9 @@ export function LoginPromptModal({
           ×
         </button>
         <div className="modal-center-body">
-          <div className="flex flex-col items-center pt-8 pb-4">
+          <div
+            className="flex flex-col items-center pt-8 pb-4"
+          >
             <div
               className="flex h-16 w-16 items-center justify-center rounded-full"
               style={{ backgroundColor: "#f5f0fa" }}
@@ -80,7 +92,7 @@ export function LoginPromptModal({
             </p>
           </div>
 
-          <div className="flex gap-3 px-6 pb-6">
+          <div className="flex gap-3 px-6 pb-3">
             <button
               onClick={onClose}
               className="flex-1 rounded-xl py-2.5 text-sm font-medium text-gray-600 transition-colors active:bg-gray-100"
@@ -94,6 +106,18 @@ export function LoginPromptModal({
               style={{ backgroundColor: BRAND }}
             >
               去登录
+            </button>
+          </div>
+
+          {/* v25.0.87: 注册引导——无账号用户一键直达注册页 */}
+          <div className="flex items-center justify-center gap-1 pb-5">
+            <span className="text-[13px] text-gray-400">还没有账号？</span>
+            <button
+              onClick={handleGoRegister}
+              className="border-none bg-transparent p-0 text-[13px] font-semibold cursor-pointer"
+              style={{ color: BRAND }}
+            >
+              立即注册
             </button>
           </div>
         </div>

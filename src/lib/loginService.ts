@@ -1,8 +1,9 @@
 ﻿"use client";
 
 // ============================================================================
-// 登录服务层 - v18.5
-// 手机号+验证码登录、手机号+密码登录、邮箱+验证码登录、邮箱注册、微信授权登录、游客模式一键转登录
+// 登录服务层 - v25.0.87
+// 手机号+验证码登录、手机号+密码登录、邮箱+验证码登录、邮箱注册、游客模式一键转登录
+// v25.0.87: 彻底移除微信授权登录（全渠道统一标准包）
 // 对接腾讯云短信/邮件服务，验证码校验走服务端 API
 // 密码前端加盐 hash 持久化存储，验证码发送频率限制
 // ============================================================================
@@ -973,35 +974,6 @@ export async function resetPasswordWithEmail(params: ResetPasswordEmailParams): 
     console.error('[RESET] 后端重置密码（邮箱）请求失败:', err);
     return { success: false, message: '网络异常，请检查网络后重试' };
   }
-}
-
-// ============================================================================
-// 微信授权登录
-// ============================================================================
-
-export async function loginWithWechat(): Promise<LoginResult> {
-  // TODO: 生产环境对接微信开放平台 OAuth2.0
-  const mockOpenId = `wx_${Date.now().toString(36)}`;
-  const mockNickname = `微信用户${mockOpenId.slice(-4)}`;
-
-  const userId = `WX${mockOpenId.slice(-8)}`.toUpperCase();
-  const user: UserProfile = {
-    userId,
-    nickname: mockNickname,
-    avatar: '',
-    memberLevel: 'basic',
-    loginTime: Date.now(),
-  };
-
-  const token = `token_${userId}_${Date.now()}`;
-  setLoginState(token, user);
-
-  // v20.1: 保存 token 双轨用于自动续期
-  saveTokenPair(token, `rt_${userId}_${Date.now()}_wx`);
-
-  syncLocalData(userId);
-
-  return { success: true, message: '微信登录成功', user, isNewUser: false };
 }
 
 // ============================================================================

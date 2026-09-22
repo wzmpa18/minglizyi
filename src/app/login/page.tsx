@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { BrandHeader } from "@/components/shared";
-import { loginWithPassword, loginWithWechat } from "@/lib/loginService";
+import { loginWithPassword } from "@/lib/loginService";
 import { getLoginState, moveLoginStateToSession } from "@/lib/auth";
 import { useIOSNativeShell } from "@/lib/iosNativeGate";
 
@@ -29,7 +29,7 @@ function EyeIcon({ show }: { show: boolean }) {
 
 export default function LoginPage() {
   const router = useRouter();
-  // v25.0.77: iOS 壳内隐藏微信登录与下载引导（App Store 5.1.1 第三方登录 / 2.5.2 外部安装引导）
+  // v25.0.77: iOS 壳内隐藏下载引导（App Store 2.5.2 外部安装引导）；v25.0.87 微信登录已彻底移除
   const iosNative = useIOSNativeShell();
 
   // v20.1: 统一账号输入（支持手机号/邮箱/数字ID）
@@ -100,30 +100,7 @@ export default function LoginPage() {
     }
   };
 
-  const handleWechatLogin = useCallback(async () => {
-    if (!agreed) {
-      setError("请先同意用户协议和隐私政策");
-      return;
-    }
-    try {
-      setLoading(true);
-      const result = await loginWithWechat();
-      if (!result.success) {
-        setError(result.message || "微信登录失败，请重试");
-        return;
-      }
-      if (!rememberMe) {
-        moveLoginStateToSession();
-      }
-      redirectAfterLogin();
-    } catch (err: any) {
-      setError(err?.message || "微信登录失败，请重试");
-    } finally {
-      setLoading(false);
-    }
-  }, [agreed, rememberMe, router]);
-
-  // v20.1: 登录后自动返回原页面（如有redirect参数）
+  // v25.0.87: 登录后自动返回原页面（如有redirect参数）
   const redirectAfterLogin = () => {
     if (typeof window !== "undefined") {
       const redirect = sessionStorage.getItem("yandao_login_redirect");
@@ -136,7 +113,12 @@ export default function LoginPage() {
     router.push("/");
   };
 
+  // v25.0.87: 游客模式同样须先勾选隐私协议
   const handleGuestBrowse = () => {
+    if (!agreed) {
+      setError("请先阅读并勾选用户协议和隐私政策");
+      return;
+    }
     router.push("/");
   };
 
@@ -342,6 +324,68 @@ export default function LoginPage() {
           </label>
         </div>
 
+        {/* v25.0.87: 隐私协议勾选框——紧邻登录按钮上方，默认不勾选，登录/游客模式均须先勾选 */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "center",
+            marginBottom: 14,
+            paddingTop: 4,
+          }}
+        >
+          <label
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              cursor: "pointer",
+              fontSize: 12,
+              color: "#999",
+              lineHeight: 1.6,
+              maxWidth: 320,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={(e) => {
+                setAgreed(e.target.checked);
+                setError("");
+              }}
+              style={{
+                marginRight: 6,
+                marginTop: 3,
+                accentColor: BRAND,
+                width: 16,
+                height: 16,
+                flexShrink: 0,
+              }}
+            />
+            <span>
+              我已阅读并同意
+              <span
+                style={{ color: BRAND, cursor: "pointer" }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  router.push("/agreement");
+                }}
+              >
+                《用户协议》
+              </span>
+              和
+              <span
+                style={{ color: BRAND, cursor: "pointer" }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  router.push("/privacy");
+                }}
+              >
+                《隐私政策》
+              </span>
+            </span>
+          </label>
+        </div>
+
         {/* 密码登录按钮 */}
         <button
           onClick={handlePasswordLogin}
@@ -401,87 +445,7 @@ export default function LoginPage() {
           </div>
           </>) }
 
-        {/* v25.0.77: iOS 壳内隐藏微信快捷登录（Apple 要求第三方登录需配 Sign in with Apple，首版未接入） */}
-        {iosNative ? null : (<>
-          {/* 分隔线 */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              marginBottom: 16,
-            }}
-          >
-            <div style={{ flex: 1, height: 1, backgroundColor: "#ddd" }} />
-            <span style={{ fontSize: 12, color: "#999", padding: "0 12px" }}>其他登录方式</span>
-            <div style={{ flex: 1, height: 1, backgroundColor: "#ddd" }} />
-          </div>
-
-          // 微信快捷登录
-          <button
-            onClick={handleWechatLogin}
-            disabled={loading}
-            style={{
-              width: "100%",
-              height: 52,
-              backgroundColor: "#07C160",
-              color: "#fff",
-              border: "none",
-              borderRadius: 12,
-              fontSize: 17,
-              fontWeight: 600,
-              cursor: loading ? "not-allowed" : "pointer",
-              opacity: loading ? 0.7 : 1,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              marginBottom: 24,
-            }}
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="white">
-              <path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.866c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 0 1 .598.082l1.584.926a.272.272 0 0 0 .14.045c.133 0 .241-.108.241-.245 0-.06-.024-.12-.04-.178l-.325-1.233a.49.49 0 0 1 .178-.554C23.028 18.48 24 16.82 24 14.98c0-3.21-2.931-5.952-7.062-6.123zm-2.18 2.769c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982zm4.844 0c.535 0 .969.44.969.982a.976.976 0 0 1-.969.983.976.976 0 0 1-.969-.983c0-.542.434-.982.97-.982z" />
-            </svg>
-            微信快捷登录
-          </button>
-          </>) }
-
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            marginBottom: 16,
-          }}
-        >
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              cursor: "pointer",
-              fontSize: 12,
-              color: "#999",
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={agreed}
-              onChange={(e) => {
-                setAgreed(e.target.checked);
-                setError("");
-              }}
-              style={{
-                marginRight: 6,
-                accentColor: BRAND,
-                width: 16,
-                height: 16,
-              }}
-            />
-            登录即同意
-            <span style={{ color: BRAND, cursor: "pointer" }}>《用户协议》</span>
-            和
-            <span style={{ color: BRAND, cursor: "pointer" }}>《隐私政策》</span>
-          </label>
-        </div>
+        {/* v25.0.87: 彻底移除微信快捷登录（全渠道统一，不再保留第三方快捷登录） */}
 
         <div style={{ textAlign: "center" }}>
           <span style={{ fontSize: 14, color: "#999" }}>还没有账号？</span>

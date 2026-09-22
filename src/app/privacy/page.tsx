@@ -101,7 +101,7 @@ export default function PrivacyPage() {
             marginBottom: 16,
           }}
         >
-          最近更新日期：2026年9月2日
+          最近更新日期：2026年9月22日
         </div>
 
         {/* 引言 */}
@@ -328,6 +328,21 @@ export default function PrivacyPage() {
           </P>
           <P>
             9.3 如对内容来源有异议，可通过客服邮箱联系我们，平台将及时核查并第一时间处理。
+          </P>
+        </Section>
+
+        {/* 应用权限说明 */}
+        <Section index={10} title="应用权限说明">
+          <P>
+            安卓客户端（APK）申请的系统权限及用途如下，本应用不申请任何与功能无关的多余权限：
+          </P>
+          <ul>
+            <Li><strong>网络访问（INTERNET）：</strong>用于登录、内容加载与在线服务通信，为应用运行必需权限；</Li>
+            <Li><strong>网络状态（ACCESS_NETWORK_STATE）：</strong>用于检测网络连接状态，保障断网提示与请求重试体验；</Li>
+            <Li><strong>写入外部存储（WRITE_EXTERNAL_STORAGE，仅 Android 9 及以下系统生效）：</strong>仅用于应用内检测到新版本时，通过系统下载管理器将更新安装包保存到设备的「下载」目录；Android 10 及以上系统采用分区存储机制，无需此权限。</Li>
+          </ul>
+          <P>
+            本应用不申请摄像头、通讯录、位置、短信、通话记录、相册读取等敏感权限；罗盘与真太阳时功能所用经纬度仅在您主动使用时于设备本地临时计算，不上传服务器。
           </P>
         </Section>
 
