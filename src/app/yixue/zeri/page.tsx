@@ -19,6 +19,8 @@ import { buildDeepReportSystemPrompt } from "@/lib/deepReportPrompt";
 
 import { ShareButton } from "@/components/ShareButton";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
+import { PaipanHistoryButton } from "@/components/PaipanHistoryButton";
+import { savePaipanRecord, type PaipanRecord } from "@/lib/nativePaipanStore";
 // ============================================================================
 // 常量
 // ============================================================================
@@ -102,12 +104,41 @@ export default function ZeriPage() {
       setHasResult(true);
       setLoading(false);
       savePaipanState("zeri",{input:{eventType:ev.id,startYear,startMonth,startDay,endYear,endMonth,endDay,userShengXiao},showForm:false,_ts:Date.now()});
+      // v25.0.88: 排盘记录自动落库（原生壳为SQLite，同参数原位去重）
+      savePaipanRecord({
+        tool: "zeri",
+        title: `择日·${ev.name}（${startYear}-${startMonth}-${startDay}起）`,
+        input: { eventType: ev.id, startYear, startMonth, startDay, endYear, endMonth, endDay, userShengXiao },
+        result: { results: r } as unknown as Record<string, unknown>,
+      }).catch(() => {});
       // 保存客户记录
       if(r.length > 0){
         try{saveRecord({clientId:selectedClient?selectedClient.id:"",type:"zeri",data:{results:r,inputParams:{eventType:ev.id,startYear,startMonth,startDay,endYear,endMonth,endDay,userShengXiao}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
       }
     }, 200);
   }, [eventType, startYear, startMonth, startDay, endYear, endMonth, endDay, userShengXiao, selectedClient, zeriCfg, enabledEventTypes]);
+
+  // v25.0.88: 历史记录恢复
+  const handleRestoreHistory = useCallback((rec: PaipanRecord) => {
+    const inp = rec.input as {
+      eventType?: string; startYear?: number; startMonth?: number; startDay?: number;
+      endYear?: number; endMonth?: number; endDay?: number; userShengXiao?: string;
+      results?: AuspiciousDay[];
+    };
+    const hit = inp.eventType ? enabledEventTypes.find((e) => e.id === inp.eventType) : undefined;
+    if (hit) setEventType(hit.id);
+    if (inp.startYear) setStartYear(inp.startYear);
+    if (inp.startMonth) setStartMonth(inp.startMonth);
+    if (inp.startDay) setStartDay(inp.startDay);
+    if (inp.endYear) setEndYear(inp.endYear);
+    if (inp.endMonth) setEndMonth(inp.endMonth);
+    if (inp.endDay) setEndDay(inp.endDay);
+    if (inp.userShengXiao !== undefined) setUserShengXiao(inp.userShengXiao);
+    if (inp.results && Array.isArray(inp.results)) {
+      setResults(inp.results);
+      setHasResult(true);
+    }
+  }, [enabledEventTypes]);
 
   const handleDayClick = useCallback((day: any) => {
     const interp = getZeriJianchuInterpretation(day.jianChu);
@@ -292,6 +323,7 @@ export default function ZeriPage() {
             >
               {loading ? "查询中..." : "查询吉日"}
             </button>
+            <PaipanHistoryButton toolKey="zeri" onRestore={handleRestoreHistory} />
           </div>
 
           <div className="mt-4 rounded-lg bg-purple-50/40 p-2.5">

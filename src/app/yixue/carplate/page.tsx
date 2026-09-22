@@ -12,6 +12,8 @@ import EventDivinationPanel from "@/components/EventDivinationPanel";
 import BatchNumberMatching from "@/components/BatchNumberMatching";
 import { ShareButton } from "@/components/ShareButton";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
+import { PaipanHistoryButton } from "@/components/PaipanHistoryButton";
+import { savePaipanRecord, type PaipanRecord } from "@/lib/nativePaipanStore";
 // ============================================================================
 // 常量
 // ============================================================================
@@ -54,9 +56,28 @@ export default function CarplatePage() {
       // 保存客户记录
       if(r){
         try{saveRecord({clientId:selectedClient?selectedClient.id:"",type:"carplate",data:{...r,plateNumber},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
+        // v25.0.88: 排盘记录自动落库（原生壳为SQLite，同参数原位去重）
+        savePaipanRecord({
+          tool: "carplate",
+          title: `车牌测算·${r.plate || plateNumber}`,
+          input: { plateNumber, clientId: selectedClient?.id || "" },
+          result: r as unknown as Record<string, unknown>,
+        }).catch(() => {});
       }
     }, 200);
   }, [plateNumber, isValid, selectedClient]);
+
+  // v25.0.88: 历史记录恢复
+  const handleRestoreHistory = useCallback((rec: PaipanRecord) => {
+    const inp = rec.input as { plateNumber?: string; clientId?: string };
+    if (inp.plateNumber) setPlateNumber(inp.plateNumber);
+    if (rec.result) {
+      setResult(rec.result as unknown as CarplateResult);
+      setHasResult(true);
+    } else {
+      setHasResult(false);
+    }
+  }, []);
 
   // URL参数clientId + 回填检查
   useEffect(() => {
@@ -160,6 +181,7 @@ export default function CarplatePage() {
             >
               {loading ? "分析中..." : "开始分析"}
             </button>
+            <PaipanHistoryButton toolKey="carplate" onRestore={handleRestoreHistory} />
           </div>
 
           <div className="mt-4 rounded-lg bg-purple-50/40 p-2.5">

@@ -23,6 +23,8 @@ import { Lunar, LunarYear, LunarMonth } from "lunar-javascript";
 import SolarDatePicker from "@/components/shared/SolarDatePicker";
 import { saveRecord } from "@/lib/clientStore";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
+import { PaipanHistoryButton } from "@/components/PaipanHistoryButton";
+import { savePaipanRecord, type PaipanRecord } from "@/lib/nativePaipanStore";
 
 // ============================================================================
 // 常量
@@ -912,12 +914,53 @@ export default function QimingPage() {
         console.error("保存起名记录失败:", e);
       }
 
+      // v25.0.88: 排盘记录自动落库（原生壳为SQLite，同参数原位去重）
+      savePaipanRecord({
+        tool: "qiming",
+        title: `起名·${surname}姓${gender === "male" ? "男" : "女"}宝`,
+        input: {
+          surname, isCompound, gender, preferredWuxing, zodiac, nameLength,
+          birthDate, birthHour, birthMinute, customRequirement, calType,
+          lunarYear, lunarMonthValue, lunarDay,
+        },
+        result: { suggestions: results.slice(0, 20) } as unknown as Record<string, unknown>,
+      }).catch(() => {});
+
       setTimeout(() => {
         const el = document.getElementById("qiming-result");
         if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
     }, 500);
   }, [surname, surnameInfo, isCompound, gender, preferredWuxing, zodiac, nameLength, baziAnalysis, customRequirement]);
+
+  // v25.0.88: 历史记录恢复（回填起名参数，重出名字建议）
+  const handleRestoreHistory = useCallback((rec: PaipanRecord) => {
+    const inp = rec.input as {
+      surname?: string; isCompound?: boolean; gender?: "male" | "female"; preferredWuxing?: string;
+      zodiac?: string; nameLength?: 1 | 2; birthDate?: string; birthHour?: number; birthMinute?: number;
+      customRequirement?: string; calType?: "solar" | "lunar";
+      lunarYear?: number; lunarMonthValue?: string; lunarDay?: number;
+    };
+    const res = rec.result as { suggestions?: NameSuggestion[] } | undefined;
+    if (inp.surname) setSurname(inp.surname);
+    if (inp.isCompound !== undefined) setIsCompound(inp.isCompound);
+    if (inp.gender) setGender(inp.gender);
+    if (inp.preferredWuxing !== undefined) setPreferredWuxing(inp.preferredWuxing);
+    if (inp.zodiac !== undefined) setZodiac(inp.zodiac);
+    if (inp.nameLength) setNameLength(inp.nameLength);
+    if (inp.birthDate) setBirthDate(inp.birthDate);
+    if (inp.birthHour !== undefined) setBirthHour(inp.birthHour);
+    if (inp.birthMinute !== undefined) setBirthMinute(inp.birthMinute);
+    if (inp.customRequirement !== undefined) setCustomRequirement(inp.customRequirement);
+    if (inp.calType) setCalType(inp.calType);
+    if (inp.lunarYear) setLunarYear(inp.lunarYear);
+    if (inp.lunarMonthValue) setLunarMonthValue(inp.lunarMonthValue);
+    if (inp.lunarDay) setLunarDay(inp.lunarDay);
+    if (res && Array.isArray(res.suggestions) && res.suggestions.length > 0) {
+      setSuggestions(res.suggestions);
+      setHasResult(true);
+    }
+  }, []);
 
   // 选中某个名字进行详细分析
   const handleSelectName = useCallback(
@@ -1366,6 +1409,9 @@ export default function QimingPage() {
           >
             {loading ? "生成中..." : "智能生成名字"}
           </button>
+          <div className="mt-2 flex justify-center">
+            <PaipanHistoryButton toolKey="qiming" onRestore={handleRestoreHistory} />
+          </div>
 
           {/* 功能说明 */}
           <div className="mt-4 rounded-lg p-2.5" style={{ backgroundColor: "#f3edf7" }}>

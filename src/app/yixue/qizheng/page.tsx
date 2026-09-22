@@ -40,6 +40,9 @@ import {
   type DuanyuItem,
   type DuanyuSectionKey,
 } from "@/algorithm-core/modules/qizheng-duanyu";
+import { PaipanHistoryButton } from "@/components/PaipanHistoryButton";
+import { MingzhuProfilePicker } from "@/components/MingzhuProfilePicker";
+import { savePaipanRecord, type PaipanRecord, type MingzhuProfile } from "@/lib/nativePaipanStore";
 import {
   computeQizhengLayers,
   LAYER_DEFS,
@@ -131,6 +134,9 @@ export default function QizhengPage() {
   const [toast, setToast] = useState("");
   const [savedCount, setSavedCount] = useState(0);
   const [lastInput, setLastInput] = useState<QizhengInput | null>(null);
+  // v25.0.88: 命主档案（跨工具共享）+ 档案回填日期（打开排盘表单时作为 initialDate）
+  const [mingzhu, setMingzhu] = useState<MingzhuProfile | null>(null);
+  const [profileDate, setProfileDate] = useState<{ year: number; month: number; day: number; hour: number; minute: number } | null>(null);
   /** v25.0.82: 历史盘恢复标识（客户档案"查看"回填，非空=当前盘为历史盘） */
   const [histMeta, setHistMeta] = useState<{
     starSystem: string; mingMode: string; dongweiStart: number; algorithmVersion: string;
@@ -500,11 +506,62 @@ export default function QizhengPage() {
         setSavedCount((c) => c + 1);
         showToast(selectedClient ? "排盘结果已保存到客户档案" : "排盘记录已保存");
       } catch { /* 保存失败不阻断排盘 */ }
+      // v25.0.88: 排盘记录自动落库（原生壳为SQLite，同参数原位去重）
+      savePaipanRecord({
+        tool: "qizheng",
+        title: `七政四余·${input.year}-${input.month}-${input.day}（${opts.gender === "male" ? "男" : "女"}）`,
+        input: input as unknown as Record<string, unknown>,
+        result: res as unknown as Record<string, unknown>,
+        profileId: mingzhu?.id ?? null,
+      }).catch(() => {});
     } catch (e) {
       trackToolEvent("qizheng", "tool_error", { phase: "calc" });
       showToast(`排盘失败：${e instanceof Error ? e.message : "输入参数异常"}`);
     }
-  }, [region, frame, mingMode, dongweiStart, selectedClient, showToast]);
+  }, [region, frame, mingMode, dongweiStart, selectedClient, showToast, mingzhu]);
+
+  // v25.0.88: 历史记录恢复（本地命主档案库/排盘历史）
+  const handleRestoreHistory = useCallback((rec: PaipanRecord) => {
+    const inp = rec.input as unknown as QizhengInput;
+    if (inp) {
+      try { setRegionIdx(nearestRegion(inp.lon)); } catch { /* 经度异常保持默认 */ }
+      if (inp.frame === "tropical" || inp.frame === "sidereal") setFrame(inp.frame);
+      if (inp.mingGongMode === "mao" || inp.mingGongMode === "sunrise") setMingMode(inp.mingGongMode);
+      if (inp.dongweiStart === 9 || inp.dongweiStart === 10) setDongweiStart(inp.dongweiStart);
+      setLastInput(inp);
+      setDstInfo(null); // input 已是当时校正后标准时间，无需二次 DST
+    }
+    if (rec.result) {
+      const res = rec.result as unknown as QizhengResult;
+      setResult(res);
+      setShowForm(false);
+      setHistMeta({
+        starSystem: res.frame,
+        mingMode: res.input.mingGongMode ?? "mao",
+        dongweiStart: res.dongwei.startBase,
+        algorithmVersion: res.engineVersion ?? "",
+      });
+    } else {
+      setShowForm(true);
+    }
+  }, []);
+
+  // v25.0.88: 命主档案选择 → 回填出生日期时间并打开排盘表单
+  const applyMingzhuProfile = useCallback((p: MingzhuProfile | null) => {
+    setMingzhu(p);
+    if (!p) return;
+    const d = { year: 1990, month: 1, day: 1, hour: 12, minute: 0 };
+    if (p.birthDate) {
+      const [y, m, dd] = p.birthDate.split("-").map(Number);
+      if (y && m && dd) { d.year = y; d.month = m; d.day = dd; }
+    }
+    if (p.birthTime) {
+      const h = parseInt(p.birthTime.split(":")[0], 10);
+      if (!isNaN(h)) d.hour = h;
+    }
+    setProfileDate(d);
+    setShowForm(true);
+  }, []);
 
   const xian = useMemo(() => {
     if (!result || xianAge === "" || xianAge < 1 || xianAge > 120) return null;
@@ -733,6 +790,19 @@ export default function QizhengPage() {
           >
             开始排盘
           </button>
+          <div className="mt-3 flex items-center justify-center gap-2">
+            <MingzhuProfilePicker
+              value={mingzhu}
+              onChange={applyMingzhuProfile}
+              buildDraft={() => ({
+                name: name || "",
+                gender: "男",
+                birthDate: profileDate ? `${profileDate.year}-${String(profileDate.month).padStart(2, "0")}-${String(profileDate.day).padStart(2, "0")}` : "",
+                birthTime: profileDate ? `${String(profileDate.hour).padStart(2, "0")}:00` : "",
+              })}
+            />
+            <PaipanHistoryButton toolKey="qizheng" onRestore={handleRestoreHistory} />
+          </div>
         </div>
         <DatePicker
           show={showForm}
@@ -740,6 +810,7 @@ export default function QizhengPage() {
           onSubmit={handleSubmit}
           submitText="立即排盘"
           title="七政四余排盘"
+          initialDate={profileDate ?? (lastInput ? { year: lastInput.year, month: lastInput.month, day: lastInput.day, hour: lastInput.hour, minute: lastInput.minute } : undefined)}
           extraOptions={
             <div className="mt-3 space-y-3">
               <div>
@@ -833,6 +904,7 @@ export default function QizhengPage() {
           >
             重新排盘
           </button>
+          <PaipanHistoryButton toolKey="qizheng" onRestore={handleRestoreHistory} />
         </div>
         <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
           <div><span className="text-gray-500">出生：</span><span className="font-medium">{birthText}</span></div>
@@ -1712,7 +1784,7 @@ export default function QizhengPage() {
         submitText="重新排盘"
         title="七政四余排盘"
         showXiaLing
-        initialDate={lastInput ? { year: lastInput.year, month: lastInput.month, day: lastInput.day, hour: lastInput.hour, minute: lastInput.minute } : undefined}
+        initialDate={profileDate ?? (lastInput ? { year: lastInput.year, month: lastInput.month, day: lastInput.day, hour: lastInput.hour, minute: lastInput.minute } : undefined)}
         extraOptions={
           <div className="mt-3 space-y-3">
             <div>

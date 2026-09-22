@@ -31,6 +31,8 @@ import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { ShareButton } from "@/components/ShareButton";
 import { PostToSquareButton } from "@/components/PostToSquareButton";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
+import { PaipanHistoryButton } from "@/components/PaipanHistoryButton";
+import { savePaipanRecord, type PaipanRecord } from "@/lib/nativePaipanStore";
 
 // ============================================================================
 // 解读类型标签颜色
@@ -320,7 +322,31 @@ export default function XiaoliurenPage() {
     const h = selectedDate.getHours();
     const mi = selectedDate.getMinutes();
     savePaipanState("xiaoliuren",{input:{year:y,month:mo,day:d,hour:h,minute:mi,desc,divMethod},result:result,showForm:false,_ts:Date.now()});
-  }, []);
+    // v25.0.88: 排盘记录自动落库（原生壳为SQLite，同参数原位去重）
+    const calcResult = calculateXiaoLiuRen({
+      month: mo,
+      day: d,
+      shichen: hourToShichen(h),
+    });
+    savePaipanRecord({
+      tool: "xiaoliuren",
+      title: `小六壬·${desc || (divMethod === "time" ? "时间起课" : "报数起课")}`,
+      input: { dateISO: selectedDate.toISOString(), desc, divMethod },
+      result: calcResult as unknown as Record<string, unknown>,
+    }).catch(() => {});
+  }, [selectedDate, desc, divMethod, result, goToResult]);
+
+  // v25.0.88: 历史记录恢复
+  const handleRestoreHistory = useCallback((rec: PaipanRecord) => {
+    const inp = rec.input as { dateISO?: string; desc?: string; divMethod?: "time" | "number" };
+    if (inp.dateISO) setSelectedDate(new Date(inp.dateISO));
+    if (typeof inp.desc === "string") setDesc(inp.desc);
+    if (inp.divMethod) setDivMethod(inp.divMethod);
+    setRecordSaved(false);
+    setInterpretPanel(null);
+    goToResult();
+    setShowPopup(false);
+  }, [goToResult]);
 
   // ---- 返回弹窗 ----
   const handleBackToPopup = useCallback(() => {
@@ -518,6 +544,7 @@ export default function XiaoliurenPage() {
                 >
                   开始排盘
                 </button>
+                <PaipanHistoryButton toolKey="xiaoliuren" onRestore={handleRestoreHistory} />
                 <button
                   onClick={() => setShowPopup(false)}
                   style={{

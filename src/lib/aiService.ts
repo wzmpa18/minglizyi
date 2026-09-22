@@ -78,6 +78,7 @@ const AI_ERROR_MAP: Record<string, string> = {
   AI_UPSTREAM_ERROR: "AI服务临时异常，请稍后重试",
   AI_EMPTY_CONTENT: "本次生成失败，请重新尝试",
   AI_SERVICE_UNAVAILABLE: "AI通道临时故障，已为您保留经典解读内容，请稍后重试",
+  AI_OFFLINE: "当前无网络连接：AI智能解读需联网使用。排盘计算、古籍经典查阅、历史记录均可离线使用，请连接网络后重试。",
   FEATURE_DISABLED: "该功能已由平台暂时关闭，请稍后再试",
   FEATURE_MAINTENANCE: "该功能正在维护中，请稍后再试",
 };
@@ -122,6 +123,17 @@ export async function callAI(request: AIRequest): Promise<AIResponse> {
     if (localCached) {
       return { success: true, content: localCached, cached: true };
     }
+  }
+
+  // v25.0.88: 离线边界预检——断网时不再发起请求，明确提示离线可用范围（排盘/古籍/历史记录本地可用）
+  if (typeof navigator !== "undefined" && !navigator.onLine) {
+    return {
+      success: false,
+      content: getAIErrorMessage("AI_OFFLINE"),
+      cached: false,
+      error: "offline",
+      errorCode: "AI_OFFLINE",
+    };
   }
 
   // 2. 调用本地服务端代理（服务端持有密钥，安全转发到第三方 AI）

@@ -28,6 +28,8 @@ import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { ShareButton } from "@/components/ShareButton";
 import { PostToSquareButton } from "@/components/PostToSquareButton";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
+import { PaipanHistoryButton } from "@/components/PaipanHistoryButton";
+import { savePaipanRecord, type PaipanRecord } from "@/lib/nativePaipanStore";
 
 // ============================================================================
 // 五行颜色 (与 jishiyu 完全一致)
@@ -535,10 +537,37 @@ export default function MeihuaPage() {
       // P1-08 修复：保存最新结果 r
       savePaipanState("meihua",{input:{year:y,month:mo,day:d,hour:h,desc,divMethod,manualNumbers,charInput,directionIdx},result:r,showForm:false,_ts:Date.now()});
       try{saveRecord({clientId:selectedClient?selectedClient.id:"",type:"meihua",data:{...r,inputParams:{year:y,month:mo,day:d,hour:h,method:divMethod}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
+      // v25.0.88: 排盘记录自动落库（原生壳为SQLite，同参数原位去重）
+      savePaipanRecord({
+        tool: "meihua",
+        title: `梅花易数·${desc || (divMethod === "time" ? "时间起卦" : divMethod === "number" ? "数字起卦" : divMethod === "character" ? "汉字起卦" : "方位起卦")}`,
+        input: { dateISO: selectedDate.toISOString(), desc, divMethod, manualNumbers, charInput, directionIdx },
+        result: r as unknown as Record<string, unknown>,
+      }).catch(() => {});
     } catch (e) {
       setError(e instanceof Error ? e.message : "起卦失败");
     }
   }, [selectedDate, selectedClient, divMethod, manualNumbers, charInput, directionIdx, desc]);
+
+  // v25.0.88: 历史记录恢复
+  const handleRestoreHistory = useCallback((rec: PaipanRecord) => {
+    const inp = rec.input as {
+      dateISO?: string; desc?: string; divMethod?: string;
+      manualNumbers?: string[]; charInput?: string; directionIdx?: number;
+    };
+    if (inp.dateISO) setSelectedDate(new Date(inp.dateISO));
+    if (typeof inp.desc === "string") setDesc(inp.desc);
+    if (inp.divMethod) setDivMethod(inp.divMethod as typeof divMethod);
+    if (Array.isArray(inp.manualNumbers)) setManualNumbers(inp.manualNumbers);
+    if (typeof inp.charInput === "string") setCharInput(inp.charInput);
+    if (typeof inp.directionIdx === "number") setDirectionIdx(inp.directionIdx);
+    if (rec.result) {
+      setResult(rec.result as never);
+      setActiveGua("ben");
+    }
+    setShowPopup(false);
+    setInterpretPanel(null);
+  }, []);
 
   // v18.2: 监听编辑/返回事件，实现逐级返回
   useEffect(() => {
@@ -704,6 +733,9 @@ export default function MeihuaPage() {
             fontSize: "16px", fontWeight: "bold", cursor: "pointer",
             boxShadow: "0 2px 8px rgba(123, 47, 190, 0.3)",
           }}>起卦</button>
+          <div style={{ display: "flex", justifyContent: "center", marginTop: "10px" }}>
+            <PaipanHistoryButton toolKey="meihua" onRestore={handleRestoreHistory} />
+          </div>
         </div>
       )}
 

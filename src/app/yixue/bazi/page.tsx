@@ -35,8 +35,12 @@ import { PostToSquareButton } from "@/components/PostToSquareButton";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 import { getPillarInterpretation, getShenshaInterpretation } from "@/lib/bazi-interpretations";
-import { savePaipanState, loadPaipanState, clearPaipanState, savePaipanHistory, getPaipanHistoryList, deletePaipanHistory, clearPaipanHistory, markPaipanHistorySynced } from "@/lib/paipanPersistence";
-import type { PaipanHistoryRecord } from "@/lib/paipanPersistence";
+import { savePaipanState, loadPaipanState, clearPaipanState, getPaipanHistoryList, clearPaipanHistory } from "@/lib/paipanPersistence";
+import {
+  savePaipanRecord, listPaipanRecords, deletePaipanRecord, clearPaipanRecordsByTool, insertPaipanRecord,
+  type PaipanRecord, type MingzhuProfile,
+} from "@/lib/nativePaipanStore";
+import { MingzhuProfilePicker } from "@/components/MingzhuProfilePicker";
 import { getUserPermissionLevel } from "@/lib/aiService";
 import { useToolBack } from "@/lib/useToolBack";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
@@ -1501,13 +1505,15 @@ export default function BaziPage(){
   const [activeTab,setActiveTab]=useState<"basic"|"chart"|"detail"|"jingpi"|"xingge"|"notes">("chart");
   const [selectedClient,setSelectedClient]=useState<Client|null>(null);
   const [interpretPanel, setInterpretPanel] = useState<{pillarLabel:string; items:Array<{type:string;title:string;content:string;source:string}>} | null>(null);
-  // v25.0.87: 排盘历史记录（本地 + 会员云端）
+  // v25.0.87: 排盘历史记录（本地 + 会员云端）；v25.0.88: 底层切换为统一原生存储（SQLite/localStorage同构）
   const [showHistory,setShowHistory]=useState(false);
-  const [historyList,setHistoryList]=useState<PaipanHistoryRecord[]>([]);
+  const [historyList,setHistoryList]=useState<PaipanRecord[]>([]);
   const [cloudRecords,setCloudRecords]=useState<Array<{objectKey:string;title:string;ts:number}>>([]);
   const [cloudLoading,setCloudLoading]=useState(false);
   const [cloudMsg,setCloudMsg]=useState("");
   const [isMember,setIsMember]=useState(false);
+  // v25.0.88: 命主档案（跨工具共享，原生壳存SQLite）
+  const [mingzhu,setMingzhu]=useState<MingzhuProfile|null>(null);
   // v25.0.87: 游客模式——基础排盘开放，解读类Tab与记录保存需注册
   const [isVisitor,setIsVisitor]=useState(false);
   const [showLoginPrompt,setShowLoginPrompt]=useState(false);
@@ -1572,11 +1578,32 @@ export default function BaziPage(){
   }, []);
 
   // v25.0.87: 初始化——刷新本地历史列表 + 会员身份 + 游客身份
+  // v25.0.88: 旧 localStorage 历史一次性迁移到统一原生存储，迁移完成后清旧键防重复
   useEffect(() => {
-    setHistoryList(getPaipanHistoryList("bazi"));
+    let alive = true;
+    (async () => {
+      try {
+        const legacy = getPaipanHistoryList("bazi");
+        const existing = await listPaipanRecords("bazi");
+        if (legacy.length > 0 && existing.length === 0) {
+          for (const rec of [...legacy].reverse()) {
+            await insertPaipanRecord({
+              tool: "bazi",
+              title: rec.title || "八字排盘",
+              input: rec.input as Record<string, unknown>,
+              result: rec.result as Record<string, unknown>,
+              note: rec.cloudSynced ? `cloud:${rec.cloudObjectKey ?? ""}` : undefined,
+            });
+          }
+          clearPaipanHistory("bazi");
+        }
+      } catch (e) { console.error("旧历史记录迁移失败:", e); }
+      if (alive) setHistoryList(await listPaipanRecords("bazi"));
+    })();
     const level = getUserPermissionLevel();
     setIsMember(level === "member");
     setIsVisitor(level === "visitor");
+    return () => { alive = false; };
   }, []);
 
   // v25.0.87: 游客身份落到受限Tab（如恢复状态残留）时回落到命盘
@@ -1584,8 +1611,26 @@ export default function BaziPage(){
     if (isVisitor && ["jingpi","xingge","notes"].includes(activeTab)) setActiveTab("chart");
   }, [isVisitor, activeTab]);
 
-  // v25.0.87: 恢复一条历史记录（本地或云端）——还原全部参数 + 排盘结果 + 神煞
-  const restoreHistoryRecord = useCallback((rec: PaipanHistoryRecord) => {
+  // v25.0.88: 应用命主档案——回填姓名/性别/生日/时辰到表单，实现跨工具共享（清空选择时不动表单）
+  const applyMingzhuProfile = useCallback((p: MingzhuProfile | null) => {
+    setMingzhu(p);
+    if (!p) return;
+    if (p.name) setName(p.name);
+    if (p.gender === "男" || p.gender === "女") setGender(p.gender === "男" ? "male" : "female");
+    if (p.birthDate) {
+      const [y, m, d] = p.birthDate.split("-").map((n) => Number(n));
+      if (y) setYear(y);
+      if (m) setMonth(m);
+      if (d) setDay(d);
+    }
+    if (p.birthTime) {
+      const hm = p.birthTime.split(":").map((n) => Number(n));
+      if (Number.isFinite(hm[0])) setHour(hm[0]);
+    }
+  }, []);
+
+  // v25.0.87: 恢复一条历史记录（本地或云端）——还原全部参数 + 排盘结果 + 神煞；v25.0.88: 数据源切换统一原生存储
+  const restoreHistoryRecord = useCallback((rec: PaipanRecord) => {
     const inp = (rec.input || {}) as any;
     if (inp.year) setYear(inp.year);
     if (inp.month) setMonth(inp.month);
@@ -1599,7 +1644,7 @@ export default function BaziPage(){
     if (inp._trueSolarDisplay !== undefined) setTrueSolarDisplay(inp._trueSolarDisplay || null);
     if (inp._solarCorrection !== undefined) setSolarCorrection(inp._solarCorrection || null);
     if (rec.result) {
-      const bz = rec.result as BaziResult;
+      const bz = rec.result as unknown as BaziResult;
       setResult(bz);
       try {
         const ss = calculateAllShenSha({
@@ -1623,7 +1668,7 @@ export default function BaziPage(){
       setShowLoginPrompt(true);
       return;
     }
-    setHistoryList(getPaipanHistoryList("bazi"));
+    setHistoryList(await listPaipanRecords("bazi"));
     setShowHistory(true);
     setCloudMsg("");
     const member = getUserPermissionLevel() === "member";
@@ -1642,8 +1687,8 @@ export default function BaziPage(){
     }
   }, []);
 
-  // v25.0.87: 会员上传单条记录到云端储存桶
-  const uploadRecordToCloud = useCallback(async (rec: PaipanHistoryRecord) => {
+  // v25.0.87: 会员上传单条记录到云端储存桶；v25.0.88: 底层切换统一原生存储，云端标记存 note
+  const uploadRecordToCloud = useCallback(async (rec: PaipanRecord) => {
     if (cloudLoading) return;
     setCloudLoading(true); setCloudMsg("");
     try {
@@ -1651,12 +1696,18 @@ export default function BaziPage(){
       const res = await fetch("/api/oss/paipan-record", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ toolKey: "bazi", record: { id: rec.id, title: rec.title, input: rec.input, result: rec.result, _ts: rec._ts } }),
+        body: JSON.stringify({ toolKey: "bazi", record: { id: rec.id, title: rec.title, input: rec.input, result: rec.result, _ts: rec.createdAt } }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        markPaipanHistorySynced("bazi", rec.id, data.objectKey);
-        setHistoryList(getPaipanHistoryList("bazi"));
+        try {
+          await savePaipanRecord({
+            tool: "bazi", id: rec.id,
+            title: rec.title, input: rec.input, result: rec.result,
+            note: `cloud:${data.objectKey ?? ""}`,
+          });
+        } catch (e) { console.error("云端标记写入失败:", e); }
+        setHistoryList(await listPaipanRecords("bazi"));
         setCloudMsg("已备份到云端");
         const lres = await fetch("/api/oss/paipan-records?toolKey=bazi", { headers: token ? { Authorization: `Bearer ${token}` } : {} });
         const ldata = await lres.json();
@@ -1679,7 +1730,7 @@ export default function BaziPage(){
       });
       const data = await res.json();
       if (res.ok && data.success && data.record) {
-        restoreHistoryRecord(data.record as PaipanHistoryRecord);
+        restoreHistoryRecord(data.record as unknown as PaipanRecord);
       } else {
         setCloudMsg((data && data.error) || "云端记录读取失败");
       }
@@ -1696,17 +1747,20 @@ export default function BaziPage(){
       const ss=calculateAllShenSha({yearGan:bz.pillars[0].gan as TianGan,yearZhi:bz.pillars[0].zhi as DiZhi,monthGan:bz.pillars[1].gan as TianGan,monthZhi:bz.pillars[1].zhi as DiZhi,dayGan:bz.dayGan as TianGan,dayZhi:bz.dayZhi as DiZhi,hourGan:bz.pillars[3].gan as TianGan,hourZhi:bz.pillars[3].zhi as DiZhi,gender:g});
       setShensha(ss);setShowForm(false);savePaipanState("bazi",{input:{year:y,month:m,day:d,hour:h,minute:mi,gender:g,calType},result:bz,showForm:false,_ts:Date.now()});
       // v25.0.87: 排盘历史记录（完整参数+结果，同参数自动去重置顶）——记录保存需注册，游客不落记录
+      // v25.0.88: 底层切换统一原生存储（原生壳SQLite/网页localStorage），并关联命主档案
       if(getUserPermissionLevel()!=="visitor"){
-        try{savePaipanHistory("bazi",{
+        savePaipanRecord({
+          tool:"bazi",
           input:{year:y,month:m,day:d,hour:h,minute:mi,gender:g,calType,useTrueSolar:zhenTaiyang,longitude,name,zaoWanZi,xiaLing,_trueSolarDisplay:trueSolarDisplay,_solarCorrection:solarCorrection},
-          result:bz,
+          result:bz as unknown as Record<string, unknown>,
+          profileId:mingzhu?.id??null,
           title:`${g==="male"?"男":"女"}命 ${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")} ${String(h).padStart(2,"0")}:${String(mi).padStart(2,"0")} ${bz.pillars.map(p=>p.gan+p.zhi).join(" ")}`,
-        });}catch(e){console.error("保存历史记录失败:",e);}
+        }).catch(e=>{console.error("保存历史记录失败:",e);});
         // 保存客户记录
         try{saveRecord({clientId:selectedClient?selectedClient.id:"",type:"bazi",data:{...bz,inputParams:{year:y,month:m,day:d,hour:h,minute:mi,gender:g}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
       }
     }catch(e){console.error("排盘失败:",e);}
-  },[year,month,day,hour,gender,selectedClient,calType,zhenTaiyang,longitude,name,zaoWanZi,xiaLing,trueSolarDisplay,solarCorrection]);
+  },[year,month,day,hour,gender,selectedClient,calType,zhenTaiyang,longitude,name,zaoWanZi,xiaLing,trueSolarDisplay,solarCorrection,mingzhu]);
 
   const pillars=result?.pillars||[]; const shengxiao=pillars[0]?getShengXiao(pillars[0].zhi as DiZhi):"";
   const dateStr=`${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")} ${String(hour).padStart(2,"0")}:00`;
@@ -1830,8 +1884,18 @@ export default function BaziPage(){
       submitText="排盘" title="八字排盘"
     />
     {!showForm && !result && (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 gap-3">
         <button onClick={() => { clearPaipanState("bazi"); setShowForm(true); }} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">开始排盘</button>
+        <MingzhuProfilePicker
+          value={mingzhu}
+          onChange={applyMingzhuProfile}
+          buildDraft={() => ({
+            name: name || "",
+            gender: gender === "male" ? "男" : "女",
+            birthDate: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+            birthTime: `${String(hour).padStart(2, "0")}:00`,
+          })}
+        />
       </div>
     )}
     {result&&<div>
@@ -1839,7 +1903,7 @@ export default function BaziPage(){
       <div className="flex border-b border-[#eee] bg-white/95 sticky top-10 z-30 overflow-x-auto">
         {tabOrder.map(tab=><button key={tab} onClick={()=>setActiveTab(tab)} className={`shrink-0 px-3 py-2.5 text-center text-[15px] font-bold border-none bg-transparent cursor-pointer transition-colors duration-200 border-b-[3px]`} style={{color: activeTab===tab ? BRAND_PURPLE : "#666", borderBottomColor: activeTab===tab ? BRAND_PURPLE : "transparent", borderBottomStyle:"solid"}}>{tabLabels[tab]}</button>)}
       </div>
-      {/* v25.0.87: 排盘历史记录入口（全Tab可见） */}
+      {/* v25.0.87: 排盘历史记录入口（全Tab可见）；v25.0.88: 命主档案跨工具共享 */}
       <div className="bg-white border-b border-[#eee] px-3 py-1.5 flex items-center justify-between">
         <button
           onClick={openHistory}
@@ -1849,7 +1913,19 @@ export default function BaziPage(){
           <span>📋 历史记录</span>
           <span style={{ background: BRAND_PURPLE_BG, borderRadius: "8px", padding: "0 6px", fontSize: "10px", color: BRAND_PURPLE }}>{historyList.length}</span>
         </button>
-        <button onClick={()=>setShowForm(true)} className="text-[11px] cursor-pointer border-none bg-transparent" style={{ color: "#999" }}>修改资料重新排盘</button>
+        <div className="flex items-center gap-2">
+          <MingzhuProfilePicker
+            value={mingzhu}
+            onChange={applyMingzhuProfile}
+            buildDraft={() => ({
+              name: name || "",
+              gender: gender === "male" ? "男" : "女",
+              birthDate: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+              birthTime: `${String(hour).padStart(2, "0")}:00`,
+            })}
+          />
+          <button onClick={()=>setShowForm(true)} className="text-[11px] cursor-pointer border-none bg-transparent" style={{ color: "#999" }}>修改资料重新排盘</button>
+        </div>
       </div>
       {activeTab==="basic"&&<TabBasic result={result} shengxiao={shengxiao} dateStr={dateStr} lunarDateStr={lunarDateStr} solarDateStr={dateStr} trueSolarStr={trueSolarTimeStr} solarCorrection={solarCorrection} taiYuan={taiYuan} taiXi={taiXi} mingGong={mingGong} shenGong={shenGong} mingGua={mingGua} wuxingStats={wuxingStats} boneWeight={boneWeight} gender={gender}/>}
       {activeTab==="chart"&&<>
@@ -1956,24 +2032,24 @@ export default function BaziPage(){
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: "12px", color: "#333", fontWeight: "bold", wordBreak: "break-all" }}>{rec.title}</div>
                         <div style={{ fontSize: "10px", color: "#999", marginTop: "2px" }}>
-                          {rec._ts ? new Date(rec._ts).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) : ""}
-                          {rec.cloudSynced ? " · 已备份云端" : ""}
+                          {rec.createdAt ? new Date(rec.createdAt).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) : ""}
+                          {rec.note?.startsWith("cloud:") ? " · 已备份云端" : ""}
                         </div>
                       </div>
                     </div>
                     <div style={{ display: "flex", gap: "6px", marginTop: "6px" }}>
                       <button onClick={() => restoreHistoryRecord(rec)} style={{ flex: 1, padding: "5px", borderRadius: "6px", border: "none", background: BRAND_PURPLE, color: "white", fontSize: "11px", fontWeight: "bold", cursor: "pointer" }}>恢复</button>
-                      {isMember && !rec.cloudSynced && (
+                      {isMember && !rec.note?.startsWith("cloud:") && (
                         <button onClick={() => uploadRecordToCloud(rec)} disabled={cloudLoading} style={{ flex: 1, padding: "5px", borderRadius: "6px", border: `1px solid ${BRAND_PURPLE}`, background: "#fff", color: BRAND_PURPLE, fontSize: "11px", fontWeight: "bold", cursor: cloudLoading ? "not-allowed" : "pointer", opacity: cloudLoading ? 0.6 : 1 }}>☁ 备份云端</button>
                       )}
-                      <button onClick={() => { deletePaipanHistory("bazi", rec.id); setHistoryList(getPaipanHistoryList("bazi")); }} style={{ padding: "5px 10px", borderRadius: "6px", border: "1px solid #ddd", background: "#fff", color: "#c62828", fontSize: "11px", cursor: "pointer" }}>删除</button>
+                      <button onClick={() => { deletePaipanRecord(rec.id).then(() => listPaipanRecords("bazi")).then(setHistoryList).catch(() => {}); }} style={{ padding: "5px 10px", borderRadius: "6px", border: "1px solid #ddd", background: "#fff", color: "#c62828", fontSize: "11px", cursor: "pointer" }}>删除</button>
                     </div>
                   </div>
                 ))
               )}
 
               {historyList.length > 0 && (
-                <button onClick={() => { if (window.confirm("确定清空全部本地排盘记录吗？")) { clearPaipanHistory("bazi"); setHistoryList([]); } }} style={{ width: "100%", padding: "6px", borderRadius: "6px", border: "1px solid #ddd", background: "#fafafa", color: "#999", fontSize: "11px", cursor: "pointer", marginTop: "4px" }}>清空本地记录</button>
+                <button onClick={() => { if (window.confirm("确定清空全部本地排盘记录吗？")) { clearPaipanRecordsByTool("bazi").then(() => setHistoryList([])).catch(() => {}); } }} style={{ width: "100%", padding: "6px", borderRadius: "6px", border: "1px solid #ddd", background: "#fafafa", color: "#999", fontSize: "11px", cursor: "pointer", marginTop: "4px" }}>清空本地记录</button>
               )}
 
               {/* 云端备份（会员） */}

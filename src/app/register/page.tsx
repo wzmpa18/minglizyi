@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { BrandHeader } from "@/components/shared";
 import { sendSmsCode, sendEmailCode, registerWithPhone, registerWithEmail, checkUserExist } from "@/lib/loginService";
 import { recordInviteLanding } from "@/lib/antiCheatStore";
-import { useIOSNativeShell } from "@/lib/iosNativeGate";
+import { useNativeShell } from "@/lib/nativeShellGate";
 
 const BRAND = "#7B2FBE";
 
@@ -30,8 +30,8 @@ function EyeIcon({ show }: { show: boolean }) {
 type RegisterMode = "phone" | "email";
 
 export default function RegisterPage() {
-  // v25.0.77: iOS 壳内隐藏安卓下载引导（Guideline 2.5.2）
-  const iosNative = useIOSNativeShell();
+  // v25.0.88: 原生壳内隐藏安卓下载引导（APP端冗余入口）
+  const nativeShell = useNativeShell();
   const router = useRouter();
 
   const [registerMode, setRegisterMode] = useState<RegisterMode>("phone");
@@ -872,8 +872,8 @@ export default function RegisterPage() {
           {loading ? "注册中..." : "注册"}
         </button>
 
-        {/* v25.0.77: iOS 壳内隐藏安卓下载引导（Guideline 2.5.2） */}
-        {iosNative ? null : (<>
+        {/* v25.0.88: 原生壳内隐藏下载引导（APP端冗余入口，v25.0.77起iOS壳已隐藏） */}
+        {nativeShell ? null : (<>
           {/* v25.0.47_14: 下载APP入口（新用户扫码落地必见，全浏览器兼容：普通/系统/微信内置浏览器均可点击） */}
           <a
             href="https://yandaoguoxue.yandao.vip/friend"

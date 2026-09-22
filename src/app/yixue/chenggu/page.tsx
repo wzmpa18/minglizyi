@@ -7,6 +7,8 @@ import EventDivinationPanel from "@/components/EventDivinationPanel";
 
 import { ShareButton } from "@/components/ShareButton";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
+import { PaipanHistoryButton } from "@/components/PaipanHistoryButton";
+import { savePaipanRecord, type PaipanRecord } from "@/lib/nativePaipanStore";
 // ============================================================================
 // 称骨数据
 // ============================================================================
@@ -373,6 +375,24 @@ export default function ChengguPage() {
       totalWeight,
       piyu,
     });
+    // v25.0.88: 排盘记录自动落库（原生壳为SQLite，同参数原位去重）
+    savePaipanRecord({
+      tool: "chenggu",
+      title: `称骨·${totalWeight}（${gender === "male" ? "男" : "女"}命）`,
+      input: { year, month, day, shichen, gender },
+      result: { yearGz, yearWeight, monthWeight, dayWeight, hourWeight, totalQian, totalWeight, piyu },
+    }).catch(() => {});
+  };
+
+  // v25.0.88: 历史记录恢复
+  const handleRestoreHistory = (rec: PaipanRecord) => {
+    const inp = rec.input as { year?: number; month?: number; day?: number; shichen?: string; gender?: Gender };
+    if (inp.year) setYear(inp.year);
+    if (inp.month) setMonth(inp.month);
+    if (inp.day) setDay(inp.day);
+    if (inp.shichen) setShichen(inp.shichen);
+    if (inp.gender) setGender(inp.gender);
+    if (rec.result) setResult(rec.result as never);
   };
 
   return (
@@ -458,12 +478,15 @@ export default function ChengguPage() {
           </div>
         </div>
 
-        <button
-          onClick={handleCalculate}
-          className="w-full rounded-lg bg-primary py-3 text-primary-foreground font-medium hover:opacity-90 transition-opacity"
-        >
-          开始称骨
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleCalculate}
+            className="flex-1 rounded-lg bg-primary py-3 text-primary-foreground font-medium hover:opacity-90 transition-opacity"
+          >
+            开始称骨
+          </button>
+          <PaipanHistoryButton toolKey="chenggu" onRestore={handleRestoreHistory} />
+        </div>
       </div>
 
       {/* 结果展示 */}

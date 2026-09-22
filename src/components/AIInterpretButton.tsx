@@ -105,6 +105,15 @@ export default function AIInterpretButton({
       return;
     }
 
+    // v25.0.88: 离线边界提示——AI解读需联网；排盘/古籍/历史记录离线可用，明确告知边界
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      const offlineMsg = "当前无网络连接：AI智能解读需联网使用。排盘计算、古籍经典查阅、历史记录均可离线使用，请连接网络后重试。";
+      setShowResult(true);
+      setError(offlineMsg);
+      setContent(offlineMsg + DISCLAIMER);
+      return;
+    }
+
     setLoading(true);
     setShowResult(true);
     setContent("");

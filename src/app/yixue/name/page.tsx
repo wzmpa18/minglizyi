@@ -25,6 +25,8 @@ import type { Gender } from "@/algorithm-core";
 import { Lunar, LunarYear, LunarMonth } from "lunar-javascript";
 import SolarDatePicker from "@/components/shared/SolarDatePicker";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
+import { PaipanHistoryButton } from "@/components/PaipanHistoryButton";
+import { savePaipanRecord, type PaipanRecord } from "@/lib/nativePaipanStore";
 
 // ============================================================================
 // 常量
@@ -585,6 +587,18 @@ export default function NameAnalysisPage() {
           console.error("保存记录失败:", e);
         }
 
+        // v25.0.88: 排盘记录自动落库（原生壳为SQLite，同参数原位去重）
+        savePaipanRecord({
+          tool: "name",
+          title: `姓名解析·${trimmed}（${r.overallScore}分）`,
+          input: {
+            fullName: trimmed, surnameLength, gender,
+            birthDate, birthHour, birthMinute, calType,
+            lunarYear, lunarMonthValue, lunarDay,
+          },
+          result: r as unknown as Record<string, unknown>,
+        }).catch(() => {});
+
         // 滚动到结果
         setTimeout(() => {
           const el = document.getElementById("name-result");
@@ -597,6 +611,29 @@ export default function NameAnalysisPage() {
       }
     }, 300);
   }, [fullName, surnameLength, gender, selectedClient, requireLogin, baziAnalysis, birthDate, birthHour, birthMinute, calType, lunarYear, lunarMonthValue, lunarDay]);
+
+  // v25.0.88: 历史记录恢复
+  const handleRestoreHistory = useCallback((rec: PaipanRecord) => {
+    const inp = rec.input as {
+      fullName?: string; surnameLength?: 1 | 2; gender?: "male" | "female";
+      birthDate?: string; birthHour?: number; birthMinute?: number; calType?: "solar" | "lunar";
+      lunarYear?: number; lunarMonthValue?: string; lunarDay?: number;
+    };
+    if (inp.fullName) setFullName(inp.fullName);
+    if (inp.surnameLength) setSurnameLength(inp.surnameLength);
+    if (inp.gender) setGender(inp.gender);
+    if (inp.birthDate) setBirthDate(inp.birthDate);
+    if (inp.birthHour !== undefined) setBirthHour(inp.birthHour);
+    if (inp.birthMinute !== undefined) setBirthMinute(inp.birthMinute);
+    if (inp.calType) setCalType(inp.calType);
+    if (inp.lunarYear) setLunarYear(inp.lunarYear);
+    if (inp.lunarMonthValue) setLunarMonthValue(inp.lunarMonthValue);
+    if (inp.lunarDay) setLunarDay(inp.lunarDay);
+    if (rec.result) {
+      setResult(rec.result as unknown as NameAnalysisResult);
+      setHasResult(true);
+    }
+  }, []);
 
   // 生肖喜忌分析（从八字年柱推导生肖）
   const derivedZodiac = useMemo(() => {
@@ -917,6 +954,9 @@ export default function NameAnalysisPage() {
           >
             {loading ? "解析中..." : "开始解析"}
           </button>
+          <div className="mt-2 flex justify-center">
+            <PaipanHistoryButton toolKey="name" onRestore={handleRestoreHistory} />
+          </div>
 
           {/* 分析内容说明 */}
           <div className="mt-4 rounded-lg p-2.5" style={{ backgroundColor: "#f3edf7" }}>

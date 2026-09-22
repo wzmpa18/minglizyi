@@ -8,6 +8,8 @@ import EventDivinationPanel from "@/components/EventDivinationPanel";
 
 import { ShareButton } from "@/components/ShareButton";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
+import { PaipanHistoryButton } from "@/components/PaipanHistoryButton";
+import { savePaipanRecord, type PaipanRecord } from "@/lib/nativePaipanStore";
 // ============================================================================
 // 常量
 // ============================================================================
@@ -211,6 +213,17 @@ export default function JiemengPage() {
     return DREAM_DATABASE.filter(e => e.category === activeCategory);
   }, [activeCategory]);
 
+  // v25.0.88: 解梦记录自动落库（原生壳为SQLite，同关键词原位去重）
+  const persistDreamRecord = useCallback((kw: string, r: MatchResult[]) => {
+    if (!kw) return;
+    savePaipanRecord({
+      tool: "jiemeng",
+      title: `解梦·${kw}`,
+      input: { query: kw },
+      result: { results: r } as unknown as Record<string, unknown>,
+    }).catch(() => {});
+  }, []);
+
   const handleSearch = useCallback(() => {
     if (!query.trim()) return;
     setLoading(true);
@@ -221,8 +234,9 @@ export default function JiemengPage() {
       setResults(r);
       setHasResult(true);
       setLoading(false);
+      persistDreamRecord(query, r);
     }, 200);
-  }, [query]);
+  }, [query, persistDreamRecord]);
 
   const handleKeywordClick = useCallback((kw: string) => {
     setQuery(kw);
@@ -233,14 +247,28 @@ export default function JiemengPage() {
       setResults(r);
       setHasResult(true);
       setLoading(false);
+      persistDreamRecord(kw, r);
     }, 100);
-  }, []);
+  }, [persistDreamRecord]);
 
   const handleEntryClick = useCallback((entry: DreamEntry) => {
     setQuery(entry.keyword);
     setResults([{ entry, score: 100, matchedKeyword: entry.keyword }]);
     setHasResult(true);
     setRecordSaved(false);
+    persistDreamRecord(entry.keyword, [{ entry, score: 100, matchedKeyword: entry.keyword }]);
+  }, [persistDreamRecord]);
+
+  // v25.0.88: 历史记录恢复
+  const handleRestoreHistory = useCallback((rec: PaipanRecord) => {
+    const inp = rec.input as { query?: string };
+    const res = rec.result as { results?: MatchResult[] } | undefined;
+    if (typeof inp.query === "string") setQuery(inp.query);
+    if (res && Array.isArray(res.results) && res.results.length > 0) {
+      setResults(res.results);
+      setHasResult(true);
+      setRecordSaved(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -263,8 +291,9 @@ export default function JiemengPage() {
       {!hasResult && (
         <div className="bg-white px-3 py-3">
           {/* 客户选择 */}
-          <div className="mb-2">
+          <div className="mb-2 flex items-center gap-2">
             <ClientSelector selectedClient={selectedClient} onSelect={setSelectedClient} />
+            <PaipanHistoryButton toolKey="jiemeng" onRestore={handleRestoreHistory} />
           </div>
           <div className="mb-3">
             <label className="mb-1 block text-xs text-gray-500">梦境关键词</label>

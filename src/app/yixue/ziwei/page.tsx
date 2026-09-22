@@ -34,6 +34,9 @@ import { PostToSquareButton } from "@/components/PostToSquareButton";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
+import { PaipanHistoryButton } from "@/components/PaipanHistoryButton";
+import { MingzhuProfilePicker } from "@/components/MingzhuProfilePicker";
+import { savePaipanRecord, type PaipanRecord, type MingzhuProfile } from "@/lib/nativePaipanStore";
 
 // ====================================================================
 // 品牌色 & 常量
@@ -510,6 +513,24 @@ export default function ZiweiPage() {
     return () => ro.disconnect();
   }, [result, viewMode]);
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
+  // v25.0.88: 命主档案（跨工具共享）
+  const [mingzhu, setMingzhu] = useState<MingzhuProfile | null>(null);
+
+  // 选择命主档案 → 回填表单基础信息
+  const applyMingzhuProfile = useCallback((p: MingzhuProfile | null) => {
+    setMingzhu(p);
+    if (!p) return;
+    if (p.name) setName(p.name);
+    if (p.gender) setGender(p.gender === "男" ? "male" : "female");
+    if (p.birthDate) {
+      const [y, m, d] = p.birthDate.split("-").map(Number);
+      if (y && m && d) { setYear(y); setMonth(m); setDay(d); }
+    }
+    if (p.birthTime) {
+      const h = parseInt(p.birthTime.split(":")[0], 10);
+      if (!isNaN(h)) setHour(h);
+    }
+  }, []);
 
   // ---- 提交 ----
   const handleSubmit = (override?:{year:number;month:number;day:number;hour:number;gender:Gender}) => {
@@ -524,10 +545,35 @@ export default function ZiweiPage() {
       savePaipanState("ziwei",{input:{year:y,month:m,day:d,hour:h,gender:g,calType},showForm:false,_ts:Date.now()});
       // 保存客户记录
       try{saveRecord({clientId:selectedClient?selectedClient.id:"",type:"ziwei",data:{...res,inputParams:{year:y,month:m,day:d,hour:h,gender:g}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
+      // v25.0.88: 排盘记录自动落库（原生壳为SQLite，同参数原位去重）
+      savePaipanRecord({
+        tool: "ziwei",
+        title: `${name || "未命名"}·紫微排盘 ${y}-${m}-${d}`,
+        input: { name, year: y, month: m, day: d, hour: h, gender: g, calType },
+        result: res as unknown as Record<string, unknown>,
+        profileId: mingzhu?.id ?? null,
+      }).catch(() => {});
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "计算失败");
     }
   };
+
+  // v25.0.88: 历史记录恢复
+  const handleRestoreHistory = useCallback((rec: PaipanRecord) => {
+    const inp = rec.input as { name?: string; year?: number; month?: number; day?: number; hour?: number; gender?: Gender; calType?: string };
+    if (typeof inp.name === "string") setName(inp.name);
+    if (inp.year) setYear(inp.year);
+    if (inp.month) setMonth(inp.month);
+    if (inp.day) setDay(inp.day);
+    if (inp.hour !== undefined) setHour(inp.hour);
+    if (inp.gender) setGender(inp.gender);
+    if (rec.result) {
+      setResult(rec.result as unknown as ZiweiResult);
+      setShowForm(false);
+    } else {
+      setShowForm(true);
+    }
+  }, []);
 
   // URL参数clientId自动选中客户 + 回填数据检查
   useEffect(() => {
@@ -1086,8 +1132,21 @@ export default function ZiweiPage() {
       {/* 排盘结果 */}
       {/* ================================================================ */}
       {!showForm && !result && (
-        <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+        <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 gap-3">
           <button onClick={() => { clearPaipanState("ziwei"); setShowForm(true); }} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">开始排盘</button>
+          <div className="flex items-center gap-2">
+            <MingzhuProfilePicker
+              value={mingzhu}
+              onChange={applyMingzhuProfile}
+              buildDraft={() => ({
+                name: name || "",
+                gender: gender === "male" ? "男" : "女",
+                birthDate: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
+                birthTime: `${String(hour).padStart(2, "0")}:00`,
+              })}
+            />
+            <PaipanHistoryButton toolKey="ziwei" onRestore={handleRestoreHistory} />
+          </div>
         </div>
       )}
       {result && (

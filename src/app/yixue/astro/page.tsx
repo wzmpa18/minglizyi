@@ -14,6 +14,8 @@ import { ShareButton } from "@/components/ShareButton";
 
 import { getDignity, DIGNITY_NOTES, CLASSICAL_ASTRO_VERSION as CLASSICAL_VERSION } from "@/lib/classicalAstroRules";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
+import { PaipanHistoryButton } from "@/components/PaipanHistoryButton";
+import { savePaipanRecord, type PaipanRecord } from "@/lib/nativePaipanStore";
 
 // ============================================================================
 // 常量
@@ -80,6 +82,13 @@ export default function AstroPage() {
         });
         setChart(result);
         savePaipanState("astro", { input: { birth, cityIdx, chart: result }, showForm: false, _ts: Date.now() });
+        // v25.0.88: 排盘记录自动落库（原生壳为SQLite，同参数原位去重）
+        savePaipanRecord({
+          tool: "astro",
+          title: `星盘·${city.name} ${birth.year}-${birth.month}-${birth.day}`,
+          input: { birth, cityIdx },
+          result: result as unknown as Record<string, unknown>,
+        }).catch(() => {});
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : "星盘计算失败，请检查输入");
       } finally {
@@ -87,6 +96,16 @@ export default function AstroPage() {
       }
     }, 150);
   }, [birth, city, cityIdx]);
+
+  // v25.0.88: 历史记录恢复
+  const handleRestoreHistory = useCallback((rec: PaipanRecord) => {
+    const inp = rec.input as { birth?: typeof birth; cityIdx?: number };
+    if (inp.birth) setBirth(inp.birth);
+    if (typeof inp.cityIdx === "number") setCityIdx(inp.cityIdx);
+    if (rec.result) {
+      setChart(rec.result as unknown as NatalChartResult);
+    }
+  }, []);
 
   // ==================== 星盘轮盘绘制 ====================
   const chartSvg = useMemo(() => {
@@ -204,6 +223,9 @@ export default function AstroPage() {
           >
             {loading ? "计算中..." : "生成星盘"}
           </button>
+          <div className="mt-2 flex justify-center">
+            <PaipanHistoryButton toolKey="astro" onRestore={handleRestoreHistory} />
+          </div>
 
           <button onClick={() => setShowTerms(!showTerms)} className="mt-3 w-full text-center text-xs text-gray-400">
             {showTerms ? "收起术语说明 ▲" : "什么是上升点/宫位/相位？术语说明 ▼"}

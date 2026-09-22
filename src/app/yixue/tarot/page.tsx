@@ -17,6 +17,8 @@ import AIInterpretButton from "@/components/AIInterpretButton";
 import { buildDeepReportSystemPrompt } from "@/lib/deepReportPrompt";
 import { ShareButton } from "@/components/ShareButton";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
+import { PaipanHistoryButton } from "@/components/PaipanHistoryButton";
+import { savePaipanRecord, type PaipanRecord } from "@/lib/nativePaipanStore";
 
 const BRAND = "#7B2FBE";
 const SUIT_MARK: Record<string, string> = { major: "✦", wands: "杖", cups: "杯", swords: "剑", pentacles: "币" };
@@ -64,8 +66,28 @@ export default function TarotPage() {
       setRevealed(cards.map(() => false));
       setShuffling(false);
       setShowResult(true);
+      // v25.0.88: 排盘记录自动落库（原生壳为SQLite，同问题+牌阵原位去重）
+      savePaipanRecord({
+        tool: "tarot",
+        title: `塔罗·${spread.name}${question.trim() ? `·${question.trim()}` : ""}`,
+        input: { question, spreadId: spread.id },
+        result: { drawn: cards } as unknown as Record<string, unknown>,
+      }).catch(() => {});
     }, 900);
-  }, [spread, shuffling, setShowResult]);
+  }, [spread, shuffling, setShowResult, question]);
+
+  // v25.0.88: 历史记录恢复（回填问题与牌阵，重放出该次抽取的牌面）
+  const handleRestoreHistory = useCallback((rec: PaipanRecord) => {
+    const inp = rec.input as { question?: string; spreadId?: string };
+    const res = rec.result as { drawn?: DrawnCard[] } | undefined;
+    if (typeof inp.question === "string") setQuestion(inp.question);
+    if (inp.spreadId && enabledSpreads.some((s) => s.id === inp.spreadId)) setSpreadId(inp.spreadId);
+    if (res && Array.isArray(res.drawn) && res.drawn.length > 0) {
+      setDrawn(res.drawn);
+      setRevealed(res.drawn.map(() => true));
+      setShowResult(true);
+    }
+  }, [enabledSpreads, setShowResult]);
 
   const revealCard = (idx: number) => {
     setRevealed((prev) => {
@@ -286,6 +308,9 @@ export default function TarotPage() {
           >
             {shuffling ? "洗牌中…" : "洗牌 · 开始"}
           </button>
+          <div className="mt-2 flex justify-center">
+            <PaipanHistoryButton toolKey="tarot" onRestore={handleRestoreHistory} />
+          </div>
           {shuffling && (
             <div className="flex justify-center gap-1.5 py-1">
               {[0, 1, 2, 3, 4].map((i) => (

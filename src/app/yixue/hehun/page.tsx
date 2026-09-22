@@ -27,6 +27,8 @@ import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { ShareButton } from "@/components/ShareButton";
 import { PostToSquareButton } from "@/components/PostToSquareButton";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
+import { PaipanHistoryButton } from "@/components/PaipanHistoryButton";
+import { savePaipanRecord, type PaipanRecord } from "@/lib/nativePaipanStore";
 
 // ============================================================================
 // 解读类型标签颜色
@@ -393,8 +395,37 @@ export default function HehunPage() {
     // 因此将 savePaipanState 移入 useEffect，确保 hehunResult 已计算完成
     if (hasResult && hehunResult) {
       savePaipanState("hehun",{input:{maleYear,maleMonth,maleDay,maleHour,femaleYear,femaleMonth,femaleDay,femaleHour},result:hehunResult,showForm:false,_ts:Date.now()});
+      // v25.0.88: 排盘记录自动落库（原生壳为SQLite，同参数原位去重）
+      savePaipanRecord({
+        tool: "hehun",
+        title: `合婚·男${maleYear}年/女${femaleYear}年`,
+        input: { maleYear, maleMonth, maleDay, maleHour, femaleYear, femaleMonth, femaleDay, femaleHour },
+        result: hehunResult as unknown as Record<string, unknown>,
+      }).catch(() => {});
     }
   }, [hasResult, hehunResult, selectedClient, recordSaved, maleYear, maleMonth, maleDay, maleHour, femaleYear, femaleMonth, femaleDay, femaleHour]);
+
+  // v25.0.88: 历史记录恢复（回填双方出生信息，结果由 useMemo 同参数重算）
+  const handleRestoreHistory = useCallback((rec: PaipanRecord) => {
+    const inp = rec.input as {
+      maleYear?: number; maleMonth?: number; maleDay?: number; maleHour?: number;
+      femaleYear?: number; femaleMonth?: number; femaleDay?: number; femaleHour?: number;
+    };
+    if (inp.maleYear) setMaleYear(inp.maleYear);
+    if (inp.maleMonth) setMaleMonth(inp.maleMonth);
+    if (inp.maleDay) setMaleDay(inp.maleDay);
+    if (inp.maleHour !== undefined) setMaleHour(inp.maleHour);
+    if (inp.femaleYear) setFemaleYear(inp.femaleYear);
+    if (inp.femaleMonth) setFemaleMonth(inp.femaleMonth);
+    if (inp.femaleDay) setFemaleDay(inp.femaleDay);
+    if (inp.femaleHour !== undefined) setFemaleHour(inp.femaleHour);
+    setRecordSaved(false);
+    setHasResult(true);
+    setTimeout(() => {
+      const el = document.getElementById("hehun-result");
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+  }, []);
 
   /** 点击开始合婚 */
   const doHehun = useCallback(() => {
@@ -604,6 +635,7 @@ export default function HehunPage() {
             >
               {loading ? "分析中..." : hasResult ? "重新合婚" : "开始合婚"}
             </button>
+            <PaipanHistoryButton toolKey="hehun" onRestore={handleRestoreHistory} />
           </div>
           <div className="flex gap-2 mt-2 justify-center">
             <button

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useNativeShell } from "@/lib/nativeShellGate";
 
 const BRAND = "#7B2FBE";
 const BRAND_DARK = "#2D1A3E";
@@ -74,6 +75,8 @@ function extractLines(payload: unknown): string[] {
 
 export default function ShareResultPage() {
   const router = useRouter();
+  // v25.0.88: 原生壳内隐藏下载/打开APP引导（APP端冗余入口）
+  const nativeShell = useNativeShell();
   const [data, setData] = useState<LandingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -220,8 +223,8 @@ export default function ShareResultPage() {
       <section className="mx-4 mt-4 rounded-2xl bg-white p-5 shadow-sm">
         <p className="mb-3 text-sm font-semibold text-gray-800">开始使用</p>
 
-        {/* Android：下载APP */}
-        {device === "android" && landing?.androidDownloadEnabled !== false && (
+        {/* Android：下载APP（原生壳内隐藏，用户已装APP） */}
+        {device === "android" && !nativeShell && landing?.androidDownloadEnabled !== false && (
           <a
             href={landing?.androidUrl || "/download"}
             onClick={recordDownload}
@@ -232,8 +235,8 @@ export default function ShareResultPage() {
           </a>
         )}
 
-        {/* iPhone：上架前网页版继续，上架后App Store */}
-        {device === "ios" && (
+        {/* iPhone：上架前网页版继续，上架后App Store（原生壳内隐藏，用户已装APP） */}
+        {device === "ios" && !nativeShell && (
           landing?.iosStoreEnabled ? (
             <a
               href={landing.iosStoreUrl || landing?.downloadPage || "/download"}
@@ -266,13 +269,15 @@ export default function ShareResultPage() {
         )}
 
         <div className="flex gap-2">
-          <button
-            onClick={openApp}
-            className="flex-1 rounded-xl border py-3 text-sm font-medium"
-            style={{ borderColor: BRAND + "55", color: BRAND }}
-          >
-            打开APP
-          </button>
+          {!nativeShell && (
+            <button
+              onClick={openApp}
+              className="flex-1 rounded-xl border py-3 text-sm font-medium"
+              style={{ borderColor: BRAND + "55", color: BRAND }}
+            >
+              打开APP
+            </button>
+          )}
           <a
             href={registerUrl()}
             className="flex-1 rounded-xl border py-3 text-center text-sm font-medium"

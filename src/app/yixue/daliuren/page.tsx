@@ -28,6 +28,8 @@ import { getSanChuanInterpretation, getSiKeInterpretation, getKeTiInterpretation
 import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
 import { useToolBack } from "@/lib/useToolBack";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
+import { PaipanHistoryButton } from "@/components/PaipanHistoryButton";
+import { savePaipanRecord, type PaipanRecord } from "@/lib/nativePaipanStore";
 import { ShareButton } from "@/components/ShareButton";
 import { PostToSquareButton } from "@/components/PostToSquareButton";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
@@ -458,7 +460,25 @@ export default function DaLiuRenPage() {
     savePaipanState("daliuren",{input:params as any,showForm:false,_ts:Date.now()});
     // 保存客户记录
     try{saveRecord({clientId:selectedClient?selectedClient.id:"",type:"daliuren",data:{...result,inputParams:params},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
+    // v25.0.88: 排盘记录自动落库（原生壳为SQLite，同参数原位去重）
+    savePaipanRecord({
+      tool: "daliuren",
+      title: `大六壬·${params.year}-${params.month}-${params.day} ${String(params.hour).padStart(2, "0")}:${String(params.minute).padStart(2, "0")}`,
+      input: params as unknown as Record<string, unknown>,
+      result: result as unknown as Record<string, unknown>,
+    }).catch(() => {});
   }, [selectedClient]);
+
+  // v25.0.88: 历史记录恢复
+  const handleRestoreHistory = useCallback((rec: PaipanRecord) => {
+    setPrefillParams(rec.input as unknown as DaLiuRenInputParams);
+    if (rec.result) {
+      setData(rec.result as unknown as DaLiuRenResult);
+      setShowForm(false);
+    } else {
+      setShowForm(true);
+    }
+  }, []);
 
   // 不自动排盘，用户必须点击排盘按钮
   if (!data) {
@@ -466,6 +486,9 @@ export default function DaLiuRenPage() {
       <div className="bg-[#ededed] min-h-screen flex justify-center">
         <div className="w-full" style={{ maxWidth: "420px", paddingBottom: "10px" }}>
           <InputPanel show={true} showTitle={false} onClose={() => {}} onSubmit={handleSubmit} selectedClient={selectedClient} onClientSelect={setSelectedClient} initialValues={prefillParams} />
+          <div className="flex justify-center py-2">
+            <PaipanHistoryButton toolKey="daliuren" onRestore={handleRestoreHistory} />
+          </div>
         </div>
       </div>
     );

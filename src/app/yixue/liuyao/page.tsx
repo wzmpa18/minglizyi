@@ -12,6 +12,8 @@ import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { ShareButton } from "@/components/ShareButton";
 import { PostToSquareButton } from "@/components/PostToSquareButton";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
+import { PaipanHistoryButton } from "@/components/PaipanHistoryButton";
+import { savePaipanRecord, type PaipanRecord } from "@/lib/nativePaipanStore";
 
 // ============================================================================
 // 品牌色 & 常量
@@ -458,10 +460,42 @@ export default function LiuyaoPage() {
       savePaipanState("liuyao",{input:{dateStr,hour,minute,method,question,manualYaos,numUpper,numLower,numDong,coinResults},result:r,showForm:false,_ts:Date.now()});
       // 保存客户记录
       try{saveRecord({clientId:selectedClient?selectedClient.id:"",type:"liuyao",data:{...r,inputParams:input},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
+      // v25.0.88: 排盘记录自动落库（原生壳为SQLite，同参数原位去重）
+      savePaipanRecord({
+        tool: "liuyao",
+        title: `六爻·${(question.trim() || (method === "time" ? "时间起卦" : method === "coin" ? "铜钱起卦" : method === "number" ? "数字起卦" : "手动起卦")) + " " + (r.benGua?.name || "")}`.trim(),
+        input: { dateStr, hour, minute, method, question, manualYaos, numUpper, numLower, numDong, coinResults },
+        result: r as unknown as Record<string, unknown>,
+      }).catch(() => {});
     } catch (e) {
       setError(e instanceof Error ? e.message : "排盘失败");
     }
-  }, [parsedDate, hour, minute, method, manualYaos, numUpper, numLower, numDong, question, selectedClient, coinResults]);
+  }, [parsedDate, hour, minute, method, manualYaos, numUpper, numLower, numDong, question, selectedClient, coinResults, dateStr]);
+
+  // v25.0.88: 历史记录恢复
+  const handleRestoreHistory = useCallback((rec: PaipanRecord) => {
+    const inp = rec.input as {
+      dateStr?: string; hour?: number; minute?: number; method?: typeof method;
+      question?: string; manualYaos?: YaoType[]; numUpper?: number; numLower?: number; numDong?: number;
+      coinResults?: (boolean[] | null)[];
+    };
+    if (inp.dateStr) setDateStr(inp.dateStr);
+    if (inp.hour !== undefined) setHour(inp.hour);
+    if (inp.minute !== undefined) setMinute(inp.minute);
+    if (inp.method) setMethod(inp.method);
+    if (inp.question) setQuestion(inp.question);
+    if (inp.manualYaos) setManualYaos(inp.manualYaos);
+    if (inp.numUpper) setNumUpper(inp.numUpper);
+    if (inp.numLower) setNumLower(inp.numLower);
+    if (inp.numDong) setNumDong(inp.numDong);
+    if (inp.coinResults) setCoinResults(inp.coinResults);
+    if (rec.result) {
+      setResult(rec.result as unknown as LiuyaoResult);
+      setShowForm(false);
+    } else {
+      setShowForm(true);
+    }
+  }, []);
 
   // 使用当前时间
   const handleUseNow = useCallback(() => {
@@ -705,6 +739,9 @@ export default function LiuyaoPage() {
               fontSize: "16px", fontWeight: "bold", cursor: "pointer",
               boxShadow: "0 2px 8px rgba(123, 47, 190, 0.3)",
             }}>起卦</button>
+            <div style={{ display: "flex", justifyContent: "center", marginTop: "10px" }}>
+              <PaipanHistoryButton toolKey="liuyao" onRestore={handleRestoreHistory} />
+            </div>
           </div>
         )}
 

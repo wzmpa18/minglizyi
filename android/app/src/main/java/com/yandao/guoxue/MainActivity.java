@@ -14,6 +14,7 @@ import android.widget.Toast;
 import androidx.activity.OnBackPressedCallback;
 
 import com.getcapacitor.BridgeActivity;
+import com.yandao.guoxue.plugins.PaipanStorePlugin;
 
 /**
  * v25.0.55: WebView 下载监听——壳内 location.href 指向 APK 等附件时，
@@ -39,6 +40,9 @@ public class MainActivity extends BridgeActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // v25.0.88: 排盘记录/命主档案原生存储插件（必须在 super.onCreate 之后注册）
+        registerPlugin(PaipanStorePlugin.class);
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override

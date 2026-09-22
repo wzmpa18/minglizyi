@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { BrandHeader } from "@/components/shared";
 import { loginWithPassword } from "@/lib/loginService";
 import { getLoginState, moveLoginStateToSession } from "@/lib/auth";
-import { useIOSNativeShell } from "@/lib/iosNativeGate";
+import { useNativeShell } from "@/lib/nativeShellGate";
 
 const BRAND = "#7B2FBE";
 
@@ -30,7 +30,7 @@ function EyeIcon({ show }: { show: boolean }) {
 export default function LoginPage() {
   const router = useRouter();
   // v25.0.77: iOS 壳内隐藏下载引导（App Store 2.5.2 外部安装引导）；v25.0.87 微信登录已彻底移除
-  const iosNative = useIOSNativeShell();
+  const nativeShell = useNativeShell();
 
   // v20.1: 统一账号输入（支持手机号/邮箱/数字ID）
   const [account, setAccount] = useState("");
@@ -407,8 +407,8 @@ export default function LoginPage() {
           {loading ? "登录中..." : "登录"}
         </button>
 
-        {/* v25.0.77: iOS 壳内隐藏安卓下载引导（Guideline 2.5.2） */}
-        {iosNative ? null : (<>
+        {/* v25.0.88: 原生壳内隐藏下载引导（APP端冗余入口，v25.0.77起iOS壳已隐藏） */}
+        {nativeShell ? null : (<>
           {/* v25.0.47_14: 下载APP入口（全浏览器可见，与注册页一致） */}
           <a
             href="https://yandaoguoxue.yandao.vip/friend"

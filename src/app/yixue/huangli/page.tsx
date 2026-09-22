@@ -14,6 +14,7 @@ import { savePaipanState, loadPaipanState } from "@/lib/paipanPersistence";
 import { ShareButton } from "@/components/ShareButton";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
+import { useNativeShell } from "@/lib/nativeShellGate";
 const BRAND = "#7B2FBE";
 
 // 解读类型颜色
@@ -660,6 +661,8 @@ function MiniCell({ label, value }: { label: string; value: string }) {
 
 // ===== 添加到手机桌面组件 =====
 function AddToHomeScreen() {
+  // v25.0.88: 原生壳内隐藏PWA安装引导（APP端冗余入口）
+  const nativeShell = useNativeShell();
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
   useBodyScrollLock(showModal);
@@ -668,6 +671,8 @@ function AddToHomeScreen() {
   const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
+    // 原生壳内无需PWA引导
+    if (nativeShell) return;
     // 检测是否已在独立模式（已添加到桌面）
     const standalone = window.matchMedia("(display-mode: standalone)").matches ||
       (window.navigator as any).standalone === true;
@@ -688,8 +693,8 @@ function AddToHomeScreen() {
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
-  // 已添加到桌面时不显示
-  if (isStandalone) return null;
+  // 原生壳内或已添加到桌面时不显示
+  if (nativeShell || isStandalone) return null;
 
   const handleAddClick = async () => {
     if (deferredPrompt) {

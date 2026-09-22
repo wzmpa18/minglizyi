@@ -17,6 +17,8 @@ import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { ShareButton } from "@/components/ShareButton";
 import { PostToSquareButton } from "@/components/PostToSquareButton";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
+import { PaipanHistoryButton } from "@/components/PaipanHistoryButton";
+import { savePaipanRecord, type PaipanRecord } from "@/lib/nativePaipanStore";
 // ============================================================================
 // 常量
 // ============================================================================
@@ -332,12 +334,36 @@ export default function TaiyiSanshiPage() {
       setLoading(false);
       setInterpretPanel(null);
       savePaipanState("taiyi",{input:{taiyiYear:y,taiyiMonth:mo,taiyiDay:d,taiyiHour:h,desc},showForm:false,_ts:Date.now()});
+      // v25.0.88: 排盘记录自动落库（原生壳为SQLite，同参数原位去重）
+      if (r) {
+        savePaipanRecord({
+          tool: "taiyi",
+          title: `太乙三式·${y}-${mo}-${d} ${h}时`,
+          input: { taiyiYear: y, taiyiMonth: mo, taiyiDay: d, taiyiHour: h, desc },
+          result: r as unknown as Record<string, unknown>,
+        }).catch(() => {});
+      }
       // 保存客户记录
       if(r){
         try{saveRecord({clientId:selectedClient?selectedClient.id:"",type:"taiyi-sanshi",data:{...r,inputParams:{taiyiYear:y,taiyiMonth:mo,taiyiDay:d,taiyiHour:h,desc}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
       }
     }, 200);
   }, [taiyiYear, taiyiMonth, taiyiDay, taiyiHour, selectedClient, desc]);
+
+  // v25.0.88: 历史记录恢复
+  const handleRestoreHistory = useCallback((rec: PaipanRecord) => {
+    const inp = rec.input as { taiyiYear?: number; taiyiMonth?: number; taiyiDay?: number; taiyiHour?: number; desc?: string };
+    if (inp.taiyiYear) setTaiyiYear(inp.taiyiYear);
+    if (inp.taiyiMonth) setTaiyiMonth(inp.taiyiMonth);
+    if (inp.taiyiDay) setTaiyiDay(inp.taiyiDay);
+    if (inp.taiyiHour !== undefined) setTaiyiHour(inp.taiyiHour);
+    if (inp.desc !== undefined) setDesc(inp.desc);
+    if (rec.result) {
+      setResult(rec.result as unknown as TaiyiResult);
+      setHasResult(true);
+      setShowForm(false);
+    }
+  }, []);
 
   // URL参数clientId + 回填检查
   useEffect(() => {
@@ -409,8 +435,9 @@ export default function TaiyiSanshiPage() {
     return (
       <div className="bg-[#ededed] min-h-screen flex justify-center">
         <div className="w-full" style={{ maxWidth: "420px" }}>
-          <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
+          <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 gap-3">
             <button onClick={() => { clearPaipanState("taiyi"); setShowForm(true); }} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">开始排盘</button>
+            <PaipanHistoryButton toolKey="taiyi" onRestore={handleRestoreHistory} />
           </div>
         </div>
       </div>

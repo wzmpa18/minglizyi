@@ -15,6 +15,8 @@ import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { ShareButton } from "@/components/ShareButton";
 import { PostToSquareButton } from "@/components/PostToSquareButton";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
+import { PaipanHistoryButton } from "@/components/PaipanHistoryButton";
+import { savePaipanRecord, type PaipanRecord } from "@/lib/nativePaipanStore";
 // ============================================================================
 // 常量
 // ============================================================================
@@ -142,12 +144,36 @@ export default function XuankongFeixingPage() {
       setHasResult(true);
       setLoading(false);
       savePaipanState("xuankong",{input:{buildYear:effYear,month,day,hour,zuoShan,floor},showForm:false,_ts:Date.now()});
+      // v25.0.88: 排盘记录自动落库（原生壳为SQLite，同参数原位去重）
+      if (r) {
+        savePaipanRecord({
+          tool: "xuankong",
+          title: `玄空飞星·${zuoShan}山${xiangShan}向·${getYunName(yun)}`,
+          input: { buildYear: effYear, month, day, hour, zuoShan, floor },
+          result: r as unknown as Record<string, unknown>,
+        }).catch(() => {});
+      }
       // 保存客户记录
       if(r){
         try{saveRecord({clientId:selectedClient?selectedClient.id:"",type:"xuankong-feixing",data:{...r,inputParams:{zuoShan,xiangShan,buildYear:effYear,floor}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
       }
     }, 200);
   }, [zuoShan, xiangShan, buildYear, floor, selectedClient]);
+
+  // v25.0.88: 历史记录恢复
+  const handleRestoreHistory = useCallback((rec: PaipanRecord) => {
+    const inp = rec.input as { buildYear?: number; month?: number; day?: number; hour?: number; zuoShan?: string; floor?: number };
+    if (inp.buildYear) setBuildYear(inp.buildYear);
+    if (inp.month) setMonth(inp.month);
+    if (inp.day) setDay(inp.day);
+    if (inp.hour) setHour(inp.hour);
+    if (inp.zuoShan && (ER_SHI_SI_SHAN as readonly string[]).includes(inp.zuoShan)) setZuoShan(inp.zuoShan);
+    if (inp.floor) setFloor(inp.floor);
+    if (rec.result) {
+      setResult(rec.result as ReturnType<typeof calcXuankong>);
+      setHasResult(true);
+    }
+  }, []);
 
   // 宫位点击处理
   const handleGongClick = useCallback((gong: number) => {
@@ -284,6 +310,7 @@ export default function XuankongFeixingPage() {
             >
               {loading ? "排盘中..." : "开始排盘"}
             </button>
+            <PaipanHistoryButton toolKey="xuankong" onRestore={handleRestoreHistory} />
           </div>
 
           <div className="mt-6 flex flex-col items-center justify-center py-8 text-gray-400">
