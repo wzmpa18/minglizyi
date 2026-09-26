@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { clearLoginState, getLoginState, type LoginState } from "@/lib/auth";
 import { clearAllTokens } from "@/lib/authInterceptor";
 import { captureAndSavePoster, preloadImageAsDataUrl } from "@/lib/posterCapture";
@@ -53,13 +54,13 @@ function ZoneItem({
   );
   if (href) {
     return (
-      <a
+      <Link
         href={href}
         className="flex w-full items-center gap-3 bg-white px-4 py-3 text-left active:bg-gray-50"
         style={{ borderBottom: noBorder ? "none" : "1px solid #f5f5f5", textDecoration: "none" }}
       >
         {inner}
-      </a>
+      </Link>
     );
   }
   return (
