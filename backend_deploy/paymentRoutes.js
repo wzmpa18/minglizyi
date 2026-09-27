@@ -877,6 +877,12 @@ router.post('/create', require('./register_routes').authMiddleware, async (req, 
     if (!type || !validTypes.includes(type)) {
       return jsonResponse(res, 400, false, `订单类型无效，支持: ${validTypes.join(', ')}`);
     }
+    if (type === 'SINGLE_UNLOCK' && (!extra || typeof extra.unlockTargetId !== 'string' || !extra.unlockTargetId.trim())) {
+      return jsonResponse(res, 400, false, '缺少购买权益信息，未发起付款');
+    }
+    if (!['MEMBERSHIP', 'POINTS_RECHARGE', 'SINGLE_UNLOCK', 'SERVICE_ORDER'].includes(type)) {
+      return jsonResponse(res, 503, false, '该购买项目交付服务正在维护，未发起付款');
+    }
 
     if (typeof amount !== 'number' || isNaN(amount) || amount <= 0) {
       return jsonResponse(res, 400, false, '金额必须为大于 0 的数字');
@@ -1473,12 +1479,14 @@ async function reconcileUndeliveredOrders() {
   try {
     const db = getOrdersDb();
     if (!db) return;
-    const rows = db.prepare("SELECT order_no FROM user_orders WHERE payment_method='wechat' AND ((status='PAID' AND benefit_delivered=0) OR (status='PENDING' AND created_at>=?)) ORDER BY created_at LIMIT 50").all(new Date(Date.now()-86400000).toISOString());
+    db.exec('CREATE TABLE IF NOT EXISTS payment_reconcile_checks(order_no TEXT PRIMARY KEY,checked_at TEXT NOT NULL)');
+    const rows = db.prepare("SELECT o.order_no FROM user_orders o LEFT JOIN payment_reconcile_checks c ON c.order_no=o.order_no WHERE o.payment_method='wechat' AND o.status IN ('PAID','PENDING','REFUND_PENDING') AND o.created_at>=? AND (c.checked_at IS NULL OR c.checked_at<?) ORDER BY COALESCE(c.checked_at,''),o.created_at LIMIT 50").all(new Date(Date.now()-7*86400000).toISOString(),new Date(Date.now()-5*60000).toISOString());
     for (const row of rows) {
       const order = getOrderRecord(row.order_no);
       if (!order) continue;
       try {
         const q = await wechatPayV3.queryOrderByOutTradeNo(row.order_no);
+        db.prepare('INSERT INTO payment_reconcile_checks(order_no,checked_at) VALUES (?,?) ON CONFLICT(order_no) DO UPDATE SET checked_at=excluded.checked_at').run(row.order_no,new Date().toISOString());
         if (!q.success) continue;
         if (q.tradeState === 'SUCCESS') {
           if (order.status === ORDER_STATUS.PENDING) updateOrderRecord(order.orderId,ORDER_STATUS.PAID,'wechat');
@@ -1486,6 +1494,9 @@ async function reconcileUndeliveredOrders() {
         } else if(q.tradeState === 'REFUND') {
           order.benefitDelivered = false;
           updateOrderRecord(order.orderId,'REFUND_PENDING','wechat');
+          require('./paymentAiCredits').ensure(db);
+          db.prepare('UPDATE paid_ai_credits SET remaining=0 WHERE source_order_no=?').run(order.orderId);
+          db.prepare('DELETE FROM user_entitlements WHERE source_order_no=?').run(order.orderId);
         } else if(['CLOSED','REVOKED','PAYERROR','NOT_FOUND'].includes(q.tradeState)) {
           updateOrderRecord(order.orderId,ORDER_STATUS.CLOSED,'wechat');
         }
