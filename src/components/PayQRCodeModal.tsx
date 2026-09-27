@@ -9,7 +9,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { pollPaymentStatus, type NativePayTicket } from "@/lib/paymentService";
+import { queryPaymentStatus, refreshUserBenefits, type NativePayTicket } from "@/lib/paymentService";
 
 const BRAND = "#7B2FBE";
 
@@ -58,8 +58,9 @@ export function PayQRCodeModal({
     setPayState("waiting");
     let stopped = false;
     let attempts = 0;
+    let inFlight = false;
     const timer = setInterval(async () => {
-      if (stopped || paidRef.current) return;
+      if (stopped || paidRef.current || inFlight) return;
       attempts += 1;
       if (attempts > 90) {
         stopped = true;
@@ -67,11 +68,13 @@ export function PayQRCodeModal({
         setPayState("expired");
         return;
       }
+      inFlight = true;
       try {
-        const s = await pollPaymentStatus(orderId);
-        if (!stopped && s && s.status === "PAID") {
+        const s = await queryPaymentStatus(orderId);
+        if (!stopped && s && s.status === "PAID" && s.benefitDelivered === true) {
           paidRef.current = true;
           clearInterval(timer);
+          await refreshUserBenefits();
           setPayState("paid");
           setTimeout(() => {
             if (!stopped) onPaid();
@@ -79,7 +82,7 @@ export function PayQRCodeModal({
         }
       } catch {
         // 网络抖动时继续轮询
-      }
+      } finally { inFlight = false; }
     }, 2000);
     return () => {
       stopped = true;
@@ -145,7 +148,7 @@ export function PayQRCodeModal({
               请使用微信「扫一扫」付款
             </div>
             <div style={{ fontSize: "12px", color: "#999", lineHeight: 1.6 }}>
-              长按识别二维码完成支付
+              本机付款：截屏后打开微信扫一扫，从相册选取付款码
               <br />
               支付成功后返回页面刷新即可生效
             </div>

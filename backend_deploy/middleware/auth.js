@@ -293,7 +293,7 @@ function beijingToday() {
 function getAIQuotaFromDB(userId) {
   const db = getDB();
   if (!db) {
-    return { dailyUsed: 0, dailyLimit: 999, remaining: 999, level: 'unknown', source: 'fallback' };
+    return { dailyUsed: 0, dailyLimit: 0, remaining: 0, paidAccess: false, level: 'unknown', source: 'unavailable' };
   }
 
   try {
@@ -302,7 +302,8 @@ function getAIQuotaFromDB(userId) {
     // 获取会员等级
     const membership = getMembershipFromDB(userId);
     const level = membership.level;
-    const dailyLimit = getAIUsageDailyLimit(level);
+    const baseLimit = getAIUsageDailyLimit(level);
+    const paid = require('../paymentAiCredits').status(db,userId);
 
     // 获取今日使用次数
     const usage = db.prepare(
@@ -310,6 +311,7 @@ function getAIQuotaFromDB(userId) {
     ).get(userId, today);
 
     const dailyUsed = usage ? usage.used_count : 0;
+    const dailyLimit = paid.activePlan ? Infinity : Math.max(baseLimit, paid.credits > 0 ? dailyUsed : 0) + paid.credits;
     // P2-16 修复：统一返回 remaining（-1 表示无限），与 consume 接口口径一致
     const remaining = dailyLimit === Infinity ? -1 : Math.max(0, dailyLimit - dailyUsed);
 
@@ -319,10 +321,12 @@ function getAIQuotaFromDB(userId) {
       remaining,
       level,
       source: 'database',
+      paidAccess: paid.activePlan || paid.credits > 0,
+      paidCredits: paid.credits,
     };
   } catch (e) {
     console.error('[middleware/auth] 获取AI配额失败:', e.message);
-    return { dailyUsed: 0, dailyLimit: 3, remaining: 3, level: 'basic', source: 'error_fallback' };
+    return { dailyUsed: 0, dailyLimit: 0, remaining: 0, paidAccess: false, level: 'basic', source: 'error' };
   }
 }
 
@@ -391,6 +395,10 @@ function consumeAIQuotaInDB(userId) {
   if (!db) return { success: false };
 
   try {
+    if (!String(userId).startsWith('anon:')) {
+      const credits = require('../paymentAiCredits');
+      if (credits.status(db,userId).activePlan || credits.consume(db,userId)) return { success: true };
+    }
     const today = beijingToday();
 
     db.prepare(`

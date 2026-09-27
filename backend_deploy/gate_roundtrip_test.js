@@ -6,6 +6,7 @@
  * 全程只使用合成数据，不触碰任何真实用户。
  */
 'use strict';
+throw new Error('已停用：本脚本向正式用户表插入高位测试账号，会污染用户编号序列。请改用隔离数据库测试。');
 const fs = require('fs');
 
 for (const line of fs.readFileSync('/www/yandaoguoxue-backend/.env', 'utf8').split('\n')) {

@@ -111,7 +111,7 @@ function writeLS<T>(key: string, rows: T[]): void {
   try {
     window.localStorage.setItem(key, JSON.stringify(rows));
   } catch {
-    // 配额满等异常：静默失败（历史记录非关键数据）
+    throw new Error("本机存储空间不足，排盘记录未保存，请释放空间后重试");
   }
 }
 
@@ -124,7 +124,7 @@ function nextWebId(): number {
 
 export function isNativeStoreAvailable(): boolean {
   if (typeof window === "undefined") return false;
-  return Capacitor.isNativePlatform();
+  return Capacitor.isPluginAvailable("PaipanStore");
 }
 
 // ==================== 排盘记录 API ====================
@@ -151,7 +151,7 @@ export async function savePaipanRecord(opts: SaveRecordOptions): Promise<number>
 
 /** 无条件新增一条记录 */
 export async function insertPaipanRecord(opts: SaveRecordOptions): Promise<number> {
-  if (typeof window !== "undefined" && Capacitor.isNativePlatform()) {
+  if (typeof window !== "undefined" && isNativeStoreAvailable()) {
     try {
       const ret = await PaipanStore.saveRecord({
         tool: opts.tool,
@@ -163,8 +163,8 @@ export async function insertPaipanRecord(opts: SaveRecordOptions): Promise<numbe
         note: opts.note,
       });
       return ret.id;
-    } catch {
-      // iOS 壳等未注册插件场景 → 降级 localStorage
+    } catch (e) {
+      throw e;
     }
   }
   const rows = readLS<PaipanRecord>(RECORDS_KEY);
@@ -201,14 +201,33 @@ export async function insertPaipanRecord(opts: SaveRecordOptions): Promise<numbe
   return record.id;
 }
 
+let migration: Promise<void> | undefined;
+async function migrateWebStore(): Promise<void> {
+  if (!isNativeStoreAvailable()) return;
+  if (!migration) migration = (async () => {
+    const marker = "paipan_native_migrated_v2";
+    if (localStorage.getItem(marker)) return;
+    for (const p of readLS<MingzhuProfile>(PROFILES_KEY)) {
+      await PaipanStore.saveProfile({ ...p, gender: p.gender ?? undefined, birthDate: p.birthDate ?? undefined,
+        birthTime: p.birthTime ?? undefined, birthPlace: p.birthPlace ?? undefined, extra: p.extra ?? undefined });
+    }
+    for (const r of readLS<PaipanRecord>(RECORDS_KEY)) {
+      await PaipanStore.saveRecord({ ...r, profileId: r.profileId ?? undefined, note: r.note ?? undefined });
+    }
+    localStorage.setItem(marker, "1");
+  })().catch(e => { migration = undefined; throw e; });
+  await migration;
+}
+
 /** 查询排盘记录（新→旧）。tool 缺省返回全部工具的记录 */
 export async function listPaipanRecords(tool?: string): Promise<PaipanRecord[]> {
-  if (typeof window !== "undefined" && Capacitor.isNativePlatform()) {
+  if (typeof window !== "undefined" && isNativeStoreAvailable()) {
     try {
-      const ret = await PaipanStore.listRecords({ tool, limit: 200 });
+      await migrateWebStore();
+      const ret = await PaipanStore.listRecords({ tool, limit: 500 });
       return (ret.records || []).map(normalizeRecord);
-    } catch {
-      // 降级 localStorage
+    } catch (e) {
+      throw e;
     }
   }
   const rows = readLS<PaipanRecord>(RECORDS_KEY);
@@ -220,12 +239,12 @@ export async function listPaipanRecords(tool?: string): Promise<PaipanRecord[]> 
 
 /** 读取单条排盘记录 */
 export async function getPaipanRecord(id: number): Promise<PaipanRecord | null> {
-  if (typeof window !== "undefined" && Capacitor.isNativePlatform()) {
+  if (typeof window !== "undefined" && isNativeStoreAvailable()) {
     try {
       const ret = await PaipanStore.getRecord({ id });
       return ret.record ? normalizeRecord(ret.record) : null;
-    } catch {
-      // 降级 localStorage
+    } catch (e) {
+      throw e;
     }
   }
   return readLS<PaipanRecord>(RECORDS_KEY).find((r) => r.id === id) || null;
@@ -233,12 +252,12 @@ export async function getPaipanRecord(id: number): Promise<PaipanRecord | null> 
 
 /** 删除单条排盘记录 */
 export async function deletePaipanRecord(id: number): Promise<void> {
-  if (typeof window !== "undefined" && Capacitor.isNativePlatform()) {
+  if (typeof window !== "undefined" && isNativeStoreAvailable()) {
     try {
       await PaipanStore.deleteRecord({ id });
       return;
-    } catch {
-      // 降级 localStorage
+    } catch (e) {
+      throw e;
     }
   }
   writeLS(RECORDS_KEY, readLS<PaipanRecord>(RECORDS_KEY).filter((r) => r.id !== id));
@@ -246,7 +265,7 @@ export async function deletePaipanRecord(id: number): Promise<void> {
 
 /** 原位更新已有记录（title/result/note/profileId 刷新，createdAt 不变） */
 async function updatePaipanRecord(id: number, opts: SaveRecordOptions): Promise<void> {
-  if (typeof window !== "undefined" && Capacitor.isNativePlatform()) {
+  if (typeof window !== "undefined" && isNativeStoreAvailable()) {
     try {
       await PaipanStore.saveRecord({
         tool: opts.tool,
@@ -258,8 +277,8 @@ async function updatePaipanRecord(id: number, opts: SaveRecordOptions): Promise<
         note: opts.note,
       });
       return;
-    } catch {
-      // 降级 localStorage
+    } catch (e) {
+      throw e;
     }
   }
   const rows = readLS<PaipanRecord>(RECORDS_KEY);
@@ -279,11 +298,11 @@ async function updatePaipanRecord(id: number, opts: SaveRecordOptions): Promise<
 
 /** 清空全部排盘记录（危险操作，仅设置页使用） */
 export async function clearAllPaipanRecords(): Promise<void> {
-  if (typeof window !== "undefined" && Capacitor.isNativePlatform()) {
+  if (typeof window !== "undefined" && isNativeStoreAvailable()) {
     try {
       await PaipanStore.clearAll();
-    } catch {
-      // 降级 localStorage
+    } catch (e) {
+      throw e;
     }
   }
   writeLS(RECORDS_KEY, []);
@@ -291,11 +310,11 @@ export async function clearAllPaipanRecords(): Promise<void> {
 
 /** 清空指定工具的排盘记录（不影响其他工具与命主档案） */
 export async function clearPaipanRecordsByTool(tool: string): Promise<void> {
-  if (typeof window !== "undefined" && Capacitor.isNativePlatform()) {
+  if (typeof window !== "undefined" && isNativeStoreAvailable()) {
     try {
       await PaipanStore.clearRecords({ tool });
-    } catch {
-      // 降级 localStorage
+    } catch (e) {
+      throw e;
     }
   }
   writeLS(RECORDS_KEY, readLS<PaipanRecord>(RECORDS_KEY).filter((r) => r.tool !== tool));
@@ -315,12 +334,12 @@ export interface ProfileDraft {
 
 /** 保存/更新命主档案，返回完整档案 */
 export async function saveMingzhuProfile(draft: ProfileDraft): Promise<MingzhuProfile> {
-  if (typeof window !== "undefined" && Capacitor.isNativePlatform()) {
+  if (typeof window !== "undefined" && isNativeStoreAvailable()) {
     try {
       const ret = await PaipanStore.saveProfile({ ...draft });
       return ret.profile;
-    } catch {
-      // 降级 localStorage
+    } catch (e) {
+      throw e;
     }
   }
   const rows = readLS<MingzhuProfile>(PROFILES_KEY);
@@ -345,12 +364,13 @@ export async function saveMingzhuProfile(draft: ProfileDraft): Promise<MingzhuPr
 
 /** 命主档案列表（最近更新优先），可按姓名搜索 */
 export async function listMingzhuProfiles(query?: string): Promise<MingzhuProfile[]> {
-  if (typeof window !== "undefined" && Capacitor.isNativePlatform()) {
+  if (typeof window !== "undefined" && isNativeStoreAvailable()) {
     try {
+      await migrateWebStore();
       const ret = await PaipanStore.listProfiles({ query });
       return ret.profiles || [];
-    } catch {
-      // 降级 localStorage
+    } catch (e) {
+      throw e;
     }
   }
   const rows = readLS<MingzhuProfile>(PROFILES_KEY);
@@ -361,12 +381,12 @@ export async function listMingzhuProfiles(query?: string): Promise<MingzhuProfil
 
 /** 删除命主档案 */
 export async function deleteMingzhuProfile(id: string): Promise<void> {
-  if (typeof window !== "undefined" && Capacitor.isNativePlatform()) {
+  if (typeof window !== "undefined" && isNativeStoreAvailable()) {
     try {
       await PaipanStore.deleteProfile({ id });
       return;
-    } catch {
-      // 降级 localStorage
+    } catch (e) {
+      throw e;
     }
   }
   writeLS(PROFILES_KEY, readLS<MingzhuProfile>(PROFILES_KEY).filter((p) => p.id !== id));

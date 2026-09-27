@@ -7,6 +7,8 @@
 // ============================================================================
 
 import { getUserToken } from "./auth";
+import { offlineAcademyResponse, prepareOfflineLearning } from "./offlineLearning";
+import { saveLearningCheckin, fetchLearningProgress } from "./offlineLearningProgress";
 
 const API_BASE = typeof window !== "undefined" ? window.location.origin : "";
 
@@ -28,6 +30,10 @@ function adminHeader(): Record<string, string> {
 }
 
 async function api<T = any>(path: string, init?: RequestInit): Promise<T> {
+  if (!init?.method || init.method === "GET") {
+    const local = await offlineAcademyResponse(path).catch(() => null);
+    if (local) { void prepareOfflineLearning(); return local as T; }
+  }
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
     headers: { "Content-Type": "application/json", ...tokenHeader(), ...(init?.headers || {}) },
@@ -251,15 +257,11 @@ export async function verifyCertificate(certNo: string) {
 // ==================== 学习进度 / 错题本 ====================
 
 export async function checkinProgress(track: string, chapter: string) {
-  return api<{ success: boolean }>(`/api/academy/progress/checkin`, {
-    method: "POST",
-    body: JSON.stringify({ track, chapter }),
-  });
+  return saveLearningCheckin(track,chapter);
 }
 
 export async function fetchProgress(track?: string) {
-  const q = track ? `?track=${track}` : "";
-  return api<{ success: boolean; progress?: Array<{ track: string; chapter: string; completedAt: string }> }>(`/api/academy/progress${q}`);
+  return fetchLearningProgress(track);
 }
 
 export async function fetchWrongAnswers() {

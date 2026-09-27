@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { runAutoClean } from "@/lib/appAutoClean";
 import { installAutoFlush, flushQueue } from "@/lib/offlineSyncClient";
+import { prepareOfflineLearning } from "@/lib/offlineLearning";
+import { flushLearningProgress } from "@/lib/offlineLearningProgress";
 
 /**
  * Offline 初始化组件（FINAL-MASTER-05 第六十三~七十四章）
@@ -17,8 +19,15 @@ export default function OfflineInit() {
       try { installAutoFlush(); } catch { /* ignore */ }
       void runAutoClean().catch(() => { /* ignore */ });
       void flushQueue().catch(() => { /* ignore */ });
+      void prepareOfflineLearning();
+      void flushLearningProgress();
     }, 4000);
-    return () => clearTimeout(timer);
+    const resume = () => { if (document.visibilityState === "visible") { void prepareOfflineLearning(); void flushLearningProgress(); } };
+    const interval = setInterval(resume, 60000);
+    window.addEventListener("online",resume);
+    window.addEventListener("storage",resume);
+    document.addEventListener("visibilitychange",resume);
+    return () => { clearTimeout(timer); clearInterval(interval); window.removeEventListener("online",resume); window.removeEventListener("storage",resume); document.removeEventListener("visibilitychange",resume); };
   }, []);
 
   return null;

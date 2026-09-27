@@ -5,12 +5,17 @@ import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import {
   saveMingzhuProfile,
+  listPaipanRecords,
+  type PaipanRecord,
   listMingzhuProfiles,
   deleteMingzhuProfile,
   type MingzhuProfile,
   type ProfileDraft,
 } from "@/lib/nativePaipanStore";
 import { getUserPermissionLevel } from "@/lib/aiService";
+
+import { profileFromRecord, TOOL_NAMES } from "@/lib/paipanProfiles";
+import { afterPopupClose } from "@/lib/popupTransition";
 
 const BRAND = "#7B2FBE";
 
@@ -31,16 +36,22 @@ interface MingzhuProfilePickerProps {
  */
 export function MingzhuProfilePicker({ value, onChange, buildDraft }: MingzhuProfilePickerProps) {
   // v25.0.88: 游客隐藏入口（注册后完整可用）
-  const [gated] = useState(() => typeof window !== "undefined" && getUserPermissionLevel() === "visitor");
+  const [gated, setGated] = useState(true);
+  useEffect(() => {
+    const refresh = () => setGated(getUserPermissionLevel() === "visitor");
+    refresh(); window.addEventListener("storage", refresh);
+    return () => window.removeEventListener("storage", refresh);
+  }, []);
   const [show, setShow] = useState(false);
   const [profiles, setProfiles] = useState<MingzhuProfile[]>([]);
+  const [records, setRecords] = useState<PaipanRecord[]>([]);
+  const [tab, setTab] = useState<"profiles" | "records">("records");
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState("");
 
   useBodyScrollLock(show);
   usePopupBackHandler(() => setShow(false), show);
-  if (gated) return null;
 
   const flashToast = useCallback((msg: string) => {
     setToast(msg);
@@ -50,7 +61,9 @@ export function MingzhuProfilePicker({ value, onChange, buildDraft }: MingzhuPro
   const refresh = useCallback(async (q?: string) => {
     setLoading(true);
     try {
-      setProfiles(await listMingzhuProfiles(q));
+      const [ps, rs] = await Promise.all([listMingzhuProfiles(q), listPaipanRecords()]);
+      setProfiles(ps);
+      setRecords(rs.filter(r => !q || `${r.title} ${r.input.name || ""}`.includes(q)));
     } finally {
       setLoading(false);
     }
@@ -61,8 +74,8 @@ export function MingzhuProfilePicker({ value, onChange, buildDraft }: MingzhuPro
   }, [show, refresh]);
 
   const handlePick = useCallback((p: MingzhuProfile) => {
+    afterPopupClose(() => onChange(p));
     setShow(false);
-    onChange(p);
   }, [onChange]);
 
   /** 把当前表单命主信息存为新档案（或更新已有档案） */
@@ -75,7 +88,8 @@ export function MingzhuProfilePicker({ value, onChange, buildDraft }: MingzhuPro
       }
       const saved = await saveMingzhuProfile({ ...draft, id: value?.id });
       setProfiles((ps) => [saved, ...ps.filter((p) => p.id !== saved.id)]);
-      onChange(saved);
+      afterPopupClose(() => onChange(saved));
+      setShow(false);
       flashToast("已存入命主档案库");
     } catch {
       flashToast("保存失败，请重试");
@@ -92,6 +106,14 @@ export function MingzhuProfilePicker({ value, onChange, buildDraft }: MingzhuPro
     }
   }, [value, onChange, flashToast]);
 
+  useEffect(() => {
+    const receive = (event: Event) => { const p = (event as CustomEvent<MingzhuProfile>).detail; onChange(p); };
+    window.addEventListener("paipan-import-profile", receive);
+    return () => window.removeEventListener("paipan-import-profile", receive);
+  }, [onChange]);
+
+  if (gated) return null;
+
   return (
     <div>
       <button
@@ -103,7 +125,7 @@ export function MingzhuProfilePicker({ value, onChange, buildDraft }: MingzhuPro
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
           <circle cx="12" cy="7" r="4" />
         </svg>
-        {value ? `命主：${value.name}` : "选择命主"}
+        {value ? `命主：${value.name}` : "档案 / 跨工具导入"}
       </button>
 
       {toast && (
@@ -116,16 +138,20 @@ export function MingzhuProfilePicker({ value, onChange, buildDraft }: MingzhuPro
       )}
 
       {show && (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center">
+        <div className="fixed inset-0 z-[60] flex items-stretch justify-end">
           <div className="absolute inset-0 bg-black/50" onClick={() => setShow(false)} />
-          <div className="relative z-10 max-h-[75vh] w-full max-w-md overflow-hidden rounded-t-2xl bg-white sm:rounded-2xl">
+          <div className="relative z-10 h-full w-[92%] max-w-md overflow-y-auto bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-              <span className="text-base font-bold text-gray-800">命主档案库</span>
+              <span className="text-base font-bold text-gray-800">命主档案与跨工具记录</span>
               <button onClick={() => setShow(false)} className="px-1 text-2xl leading-none text-gray-400">
                 ×
               </button>
             </div>
 
+            <div className="flex gap-2 px-3 pt-3">
+              <button onClick={() => setTab("records")} className={`flex-1 rounded-lg p-2 text-sm ${tab === "records" ? "bg-purple-100 text-purple-800" : "bg-gray-100"}`}>所有工具记录</button>
+              <button onClick={() => setTab("profiles")} className={`flex-1 rounded-lg p-2 text-sm ${tab === "profiles" ? "bg-purple-100 text-purple-800" : "bg-gray-100"}`}>命主档案</button>
+            </div>
             <div className="p-3">
               <input
                 value={query}
@@ -148,6 +174,19 @@ export function MingzhuProfilePicker({ value, onChange, buildDraft }: MingzhuPro
             <div className="max-h-[45vh] overflow-y-auto px-3 pb-3">
               {loading ? (
                 <div className="py-10 text-center text-sm text-gray-400">加载中…</div>
+              ) : tab === "records" ? (
+                <div className="space-y-2">
+                  {records.length === 0 && <p className="py-8 text-center text-sm text-gray-400">暂无排盘记录，排盘成功后会自动保存</p>}
+                  {records.map(r => { const p = profileFromRecord(r); return (
+                    <div key={r.id} className="rounded-xl bg-gray-50 p-3">
+                      <div className="text-xs text-purple-700">{TOOL_NAMES[r.tool] || r.tool}</div>
+                      <div className="my-1 text-sm text-gray-800">{r.title}</div>
+                      {p ? <><div className="text-xs text-gray-500">{p.gender} {p.birthDate} {p.birthTime} {p.birthPlace}</div>
+                      <button onClick={() => handlePick(p)} className="mt-2 rounded-lg bg-purple-700 px-3 py-2 text-xs text-white">导入出生与个人信息</button></>
+                      : <p className="text-xs text-gray-400">此记录没有完整出生信息，不能作为生日导入</p>}
+                    </div>
+                  ); })}
+                </div>
               ) : profiles.length === 0 ? (
                 <div className="py-10 text-center text-sm text-gray-400">
                   档案库为空，排盘后点击上方按钮存入命主档案

@@ -6,6 +6,9 @@ import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import { REGIONS } from "@/data/regions";
 import { chinaDstInfo } from "@/algorithm-core/common/dst";
+import { listPaipanRecords, type MingzhuProfile, type PaipanRecord } from "@/lib/nativePaipanStore";
+import { profileFromRecord, TOOL_NAMES } from "@/lib/paipanProfiles";
+import { getUserPermissionLevel } from "@/lib/aiService";
 
 // ============================================================================
 // 类型定义
@@ -54,6 +57,7 @@ export interface DatePickerProps {
   extraOptions?: React.ReactNode;
   submitText?: string;
   title?: string;
+  onRecordImport?: (profile: MingzhuProfile) => void;
 }
 
 // ============================================================================
@@ -164,7 +168,19 @@ export default function DatePicker({
   extraOptions = null,
   submitText = "排盘",
   title = "选择日期",
+  onRecordImport,
 }: DatePickerProps) {
+  const [recordsOpen, setRecordsOpen] = useState(false);
+  const [records, setRecords] = useState<PaipanRecord[]>([]);
+  const [recordQuery, setRecordQuery] = useState("");
+  const [recordMessage, setRecordMessage] = useState("");
+  useEffect(() => { if (!show) setRecordsOpen(false); }, [show]);
+  const openRecords = async () => {
+    setRecordsOpen(true); setRecordMessage("加载中…");
+    if (getUserPermissionLevel() === "visitor") { setRecordMessage("登录后可查看和导入排盘记录"); return; }
+    try { setRecords(await listPaipanRecords()); setRecordMessage(""); }
+    catch { setRecordMessage("记录读取失败，请关闭后重试"); }
+  };
   const [date, setDate] = useState<DatePickerValue>(initialDate || createDefaultDate());
   const [options, setOptions] = useState<DatePickerOptions>({ ...DEFAULT_OPTIONS, ...(initialOptions || {}) });
   const [nameState, setNameState] = useState(name);
@@ -392,7 +408,23 @@ export default function DatePicker({
 
           {/* 3. 日期 - 原生select下拉框（对标吉时雨 mydate + RolldateFull） */}
           <div>
-            <label className="mb-1 block text-sm text-gray-700">日期</label>
+            <div className="mb-2 flex items-center justify-between">
+              <label className="text-sm text-gray-700">日期</label>
+              {onRecordImport && <button type="button" onClick={openRecords} className="rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-xs font-semibold text-purple-800">排盘记录 / 导入</button>}
+            </div>
+            {recordsOpen && <section data-testid="date-records" className="mb-3 rounded-xl border border-purple-200 bg-purple-50 p-3">
+              <div className="mb-2 flex items-center justify-between"><strong className="text-sm text-purple-900">全部工具排盘记录</strong><button type="button" onClick={()=>setRecordsOpen(false)} className="text-xs text-purple-700">收起记录</button></div>
+              <input aria-label="搜索可导入记录" value={recordQuery} onChange={e=>setRecordQuery(e.target.value)} placeholder="搜索姓名、工具或日期" className="mb-2 w-full rounded-lg border bg-white p-2 text-sm" />
+              <div className="max-h-60 space-y-2 overflow-y-auto">
+                {recordMessage ? <p className="text-xs text-gray-500">{recordMessage}</p> : records.filter(r=>`${r.title} ${TOOL_NAMES[r.tool]||r.tool}`.includes(recordQuery)).map(r=>{const p=profileFromRecord(r);return <div key={r.id} className="rounded-lg bg-white p-2 text-xs">
+                  <div className="font-semibold">{TOOL_NAMES[r.tool]||r.tool} · {r.title}</div>
+                  {p ? <><div className="my-1 text-gray-600">{p.gender} {p.birthDate} {p.birthTime}</div><button type="button" className="rounded-lg bg-purple-700 px-3 py-2 text-white" onClick={()=>{
+                    onRecordImport?.(p); setRecordsOpen(false); setRecordQuery("");
+                  }}>导入此人资料</button></> : <div className="mt-1 text-gray-500">无完整出生资料，可在工具记录中查看原盘</div>}
+                </div>;})}
+                {!recordMessage && records.length===0 && <p className="text-xs text-gray-500">暂无记录，排盘后自动保存</p>}
+              </div>
+            </section>}
             <div className="flex items-center gap-1.5">
               <select
                 value={date.year}

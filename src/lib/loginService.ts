@@ -501,57 +501,11 @@ export async function registerWithPhone(params: RegisterParams): Promise<LoginRe
       return { success: false, message: data.message || '注册失败' };
     }
   } catch (err: any) {
-    console.error('[REGISTER] 后端注册请求失败，回退到本地注册:', err);
+    console.error('[REGISTER] 后端注册请求失败:', err);
     // 网络错误，继续执行下方本地注册降级流程
   }
 
-  // === 本地注册降级流程（网络不可用时） ===
-  // 服务端校验验证码
-  const valid = await verifySmsCode(phone, smsCode);
-  if (!valid) {
-    return { success: false, message: '验证码错误或已过期' };
-  }
-
-  // 保存密码到持久化存储（加盐 hash）
-  const store = loadPasswordStore();
-  store[phone] = hashPassword(password);
-  savePasswordStore(store);
-
-  // 生成用户信息
-  const userId = `YD${phone.slice(-4)}${Date.now().toString(36).slice(-4)}`.toUpperCase();
-  const numberId = bindNumberId(phone); // v20.1: 生成数字ID
-  const user: UserProfile = {
-    userId,
-    nickname: `国学爱好者${phone.slice(-4)}`,
-    avatar: '',
-    memberLevel: 'basic',
-    phone,
-    numberId,
-    loginTime: Date.now(),
-  };
-
-  // 保存用户信息到 localStorage
-  localStorage.setItem(`yandao_user_${phone}`, JSON.stringify(user));
-
-  // 设置登录态
-  const token = `token_${userId}_${Date.now()}`;
-  setLoginState(token, user);
-
-  // v20.1: 保存 token 双轨用于自动续期
-  saveTokenPair(token, `rt_${userId}_${Date.now()}_reg`);
-
-  syncLocalData(userId);
-
-  // P6-TOOL-04 §5.2：本地降级注册同样登记设备档案
-  try {
-    const { recordRegistration } = await import('./antiCheatStore');
-    recordRegistration(userId);
-  } catch { /* ignore */ }
-
-  // v19.7_final: 注册到服务端用户表（供后续唯一性校验）
-  registerToServer(phone);
-
-  return { success: true, message: '注册成功', user, isNewUser: true };
+  return { success: false, message: '网络异常，请连接网络后重试；不会创建临时账号' };
 }
 
 // ============================================================================
@@ -564,7 +518,7 @@ export async function loginWithPhone(phone: string, code: string, inviteCode?: s
   try {
     const { loginWithCodeServer } = await import('./inviteApi');
     const result = await loginWithCodeServer({ phone, code });
-    if (result.success && result.user) {
+    if (result.success && result.user && result.accessToken && /^\d+$/.test(String(result.user.userId))) {
       const user: UserProfile = {
         userId: String(result.user.userId),
         nickname: result.user.nickname || `国学爱好者${phone.slice(-4)}`,
@@ -585,45 +539,10 @@ export async function loginWithPhone(phone: string, code: string, inviteCode?: s
       return { success: false, message: result.message };
     }
   } catch (err) {
-    console.error('[LOGIN-CODE] 后端验证码登录失败，回退本地流程:', err);
+    console.error('[LOGIN-CODE] 后端验证码登录失败:', err);
   }
 
-  // === 本地降级流程（网络不可用时） ===
-  // 服务端校验验证码
-  const valid = await verifySmsCode(phone, code);
-  if (!valid) {
-    return { success: false, message: '验证码错误或已过期' };
-  }
-
-  // 检查是否为新用户
-  const existingUser = localStorage.getItem(`yandao_user_${phone}`);
-  const isNewUser = !existingUser;
-
-  // 生成用户信息
-  const userId = `YD${phone.slice(-4)}${Date.now().toString(36).slice(-4)}`.toUpperCase();
-  const user: UserProfile = {
-    userId,
-    nickname: `国学爱好者${phone.slice(-4)}`,
-    avatar: '',
-    memberLevel: 'basic',
-    phone,
-    loginTime: Date.now(),
-  };
-
-  // 保存用户信息到 localStorage
-  localStorage.setItem(`yandao_user_${phone}`, JSON.stringify(user));
-
-  // 设置登录态
-  const token = `token_${userId}_${Date.now()}`;
-  setLoginState(token, user);
-
-  // v20.1: 保存 token 双轨（access + refresh）用于自动续期
-  const refreshToken = `rt_${userId}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-  saveTokenPair(token, refreshToken);
-
-  syncLocalData(userId);
-
-  return { success: true, message: isNewUser ? '注册成功' : '登录成功', user, isNewUser };
+  return { success: false, message: '网络异常，请连接网络后重试；不会创建临时账号' };
 }
 
 // ============================================================================
@@ -709,43 +628,20 @@ export async function loginWithPassword(account: string, password: string): Prom
 // ============================================================================
 
 export async function loginWithEmail(email: string, code: string): Promise<LoginResult> {
-  const valid = await verifyEmailCode(email, code);
-  if (!valid) {
-    return { success: false, message: '验证码错误或已过期' };
+  try {
+    const { loginWithCodeServer } = await import('./inviteApi');
+    const result = await loginWithCodeServer({ email, code });
+    if (!result.success || !result.user || !result.accessToken || !/^\d+$/.test(String(result.user.userId))) {
+      return { success: false, message: result.message || '登录失败，请重试' };
+    }
+    const user: UserProfile = { ...result.user, userId: String(result.user.userId), email, loginTime: Date.now() };
+    setLoginState(result.accessToken, user);
+    saveTokenPair(result.accessToken, '');
+    syncLocalData(user.userId);
+    return { success: true, message: result.message, user, isNewUser: !!result.isNewUser };
+  } catch {
+    return { success: false, message: '网络异常，请连接网络后重试' };
   }
-
-  const emailKey = email.replace(/[^a-zA-Z0-9]/g, '_');
-  const existingUser = localStorage.getItem(`yandao_email_${emailKey}`);
-  const isNewUser = !existingUser;
-
-  const userId = `EM${emailKey.slice(0, 4)}${Date.now().toString(36).slice(-4)}`.toUpperCase();
-  const user: UserProfile = {
-    userId,
-    nickname: email.split('@')[0],
-    avatar: '',
-    memberLevel: 'basic',
-    email,
-    loginTime: Date.now(),
-  };
-
-  localStorage.setItem(`yandao_email_${emailKey}`, JSON.stringify(user));
-  const token = `token_${userId}_${Date.now()}`;
-  setLoginState(token, user);
-
-  // v20.1: 保存 token 双轨用于自动续期
-  saveTokenPair(token, `rt_${userId}_${Date.now()}_email`);
-
-  syncLocalData(userId);
-
-  // P6-TOOL-04 §5.2：邮箱验证码登录新建账号视为注册，登记设备档案
-  if (isNewUser) {
-    try {
-      const { recordRegistration } = await import('./antiCheatStore');
-      recordRegistration(userId);
-    } catch { /* ignore */ }
-  }
-
-  return { success: true, message: isNewUser ? '注册成功' : '登录成功', user, isNewUser };
 }
 
 // ============================================================================
@@ -845,75 +741,11 @@ export async function registerWithEmail(params: RegisterEmailParams): Promise<Lo
       return { success: false, message: data.message || '注册失败' };
     }
   } catch (err: any) {
-    console.error('[REGISTER] 后端注册请求失败，回退到本地注册:', err);
+    console.error('[REGISTER] 后端注册请求失败:', err);
     // 网络错误，继续执行下方本地注册降级流程
   }
 
-  // === 本地注册降级流程（网络不可用时） ===
-  // 服务端校验邮箱验证码
-  const valid = await verifyEmailCode(email, emailCode);
-  if (!valid) {
-    return { success: false, message: '邮箱验证码错误或已过期' };
-  }
-
-  // 保存密码到持久化存储（以邮箱作为 key）
-  const store = loadPasswordStore();
-  store[email] = hashPassword(password);
-  savePasswordStore(store);
-
-  const emailKey = email.replace(/[^a-zA-Z0-9]/g, '_');
-  const numberId = bindNumberId(email); // v20.1: 生成数字ID
-  const userId = `EM${emailKey.slice(0, 4)}${Date.now().toString(36).slice(-4)}`.toUpperCase();
-  const user: UserProfile = {
-    userId,
-    nickname: email.split('@')[0],
-    avatar: '',
-    memberLevel: 'basic',
-    email,
-    numberId,
-    loginTime: Date.now(),
-  };
-
-  localStorage.setItem(`yandao_email_${emailKey}`, JSON.stringify(user));
-
-  // 设置登录态（自动登录）
-  const token = `token_${userId}_${Date.now()}`;
-  setLoginState(token, user);
-
-  // v20.1: 保存 token 双轨用于自动续期
-  saveTokenPair(token, `rt_${userId}_${Date.now()}_regemail`);
-
-  // 处理邀请码
-  if (inviteCode) {
-    try {
-      const { addInviteRelation, getUserIdByInviteCode } = await import('./inviteStore');
-      // v18.6: 通过邀请码反查邀请人真实userId，确保邀请关系正确绑定
-      const inviterUid = getUserIdByInviteCode(inviteCode) || inviteCode;
-      addInviteRelation({
-        id: `inv_${Date.now()}`,
-        inviterId: inviterUid,
-        inviterName: '',
-        inviteeId: userId,
-        inviteeName: user.nickname,
-        level: 1,
-        createdAt: new Date().toISOString(),
-        rewardClaimed: false,
-      });
-    } catch {}
-  }
-
-  syncLocalData(userId);
-
-  // P6-TOOL-04 §5.2：本地降级邮箱注册同样登记设备档案
-  try {
-    const { recordRegistration } = await import('./antiCheatStore');
-    recordRegistration(userId);
-  } catch { /* ignore */ }
-
-  // v19.7_final: 注册到服务端用户表（供后续唯一性校验）
-  registerToServer(undefined, email);
-
-  return { success: true, message: '注册成功', user, isNewUser: true };
+  return { success: false, message: '网络异常，请连接网络后重试；不会创建临时账号' };
 }
 
 // ============================================================================

@@ -34,11 +34,12 @@ jobs:
           java-version: '21'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Build web bundle (native assets)
         run: |
-          npm run build
+          npm run prebuild
+          NODE_OPTIONS=--max-old-space-size=4096 npx next build --webpack
           test -f out/index.html || { echo "FATAL: 静态导出产物缺失 out/index.html"; exit 1; }
           grep -q '__nativeApiPatchInstalled' out/index.html || { echo "FATAL: 原生 API 改写脚本未内联进 HTML（layout 注入缺失）"; exit 1; }
           rm -rf www
@@ -64,15 +65,15 @@ jobs:
 
       - name: Verify version gate
         run: |
-          grep -q 'versionCode 2047' android/app/build.gradle || { echo "FATAL: versionCode 非 2047"; exit 1; }
-          grep -q 'versionName "25.0.47"' android/app/build.gradle || { echo "FATAL: versionName 非 25.0.47"; exit 1; }
-          echo "版本门禁 OK: versionCode 2047 / versionName 25.0.47"
+          grep -q 'versionCode 2082' android/app/build.gradle || { echo "FATAL: versionCode 非 2047"; exit 1; }
+          grep -q 'versionName "25.0.95"' android/app/build.gradle || { echo "FATAL: versionName 非 25.0.95"; exit 1; }
+          echo "版本门禁 OK: versionCode 2082 / versionName 25.0.95"
 
       - name: Build release APK
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew assembleRelease bundleRelease --no-daemon
 
       - name: Show APK info
         run: |
@@ -81,13 +82,16 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: yandao-guoxue-android-apk
-          path: android/app/build/outputs/apk/release/*.apk
+          name: yandao-guoxue-v25.0.95-apk-aab-web
+          path: |
+            android/app/build/outputs/apk/release/*.apk
+            android/app/build/outputs/bundle/release/*.aab
+            out/
           retention-days: 14
 
       - name: Build summary
         run: |
           echo "### Android 构建结果" >> $GITHUB_STEP_SUMMARY
-          echo "- Bundle: $BUNDLE_ID (versionCode 2047 / versionName 25.0.47)" >> $GITHUB_STEP_SUMMARY
-          echo "- 模式: 原生内置资源 (v25.0.47_D20260822, API 改写到 https://yandaoguoxue.yandao.vip)" >> $GITHUB_STEP_SUMMARY
+          echo "- Bundle: $BUNDLE_ID (versionCode 2082 / versionName 25.0.95)" >> $GITHUB_STEP_SUMMARY
+          echo "- 模式: 原生内置资源 (v25.0.95_D20260822, API 改写到 https://yandaoguoxue.yandao.vip)" >> $GITHUB_STEP_SUMMARY
           echo "- 产物: signed release apk" >> $GITHUB_STEP_SUMMARY

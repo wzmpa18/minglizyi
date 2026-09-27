@@ -18,6 +18,8 @@ import {
 import { remove } from "@/lib/storageManager";
 import { queueSize, flushQueue } from "@/lib/offlineSyncClient";
 import { storageUsageOverview } from "@/lib/appAutoClean";
+import OfflinePreparationCard from "@/components/OfflinePreparationCard";
+import { localLearningProgress, flushLearningProgress } from "@/lib/offlineLearningProgress";
 
 const BRAND = "#7B2FBE";
 
@@ -54,7 +56,8 @@ export default function OfflinePage() {
       getInstalledPacks().catch(() => [] as { packId: string; version: string }[]),
     ]);
     setUsage(u);
-    setQueueN(q);
+    const learning = await localLearningProgress().catch(() => []);
+    setQueueN(q + learning.filter(r => r.pending).length);
     // 删除后重新判定「已是最新」
     setPlans((prev) => prev.map((p) => {
       if (p.action === "UP_TO_DATE" && !installed.some((r) => r.packId === p.packId)) {
@@ -133,13 +136,17 @@ export default function OfflinePage() {
   const handleFlush = async () => {
     if (flushing) return;
     setFlushing(true);
+    const before = (await localLearningProgress().catch(() => [])).filter(r => r.pending).length;
+    await flushLearningProgress();
+    const after = (await localLearningProgress().catch(() => [])).filter(r => r.pending).length;
     const r = await flushQueue().catch(() => null);
     setFlushing(false);
-    if (r && r.flushed > 0) setMessage({ text: `已同步 ${r.flushed} 条离线记录`, ok: true });
+    if ((r?.flushed || 0) + before - after > 0) setMessage({ text: `已同步 ${(r?.flushed || 0) + before - after} 条离线记录`, ok: true });
+    else if (after > 0) setMessage({ text: `还有 ${after} 条学习记录保存在手机，联网后继续同步`, ok: false });
     else if (r && r.remained > 0) setMessage({ text: `同步暂不可用（${r.error || "稍后自动重试"}），队列保留 ${r.remained} 条`, ok: false });
     else if (r && r.error) setMessage({ text: `暂未同步：${r.error}`, ok: false });
     else setMessage({ text: "队列为空，无需同步", ok: true });
-    setQueueN(await queueSize().catch(() => 0));
+    setQueueN((await queueSize().catch(() => 0)) + after);
   };
 
   return (
@@ -147,11 +154,12 @@ export default function OfflinePage() {
       <BrandHeader title="离线内容" showBack />
 
       <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
+        <OfflinePreparationCard />
         {/* 离线同步队列 */}
         <div style={{ background: "#fff", borderRadius: "16px", padding: "16px", marginBottom: "12px" }}>
           <div style={{ fontSize: "15px", fontWeight: "bold", color: "#333", marginBottom: "8px" }}>离线学习记录</div>
           <div style={{ fontSize: "13px", color: "#666", marginBottom: "12px", lineHeight: 1.6 }}>
-            断网做题、打卡、收藏的记录会在本地排队，联网后自动同步（服务器按事件ID幂等，绝不重复入账）。未同步记录永久保留，清缓存不会触碰。
+            学习打卡先保存到手机，联网后自动同步。退出或重启后，尚未同步的学习记录仍会保留。
           </div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ fontSize: "14px", color: BRAND, fontWeight: "bold" }}>

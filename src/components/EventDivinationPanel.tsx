@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
+import { getUserToken } from "@/lib/auth";
 import {
   checkAIQuota,
   incrementAIUsage,
@@ -115,13 +116,26 @@ export default function EventDivinationPanel({
   }, [isPaidTool, setShowLoginPrompt]);
 
   // v20.1: 处理AI内容 - 根据权限等级决定是否截取
+  const paidRequestAccess = useRef(false);
+  const verifyPaidRequestAccess = useCallback(async () => {
+    paidRequestAccess.current = false;
+    try {
+      const token = getUserToken();
+      if (!token) return false;
+      const res = await fetch('/api/ai/quota', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
+      if (!res.ok) return false;
+      const data = await res.json();
+      paidRequestAccess.current = data?.success === true && data?.data?.paidAccess === true;
+      return paidRequestAccess.current;
+    } catch { return false; }
+  }, []);
   const processContentByPermission = useCallback(
     (rawContent: string) => {
       const level = getUserPermissionLevel();
       const cKey = generateContentKey(toolName, chartContext + (activeMode === "event" ? userQuestion : "deep"));
 
       // 会员：完整展示
-      if (level === "member") {
+      if (level === "member" || paidRequestAccess.current) {
         setFullContent(rawContent);
         setContent(rawContent);
         setIsLocked(false);
@@ -189,7 +203,7 @@ export default function EventDivinationPanel({
     }
     if (loading) return;
 
-    if (!checkAccess()) return;
+    if (!(await verifyPaidRequestAccess()) && !checkAccess()) return;
 
     setLoading(true);
     setError("");
@@ -209,12 +223,12 @@ export default function EventDivinationPanel({
     } finally {
       setLoading(false);
     }
-  }, [userQuestion, loading, toolName, chartContext, checkAccess, processContentByPermission]);
+  }, [userQuestion, loading, toolName, chartContext, checkAccess, processContentByPermission, verifyPaidRequestAccess]);
 
   // 执行深度解读
   const handleDeepInterpretation = useCallback(async () => {
     if (loading) return;
-    if (!checkAccess()) return;
+    if (!(await verifyPaidRequestAccess()) && !checkAccess()) return;
 
     setLoading(true);
     setError("");
@@ -255,7 +269,7 @@ export default function EventDivinationPanel({
     } finally {
       setLoading(false);
     }
-  }, [loading, toolName, chartContext, checkAccess, processContentByPermission]);
+  }, [loading, toolName, chartContext, checkAccess, processContentByPermission, verifyPaidRequestAccess]);
 
   // COMMERCIAL-CLEANUP-03: 付费套餐购买——走真实微信支付，AI权限由服务端SSOT决定，不再本地激活
   const [purchasePaying, setPurchasePaying] = useState(false);

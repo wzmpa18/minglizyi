@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { calculateZiwei, solarToBazi, calcTrueSolarTime } from "@/algorithm-core";
@@ -442,6 +442,7 @@ export default function ZiweiPage() {
   const [day, setDay] = useState(sp ? parseInt(sp.get("d") || "15") : 15);
   const [hour, setHour] = useState(sp ? parseInt(sp.get("h") || "12") : 12);
   const [gender, setGender] = useState<Gender>((sp?.get("g") as Gender) || "male");
+  const [birthMinute, setBirthMinute] = useState(0);
   const [calType, setCalType] = useState<"gongli" | "nongli" | "sizhu">("gongli");
   const [zaoWanZi, setZaoWanZi] = useState(false);
   const [zhenTaiyang, setZhenTaiyang] = useState(true);
@@ -520,6 +521,8 @@ export default function ZiweiPage() {
   const applyMingzhuProfile = useCallback((p: MingzhuProfile | null) => {
     setMingzhu(p);
     if (!p) return;
+    setCalType("gongli");
+    setShowForm(true);
     if (p.name) setName(p.name);
     if (p.gender) setGender(p.gender === "男" ? "male" : "female");
     if (p.birthDate) {
@@ -529,11 +532,12 @@ export default function ZiweiPage() {
     if (p.birthTime) {
       const h = parseInt(p.birthTime.split(":")[0], 10);
       if (!isNaN(h)) setHour(h);
+      setBirthMinute(Number(p.birthTime.split(":")[1]) || 0);
     }
   }, []);
 
   // ---- 提交 ----
-  const handleSubmit = (override?:{year:number;month:number;day:number;hour:number;gender:Gender}) => {
+  const handleSubmit = (override?:{year:number;month:number;day:number;hour:number;gender:Gender;birthInput?:Record<string,unknown>}) => {
     setError(null);
     const y=override?.year??year; const m=override?.month??month;
     const d=override?.day??day; const h=override?.hour??hour;
@@ -549,7 +553,7 @@ export default function ZiweiPage() {
       savePaipanRecord({
         tool: "ziwei",
         title: `${name || "未命名"}·紫微排盘 ${y}-${m}-${d}`,
-        input: { name, year: y, month: m, day: d, hour: h, gender: g, calType },
+        input: { birthInput:override?.birthInput, name, year: y, month: m, day: d, hour: h, gender: g, calType },
         result: res as unknown as Record<string, unknown>,
         profileId: mingzhu?.id ?? null,
       }).catch(() => {});
@@ -1084,11 +1088,11 @@ export default function ZiweiPage() {
     <div className="bg-[#ededed] min-h-screen flex justify-center">
       <div className="w-full" style={{ maxWidth: "420px", paddingBottom: "10px" }}>
       {/* 输入表单 DatePicker 弹窗 */}
-      <DatePicker
+      <DatePicker onRecordImport={applyMingzhuProfile}
         show={showForm}
         onClose={(reason?: "back") => { setShowForm(false); if (reason === "back" && !result && !isManagedBackNavigation()) leaveToolPage(router); }}
         onSubmit={(dateVal, opts) => {
-          setYear(dateVal.year); setMonth(dateVal.month); setDay(dateVal.day); setHour(dateVal.hour);
+          setYear(dateVal.year); setMonth(dateVal.month); setDay(dateVal.day); setHour(dateVal.hour); setBirthMinute(dateVal.minute);
           setGender(opts.gender as Gender);
           setCalType(opts.calType === "solar" ? "gongli" : opts.calType === "lunar" ? "nongli" : "sizhu");
           setZaoWanZi(opts.zaoWanZi); setZhenTaiyang(opts.zhenTaiyang); setXiaLing(opts.xiaLing);
@@ -1106,9 +1110,9 @@ export default function ZiweiPage() {
             setSolarCorrection(null);
           }
           if (opts.longitude !== undefined) setLongitude(opts.longitude);
-          handleSubmit({ ...calcDate, gender: opts.gender as Gender });
+          handleSubmit({ ...calcDate, gender: opts.gender as Gender, birthInput:{...dateVal,name,gender:opts.gender,longitude:opts.longitude ?? longitude,calendar:"solar"} });
         }}
-        initialDate={{year, month, day, hour, minute: 0}}
+        initialDate={{year, month, day, hour, minute: birthMinute}}
         initialOptions={{
           gender,
           calType: calType === "gongli" ? "solar" : calType === "nongli" ? "lunar" : "sizhu",
@@ -1142,7 +1146,7 @@ export default function ZiweiPage() {
                 name: name || "",
                 gender: gender === "male" ? "男" : "女",
                 birthDate: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
-                birthTime: `${String(hour).padStart(2, "0")}:00`,
+                birthTime: `${String(hour).padStart(2, "0")}:${String(birthMinute).padStart(2, "0")}`,
               })}
             />
             <PaipanHistoryButton toolKey="ziwei" onRestore={handleRestoreHistory} />
