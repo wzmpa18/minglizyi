@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { callAI, getPermissionStatus } from "@/lib/aiService";
+import { callAI, getPermissionStatusFromServer } from "@/lib/aiService";
 import { BrandHeader } from "@/components/shared";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
@@ -20,7 +20,7 @@ export default function ZhongyiAIPage() {
 
     // v20.1: 三级权限检查 - 未登录弹出登录引导
     if (!requireLogin()) return;
-    const perm = getPermissionStatus();
+    const perm = await getPermissionStatusFromServer();
     if (!perm.canUseAI) {
       setMessages((prev) => [...prev, { role: "user", content: input }, { role: "assistant", content: perm.message || "今日AI解读次数已用完，开通会员继续使用" }]);
       setInput("");

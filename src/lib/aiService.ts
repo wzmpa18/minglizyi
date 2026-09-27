@@ -395,6 +395,26 @@ export function getUserPermissionLevel(): PermissionLevel {
 /**
  * 获取完整权限状态
  */
+export async function getPermissionStatusFromServer(): Promise<PermissionStatus & { paidAccess: boolean }> {
+  const local = getPermissionStatus();
+  const token = getUserToken();
+  if (!token) return { ...local, paidAccess: false };
+  try {
+    const response = await fetch('/api/ai/quota', {
+      headers: { Authorization: `Bearer ${token}` }, cache: 'no-store',
+      signal: AbortSignal.timeout(8000),
+    });
+    if (response.status === 401) return { ...local, canUseAI: false, needLogin: true, paidAccess: false };
+    if (!response.ok) return { ...local, paidAccess: false };
+    const payload = await response.json();
+    if (payload?.success === true && payload?.data?.paidAccess === true) {
+      return { ...local, isLoggedIn: true, canUseAI: true, needLogin: false, needPayment: false,
+        message: '已购买的AI解读权益可用', paidAccess: true };
+    }
+  } catch { /* The request itself still enforces server authentication and quota. */ }
+  return { ...local, paidAccess: false };
+}
+
 export function getPermissionStatus(): PermissionStatus {
   const level = getUserPermissionLevel();
 

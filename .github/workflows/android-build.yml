@@ -65,9 +65,9 @@ jobs:
 
       - name: Verify version gate
         run: |
-          grep -q 'versionCode 2082' android/app/build.gradle || { echo "FATAL: versionCode 非 2047"; exit 1; }
-          grep -q 'versionName "25.0.95"' android/app/build.gradle || { echo "FATAL: versionName 非 25.0.95"; exit 1; }
-          echo "版本门禁 OK: versionCode 2082 / versionName 25.0.95"
+          grep -q 'versionCode 2083' android/app/build.gradle || { echo "FATAL: versionCode 非 2047"; exit 1; }
+          grep -q 'versionName "25.0.96"' android/app/build.gradle || { echo "FATAL: versionName 非 25.0.96"; exit 1; }
+          echo "版本门禁 OK: versionCode 2083 / versionName 25.0.96"
 
       - name: Build release APK
         working-directory: android
@@ -82,7 +82,7 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: yandao-guoxue-v25.0.95-apk-aab-web
+          name: yandao-guoxue-v25.0.96-apk-aab-web
           path: |
             android/app/build/outputs/apk/release/*.apk
             android/app/build/outputs/bundle/release/*.aab
@@ -92,6 +92,6 @@ jobs:
       - name: Build summary
         run: |
           echo "### Android 构建结果" >> $GITHUB_STEP_SUMMARY
-          echo "- Bundle: $BUNDLE_ID (versionCode 2082 / versionName 25.0.95)" >> $GITHUB_STEP_SUMMARY
-          echo "- 模式: 原生内置资源 (v25.0.95_D20260822, API 改写到 https://yandaoguoxue.yandao.vip)" >> $GITHUB_STEP_SUMMARY
+          echo "- Bundle: $BUNDLE_ID (versionCode 2083 / versionName 25.0.96)" >> $GITHUB_STEP_SUMMARY
+          echo "- 模式: 原生内置资源 (v25.0.96_D20260822, API 改写到 https://yandaoguoxue.yandao.vip)" >> $GITHUB_STEP_SUMMARY
           echo "- 产物: signed release apk" >> $GITHUB_STEP_SUMMARY

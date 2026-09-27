@@ -1,8 +1,8 @@
-﻿"use client";
+"use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
-import { loadAssistantChat, saveAssistantChat, loadAssistantPos, saveAssistantPos, callAI, getPermissionStatus, type ChatMessage } from "@/lib/aiService";
+import { loadAssistantChat, saveAssistantChat, loadAssistantPos, saveAssistantPos, callAI, getPermissionStatusFromServer, type ChatMessage } from "@/lib/aiService";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
@@ -190,7 +190,7 @@ export default function AIAssistant() {
 
     // v20.1: 三级权限检查 - 未登录弹出登录引导
     if (!requireLogin()) return;
-    const perm = getPermissionStatus();
+    const perm = await getPermissionStatusFromServer();
     if (!perm.canUseAI) {
       const msg: ChatMessage = {
         id: genId(),

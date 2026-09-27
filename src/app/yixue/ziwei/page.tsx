@@ -22,7 +22,7 @@ import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/c
 import type { Client } from "@/lib/clientStore";
 import { getPalaceInterpretation, getPalaceAllStarInterpretations } from "@/lib/ziwei-interpretations";
 import { KB_TIANJI_SOURCE, getKbTianjiPalaceNotes } from "@/lib/ziwei-kb-supplement";
-import { callAI, checkAIQuota, incrementAIUsage, getPermissionStatus } from "@/lib/aiService";
+import { callAI, checkAIQuota, incrementAIUsage, getPermissionStatusFromServer } from "@/lib/aiService";
 import { buildDeepReportSystemPrompt } from "@/lib/deepReportPrompt";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
@@ -997,7 +997,7 @@ export default function ZiweiPage() {
 
     // v20.1: 三级权限检查 - 未登录弹出登录引导
     if (!requireLogin()) return;
-    const perm = getPermissionStatus();
+    const perm = await getPermissionStatusFromServer();
     if (!perm.canUseAI) {
       setAiContent(perm.message || "今日AI解读次数已用完，开通会员继续使用");
       setAiScope(scope);

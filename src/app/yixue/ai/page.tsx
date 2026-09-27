@@ -1,7 +1,7 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
-import { callAI, getPermissionStatus } from "@/lib/aiService";
+import { callAI, getPermissionStatusFromServer } from "@/lib/aiService";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
@@ -23,7 +23,7 @@ export default function YixueAIPage() {
 
     // v20.1: 三级权限检查 - 未登录弹出登录引导
     if (!requireLogin()) return;
-    const perm = getPermissionStatus();
+    const perm = await getPermissionStatusFromServer();
     if (!perm.canUseAI) {
       setMessages((prev) => [...prev,
         { role: "user", content: input },

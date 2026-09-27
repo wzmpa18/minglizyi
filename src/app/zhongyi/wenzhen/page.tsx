@@ -4,7 +4,7 @@ import { useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { WENZHEN_CATEGORIES, buildWenzhenSystemPrompt } from "@/data/wenzhen_data";
 import { buildZhengguPrompt } from "@/data/zhenggu_knowledge";
-import { callAI, getUserPermissionLevel, getPermissionStatus, truncateContentForFreeUser, generateContentKey, isSingleUnlocked, activateSingleUnlock, SINGLE_UNLOCK_PRICE } from "@/lib/aiService";
+import { callAI, getUserPermissionLevel, getPermissionStatusFromServer, truncateContentForFreeUser, generateContentKey, isSingleUnlocked, activateSingleUnlock, SINGLE_UNLOCK_PRICE } from "@/lib/aiService";
 import { paySingleUnlockAndWait } from "@/lib/paymentService";
 import { useAiPricing } from "@/lib/pricingStore";
 import { useNativePayQR } from "@/components/PayQRCodeModal";
@@ -99,7 +99,7 @@ export default function WenzhenPage() {
   // 开始辨证
   const handleDiagnose = useCallback(async () => {
     // 权限检查
-    const perm = getPermissionStatus();
+    const perm = await getPermissionStatusFromServer();
     setQuotaMsg(perm.message);
 
     if (perm.needLogin) {
@@ -158,7 +158,7 @@ export default function WenzhenPage() {
 
         // 根据权限处理内容
         const level = getUserPermissionLevel();
-        if (level === "member" || isSingleUnlocked(cKey)) {
+        if (level === "member" || perm.paidAccess || isSingleUnlocked(cKey)) {
           setAiResult(fullText);
           setIsLocked(false);
         } else {
