@@ -1489,7 +1489,7 @@ async function reconcileUndeliveredOrders() {
         db.prepare('INSERT INTO payment_reconcile_checks(order_no,checked_at) VALUES (?,?) ON CONFLICT(order_no) DO UPDATE SET checked_at=excluded.checked_at').run(row.order_no,new Date().toISOString());
         if (!q.success) continue;
         if (q.tradeState === 'SUCCESS') {
-          if (order.status === ORDER_STATUS.PENDING) updateOrderRecord(order.orderId,ORDER_STATUS.PAID,'wechat');
+            if (order.status !== ORDER_STATUS.PAID) updateOrderRecord(order.orderId,ORDER_STATUS.PAID,'wechat');
           if (!order.benefitDelivered) deliverOrderBenefits(order);
         } else if(q.tradeState === 'REFUND') {
           order.benefitDelivered = false;

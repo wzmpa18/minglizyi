@@ -370,7 +370,7 @@ function checkAIQuota(req, res, next) {
   req.aiQuota = quota;
 
   const level = req.membership?.level || quota.level;
-  const limit = getAIUsageDailyLimit(level);
+  const limit = quota.dailyLimit;
 
   if (quota.dailyUsed >= limit) {
     return res.status(429).json({
