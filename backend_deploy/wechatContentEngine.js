@@ -50,6 +50,47 @@ const CLUSTERS = [
   { id: 'shuziguanjia', name: '数字文化', toolUrl: '/', learnUrl: '/', recordTypes: [], tracks: [], chapterKeys: [], strategicFloor: 55 },
 ];
 
+// 2026-09-30 内容强化：每个集群拆成具体、可考的写作角度（避免整集群反复写"八字命理/七政四余"等泛标题）
+// 选题时按此表轮换取具体角度，配合知识库事实素材注入，保证每篇都是独特干货、不再重复
+const SUBTOPICS = {
+  qizheng: ['七政四余里的"十一曜"各自指什么', '星宗与二十八宿是什么关系', '七政看盘怎么起命宫', '四余星的文化源流', '七政四余与八字排盘的区别'],
+  luopan: ['罗盘二十四山怎么读', '七十二龙与分金口诀', '罗经天地人三盘差在哪', '坐向和分金是什么关系', '罗盘上的缝针、中针怎么用'],
+  bazi: ['八字里的日主强弱怎么看', '十神中"正印"代表什么', '财官印食四柱格局怎么入门', '大运和流年怎么排', '身弱身旺该怎么调候'],
+  liji: ['立极尺在阳宅里怎么用', '中宫立极怎么定', '罗盘和立极尺怎么配合'],
+  xuankong: ['玄空飞星九星各代表什么', '三元九运怎么分', '旺山旺向怎么看', '玄空飞星的山星向星'],
+  luban: ['鲁班尺的八星吉凶怎么看', '门公尺和丁兰尺区别', '尺寸吉凶怎么选', '鲁班尺在门窗中的应用'],
+  phone: ['手机号尾数数字文化怎么看', '选手机号的数字习俗', '号码里的阴阳奇偶讲究'],
+  carplate: ['车牌号数字选取习俗', '车牌号里的数字文化', '选车牌号的常见讲究'],
+  zhongyi: ['十二经脉循行顺序是怎样的', '脾胃为后天之本指什么', '二十四节气与养生怎么对应', '伤寒论六经辨证怎么入门', '五行和脏腑是怎么对应的', '经络里的原穴络穴是什么'],
+  yikao: ['中医执业医师考试考什么', '医考刷题怎么高效', '中医基础怎么搭框架'],
+  xuewaiyu: ['二十四节气里的语言文化', '汉字里的数字文化', '方言如何保留古音', '外来词怎么进入中文'],
+  shuziguanjia: ['古人的数字哲学讲什么', '河图洛书怎么读', '数字在礼制里的含义', '天干地支怎么对应数字'],
+};
+
+// 从学堂知识库抽取该集群的真实知识点（必须 approved），作为文章事实素材；无则空数组（prompt 降级处理）
+function collectKnowledge(cluster) {
+  const db = getDb();
+  const tracks = (cluster.tracks || []).filter(Boolean);
+  if (!tracks.length) return [];
+  const ph = tracks.map(() => '?').join(',');
+  let rows = [];
+  try {
+    rows = db.prepare(`SELECT id, title, content, source_location, category FROM knowledge_points WHERE status = 'approved' AND track IN (${ph}) ORDER BY RANDOM() LIMIT 8`).all(...tracks);
+  } catch { return []; }
+  return rows.map((r) => ({ id: r.id, title: r.title || '', content: String(r.content || '').slice(0, 360), source: r.source_location || r.category || '' }));
+}
+
+// 选题取具体角度：优先取近期未用过的小角度，保证批次间不重复；已用记录滚动保留最近 50 个
+function pickSubtopic(cluster) {
+  const list = SUBTOPICS[cluster.id];
+  if (!list || !list.length) return cluster.name;
+  const used = new Set(getSetting('wechat_used_subtopics', []));
+  const avail = list.filter((x) => !used.has(x));
+  const pick = (avail.length ? avail : list)[Math.floor(Math.random() * (avail.length ? avail.length : list.length))];
+  setSetting('wechat_used_subtopics', [...used, pick].slice(-50), 'system');
+  return pick;
+}
+
 // ---------- 内部需求数据（第三十五/三十八章：真实数据，不伪造） ----------
 function collectInternalDemand() {
   const db = getDb();
@@ -133,7 +174,7 @@ function generateTopics(runDate) {
     const gap = contentGapScore(c);
     const final = Math.round(internal * 0.7 + gap * 0.3);
     rows.push({
-      keyword: c.name, cluster: c.id, source: 'INTERNAL',
+      keyword: pickSubtopic(c), cluster: c.id, source: 'INTERNAL',
       source_score: null, internal_score: internal,
       trend_score: null, // 无真实趋势API → UNKNOWN（第三十六章禁止伪数据）
       content_gap_score: gap, final_score: final,
@@ -310,6 +351,10 @@ const ARTICLE_STYLES = ['科普型', '教程型', '问答型', '清单型', '学
 
 function buildArticlePrompt(topic, cluster, style) {
   const bp = profileFor(topic.cluster);
+  const knowledge = collectKnowledge(cluster);
+  const knowledgeText = knowledge.length
+    ? knowledge.map(function (k, i) { return (i + 1) + '. ' + k.title + (k.source ? '（出处：' + k.source + '）' : '') + '：' + k.content; }).join('\n')
+    : '（暂无结构化知识库素材，请基于公开、可考的国学常识与典籍撰写，仍须具体、有出处、不空泛）';
   let termNote = '';
   if (topic.cluster === 'jieqi') {
     const st = solarTermForBatch(topic.run_date || new Date().toISOString().slice(0, 10));
@@ -331,7 +376,11 @@ function buildArticlePrompt(topic, cluster, style) {
 - 结构公式：${bp.formula}
 - 本题材禁忌：${bp.taboo}
 
+事实素材（必须引用，不得虚构；每条尽量给出来源/典籍出处，没有出处只写知识点名称；全文至少落实 2 条具体素材，这是文章"干货"的底气）：
+${knowledgeText}
+
 写作铁律（逐条自检后再输出）：
+0. 必须围绕本具体角度「${topic.keyword}」展开，严禁泛泛而谈；与任何已有文章不得雷同；必须出现上述事实素材中的至少 2 条具体内容
 1. 纯干货。全文不得出现任何APP、工具、课程、网站、下载、会员等推广内容，一个字都不带
 2. 结构硬指标：sections 必须有 4~6 个小节，每小节 paragraphs 给 2~3 段，每段 90~160 字；正文（开场+全部小节段落合计）必须达到 1600~2200 字，不足 1600 字视为不合格，必须扩写细节后再输出。信息密度优先：具体数字、典籍出处、可操作的细节
 3. 去AI味：长短句交错，一两句一段；禁用"与此同时""不仅如此""值得注意的是""让我们来看看"等过渡词；允许出现极短句作停顿
@@ -517,6 +566,9 @@ async function generateArticle(topicId) {
   if (todayAiCost() >= s.dailyCostCap) throw new Error('已达当日AI成本上限，停止生成（成本保护）');
   const topic = db.prepare('SELECT * FROM wechat_topic_candidates WHERE topic_id = ?').get(topicId);
   if (!topic) throw new Error('选题不存在');
+  // 2026-09-30 防重复：该具体角度若已发过（非归档/删除）则跳过，不再浪费 AI 调用，避免整集群反复写同一主题
+  const usedSub = db.prepare(`SELECT 1 FROM wechat_articles a JOIN wechat_topic_candidates t ON a.topic_id=t.topic_id WHERE a.status NOT IN ('ARCHIVED','DELETED') AND t.keyword=? LIMIT 1`).get(topic.keyword);
+  if (usedSub) throw new Error('该具体角度已发过，跳过（防重复）');
   const cluster = CLUSTERS.find((c) => c.id === topic.cluster) || (topic.cluster === 'jieqi'
     ? { id: 'jieqi', name: '节气文化', toolUrl: '/', learnUrl: '/', recordTypes: [], tracks: [], chapterKeys: [] }
     : CLUSTERS[0]);
