@@ -1,11 +1,12 @@
 {
   "name": "06-app",
-  "version": "v25.0.91",
+  "version": "v25.0.96",
   "private": true,
   "scripts": {
     "dev": "node scripts/gen-version.js && next dev",
     "prebuild": "node scripts/gen-version.js",
     "build": "next build",
+    "postbuild": "node scripts/seo-fix/inject-canonical.js",
     "start": "next start",
     "lint": "eslint"
   },
