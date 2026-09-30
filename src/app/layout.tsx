@@ -20,6 +20,8 @@ import { ToastHost } from "@/components/ui";
 import { PromoFloat } from "@/components/marketing/PromoFloat";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://yandaoguoxue.yandao.vip"),
+  alternates: { canonical: "./" },
   title: {
     default: "言道国学——八字紫微奇门六爻免费在线排盘与国学学习平台",
     template: "%s｜言道国学",
