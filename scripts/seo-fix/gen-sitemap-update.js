@@ -5,7 +5,7 @@ const path = require("path");
 
 const PUB = path.join(__dirname, "..", "..", "public", "sitemap.xml");
 const BASE = "https://yandaoguoxue.yandao.vip";
-const TODAY = "2026-09-13";
+const TODAY = new Date().toISOString().slice(0,10);
 
 const src = fs.readFileSync(PUB, "utf8");
 
