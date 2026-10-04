@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import html
+import hashlib
 import re
 import urllib.parse
 import urllib.request
@@ -21,8 +22,14 @@ from pathlib import Path
 
 API = "https://zh.wikisource.org/w/api.php"
 OUTPUT = Path(__file__).resolve().parents[1] / "src" / "data" / "guoxueClassics.json"
+CACHE_DIR = Path.home() / ".cache" / "yandao-classics"
 
 BOOKS = [
+    {"id": "lunyu", "title": "论语", "wikiTitle": "論語/全覽", "category": "儒家", "author": "孔子弟子及再传弟子编纂"},
+    {"id": "daxue", "title": "大学章句", "wikiTitle": "四書章句集註/大學章句", "category": "儒家", "author": "朱熹章句"},
+    {"id": "zhongyong", "title": "中庸章句", "wikiTitle": "四書章句集註 (四庫全書本)/中庸", "category": "儒家", "author": "朱熹章句"},
+    {"id": "daodejing_wangbi", "title": "道德经（王弼本）", "wikiTitle": "道德經 (王弼本)", "category": "道家", "author": "老子；王弼注"},
+    {"id": "sunzibingfa", "title": "孙子兵法", "wikiTitle": "孫子兵法", "category": "兵家", "author": "孙武"},
     {"id": "sanzijing", "title": "三字经", "wikiTitles": ["新刊三字經"], "category": "蒙学", "author": "王应麟（传统署名）"},
     {"id": "baijiaxing", "title": "百家姓", "wikiTitle": "百家姓", "category": "蒙学", "author": "佚名"},
     {"id": "qianziwen", "title": "千字文", "wikiTitle": "千字文", "category": "蒙学", "author": "周兴嗣"},
@@ -34,6 +41,10 @@ BOOKS = [
 
 
 def fetch_extract(title: str) -> tuple[str, str]:
+    cache_file = CACHE_DIR / f"{hashlib.sha256(title.encode('utf-8')).hexdigest()}.json"
+    if cache_file.exists():
+        cached = json.loads(cache_file.read_text(encoding="utf-8"))
+        return cached["title"], cached["content"]
     params = urllib.parse.urlencode(
         {
             "action": "parse",
@@ -49,16 +60,16 @@ def fetch_extract(title: str) -> tuple[str, str]:
         f"{API}?{params}",
         headers={"User-Agent": "YandaoGuoxue/1.0 classics-importer"},
     )
-    for attempt in range(5):
+    for attempt in range(8):
         try:
             with urllib.request.urlopen(request, timeout=30) as response:
                 page = json.load(response)["parse"]
             break
         except urllib.error.HTTPError as error:
-            if error.code != 429 or attempt == 4:
+            if error.code != 429 or attempt == 7:
                 raise
-            time.sleep(2 ** attempt)
-    time.sleep(0.4)
+            time.sleep(min(5 * (attempt + 1), 30))
+    time.sleep(1.0)
     rendered = str(page.get("text") or "")
     rendered = re.sub(r"<(script|style|table)[^>]*>.*?</\1>", "", rendered, flags=re.I | re.S)
     rendered = re.sub(r"<span[^>]*class=\"mw-editsection[^>]*>.*?</span>", "", rendered, flags=re.I | re.S)
@@ -72,12 +83,20 @@ def fetch_extract(title: str) -> tuple[str, str]:
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     if len(text) < 80:
         raise RuntimeError(f"Wikisource extract too short: {title} ({len(text)})")
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    cache_file.write_text(json.dumps({"title": page["title"], "content": text}, ensure_ascii=False), encoding="utf-8")
     return str(page["title"]), text
 
 
 def main() -> None:
+    existing = {}
+    if OUTPUT.exists():
+        existing = {item["id"]: item for item in json.loads(OUTPUT.read_text(encoding="utf-8")).get("books", [])}
     imported = []
     for book in BOOKS:
+        if book["id"] in existing:
+            imported.append(existing[book["id"]])
+            continue
         requested_titles = book.get("wikiTitles") or [book["wikiTitle"]]
         parts = []
         resolved_titles = []

@@ -3,7 +3,11 @@ from pathlib import Path
 
 
 DATA = Path(__file__).resolve().parents[1] / "src" / "data" / "guoxueClassics.json"
-EXPECTED = {"sanzijing", "baijiaxing", "qianziwen", "dizigui", "zhuzijiaxun", "shenglvqimeng", "zengguangxianwen"}
+EXPECTED = {
+    "lunyu", "daxue", "zhongyong", "daodejing_wangbi", "sunzibingfa",
+    "sanzijing", "baijiaxing", "qianziwen", "dizigui", "zhuzijiaxun",
+    "shenglvqimeng", "zengguangxianwen",
+}
 
 
 def main() -> None:
