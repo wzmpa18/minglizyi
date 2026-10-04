@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { isNativeShellOutdated, type AppReleaseInfo, type NativeShellInfo } from "../src/lib/nativeDetect";
 
 const release: AppReleaseInfo = {
-  latestVersion: "25.0.104",
-  latestVersionCode: 2091,
+  latestVersion: "25.0.105",
+  latestVersionCode: 2092,
   downloadUrl: "https://www.yandao.vip/app-download/latest.apk",
   downloadPage: "https://yandaoguoxue.yandao.vip/friend",
   releaseNotes: [],
@@ -15,9 +15,9 @@ function shell(versionCode: number | null, versionName: string | null, source: N
   return { isShell: true, versionCode, versionName, source };
 }
 
-assert.equal(isNativeShellOutdated(shell(2091, "25.0.104"), release), false, "exact versionCode must be current");
+assert.equal(isNativeShellOutdated(shell(2092, "25.0.105"), release), false, "exact versionCode must be current");
 assert.equal(isNativeShellOutdated(shell(2084, "25.0.97"), release), true, "older versionCode must upgrade");
-assert.equal(isNativeShellOutdated(shell(null, "25.0.104"), release), false, "embedded version fallback must prevent false upgrade");
+assert.equal(isNativeShellOutdated(shell(null, "25.0.105"), release), false, "embedded version fallback must prevent false upgrade");
 assert.equal(isNativeShellOutdated(shell(null, "25.0.97"), release), true, "older embedded version fallback must upgrade");
 assert.equal(isNativeShellOutdated(shell(null, null, "legacy"), release), true, "true legacy shell must upgrade");
 assert.equal(isNativeShellOutdated(shell(null, "25.0.105"), release), false, "newer patch version must not downgrade");

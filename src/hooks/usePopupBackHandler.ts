@@ -40,7 +40,10 @@ export function usePopupBackHandler(onClose: (reason?: "back") => void, isOpen: 
       const current = (window.history.state && typeof window.history.state === "object")
         ? window.history.state
         : {};
-      window.history.pushState({ ...current, __popup: "1" }, "");
+      const popupState: Record<string, unknown> = { ...current, __popup: "1" };
+      // Next.js 用递增 idx 判断返回方向；复用原 idx 会导致右滑时跨页或循环。
+      if (typeof current.idx === "number") popupState.idx = current.idx + 1;
+      window.history.pushState(popupState, "");
       pushedRef.current = true;
       backHandledRef.current = false;
     } else if (!isOpen && pushedRef.current && !backHandledRef.current) {

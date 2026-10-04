@@ -20,6 +20,17 @@ const TOOL_PATHS = [
   "/yixue/name", "/yixue/qiming",
 ];
 
+// 已接入 yixue-edit 的排盘工具：结果页从顶栏重新打开输入表单，
+// 不再占用命盘正文空间放“历史记录/重新排盘”整行按钮。
+const EDITABLE_PATHS = [
+  "/yixue/bazi", "/yixue/meihua", "/yixue/xiaoliuren",
+  "/yixue/ziwei", "/yixue/qimen", "/yixue/liuyao",
+  "/yixue/daliuren", "/yixue/hehun", "/yixue/yizhangjing",
+  "/yixue/xuankong-feixing", "/yixue/taiyi-sanshi",
+  "/yixue/phone", "/yixue/carplate", "/yixue/zeri", "/yixue/jiemeng",
+  "/yixue/name", "/yixue/qiming",
+];
+
 // 全局返回标记：子页面切换回输入模式后设为 true
 declare global { interface Window { __yixueBackHandled?: boolean; } }
 
@@ -30,6 +41,7 @@ export default function YixueClientShell({ children }: { children: React.ReactNo
   // 列表页返回键退化为 router.back()，从工具页返回列表后再按返回会跳回工具页
   const normPathname = pathname !== "/" && pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
   const isToolPage = TOOL_PATHS.some(p => normPathname.startsWith(p));
+  const isEditableTool = EDITABLE_PATHS.some(p => normPathname.startsWith(p));
 
   const [pageTitle, setPageTitle] = useState("言道易学");
   useEffect(() => {
@@ -90,8 +102,18 @@ export default function YixueClientShell({ children }: { children: React.ReactNo
         className="sticky top-0 z-50 grid w-full items-center"
         // v25.0.80: iOS 刘海屏顶栏避让——viewport-fit=cover 下补 safe-area-inset-top，
         // 否则返回键/分享键被灵动岛遮挡（Android 安全区为 0，零影响）
-        style={{ gridTemplateColumns: "44px 1fr 44px", backgroundColor: "#7B2FBE", minHeight: "calc(48px + env(safe-area-inset-top, 0px))", padding: "0", paddingTop: "env(safe-area-inset-top, 0px)" }}
+        style={{ gridTemplateColumns: `44px 1fr ${isEditableTool ? "84px" : "44px"}`, backgroundColor: "#7B2FBE", minHeight: "calc(48px + env(safe-area-inset-top, 0px))", padding: "0", paddingTop: "env(safe-area-inset-top, 0px)" }}
       >
+        <div className="flex items-center justify-end">
+        {isEditableTool && <button
+          onClick={() => window.dispatchEvent(new CustomEvent("yixue-edit"))}
+          className="flex h-10 w-10 items-center justify-center" title="重新排盘"
+          aria-label="重新排盘"
+        >
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+          </svg>
+        </button>}
         <button
           onClick={handleBack}
           className="flex h-10 w-10 items-center justify-center" title="返回"
@@ -131,6 +153,7 @@ export default function YixueClientShell({ children }: { children: React.ReactNo
             <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
           </svg>
         </button>
+        </div>
       </header>
 
       {/* v25.0.27: 移除 52px 空白占位（sticky header 已在文档流中），内容直接顶到品牌栏下方 */}

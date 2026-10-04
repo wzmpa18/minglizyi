@@ -624,19 +624,9 @@ function TabDetail({result,gender}:{
   const [selectedLn, setSelectedLn] = useState(0);
   // 选中流月索引 (undefined = 未选中，隐藏流月列)
   const [selectedLy, setSelectedLy] = useState<number | undefined>(undefined);
-  // 流日、流时直接复用统一历法引擎计算，避免手写干支口径偏差。
-  const [flowDate, setFlowDate] = useState(() => {
-    const now = new Date();
-    return { year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate(), hour: now.getHours() };
-  });
-  const flowMaxDay = new Date(flowDate.year, flowDate.month, 0).getDate();
-  const flowResult = useMemo(() => {
-    try {
-      return solarToBazi({ ...flowDate, minute: 0, gender }) as BaziResult;
-    } catch {
-      return null;
-    }
-  }, [flowDate, gender]);
+  // 流日、流时与紫微斗数相同：必须由用户逐层点击后才展开。
+  const [selectedLr, setSelectedLr] = useState<number | undefined>(undefined);
+  const [selectedLs, setSelectedLs] = useState<number | undefined>(undefined);
 
   // 默认选中包含当前年份的大运
   useEffect(() => {
@@ -658,16 +648,22 @@ function TabDetail({result,gender}:{
     setSelectedDy(idx);
     setSelectedLn(0); // 切换大运时重置流年到第1年
     setSelectedLy(undefined); // 切换大运时隐藏流月列
+    setSelectedLr(undefined);
+    setSelectedLs(undefined);
   };
 
   const handleLiunianClick = (idx: number) => {
     setSelectedLn(idx);
     setSelectedLy(undefined); // 切换流年时隐藏流月列
+    setSelectedLr(undefined);
+    setSelectedLs(undefined);
   };
 
-  // 流月点击：toggle 选中/取消选中
+  // 选择流月后展开流日；更换流月时清空下级选择。
   const handleLiuyueClick = (idx: number) => {
-    setSelectedLy(idx === selectedLy ? undefined : idx);
+    setSelectedLy(idx);
+    setSelectedLr(undefined);
+    setSelectedLs(undefined);
   };
 
   const curDy = dayunList[selectedDy];
@@ -750,7 +746,97 @@ function TabDetail({result,gender}:{
     return liuyueList[selectedLy];
   }, [selectedLy, curLn, liuyueList]);
 
-  // ===== 统一显示柱数组：基础4柱 + 选中大运(第5列) + 选中流年(第6列) + 选中流月(第7列) =====
+  type FlowNode = {
+    gan: TianGan;
+    zhi: DiZhi;
+    ganzhi: string;
+    shishenGan: string;
+    year: number;
+    month: number;
+    day: number;
+    hour?: number;
+    label: string;
+  };
+
+  // 按八字节气月扫描真实公历日期，避免把“寅月”错误等同于整个二月。
+  const liuriList = useMemo<FlowNode[]>(() => {
+    if (!curLn || selectedLy === undefined || !curLy) return [];
+    const anchorMonth = selectedLy === 11 ? 1 : selectedLy + 2;
+    const anchorYear = selectedLy === 11 ? curLn.year + 1 : curLn.year;
+    const scanStart = new Date(anchorYear, anchorMonth - 1, 1);
+    const targetGanzhi = `${curLy.gan}${curLy.zhi}`;
+    const days: FlowNode[] = [];
+    for (let offset = 0; offset < 45; offset++) {
+      const date = new Date(scanStart);
+      date.setDate(scanStart.getDate() + offset);
+      try {
+        const calculated = solarToBazi({
+          year: date.getFullYear(),
+          month: date.getMonth() + 1,
+          day: date.getDate(),
+          hour: 12,
+          minute: 0,
+          gender,
+        }) as BaziResult;
+        const monthPillar = calculated.pillars[1];
+        const dayPillar = calculated.pillars[2];
+        if (monthPillar?.ganzhi !== targetGanzhi || !dayPillar) continue;
+        days.push({
+          gan: dayPillar.gan as TianGan,
+          zhi: dayPillar.zhi as DiZhi,
+          ganzhi: dayPillar.ganzhi,
+          shishenGan: getShiShen(dayGan, dayPillar.gan as TianGan) || "",
+          year: date.getFullYear(),
+          month: date.getMonth() + 1,
+          day: date.getDate(),
+          label: `${date.getMonth() + 1}/${date.getDate()}`,
+        });
+      } catch {
+        // 单日历法不可用时跳过，不影响其余日期。
+      }
+    }
+    return days;
+  }, [curLn?.year, curLy?.gan, curLy?.zhi, selectedLy, dayGan, gender]);
+
+  const curLr = selectedLr === undefined ? undefined : liuriList[selectedLr];
+
+  // 十二时辰采用子、丑……亥的代表时刻，时柱仍由统一八字引擎计算。
+  const liushiList = useMemo<FlowNode[]>(() => {
+    if (!curLr) return [];
+    const branches: DiZhi[] = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
+    return branches.flatMap((branch, index) => {
+      const hour = index * 2;
+      try {
+        const calculated = solarToBazi({
+          year: curLr.year,
+          month: curLr.month,
+          day: curLr.day,
+          hour,
+          minute: 0,
+          gender,
+        }) as BaziResult;
+        const hourPillar = calculated.pillars[3];
+        if (!hourPillar) return [];
+        return [{
+          gan: hourPillar.gan as TianGan,
+          zhi: hourPillar.zhi as DiZhi,
+          ganzhi: hourPillar.ganzhi,
+          shishenGan: getShiShen(dayGan, hourPillar.gan as TianGan) || "",
+          year: curLr.year,
+          month: curLr.month,
+          day: curLr.day,
+          hour,
+          label: `${branch}时`,
+        }];
+      } catch {
+        return [];
+      }
+    });
+  }, [curLr?.year, curLr?.month, curLr?.day, dayGan, gender]);
+
+  const curLs = selectedLs === undefined ? undefined : liushiList[selectedLs];
+
+  // ===== 统一显示柱数组：本命四柱 → 大运 → 流年 → 流月 → 流日 → 流时 =====
   type DisplayPillar = {
     label: string;
     sublabel?: string;
@@ -767,6 +853,8 @@ function TabDetail({result,gender}:{
     isDayun?: boolean;
     isLiunian?: boolean;
     isLiuyue?: boolean;
+    isLiuri?: boolean;
+    isLiushi?: boolean;
   };
 
   const displayPillars: DisplayPillar[] = useMemo(() => {
@@ -844,8 +932,44 @@ function TabDetail({result,gender}:{
       });
     }
 
+    if (curLr) {
+      base.push({
+        label: "流日",
+        sublabel: curLr.label,
+        gan: curLr.gan,
+        zhi: curLr.zhi,
+        ganzhi: curLr.ganzhi,
+        shishenGan: curLr.shishenGan,
+        shishenZhi: [],
+        canggan: getCangGan(curLr.zhi) || [],
+        nayin: getNaYin(curLr.ganzhi) || "",
+        xunkong: getXunKong(curLr.ganzhi) || "",
+        zuo: getChangSheng(dayGan, curLr.zhi),
+        isDayPillar: false,
+        isLiuri: true,
+      });
+    }
+
+    if (curLs) {
+      base.push({
+        label: "流时",
+        sublabel: curLs.label,
+        gan: curLs.gan,
+        zhi: curLs.zhi,
+        ganzhi: curLs.ganzhi,
+        shishenGan: curLs.shishenGan,
+        shishenZhi: [],
+        canggan: getCangGan(curLs.zhi) || [],
+        nayin: getNaYin(curLs.ganzhi) || "",
+        xunkong: getXunKong(curLs.ganzhi) || "",
+        zuo: getChangSheng(dayGan, curLs.zhi),
+        isDayPillar: false,
+        isLiushi: true,
+      });
+    }
+
     return base;
-  }, [pillars, curDy, curLn, curLy, dayGan, gender]);
+  }, [pillars, curDy, curLn, curLy, curLr, curLs, dayGan, gender]);
 
   // 藏干+十神（统一用于基础柱/大运/流年）- v17.7 基础柱使用预计算值
   const getCgSs = (dp: DisplayPillar) => {
@@ -854,7 +978,7 @@ function TabDetail({result,gender}:{
       let ssName = "";
       if (dp.isDayPillar) {
         ssName = idx === 0 ? (gender === "male" ? "元男" : "元女") : ((dp.shishenZhi && dp.shishenZhi[idx]) || "");
-      } else if (dp.isDayun || dp.isLiunian || dp.isLiuyue) {
+      } else if (dp.isDayun || dp.isLiunian || dp.isLiuyue || dp.isLiuri || dp.isLiushi) {
         ssName = getShiShen(dayGan, g as TianGan) || "";
       } else {
         ssName = (dp.shishenZhi && dp.shishenZhi[idx]) || "";
@@ -865,12 +989,12 @@ function TabDetail({result,gender}:{
 
   // 动态列宽
   const numPillars = displayPillars.length;
-  const labelWidth = numPillars <= 4 ? "14%" : numPillars === 5 ? "12%" : numPillars === 6 ? "11%" : "9%";
+  const labelWidth = numPillars <= 4 ? "14%" : numPillars === 5 ? "12%" : numPillars === 6 ? "11%" : numPillars === 7 ? "9%" : "8%";
   const pillarWidth = `${(100 - parseFloat(labelWidth)) / numPillars}%`;
-  const ganzhiFontSize = numPillars <= 4 ? "26px" : numPillars === 5 ? "22px" : numPillars === 6 ? "20px" : "18px";
-  const cgFontSize = numPillars <= 4 ? "15px" : numPillars === 5 ? "13px" : numPillars === 6 ? "12px" : "11px";
+  const ganzhiFontSize = numPillars <= 4 ? "26px" : numPillars === 5 ? "22px" : numPillars === 6 ? "20px" : numPillars === 7 ? "18px" : numPillars === 8 ? "16px" : "15px";
+  const cgFontSize = numPillars <= 4 ? "15px" : numPillars === 5 ? "13px" : numPillars === 6 ? "12px" : numPillars === 7 ? "11px" : "10px";
   const cgSsFontSize = numPillars <= 4 ? "13px" : numPillars === 5 ? "11px" : numPillars === 6 ? "10px" : "9px";
-  const cgLineHeight = numPillars <= 4 ? "22px" : numPillars === 5 ? "19px" : numPillars === 6 ? "17px" : "15px";
+  const cgLineHeight = numPillars <= 4 ? "22px" : numPillars === 5 ? "19px" : numPillars === 6 ? "17px" : numPillars === 7 ? "15px" : "14px";
 
   return <div className="px-2 pt-2 pb-4">
     {/* 四柱详盘表格 - 白底无圆角阴影，对标jishiyu，支持4/5/6/7列动态 */}
@@ -1080,6 +1204,59 @@ function TabDetail({result,gender}:{
         </div>
       </div>}
 
+      {/* 流日行：沿用紫微斗数的两排紧凑布局，选择流月后才出现。 */}
+      {liuriList.length > 0 && <>
+        {[liuriList.slice(0, 15), liuriList.slice(15)].map((row, rowIndex) => row.length > 0 && (
+          <div key={`lr-row-${rowIndex}`} className="flex" style={{borderBottom:"1px solid #e0e0e0", background:"#fafafa"}}>
+            <div className="shrink-0 flex flex-col items-center justify-center text-center font-bold" style={{width:"28px", lineHeight:"16px", fontSize:"11px", color:"#333", borderRight:"1px solid #ccc"}}>
+              {rowIndex === 0 ? <><div>流</div><div>日</div></> : null}
+            </div>
+            <div className="flex-1 flex" style={{overflow:"hidden"}}>
+              {row.map((lr, localIndex) => {
+                const actualIndex = rowIndex * 15 + localIndex;
+                const isActive = actualIndex === selectedLr;
+                return <div
+                  key={`${lr.year}-${lr.month}-${lr.day}`}
+                  onClick={() => { setSelectedLr(actualIndex); setSelectedLs(undefined); }}
+                  className="flex-1 min-w-0 text-center cursor-pointer"
+                  style={{padding:"2px 0", borderLeft:localIndex > 0 ? "1px solid #eee" : "none", backgroundColor:isActive ? "#e8e0f0" : "#fff", lineHeight:"1.2"}}
+                >
+                  <div style={{fontSize:"7px", color:"#888", whiteSpace:"nowrap"}}>{lr.label}</div>
+                  <div style={{fontSize:"9px", fontWeight:isActive ? "bold" : "normal"}}>
+                    <span style={{color:WX_COLORS[getGanWuxing(lr.gan)||"火"]}}>{lr.gan}</span>
+                    <span style={{color:WX_COLORS[getZhiWuxing(lr.zhi)||"火"]}}>{lr.zhi}</span>
+                  </div>
+                </div>;
+              })}
+            </div>
+          </div>
+        ))}
+      </>}
+
+      {/* 流时行：选择流日后才出现。 */}
+      {liushiList.length > 0 && <div className="flex" style={{borderBottom:"1px solid #e0e0e0", background:"#fafafa"}}>
+        <div className="shrink-0 flex flex-col items-center justify-center text-center font-bold" style={{width:"28px", lineHeight:"16px", fontSize:"11px", color:"#333", borderRight:"1px solid #ccc"}}>
+          <div>流</div><div>时</div>
+        </div>
+        <div className="flex-1 flex" style={{overflow:"hidden"}}>
+          {liushiList.map((ls, index) => {
+            const isActive = index === selectedLs;
+            return <div
+              key={ls.label}
+              onClick={() => setSelectedLs(index)}
+              className="flex-1 min-w-0 text-center cursor-pointer"
+              style={{padding:"3px 1px", borderLeft:index > 0 ? "1px solid #eee" : "none", backgroundColor:isActive ? "#e8e0f0" : "#fff", lineHeight:"1.25"}}
+            >
+              <div style={{fontSize:"8px", color:"#666"}}>{ls.label.slice(0, 1)}</div>
+              <div style={{fontSize:"10px", fontWeight:isActive ? "bold" : "normal"}}>
+                <span style={{color:WX_COLORS[getGanWuxing(ls.gan)||"火"]}}>{ls.gan}</span>
+                <span style={{color:WX_COLORS[getZhiWuxing(ls.zhi)||"火"]}}>{ls.zhi}</span>
+              </div>
+            </div>;
+          })}
+        </div>
+      </div>}
+
       {/* 选中流年详情 */}
       {curLn && <div className="px-3 py-3" style={{backgroundColor:BRAND_PURPLE_BG}}>
         <div className="flex items-center gap-3 mb-2">
@@ -1108,37 +1285,6 @@ function TabDetail({result,gender}:{
         </div>
       </div>}
     </div>}
-
-    {/* 流日流时：按所选公历时刻调用与本命一致的历法引擎。 */}
-    <div className="mb-2 bg-white px-2 py-2">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <strong className="text-[14px] text-[#333]">流日 · 流时</strong>
-        <button type="button" onClick={() => { const now = new Date(); setFlowDate({ year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate(), hour: now.getHours() }); }} className="rounded border border-[#C9A8DC] bg-[#F3EDF7] px-2 py-1 text-[11px] text-[#7B2FBE]">当前时刻</button>
-      </div>
-      <div className="mb-2 grid grid-cols-[1.35fr_.8fr_.8fr_.8fr] gap-1">
-        <select aria-label="流日年份" value={flowDate.year} onChange={(e) => setFlowDate((v) => ({ ...v, year: Number(e.target.value), day: Math.min(v.day, new Date(Number(e.target.value), v.month, 0).getDate()) }))} className="min-w-0 rounded border border-gray-200 bg-white px-1 py-1.5 text-center text-[12px]">
-          {Array.from({ length: 201 }, (_, i) => 1900 + i).map((y) => <option key={y} value={y}>{y}年</option>)}
-        </select>
-        <select aria-label="流日月份" value={flowDate.month} onChange={(e) => setFlowDate((v) => { const month = Number(e.target.value); return { ...v, month, day: Math.min(v.day, new Date(v.year, month, 0).getDate()) }; })} className="min-w-0 rounded border border-gray-200 bg-white px-1 py-1.5 text-center text-[12px]">
-          {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => <option key={m} value={m}>{m}月</option>)}
-        </select>
-        <select aria-label="流日日数" value={flowDate.day} onChange={(e) => setFlowDate((v) => ({ ...v, day: Number(e.target.value) }))} className="min-w-0 rounded border border-gray-200 bg-white px-1 py-1.5 text-center text-[12px]">
-          {Array.from({ length: flowMaxDay }, (_, i) => i + 1).map((d) => <option key={d} value={d}>{d}日</option>)}
-        </select>
-        <select aria-label="流时时辰" value={flowDate.hour} onChange={(e) => setFlowDate((v) => ({ ...v, hour: Number(e.target.value) }))} className="min-w-0 rounded border border-gray-200 bg-white px-1 py-1.5 text-center text-[12px]">
-          {Array.from({ length: 24 }, (_, i) => i).map((h) => <option key={h} value={h}>{String(h).padStart(2,"0")}时</option>)}
-        </select>
-      </div>
-      {flowResult ? <table className="w-full table-fixed border-collapse text-center">
-        <tbody>
-          <tr className="bg-[#f8f8f8] text-[11px] text-[#666]"><td className="py-1">日期</td>{["流年","流月","流日","流时"].map((v) => <td key={v} className="py-1">{v}</td>)}</tr>
-          <tr><td className="py-1 text-[11px] text-[#666]">十神</td>{flowResult.pillars.map((p,i) => <td key={i} className="py-1 text-[12px] text-[#333]">{i === 2 ? (gender === "male" ? "元男" : "元女") : getShiShen(dayGan, p.gan as TianGan)}</td>)}</tr>
-          <tr><td className="py-1 text-[11px] text-[#666]">天干</td>{flowResult.pillars.map((p,i) => <td key={i} className="py-1 text-[20px] font-black" style={{color:WX_COLORS[getGanWuxing(p.gan as TianGan)||"火"]}}>{p.gan}</td>)}</tr>
-          <tr><td className="py-1 text-[11px] text-[#666]">地支</td>{flowResult.pillars.map((p,i) => <td key={i} className="py-1 text-[20px] font-black" style={{color:WX_COLORS[getZhiWuxing(p.zhi as DiZhi)||"火"]}}>{p.zhi}</td>)}</tr>
-          <tr className="bg-[#f8f8f8]"><td className="py-1 text-[11px] text-[#666]">纳音</td>{flowResult.pillars.map((p,i) => <td key={i} className="py-1 text-[11px] text-[#555]">{p.nayin || getNaYin(p.ganzhi) || "-"}</td>)}</tr>
-        </tbody>
-      </table> : <div className="py-3 text-center text-xs text-red-500">该时刻暂时无法计算，请调整日期</div>}
-    </div>
 
     {/* 五行旺衰条 - 金色/棕色底, 对标参考页 */}
     {(() => {
