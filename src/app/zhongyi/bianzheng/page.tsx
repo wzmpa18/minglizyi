@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { BrandHeader } from "@/components/shared";
 import { useToolBack } from "@/lib/useToolBack";
-import { callAI, getPermissionStatus } from "@/lib/aiService";
+import { callAI, getPermissionStatusFromServer } from "@/lib/aiService";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { WENZHEN_CATEGORIES, buildWenzhenSystemPrompt } from "@/data/wenzhen_data";
@@ -206,7 +206,7 @@ function BianZhengPageOriginal() {
 
     // v20.1: 三级权限检查 - 未登录弹出登录引导
     if (!requireLogin()) return;
-    const perm = getPermissionStatus();
+    const perm = await getPermissionStatusFromServer();
     if (!perm.canUseAI) {
       setStep(3);
       setHasError(true);

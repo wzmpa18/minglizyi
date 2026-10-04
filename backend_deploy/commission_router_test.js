@@ -252,6 +252,22 @@ console.log('\n=== 7) Partner 培养关系（P2 下级，P1 上级收 5% nurture
   eq(r.conservation.breakdown.nurture, 372, '快照 nurture=372');
 }
 
+console.log('\n=== 7.1) 助力优惠：普通推荐佣金关闭，Partner 合同保留 ===');
+{
+  const order = mkOrder('T8', 1003, 80);
+  order.extra = { growthCampaign: { commissionPolicy: 'REFERRAL_EXCLUDED_PARTNER_PRESERVED' } };
+  const r = commissionRouter.processPaidOrder(order);
+  eq(r.ok, true, '优惠订单入账 ok');
+  eq(r.campaignCommissionPolicy, 'REFERRAL_EXCLUDED_PARTNER_PRESERVED', '活动分佣策略已快照到返回值');
+  eq(r.referral.granted, false, '普通 L1 不叠加');
+  eq(r.partner.granted, true, 'Partner 合同继续履约');
+  eq(r.partner.partnerId, 2200, 'Partner=2200');
+  eq(r.partner.netCents, 7152, '净额按实付80元计算且不扣普通佣金');
+  eq(r.partner.commissionCents, 3576, 'Partner=7152×50%');
+  eq(r.conservation.breakdown.referralL1, 0, '快照普通佣金=0');
+  eq(r.conservation.ok, true, '优惠订单金额守恒');
+}
+
 console.log('\n=== 8) 全额退款冲正 ===');
 {
   // T4 已入账（普通 + Partner）

@@ -30,6 +30,7 @@ import { payForUnlock, pollPaymentStatus } from "@/lib/paymentService";
 import { isSingleUnlocked, activateSingleUnlock } from "@/lib/aiService";
 import { recordAnswer, getMastery, isAnswerCorrect } from "@/lib/yikaoStudyStore";
 import { addNote, toggleFavorite, isFavorited, addComment } from "@/lib/academyStudyStore";
+import { learningDifficultyLabel } from "@/lib/learningDisplay";
 
 // 医考专区独立视觉体系（对标行业医考产品：青绿主色 + 朱红印章 + 米色纸感）
 const GREEN = "#2FAE9E";
@@ -37,8 +38,6 @@ const GREEN_DARK = "#1F8A7D";
 const SEAL_RED = "#C05046";
 const CREAM = "#FAF6ED";
 const INK = "#333333";
-
-const DIFF_NAMES: Record<string, string> = { easy: "易", medium: "中", hard: "难" };
 
 // 文库学科 Tab 别名（短标签 → 科目名包含的关键词）
 const LIB_TAB_ALIASES: Record<string, string[]> = {
@@ -311,9 +310,9 @@ export default function YikaoPage() {
                   <div className="p-4">
                     <div className="mb-2 flex items-center gap-2">
                       <span className="rounded-md px-1.5 py-0.5 text-[10px] font-semibold" style={{ backgroundColor: GREEN + "14", color: GREEN_DARK }}>
-                        {TYPE_NAMES[q.type] || q.type}
+                        {TYPE_NAMES[q.type] || "题目"}
                       </span>
-                      <span className="rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">{DIFF_NAMES[q.difficulty] || q.difficulty}</span>
+                      <span className="rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">{learningDifficultyLabel(q.difficulty)}</span>
                       <span className="ml-auto text-[10px] text-gray-300">#{idx + 1}</span>
                       <button
                         onClick={() => toggleFavorite({ questionId: q.id, stem: q.stem, track: "yikao", category: q.category || "", answer: q.answer || "", analysis: q.analysis || "" })}
@@ -407,7 +406,7 @@ export default function YikaoPage() {
   const renderSubjectTree = () => (
     <div className="px-3 py-3 pb-28">
       <div className="mb-2 flex items-center justify-between px-1">
-        <p className="text-[11px] text-gray-400">覆盖全部核心考点 · 掌握度随练习自动更新</p>
+        <p className="text-[11px] text-gray-400">核心知识点与练习进度 · 掌握度随练习自动更新</p>
       </div>
       <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
         {examSubjects.map((s, idx) => {
@@ -436,7 +435,7 @@ export default function YikaoPage() {
                 <div style={{ backgroundColor: "#fbfaf6" }}>
                   <div className="flex items-center justify-between px-8 pb-1.5 pt-1">
                     <p className="text-[10px] font-medium" style={{ color: covered ? "#15803d" : "#999" }}>
-                      {covered ? "覆盖全部核心考点" : "核心知识点持续完善中"}
+                      {covered ? "当前配置考点已覆盖" : "核心知识点持续完善中"}
                     </p>
                   </div>
                   {(s.chapters.length > 0 ? s.chapters : ["全部章节"]).map((ch) => (

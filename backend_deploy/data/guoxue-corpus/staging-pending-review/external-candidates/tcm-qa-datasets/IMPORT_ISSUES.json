@@ -1,0 +1,505 @@
+{
+  "generatedAt": "2026-10-03T16:05:14.410Z",
+  "formatIssues": [
+    {
+      "sourceFile": "Q&A datasets-SINGLE.json",
+      "sourceIndex": 2,
+      "stem": "下列除哪项外，均提示病情严重，预后不良",
+      "answer": "D",
+      "options": [
+        "目暗睛迷",
+        "舌苔骤剥",
+        "脉微欲绝",
+        "抽搐吐沫",
+        "昏迷烦躁"
+      ],
+      "issues": [
+        "DUPLICATE_OPTION_LABEL"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-SINGLE.json",
+      "sourceIndex": 8,
+      "stem": "独语、错语的共同病因是",
+      "answer": "D",
+      "options": [
+        "风痰阻络",
+        "热扰心神",
+        "心气大伤",
+        "心气不足",
+        "痰火扰心"
+      ],
+      "issues": [
+        "DUPLICATE_OPTION_LABEL"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-SINGLE.json",
+      "sourceIndex": 14,
+      "stem": "下列哪项不属于滑脉所主病证",
+      "answer": "D",
+      "options": [
+        "痰饮",
+        "食滞",
+        "实热",
+        "疟疾",
+        "恶阻"
+      ],
+      "issues": [
+        "DUPLICATE_OPTION_LABEL"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-SINGLE.json",
+      "sourceIndex": 23,
+      "stem": "下列肝胆病中，哪项不出现眩晕症状",
+      "answer": "C",
+      "options": [
+        "胆郁痰扰",
+        "肝阳上亢",
+        "肝气郁结",
+        "肝血虚",
+        "肝阴虚"
+      ],
+      "issues": [
+        "DUPLICATE_OPTION_LABEL"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-SINGLE.json",
+      "sourceIndex": 104,
+      "stem": "患者黄疸日久，黄色晦暗如烟熏，纳少脘闷，大便溏，神疲畏寒，口淡不渴，舌淡苔腻，脉沉迟。治疗应首选",
+      "answer": "E",
+      "options": [
+        "茵陈蒿汤",
+        "茵陈五苓散",
+        "甘露消毒丹",
+        "黄连温胆汤"
+      ],
+      "issues": [
+        "ANSWER_OPTION_MISSING"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-MULITPLE.json",
+      "sourceIndex": 29,
+      "stem": "下列哪两项既属“五体”，又属奇恒之腑",
+      "answer": "A",
+      "options": [
+        "脉",
+        "胆",
+        "脑",
+        "骨",
+        "髓"
+      ],
+      "issues": [
+        "INVALID_MULTIPLE_ANSWER"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-MULITPLE.json",
+      "sourceIndex": 42,
+      "stem": "属于“金元四大家”的是",
+      "answer": "ABE",
+      "options": [],
+      "issues": [
+        "OPTIONS_LT_2",
+        "ANSWER_OPTION_MISSING"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-MULITPLE.json",
+      "sourceIndex": 43,
+      "stem": "“土爰稼穑”是指土具有",
+      "answer": "ACE",
+      "options": [],
+      "issues": [
+        "OPTIONS_LT_2",
+        "ANSWER_OPTION_MISSING"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-MULITPLE.json",
+      "sourceIndex": 44,
+      "stem": "根据《素问·五运行大论》观点，五行中某一行之气太过，则",
+      "answer": "AB",
+      "options": [],
+      "issues": [
+        "OPTIONS_LT_2",
+        "ANSWER_OPTION_MISSING"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-MULITPLE.json",
+      "sourceIndex": 46,
+      "stem": "过劳包括",
+      "answer": "ABC",
+      "options": [],
+      "issues": [
+        "OPTIONS_LT_2",
+        "ANSWER_OPTION_MISSING"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-MULITPLE.json",
+      "sourceIndex": 47,
+      "stem": "胆又称为",
+      "answer": "ACD",
+      "options": [],
+      "issues": [
+        "OPTIONS_LT_2",
+        "ANSWER_OPTION_MISSING"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-MULITPLE.json",
+      "sourceIndex": 48,
+      "stem": "营气的生理功能",
+      "answer": "AE",
+      "options": [],
+      "issues": [
+        "OPTIONS_LT_2",
+        "ANSWER_OPTION_MISSING"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-MULITPLE.json",
+      "sourceIndex": 49,
+      "stem": "七情内伤的致病特点是",
+      "answer": "BCDE",
+      "options": [],
+      "issues": [
+        "OPTIONS_LT_2",
+        "ANSWER_OPTION_MISSING"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-MULITPLE.json",
+      "sourceIndex": 50,
+      "stem": "寒邪的性质和致病特点是",
+      "answer": "BCE",
+      "options": [],
+      "issues": [
+        "OPTIONS_LT_2",
+        "ANSWER_OPTION_MISSING"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-MULITPLE.json",
+      "sourceIndex": 51,
+      "stem": "气虚可进一步导致",
+      "answer": "ABCDE",
+      "options": [],
+      "issues": [
+        "OPTIONS_LT_2",
+        "ANSWER_OPTION_MISSING"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-MULITPLE.json",
+      "sourceIndex": 55,
+      "stem": "根据七情分属五脏的理论，下列情志中属心所主的是",
+      "answer": "A",
+      "options": [
+        "喜",
+        "怒",
+        "悲",
+        "惊",
+        "恐"
+      ],
+      "issues": [
+        "INVALID_MULTIPLE_ANSWER"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-MULITPLE.json",
+      "sourceIndex": 72,
+      "stem": "李某，男，35岁，三日前觉恶寒,咳嗽，痰色白，身痛无汗，今日来咳嗽渐重，声重音嘎，痰浊不易咯出，口渴心烦，恶寒尚存，伴有发热，舌苔白腻中有黄苔。其治法是",
+      "answer": "ABCD",
+      "options": [
+        "散寒",
+        "解表",
+        "清里",
+        "健脾化痰"
+      ],
+      "issues": [
+        "ANSWER_OPTION_MISSING"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-MULITPLE.json",
+      "sourceIndex": 88,
+      "stem": "真心痛的临床表现包括",
+      "answer": "ABCDE",
+      "options": [
+        "持续时间较长",
+        "脉微细或结代",
+        "四肢厥冷",
+        "冷汗淋漓"
+      ],
+      "issues": [
+        "ANSWER_OPTION_MISSING"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-MULITPLE.json",
+      "sourceIndex": 90,
+      "stem": "患者胸闷痛气短，遇寒加重，心悸，汗出，腰酸，乏力，畏寒肢冷，唇甲淡白，舌质淡，苔白，脉沉细。治疗应选下列何方",
+      "answer": "DE",
+      "options": [
+        "乌头赤石脂丸",
+        "血府逐瘀汤",
+        "冠心苏合丸",
+        "右归饮"
+      ],
+      "issues": [
+        "ANSWER_OPTION_MISSING"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-MULITPLE.json",
+      "sourceIndex": 97,
+      "stem": "中风的病因为",
+      "answer": "ABCDE",
+      "options": [
+        "内伤积损",
+        "劳欲过度",
+        "情志所伤"
+      ],
+      "issues": [
+        "ANSWER_OPTION_MISSING"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-MULITPLE.json",
+      "sourceIndex": 98,
+      "stem": "中风病病变多与哪些脏的阴阳失调相关",
+      "answer": "ABCE",
+      "options": [
+        "肾"
+      ],
+      "issues": [
+        "OPTIONS_LT_2",
+        "ANSWER_OPTION_MISSING"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-MULITPLE.json",
+      "sourceIndex": 100,
+      "stem": "下列哪些是中风后遗症的治法范围",
+      "answer": "CDE",
+      "options": [
+        "搜风通络",
+        "化瘀通络",
+        "化痰通络",
+        "滋阴补阳"
+      ],
+      "issues": [
+        "ANSWER_OPTION_MISSING"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-MULITPLE.json",
+      "sourceIndex": 101,
+      "stem": "周某，平素眩晕头痛，耳鸣，突发半身不遂，口舌歪斜，失语，面红目赤，口苦咽干，尿赤便干，舌质红绛，苔薄黄，脉弦有力。治疗应选用",
+      "answer": "AD",
+      "options": [],
+      "issues": [
+        "OPTIONS_LT_2",
+        "ANSWER_OPTION_MISSING"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-MULITPLE.json",
+      "sourceIndex": 102,
+      "stem": "熊某，患“中风”二年后，一现证见左侧手足僵硬，活动不灵，肌肉萎缩、舌质淡红，苔少，脉沉细。治疗应选用",
+      "answer": "CD",
+      "options": [],
+      "issues": [
+        "OPTIONS_LT_2",
+        "ANSWER_OPTION_MISSING"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-MULITPLE.json",
+      "sourceIndex": 103,
+      "stem": "临床判断不寐的依据是",
+      "answer": "ABCDE",
+      "options": [
+        "睡眠深度",
+        "睡眠时间",
+        "能否恢复体力",
+        "能否恢复精力"
+      ],
+      "issues": [
+        "ANSWER_OPTION_MISSING"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-MULITPLE.json",
+      "sourceIndex": 105,
+      "stem": "不寐患者常伴有",
+      "answer": "ABCE",
+      "options": [
+        "神疲乏力",
+        "心悸健忘",
+        "视物不清",
+        "多梦"
+      ],
+      "issues": [
+        "ANSWER_OPTION_MISSING"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-MULITPLE.json",
+      "sourceIndex": 108,
+      "stem": "患者不寐，多梦，易于惊醒，胆怯心悸，倦怠气短，脉弦细，其治法是",
+      "answer": "AD",
+      "options": [
+        "补益心脾",
+        "滋阴降火",
+        "益气镇惊"
+      ],
+      "issues": [
+        "ANSWER_OPTION_MISSING"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-MULITPLE.json",
+      "sourceIndex": 122,
+      "stem": "腹痛的治法有",
+      "answer": "ABDE",
+      "options": [
+        "温中散寒",
+        "泄热通腑",
+        "温中补虚，和里缓急",
+        "疏肝解郁，理气止痛"
+      ],
+      "issues": [
+        "ANSWER_OPTION_MISSING"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-MULITPLE.json",
+      "sourceIndex": 123,
+      "stem": "腹痛的治疗方剂有",
+      "answer": "ABCDE",
+      "options": [
+        "良附丸合正气天香散加减",
+        "少腹逐瘀汤加减",
+        "小建中汤加减",
+        "柴胡疏肝散加减"
+      ],
+      "issues": [
+        "ANSWER_OPTION_MISSING"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-MULITPLE.json",
+      "sourceIndex": 125,
+      "stem": "泄泻的治法有",
+      "answer": "ABCDE",
+      "options": [
+        "温肾健脾，固涩止泻",
+        "健脾益气，化湿止泻",
+        "消食导滞",
+        "清热利湿"
+      ],
+      "issues": [
+        "ANSWER_OPTION_MISSING"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-MULITPLE.json",
+      "sourceIndex": 126,
+      "stem": "泄泻的治疗方剂有",
+      "answer": "ABCDE",
+      "options": [
+        "四神丸加减",
+        "参苓白术散加减",
+        "葛根芩连汤加减",
+        "藿香正气散加减"
+      ],
+      "issues": [
+        "ANSWER_OPTION_MISSING"
+      ]
+    },
+    {
+      "sourceFile": "Q&A datasets-MULITPLE.json",
+      "sourceIndex": 131,
+      "stem": "刘某，男，70岁，诉大便干结如羊屎状十年，伴头晕耳鸣，心烦失眠,潮热盗汗，腰膝酸软。两颧红赤,.形体消瘦，舌红少苔，脉细数。其诊断、治疗正确的是",
+      "answer": "BDE",
+      "options": [
+        "方药选用润肠丸加减",
+        "其证型为血虚便秘",
+        "方药选用增液汤加减",
+        "治法为滋阴通便"
+      ],
+      "issues": [
+        "ANSWER_OPTION_MISSING"
+      ]
+    }
+  ],
+  "duplicateGroups": [
+    {
+      "hash": "5fb0971fdbeb179bace2eaa55be9abbbcbe11f7bdf01ed0f0b4c69c4286293e7",
+      "items": [
+        {
+          "sourceFile": "Q&A datasets-SINGLE.json",
+          "sourceIndex": 26,
+          "stem": "患者，男，50岁。咳喘20余年，现咳嗽痰少，口燥咽干，形体消瘦，腰膝疫软，颧红盗汗，舌红少苔，脉细数。其病机是"
+        },
+        {
+          "sourceFile": "Q&A datasets-SINGLE.json",
+          "sourceIndex": 38,
+          "stem": "患者，男，50岁。咳喘20余年，现咳嗽痰少，口燥咽干，形体消瘦，腰膝疫软，颧红盗汗，舌红少苔，脉细数。其病机是"
+        }
+      ]
+    },
+    {
+      "hash": "a94d6c27bd0f9f504c9793596c3f2840d6322c95258acfa52424dc593c4b65ee",
+      "items": [
+        {
+          "sourceFile": "Q&A datasets-SINGLE.json",
+          "sourceIndex": 70,
+          "stem": "癃闭的病位虽在膀胱，但与本病关系密切的脏腑还有"
+        },
+        {
+          "sourceFile": "Q&A datasets-SINGLE.json",
+          "sourceIndex": 443,
+          "stem": "癃闭的病位虽在膀胱，但与本病关系密切的脏腑还有"
+        }
+      ]
+    },
+    {
+      "hash": "91eb8b75bb06e966c4b23f177336b8378395ef070e3e24f5c3e97e9328920491",
+      "items": [
+        {
+          "sourceFile": "Q&A datasets-SINGLE.json",
+          "sourceIndex": 123,
+          "stem": "治疗热哮发作期，应首选"
+        },
+        {
+          "sourceFile": "Q&A datasets-SINGLE.json",
+          "sourceIndex": 434,
+          "stem": "治疗热哮发作期，应首选"
+        }
+      ]
+    },
+    {
+      "hash": "60b0e66c7fcf58901aa614365adb65e072c818dd19c003f4b8f0dff8317bc24a",
+      "items": [
+        {
+          "sourceFile": "Q&A datasets-SINGLE.json",
+          "sourceIndex": 315,
+          "stem": "槐花散的功用有"
+        },
+        {
+          "sourceFile": "Q&A datasets-SINGLE.json",
+          "sourceIndex": 417,
+          "stem": "槐花散的功用有"
+        }
+      ]
+    }
+  ]
+}

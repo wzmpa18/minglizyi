@@ -23,7 +23,9 @@ const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
 const offlinePackEngine = require('./offlinePackEngine');
+const objectStorage = require('./objectStorageEngine');
 const { adminAuth, audit } = require('./adminRoles');
+const { getMembershipFromDB, MEMBER_LEVELS } = require('./middleware/auth');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
@@ -45,11 +47,33 @@ function createRouter() {
     }
   }
 
+  function attachUserIfPresent(req) {
+    const header = req.headers.authorization || '';
+    const token = header.startsWith('Bearer ') ? header.slice(7) : (req.headers['x-access-token'] || '');
+    if (!token) return;
+    try { req.user = jwt.verify(token, JWT_SECRET); } catch { /* 下载门禁统一返回登录提示 */ }
+  }
+
+  function canDownload(req, row) {
+    if ((row.access_level || 'PUBLIC') === 'PUBLIC') return { ok: true };
+    if (!req.user || !req.user.userId) return { ok: false, status: 401, error: '请先登录会员账号' };
+    const membership = getMembershipFromDB(req.user.userId);
+    const paid = ['monthly', 'quarterly', 'yearly', 'lifetime', 'premium'].includes(membership.level) ||
+      (MEMBER_LEVELS[membership.level] || 0) >= (MEMBER_LEVELS.monthly || 1);
+    return paid ? { ok: true } : { ok: false, status: 403, error: '离线学习包为会员权益，请开通会员后下载' };
+  }
+
   const guard = fn => (req, res) => {
     try { fn(req, res); } catch (e) {
       console.error('[OfflineRoutes] 内部错误:', e.message);
       res.status(500).json({ success: false, error: '服务内部错误' });
     }
+  };
+  const guardAsync = fn => (req, res) => {
+    Promise.resolve(fn(req, res)).catch((e) => {
+      console.error('[OfflineRoutes] 内部错误:', e.message);
+      if (!res.headersSent) res.status(500).json({ success: false, error: '服务内部错误' });
+    });
   };
 
   // ==================== 用户端 ====================
@@ -62,9 +86,19 @@ function createRouter() {
   }));
 
   // 第六十~六十一章：Pack 下载（支持 Range 断点续传）
-  router.get('/packs/:packId/download', guard((req, res) => {
+  router.get('/packs/:packId/download', guardAsync(async (req, res) => {
     const r = offlinePackEngine.getPackFile(req.params.packId);
     if (!r.ok) return res.status(404).json({ success: false, error: r.error });
+    attachUserIfPresent(req);
+    const access = canDownload(req, r.row);
+    if (!access.ok) return res.status(access.status).json({ success: false, error: access.error });
+
+    if (r.deliveryProvider === 'COS' && r.objectKey) {
+      const signed = await objectStorage.ObjectStorageService.temporaryDownloadUrl('learning_content', r.objectKey, 900);
+      if (!signed.ok) return res.status(503).json({ success: false, error: signed.error, code: signed.status || 'COS_URL_FAILED' });
+      res.setHeader('Cache-Control', 'private, no-store');
+      return res.redirect(307, signed.url);
+    }
 
     const stat = fs.statSync(r.filePath);
     const range = req.headers.range;
@@ -122,9 +156,17 @@ function createRouter() {
       packId: b.packId, contentType: b.contentType, version: b.version,
       filePath: b.filePath, name: b.name, minAppVersion: b.minAppVersion,
       required: b.required, description: b.description,
+      accessLevel: b.accessLevel,
     });
     if (!r.ok) return res.status(400).json({ success: false, error: r.error });
     audit(req.admin, 'OFFLINE_PACK_REGISTER', `pack=${b.packId} type=${b.contentType} v=${b.version} size=${r.pack.size}`, null, null, '', null, null, '', req);
+    res.json({ success: true, data: r });
+  }));
+
+  router.post('/packs/:packId/distribute', adminAuth('SUPER_ADMIN', 'content'), guardAsync(async (req, res) => {
+    const r = await offlinePackEngine.distributePack(req.params.packId);
+    if (!r.ok) return res.status(400).json({ success: false, error: r.error, status: r.status });
+    audit(req.admin, 'OFFLINE_PACK_DISTRIBUTE', `pack=${req.params.packId} provider=${r.provider}`, null, r.objectKey, '学习包分发到私有对象存储', req);
     res.json({ success: true, data: r });
   }));
 

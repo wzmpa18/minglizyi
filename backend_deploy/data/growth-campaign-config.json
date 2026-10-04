@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "campaignId": "invite10_member20_v1",
+  "name": "邀请10位新用户，会员八折",
+  "startsAt": "2026-10-03T00:00:00+08:00",
+  "endsAt": "2027-03-31T23:59:59+08:00",
+  "targetInvites": 10,
+  "discountPercent": 20,
+  "couponValidDays": 7,
+  "eligibleMembershipLevels": ["monthly", "quarterly", "yearly"],
+  "commissionPolicy": "REFERRAL_EXCLUDED_PARTNER_PRESERVED",
+  "termsVersion": "2026-10-03-v1"
+}

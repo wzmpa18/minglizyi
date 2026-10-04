@@ -30,6 +30,21 @@ export interface InviteOverview {
   };
   invitees: { inviteeId: number; name: string; invitedAt: string }[];
   rewards: { id: number; inviteeId: number; type: string; points: number; status: string; grantedAt: string }[];
+  growthCampaign?: {
+    enabled: boolean;
+    campaignId: string;
+    name: string;
+    qualifiedInvites: number;
+    targetInvites: number;
+    remainingInvites: number;
+    progressPercent: number;
+    discountPercent: number;
+    eligibleMembershipLevels: string[];
+    endsAt: string;
+    termsVersion: string;
+    coupon: { id: number; code: string; status: "AVAILABLE" | "RESERVED" | "CONSUMED" | "EXPIRED"; expiresAt: string } | null;
+    rules: string[];
+  } | null;
 }
 
 export interface PointsTransactions {

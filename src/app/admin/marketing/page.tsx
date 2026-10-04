@@ -9,7 +9,7 @@
 // ============================================================================
 
 import { useCallback, useEffect, useState } from "react";
-import { Megaphone, RefreshCw, Save, Share2 } from "lucide-react";
+import { Megaphone, RefreshCw, Save, Share2, Users } from "lucide-react";
 import {
   THEME,
   AdminCard,
@@ -25,6 +25,11 @@ import {
   savePosterConfig,
   saveShareConfig,
 } from "@/lib/admin/client";
+import {
+  fetchGrowthCampaign,
+  updateGrowthCampaign,
+  type GrowthCampaignConfig,
+} from "@/lib/admin/unifiedService";
 
 interface ShareChannel {
   enabled: boolean;
@@ -37,15 +42,17 @@ export default function MarketingPage() {
   const { show, toastNode } = useToast();
   const [poster, setPoster] = useState<Record<string, any> | null>(null);
   const [share, setShare] = useState<Record<string, any> | null>(null);
+  const [campaign, setCampaign] = useState<GrowthCampaignConfig | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState<"poster" | "share" | null>(null);
-  const [confirm, setConfirm] = useState<"poster" | "share" | null>(null);
+  const [saving, setSaving] = useState<"poster" | "share" | "campaign" | null>(null);
+  const [confirm, setConfirm] = useState<"poster" | "share" | "campaign" | null>(null);
 
   const load = useCallback(async () => {
-    const [p, s] = await Promise.all([fetchPosterConfig(), fetchShareConfig()]);
+    const [p, s, c] = await Promise.all([fetchPosterConfig(), fetchShareConfig(), fetchGrowthCampaign()]);
     if (p) setPoster(p);
     if (s) setShare(s);
-    if (!p && !s) show("营销配置加载失败，请检查权限", "error");
+    if (c) setCampaign(c);
+    if (!p && !s && !c) show("营销配置加载失败，请检查权限", "error");
     setLoading(false);
   }, [show]);
 
@@ -70,6 +77,12 @@ export default function MarketingPage() {
         const res = await saveShareConfig(share);
         if (res.ok) show("分享配置已保存，立即生效", "success");
         else show(res.error || "保存失败", "error");
+      } else if (confirm === "campaign" && campaign) {
+        const res = await updateGrowthCampaign({ ...campaign, reason: '后台更新邀请会员优惠活动' });
+        if (res.ok && res.data) {
+          setCampaign(res.data);
+          show("邀请优惠活动已保存，服务器立即生效", "success");
+        } else show(res.error || "保存失败", "error");
       }
     } finally {
       setSaving(null);
@@ -124,6 +137,31 @@ export default function MarketingPage() {
           <RefreshCw size={14} /> 刷新
         </button>
       </div>
+
+      {/* ===== 海报文案配置 ===== */}
+      {campaign && (
+        <AdminCard
+          title={<span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Users size={15} /> 邀请会员优惠活动</span>}
+          style={{ marginBottom: 16 }}
+          extra={<button onClick={() => setConfirm('campaign')} disabled={saving === 'campaign'} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', border: 'none', borderRadius: 8, backgroundColor: THEME.primary, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}><Save size={14} /> 保存活动</button>}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <div><div style={{ fontSize: 13, fontWeight: 700 }}>活动总开关</div><div style={{ fontSize: 11, color: THEME.textSub }}>关闭后用户端立即停止发券和使用优惠券</div></div>
+            <ToggleSwitch checked={campaign.enabled} onChange={(enabled) => setCampaign({ ...campaign, enabled })} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
+            <Field label="活动名称"><input value={campaign.name} onChange={(e) => setCampaign({ ...campaign, name: e.target.value })} style={inputStyle} /></Field>
+            <Field label="达标邀请人数"><input type="number" min={1} max={100} value={campaign.targetInvites} onChange={(e) => setCampaign({ ...campaign, targetInvites: Number(e.target.value) })} style={inputStyle} /></Field>
+            <Field label="会员优惠比例（%）"><input type="number" min={1} max={50} value={campaign.discountPercent} onChange={(e) => setCampaign({ ...campaign, discountPercent: Number(e.target.value) })} style={inputStyle} /></Field>
+            <Field label="优惠券有效期（天）"><input type="number" min={1} max={90} value={campaign.couponValidDays} onChange={(e) => setCampaign({ ...campaign, couponValidDays: Number(e.target.value) })} style={inputStyle} /></Field>
+            <Field label="开始时间"><input type="datetime-local" value={campaign.startsAt.slice(0, 16)} onChange={(e) => setCampaign({ ...campaign, startsAt: new Date(e.target.value).toISOString() })} style={inputStyle} /></Field>
+            <Field label="结束时间"><input type="datetime-local" value={campaign.endsAt.slice(0, 16)} onChange={(e) => setCampaign({ ...campaign, endsAt: new Date(e.target.value).toISOString() })} style={inputStyle} /></Field>
+          </div>
+          <div style={{ marginTop: 14, padding: 12, borderRadius: 8, background: THEME.primaryBgLight, fontSize: 12, color: THEME.textSub, lineHeight: 1.7 }}>
+            当前适用月度、季度、年度会员；优惠订单不再叠加邀请积分和现金佣金，避免重复奖励。所有修改写入后台审计。
+          </div>
+        </AdminCard>
+      )}
 
       {/* ===== 海报文案配置 ===== */}
       {poster && (
@@ -341,7 +379,9 @@ export default function MarketingPage() {
         message={
           confirm === "poster"
             ? "将保存海报模板文案修改，保存后立即对全部用户生效（分享海报实时读取最新文案）。确定继续吗？"
-            : "将保存分享渠道与文案修改，保存后立即生效。确定继续吗？"
+            : confirm === 'campaign'
+              ? '将更新邀请达标人数、折扣和活动期限，保存后服务器立即生效。确定继续吗？'
+              : "将保存分享渠道与文案修改，保存后立即生效。确定继续吗？"
         }
         confirmText="确认保存"
         onConfirm={doSave}

@@ -18,6 +18,7 @@ import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { ShareButton } from "@/components/ShareButton";
 import { PostToSquareButton } from "@/components/PostToSquareButton";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
+import { savePaipanRecord } from "@/lib/nativePaipanStore";
 // ============================================================================
 // 一掌经十二宫
 // ============================================================================
@@ -160,6 +161,12 @@ export default function YizhangjingPage() {
     setHasResult(true);
     setShowInput(false);
     savePaipanState("yizhangjing",{input:{dateType,selectedYear,selectedMonth,selectedDay,selectedHour,sizhuInput},result:result,showForm:false,_ts:Date.now()});
+    savePaipanRecord({
+      tool: "yizhangjing",
+      title: `一掌经·${selectedYear}-${selectedMonth}-${selectedDay} ${selectedHour}时`,
+      input: { dateType, year: selectedYear, month: selectedMonth, day: selectedDay, hour: selectedHour, sizhuInput },
+      result: result as unknown as Record<string, unknown>,
+    }).catch(() => {});
   }, [dateType, selectedYear, selectedMonth, selectedDay, selectedHour, sizhuInput, result]);
 
   // v18.2: 监听编辑/返回事件，实现逐级返回

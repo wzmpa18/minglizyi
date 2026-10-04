@@ -8,7 +8,7 @@
 // 不要求微信内环境。JSAPI 保留：公众号参数补充后自动启用免扫码支付。
 // ============================================================================
 
-import { getUserProfile } from "./auth";
+import { getUserProfile, getUserToken } from "./auth";
 import { isPaymentsBlocked, IOS_PAYMENT_DISABLED_TIP, clientPlatformHeaders } from "./platformGate";
 
 // ==================== 类型定义 ====================
@@ -55,6 +55,8 @@ export interface CallPaymentParams {
     batchTool?: string;
     openid?: string;
     returnUrl?: string;
+    /** 邀请10人助力八折券：仅会员订单可用，服务端重新校验资格 */
+    useGrowthCoupon?: boolean;
   };
 }
 
@@ -64,6 +66,8 @@ export interface CallPaymentParams {
 export interface CallPaymentResult {
   success: boolean;
   orderId?: string;
+  /** 服务端最终裁决的实付金额（可能包含活动折扣） */
+  amount?: number;
   channel?: PaymentChannel;
   payUrl?: string;
   prepayId?: string;
@@ -96,7 +100,8 @@ export interface NativePayTicket {
  */
 export interface PaymentStatusResult {
   success: boolean;
-  status: "PENDING" | "PAID" | "CLOSED" | "REFUNDED" | "UNKNOWN";
+  status: "PENDING" | "PAID" | "CLOSED" | "REFUNDED" | "REFUND_PENDING" | "UNKNOWN";
+  benefitDelivered?: boolean;
   orderId: string;
   paidAt?: string | null;
   error?: string;
@@ -121,6 +126,8 @@ export const COMPLIANCE_TITLES: Record<PaymentScenario, string> = {
   MEMBERSHIP: "传统文化学习平台会员服务",
   POINTS_RECHARGE: "传统文化学习平台积分充值",
   CONSULT_SERVICE: "传统文化学习顾问咨询服务",
+  AI_PACKAGE: "传统文化学习解读套餐",
+  BATCH_INTERPRET: "传统文化学习批量解读",
 };
 
 // ==================== 配置常量 ====================
@@ -293,7 +300,7 @@ export async function callPayment(
     // 1. 创建订单
     const res = await fetch(`${API_BASE}/create`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...clientPlatformHeaders() },
+      headers: { "Content-Type": "application/json", ...clientPlatformHeaders(), Authorization: `Bearer ${getUserToken() || ""}` },
       body: JSON.stringify({
         userId,
         type,
@@ -343,6 +350,7 @@ export async function callPayment(
       return {
         success: true,
         orderId: data.orderId,
+        amount: data.amount,
         channel: resultChannel,
         payMode: "NATIVE",
         codeUrl: data.codeUrl,
@@ -360,6 +368,7 @@ export async function callPayment(
     return {
       success: true,
       orderId: data.orderId,
+      amount: data.amount,
       channel: resultChannel,
       payUrl: data.payUrl,
       prepayId: data.prepayId,
@@ -479,7 +488,7 @@ export async function pollPaymentStatus(
         }
 
         // 支付成功
-        if (result.status === "PAID") {
+        if (result.status === "PAID" && result.benefitDelivered === true) {
           clearInterval(timer);
           // 刷新用户权益
           await refreshUserBenefits();
@@ -530,6 +539,7 @@ export async function queryPaymentStatus(
       status: data.status || "PENDING",
       orderId,
       paidAt: data.paidAt || null,
+      benefitDelivered: data.benefitDelivered === true,
     };
   } catch {
     return {
@@ -680,12 +690,13 @@ export async function payForUnlock(
 export async function payForMembership(
   level: string,
   amount: number,
-  days: number
+  days: number,
+  useGrowthCoupon = false
 ): Promise<CallPaymentResult> {
   return callPayment({
     type: "MEMBERSHIP",
     amount,
-    extra: { membershipLevel: level, membershipDays: days },
+    extra: { membershipLevel: level, membershipDays: days, useGrowthCoupon },
   });
 }
 
@@ -760,7 +771,7 @@ export async function paySingleUnlockAndWait(
     }
     // JSAPI：调起微信支付后轮询确认
     const status = await pollPaymentStatus(r.orderId);
-    if (status && status.status === "PAID") {
+    if (status && status.status === "PAID" && status.benefitDelivered === true) {
       return { paid: true, message: "支付成功，权益已生效" };
     }
     return {
@@ -822,7 +833,7 @@ export async function payBatchInterpretAndWait(
       };
     }
     const status = await pollPaymentStatus(r.orderId);
-    if (status && status.status === "PAID") {
+    if (status && status.status === "PAID" && status.benefitDelivered === true) {
       return { paid: true, free: false, message: "支付成功，正在生成报告" };
     }
     return {

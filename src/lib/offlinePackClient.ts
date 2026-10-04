@@ -16,6 +16,7 @@
 // ============================================================================
 
 import { get, put, remove, listMeta } from "./storageManager";
+import { getUserToken } from "./auth";
 
 export interface ManifestPack {
   packId: string;
@@ -41,6 +42,7 @@ export interface OfflineManifest {
 }
 
 const INSTALLED_INDEX_KEY = "installed_packs_index";
+const LAST_BACKGROUND_CHECK_KEY = "offline_pack_background_check";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "";
 
 interface InstalledPackRecord {
@@ -168,6 +170,8 @@ export async function downloadPack(pack: ManifestPack, onProgress?: DownloadProg
   try {
     const headers: Record<string, string> = {};
     if (startByte > 0 && startByte < pack.size) headers["Range"] = `bytes=${startByte}-`;
+    const token = getUserToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
     const res = await fetch(`${API_BASE}${pack.downloadUrl}`, { headers });
 
     if (!(res.status === 200 || res.status === 206)) {
@@ -223,6 +227,40 @@ export async function loadPackContent(packId: string): Promise<ArrayBuffer | nul
   const rec = idx[packId];
   if (!rec) return null;
   return get<ArrayBuffer>("OFFLINE_PACK", finalKey(packId, rec.version));
+}
+
+/** 读取并解析 JSON 内容包；坏包只返回 null，不影响内置数据继续使用。 */
+export async function loadJsonPack<T>(packId: string): Promise<T | null> {
+  const content = await loadPackContent(packId);
+  if (!content) return null;
+  try {
+    return JSON.parse(new TextDecoder('utf-8').decode(content)) as T;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 启动后静默更新小型内容包。文件写入 IndexedDB/原生持久分区，关机重启仍保留。
+ * 大包在移动网络下不自动下载，避免消耗用户流量。
+ */
+export async function backgroundUpdateContentPacks(appVersion: string, force = false): Promise<DownloadResult[]> {
+  const lastCheck = (await get<number>('SYSTEM_DATA', LAST_BACKGROUND_CHECK_KEY)) || 0;
+  if (!force && Date.now() - lastCheck < 6 * 3600 * 1000) return [];
+  const manifest = await fetchManifest();
+  if (!manifest) return [];
+  await put('SYSTEM_DATA', LAST_BACKGROUND_CHECK_KEY, Date.now());
+  const normalizedVersion = String(appVersion || '0.0.0').replace(/^v/i, '').split('_')[0];
+  const plans = await checkUpdates(normalizedVersion, manifest);
+  const pending = plans.filter((plan) =>
+    (plan.action === 'INSTALL' || plan.action === 'UPDATE') && !needsUserConfirmation(plan.manifestPack)
+  );
+  const results: DownloadResult[] = [];
+  for (const plan of pending) {
+    // 串行下载，避免后台抢占前台网络和内存。
+    results.push(await downloadPack(plan.manifestPack));
+  }
+  return results;
 }
 
 /** 清理失败 .part 残片（appAutoClean 每日维护调用） */

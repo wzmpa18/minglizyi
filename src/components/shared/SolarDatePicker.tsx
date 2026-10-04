@@ -12,7 +12,10 @@
  * value 格式: "YYYY-MM-DD"（如 "1982-10-13"）
  */
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { listPaipanRecords, type MingzhuProfile } from "@/lib/nativePaipanStore";
+import { profileFromRecord, TOOL_NAMES } from "@/lib/paipanProfiles";
+import { getUserPermissionLevel } from "@/lib/aiService";
 
 interface SolarDatePickerProps {
   value: string; // "YYYY-MM-DD" 格式
@@ -20,6 +23,7 @@ interface SolarDatePickerProps {
   minYear?: number;
   maxYear?: number;
   className?: string;
+  onRecordImport?: (profile: MingzhuProfile) => void;
 }
 
 export default function SolarDatePicker({
@@ -28,7 +32,18 @@ export default function SolarDatePicker({
   minYear = 1900,
   maxYear = 2099,
   className = "",
+  onRecordImport,
 }: SolarDatePickerProps) {
+  const [recordsOpen, setRecordsOpen] = useState(false);
+  const [records, setRecords] = useState<Awaited<ReturnType<typeof listPaipanRecords>>>([]);
+  const [recordQuery, setRecordQuery] = useState("");
+  const [recordMessage, setRecordMessage] = useState("");
+  const openRecords = async () => {
+    setRecordsOpen(true); setRecordMessage("加载中…");
+    if (getUserPermissionLevel() === "visitor") { setRecordMessage("登录后可查看和导入排盘记录"); return; }
+    try { setRecords(await listPaipanRecords()); setRecordMessage(""); }
+    catch { setRecordMessage("记录读取失败，请稍后重试"); }
+  };
   // 解析当前值
   const parts = value ? value.split("-") : [];
   const year = parts[0] ? parseInt(parts[0], 10) : 0;
@@ -77,7 +92,8 @@ export default function SolarDatePicker({
   };
 
   return (
-    <div className={`flex gap-1 ${className}`}>
+    <div className={`space-y-2 ${className}`}>
+      <div className="flex items-center gap-1">
       <select
         value={year || ""}
         onChange={(e) => handleYearChange(parseInt(e.target.value, 10))}
@@ -108,6 +124,20 @@ export default function SolarDatePicker({
           <option key={d} value={d}>{d}日</option>
         ))}
       </select>
+      <button type="button" onClick={openRecords} className="shrink-0 rounded-lg border border-purple-200 bg-purple-50 px-2 py-2 text-xs font-semibold text-purple-800">排盘记录</button>
+      </div>
+      {recordsOpen && <section className="rounded-xl border border-purple-200 bg-purple-50 p-3">
+        <div className="mb-2 flex items-center justify-between"><strong className="text-sm text-purple-900">全部工具排盘记录</strong><button type="button" onClick={() => setRecordsOpen(false)} className="text-xs text-purple-700">收起</button></div>
+        <input value={recordQuery} onChange={e => setRecordQuery(e.target.value)} placeholder="搜索姓名、工具或备注" className="mb-2 w-full rounded-lg border bg-white p-2 text-sm" />
+        <div className="max-h-52 space-y-2 overflow-y-auto">
+          {recordMessage ? <p className="text-xs text-gray-500">{recordMessage}</p> : records.filter(r => `${r.title} ${r.input.name || ""} ${r.note || ""} ${TOOL_NAMES[r.tool] || r.tool}`.toLocaleLowerCase().includes(recordQuery.trim().toLocaleLowerCase())).map(r => {
+            const p = profileFromRecord(r);
+            if (!p) return <div key={r.id} className="rounded-lg bg-white p-2 text-xs text-gray-600">{TOOL_NAMES[r.tool] || r.tool} · {String(r.input.name || r.title)}{r.note ? ` · ${r.note}` : ""}（非出生资料记录）</div>;
+            return <div key={r.id} className="rounded-lg bg-white p-2 text-xs"><div className="font-semibold">{p.name} · {TOOL_NAMES[r.tool] || r.tool}</div><div className="my-1 text-gray-600">{p.birthDate} {p.birthTime} {r.note ? `· ${r.note}` : ""}</div><button type="button" className="rounded-lg bg-purple-700 px-3 py-2 text-white" onClick={() => { onChange(p.birthDate || ""); onRecordImport?.(p); setRecordsOpen(false); }}>导入此人资料</button></div>;
+          })}
+          {!recordMessage && records.length === 0 && <p className="text-xs text-gray-500">暂无记录</p>}
+        </div>
+      </section>}
     </div>
   );
 }

@@ -15,10 +15,9 @@ import {
 } from "@/lib/academyApi";
 import { PageLoginGuard } from "@/components/PageLoginGuard";
 import { addNote, toggleFavorite, isFavorited } from "@/lib/academyStudyStore";
+import { learningDifficultyLabel } from "@/lib/learningDisplay";
 
 const BRAND = "#7B2FBE";
-
-const DIFF_NAMES: Record<string, string> = { easy: "易", medium: "中", hard: "难" };
 
 export default function QuestionBankPage() {
   const [track, setTrack] = useState<string>("");
@@ -244,7 +243,7 @@ export default function QuestionBankPage() {
       <div className="border-b border-gray-100 bg-white px-3 py-2">
         <div className="flex items-center justify-between">
           <p className="text-[11px] font-medium" style={{ color: coverage && coverage.coverage_rate >= 100 ? "#15803d" : "#666" }}>
-            {coverage && coverage.coverage_rate >= 100 ? "覆盖全部核心知识点与考点" : "核心知识点持续完善中"}
+            {coverage && coverage.coverage_rate >= 100 ? "当前配置知识点已覆盖" : "核心知识点持续完善中"}
           </p>
           <p className="text-[10px] text-gray-400">{coverage ? `覆盖 ${coverage.coverage_rate}%` : ""}</p>
         </div>
@@ -285,7 +284,7 @@ export default function QuestionBankPage() {
                           {TYPE_NAMES[q.type] || q.type}
                         </span>
                         <span className="rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">
-                          {DIFF_NAMES[q.difficulty] || q.difficulty}
+                          {learningDifficultyLabel(q.difficulty)}
                         </span>
                         <span className="rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">
                           {TRACK_LIST.find((t) => t.key === q.track)?.name || q.track}

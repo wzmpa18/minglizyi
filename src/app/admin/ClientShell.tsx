@@ -37,6 +37,7 @@ import {
   Activity,
   Bell,
   Send,
+  HardDriveDownload,
 } from "lucide-react";
 import { THEME, useMounted } from "./_shared";
 import { getAdminKey, setAdminKey, clearAdminKey, isAdminAuthed, getAdminRole, setAdminRole } from "@/lib/admin/client";
@@ -65,6 +66,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/admin/ai-control", label: "AI管理", icon: <Bot size={18} />, desc: "开关·配额·定价·健康", scope: "super" },
   { href: "/admin/ai-cost", label: "AI成本中心", icon: <Coins size={18} />, desc: "用量·tokens·成本·告警", scope: "finance" },
   { href: "/admin/loc", label: "学习 / 中医", icon: <GraduationCap size={18} />, desc: "考试配置·积分·机构管理", scope: "ops" },
+  { href: "/admin/offline-content", label: "离线内容包", icon: <HardDriveDownload size={18} />, desc: "注册·发布·撤回·版本校验", scope: "super" },
   { href: "/admin/moderation?tab=group", label: "社交 / 群聊", icon: <MessagesSquare size={18} />, desc: "群管理·举报处理·禁言", scope: "ops" },
   { href: "/admin/sources", label: "发现 / 资讯", icon: <Newspaper size={18} />, desc: "资讯增删改·排序·合规", scope: "ops" },
   { href: "/admin/marketing", label: "营销 / 海报", icon: <Megaphone size={18} />, desc: "海报模板·分享文案·渠道", scope: "ops" },

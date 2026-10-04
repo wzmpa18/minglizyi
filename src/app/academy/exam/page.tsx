@@ -16,10 +16,9 @@ import {
   type TrackOverview,
 } from "@/lib/academyApi";
 import { PageLoginGuard } from "@/components/PageLoginGuard";
+import { learningDifficultyLabel } from "@/lib/learningDisplay";
 
 const BRAND = "#7B2FBE";
-
-const DIFF_NAMES: Record<string, string> = { easy: "易", medium: "中", hard: "难" };
 
 type MyExamRow = {
   id: string; track: string; trackName: string; level: number;
@@ -182,7 +181,7 @@ export default function AcademyExamPage() {
               ))}
             </div>
             <p className="mt-2 text-[10px] leading-relaxed text-gray-400">
-              初级 10 题 / 15 分钟 / 60 分及格；中级 15 题 / 25 分钟 / 70 分及格；高级 20 题 / 40 分钟 / 75 分及格。不限考试次数，通过自动颁发电子证书。
+              初级 10 题 / 15 分钟 / 60 分及格；中级 15 题 / 25 分钟 / 70 分及格；高级 20 题 / 40 分钟 / 75 分及格。通过后生成平台学习结业记录，不具职业资格效力。
             </p>
 
             <button
@@ -331,7 +330,7 @@ export default function AcademyExamPage() {
                 {TYPE_NAMES[q.type] || q.type}
               </span>
               <span className="rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-500">
-                {DIFF_NAMES[q.difficulty] || q.difficulty}
+                {learningDifficultyLabel(q.difficulty)}
               </span>
               <span className="ml-auto text-[10px] text-gray-300">
                 第 {qIndex + 1}/{total} 题
@@ -444,7 +443,7 @@ export default function AcademyExamPage() {
             {result.certificate && (
               <div className="mt-4 rounded-xl border border-dashed p-3" style={{ borderColor: BRAND + "55", backgroundColor: BRAND + "08" }}>
                 <p className="text-xs font-bold" style={{ color: BRAND }}>
-                  🏅 已颁发电子证书
+                  🏅 已生成学习结业记录
                 </p>
                 <p className="mt-1 text-[11px] text-gray-600">
                   {result.certificate.title} · 编号 {result.certificate.certNo}
@@ -457,7 +456,7 @@ export default function AcademyExamPage() {
                   className="mt-2 rounded-lg px-3 py-1.5 text-[11px] font-semibold text-white"
                   style={{ backgroundColor: BRAND }}
                 >
-                  查看我的证书
+                  查看学习结业记录
                 </button>
               </div>
             )}

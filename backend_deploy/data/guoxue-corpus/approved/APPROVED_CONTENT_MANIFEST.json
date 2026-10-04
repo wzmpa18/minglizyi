@@ -1,0 +1,20 @@
+{
+  "updatedAt": "2026-10-03",
+  "items": [
+    {
+      "contentId": "tcm-acupoints-baseline-v1",
+      "name": "经络穴位学习基线",
+      "scope": "14条经络、361个穴位的名称、编码、所属经络、学习定位、功效与典籍字段",
+      "source": "项目既有 tcm-cli MIT 数据基线",
+      "license": "MIT",
+      "reviewState": "APPROVED_EXISTING_BASELINE",
+      "medicalScope": "传统文化学习；不含针刺深度、手法、个体诊疗或自助治疗指令",
+      "sourceFile": "src/algorithm-core/modules/tcm/data/meridians.json",
+      "packFile": "backend_deploy/data/offline_pack_sources/tcm-acupoints-v1.0.0.pack",
+      "packId": "tcm-acupoints",
+      "packVersion": "1.0.0",
+      "appConsumer": "src/algorithm-core/modules/tcm/meridians.ts",
+      "publication": "DRAFT_PACK_READY_NOT_SERVER_PUBLISHED"
+    }
+  ]
+}

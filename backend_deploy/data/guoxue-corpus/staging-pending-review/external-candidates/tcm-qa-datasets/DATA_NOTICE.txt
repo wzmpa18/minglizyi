@@ -1,0 +1,7 @@
+Candidate snapshot of yizhen-buaa/TCM-QA-datasets (805 question/answer pairs).
+
+The upstream repository includes an Apache License 2.0. The original repository README does not document the question-bank publisher, exam year, curriculum edition, or explanations. This project has not verified those upstream rights claims and has not reviewed the answers with a licensed TCM educator. This directory is isolated staging data and must not be imported into the public app or an offline release pack until each review gate is satisfied.
+
+The dataset contains question and answer fields only. Do not imply that the upstream dataset provides explanations, and do not present any answer as clinical guidance.
+
+Upstream files are preserved unchanged. This project has not modified them. See LICENSE and README.md for the upstream repository-level notice.

@@ -380,6 +380,7 @@ export default function NameAnalysisPage() {
   const [birthDate, setBirthDate] = useState("");
   const [birthHour, setBirthHour] = useState<number>(12);
   const [birthMinute, setBirthMinute] = useState<number>(0);
+  const [recordNote, setRecordNote] = useState("");
   const [calType, setCalType] = useState<"solar" | "lunar">("solar");
   const [lunarYear, setLunarYear] = useState<number>(new Date().getFullYear());
   const [lunarMonthValue, setLunarMonthValue] = useState<string>("1");
@@ -592,10 +593,11 @@ export default function NameAnalysisPage() {
           tool: "name",
           title: `姓名解析·${trimmed}（${r.overallScore}分）`,
           input: {
-            fullName: trimmed, surnameLength, gender,
+            name: trimmed, fullName: trimmed, surnameLength, gender,
             birthDate, birthHour, birthMinute, calType,
             lunarYear, lunarMonthValue, lunarDay,
           },
+          note: recordNote,
           result: r as unknown as Record<string, unknown>,
         }).catch(() => {});
 
@@ -610,7 +612,7 @@ export default function NameAnalysisPage() {
         setLoading(false);
       }
     }, 300);
-  }, [fullName, surnameLength, gender, selectedClient, requireLogin, baziAnalysis, birthDate, birthHour, birthMinute, calType, lunarYear, lunarMonthValue, lunarDay]);
+  }, [fullName, surnameLength, gender, selectedClient, requireLogin, baziAnalysis, birthDate, birthHour, birthMinute, calType, lunarYear, lunarMonthValue, lunarDay, recordNote]);
 
   // v25.0.88: 历史记录恢复
   const handleRestoreHistory = useCallback((rec: PaipanRecord) => {
@@ -804,7 +806,8 @@ export default function NameAnalysisPage() {
             {/* 公历模式 */}
             {calType === "solar" ? (
               <div className="space-y-1.5">
-                <SolarDatePicker value={birthDate} onChange={setBirthDate} />
+                <SolarDatePicker value={birthDate} onChange={setBirthDate} onRecordImport={(p) => { setFullName(p.name); setGender(p.gender === "女" ? "female" : "male"); setBirthHour(Number((p.birthTime || "12:00").slice(0, 2))); setBirthMinute(Number((p.birthTime || "12:00").slice(3, 5))); setCalType("solar"); }} />
+                <textarea aria-label="排盘记录备注" value={recordNote} onChange={(e) => setRecordNote(e.target.value)} maxLength={300} rows={2} placeholder="记录备注（可选）" className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
                 <div className="flex items-center gap-2">
                   <select
                     value={birthHour}

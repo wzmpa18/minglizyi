@@ -256,7 +256,41 @@ const RAW_ACUPOINTS: TcmAcupoint[] = [
 const FULL_ACUPOINTS: TcmAcupoint[] = (meridiansJson.acupoints && meridiansJson.acupoints.length > 0)
   ? meridiansJson.acupoints as unknown as TcmAcupoint[]
   : RAW_ACUPOINTS;
-export const ACUPOINTS_DB: TcmAcupoint[] = FULL_ACUPOINTS;
+export let ACUPOINTS_DB: TcmAcupoint[] = FULL_ACUPOINTS;
+
+interface TcmAcupointContentPack {
+  schema: 'yandao.tcm.acupoints.v1';
+  version: string;
+  reviewState: 'APPROVED_EXISTING_BASELINE';
+  acupoints: TcmAcupoint[];
+}
+
+/** 安装已通过离线包 SHA256 校验的穴位数据；验证失败时继续使用内置 361 穴。 */
+export function installAcupointContentPack(pack: TcmAcupointContentPack): boolean {
+  if (!pack || pack.schema !== 'yandao.tcm.acupoints.v1' || pack.reviewState !== 'APPROVED_EXISTING_BASELINE') return false;
+  if (!Array.isArray(pack.acupoints) || pack.acupoints.length < 361) return false;
+  const seen = new Set<string>();
+  const safe: TcmAcupoint[] = [];
+  for (const raw of pack.acupoints) {
+    const point = raw as TcmAcupoint;
+    if (!point || !point.name || !point.code || !point.meridian || !point.location || !point.function) return false;
+    const code = String(point.code).trim().toUpperCase();
+    if (seen.has(code)) return false;
+    seen.add(code);
+    safe.push({
+      name: String(point.name).slice(0, 30),
+      pinyin: String(point.pinyin || '').slice(0, 80),
+      code,
+      meridian: String(point.meridian).slice(0, 30),
+      location: String(point.location).slice(0, 500),
+      location_detail: String(point.location_detail || '').slice(0, 500),
+      function: String(point.function).slice(0, 500),
+      literature: String(point.literature || '').slice(0, 120),
+    });
+  }
+  ACUPOINTS_DB = safe;
+  return true;
+}
 
 // ============================================================================
 // 搜索经络
@@ -419,7 +453,14 @@ export async function loadFullMeridiansDatabase(): Promise<{
   meridians: TcmMeridian[];
   acupoints: TcmAcupoint[];
 }> {
-  // JSON 数据已在构建时通过 import 加载，直接返回
+  // 先尝试读取已经校验并持久安装的更新包；离线或无更新时使用随 APP 内置的 361 穴。
+  try {
+    const { loadJsonPack } = await import('../../../lib/offlinePackClient');
+    const pack = await loadJsonPack<TcmAcupointContentPack>('tcm-acupoints');
+    if (pack) installAcupointContentPack(pack);
+  } catch {
+    // 离线包不可用不影响内置资料。
+  }
   fullMeridiansLoaded = true;
   meridiansLoading = false;
   console.log(

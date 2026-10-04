@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 // 七政四余排盘工具页 - NICHE-TOOLS v25.0.68 / 断语面板 v25.0.71 / 历史盘Profile v25.0.82
 // ============================================================================
@@ -16,6 +16,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { QizhengPalaceSheet } from "@/components/QizhengPalaceSheet";
+import { buildPalaceBasicInterpretation, PALACE_AUX } from "@/lib/qizhengPalaceInterpretation";
+import { QizhengDetailedChart } from "@/components/QizhengDetailedChart";
+import { solarToBazi } from "@/algorithm-core/modules/bazi/base";
 import ClientSelector from "@/components/ClientSelector";
 import { ShareButton } from "@/components/ShareButton";
 import { trackToolEvent } from "@/lib/toolAnalytics";
@@ -125,6 +129,7 @@ export default function QizhengPage() {
   const [showForm, setShowForm] = useState(false);
   const [result, setResult] = useState<QizhengResult | null>(null);
   const [name, setName] = useState("");
+  const [profileGender, setProfileGender] = useState<"male" | "female">("male");
   const [regionIdx, setRegionIdx] = useState<RegionIndices>({ p: 0, c: 0, d: 0 });
   const [frame, setFrame] = useState<StarFrame>("tropical");
   const [mingMode, setMingMode] = useState<MingGongMode>("mao");
@@ -144,6 +149,8 @@ export default function QizhengPage() {
   /** v25.0.82 (GAP C4): 夏令时校正信息（勾选夏令时减 1 小时的盘面显示） */
   const [dstInfo, setDstInfo] = useState<{ clock: string; crossedDay: boolean } | null>(null);
   /** v25.0.84 P1-4（GAP F3）：星盘缩放/全屏/复位 */
+  const [selectedPalace, setSelectedPalace] = useState<string | null>(null);
+  const [professional, setProfessional] = useState(true);
   const [chartScale, setChartScale] = useState(1);
   const [chartFull, setChartFull] = useState(false);
   const chartViewRef = useRef<HTMLDivElement | null>(null);
@@ -230,8 +237,12 @@ export default function QizhengPage() {
     const svgEl = svgWrapRef.current;
     if (!svgEl || !result) return null;
     const SRC = svgEl.cloneNode(true) as SVGSVGElement;
+    if (exportCfg.privacy) SRC.querySelectorAll("[data-chart-private]").forEach(el => el.remove());
     SRC.removeAttribute("width");
     SRC.removeAttribute("height");
+    const chartUnits = professional ? 1200 : 360;
+    SRC.setAttribute("width", String(chartUnits));
+    SRC.setAttribute("height", String(professional ? 1000 : chartUnits));
     SRC.removeAttribute("style");
     SRC.removeAttribute("class");
 
@@ -269,8 +280,8 @@ export default function QizhengPage() {
     y += 14;
 
     // 星盘（当前盘面状态：含已开图层/流年标记，所见即所得）
-    parts.push(`<g transform="translate(${(W - CHART) / 2},${y}) scale(${CHART / 360})">${new XMLSerializer().serializeToString(SRC)}</g>`);
-    y += CHART + 24;
+    parts.push(`<g transform="translate(${(W - CHART) / 2},${y}) scale(${CHART / chartUnits})">${new XMLSerializer().serializeToString(SRC)}</g>`);
+    y += CHART * (professional ? 5 / 6 : 1) + 24;
 
     // 命身要略
     if (exportCfg.yaolue) {
@@ -509,21 +520,24 @@ export default function QizhengPage() {
       // v25.0.88: 排盘记录自动落库（原生壳为SQLite，同参数原位去重）
       savePaipanRecord({
         tool: "qizheng",
-        title: `七政四余·${input.year}-${input.month}-${input.day}（${opts.gender === "male" ? "男" : "女"}）`,
-        input: input as unknown as Record<string, unknown>,
-        result: res as unknown as Record<string, unknown>,
+        title: `${name || "未命名"}·七政四余·${input.year}-${input.month}-${input.day}（${opts.gender === "male" ? "男" : "女"}）`,
+        input: { ...input, name, calendar: "solar", birthInput:{...dateVal,name,gender:opts.gender,lon:input.lon,lat:input.lat,placeName:input.placeName,calendar:"solar"} } as unknown as Record<string, unknown>,
+        result: { ...res, snapshotSchemaVersion: 1, palaceInterpretations: res.palaces.map(p => buildPalaceBasicInterpretation(res,p)) } as unknown as Record<string, unknown>,
         profileId: mingzhu?.id ?? null,
-      }).catch(() => {});
+      }).then(id => { if (id > 0) showToast("排盘记录已保存到本机"); }).catch(() => showToast("排盘成功，但记录保存失败，请检查存储空间后重试"));
     } catch (e) {
       trackToolEvent("qizheng", "tool_error", { phase: "calc" });
       showToast(`排盘失败：${e instanceof Error ? e.message : "输入参数异常"}`);
     }
-  }, [region, frame, mingMode, dongweiStart, selectedClient, showToast, mingzhu]);
+  }, [region, frame, mingMode, dongweiStart, selectedClient, showToast, mingzhu, name]);
 
   // v25.0.88: 历史记录恢复（本地命主档案库/排盘历史）
   const handleRestoreHistory = useCallback((rec: PaipanRecord) => {
     const inp = rec.input as unknown as QizhengInput;
     if (inp) {
+      setName(typeof rec.input.name === "string" ? rec.input.name : "");
+      setProfileGender(inp.gender === "female" ? "female" : "male");
+      setProfileDate({year:inp.year,month:inp.month,day:inp.day,hour:inp.hour,minute:inp.minute});
       try { setRegionIdx(nearestRegion(inp.lon)); } catch { /* 经度异常保持默认 */ }
       if (inp.frame === "tropical" || inp.frame === "sidereal") setFrame(inp.frame);
       if (inp.mingGongMode === "mao" || inp.mingGongMode === "sunrise") setMingMode(inp.mingGongMode);
@@ -531,7 +545,7 @@ export default function QizhengPage() {
       setLastInput(inp);
       setDstInfo(null); // input 已是当时校正后标准时间，无需二次 DST
     }
-    if (rec.result) {
+    if (rec.result && Array.isArray(rec.result.stars) && rec.result.input && rec.result.dongwei) {
       const res = rec.result as unknown as QizhengResult;
       setResult(res);
       setShowForm(false);
@@ -550,6 +564,10 @@ export default function QizhengPage() {
   const applyMingzhuProfile = useCallback((p: MingzhuProfile | null) => {
     setMingzhu(p);
     if (!p) return;
+    setName(p.name || "");
+    setProfileGender(p.gender === "女" ? "female" : "male");
+    const lon = p.extra?.lon ?? p.extra?.longitude;
+    if (typeof lon === "number") setRegionIdx(nearestRegion(lon));
     const d = { year: 1990, month: 1, day: 1, hour: 12, minute: 0 };
     if (p.birthDate) {
       const [y, m, dd] = p.birthDate.split("-").map(Number);
@@ -558,6 +576,8 @@ export default function QizhengPage() {
     if (p.birthTime) {
       const h = parseInt(p.birthTime.split(":")[0], 10);
       if (!isNaN(h)) d.hour = h;
+      const mi = Number(p.birthTime.split(":")[1]);
+      if (Number.isInteger(mi) && mi >= 0 && mi <= 59) d.minute = mi;
     }
     setProfileDate(d);
     setShowForm(true);
@@ -693,7 +713,7 @@ export default function QizhengPage() {
   // ==================== 流年模式（v25.0.83 P1-2，GAP E2/E3/F4） ====================
   // 年份选择 → 流年盘（立春日天象落本命盘，原流相并）+ 太岁 + 流年神煞/化曜/顶星；
   // 小限/划度/月限无知识库算法表，挂起待源（GAP MATRIX 同口径，不造假）。
-  const [liunianOn, setLiunianOn] = useState(false);
+  const [liunianOn, setLiunianOn] = useState(true);
   const [liunianYear, setLiunianYear] = useState<number>(new Date().getFullYear());
   const liunian = useMemo(() => {
     if (!result || !liunianOn) return null;
@@ -796,20 +816,22 @@ export default function QizhengPage() {
               onChange={applyMingzhuProfile}
               buildDraft={() => ({
                 name: name || "",
-                gender: "男",
+                gender: profileGender === "male" ? "男" : "女",
                 birthDate: profileDate ? `${profileDate.year}-${String(profileDate.month).padStart(2, "0")}-${String(profileDate.day).padStart(2, "0")}` : "",
-                birthTime: profileDate ? `${String(profileDate.hour).padStart(2, "0")}:00` : "",
+                birthTime: profileDate ? `${String(profileDate.hour).padStart(2, "0")}:${String(profileDate.minute).padStart(2, "0")}` : "",
               })}
             />
             <PaipanHistoryButton toolKey="qizheng" onRestore={handleRestoreHistory} />
           </div>
         </div>
-        <DatePicker
+        <DatePicker onRecordImport={applyMingzhuProfile}
           show={showForm}
           onClose={() => setShowForm(false)}
           onSubmit={handleSubmit}
           submitText="立即排盘"
           title="七政四余排盘"
+          showName name={name} onNameChange={setName} showMinute
+          initialOptions={{gender:profileGender,calType:"solar",zaoWanZi:false,zhenTaiyang:false,xiaLing:false}}
           initialDate={profileDate ?? (lastInput ? { year: lastInput.year, month: lastInput.month, day: lastInput.day, hour: lastInput.hour, minute: lastInput.minute } : undefined)}
           extraOptions={
             <div className="mt-3 space-y-3">
@@ -943,7 +965,8 @@ export default function QizhengPage() {
             星盘{chartFull ? " · 全屏" : ""} · {Math.round(chartScale * 100)}%
             {chartScale > 1 ? "（可拖动查看）" : "（双指捏合缩放）"}
           </span>
-          <div className="flex items-center gap-1">
+          <div className="flex flex-wrap items-center gap-1">
+            <button type="button" onClick={() => setProfessional(v => !v)} className="rounded-full border px-2 py-1 text-[10px] text-purple-700">{professional ? "详细盘" : "简洁盘"}</button>
             <button type="button" onClick={() => zoomBy(-0.25)} disabled={chartScale <= 1}
               className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 text-sm font-bold text-gray-600 active:scale-95 disabled:opacity-40">−</button>
             <button type="button" onClick={() => zoomBy(0.25)} disabled={chartScale >= 3}
@@ -970,9 +993,9 @@ export default function QizhengPage() {
           className="mx-auto"
           style={
             {
-              "--qz-base": chartFull ? "min(96vw, calc(100vh - 80px))" : "344px",
+              "--qz-base": professional ? "min(960px, 92vw)" : chartFull ? "min(96vw, calc(100vh - 80px))" : "344px",
               width: `calc(var(--qz-base) * ${chartScale})`,
-              height: `calc(var(--qz-base) * ${chartScale})`,
+              height: `calc(var(--qz-base) * ${chartScale} * ${professional ? 5 / 6 : 1})`,
             } as React.CSSProperties
           }
         >
@@ -980,13 +1003,14 @@ export default function QizhengPage() {
           style={
             {
               width: "var(--qz-base)",
-              height: "var(--qz-base)",
+              height: professional ? "calc(var(--qz-base) * 5 / 6)" : "var(--qz-base)",
               transform: `scale(${chartScale})`,
               transformOrigin: "top left",
             } as React.CSSProperties
           }
         >
-          <svg ref={svgWrapRef} viewBox="0 0 360 360" width="100%" height="100%">
+          {professional ? <QizhengDetailedChart chart={result} transit={liunian} name={name} age={xianAge === "" ? undefined : xianAge} onPalace={setSelectedPalace} svgRef={svgWrapRef} /> : <svg ref={svgWrapRef} viewBox="0 0 360 360" width="100%" height="100%">
+
             {/* 外圈底 */}
             <circle cx={C} cy={C} r={R_EDGE} fill={PAN_BG} stroke={PAN_LINE} strokeWidth={2} />
             {/* 第五圈层·十二人事宫（最外，v25.0.84 P1-3 重排外圈化） */}
@@ -1191,7 +1215,12 @@ export default function QizhengPage() {
             <text x={C} y={C + 5.5} textAnchor="middle" fontSize={7} fill="#bfa76a">{result.shenGong.branch}宫安身</text>
             <text x={C} y={C + 14} textAnchor="middle" fontSize={5.5} fill="#ff8a80">命度·{result.mingDu.xiuName}{result.mingDu.xiuDegree.toFixed(0)}°</text>
             <text x={C} y={C + 21.5} textAnchor="middle" fontSize={5.5} fill="#81d4fa">身度·{result.shenDu.xiuName}{result.shenDu.xiuDegree.toFixed(0)}°</text>
-          </svg>
+            {/* Transparent hit targets use actual palace boundaries, not a fixed branch/house map. */}
+            {result.palaces.map(p => <path key={`hit-${p.branch}`} d={sectorPath(R_GONG_OUT,professional?253:R_RENSHI_OUT,p.startLon,p.startLon+p.width)}
+              fill={selectedPalace===p.branch?"rgba(123,47,190,.10)":"transparent"} stroke="none" role="button" tabIndex={0}
+              aria-label={`解读${p.renshiGong}（${p.branch}宫）`} style={{cursor:"pointer"}}
+              onClick={()=>setSelectedPalace(p.branch)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();setSelectedPalace(p.branch);}}} />)}
+          </svg>}
         </div>
         </div>
         <div className={`mt-1 flex flex-wrap justify-center gap-2 text-[10px] ${chartFull ? "text-gray-300" : "text-gray-500"}`}>
@@ -1220,11 +1249,28 @@ export default function QizhengPage() {
               <span className="inline-block h-2 w-2 rounded-full border border-gray-300 align-middle" style={{ backgroundColor: starColor({ key, wuxing: "" }) }} />{label}
             </span>
           ))}
-          <span className="text-gray-400">五圈层：核心→地支→星曜→宿→人事宫</span>
+          <span className="text-gray-400">圈层：核心→地支→星曜→宿→人事宫→本命神煞→流年神煞→行限虚岁</span>
         </div>
         </div>
       </div>
 
+      <div className="mt-2 bg-white px-3 py-3 text-xs leading-6">
+        <div className="font-bold text-purple-800">盘面参数</div>
+        <div>外圈：蓝字为本命年干支神煞，绿字为流年神煞；最外刻度为洞微行限虚岁，可放大查看。</div>
+        <div>四柱（真太阳时）：{(() => { try {
+          const i=result.input;
+          const clock=new Date(Date.UTC(i.year,i.month-1,i.day,i.hour,i.minute+result.trueSolar.totalOffsetMin));
+          const bz=solarToBazi({year:clock.getUTCFullYear(),month:clock.getUTCMonth()+1,day:clock.getUTCDate(),hour:clock.getUTCHours(),minute:clock.getUTCMinutes(),gender:i.gender || "male"});
+          return bz.pillars.map(p=>p.ganzhi).join("　");
+        } catch { return "无法计算"; } })()}</div>
+        <div>经度 {result.input.lon.toFixed(4)}° · 纬度 {result.input.lat.toFixed(4)}° · 时区 UTC{(result.input.tzOffset ?? 8)>=0?"+":""}{result.input.tzOffset ?? 8}</div>
+        <div>日出 {result.dayNight.sunriseUtc ? new Date(result.dayNight.sunriseUtc).toLocaleTimeString("zh-CN",{timeZone:"Asia/Shanghai",hour:"2-digit",minute:"2-digit"}) : "无日出"} · 日落 {result.dayNight.sunsetUtc ? new Date(result.dayNight.sunsetUtc).toLocaleTimeString("zh-CN",{timeZone:"Asia/Shanghai",hour:"2-digit",minute:"2-digit"}) : "无日落"}（北京时间）</div>
+        <div>命主 {result.palaces[result.mingGong.branchIndex].owner} · 身主 {result.palaces[result.shenGong.branchIndex].owner} · 命度主 {result.mingDuZhu} · 身度主 {result.shenDuZhu}</div>
+      </div>
+      <div className="grid grid-cols-4 gap-1 bg-white px-3 pb-3">
+        {result.palaces.slice().sort((a,b)=>a.renshiIndex-b.renshiIndex).map(p=><button key={p.branch} onClick={()=>setSelectedPalace(p.branch)} className="rounded-lg bg-purple-50 px-1 py-2 text-xs text-purple-800">{p.renshiGong}·{p.branch}</button>)}
+      </div>
+      {selectedPalace && <QizhengPalaceSheet chart={result} branch={selectedPalace} transit={liunian} age={xianAge === "" ? undefined : xianAge} onClose={()=>setSelectedPalace(null)} onSelect={setSelectedPalace} />}
       {/* 感应图层（v25.0.82 P1-1：12 项开关 + 连线绘制，RULE_ID 可追溯） */}
       <div className="mt-2 bg-white px-3 py-3">
         <button
@@ -1777,12 +1823,14 @@ export default function QizhengPage() {
       <div style={{ height: "20px" }} />
 
       {/* 重排弹窗 */}
-      <DatePicker
+      <DatePicker onRecordImport={applyMingzhuProfile}
         show={showForm}
         onClose={() => setShowForm(false)}
         onSubmit={handleSubmit}
         submitText="重新排盘"
         title="七政四余排盘"
+        showName name={name} onNameChange={setName} showMinute
+        initialOptions={{gender:profileGender,calType:"solar",zaoWanZi:false,zhenTaiyang:false,xiaLing:false}}
         showXiaLing
         initialDate={profileDate ?? (lastInput ? { year: lastInput.year, month: lastInput.month, day: lastInput.day, hour: lastInput.hour, minute: lastInput.minute } : undefined)}
         extraOptions={

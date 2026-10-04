@@ -6,6 +6,9 @@ import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import { REGIONS } from "@/data/regions";
 import { chinaDstInfo } from "@/algorithm-core/common/dst";
+import { clearPendingPaipanRecordMeta, listPaipanRecords, setPendingPaipanRecordMeta, type MingzhuProfile, type PaipanRecord } from "@/lib/nativePaipanStore";
+import { profileFromRecord, TOOL_NAMES } from "@/lib/paipanProfiles";
+import { getUserPermissionLevel } from "@/lib/aiService";
 
 // ============================================================================
 // 类型定义
@@ -54,6 +57,7 @@ export interface DatePickerProps {
   extraOptions?: React.ReactNode;
   submitText?: string;
   title?: string;
+  onRecordImport?: (profile: MingzhuProfile) => void;
 }
 
 // ============================================================================
@@ -164,7 +168,25 @@ export default function DatePicker({
   extraOptions = null,
   submitText = "排盘",
   title = "选择日期",
+  onRecordImport,
 }: DatePickerProps) {
+  const [recordsOpen, setRecordsOpen] = useState(false);
+  const [records, setRecords] = useState<PaipanRecord[]>([]);
+  const [recordQuery, setRecordQuery] = useState("");
+  const [recordMessage, setRecordMessage] = useState("");
+  const [recordNote, setRecordNote] = useState("");
+  const currentRecordTool = () => {
+    const routeTool = typeof window === "undefined" ? "" : window.location.pathname.split("/").filter(Boolean).pop() || "";
+    return ({ "taiyi-sanshi": "taiyi", "xuankong-feixing": "xuankong" } as Record<string, string>)[routeTool] || routeTool;
+  };
+  useEffect(() => { if (!show) clearPendingPaipanRecordMeta(currentRecordTool()); }, [show]);
+  useEffect(() => { if (!show) setRecordsOpen(false); }, [show]);
+  const openRecords = async () => {
+    setRecordsOpen(true); setRecordMessage("加载中…");
+    if (getUserPermissionLevel() === "visitor") { setRecordMessage("登录后可查看和导入排盘记录"); return; }
+    try { setRecords(await listPaipanRecords()); setRecordMessage(""); }
+    catch { setRecordMessage("记录读取失败，请关闭后重试"); }
+  };
   const [date, setDate] = useState<DatePickerValue>(initialDate || createDefaultDate());
   const [options, setOptions] = useState<DatePickerOptions>({ ...DEFAULT_OPTIONS, ...(initialOptions || {}) });
   const [nameState, setNameState] = useState(name);
@@ -222,11 +244,12 @@ export default function DatePicker({
   // 提交（v18.1: 农历模式自动转换为公历后再传给算法）
   const handleSubmit = useCallback(() => {
     if (onNameChange) onNameChange(nameState);
+    setPendingPaipanRecordMeta(currentRecordTool(), showSaveName && !saveName ? "" : nameState, recordNote);
     // 农历模式：将农历日期转换为公历日期，确保算法层始终接收公历
     const finalDate = options.calType === "lunar" ? lunarToSolarDate(date) : date;
     onSubmit(finalDate, options);
     onClose();
-  }, [date, options, nameState, onNameChange, onSubmit, onClose]);
+  }, [date, options, nameState, recordNote, showSaveName, saveName, onNameChange, onSubmit, onClose]);
 
   // P1-6: 统一滚动锁 + P1-7: 弹窗返回拦截
   // P1-REOPEN: 排盘弹窗保留底部导航栏（hideNav:false）+ 弹窗整体上移 56px 避让，
@@ -305,14 +328,14 @@ export default function DatePicker({
 
         <div className="px-4 py-3 space-y-3">
           {/* 1. 姓名 + 保存开关（对标吉时雨 福主姓名 + autosave switch） */}
-          {showName && (
+          {
             <div className="flex items-center gap-2">
-              <label className="w-14 shrink-0 text-sm text-gray-700">姓名</label>
+                <label className="w-20 shrink-0 text-sm text-gray-700">记录名称</label>
               <input
                 type="text"
                 value={nameState}
                 onChange={(e) => setNameState(e.target.value)}
-                placeholder="如需保存，请输入姓名"
+                placeholder="输入姓名，之后可按姓名搜索"
                 className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#7B2FBE]"
               />
               {showSaveName && (
@@ -334,7 +357,11 @@ export default function DatePicker({
                 </div>
               )}
             </div>
-          )}
+          }
+          <div className="flex items-start gap-2">
+            <label className="w-20 shrink-0 pt-2 text-sm text-gray-700">备注</label>
+            <textarea value={recordNote} onChange={(e) => setRecordNote(e.target.value)} rows={2} maxLength={300} placeholder="可填写便于查找的备注" className="flex-1 resize-y rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#7B2FBE]" />
+          </div>
 
           {/* 2. 性别 + 历法切换（对标吉时雨 sex radio + rolldate-button-date-group2） */}
           {(showGender || showCalType) && (
@@ -392,7 +419,28 @@ export default function DatePicker({
 
           {/* 3. 日期 - 原生select下拉框（对标吉时雨 mydate + RolldateFull） */}
           <div>
-            <label className="mb-1 block text-sm text-gray-700">日期</label>
+            <div className="mb-2 flex items-center justify-between">
+              <label className="text-sm text-gray-700">日期</label>
+              <button type="button" onClick={openRecords} className="rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-xs font-semibold text-purple-800">排盘记录 / 导入</button>
+            </div>
+            {recordsOpen && <section data-testid="date-records" className="mb-3 rounded-xl border border-purple-200 bg-purple-50 p-3">
+              <div className="mb-2 flex items-center justify-between"><strong className="text-sm text-purple-900">全部工具排盘记录</strong><button type="button" onClick={()=>setRecordsOpen(false)} className="text-xs text-purple-700">收起记录</button></div>
+              <input aria-label="搜索可导入记录" value={recordQuery} onChange={e=>setRecordQuery(e.target.value)} placeholder="搜索姓名、工具或日期" className="mb-2 w-full rounded-lg border bg-white p-2 text-sm" />
+              <div className="max-h-60 space-y-2 overflow-y-auto">
+                {recordMessage ? <p className="text-xs text-gray-500">{recordMessage}</p> : records.filter(r=>`${r.title} ${TOOL_NAMES[r.tool]||r.tool} ${String(r.input.name||"")} ${r.note||""}`.toLocaleLowerCase().includes(recordQuery.trim().toLocaleLowerCase())).map(r=>{const p=profileFromRecord(r);return <div key={r.id} className="rounded-lg bg-white p-2 text-xs">
+                  <div className="font-semibold">{TOOL_NAMES[r.tool]||r.tool} · {String(r.input.name||r.title)}</div>
+                  {r.note && <div className="mt-1 text-gray-600">备注：{r.note}</div>}
+                  {p ? <><div className="my-1 text-gray-600">{p.gender} {p.birthDate} {p.birthTime}</div><button type="button" className="rounded-lg bg-purple-700 px-3 py-2 text-white" onClick={()=>{
+                    const [year, month, day] = (p.birthDate || "").split("-").map(Number);
+                    const [hour, minute] = (p.birthTime || "").split(":").map(Number);
+                    if (year && month && day && Number.isFinite(hour)) setDate({ year, month, day, hour, minute: Number.isFinite(minute) ? minute : 0 });
+                    if (p.gender) setOptions(prev => ({ ...prev, gender: p.gender === "女" ? "female" : "male" }));
+                    onRecordImport?.(p); setNameState(p.name); setRecordNote(r.note || ""); onNameChange?.(p.name); setRecordsOpen(false); setRecordQuery("");
+                  }}>导入此人资料</button></> : <div className="mt-1 text-gray-500">无完整出生资料，可在工具记录中查看原盘</div>}
+                </div>;})}
+                {!recordMessage && records.length===0 && <p className="text-xs text-gray-500">暂无记录，排盘后自动保存</p>}
+              </div>
+            </section>}
             <div className="flex items-center gap-1.5">
               <select
                 value={date.year}

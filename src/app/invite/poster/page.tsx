@@ -22,7 +22,7 @@ import { PRODUCT_LIST, PRODUCTS } from "@/lib/marketing/products";
 import { CHANNEL_LIST, getChannel } from "@/lib/marketing/channels";
 import { getRatio, type RecommendationItem } from "@/lib/marketing/recommend";
 import { renderPoster, type RenderCheck } from "@/lib/marketing/posterEngine";
-import { qrSelfTest, type QrSelfTestResult } from "@/lib/marketing/qrSelfTest";
+import { isSignedInviteLinkShape, qrSelfTest, type QrSelfTestResult } from "@/lib/marketing/qrSelfTest";
 import { logMarketingEvent } from "@/lib/marketing/logEvents";
 import { getDisclaimer } from "@/lib/marketing/copyLibrary";
 import {
@@ -34,6 +34,7 @@ import {
   DEFAULT_SHARE_TEXT,
 } from "@/lib/marketing/viralTemplates";
 import { generateAiPosterCopies, type AiPosterCopy } from "@/lib/marketing/aiCopy";
+import { LEARNING_POSTERS, renderLearningPoster, type LearningPosterId } from "@/lib/marketing/learningPosterEngine";
 
 const BRAND = "#7B2FBE";
 const GENERIC = "__generic__";
@@ -68,6 +69,7 @@ export default function PosterAssistantPage() {
   const [qrDataUrl, setQrDataUrl] = useState("");
 
   const [posterUrl, setPosterUrl] = useState("");
+  const [learningPoster, setLearningPoster] = useState<LearningPosterId | null>(null);
   const [checks, setChecks] = useState<RenderCheck | null>(null);
   const [qrTest, setQrTest] = useState<QrSelfTestResult | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -117,6 +119,7 @@ export default function PosterAssistantPage() {
         const linkData = await getInviteLink();
         setInvite(linkData);
         if (linkData?.inviteLink) {
+          if (!isSignedInviteLinkShape(linkData.inviteLink)) throw new Error("服务器返回的个人分享链接未通过签名格式校验");
           const QRCode = (await import("qrcode")).default;
           const url = await QRCode.toDataURL(linkData.inviteLink, {
             width: 600,
@@ -168,10 +171,11 @@ export default function PosterAssistantPage() {
   const renderRec = useCallback(
     async (rec: RecommendationItem, useCache = true) => {
       setGenerating(true);
+      setLearningPoster(null);
       setError("");
       try {
         const policy = getChannel(channel);
-        const cacheKey = `${rec.variant.id}|${rec.copy.copyId}|${rec.ratio}|${channel}|${showNickname}|${showAvatar}`;
+        const cacheKey = `${rec.variant.id}|${rec.copy.copyId}|${rec.ratio}|${channel}|${invite?.inviteLink || ""}|${nickname}|${showNickname}|${showAvatar}`;
         let dataUrl = useCache ? posterCache.current.get(cacheKey) : undefined;
         if (!dataUrl) {
           const req: PosterRequest = {
@@ -237,6 +241,31 @@ export default function PosterAssistantPage() {
     },
     [channel, qrDataUrl, invite, nickname, avatarDataUrl, showNickname, showAvatar, effectiveAudience, product, showToast]
   );
+
+  const renderLearningTemplate = useCallback(async (templateId: LearningPosterId) => {
+    if (!invite?.inviteLink || !qrDataUrl) {
+      showToast("个人分享链接加载中，请稍候", "error");
+      return;
+    }
+    setGenerating(true); setError(""); setAppliedAi(null);
+    try {
+      const dataUrl = await renderLearningPoster({
+        templateId,
+        qrDataUrl,
+        inviteLink: invite.inviteLink,
+        nickname,
+        showNickname,
+      });
+      setLearningPoster(templateId);
+      setPosterUrl(dataUrl);
+      setChecks({ textContrastOk: true, overflowOk: true, safeAreaOk: true, warnings: [] });
+      setQrTest(await qrSelfTest(dataUrl, invite.inviteLink));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "学习海报生成失败");
+    } finally {
+      setGenerating(false);
+    }
+  }, [invite, qrDataUrl, nickname, showNickname, showToast]);
 
   const doGenerate = useCallback(
     async (idx: number) => {
@@ -582,13 +611,29 @@ export default function PosterAssistantPage() {
                 {personalized ? "个性化推荐" : "通用版"}
               </span>
             </div>
+            {policy.qrAllowed && (
+              <div style={{ backgroundColor: "#fff", borderRadius: "12px", padding: "12px", marginBottom: "12px" }}>
+                <div style={{ fontSize: "13px", fontWeight: 700, color: "#333", marginBottom: "8px" }}>学习专区精选海报</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                  {LEARNING_POSTERS.map((item) => (
+                    <button key={item.id} type="button" onClick={() => void renderLearningTemplate(item.id)}
+                      style={{ padding: "10px", borderRadius: "10px", border: learningPoster === item.id ? `2px solid ${BRAND}` : "1px solid #e8e8e8", background: learningPoster === item.id ? "#F8F1FC" : "#fff", textAlign: "left" }}>
+                      <div style={{ fontSize: "13px", fontWeight: 700, color: "#333" }}>{item.name}</div>
+                      <div style={{ marginTop: "3px", fontSize: "10px", color: "#999" }}>{item.description}</div>
+                    </button>
+                  ))}
+                </div>
+                <div style={{ marginTop: "7px", fontSize: "10px", color: "#999" }}>二维码只使用服务器返回的本人分享链接。听学海报将在真机验收后开放。</div>
+              </div>
+            )}
             <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "14px" }}>
               {recs.map((r, i) => (
                 <div
                   key={r.variant.id}
                   onClick={() => {
+                    setLearningPoster(null);
                     setActiveIdx(i);
-                    if (i !== activeIdx) {
+                    if (i !== activeIdx || learningPoster) {
                       setPosterUrl("");
                       setTimeout(() => void doGenerate(i), 0);
                     }
@@ -726,7 +771,7 @@ export default function PosterAssistantPage() {
                     </button>
                   </div>
                 )}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", marginBottom: "10px" }}>
+                {!learningPoster && <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px", marginBottom: "10px" }}>
                   <button onClick={handleAiGenerate} disabled={generating || aiLoading} style={{ ...secondaryBtn, fontSize: "13px", borderColor: BRAND }}>
                     {aiLoading ? "生成中..." : "✨ AI换文案"}
                   </button>
@@ -734,7 +779,7 @@ export default function PosterAssistantPage() {
                   <button onClick={handleUseGeneric} disabled={generating || !personalized} style={{ ...secondaryBtn, fontSize: "13px" }}>
                     {personalized ? "使用通用版" : "已通用版"}
                   </button>
-                </div>
+                </div>}
                 <button
                   onClick={handleSave}
                   disabled={generating || saveBlocked}

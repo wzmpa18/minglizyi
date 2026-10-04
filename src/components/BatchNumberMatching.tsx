@@ -17,7 +17,7 @@ import {
   DIGIT_WUXING,
 } from "@/lib/batchNumberMatch";
 import type { BatchMatchResult, NumberMatchResult } from "@/lib/batchNumberMatch";
-import { callAI, getPermissionStatus } from "@/lib/aiService";
+import { callAI, getPermissionStatusFromServer } from "@/lib/aiService";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { reportConsumptionRebate } from "@/lib/inviteApi";
@@ -467,7 +467,7 @@ export default function BatchNumberMatching({ toolType }: BatchNumberMatchingPro
 
     // v20.1: 权限检查
     if (!requireLogin()) return;
-    const perm = getPermissionStatus();
+    const perm = await getPermissionStatusFromServer();
     if (!perm.canUseAI && perm.needPayment) {
       setToast("今日AI解读次数已用完，请开通会员继续使用");
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);

@@ -1,0 +1,23 @@
+{
+  "datasetId": "tcm-qa-datasets-yizhen-buaa",
+  "title": "TCM-QA-datasets 中医问答题候选集",
+  "sourceUrl": "https://github.com/yizhen-buaa/TCM-QA-datasets",
+  "snapshotDate": "2026-10-03",
+  "declaredRepositoryLicense": "Apache-2.0",
+  "sourceProvenance": "Repository README lists 578 single-choice, 131 multiple-choice, and 96 true/false questions; it does not identify the original publisher, exam years, or curriculum edition.",
+  "statistics": {
+    "files": 3,
+    "questions": 805,
+    "uniqueQuestionStems": 805,
+    "missingQuestion": 0,
+    "missingAnswer": 0,
+    "explanationFieldPresent": false
+  },
+  "rightsStatus": "repository_license_declared_upstream_provenance_unverified",
+  "completenessStatus": "question_and_answer_present_explanations_not_provided",
+  "qualityStatus": "not_medically_or_curricularly_reviewed",
+  "approvalStatus": "pending_review_not_for_publication",
+  "allowedNextUse": "Keep isolated in staging; perform source-rights confirmation, answer-format validation, curriculum mapping, duplicate review, and licensed TCM educator review before any app import.",
+  "notices": "Keep the upstream LICENSE and README with any redistributed copy. Do not label the questions as official national exam questions. No per-question explanation may be generated and attributed to the source.",
+  "modifiedByThisProject": false
+}

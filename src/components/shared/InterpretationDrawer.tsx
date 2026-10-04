@@ -23,6 +23,7 @@ import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import { isPaymentsBlocked, IOS_PAYMENT_DISABLED_TIP } from "@/lib/platformGate";
+import { SafeRichText } from "@/components/SafeRichText";
 
 export interface InterpretationItem {
   type: string;
@@ -191,7 +192,7 @@ export default function InterpretationDrawer({
                   <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: "4px", fontSize: "11px", fontWeight: 600, backgroundColor: tc.fg, color: "#fff" }}>{item.isAI ? "AI 参考" : tc.label}</span>
                   {item.isAI && <span style={{ fontSize: "10px", color: "#9ca3af" }}>内容仅供参考</span>}
                 </div>
-                <div style={{ fontSize: "14px", lineHeight: "1.7", color: "#333", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{item.content}</div>
+                <SafeRichText content={item.content} style={{ fontSize: "14px", lineHeight: "1.7", color: "#333" }} />
               </div>
             );
           })}
@@ -205,7 +206,7 @@ export default function InterpretationDrawer({
                     <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: "4px", fontSize: "11px", fontWeight: 600, backgroundColor: "#7B2FBE", color: "#fff" }}>AI 参考</span>
                     <span style={{ fontSize: "10px", color: "#9ca3af" }}>内容仅供参考</span>
                   </div>
-                  <div style={{ fontSize: "14px", lineHeight: "1.7", color: "#4a1d8a", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{aiContent}</div>
+                  <SafeRichText content={aiContent} style={{ fontSize: "14px", lineHeight: "1.7", color: "#4a1d8a" }} />
 
                   {/* v20.1: 免费用户内容锁定 */}
                   {aiLocked && (

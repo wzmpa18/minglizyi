@@ -179,7 +179,7 @@ public class PaipanStorePlugin extends Plugin {
                 call.reject("tool is required");
                 return;
             }
-            Long existingId = call.getLong("id");
+            Long existingId = numericLong(call, "id");
             // 命主档案 id 为 UUID 字符串，按字符串存取
             String profileId = call.getString("profileId");
             JSONObject input = call.getObject("input", null);
@@ -199,10 +199,15 @@ public class PaipanStorePlugin extends Plugin {
             long id;
             if (existingId != null && existingId > 0) {
                 id = existingId;
-                d.update("paipan_records", cv, "id=?", new String[]{String.valueOf(existingId)});
+                int changed = d.update("paipan_records", cv, "id=?", new String[]{String.valueOf(existingId)});
+                if (changed == 0) {
+                    cv.put("id", existingId);
+                    cv.put("created_at", now);
+                    id = d.insertOrThrow("paipan_records", null, cv);
+                }
             } else {
                 cv.put("created_at", now);
-                id = d.insert("paipan_records", null, cv);
+                id = d.insertOrThrow("paipan_records", null, cv);
             }
 
             JSObject ret = new JSObject();
@@ -218,7 +223,7 @@ public class PaipanStorePlugin extends Plugin {
     public void listRecords(PluginCall call) {
         try {
             String tool = call.getString("tool");
-            Long limitVal = call.getLong("limit");
+            Long limitVal = numericLong(call, "limit");
             int limit = limitVal == null || limitVal <= 0 ? DEFAULT_LIMIT
                     : (int) Math.min(limitVal, MAX_LIMIT);
             SQLiteDatabase d = db().getReadableDatabase();
@@ -247,7 +252,7 @@ public class PaipanStorePlugin extends Plugin {
     @PluginMethod
     public void getRecord(PluginCall call) {
         try {
-            Long id = call.getLong("id");
+            Long id = numericLong(call, "id");
             if (id == null || id <= 0) {
                 call.reject("id is required");
                 return;
@@ -271,7 +276,7 @@ public class PaipanStorePlugin extends Plugin {
     @PluginMethod
     public void deleteRecord(PluginCall call) {
         try {
-            Long id = call.getLong("id");
+            Long id = numericLong(call, "id");
             if (id == null || id <= 0) {
                 call.reject("id is required");
                 return;
@@ -326,6 +331,15 @@ public class PaipanStorePlugin extends Plugin {
         if (c.moveToFirst()) o = rowToProfile(c);
         c.close();
         return o;
+    }
+
+    // JSON decodes small integers as Integer, while Capacitor getLong only accepts Long.
+    private static Long numericLong(PluginCall call, String key) {
+        Object value = call.getData().opt(key);
+        if (!(value instanceof Number)) return null;
+        double number = ((Number) value).doubleValue();
+        if (Double.isNaN(number) || Double.isInfinite(number) || number != Math.rint(number)) return null;
+        return ((Number) value).longValue();
     }
 
     private static JSObject rowToProfile(Cursor c) {

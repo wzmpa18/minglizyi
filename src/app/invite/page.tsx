@@ -23,6 +23,7 @@ import {
   type ViralTemplateId,
 } from "@/lib/marketing/viralTemplates";
 import { generateAiPosterCopies, type AiPosterCopy } from "@/lib/marketing/aiCopy";
+import { isSignedInviteLinkShape } from "@/lib/marketing/qrSelfTest";
 
 const BRAND = "#7B2FBE";
 
@@ -85,6 +86,9 @@ export default function InvitePage() {
     setLoading(true);
     try {
       const linkData = await getInviteLink();
+      if (linkData?.inviteLink && !isSignedInviteLinkShape(linkData.inviteLink)) {
+        throw new Error("服务器返回的个人分享链接未通过签名格式校验");
+      }
       setLink(linkData);
       if (linkData) {
         try {
@@ -374,6 +378,25 @@ export default function InvitePage() {
       <BrandHeader title="推广中心" showBack />
 
       <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 8px" }}>
+        {overview?.growthCampaign?.enabled && (
+          <div style={{ marginBottom: "12px", padding: "16px", borderRadius: "14px", background: "linear-gradient(135deg,#fff3d6,#fff)", border: "1px solid #f0c15b" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", alignItems: "center" }}>
+              <div style={{ fontSize: "16px", fontWeight: 800, color: "#7a4b0b" }}>{overview.growthCampaign.name}</div>
+              <div style={{ fontSize: "12px", color: "#9a651e", whiteSpace: "nowrap" }}>{overview.growthCampaign.qualifiedInvites}/{overview.growthCampaign.targetInvites}</div>
+            </div>
+            <div style={{ marginTop: "10px", height: "8px", borderRadius: "5px", backgroundColor: "#f1e2c5", overflow: "hidden" }}>
+              <div style={{ width: `${overview.growthCampaign.progressPercent}%`, height: "100%", background: "linear-gradient(90deg,#f6ad32,#e67e22)" }} />
+            </div>
+            <div style={{ marginTop: "9px", fontSize: "12px", color: "#7d6545", lineHeight: 1.6 }}>
+              {overview.growthCampaign.coupon?.status === "AVAILABLE"
+                ? `会员优惠券已到账（立减${overview.growthCampaign.discountPercent}%），有效期至 ${new Date(overview.growthCampaign.coupon.expiresAt).toLocaleDateString("zh-CN")}。可到会员中心使用。`
+                : overview.growthCampaign.coupon?.status === "CONSUMED"
+                ? "本期八折券已使用。"
+                : `再邀请 ${overview.growthCampaign.remainingInvites} 位新用户完成手机号注册，即可获得一张会员优惠券。`}
+            </div>
+            <div style={{ marginTop: "7px", fontSize: "10px", color: "#a0835e" }}>每人一次；月度、季度、年度会员可用；不与其他优惠或邀请佣金叠加。异常注册不计入。</div>
+          </div>
+        )}
         {/* ===== AI推广助手入口（P7-MKT-POSTER-02） ===== */}
         <button
           onClick={() => router.push("/invite/poster")}

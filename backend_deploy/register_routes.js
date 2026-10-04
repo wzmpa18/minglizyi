@@ -1074,6 +1074,13 @@ function createUser(params, opts = {}) {
   if (!opts.skipAttribution) {
     const attribution = resolveInviteAttribution(db, { inviteRef, inviteTs, inviteSig, inviteCode, deviceId, clientIp });
     inviteResult = bindInviteAndReward(db, newUserId, attribution, clientIp, deviceId);
+    if (inviteResult.bound && attribution.inviterId) {
+      try {
+        require('./growthCampaignEngine').syncUser(db, attribution.inviterId);
+      } catch (e) {
+        console.error('[GrowthCampaign] 邀请助力进度同步失败:', e.message);
+      }
+    }
   }
 
   // 记录操作日志
@@ -1990,7 +1997,16 @@ function createRouter() {
       }
       const ts = Date.now();
       const sig = signInviteRef(user.user_id, ts);
-      const base = process.env.PUBLIC_BASE_URL || `https://${req.headers.host || 'yandaoguoxue.yandao.vip'}`;
+      // 邀请二维码只能指向固定公开站点，不信任可被代理或客户端改写的 Host 请求头。
+      let base = String(process.env.PUBLIC_BASE_URL || 'https://yandaoguoxue.yandao.vip').replace(/\/$/, '');
+      try {
+        const parsed = new URL(base);
+        if (parsed.protocol !== 'https:' || !['yandaoguoxue.yandao.vip', 'www.yandao.vip'].includes(parsed.hostname.toLowerCase())) {
+          base = 'https://yandaoguoxue.yandao.vip';
+        }
+      } catch (_) {
+        base = 'https://yandaoguoxue.yandao.vip';
+      }
       const inviteLink = `${base}/register?ref=${user.user_id}&ts=${ts}&sig=${sig}`;
       return jsonResponse(res, 200, true, '获取成功', {
         userId: user.user_id,
@@ -2019,13 +2035,22 @@ function createRouter() {
   router.post('/invite/consumption-rebate', authMiddleware, (req, res) => {
     try {
       const { orderNo, amount, product } = req.body || {};
-      const price = rebateProductPrice(product);
-      if (price === null) {
-        logInviteAudit(initDatabase(), req.user.userId, null, 'payment', 'rebate_rejected', `UNKNOWN_PRODUCT_${String(product || '').slice(0, 40)}_ORDER_${String(orderNo || '').slice(0, 64)}`, getClientIp(req), '');
-        return jsonResponse(res, 200, true, 'UNKNOWN_PRODUCT', { granted: false, reason: 'UNKNOWN_PRODUCT' });
+      const db = initDatabase();
+      const order = db.prepare('SELECT user_id, amount, status, extra FROM user_orders WHERE order_no = ?').get(String(orderNo || '').slice(0, 64));
+      if (!order || String(order.user_id) !== String(req.user.userId) || order.status !== 'PAID') {
+        logInviteAudit(db, req.user.userId, null, 'payment', 'rebate_rejected', `ORDER_NOT_PAID_OR_NOT_OWNED_${String(orderNo || '').slice(0, 64)}`, getClientIp(req), '');
+        return jsonResponse(res, 200, true, 'ORDER_NOT_ELIGIBLE', { granted: false, reason: 'ORDER_NOT_ELIGIBLE' });
       }
-      // 客户端金额与服务端目录不一致：以服务端为准并留痕（攻击面：伪造大额）
-      if (amount !== undefined && Number(amount) !== price) {
+      let orderExtra = {};
+      try { orderExtra = JSON.parse(order.extra || '{}'); } catch (e) {}
+      if (orderExtra.growthCampaign && ['EXCLUDED', 'REFERRAL_EXCLUDED_PARTNER_PRESERVED'].includes(orderExtra.growthCampaign.commissionPolicy)) {
+        return jsonResponse(res, 200, true, 'GROWTH_COUPON_EXCLUDED', { granted: false, reason: 'GROWTH_COUPON_EXCLUDED' });
+      }
+      const price = Number(order.amount);
+      if (!(price > 0)) {
+        return jsonResponse(res, 200, true, 'INVALID_ORDER_AMOUNT', { granted: false, reason: 'INVALID_ORDER_AMOUNT' });
+      }
+      if (amount !== undefined && Math.abs(Number(amount) - price) > 0.001) {
         logInviteAudit(initDatabase(), req.user.userId, null, 'payment', 'rebate_amount_mismatch',
           `CLIENT_${Number(amount)}_SERVER_${price}_ORDER_${String(orderNo || '').slice(0, 64)}`, getClientIp(req), '');
       }
@@ -2071,6 +2096,12 @@ function createRouter() {
       const monthPrefix = todayPrefix.slice(0, 7);
       const monthInvites = relations.filter(r => String(r.invite_time || '').slice(0, 7) === monthPrefix).length;
       const totalRewardPoints = rewards.reduce((s, r) => s + (r.points || 0), 0) + totalRebatePoints;
+      let growthCampaign = null;
+      try {
+        growthCampaign = require('./growthCampaignEngine').syncUser(db, userId);
+      } catch (e) {
+        console.error('[GrowthCampaign] 活动状态读取失败:', e.message);
+      }
 
       const maskName = (name) => {
         if (!name) return '国学爱好者';
@@ -2087,6 +2118,7 @@ function createRouter() {
           totalRewardPoints,
           pointsBalance: pointsRow ? pointsRow.points_balance || 0 : 0,
         },
+        growthCampaign,
         invitees: relations.map(r => ({
           inviteeId: r.invitee_id,
           name: maskName(r.nickname),

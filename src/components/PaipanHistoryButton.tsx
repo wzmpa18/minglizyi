@@ -1,5 +1,8 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { profileFromRecord, TOOL_NAMES } from "@/lib/paipanProfiles";
+import { afterPopupClose } from "@/lib/popupTransition";
 import { useState, useCallback, useEffect } from "react";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
@@ -7,6 +10,8 @@ import {
   listPaipanRecords,
   deletePaipanRecord,
   formatRecordTime,
+  setPendingPaipanRecordMeta,
+  clearPendingPaipanRecordMeta,
   type PaipanRecord,
 } from "@/lib/nativePaipanStore";
 import { getUserPermissionLevel } from "@/lib/aiService";
@@ -29,15 +34,31 @@ interface PaipanHistoryButtonProps {
  */
 export function PaipanHistoryButton({ toolKey, onRestore }: PaipanHistoryButtonProps) {
   // v25.0.88: 游客隐藏入口（注册后完整可用）
-  const [gated] = useState(() => typeof window !== "undefined" && getUserPermissionLevel() === "visitor");
+  const [gated, setGated] = useState(true);
+  useEffect(() => {
+    const refresh = () => setGated(getUserPermissionLevel() === "visitor");
+    refresh(); window.addEventListener("storage", refresh);
+    return () => window.removeEventListener("storage", refresh);
+  }, []);
+  const router = useRouter();
+  const [scope, setScope] = useState<"current" | "all">("all");
+  const [query, setQuery] = useState("");
   const [showHistory, setShowHistory] = useState(false);
   const [records, setRecords] = useState<PaipanRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState("");
+  const [metaOpen, setMetaOpen] = useState(false);
+  const [recordName, setRecordName] = useState("");
+  const [recordNote, setRecordNote] = useState("");
+  const [metaEdited, setMetaEdited] = useState(false);
+
+  useEffect(() => {
+    if (metaEdited) setPendingPaipanRecordMeta(toolKey, recordName, recordNote, true);
+  }, [toolKey, recordName, recordNote, metaEdited]);
+  useEffect(() => () => clearPendingPaipanRecordMeta(toolKey), [toolKey]);
 
   useBodyScrollLock(showHistory);
   usePopupBackHandler(() => setShowHistory(false), showHistory);
-  if (gated) return null;
 
   const flashToast = useCallback((msg: string) => {
     setToast(msg);
@@ -47,11 +68,13 @@ export function PaipanHistoryButton({ toolKey, onRestore }: PaipanHistoryButtonP
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      setRecords(await listPaipanRecords(toolKey));
+      setRecords(await listPaipanRecords(scope === "all" ? undefined : toolKey));
+    } catch {
+      flashToast("记录读取失败，请重试");
     } finally {
       setLoading(false);
     }
-  }, [toolKey]);
+  }, [toolKey, scope]);
 
   useEffect(() => {
     if (showHistory) refresh();
@@ -59,8 +82,13 @@ export function PaipanHistoryButton({ toolKey, onRestore }: PaipanHistoryButtonP
 
   const handleRestore = useCallback((record: PaipanRecord) => {
     setShowHistory(false);
-    onRestore(record);
-  }, [onRestore]);
+    if (record.tool === toolKey) onRestore(record);
+    else {
+      sessionStorage.setItem("paipan_pending_restore", JSON.stringify(record));
+      window.__skipPopupCleanup = true;
+      router.push(`/yixue/${record.tool}/`);
+    }
+  }, [onRestore, toolKey, router]);
 
   const handleDelete = useCallback(async (id: number) => {
     try {
@@ -71,6 +99,15 @@ export function PaipanHistoryButton({ toolKey, onRestore }: PaipanHistoryButtonP
     }
   }, [flashToast]);
 
+  useEffect(() => {
+    const raw = sessionStorage.getItem("paipan_pending_restore");
+    if (!raw) return;
+    try { const record = JSON.parse(raw) as PaipanRecord;
+      if (record.tool === toolKey) { sessionStorage.removeItem("paipan_pending_restore"); onRestore(record); }
+    } catch { sessionStorage.removeItem("paipan_pending_restore"); }
+  }, [toolKey, onRestore]);
+  if (gated) return null;
+
   return (
     <div className="inline-flex">
       <button
@@ -78,8 +115,16 @@ export function PaipanHistoryButton({ toolKey, onRestore }: PaipanHistoryButtonP
         className="rounded-lg border px-3 py-1.5 text-xs font-medium"
         style={{ borderColor: BRAND + "55", color: BRAND }}
       >
-        历史
+        排盘记录
       </button>
+      <button type="button" onClick={() => setMetaOpen((v) => !v)} className="ml-2 rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600">
+        {metaOpen ? "收起记录名称" : "设置记录名称/备注"}
+      </button>
+      {metaOpen && <div className="fixed bottom-24 left-1/2 z-[55] w-[min(92vw,380px)] -translate-x-1/2 space-y-2 rounded-xl border bg-white p-3 shadow-lg">
+        <input value={recordName} onChange={(e) => { setRecordName(e.target.value); setMetaEdited(true); }} maxLength={60} placeholder="记录名称，之后可按姓名搜索" className="w-full rounded-lg border p-2 text-sm" />
+        <textarea value={recordNote} onChange={(e) => { setRecordNote(e.target.value); setMetaEdited(true); }} maxLength={300} rows={2} placeholder="备注（可选）" className="w-full rounded-lg border p-2 text-sm" />
+        <p className="text-[11px] text-gray-500">将应用到本工具后续保存的排盘记录。</p>
+      </div>}
 
       {toast && (
         <div
@@ -91,16 +136,21 @@ export function PaipanHistoryButton({ toolKey, onRestore }: PaipanHistoryButtonP
       )}
 
       {showHistory && (
-        <div className="fixed inset-0 z-[60] flex items-end justify-center sm:items-center">
+        <div className="fixed inset-0 z-[60] flex items-stretch justify-end">
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowHistory(false)} />
-          <div className="relative z-10 max-h-[75vh] w-full max-w-md overflow-hidden rounded-t-2xl bg-white sm:rounded-2xl">
+          <div className="relative z-10 h-full w-[92%] max-w-md overflow-y-auto bg-white shadow-xl">
             <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
               <span className="text-base font-bold text-gray-800">排盘记录</span>
               <button onClick={() => setShowHistory(false)} className="px-1 text-2xl leading-none text-gray-400">
                 ×
               </button>
             </div>
-            <div className="max-h-[58vh] overflow-y-auto p-3">
+            <div className="flex gap-2 p-3">
+              <button onClick={() => setScope("all")} className={`flex-1 rounded-lg p-2 text-sm ${scope === "all" ? "bg-purple-100 text-purple-800" : "bg-gray-100"}`}>全部工具</button>
+              <button onClick={() => setScope("current")} className={`flex-1 rounded-lg p-2 text-sm ${scope === "current" ? "bg-purple-100 text-purple-800" : "bg-gray-100"}`}>当前工具</button>
+            </div>
+            <div className="px-3"><input aria-label="搜索排盘记录" value={query} onChange={e => setQuery(e.target.value)} placeholder="搜索姓名、日期或工具" className="w-full rounded-lg border p-2 text-sm" /></div>
+            <div className="overflow-y-auto p-3">
               {loading ? (
                 <div className="py-10 text-center text-sm text-gray-400">加载中…</div>
               ) : records.length === 0 ? (
@@ -109,19 +159,25 @@ export function PaipanHistoryButton({ toolKey, onRestore }: PaipanHistoryButtonP
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {records.map((r) => (
+                  {records.filter(r => `${r.title} ${r.input.name || ""} ${r.note || ""} ${TOOL_NAMES[r.tool] || r.tool}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())).map((r) => (
                     <div key={r.id} className="flex items-center justify-between gap-2 rounded-xl bg-gray-50 p-3">
                       <div className="min-w-0 flex-1" onClick={() => handleRestore(r)}>
-                        <div className="truncate text-sm font-medium text-gray-800">{r.title || "未命名排盘"}</div>
+                        <div className="truncate text-sm font-medium text-gray-800">{TOOL_NAMES[r.tool] || r.tool} · {r.title || "未命名排盘"}</div>
+                        {(r.input.name || r.note) && <div className="mt-0.5 truncate text-xs text-gray-600">{r.input.name ? `姓名：${String(r.input.name)}` : ""}{r.note ? ` · 备注：${r.note}` : ""}</div>}
                         <div className="mt-0.5 text-[11px] text-gray-400">{formatRecordTime(r.createdAt)}</div>
                       </div>
-                      <div className="flex shrink-0 gap-1.5">
+                      <div className="flex shrink-0 flex-col gap-1.5">
+                        {["bazi", "ziwei", "qizheng", "chenggu"].includes(toolKey) && r.tool !== toolKey && profileFromRecord(r) && <button
+                          onClick={() => { const p = profileFromRecord(r); if (!p) return;
+                            afterPopupClose(() => window.dispatchEvent(new CustomEvent("paipan-import-profile", { detail:p })));
+                            setShowHistory(false);
+                          }} className="rounded-lg bg-purple-100 px-2.5 py-1 text-[11px] text-purple-800">导入个人信息</button>}
                         <button
                           onClick={() => handleRestore(r)}
                           className="rounded-lg px-2.5 py-1 text-[11px] font-medium text-white"
                           style={{ backgroundColor: BRAND }}
                         >
-                          恢复
+                          {r.tool === toolKey ? "恢复" : "查看原盘"}
                         </button>
                         <button
                           onClick={() => handleDelete(r.id)}

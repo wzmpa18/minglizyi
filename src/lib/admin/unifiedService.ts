@@ -70,6 +70,21 @@ export interface PaymentStatus {
   generatedAt: string;
 }
 
+export interface GrowthCampaignConfig {
+  enabled: boolean;
+  campaignId: string;
+  name: string;
+  startsAt: string;
+  endsAt: string;
+  targetInvites: number;
+  discountPercent: number;
+  couponValidDays: number;
+  eligibleMembershipLevels: string[];
+  commissionPolicy: 'EXCLUDED' | 'REFERRAL_EXCLUDED_PARTNER_PRESERVED';
+  termsVersion: string;
+  updatedAt?: string;
+}
+
 export interface ModerationUser {
   user_id: number;
   nickname: string;
@@ -316,6 +331,21 @@ export async function revokeAdminKey(masked: string, reason: string): Promise<{ 
 export async function fetchPaymentStatus(): Promise<PaymentStatus | null> {
   const res = await unifiedFetch<PaymentStatus>("/payment-status");
   return res.success ? res.data! : null;
+}
+
+export async function fetchGrowthCampaign(): Promise<GrowthCampaignConfig | null> {
+  const res = await unifiedFetch<GrowthCampaignConfig>('/growth-campaign');
+  return res.success ? res.data! : null;
+}
+
+export async function updateGrowthCampaign(
+  patch: Partial<GrowthCampaignConfig> & { reason?: string }
+): Promise<{ ok: boolean; data?: GrowthCampaignConfig; error?: string }> {
+  const res = await unifiedFetch<GrowthCampaignConfig>('/growth-campaign', {
+    method: 'PUT',
+    body: JSON.stringify(patch),
+  });
+  return { ok: !!res.success, data: res.data, error: res.error };
 }
 
 // ==================== 内容审核 ====================

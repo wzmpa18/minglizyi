@@ -962,3 +962,6 @@ gh workflow run ios-build.yml --repo wzmpa18/minglizyi --ref main
 **构建终验**：v25.0.80 build PASS（Compiled successfully 27.8s / 174 静态页 / builtAt 2026-09-03 20:21）；四特征入包——GlobalBackButton `0u36arl2-v_yq.js`、NewsCard 主框架跳转 `0u36arl2-v_yq.js`+`1y_kd1jq0cdbz.js`、倒计时重置双页 `3a3mmuv_da7l1.js`+`3w7n9xu9tsm4z.js`、friends 服务端列表 3 chunks。
 
 **审核结果后的部署顺序（一次性解决）**：① deploy_v25_0_80.sh（Web）→ ② deploy_news_ai_v25_0_78.sh（资讯 AI 维护+cron+首跑）→ ③ Android 重打包 versionCode 2073（内置 v25.0.80）→ ④ iOS 视审核结果重提/下版本带上。
+## 十二.31 v25.0.97 学习听学、私有 COS 离线包与传播闭环（2026-10-04）
+
+指令 `CONTENT-TTS-GROWTH-RELEASE-02` 已落实到代码：学习分类与中文标签完善；知识点/典籍增加设备本机中文朗读；AI 文本安全渲染；两张学习海报使用服务端签名个人链接；十人助力优惠与 Partner 合同兼容。离线包发布改为强制先进入私有 COS，再由会员鉴权取得短期签名地址，下载后 SHA-256 校验并永久保存在手机。真实生产库可导出中医 1348 知识点/1698 题、易学 2048 知识点/2228 题；经络穴位基线为 14 经络/361 穴。构建 185 页通过，离线包 76/0、佣金 121/0。线上仍为 v25.0.96；v25.0.97 因 COS 密钥环境未配置与真机朗读未验收，不标记上线。详见 `docs/reports/20261004_v25.0.97_学习听学对象存储与传播接入报告.md`。

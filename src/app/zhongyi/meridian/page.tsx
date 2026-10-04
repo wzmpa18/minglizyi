@@ -14,7 +14,7 @@ import {
 } from "@/algorithm-core/modules/tcm/dong-acupoints";
 import { addRecentItem } from "@/lib/tcmRecent";
 import { triggerScrape, getCachedAcupointInfo, markForRefetch } from "@/lib/tcmScraper";
-import { callAI, getPermissionStatus } from "@/lib/aiService";
+import { callAI, getPermissionStatusFromServer } from "@/lib/aiService";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import type { TcmMeridian, TcmAcupoint, TcmDongAcupoint } from "@/algorithm-core/types/tcm";
@@ -169,7 +169,7 @@ function PositioningModal({
 
     // v20.1: 三级权限检查 - 未登录弹出登录引导
     if (!requireLogin()) return;
-    const perm = getPermissionStatus();
+    const perm = await getPermissionStatusFromServer();
     if (!perm.canUseAI) {
       setAiError(perm.message || "今日AI解读次数已用完，开通会员继续使用");
       return;

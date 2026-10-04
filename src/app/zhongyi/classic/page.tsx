@@ -8,6 +8,7 @@ import { getAllBooks, getBookById, getChapterById, searchClassics } from '@/algo
 import type { ClassicBook, ClassicChapter } from '@/algorithm-core/modules/tcm/classics';
 import { addRecentItem } from '@/lib/tcmRecent';
 import { useToolBack } from "@/lib/useToolBack";
+import { LocalListenButton } from "@/components/LocalListenButton";
 
 // 阅读设置类型
 interface ReaderSettings {
@@ -468,6 +469,9 @@ function ReaderPage({ bookId, chapterId }: { bookId: string; chapterId: string }
         <h1 style={{ fontSize: `${settings.fontSize + 6}px`, fontWeight: 600, color: theme.text, textAlign: 'center', marginBottom: '8px', lineHeight: 1.4 }}>{chapter.title}</h1>
         <div style={{ textAlign: 'center', fontSize: '13px', color: theme.meta, marginBottom: '24px', paddingBottom: '16px', borderBottom: `1px solid ${theme.border}` }}>
           {book.name} · {book.dynasty} · {book.author}
+        </div>
+        <div style={{ marginBottom: '18px', padding: '12px', borderRadius: '12px', backgroundColor: theme.cardBg, border: `1px solid ${theme.border}` }}>
+          <LocalListenButton text={`${chapter.title}。${chapter.content}`} contentId={`classic:${bookId}:${chapterId}`} />
         </div>
         <div style={{ fontSize: `${settings.fontSize}px`, lineHeight: 2, color: theme.text }}>
           {paragraphs.map((p, i) => (

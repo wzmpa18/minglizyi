@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -40,6 +40,7 @@ import {
   savePaipanRecord, listPaipanRecords, deletePaipanRecord, clearPaipanRecordsByTool, insertPaipanRecord,
   type PaipanRecord, type MingzhuProfile,
 } from "@/lib/nativePaipanStore";
+import { PaipanHistoryButton } from "@/components/PaipanHistoryButton";
 import { MingzhuProfilePicker } from "@/components/MingzhuProfilePicker";
 import { getUserPermissionLevel } from "@/lib/aiService";
 import { useToolBack } from "@/lib/useToolBack";
@@ -1492,6 +1493,7 @@ export default function BaziPage(){
   const pageKey = "yixue_bazi"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   const [name,setName]=useState(""); const [year,setYear]=useState(1990); const [month,setMonth]=useState(5);
   const [day,setDay]=useState(15); const [hour,setHour]=useState(12); const [gender,setGender]=useState<Gender>("male");
+  const [birthMinute, setBirthMinute] = useState(0);
   const [calType,setCalType]=useState<"gongli"|"nongli"|"sizhu">("gongli");
   const [zaoWanZi,setZaoWanZi]=useState(false); const [zhenTaiyang,setZhenTaiyang]=useState(true);
   const [xiaLing,setXiaLing]=useState(false); const [saveName,setSaveName]=useState(false);
@@ -1615,6 +1617,10 @@ export default function BaziPage(){
   const applyMingzhuProfile = useCallback((p: MingzhuProfile | null) => {
     setMingzhu(p);
     if (!p) return;
+    setCalType("gongli");
+    setShowForm(true);
+    if (typeof p.extra?.longitude === "number") setLongitude(p.extra.longitude);
+    if (typeof p.extra?.lon === "number") setLongitude(p.extra.lon);
     if (p.name) setName(p.name);
     if (p.gender === "男" || p.gender === "女") setGender(p.gender === "男" ? "male" : "female");
     if (p.birthDate) {
@@ -1626,6 +1632,7 @@ export default function BaziPage(){
     if (p.birthTime) {
       const hm = p.birthTime.split(":").map((n) => Number(n));
       if (Number.isFinite(hm[0])) setHour(hm[0]);
+      if (Number.isFinite(hm[1])) setBirthMinute(hm[1]);
     }
   }, []);
 
@@ -1738,7 +1745,7 @@ export default function BaziPage(){
     finally { setCloudLoading(false); }
   }, [cloudLoading, restoreHistoryRecord]);
 
-  const handleSubmit=useCallback((override?:{year:number;month:number;day:number;hour:number;minute?:number;gender:Gender})=>{
+  const handleSubmit=useCallback((override?:{year:number;month:number;day:number;hour:number;minute?:number;gender:Gender;birthInput?:Record<string,unknown>})=>{
     const y=override?.year??year; const m=override?.month??month;
     const d=override?.day??day; const h=override?.hour??hour;
     const mi=override?.minute??0;
@@ -1751,7 +1758,7 @@ export default function BaziPage(){
       if(getUserPermissionLevel()!=="visitor"){
         savePaipanRecord({
           tool:"bazi",
-          input:{year:y,month:m,day:d,hour:h,minute:mi,gender:g,calType,useTrueSolar:zhenTaiyang,longitude,name,zaoWanZi,xiaLing,_trueSolarDisplay:trueSolarDisplay,_solarCorrection:solarCorrection},
+          input:{birthInput:override?.birthInput,year:y,month:m,day:d,hour:h,minute:mi,gender:g,calType,useTrueSolar:zhenTaiyang,longitude,name,zaoWanZi,xiaLing,_trueSolarDisplay:trueSolarDisplay,_solarCorrection:solarCorrection},
           result:bz as unknown as Record<string, unknown>,
           profileId:mingzhu?.id??null,
           title:`${g==="male"?"男":"女"}命 ${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")} ${String(h).padStart(2,"0")}:${String(mi).padStart(2,"0")} ${bz.pillars.map(p=>p.gan+p.zhi).join(" ")}`,
@@ -1843,11 +1850,11 @@ export default function BaziPage(){
 
   return <div className="bg-[#ededed] min-h-screen flex justify-center">
     <div className="w-full" style={{maxWidth:"420px",paddingBottom:"10px"}}>
-    <DatePicker
+    <DatePicker onRecordImport={applyMingzhuProfile}
       show={showForm}
       onClose={(reason?: "back") => { setShowForm(false); if (reason === "back" && !result && !isManagedBackNavigation()) leaveToolPage(router); }}
       onSubmit={(dateVal, opts) => {
-        setYear(dateVal.year); setMonth(dateVal.month); setDay(dateVal.day); setHour(dateVal.hour);
+        setYear(dateVal.year); setMonth(dateVal.month); setDay(dateVal.day); setHour(dateVal.hour); setBirthMinute(dateVal.minute);
         setGender(opts.gender as Gender);
         setCalType(opts.calType === "solar" ? "gongli" : opts.calType === "lunar" ? "nongli" : "sizhu");
         setZaoWanZi(opts.zaoWanZi); setZhenTaiyang(opts.zhenTaiyang); setXiaLing(opts.xiaLing);
@@ -1869,9 +1876,9 @@ export default function BaziPage(){
           setSolarCorrection(null);
         }
         if (opts.longitude !== undefined) setLongitude(opts.longitude);
-        handleSubmit({ ...calcDate, gender: opts.gender as Gender });
+        handleSubmit({ ...calcDate, gender: opts.gender as Gender, birthInput:{...dateVal,name,gender:opts.gender,longitude:opts.longitude ?? longitude,calendar:"solar"} });
       }}
-      initialDate={{year, month, day, hour, minute: 0}}
+      initialDate={{year, month, day, hour, minute: birthMinute}}
       initialOptions={{
         gender,
         calType: calType === "gongli" ? "solar" : calType === "nongli" ? "lunar" : "sizhu",
@@ -1886,6 +1893,7 @@ export default function BaziPage(){
     {!showForm && !result && (
       <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 gap-3">
         <button onClick={() => { clearPaipanState("bazi"); setShowForm(true); }} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">开始排盘</button>
+        <PaipanHistoryButton toolKey="bazi" onRestore={restoreHistoryRecord} />
         <MingzhuProfilePicker
           value={mingzhu}
           onChange={applyMingzhuProfile}
@@ -1893,7 +1901,7 @@ export default function BaziPage(){
             name: name || "",
             gender: gender === "male" ? "男" : "女",
             birthDate: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
-            birthTime: `${String(hour).padStart(2, "0")}:00`,
+            birthTime: `${String(hour).padStart(2, "0")}:${String(birthMinute).padStart(2, "0")}`,
           })}
         />
       </div>
@@ -1914,14 +1922,15 @@ export default function BaziPage(){
           <span style={{ background: BRAND_PURPLE_BG, borderRadius: "8px", padding: "0 6px", fontSize: "10px", color: BRAND_PURPLE }}>{historyList.length}</span>
         </button>
         <div className="flex items-center gap-2">
-          <MingzhuProfilePicker
+          <PaipanHistoryButton toolKey="bazi" onRestore={restoreHistoryRecord} />
+        <MingzhuProfilePicker
             value={mingzhu}
             onChange={applyMingzhuProfile}
             buildDraft={() => ({
               name: name || "",
               gender: gender === "male" ? "男" : "女",
               birthDate: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
-              birthTime: `${String(hour).padStart(2, "0")}:00`,
+              birthTime: `${String(hour).padStart(2, "0")}:${String(birthMinute).padStart(2, "0")}`,
             })}
           />
           <button onClick={()=>setShowForm(true)} className="text-[11px] cursor-pointer border-none bg-transparent" style={{ color: "#999" }}>修改资料重新排盘</button>

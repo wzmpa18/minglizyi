@@ -19,6 +19,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const objectStorage = require('./objectStorageEngine');
 
 const DATA_DIR = process.env.OFFLINE_PACK_DIR || path.join(__dirname, 'data');
 const PACK_FILES_DIR = path.join(DATA_DIR, 'offline_packs');
@@ -72,6 +73,9 @@ function getDb() {
       status TEXT NOT NULL DEFAULT 'DRAFT',
       file_path TEXT NOT NULL,
       description TEXT NOT NULL DEFAULT '',
+      access_level TEXT NOT NULL DEFAULT 'PUBLIC',
+      delivery_provider TEXT NOT NULL DEFAULT 'LOCAL',
+      object_key TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
@@ -91,8 +95,16 @@ function getDb() {
     CREATE INDEX IF NOT EXISTS idx_ose_user ON offline_sync_events(user_id);
     CREATE INDEX IF NOT EXISTS idx_ose_type ON offline_sync_events(event_type);
   `);
+  ensureColumn(db, 'offline_content_packs', 'access_level', "TEXT NOT NULL DEFAULT 'PUBLIC'");
+  ensureColumn(db, 'offline_content_packs', 'delivery_provider', "TEXT NOT NULL DEFAULT 'LOCAL'");
+  ensureColumn(db, 'offline_content_packs', 'object_key', "TEXT NOT NULL DEFAULT ''");
   _db = db;
   return db;
+}
+
+function ensureColumn(db, table, column, definition) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all();
+  if (!columns.some((item) => item.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
 }
 
 function sha256File(filePath) {
@@ -116,6 +128,9 @@ function packRowToView(r) {
     description: r.description,
     updatedAt: r.updated_at,
     status: r.status,
+    accessLevel: r.access_level || 'PUBLIC',
+    deliveryProvider: r.delivery_provider || 'LOCAL',
+    storageReady: r.delivery_provider === 'COS' && !!r.object_key,
   };
 }
 
@@ -152,16 +167,19 @@ function registerPack(params) {
     minAppVersion: String(params.minAppVersion || '1.0.0').trim(),
     required: params.required ? 1 : 0,
     description: String(params.description || '').slice(0, 500),
+    accessLevel: ['PUBLIC', 'MEMBER'].includes(String(params.accessLevel || '').toUpperCase())
+      ? String(params.accessLevel).toUpperCase() : 'MEMBER',
   };
   if (existing) {
     db.prepare(`UPDATE offline_content_packs SET content_type=?, name=?, version=?, size_bytes=?, sha256=?,
-      min_app_version=?, required=?, file_path=?, description=?, updated_at=? WHERE pack_id=?`)
-      .run(contentType, row.name, version, stat.size, sha, row.minAppVersion, row.required, dest, row.description, now, packId);
+      min_app_version=?, required=?, file_path=?, description=?, access_level=?, delivery_provider='LOCAL',
+      object_key='', updated_at=? WHERE pack_id=?`)
+      .run(contentType, row.name, version, stat.size, sha, row.minAppVersion, row.required, dest, row.description, row.accessLevel, now, packId);
   } else {
     db.prepare(`INSERT INTO offline_content_packs (pack_id, content_type, name, version, size_bytes, sha256,
-      min_app_version, required, status, file_path, description, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, ?)`)
-      .run(packId, contentType, row.name, version, stat.size, sha, row.minAppVersion, row.required, dest, row.description, now, now);
+      min_app_version, required, status, file_path, description, access_level, delivery_provider, object_key, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?, 'LOCAL', '', ?, ?)`)
+      .run(packId, contentType, row.name, version, stat.size, sha, row.minAppVersion, row.required, dest, row.description, row.accessLevel, now, now);
   }
   const saved = db.prepare('SELECT * FROM offline_content_packs WHERE pack_id = ?').get(packId);
   return { ok: true, pack: packRowToView(saved), updated: !!existing };
@@ -188,8 +206,8 @@ function setPackStatus(params) {
   }
   const r = db.prepare('SELECT * FROM offline_content_packs WHERE pack_id = ?').get(packId);
   if (!r) return { ok: false, error: 'pack 不存在' };
-  if (action === 'publish' && !fs.existsSync(r.file_path)) {
-    return { ok: false, error: 'pack 文件缺失，无法上架（先重新注册）' };
+  if (action === 'publish' && process.env.OFFLINE_REQUIRE_COS !== '0' && r.delivery_provider !== 'COS') {
+    return { ok: false, error: '内容包尚未分发到 COS，请先点击“分发到存储桶”；禁止让应用服务器承担学习包下载流量' };
   }
   const status = action === 'publish' ? PACK_STATUS.PUBLISHED : action === 'deprecate' ? PACK_STATUS.DEPRECATED : PACK_STATUS.DRAFT;
   db.prepare('UPDATE offline_content_packs SET status=?, updated_at=? WHERE pack_id=?').run(status, nowIso(), packId);
@@ -211,8 +229,35 @@ function getPackFile(packId) {
   const db = getDb();
   const r = db.prepare("SELECT * FROM offline_content_packs WHERE pack_id = ? AND status = 'PUBLISHED'").get(String(packId || ''));
   if (!r) return { ok: false, error: 'pack 不存在或未上架' };
-  if (!fs.existsSync(r.file_path)) return { ok: false, error: 'pack 文件缺失' };
-  return { ok: true, row: r, filePath: r.file_path, size: r.size_bytes, sha256: r.sha256 };
+  if (r.delivery_provider !== 'COS' && !fs.existsSync(r.file_path)) return { ok: false, error: 'pack 文件缺失' };
+  return { ok: true, row: r, filePath: r.file_path, size: r.size_bytes, sha256: r.sha256,
+    deliveryProvider: r.delivery_provider || 'LOCAL', objectKey: r.object_key || '' };
+}
+
+/** 把草稿包镜像到私有学习内容分区；成功后可删除服务器暂存副本。 */
+async function distributePack(packId) {
+  const db = getDb();
+  const row = db.prepare('SELECT * FROM offline_content_packs WHERE pack_id = ?').get(String(packId || ''));
+  if (!row) return { ok: false, error: 'pack 不存在' };
+  if (!fs.existsSync(row.file_path)) return { ok: false, error: '服务器暂存文件不存在，请重新注册' };
+  if (objectStorage.getConfig().provider !== 'COS') {
+    return { ok: false, status: 'COS_NOT_ACTIVE', error: '当前对象存储仍为本地模式，请先在服务器启用 COS Provider' };
+  }
+  const objectKey = `offline-packs/${row.pack_id}/${row.version}.pack`;
+  const uploaded = await objectStorage.ObjectStorageService.putObject({
+    partition: 'learning_content', objectKey, filePath: row.file_path, sha256: row.sha256, owner: 'system',
+  });
+  if (!uploaded.ok) return uploaded;
+  if (uploaded.provider !== 'COS') {
+    return { ok: false, status: 'COS_NOT_ACTIVE', error: '当前对象存储仍为本地模式，请先在服务器启用 COS Provider；未把本地副本误标为已分发' };
+  }
+  db.prepare("UPDATE offline_content_packs SET delivery_provider='COS', object_key=?, updated_at=? WHERE pack_id=?")
+    .run(objectKey, nowIso(), row.pack_id);
+  if (process.env.OFFLINE_KEEP_LOCAL_AFTER_COS !== '1') {
+    try { fs.unlinkSync(row.file_path); } catch { /* COS 已有校验副本，本地清理失败不阻断 */ }
+  }
+  const saved = db.prepare('SELECT * FROM offline_content_packs WHERE pack_id = ?').get(row.pack_id);
+  return { ok: true, pack: packRowToView(saved), provider: uploaded.provider, objectKey };
 }
 
 // ==================== 离线同步事件（第六十四~六十五章） ====================
@@ -301,6 +346,7 @@ module.exports = {
   setPackStatus,
   listPacksAdmin,
   getPackFile,
+  distributePack,
   syncEvents,
   getSyncedEvents,
   syncStats,

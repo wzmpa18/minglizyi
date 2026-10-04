@@ -16,14 +16,13 @@ import { useNativePayQR } from "@/components/PayQRCodeModal";
 import { paySingleUnlockAndWait } from "@/lib/paymentService";
 import { isSingleUnlocked, activateSingleUnlock } from "@/lib/aiService";
 import { fetchMaterials, fetchKnowledge, fetchQuestions, type MaterialVo, type KnowledgeVo, type QuestionVo } from "@/lib/academyApi";
+import { learningDifficultyLabel } from "@/lib/learningDisplay";
 
 const BRAND = "#7B2FBE";
 const ZHENGGU_CATEGORY = "中华非遗正骨";
 const ZHENGGU_TOOL_ID = "zhongyi_zhenggu";
 
 const TYPE_NAMES: Record<string, string> = { single: "单选", multi: "多选", judge: "判断", fill: "填空", qa: "问答", case: "案例" };
-const DIFF_NAMES: Record<string, string> = { easy: "易", medium: "中", hard: "难" };
-
 interface ZhengguAccess {
   toolId: string;
   category: string;
@@ -333,8 +332,8 @@ export default function ZhengguPage() {
                               <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                                 <span style={{ fontSize: "12px", color: "#333", fontWeight: 500, flex: 1 }}>{p.title}</span>
                                 {p.difficulty && (
-                                  <span style={{ fontSize: 10, color: DIFF_NAMES[p.difficulty] === "易" ? "#2E7D32" : DIFF_NAMES[p.difficulty] === "难" ? "#C62828" : "#C77700" }}>
-                                    {DIFF_NAMES[p.difficulty]}
+                                  <span style={{ fontSize: 10, color: p.difficulty === "easy" ? "#2E7D32" : p.difficulty === "hard" ? "#C62828" : "#C77700" }}>
+                                    {learningDifficultyLabel(p.difficulty)}
                                   </span>
                                 )}
                               </div>
@@ -380,7 +379,7 @@ export default function ZhengguPage() {
                   <div style={{ padding: "12px 14px 8px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
                       <span style={{ fontSize: 10, color: BRAND, backgroundColor: "#F3EDF7", borderRadius: 999, padding: "2px 8px" }}>{TYPE_NAMES[q.type] || q.type}</span>
-                      <span style={{ fontSize: 10, color: "#999" }}>{DIFF_NAMES[q.difficulty] || q.difficulty}</span>
+                      <span style={{ fontSize: 10, color: "#999" }}>{learningDifficultyLabel(q.difficulty)}</span>
                     </div>
                     <p style={{ fontSize: "13px", color: "#333", lineHeight: 1.7, margin: 0, fontWeight: 500 }}>{q.stem}</p>
                     {q.options && q.options.length > 0 && (

@@ -1,10 +1,11 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
-import { callAI, getPermissionStatus } from "@/lib/aiService";
+import { callAI, getPermissionStatusFromServer } from "@/lib/aiService";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
+import { SafeRichText } from "@/components/SafeRichText";
 
 export default function YixueAIPage() {
   useIOSLearningRedirect("ai"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
@@ -23,7 +24,7 @@ export default function YixueAIPage() {
 
     // v20.1: 三级权限检查 - 未登录弹出登录引导
     if (!requireLogin()) return;
-    const perm = getPermissionStatus();
+    const perm = await getPermissionStatusFromServer();
     if (!perm.canUseAI) {
       setMessages((prev) => [...prev,
         { role: "user", content: input },
@@ -57,7 +58,7 @@ export default function YixueAIPage() {
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
             <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
-              {msg.content}
+              {msg.role === "user" ? <span className="break-words">{msg.content}</span> : <SafeRichText content={msg.content} />}
             </div>
           </div>
         ))}

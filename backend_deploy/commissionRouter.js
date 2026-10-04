@@ -296,6 +296,8 @@ function processPaidOrder(order) {
 
   const ids = resolveIdentities(order);
   const policy = ids.doubleIdentity ? cfg.doubleIdentityPolicy : null;
+  const campaignCommissionPolicy = order.extra && order.extra.growthCampaign && order.extra.growthCampaign.commissionPolicy;
+  const partnerOnly = campaignCommissionPolicy === 'REFERRAL_EXCLUDED_PARTNER_PRESERVED';
 
   let referral = { granted: false };
   let partner = { granted: false };
@@ -304,7 +306,10 @@ function processPaidOrder(order) {
   const callReferral = () => { try { referral = commissionEngine.grantCommission(order); } catch (e) { referral = { granted: false, reason: 'ERROR:' + e.message }; } };
   const callPartner = () => { try { partner = partnerEngine.grantPartnerCommission(order); } catch (e) { partner = { granted: false, reason: 'ERROR:' + e.message }; } };
 
-  if (!ids.doubleIdentity) {
+  if (partnerOnly) {
+    // 助力优惠不再发普通推荐佣金，但既有 Partner 渠道合同仍按用户实付金额履约。
+    callPartner();
+  } else if (!ids.doubleIdentity) {
     // 非双身份：维持现有双引擎行为（普通 15%/5% + Partner 50% + 培养 5%）
     callReferral();
     callPartner();
@@ -329,7 +334,10 @@ function processPaidOrder(order) {
   const snap = buildSnapshot(db, order, ids, { referral, partner });
 
   let status, note;
-  if (ids.doubleIdentity && policy === DOUBLE_IDENTITY_POLICIES.REVIEW_REQUIRED) {
+  if (partnerOnly) {
+    status = SETTLEMENT_STATUS.SETTLED;
+    note = '助力优惠订单：普通邀请佣金不叠加，Partner 渠道合同按实付金额保留';
+  } else if (ids.doubleIdentity && policy === DOUBLE_IDENTITY_POLICIES.REVIEW_REQUIRED) {
     status = SETTLEMENT_STATUS.REVIEW_REQUIRED;
     note = `双身份订单：Partner(${ids.partnerAttributionId}) 同时为 L1 推荐人，Partner 侧待项目方决策（BUSINESS_DECISION_REQUIRED）`;
   } else if (ids.doubleIdentity && policy === DOUBLE_IDENTITY_POLICIES.PARTNER_NET_OF_REFERRAL) {
@@ -379,6 +387,7 @@ function processPaidOrder(order) {
     ok: true,
     doubleIdentity: ids.doubleIdentity,
     policy,
+    campaignCommissionPolicy: campaignCommissionPolicy || null,
     reviewRequired: status === SETTLEMENT_STATUS.REVIEW_REQUIRED,
     snapshotId,
     referral,

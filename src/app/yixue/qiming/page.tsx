@@ -717,6 +717,8 @@ export default function QimingPage() {
   const [birthDate, setBirthDate] = useState("");
   const [birthHour, setBirthHour] = useState<number>(12);
   const [birthMinute, setBirthMinute] = useState<number>(0);
+  const [recordName, setRecordName] = useState("");
+  const [recordNote, setRecordNote] = useState("");
   const [customRequirement, setCustomRequirement] = useState("");
   const [baziAnalysis, setBaziAnalysis] = useState<BaziAnalysis | null>(null);
   // 公历/农历切换
@@ -917,12 +919,13 @@ export default function QimingPage() {
       // v25.0.88: 排盘记录自动落库（原生壳为SQLite，同参数原位去重）
       savePaipanRecord({
         tool: "qiming",
-        title: `起名·${surname}姓${gender === "male" ? "男" : "女"}宝`,
+        title: `起名·${recordName.trim() || `${surname}姓${gender === "male" ? "男" : "女"}宝`}`,
         input: {
-          surname, isCompound, gender, preferredWuxing, zodiac, nameLength,
+          name: recordName.trim() || `${surname}姓${gender === "male" ? "男" : "女"}宝`, surname, isCompound, gender, preferredWuxing, zodiac, nameLength,
           birthDate, birthHour, birthMinute, customRequirement, calType,
           lunarYear, lunarMonthValue, lunarDay,
         },
+        note: recordNote,
         result: { suggestions: results.slice(0, 20) } as unknown as Record<string, unknown>,
       }).catch(() => {});
 
@@ -931,7 +934,7 @@ export default function QimingPage() {
         if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
     }, 500);
-  }, [surname, surnameInfo, isCompound, gender, preferredWuxing, zodiac, nameLength, baziAnalysis, customRequirement]);
+  }, [surname, surnameInfo, isCompound, gender, preferredWuxing, zodiac, nameLength, baziAnalysis, customRequirement, recordName, recordNote]);
 
   // v25.0.88: 历史记录恢复（回填起名参数，重出名字建议）
   const handleRestoreHistory = useCallback((rec: PaipanRecord) => {
@@ -1206,7 +1209,9 @@ export default function QimingPage() {
               {/* 公历模式 */}
               {calType === "solar" ? (
                 <div className="space-y-1.5">
-                  <SolarDatePicker value={birthDate} onChange={setBirthDate} />
+                  <SolarDatePicker value={birthDate} onChange={setBirthDate} onRecordImport={(p) => { setBirthHour(Number((p.birthTime || "12:00").slice(0, 2))); setBirthMinute(Number((p.birthTime || "12:00").slice(3, 5))); setGender(p.gender === "女" ? "female" : "male"); setCalType("solar"); }} />
+                  <input value={recordName} onChange={(e) => setRecordName(e.target.value)} maxLength={60} placeholder="记录名称（默认姓氏与用途，可修改后搜索）" className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
+                  <textarea aria-label="排盘记录备注" value={recordNote} onChange={(e) => setRecordNote(e.target.value)} maxLength={300} rows={2} placeholder="记录备注（可选）" className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" />
                   <div className="flex items-center gap-2">
                     <select
                       value={birthHour}

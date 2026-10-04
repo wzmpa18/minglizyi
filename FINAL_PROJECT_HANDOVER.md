@@ -420,3 +420,11 @@ sqlite3 /tmp/yandao_restore_test/social.db "SELECT COUNT(*) FROM friendships; SE
 ---
 
 **封板声明**：本文档对应 FINAL-HANDOVER-STABILITY-SEAL-20260826 批次（最终代码批次 v25.0.62：D22 academy.db 三库备份封口，代码止于 `2b1d6af`，其后仅文档批次）。生产已封板（回归 26/26 全绿、四端一致、三库备份门禁在线）。推广门禁仅剩 2 项真机验证（§27.2/27.3），由项目方执行后即可扩大推广。
+## 2026-10-04 交接增量：v25.0.97
+
+- 版本：Web v25.0.97、Android 2084、iOS build 5；生产当前仍为 v25.0.96。
+- 已完成：本机中文听学、安全 AI 富文本、学习类目与标签、两张真实签名链接海报、活动/Partner 兼容、COS 私有学习包架构与后台发布门禁。
+- 可安全导出：中医 1348 知识点/1698 题，易学 2048 知识点/2228 题；仅取 APPROVED/PUBLISHED。
+- 验证：Web 185 页；离线 76/0；佣金 121/0。
+- 阻塞：生产后端尚无 COS 四项环境变量；Android 本机无 Java 21，需 Codemagic 构建后真机验收；听学宣传保持关闭。
+- 完整报告：`docs/reports/20261004_v25.0.97_学习听学对象存储与传播接入报告.md`。

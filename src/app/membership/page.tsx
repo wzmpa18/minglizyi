@@ -30,6 +30,7 @@ import { isPaymentsBlocked, IOS_PAYMENT_DISABLED_TIP } from "@/lib/platformGate"
 import { payForMembership, pollPaymentStatus } from "@/lib/paymentService";
 import { useNativePayQR } from "@/components/PayQRCodeModal";
 import { useServerPricing, mergePlansWithServer } from "@/lib/pricingStore";
+import { getInviteOverview, type InviteOverview } from "@/lib/inviteApi";
 
 const BRAND = "#7B2FBE";
 
@@ -64,6 +65,8 @@ export default function MembershipPage() {
   const [redeemEnabled, setRedeemEnabled] = useState(false);
   // FINAL-RC-02: iOS 本期不开放任何付费（静态导出需 useEffect 后置判定，避免水合不一致）
   const [paymentsBlocked, setPaymentsBlocked] = useState(false);
+  const [growthCampaign, setGrowthCampaign] = useState<NonNullable<InviteOverview["growthCampaign"]> | null>(null);
+  const [useGrowthCoupon, setUseGrowthCoupon] = useState(true);
 
   useEffect(() => {
     setPaymentsBlocked(isPaymentsBlocked());
@@ -76,6 +79,7 @@ export default function MembershipPage() {
       setRedeemEnabled(getToolConfig().redeem.enabled);
       setMyRedemptions(getMyRedemptions());
     } catch {}
+    void getInviteOverview().then((data) => setGrowthCampaign(data?.growthCampaign || null));
   }, []);
 
   // v25.0.47_21 登录态联动：未登录点开通 → 登录页登录成功后回跳 /membership?autopay=1，
@@ -179,7 +183,11 @@ export default function MembershipPage() {
     setPaying(true);
     try {
       const daysMap: Record<string, number> = { monthly: 30, quarterly: 90, yearly: 365, lifetime: -1 };
-      const r = await payForMembership(plan.level, plan.price, daysMap[plan.level] ?? 30);
+      const canUseGrowthCoupon = !!(
+        useGrowthCoupon && growthCampaign?.coupon?.status === "AVAILABLE" &&
+        growthCampaign.eligibleMembershipLevels.includes(plan.level)
+      );
+      const r = await payForMembership(plan.level, plan.price, daysMap[plan.level] ?? 30, canUseGrowthCoupon);
       if (!r || !r.success || !r.orderId) {
         setPaying(false);
         const msg = (r && (r.message || r.error)) || "支付发起失败，请稍后重试";
@@ -193,7 +201,7 @@ export default function MembershipPage() {
         setPaying(false);
         const paidOrderNo = r.orderId;
         openQR(
-          { nativePay: true, codeUrl: r.codeUrl, orderId: paidOrderNo, amount: plan.price, title: plan.name },
+          { nativePay: true, codeUrl: r.codeUrl, orderId: paidOrderNo, amount: r.amount ?? plan.price, title: plan.name },
           () => applyMembershipPaid(paidOrderNo)
         );
         return;
@@ -309,10 +317,35 @@ export default function MembershipPage() {
           </div>
         )}
 
+        {!paymentsBlocked && growthCampaign?.enabled && (
+          <div style={{ margin: "8px 12px 12px", padding: "14px 16px", borderRadius: "14px", background: "linear-gradient(135deg,#fff7e6,#fff)", border: "1px solid #f4c66a" }}>
+            <div style={{ fontSize: "15px", fontWeight: 700, color: "#8a5312" }}>{growthCampaign.name}</div>
+            {growthCampaign.coupon?.status === "AVAILABLE" ? (
+              <label style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#6d4617", fontSize: "13px" }}>
+                <input type="checkbox" checked={useGrowthCoupon} onChange={(e) => setUseGrowthCoupon(e.target.checked)} />
+                使用会员优惠券（立减 {growthCampaign.discountPercent}% · 有效期至 {new Date(growthCampaign.coupon.expiresAt).toLocaleDateString("zh-CN")}）
+              </label>
+            ) : (
+              <div style={{ marginTop: "8px", fontSize: "13px", color: "#8a6a43", lineHeight: 1.6 }}>
+                已完成 {growthCampaign.qualifiedInvites}/{growthCampaign.targetInvites} 位有效邀请，还差 {growthCampaign.remainingInvites} 位即可获得八折券。
+                <Link href="/invite" style={{ marginLeft: "6px", color: BRAND, fontWeight: 700 }}>去邀请</Link>
+              </div>
+            )}
+            <div style={{ marginTop: "7px", fontSize: "11px", color: "#a17d50" }}>月度、季度、年度会员可用；每人一次，不与其他优惠或邀请佣金叠加。</div>
+          </div>
+        )}
+
         {/* ===== 套餐列表 ===== */}
         {!paymentsBlocked && (PLANS || MEMBERSHIP_PLANS).map((plan) => {
           const isSelected = selectedPlan === plan.level;
           const levelColor = getLevelColor(plan.level);
+          const couponApplies = !!(
+            useGrowthCoupon && growthCampaign?.coupon?.status === "AVAILABLE" &&
+            growthCampaign.eligibleMembershipLevels.includes(plan.level)
+          );
+          const shownPrice = couponApplies
+            ? Math.round(plan.price * (100 - growthCampaign.discountPercent)) / 100
+            : plan.price;
           return (
             <div
               key={plan.level}
@@ -388,8 +421,9 @@ export default function MembershipPage() {
                 ) : (
                   <>
                     <span style={{ fontSize: "12px", color: BRAND }}>¥</span>
-                    <span style={{ fontSize: "26px", fontWeight: 700, color: BRAND }}>{plan.price}</span>
-                    <span style={{ fontSize: "13px", color: "#bbb", textDecoration: "line-through" }}>¥{plan.originalPrice}</span>
+                    <span style={{ fontSize: "26px", fontWeight: 700, color: BRAND }}>{shownPrice}</span>
+                    <span style={{ fontSize: "13px", color: "#bbb", textDecoration: "line-through" }}>¥{couponApplies ? plan.price : plan.originalPrice}</span>
+                    {couponApplies && <span style={{ fontSize: "11px", color: "#e67e22", fontWeight: 700 }}>助力立减{growthCampaign.discountPercent}%</span>}
                   </>
                 )}
               </div>

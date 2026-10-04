@@ -91,6 +91,30 @@ router.get('/whoami', adminAuthUnified(), (req, res) => {
   });
 });
 
+// ==================== 邀请增长活动（后台实时配置，无需重打包） ====================
+
+router.get('/growth-campaign', adminAuthUnified('ADMIN'), (_req, res) => {
+  try {
+    const engine = require('./growthCampaignEngine');
+    res.json({ success: true, data: engine.getConfig() });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+router.put('/growth-campaign', adminAuthUnified('ADMIN'), (req, res) => {
+  try {
+    const engine = require('./growthCampaignEngine');
+    const oldValue = engine.getConfig();
+    const data = engine.saveConfig(req.body || {});
+    audit(req.admin, 'GROWTH_CAMPAIGN_UPDATE', data.campaignId, oldValue, data,
+      String((req.body && req.body.reason) || '更新邀请会员优惠活动').slice(0, 200), req);
+    res.json({ success: true, data });
+  } catch (e) {
+    res.status(400).json({ success: false, error: e.message });
+  }
+});
+
 // ==================== 密钥管理（SUPER_ADMIN，v25.0.47_13 哈希存储） ====================
 
 router.get('/keys', adminAuthUnified('SUPER_ADMIN'), (_req, res) => {

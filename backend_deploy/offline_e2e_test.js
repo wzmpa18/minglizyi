@@ -27,6 +27,7 @@ fs.mkdirSync(PACK_DIR, { recursive: true });
 
 process.env.DB_PATH = path.join(ROOT, 'users.db');
 process.env.OFFLINE_PACK_DIR = path.join(ROOT, 'data');
+process.env.OFFLINE_REQUIRE_COS = '0'; // 隔离测试验证本地 Provider；生产默认强制先分发 COS 再发布
 // GC 目录映射（隔离）
 process.env.GC_LOGS_DIR = path.join(ROOT, 'logs');
 process.env.GC_UPLOADS_DIR = path.join(ROOT, 'uploads');

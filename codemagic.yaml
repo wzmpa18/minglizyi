@@ -1,4 +1,4 @@
-# Codemagic CI/CD - 言道国学 iOS (FINAL-RC-02) + Android 离线完整包 (v25.0.53 / DEV-V22)
+# Codemagic CI/CD - 言道国学 v25.0.97（Android 2084 / iOS build 5）
 # 工程: ios/ 与 android/ 均已正式入库Git
 #
 # Android 签名（一次性配置）：
@@ -12,7 +12,7 @@
 # Issuer ID: 需在ASC后台 Users and Access→Integrations 查看(形如xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)并配置到集成
 workflows:
   android-workflow:
-    name: 言道国学 Android APK（离线完整安装包）
+    name: 言道国学 v25.0.97 Android APK+AAB
     max_build_duration: 60
     instance_type: linux_x2
     environment:
@@ -28,14 +28,15 @@ workflows:
       - name: 同步Web资源到Android工程(www→assets/public)
         script: |
           rm -rf www && cp -a out www
+          node scripts/write-native-marker.js
           npx cap sync android
       - name: 恢复签名证书(加密变量ANDROID_KEYSTORE_B64)
         script: |
           echo "$ANDROID_KEYSTORE_B64" | base64 -d > yandao-release.keystore
           keytool -list -v -keystore yandao-release.keystore -storepass yandao2024 -alias yandao | sed -n '1,8p'
-      - name: 构建APK
+      - name: 构建APK及谷歌内部测试AAB
         script: |
-          cd android && ./gradlew assembleRelease
+          cd android && ./gradlew assembleRelease bundleRelease --no-daemon
       - name: 校验版本号与签名
         script: |
           APK="android/app/build/outputs/apk/release/app-release.apk"
@@ -44,8 +45,9 @@ workflows:
           jarsigner -verify "$APK" && echo "签名校验 OK"
     artifacts:
       - android/app/build/outputs/apk/release/*.apk
+      - android/app/build/outputs/bundle/release/*.aab
   ios-workflow:
-    name: 言道国学 iOS TestFlight
+    name: 言道国学 v25.0.97 iOS TestFlight
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
@@ -64,6 +66,8 @@ workflows:
           bash build.sh
       - name: 同步Web资源到iOS工程(已入库的正式工程)
         script: |
+          rm -rf www && cp -a out www
+          node scripts/write-native-marker.js
           npx cap sync ios
       - name: 显示版本信息
         script: |

@@ -1,12 +1,13 @@
-﻿"use client";
+"use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
-import { loadAssistantChat, saveAssistantChat, loadAssistantPos, saveAssistantPos, callAI, getPermissionStatus, type ChatMessage } from "@/lib/aiService";
+import { loadAssistantChat, saveAssistantChat, loadAssistantPos, saveAssistantPos, callAI, getPermissionStatusFromServer, type ChatMessage } from "@/lib/aiService";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
+import { SafeRichText } from "@/components/SafeRichText";
 
 const BRAND = "#7B2FBE";
 
@@ -190,7 +191,7 @@ export default function AIAssistant() {
 
     // v20.1: 三级权限检查 - 未登录弹出登录引导
     if (!requireLogin()) return;
-    const perm = getPermissionStatus();
+    const perm = await getPermissionStatusFromServer();
     if (!perm.canUseAI) {
       const msg: ChatMessage = {
         id: genId(),
@@ -536,8 +537,8 @@ export default function AIAssistant() {
                                 {firstLine}
                               </p>
                             )}
-                            {!isDisclaimer && firstLine && <p style={{ margin: 0 }}>{firstLine}</p>}
-                            {restLines && <p style={{ margin: isDisclaimer ? 0 : "4px 0 0" }}>{restLines}</p>}
+                            {!isDisclaimer && firstLine && <SafeRichText content={firstLine} />}
+                            {restLines && <SafeRichText content={restLines} style={{ marginTop: isDisclaimer ? 0 : 4 }} />}
                           </>
                         );
                       })()

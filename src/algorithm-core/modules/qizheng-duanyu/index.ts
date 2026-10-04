@@ -84,13 +84,13 @@ const STAR_NAMES: Record<string, string> = {
 };
 
 /** 化曜表用短名 → star key（卷一§1.6.2 表） */
-const SHORT_KEY: Record<string, string> = {
+export const SHORT_KEY: Record<string, string> = {
   日: "sun", 月: "moon", 木: "jupiter", 火: "mars", 土: "saturn",
   金: "venus", 水: "mercury", 气: "qi", 罗: "luo", 计: "ji", 孛: "bei",
 };
 
 // —— 卷三§3.3.2 十一曜庙旺乐喜例表（古今占星学 p5-10）——
-const MIAO_WANG_LE_XI: Record<string, { miao: string; wang: string; le: string; xi: string }> = {
+export const MIAO_WANG_LE_XI: Record<string, { miao: string; wang: string; le: string; xi: string }> = {
   sun: { miao: "午", wang: "卯", le: "未", xi: "亥" },
   moon: { miao: "未", wang: "酉", le: "亥", xi: "子" },
   jupiter: { miao: "亥", wang: "寅", le: "未", xi: "巳" },
@@ -105,7 +105,7 @@ const MIAO_WANG_LE_XI: Record<string, { miao: string; wang: string; le: string; 
 };
 
 // —— 卷三§3.4.1 五星四余忌躔歌（张果星宗 p81）——
-const JI_CHAN: Record<string, string[]> = {
+export const JI_CHAN: Record<string, string[]> = {
   jupiter: ["辰", "酉"],
   mars: ["申", "巳"],
   saturn: ["寅", "亥"],
@@ -154,7 +154,7 @@ function buildHuayaoTable(): Record<string, Record<string, string>> {
 const HUAYAO_TABLE = buildHuayaoTable();
 
 // —— 卷一§1.6.3 文星魁星官星印星催官禄神喜神（张果星宗 p11-13）——
-const TEHUA_TABLE: Record<string, Record<string, string[]>> = {
+export const TEHUA_TABLE: Record<string, Record<string, string[]>> = {
   文星: { 甲: ["罗"], 乙: ["计"], 丙: ["金"], 丁: ["火"], 戊: ["金"], 己: ["气"], 庚: ["木"], 辛: ["土"], 壬: ["日"], 癸: ["月"] },
   魁星: { 甲: ["月"], 乙: ["日"], 丙: ["罗"], 丁: ["计"], 戊: ["火"], 己: ["金"], 庚: ["木"], 辛: ["水"], 壬: ["气"], 癸: ["水"] },
   官星: { 甲: ["气"], 乙: ["水"], 丙: ["罗"], 丁: ["计"], 戊: ["孛"], 己: ["火"], 庚: ["金"], 辛: ["木"], 壬: ["月"], 癸: ["土"] },

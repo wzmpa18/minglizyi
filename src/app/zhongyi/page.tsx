@@ -136,7 +136,7 @@ const ENTRIES = [
   {
     key: "classic",
     title: "典籍原文",
-    desc: "四大经典学习",
+    desc: "13部典籍·1224章",
     href: "/zhongyi/classic",
     color: "#6A1B9A",
     bgColor: "#F3E5F5",

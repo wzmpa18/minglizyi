@@ -1,0 +1,21 @@
+{
+  "generatedAt": "2026-10-03T16:05:14.410Z",
+  "datasetId": "tcm-qa-datasets-yizhen-buaa",
+  "total": 805,
+  "byType": {
+    "single": 578,
+    "multiple": 131,
+    "judge": 96
+  },
+  "clean": 773,
+  "needsReview": 32,
+  "issueCounts": {
+    "DUPLICATE_OPTION_LABEL": 4,
+    "ANSWER_OPTION_MISSING": 26,
+    "INVALID_MULTIPLE_ANSWER": 2,
+    "OPTIONS_LT_2": 12
+  },
+  "duplicateHashes": 4,
+  "publicationState": "PENDING_REVIEW",
+  "note": "本报告只验证格式；未完成医学答案校对、考试版本映射或逐题来源核验。"
+}

@@ -42,10 +42,14 @@ const ZONES: ZoneDef[] = [
     name: "中医学习区",
     emoji: "🌿",
     color: "#2FAE9E",
-    desc: "典籍讲义分门别类 · 中医知识点与题库",
+    desc: "典籍 · 中药 · 方剂 · 经络穴位 · 知识练习",
     trackKey: "zhongyi",
     entries: [
       { key: "learn", label: "📖 知识学习", url: "/academy/learn?track=zhongyi" },
+      { key: "classic", label: "📜 典籍精读", url: "/zhongyi/classic" },
+      { key: "herb", label: "🌿 中药资料", url: "/zhongyi/herb" },
+      { key: "formula", label: "📋 方剂资料", url: "/zhongyi/formula" },
+      { key: "meridian", label: "📍 经络穴位", url: "/zhongyi/meridian" },
       { key: "bank", label: "📝 题库练习", url: "/academy/question-bank" },
       { key: "exam", label: "🎓 等级考试", url: "/academy/exam" },
     ],
@@ -55,17 +59,16 @@ const ZONES: ZoneDef[] = [
     name: "医学考试区",
     emoji: "🩺",
     color: "#C05046",
-    desc: "中医执业医师 · 刷题 / 模考 / 文库一体化",
-    entries: [{ key: "yikao", label: "🎓 医考题库专区", url: "/academy/yikao" }],
+    desc: "中医基础知识 · 刷题 / 模拟练习 / 文库一体化",
+    entries: [{ key: "yikao", label: "🎓 医考学习专区", url: "/academy/yikao" }],
   },
   {
     key: "yangsheng",
     name: "养生学习区",
     emoji: "🍵",
     color: "#8B6F47",
-    desc: "四时养生 · 食疗本草 · 内容持续完善中",
-    entries: [],
-    coming: true,
+    desc: "四时养生 · 食疗本草 · 传统功法学习",
+    entries: [{ key: "yangsheng", label: "🍵 养生资料", url: "/zhongyi/yangsheng" }],
   },
   {
     key: "guoxue",
@@ -84,7 +87,7 @@ const ZONES: ZoneDef[] = [
 // 通用学习工具（跨区共用）
 const TOOLS = [
   { key: "wrong", emoji: "📕", name: "错题本", desc: "错题回顾", url: "/academy/wrong-book" },
-  { key: "cert", emoji: "🏅", name: "我的证书", desc: "查验复核", url: "/academy/certificates" },
+  { key: "cert", emoji: "🏅", name: "学习结业记录", desc: "平台学习记录核验", url: "/academy/certificates" },
   { key: "factory", emoji: "🏭", name: "知识工厂", desc: "AI 解析入库", url: "/academy/factory" },
   { key: "orgs", emoji: "🏛️", name: "机构专区", desc: "入驻开班", url: "/academy/orgs" },
 ];
@@ -127,7 +130,7 @@ export default function AcademyPage() {
             </div>
           </div>
           <p className="mt-3 text-xs leading-relaxed text-gray-500">
-            分区学习 · 逐级考核 · 证书验真；上传资料由 AI 解析为结构化知识点，经人工审核后生成题库。
+            分区学习 · 逐级练习 · 学习记录核验；上传资料由 AI 解析为结构化知识点，经人工审核后生成题库。
           </p>
         </div>
       </div>
@@ -184,7 +187,7 @@ export default function AcademyPage() {
                         <span>·</span>
                         <span>{t.knowledgeCount} 个知识点</span>
                         <span>·</span>
-                        <span>覆盖全部核心知识点与考点</span>
+                        <span>内容持续更新</span>
                       </div>
                     )}
                     {/* 区内入口 */}

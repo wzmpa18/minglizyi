@@ -39,6 +39,14 @@ const PARTITIONS = {
     cosPrefix: 'public-content/',
     cdn: true,
   },
+  learning_content: {
+    key: 'learning_content',
+    label: '会员学习内容',
+    visibility: 'PRIVATE',
+    localDir: process.env.OSS_LEARNING_DIR || 'learning-content',
+    cosPrefix: 'learning-content/',
+    cdn: false,
+  },
   backup: {
     key: 'backup',
     label: '备份归档',
@@ -103,7 +111,9 @@ function saveConfig(patch) {
 function saveConfigFile(cfg) {
   const dir = path.dirname(CONFIG_FILE);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  fs.writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2), 'utf-8');
+  // 凭证只允许来自环境变量，保存管理配置时必须彻底剔除，避免把 COS 密钥落盘。
+  const safe = { ...cfg, cos: {} };
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(safe, null, 2), 'utf-8');
 }
 
 function pickPosInt(v, fallback, min, max) {
@@ -242,6 +252,8 @@ const cosProvider = {
     return new Promise((resolve) => {
       c.client.uploadFile({
         Bucket: c.bucket, Region: c.region, Key, FilePath: filePath, SliceSize: 8 * 1024 * 1024,
+        ACL: p.visibility === 'PRIVATE' ? 'private' : 'public-read',
+        CacheControl: p.visibility === 'PRIVATE' ? 'private, no-store' : 'public, max-age=3600',
       }, (err, data) => {
         if (err) return resolve({ ok: false, error: String(err.message || err) });
         resolve({ ok: true, provider: 'COS', partition: partitionKey, objectKey, cosKey: Key, size: stat.size, location: data && data.Location, sha256: meta.sha256 || sha256File(filePath) });
@@ -282,6 +294,18 @@ const cosProvider = {
       });
     });
   },
+  async temporaryUrl(partitionKey, objectKey, expiresSeconds = 900) {
+    const c = getCosClient();
+    if (c.blocked) return { ok: false, status: 'BLOCKED_EXTERNAL_CONFIG', error: c.blocked.note };
+    const Key = PARTITIONS[partitionKey].cosPrefix + normalizeCosKey(objectKey);
+    const Expires = Math.max(60, Math.min(3600, Number(expiresSeconds) || 900));
+    return new Promise((resolve) => {
+      c.client.getObjectUrl({ Bucket: c.bucket, Region: c.region, Key, Sign: true, Expires }, (err, data) => {
+        if (err || !data || !data.Url) return resolve({ ok: false, error: String((err && err.message) || err || 'COS 签名地址生成失败') });
+        resolve({ ok: true, provider: 'COS', url: data.Url, expiresIn: Expires });
+      });
+    });
+  },
 };
 
 function normalizeCosKey(objectKey) {
@@ -301,6 +325,7 @@ const secondaryProvider = {
   async get() { return { ok: false, status: 'NOT_IMPLEMENTED', error: 'SECONDARY Provider 未接入' }; },
   async delete() { return { ok: false, status: 'NOT_IMPLEMENTED', error: 'SECONDARY Provider 未接入' }; },
   async stat() { return { ok: false, status: 'NOT_IMPLEMENTED', error: 'SECONDARY Provider 未接入' }; },
+  async temporaryUrl() { return { ok: false, status: 'NOT_IMPLEMENTED', error: 'SECONDARY Provider 未接入' }; },
 };
 
 const PROVIDERS = { LOCAL: localProvider, COS: cosProvider, SECONDARY: secondaryProvider };
@@ -385,6 +410,17 @@ const ObjectStorageService = {
       return { ok: true, provider: 'COS', url: `https://${cfg.bucket}.cos.${cfg.region}.myqcloud.com/${key}` };
     }
     return { ok: false, error: '当前 Provider 不支持公开 URL' };
+  },
+
+  /** 私有学习包只返回短期签名地址，避免让应用服务器承载大文件流量。 */
+  async temporaryDownloadUrl(partition, objectKey, expiresSeconds = 900) {
+    const p = PARTITIONS[partition];
+    if (!p) return { ok: false, error: '未知分区' };
+    const provider = getProvider();
+    if (provider.type !== 'COS' || typeof provider.temporaryUrl !== 'function') {
+      return { ok: false, status: 'COS_NOT_ACTIVE', error: '私有直传需要启用 COS Provider' };
+    }
+    return provider.temporaryUrl(partition, objectKey, expiresSeconds);
   },
 };
 

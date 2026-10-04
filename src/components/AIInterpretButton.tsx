@@ -7,7 +7,7 @@ import {
   incrementAIUsage,
   getAIErrorMessage,
   // v20.1: 三级权限
-  getPermissionStatus,
+  getPermissionStatusFromServer,
   getUserPermissionLevel,
   truncateContentForFreeUser,
   activateSingleUnlock,
@@ -20,6 +20,7 @@ import { useNativePayQR } from "@/components/PayQRCodeModal";
 import { useAiPricing } from "@/lib/pricingStore";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
+import { SafeRichText } from "@/components/SafeRichText";
 
 /**
  * v18.9: 通用AI解读按钮组件
@@ -90,7 +91,7 @@ export default function AIInterpretButton({
     if (loading) return;
 
     // v20.1: 三级权限检查
-    const perm = getPermissionStatus();
+    const perm = await getPermissionStatusFromServer();
 
     // 游客：弹出登录引导
     if (perm.needLogin) {
@@ -144,7 +145,7 @@ export default function AIInterpretButton({
         const level = getUserPermissionLevel();
         const cKey = generateContentKey(toolName, scope + contextData.slice(0, 50));
 
-        if (level === "member") {
+        if (level === "member" || perm.paidAccess) {
           // 会员：完整展示
           setFullContent(text);
           setContent(text);
@@ -286,7 +287,7 @@ export default function AIInterpretButton({
             {loading && !content ? (
               <span style={{ color: "#999" }}>正在生成解读内容，请稍候...</span>
             ) : (
-              content
+              <SafeRichText content={content} />
             )}
           </div>
 

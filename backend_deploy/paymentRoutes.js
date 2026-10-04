@@ -321,15 +321,17 @@ function getOrdersDb() {
 function persistOrder(order) {
   try {
     const db = getOrdersDb();
-    if (!db) return;
+    if (!db) return false;
     db.prepare(`INSERT INTO user_orders (user_id, order_no, amount, order_type, status, payment_method, created_at, paid_at, benefit_delivered, transaction_id, extra)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(order_no) DO UPDATE SET status=excluded.status, payment_method=excluded.payment_method, paid_at=excluded.paid_at, benefit_delivered=excluded.benefit_delivered, transaction_id=CASE WHEN excluded.transaction_id IS NOT NULL AND excluded.transaction_id != '' THEN excluded.transaction_id ELSE user_orders.transaction_id END, extra=CASE WHEN excluded.extra IS NOT NULL THEN excluded.extra ELSE user_orders.extra END`)
       .run(String(order.userId || ''), order.orderId, Number(order.amount) || 0, order.type, order.status,
            order.channel || '', order.createdAt, order.paidAt, order.benefitDelivered ? 1 : 0, order.transactionId || null,
            order.extra ? JSON.stringify(order.extra) : null);
+    return true;
   } catch (e) {
     console.error('[payment] 订单持久化失败:', e.message);
+    return false;
   }
 }
 
@@ -399,8 +401,15 @@ function deliverOrderBenefits(order) {
       if (require('fs').existsSync(dbPath)) {
         const db = new Database(dbPath);
         try {
-          const uid = parseInt(order.userId, 10);
+          const uid = /^\d+$/.test(String(order.userId)) ? Number(order.userId) : NaN;
           const targetId = order.extra && order.extra.unlockTargetId;
+          if (!Number.isSafeInteger(uid) || !db.prepare('SELECT user_id FROM users WHERE user_id = ?').get(uid)) {
+            throw new Error('订单用户无效，权益未交付');
+          }
+          if (order.type === 'SINGLE_UNLOCK' && !targetId) throw new Error('缺少解锁权益标识');
+          if (targetId === 'ai_plan_single') {
+            require('./paymentAiCredits').grant(db, uid, order.orderId);
+          }
           if (!isNaN(uid) && targetId) {
             let expireAt = null;
             const m = /^ai_plan_(\w+)$/.exec(targetId);
@@ -419,9 +428,10 @@ function deliverOrderBenefits(order) {
             console.log(`[payment] 单项权益已入库 orderId=${order.orderId} userId=${uid} key=${targetId} expire=${expireAt || '永久'}`);
           }
         } finally { db.close(); }
-      }
+      } else { throw new Error('权益数据库不存在'); }
     } catch (e) {
       console.error(`[payment] 单项权益入库失败 orderId=${order.orderId}:`, e.message);
+      return;
     }
     order.benefitDelivered = true;
     persistOrder(order);
@@ -527,8 +537,8 @@ function createOrderRecord(orderData) {
     paidAt: null,
     extra: orderData.extra || {},
   };
+  if (!persistOrder(order)) throw new Error('订单保存失败，未发起扣款，请稍后重试');
   ordersStore.set(order.orderId, order);
-  persistOrder(order);
   return order;
 }
 
@@ -578,15 +588,25 @@ function updateOrderRecord(orderId, status, channel) {
   if (channel) order.channel = channel;
   if (status === ORDER_STATUS.PAID && !order.paidAt) {
     order.paidAt = new Date().toISOString();
-    // P9-推广中心：订单首次支付成功 → 触发被邀请人首次有效付费奖励（单层/幂等）
     try {
-      const { grantFirstPayReward } = require('./register_routes');
-      const r = grantFirstPayReward(order.userId, order.orderId);
-      if (r && r.granted) {
-        console.log(`[payment] 首付费奖励已发放 orderId=${order.orderId} inviter获得=${r.points}积分`);
+      if (order.extra && order.extra.growthCampaign && order.extra.growthCampaign.couponId) {
+        const db = getOrdersDb();
+        if (db) require('./growthCampaignEngine').consumeCoupon(db, order.orderId);
       }
     } catch (e) {
-      console.error('[payment] 首付费奖励发放失败:', e.message);
+      console.error('[GrowthCampaign] 优惠券核销失败:', e.message);
+    }
+    // P9-推广中心：订单首次支付成功 → 触发被邀请人首次有效付费奖励（单层/幂等）
+    if (!(order.extra && order.extra.growthCampaign && ['EXCLUDED', 'REFERRAL_EXCLUDED_PARTNER_PRESERVED'].includes(order.extra.growthCampaign.commissionPolicy))) {
+      try {
+        const { grantFirstPayReward } = require('./register_routes');
+        const r = grantFirstPayReward(order.userId, order.orderId);
+        if (r && r.granted) {
+          console.log(`[payment] 首付费奖励已发放 orderId=${order.orderId} inviter获得=${r.points}积分`);
+        }
+      } catch (e) {
+        console.error('[payment] 首付费奖励发放失败:', e.message);
+      }
     }
     // v25.0.47_8 订单权益交付：会员开通/积分入账（幂等，失败由 query 接口补交付）
     try {
@@ -595,14 +615,18 @@ function updateOrderRecord(orderId, status, channel) {
       console.error('[payment] 权益交付异常:', e.message);
     }
     // v25.0.41 订单事件驱动返佣：支付成功即由服务端按订单金额发放一/二级返佣（前端上报仅作兜底对账）
-    try {
-      const { grantConsumptionRebate } = require('./register_routes');
-      const rb = grantConsumptionRebate(order.userId, order.orderId, order.amount, order.title);
-      if (rb && rb.granted) {
-        console.log(`[payment] 订单事件返佣已入账 orderId=${order.orderId} L1=${rb.level1Points}分 L2=${rb.level2Points}分`);
+    if (!(order.extra && order.extra.growthCampaign && ['EXCLUDED', 'REFERRAL_EXCLUDED_PARTNER_PRESERVED'].includes(order.extra.growthCampaign.commissionPolicy))) {
+      try {
+        const { grantConsumptionRebate } = require('./register_routes');
+        const rb = grantConsumptionRebate(order.userId, order.orderId, order.amount, order.title);
+        if (rb && rb.granted) {
+          console.log(`[payment] 订单事件返佣已入账 orderId=${order.orderId} L1=${rb.level1Points}分 L2=${rb.level2Points}分`);
+        }
+      } catch (e) {
+        console.error('[payment] 订单事件返佣发放失败:', e.message);
       }
-    } catch (e) {
-      console.error('[payment] 订单事件返佣发放失败:', e.message);
+    } else {
+      order.commissionStatus = 'NO_REFERRAL_COMMISSION:GROWTH_COUPON';
     }
   }
   if (status === ORDER_STATUS.REFUNDED) {
@@ -615,6 +639,14 @@ function updateOrderRecord(orderId, status, channel) {
       }
     } catch (e) {
       console.error('[payment] 退款返佣冲正失败:', e.message);
+    }
+  }
+  if (status === ORDER_STATUS.CLOSED) {
+    try {
+      const db = getOrdersDb();
+      if (db) require('./growthCampaignEngine').releaseCoupon(db, order.orderId);
+    } catch (e) {
+      console.error('[GrowthCampaign] 关闭订单释放优惠券失败:', e.message);
     }
   }
   persistOrder(order);
@@ -661,7 +693,7 @@ function updateOrderRecord(orderId, status, channel) {
   }
   // COMMISSION_ROUTER（AI-PRODUCTION-SEAL-AND-COMMISSION-ROUTER-04 第四十一~四十二部分）：
   // 分佣唯一结算入口——支付/退款只进 Router 一次，禁止 commissionEngine/partnerEngine 双引擎独立调用导致重复计提。
-  if (status === ORDER_STATUS.PAID) {
+  if (status === ORDER_STATUS.PAID && !(order.extra && order.extra.growthCampaign && order.extra.growthCampaign.commissionPolicy === 'EXCLUDED')) {
     try {
       const commissionRouter = require('./commissionRouter');
       const rr = commissionRouter.processPaidOrder(order);
@@ -845,18 +877,34 @@ function resolveServerPrice(type, extra, userId) {
 
 // POST /api/payment/create — 创建支付订单
 // ============================================================================
-router.post('/create', async (req, res) => {
+router.post('/create', require('./register_routes').authMiddleware, async (req, res) => {
   try {
-    const { userId, type, amount, title, channel, extra } = req.body;
+    const { type, amount, title, channel, extra } = req.body;
+    const effectiveExtra = extra && typeof extra === 'object' ? { ...extra } : {};
+    const userId = String(req.user.userId);
+    if (req.body.userId != null && String(req.body.userId) !== userId) {
+      return jsonResponse(res, 403, false, '登录账号与付款账号不一致，请重新登录');
+    }
 
     // 参数校验
-    if (!userId || typeof userId !== 'string' || userId.length < 4) {
-      return jsonResponse(res, 400, false, '用户ID无效');
+    if (!userId || typeof userId !== 'string' || !/^\d+$/.test(userId) || !Number.isSafeInteger(Number(userId))) {
+      return jsonResponse(res, 400, false, '登录身份无效，请退出后重新登录再购买');
+    }
+    const paymentDb = getOrdersDb();
+    if (!paymentDb) return jsonResponse(res, 503, false, '订单服务暂不可用，请稍后重试');
+    if (!paymentDb.prepare('SELECT user_id FROM users WHERE user_id = ?').get(Number(userId))) {
+      return jsonResponse(res, 401, false, '账号不存在或登录已失效，请重新登录再购买');
     }
 
     const validTypes = Object.values(ORDER_TYPES);
     if (!type || !validTypes.includes(type)) {
       return jsonResponse(res, 400, false, `订单类型无效，支持: ${validTypes.join(', ')}`);
+    }
+    if (type === 'SINGLE_UNLOCK' && (!extra || typeof extra.unlockTargetId !== 'string' || !extra.unlockTargetId.trim())) {
+      return jsonResponse(res, 400, false, '缺少购买权益信息，未发起付款');
+    }
+    if (!['MEMBERSHIP', 'POINTS_RECHARGE', 'SINGLE_UNLOCK', 'SERVICE_ORDER'].includes(type)) {
+      return jsonResponse(res, 503, false, '该购买项目交付服务正在维护，未发起付款');
     }
 
     if (typeof amount !== 'number' || isNaN(amount) || amount <= 0) {
@@ -864,7 +912,7 @@ router.post('/create', async (req, res) => {
     }
 
     // v25.0.47_10/12: 服务端价格裁决——下单金额以 Product/Price SSOT 为准
-    const resolved = resolveServerPrice(type, extra, userId);
+    const resolved = resolveServerPrice(type, effectiveExtra, userId);
     let finalAmount = Number(amount);
     if (resolved) {
       if (resolved.price == null || resolved.price <= 0) {
@@ -882,6 +930,22 @@ router.post('/create', async (req, res) => {
       return jsonResponse(res, 400, false, '金额超出合理范围');
     }
 
+    if (type === 'MEMBERSHIP' && effectiveExtra.useGrowthCoupon === true) {
+      const quote = require('./growthCampaignEngine').quoteMembership(paymentDb, {
+        userId,
+        membershipLevel: effectiveExtra.membershipLevel || effectiveExtra.level,
+        basePrice: finalAmount,
+        useCoupon: true,
+      });
+      if (!quote.applied) return jsonResponse(res, 400, false, quote.error || '助力八折券当前不可用');
+      finalAmount = quote.price;
+      effectiveExtra.growthCampaign = {
+        ...quote.campaignSnapshot,
+        couponId: quote.couponId,
+        couponCode: quote.couponCode,
+      };
+    }
+
     const validChannels = ['wechat', 'alipay'];
     if (channel && !validChannels.includes(channel)) {
       return jsonResponse(res, 400, false, `支付渠道无效，支持: ${validChannels.join(', ')}`);
@@ -891,23 +955,32 @@ router.post('/create', async (req, res) => {
     if (!isPaymentEnabled()) {
       // TODO: 参数到位后启用
       // 通道未配置时仍创建订单（PENDING 状态），但返回"即将开放"提示
-      const order = createOrderRecord({ userId, type, amount: finalAmount, title, extra });
+      const order = createOrderRecord({ userId, type, amount: finalAmount, title, extra: effectiveExtra });
       console.log(`[payment/create] 订单已创建（通道未启用）orderId=${order.orderId}`);
       return paymentNotReadyResponse(res);
     }
 
     // === 微信支付V3 JSAPI 下单流程 ===
-    const order = createOrderRecord({ userId, type, amount: finalAmount, title, extra });
+    const order = createOrderRecord({ userId, type, amount: finalAmount, title, extra: effectiveExtra });
+    if (effectiveExtra.growthCampaign && effectiveExtra.growthCampaign.couponId) {
+      const reserved = require('./growthCampaignEngine').reserveCoupon(
+        paymentDb, effectiveExtra.growthCampaign.couponId, userId, order.orderId
+      );
+      if (!reserved) {
+        updateOrderRecord(order.orderId, ORDER_STATUS.CLOSED, null);
+        return jsonResponse(res, 409, false, '会员优惠券已被使用或过期，请刷新后重试');
+      }
+    }
 
     // MASTER-05 第三十八章：SERVICE_ORDER 支付单回绑服务订单（金额一致性校验，SSOT）
-    if (type === 'SERVICE_ORDER' && extra && extra.serviceOrderNo) {
+    if (type === 'SERVICE_ORDER' && effectiveExtra.serviceOrderNo) {
       try {
-        const bind = require('./providerEngine').bindPaymentOrder(extra.serviceOrderNo, order.orderId, order.amount);
+        const bind = require('./providerEngine').bindPaymentOrder(effectiveExtra.serviceOrderNo, order.orderId, order.amount);
         if (!bind.ok) {
           updateOrderRecord(order.orderId, ORDER_STATUS.CLOSED, null);
           return jsonResponse(res, 400, false, bind.error);
         }
-        console.log(`[payment/create] Provider服务订单已回绑 serviceOrder=${extra.serviceOrderNo} payment=${order.orderId}`);
+        console.log(`[payment/create] Provider服务订单已回绑 serviceOrder=${effectiveExtra.serviceOrderNo} payment=${order.orderId}`);
       } catch (e) {
         console.error('[payment/create] Provider回绑失败:', e.message);
       }
@@ -919,7 +992,7 @@ router.post('/create', async (req, res) => {
       // ===== FIX-PAY-UNBIND-WECHAT-APPID 通道选择 =====
       // JSAPI（免扫码，需公众号AppID+openid）；缺任一参数自动降级 Native 扫码支付，
       // 不报错、不阻断流程；微信内环境同样展示二维码（长按识别支付）。
-      const openid = extra && extra.openid;
+      const openid = effectiveExtra.openid;
       const canJsapi = !!openid && wechatPayV3.isReadyForJsapi();
 
       if (canJsapi) {
@@ -938,6 +1011,7 @@ router.post('/create', async (req, res) => {
           console.log(`[payment/create] 微信JSAPI下单成功 orderId=${order.orderId} prepayId=${result.prepayId}`);
           return jsonResponse(res, 200, true, '订单创建成功', {
             orderId: order.orderId,
+            amount: order.amount,
             channel: 'wechat',
             payMode: 'JSAPI',
             prepayId: result.prepayId,
@@ -965,6 +1039,7 @@ router.post('/create', async (req, res) => {
         console.log(`[payment/create] 微信Native扫码下单成功 orderId=${order.orderId}`);
         return jsonResponse(res, 200, true, '订单创建成功（扫码支付）', {
           orderId: order.orderId,
+          amount: order.amount,
           channel: 'wechat',
           payMode: 'NATIVE',
           codeUrl: nativeResult.codeUrl,
@@ -1025,12 +1100,22 @@ router.post('/query', async (req, res) => {
     }
 
     // 待支付且微信渠道：主动查微信侧，防回调丢失导致状态停滞
-    if (order.status === ORDER_STATUS.PENDING && order.channel === 'wechat' && wechatPayV3.isConfigured()) {
+    if ([ORDER_STATUS.PENDING, ORDER_STATUS.PAID, 'REFUND_PENDING'].includes(order.status) && order.channel === 'wechat' && wechatPayV3.isConfigured()) {
       try {
         const qr = await wechatPayV3.queryOrderByOutTradeNo(orderId);
-        if (qr.success && qr.tradeState === 'SUCCESS') {
+        if (qr.success && qr.tradeState === 'SUCCESS' && order.status === ORDER_STATUS.PENDING) {
           updateOrderRecord(orderId, ORDER_STATUS.PAID, 'wechat');
           console.log(`[payment/query] 对账发现已支付，本地状态已更新 orderId=${orderId}`);
+        } else if (qr.success && qr.tradeState === 'REFUND') {
+          // REFUND 表示转入退款，不能据此声称全部金额已到账。
+          order.benefitDelivered = false;
+          updateOrderRecord(orderId, 'REFUND_PENDING', 'wechat');
+          const db = getOrdersDb();
+          if (db) {
+            require('./paymentAiCredits').ensure(db);
+            db.prepare('UPDATE paid_ai_credits SET remaining=0 WHERE source_order_no=?').run(orderId);
+            db.prepare('DELETE FROM user_entitlements WHERE source_order_no=?').run(orderId);
+          }
         } else if (qr.success && (qr.tradeState === 'CLOSED' || qr.tradeState === 'REVOKED' || qr.tradeState === 'PAYERROR')) {
           updateOrderRecord(orderId, ORDER_STATUS.CLOSED, 'wechat');
         }
@@ -1055,6 +1140,7 @@ router.post('/query', async (req, res) => {
       channel: latest.channel,
       createdAt: latest.createdAt,
       paidAt: latest.paidAt,
+      benefitDelivered: latest.benefitDelivered === true,
     });
   } catch (error) {
     console.error('[payment/query] error:', error);
@@ -1436,7 +1522,43 @@ router.post('/admin/orders/:orderId/retry-delivery', _prAdminAuth('SUPER_ADMIN')
   }
 });
 
+let reconciliationRunning = false;
+async function reconcileUndeliveredOrders() {
+  if (reconciliationRunning || !wechatPayV3.isConfigured()) return;
+  reconciliationRunning = true;
+  try {
+    const db = getOrdersDb();
+    if (!db) return;
+    db.exec('CREATE TABLE IF NOT EXISTS payment_reconcile_checks(order_no TEXT PRIMARY KEY,checked_at TEXT NOT NULL)');
+    const rows = db.prepare("SELECT o.order_no FROM user_orders o LEFT JOIN payment_reconcile_checks c ON c.order_no=o.order_no WHERE o.payment_method='wechat' AND o.status IN ('PAID','PENDING','REFUND_PENDING') AND o.created_at>=? AND (c.checked_at IS NULL OR c.checked_at<?) ORDER BY COALESCE(c.checked_at,''),o.created_at LIMIT 50").all(new Date(Date.now()-7*86400000).toISOString(),new Date(Date.now()-5*60000).toISOString());
+    for (const row of rows) {
+      const order = getOrderRecord(row.order_no);
+      if (!order) continue;
+      try {
+        const q = await wechatPayV3.queryOrderByOutTradeNo(row.order_no);
+        db.prepare('INSERT INTO payment_reconcile_checks(order_no,checked_at) VALUES (?,?) ON CONFLICT(order_no) DO UPDATE SET checked_at=excluded.checked_at').run(row.order_no,new Date().toISOString());
+        if (!q.success) continue;
+        if (q.tradeState === 'SUCCESS') {
+            if (order.status !== ORDER_STATUS.PAID) updateOrderRecord(order.orderId,ORDER_STATUS.PAID,'wechat');
+          if (!order.benefitDelivered) deliverOrderBenefits(order);
+        } else if(q.tradeState === 'REFUND') {
+          order.benefitDelivered = false;
+          updateOrderRecord(order.orderId,'REFUND_PENDING','wechat');
+          require('./paymentAiCredits').ensure(db);
+          db.prepare('UPDATE paid_ai_credits SET remaining=0 WHERE source_order_no=?').run(order.orderId);
+          db.prepare('DELETE FROM user_entitlements WHERE source_order_no=?').run(order.orderId);
+        } else if(['CLOSED','REVOKED','PAYERROR','NOT_FOUND'].includes(q.tradeState)) {
+          updateOrderRecord(order.orderId,ORDER_STATUS.CLOSED,'wechat');
+        }
+      } catch(e) { console.error('[payment/reconcile]',row.order_no,e.message); }
+    }
+  } finally { reconciliationRunning = false; }
+}
+const reconciliationTimer = setInterval(()=>reconcileUndeliveredOrders().catch(e=>console.error('[payment/reconcile]',e.message)),60000);
+reconciliationTimer.unref();
+
 module.exports = {
+  reconcileUndeliveredOrders,
   router,
   createRouter() {
     return router;

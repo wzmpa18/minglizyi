@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { callAI, getPermissionStatus } from "@/lib/aiService";
+import { callAI, getPermissionStatusFromServer } from "@/lib/aiService";
 import { BrandHeader } from "@/components/shared";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
+import { SafeRichText } from "@/components/SafeRichText";
 
 export default function ZhongyiAIPage() {
   const [input, setInput] = useState("");
@@ -20,7 +21,7 @@ export default function ZhongyiAIPage() {
 
     // v20.1: 三级权限检查 - 未登录弹出登录引导
     if (!requireLogin()) return;
-    const perm = getPermissionStatus();
+    const perm = await getPermissionStatusFromServer();
     if (!perm.canUseAI) {
       setMessages((prev) => [...prev, { role: "user", content: input }, { role: "assistant", content: perm.message || "今日AI解读次数已用完，开通会员继续使用" }]);
       setInput("");
@@ -52,7 +53,7 @@ export default function ZhongyiAIPage() {
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
             <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${msg.role === "user" ? "bg-emerald-600 text-white" : "bg-muted"}`}>
-              {msg.content}
+              {msg.role === "user" ? <span className="break-words">{msg.content}</span> : <SafeRichText content={msg.content} />}
             </div>
           </div>
         ))}

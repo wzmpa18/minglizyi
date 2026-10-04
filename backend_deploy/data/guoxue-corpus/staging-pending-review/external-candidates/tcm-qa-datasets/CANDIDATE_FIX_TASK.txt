@@ -1,0 +1,23 @@
+【言道国学｜TCM-QA-805-CLEANUP-01】
+
+只处理当前目录的805道中医题库候选，不处理其他项目，不重新OCR资料。
+
+输入：
+1. Q&A datasets-SINGLE.json
+2. Q&A datasets-MULITPLE.json
+3. Q&A datasets-TRUE-FALSE.json
+4. IMPORT_ISSUES.json（精确列出异常文件、数组序号、题干、答案、选项和问题码）
+
+任务：
+1. 先处理 IMPORT_ISSUES.json 的 formatIssues：
+   - DUPLICATE_OPTION_LABEL：根据原始题面确认重复字母应改成哪个选项字母；不得只按位置猜答案。
+   - ANSWER_OPTION_MISSING：确认答案字母是否抄错或选项是否缺失；没有可靠依据时保持待复核并写明原因。
+   - INVALID_MULTIPLE_ANSWER：统一为大写选项字母组合，不添加分隔符；无法确认时不得修。
+   - OPTIONS_LT_2：确认是否为解析失败、题干换行错误或数据源缺项；不得编造选项。
+2. 再处理 duplicateGroups：逐组判断完全重复、版本差异或数据错误；完全重复只保留一题，差异题保留并写差异原因。
+3. 每道题核对答案，只能使用可靠教材/考纲/原始试题证据。不得用AI常识直接填答案，不生成伪造解析、年份、页码或出处。
+4. 输出修正版JSON、逐题变更清单、未解决清单和证据说明。保持原始文件备份，禁止原地覆盖。
+5. 完成后运行：node backend_deploy/import_tcm_qa_candidates.js --validate-only
+   目标是格式异常0、重复指纹0；这只代表格式通过，不能把题目状态改为 approved。
+
+当前自动检查基线：805题；773道格式通过；32道存在格式问题；4个重复指纹。医学复核和考试版本映射仍未完成。

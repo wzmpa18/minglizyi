@@ -1379,9 +1379,12 @@ function createRouter() {
       }
       if (isAdmin(req)) { if (status) { sql += ' AND k.status = ?'; params.push(status); } }
       else { sql += ` AND k.status = 'approved'`; }
-      sql += ` ORDER BY k.id DESC LIMIT ${Math.min(1000, Math.max(1, parseInt(limitStr, 10) || 300))}`;
+      const beforeId = Number(req.query.beforeId);
+      if (Number.isSafeInteger(beforeId) && beforeId > 0) { sql += ' AND k.id < ?'; params.push(beforeId); }
+      const offlineCursorLimit = Math.min(1000, Math.max(1, parseInt(limitStr, 10) || 300));
+      sql += ` ORDER BY k.id DESC LIMIT ${offlineCursorLimit}`;
       const rows = d.prepare(sql).all(...params).map(r => knowledgeVo({ ...r, track: r.track || r.m_track || '', category: r.category || r.m_category || '' }));
-      res.json({ success: true, points: rows });
+      res.json({ success: true, points: rows, pagination: { nextBeforeId: rows.length === offlineCursorLimit ? Number(rows[rows.length - 1].id) : null } });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
     }
@@ -1583,8 +1586,12 @@ function createRouter() {
       if (type) { sql += ' AND type = ?'; params.push(type); }
       if (isAdmin(req)) { if (status) { sql += ' AND status = ?'; params.push(status); } }
       else { sql += ` AND status = 'approved'`; }
-      sql += ` ORDER BY id DESC LIMIT ${Math.min(1000, Math.max(1, parseInt(limitStr, 10) || 300))}`;
-      res.json({ success: true, questions: d.prepare(sql).all(...params).map(q => questionVo(q, isAdmin(req) || zhengguWithAnswer)) });
+      const beforeId = Number(req.query.beforeId);
+      if (Number.isSafeInteger(beforeId) && beforeId > 0) { sql += ' AND id < ?'; params.push(beforeId); }
+      const offlineCursorLimit = Math.min(1000, Math.max(1, parseInt(limitStr, 10) || 300));
+      sql += ` ORDER BY id DESC LIMIT ${offlineCursorLimit}`;
+      const rows = d.prepare(sql).all(...params).map(q => questionVo(q, isAdmin(req) || zhengguWithAnswer));
+      res.json({ success: true, questions: rows, pagination: { nextBeforeId: rows.length === offlineCursorLimit ? Number(rows[rows.length - 1].id) : null } });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
     }

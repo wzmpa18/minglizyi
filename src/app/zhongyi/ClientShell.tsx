@@ -98,7 +98,7 @@ export default function ZhongyiClientShell({ children }: { children: React.React
           <div>
             <span className="text-lg font-bold tracking-wide text-[#e8edf0]">言道中医</span>
             <div style={{ fontSize: "10px", fontWeight: "normal", opacity: 0.65, lineHeight: "1.4", color: "#e8edf0" }}>
-              yandao.vip 分享下载有礼
+              典籍 · 经络 · 方药 · 学习
             </div>
           </div>
         </Link>

@@ -66,18 +66,19 @@ export default function CertificatesPage() {
   return (
     <div style={{ maxWidth: "420px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f5f5f5" }}>
       <PageLoginGuard />
-      <BrandHeader title="我的证书" showBack backUrl="/academy" />
+      <BrandHeader title="学习结业记录" showBack backUrl="/academy" />
 
       <div className="px-3 py-3 pb-24">
         {/* 我的证书列表 */}
-        <p className="mb-2 px-1 text-xs font-bold text-gray-500">我的证书（{certs.length}）</p>
+        <div className="mb-3 rounded-xl bg-amber-50 p-3 text-[11px] leading-relaxed text-amber-800">本页记录仅证明用户在言道国学平台完成相应学习与练习，不属于国家职业资格、执业许可或学历证书。</div>
+        <p className="mb-2 px-1 text-xs font-bold text-gray-500">我的学习结业记录（{certs.length}）</p>
         {loading ? (
           <div className="rounded-2xl bg-white p-6 text-center text-xs text-gray-400 shadow-sm">加载中...</div>
         ) : certs.length === 0 ? (
           <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
             <p className="text-2xl">🏅</p>
-            <p className="mt-2 text-sm text-gray-500">暂无证书</p>
-            <p className="mt-1 text-xs text-gray-400">通过等级考试后自动颁发电子证书</p>
+            <p className="mt-2 text-sm text-gray-500">暂无学习结业记录</p>
+            <p className="mt-1 text-xs text-gray-400">完成平台等级练习后自动生成</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -93,7 +94,7 @@ export default function CertificatesPage() {
                   <div className="flex items-center justify-between px-4 py-3" style={{ background: `linear-gradient(135deg, ${BRAND}, #9B59B6)` }}>
                     <div>
                       <p className="text-[10px] tracking-widest text-white/70">YANDAO CERTIFICATE</p>
-                      <p className="mt-0.5 text-sm font-bold text-white">言道国学认证证书</p>
+                      <p className="mt-0.5 text-sm font-bold text-white">言道国学学习结业记录</p>
                     </div>
                     <span className="text-2xl">🏅</span>
                   </div>
@@ -124,7 +125,7 @@ export default function CertificatesPage() {
                         持证人：<span className="font-medium text-gray-700">{c.userName}</span>
                       </p>
                       <p className="text-[11px] text-gray-500">
-                        证书编号：<span className="font-mono font-medium text-gray-700">{c.certNo}</span>
+                        记录编号：<span className="font-mono font-medium text-gray-700">{c.certNo}</span>
                       </p>
                       <p className="text-[11px] text-gray-500">
                         颁发日期：<span className="font-medium text-gray-700">{c.issuedAt}</span>
@@ -150,8 +151,8 @@ export default function CertificatesPage() {
 
         {/* 公开验真 */}
         <div className="mt-4 rounded-2xl bg-white p-4 shadow-sm">
-          <p className="text-sm font-bold text-gray-800">证书验真</p>
-          <p className="mt-1 text-[10px] text-gray-400">输入证书编号（如 YA-2026-TCM-000001）公开查询真伪，无需登录</p>
+          <p className="text-sm font-bold text-gray-800">学习记录核验</p>
+          <p className="mt-1 text-[10px] text-gray-400">输入记录编号（如 YA-2026-TCM-000001）查询平台记录，无需登录</p>
           <div className="mt-3 flex gap-2">
             <input
               value={verifyNo}

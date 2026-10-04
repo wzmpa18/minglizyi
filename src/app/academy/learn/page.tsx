@@ -12,6 +12,8 @@ import {
   type CategoryVo,
 } from "@/lib/academyApi";
 import { PageLoginGuard } from "@/components/PageLoginGuard";
+import { learningDifficultyLabel } from "@/lib/learningDisplay";
+import { LocalListenButton } from "@/components/LocalListenButton";
 
 const BRAND = "#7B2FBE";
 
@@ -215,7 +217,7 @@ export default function AcademyLearnPage() {
                         {TRACK_LIST.find((t) => t.key === pt.track)?.name || pt.track}
                         {pt.category ? ` · ${pt.category}` : ""}
                         {pt.chapter ? ` · ${pt.chapter}` : ""}
-                        {pt.difficulty ? ` · ${pt.difficulty}` : ""}
+                        {pt.difficulty ? ` · ${learningDifficultyLabel(pt.difficulty)}` : ""}
                       </p>
                     </div>
                     <svg
@@ -229,6 +231,9 @@ export default function AcademyLearnPage() {
                   </button>
                   {open && (
                     <div className="border-t border-gray-100 px-4 py-3">
+                      <div className="mb-3 rounded-xl bg-purple-50/60 p-2.5">
+                        <LocalListenButton text={`${pt.title}。${pt.content}`} contentId={`knowledge:${pt.id}`} />
+                      </div>
                       <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-gray-600">{pt.content}</p>
                       {pt.tags && pt.tags.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-1.5">

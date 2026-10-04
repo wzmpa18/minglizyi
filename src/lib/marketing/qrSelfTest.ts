@@ -67,7 +67,12 @@ export async function qrSelfTest(
 export function isSignedInviteLinkShape(link: string): boolean {
   try {
     const u = new URL(link);
-    return u.protocol === "https:" && !!(u.searchParams.get("ref") || u.searchParams.get("token") || u.searchParams.get("sig"));
+    const allowedHosts = new Set(["yandaoguoxue.yandao.vip", "www.yandao.vip"]);
+    const ref = u.searchParams.get("ref") || "";
+    const ts = u.searchParams.get("ts") || "";
+    const sig = u.searchParams.get("sig") || "";
+    return u.protocol === "https:" && allowedHosts.has(u.hostname.toLowerCase()) &&
+      /^\d+$/.test(ref) && /^\d{10,16}$/.test(ts) && /^[a-f0-9]{32}$/i.test(sig);
   } catch {
     return false;
   }
