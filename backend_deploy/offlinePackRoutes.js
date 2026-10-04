@@ -81,7 +81,12 @@ function createRouter() {
   // 第五十九章：Pack Manifest（公开只读——元数据不含隐私；登录可选以携带平台信息）
   router.get('/manifest', guard((req, res) => {
     const manifest = offlinePackEngine.getManifest();
-    res.setHeader('Cache-Control', 'public, max-age=300');
+    // Content releases must become visible immediately.  The client persists
+    // verified packs locally, so caching this small manifest only risks serving
+    // an obsolete catalogue after an operator publishes a new version.
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.json({ success: true, data: manifest });
   }));
 

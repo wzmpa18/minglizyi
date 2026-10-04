@@ -172,7 +172,7 @@ function registerPack(params) {
   };
   if (existing) {
     db.prepare(`UPDATE offline_content_packs SET content_type=?, name=?, version=?, size_bytes=?, sha256=?,
-      min_app_version=?, required=?, file_path=?, description=?, access_level=?, delivery_provider='LOCAL',
+      min_app_version=?, required=?, status='DRAFT', file_path=?, description=?, access_level=?, delivery_provider='LOCAL',
       object_key='', updated_at=? WHERE pack_id=?`)
       .run(contentType, row.name, version, stat.size, sha, row.minAppVersion, row.required, dest, row.description, row.accessLevel, now, packId);
   } else {
