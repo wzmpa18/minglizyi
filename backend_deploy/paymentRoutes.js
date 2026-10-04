@@ -1256,14 +1256,18 @@ router.post('/callback/wechat', async (req, res) => {
     }
 
     if (detail.trade_state === 'SUCCESS') {
+      // Persist the WeChat transaction identity together with the PAID state.
+      // Doing this after updateOrderRecord left the durable row without the
+      // transaction id, which weakened support/audit tracing after a restart.
+      order.transactionId = detail.transaction_id || order.transactionId || null;
+      order.successTime = detail.success_time || order.successTime || null;
       if (order.status === ORDER_STATUS.PENDING) {
         updateOrderRecord(order.orderId, ORDER_STATUS.PAID, 'wechat');
-        const paid = getOrderRecord(order.orderId);
-        if (paid) {
-          paid.transactionId = detail.transaction_id || null;
-          paid.successTime = detail.success_time || null;
-        }
         console.log(`[payment/callback/wechat] 支付成功 orderId=${order.orderId} transactionId=${detail.transaction_id} amount=${detail.amount && detail.amount.total}分`);
+      } else {
+        // Duplicate callbacks are expected. They also repair old PAID rows
+        // whose transaction identity was not persisted by earlier versions.
+        persistOrder(order);
       }
       // 已PAID的重复回调：幂等跳过
     } else if (['CLOSED', 'REVOKED', 'PAYERROR'].includes(detail.trade_state)) {
@@ -1539,7 +1543,10 @@ async function reconcileUndeliveredOrders() {
         db.prepare('INSERT INTO payment_reconcile_checks(order_no,checked_at) VALUES (?,?) ON CONFLICT(order_no) DO UPDATE SET checked_at=excluded.checked_at').run(row.order_no,new Date().toISOString());
         if (!q.success) continue;
         if (q.tradeState === 'SUCCESS') {
-            if (order.status !== ORDER_STATUS.PAID) updateOrderRecord(order.orderId,ORDER_STATUS.PAID,'wechat');
+          order.transactionId = q.transactionId || order.transactionId || null;
+          order.successTime = q.successTime || order.successTime || null;
+          if (order.status !== ORDER_STATUS.PAID) updateOrderRecord(order.orderId,ORDER_STATUS.PAID,'wechat');
+          else persistOrder(order);
           if (!order.benefitDelivered) deliverOrderBenefits(order);
         } else if(q.tradeState === 'REFUND') {
           order.benefitDelivered = false;
