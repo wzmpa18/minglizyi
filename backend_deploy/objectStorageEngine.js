@@ -12,14 +12,15 @@
  * 第一百零七章：PRIVATE（user-content）必须鉴权 + owner 权限校验。
  * 第一百零八章：PUBLIC（public-content）才允许公开 CDN；默认禁止公开。
  *
- * 密钥来源（第一百一十四章）：仅从环境变量/服务器 .env 读取（COS_SECRET_ID/
- *   COS_SECRET_KEY/COS_BUCKET/COS_REGION），禁止聊天粘贴、禁止硬编码、禁止写库。
+ * 身份来源（第一百一十四章）：优先使用 CVM 实例角色自动轮换临时凭据；兼容从
+ *   服务器环境变量读取 COS_SECRET_ID/COS_SECRET_KEY。禁止聊天粘贴、禁止硬编码、禁止写库。
  */
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const cosCredentials = require('./cosCredentialProvider');
 
 // ==================== 第一百零六章：逻辑分区（冻结枚举） ====================
 const PARTITIONS = {
@@ -128,8 +129,8 @@ function pickPosInt(v, fallback, min, max) {
 function validateCosConfig() {
   const cfg = getConfig().cos;
   const missing = [];
-  if (!cfg.secretId) missing.push('COS_SECRET_ID');
-  if (!cfg.secretKey) missing.push('COS_SECRET_KEY');
+  const auth = cosCredentials.validateAuth();
+  if (!auth.valid) missing.push(...auth.missing);
   if (!cfg.bucket) missing.push('COS_BUCKET');
   if (!cfg.region) missing.push('COS_REGION');
   if (missing.length) {
@@ -143,9 +144,10 @@ function validateCosConfig() {
   return {
     valid: true,
     status: 'READY_TO_CONNECT',
+    authMode: auth.mode,
     bucket: cfg.bucket,
     region: cfg.region,
-    note: '凭证已从服务器环境读取（软件链已就绪；实际连通性以首次真实上传为准）',
+    note: auth.note || '凭证已从服务器环境读取（软件链已就绪；实际连通性以首次真实上传为准）',
   };
 }
 
@@ -235,7 +237,7 @@ function getCosClient() {
     };
   }
   const cfg = getConfig().cos;
-  const client = new Sdk({ SecretId: cfg.secretId, SecretKey: cfg.secretKey });
+  const client = new Sdk(cosCredentials.createClientOptions());
   return { client, bucket: cfg.bucket, region: cfg.region };
 }
 

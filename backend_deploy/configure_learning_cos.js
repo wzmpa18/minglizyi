@@ -5,15 +5,18 @@
 'use strict';
 
 const COS = require('cos-nodejs-sdk-v5');
+const cosCredentials = require('./cosCredentialProvider');
 
-const required = ['COS_SECRET_ID', 'COS_SECRET_KEY', 'COS_BUCKET', 'COS_REGION'];
+const required = ['COS_BUCKET', 'COS_REGION'];
 const missing = required.filter((key) => !process.env[key]);
+const auth = cosCredentials.validateAuth();
+if (!auth.valid) missing.push(...auth.missing);
 if (missing.length) {
   console.error(`BLOCKED_EXTERNAL_CONFIG: ${missing.join(', ')}`);
   process.exit(2);
 }
 
-const client = new COS({ SecretId: process.env.COS_SECRET_ID, SecretKey: process.env.COS_SECRET_KEY });
+const client = new COS(cosCredentials.createClientOptions());
 const params = {
   Bucket: process.env.COS_BUCKET,
   Region: process.env.COS_REGION,
