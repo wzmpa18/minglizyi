@@ -836,7 +836,8 @@ function TabDetail({result,gender}:{
 
   const curLs = selectedLs === undefined ? undefined : liushiList[selectedLs];
 
-  // ===== 统一显示柱数组：本命四柱 → 大运 → 流年 → 流月 → 流日 → 流时 =====
+  // ===== 上方命盘只显示：本命四柱 → 流年 → 流月 → 流日 → 流时 =====
+  // 大运保留在下方独立大运行，不重复挤入上方四柱表。
   type DisplayPillar = {
     label: string;
     sublabel?: string;
@@ -850,7 +851,6 @@ function TabDetail({result,gender}:{
     xunkong: string;
     zuo: string;
     isDayPillar: boolean;
-    isDayun?: boolean;
     isLiunian?: boolean;
     isLiuyue?: boolean;
     isLiuri?: boolean;
@@ -872,27 +872,7 @@ function TabDetail({result,gender}:{
       isDayPillar: i === 2,
     }));
 
-    // 大运列（第5列）
-    if (curDy) {
-      const dyGanzhi = curDy.gan + curDy.zhi;
-      base.push({
-        label: "大运",
-        sublabel: `${Math.floor(curDy.startAge)}-${Math.floor(curDy.startAge)+9}岁`,
-        gan: curDy.gan as TianGan,
-        zhi: curDy.zhi as DiZhi,
-        ganzhi: dyGanzhi,
-        shishenGan: curDy.shishenGan || getShiShen(dayGan, curDy.gan as TianGan) || "",
-        shishenZhi: [],
-        canggan: curDy.canggan || getCangGan(curDy.zhi as DiZhi) || [],
-        nayin: curDy.nayin || getNaYin(dyGanzhi) || "",
-        xunkong: getXunKong(dyGanzhi) || "",
-        zuo: getChangSheng(dayGan, curDy.zhi as DiZhi),
-        isDayPillar: false,
-        isDayun: true,
-      });
-    }
-
-    // 流年列（第6列）
+    // 流年列（第5列）
     if (curLn && curDy) {
       const lnGanzhi = curLn.gan + curLn.zhi;
       base.push({
@@ -978,7 +958,7 @@ function TabDetail({result,gender}:{
       let ssName = "";
       if (dp.isDayPillar) {
         ssName = idx === 0 ? (gender === "male" ? "元男" : "元女") : ((dp.shishenZhi && dp.shishenZhi[idx]) || "");
-      } else if (dp.isDayun || dp.isLiunian || dp.isLiuyue || dp.isLiuri || dp.isLiushi) {
+      } else if (dp.isLiunian || dp.isLiuyue || dp.isLiuri || dp.isLiushi) {
         ssName = getShiShen(dayGan, g as TianGan) || "";
       } else {
         ssName = (dp.shishenZhi && dp.shishenZhi[idx]) || "";
