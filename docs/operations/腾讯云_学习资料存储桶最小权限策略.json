@@ -13,7 +13,8 @@
         "name/cos:AbortMultipartUpload",
         "name/cos:ListParts",
         "name/cos:HeadObject",
-        "name/cos:GetObject"
+        "name/cos:GetObject",
+        "name/cos:DeleteObject"
       ],
       "resource": [
         "qcs::cos:ap-beijing:uid/1300262413:yandao-guoxue-1300262413/learning-content/*"
@@ -23,7 +24,8 @@
       "effect": "allow",
       "action": [
         "name/cos:GetBucketCORS",
-        "name/cos:PutBucketCORS"
+        "name/cos:PutBucketCORS",
+        "name/cos:GetBucket"
       ],
       "resource": [
         "qcs::cos:ap-beijing:uid/1300262413:yandao-guoxue-1300262413/*"
