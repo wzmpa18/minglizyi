@@ -29,7 +29,30 @@ BOOKS = [
     {"id": "daxue", "title": "大学章句", "wikiTitle": "四書章句集註/大學章句", "category": "儒家", "author": "朱熹章句"},
     {"id": "zhongyong", "title": "中庸章句", "wikiTitle": "四書章句集註 (四庫全書本)/中庸", "category": "儒家", "author": "朱熹章句"},
     {"id": "daodejing_wangbi", "title": "道德经（王弼本）", "wikiTitle": "道德經 (王弼本)", "category": "道家", "author": "老子；王弼注"},
+    {"id": "huangdi_yinfujing", "title": "黄帝阴符经", "wikiTitle": "黃帝陰符經", "category": "道家", "author": "传统题黄帝撰", "minLength": 300},
+    {"id": "qingjingjing", "title": "太上老君说常清静经", "wikiTitle": "太上老君說常清靜經", "category": "道家", "author": "佚名", "minLength": 300},
+    {"id": "taishang_ganying", "title": "太上感应篇", "wikiTitle": "太上感應篇", "category": "道家", "author": "佚名", "minLength": 500},
+    {"id": "zhuangzi", "title": "庄子", "wikiPrefix": "莊子", "category": "道家", "author": "庄周及后学", "minLength": 10000},
+    {"id": "liezi", "title": "列子", "wikiTitle": "列子 (四庫全書本)/全覽", "category": "道家", "author": "传统题列御寇", "minLength": 10000},
+    {"id": "guiguzi", "title": "鬼谷子", "wikiTitle": "鬼谷子 (四庫全書本)", "category": "纵横家", "author": "传统题鬼谷子", "minLength": 5000},
+    {"id": "mengzi", "title": "孟子", "wikiPrefix": "孟子", "category": "儒家", "author": "孟子及其弟子", "minLength": 10000},
+    {"id": "xunzi", "title": "荀子", "wikiTitle": "荀子 (四庫全書本)/全覽", "category": "儒家", "author": "荀况", "minLength": 10000},
+    {"id": "xiaojing", "title": "孝经", "wikiTitle": "今文孝經", "category": "儒家", "author": "佚名", "minLength": 1000},
+    {"id": "hanfeizi", "title": "韩非子", "wikiPrefix": "韓非子 (四部叢刊本)", "category": "法家", "author": "韩非", "minLength": 30000},
+    {"id": "shangjunshu", "title": "商君书", "wikiPrefix": "商君書", "category": "法家", "author": "商鞅及后学", "minLength": 5000},
+    {"id": "guanzi", "title": "管子", "wikiTitle": "管子 (四庫全書本)/全覽", "category": "法家", "author": "传统题管仲", "minLength": 10000},
+    {"id": "mozi", "title": "墨子", "wikiTitle": "墨子 (四庫全書本)/全覽", "category": "墨家", "author": "墨翟及墨家后学", "minLength": 10000},
+    {"id": "gongsunlongzi", "title": "公孙龙子", "wikiPrefix": "公孫龍子", "category": "名家", "author": "公孙龙", "minLength": 1000},
+    {"id": "lvshi_chunqiu", "title": "吕氏春秋", "wikiPrefix": "吕氏春秋 (四庫全書本)", "category": "杂家", "author": "吕不韦门客编纂", "minLength": 30000},
+    {"id": "huainanzi", "title": "淮南子", "wikiPrefix": "淮南子", "category": "杂家", "author": "刘安及门客编纂", "minLength": 10000},
     {"id": "sunzibingfa", "title": "孙子兵法", "wikiTitle": "孫子兵法", "category": "兵家", "author": "孙武"},
+    {"id": "wuzi", "title": "吴子兵法", "wikiTitle": "吳子兵法", "category": "兵家", "author": "吴起", "minLength": 1000},
+    {"id": "simafa", "title": "司马法", "wikiTitle": "司馬法", "category": "兵家", "author": "传统题司马穰苴", "minLength": 1000},
+    {"id": "liutao", "title": "六韬", "wikiTitle": "六韜", "category": "兵家", "author": "传统题姜太公", "minLength": 2000},
+    {"id": "sanlue", "title": "黄石公三略", "wikiTitle": "黃石公三略", "category": "兵家", "author": "传统题黄石公", "minLength": 1000},
+    {"id": "sushu", "title": "黄石公素书", "wikiTitle": "黃石公素書", "category": "兵家", "author": "传统题黄石公", "minLength": 500},
+    {"id": "weiliaozhi", "title": "尉缭子", "wikiTitle": "尉繚子", "category": "兵家", "author": "尉缭", "minLength": 2000},
+    {"id": "shanhaijing", "title": "山海经", "wikiPrefix": "山海經", "category": "地理博物", "author": "佚名", "minLength": 5000},
     {"id": "sanzijing", "title": "三字经", "wikiTitles": ["新刊三字經"], "category": "蒙学", "author": "王应麟（传统署名）"},
     {"id": "baijiaxing", "title": "百家姓", "wikiTitle": "百家姓", "category": "蒙学", "author": "佚名"},
     {"id": "qianziwen", "title": "千字文", "wikiTitle": "千字文", "category": "蒙学", "author": "周兴嗣"},
@@ -60,16 +83,16 @@ def fetch_extract(title: str) -> tuple[str, str]:
         f"{API}?{params}",
         headers={"User-Agent": "YandaoGuoxue/1.0 classics-importer"},
     )
-    for attempt in range(8):
+    for attempt in range(3):
         try:
             with urllib.request.urlopen(request, timeout=30) as response:
                 page = json.load(response)["parse"]
             break
         except urllib.error.HTTPError as error:
-            if error.code != 429 or attempt == 7:
+            if error.code != 429 or attempt == 2:
                 raise
-            time.sleep(min(5 * (attempt + 1), 30))
-    time.sleep(1.0)
+            time.sleep(2 * (attempt + 1))
+    time.sleep(0.7)
     rendered = str(page.get("text") or "")
     rendered = re.sub(r"<(script|style|table)[^>]*>.*?</\1>", "", rendered, flags=re.I | re.S)
     rendered = re.sub(r"<span[^>]*class=\"mw-editsection[^>]*>.*?</span>", "", rendered, flags=re.I | re.S)
@@ -88,6 +111,92 @@ def fetch_extract(title: str) -> tuple[str, str]:
     return str(page["title"]), text
 
 
+def api_request(params: dict[str, str], *, post: bool = False) -> dict:
+    encoded = urllib.parse.urlencode(params).encode("utf-8")
+    request = urllib.request.Request(
+        API if post else f"{API}?{encoded.decode('ascii')}",
+        data=encoded if post else None,
+        headers={"User-Agent": "YandaoGuoxue/1.0 classics-importer"},
+    )
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(request, timeout=30) as response:
+                result = json.load(response)
+            time.sleep(0.7)
+            return result
+        except urllib.error.HTTPError as error:
+            if error.code != 429 or attempt == 2:
+                raise
+            time.sleep(2 * (attempt + 1))
+    raise RuntimeError("MediaWiki API unavailable")
+
+
+def clean_plain_text(text: str) -> str:
+    text = str(text or "").replace("\r\n", "\n")
+    text = re.sub(r"一作「[^」]*」", "", text)
+    text = re.sub(r"\n(?:此作品在全世界|Public domain)[\s\S]*$", "", text)
+    text = re.sub(r"\n{3,}", "\n\n", text).strip()
+    return text
+
+
+def fetch_subpages(prefix: str) -> tuple[list[str], str]:
+    cache_file = CACHE_DIR / f"subpages-v2-{hashlib.sha256(prefix.encode('utf-8')).hexdigest()}.json"
+    if cache_file.exists():
+        cached = json.loads(cache_file.read_text(encoding="utf-8"))
+        return cached["titles"], cached["content"]
+
+    titles: list[str] = []
+    continuation = ""
+    while True:
+        params = {
+            "action": "query", "list": "allpages", "apprefix": f"{prefix}/",
+            "apnamespace": "0", "aplimit": "max", "format": "json", "formatversion": "2",
+        }
+        if continuation:
+            params["apcontinue"] = continuation
+        result = api_request(params)
+        titles.extend(item["title"] for item in result.get("query", {}).get("allpages", []))
+        continuation = result.get("continue", {}).get("apcontinue", "")
+        if not continuation:
+            break
+
+    excluded = ("/目錄", "/目录", "/全覽", "/全览", "/索引", "/版本", "/譯文", "/译文")
+    titles = [title for title in titles if not any(token in title for token in excluded)]
+    if not titles:
+        raise RuntimeError(f"no readable subpages found for {prefix}")
+
+    extracted: dict[str, str] = {}
+    for offset in range(0, len(titles), 20):
+        batch = titles[offset:offset + 20]
+        result = api_request(
+            {
+                "action": "query", "prop": "extracts", "explaintext": "1", "redirects": "1",
+                "titles": "|".join(batch), "format": "json", "formatversion": "2",
+            },
+            post=True,
+        )
+        for page in result.get("query", {}).get("pages", []):
+            extracted[page.get("title", "")] = clean_plain_text(page.get("extract", ""))
+
+    parts = []
+    used_titles = []
+    for title in titles:
+        content = extracted.get(title, "")
+        if len(content) < 80:
+            try:
+                _, content = fetch_extract(title)
+            except Exception:
+                continue
+        used_titles.append(title)
+        parts.append(f"【{title.split('/')[-1]}】\n{content}")
+    if not parts:
+        raise RuntimeError(f"subpages contain no readable text: {prefix}")
+    content = "\n\n".join(parts)
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    cache_file.write_text(json.dumps({"titles": used_titles, "content": content}, ensure_ascii=False), encoding="utf-8")
+    return used_titles, content
+
+
 def main() -> None:
     existing = {}
     if OUTPUT.exists():
@@ -97,14 +206,25 @@ def main() -> None:
         if book["id"] in existing:
             imported.append(existing[book["id"]])
             continue
-        requested_titles = book.get("wikiTitles") or [book["wikiTitle"]]
         parts = []
         resolved_titles = []
-        for requested_title in requested_titles:
-            resolved_title, content = fetch_extract(requested_title)
-            resolved_titles.append(resolved_title)
-            parts.append(content)
+        try:
+            if book.get("wikiPrefix"):
+                resolved_titles, content = fetch_subpages(book["wikiPrefix"])
+                parts.append(content)
+            else:
+                requested_titles = book.get("wikiTitles") or [book["wikiTitle"]]
+                for requested_title in requested_titles:
+                    resolved_title, content = fetch_extract(requested_title)
+                    resolved_titles.append(resolved_title)
+                    parts.append(content)
+        except Exception as error:
+            print(f"skip {book['title']}: {error}")
+            continue
         content = "\n\n".join(parts)
+        if len(content) < int(book.get("minLength", 500)):
+            print(f"skip {book['title']}: content too short ({len(content)})")
+            continue
         imported.append(
             {
                 "id": book["id"],
