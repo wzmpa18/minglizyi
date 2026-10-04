@@ -28,47 +28,66 @@ const BRAND_BG = "#F3EDF7";
 const COMPLIANCE_TEXT = "本APP内容仅供传统文化研究参考，不构成医疗建议。如有身体不适，请及时就医。";
 const PROFESSIONAL_WARNING = "⚠️ 专业操作，请勿自行尝试";
 
-const MERIDIAN_CHARTS: Record<string, string> = {
-  "手太阴肺经": "/assets/meridians/lung.webp",
-  "手阳明大肠经": "/assets/meridians/large-intestine.webp",
-  "足阳明胃经": "/assets/meridians/stomach.webp",
-  "足太阴脾经": "/assets/meridians/spleen.webp",
-  "手少阴心经": "/assets/meridians/heart.webp",
-  "手太阳小肠经": "/assets/meridians/small-intestine.webp",
-  "足太阳膀胱经": "/assets/meridians/bladder.webp",
-  "足少阴肾经": "/assets/meridians/kidney.webp",
-  "手厥阴心包经": "/assets/meridians/pericardium.webp",
-  "手少阳三焦经": "/assets/meridians/triple-energizer.webp",
-  "足少阳胆经": "/assets/meridians/gallbladder.webp",
-  "足厥阴肝经": "/assets/meridians/liver.webp",
-  "督脉": "/assets/meridians/governor-vessel.webp",
-  "任脉": "/assets/meridians/conception-vessel.webp",
+const MERIDIAN_SLUGS: Record<string, string> = {
+  "肺经": "lung", "手太阴肺经": "lung",
+  "大肠经": "large-intestine", "手阳明大肠经": "large-intestine",
+  "胃经": "stomach", "足阳明胃经": "stomach",
+  "脾经": "spleen", "足太阴脾经": "spleen",
+  "心经": "heart", "手少阴心经": "heart",
+  "小肠经": "small-intestine", "手太阳小肠经": "small-intestine",
+  "膀胱经": "bladder", "足太阳膀胱经": "bladder",
+  "肾经": "kidney", "足少阴肾经": "kidney",
+  "心包经": "pericardium", "手厥阴心包经": "pericardium",
+  "三焦经": "triple-energizer", "手少阳三焦经": "triple-energizer",
+  "胆经": "gallbladder", "足少阳胆经": "gallbladder",
+  "肝经": "liver", "足厥阴肝经": "liver",
+  "督脉": "governor-vessel",
+  "任脉": "conception-vessel",
 };
+
+function meridianChartSources(meridianName: string) {
+  const slug = MERIDIAN_SLUGS[meridianName];
+  return slug ? {
+    acupoints: `/assets/meridians/${slug}.webp`,
+    skeleton: `/assets/meridians/skeleton/${slug}.webp`,
+  } : null;
+}
 
 function MeridianChart({ meridianName, compact = false }: { meridianName: string; compact?: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const [zoom, setZoom] = useState(1);
-  const src = MERIDIAN_CHARTS[meridianName];
-  if (!src) return null;
+  const [chartMode, setChartMode] = useState<"acupoints" | "skeleton">("acupoints");
+  const sources = meridianChartSources(meridianName);
+  if (!sources) return null;
+  const src = sources[chartMode];
+  const modeLabel = chartMode === "acupoints" ? "人体穴位图" : "骨骼循行图";
 
   const image = (
     <img
       src={src}
-      alt={`${meridianName}经络穴位动态图`}
+      alt={`${meridianName}${modeLabel}动态图`}
       draggable={false}
       style={{ display: "block", width: `${zoom * 100}%`, maxWidth: "none", height: "auto", margin: "0 auto" }}
     />
   );
 
   return <>
+    <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+      {(["acupoints", "skeleton"] as const).map((mode) => (
+        <button key={mode} type="button" onClick={() => { setChartMode(mode); setZoom(1); }}
+          style={{ flex: 1, border: "1px solid #D7C9E3", borderRadius: 9, padding: "7px 6px", background: chartMode === mode ? BRAND_BG : "#FFF", color: chartMode === mode ? BRAND : "#777", fontWeight: 700, fontSize: 12 }}>
+          {mode === "acupoints" ? "人体穴位图" : "骨骼循行图"}
+        </button>
+      ))}
+    </div>
     <button
       type="button"
       onClick={() => { setZoom(1); setExpanded(true); }}
       style={{ width: "100%", padding: 0, border: "none", borderRadius: "14px", overflow: "hidden", background: "#EEF6F2", cursor: "zoom-in" }}
       aria-label={`放大查看${meridianName}动态图`}
     >
-      <img src={src} alt={`${meridianName}经络穴位动态图`} draggable={false} style={{ display: "block", width: "100%", height: compact ? "250px" : "auto", objectFit: "contain" }} />
-      <span style={{ display: "block", padding: "7px 10px", fontSize: "11px", color: "#5D6D65", background: "white" }}>点击放大 · 动画循行 · 可离线查看</span>
+      <img key={src} src={src} alt={`${meridianName}${modeLabel}动态图`} draggable={false} style={{ display: "block", width: "100%", height: compact ? "250px" : "auto", objectFit: "contain" }} />
+      <span style={{ display: "block", padding: "7px 10px", fontSize: "11px", color: "#5D6D65", background: "white" }}>点击放大 · {modeLabel} · 可离线查看</span>
     </button>
     {expanded && (
       <div
@@ -76,7 +95,7 @@ function MeridianChart({ meridianName, compact = false }: { meridianName: string
         style={{ position: "fixed", inset: 0, zIndex: 1400, background: "rgba(0,0,0,.88)", display: "flex", flexDirection: "column", padding: "12px" }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", color: "white", paddingBottom: "10px" }}>
-          <strong style={{ fontSize: "14px" }}>{meridianName}</strong>
+          <strong style={{ fontSize: "14px" }}>{meridianName} · {modeLabel}</strong>
           <div style={{ display: "flex", gap: "8px" }}>
             <button type="button" onClick={(e) => { e.stopPropagation(); setZoom(v => Math.max(1, v - .5)); }} style={{ width: "38px", height: "34px", border: 0, borderRadius: "17px", fontSize: "20px" }}>−</button>
             <button type="button" onClick={(e) => { e.stopPropagation(); setZoom(v => Math.min(3, v + .5)); }} style={{ width: "38px", height: "34px", border: 0, borderRadius: "17px", fontSize: "20px" }}>＋</button>
@@ -372,7 +391,7 @@ function PositioningModal({
 
         {/* Body diagram */}
         <div style={{ padding: "16px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-          {meridianName && MERIDIAN_CHARTS[meridianName]
+          {meridianName && meridianChartSources(meridianName)
             ? <MeridianChart meridianName={meridianName} compact />
             : <BodyDiagramSVG area={bodyArea} acupointCode={acupointCode} acupointName={acupointName} />}
           <span

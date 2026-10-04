@@ -1,0 +1,21 @@
+3D acupoint layout data
+========================
+
+The schematic point coordinates used to derive acupoints-3d.json are adapted
+from the Let Energy Flow dataset by the Let Energy Flow authors:
+
+https://github.com/MuzikPro/letenergyflow
+
+Dataset licence: Creative Commons Attribution-ShareAlike 4.0 International
+https://creativecommons.org/licenses/by-sa/4.0/
+
+Changes made by the Yan Dao Guoxue project:
+- excluded the non-canonical GV29 entry to match the 361-point catalogue;
+- normalised DU/GV, RN/CV, SJ/TE and LV/LR aliases;
+- projected the source atlas coordinates onto the Z-Anatomy skin mesh;
+- mirrored bilateral markers and attached the existing simplified-Chinese names.
+
+acupoints-3d.json remains available under CC BY-SA 4.0. Every record retains
+its source IDs and review status. The coordinates are schematic_unvalidated:
+they are educational layout positions, not clinical measurements or guidance
+for locating or needling a point on a real person.

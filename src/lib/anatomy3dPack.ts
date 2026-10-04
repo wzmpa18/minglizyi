@@ -8,9 +8,9 @@ import {
   type DownloadProgress,
 } from "./offlinePackClient";
 
-export const ANATOMY_3D_PACK_ID = "tcm-anatomy-3d-v1";
+export const ANATOMY_3D_PACK_ID = "tcm-anatomy-3d-v2";
 
-export type AnatomyLayerId = "skeletal" | "visceral" | "muscular";
+export type AnatomyLayerId = "skin" | "muscular" | "visceral" | "skeletal";
 
 export interface AnatomyLayerManifest {
   id: AnatomyLayerId;
@@ -39,6 +39,10 @@ function decodeManifest(bytes: Uint8Array): AnatomyPackManifest {
   const parsed = JSON.parse(new TextDecoder("utf-8").decode(bytes)) as AnatomyPackManifest;
   if (parsed.format !== "yandao-anatomy-3d" || !Array.isArray(parsed.layers)) {
     throw new Error("3D 解剖包格式不受支持");
+  }
+  const required: AnatomyLayerId[] = ["skin", "muscular", "visceral", "skeletal"];
+  if (required.some((id) => !parsed.layers.some((layer) => layer.id === id))) {
+    throw new Error("3D 解剖包不是完整四层版本，请重新下载");
   }
   return parsed;
 }

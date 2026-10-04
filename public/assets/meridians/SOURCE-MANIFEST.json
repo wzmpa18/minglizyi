@@ -1,0 +1,119 @@
+{
+  "sourcePage": "https://www.163.com/dy/article/GFRB2VGI0545R7B7.html",
+  "retrieved": "2026-10-04",
+  "note": "14 skeleton-flow animations from the referenced article; lung/pericardium/liver acupoint animations replace prior placeholders. Existing 11 user-provided acupoint animations retained.",
+  "records": [
+    {
+      "index": 1,
+      "slug": "conception-vessel",
+      "file": "skeleton/conception-vessel.webp",
+      "frames": 23,
+      "sourceFile": "01_skeleton_6bac2588.gif",
+      "sourceSha256": "4e549e30e4e5de10f40e5c636cfacfd82d4884d40b0d1615a5779039f6856edf"
+    },
+    {
+      "index": 2,
+      "slug": "governor-vessel",
+      "file": "skeleton/governor-vessel.webp",
+      "frames": 23,
+      "sourceFile": "02_skeleton_3c4073b0.gif",
+      "sourceSha256": "1c9a6db7cc6b369e407128328403c869f6fc450c4bcc2fb3d95f03527ebc92c3"
+    },
+    {
+      "index": 3,
+      "slug": "lung",
+      "file": "skeleton/lung.webp",
+      "frames": 22,
+      "sourceFile": "03_skeleton_9e0e53e0.gif",
+      "sourceSha256": "36c72e750d13e509752f16c945c19abab703dc8f71205b35e9e4bf89bd136f3c"
+    },
+    {
+      "index": 4,
+      "slug": "large-intestine",
+      "file": "skeleton/large-intestine.webp",
+      "frames": 23,
+      "sourceFile": "04_skeleton_26415fdb.gif",
+      "sourceSha256": "32cedcd2c2e78c2cd408df0276a63302943c6c7b21163a1339561b4a4d740c25"
+    },
+    {
+      "index": 5,
+      "slug": "stomach",
+      "file": "skeleton/stomach.webp",
+      "frames": 23,
+      "sourceFile": "05_skeleton_a16fdc4d.gif",
+      "sourceSha256": "fd013edebe6d16122cd28f2895cca2ec6049bae9c6940a6125baeca85a94d231"
+    },
+    {
+      "index": 6,
+      "slug": "spleen",
+      "file": "skeleton/spleen.webp",
+      "frames": 23,
+      "sourceFile": "06_skeleton_0294dd5c.gif",
+      "sourceSha256": "2bee3afc2a720ae8e2de98d9dcc6de7ebcf63cc96a05662acc8ae3c56512e201"
+    },
+    {
+      "index": 7,
+      "slug": "heart",
+      "file": "skeleton/heart.webp",
+      "frames": 23,
+      "sourceFile": "07_skeleton_4d3bd900.gif",
+      "sourceSha256": "0713f1a394f5c0611e3e6b7cffabe1a12f52bc995b269b09b42cf0d217a532e0"
+    },
+    {
+      "index": 8,
+      "slug": "small-intestine",
+      "file": "skeleton/small-intestine.webp",
+      "frames": 23,
+      "sourceFile": "08_skeleton_902ff3a1.gif",
+      "sourceSha256": "696c4d852063a48c038d458a3e9b37e0fabade01f3279f17c1534b33b0a7a9c8"
+    },
+    {
+      "index": 9,
+      "slug": "bladder",
+      "file": "skeleton/bladder.webp",
+      "frames": 23,
+      "sourceFile": "09_skeleton_6a950f86.gif",
+      "sourceSha256": "90661064df23d7110108d5b15d40b27efc1390b1ca0e5124490ad77952b64081"
+    },
+    {
+      "index": 10,
+      "slug": "kidney",
+      "file": "skeleton/kidney.webp",
+      "frames": 23,
+      "sourceFile": "10_skeleton_bc7b932c.gif",
+      "sourceSha256": "d3407061639f2d7490fb25256e76495efd0eb34b044c2f0a10ce811b0d84f54b"
+    },
+    {
+      "index": 11,
+      "slug": "pericardium",
+      "file": "skeleton/pericardium.webp",
+      "frames": 23,
+      "sourceFile": "11_skeleton_e695c94b.gif",
+      "sourceSha256": "2bef908d5d0c28bd1dd6a458238644a44a0ead61d28b8d97a687a098c864ac92"
+    },
+    {
+      "index": 12,
+      "slug": "triple-energizer",
+      "file": "skeleton/triple-energizer.webp",
+      "frames": 23,
+      "sourceFile": "12_skeleton_435dac86.gif",
+      "sourceSha256": "6329744d37a3b8511044cf7cb8cae0e4e786dc1609b790316fef9eea8fb17fb3"
+    },
+    {
+      "index": 13,
+      "slug": "gallbladder",
+      "file": "skeleton/gallbladder.webp",
+      "frames": 23,
+      "sourceFile": "13_skeleton_713e34da.gif",
+      "sourceSha256": "7d3e1818462756a1d573a8f930f375d0ccf125a83457d8c0e87767c31e6981e7"
+    },
+    {
+      "index": 14,
+      "slug": "liver",
+      "file": "skeleton/liver.webp",
+      "frames": 23,
+      "sourceFile": "14_skeleton_a0e45786.gif",
+      "sourceSha256": "258502df2c8b4403d0bc2506062a1df1693384b343c9526ab0b61233fba12ae2"
+    }
+  ]
+}
