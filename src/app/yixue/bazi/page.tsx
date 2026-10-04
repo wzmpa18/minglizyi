@@ -700,6 +700,15 @@ function TabDetail({result,gender}:{
     return { text: "平", color: "#888" };
   };
 
+  const getShiShenMeaning = (name: string) => {
+    if (["比肩","劫财"].includes(name)) return "同类五行，基础取象侧重自身、同辈与竞争协作";
+    if (["食神","伤官"].includes(name)) return "日主所生，基础取象侧重表达、输出与行动发挥";
+    if (["正财","偏财"].includes(name)) return "日主所克，基础取象侧重资源、事务与经营管理";
+    if (["正官","七杀"].includes(name)) return "克制日主，基础取象侧重规则、责任与外部压力";
+    if (["正印","偏印"].includes(name)) return "生助日主，基础取象侧重学习、支持与知识吸收";
+    return "需结合原局、大运及各层干支生克合参";
+  };
+
   // ===== 流月计算(五虎遁) =====
   const liuyueList = useMemo(() => {
     if (!curLn) return [];
@@ -836,8 +845,20 @@ function TabDetail({result,gender}:{
 
   const curLs = selectedLs === undefined ? undefined : liushiList[selectedLs];
 
-  // ===== 上方命盘只显示：本命四柱 → 流年 → 流月 → 流日 → 流时 =====
-  // 大运保留在下方独立大运行，不重复挤入上方四柱表。
+  type SelectedFlowDetail = {
+    level: "流月" | "流日" | "流时";
+    label: string;
+    gan: TianGan;
+    zhi: DiZhi;
+    ganzhi: string;
+    shishenGan: string;
+  };
+  const selectedFlowDetails: SelectedFlowDetail[] = [];
+  if (curLy) selectedFlowDetails.push({ level:"流月", label:`${curLy.jieqi}起`, gan:curLy.gan, zhi:curLy.zhi, ganzhi:`${curLy.gan}${curLy.zhi}`, shishenGan:curLy.shishenGan });
+  if (curLr) selectedFlowDetails.push({ level:"流日", label:`${curLr.year}/${curLr.month}/${curLr.day}`, gan:curLr.gan, zhi:curLr.zhi, ganzhi:curLr.ganzhi, shishenGan:curLr.shishenGan });
+  if (curLs) selectedFlowDetails.push({ level:"流时", label:`${curLs.label}（${String(curLs.hour ?? 0).padStart(2,"0")}:00）`, gan:curLs.gan, zhi:curLs.zhi, ganzhi:curLs.ganzhi, shishenGan:curLs.shishenGan });
+
+  // ===== 保持原命盘结构，只在末尾追加流日、流时 =====
   type DisplayPillar = {
     label: string;
     sublabel?: string;
@@ -851,6 +872,7 @@ function TabDetail({result,gender}:{
     xunkong: string;
     zuo: string;
     isDayPillar: boolean;
+    isDayun?: boolean;
     isLiunian?: boolean;
     isLiuyue?: boolean;
     isLiuri?: boolean;
@@ -872,7 +894,27 @@ function TabDetail({result,gender}:{
       isDayPillar: i === 2,
     }));
 
-    // 流年列（第5列）
+    // 大运列（原有列，保持不动）
+    if (curDy) {
+      const dyGanzhi = curDy.gan + curDy.zhi;
+      base.push({
+        label: "大运",
+        sublabel: `${Math.floor(curDy.startAge)}-${Math.floor(curDy.startAge)+9}岁`,
+        gan: curDy.gan as TianGan,
+        zhi: curDy.zhi as DiZhi,
+        ganzhi: dyGanzhi,
+        shishenGan: curDy.shishenGan || getShiShen(dayGan, curDy.gan as TianGan) || "",
+        shishenZhi: [],
+        canggan: curDy.canggan || getCangGan(curDy.zhi as DiZhi) || [],
+        nayin: curDy.nayin || getNaYin(dyGanzhi) || "",
+        xunkong: getXunKong(dyGanzhi) || "",
+        zuo: getChangSheng(dayGan, curDy.zhi as DiZhi),
+        isDayPillar: false,
+        isDayun: true,
+      });
+    }
+
+    // 流年列（原有列，保持不动）
     if (curLn && curDy) {
       const lnGanzhi = curLn.gan + curLn.zhi;
       base.push({
@@ -958,7 +1000,7 @@ function TabDetail({result,gender}:{
       let ssName = "";
       if (dp.isDayPillar) {
         ssName = idx === 0 ? (gender === "male" ? "元男" : "元女") : ((dp.shishenZhi && dp.shishenZhi[idx]) || "");
-      } else if (dp.isLiunian || dp.isLiuyue || dp.isLiuri || dp.isLiushi) {
+      } else if (dp.isDayun || dp.isLiunian || dp.isLiuyue || dp.isLiuri || dp.isLiushi) {
         ssName = getShiShen(dayGan, g as TianGan) || "";
       } else {
         ssName = (dp.shishenZhi && dp.shishenZhi[idx]) || "";
@@ -1201,11 +1243,10 @@ function TabDetail({result,gender}:{
                   className="flex-1 min-w-0 text-center cursor-pointer"
                   style={{padding:"2px 0", borderLeft:localIndex > 0 ? "1px solid #eee" : "none", backgroundColor:isActive ? "#e8e0f0" : "#fff", lineHeight:"1.2"}}
                 >
-                  <div style={{fontSize:"7px", color:"#888", whiteSpace:"nowrap"}}>{lr.label}</div>
-                  <div style={{fontSize:"9px", fontWeight:isActive ? "bold" : "normal"}}>
-                    <span style={{color:WX_COLORS[getGanWuxing(lr.gan)||"火"]}}>{lr.gan}</span>
-                    <span style={{color:WX_COLORS[getZhiWuxing(lr.zhi)||"火"]}}>{lr.zhi}</span>
-                  </div>
+                  <div style={{fontSize:"7px", color:"#888", lineHeight:"10px", whiteSpace:"nowrap"}}>{lr.label}</div>
+                  <div style={{fontSize:"10px", fontWeight:"bold", lineHeight:"12px", color:WX_COLORS[getGanWuxing(lr.gan)||"火"]}}>{lr.gan}</div>
+                  <div style={{fontSize:"7px", color:"#333", lineHeight:"9px", whiteSpace:"nowrap"}}>{lr.shishenGan}</div>
+                  <div style={{fontSize:"10px", fontWeight:"bold", lineHeight:"12px", color:WX_COLORS[getZhiWuxing(lr.zhi)||"火"]}}>{lr.zhi}</div>
                 </div>;
               })}
             </div>
@@ -1227,11 +1268,10 @@ function TabDetail({result,gender}:{
               className="flex-1 min-w-0 text-center cursor-pointer"
               style={{padding:"3px 1px", borderLeft:index > 0 ? "1px solid #eee" : "none", backgroundColor:isActive ? "#e8e0f0" : "#fff", lineHeight:"1.25"}}
             >
-              <div style={{fontSize:"8px", color:"#666"}}>{ls.label.slice(0, 1)}</div>
-              <div style={{fontSize:"10px", fontWeight:isActive ? "bold" : "normal"}}>
-                <span style={{color:WX_COLORS[getGanWuxing(ls.gan)||"火"]}}>{ls.gan}</span>
-                <span style={{color:WX_COLORS[getZhiWuxing(ls.zhi)||"火"]}}>{ls.zhi}</span>
-              </div>
+              <div style={{fontSize:"8px", color:"#666", lineHeight:"10px"}}>{ls.label.slice(0, 1)}</div>
+              <div style={{fontSize:"10px", fontWeight:"bold", lineHeight:"12px", color:WX_COLORS[getGanWuxing(ls.gan)||"火"]}}>{ls.gan}</div>
+              <div style={{fontSize:"7px", color:"#333", lineHeight:"9px", whiteSpace:"nowrap"}}>{ls.shishenGan}</div>
+              <div style={{fontSize:"10px", fontWeight:"bold", lineHeight:"12px", color:WX_COLORS[getZhiWuxing(ls.zhi)||"火"]}}>{ls.zhi}</div>
             </div>;
           })}
         </div>
@@ -1263,6 +1303,34 @@ function TabDetail({result,gender}:{
             {curLn.shishenGan==="比肩"||curLn.shishenGan==="劫财"?"竞争较多，合作需谨慎，破财之象需留意。":""}
           </div>
         </div>
+      </div>}
+
+      {/* 所选流月/流日/流时的本地基础说明，随点击逐层增加。 */}
+      {selectedFlowDetails.length > 0 && <div className="bg-white px-3 py-2">
+        {selectedFlowDetails.map((item, index) => {
+          const ganWx = getGanWuxing(item.gan) || "火";
+          const zhiWx = getZhiWuxing(item.zhi) || "火";
+          const hidden = getCangGan(item.zhi) || [];
+          return <div key={item.level} className={index > 0 ? "mt-2 pt-2" : ""} style={index > 0 ? {borderTop:"1px dashed #ddd"} : undefined}>
+            <div className="mb-1 flex items-center gap-2">
+              <strong className="text-[14px]" style={{color:BRAND_PURPLE}}>{item.level} · {item.ganzhi}</strong>
+              <span className="text-[11px] text-[#777]">{item.label}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-[12px] text-[#333]">
+              <div>天干：<span style={{color:WX_COLORS[ganWx]}}>{item.gan}（{ganWx}）</span></div>
+              <div>十神：<span style={{color:BRAND_PURPLE}}>{item.shishenGan}</span></div>
+              <div>地支：<span style={{color:WX_COLORS[zhiWx]}}>{item.zhi}（{zhiWx}）</span></div>
+              <div>藏干：{hidden.join(" ") || "-"}</div>
+              <div>纳音：{getNaYin(item.ganzhi) || "-"}</div>
+              <div>空亡：{getXunKong(item.ganzhi) || "-"}</div>
+              <div>十二长生：{getChangSheng(dayGan, item.zhi) || "-"}</div>
+              <div>与日主：{item.shishenGan}</div>
+            </div>
+            <div className="mt-1 text-[11px] leading-[1.7] text-[#777]">
+              {item.level}{item.ganzhi}，天干{item.gan}对日主取{item.shishenGan}；{getShiShenMeaning(item.shishenGan)}。地支{item.zhi}藏{hidden.join("、") || "无"}，应与原局、大运及上一级流运共同参看。
+            </div>
+          </div>;
+        })}
       </div>}
     </div>}
 
