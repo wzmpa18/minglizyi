@@ -78,6 +78,7 @@ const ZONES: ZoneDef[] = [
     desc: "经史子集 · 传统经典 · 系统研读",
     trackKey: "guoxue",
     entries: [
+      { key: "classics", label: "📜 国学典籍库", url: "/books" },
       { key: "learn", label: "📖 知识学习", url: "/academy/learn?track=guoxue" },
       { key: "bank", label: "📝 题库练习", url: "/academy/question-bank" },
     ],
