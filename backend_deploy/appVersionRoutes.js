@@ -54,8 +54,37 @@ function readReleaseConfig() {
   return DEFAULT_RELEASE;
 }
 
-router.get('/', (_req, res) => {
-  res.json({ success: true, data: readReleaseConfig() });
+function resolveClientPlatform(req) {
+  const queryPlatform = String(req.query.platform || '').toLowerCase();
+  if (queryPlatform === 'ios' || queryPlatform === 'android') return queryPlatform;
+  const headerPlatform = String(req.headers['x-client-platform'] || '').toLowerCase();
+  if (headerPlatform === 'ios' || headerPlatform === 'android') return headerPlatform;
+  const userAgent = String(req.headers['user-agent'] || '');
+  if (/YandaoGuoxueIOS/i.test(userAgent)) return 'ios';
+  if (/YandaoGuoxueAndroid/i.test(userAgent)) return 'android';
+  return 'web';
+}
+
+router.get('/', (req, res) => {
+  const release = readReleaseConfig();
+  if (resolveClientPlatform(req) === 'ios') {
+    // iOS releases are delivered only by App Store Connect. Returning the
+    // Android versionCode here made the shared checker offer an APK to iOS.
+    return res.json({
+      success: true,
+      data: {
+        ...release,
+        latestVersion: process.env.IOS_APP_VERSION || '25.0.77',
+        latestVersionCode: Number(process.env.IOS_APP_BUILD || 4),
+        downloadUrl: '',
+        downloadPage: '',
+        releaseNotes: [],
+        forceUpdate: false,
+        platform: 'ios',
+      },
+    });
+  }
+  return res.json({ success: true, data: { ...release, platform: 'android' } });
 });
 
-module.exports = { router, DEFAULT_RELEASE };
+module.exports = { router, DEFAULT_RELEASE, resolveClientPlatform };
