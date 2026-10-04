@@ -14,6 +14,7 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -24,15 +25,28 @@ import java.util.Set;
  */
 @CapacitorPlugin(name = "LocalTts")
 public class LocalTtsPlugin extends Plugin implements TextToSpeech.OnInitListener {
+    private static final String PREFERRED_ENGINE = "com.iflytek.speechsuite";
     private TextToSpeech tts;
     private volatile boolean initialized = false;
     private volatile String initError = null;
+    private volatile String requestedEngine = PREFERRED_ENGINE;
+    private volatile String activeEngine = "";
+    private volatile boolean fallbackAttempted = false;
     private Voice offlineChineseVoice;
     private volatile String finalUtteranceId = null;
 
     @Override
     public void load() {
-        tts = new TextToSpeech(getContext().getApplicationContext(), this);
+        initializeEngine(PREFERRED_ENGINE);
+    }
+
+    private void initializeEngine(String enginePackage) {
+        requestedEngine = enginePackage == null ? "" : enginePackage;
+        initialized = false;
+        initError = null;
+        tts = enginePackage == null
+                ? new TextToSpeech(getContext().getApplicationContext(), this)
+                : new TextToSpeech(getContext().getApplicationContext(), this, enginePackage);
         tts.setOnUtteranceProgressListener(new UtteranceProgressListener() {
             @Override public void onStart(String utteranceId) {
                 notifyState("speaking", utteranceId, null);
@@ -55,12 +69,23 @@ public class LocalTtsPlugin extends Plugin implements TextToSpeech.OnInitListene
     @Override
     public void onInit(int status) {
         if (status != TextToSpeech.SUCCESS) {
+            if (switchToSystemFallback()) return;
             initError = "手机语音服务启动失败";
             return;
         }
-        initialized = true;
+        activeEngine = requestedEngine.isEmpty() ? String.valueOf(tts.getDefaultEngine()) : requestedEngine;
         offlineChineseVoice = chooseOfflineChineseVoice(tts.getVoices(), "warmMale", null);
+        if (offlineChineseVoice == null && switchToSystemFallback()) return;
+        initialized = true;
         if (offlineChineseVoice == null) initError = "手机尚未安装离线中文语音包";
+    }
+
+    private boolean switchToSystemFallback() {
+        if (fallbackAttempted || !PREFERRED_ENGINE.equals(requestedEngine)) return false;
+        fallbackAttempted = true;
+        if (tts != null) tts.shutdown();
+        initializeEngine(null);
+        return true;
     }
 
     private Voice chooseOfflineChineseVoice(Set<Voice> voices, String style, String requestedName) {
@@ -105,6 +130,7 @@ public class LocalTtsPlugin extends Plugin implements TextToSpeech.OnInitListene
         result.put("ready", initialized);
         result.put("available", initialized && offlineChineseVoice != null);
         result.put("voiceName", offlineChineseVoice == null ? "" : offlineChineseVoice.getName());
+        result.put("engineName", activeEngine);
         result.put("message", initError == null ? (initialized ? "本机离线中文朗读可用" : "正在启动手机语音服务") : initError);
         call.resolve(result);
     }
@@ -114,10 +140,12 @@ public class LocalTtsPlugin extends Plugin implements TextToSpeech.OnInitListene
         JSArray output = new JSArray();
         if (initialized && tts != null && tts.getVoices() != null) {
             List<Voice> voices = new ArrayList<>();
+            Set<String> voiceNames = new HashSet<>();
             for (Voice voice : tts.getVoices()) {
                 if (voice.getLocale() != null
                         && "zh".equalsIgnoreCase(voice.getLocale().getLanguage())
-                        && !voice.isNetworkConnectionRequired()) voices.add(voice);
+                        && !voice.isNetworkConnectionRequired()
+                        && voiceNames.add(voice.getName())) voices.add(voice);
             }
             voices.sort(Comparator.comparing(Voice::getName));
             for (Voice voice : voices) {
@@ -152,7 +180,10 @@ public class LocalTtsPlugin extends Plugin implements TextToSpeech.OnInitListene
         tts.setLanguage(Locale.SIMPLIFIED_CHINESE);
         // setLanguage may switch voices, so pin the verified offline voice afterwards.
         tts.setVoice(selectedVoice);
-        tts.setPitch("warmMale".equals(style) ? 0.78f : "softFemale".equals(style) ? 0.94f : 0.86f);
+        // Large pitch changes make Chinese initials sound metallic and unclear on
+        // many bundled engines. Keep every preset close to the natural register;
+        // voice selection and a measured reading rate provide the distinction.
+        tts.setPitch("warmMale".equals(style) ? 0.92f : "softFemale".equals(style) ? 1.02f : 0.98f);
         tts.setSpeechRate(rate);
 
         List<String> chunks = splitText(text, 1000);

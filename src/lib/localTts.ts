@@ -8,6 +8,7 @@ export interface LocalTtsStatus {
   voiceName?: string;
   message: string;
   source: "android" | "browser" | "unavailable";
+  engineName?: string;
 }
 
 export type LocalTtsStyle = "warmMale" | "warmNatural" | "softFemale";
@@ -113,7 +114,7 @@ export async function speakLocalText(
   utterance.voice = voice;
   utterance.lang = voice.lang;
   utterance.rate = Math.max(0.6, Math.min(1.15, rate));
-  utterance.pitch = style === "warmMale" ? 0.78 : style === "softFemale" ? 0.94 : 0.86;
+  utterance.pitch = style === "warmMale" ? 0.92 : style === "softFemale" ? 1.02 : 0.98;
   utterance.onstart = () => onState?.({ state: "speaking" });
   utterance.onend = () => { browserUtterance = null; onState?.({ state: "finished" }); };
   utterance.onerror = () => { browserUtterance = null; onState?.({ state: "error", message: "本机语音朗读失败" }); };

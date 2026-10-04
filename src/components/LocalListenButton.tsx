@@ -20,7 +20,7 @@ export function LocalListenButton({ text, contentId, compact = false }: { text: 
   const [status, setStatus] = useState<LocalTtsStatus | null>(null);
   const [state, setState] = useState<"idle" | "speaking" | "error">("idle");
   const [message, setMessage] = useState("");
-  const [rate, setRate] = useState(0.84);
+  const [rate, setRate] = useState(0.8);
   const [style, setStyle] = useState<LocalTtsStyle>("warmMale");
   const [voices, setVoices] = useState<LocalTtsVoice[]>([]);
   const [voiceName, setVoiceName] = useState("");
@@ -35,8 +35,8 @@ export function LocalListenButton({ text, contentId, compact = false }: { text: 
     let active = true;
     try {
       const savedRate = Number(window.localStorage.getItem(RATE_KEY));
-      const migratedRate = savedRate === 0.75 ? 0.72 : savedRate === 0.9 ? 0.84 : savedRate === 1.1 ? 0.96 : savedRate;
-      if ([0.72, 0.84, 0.96].includes(migratedRate)) setRate(migratedRate);
+      const migratedRate = savedRate === 0.75 || savedRate === 0.72 ? 0.7 : savedRate === 0.9 || savedRate === 0.84 ? 0.8 : savedRate === 1.1 || savedRate === 0.96 ? 0.92 : savedRate;
+      if ([0.7, 0.8, 0.92].includes(migratedRate)) setRate(migratedRate);
       const savedStyle = window.localStorage.getItem(STYLE_KEY);
       if (["warmMale", "warmNatural", "softFemale"].includes(savedStyle || "")) setStyle(savedStyle as LocalTtsStyle);
       setVoiceName(window.localStorage.getItem(VOICE_KEY) || "");
@@ -108,7 +108,7 @@ export function LocalListenButton({ text, contentId, compact = false }: { text: 
       {!compact && (
         <select aria-label="朗读速度" value={rate} onChange={(e) => setRate(Number(e.target.value))}
           className="rounded-full border border-gray-200 bg-white px-2 py-1 text-xs text-gray-600">
-          <option value={0.72}>舒缓</option><option value={0.84}>标准</option><option value={0.96}>稍快</option>
+          <option value={0.7}>舒缓</option><option value={0.8}>标准</option><option value={0.92}>稍快</option>
         </select>
       )}
       {!compact && <span className="self-center text-[10px] text-gray-400">离线朗读；音色设置保存在本机</span>}
