@@ -1,6 +1,6 @@
 {
   "name": "06-app",
-  "version": "v25.0.99",
+  "version": "v25.0.100",
   "private": true,
   "scripts": {
     "dev": "node scripts/gen-version.js && next dev",
@@ -29,6 +29,7 @@
     "cos-nodejs-sdk-v5": "^3.0.0",
     "echarts": "^6.1.0",
     "echarts-for-react": "^3.0.6",
+    "fflate": "^0.8.3",
     "html2canvas": "^1.4.1",
     "html2canvas-pro": "^2.3.3",
     "iztro": "^2.5.8",
@@ -41,13 +42,15 @@
     "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "tailwind-merge": "^3.6.0"
+    "tailwind-merge": "^3.6.0",
+    "three": "^0.186.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.186.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
     "ssh2": "^1.17.0",

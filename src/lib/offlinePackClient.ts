@@ -153,6 +153,33 @@ export interface DownloadResult {
   resumedFrom?: number;
 }
 
+async function readResponseWithProgress(
+  res: Response,
+  startByte: number,
+  expectedTotal: number,
+  onProgress?: DownloadProgress,
+): Promise<ArrayBuffer> {
+  if (!res.body || !onProgress) return res.arrayBuffer();
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!value?.byteLength) continue;
+    chunks.push(value);
+    received += value.byteLength;
+    onProgress(Math.min(startByte + received, expectedTotal), expectedTotal);
+  }
+  const merged = new Uint8Array(received);
+  let offset = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return merged.buffer;
+}
+
 /**
  * 下载 pack。带断点续传：OFFLINE_PACK 分区中已有 .part 时用 Range 从断点继续。
  * SHA256 校验失败：清理 .part 残片并返回 error（绝不启用，第六十章）。
@@ -184,7 +211,8 @@ export async function downloadPack(pack: ManifestPack, onProgress?: DownloadProg
       return { ok: false, packId: pack.packId, version: pack.version, error: "manifest 与文件 sha256 不一致，中止" };
     }
 
-    const chunk = await res.arrayBuffer();
+    const responseStart = res.status === 206 ? startByte : 0;
+    const chunk = await readResponseWithProgress(res, responseStart, pack.size, onProgress);
     // 拼接断点（206 场景）
     let full: ArrayBuffer;
     if (res.status === 206 && existingPart && startByte > 0) {

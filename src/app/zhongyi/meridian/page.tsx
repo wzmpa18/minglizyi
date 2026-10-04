@@ -104,6 +104,29 @@ function getCatColor(cat: string) {
   return CATEGORY_COLORS[cat] || { bg: "#F5F5F5", text: "#616161" };
 }
 
+function Anatomy3DEntry({ compact = false }: { compact?: boolean }) {
+  const router = useRouter();
+  return (
+    <button
+      type="button"
+      onClick={() => router.push("/zhongyi/anatomy3d")}
+      style={{
+        width: "100%", display: "flex", alignItems: "center", gap: 12,
+        padding: compact ? "10px 12px" : "13px 14px", border: "1px solid #DEC9EC",
+        borderRadius: 14, background: "linear-gradient(135deg,#FFF 0%,#F5ECFA 100%)",
+        boxShadow: "0 3px 12px rgba(123,47,190,.08)", textAlign: "left", cursor: "pointer",
+      }}
+    >
+      <span style={{ width: 38, height: 38, borderRadius: 12, display: "grid", placeItems: "center", background: "#EADCF4", fontSize: 21 }}>🫀</span>
+      <span style={{ flex: 1 }}>
+        <strong style={{ display: "block", color: "#4C3260", fontSize: 14 }}>3D人体解剖分层</strong>
+        <span style={{ display: "block", color: "#7D6F84", fontSize: 11, marginTop: 3 }}>旋转 · 缩放 · 骨骼/脏腑/肌肉 · 下载后离线使用</span>
+      </span>
+      <span style={{ color: BRAND, fontSize: 18 }}>›</span>
+    </button>
+  );
+}
+
 // ==================== 穴位定位图模态框 ====================
 type BodyArea = "head" | "arms" | "legs" | "torso" | "back" | "hands" | "feet";
 
@@ -567,6 +590,7 @@ function MeridianListPage() {
       </div>
 
       <div style={{ padding: "12px" }}>
+        <div style={{ marginBottom: 14 }}><Anatomy3DEntry /></div>
         {activeTab === "standard" && !searchQuery && Object.entries(groupedMeridians).map(([cat, meridians]) => {
             const cc = getCatColor(cat);
             return (
@@ -663,6 +687,8 @@ function AcupointListPage({ meridianName }: { meridianName: string }) {
         <div style={{ fontSize: "12px", color: "#666", fontWeight: "bold", margin: "2px 4px 8px" }}>经络穴位动态图</div>
         <MeridianChart meridianName={meridian.name} />
       </div>
+
+      <div style={{ margin: "0 12px 12px" }}><Anatomy3DEntry compact /></div>
 
       <div style={{ margin: "12px", background: "white", borderRadius: "16px", padding: "14px", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
         <div style={{ fontSize: "12px", color: "#999", marginBottom: "6px" }}>循行路线</div>
