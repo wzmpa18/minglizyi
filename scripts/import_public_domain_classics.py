@@ -1,4 +1,4 @@
-"""Import a small, reviewed public-domain classics batch from Wikisource.
+"""Import a reviewed public-domain classics batch from verified source libraries.
 
 The importer uses the MediaWiki API instead of OCR.  It stores source and
 license metadata beside every text so the app can show one unified notice.
@@ -113,7 +113,7 @@ def fetch_extract(title: str) -> tuple[str, str]:
     text = re.sub(r"^Image\s*$", "", text, flags=re.M)
     text = re.sub(r"\n{3,}", "\n\n", text).strip()
     if len(text) < 80:
-        raise RuntimeError(f"Wikisource extract too short: {title} ({len(text)})")
+        raise RuntimeError(f"Source extract too short: {title} ({len(text)})")
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     cache_file.write_text(json.dumps({"title": page["title"], "content": text}, ensure_ascii=False), encoding="utf-8")
     return str(page["title"]), text
@@ -277,7 +277,7 @@ def main() -> None:
     payload = {
         "schemaVersion": 1,
         "generatedAt": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
-        "notice": "仅收录可核验的古籍原文；不含现代译注。文本来自维基文库，具体公版或 CC BY-SA 4.0 状态以来源页为准。",
+        "notice": "仅收录可核验的古籍原文，不含现代译注。文本来自维基文库与 Project Gutenberg；具体公版或开放许可状态以每部典籍的来源页为准。",
         "books": imported,
     }
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
