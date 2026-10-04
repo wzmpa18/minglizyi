@@ -395,6 +395,16 @@ export default function InvitePage() {
                 : `再邀请 ${overview.growthCampaign.remainingInvites} 位新用户完成手机号注册，即可获得一张会员优惠券。`}
             </div>
             <div style={{ marginTop: "7px", fontSize: "10px", color: "#a0835e" }}>每人一次；月度、季度、年度会员可用；不与其他优惠或邀请佣金叠加。异常注册不计入。</div>
+            <button
+              type="button"
+              onClick={() => {
+                switchToTemplate("VIRAL_BARGAIN");
+                window.setTimeout(() => document.getElementById("invite-poster-card")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
+              }}
+              style={{ marginTop: "10px", width: "100%", border: "none", borderRadius: "10px", padding: "10px 12px", backgroundColor: "#c85a24", color: "#fff", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}
+            >
+              生成我的十人助力海报
+            </button>
           </div>
         )}
         {/* ===== AI推广助手入口（P7-MKT-POSTER-02） ===== */}
@@ -446,6 +456,7 @@ export default function InvitePage() {
 
         {/* ===== v25.0.47_14 邀请裂变海报卡（完整海报导出，修复"保存相册只有二维码"） ===== */}
         <div
+          id="invite-poster-card"
           style={{
             backgroundColor: "#fff",
             borderRadius: "14px",
@@ -475,14 +486,14 @@ export default function InvitePage() {
             )}
           </div>
 
-          {/* 3套模板切换 */}
-          <div style={{ display: "flex", gap: "6px", marginBottom: "12px" }}>
+          {/* 模板切换 */}
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginBottom: "12px" }}>
             {VIRAL_TEMPLATES.map((t) => (
               <button
                 key={t.id}
                 onClick={() => switchToTemplate(t.id)}
                 style={{
-                  flex: 1,
+                  flex: "1 1 44%",
                   padding: "8px 0",
                   borderRadius: "10px",
                   border: activeViralId === t.id ? `2px solid ${BRAND}` : "1px solid #e5e5e5",

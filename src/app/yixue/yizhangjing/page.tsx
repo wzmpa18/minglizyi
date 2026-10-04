@@ -18,7 +18,8 @@ import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { ShareButton } from "@/components/ShareButton";
 import { PostToSquareButton } from "@/components/PostToSquareButton";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
-import { savePaipanRecord } from "@/lib/nativePaipanStore";
+import { PaipanHistoryButton } from "@/components/PaipanHistoryButton";
+import { savePaipanRecord, type PaipanRecord } from "@/lib/nativePaipanStore";
 // ============================================================================
 // 一掌经十二宫
 // ============================================================================
@@ -169,6 +170,21 @@ export default function YizhangjingPage() {
     }).catch(() => {});
   }, [dateType, selectedYear, selectedMonth, selectedDay, selectedHour, sizhuInput, result]);
 
+  const handleRestoreHistory = useCallback((record: PaipanRecord) => {
+    const input = record.input || {};
+    if (input.dateType === "solar" || input.dateType === "lunar" || input.dateType === "sizhu") setDateType(input.dateType);
+    if (Number.isFinite(Number(input.year))) setSelectedYear(Number(input.year));
+    if (Number.isFinite(Number(input.month))) setSelectedMonth(Number(input.month));
+    if (Number.isFinite(Number(input.day))) setSelectedDay(Number(input.day));
+    if (Number.isFinite(Number(input.hour))) setSelectedHour(Number(input.hour));
+    if (input.sizhuInput && typeof input.sizhuInput === "object") {
+      setSizhuInput((prev) => ({ ...prev, ...(input.sizhuInput as typeof prev) }));
+    }
+    setShowForm(false);
+    setShowInput(false);
+    setHasResult(true);
+  }, []);
+
   // v18.2: 监听编辑/返回事件，实现逐级返回
   useEffect(() => {
     const editHandler = () => {
@@ -273,7 +289,10 @@ export default function YizhangjingPage() {
         {/* 输入区 */}
         {showInput && (
           <div style={{ backgroundColor: "white", borderRadius: "10px", padding: "14px", marginBottom: "10px" }}>
-            <div style={{ fontSize: "15px", fontWeight: 600, marginBottom: "10px" }}>排盘设置</div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "10px" }}>
+              <div style={{ fontSize: "15px", fontWeight: 600 }}>排盘设置</div>
+              <PaipanHistoryButton toolKey="yizhangjing" onRestore={handleRestoreHistory} />
+            </div>
 
             {/* 日期类型选择：公历 / 农历 / 四柱 */}
             <div style={{ marginBottom: "12px" }}>

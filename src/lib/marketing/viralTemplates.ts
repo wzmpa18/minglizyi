@@ -23,7 +23,7 @@ import { renderPoster, type RenderCheck } from "./posterEngine";
 import { getChannel } from "./channels";
 import type { RecommendationItem } from "./recommend";
 
-export type ViralTemplateId = "VIRAL_MOMENTS" | "VIRAL_GROUP" | "VIRAL_LEARN";
+export type ViralTemplateId = "VIRAL_MOMENTS" | "VIRAL_GROUP" | "VIRAL_LEARN" | "VIRAL_BARGAIN";
 
 export interface ViralTemplate {
   id: ViralTemplateId;
@@ -125,6 +125,22 @@ const LEARN_VARIANT: TemplateVariant = {
   pointIcon: "check",
 };
 
+const BARGAIN_VARIANT: TemplateVariant = {
+  id: "VIRAL-BARGAIN-01",
+  family: "T06",
+  name: "十人助力八折版",
+  palette: {
+    bg: ["#FFF7DF", "#F3D7A0"],
+    accent: "#C44824",
+    text: "#4A2B19",
+    subText: "#8A654D",
+    cardBg: "#FFFDF6",
+  },
+  ratios: ["R9_16", "R3_4", "SQUARE", "LONG"],
+  decorative: "paper",
+  pointIcon: "check",
+};
+
 // 模板一：朋友圈种草版（默认模板，主打社交裂变，朋友私藏分享调性）
 const MOMENTS_COPY: CopySet = {
   copyId: "VC-MOMENTS-02",
@@ -217,6 +233,30 @@ const LEARN_COPY: CopySet = {
   status: "ACTIVE",
 };
 
+const BARGAIN_COPY: CopySet = {
+  copyId: "VC-BARGAIN-01",
+  version: "v25.0.97",
+  audience: "ANY",
+  product: "P14",
+  channel: "ANY",
+  title: "帮我助力，会员立享八折",
+  subtitle: "邀请10位新用户完成手机号注册\n即可领取会员八折优惠券",
+  sellingPoints: [
+    "每位有效新用户自动计入助力进度",
+    "达到10人后优惠券自动到账",
+    "月度、季度、年度会员均可使用",
+    "扫码进入我的专属邀请页，注册即助力",
+  ],
+  cta: "扫码帮我助力",
+  benefitLine: "🎁 十人助力完成 · 会员价格立减20%",
+  qrNote: "二维码对应分享人的签名专属链接",
+  momentsCopy: "想请你帮我助力一下～扫码注册言道国学，完成10位新用户助力后，我可以领取会员八折优惠券。这里也有排盘、国学和中医学习工具，可以免费体验。",
+  groupCopy: "言道国学十人助力活动：扫码完成手机号注册即可帮我增加1次助力，满10人可领会员八折券，感谢支持。",
+  privateCopies: [{ tone: "好友助力", text: "麻烦帮我扫一下海报二维码注册言道国学，给我的会员八折活动增加1次助力，谢谢！" }],
+  disclaimer: "general",
+  status: "ACTIVE",
+};
+
 export const VIRAL_TEMPLATES: ViralTemplate[] = [
   {
     id: "VIRAL_MOMENTS",
@@ -241,6 +281,14 @@ export const VIRAL_TEMPLATES: ViralTemplate[] = [
     desc: "清雅书卷气 · 主打学习者人群，典籍/题库/深度解读",
     variant: LEARN_VARIANT,
     copy: LEARN_COPY,
+  },
+  {
+    id: "VIRAL_BARGAIN",
+    name: "十人助力八折版",
+    shortName: "助力八折",
+    desc: "活动专用海报 · 使用当前用户的签名专属二维码，好友注册后自动计入助力进度",
+    variant: BARGAIN_VARIANT,
+    copy: BARGAIN_COPY,
   },
 ];
 

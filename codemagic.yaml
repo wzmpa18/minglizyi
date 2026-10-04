@@ -12,7 +12,7 @@
 # Issuer ID: 需在ASC后台 Users and Access→Integrations 查看(形如xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)并配置到集成
 workflows:
   android-workflow:
-    name: 言道国学 v25.0.97 Android APK+AAB
+    name: 言道国学 v25.0.97 Android APK
     max_build_duration: 60
     instance_type: linux_x2
     environment:
@@ -34,9 +34,9 @@ workflows:
         script: |
           echo "$ANDROID_KEYSTORE_B64" | base64 -d > yandao-release.keystore
           keytool -list -v -keystore yandao-release.keystore -storepass yandao2024 -alias yandao | sed -n '1,8p'
-      - name: 构建APK及谷歌内部测试AAB
+      - name: 构建正式版APK
         script: |
-          cd android && ./gradlew assembleRelease bundleRelease --no-daemon
+          cd android && ./gradlew assembleRelease --no-daemon
       - name: 校验版本号与签名
         script: |
           APK="android/app/build/outputs/apk/release/app-release.apk"
@@ -45,7 +45,6 @@ workflows:
           jarsigner -verify "$APK" && echo "签名校验 OK"
     artifacts:
       - android/app/build/outputs/apk/release/*.apk
-      - android/app/build/outputs/bundle/release/*.aab
   ios-workflow:
     name: 言道国学 v25.0.97 iOS TestFlight
     max_build_duration: 60
