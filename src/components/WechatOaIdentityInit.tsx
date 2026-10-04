@@ -17,7 +17,7 @@ export default function WechatOaIdentityInit() {
     const ua = navigator.userAgent || "";
     if (!ua.includes("MicroMessenger")) return; // 非微信浏览器
     try {
-      const cap = window.Capacitor as { isNativePlatform?: () => boolean } | undefined;
+      const cap = (window as Window & { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
       if (cap && typeof cap.isNativePlatform === "function" && cap.isNativePlatform()) return; // 原生APP壳
     } catch { /* ignore */ }
 

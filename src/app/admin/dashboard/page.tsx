@@ -44,7 +44,7 @@ interface StatsShape {
   user?: { total?: number; active?: number; newToday?: number; newThisWeek?: number; newThisMonth?: number };
   invite?: { totalInvites?: number; successfulInvites?: number; pendingInvites?: number; conversionRate?: number };
   pageViews?: { total?: number; today?: number; topPages?: { path?: string; title?: string; views?: number }[] };
-  membership?: { totalMembers?: number; monthly?: number; yearly?: number; lifetime?: number; revenue?: number };
+  membership?: { totalMembers?: number; monthly?: number; quarterly?: number; yearly?: number; lifetime?: number; revenue?: number };
   aiUsage?: { totalCalls?: number; today?: number; successRate?: number; topTools?: { name?: string; calls?: number }[] };
   generatedAt?: string;
 }

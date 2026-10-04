@@ -181,7 +181,7 @@ export default function PartnerApplyPage() {
           padding: "10px 18px", borderRadius: 20, zIndex: 999,
         }}>{toast}</div>
       )}
-      <LoginPromptModal open={showLoginPrompt} onClose={() => setShowLoginPrompt(false)} />
+      <LoginPromptModal show={showLoginPrompt} onClose={() => setShowLoginPrompt(false)} />
     </div>
   );
 }

@@ -1,28 +1,56 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BrandHeader } from "@/components/shared";
 import { LocalListenButton } from "@/components/LocalListenButton";
 import AIInterpretButton from "@/components/AIInterpretButton";
 import classicsData from "@/data/guoxueClassics.json";
+import { loadJsonPack } from "@/lib/offlinePackClient";
 
 const BRAND = "#7B2FBE";
 
 type GuoxueBook = (typeof classicsData.books)[number];
+interface GuoxueClassicsPack {
+  schema: "yandao.guoxue.classics.v1";
+  version: string;
+  notice: string;
+  books: GuoxueBook[];
+}
 
 export default function BooksPage() {
   const [selectedId, setSelectedId] = useState("");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("全部");
-  const selected = classicsData.books.find((book) => book.id === selectedId);
+  const [catalogue, setCatalogue] = useState<{ books: GuoxueBook[]; notice: string; version: string }>({
+    books: classicsData.books,
+    notice: classicsData.notice,
+    version: "内置",
+  });
+  useEffect(() => {
+    let active = true;
+    const reload = async () => {
+      const pack = await loadJsonPack<GuoxueClassicsPack>("guoxue-classics-approved");
+      if (active && pack?.schema === "yandao.guoxue.classics.v1" && Array.isArray(pack.books) && pack.books.length) {
+        setCatalogue({ books: pack.books, notice: pack.notice || classicsData.notice, version: pack.version });
+      }
+    };
+    void reload();
+    const onInstalled = (event: Event) => {
+      const detail = (event as CustomEvent<{ packId?: string }>).detail;
+      if (detail?.packId === "guoxue-classics-approved") void reload();
+    };
+    window.addEventListener("offline-pack-installed", onInstalled);
+    return () => { active = false; window.removeEventListener("offline-pack-installed", onInstalled); };
+  }, []);
+  const selected = catalogue.books.find((book) => book.id === selectedId);
   const categories = useMemo(
-    () => ["全部", ...Array.from(new Set(classicsData.books.map((book) => book.category)))],
-    [],
+    () => ["全部", ...Array.from(new Set(catalogue.books.map((book) => book.category)))],
+    [catalogue.books],
   );
-  const visible = useMemo(() => classicsData.books.filter((book) => {
+  const visible = useMemo(() => catalogue.books.filter((book) => {
     const keywordMatched = !query.trim() || `${book.title}${book.author}${book.content}`.includes(query.trim());
     return keywordMatched && (category === "全部" || book.category === category);
-  }), [category, query]);
+  }), [catalogue.books, category, query]);
 
   if (selected) return <BookReader book={selected} onBack={() => setSelectedId("")} />;
 
@@ -70,7 +98,7 @@ export default function BooksPage() {
         </div>
 
         <p className="mt-5 rounded-xl bg-amber-50 p-3 text-[11px] leading-5 text-amber-800">
-          {classicsData.notice} 来源和许可统一在本页说明，正文保持清爽；新增典籍需先通过来源、完整性与错字检查。
+          {catalogue.notice} 来源和许可统一在本页说明，正文保持清爽；新增典籍需先通过来源、完整性与错字检查。内容版本：{catalogue.version}。
         </p>
       </main>
       <div className="page-bottom-nav-safe" aria-hidden="true" />

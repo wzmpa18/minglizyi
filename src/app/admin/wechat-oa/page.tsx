@@ -123,8 +123,8 @@ export default function WechatOaPage() {
       {toastNode}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: THEME.text }}>公众号运营</h1>
-          <p style={{ fontSize: 13, color: THEME.textSecondary, marginTop: 4 }}>服务号「言道国学研习」· 选题 → AI文章 → 安全门 → 微信草稿箱（发布需人工确认）</p>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: THEME.textMain }}>公众号运营</h1>
+          <p style={{ fontSize: 13, color: THEME.textSub, marginTop: 4 }}>服务号「言道国学研习」· 选题 → AI文章 → 安全门 → 微信草稿箱（发布需人工确认）</p>
         </div>
         <button onClick={loadAll} style={{ ...styles.btnGhost, display: "flex", gap: 6, alignItems: "center" }}><RefreshCw size={14} />刷新</button>
       </div>
@@ -177,7 +177,7 @@ export default function WechatOaPage() {
 
       {tab === "menu" && (
         <AdminCard title="自定义菜单（发布到微信）">
-          <p style={{ fontSize: 13, color: THEME.textSecondary, marginBottom: 10 }}>
+          <p style={{ fontSize: 13, color: THEME.textSub, marginBottom: 10 }}>
             默认菜单结构：【国学工具】专业罗盘/七政四余/八字排盘/更多工具 ·【学习】七政学习/中医学习/医考题库/国学资料 ·【我的】网页版/下载APP/会员中心。全部链接带 source=wechat_oa 追踪参数。
           </p>
           <textarea value={menuJson} onChange={(e) => setMenuJson(e.target.value)} style={styles.textarea} rows={18} />
@@ -232,7 +232,7 @@ export default function WechatOaPage() {
                   </td>
                 </tr>
               ))}
-              {!topics.length && <tr><td colSpan={7} style={{ textAlign: "center", color: THEME.textSecondary, padding: 20 }}>今日暂无选题，点击「生成今日选题」</td></tr>}
+              {!topics.length && <tr><td colSpan={7} style={{ textAlign: "center", color: THEME.textSub, padding: 20 }}>今日暂无选题，点击「生成今日选题」</td></tr>}
             </tbody>
           </table>
         </AdminCard>
@@ -248,7 +248,7 @@ export default function WechatOaPage() {
                   <tr key={a.article_id}>
                     <td style={{ maxWidth: 260, cursor: "pointer" }} onClick={() => woFetch<ArticleDetail>(`/api/wechat/official/admin/articles/${a.article_id}`).then((r) => r.success && r.data && setDetail(r.data))}>
                       <div style={{ fontWeight: 600 }}>{a.title}</div>
-                      <div style={{ fontSize: 11, color: THEME.textSecondary }}>{a.created_at} · {a.ai_model}</div>
+                      <div style={{ fontSize: 11, color: THEME.textSub }}>{a.created_at} · {a.ai_model}</div>
                     </td>
                     <td><Badge type={a.status === "WECHAT_DRAFT" ? "success" : a.status === "RISK_BLOCKED" || a.status === "DUPLICATE" ? "error" : "default"}>{STATUS_LABEL[a.status]?.label || a.status}</Badge></td>
                     <td><Badge type={a.safety_status === "PASS" ? "success" : "error"}>{a.safety_status}</Badge></td>
@@ -270,13 +270,13 @@ export default function WechatOaPage() {
                     </td>
                   </tr>
                 ))}
-                {!articles.length && <tr><td colSpan={5} style={{ textAlign: "center", color: THEME.textSecondary, padding: 20 }}>暂无文章</td></tr>}
+                {!articles.length && <tr><td colSpan={5} style={{ textAlign: "center", color: THEME.textSub, padding: 20 }}>暂无文章</td></tr>}
               </tbody>
             </table>
           </AdminCard>
           {detail && (
-            <AdminCard title={`预览：${detail.title}`} action={<button style={styles.btnMini} onClick={() => setDetail(null)}>关闭</button>}>
-              <div style={{ fontSize: 13, color: THEME.textSecondary, marginBottom: 8 }}>摘要：{detail.digest}</div>
+            <AdminCard title={`预览：${detail.title}`} extra={<button style={styles.btnMini} onClick={() => setDetail(null)}>关闭</button>}>
+              <div style={{ fontSize: 13, color: THEME.textSub, marginBottom: 8 }}>摘要：{detail.digest}</div>
               <div style={{ ...styles.previewBox }} dangerouslySetInnerHTML={{ __html: detail.content_html }} />
               <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
                 <button style={styles.btnMini} onClick={() => {
@@ -309,7 +309,7 @@ export default function WechatOaPage() {
                   <td>{f.user_id || "—"}</td>
                 </tr>
               ))}
-              {!followers.length && <tr><td colSpan={6} style={{ textAlign: "center", color: THEME.textSecondary, padding: 20 }}>暂无关注者数据（需微信平台完成服务器配置后产生）</td></tr>}
+              {!followers.length && <tr><td colSpan={6} style={{ textAlign: "center", color: THEME.textSub, padding: 20 }}>暂无关注者数据（需微信平台完成服务器配置后产生）</td></tr>}
             </tbody>
           </table>
         </AdminCard>
@@ -369,7 +369,7 @@ export default function WechatOaPage() {
                   <td style={{ color: THEME.error, fontSize: 12, maxWidth: 300 }}>{j.error || "—"}</td>
                 </tr>
               ))}
-              {!jobs.length && <tr><td colSpan={6} style={{ textAlign: "center", color: THEME.textSecondary, padding: 20 }}>暂无任务记录（定时任务 06:30 起执行）</td></tr>}
+              {!jobs.length && <tr><td colSpan={6} style={{ textAlign: "center", color: THEME.textSub, padding: 20 }}>暂无任务记录（定时任务 06:30 起执行）</td></tr>}
             </tbody>
           </table>
         </AdminCard>
@@ -381,8 +381,8 @@ export default function WechatOaPage() {
 function StatBox({ label, value, color }: { label: string; value: string | number; color?: string }) {
   return (
     <div style={{ background: "#fff", border: "1px solid #E5E7EB", borderRadius: 10, padding: 14 }}>
-      <div style={{ fontSize: 12, color: THEME.textSecondary }}>{label}</div>
-      <div style={{ fontSize: 24, fontWeight: 700, color: color || THEME.text, marginTop: 4 }}>{value}</div>
+      <div style={{ fontSize: 12, color: THEME.textSub }}>{label}</div>
+      <div style={{ fontSize: 24, fontWeight: 700, color: color || THEME.textMain, marginTop: 4 }}>{value}</div>
     </div>
   );
 }
@@ -390,7 +390,7 @@ function KV({ k, v, badge }: { k: string; v: string; badge?: boolean }) {
   const ok = /PRESENT|有效|已通过|强制关闭/.test(v);
   return (
     <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #F3F4F6", fontSize: 13 }}>
-      <span style={{ color: THEME.textSecondary }}>{k}</span>
+      <span style={{ color: THEME.textSub }}>{k}</span>
       {badge ? <Badge type={ok ? "success" : "error"}>{v}</Badge> : <span style={{ fontWeight: 600 }}>{v}</span>}
     </div>
   );
@@ -398,21 +398,21 @@ function KV({ k, v, badge }: { k: string; v: string; badge?: boolean }) {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 8 }}>
-      <label style={{ fontSize: 12, color: THEME.textSecondary }}>{label}</label>
+      <label style={{ fontSize: 12, color: THEME.textSub }}>{label}</label>
       {children}
     </div>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  tab: { padding: "8px 14px", borderRadius: 8, border: "1px solid #E5E7EB", background: "#fff", fontSize: 13, color: THEME.textSecondary, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 },
+  tab: { padding: "8px 14px", borderRadius: 8, border: "1px solid #E5E7EB", background: "#fff", fontSize: 13, color: THEME.textSub, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 },
   tabActive: { background: THEME.primary, color: "#fff", borderColor: THEME.primary },
   table: { width: "100%", borderCollapse: "collapse", fontSize: 13, background: "#fff" },
   btnPrimary: { padding: "9px 18px", borderRadius: 8, border: "none", background: THEME.primary, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" },
-  btnGhost: { padding: "8px 14px", borderRadius: 8, border: "1px solid #E5E7EB", background: "#fff", fontSize: 13, color: THEME.text, cursor: "pointer" },
-  btnMini: { padding: "4px 10px", borderRadius: 6, border: "1px solid #E5E7EB", background: "#fff", fontSize: 12, cursor: "pointer", color: THEME.text },
-  input: { padding: "8px 10px", borderRadius: 8, border: "1px solid #D1D5DB", fontSize: 13, background: "#fff", color: THEME.text },
-  textarea: { width: "100%", padding: 10, borderRadius: 8, border: "1px solid #D1D5DB", fontSize: 12, fontFamily: "monospace", background: "#fff", color: THEME.text, boxSizing: "border-box" },
-  previewBox: { border: "1px solid #E5E7EB", borderRadius: 8, padding: 14, maxHeight: 420, overflow: "auto", fontSize: 14, lineHeight: 1.8, background: "#fff", color: THEME.text },
+  btnGhost: { padding: "8px 14px", borderRadius: 8, border: "1px solid #E5E7EB", background: "#fff", fontSize: 13, color: THEME.textMain, cursor: "pointer" },
+  btnMini: { padding: "4px 10px", borderRadius: 6, border: "1px solid #E5E7EB", background: "#fff", fontSize: 12, cursor: "pointer", color: THEME.textMain },
+  input: { padding: "8px 10px", borderRadius: 8, border: "1px solid #D1D5DB", fontSize: 13, background: "#fff", color: THEME.textMain },
+  textarea: { width: "100%", padding: 10, borderRadius: 8, border: "1px solid #D1D5DB", fontSize: 12, fontFamily: "monospace", background: "#fff", color: THEME.textMain, boxSizing: "border-box" },
+  previewBox: { border: "1px solid #E5E7EB", borderRadius: 8, padding: 14, maxHeight: 420, overflow: "auto", fontSize: 14, lineHeight: 1.8, background: "#fff", color: THEME.textMain },
   warnBanner: { background: "#FEF3C7", border: "1px solid #F59E0B", color: "#92400E", borderRadius: 10, padding: "10px 14px", fontSize: 13, marginBottom: 16 },
 };

@@ -243,6 +243,9 @@ export async function downloadPack(pack: ManifestPack, onProgress?: DownloadProg
     await put("SYSTEM_DATA", INSTALLED_INDEX_KEY, idx);
     await remove("OFFLINE_PACK", pKey);
     onProgress?.(pack.size, pack.size);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("offline-pack-installed", { detail: { packId: pack.packId, version: pack.version } }));
+    }
     return { ok: true, packId: pack.packId, version: pack.version, sha256Verified: true, resumedFrom: startByte };
   } catch (e) {
     return { ok: false, packId: pack.packId, version: pack.version, error: (e as Error).message };

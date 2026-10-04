@@ -35,14 +35,14 @@ import { fetchAdminOverview, type AdminOverviewData } from "@/lib/admin/client";
 
 // ==================== 三色健康状态渲染 ====================
 
-function healthColor(status?: string): { color: string; label: string } {
+function healthColor(status?: string | boolean): { color: string; label: string } {
   if (status === "ok" || status === "ON" || status === true) return { color: THEME.success, label: "正常" };
   if (status === "warn" || status === "degraded" || status === "MAINTENANCE") return { color: THEME.warning, label: "部分可用" };
   if (status === "error" || status === "OFF" || status === "down") return { color: THEME.error, label: "故障" };
   return { color: THEME.textHint, label: "未知" };
 }
 
-function HealthDot({ status }: { status?: string }) {
+function HealthDot({ status }: { status?: string | boolean }) {
   const c = healthColor(status);
   return (
     <span

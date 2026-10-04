@@ -45,6 +45,14 @@ export interface AIConfig {
   tools: AIToolConfig[];
   quotas: AIQuotaConfig;
   packages: IncrementalPackageConfig[];
+  timePlans?: Array<{
+    key: string;
+    name: string;
+    price: number;
+    duration: string;
+    desc?: string;
+    enabled?: boolean;
+  }>;
   updatedAt: string;
 }
 

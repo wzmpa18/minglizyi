@@ -8,8 +8,8 @@ android {
         applicationId "com.yandao.guoxue"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2087
-        versionName "25.0.100"
+        versionCode 2088
+        versionName "25.0.101"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

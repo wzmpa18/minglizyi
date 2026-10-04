@@ -28,6 +28,10 @@ BOOKS = [
     {"id": "lunyu", "title": "论语", "wikiTitle": "論語/全覽", "category": "儒家", "author": "孔子弟子及再传弟子编纂"},
     {"id": "daxue", "title": "大学章句", "wikiTitle": "四書章句集註/大學章句", "category": "儒家", "author": "朱熹章句"},
     {"id": "zhongyong", "title": "中庸章句", "wikiTitle": "四書章句集註 (四庫全書本)/中庸", "category": "儒家", "author": "朱熹章句"},
+    {"id": "yijing", "title": "易经", "plainUrl": "https://www.gutenberg.org/cache/epub/25501/pg25501.txt", "sourceUrl": "https://www.gutenberg.org/ebooks/25501", "category": "经部", "author": "佚名", "minLength": 30000},
+    {"id": "shijing", "title": "诗经", "plainUrl": "https://www.gutenberg.org/cache/epub/23873/pg23873.txt", "sourceUrl": "https://www.gutenberg.org/ebooks/23873", "category": "经部", "author": "佚名", "minLength": 30000},
+    {"id": "liji", "title": "礼记", "plainUrl": "https://www.gutenberg.org/cache/epub/24048/pg24048.txt", "sourceUrl": "https://www.gutenberg.org/ebooks/24048", "category": "经部", "author": "佚名", "minLength": 50000},
+    {"id": "zuozhuan", "title": "左传", "plainUrl": "https://www.gutenberg.org/cache/epub/24136/pg24136.txt", "sourceUrl": "https://www.gutenberg.org/ebooks/24136", "category": "经部", "author": "传统题左丘明", "minLength": 100000},
     {"id": "daodejing_wangbi", "title": "道德经（王弼本）", "wikiTitle": "道德經 (王弼本)", "category": "道家", "author": "老子；王弼注"},
     {"id": "huangdi_yinfujing", "title": "黄帝阴符经", "wikiTitle": "黃帝陰符經", "category": "道家", "author": "传统题黄帝撰", "minLength": 300},
     {"id": "qingjingjing", "title": "太上老君说常清静经", "wikiTitle": "太上老君說常清靜經", "category": "道家", "author": "佚名", "minLength": 300},
@@ -113,6 +117,30 @@ def fetch_extract(title: str) -> tuple[str, str]:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     cache_file.write_text(json.dumps({"title": page["title"], "content": text}, ensure_ascii=False), encoding="utf-8")
     return str(page["title"]), text
+
+
+def fetch_plain_text(url: str, title: str) -> tuple[str, str]:
+    cache_file = CACHE_DIR / f"plain-{hashlib.sha256(url.encode('utf-8')).hexdigest()}.json"
+    if cache_file.exists():
+        cached = json.loads(cache_file.read_text(encoding="utf-8"))
+        return cached["title"], cached["content"]
+    request = urllib.request.Request(url, headers={"User-Agent": "YandaoGuoxue/1.0 classics-importer"})
+    with urllib.request.urlopen(request, timeout=45) as response:
+        text = response.read().decode("utf-8-sig", errors="strict")
+    start = re.search(r"\*\*\*\s*START OF (?:THE )?PROJECT GUTENBERG EBOOK[^\n]*\*\*\*", text, flags=re.I)
+    end = re.search(r"\*\*\*\s*END OF (?:THE )?PROJECT GUTENBERG EBOOK[^\n]*\*\*\*", text, flags=re.I)
+    if start:
+        text = text[start.end():]
+    if end:
+        text = text[:max(0, end.start() - (start.end() if start else 0))]
+    text = re.sub(r"\r\n?", "\n", text)
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text).strip()
+    if len(text) < 500:
+        raise RuntimeError(f"plain text too short: {title} ({len(text)})")
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    cache_file.write_text(json.dumps({"title": title, "content": text}, ensure_ascii=False), encoding="utf-8")
+    return title, text
 
 
 def api_request(params: dict[str, str], *, post: bool = False) -> dict:
@@ -213,7 +241,11 @@ def main() -> None:
         parts = []
         resolved_titles = []
         try:
-            if book.get("wikiPrefix"):
+            if book.get("plainUrl"):
+                resolved_title, content = fetch_plain_text(book["plainUrl"], book["title"])
+                resolved_titles.append(resolved_title)
+                parts.append(content)
+            elif book.get("wikiPrefix"):
                 resolved_titles, content = fetch_subpages(book["wikiPrefix"])
                 parts.append(content)
             else:
@@ -236,10 +268,10 @@ def main() -> None:
                 "category": book["category"],
                 "author": book["author"],
                 "content": content,
-                "sourceName": "维基文库",
-                "sourceUrl": "https://zh.wikisource.org/wiki/" + urllib.parse.quote(resolved_titles[0]),
-                "sourcePages": ["https://zh.wikisource.org/wiki/" + urllib.parse.quote(title) for title in resolved_titles],
-                "license": "Public domain or CC BY-SA 4.0; see source page",
+                "sourceName": "Project Gutenberg" if book.get("plainUrl") else "维基文库",
+                "sourceUrl": book.get("sourceUrl") or ("https://zh.wikisource.org/wiki/" + urllib.parse.quote(resolved_titles[0])),
+                "sourcePages": [book["sourceUrl"]] if book.get("plainUrl") else ["https://zh.wikisource.org/wiki/" + urllib.parse.quote(title) for title in resolved_titles],
+                "license": "Public domain; see Project Gutenberg source page" if book.get("plainUrl") else "Public domain or CC BY-SA 4.0; see source page",
             }
         )
     payload = {
