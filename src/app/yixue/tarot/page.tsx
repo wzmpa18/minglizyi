@@ -386,6 +386,7 @@ export default function TarotPage() {
                   </div>
                   <div className="mt-2">
                     <AIInterpretButton
+                      discussionEnabled
                       toolName="塔罗牌阵"
                       scope="深度牌阵解读"
                       buttonText={`AI 深度牌阵解读 ¥${tarotCfg.aiDeepPrice}/次`}

@@ -124,6 +124,40 @@ export async function addComment(postId: string, content: string) {
   });
 }
 
+export interface ResourceComment {
+  id: string;
+  resourceType: "acupoint" | "classic" | "yixue";
+  resourceId: string;
+  authorId: string;
+  authorName: string;
+  content: string;
+  createdAt: string;
+}
+
+export async function fetchResourceComments(resourceType: ResourceComment["resourceType"], resourceId: string) {
+  return api<{ success: boolean; comments?: ResourceComment[]; error?: string }>(
+    `/api/social/resource/${resourceType}/${encodeURIComponent(resourceId)}/comments`,
+  );
+}
+
+export async function addResourceComment(resourceType: ResourceComment["resourceType"], resourceId: string, content: string) {
+  return api<{ success: boolean; comment?: ResourceComment; pendingReview?: boolean; message?: string; error?: string }>(
+    `/api/social/resource/${resourceType}/${encodeURIComponent(resourceId)}/comments`,
+    { method: "POST", body: JSON.stringify({ content }) },
+  );
+}
+
+export async function deleteResourceComment(commentId: string) {
+  return api<{ success: boolean; error?: string }>(`/api/social/resource-comments/${commentId}`, { method: "DELETE" });
+}
+
+export async function reportResourceComment(commentId: string, reason = "不当内容") {
+  return api<{ success: boolean; duplicated?: boolean; message?: string; error?: string }>(
+    `/api/social/resource-comments/${commentId}/report`,
+    { method: "POST", body: JSON.stringify({ reason }) },
+  );
+}
+
 // ==================== 关注 ====================
 
 export async function toggleFollow(userId: string) {

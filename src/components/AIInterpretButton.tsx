@@ -21,6 +21,7 @@ import { useAiPricing } from "@/lib/pricingStore";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { SafeRichText } from "@/components/SafeRichText";
+import { ResourceDiscussion } from "@/components/ResourceDiscussion";
 
 /**
  * v18.9: 通用AI解读按钮组件
@@ -50,6 +51,10 @@ export interface AIInterpretButtonProps {
   buttonText?: string;
   buttonStyle?: "primary" | "secondary";
   cacheKey?: string;
+  discussionType?: "acupoint" | "classic" | "yixue";
+  discussionId?: string;
+  discussionTitle?: string;
+  discussionEnabled?: boolean;
 }
 
 const DEFAULT_SYSTEM_PROMPT = `你是传统文化研究者。请基于提供的排盘数据进行文史讲解。
@@ -71,6 +76,10 @@ export default function AIInterpretButton({
   buttonText,
   buttonStyle = "primary",
   cacheKey,
+  discussionType = "yixue",
+  discussionId,
+  discussionTitle,
+  discussionEnabled = false,
 }: AIInterpretButtonProps) {
   const [loading, setLoading] = useState(false);
   const [content, setContent] = useState("");
@@ -79,6 +88,7 @@ export default function AIInterpretButton({
   const [showResult, setShowResult] = useState(false);
   const [error, setError] = useState("");
   const [showSingleUnlock, setShowSingleUnlock] = useState(false); // v20.1: 单次解锁弹窗
+  const [showDiscussion, setShowDiscussion] = useState(false);
 
   // v25.0.47_10: 价格 SSOT——展示与下单价格优先读服务端，本地常量仅兜底
   const { singleUnlockPrice: serverSinglePrice } = useAiPricing();
@@ -223,14 +233,36 @@ export default function AIInterpretButton({
 
   return (
     <>
-      <button
-        onClick={handleInterpret}
-        disabled={loading}
-        className="w-full py-2 rounded-lg font-bold text-sm cursor-pointer border-0 text-white disabled:opacity-60 transition-opacity"
-        style={{ background: loading ? "#999" : (buttonStyle === "primary" ? primaryColor : secondaryColor) }}
-      >
-        {loading ? "🤖 AI解读中..." : (buttonText || `🤖 AI${scope}`)}
-      </button>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button
+          onClick={handleInterpret}
+          disabled={loading}
+          className="py-2 rounded-lg font-bold text-sm cursor-pointer border-0 text-white disabled:opacity-60 transition-opacity"
+          style={{ flex: 1, background: loading ? "#999" : (buttonStyle === "primary" ? primaryColor : secondaryColor) }}
+        >
+          {loading ? "🤖 AI解读中..." : (buttonText || `🤖 AI${scope}`)}
+        </button>
+        {discussionEnabled && (
+          <button
+            type="button"
+            onClick={() => setShowDiscussion((value) => !value)}
+            className="py-2 rounded-lg font-bold text-sm cursor-pointer transition-opacity"
+            style={{ minWidth: 82, paddingLeft: 12, paddingRight: 12, border: `1px solid ${primaryColor}`, color: primaryColor, background: "#FFF" }}
+          >
+            💬 评论
+          </button>
+        )}
+      </div>
+
+      {discussionEnabled && showDiscussion && (
+        <div style={{ marginLeft: -12, marginRight: -12 }}>
+          <ResourceDiscussion
+            resourceType={discussionType}
+            resourceId={discussionId || `${toolName}:${scope}`}
+            title={discussionTitle || `${toolName}学习交流`}
+          />
+        </div>
+      )}
 
       {showResult && (content || loading) && (
         <div

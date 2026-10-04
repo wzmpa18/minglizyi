@@ -351,6 +351,7 @@ export default function AstroPage() {
               </div>
               <div className="mt-2">
                 <AIInterpretButton
+                  discussionEnabled
                   toolName="占星解读"
                   scope="深度解读"
                   buttonText={`AI 深度解读 ¥${astroCfg.aiDeepPrice}/次`}

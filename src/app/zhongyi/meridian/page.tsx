@@ -21,6 +21,7 @@ import type { TcmMeridian, TcmAcupoint, TcmDongAcupoint } from "@/algorithm-core
 import { useToolBack } from "@/lib/useToolBack";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
+import { ResourceDiscussion } from "@/components/ResourceDiscussion";
 
 const BRAND = "#7B2FBE";
 const BRAND_LIGHT = "#9B5ECF";
@@ -121,29 +122,6 @@ const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
 
 function getCatColor(cat: string) {
   return CATEGORY_COLORS[cat] || { bg: "#F5F5F5", text: "#616161" };
-}
-
-function Anatomy3DEntry({ compact = false }: { compact?: boolean }) {
-  const router = useRouter();
-  return (
-    <button
-      type="button"
-      onClick={() => router.push("/zhongyi/anatomy3d")}
-      style={{
-        width: "100%", display: "flex", alignItems: "center", gap: 12,
-        padding: compact ? "10px 12px" : "13px 14px", border: "1px solid #DEC9EC",
-        borderRadius: 14, background: "linear-gradient(135deg,#FFF 0%,#F5ECFA 100%)",
-        boxShadow: "0 3px 12px rgba(123,47,190,.08)", textAlign: "left", cursor: "pointer",
-      }}
-    >
-      <span style={{ width: 38, height: 38, borderRadius: 12, display: "grid", placeItems: "center", background: "#EADCF4", fontSize: 21 }}>🫀</span>
-      <span style={{ flex: 1 }}>
-        <strong style={{ display: "block", color: "#4C3260", fontSize: 14 }}>3D人体解剖分层</strong>
-        <span style={{ display: "block", color: "#7D6F84", fontSize: 11, marginTop: 3 }}>旋转 · 缩放 · 骨骼/脏腑/肌肉 · 下载后离线使用</span>
-      </span>
-      <span style={{ color: BRAND, fontSize: 18 }}>›</span>
-    </button>
-  );
 }
 
 // ==================== 穴位定位图模态框 ====================
@@ -609,7 +587,6 @@ function MeridianListPage() {
       </div>
 
       <div style={{ padding: "12px" }}>
-        <div style={{ marginBottom: 14 }}><Anatomy3DEntry /></div>
         {activeTab === "standard" && !searchQuery && Object.entries(groupedMeridians).map(([cat, meridians]) => {
             const cc = getCatColor(cat);
             return (
@@ -707,7 +684,6 @@ function AcupointListPage({ meridianName }: { meridianName: string }) {
         <MeridianChart meridianName={meridian.name} />
       </div>
 
-      <div style={{ margin: "0 12px 12px" }}><Anatomy3DEntry compact /></div>
 
       <div style={{ margin: "12px", background: "white", borderRadius: "16px", padding: "14px", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
         <div style={{ fontSize: "12px", color: "#999", marginBottom: "6px" }}>循行路线</div>
@@ -962,6 +938,8 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
         </p>
       </div>
 
+      <ResourceDiscussion resourceType="acupoint" resourceId={`standard:${acupoint.code}`} title={`${acupoint.name}学习讨论`} />
+
       <div style={{ padding: "12px" }}>
         <button onClick={() => router.push(`/zhongyi/meridian?meridian=${encodeURIComponent(acupoint.meridian)}`)}
           style={{ width: "100%", padding: "12px", borderRadius: "12px", border: "none", fontSize: "14px", cursor: "pointer", backgroundColor: BRAND_BG, color: BRAND, fontWeight: "500", marginBottom: "8px" }}>
@@ -1183,6 +1161,8 @@ function DongAcupointDetailPage({ acupointName }: { acupointName: string }) {
           </div>
         )}
       </div>
+
+      <ResourceDiscussion resourceType="acupoint" resourceId={`dong:${acupoint.code}`} title={`${acupoint.name}学习讨论`} accent="#E65100" />
 
       <div style={{ padding: "12px" }}>
         <button onClick={() => router.push("/zhongyi/meridian")}

@@ -1737,6 +1737,7 @@ export default function QizhengPage() {
       {/* AI 解读 */}
       <div className="mt-2 bg-white px-3 py-3">
         <AIInterpretButton
+          discussionEnabled
           toolName="七政四余"
           scope="整体解读"
           contextData={aiContext}

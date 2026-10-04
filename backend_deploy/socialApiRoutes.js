@@ -88,6 +88,22 @@ function initTables(d) {
     );
     CREATE INDEX IF NOT EXISTS idx_comments_post ON comments(post_id);
 
+    CREATE TABLE IF NOT EXISTS resource_comments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      resource_type TEXT NOT NULL,
+      resource_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      nickname TEXT DEFAULT '',
+      content TEXT NOT NULL,
+      status TEXT DEFAULT 'pending',
+      review_reason TEXT DEFAULT '',
+      moderation_model TEXT DEFAULT '',
+      reviewed_at TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now','localtime'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_resource_comments_target
+      ON resource_comments(resource_type, resource_id, id DESC);
+
     CREATE TABLE IF NOT EXISTS likes (
       post_id TEXT NOT NULL,
       user_id TEXT NOT NULL,
@@ -247,6 +263,12 @@ function initTables(d) {
       if (!ccols.includes('deleted_at')) d.exec(`ALTER TABLE comments ADD COLUMN deleted_at TEXT DEFAULT ''`);
       if (!ccols.includes('deleted_by')) d.exec(`ALTER TABLE comments ADD COLUMN deleted_by TEXT DEFAULT ''`);
     }
+    const rccols = d.prepare('PRAGMA table_info(resource_comments)').all().map(c => c.name);
+    if (rccols.includes('id')) {
+      if (!rccols.includes('review_reason')) d.exec(`ALTER TABLE resource_comments ADD COLUMN review_reason TEXT DEFAULT ''`);
+      if (!rccols.includes('moderation_model')) d.exec(`ALTER TABLE resource_comments ADD COLUMN moderation_model TEXT DEFAULT ''`);
+      if (!rccols.includes('reviewed_at')) d.exec(`ALTER TABLE resource_comments ADD COLUMN reviewed_at TEXT DEFAULT ''`);
+    }
   } catch (e) { console.error('[SocialApi] v25.0.42 群聊/消息列迁移异常(不阻断):', e.message); }
   // v25.0.42：存量会话回填 user_conversations（幂等 INSERT OR IGNORE，仅启动时一次）
   try {
@@ -361,6 +383,24 @@ function findSensitiveWords(text) {
     if (text.includes(w)) hit.push(w);
   }
   return hit;
+}
+
+async function moderateResourceComment(content) {
+  try {
+    const callAI = require('./academyRoutes').callAI;
+    const result = await callAI(
+      '你是社区评论审核器。只返回 PASS 或 REJECT:简短原因。拦截违法、色情、赌博、诈骗、广告引流、联系方式、隐私泄露、人身攻击、仇恨、煽动，以及鼓励自行针刺、用药、开方等危险医疗操作。正常的国学、中医学习讨论应通过。',
+      `待审核评论：${String(content).slice(0, 1000)}`,
+      'resource_comment_moderation',
+      {},
+    );
+    const answer = String(result || '').trim();
+    if (/^PASS\b/i.test(answer)) return { status: 'active', reason: '', model: 'configured-ai' };
+    if (/^REJECT\b/i.test(answer)) return { status: 'rejected', reason: answer.slice(0, 200), model: 'configured-ai' };
+    return { status: 'pending', reason: 'AI审核结果无法识别，转人工复核', model: 'configured-ai' };
+  } catch (error) {
+    return { status: 'pending', reason: `AI审核暂不可用：${String(error && error.message || error).slice(0, 120)}`, model: 'unavailable' };
+  }
 }
 
 function logSensitive(userId, scene, content, words) {
@@ -694,6 +734,105 @@ function createRouter() {
       d.prepare('INSERT INTO reports (target_type, target_id, reporter_id, reporter_name, reason) VALUES (?,?,?,?,?)')
         .run('comment', commentId, me, info.nickname || '', String(req.body.reason || '其他').trim().slice(0, 200));
       res.json({ success: true, message: '举报已提交，平台将尽快核实处理' });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 学习资源讨论区：穴位、典籍章节各自独立，不混入动态广场。
+  router.get('/resource/:resourceType/:resourceId/comments', (req, res) => {
+    try {
+      const resourceType = String(req.params.resourceType || '').trim();
+      const resourceId = String(req.params.resourceId || '').trim().slice(0, 160);
+      if (!['acupoint', 'classic', 'yixue'].includes(resourceType) || !resourceId) {
+        return res.status(400).json({ success: false, error: '资源参数错误' });
+      }
+      const rows = getDb().prepare(`SELECT * FROM resource_comments
+        WHERE resource_type = ? AND resource_id = ? AND status = 'active'
+        ORDER BY id DESC LIMIT 200`).all(resourceType, resourceId);
+      res.json({
+        success: true,
+        comments: rows.map(r => ({
+          id: String(r.id), resourceType: r.resource_type, resourceId: r.resource_id,
+          authorId: r.user_id, authorName: r.nickname, content: r.content, createdAt: r.created_at,
+        })),
+      });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  router.post('/resource/:resourceType/:resourceId/comments', authRequired, socialRateLimitGate('comment'), async (req, res) => {
+    try {
+      if (!featureEnabled('comments_enabled')) return featureDisabled(res, '评论');
+      const resourceType = String(req.params.resourceType || '').trim();
+      const resourceId = String(req.params.resourceId || '').trim().slice(0, 160);
+      if (!['acupoint', 'classic', 'yixue'].includes(resourceType) || !resourceId) {
+        return res.status(400).json({ success: false, error: '资源参数错误' });
+      }
+      const mute = checkPlatformMute(req.user.userId);
+      if (mute) return res.status(403).json({ success: false, error: `你已被禁言（剩余约${mute.remainMinutes}分钟），暂不能评论`, code: 'USER_MUTED' });
+      const content = String((req.body && req.body.content) || '').trim().slice(0, 1000);
+      if (!content) return res.status(400).json({ success: false, error: '评论内容不能为空' });
+      const hits = findSensitiveWords(content);
+      if (hits.length) {
+        logSensitive(String(req.user.userId), 'resource_comment', content, hits);
+        return res.status(400).json({ success: false, error: '评论包含违规内容，已拦截' });
+      }
+      const info = userPublicInfo(req.user.userId) || { nickname: '国学爱好者' };
+      const d = getDb();
+      const result = d.prepare(`INSERT INTO resource_comments
+        (resource_type, resource_id, user_id, nickname, content, status) VALUES (?,?,?,?,?,'pending')`)
+        .run(resourceType, resourceId, String(req.user.userId), info.nickname || '国学爱好者', content);
+      const review = await moderateResourceComment(content);
+      d.prepare(`UPDATE resource_comments SET status = ?, review_reason = ?, moderation_model = ?,
+        reviewed_at = datetime('now','localtime') WHERE id = ?`)
+        .run(review.status, review.reason, review.model, result.lastInsertRowid);
+      if (review.status === 'rejected') {
+        return res.status(400).json({ success: false, rejected: true, error: '评论未通过内容审核，未对外展示' });
+      }
+      if (review.status === 'pending') {
+        return res.json({ success: true, pendingReview: true, message: '评论已提交，审核通过后展示' });
+      }
+      const row = d.prepare('SELECT * FROM resource_comments WHERE id = ?').get(result.lastInsertRowid);
+      res.json({ success: true, comment: {
+        id: String(row.id), resourceType: row.resource_type, resourceId: row.resource_id,
+        authorId: row.user_id, authorName: row.nickname, content: row.content, createdAt: row.created_at,
+      } });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  router.delete('/resource-comments/:commentId', authRequired, (req, res) => {
+    try {
+      const d = getDb();
+      const row = d.prepare('SELECT * FROM resource_comments WHERE id = ?').get(parseInt(req.params.commentId, 10));
+      if (!row) return res.status(404).json({ success: false, error: '评论不存在' });
+      if (String(row.user_id) !== String(req.user.userId)) {
+        return res.status(403).json({ success: false, error: '只能删除自己发布的评论' });
+      }
+      d.prepare(`UPDATE resource_comments SET status = 'deleted' WHERE id = ?`).run(row.id);
+      res.json({ success: true, deleted: true, commentId: String(row.id) });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  router.post('/resource-comments/:commentId/report', authRequired, socialRateLimitGate('report'), (req, res) => {
+    try {
+      const d = getDb();
+      const commentId = String(req.params.commentId || '');
+      const comment = d.prepare("SELECT * FROM resource_comments WHERE id = ? AND status = 'active'").get(parseInt(commentId, 10));
+      if (!comment) return res.status(404).json({ success: false, error: '评论不存在或已被处理' });
+      const me = String(req.user.userId);
+      const dup = d.prepare('SELECT 1 FROM reports WHERE target_type = ? AND target_id = ? AND reporter_id = ?')
+        .get('resource_comment', commentId, me);
+      if (dup) return res.json({ success: true, duplicated: true, message: '已收到你的举报，请勿重复提交' });
+      const info = userPublicInfo(me) || { nickname: '' };
+      d.prepare('INSERT INTO reports (target_type, target_id, reporter_id, reporter_name, reason) VALUES (?,?,?,?,?)')
+        .run('resource_comment', commentId, me, info.nickname || '', String(req.body.reason || '不当内容').trim().slice(0, 200));
+      res.json({ success: true, message: '举报已提交，平台将尽快复核' });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
     }
@@ -1884,6 +2023,46 @@ function createRouter() {
           createdAt: r.created_at,
         })),
       });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  router.get('/admin/resource-comments', adminAuth('OPERATOR_ADMIN', 'ops'), (req, res) => {
+    try {
+      const status = String(req.query.status || '').trim();
+      const resourceType = String(req.query.resourceType || '').trim();
+      let sql = 'SELECT * FROM resource_comments WHERE 1=1';
+      const args = [];
+      if (status) { sql += ' AND status = ?'; args.push(status); }
+      if (resourceType) { sql += ' AND resource_type = ?'; args.push(resourceType); }
+      sql += ' ORDER BY id DESC LIMIT 300';
+      res.json({ success: true, data: getDb().prepare(sql).all(...args).map(r => ({
+        id: String(r.id), resourceType: r.resource_type, resourceId: r.resource_id,
+        authorId: r.user_id, authorName: r.nickname, content: r.content,
+        status: r.status, reviewReason: r.review_reason || '', moderationModel: r.moderation_model || '',
+        reviewedAt: r.reviewed_at || '', createdAt: r.created_at,
+      })) });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  router.post('/admin/resource-comments/:commentId/action', adminAuth('OPERATOR_ADMIN', 'ops'), (req, res) => {
+    try {
+      const action = String(req.body.action || '');
+      if (!['approve', 'reject', 'delete'].includes(action)) {
+        return res.status(400).json({ success: false, error: 'action 必须为 approve/reject/delete' });
+      }
+      const row = getDb().prepare('SELECT * FROM resource_comments WHERE id = ?').get(parseInt(req.params.commentId, 10));
+      if (!row) return res.status(404).json({ success: false, error: '评论不存在' });
+      const nextStatus = action === 'approve' ? 'active' : (action === 'reject' ? 'rejected' : 'deleted');
+      const reason = String(req.body.reason || `管理员${action}`).slice(0, 200);
+      getDb().prepare(`UPDATE resource_comments SET status = ?, review_reason = ?,
+        moderation_model = 'manual', reviewed_at = datetime('now','localtime') WHERE id = ?`)
+        .run(nextStatus, reason, row.id);
+      audit(req.admin, 'RESOURCE_COMMENT_REVIEW', `resource-comment#${row.id}`, row.status, nextStatus, reason, req);
+      res.json({ success: true, status: nextStatus });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
     }

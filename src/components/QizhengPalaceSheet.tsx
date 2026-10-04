@@ -37,7 +37,7 @@ export function QizhengPalaceSheet({chart,branch,transit,age,onClose,onSelect}: 
    {section("当前限运",<><p>{detail.currentDaXian?`虚岁 ${detail.currentDaXian.age}，大限在${detail.currentDaXian.branch}宫，${detail.currentDaXian.xiu}${detail.currentDaXian.degree.toFixed(2)}°；${detail.currentDaXian.inPalace?"正在经过本宫":"未经过本宫"}`:"选择流年或输入行限虚岁后显示当前大限"}</p><p>小限 / 月限：资料未提供完整起算法，暂不推算。</p></>)}
    {section("综合基本解读",<p data-testid="palace-local-summary">{detail.summary}</p>)}
    <details className="py-3"><summary className="cursor-pointer font-medium text-purple-800">传统资料依据</summary><p>{detail.focus}</p>{detail.sourceRefs.map(s=><p key={s} className="text-xs text-gray-500">{s}</p>)}{detail.shenshaNatal.map(s=><p key={s.id} className="text-xs">{s.name}：{s.source}</p>)}</details>
-   <AIInterpretButton key={branch} toolName="七政四余" scope={detail.title+"深入解读"} buttonText="AI深入解读" contextData={JSON.stringify({chartSnapshot:{schemaVersion:1,profile:chart.input,ming:chart.mingDu,shen:chart.shenDu,stars:chart.stars},palace:detail})} systemPrompt="只解释传入的确定性盘面和资料依据，不自行排盘，不增补不存在的星曜、神煞或限运。使用现代中文，避免确定性命运、疾病与投资判断。" />
+   <AIInterpretButton discussionEnabled key={branch} toolName="七政四余" scope={detail.title+"深入解读"} buttonText="AI深入解读" contextData={JSON.stringify({chartSnapshot:{schemaVersion:1,profile:chart.input,ming:chart.mingDu,shen:chart.shenDu,stars:chart.stars},palace:detail})} systemPrompt="只解释传入的确定性盘面和资料依据，不自行排盘，不增补不存在的星曜、神煞或限运。使用现代中文，避免确定性命运、疾病与投资判断。" />
    <p className="mt-3 text-xs text-gray-400">基础解读在本地生成。传统文化学习参考，不作为医疗、投资、婚姻或其他现实决策的唯一依据。</p>
   </div>
  </div>,document.body);

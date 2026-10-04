@@ -504,6 +504,7 @@ export default function ZeriPage() {
               </div>
               <div className="mt-2">
                 <AIInterpretButton
+                  discussionEnabled
                   toolName="择日深度分析"
                   scope="深度分析"
                   buttonText={`AI 深度择日分析 ¥${zeriCfg.aiDeepPrice}/次`}

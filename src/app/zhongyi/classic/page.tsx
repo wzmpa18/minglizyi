@@ -9,6 +9,7 @@ import type { ClassicBook, ClassicChapter } from '@/algorithm-core/modules/tcm/c
 import { addRecentItem } from '@/lib/tcmRecent';
 import { useToolBack } from "@/lib/useToolBack";
 import { LocalListenButton } from "@/components/LocalListenButton";
+import AIInterpretButton from "@/components/AIInterpretButton";
 
 // 阅读设置类型
 interface ReaderSettings {
@@ -472,6 +473,20 @@ function ReaderPage({ bookId, chapterId }: { bookId: string; chapterId: string }
         </div>
         <div style={{ marginBottom: '18px', padding: '12px', borderRadius: '12px', backgroundColor: theme.cardBg, border: `1px solid ${theme.border}` }}>
           <LocalListenButton text={`${chapter.title}。${chapter.content}`} contentId={`classic:${bookId}:${chapterId}`} />
+          <div style={{ marginTop: '10px' }}>
+            <AIInterpretButton
+              toolName={`${book.name}·${chapter.title}`}
+              scope="本章原文解读"
+              buttonText="🤖 AI解读本章"
+              contextData={chapter.content.slice(0, 12000)}
+              cacheKey={`classic_interpret:${bookId}:${chapterId}`}
+              discussionEnabled
+              discussionType="classic"
+              discussionId={`${bookId}:${chapterId}`}
+              discussionTitle={`${chapter.title}学习讨论`}
+              systemPrompt="你是中医古籍阅读助手。只能依据用户提供的本章原文解释字词、句义、篇章结构与历史语境；引用时明确标注本章原句，不虚构书名、篇名、页码或医家观点。可以说明传统理论背景，但不得进行个体诊断、开具处方、给出药量或指导普通用户自行针刺。回答使用现代中文，并明确区分原文、释义和学习提示。"
+            />
+          </div>
         </div>
         <div style={{ fontSize: `${settings.fontSize}px`, lineHeight: 2, color: theme.text }}>
           {paragraphs.map((p, i) => (
