@@ -28,7 +28,13 @@ function browserOfflineChineseVoice(): SpeechSynthesisVoice | null {
 
 export async function getLocalTtsStatus(): Promise<LocalTtsStatus> {
   if (Capacitor.isNativePlatform() && Capacitor.isPluginAvailable("LocalTts")) {
-    const result = await NativeTts.getStatus();
+    let result = await NativeTts.getStatus();
+    // Android initializes its speech engine asynchronously. Avoid showing a
+    // false "voice pack missing" state when a page opens during onInit.
+    for (let attempt = 0; !result.ready && attempt < 8; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      result = await NativeTts.getStatus();
+    }
     return { ...result, source: "android" };
   }
   if (typeof window !== "undefined" && "speechSynthesis" in window) {

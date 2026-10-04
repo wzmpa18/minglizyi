@@ -72,9 +72,48 @@ export async function detectNativeShell(): Promise<NativeShellInfo> {
   const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
   const isShell = !!(cap && typeof cap.isNativePlatform === "function" && cap.isNativePlatform());
   if (isShell) {
+    // 内置资源壳的 origin 为 localhost。即使构建流程漏写 app-native.json，
+    // 也要用同包的 version.json 识别当前版本，不能误判为早期 server.url 老壳。
+    const embeddedHost = /^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname)
+      || window.location.protocol === "capacitor:";
+    if (embeddedHost) {
+      try {
+        const versionRes = await fetch(`/version.json?t=${Date.now()}`, { cache: "no-store" });
+        if (versionRes.ok) {
+          const versionJson = await versionRes.json();
+          const versionName = String(versionJson?.version || "").replace(/^v/i, "").trim();
+          if (/^\d+\.\d+\.\d+$/.test(versionName)) {
+            return { isShell: true, versionCode: null, versionName, source: "asset" };
+          }
+        }
+      } catch { /* ignore and keep legacy fallback */ }
+    }
     return { isShell: true, versionCode: null, versionName: null, source: "legacy" };
   }
   return { isShell: false, versionCode: null, versionName: null, source: "browser" };
+}
+
+function versionParts(value: string | null | undefined): number[] | null {
+  const normalized = String(value || "").replace(/^v/i, "").trim();
+  if (!/^\d+(?:\.\d+){1,3}$/.test(normalized)) return null;
+  return normalized.split(".").map((part) => Number(part));
+}
+
+/** 统一版本判断：精确 code 优先，内置 version.json 次之，只有真老壳才用 2047 上限。 */
+export function isNativeShellOutdated(shell: NativeShellInfo, release: AppReleaseInfo): boolean {
+  if (shell.versionCode !== null) return release.latestVersionCode > shell.versionCode;
+  const current = versionParts(shell.versionName);
+  const latest = versionParts(release.latestVersion);
+  if (current && latest) {
+    const length = Math.max(current.length, latest.length);
+    for (let index = 0; index < length; index += 1) {
+      const currentPart = current[index] || 0;
+      const latestPart = latest[index] || 0;
+      if (latestPart !== currentPart) return latestPart > currentPart;
+    }
+    return false;
+  }
+  return release.latestVersionCode > LEGACY_SHELL_MAX_CODE;
 }
 
 export interface AppReleaseInfo {

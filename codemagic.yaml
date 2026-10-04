@@ -1,4 +1,4 @@
-# Codemagic CI/CD - 言道国学 v25.0.97（Android 2084 / iOS build 5）
+# Codemagic CI/CD - 言道国学（Android v25.0.98 / 2085；iOS 保持 v25.0.97 / build 5）
 # 工程: ios/ 与 android/ 均已正式入库Git
 #
 # Android 签名（一次性配置）：
@@ -12,7 +12,7 @@
 # Issuer ID: 需在ASC后台 Users and Access→Integrations 查看(形如xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)并配置到集成
 workflows:
   android-workflow:
-    name: 言道国学 v25.0.97 Android APK
+    name: 言道国学 v25.0.98 Android APK
     max_build_duration: 60
     instance_type: linux_x2
     environment:

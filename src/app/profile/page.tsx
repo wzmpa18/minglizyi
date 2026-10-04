@@ -11,7 +11,7 @@ import { getAIQuotaInfo } from "@/lib/aiQuotaService";
 import { getFollowStats, getCurrentUserId } from "@/lib/userStore";
 import { fetchTracks, fetchProgress } from "@/lib/academyApi";
 import { reloadWithCachePurge } from "@/lib/cachePurge";
-import { detectNativeShell, fetchLatestRelease, LEGACY_SHELL_MAX_CODE } from "@/lib/nativeDetect";
+import { detectNativeShell, fetchLatestRelease, isNativeShellOutdated } from "@/lib/nativeDetect";
 import { showToast } from "@/components/ui/Toast";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
@@ -756,9 +756,7 @@ export default function ProfilePage() {
       try {
         const rel = await fetchLatestRelease();
         if (rel) {
-          const outdated = shell.versionCode === null
-            ? rel.latestVersionCode > LEGACY_SHELL_MAX_CODE
-            : rel.latestVersionCode > shell.versionCode;
+            const outdated = isNativeShellOutdated(shell, rel);
           if (outdated) {
             setUpdateCheck({ checking: false, result: { latest: false, version: rel.latestVersion } });
             showToast(
@@ -771,8 +769,9 @@ export default function ProfilePage() {
               window.location.href = rel.downloadPage || rel.downloadUrl || "/friend";
             }, 900);
           } else {
-            setUpdateCheck({ checking: false, result: { latest: true, version: `v${shell.versionName}` } });
-            showToast(`当前已是最新版本 v${shell.versionName}`, "success");
+            const currentVersion = shell.versionName || rel.latestVersion;
+            setUpdateCheck({ checking: false, result: { latest: true, version: `v${currentVersion}` } });
+            showToast(`当前已是最新版本 v${currentVersion}`, "success");
           }
           return;
         }

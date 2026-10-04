@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getLocalTtsStatus, speakLocalText, stopLocalTts, type LocalTtsStatus } from "@/lib/localTts";
 
-export function LocalListenButton({ text, compact = false }: { text: string; contentId: string; compact?: boolean }) {
+const RATE_KEY = "local_tts_rate";
+const LAST_CONTENT_KEY = "local_tts_last_content";
+
+export function LocalListenButton({ text, contentId, compact = false }: { text: string; contentId: string; compact?: boolean }) {
   const [status, setStatus] = useState<LocalTtsStatus | null>(null);
   const [state, setState] = useState<"idle" | "speaking" | "error">("idle");
   const [message, setMessage] = useState("");
@@ -17,18 +20,27 @@ export function LocalListenButton({ text, compact = false }: { text: string; con
 
   useEffect(() => {
     let active = true;
+    try {
+      const savedRate = Number(window.localStorage.getItem(RATE_KEY));
+      if ([0.75, 0.9, 1.1].includes(savedRate)) setRate(savedRate);
+    } catch { /* localStorage unavailable */ }
     void getLocalTtsStatus().then((result) => { if (active) setStatus(result); }).catch(() => {
       if (active) setStatus({ ready: true, available: false, message: "本机语音服务暂不可用", source: "unavailable" });
     });
-    const leave = () => { if (document.visibilityState === "hidden") stop(); };
-    document.addEventListener("visibilitychange", leave); window.addEventListener("pagehide", stop);
-    return () => { active = false; document.removeEventListener("visibilitychange", leave); window.removeEventListener("pagehide", stop); stop(); };
+    // Native reading may continue while the screen is locked or another app is
+    // briefly opened. Stop only after this reading component is actually left.
+    window.addEventListener("pagehide", stop);
+    return () => { active = false; window.removeEventListener("pagehide", stop); stop(); };
   }, [stop]);
 
   const play = async () => {
     if (state === "speaking") { stop(); return; }
     setMessage("");
     try {
+      try {
+        window.localStorage.setItem(RATE_KEY, String(rate));
+        window.localStorage.setItem(LAST_CONTENT_KEY, contentId);
+      } catch { /* localStorage unavailable */ }
       cleanupRef.current = await speakLocalText(text, rate, (event) => {
         if (event.state === "speaking") setState("speaking");
         if (event.state === "finished" || event.state === "stopped") { setState("idle"); cleanupRef.current = null; }
@@ -42,7 +54,9 @@ export function LocalListenButton({ text, compact = false }: { text: string; con
   };
 
   if (status && !status.available) {
-    return <p className="text-[11px] text-amber-700">{status.message}，可在手机系统的“文字转语音”设置中安装中文语音包。</p>;
+    return <p className="text-[11px] text-amber-700">
+      {status.ready ? `${status.message}，可在手机系统的“文字转语音”设置中安装中文语音包。` : status.message}
+    </p>;
   }
   return (
     <div className={`flex ${compact ? "items-center" : "items-start"} flex-wrap gap-2`}>

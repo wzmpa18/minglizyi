@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { BrandHeader } from "@/components/shared";
 import { PageLoginGuard } from "@/components/PageLoginGuard";
+import { LocalListenButton } from "@/components/LocalListenButton";
 import { getSubject, YIXUE_SUBJECTS } from "@/lib/yixueSubjects";
 import { qizhengTopicOfPoint } from "@/lib/qizhengLearningTopics";
 import {
@@ -312,6 +313,9 @@ export default function YixueSubjectPage() {
                                 >{checked.has(kpKey(p)) ? "✓ 已学" : "打卡"}</button>
                               </div>
                               <p className="mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-gray-600">{p.content}</p>
+                              <div className="mt-2">
+                                <LocalListenButton text={`${p.title}。${p.content}`} contentId={`yixue:${key}:${p.id}`} compact />
+                              </div>
                               {(p.tags || []).length > 0 && (
                                 <div className="mt-1.5 flex flex-wrap gap-1">
                                   {p.tags.slice(0, 6).map((tg) => (
@@ -361,6 +365,9 @@ export default function YixueSubjectPage() {
                             >{checked.has(kpKey(p)) ? "✓ 已学" : "打卡"}</button>
                           </div>
                           <p className="mt-1 whitespace-pre-wrap text-[12px] leading-relaxed text-gray-600">{p.content}</p>
+                          <div className="mt-2">
+                            <LocalListenButton text={`${p.title}。${p.content}`} contentId={`yixue:${key}:${p.id}`} compact />
+                          </div>
                           {(p.tags || []).length > 0 && (
                             <div className="mt-1.5 flex flex-wrap gap-1">
                               {p.tags.slice(0, 6).map((tg) => (

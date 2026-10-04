@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import {
   detectNativeShell,
   fetchLatestRelease,
+  isNativeShellOutdated,
   isNativeShellSync,
-  LEGACY_SHELL_MAX_CODE,
   type AppReleaseInfo,
 } from "@/lib/nativeDetect";
 
@@ -52,10 +52,11 @@ export default function AppUpgradeChecker() {
       try {
         const rel = await fetchLatestRelease();
         if (stopped || !rel) return;
-        const outdated = shell.versionCode === null
-          ? rel.latestVersionCode > LEGACY_SHELL_MAX_CODE
-          : rel.latestVersionCode > shell.versionCode;
-        if (!outdated) return;
+        const outdated = isNativeShellOutdated(shell, rel);
+        if (!outdated) {
+          setRelease(null);
+          return;
+        }
 
         try {
           if (localStorage.getItem(DISMISS_KEY) === String(rel.latestVersionCode)) return;
@@ -77,10 +78,9 @@ export default function AppUpgradeChecker() {
     };
   }, []);
 
-  const needsUpgrade = !!native && !!release && (
-    native.versionCode === null
-      ? release.latestVersionCode > LEGACY_SHELL_MAX_CODE
-      : release.latestVersionCode > native.versionCode
+  const needsUpgrade = !!native && !!release && isNativeShellOutdated(
+    { isShell: true, versionCode: native.versionCode, versionName: native.versionName, source: "asset" },
+    release,
   );
   if (!needsUpgrade || dismissed) return null;
 
