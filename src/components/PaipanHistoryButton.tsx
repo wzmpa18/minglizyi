@@ -10,8 +10,7 @@ import {
   listPaipanRecords,
   deletePaipanRecord,
   formatRecordTime,
-  setPendingPaipanRecordMeta,
-  clearPendingPaipanRecordMeta,
+  updatePaipanRecordMeta,
   type PaipanRecord,
 } from "@/lib/nativePaipanStore";
 import { getUserPermissionLevel } from "@/lib/aiService";
@@ -47,15 +46,9 @@ export function PaipanHistoryButton({ toolKey, onRestore }: PaipanHistoryButtonP
   const [records, setRecords] = useState<PaipanRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState("");
-  const [metaOpen, setMetaOpen] = useState(false);
-  const [recordName, setRecordName] = useState("");
-  const [recordNote, setRecordNote] = useState("");
-  const [metaEdited, setMetaEdited] = useState(false);
-
-  useEffect(() => {
-    if (metaEdited) setPendingPaipanRecordMeta(toolKey, recordName, recordNote, true);
-  }, [toolKey, recordName, recordNote, metaEdited]);
-  useEffect(() => () => clearPendingPaipanRecordMeta(toolKey), [toolKey]);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editNote, setEditNote] = useState("");
 
   useBodyScrollLock(showHistory);
   usePopupBackHandler(() => setShowHistory(false), showHistory);
@@ -99,6 +92,24 @@ export function PaipanHistoryButton({ toolKey, onRestore }: PaipanHistoryButtonP
     }
   }, [flashToast]);
 
+  const beginEdit = useCallback((record: PaipanRecord) => {
+    setEditingId(record.id);
+    setEditName(String(record.input.name || ""));
+    setEditNote(record.note || "");
+  }, []);
+
+  const saveEdit = useCallback(async () => {
+    if (editingId == null) return;
+    try {
+      await updatePaipanRecordMeta(editingId, editName, editNote);
+      setEditingId(null);
+      await refresh();
+      flashToast("名称和备注已更新");
+    } catch {
+      flashToast("修改失败，请重试");
+    }
+  }, [editingId, editName, editNote, refresh, flashToast]);
+
   useEffect(() => {
     const raw = sessionStorage.getItem("paipan_pending_restore");
     if (!raw) return;
@@ -117,14 +128,6 @@ export function PaipanHistoryButton({ toolKey, onRestore }: PaipanHistoryButtonP
       >
         排盘记录
       </button>
-      <button type="button" onClick={() => setMetaOpen((v) => !v)} className="ml-2 rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600">
-        {metaOpen ? "收起记录名称" : "设置记录名称/备注"}
-      </button>
-      {metaOpen && <div className="fixed bottom-24 left-1/2 z-[55] w-[min(92vw,380px)] -translate-x-1/2 space-y-2 rounded-xl border bg-white p-3 shadow-lg">
-        <input value={recordName} onChange={(e) => { setRecordName(e.target.value); setMetaEdited(true); }} maxLength={60} placeholder="记录名称，之后可按姓名搜索" className="w-full rounded-lg border p-2 text-sm" />
-        <textarea value={recordNote} onChange={(e) => { setRecordNote(e.target.value); setMetaEdited(true); }} maxLength={300} rows={2} placeholder="备注（可选）" className="w-full rounded-lg border p-2 text-sm" />
-        <p className="text-[11px] text-gray-500">将应用到本工具后续保存的排盘记录。</p>
-      </div>}
 
       {toast && (
         <div
@@ -160,7 +163,15 @@ export function PaipanHistoryButton({ toolKey, onRestore }: PaipanHistoryButtonP
               ) : (
                 <div className="space-y-2">
                   {records.filter(r => `${r.title} ${r.input.name || ""} ${r.note || ""} ${TOOL_NAMES[r.tool] || r.tool}`.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())).map((r) => (
-                    <div key={r.id} className="flex items-center justify-between gap-2 rounded-xl bg-gray-50 p-3">
+                    <div key={r.id} className="rounded-xl bg-gray-50 p-3">
+                      {editingId === r.id ? <div className="space-y-2">
+                        <input value={editName} onChange={(e) => setEditName(e.target.value)} maxLength={60} placeholder="姓名或记录名称" className="w-full rounded-lg border bg-white p-2 text-sm" />
+                        <input value={editNote} onChange={(e) => setEditNote(e.target.value)} maxLength={300} placeholder="备注（可选）" className="w-full rounded-lg border bg-white p-2 text-sm" />
+                        <div className="flex justify-end gap-2">
+                          <button onClick={() => setEditingId(null)} className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600">取消</button>
+                          <button onClick={saveEdit} className="rounded-lg px-3 py-1.5 text-xs text-white" style={{ backgroundColor: BRAND }}>保存修改</button>
+                        </div>
+                      </div> : <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0 flex-1" onClick={() => handleRestore(r)}>
                         <div className="truncate text-sm font-medium text-gray-800">{TOOL_NAMES[r.tool] || r.tool} · {r.title || "未命名排盘"}</div>
                         {(r.input.name || r.note) && <div className="mt-0.5 truncate text-xs text-gray-600">{r.input.name ? `姓名：${String(r.input.name)}` : ""}{r.note ? ` · 备注：${r.note}` : ""}</div>}
@@ -179,6 +190,7 @@ export function PaipanHistoryButton({ toolKey, onRestore }: PaipanHistoryButtonP
                         >
                           {r.tool === toolKey ? "恢复" : "查看原盘"}
                         </button>
+                        <button onClick={() => beginEdit(r)} className="rounded-lg border border-purple-200 px-2.5 py-1 text-[11px] text-purple-700">编辑名称/备注</button>
                         <button
                           onClick={() => handleDelete(r.id)}
                           className="rounded-lg border border-gray-200 px-2.5 py-1 text-[11px] text-gray-500"
@@ -186,6 +198,7 @@ export function PaipanHistoryButton({ toolKey, onRestore }: PaipanHistoryButtonP
                           删除
                         </button>
                       </div>
+                    </div>}
                     </div>
                   ))}
                 </div>

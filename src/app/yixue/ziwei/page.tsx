@@ -15,7 +15,7 @@ import {
 } from "@/algorithm-core";
 import type { ZwTimeInput, ZwSeriesStar } from "@/algorithm-core";
 import { useRouter } from "next/navigation";
-import { leaveToolPage, isManagedBackNavigation } from "@/lib/leaveToolPage";
+import { closeInitialToolPopup } from "@/lib/leaveToolPage";
 import type { ZiweiResult, Gender } from "@/algorithm-core";
 import { DatePicker } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
@@ -27,15 +27,13 @@ import { buildDeepReportSystemPrompt } from "@/lib/deepReportPrompt";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
-import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
+import { savePaipanState, loadPaipanState } from "@/lib/paipanPersistence";
 import { useToolBack } from "@/lib/useToolBack";
 import { ShareButton } from "@/components/ShareButton";
 import { PostToSquareButton } from "@/components/PostToSquareButton";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
-import { PaipanHistoryButton } from "@/components/PaipanHistoryButton";
-import { MingzhuProfilePicker } from "@/components/MingzhuProfilePicker";
 import { savePaipanRecord, type PaipanRecord, type MingzhuProfile } from "@/lib/nativePaipanStore";
 
 // ====================================================================
@@ -1090,7 +1088,7 @@ export default function ZiweiPage() {
       {/* 输入表单 DatePicker 弹窗 */}
       <DatePicker onRecordImport={applyMingzhuProfile}
         show={showForm}
-        onClose={(reason?: "back") => { setShowForm(false); if (reason === "back" && !result && !isManagedBackNavigation()) leaveToolPage(router); }}
+        onClose={(reason) => { setShowForm(false); if (reason !== "submit" && !result) closeInitialToolPopup(router, reason); }}
         onSubmit={(dateVal, opts) => {
           setYear(dateVal.year); setMonth(dateVal.month); setDay(dateVal.day); setHour(dateVal.hour); setBirthMinute(dateVal.minute);
           setGender(opts.gender as Gender);
@@ -1135,24 +1133,6 @@ export default function ZiweiPage() {
       {/* ================================================================ */}
       {/* 排盘结果 */}
       {/* ================================================================ */}
-      {!showForm && !result && (
-        <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 gap-3">
-          <button onClick={() => { clearPaipanState("ziwei"); setShowForm(true); }} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">开始排盘</button>
-          <div className="flex items-center gap-2">
-            <MingzhuProfilePicker
-              value={mingzhu}
-              onChange={applyMingzhuProfile}
-              buildDraft={() => ({
-                name: name || "",
-                gender: gender === "male" ? "男" : "女",
-                birthDate: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
-                birthTime: `${String(hour).padStart(2, "0")}:${String(birthMinute).padStart(2, "0")}`,
-              })}
-            />
-            <PaipanHistoryButton toolKey="ziwei" onRestore={handleRestoreHistory} />
-          </div>
-        </div>
-      )}
       {result && (
         <div className="px-2">
           {/* S2-4: 真太阳时修正说明（勾选真太阳时后显示） */}

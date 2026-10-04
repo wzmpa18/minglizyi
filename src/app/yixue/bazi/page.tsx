@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { leaveToolPage, isManagedBackNavigation } from "@/lib/leaveToolPage";
+import { closeInitialToolPopup } from "@/lib/leaveToolPage";
 import {
   solarToBazi,
   calcTrueSolarTime,
@@ -35,13 +35,11 @@ import { PostToSquareButton } from "@/components/PostToSquareButton";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 import { getPillarInterpretation, getShenshaInterpretation } from "@/lib/bazi-interpretations";
-import { savePaipanState, loadPaipanState, clearPaipanState, getPaipanHistoryList, clearPaipanHistory } from "@/lib/paipanPersistence";
+import { savePaipanState, loadPaipanState, getPaipanHistoryList, clearPaipanHistory } from "@/lib/paipanPersistence";
 import {
   savePaipanRecord, listPaipanRecords, deletePaipanRecord, clearPaipanRecordsByTool, insertPaipanRecord,
   type PaipanRecord, type MingzhuProfile,
 } from "@/lib/nativePaipanStore";
-import { PaipanHistoryButton } from "@/components/PaipanHistoryButton";
-import { MingzhuProfilePicker } from "@/components/MingzhuProfilePicker";
 import { getUserPermissionLevel } from "@/lib/aiService";
 import { useToolBack } from "@/lib/useToolBack";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
@@ -560,23 +558,32 @@ function TabChart({result,shensha,shengxiao,gender,lunarDateStr,solarDateStr,tru
 }
 
 // ===== TabBasic =====
-function TabBasic({result,shengxiao,dateStr,lunarDateStr,solarDateStr,trueSolarStr,solarCorrection,taiYuan,taiXi,mingGong,shenGong,mingGua,wuxingStats,boneWeight,gender}:{
-  result:BaziResult;shengxiao:string;dateStr:string;lunarDateStr:string;solarDateStr:string;trueSolarStr:string;solarCorrection:string|null;taiYuan:string;taiXi:string;mingGong:string;shenGong:string;mingGua:string;
+function TabBasic({result,shengxiao,name,birthPlace,longitude,dateStr,lunarDateStr,solarDateStr,trueSolarStr,solarCorrection,taiYuan,taiXi,mingGong,shenGong,mingGua,wuxingStats,boneWeight,gender}:{
+  result:BaziResult;shengxiao:string;name:string;birthPlace:string;longitude:number;dateStr:string;lunarDateStr:string;solarDateStr:string;trueSolarStr:string;solarCorrection:string|null;taiYuan:string;taiXi:string;mingGong:string;shenGong:string;mingGua:string;
   wuxingStats:Record<string,number>|null;boneWeight:ReturnType<typeof calcBoneWeight>;gender:Gender;
 }){
   return <div className="px-2 pt-2">
-    <div className="bg-white mb-2 px-3 py-3">
-      <table className="w-full border-collapse"><colgroup><col width="22%"/><col width="78%"/></colgroup><tbody>
-        <tr><td rowSpan={10} className="text-center align-top pr-2 pt-1"><ShengxiaoIcon name={shengxiao} /></td><td className="text-[17px] text-[#333] pb-1">农历：{lunarDateStr}</td></tr>
-        <tr><td className="text-[13px] text-[#999] text-right pr-1 align-top">北京时间：</td><td className="text-[13px] text-[#333]">{solarDateStr}</td></tr>
-        <tr><td className="text-[13px] text-[#999] text-right pr-1 align-top">真太阳时：</td><td className="text-[13px] text-[#333]">{trueSolarStr}</td></tr>
-        {solarCorrection && <tr><td className="text-[13px] text-[#999] text-right pr-1 align-top">真太阳时修正：</td><td className="text-[13px] text-[#333]">{solarCorrection}</td></tr>}
-        <tr><td className="text-[13px] text-[#999] text-right pr-1 align-top">胎元：</td><td className="text-[13px] text-[#333]">{taiYuan}</td></tr>
-        <tr><td className="text-[13px] text-[#999] text-right pr-1 align-top">胎息：</td><td className="text-[13px] text-[#333]">{taiXi}</td></tr>
-        <tr><td className="text-[13px] text-[#999] text-right pr-1 align-top">命宫：</td><td className="text-[13px] text-[#333]">{mingGong}</td></tr>
-        <tr><td className="text-[13px] text-[#999] text-right pr-1 align-top">身宫：</td><td className="text-[13px] text-[#333]">{shenGong}</td></tr>
-        <tr><td className="text-[13px] text-[#999] text-right pr-1 align-top">命卦：</td><td className="text-[13px] text-[#333]">{mingGua}</td></tr>
-      </tbody></table>
+    <div className="mb-2 bg-white px-3 py-3">
+      <div className="flex items-start gap-3">
+        <div className="shrink-0 pt-1"><ShengxiaoIcon name={shengxiao} /></div>
+        <div className="min-w-0 flex-1">
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <strong className="truncate text-[16px] text-[#333]">{name || "未命名命盘"}</strong>
+            <span className="shrink-0 rounded bg-[#F3EDF7] px-2 py-0.5 text-[12px] font-bold text-[#7B2FBE]">{gender === "male" ? "男 · 乾造" : "女 · 坤造"}</span>
+          </div>
+          <div className="grid grid-cols-[68px_minmax(0,1fr)] gap-x-2 gap-y-1 text-[12px] leading-[1.55]">
+            <span className="text-[#999]">农历</span><span className="break-words text-[#333]">{lunarDateStr}</span>
+            <span className="text-[#999]">北京时间</span><span className="text-[#333]">{solarDateStr}</span>
+            <span className="text-[#999]">真太阳时</span><span className="text-[#333]">{trueSolarStr}</span>
+            <span className="text-[#999]">出生地区</span><span className="break-words text-[#333]">{birthPlace || `东经 ${longitude.toFixed(2)}°`}</span>
+            <span className="text-[#999]">四柱</span><strong className="tracking-wide text-[#333]">{result.pillars.map((p) => p.gan + p.zhi).join(" · ")}</strong>
+          </div>
+        </div>
+      </div>
+      {solarCorrection && <div className="mt-2 rounded bg-[#faf7ef] px-2 py-1.5 text-[11px] leading-relaxed text-[#8a6d3b]">真太阳时修正：{solarCorrection}</div>}
+      <div className="mt-2 grid grid-cols-5 gap-1 border-t border-[#eee] pt-2 text-center">
+        {[["胎元",taiYuan],["胎息",taiXi],["命宫",mingGong],["身宫",shenGong],["命卦",mingGua]].map(([label,value])=><div key={label}><div className="text-[10px] text-[#999]">{label}</div><div className="mt-0.5 text-[13px] font-bold text-[#333]">{value}</div></div>)}
+      </div>
     </div>
     <div className="bg-white mb-2 px-3 py-3">
       <div className="text-[16px] font-bold mb-2 text-[#333]">五行统计</div>
@@ -617,6 +624,19 @@ function TabDetail({result,gender}:{
   const [selectedLn, setSelectedLn] = useState(0);
   // 选中流月索引 (undefined = 未选中，隐藏流月列)
   const [selectedLy, setSelectedLy] = useState<number | undefined>(undefined);
+  // 流日、流时直接复用统一历法引擎计算，避免手写干支口径偏差。
+  const [flowDate, setFlowDate] = useState(() => {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate(), hour: now.getHours() };
+  });
+  const flowMaxDay = new Date(flowDate.year, flowDate.month, 0).getDate();
+  const flowResult = useMemo(() => {
+    try {
+      return solarToBazi({ ...flowDate, minute: 0, gender }) as BaziResult;
+    } catch {
+      return null;
+    }
+  }, [flowDate, gender]);
 
   // 默认选中包含当前年份的大运
   useEffect(() => {
@@ -1089,6 +1109,37 @@ function TabDetail({result,gender}:{
       </div>}
     </div>}
 
+    {/* 流日流时：按所选公历时刻调用与本命一致的历法引擎。 */}
+    <div className="mb-2 bg-white px-2 py-2">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <strong className="text-[14px] text-[#333]">流日 · 流时</strong>
+        <button type="button" onClick={() => { const now = new Date(); setFlowDate({ year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate(), hour: now.getHours() }); }} className="rounded border border-[#C9A8DC] bg-[#F3EDF7] px-2 py-1 text-[11px] text-[#7B2FBE]">当前时刻</button>
+      </div>
+      <div className="mb-2 grid grid-cols-[1.35fr_.8fr_.8fr_.8fr] gap-1">
+        <select aria-label="流日年份" value={flowDate.year} onChange={(e) => setFlowDate((v) => ({ ...v, year: Number(e.target.value), day: Math.min(v.day, new Date(Number(e.target.value), v.month, 0).getDate()) }))} className="min-w-0 rounded border border-gray-200 bg-white px-1 py-1.5 text-center text-[12px]">
+          {Array.from({ length: 201 }, (_, i) => 1900 + i).map((y) => <option key={y} value={y}>{y}年</option>)}
+        </select>
+        <select aria-label="流日月份" value={flowDate.month} onChange={(e) => setFlowDate((v) => { const month = Number(e.target.value); return { ...v, month, day: Math.min(v.day, new Date(v.year, month, 0).getDate()) }; })} className="min-w-0 rounded border border-gray-200 bg-white px-1 py-1.5 text-center text-[12px]">
+          {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => <option key={m} value={m}>{m}月</option>)}
+        </select>
+        <select aria-label="流日日数" value={flowDate.day} onChange={(e) => setFlowDate((v) => ({ ...v, day: Number(e.target.value) }))} className="min-w-0 rounded border border-gray-200 bg-white px-1 py-1.5 text-center text-[12px]">
+          {Array.from({ length: flowMaxDay }, (_, i) => i + 1).map((d) => <option key={d} value={d}>{d}日</option>)}
+        </select>
+        <select aria-label="流时时辰" value={flowDate.hour} onChange={(e) => setFlowDate((v) => ({ ...v, hour: Number(e.target.value) }))} className="min-w-0 rounded border border-gray-200 bg-white px-1 py-1.5 text-center text-[12px]">
+          {Array.from({ length: 24 }, (_, i) => i).map((h) => <option key={h} value={h}>{String(h).padStart(2,"0")}时</option>)}
+        </select>
+      </div>
+      {flowResult ? <table className="w-full table-fixed border-collapse text-center">
+        <tbody>
+          <tr className="bg-[#f8f8f8] text-[11px] text-[#666]"><td className="py-1">日期</td>{["流年","流月","流日","流时"].map((v) => <td key={v} className="py-1">{v}</td>)}</tr>
+          <tr><td className="py-1 text-[11px] text-[#666]">十神</td>{flowResult.pillars.map((p,i) => <td key={i} className="py-1 text-[12px] text-[#333]">{i === 2 ? (gender === "male" ? "元男" : "元女") : getShiShen(dayGan, p.gan as TianGan)}</td>)}</tr>
+          <tr><td className="py-1 text-[11px] text-[#666]">天干</td>{flowResult.pillars.map((p,i) => <td key={i} className="py-1 text-[20px] font-black" style={{color:WX_COLORS[getGanWuxing(p.gan as TianGan)||"火"]}}>{p.gan}</td>)}</tr>
+          <tr><td className="py-1 text-[11px] text-[#666]">地支</td>{flowResult.pillars.map((p,i) => <td key={i} className="py-1 text-[20px] font-black" style={{color:WX_COLORS[getZhiWuxing(p.zhi as DiZhi)||"火"]}}>{p.zhi}</td>)}</tr>
+          <tr className="bg-[#f8f8f8]"><td className="py-1 text-[11px] text-[#666]">纳音</td>{flowResult.pillars.map((p,i) => <td key={i} className="py-1 text-[11px] text-[#555]">{p.nayin || getNaYin(p.ganzhi) || "-"}</td>)}</tr>
+        </tbody>
+      </table> : <div className="py-3 text-center text-xs text-red-500">该时刻暂时无法计算，请调整日期</div>}
+    </div>
+
     {/* 五行旺衰条 - 金色/棕色底, 对标参考页 */}
     {(() => {
       // 计算月令五行旺衰
@@ -1496,8 +1547,9 @@ export default function BaziPage(){
   const [birthMinute, setBirthMinute] = useState(0);
   const [calType,setCalType]=useState<"gongli"|"nongli"|"sizhu">("gongli");
   const [zaoWanZi,setZaoWanZi]=useState(false); const [zhenTaiyang,setZhenTaiyang]=useState(true);
-  const [xiaLing,setXiaLing]=useState(false); const [saveName,setSaveName]=useState(false);
+  const [xiaLing,setXiaLing]=useState(false);
   const [longitude,setLongitude]=useState(116.4);
+  const [birthPlace,setBirthPlace]=useState("");
   const [solarCorrection,setSolarCorrection]=useState<string|null>(null);
   const [trueSolarDisplay,setTrueSolarDisplay]=useState<string|null>(null);
   const [showForm,setShowForm]=useState(true); const [result,setResult]=useState<BaziResult|null>(null);
@@ -1576,6 +1628,10 @@ export default function BaziPage(){
       if (inp.hour) setHour(inp.hour);
       if (inp.gender) setGender(inp.gender);
       if (inp.calType) setCalType(inp.calType);
+      if (inp.minute !== undefined) setBirthMinute(inp.minute);
+      if (inp.name !== undefined) setName(inp.name);
+      if (inp.longitude !== undefined) setLongitude(inp.longitude);
+      if (inp.birthPlace !== undefined) setBirthPlace(inp.birthPlace);
     }
   }, []);
 
@@ -1647,6 +1703,7 @@ export default function BaziPage(){
     if (inp.calType) setCalType(inp.calType);
     if (inp.useTrueSolar !== undefined) setZhenTaiyang(!!inp.useTrueSolar);
     if (inp.longitude !== undefined) setLongitude(inp.longitude);
+    if (inp.birthPlace !== undefined) setBirthPlace(inp.birthPlace || "");
     if (inp.name !== undefined) setName(inp.name);
     if (inp._trueSolarDisplay !== undefined) setTrueSolarDisplay(inp._trueSolarDisplay || null);
     if (inp._solarCorrection !== undefined) setSolarCorrection(inp._solarCorrection || null);
@@ -1745,20 +1802,22 @@ export default function BaziPage(){
     finally { setCloudLoading(false); }
   }, [cloudLoading, restoreHistoryRecord]);
 
-  const handleSubmit=useCallback((override?:{year:number;month:number;day:number;hour:number;minute?:number;gender:Gender;birthInput?:Record<string,unknown>})=>{
+  const handleSubmit=useCallback((override?:{year:number;month:number;day:number;hour:number;minute?:number;gender:Gender;birthPlace?:string;birthInput?:Record<string,unknown>})=>{
     const y=override?.year??year; const m=override?.month??month;
     const d=override?.day??day; const h=override?.hour??hour;
     const mi=override?.minute??0;
     const g=override?.gender??gender;
     try{const bz=solarToBazi({year:y,month:m,day:d,hour:h,minute:mi,gender:g}) as BaziResult;setResult(bz);
       const ss=calculateAllShenSha({yearGan:bz.pillars[0].gan as TianGan,yearZhi:bz.pillars[0].zhi as DiZhi,monthGan:bz.pillars[1].gan as TianGan,monthZhi:bz.pillars[1].zhi as DiZhi,dayGan:bz.dayGan as TianGan,dayZhi:bz.dayZhi as DiZhi,hourGan:bz.pillars[3].gan as TianGan,hourZhi:bz.pillars[3].zhi as DiZhi,gender:g});
-      setShensha(ss);setShowForm(false);savePaipanState("bazi",{input:{year:y,month:m,day:d,hour:h,minute:mi,gender:g,calType},result:bz,showForm:false,_ts:Date.now()});
+      const place=override?.birthPlace??birthPlace;
+      setBirthMinute(mi); setBirthPlace(place);
+      setShensha(ss);setShowForm(false);savePaipanState("bazi",{input:{year:y,month:m,day:d,hour:h,minute:mi,gender:g,calType,name,longitude,birthPlace:place},result:bz,showForm:false,_ts:Date.now()});
       // v25.0.87: 排盘历史记录（完整参数+结果，同参数自动去重置顶）——记录保存需注册，游客不落记录
       // v25.0.88: 底层切换统一原生存储（原生壳SQLite/网页localStorage），并关联命主档案
       if(getUserPermissionLevel()!=="visitor"){
         savePaipanRecord({
           tool:"bazi",
-          input:{birthInput:override?.birthInput,year:y,month:m,day:d,hour:h,minute:mi,gender:g,calType,useTrueSolar:zhenTaiyang,longitude,name,zaoWanZi,xiaLing,_trueSolarDisplay:trueSolarDisplay,_solarCorrection:solarCorrection},
+          input:{birthInput:override?.birthInput,year:y,month:m,day:d,hour:h,minute:mi,gender:g,calType,useTrueSolar:zhenTaiyang,longitude,birthPlace:place,name,zaoWanZi,xiaLing,_trueSolarDisplay:trueSolarDisplay,_solarCorrection:solarCorrection},
           result:bz as unknown as Record<string, unknown>,
           profileId:mingzhu?.id??null,
           title:`${g==="male"?"男":"女"}命 ${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")} ${String(h).padStart(2,"0")}:${String(mi).padStart(2,"0")} ${bz.pillars.map(p=>p.gan+p.zhi).join(" ")}`,
@@ -1767,10 +1826,10 @@ export default function BaziPage(){
         try{saveRecord({clientId:selectedClient?selectedClient.id:"",type:"bazi",data:{...bz,inputParams:{year:y,month:m,day:d,hour:h,minute:mi,gender:g}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
       }
     }catch(e){console.error("排盘失败:",e);}
-  },[year,month,day,hour,gender,selectedClient,calType,zhenTaiyang,longitude,name,zaoWanZi,xiaLing,trueSolarDisplay,solarCorrection,mingzhu]);
+  },[year,month,day,hour,gender,selectedClient,calType,zhenTaiyang,longitude,birthPlace,name,zaoWanZi,xiaLing,trueSolarDisplay,solarCorrection,mingzhu]);
 
   const pillars=result?.pillars||[]; const shengxiao=pillars[0]?getShengXiao(pillars[0].zhi as DiZhi):"";
-  const dateStr=`${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")} ${String(hour).padStart(2,"0")}:00`;
+  const dateStr=`${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")} ${String(hour).padStart(2,"0")}:${String(birthMinute).padStart(2,"0")}`;
   // 真太阳时显示：勾选时用修正后的真实时间，否则回退为北京时间
   const trueSolarTimeStr = trueSolarDisplay ?? dateStr;
   const lunarDateStr = result?.lunarDate || (result ? `${result.input?.solarDate} ${result.input?.time}` : '');
@@ -1852,7 +1911,10 @@ export default function BaziPage(){
     <div className="w-full" style={{maxWidth:"420px",paddingBottom:"10px"}}>
     <DatePicker onRecordImport={applyMingzhuProfile}
       show={showForm}
-      onClose={(reason?: "back") => { setShowForm(false); if (reason === "back" && !result && !isManagedBackNavigation()) leaveToolPage(router); }}
+      onClose={(reason) => {
+        setShowForm(false);
+        if (reason !== "submit" && !result) closeInitialToolPopup(router, reason);
+      }}
       onSubmit={(dateVal, opts) => {
         setYear(dateVal.year); setMonth(dateVal.month); setDay(dateVal.day); setHour(dateVal.hour); setBirthMinute(dateVal.minute);
         setGender(opts.gender as Gender);
@@ -1876,7 +1938,7 @@ export default function BaziPage(){
           setSolarCorrection(null);
         }
         if (opts.longitude !== undefined) setLongitude(opts.longitude);
-        handleSubmit({ ...calcDate, gender: opts.gender as Gender, birthInput:{...dateVal,name,gender:opts.gender,longitude:opts.longitude ?? longitude,calendar:"solar"} });
+        handleSubmit({ ...calcDate, gender: opts.gender as Gender, birthPlace: opts.birthPlace, birthInput:{...dateVal,name,gender:opts.gender,longitude:opts.longitude ?? longitude,birthPlace:opts.birthPlace,calendar:"solar"} });
       }}
       initialDate={{year, month, day, hour, minute: birthMinute}}
       initialOptions={{
@@ -1885,58 +1947,16 @@ export default function BaziPage(){
         zaoWanZi, zhenTaiyang, xiaLing, longitude,
       }}
       showName={true} name={name} onNameChange={setName}
-      showSaveName={true} saveName={saveName} onSaveNameChange={setSaveName}
       showGender={true} showCalType={true} showToggles={true} showRegion={true}
       showMinute={true}
       submitText="排盘" title="八字排盘"
     />
-    {!showForm && !result && (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 gap-3">
-        <button onClick={() => { clearPaipanState("bazi"); setShowForm(true); }} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">开始排盘</button>
-        <PaipanHistoryButton toolKey="bazi" onRestore={restoreHistoryRecord} />
-        <MingzhuProfilePicker
-          value={mingzhu}
-          onChange={applyMingzhuProfile}
-          buildDraft={() => ({
-            name: name || "",
-            gender: gender === "male" ? "男" : "女",
-            birthDate: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
-            birthTime: `${String(hour).padStart(2, "0")}:${String(birthMinute).padStart(2, "0")}`,
-          })}
-        />
-      </div>
-    )}
     {result&&<div>
       {/* Tab导航 - 紫色选中态 */}
       <div className="flex border-b border-[#eee] bg-white/95 sticky top-10 z-30 overflow-x-auto">
         {tabOrder.map(tab=><button key={tab} onClick={()=>setActiveTab(tab)} className={`shrink-0 px-3 py-2.5 text-center text-[15px] font-bold border-none bg-transparent cursor-pointer transition-colors duration-200 border-b-[3px]`} style={{color: activeTab===tab ? BRAND_PURPLE : "#666", borderBottomColor: activeTab===tab ? BRAND_PURPLE : "transparent", borderBottomStyle:"solid"}}>{tabLabels[tab]}</button>)}
       </div>
-      {/* v25.0.87: 排盘历史记录入口（全Tab可见）；v25.0.88: 命主档案跨工具共享 */}
-      <div className="bg-white border-b border-[#eee] px-3 py-1.5 flex items-center justify-between">
-        <button
-          onClick={openHistory}
-          className="flex items-center gap-1 text-[12px] font-bold cursor-pointer border-none bg-transparent"
-          style={{ color: BRAND_PURPLE }}
-        >
-          <span>📋 历史记录</span>
-          <span style={{ background: BRAND_PURPLE_BG, borderRadius: "8px", padding: "0 6px", fontSize: "10px", color: BRAND_PURPLE }}>{historyList.length}</span>
-        </button>
-        <div className="flex items-center gap-2">
-          <PaipanHistoryButton toolKey="bazi" onRestore={restoreHistoryRecord} />
-        <MingzhuProfilePicker
-            value={mingzhu}
-            onChange={applyMingzhuProfile}
-            buildDraft={() => ({
-              name: name || "",
-              gender: gender === "male" ? "男" : "女",
-              birthDate: `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`,
-              birthTime: `${String(hour).padStart(2, "0")}:${String(birthMinute).padStart(2, "0")}`,
-            })}
-          />
-          <button onClick={()=>setShowForm(true)} className="text-[11px] cursor-pointer border-none bg-transparent" style={{ color: "#999" }}>修改资料重新排盘</button>
-        </div>
-      </div>
-      {activeTab==="basic"&&<TabBasic result={result} shengxiao={shengxiao} dateStr={dateStr} lunarDateStr={lunarDateStr} solarDateStr={dateStr} trueSolarStr={trueSolarTimeStr} solarCorrection={solarCorrection} taiYuan={taiYuan} taiXi={taiXi} mingGong={mingGong} shenGong={shenGong} mingGua={mingGua} wuxingStats={wuxingStats} boneWeight={boneWeight} gender={gender}/>}
+      {activeTab==="basic"&&<TabBasic result={result} shengxiao={shengxiao} name={name} birthPlace={birthPlace} longitude={longitude} dateStr={dateStr} lunarDateStr={lunarDateStr} solarDateStr={dateStr} trueSolarStr={trueSolarTimeStr} solarCorrection={solarCorrection} taiYuan={taiYuan} taiXi={taiXi} mingGong={mingGong} shenGong={shenGong} mingGua={mingGua} wuxingStats={wuxingStats} boneWeight={boneWeight} gender={gender}/>}
       {activeTab==="chart"&&<>
       <TabChart result={result} shensha={shensha} shengxiao={shengxiao} gender={gender} lunarDateStr={lunarDateStr} solarDateStr={dateStr} trueSolarStr={trueSolarTimeStr} solarCorrection={solarCorrection} wangshuaiArr={wangshuaiArr} onPillarClick={(label,gan,zhi,shishenGan,nayin,canggan)=>{
         const interp = getPillarInterpretation(label,gan,zhi,shishenGan,nayin,canggan);

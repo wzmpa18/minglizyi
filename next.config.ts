@@ -28,7 +28,9 @@ const nextConfig: NextConfig = {
   generateBuildId: () => BUILD_ID,
   // 本机构建内存受限（可用 ~3GB），静态页生成并发过高会 Zone OOM
   experimental: {
-    cpus: 2,
+    // Windows 打包机内存紧张时，多 worker 会在静态页生成阶段被系统直接终止。
+    // 单 worker 稍慢，但能稳定完成正式包构建。
+    cpus: 1,
     turbopackMemoryLimit: 2048,
   },
   env: {

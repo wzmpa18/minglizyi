@@ -35,7 +35,12 @@ export function usePopupBackHandler(onClose: (reason?: "back") => void, isOpen: 
 
   useEffect(() => {
     if (isOpen && !pushedRef.current) {
-      window.history.pushState({ __popup: "1" }, "");
+      // 保留 Next.js 的 idx/scroll 等历史字段。覆盖成只有 __popup 会让返回逻辑
+      // 误判为“直接打开页面”，继而反复 push 工具列表，形成返回死循环。
+      const current = (window.history.state && typeof window.history.state === "object")
+        ? window.history.state
+        : {};
+      window.history.pushState({ ...current, __popup: "1" }, "");
       pushedRef.current = true;
       backHandledRef.current = false;
     } else if (!isOpen && pushedRef.current && !backHandledRef.current) {

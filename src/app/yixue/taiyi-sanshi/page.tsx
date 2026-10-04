@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { leaveToolPage, isManagedBackNavigation } from "@/lib/leaveToolPage";
+import { closeInitialToolPopup } from "@/lib/leaveToolPage";
 import { solarToBazi, GAN, ZHI } from "@/algorithm-core";
 import { solarToLunar, getLunarDateString } from "@/lib/lunar";
 import { DatePicker } from "@/components/shared";
@@ -10,14 +10,13 @@ import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/c
 import type { Client } from "@/lib/clientStore";
 import { getTaiyiPalaceInterpretation, getTaiyiShenInterpretation } from "@/lib/taiyi-interpretations";
 import type { TaiyiInterpretItem } from "@/lib/taiyi-interpretations";
-import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
+import { savePaipanState, loadPaipanState } from "@/lib/paipanPersistence";
 import { useToolBack } from "@/lib/useToolBack";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
 
 import { ShareButton } from "@/components/ShareButton";
 import { PostToSquareButton } from "@/components/PostToSquareButton";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
-import { PaipanHistoryButton } from "@/components/PaipanHistoryButton";
 import { savePaipanRecord, type PaipanRecord } from "@/lib/nativePaipanStore";
 // ============================================================================
 // 常量
@@ -413,7 +412,7 @@ export default function TaiyiSanshiPage() {
       <div style={{ maxWidth: "420px", margin: "0 auto", backgroundColor: "#fff", minHeight: "100vh" }}>
         <DatePicker
           show={true}
-          onClose={(reason?: "back") => { setShowForm(false); if (reason === "back" && !hasResult && !isManagedBackNavigation()) leaveToolPage(router); }}
+          onClose={(reason) => { setShowForm(false); if (reason !== "submit" && !hasResult) closeInitialToolPopup(router, reason); }}
           onSubmit={(dateVal) => {
             setTaiyiYear(dateVal.year);
             setTaiyiMonth(dateVal.month);
@@ -431,18 +430,7 @@ export default function TaiyiSanshiPage() {
   }
 
   // ==================== 排盘结果 ====================
-  if (!result) {
-    return (
-      <div className="bg-[#ededed] min-h-screen flex justify-center">
-        <div className="w-full" style={{ maxWidth: "420px" }}>
-          <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 gap-3">
-            <button onClick={() => { clearPaipanState("taiyi"); setShowForm(true); }} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">开始排盘</button>
-            <PaipanHistoryButton toolKey="taiyi" onRestore={handleRestoreHistory} />
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (!result) return null;
 
   return (
     <div className="mx-auto w-full bg-[#ededed]" style={{ maxWidth: "420px", minHeight: "100vh" }}>

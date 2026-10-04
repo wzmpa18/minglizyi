@@ -85,7 +85,8 @@ export function ResourceDiscussion({
         onChange={(event) => setContent(event.target.value.slice(0, 500))}
         placeholder="交流学习心得、典籍理解或使用体会（仅支持文字）…"
         rows={3}
-        style={{ width: "100%", resize: "vertical", boxSizing: "border-box", border: "1px solid #E2E2E2", borderRadius: 10, padding: "10px 11px", fontSize: 13, lineHeight: 1.6, outlineColor: accent }}
+        className="placeholder:text-white/70"
+        style={{ width: "100%", resize: "vertical", boxSizing: "border-box", border: "1px solid rgba(255,255,255,.38)", borderRadius: 10, padding: "10px 11px", fontSize: 13, lineHeight: 1.6, outlineColor: "#FFF", background: accent, color: "#FFF", caretColor: "#FFF", WebkitTextFillColor: "#FFF" }}
       />
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 8 }}>
         <span style={{ color: "#999", fontSize: 10 }}>仅限文字交流；内容经审核后展示，不作为诊疗依据</span>

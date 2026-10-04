@@ -64,13 +64,16 @@ export default function YixueClientShell({ children }: { children: React.ReactNo
   // 列表页按历史栈返回（栈不足回主页）。
   // 弹窗打开时跳离页需设置 __skipPopupCleanup，否则弹窗卸载清理的 history.back() 会撤销本次导航（BottomNav 同款守护）。
   const handleBack = () => {
+    // 弹窗自己持有一个历史垫层。先让浏览器退掉垫层，由弹窗的 popstate
+    // 回调决定“回原盘面”还是“继续退出首次排盘页”，避免页面与弹窗同时返回。
+    if (typeof document !== "undefined" && document.body.classList.contains("modal-open")) {
+      window.history.back();
+      return;
+    }
     window.__yixueBackHandled = false;
     window.dispatchEvent(new CustomEvent("yixue-back"));
     setTimeout(() => {
       if (window.__yixueBackHandled) return;
-      if (typeof document !== "undefined" && document.body.classList.contains("modal-open")) {
-        (window as unknown as { __skipPopupCleanup?: boolean }).__skipPopupCleanup = true;
-      }
       if (isToolPage) {
         leaveToolPage(router);
       } else if (window.history.length > 1) {

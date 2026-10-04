@@ -54,7 +54,7 @@ jobs:
           test -f android/app/src/main/assets/public/index.html || { echo "FATAL: Android assets 未同步内置资源"; exit 1; }
           test -f android/app/src/main/assets/public/native-api-patch.js || { echo "FATAL: native-api-patch.js 未进入 Android assets"; exit 1; }
           test -f android/app/src/main/assets/public/app-native.json || { echo "FATAL: app-native.json 未进入 APK 资源"; exit 1; }
-          grep -q '"versionCode": 2090' android/app/src/main/assets/public/app-native.json || { echo "FATAL: app-native versionCode 非 2090"; exit 1; }
+          grep -q '"versionCode": 2091' android/app/src/main/assets/public/app-native.json || { echo "FATAL: app-native versionCode 非 2091"; exit 1; }
           if grep -q '"url":' android/app/src/main/assets/capacitor.config.json; then
             echo "FATAL: capacitor.config 仍含 server.url（远程加载模式残留）"; exit 1
           fi
@@ -68,9 +68,9 @@ jobs:
 
       - name: Verify version gate
         run: |
-          grep -q 'versionCode 2090' android/app/build.gradle || { echo "FATAL: versionCode 非 2090"; exit 1; }
-          grep -q 'versionName "25.0.103"' android/app/build.gradle || { echo "FATAL: versionName 非 25.0.103"; exit 1; }
-          echo "版本门禁 OK: versionCode 2090 / versionName 25.0.103"
+          grep -q 'versionCode 2091' android/app/build.gradle || { echo "FATAL: versionCode 非 2091"; exit 1; }
+          grep -q 'versionName "25.0.104"' android/app/build.gradle || { echo "FATAL: versionName 非 25.0.104"; exit 1; }
+          echo "版本门禁 OK: versionCode 2091 / versionName 25.0.104"
 
       - name: Build release APK
         working-directory: android
@@ -101,6 +101,6 @@ jobs:
       - name: Build summary
         run: |
           echo "### Android 构建结果" >> $GITHUB_STEP_SUMMARY
-          echo "- Bundle: $BUNDLE_ID (versionCode 2090 / versionName 25.0.103)" >> $GITHUB_STEP_SUMMARY
-          echo "- 模式: 原生内置资源 (v25.0.103, API 指向 https://yandaoguoxue.yandao.vip)" >> $GITHUB_STEP_SUMMARY
+          echo "- Bundle: $BUNDLE_ID (versionCode 2091 / versionName 25.0.104)" >> $GITHUB_STEP_SUMMARY
+          echo "- 模式: 原生内置资源 (v25.0.104, API 指向 https://yandaoguoxue.yandao.vip)" >> $GITHUB_STEP_SUMMARY
           echo "- 产物: signed release apk" >> $GITHUB_STEP_SUMMARY

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { leaveToolPage, isManagedBackNavigation } from "@/lib/leaveToolPage";
+import { closeInitialToolPopup } from "@/lib/leaveToolPage";
 import { Solar } from "lunar-javascript";
 import { calculateQimen } from "@/algorithm-core";
 import type { QimenResult, PanMethod, PanLayoutMode, JiGongMethod, QimenTimeType, AnganType } from "@/algorithm-core";
@@ -11,14 +11,13 @@ import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/c
 import type { Client } from "@/lib/clientStore";
 import { getQimenPalaceInterpretation } from "@/lib/qimen-interpretations";
 import { QM_KB_SOURCE, getQmGanNotes, getQmMenNotes, getQmShenNotes, getQmXingNotes, QM_GANZHI_JICHU } from "@/lib/qimen-kb-supplement";
-import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
+import { savePaipanState, loadPaipanState } from "@/lib/paipanPersistence";
 import type { QimenInterpretItem } from "@/lib/qimen-interpretations";
 import { useToolBack } from "@/lib/useToolBack";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { ShareButton } from "@/components/ShareButton";
 import { PostToSquareButton } from "@/components/PostToSquareButton";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
-import { PaipanHistoryButton } from "@/components/PaipanHistoryButton";
 import { savePaipanRecord, type PaipanRecord } from "@/lib/nativePaipanStore";
 
 // ============================================================================
@@ -385,7 +384,7 @@ export default function QimenPage() {
       <div style={{ maxWidth: "420px", margin: "0 auto", backgroundColor: "#fff", minHeight: "100vh" }}>
         <DatePicker
           show={true}
-          onClose={(reason?: "back") => { setShowForm(false); if (reason === "back" && !result && !isManagedBackNavigation()) leaveToolPage(router); }}
+          onClose={(reason) => { setShowForm(false); if (reason !== "submit" && !result) closeInitialToolPopup(router, reason); }}
           onSubmit={(dateVal) => {
             setFormData(prev => ({ ...prev, year: dateVal.year, month: dateVal.month, day: dateVal.day, hour: dateVal.hour }));
             doPaipan({year: dateVal.year, month: dateVal.month, day: dateVal.day, hour: dateVal.hour});
@@ -489,18 +488,7 @@ export default function QimenPage() {
   }
 
   // ==================== 排盘结果 ====================
-  if (!result) {
-    return (
-      <div className="bg-[#ededed] min-h-screen flex justify-center">
-        <div className="w-full" style={{ maxWidth: "420px" }}>
-          <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 gap-3">
-            <button onClick={() => { clearPaipanState("qimen"); setShowForm(true); }} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">开始排盘</button>
-            <PaipanHistoryButton toolKey="qimen" onRestore={handleRestoreHistory} />
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (!result) return null;
 
   const getGanColor = (g: string) => GAN_COLORS[g] || COLOR_BLACK;
   const getShenColor = (s: string) => SHEN_COLORS[s] || COLOR_BLACK;

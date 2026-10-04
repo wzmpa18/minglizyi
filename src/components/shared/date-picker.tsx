@@ -30,11 +30,13 @@ export interface DatePickerOptions {
   xiaLing: boolean;
   /** 出生地经度（东经度数，zhenTaiyang 时用于真太阳时校正，缺省北京 116.4） */
   longitude?: number;
+  /** 省市区名称，用于排盘基本信息和历史记录恢复。 */
+  birthPlace?: string;
 }
 
 export interface DatePickerProps {
   show: boolean;
-  onClose: () => void;
+  onClose: (reason?: "back" | "submit") => void;
   onSubmit: (date: DatePickerValue, options: DatePickerOptions) => void;
   initialDate?: DatePickerValue;
   initialOptions?: DatePickerOptions;
@@ -101,6 +103,13 @@ function nearestRegion(lng: number): { p: number; c: number; d: number } {
     }
   }
   return best;
+}
+
+function regionNameAt(region: { p: number; c: number; d: number }): string {
+  const province = REGIONS[region.p] ?? REGIONS[0];
+  const city = province?.cities?.[region.c] ?? province?.cities?.[0];
+  const district = city?.districts?.[region.d] ?? city?.districts?.[0];
+  return [province?.name, city?.name, district?.name].filter(Boolean).join(" ");
 }
 
 // ============================================================================
@@ -244,12 +253,13 @@ export default function DatePicker({
   // 提交（v18.1: 农历模式自动转换为公历后再传给算法）
   const handleSubmit = useCallback(() => {
     if (onNameChange) onNameChange(nameState);
-    setPendingPaipanRecordMeta(currentRecordTool(), showSaveName && !saveName ? "" : nameState, recordNote);
+    // 名称和备注跟随本次排盘自动保存；用户可在记录抽屉中随时修改或删除。
+    setPendingPaipanRecordMeta(currentRecordTool(), nameState, recordNote);
     // 农历模式：将农历日期转换为公历日期，确保算法层始终接收公历
     const finalDate = options.calType === "lunar" ? lunarToSolarDate(date) : date;
-    onSubmit(finalDate, options);
-    onClose();
-  }, [date, options, nameState, recordNote, showSaveName, saveName, onNameChange, onSubmit, onClose]);
+    onSubmit(finalDate, { ...options, birthPlace: showRegion ? regionNameAt(region) : options.birthPlace });
+    onClose("submit");
+  }, [date, options, region, showRegion, nameState, recordNote, onNameChange, onSubmit, onClose]);
 
   // P1-6: 统一滚动锁 + P1-7: 弹窗返回拦截
   // P1-REOPEN: 排盘弹窗保留底部导航栏（hideNav:false）+ 弹窗整体上移 56px 避让，
@@ -293,31 +303,31 @@ export default function DatePicker({
   const minutes = Array.from({ length: 60 }, (_, i) => i);
 
   // select 样式
-  const selectClass = "flex-1 rounded-lg border border-gray-200 px-2 py-2 text-sm text-center outline-none focus:border-[#7B2FBE] bg-white cursor-pointer";
+  const selectClass = "min-w-0 flex-1 rounded-md border border-gray-200 px-1 py-1.5 text-[13px] text-center outline-none focus:border-[#7B2FBE] bg-white cursor-pointer";
 
   return (
     <div
       className="fixed inset-0 z-[9999] flex justify-center"
-      style={{ paddingTop: "max(8vh, 48px)", alignItems: "flex-start" }}
+      style={{ paddingTop: "max(44px, env(safe-area-inset-top))", paddingBottom: "56px", alignItems: "flex-start" }}
     >
       {/* 遮罩层 - 独立div确保点击可关闭 */}
       <div
         className="absolute inset-0 bg-black/50"
-        onClick={onClose}
+        onClick={() => onClose()}
       />
       {/* v25.0.30（P8-1 弹窗规范）：屏幕居中偏上 + 80vh 上限 + 内容内滚（原底部形态改居中偏上口径） */}
       <div
-        className="relative w-full max-w-[380px] rounded-2xl bg-white shadow-2xl"
-        style={{ maxHeight: "80vh", overflowY: "auto" }}
+        className="relative w-[calc(100%-16px)] max-w-[390px] rounded-2xl bg-white shadow-2xl"
+        style={{ maxHeight: "calc(100dvh - 108px)", overflowY: "auto" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* 标题栏 - 右上角×关闭按钮（对标吉时雨 closeBtn: 1） */}
-        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 sticky top-0 bg-white z-10">
+        <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2 sticky top-0 bg-white z-10">
           <div className="w-8" />
           <span className="text-base font-bold text-gray-800">{title}</span>
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => onClose()}
             className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 transition-colors"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -326,42 +336,18 @@ export default function DatePicker({
           </button>
         </div>
 
-        <div className="px-4 py-3 space-y-3">
-          {/* 1. 姓名 + 保存开关（对标吉时雨 福主姓名 + autosave switch） */}
-          {
-            <div className="flex items-center gap-2">
-                <label className="w-20 shrink-0 text-sm text-gray-700">记录名称</label>
+        <div className="space-y-2 px-3 py-2">
+          {/* 名称与备注会自动写入记录，不再要求用户额外点击保存。 */}
+            <div className="grid grid-cols-2 gap-2">
               <input
                 type="text"
                 value={nameState}
                 onChange={(e) => setNameState(e.target.value)}
-                placeholder="输入姓名，之后可按姓名搜索"
-                className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#7B2FBE]"
+                placeholder="姓名 / 记录名称"
+                className="min-w-0 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#7B2FBE]"
               />
-              {showSaveName && (
-                <div className="flex items-center gap-1 text-xs text-gray-500">
-                  <span>{saveName ? "保存" : "不存"}</span>
-                  <button
-                    type="button"
-                    onClick={() => onSaveNameChange?.(!saveName)}
-                    className={`relative h-5 w-9 rounded-full transition-colors ${
-                      saveName ? "bg-[#7B2FBE]" : "bg-gray-300"
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-                        saveName ? "left-[18px]" : "left-0.5"
-                      }`}
-                    />
-                  </button>
-                </div>
-              )}
+              <input value={recordNote} onChange={(e) => setRecordNote(e.target.value)} maxLength={300} placeholder="备注（可选）" className="min-w-0 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#7B2FBE]" />
             </div>
-          }
-          <div className="flex items-start gap-2">
-            <label className="w-20 shrink-0 pt-2 text-sm text-gray-700">备注</label>
-            <textarea value={recordNote} onChange={(e) => setRecordNote(e.target.value)} rows={2} maxLength={300} placeholder="可填写便于查找的备注" className="flex-1 resize-y rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#7B2FBE]" />
-          </div>
 
           {/* 2. 性别 + 历法切换（对标吉时雨 sex radio + rolldate-button-date-group2） */}
           {(showGender || showCalType) && (
@@ -419,7 +405,7 @@ export default function DatePicker({
 
           {/* 3. 日期 - 原生select下拉框（对标吉时雨 mydate + RolldateFull） */}
           <div>
-            <div className="mb-2 flex items-center justify-between">
+              <div className="mb-1 flex items-center justify-between">
               <label className="text-sm text-gray-700">日期</label>
               <button type="button" onClick={openRecords} className="rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-xs font-semibold text-purple-800">排盘记录 / 导入</button>
             </div>
@@ -470,7 +456,7 @@ export default function DatePicker({
                 ))}
               </select>
             </div>
-            <div className="mt-1.5 flex items-center gap-1.5">
+              <div className="mt-1 flex items-center gap-1.5">
               <select
                 value={date.hour}
                 onChange={(e) => updateDate("hour", parseInt(e.target.value, 10))}
@@ -495,7 +481,7 @@ export default function DatePicker({
               <button
                 type="button"
                 onClick={handleNow}
-                className="shrink-0 rounded-lg border border-[#7B2FBE] bg-[#F3EDF7] px-3 py-2 text-sm font-medium text-[#7B2FBE] transition-colors hover:bg-[#C9A8DC]"
+                  className="shrink-0 rounded-md border border-[#7B2FBE] bg-[#F3EDF7] px-2 py-1.5 text-[13px] font-medium text-[#7B2FBE] transition-colors hover:bg-[#C9A8DC]"
               >
                 当前
               </button>
@@ -618,33 +604,23 @@ export default function DatePicker({
 
               {/* 6. 地区选择 - 省/市/县三级联动 + 手动经度微调（真太阳时校正） */}
               {showRegion && options.zhenTaiyang && (
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <label className="block text-sm text-gray-700">
                     出生地（东经{" "}
                     <span className="font-medium text-[#7B2FBE]">{(options.longitude ?? 0).toFixed(4)}°</span>
                     ）
                   </label>
-                  <select
-                    value={region.p}
-                    onChange={(e) => onProvinceChange(parseInt(e.target.value, 10))}
-                    className="w-full rounded-lg border border-gray-200 px-2 py-2 text-sm outline-none focus:border-[#7B2FBE] bg-white"
-                  >
-                    {REGIONS.map((p, i) => <option key={p.name} value={i}>{p.name}</option>)}
-                  </select>
-                  <select
-                    value={region.c}
-                    onChange={(e) => onCityChange(parseInt(e.target.value, 10))}
-                    className="w-full rounded-lg border border-gray-200 px-2 py-2 text-sm outline-none focus:border-[#7B2FBE] bg-white"
-                  >
-                    {cities.map((c, i) => <option key={c.name} value={i}>{c.name}</option>)}
-                  </select>
-                  <select
-                    value={region.d}
-                    onChange={(e) => onDistrictChange(parseInt(e.target.value, 10))}
-                    className="w-full rounded-lg border border-gray-200 px-2 py-2 text-sm outline-none focus:border-[#7B2FBE] bg-white"
-                  >
-                    {districts.map((d, i) => <option key={d.name} value={i}>{d.name}（{d.lng != null ? d.lng.toFixed(2) + "°" : "缺省"}）</option>)}
-                  </select>
+                  <div className="grid grid-cols-3 gap-1">
+                    <select value={region.p} onChange={(e) => onProvinceChange(parseInt(e.target.value, 10))} className="min-w-0 rounded-md border border-gray-200 px-1 py-1.5 text-xs outline-none focus:border-[#7B2FBE] bg-white">
+                      {REGIONS.map((p, i) => <option key={p.name} value={i}>{p.name}</option>)}
+                    </select>
+                    <select value={region.c} onChange={(e) => onCityChange(parseInt(e.target.value, 10))} className="min-w-0 rounded-md border border-gray-200 px-1 py-1.5 text-xs outline-none focus:border-[#7B2FBE] bg-white">
+                      {cities.map((c, i) => <option key={c.name} value={i}>{c.name}</option>)}
+                    </select>
+                    <select value={region.d} onChange={(e) => onDistrictChange(parseInt(e.target.value, 10))} className="min-w-0 rounded-md border border-gray-200 px-1 py-1.5 text-xs outline-none focus:border-[#7B2FBE] bg-white">
+                      {districts.map((d, i) => <option key={d.name} value={i}>{d.name}</option>)}
+                    </select>
+                  </div>
                   <div className="flex items-center gap-2">
                     <span className="shrink-0 text-xs text-gray-500">手动经度</span>
                     <input
@@ -654,7 +630,7 @@ export default function DatePicker({
                       max={135}
                       value={options.longitude}
                       onChange={(e) => { const v = parseFloat(e.target.value); if (!isNaN(v)) setOptions(prev => ({ ...prev, longitude: v })); }}
-                      className="flex-1 rounded-lg border border-gray-200 px-2 py-2 text-sm outline-none focus:border-[#7B2FBE] bg-white"
+                      className="flex-1 rounded-md border border-gray-200 px-2 py-1.5 text-sm outline-none focus:border-[#7B2FBE] bg-white"
                     />
                     <span className="shrink-0 text-xs text-gray-400">°E</span>
                   </div>
@@ -669,11 +645,11 @@ export default function DatePicker({
         {extraOptions}
 
         {/* 排盘按钮（对标吉时雨 submitFormBtn class="app-paipan-button"） */}
-        <div className="px-4 pb-5 pt-2">
+        <div className="px-3 pb-3 pt-1">
           <button
             type="button"
             onClick={handleSubmit}
-            className="w-full rounded-full bg-[#7B2FBE] text-white font-bold text-lg py-3 shadow-lg active:bg-[#5B1A8A] transition-colors"
+            className="w-full rounded-full bg-[#7B2FBE] py-2.5 text-base font-bold text-white shadow-lg transition-colors active:bg-[#5B1A8A]"
           >
             {submitText}
           </button>

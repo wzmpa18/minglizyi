@@ -287,6 +287,8 @@ export interface DaLiuRenResult {
 /** 大六壬起课输入参数 */
 export interface DaLiuRenInputParams {
   year: number; month: number; day: number; hour: number; minute: number;
+  /** 仅用于本机记录和盘面展示，不参与起课算法。 */
+  name?: string;
   isMan: boolean;
   birthYear: number;
   zhanbuTime?: string;

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { leaveToolPage, isManagedBackNavigation } from "@/lib/leaveToolPage";
+import { closeInitialToolPopup } from "@/lib/leaveToolPage";
 import {
   solarToBazi,
   GAN,
@@ -28,7 +28,6 @@ import { getSanChuanInterpretation, getSiKeInterpretation, getKeTiInterpretation
 import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
 import { useToolBack } from "@/lib/useToolBack";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
-import { PaipanHistoryButton } from "@/components/PaipanHistoryButton";
 import { savePaipanRecord, type PaipanRecord } from "@/lib/nativePaipanStore";
 import { ShareButton } from "@/components/ShareButton";
 import { PostToSquareButton } from "@/components/PostToSquareButton";
@@ -147,7 +146,7 @@ function InputPanel({
   show, onClose, onSubmit, selectedClient, onClientSelect, initialValues, showTitle = true,
 }: {
   show: boolean;
-  onClose: () => void;
+  onClose: (reason?: "back") => void;
   onSubmit: (params: DaLiuRenInputParams) => void;
   selectedClient: Client | null;
   onClientSelect: (c: Client | null) => void;
@@ -159,6 +158,7 @@ function InputPanel({
   const [day, setDay] = useState(initialValues?.day || 1);
   const [hour, setHour] = useState(initialValues?.hour !== undefined ? initialValues.hour : 12);
   const [minute, setMinute] = useState(initialValues?.minute !== undefined ? initialValues.minute : 0);
+  const [recordName, setRecordName] = useState(initialValues?.name || "");
   const [isMan, setIsMan] = useState(initialValues?.isMan !== undefined ? initialValues.isMan : true);
   const [birthYear, setBirthYear] = useState(initialValues?.birthYear || 1980);
   const [zhanbuTime, setZhanbuTime] = useState<string>(initialValues?.zhanbuTime ?? "");
@@ -200,7 +200,7 @@ function InputPanel({
 
   const handleSubmit = () => {
     onSubmit({
-      year, month, day, hour, minute, isMan, birthYear,
+      year, month, day, hour, minute, name: recordName, isMan, birthYear,
       zhanbuTime: zhanbuTime || undefined,
       yueJiangMethod, guirenMethod, guirenSunni,
     });
@@ -227,12 +227,12 @@ function InputPanel({
         {/* 遮罩层 */}
         <div
           className="absolute inset-0 bg-black/50"
-          onClick={onClose}
+          onClick={() => onClose()}
         />
         {/* 弹窗内容 */}
         <div
           className="relative w-full max-w-[420px] rounded-t-2xl bg-white shadow-2xl transition-transform duration-300 ease-out"
-          style={{ maxHeight: "85vh", overflowY: "auto", transform: entered ? "translateY(0)" : "translateY(100%)" }}
+          style={{ maxHeight: "calc(100dvh - 58px)", overflowY: "auto", transform: entered ? "translateY(0)" : "translateY(100%)" }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* 标题栏（仅模态模式显示，避免与BrandHeader形成双层标题） */}
@@ -241,7 +241,7 @@ function InputPanel({
             <span className="text-base font-bold text-gray-800">大六壬起课</span>
             <button
               type="button"
-              onClick={onClose}
+              onClick={() => onClose()}
               className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 transition-colors"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -251,22 +251,22 @@ function InputPanel({
           </div>
           )}
 
-          <div className="px-4 py-3 space-y-4">
+          <div className="space-y-2 px-3 py-2">
             {/* 1. 起课时间 */}
             <div>
-              <div className="text-sm font-medium text-gray-700 mb-1.5">起课时间</div>
+              <div className="mb-1 text-sm font-medium text-gray-700">起课时间</div>
               <div className="flex gap-2">
                 <button
                   type="button"
                   onClick={() => setShowDatePicker(true)}
-                  className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-left hover:border-[#7B2FBE] transition-colors"
+                  className="flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-left hover:border-[#7B2FBE] transition-colors"
                 >
                   {dateStr}
                 </button>
                 <button
                   type="button"
                   onClick={handleNow}
-                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+                  className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
                 >
                   当前时间
                 </button>
@@ -274,12 +274,13 @@ function InputPanel({
             </div>
 
             {/* 2. 出生年份 */}
-            <div>
-              <div className="text-sm font-medium text-gray-700 mb-1.5">出生年份</div>
+            <div className="grid grid-cols-[1fr_auto] items-end gap-3">
+              <div>
+              <div className="mb-1 text-sm font-medium text-gray-700">出生年份</div>
               <select
                 value={birthYear}
                 onChange={(e) => setBirthYear(parseInt(e.target.value, 10))}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#7B2FBE]"
+                className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:border-[#7B2FBE]"
               >
                 {Array.from({ length: currentYear - 1950 + 1 }, (_, i) => {
                   const y = 1950 + i;
@@ -289,24 +290,22 @@ function InputPanel({
                   );
                 })}
               </select>
-            </div>
-
-            {/* 3. 性别 */}
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700">性别</span>
-              <div className="flex gap-4">
+              </div>
+              <div className="pb-1">
+              <div className="flex gap-3">
                 <DLRRadioOption label="男" selected={isMan} onClick={() => setIsMan(true)} />
                 <DLRRadioOption label="女" selected={!isMan} onClick={() => setIsMan(false)} />
+              </div>
               </div>
             </div>
 
             {/* 4. 占事时辰 */}
             <div>
-              <div className="text-sm font-medium text-gray-700 mb-1.5">占事时辰</div>
+              <div className="mb-1 text-sm font-medium text-gray-700">占事时辰</div>
               <select
                 value={zhanbuTime}
                 onChange={(e) => setZhanbuTime(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#7B2FBE]"
+                className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:border-[#7B2FBE]"
               >
                 <option value="">当前时间</option>
                 {SHI_CHEN_LIST.map((z) => (
@@ -352,7 +351,7 @@ function InputPanel({
             <button
               type="button"
               onClick={handleSubmit}
-              className="w-full rounded-full bg-[#7B2FBE] text-white font-bold text-lg py-2.5 shadow-lg active:bg-[#5B1A8A] transition-colors"
+              className="w-full rounded-full bg-[#7B2FBE] py-2.5 text-base font-bold text-white shadow-lg transition-colors active:bg-[#5B1A8A]"
             >
               开始起课
             </button>
@@ -379,7 +378,14 @@ function InputPanel({
         showCalType={true}
         showToggles={false}
         showRegion={false}
-        showName={false}
+        showName
+        name={recordName}
+        onNameChange={setRecordName}
+        onRecordImport={(profile) => {
+          const importedYear = Number((profile.birthDate || "").slice(0, 4));
+          if (Number.isFinite(importedYear) && importedYear > 0) setBirthYear(importedYear);
+          if (profile.gender) setIsMan(profile.gender !== "女");
+        }}
         title="选择起课时间"
         submitText="排盘"
       />
@@ -456,6 +462,7 @@ export default function DaLiuRenPage() {
       params.zhanbuTime, params.yueJiangMethod, params.guirenMethod, params.guirenSunni
     );
     setData(result);
+    setPrefillParams(params);
     setShowForm(false);
     savePaipanState("daliuren",{input:params as any,showForm:false,_ts:Date.now()});
     // 保存客户记录
@@ -463,7 +470,7 @@ export default function DaLiuRenPage() {
     // v25.0.88: 排盘记录自动落库（原生壳为SQLite，同参数原位去重）
     savePaipanRecord({
       tool: "daliuren",
-      title: `大六壬·${params.year}-${params.month}-${params.day} ${String(params.hour).padStart(2, "0")}:${String(params.minute).padStart(2, "0")}`,
+      title: `${params.name ? `${params.name} · ` : ""}大六壬·${params.year}-${params.month}-${params.day} ${String(params.hour).padStart(2, "0")}:${String(params.minute).padStart(2, "0")}`,
       input: params as unknown as Record<string, unknown>,
       result: result as unknown as Record<string, unknown>,
     }).catch(() => {});
@@ -485,10 +492,7 @@ export default function DaLiuRenPage() {
     return (
       <div className="bg-[#ededed] min-h-screen flex justify-center">
         <div className="w-full" style={{ maxWidth: "420px", paddingBottom: "10px" }}>
-          <InputPanel show={true} showTitle={false} onClose={() => {}} onSubmit={handleSubmit} selectedClient={selectedClient} onClientSelect={setSelectedClient} initialValues={prefillParams} />
-          <div className="flex justify-center py-2">
-            <PaipanHistoryButton toolKey="daliuren" onRestore={handleRestoreHistory} />
-          </div>
+          <InputPanel show={true} showTitle={false} onClose={(reason) => closeInitialToolPopup(router, reason)} onSubmit={handleSubmit} selectedClient={selectedClient} onClientSelect={setSelectedClient} initialValues={prefillParams} />
         </div>
       </div>
     );
@@ -556,7 +560,7 @@ export default function DaLiuRenPage() {
     <div className="bg-[#ededed] min-h-screen flex justify-center">
       <div className="w-full" style={{ maxWidth: "420px", paddingBottom: "10px" }}>
       {/* 输入面板（点击编辑按钮展开）；P1-REOPEN: 返回键关闭且无结果时直接返回工具列表 */}
-      <InputPanel show={showForm} showTitle={false} onClose={(reason?: "back") => { setShowForm(false); if (reason === "back" && !data && !isManagedBackNavigation()) leaveToolPage(router); }} onSubmit={handleSubmit} selectedClient={selectedClient} onClientSelect={setSelectedClient} initialValues={prefillParams} />
+      <InputPanel show={showForm} showTitle={false} onClose={(reason) => { setShowForm(false); if (!data) closeInitialToolPopup(router, reason); }} onSubmit={handleSubmit} selectedClient={selectedClient} onClientSelect={setSelectedClient} initialValues={prefillParams} />
 
       {/* ====== 1. 顶部信息栏 ====== */}
       <div style={{ display: "flex", padding: "6px 10px", borderBottom: "1px solid #eee", backgroundColor: "#fff" }}>
@@ -617,7 +621,7 @@ export default function DaLiuRenPage() {
         }}>
           {/* 出生信息 */}
           <div style={{ textAlign: "center", marginBottom: "6px", fontSize: "12px", color: "#000", lineHeight: 1.3, fontWeight: 500 }}>
-            {data.shengXiao}({data.birthYear}) {data.isMan ? "男" : "女"}
+            {prefillParams?.name ? `${prefillParams.name} · ` : ""}{data.shengXiao}({data.birthYear}) {data.isMan ? "男" : "女"}
           </div>
 
           {/* 本命/行年（inline布局，灰色标签+彩色大值） */}

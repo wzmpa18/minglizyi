@@ -25,6 +25,31 @@ export function leaveToolPage(router: ReturnType<typeof useRouter>) {
 }
 
 /**
+ * 关闭“首次进入工具即打开”的输入弹窗。
+ * 系统返回/右滑已经弹掉了 popup 垫层，此时再退一级即可回到真实上一页；
+ * 点击遮罩或关闭按钮时 popup 垫层仍在，需要一次跨过 popup 与工具页。
+ */
+export function closeInitialToolPopup(
+  router: ReturnType<typeof useRouter>,
+  reason?: "back",
+) {
+  if (typeof window === "undefined") return;
+  if (reason === "back") {
+    leaveToolPage(router);
+    return;
+  }
+  const state = window.history.state as { idx?: number; __popup?: string } | null;
+  window.__skipPopupCleanup = true;
+  if (state?.__popup === "1" && typeof state.idx === "number" && state.idx > 0) {
+    window.history.go(-2);
+  } else if (state && typeof state.idx === "number" && state.idx > 0) {
+    router.back();
+  } else {
+    router.replace("/yixue");
+  }
+}
+
+/**
  * 是否由页面顶栏返回键/底部导航触发的"托管返回"。
  * layout 返回键会先设 __skipPopupCleanup 再消费弹窗垫层，
  * 此时弹窗 popstate 关闭不应再自行导航，避免双重跳转。

@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { leaveToolPage, isManagedBackNavigation } from "@/lib/leaveToolPage";
+import { closeInitialToolPopup } from "@/lib/leaveToolPage";
 import {
   solarToBazi,
   getCurrentJieQi,
@@ -257,7 +257,7 @@ export default function YizhangjingPage() {
     <div style={{ minHeight: "100vh", backgroundColor: "#ededed" }}>
       <DatePicker
         show={showForm}
-        onClose={(reason?: "back") => { setShowForm(false); if (reason === "back" && !hasResult && !isManagedBackNavigation()) leaveToolPage(router); }}
+        onClose={(reason) => { setShowForm(false); if (reason !== "submit" && !hasResult) closeInitialToolPopup(router, reason); }}
         onSubmit={(dateVal, opts) => {
           setSelectedYear(dateVal.year);
           setSelectedMonth(dateVal.month);

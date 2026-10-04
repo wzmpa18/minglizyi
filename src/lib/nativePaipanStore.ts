@@ -291,6 +291,20 @@ export async function deletePaipanRecord(id: number): Promise<void> {
   writeLS(RECORDS_KEY, readLS<PaipanRecord>(RECORDS_KEY).filter((r) => r.id !== id));
 }
 
+/** 修改一条记录的姓名与备注，保留原排盘结果和创建时间。 */
+export async function updatePaipanRecordMeta(id: number, name: string, note: string): Promise<void> {
+  const record = await getPaipanRecord(id);
+  if (!record) throw new Error("排盘记录不存在或已删除");
+  await updatePaipanRecord(id, {
+    tool: record.tool,
+    title: record.title,
+    input: { ...record.input, name: name.trim() },
+    result: record.result,
+    note: note.trim(),
+    profileId: record.profileId ?? null,
+  });
+}
+
 /** 原位更新已有记录（title/result/note/profileId 刷新，createdAt 不变） */
 async function updatePaipanRecord(id: number, opts: SaveRecordOptions): Promise<void> {
   if (typeof window !== "undefined" && isNativeStoreAvailable()) {
