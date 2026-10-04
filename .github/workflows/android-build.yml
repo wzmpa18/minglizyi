@@ -34,7 +34,7 @@ jobs:
           java-version: '21'
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --legacy-peer-deps
 
       - name: Build web bundle (native assets)
         run: |
@@ -64,9 +64,9 @@ jobs:
 
       - name: Verify version gate
         run: |
-          grep -q 'versionCode 2047' android/app/build.gradle || { echo "FATAL: versionCode 非 2047"; exit 1; }
-          grep -q 'versionName "25.0.47"' android/app/build.gradle || { echo "FATAL: versionName 非 25.0.47"; exit 1; }
-          echo "版本门禁 OK: versionCode 2047 / versionName 25.0.47"
+          grep -q 'versionCode 2084' android/app/build.gradle || { echo "FATAL: versionCode 非 2084"; exit 1; }
+          grep -q 'versionName "25.0.97"' android/app/build.gradle || { echo "FATAL: versionName 非 25.0.97"; exit 1; }
+          echo "版本门禁 OK: versionCode 2084 / versionName 25.0.97"
 
       - name: Build release APK
         working-directory: android
@@ -77,6 +77,15 @@ jobs:
       - name: Show APK info
         run: |
           ls -la android/app/build/outputs/apk/release/
+          APK="android/app/build/outputs/apk/release/app-release.apk"
+          AAPT=$(find "$ANDROID_HOME/build-tools" -name aapt | sort -V | tail -1)
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -1)
+          "$AAPT" dump badging "$APK" | head -2
+          "$APKSIGNER" verify --verbose --print-certs "$APK"
+          ACTUAL_SHA256=$("$APKSIGNER" verify --print-certs "$APK" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | tr '[:upper:]' '[:lower:]')
+          EXPECTED_SHA256="8ca0c414573d4b05fc2bd1ba9c6a2a8090c90c58e3815119494607443dc6d5a0"
+          test "$ACTUAL_SHA256" = "$EXPECTED_SHA256" || { echo "FATAL: 签名指纹与正式包不一致"; exit 1; }
+          echo "签名门禁 OK: $ACTUAL_SHA256"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -88,6 +97,6 @@ jobs:
       - name: Build summary
         run: |
           echo "### Android 构建结果" >> $GITHUB_STEP_SUMMARY
-          echo "- Bundle: $BUNDLE_ID (versionCode 2047 / versionName 25.0.47)" >> $GITHUB_STEP_SUMMARY
-          echo "- 模式: 原生内置资源 (v25.0.47_D20260822, API 改写到 https://yandaoguoxue.yandao.vip)" >> $GITHUB_STEP_SUMMARY
+          echo "- Bundle: $BUNDLE_ID (versionCode 2084 / versionName 25.0.97)" >> $GITHUB_STEP_SUMMARY
+          echo "- 模式: 原生内置资源 (v25.0.97, API 指向 https://yandaoguoxue.yandao.vip)" >> $GITHUB_STEP_SUMMARY
           echo "- 产物: signed release apk" >> $GITHUB_STEP_SUMMARY
