@@ -336,7 +336,7 @@ export const DEFAULT_TOOL_CONFIG: ToolConfig = {
   },
   yikao: {
     enabled: true,
-    version: "yikao-syllabus-2026-v1",
+    version: "yikao-syllabus-2025-v1",
     exams: [
       { id: "zyzy", name: "中医执业医师", enabled: true, subjectIds: ["zhongji", "zhongzhen", "zhongyao", "fangji", "zhongnei", "zhongwai", "zhongfu", "zhonger", "zhenjiu", "zhenduan", "neike", "chuanran", "lunli", "fagui"] },
     ],
@@ -366,10 +366,10 @@ export const DEFAULT_TOOL_CONFIG: ToolConfig = {
       { id: "st3-dabian", name: "第三站西医临床答辩", group: "第三站", paid: true, enabled: true },
     ],
     cards: [
-      { id: "mijuan", seal: "密", title: "冲刺密卷", subtitle: "考前冲刺提分", price: 29.9, memberFree: true, target: "yikao_mijuan", enabled: true },
-      { id: "bishua", seal: "刷", title: "必刷题集", subtitle: "掌握核心考点", price: 19.9, memberFree: true, target: "yikao_bishua", enabled: true },
-      { id: "zhenti-jiang", seal: "讲", title: "真题精讲", subtitle: "精选名师讲解", price: 39.9, memberFree: true, target: "yikao_zhenti_jiang", enabled: true },
-      { id: "zhenti", seal: "真", title: "历年真题", subtitle: "高命中率原题", price: 29.9, memberFree: true, target: "yikao_zhenti", enabled: true },
+      { id: "mijuan", seal: "纲", title: "大纲练习", subtitle: "按现行考纲巩固", price: 29.9, memberFree: true, target: "yikao_mijuan", enabled: true },
+      { id: "bishua", seal: "综", title: "综合练习", subtitle: "覆盖核心知识点", price: 19.9, memberFree: true, target: "yikao_bishua", enabled: true },
+      { id: "zhenti-jiang", seal: "析", title: "解析强化", subtitle: "辨析常见易错项", price: 39.9, memberFree: true, target: "yikao_zhenti_jiang", enabled: true },
+      { id: "zhenti", seal: "模", title: "模拟自测", subtitle: "原创模拟题训练", price: 29.9, memberFree: true, target: "yikao_zhenti", enabled: true },
     ],
     aiWrongAnalysisPrice: 9.9,
     aiWrongAnalysisEnabled: true,

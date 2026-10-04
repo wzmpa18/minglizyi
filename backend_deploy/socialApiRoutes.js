@@ -744,7 +744,7 @@ function createRouter() {
     try {
       const resourceType = String(req.params.resourceType || '').trim();
       const resourceId = String(req.params.resourceId || '').trim().slice(0, 160);
-      if (!['acupoint', 'classic', 'yixue'].includes(resourceType) || !resourceId) {
+      if (!['acupoint', 'classic', 'yixue', 'academy'].includes(resourceType) || !resourceId) {
         return res.status(400).json({ success: false, error: '资源参数错误' });
       }
       const rows = getDb().prepare(`SELECT * FROM resource_comments
@@ -767,7 +767,7 @@ function createRouter() {
       if (!featureEnabled('comments_enabled')) return featureDisabled(res, '评论');
       const resourceType = String(req.params.resourceType || '').trim();
       const resourceId = String(req.params.resourceId || '').trim().slice(0, 160);
-      if (!['acupoint', 'classic', 'yixue'].includes(resourceType) || !resourceId) {
+      if (!['acupoint', 'classic', 'yixue', 'academy'].includes(resourceType) || !resourceId) {
         return res.status(400).json({ success: false, error: '资源参数错误' });
       }
       const mute = checkPlatformMute(req.user.userId);

@@ -30,7 +30,10 @@ export default function BooksPage() {
     let active = true;
     const reload = async () => {
       const pack = await loadJsonPack<GuoxueClassicsPack>("guoxue-classics-approved");
-      if (active && pack?.schema === "yandao.guoxue.classics.v1" && Array.isArray(pack.books) && pack.books.length) {
+      const fullTextPack = Array.isArray(pack?.books)
+        && pack.books.length > 0
+        && pack.books.every((book) => book.completeness === "full" && book.sectionCount > 0);
+      if (active && pack?.schema === "yandao.guoxue.classics.v1" && fullTextPack) {
         setCatalogue({ books: pack.books, notice: pack.notice || classicsData.notice, version: pack.version });
       }
     };
@@ -61,7 +64,7 @@ export default function BooksPage() {
         <section className="mb-4 rounded-2xl bg-white p-4 shadow-sm">
           <h1 className="text-base font-bold" style={{ color: BRAND }}>经典原文 · 离线阅读 · 本地听学</h1>
           <p className="mt-1 text-xs leading-5 text-gray-500">
-            当前只发布已核验的古籍原文，不混入现代译注。每部典籍均可听读、AI辅助理解并参与学习讨论。
+            当前收录 {catalogue.books.length} 部已通过篇章完整性核验的古籍全文，不发布节选。每部典籍均可听读、AI辅助理解并参与学习讨论。
           </p>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <a href="/zhongyi/classic" className="rounded-xl border border-purple-100 bg-purple-50 p-3 text-center text-xs font-semibold text-purple-800">中医典籍库</a>

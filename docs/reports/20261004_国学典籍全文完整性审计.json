@@ -1,0 +1,505 @@
+{
+  "schema": "yandao.guoxue.fulltext-audit.v1",
+  "generatedAt": "2026-10-04T19:15:33+0900",
+  "passed": [
+    {
+      "id": "zhuangzi",
+      "status": "full",
+      "chapterCount": 33,
+      "chars": 84452,
+      "chapters": [
+        {
+          "chapter": "逍遙遊",
+          "sourceTitle": "莊子/逍遙遊",
+          "chars": 1844
+        },
+        {
+          "chapter": "齊物論",
+          "sourceTitle": "莊子/齊物論",
+          "chars": 3866
+        },
+        {
+          "chapter": "養生主",
+          "sourceTitle": "莊子/養生主",
+          "chars": 743
+        },
+        {
+          "chapter": "人間世",
+          "sourceTitle": "莊子/人間世",
+          "chars": 3587
+        },
+        {
+          "chapter": "德充符",
+          "sourceTitle": "莊子/德充符",
+          "chars": 2441
+        },
+        {
+          "chapter": "大宗師",
+          "sourceTitle": "莊子/大宗師",
+          "chars": 3849
+        },
+        {
+          "chapter": "應帝王",
+          "sourceTitle": "莊子/應帝王",
+          "chars": 1439
+        },
+        {
+          "chapter": "駢拇",
+          "sourceTitle": "莊子/駢拇",
+          "chars": 1269
+        },
+        {
+          "chapter": "馬蹄",
+          "sourceTitle": "莊子/馬蹄",
+          "chars": 730
+        },
+        {
+          "chapter": "胠篋",
+          "sourceTitle": "莊子/胠篋",
+          "chars": 1630
+        },
+        {
+          "chapter": "在宥",
+          "sourceTitle": "莊子/在宥",
+          "chars": 3037
+        },
+        {
+          "chapter": "天地",
+          "sourceTitle": "莊子/天地",
+          "chars": 4054
+        },
+        {
+          "chapter": "天道",
+          "sourceTitle": "莊子/天道",
+          "chars": 2992
+        },
+        {
+          "chapter": "天運",
+          "sourceTitle": "莊子/天運",
+          "chars": 3339
+        },
+        {
+          "chapter": "刻意",
+          "sourceTitle": "莊子/刻意",
+          "chars": 877
+        },
+        {
+          "chapter": "繕性",
+          "sourceTitle": "莊子/繕性",
+          "chars": 813
+        },
+        {
+          "chapter": "秋水",
+          "sourceTitle": "莊子/秋水",
+          "chars": 3660
+        },
+        {
+          "chapter": "至樂",
+          "sourceTitle": "莊子/至樂",
+          "chars": 1813
+        },
+        {
+          "chapter": "達生",
+          "sourceTitle": "莊子/達生",
+          "chars": 3052
+        },
+        {
+          "chapter": "山木",
+          "sourceTitle": "莊子/山木",
+          "chars": 2861
+        },
+        {
+          "chapter": "田子方",
+          "sourceTitle": "莊子/田子方",
+          "chars": 2822
+        },
+        {
+          "chapter": "知北遊",
+          "sourceTitle": "莊子/知北遊",
+          "chars": 3397
+        },
+        {
+          "chapter": "庚桑楚",
+          "sourceTitle": "莊子/庚桑楚",
+          "chars": 3099
+        },
+        {
+          "chapter": "徐無鬼",
+          "sourceTitle": "莊子/徐無鬼",
+          "chars": 4390
+        },
+        {
+          "chapter": "則陽",
+          "sourceTitle": "莊子/則陽",
+          "chars": 3274
+        },
+        {
+          "chapter": "外物",
+          "sourceTitle": "莊子/外物",
+          "chars": 1972
+        },
+        {
+          "chapter": "寓言",
+          "sourceTitle": "莊子/寓言",
+          "chars": 1209
+        },
+        {
+          "chapter": "讓王",
+          "sourceTitle": "莊子/讓王",
+          "chars": 3477
+        },
+        {
+          "chapter": "盜跖",
+          "sourceTitle": "莊子/盜跖",
+          "chars": 3955
+        },
+        {
+          "chapter": "說劍",
+          "sourceTitle": "莊子/說劍",
+          "chars": 1180
+        },
+        {
+          "chapter": "漁父",
+          "sourceTitle": "莊子/漁父",
+          "chars": 2023
+        },
+        {
+          "chapter": "列禦寇",
+          "sourceTitle": "莊子/列禦寇",
+          "chars": 2076
+        },
+        {
+          "chapter": "天下",
+          "sourceTitle": "莊子/天下",
+          "chars": 3441
+        }
+      ],
+      "catalog": "莊子"
+    },
+    {
+      "id": "shangjunshu",
+      "status": "full",
+      "chapterCount": 5,
+      "chars": 24550,
+      "chapters": [
+        {
+          "chapter": "卷一",
+          "sourceTitle": "商君書/卷一",
+          "chars": 5351
+        },
+        {
+          "chapter": "卷二",
+          "sourceTitle": "商君書/卷二",
+          "chars": 4367
+        },
+        {
+          "chapter": "卷三",
+          "sourceTitle": "商君書/卷三",
+          "chars": 4397
+        },
+        {
+          "chapter": "卷四",
+          "sourceTitle": "商君書/卷四",
+          "chars": 4441
+        },
+        {
+          "chapter": "卷五",
+          "sourceTitle": "商君書/卷五",
+          "chars": 5961
+        }
+      ],
+      "catalog": "商君書"
+    },
+    {
+      "id": "gongsunlongzi",
+      "status": "full",
+      "chapterCount": 7,
+      "chars": 11683,
+      "chapters": [
+        {
+          "chapter": "原序",
+          "sourceTitle": "公孫龍子/原序",
+          "chars": 378
+        },
+        {
+          "chapter": "1",
+          "sourceTitle": "公孫龍子/1",
+          "chars": 1859
+        },
+        {
+          "chapter": "2",
+          "sourceTitle": "公孫龍子/2",
+          "chars": 2042
+        },
+        {
+          "chapter": "3",
+          "sourceTitle": "公孫龍子/3",
+          "chars": 1092
+        },
+        {
+          "chapter": "4",
+          "sourceTitle": "公孫龍子/4",
+          "chars": 2532
+        },
+        {
+          "chapter": "5",
+          "sourceTitle": "公孫龍子/5",
+          "chars": 2595
+        },
+        {
+          "chapter": "6",
+          "sourceTitle": "公孫龍子/6",
+          "chars": 1144
+        }
+      ],
+      "catalog": "公孫龍子"
+    },
+    {
+      "id": "huainanzi",
+      "status": "full",
+      "chapterCount": 22,
+      "chars": 159688,
+      "chapters": [
+        {
+          "chapter": "敘目",
+          "sourceTitle": "淮南子/敘目",
+          "chars": 986
+        },
+        {
+          "chapter": "原道訓",
+          "sourceTitle": "淮南子/原道訓",
+          "chars": 7119
+        },
+        {
+          "chapter": "俶真訓",
+          "sourceTitle": "淮南子/俶真訓",
+          "chars": 6118
+        },
+        {
+          "chapter": "天文訓",
+          "sourceTitle": "淮南子/天文訓",
+          "chars": 8966
+        },
+        {
+          "chapter": "墬形訓",
+          "sourceTitle": "淮南子/墬形訓",
+          "chars": 4566
+        },
+        {
+          "chapter": "時則訓",
+          "sourceTitle": "淮南子/時則訓",
+          "chars": 6788
+        },
+        {
+          "chapter": "覽冥訓",
+          "sourceTitle": "淮南子/覽冥訓",
+          "chars": 3647
+        },
+        {
+          "chapter": "精神訓",
+          "sourceTitle": "淮南子/精神訓",
+          "chars": 5231
+        },
+        {
+          "chapter": "本經訓",
+          "sourceTitle": "淮南子/本經訓",
+          "chars": 4671
+        },
+        {
+          "chapter": "主術訓",
+          "sourceTitle": "淮南子/主術訓",
+          "chars": 11917
+        },
+        {
+          "chapter": "繆稱訓",
+          "sourceTitle": "淮南子/繆稱訓",
+          "chars": 6755
+        },
+        {
+          "chapter": "齊俗訓",
+          "sourceTitle": "淮南子/齊俗訓",
+          "chars": 8802
+        },
+        {
+          "chapter": "道應訓",
+          "sourceTitle": "淮南子/道應訓",
+          "chars": 11048
+        },
+        {
+          "chapter": "氾論訓",
+          "sourceTitle": "淮南子/氾論訓",
+          "chars": 9839
+        },
+        {
+          "chapter": "詮言訓",
+          "sourceTitle": "淮南子/詮言訓",
+          "chars": 7122
+        },
+        {
+          "chapter": "兵略訓",
+          "sourceTitle": "淮南子/兵略訓",
+          "chars": 9459
+        },
+        {
+          "chapter": "說山訓",
+          "sourceTitle": "淮南子/說山訓",
+          "chars": 6555
+        },
+        {
+          "chapter": "說林訓",
+          "sourceTitle": "淮南子/說林訓",
+          "chars": 6121
+        },
+        {
+          "chapter": "人間訓",
+          "sourceTitle": "淮南子/人間訓",
+          "chars": 12613
+        },
+        {
+          "chapter": "脩務訓",
+          "sourceTitle": "淮南子/脩務訓",
+          "chars": 6098
+        },
+        {
+          "chapter": "泰族訓",
+          "sourceTitle": "淮南子/泰族訓",
+          "chars": 10941
+        },
+        {
+          "chapter": "要略",
+          "sourceTitle": "淮南子/要略",
+          "chars": 4154
+        }
+      ],
+      "catalog": "淮南子"
+    },
+    {
+      "id": "shanhaijing",
+      "status": "full",
+      "chapterCount": 18,
+      "chars": 47522,
+      "chapters": [
+        {
+          "chapter": "南山經",
+          "sourceTitle": "山海經/南山經",
+          "chars": 4103
+        },
+        {
+          "chapter": "西山經",
+          "sourceTitle": "山海經/西山經",
+          "chars": 10750
+        },
+        {
+          "chapter": "北山經",
+          "sourceTitle": "山海經/北山經",
+          "chars": 5298
+        },
+        {
+          "chapter": "東山經",
+          "sourceTitle": "山海經/東山經",
+          "chars": 2675
+        },
+        {
+          "chapter": "中山經",
+          "sourceTitle": "山海經/中山經",
+          "chars": 10738
+        },
+        {
+          "chapter": "海外南經",
+          "sourceTitle": "山海經/海外南經",
+          "chars": 794
+        },
+        {
+          "chapter": "海外西經",
+          "sourceTitle": "山海經/海外西經",
+          "chars": 769
+        },
+        {
+          "chapter": "海外北經",
+          "sourceTitle": "山海經/海外北經",
+          "chars": 886
+        },
+        {
+          "chapter": "海外東經",
+          "sourceTitle": "山海經/海外東經",
+          "chars": 723
+        },
+        {
+          "chapter": "海內南經",
+          "sourceTitle": "山海經/海內南經",
+          "chars": 571
+        },
+        {
+          "chapter": "海內西經",
+          "sourceTitle": "山海經/海內西經",
+          "chars": 851
+        },
+        {
+          "chapter": "海內北經",
+          "sourceTitle": "山海經/海內北經",
+          "chars": 666
+        },
+        {
+          "chapter": "海內東經",
+          "sourceTitle": "山海經/海內東經",
+          "chars": 1203
+        },
+        {
+          "chapter": "大荒東經",
+          "sourceTitle": "山海經/大荒東經",
+          "chars": 1225
+        },
+        {
+          "chapter": "大荒南經",
+          "sourceTitle": "山海經/大荒南經",
+          "chars": 1323
+        },
+        {
+          "chapter": "大荒西經",
+          "sourceTitle": "山海經/大荒西經",
+          "chars": 1725
+        },
+        {
+          "chapter": "大荒北經",
+          "sourceTitle": "山海經/大荒北經",
+          "chars": 1456
+        },
+        {
+          "chapter": "海內經",
+          "sourceTitle": "山海經/海內經",
+          "chars": 1612
+        }
+      ],
+      "catalog": "山海經"
+    },
+    {
+      "id": "hanfeizi",
+      "status": "full",
+      "chapterCount": 1,
+      "chars": 123138,
+      "chapters": [
+        {
+          "chapter": "全覽",
+          "sourceTitle": "韓非子 (四庫全書本)/全覽",
+          "chars": 123138
+        }
+      ],
+      "catalog": "韓非子 (四庫全書本)/全覽"
+    },
+    {
+      "id": "lvshi_chunqiu",
+      "status": "full",
+      "chapterCount": 1,
+      "chars": 184063,
+      "chapters": [
+        {
+          "chapter": "全覽",
+          "sourceTitle": "吕氏春秋 (四庫全書本)/全覽",
+          "chars": 184063
+        }
+      ],
+      "catalog": "吕氏春秋 (四庫全書本)/全覽"
+    }
+  ],
+  "failed": []
+}

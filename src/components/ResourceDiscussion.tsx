@@ -10,7 +10,7 @@ import {
 } from "@/lib/socialApi";
 
 interface ResourceDiscussionProps {
-  resourceType: "acupoint" | "classic" | "yixue";
+  resourceType: "acupoint" | "classic" | "yixue" | "academy";
   resourceId: string;
   title?: string;
   accent?: string;
@@ -83,12 +83,12 @@ export function ResourceDiscussion({
       <textarea
         value={content}
         onChange={(event) => setContent(event.target.value.slice(0, 500))}
-        placeholder="交流学习心得、典籍理解或使用体会…"
+        placeholder="交流学习心得、典籍理解或使用体会（仅支持文字）…"
         rows={3}
         style={{ width: "100%", resize: "vertical", boxSizing: "border-box", border: "1px solid #E2E2E2", borderRadius: 10, padding: "10px 11px", fontSize: 13, lineHeight: 1.6, outlineColor: accent }}
       />
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 8 }}>
-        <span style={{ color: "#999", fontSize: 10 }}>讨论内容是用户学习交流，不作为诊疗依据</span>
+        <span style={{ color: "#999", fontSize: 10 }}>仅限文字交流；内容经审核后展示，不作为诊疗依据</span>
         <button type="button" onClick={() => void submit()} disabled={!content.trim() || submitting}
           style={{ border: 0, borderRadius: 999, padding: "7px 14px", color: "#FFF", background: accent, opacity: !content.trim() || submitting ? .5 : 1, fontSize: 12, fontWeight: 700 }}>
           {submitting ? "发布中…" : "发布"}

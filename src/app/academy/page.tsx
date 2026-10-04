@@ -35,6 +35,7 @@ const ZONES: ZoneDef[] = [
       { key: "learn", label: "📖 知识学习", url: "/academy/learn?track=yixue" },
       { key: "bank", label: "📝 题库练习", url: "/academy/question-bank" },
       { key: "exam", label: "🎓 等级考试", url: "/academy/exam" },
+      { key: "community", label: "💬 交流社区", url: "/academy/community?zone=yixue" },
     ],
   },
   {
@@ -52,6 +53,7 @@ const ZONES: ZoneDef[] = [
       { key: "meridian", label: "📍 经络穴位", url: "/zhongyi/meridian" },
       { key: "bank", label: "📝 题库练习", url: "/academy/question-bank" },
       { key: "exam", label: "🎓 等级考试", url: "/academy/exam" },
+      { key: "community", label: "💬 交流社区", url: "/academy/community?zone=zhongyi" },
     ],
   },
   {
@@ -60,7 +62,10 @@ const ZONES: ZoneDef[] = [
     emoji: "🩺",
     color: "#C05046",
     desc: "中医基础知识 · 刷题 / 模拟练习 / 文库一体化",
-    entries: [{ key: "yikao", label: "🎓 医考学习专区", url: "/academy/yikao" }],
+    entries: [
+      { key: "yikao", label: "🎓 医考学习专区", url: "/academy/yikao" },
+      { key: "community", label: "💬 交流社区", url: "/academy/community?zone=yikao" },
+    ],
   },
   {
     key: "yangsheng",
@@ -68,7 +73,10 @@ const ZONES: ZoneDef[] = [
     emoji: "🍵",
     color: "#8B6F47",
     desc: "四时养生 · 食疗本草 · 传统功法学习",
-    entries: [{ key: "yangsheng", label: "🍵 养生资料", url: "/zhongyi/yangsheng" }],
+    entries: [
+      { key: "yangsheng", label: "🍵 养生资料", url: "/zhongyi/yangsheng" },
+      { key: "community", label: "💬 交流社区", url: "/academy/community?zone=yangsheng" },
+    ],
   },
   {
     key: "guoxue",
@@ -81,6 +89,7 @@ const ZONES: ZoneDef[] = [
       { key: "classics", label: "📜 国学典籍库", url: "/books" },
       { key: "learn", label: "📖 知识学习", url: "/academy/learn?track=guoxue" },
       { key: "bank", label: "📝 题库练习", url: "/academy/question-bank" },
+      { key: "community", label: "💬 交流社区", url: "/academy/community?zone=guoxue" },
     ],
   },
 ];

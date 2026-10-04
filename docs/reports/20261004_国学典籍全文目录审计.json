@@ -1,0 +1,345 @@
+{
+  "schema": "yandao.guoxue.catalog-audit.v1",
+  "generatedAt": "2026-10-04T10:21:20.144Z",
+  "total": 42,
+  "full": 42,
+  "blocked": 0,
+  "books": [
+    {
+      "id": "lunyu",
+      "title": "论语",
+      "category": "儒家",
+      "chars": 26167,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "daxue",
+      "title": "大学章句",
+      "category": "儒家",
+      "chars": 7628,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "zhongyong",
+      "title": "中庸章句",
+      "category": "儒家",
+      "chars": 13972,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "yijing",
+      "title": "易经",
+      "category": "经部",
+      "chars": 31665,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "shijing",
+      "title": "诗经",
+      "category": "经部",
+      "chars": 44379,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "liji",
+      "title": "礼记",
+      "category": "经部",
+      "chars": 127795,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "zuozhuan",
+      "title": "左传",
+      "category": "经部",
+      "chars": 231459,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "daodejing_wangbi",
+      "title": "道德经（王弼本）",
+      "category": "道家",
+      "chars": 32386,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "huangdi_yinfujing",
+      "title": "黄帝阴符经",
+      "category": "道家",
+      "chars": 663,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "qingjingjing",
+      "title": "太上老君说常清静经",
+      "category": "道家",
+      "chars": 1354,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "taishang_ganying",
+      "title": "太上感应篇",
+      "category": "道家",
+      "chars": 1603,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "zhuangzi",
+      "title": "庄子",
+      "category": "道家",
+      "chars": 84467,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "liezi",
+      "title": "列子",
+      "category": "道家",
+      "chars": 64634,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "guiguzi",
+      "title": "鬼谷子",
+      "category": "纵横家",
+      "chars": 8636,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "mengzi",
+      "title": "孟子",
+      "category": "儒家",
+      "chars": 47802,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "xunzi",
+      "title": "荀子",
+      "category": "儒家",
+      "chars": 166886,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "xiaojing",
+      "title": "孝经",
+      "category": "儒家",
+      "chars": 2607,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "hanfeizi",
+      "title": "韩非子",
+      "category": "法家",
+      "chars": 123202,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "shangjunshu",
+      "title": "商君书",
+      "category": "法家",
+      "chars": 24550,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "guanzi",
+      "title": "管子",
+      "category": "法家",
+      "chars": 210644,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "mozi",
+      "title": "墨子",
+      "category": "墨家",
+      "chars": 78559,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "gongsunlongzi",
+      "title": "公孙龙子",
+      "category": "名家",
+      "chars": 11683,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "lvshi_chunqiu",
+      "title": "吕氏春秋",
+      "category": "杂家",
+      "chars": 184247,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "huainanzi",
+      "title": "淮南子",
+      "category": "杂家",
+      "chars": 159719,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "sunzibingfa",
+      "title": "孙子兵法",
+      "category": "兵家",
+      "chars": 10434,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "wuzi",
+      "title": "吴子兵法",
+      "category": "兵家",
+      "chars": 6057,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "simafa",
+      "title": "司马法",
+      "category": "兵家",
+      "chars": 4489,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "liutao",
+      "title": "六韬",
+      "category": "兵家",
+      "chars": 21510,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "sanlue",
+      "title": "黄石公三略",
+      "category": "兵家",
+      "chars": 5052,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "sushu",
+      "title": "黄石公素书",
+      "category": "兵家",
+      "chars": 1658,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "shanhaijing",
+      "title": "山海经",
+      "category": "地理博物",
+      "chars": 47634,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "caigentan",
+      "title": "菜根谭",
+      "category": "处世",
+      "chars": 35305,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "weiluyehua",
+      "title": "围炉夜话",
+      "category": "处世",
+      "chars": 9363,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "youmengying",
+      "title": "幽梦影",
+      "category": "处世",
+      "chars": 32866,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "liaofansixun",
+      "title": "了凡四训",
+      "category": "家训",
+      "chars": 11824,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "sanzijing",
+      "title": "三字经",
+      "category": "蒙学",
+      "chars": 1587,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "baijiaxing",
+      "title": "百家姓",
+      "category": "蒙学",
+      "chars": 781,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "qianziwen",
+      "title": "千字文",
+      "category": "蒙学",
+      "chars": 1374,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "dizigui",
+      "title": "弟子规",
+      "category": "蒙学",
+      "chars": 1563,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "zhuzijiaxun",
+      "title": "朱子家训",
+      "category": "家训",
+      "chars": 730,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "shenglvqimeng",
+      "title": "声律启蒙",
+      "category": "蒙学",
+      "chars": 9417,
+      "status": "full",
+      "errors": []
+    },
+    {
+      "id": "zengguangxianwen",
+      "title": "增广贤文",
+      "category": "蒙学",
+      "chars": 11569,
+      "status": "full",
+      "errors": []
+    }
+  ]
+}

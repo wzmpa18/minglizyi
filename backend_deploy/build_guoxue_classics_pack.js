@@ -20,6 +20,9 @@ for (const book of catalogue.books) {
   if (!book.id || ids.has(book.id)) throw new Error(`典籍 ID 缺失或重复: ${book.id || '(empty)'}`);
   if (!book.title || !book.category || !book.author || !book.sourceUrl || !book.license) throw new Error(`典籍元数据不完整: ${book.id}`);
   if (String(book.content || '').trim().length < 500) throw new Error(`典籍正文过短: ${book.title}`);
+  if (book.completeness !== 'full' || !Number.isInteger(book.sectionCount) || book.sectionCount < 1) {
+    throw new Error(`典籍未通过全文篇章核验，禁止发布: ${book.title}`);
+  }
   ids.add(book.id);
 }
 

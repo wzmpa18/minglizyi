@@ -10,10 +10,20 @@ export interface LocalTtsStatus {
   source: "android" | "browser" | "unavailable";
 }
 
+export type LocalTtsStyle = "warmMale" | "warmNatural" | "softFemale";
+
+export interface LocalTtsVoice {
+  name: string;
+  label: string;
+  locale: string;
+  likelyGender: "male" | "female" | "unknown";
+}
+
 interface StateEvent { state: "speaking" | "finished" | "stopped" | "error"; message?: string }
 interface NativeLocalTts {
   getStatus(): Promise<Omit<LocalTtsStatus, "source">>;
-  speak(options: { text: string; rate: number }): Promise<{ accepted: boolean; chunks: number; voiceName: string }>;
+  listVoices(): Promise<{ voices: LocalTtsVoice[] }>;
+  speak(options: { text: string; rate: number; style: LocalTtsStyle; voiceName?: string }): Promise<{ accepted: boolean; chunks: number; voiceName: string }>;
   stop(): Promise<void>;
   addListener(eventName: "stateChange", listener: (event: StateEvent) => void): Promise<PluginListenerHandle>;
 }
@@ -21,9 +31,14 @@ interface NativeLocalTts {
 const NativeTts = registerPlugin<NativeLocalTts>("LocalTts");
 let browserUtterance: SpeechSynthesisUtterance | null = null;
 
-function browserOfflineChineseVoice(): SpeechSynthesisVoice | null {
-  if (typeof window === "undefined" || !("speechSynthesis" in window)) return null;
-  return window.speechSynthesis.getVoices().find((v) => v.localService && /^zh(?:-|_)/i.test(v.lang)) || null;
+function browserOfflineChineseVoices(): SpeechSynthesisVoice[] {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return [];
+  return window.speechSynthesis.getVoices().filter((v) => v.localService && /^zh(?:-|_)/i.test(v.lang));
+}
+
+function browserOfflineChineseVoice(preferredName?: string): SpeechSynthesisVoice | null {
+  const voices = browserOfflineChineseVoices();
+  return voices.find((voice) => voice.name === preferredName) || voices[0] || null;
 }
 
 export async function getLocalTtsStatus(): Promise<LocalTtsStatus> {
@@ -50,7 +65,26 @@ export async function getLocalTtsStatus(): Promise<LocalTtsStatus> {
   return { ready: true, available: false, message: "当前设备不支持本机朗读", source: "unavailable" };
 }
 
-export async function speakLocalText(text: string, rate: number, onState?: (event: StateEvent) => void): Promise<() => void> {
+export async function listLocalTtsVoices(): Promise<LocalTtsVoice[]> {
+  if (Capacitor.isNativePlatform() && Capacitor.isPluginAvailable("LocalTts")) {
+    const result = await NativeTts.listVoices();
+    return result.voices || [];
+  }
+  return browserOfflineChineseVoices().map((voice) => ({
+    name: voice.name,
+    label: voice.name,
+    locale: voice.lang,
+    likelyGender: "unknown" as const,
+  }));
+}
+
+export async function speakLocalText(
+  text: string,
+  rate: number,
+  style: LocalTtsStyle,
+  voiceName?: string,
+  onState?: (event: StateEvent) => void,
+): Promise<() => void> {
   const value = String(text || "").trim();
   if (!value) throw new Error("没有可朗读的文字");
   if (Capacitor.isNativePlatform() && Capacitor.isPluginAvailable("LocalTts")) {
@@ -63,7 +97,7 @@ export async function speakLocalText(text: string, rate: number, onState?: (even
       }
     });
     try {
-      await NativeTts.speak({ text: value, rate });
+      await NativeTts.speak({ text: value, rate, style, voiceName });
     } catch (error) {
       if (handle) await handle.remove();
       throw error;
@@ -71,12 +105,15 @@ export async function speakLocalText(text: string, rate: number, onState?: (even
     return () => { void NativeTts.stop(); void handle?.remove(); handle = null; };
   }
   const status = await getLocalTtsStatus();
-  const voice = browserOfflineChineseVoice();
+  const voice = browserOfflineChineseVoice(voiceName);
   if (!status.available || !voice || typeof window === "undefined") throw new Error(status.message);
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(value);
   browserUtterance = utterance;
-  utterance.voice = voice; utterance.lang = voice.lang; utterance.rate = Math.max(0.6, Math.min(1.3, rate));
+  utterance.voice = voice;
+  utterance.lang = voice.lang;
+  utterance.rate = Math.max(0.6, Math.min(1.15, rate));
+  utterance.pitch = style === "warmMale" ? 0.78 : style === "softFemale" ? 0.94 : 0.86;
   utterance.onstart = () => onState?.({ state: "speaking" });
   utterance.onend = () => { browserUtterance = null; onState?.({ state: "finished" }); };
   utterance.onerror = () => { browserUtterance = null; onState?.({ state: "error", message: "本机语音朗读失败" }); };

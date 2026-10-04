@@ -1590,7 +1590,10 @@ function createRouter() {
       if (Number.isSafeInteger(beforeId) && beforeId > 0) { sql += ' AND id < ?'; params.push(beforeId); }
       const offlineCursorLimit = Math.min(1000, Math.max(1, parseInt(limitStr, 10) || 300));
       sql += ` ORDER BY id DESC LIMIT ${offlineCursorLimit}`;
-      const rows = d.prepare(sql).all(...params).map(q => questionVo(q, isAdmin(req) || zhengguWithAnswer));
+      // 医考专区是练习模式，用户作答后需要在本页核对答案与解析。
+      // 正骨仍保持独立付费门控；其他赛道沿用原有隐藏答案策略。
+      const yikaoPracticeWithAnswer = track && normTrack(track) === 'yikao';
+      const rows = d.prepare(sql).all(...params).map(q => questionVo(q, isAdmin(req) || zhengguWithAnswer || yikaoPracticeWithAnswer));
       res.json({ success: true, questions: rows, pagination: { nextBeforeId: rows.length === offlineCursorLimit ? Number(rows[rows.length - 1].id) : null } });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });

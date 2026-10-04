@@ -152,7 +152,7 @@ export default function YikaoPage() {
   const loadQuestions = useCallback(async (category?: string) => {
     setLoading(true);
     try {
-      const r = await fetchQuestions({ status: "approved", track: "yikao", ...(category ? { category } : {}) });
+      const r = await fetchQuestions({ status: "approved", track: "yikao", limit: 1000, ...(category ? { category } : {}) });
       setQuestions(r && r.success && r.questions ? r.questions : []);
     } catch {
       setQuestions([]);
@@ -588,6 +588,10 @@ export default function YikaoPage() {
           </div>
           <button onClick={() => setShowSettings(true)} className="shrink-0 text-lg text-gray-600" title="设置">⚙</button>
         </div>
+      </div>
+
+      <div className="border-b border-emerald-100 bg-emerald-50 px-4 py-2 text-[10px] leading-4 text-emerald-800">
+        依据中医类别医师资格考试大纲（2025年版，2026年继续使用）组织科目。题库为原创模拟练习，医学综合考试官方题型包括 A1、A2、A3/A4、B1；不冒充历年真题。
       </div>
 
       {topTab === "bank" ? (

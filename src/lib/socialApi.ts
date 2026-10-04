@@ -126,7 +126,7 @@ export async function addComment(postId: string, content: string) {
 
 export interface ResourceComment {
   id: string;
-  resourceType: "acupoint" | "classic" | "yixue";
+  resourceType: "acupoint" | "classic" | "yixue" | "academy";
   resourceId: string;
   authorId: string;
   authorName: string;
