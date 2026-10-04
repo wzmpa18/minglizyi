@@ -14,6 +14,7 @@ import { ShareButton } from "@/components/ShareButton";
 import { useToolBack } from "@/lib/useToolBack";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
+import { openExternalLink } from "@/lib/externalLink";
 
 const BRAND = "#2E7D32";
 const BRAND_LIGHT = "#4CAF50";
@@ -348,19 +349,20 @@ export default function ClientPage({ routeId }: { routeId?: string }) {
           <h3 style={{ fontSize: "14px", fontWeight: "bold", color: BRAND, margin: "0 0 10px" }}>🎬 视频学习</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {gongfa.videos.map((v, i) => (
-              <a
+              <button
+                type="button"
                 key={i}
-                href={v.url}
-                target="_blank"
-                rel="noopener noreferrer"
+                onClick={() => openExternalLink(v.url)}
                 style={{
                   display: "flex",
+                  width: "100%",
                   alignItems: "center",
                   gap: "10px",
                   padding: "10px",
                   borderRadius: "10px",
                   backgroundColor: "#fafafa",
                   textDecoration: "none",
+                  textAlign: "left",
                   border: "1px solid #f0f0f0",
                 }}
               >
@@ -400,7 +402,7 @@ export default function ClientPage({ routeId }: { routeId?: string }) {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M7 17L17 7M17 7H8M17 7v9" />
                 </svg>
-              </a>
+              </button>
             ))}
           </div>
         </div>

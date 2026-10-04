@@ -235,7 +235,7 @@ const LEARN_COPY: CopySet = {
 
 const BARGAIN_COPY: CopySet = {
   copyId: "VC-BARGAIN-01",
-  version: "v25.0.98",
+  version: "v25.0.99",
   audience: "ANY",
   product: "P14",
   channel: "ANY",

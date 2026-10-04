@@ -251,6 +251,22 @@ export default function YixueSubjectPage() {
           </div>
         </div>
 
+        {!loading && points.length > 0 && (
+          <div className="mb-3 rounded-2xl border border-purple-100 bg-white p-3 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-bold" style={{ color: BRAND }}>🎧 听本课程</p>
+                <p className="text-[11px] text-gray-400">本机离线朗读，锁屏后仍可继续</p>
+              </div>
+              <LocalListenButton
+                text={points.map((p) => `${p.title}。${p.content}`).join("。\n").slice(0, 30000)}
+                contentId={`yixue-course:${key}`}
+                compact
+              />
+            </div>
+          </div>
+        )}
+
         {/* Tab 切换 */}
         <div className="mb-3 flex gap-1.5">
           {([["points", hasTopics ? `学习专题 ${points.length}` : `知识点 ${points.length}`], ["quiz", hasTopics ? `专题练习 ${questions.length}` : `章节练习 ${questions.length}`], ["notes", `学习笔记 ${notes.length}`]] as Array<[Tab, string]>).map(([t, label]) => (

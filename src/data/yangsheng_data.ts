@@ -11,6 +11,9 @@ export interface VideoLink {
   duration?: string;
 }
 
+const bilibiliSearch = (keyword: string) =>
+  `https://search.bilibili.com/all?keyword=${encodeURIComponent(keyword)}`;
+
 export interface GongfaStep {
   title: string;
   essentials: string; // 动作要领
@@ -78,8 +81,8 @@ export const GONGFA_LIST: GongfaDetail[] = [
       { title: "第八式：背后七颠百病消", essentials: "足跟提起再落下，全身颠动七次。", effect: "疏通全身经络，消除疲劳。" },
     ],
     videos: [
-      { title: "国家体育总局版八段锦完整教学", platform: "B站", url: "https://www.bilibili.com/video/BV1Yb411W7Hi", duration: "12:30" },
-      { title: "八段锦分解教学（慢动作）", platform: "B站", url: "https://www.bilibili.com/video/BV1Hx411y7rD", duration: "20:15" },
+      { title: "国家体育总局版八段锦完整教学", platform: "B站", url: bilibiliSearch("国家体育总局 八段锦 完整教学") },
+      { title: "八段锦分解教学（慢动作）", platform: "B站", url: bilibiliSearch("八段锦 分解教学 慢动作") },
     ],
   },
   {
@@ -103,8 +106,8 @@ export const GONGFA_LIST: GongfaDetail[] = [
       { title: "第六式：出爪亮翅", essentials: "双手向前推出如亮翅状，反复推收。", effect: "增强胸臂力量，扩胸理气。" },
     ],
     videos: [
-      { title: "少林易筋经完整教学", platform: "B站", url: "https://www.bilibili.com/video/BV1mW41137oP", duration: "15:40" },
-      { title: "易筋经十二式分解", platform: "B站", url: "https://www.bilibili.com/video/BV1Hs41137oZ", duration: "22:10" },
+      { title: "少林易筋经完整教学", platform: "B站", url: bilibiliSearch("少林 易筋经 完整教学") },
+      { title: "易筋经十二式分解", platform: "B站", url: bilibiliSearch("易筋经 十二式 分解教学") },
     ],
   },
   {
@@ -127,7 +130,7 @@ export const GONGFA_LIST: GongfaDetail[] = [
       { title: "鸟戏：鸟飞", essentials: "如鸟展翅飞翔，双臂上下扇动。", effect: "疏通心肺，增强呼吸功能。" },
     ],
     videos: [
-      { title: "五禽戏完整教学（国家体育总局）", platform: "B站", url: "https://www.bilibili.com/video/BV1LW41137xp", duration: "14:20" },
+      { title: "五禽戏完整教学（国家体育总局）", platform: "B站", url: bilibiliSearch("国家体育总局 五禽戏 完整教学") },
     ],
   },
   {
@@ -151,7 +154,7 @@ export const GONGFA_LIST: GongfaDetail[] = [
       { title: "嘻字诀（三焦）", essentials: "口型嘻，配合两手从上向下疏导。", effect: "调理三焦，理气化滞。" },
     ],
     videos: [
-      { title: "六字诀完整教学", platform: "B站", url: "https://www.bilibili.com/video/BV1Hb411W7Qq", duration: "10:30" },
+      { title: "六字诀完整教学", platform: "B站", url: bilibiliSearch("国家体育总局 六字诀 完整教学") },
     ],
   },
   {
@@ -173,7 +176,7 @@ export const GONGFA_LIST: GongfaDetail[] = [
       { title: "第四步骤：收功", essentials: "缓缓放下双手，搓手擦面，散步放松。", effect: "收功归元，防止气血不畅。" },
     ],
     videos: [
-      { title: "浑圆桩教学（意拳基础）", platform: "B站", url: "https://www.bilibili.com/video/BV1Yx411y7kP", duration: "18:20" },
+      { title: "浑圆桩教学（意拳基础）", platform: "B站", url: bilibiliSearch("浑圆桩 意拳 基础 教学") },
     ],
   },
   {
@@ -195,8 +198,8 @@ export const GONGFA_LIST: GongfaDetail[] = [
       { title: "第四步：慈心冥想", essentials: "在心中默念祝福语：愿我快乐，愿我平安，愿我健康。", effect: "培养慈悲心，改善人际关系。" },
     ],
     videos: [
-      { title: "正念冥想引导（10分钟入门）", platform: "B站", url: "https://www.bilibili.com/video/BV1GJ411x7hM", duration: "10:00" },
-      { title: "MBSR正念减压完整课程", platform: "B站", url: "https://www.bilibili.com/video/BV1Hb411W7Yy", duration: "45:00" },
+      { title: "正念冥想引导（10分钟入门）", platform: "B站", url: bilibiliSearch("正念冥想 引导 10分钟 入门") },
+      { title: "MBSR正念减压完整课程", platform: "B站", url: bilibiliSearch("MBSR 正念减压 完整课程") },
     ],
   },
   {
@@ -219,7 +222,7 @@ export const GONGFA_LIST: GongfaDetail[] = [
       { title: "摊尸式（Savasana）", essentials: "仰卧放松，全身松弛，自然呼吸。", effect: "深度放松，整合练习效果。" },
     ],
     videos: [
-      { title: "哈他瑜伽入门完整课程", platform: "B站", url: "https://www.bilibili.com/video/BV1nx411y7kL", duration: "30:00" },
+      { title: "哈他瑜伽入门完整课程", platform: "B站", url: bilibiliSearch("哈他瑜伽 入门 完整课程") },
     ],
   },
   {
@@ -240,7 +243,7 @@ export const GONGFA_LIST: GongfaDetail[] = [
       { title: "开合桩", essentials: "双手开合配合呼吸，开时吸气，合时呼气。", effect: "训练呼吸与动作配合。" },
     ],
     videos: [
-      { title: "太极桩功教学", platform: "B站", url: "https://www.bilibili.com/video/BV1mW41137xp", duration: "15:00" },
+      { title: "太极桩功教学", platform: "B站", url: bilibiliSearch("太极桩功 教学") },
     ],
   },
   {
@@ -263,7 +266,7 @@ export const GONGFA_LIST: GongfaDetail[] = [
       { title: "第五步：通任督，气归丹田", essentials: "真气沿任脉下行，完成小周天循环。", effect: "任督二脉通畅，真气循环运行。" },
     ],
     videos: [
-      { title: "真气运行法五步功法教学", platform: "B站", url: "https://www.bilibili.com/video/BV1Hb411W7Qq", duration: "25:00" },
+      { title: "真气运行法五步功法教学", platform: "B站", url: bilibiliSearch("真气运行法 五步功法 教学") },
     ],
   },
   {
@@ -285,7 +288,7 @@ export const GONGFA_LIST: GongfaDetail[] = [
       { title: "第四步：摩足", essentials: "单脚盘于对侧腿上，按摩足底涌泉穴。", effect: "引火归元，滋阴降火。" },
     ],
     videos: [
-      { title: "天竺国按摩法演示", platform: "B站", url: "https://www.bilibili.com/video/BV1Yb411W7Hi", duration: "08:00" },
+      { title: "天竺国按摩法演示", platform: "B站", url: bilibiliSearch("天竺国按摩法 演示") },
     ],
   },
 ];

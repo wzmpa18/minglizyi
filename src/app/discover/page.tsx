@@ -42,6 +42,7 @@ import {
 } from "@/lib/socialStore";
 import { getUserProfile } from "@/lib/auth";
 import { getCurrentUser } from "@/lib/loginService";
+import { openExternalLink } from "@/lib/externalLink";
 import {
   fetchPosts as apiFetchPosts,
   createPost as apiCreatePost,
@@ -374,7 +375,10 @@ function VideoCard({
           />
         ) : (
           <button
-            onClick={() => setPlaying(true)}
+            onClick={() => {
+              if (video.platform === "bilibili") openExternalLink(video.url);
+              else setPlaying(true);
+            }}
             className="flex h-full w-full items-center justify-center"
             style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)" }}
           >
@@ -393,12 +397,10 @@ function VideoCard({
       {/* 来源标注 */}
       <div className="mt-2 flex items-center justify-between">
         <span className="text-[11px] text-gray-400">来源：{video.sourceLabel} · 由 @{video.author} 分享</span>
-        <button
-          onClick={onReport}
-          className="text-[11px] text-gray-400 underline active:opacity-70"
-        >
-          侵权举报
-        </button>
+        <div className="flex items-center gap-3">
+          <button onClick={() => openExternalLink(video.url)} className="text-[11px] font-semibold text-[#FB7299] underline active:opacity-70">去原平台观看</button>
+          <button onClick={onReport} className="text-[11px] text-gray-400 underline active:opacity-70">侵权举报</button>
+        </div>
       </div>
 
       {/* 操作栏 */}

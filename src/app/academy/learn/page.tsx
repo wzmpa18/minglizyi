@@ -173,6 +173,21 @@ export default function AcademyLearnPage() {
       </div>
 
       <div className="px-3 py-3 pb-24">
+        {!loading && filteredPoints.length > 0 && (
+          <div className="mb-3 rounded-2xl border border-purple-100 bg-white p-3 shadow-sm">
+            <div className="mb-2 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-bold" style={{ color: BRAND }}>🎧 听学当前内容</p>
+                <p className="text-[11px] text-gray-400">使用手机离线中文语音，可锁屏继续播放</p>
+              </div>
+              <LocalListenButton
+                text={filteredPoints.map((pt) => `${pt.title}。${pt.content}`).join("。\n").slice(0, 30000)}
+                contentId={`knowledge-list:${track || "all"}:${category || "all"}:${term || "all"}`}
+                compact
+              />
+            </div>
+          </div>
+        )}
         {/* v25.0.24: 术语筛选提示条（工具页星曜术语跳转进入时显示） */}
         {term && (
           <div className="mb-2.5 flex items-center justify-between rounded-xl px-3 py-2 text-xs" style={{ backgroundColor: BRAND + "14", color: BRAND }}>

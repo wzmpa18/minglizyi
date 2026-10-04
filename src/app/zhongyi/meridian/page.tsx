@@ -28,6 +28,69 @@ const BRAND_BG = "#F3EDF7";
 const COMPLIANCE_TEXT = "本APP内容仅供传统文化研究参考，不构成医疗建议。如有身体不适，请及时就医。";
 const PROFESSIONAL_WARNING = "⚠️ 专业操作，请勿自行尝试";
 
+const MERIDIAN_CHARTS: Record<string, string> = {
+  "手太阴肺经": "/assets/meridians/lung.webp",
+  "手阳明大肠经": "/assets/meridians/large-intestine.webp",
+  "足阳明胃经": "/assets/meridians/stomach.webp",
+  "足太阴脾经": "/assets/meridians/spleen.webp",
+  "手少阴心经": "/assets/meridians/heart.webp",
+  "手太阳小肠经": "/assets/meridians/small-intestine.webp",
+  "足太阳膀胱经": "/assets/meridians/bladder.webp",
+  "足少阴肾经": "/assets/meridians/kidney.webp",
+  "手厥阴心包经": "/assets/meridians/pericardium.webp",
+  "手少阳三焦经": "/assets/meridians/triple-energizer.webp",
+  "足少阳胆经": "/assets/meridians/gallbladder.webp",
+  "足厥阴肝经": "/assets/meridians/liver.webp",
+  "督脉": "/assets/meridians/governor-vessel.webp",
+  "任脉": "/assets/meridians/conception-vessel.webp",
+};
+
+function MeridianChart({ meridianName, compact = false }: { meridianName: string; compact?: boolean }) {
+  const [expanded, setExpanded] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const src = MERIDIAN_CHARTS[meridianName];
+  if (!src) return null;
+
+  const image = (
+    <img
+      src={src}
+      alt={`${meridianName}经络穴位动态图`}
+      draggable={false}
+      style={{ display: "block", width: `${zoom * 100}%`, maxWidth: "none", height: "auto", margin: "0 auto" }}
+    />
+  );
+
+  return <>
+    <button
+      type="button"
+      onClick={() => { setZoom(1); setExpanded(true); }}
+      style={{ width: "100%", padding: 0, border: "none", borderRadius: "14px", overflow: "hidden", background: "#EEF6F2", cursor: "zoom-in" }}
+      aria-label={`放大查看${meridianName}动态图`}
+    >
+      <img src={src} alt={`${meridianName}经络穴位动态图`} draggable={false} style={{ display: "block", width: "100%", height: compact ? "250px" : "auto", objectFit: "contain" }} />
+      <span style={{ display: "block", padding: "7px 10px", fontSize: "11px", color: "#5D6D65", background: "white" }}>点击放大 · 动画循行 · 可离线查看</span>
+    </button>
+    {expanded && (
+      <div
+        onClick={() => setExpanded(false)}
+        style={{ position: "fixed", inset: 0, zIndex: 1400, background: "rgba(0,0,0,.88)", display: "flex", flexDirection: "column", padding: "12px" }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", color: "white", paddingBottom: "10px" }}>
+          <strong style={{ fontSize: "14px" }}>{meridianName}</strong>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <button type="button" onClick={(e) => { e.stopPropagation(); setZoom(v => Math.max(1, v - .5)); }} style={{ width: "38px", height: "34px", border: 0, borderRadius: "17px", fontSize: "20px" }}>−</button>
+            <button type="button" onClick={(e) => { e.stopPropagation(); setZoom(v => Math.min(3, v + .5)); }} style={{ width: "38px", height: "34px", border: 0, borderRadius: "17px", fontSize: "20px" }}>＋</button>
+            <button type="button" onClick={() => setExpanded(false)} style={{ height: "34px", padding: "0 14px", border: 0, borderRadius: "17px" }}>关闭</button>
+          </div>
+        </div>
+        <div onClick={(e) => e.stopPropagation()} style={{ flex: 1, overflow: "auto", borderRadius: "12px", background: "#EEF6F2", touchAction: "pan-x pan-y pinch-zoom" }}>
+          {image}
+        </div>
+      </div>
+    )}
+  </>;
+}
+
 const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
   "手三阴经": { bg: "#E3F2FD", text: "#1565C0" },
   "手三阳经": { bg: "#FFEBEE", text: "#C62828" },
@@ -84,66 +147,112 @@ function detectBodyArea(name: string, location: string, zone?: string): BodyArea
   return "torso";
 }
 
-const MARKER_POSITIONS: Record<BodyArea, { x: number; y: number }> = {
-  head: { x: 100, y: 40 },
-  arms: { x: 49, y: 130 },
-  hands: { x: 49, y: 192 },
-  legs: { x: 85, y: 260 },
-  feet: { x: 85, y: 340 },
-  torso: { x: 100, y: 130 },
-  back: { x: 100, y: 130 },
+type DiagramPoint = [number, number];
+type MeridianCourse = { total: number; view: "front" | "back"; points: DiagramPoint[] };
+
+// Simplified teaching courses. The selected point is placed by its standard
+// sequence number along the course; the written landmark remains the precise
+// positioning reference.
+const MERIDIAN_COURSES: Record<string, MeridianCourse> = {
+  LU: { total: 11, view: "front", points: [[94, 93], [76, 112], [62, 150], [51, 196], [43, 239]] },
+  LI: { total: 20, view: "front", points: [[43, 239], [54, 194], [68, 143], [84, 93], [105, 72], [111, 55]] },
+  ST: { total: 45, view: "front", points: [[108, 52], [101, 78], [96, 116], [101, 166], [104, 216], [103, 277], [107, 345], [105, 393]] },
+  SP: { total: 21, view: "front", points: [[105, 393], [96, 344], [94, 278], [93, 219], [89, 171], [86, 116], [83, 94]] },
+  HT: { total: 9, view: "front", points: [[89, 96], [73, 123], [61, 159], [50, 199], [44, 239]] },
+  SI: { total: 19, view: "back", points: [[43, 239], [55, 193], [70, 145], [88, 98], [99, 79], [108, 63]] },
+  BL: { total: 67, view: "back", points: [[108, 49], [112, 72], [102, 101], [99, 151], [96, 205], [101, 254], [106, 312], [104, 371], [108, 397]] },
+  KI: { total: 27, view: "front", points: [[112, 397], [106, 350], [108, 291], [105, 228], [103, 180], [105, 131], [108, 91]] },
+  PC: { total: 9, view: "front", points: [[91, 94], [76, 126], [63, 161], [52, 201], [45, 239]] },
+  TE: { total: 23, view: "back", points: [[45, 239], [55, 199], [68, 151], [84, 103], [101, 76], [114, 58]] },
+  GB: { total: 44, view: "front", points: [[113, 52], [125, 64], [113, 79], [129, 99], [133, 146], [126, 199], [122, 261], [119, 326], [116, 392]] },
+  LR: { total: 14, view: "front", points: [[110, 391], [104, 345], [101, 286], [99, 229], [94, 181], [88, 133], [86, 101]] },
+  GV: { total: 28, view: "back", points: [[120, 211], [120, 180], [120, 142], [120, 101], [120, 73], [120, 38], [118, 22], [112, 55]] },
+  CV: { total: 24, view: "front", points: [[120, 211], [120, 183], [120, 148], [120, 112], [120, 82], [120, 61]] },
 };
 
-function BodyDiagramSVG({ area }: { area: BodyArea }) {
-  const HIGHLIGHT = BRAND;
-  const NORMAL = "#EDE7F6";
-  const STROKE = "#B39DDB";
-  const hl = (targets: BodyArea[]) => targets.includes(area);
-  const marker = MARKER_POSITIONS[area];
+const FALLBACK_MARKERS: Record<BodyArea, DiagramPoint> = {
+  head: [120, 48], arms: [60, 155], hands: [43, 239], legs: [104, 292], feet: [106, 392],
+  torso: [120, 135], back: [120, 135],
+};
+
+function interpolateCourse(points: DiagramPoint[], ratio: number): DiagramPoint {
+  const lengths = points.slice(1).map((point, index) => Math.hypot(point[0] - points[index][0], point[1] - points[index][1]));
+  const total = lengths.reduce((sum, value) => sum + value, 0);
+  let remaining = Math.max(0, Math.min(1, ratio)) * total;
+  for (let index = 0; index < lengths.length; index += 1) {
+    if (remaining <= lengths[index]) {
+      const start = points[index], end = points[index + 1];
+      const part = lengths[index] ? remaining / lengths[index] : 0;
+      return [start[0] + (end[0] - start[0]) * part, start[1] + (end[1] - start[1]) * part];
+    }
+    remaining -= lengths[index];
+  }
+  return points[points.length - 1];
+}
+
+function parseCourseCode(code?: string): { prefix: string; index: number } | null {
+  const match = String(code || "").toUpperCase().match(/^([A-Z]+)(\d+)$/);
+  if (!match) return null;
+  let prefix = match[1], index = Number(match[2]);
+  if (prefix === "DU") { prefix = "GV"; index += 25; }
+  if (prefix === "RN") { prefix = "CV"; index += 21; }
+  return MERIDIAN_COURSES[prefix] ? { prefix, index } : null;
+}
+
+function HumanOutline({ back }: { back: boolean }) {
+  return <g fill="#F8F3EC" stroke="#9B8C80" strokeWidth="1.6" strokeLinejoin="round">
+    <ellipse cx="120" cy="43" rx="25" ry="31" />
+    <path d="M108 71 L104 82 Q83 86 76 104 L63 167 Q59 190 48 226 L39 237 Q35 244 43 249 Q51 252 57 243 L68 210 Q79 178 86 145 L88 205 Q87 225 93 242 L91 320 L96 389 Q98 406 108 406 Q117 405 116 389 L118 325 L120 250 L122 325 L124 389 Q124 405 134 406 Q144 405 144 389 L149 320 L147 242 Q153 224 152 205 L154 145 Q161 179 172 210 L183 243 Q189 252 197 249 Q205 244 201 237 L192 226 Q181 190 177 167 L164 104 Q157 86 136 82 L132 71 Z" />
+    <path d="M106 75 Q120 87 134 75" fill="none" />
+    {back ? <path d="M120 88 L120 213 M98 111 Q120 101 142 111 M101 174 Q120 184 139 174" fill="none" stroke="#C3B6AA" strokeDasharray="3 3" /> : <path d="M98 111 Q120 126 142 111 M103 154 Q120 164 137 154 M120 92 L120 210" fill="none" stroke="#D1C5BB" strokeDasharray="3 3" />}
+    <path d="M101 37 Q108 31 114 37 M126 37 Q132 31 139 37 M117 47 Q120 50 123 47 M111 58 Q120 62 129 58" fill="none" stroke="#B6A79B" />
+  </g>;
+}
+
+function BodyDiagramSVG({ area, acupointCode, acupointName }: { area: BodyArea; acupointCode?: string; acupointName: string }) {
+  const parsed = parseCourseCode(acupointCode);
+  const course = parsed ? MERIDIAN_COURSES[parsed.prefix] : null;
+  const selected = course && parsed
+    ? interpolateCourse(course.points, (Math.max(1, parsed.index) - 1) / Math.max(1, course.total - 1))
+    : FALLBACK_MARKERS[area];
+  const dots = course ? Array.from({ length: course.total }, (_, index) => interpolateCourse(course.points, index / Math.max(1, course.total - 1))) : [];
+  const mirrored = (point: DiagramPoint): DiagramPoint => [240 - point[0], point[1]];
+  const pathText = course?.points.map((point) => point.join(",")).join(" ") || "";
+  const mirrorPathText = course?.points.map(mirrored).map((point) => point.join(",")).join(" ") || "";
   return (
-    <svg width="150" height="320" viewBox="0 0 200 400" xmlns="http://www.w3.org/2000/svg">
-      {/* Head */}
-      <circle cx="100" cy="40" r="28" fill={hl(["head"]) ? HIGHLIGHT : NORMAL} stroke={STROKE} strokeWidth="2" />
-      {/* Neck */}
-      <rect x="90" y="63" width="20" height="14" fill={NORMAL} stroke={STROKE} strokeWidth="1.5" rx="4" />
-      {/* Torso */}
-      <rect x="66" y="75" width="68" height="115" rx="16" fill={hl(["torso", "back"]) ? HIGHLIGHT : NORMAL} stroke={STROKE} strokeWidth="2" />
-      {/* Spine line for back view */}
-      {area === "back" && (
-        <line x1="100" y1="82" x2="100" y2="183" stroke="rgba(255,255,255,0.5)" strokeWidth="2" strokeDasharray="4 3" />
-      )}
-      {/* Left arm */}
-      <rect x="38" y="80" width="22" height="95" rx="10" fill={hl(["arms"]) ? HIGHLIGHT : NORMAL} stroke={STROKE} strokeWidth="2" />
-      {/* Right arm */}
-      <rect x="140" y="80" width="22" height="95" rx="10" fill={hl(["arms"]) ? HIGHLIGHT : NORMAL} stroke={STROKE} strokeWidth="2" />
-      {/* Left hand */}
-      <circle cx="49" cy="192" r="13" fill={hl(["hands", "arms"]) ? HIGHLIGHT : NORMAL} stroke={STROKE} strokeWidth="2" />
-      {/* Right hand */}
-      <circle cx="151" cy="192" r="13" fill={hl(["hands", "arms"]) ? HIGHLIGHT : NORMAL} stroke={STROKE} strokeWidth="2" />
-      {/* Left leg */}
-      <rect x="73" y="190" width="24" height="135" rx="10" fill={hl(["legs"]) ? HIGHLIGHT : NORMAL} stroke={STROKE} strokeWidth="2" />
-      {/* Right leg */}
-      <rect x="103" y="190" width="24" height="135" rx="10" fill={hl(["legs"]) ? HIGHLIGHT : NORMAL} stroke={STROKE} strokeWidth="2" />
-      {/* Left foot */}
-      <ellipse cx="85" cy="340" rx="16" ry="9" fill={hl(["feet", "legs"]) ? HIGHLIGHT : NORMAL} stroke={STROKE} strokeWidth="2" />
-      {/* Right foot */}
-      <ellipse cx="115" cy="340" rx="16" ry="9" fill={hl(["feet", "legs"]) ? HIGHLIGHT : NORMAL} stroke={STROKE} strokeWidth="2" />
-      {/* Acupoint marker (pulsing red dot) */}
-      <circle cx={marker.x} cy={marker.y} r="5" fill="#F44336" stroke="white" strokeWidth="2">
-        <animate attributeName="r" values="4;7;4" dur="1.5s" repeatCount="indefinite" />
+    <svg width="240" height="430" viewBox="0 0 240 430" role="img" aria-label={`${acupointName}经络定位示意图`}>
+      <rect x="1" y="1" width="238" height="418" rx="18" fill="#FCFAF7" stroke="#E6DDD5" />
+      <text x="14" y="24" fill="#6D5C52" fontSize="11" fontWeight="700">{course?.view === "back" ? "人体背面" : "人体正面"} · 经络循行</text>
+      <HumanOutline back={course?.view === "back" || area === "back"} />
+      {course && <>
+        <polyline points={pathText} fill="none" stroke={BRAND} strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.88" />
+        {parsed?.prefix !== "GV" && parsed?.prefix !== "CV" && <polyline points={mirrorPathText} fill="none" stroke={BRAND} strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.45" />}
+        {dots.map((point, index) => <circle key={`p-${index}`} cx={point[0]} cy={point[1]} r="1.7" fill="#fff" stroke={BRAND} strokeWidth="1" />)}
+      </>}
+      <circle cx={selected[0]} cy={selected[1]} r="9" fill="#EF535033" stroke="#EF5350" strokeWidth="1.5">
+        <animate attributeName="r" values="7;11;7" dur="1.5s" repeatCount="indefinite" />
       </circle>
-      <circle cx={marker.x} cy={marker.y} r="3" fill="#F44336" />
+      <circle cx={selected[0]} cy={selected[1]} r="4" fill="#D32F2F" stroke="#fff" strokeWidth="1.5" />
+      <path d={`M${selected[0] + 5} ${selected[1] - 5} L${Math.min(177, selected[0] + 28)} ${Math.max(30, selected[1] - 24)}`} stroke="#D32F2F" strokeWidth="1" />
+      <rect x="147" y="28" width="80" height="35" rx="8" fill="#fff" stroke="#EF9A9A" />
+      <text x="187" y="42" textAnchor="middle" fill="#C62828" fontSize="10" fontWeight="700">{acupointName}</text>
+      <text x="187" y="56" textAnchor="middle" fill="#8D6E63" fontSize="9">{acupointCode || AREA_LABELS[area]}</text>
+      <text x="120" y="417" textAnchor="middle" fill="#9E8F84" fontSize="9">红点为本经穴位顺序位置 · 具体定位请看下方骨性标志</text>
     </svg>
   );
 }
 
 function PositioningModal({
   acupointName,
+  acupointCode,
+  meridianName,
   locationText,
   zone,
   onClose,
 }: {
   acupointName: string;
+  acupointCode?: string;
+  meridianName?: string;
   locationText: string;
   zone?: string;
   onClose: () => void;
@@ -240,7 +349,9 @@ function PositioningModal({
 
         {/* Body diagram */}
         <div style={{ padding: "16px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <BodyDiagramSVG area={bodyArea} />
+          {meridianName && MERIDIAN_CHARTS[meridianName]
+            ? <MeridianChart meridianName={meridianName} compact />
+            : <BodyDiagramSVG area={bodyArea} acupointCode={acupointCode} acupointName={acupointName} />}
           <span
             style={{
               marginTop: "8px", fontSize: "12px", fontWeight: "bold",
@@ -250,6 +361,7 @@ function PositioningModal({
           >
             {AREA_LABELS[bodyArea]}
           </span>
+          {meridianName && <span style={{ marginTop: "5px", fontSize: "11px", color: "#777" }}>{meridianName} · {acupointCode}</span>}
         </div>
 
         {/* Location text */}
@@ -547,6 +659,11 @@ function AcupointListPage({ meridianName }: { meridianName: string }) {
         </div>
       </div>
 
+      <div style={{ margin: "12px", background: "white", borderRadius: "16px", padding: "10px", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+        <div style={{ fontSize: "12px", color: "#666", fontWeight: "bold", margin: "2px 4px 8px" }}>经络穴位动态图</div>
+        <MeridianChart meridianName={meridian.name} />
+      </div>
+
       <div style={{ margin: "12px", background: "white", borderRadius: "16px", padding: "14px", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
         <div style={{ fontSize: "12px", color: "#999", marginBottom: "6px" }}>循行路线</div>
         <p style={{ fontSize: "13px", color: "#333", lineHeight: 1.7, margin: 0 }}>{meridian.pathway}</p>
@@ -814,6 +931,8 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
       {showPositionModal && (
         <PositioningModal
           acupointName={acupoint.name}
+          acupointCode={acupoint.code}
+          meridianName={acupoint.meridian}
           locationText={acupoint.location_detail && acupoint.location_detail !== acupoint.location
             ? acupoint.location + " " + acupoint.location_detail
             : acupoint.location}
@@ -1034,6 +1153,8 @@ function DongAcupointDetailPage({ acupointName }: { acupointName: string }) {
       {showPositionModal && (
         <PositioningModal
           acupointName={acupoint.name}
+          acupointCode={acupoint.code}
+          meridianName="董氏奇穴"
           locationText={acupoint.location_detail && acupoint.location_detail !== acupoint.location
             ? acupoint.location + " " + acupoint.location_detail
             : acupoint.location}
