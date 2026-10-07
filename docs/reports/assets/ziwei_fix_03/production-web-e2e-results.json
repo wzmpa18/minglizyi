@@ -1,0 +1,86 @@
+[
+  {
+    "viewport": "360x800",
+    "startAge": 35,
+    "firstAge": 35,
+    "firstYear": 2024,
+    "selected": "true",
+    "recordFields": [
+      "birthLocation",
+      "birthPlace",
+      "calculationDateTime",
+      "calendar",
+      "coordinateSource",
+      "correctionInfo",
+      "day",
+      "gender",
+      "hour",
+      "latitude",
+      "longitude",
+      "minute",
+      "month",
+      "name",
+      "normalizedDateTime",
+      "rawDateTime",
+      "timezone",
+      "timezoneSource",
+      "utcOffsetMinutes",
+      "xiaLing",
+      "year",
+      "zaoWanZi",
+      "zhenTaiyang"
+    ],
+    "roundTripResultSnapshotEqual": true,
+    "restoredLongitude": 113.2644,
+    "gridBox": {
+      "x": 18.945453643798828,
+      "y": 94.8204574584961,
+      "width": 322.1091117858887,
+      "height": 383.45740509033203
+    },
+    "viewBox": {
+      "x": 240,
+      "y": 716,
+      "width": 104,
+      "height": 36
+    }
+  },
+  {
+    "viewport": "390x844",
+    "startAge": 35,
+    "firstAge": 35,
+    "firstYear": 2024,
+    "selected": "true",
+    "gridBox": {
+      "x": 19.900001525878906,
+      "y": 95.7750015258789,
+      "width": 350.2000045776367,
+      "height": 416.8984603881836
+    },
+    "viewBox": {
+      "x": 260,
+      "y": 751.328125,
+      "width": 114,
+      "height": 36
+    }
+  },
+  {
+    "viewport": "412x915",
+    "startAge": 35,
+    "firstAge": 35,
+    "firstYear": 2024,
+    "selected": "true",
+    "gridBox": {
+      "x": 20.599998474121094,
+      "y": 0.47499942779541016,
+      "width": 370.7999954223633,
+      "height": 441.4218511581421
+    },
+    "viewBox": {
+      "x": 274.671875,
+      "y": 681.21875,
+      "width": 121.328125,
+      "height": 36
+    }
+  }
+]
