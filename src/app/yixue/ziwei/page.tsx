@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation";
 import { closeInitialToolPopup } from "@/lib/leaveToolPage";
 import type { ZiweiResult, Gender } from "@/algorithm-core";
 import { DatePicker } from "@/components/shared";
+import type { DatePickerOptions } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 import { getPalaceInterpretation, getPalaceAllStarInterpretations } from "@/lib/ziwei-interpretations";
@@ -34,7 +35,7 @@ import { PostToSquareButton } from "@/components/PostToSquareButton";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
-import { savePaipanRecord, type PaipanRecord, type MingzhuProfile } from "@/lib/nativePaipanStore";
+import { savePaipanRecord, updatePaipanRecordViewState, type PaipanRecord, type MingzhuProfile } from "@/lib/nativePaipanStore";
 
 // ====================================================================
 // 品牌色 & 常量
@@ -448,6 +449,7 @@ export default function ZiweiPage() {
   // S2-4: 真太阳时修正说明（勾选真太阳时后排盘显示）
   const [solarCorrection, setSolarCorrection] = useState<string | null>(null);
   const [longitude, setLongitude] = useState(116.4);
+  const [historyDateOptions, setHistoryDateOptions] = useState<Partial<DatePickerOptions>>({});
   const [saveName, setSaveName] = useState(false);
   const [showForm, setShowForm] = useState(true);
   // P1-REOPEN: 返回键关闭排盘弹窗且无结果时直接返回工具列表
@@ -472,6 +474,9 @@ export default function ZiweiPage() {
   // v19.2: 流日/流时选中状态
   const [selectedLiuri, setSelectedLiuri] = useState<number>(-1);
   const [selectedLiushi, setSelectedLiushi] = useState<number>(-1);
+  const decadeUserActionRef = useRef(false);
+  const liunianRowRef = useRef<HTMLDivElement>(null);
+  const historyRecordIdRef = useRef<number | null>(null);
   // v25.0.41（20260819用户指令）：童限前置模式——点击大限行最前"童限"格进入，
   // 虚线三角箭头指本命（命宫），下方展开童限/小限对照行与童限期（起限前）流年流月流日流时
   const [tongxianActive, setTongxianActive] = useState(false);
@@ -544,17 +549,23 @@ export default function ZiweiPage() {
       const res = calculateZiwei({ year:y, month:m, day:d, hour:h, gender:g });
       setResult(res);
       setShowForm(false);
-      savePaipanState("ziwei",{input:{year:y,month:m,day:d,hour:h,gender:g,calType},showForm:false,_ts:Date.now()});
+      savePaipanState("ziwei",{input:{year:y,month:m,day:d,hour:h,gender:g,calType,zaoWanZi,zhenTaiyang,xiaLing,longitude,...historyDateOptions},showForm:false,_ts:Date.now()});
       // 保存客户记录
       try{saveRecord({clientId:selectedClient?selectedClient.id:"",type:"ziwei",data:{...res,inputParams:{year:y,month:m,day:d,hour:h,gender:g}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
       // v25.0.88: 排盘记录自动落库（原生壳为SQLite，同参数原位去重）
       savePaipanRecord({
         tool: "ziwei",
         title: `${name || "未命名"}·紫微排盘 ${y}-${m}-${d}`,
-        input: { birthInput:override?.birthInput, name, year: y, month: m, day: d, hour: h, gender: g, calType },
+        input: {
+          birthInput: override?.birthInput,
+          calculationInput: { year: y, month: m, day: d, hour: h, gender: g },
+          name, year: y, month: m, day: d, hour: h, gender: g, calType,
+          zaoWanZi, zhenTaiyang, xiaLing, longitude,
+          viewState: { viewMode, selectedDaxian, selectedLiunian, selectedLiuyue, selectedLiuri, selectedLiushi, tongxianActive, dxLayer, lnLayer },
+        },
         result: res as unknown as Record<string, unknown>,
         profileId: mingzhu?.id ?? null,
-      }).catch(() => {});
+      }).then(id => { if (id >= 0) historyRecordIdRef.current = id; }).catch(() => {});
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "计算失败");
     }
@@ -562,13 +573,41 @@ export default function ZiweiPage() {
 
   // v25.0.88: 历史记录恢复
   const handleRestoreHistory = useCallback((rec: PaipanRecord) => {
-    const inp = rec.input as { name?: string; year?: number; month?: number; day?: number; hour?: number; gender?: Gender; calType?: string };
+    historyRecordIdRef.current = rec.id;
+    const inp = rec.input as Record<string, any>;
+    const birthInput = inp.birthInput && typeof inp.birthInput === "object" ? inp.birthInput : {};
+    const raw = birthInput.rawDateTime && typeof birthInput.rawDateTime === "object" ? birthInput.rawDateTime : inp;
     if (typeof inp.name === "string") setName(inp.name);
-    if (inp.year) setYear(inp.year);
-    if (inp.month) setMonth(inp.month);
-    if (inp.day) setDay(inp.day);
-    if (inp.hour !== undefined) setHour(inp.hour);
-    if (inp.gender) setGender(inp.gender);
+    if (Number(raw.year)) setYear(Number(raw.year));
+    if (Number(raw.month)) setMonth(Number(raw.month));
+    if (Number(raw.day)) setDay(Number(raw.day));
+    if (raw.hour !== undefined) setHour(Number(raw.hour));
+    if (raw.minute !== undefined) setBirthMinute(Number(raw.minute));
+    if (birthInput.gender || inp.gender) setGender((birthInput.gender || inp.gender) as Gender);
+    const restoredCalType = birthInput.calendar === "lunar" ? "nongli" : birthInput.calendar === "sizhu" ? "sizhu" : inp.calType;
+    if (restoredCalType === "gongli" || restoredCalType === "nongli" || restoredCalType === "sizhu") setCalType(restoredCalType);
+    if (typeof birthInput.zaoWanZi === "boolean") setZaoWanZi(birthInput.zaoWanZi);
+    if (typeof birthInput.zhenTaiyang === "boolean") setZhenTaiyang(birthInput.zhenTaiyang);
+    if (typeof birthInput.xiaLing === "boolean") setXiaLing(birthInput.xiaLing);
+    if (Number.isFinite(Number(birthInput.longitude))) setLongitude(Number(birthInput.longitude));
+    setSolarCorrection(typeof birthInput.correctionInfo === "string" ? birthInput.correctionInfo : null);
+    setHistoryDateOptions({
+      birthPlace: typeof birthInput.birthPlace === "string" ? birthInput.birthPlace : undefined,
+      birthLocation: birthInput.birthLocation,
+      longitude: Number.isFinite(Number(birthInput.longitude)) ? Number(birthInput.longitude) : undefined,
+      latitude: Number.isFinite(Number(birthInput.latitude)) ? Number(birthInput.latitude) : undefined,
+      locationMissing: !birthInput.birthLocation && !birthInput.birthPlace && !Number.isFinite(Number(birthInput.longitude)),
+    });
+    const view = inp.viewState && typeof inp.viewState === "object" ? inp.viewState : {};
+    if (view.viewMode === "sihua" || view.viewMode === "sanhe" || view.viewMode === "feixing") setViewMode(view.viewMode);
+    if (Number.isInteger(view.selectedDaxian)) setSelectedDaxian(view.selectedDaxian);
+    if (Number.isInteger(view.selectedLiunian)) setSelectedLiunian(view.selectedLiunian);
+    if (Number.isInteger(view.selectedLiuyue)) setSelectedLiuyue(view.selectedLiuyue);
+    if (Number.isInteger(view.selectedLiuri)) setSelectedLiuri(view.selectedLiuri);
+    if (Number.isInteger(view.selectedLiushi)) setSelectedLiushi(view.selectedLiushi);
+    if (typeof view.tongxianActive === "boolean") setTongxianActive(view.tongxianActive);
+    if (typeof view.dxLayer === "boolean") setDxLayer(view.dxLayer);
+    if (typeof view.lnLayer === "boolean") setLnLayer(view.lnLayer);
     if (rec.result) {
       setResult(rec.result as unknown as ZiweiResult);
       setShowForm(false);
@@ -576,6 +615,18 @@ export default function ZiweiPage() {
       setShowForm(true);
     }
   }, []);
+
+  useEffect(() => {
+    const recordId = historyRecordIdRef.current;
+    if (!recordId) return;
+    const timer = window.setTimeout(() => {
+      updatePaipanRecordViewState(recordId, {
+        viewMode, selectedDaxian, selectedLiunian, selectedLiuyue, selectedLiuri, selectedLiushi,
+        tongxianActive, dxLayer, lnLayer,
+      }).catch(() => {});
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [viewMode, selectedDaxian, selectedLiunian, selectedLiuyue, selectedLiuri, selectedLiushi, tongxianActive, dxLayer, lnLayer]);
 
   // URL参数clientId自动选中客户 + 回填数据检查
   useEffect(() => {
@@ -623,7 +674,7 @@ export default function ZiweiPage() {
       if (inp.year) setYear(inp.year);
       if (inp.month) setMonth(inp.month);
       if (inp.day) setDay(inp.day);
-      if (inp.hour) setHour(inp.hour);
+      if (inp.hour !== undefined) setHour(inp.hour);
       if (inp.gender) setGender(inp.gender);
       if (inp.calType) setCalType(inp.calType);
     }
@@ -969,14 +1020,15 @@ export default function ZiweiPage() {
     };
   }, [showForm]);
 
-  // 当大限变化时重置流年（v25.0.27: 点击某大限仅展开对应大限层，不自动带出流年及以下层级）
+  // 仅用户点击大运时联动首个流年；历史恢复直接恢复原选择，不被此逻辑覆盖。
   useEffect(() => {
-    setSelectedLiunian(0);
-    setLnLayer(false);
-    setSelectedLiuyue(-1);
-    setSelectedLiuri(-1);
-    setSelectedLiushi(-1);
-  }, [selectedDaxian]);
+    if (!decadeUserActionRef.current || !liunianYears.length) return;
+    decadeUserActionRef.current = false;
+    liunianRowRef.current?.scrollTo({ left: 0, behavior: "auto" });
+    const first = liunianYears[0];
+    const idx = first?.palaceIndex !== undefined && first.palaceIndex >= 0 ? first.palaceIndex : ZHI_NAMES.indexOf(first?.zhi || "");
+    if (idx >= 0) setFocusedPalace(idx);
+  }, [liunianYears]);
 
   // 默认无连线，点击宫位才显示三方四正
   useEffect(() => {
@@ -1086,7 +1138,7 @@ export default function ZiweiPage() {
     <div className="bg-[#ededed] min-h-screen flex justify-center">
       <div className="w-full" style={{ maxWidth: "420px", paddingBottom: "10px" }}>
       {/* 输入表单 DatePicker 弹窗 */}
-      <DatePicker onRecordImport={applyMingzhuProfile}
+      <DatePicker onRecordImport={applyMingzhuProfile} onRecordRestore={handleRestoreHistory}
         show={showForm}
         onClose={(reason) => { setShowForm(false); if (reason !== "submit" && !result) closeInitialToolPopup(router, reason); }}
         onSubmit={(dateVal, opts) => {
@@ -1094,8 +1146,10 @@ export default function ZiweiPage() {
           setGender(opts.gender as Gender);
           setCalType(opts.calType === "solar" ? "gongli" : opts.calType === "lunar" ? "nongli" : "sizhu");
           setZaoWanZi(opts.zaoWanZi); setZhenTaiyang(opts.zhenTaiyang); setXiaLing(opts.xiaLing);
+          setHistoryDateOptions(opts);
           // S2-4: 真太阳时校正——勾选后按出生地经度修正年月日时再排盘
           let calcDate = { year: dateVal.year, month: dateVal.month, day: dateVal.day, hour: dateVal.hour };
+          let correctionInfo: string | null = null;
           if (opts.zhenTaiyang) {
             const std = new Date(dateVal.year, dateVal.month - 1, dateVal.day, dateVal.hour, dateVal.minute || 0);
             const tst = calcTrueSolarTime(std, opts.longitude ?? longitude);
@@ -1103,15 +1157,34 @@ export default function ZiweiPage() {
             calcDate = { year: t.getFullYear(), month: t.getMonth() + 1, day: t.getDate(), hour: t.getHours() };
             const sign = tst.totalOffset >= 0 ? "+" : "-";
             const absMin = Math.abs(tst.totalOffset);
-            setSolarCorrection(`真太阳时 ${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")} ${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}（${(opts.longitude ?? longitude).toFixed(1)}°E，修正${sign}${Math.floor(absMin)}分）`);
+            correctionInfo = `真太阳时 ${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")} ${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}（${(opts.longitude ?? longitude).toFixed(1)}°E，修正${sign}${Math.floor(absMin)}分）`;
+            setSolarCorrection(correctionInfo);
           } else {
             setSolarCorrection(null);
           }
           if (opts.longitude !== undefined) setLongitude(opts.longitude);
-          handleSubmit({ ...calcDate, gender: opts.gender as Gender, birthInput:{...dateVal,name,gender:opts.gender,longitude:opts.longitude ?? longitude,calendar:"solar"} });
+          handleSubmit({
+            ...calcDate,
+            gender: opts.gender as Gender,
+            birthInput: {
+              normalizedDateTime: { ...dateVal },
+              name,
+              gender: opts.gender,
+              longitude: opts.longitude ?? longitude,
+              latitude: opts.latitude,
+              birthPlace: opts.birthPlace,
+              birthLocation: opts.birthLocation,
+              zaoWanZi: opts.zaoWanZi,
+              zhenTaiyang: opts.zhenTaiyang,
+              xiaLing: opts.xiaLing,
+              correctionInfo,
+              calculationDateTime: calcDate,
+            },
+          });
         }}
         initialDate={{year, month, day, hour, minute: birthMinute}}
         initialOptions={{
+          ...historyDateOptions,
           gender,
           calType: calType === "gongli" ? "solar" : calType === "nongli" ? "lunar" : "sizhu",
           zaoWanZi, zhenTaiyang, xiaLing, longitude,
@@ -1214,9 +1287,8 @@ export default function ZiweiPage() {
                   })()}
                 </svg>
 
-                {/* 4x4 CSS Grid - P7-上架前阻断整改-01：恢复 v25.0.31 固定宫格尺寸（aspectRatio 0.75），
-                    宫格大小不再调整；密集宫格通过既有放大横滑双模式阅读，星曜统一固定字号自动换行 */}
-                <div className="grid grid-cols-4 grid-rows-4" style={{ position: "relative", zIndex: 1, aspectRatio: "0.75" }}>
+                {/* 4x4 宫格仅纵向收紧约 10%，保留原列宽、内容和算法；外层仍等比适配屏宽。 */}
+                <div data-testid="ziwei-palace-grid" className="grid grid-cols-4 grid-rows-4" style={{ position: "relative", zIndex: 1, aspectRatio: "0.84" }}>
                   {/* 12宫位卡片 */}
                   {GRID_4X4.flat().map((idx, pos) => {
                     // 中心 4 格合并为命宫详情
@@ -1729,7 +1801,7 @@ export default function ZiweiPage() {
                 {/* 大限标签 */}
                 <div style={{ width: "22px", display: "flex", alignItems: "center", justifyContent: "center", borderRight: "1px solid #ccc", fontSize: "10px", color: "#333", fontWeight: "bold", writingMode: "vertical-rl", textOrientation: "upright", letterSpacing: "2px", padding: "4px 1px", lineHeight: "1" }}>大限</div>
                 {/* 大限12格（v25.0.41 20260819用户指令：最前增加"童限"前置格，起限前可选，对标文墨天机"起限前(童限)"） */}
-                <div style={{ flex: 1, display: "flex", overflowX: "auto" }}>
+                <div data-testid="ziwei-decade-row" style={{ flex: 1, display: "flex", overflowX: "auto" }}>
                   {tongxianYears.length > 0 && (() => {
                     const txQiyun = decadalData[0]?.ageRange?.[0] || 0;
                     const txActive = tongxianActive;
@@ -1774,11 +1846,19 @@ export default function ZiweiPage() {
                     return (
                       <div
                         key={`dy-${i}`}
+                        data-testid={`ziwei-decade-${i}`}
+                        data-start-age={d.ageRange[0]}
                         onClick={() => {
+                          decadeUserActionRef.current = true;
                           setTongxianActive(false);
                           setSelectedDaxian(i);
-                          // v25.0.27: 点击大限=用户主动展开大限叠宫层（不自动带出流年层级）
+                          // 用户点击大运时，流年从该大运首岁开始并立即选中；月/日/时回到未选。
+                          setSelectedLiunian(0);
+                          setSelectedLiuyue(-1);
+                          setSelectedLiuri(-1);
+                          setSelectedLiushi(-1);
                           setDxLayer(true);
+                          setLnLayer(true);
                           setShowOverlay(true);
                           // 虚线三角形移动到大限对应宫位
                           const palaceName = decadalData[i]?.name;
@@ -1851,13 +1931,17 @@ export default function ZiweiPage() {
               {/* 流年行 */}
               <div style={{ display: "flex", borderBottom: "1px solid #ccc", background: "#fafafa" }}>
                 <div style={{ width: "22px", display: "flex", alignItems: "center", justifyContent: "center", borderRight: "1px solid #ccc", fontSize: "10px", color: "#333", fontWeight: "bold", writingMode: "vertical-rl", textOrientation: "upright", letterSpacing: "2px", padding: "4px 1px", lineHeight: "1" }}>流年</div>
-                <div style={{ flex: 1, display: "flex", overflowX: "auto" }}>
+                <div ref={liunianRowRef} data-testid="ziwei-flow-year-row" style={{ flex: 1, display: "flex", overflowX: "auto" }}>
                   {liunianYears.map((y, i) => {
                     const isCurrent = y.year === currentYear;
                     const isActive = i === selectedLiunian;
                     return (
                       <div
                         key={`ln-${i}`}
+                        data-testid={`ziwei-flow-year-${i}`}
+                        data-age={y.age}
+                        data-year={y.year}
+                        aria-selected={isActive}
                         onClick={() => {
                           setSelectedLiunian(i);
                           // v25.0.27: 点击流年=用户主动展开流年叠宫层
@@ -1876,15 +1960,16 @@ export default function ZiweiPage() {
                           padding: "3px 1px",
                           textAlign: "center",
                           cursor: "pointer",
-                          background: isCurrent ? BRAND_PURPLE : (isActive ? "#eee" : "#fff"),
+                          background: isActive ? BRAND_PURPLE : (isCurrent ? BRAND_PURPLE_BG : "#fff"),
                           fontWeight: isCurrent || isActive ? "bold" : "normal",
+                          boxShadow: isCurrent && !isActive ? `inset 0 -2px 0 ${BRAND_PURPLE}` : "none",
                           lineHeight: "1.3",
                         }}
                       >
-                        <div style={{ fontSize: "9px", color: isCurrent ? "#fff" : "#666", whiteSpace: "nowrap", overflow: "hidden" }}>{tongxianActive ? `${y.year % 100}·${y.age}岁` : y.year % 100}</div>
+                        <div style={{ fontSize: "8px", color: isActive ? "#fff" : "#666", whiteSpace: "nowrap", overflow: "hidden" }}>{`${y.year % 100}·${y.age}岁`}</div>
                         <div style={{ fontSize: "12px", fontWeight: "bold" }}>
-                          <span style={{ color: isCurrent ? "#fff" : getGanZhiColor(y.gan) }}>{y.gan}</span>
-                          <span style={{ color: isCurrent ? "#fff" : getGanZhiColor(y.zhi) }}>{y.zhi}</span>
+                          <span style={{ color: isActive ? "#fff" : getGanZhiColor(y.gan) }}>{y.gan}</span>
+                          <span style={{ color: isActive ? "#fff" : getGanZhiColor(y.zhi) }}>{y.zhi}</span>
                         </div>
                       </div>
                     );
@@ -1903,6 +1988,7 @@ export default function ZiweiPage() {
                     return (
                       <div
                         key={`ly-${i}`}
+                        data-testid={`ziwei-flow-month-${i}`}
                         onClick={() => {
                           // v25.0.24: ZW-TIME 引擎宫位高亮（流月从流年宫起数，非月支宫）
                           setSelectedLiuyue(i);
@@ -1952,6 +2038,7 @@ export default function ZiweiPage() {
                         return (
                           <div
                             key={`lr1-${i}`}
+                            data-testid={`ziwei-flow-day-${actualIdx}`}
                             onClick={() => {
                               setSelectedLiuri(actualIdx);
                               setSelectedLiushi(-1);
@@ -1992,6 +2079,7 @@ export default function ZiweiPage() {
                         return (
                           <div
                             key={`lr2-${i}`}
+                            data-testid={`ziwei-flow-day-${actualIdx}`}
                             onClick={() => {
                               setSelectedLiuri(actualIdx);
                               setSelectedLiushi(-1);
@@ -2035,6 +2123,7 @@ export default function ZiweiPage() {
                       return (
                         <div
                           key={`ls-${i}`}
+                          data-testid={`ziwei-flow-hour-${i}`}
                           onClick={() => {
                             setSelectedLiushi(i);
                             setShowOverlay(true);
@@ -2076,6 +2165,7 @@ export default function ZiweiPage() {
             ].map(m => (
               <button
                 key={m.key}
+                data-testid={`ziwei-view-${m.key}`}
                 onClick={() => { setViewMode(m.key as any); setFocusedPalace(null); }}
                 className="flex-1 py-2 rounded text-sm font-bold cursor-pointer border-0"
                 style={{

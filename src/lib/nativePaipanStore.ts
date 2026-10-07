@@ -14,7 +14,6 @@
 // ============================================================================
 
 import { Capacitor, registerPlugin } from "@capacitor/core";
-import { getUserPermissionLevel } from "@/lib/aiService";
 
 // ==================== 数据类型 ====================
 
@@ -57,14 +56,35 @@ export interface SaveRecordOptions {
   id?: number;
 }
 
-interface PendingRecordMeta { name: string; note: string; savedAt: number; persistent: boolean }
+interface PendingRecordMeta {
+  name: string;
+  note: string;
+  savedAt: number;
+  persistent: boolean;
+  context?: Record<string, unknown>;
+}
 const pendingRecordMeta = new Map<string, PendingRecordMeta>();
 
 /** Shared date form metadata is keyed by route/tool so concurrent tools cannot cross-label records. */
 export function setPendingPaipanRecordMeta(tool: string, name: string, note: string, persistent = false): void {
   const key = String(tool || "").trim();
   if (!key) return;
-  pendingRecordMeta.set(key, { name: name.trim(), note: note.trim(), savedAt: Date.now(), persistent });
+  const previous = pendingRecordMeta.get(key);
+  pendingRecordMeta.set(key, { name: name.trim(), note: note.trim(), savedAt: Date.now(), persistent, context: previous?.context });
+}
+
+/** Attach the full shared date/location/options snapshot to the next record saved by this tool. */
+export function setPendingPaipanRecordContext(tool: string, context: Record<string, unknown>): void {
+  const key = String(tool || "").trim();
+  if (!key) return;
+  const previous = pendingRecordMeta.get(key);
+  pendingRecordMeta.set(key, {
+    name: previous?.name || "",
+    note: previous?.note || "",
+    savedAt: Date.now(),
+    persistent: previous?.persistent || false,
+    context,
+  });
 }
 
 export function clearPendingPaipanRecordMeta(tool: string): void {
@@ -146,16 +166,26 @@ export function isNativeStoreAvailable(): boolean {
 
 /** 保存/更新排盘记录（原生优先，web 回退），返回记录 id。
  *  自动去重：与该工具最近一条 input 完全相同时原位更新（避免反复排盘刷屏）。
- *  游客门控（v25.0.88 合规边界）：游客不落新记录，注册登录后完整可用（与八字页 v25.0.87 边界一致）。 */
+ *  未登录用户也本地落盘；云端同步仍由原有会员权益链单独判断。 */
 export async function savePaipanRecord(opts: SaveRecordOptions): Promise<number> {
-  if (typeof window !== "undefined" && getUserPermissionLevel() === "visitor") {
-    return -1;
-  }
   const meta = pendingRecordMeta.get(opts.tool);
   const useMeta = meta && Date.now() - meta.savedAt < 5 * 60 * 1000 ? meta : null;
   if (useMeta && !useMeta.persistent) pendingRecordMeta.delete(opts.tool);
   if (meta && !useMeta) pendingRecordMeta.delete(opts.tool);
-  const enrichedInput = useMeta ? { ...opts.input, name: useMeta.name } : opts.input;
+  const sharedContext = useMeta?.context || {};
+  const existingBirthInput = opts.input.birthInput && typeof opts.input.birthInput === "object"
+    ? opts.input.birthInput as Record<string, unknown>
+    : {};
+  const contextBirthInput = sharedContext.birthInput && typeof sharedContext.birthInput === "object"
+    ? sharedContext.birthInput as Record<string, unknown>
+    : {};
+  const enrichedInput = useMeta ? {
+    ...sharedContext,
+    ...opts.input,
+    schemaVersion: Number(opts.input.schemaVersion || sharedContext.schemaVersion || 2),
+    name: useMeta.name || String(opts.input.name || ""),
+    birthInput: { ...contextBirthInput, ...existingBirthInput },
+  } : opts.input;
   if (useMeta && enrichedInput.birthInput && typeof enrichedInput.birthInput === "object") {
     enrichedInput.birthInput = { ...(enrichedInput.birthInput as Record<string, unknown>), name: useMeta.name };
   }
@@ -301,6 +331,20 @@ export async function updatePaipanRecordMeta(id: number, name: string, note: str
     input: { ...record.input, name: name.trim() },
     result: record.result,
     note: note.trim(),
+    profileId: record.profileId ?? null,
+  });
+}
+
+/** 原位保存工具查看状态，保留输入、结果、笔记和创建时间。 */
+export async function updatePaipanRecordViewState(id: number, viewState: Record<string, unknown>): Promise<void> {
+  const record = await getPaipanRecord(id);
+  if (!record) return;
+  await updatePaipanRecord(id, {
+    tool: record.tool,
+    title: record.title,
+    input: { ...record.input, viewState },
+    result: record.result,
+    note: record.note ?? undefined,
     profileId: record.profileId ?? null,
   });
 }
