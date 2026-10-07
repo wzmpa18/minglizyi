@@ -786,11 +786,23 @@ export default function ZiweiPage() {
     try { return getZwDecadalList(zwInput); } catch { return []; }
   }, [zwInput]);
 
-  // v25.0.25 修正：引擎大限列表为宫序（寅→丑），页面 decadalData 为起运年龄序（命宫起阳男阴女顺/阴男阳女逆），
-  // 两种顺序同索引取值会取错宫（6 案例对拍全部错位确认）。按大限干支唯一对齐后再取值。
+  // 引擎大限列表为宫序（寅→丑），页面 decadalData 为起运年龄序。
+  // 优先用「起止年龄 + 宫名」绑定同一柱大运，再以干支兜底，避免顺逆排时点中 A 柱却读取 B 柱流年。
   const zwDecadalAligned = useMemo(() => {
     if (!zwDecadal.length || !decadalData.length) return [];
-    return decadalData.map(d => zwDecadal.find(n => n.gan === d.decadalGan && n.zhi === d.decadalZhi) || null);
+    return decadalData.map(d => (
+      zwDecadal.find(n => (
+        n.ageRange?.[0] === d.ageRange[0]
+        && n.ageRange?.[1] === d.ageRange[1]
+        && n.palaceName === d.name
+      ))
+      || zwDecadal.find(n => (
+        n.ageRange?.[0] === d.ageRange[0]
+        && n.ageRange?.[1] === d.ageRange[1]
+      ))
+      || zwDecadal.find(n => n.gan === d.decadalGan && n.zhi === d.decadalZhi)
+      || null
+    ));
   }, [zwDecadal, decadalData]);
 
   // v25.0.41（20260819用户指令）童限年列表：起限前虚岁1~起运岁-1；
@@ -1848,6 +1860,7 @@ export default function ZiweiPage() {
                         key={`dy-${i}`}
                         data-testid={`ziwei-decade-${i}`}
                         data-start-age={d.ageRange[0]}
+                        data-end-age={d.ageRange[1]}
                         onClick={() => {
                           decadeUserActionRef.current = true;
                           setTongxianActive(false);
@@ -1876,15 +1889,18 @@ export default function ZiweiPage() {
                           padding: "3px 1px",
                           textAlign: "center",
                           cursor: "pointer",
-                          background: isActive ? "#eee" : "#fff",
+                          background: isActive ? BRAND_PURPLE : "#fff",
                           fontWeight: isActive ? "bold" : "normal",
                           lineHeight: "1.3",
+                          boxShadow: isActive ? `inset 0 -2px 0 ${BRAND_PURPLE_DARK}` : "none",
                         }}
+                        aria-selected={isActive}
+                        title={`${d.ageRange[0]}-${d.ageRange[1]}岁 ${d.decadalGan}${d.decadalZhi}大运；点击后流年从${d.ageRange[0]}岁开始`}
                       >
-                        <div style={{ fontSize: "9px", color: "#666" }}>{d.ageRange[0]}-{d.ageRange[1]}</div>
+                        <div style={{ fontSize: "9px", color: isActive ? "#fff" : "#666" }}>{d.ageRange[0]}-{d.ageRange[1]}</div>
                         <div style={{ fontSize: "12px", fontWeight: "bold" }}>
-                          <span style={{ color: getGanZhiColor(d.decadalGan) }}>{d.decadalGan}</span>
-                          <span style={{ color: getGanZhiColor(d.decadalZhi) }}>{d.decadalZhi}</span>
+                          <span style={{ color: isActive ? "#fff" : getGanZhiColor(d.decadalGan) }}>{d.decadalGan}</span>
+                          <span style={{ color: isActive ? "#fff" : getGanZhiColor(d.decadalZhi) }}>{d.decadalZhi}</span>
                         </div>
                       </div>
                     );
@@ -1966,11 +1982,12 @@ export default function ZiweiPage() {
                           lineHeight: "1.3",
                         }}
                       >
-                        <div style={{ fontSize: "8px", color: isActive ? "#fff" : "#666", whiteSpace: "nowrap", overflow: "hidden" }}>{`${y.year % 100}·${y.age}岁`}</div>
+                        <div style={{ fontSize: "8px", color: isActive ? "#fff" : "#666", whiteSpace: "nowrap", overflow: "hidden" }}>{`${y.year}年`}</div>
                         <div style={{ fontSize: "12px", fontWeight: "bold" }}>
                           <span style={{ color: isActive ? "#fff" : getGanZhiColor(y.gan) }}>{y.gan}</span>
                           <span style={{ color: isActive ? "#fff" : getGanZhiColor(y.zhi) }}>{y.zhi}</span>
                         </div>
+                        <div style={{ fontSize: "8px", color: isActive ? "#fff" : "#666", whiteSpace: "nowrap" }}>{y.age}岁</div>
                       </div>
                     );
                   })}

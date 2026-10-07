@@ -546,6 +546,7 @@ export default function DatePicker({
             </section>}
             <div className="flex items-center gap-1.5">
               <select
+                data-testid="birth-year"
                 value={date.year}
                 onChange={(e) => updateDate("year", parseInt(e.target.value, 10))}
                 className={selectClass}
@@ -555,6 +556,7 @@ export default function DatePicker({
                 ))}
               </select>
               <select
+                data-testid="birth-month"
                 value={date.month}
                 onChange={(e) => updateDate("month", parseInt(e.target.value, 10))}
                 className={selectClass}
@@ -564,6 +566,7 @@ export default function DatePicker({
                 ))}
               </select>
               <select
+                data-testid="birth-day"
                 value={date.day}
                 onChange={(e) => updateDate("day", parseInt(e.target.value, 10))}
                 className={selectClass}
@@ -575,6 +578,7 @@ export default function DatePicker({
             </div>
               <div className="mt-1 flex items-center gap-1.5">
               <select
+                data-testid="birth-hour"
                 value={date.hour}
                 onChange={(e) => updateDate("hour", parseInt(e.target.value, 10))}
                 className={selectClass}
