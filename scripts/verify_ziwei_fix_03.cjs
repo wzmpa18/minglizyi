@@ -3,27 +3,24 @@ const fs = require('fs');
 const path = require('path');
 (async()=>{
  const out=path.resolve('.codex-delivery/ziwei-fix-03');
+ const baseUrl=process.env.ZIWEI_BASE_URL||'http://localhost:3013';
  const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'});
  const results=[];
  for (const [w,h] of [[360,800],[390,844],[412,915]]) {
-  const page=await browser.newPage({viewport:{width:w,height:h},deviceScaleFactor:1});
-  await page.goto('http://localhost:3013/yixue/ziwei',{waitUntil:'domcontentloaded'});
-  await page.evaluate(()=>localStorage.clear());
-  await page.reload({waitUntil:'domcontentloaded'});
+  const context=await browser.newContext({viewport:{width:w,height:h},deviceScaleFactor:1});
+  const page=await context.newPage();
+  await page.goto(`${baseUrl}/yixue/ziwei`,{waitUntil:'networkidle'});
   await page.waitForFunction(()=>document.querySelector('[data-testid="date-picker-submit"]')||document.querySelector('[data-testid="ziwei-palace-grid"]'),null,{timeout:60000});
   if(await page.getByTestId('date-picker-submit').count()===0) await page.evaluate(()=>window.dispatchEvent(new Event('yixue-edit')));
   await page.getByTestId('date-picker-submit').waitFor({timeout:60000}); await page.waitForTimeout(1500);
   // 专项命例：男，1982-07-15 12时，起运3岁，明确覆盖用户举例的23-32岁大运。
-  await page.getByTestId('birth-year').selectOption('1982');
-  await page.getByTestId('birth-month').selectOption('7');
-  await page.getByTestId('birth-day').selectOption('15');
-  await page.getByTestId('birth-hour').selectOption('12');
+  for (const [field,value] of [['birth-year','1982'],['birth-month','7'],['birth-day','15'],['birth-hour','12']]) {
+    await page.getByTestId(field).selectOption(value);
+    await page.waitForTimeout(300);
+  }
   if(w===360){
-    const p=page.getByTestId('birth-region-province');
-    const labels=await p.locator('option').allTextContents();
-    const target=labels.find(x=>x.includes('广东'))||labels[Math.min(5,labels.length-1)];
-    await p.selectOption({label:target});
     await page.getByTestId('birth-longitude').fill('113.2644');
+    await page.waitForTimeout(500);
   }
   await page.getByTestId('date-picker-submit').click();
   await page.getByTestId('ziwei-palace-grid').waitFor({timeout:30000});
@@ -84,7 +81,7 @@ const path = require('path');
     const restoredLng=Number(await page.getByTestId('birth-longitude').inputValue());
     results.push({viewport:`${w}x${h}`,startAge,firstAge,firstYear,selected,decadeChecks,recordFields:Object.keys(bi).sort(),roundTripResultSnapshotEqual:true,restoredLongitude:restoredLng,gridBox,viewBox});
   } else results.push({viewport:`${w}x${h}`,startAge,firstAge,firstYear,selected,decadeChecks,gridBox,viewBox});
-  await page.close();
+  await context.close();
  }
  fs.writeFileSync(path.join(out,'web-e2e-results.json'),JSON.stringify(results,null,2));
  console.log(JSON.stringify(results,null,2));
