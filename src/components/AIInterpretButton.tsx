@@ -281,7 +281,7 @@ export default function AIInterpretButton({
             }}
           >
             <span style={{ fontSize: "14px", fontWeight: "bold" }}>
-              {loading ? "🤖 AI解读生成中..." : `🤖 AI${scope}结果`}
+              {loading ? "🤖 AI解读生成中..." : `🤖 AI生成（深度合成）· ${scope}结果`}
             </span>
             <button
               onClick={() => { setShowResult(false); setContent(""); }}

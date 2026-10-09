@@ -524,6 +524,16 @@ export default function AIAssistant() {
                         const isDisclaimer = firstLine.includes("AI 生成内容仅供学习参考");
                         return (
                           <>
+                            <p style={{
+                              margin: "0 0 6px",
+                              color: "#d32f2f",
+                              fontWeight: "bold",
+                              fontSize: "12px",
+                              paddingBottom: "6px",
+                              borderBottom: "1px solid #ffebee"
+                            }}>
+                              AI生成（深度合成）内容
+                            </p>
                             {isDisclaimer && (
                               <p style={{ 
                                 margin: 0, 

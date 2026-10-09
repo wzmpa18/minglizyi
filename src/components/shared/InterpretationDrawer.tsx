@@ -189,8 +189,8 @@ export default function InterpretationDrawer({
             return (
               <div key={idx} style={{ marginBottom: idx < items.length - 1 ? "12px" : 0, padding: "12px", borderRadius: "10px", backgroundColor: tc.bg, border: `1px solid ${tc.fg}20` }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
-                  <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: "4px", fontSize: "11px", fontWeight: 600, backgroundColor: tc.fg, color: "#fff" }}>{item.isAI ? "AI 参考" : tc.label}</span>
-                  {item.isAI && <span style={{ fontSize: "10px", color: "#9ca3af" }}>内容仅供参考</span>}
+                  <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: "4px", fontSize: "11px", fontWeight: 600, backgroundColor: tc.fg, color: "#fff" }}>{item.isAI ? "AI生成（深度合成）内容" : tc.label}</span>
+                  {item.isAI && <span style={{ fontSize: "10px", color: "#9ca3af" }}>仅供学习参考</span>}
                 </div>
                 <SafeRichText content={item.content} style={{ fontSize: "14px", lineHeight: "1.7", color: "#333" }} />
               </div>
@@ -203,8 +203,8 @@ export default function InterpretationDrawer({
               {aiContent && (
                 <div style={{ padding: "12px", borderRadius: "10px", backgroundColor: "#f3e8ff", border: "1px solid #7B2FBE20" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "6px" }}>
-                    <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: "4px", fontSize: "11px", fontWeight: 600, backgroundColor: "#7B2FBE", color: "#fff" }}>AI 参考</span>
-                    <span style={{ fontSize: "10px", color: "#9ca3af" }}>内容仅供参考</span>
+                    <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: "4px", fontSize: "11px", fontWeight: 600, backgroundColor: "#7B2FBE", color: "#fff" }}>AI生成（深度合成）内容</span>
+                    <span style={{ fontSize: "10px", color: "#9ca3af" }}>仅供学习参考</span>
                   </div>
                   <SafeRichText content={aiContent} style={{ fontSize: "14px", lineHeight: "1.7", color: "#4a1d8a" }} />
 

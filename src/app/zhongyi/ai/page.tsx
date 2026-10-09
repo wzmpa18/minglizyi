@@ -53,6 +53,7 @@ export default function ZhongyiAIPage() {
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
             <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${msg.role === "user" ? "bg-emerald-600 text-white" : "bg-muted"}`}>
+              {msg.role !== "user" && <div className="mb-1 text-xs font-semibold text-red-600">AI生成（深度合成）内容</div>}
               {msg.role === "user" ? <span className="break-words">{msg.content}</span> : <SafeRichText content={msg.content} />}
             </div>
           </div>

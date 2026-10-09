@@ -461,7 +461,7 @@ export default function EventDivinationPanel({
         {content && (
           <div style={{ marginTop: "10px", borderRadius: "8px", overflow: "hidden", border: "1px solid #e0d0f0" }}>
             <div style={{ padding: "6px 10px", background: "#f3edf7", fontSize: "12px", fontWeight: "bold", color: "#7B2FBE" }}>
-              {loading ? "🤖 AI解读生成中..." : "🤖 AI解读结果"}
+              {loading ? "🤖 AI解读生成中..." : "🤖 AI生成（深度合成）解读结果"}
             </div>
             <div
               style={{

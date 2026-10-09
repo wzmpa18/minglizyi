@@ -125,6 +125,11 @@ function MessageBubble({ message }: { message: AIMessage }) {
               : "rounded-bl-md bg-white text-gray-700 border border-gray-200 shadow-sm"
           }`}
         >
+          {message.role === "ai" && (
+            <div className="mb-2 text-[11px] font-semibold text-red-600">
+              AI生成（深度合成）内容
+            </div>
+          )}
           {message.content}
         </div>
         <span
