@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { PUBLIC_SOCIAL_ENABLED } from "@/lib/releaseFeatures";
 
 // v25.0.41：五Tab配置：首页/发现/聊天/学习/我的（"好友"正式更名"聊天"，入口含消息+通讯录）
-const TABS = [
+const ALL_TABS = [
   {
     key: "home",
     label: "首页",
@@ -36,6 +37,10 @@ const TABS = [
     Icon: ProfileIcon,
   },
 ];
+
+const TABS = PUBLIC_SOCIAL_ENABLED
+  ? ALL_TABS
+  : ALL_TABS.filter((tab) => tab.key !== "discover" && tab.key !== "friends");
 
 function HomeIcon({ active }: { active: boolean }) {
   return (

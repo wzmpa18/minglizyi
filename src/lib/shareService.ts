@@ -14,7 +14,7 @@ const DOWNLOAD_URL = "https://yandaoguoxue.yandao.vip/friend";
 /** 默认社交媒体分享文案（已移除所有AI免费赠送表述） */
 const SHARE_DEFAULT_TEXT = "发现一个实用的传统文化学习平台，排盘工具、典籍知识库都有，分享给你一起看看。";
 /** 备选分享文案 */
-const SHARE_ALT_TEXT = "一直在用的国学学习工具，基础排盘永久免费，还有同道交流社区，扫码就能下载。";
+const SHARE_ALT_TEXT = "一直在用的国学学习工具，基础排盘永久免费，还有典籍题库和离线学习，扫码就能下载。";
 
 export type ShareChannel =
   | "wechat_friend"

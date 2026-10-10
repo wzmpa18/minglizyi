@@ -8,6 +8,7 @@ import {
   reportResourceComment,
   type ResourceComment,
 } from "@/lib/socialApi";
+import { PUBLIC_SOCIAL_ENABLED } from "@/lib/releaseFeatures";
 
 interface ResourceDiscussionProps {
   resourceType: "acupoint" | "classic" | "yixue" | "academy";
@@ -16,7 +17,12 @@ interface ResourceDiscussionProps {
   accent?: string;
 }
 
-export function ResourceDiscussion({
+export function ResourceDiscussion(props: ResourceDiscussionProps) {
+  if (!PUBLIC_SOCIAL_ENABLED) return null;
+  return <ResourceDiscussionEnabled {...props} />;
+}
+
+function ResourceDiscussionEnabled({
   resourceType,
   resourceId,
   title = "学习讨论",

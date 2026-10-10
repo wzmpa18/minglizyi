@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { BrandHeader } from "@/components/shared";
 import { ResourceDiscussion } from "@/components/ResourceDiscussion";
+import { PUBLIC_SOCIAL_ENABLED } from "@/lib/releaseFeatures";
 
 const ZONES = {
   yixue: { name: "易学交流社区", desc: "交流排盘学习、典籍理解与工具使用心得", color: "#7B2FBE" },
@@ -21,6 +22,15 @@ export default function AcademyCommunityPage() {
     setZoneKey(raw in ZONES ? raw as ZoneKey : "guoxue");
   }, []);
   const zone = ZONES[zoneKey];
+
+  if (!PUBLIC_SOCIAL_ENABLED) {
+    return (
+      <div className="min-h-screen bg-gray-50" style={{ maxWidth: 520, margin: "0 auto" }}>
+        <BrandHeader title="学习交流" showBack />
+        <main className="px-4 py-12 text-center text-sm text-gray-500">公开交流功能暂未开放。</main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50" style={{ maxWidth: 520, margin: "0 auto" }}>

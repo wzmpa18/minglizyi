@@ -95,7 +95,7 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
       "每日3次通用AI问答",
       "中医基础内容查询",
       "模拟考试初级题库",
-      "社区浏览发帖 · 签到积分",
+      "离线学习资料 · 签到积分",
     ],
     highlighted: false,
     badge: "",

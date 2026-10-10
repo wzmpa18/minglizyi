@@ -17,7 +17,7 @@ const APK_URL_FALLBACK = "https://yandaoguoxue.yandao.vip/app-download/latest.ap
 const FEATURES: { icon: string; title: string; desc: string }[] = [
   { icon: "🔮", title: "专业排盘", desc: "14款排盘工具，基础永久免费" },
   { icon: "📚", title: "典籍学习", desc: "中医经典古籍免费查阅" },
-  { icon: "🤝", title: "同道交流", desc: "同好社区，师父咨询通道" },
+  { icon: "📚", title: "系统学习", desc: "典籍题库，学习记录同步" },
   { icon: "🧘", title: "养生功法", desc: "养生功法学习模块" },
   { icon: "👈", title: "手势返回", desc: "右滑手势返回全局生效" },
   { icon: "🔐", title: "永久登录", desc: "登录态永久持久化" },

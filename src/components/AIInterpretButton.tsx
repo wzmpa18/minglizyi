@@ -22,6 +22,7 @@ import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { SafeRichText } from "@/components/SafeRichText";
 import { ResourceDiscussion } from "@/components/ResourceDiscussion";
+import { PUBLIC_SOCIAL_ENABLED } from "@/lib/releaseFeatures";
 
 /**
  * v18.9: 通用AI解读按钮组件
@@ -242,7 +243,7 @@ export default function AIInterpretButton({
         >
           {loading ? "🤖 AI解读中..." : (buttonText || `🤖 AI${scope}`)}
         </button>
-        {discussionEnabled && (
+        {PUBLIC_SOCIAL_ENABLED && discussionEnabled && (
           <button
             type="button"
             onClick={() => setShowDiscussion((value) => !value)}
@@ -254,7 +255,7 @@ export default function AIInterpretButton({
         )}
       </div>
 
-      {discussionEnabled && showDiscussion && (
+      {PUBLIC_SOCIAL_ENABLED && discussionEnabled && showDiscussion && (
         <div style={{ marginLeft: -12, marginRight: -12 }}>
           <ResourceDiscussion
             resourceType={discussionType}

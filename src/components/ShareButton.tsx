@@ -453,7 +453,7 @@ function ShareMenu({
 const QR_VALUE_POINTS = [
   { icon: "📊", title: "专业排盘", desc: "八字紫微奇门等14款工具" },
   { icon: "📚", title: "典籍学习", desc: "中医经典·易学古籍免费读" },
-  { icon: "👥", title: "同道交流", desc: "同好社区·师父在线交流" },
+  { icon: "📚", title: "系统学习", desc: "典籍题库·离线学习记录" },
 ];
 
 function QrModal({ image, url, onClose }: { image: string; url: string; onClose: () => void }) {
@@ -486,7 +486,7 @@ function QrModal({ image, url, onClose }: { image: string; url: string; onClose:
           </button>
           <p className="text-[10px] tracking-wide opacity-80">东莞言道科技有限公司</p>
           <p className="mt-1 text-lg font-extrabold">国学随身查，典籍全收录</p>
-          <p className="mt-1 text-[11px] opacity-85">14款专业排盘工具 · 中医典籍知识库 · 同好交流社区</p>
+          <p className="mt-1 text-[11px] opacity-85">14款专业排盘工具 · 中医典籍知识库 · 离线学习资料</p>
         </div>
 
         <div className="overflow-y-auto px-5 pb-5 pt-4">

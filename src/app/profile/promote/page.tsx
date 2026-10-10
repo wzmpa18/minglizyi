@@ -562,7 +562,7 @@ export default function PromotePage() {
           {[
             { icon: "✓", text: "14款专业排盘工具，基础功能永久免费" },
             { icon: "✓", text: "中医典籍全库，随时查阅研习" },
-            { icon: "✓", text: "同道交流社区，同好互动学习" },
+            { icon: "✓", text: "国学典籍题库，支持离线学习" },
           ].map((item, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
               <span style={{
@@ -661,7 +661,7 @@ export default function PromotePage() {
                 {[
                   "14款专业排盘工具，基础功能永久免费",
                   "中医典籍全库，随时查阅研习",
-                  "同道交流社区，同好互动学习",
+                  "国学典籍题库，支持离线学习",
                 ].map((text, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
                     <span style={{

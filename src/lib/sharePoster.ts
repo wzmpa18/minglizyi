@@ -39,14 +39,14 @@ const DOWNLOAD_URL = "https://yandaoguoxue.yandao.vip/friend";
 const VALUE_POINTS = [
   { icon: "chart", title: "专业排盘", desc: "八字、紫微、奇门等14款工具，基础排盘永久免费" },
   { icon: "book", title: "典籍学习", desc: "中医经典、易学古籍、方剂经络，免费查阅初级库" },
-  { icon: "community", title: "同道交流", desc: "同好社区互动，师父一对一咨询通道" },
+  { icon: "community", title: "系统学习", desc: "典籍题库与离线学习记录" },
 ];
 
 /** 统一分享文案（已移除所有AI免费赠送表述） */
-export const SHARE_TEXT = "国学随身查，典籍全收录！14款专业排盘工具、中医典籍知识库、同好交流学习社区";
+export const SHARE_TEXT = "国学随身查，典籍全收录！14款专业排盘工具、中医典籍知识库、离线学习资料";
 
 /** 备选分享文案 */
-export const SHARE_TEXT_ALT = "一直在用的国学学习工具，基础排盘永久免费，还有同道交流社区，扫码就能下载。";
+export const SHARE_TEXT_ALT = "一直在用的国学学习工具，基础排盘永久免费，还有典籍题库和离线学习，扫码就能下载。";
 
 /** 合规分享文案 */
 export const SHARE_COMPLIANCE_TEXT = "传统文化学习交流工具";
@@ -103,7 +103,7 @@ export async function generatePoster(config: PosterConfig): Promise<string> {
   const subSize = config.size === "weibo" ? 12 : 15;
   ctx.font = `${subSize}px "Noto Sans CJK SC", "WenQuanYi Micro Hei", sans-serif`;
   ctx.fillStyle = "rgba(255,255,255,0.85)";
-  ctx.fillText("14 款专业排盘工具・中医典籍知识库・同好交流学习社区", w / 2, config.size === "weibo" ? 78 : 118);
+  ctx.fillText("14 款专业排盘工具・中医典籍知识库・离线学习资料", w / 2, config.size === "weibo" ? 78 : 118);
 
   // 微博横版特殊布局
   if (config.size === "weibo") {

@@ -6,6 +6,7 @@ import { BrandHeader } from "@/components/shared";
 import { fetchTracks, LEVEL_NAMES, type TrackOverview } from "@/lib/academyApi";
 import { PageLoginGuard } from "@/components/PageLoginGuard";
 import { getToolConfig } from "@/lib/toolConfigStore";
+import { PUBLIC_SOCIAL_ENABLED } from "@/lib/releaseFeatures";
 
 const BRAND = "#7B2FBE";
 
@@ -202,7 +203,7 @@ export default function AcademyPage() {
                     )}
                     {/* 区内入口 */}
                     <div className="flex flex-wrap gap-2 px-4 pb-3.5 pt-2">
-                      {z.entries.map((e) => (
+                      {z.entries.filter((e) => PUBLIC_SOCIAL_ENABLED || e.key !== "community").map((e) => (
                         <button
                           key={e.key}
                           onClick={() => router.push(e.url)}
