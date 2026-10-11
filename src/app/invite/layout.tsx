@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import StoreFeatureUnavailable from "@/components/StoreFeatureUnavailable";
+import { PUBLIC_PROMOTION_ENABLED } from "@/lib/releaseFeatures";
 
 export const metadata: Metadata = {
   title: "邀请有礼——邀请好友共建言道国学学习圈",
@@ -7,5 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function InviteLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return PUBLIC_PROMOTION_ENABLED ? children : <StoreFeatureUnavailable />;
 }

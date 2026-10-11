@@ -17,6 +17,7 @@ import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import IcpFooter from "@/components/IcpFooter";
 import { useIOSNativeShell } from "@/lib/iosNativeGate";
+import { PUBLIC_AI_ENABLED, PUBLIC_PROMOTION_ENABLED, PUBLIC_SOCIAL_ENABLED } from "@/lib/releaseFeatures";
 
 const BRAND = "#7B2FBE";
 
@@ -1004,14 +1005,14 @@ export default function ProfilePage() {
 
           {/* 右侧：AI 剩余额度 / 积分余额 */}
           <div className="flex shrink-0 flex-col gap-2">
-            <button
+            {PUBLIC_AI_ENABLED && <button
               onClick={() => router.push(loginState.isLoggedIn ? "/yixue/ai" : "/login")}
               className="flex items-center gap-1.5 rounded-full px-3 py-1.5 active:opacity-80"
               style={{ backgroundColor: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)" }}
             >
               <span className="text-[10px] text-white/80">AI 额度</span>
               <span className="text-sm font-bold text-white">{aiRemaining === -1 ? "无限" : aiRemaining !== null ? aiRemaining : "--"}</span>
-            </button>
+            </button>}
             <button
               onClick={() => router.push("/points")}
               className="flex items-center gap-1.5 rounded-full px-3 py-1.5 active:opacity-80"
@@ -1029,7 +1030,7 @@ export default function ProfilePage() {
         <ZoneItem
           icon={Ic.academy}
           label="言道学堂"
-          sub="AI 知识工厂 · 学习考级认证生态"
+          sub={PUBLIC_AI_ENABLED ? "AI 知识工厂 · 学习考级认证生态" : "国学学习 · 题库练习 · 考级认证"}
           onClick={() => router.push("/academy")}
         />
         <ZoneItem
@@ -1076,14 +1077,14 @@ export default function ProfilePage() {
         <ZoneItem
           icon={Ic.factory}
           label="我的上传 · 知识贡献"
-          sub="上传资料 · AI 解析 · 贡献积分"
+          sub={PUBLIC_AI_ENABLED ? "上传资料 · AI 解析 · 贡献积分" : "上传资料 · 内容整理 · 贡献积分"}
           onClick={() => router.push("/academy/factory")}
           noBorder
         />
       </Zone>
 
       {/* ===== 第三区：社区中心（P9-首发裁剪：隐藏我的动态/消息通知，保留好友/关注/粉丝） ===== */}
-      <Zone title="社区中心" storageKey="yandao_zone_social">
+      {PUBLIC_SOCIAL_ENABLED && <Zone title="社区中心" storageKey="yandao_zone_social">
         <ZoneItem
           icon={Ic.follow}
           label="我的关注"
@@ -1108,7 +1109,7 @@ export default function ProfilePage() {
           onClick={() => setShowQR(true)}
           noBorder
         />
-      </Zone>
+      </Zone>}
 
       {/* ===== 第四区：商业中心（v25.0.49 默认展开：会员购买入口直达，杜绝"找不到入口/点了没反应"） ===== */}
       <Zone title="商业中心" storageKey="yandao_zone_biz" defaultOpen>
@@ -1118,12 +1119,12 @@ export default function ProfilePage() {
           sub={isMember ? `${memberLabel}权益生效中` : "开通会员解锁全部权益"}
           href="/membership/"
         />
-        <ZoneItem
+        {PUBLIC_AI_ENABLED && <ZoneItem
           icon={Ic.ai}
           label="AI 额度"
           right={<span className="text-xs text-gray-400">{aiRemaining === -1 ? "会员特权 · 无限次" : aiRemaining !== null ? `剩余 ${aiRemaining} 次` : ""}</span>}
           onClick={() => router.push(loginState.isLoggedIn ? "/yixue/ai" : "/login")}
-        />
+        />}
         <ZoneItem
           icon={Ic.points}
           label="积分中心"
@@ -1139,7 +1140,7 @@ export default function ProfilePage() {
       </Zone>
 
       {/* ===== 第五区：推广中心 ===== */}
-      <Zone title="推广中心" storageKey="yandao_zone_promo">
+      {PUBLIC_PROMOTION_ENABLED && <Zone title="推广中心" storageKey="yandao_zone_promo">
         <ZoneItem
           icon={Ic.profit}
           label="我的收益"
@@ -1174,7 +1175,7 @@ export default function ProfilePage() {
           onClick={() => router.push("/profile/promote")}
           noBorder
         />
-      </Zone>
+      </Zone>}
 
       {/* ===== 第六区：系统中心 ===== */}
       <Zone title="系统中心" storageKey="yandao_zone_sys">

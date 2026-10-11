@@ -6,6 +6,7 @@ import { BrandHeader } from "@/components/shared";
 import { sendSmsCode, sendEmailCode, registerWithPhone, registerWithEmail, checkUserExist } from "@/lib/loginService";
 import { recordInviteLanding } from "@/lib/antiCheatStore";
 import { useNativeShell } from "@/lib/nativeShellGate";
+import { PUBLIC_PROMOTION_ENABLED } from "@/lib/releaseFeatures";
 
 const BRAND = "#7B2FBE";
 
@@ -55,6 +56,7 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [agreed, setAgreed] = useState(false);
 
   // v19.7_final: 注册唯一性实时校验
   const [phoneExistMsg, setPhoneExistMsg] = useState("");
@@ -348,12 +350,16 @@ export default function RegisterPage() {
 
   // 统一提交入口
   const handleSubmit = useCallback(() => {
+    if (!agreed) {
+      setError("请先阅读并同意《用户协议》和《隐私政策》");
+      return;
+    }
     if (registerMode === "phone") {
       handlePhoneRegister();
     } else {
       handleEmailRegister();
     }
-  }, [registerMode, handlePhoneRegister, handleEmailRegister]);
+  }, [registerMode, handlePhoneRegister, handleEmailRegister, agreed]);
 
   // 回车快捷提交
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -744,7 +750,7 @@ export default function RegisterPage() {
         </div>
 
         {/* 邀请码（选填） */}
-        <div style={{ marginBottom: 24 }}>
+        {PUBLIC_PROMOTION_ENABLED && <div style={{ marginBottom: 24 }}>
           {/* P6-TOOL-04 §5.1: 受邀注册时明确展示邀请关系与奖励说明 */}
           {invitedByCode && (
             <div
@@ -834,7 +840,7 @@ export default function RegisterPage() {
               />
             </div>
           )}
-        </div>
+        </div>}
 
         {/* 错误提示 */}
         {error && (
@@ -850,6 +856,15 @@ export default function RegisterPage() {
             {error}
           </div>
         )}
+
+        <label style={{ display: "flex", alignItems: "flex-start", gap: 7, fontSize: 12, color: "#666", lineHeight: 1.6, margin: "0 2px 14px", cursor: "pointer" }}>
+          <input type="checkbox" checked={agreed} onChange={(e) => { setAgreed(e.target.checked); setError(""); }} style={{ width: 16, height: 16, marginTop: 2, accentColor: BRAND, flexShrink: 0 }} />
+          <span>我已阅读并同意
+            <button type="button" onClick={(e) => { e.preventDefault(); router.push("/agreement"); }} style={{ border: 0, background: "transparent", padding: 0, color: BRAND }}>《用户协议》</button>
+            和
+            <button type="button" onClick={(e) => { e.preventDefault(); router.push("/privacy"); }} style={{ border: 0, background: "transparent", padding: 0, color: BRAND }}>《隐私政策》</button>
+          </span>
+        </label>
 
         {/* 注册按钮 */}
         <button

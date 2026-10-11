@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import StoreFeatureUnavailable from "@/components/StoreFeatureUnavailable";
+import { PUBLIC_AI_ENABLED } from "@/lib/releaseFeatures";
 
 export const metadata: Metadata = {
   title: "AI中医问答——智能中医知识查询助手｜言道国学",
@@ -24,6 +26,7 @@ const ZHONGYI_TOOLS = [
 ];
 
 export default function Layout({ children }: { children: React.ReactNode }) {
+  if (!PUBLIC_AI_ENABLED) return <StoreFeatureUnavailable />;
   return (
     <>
       {children}

@@ -22,7 +22,7 @@ import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { SafeRichText } from "@/components/SafeRichText";
 import { ResourceDiscussion } from "@/components/ResourceDiscussion";
-import { PUBLIC_SOCIAL_ENABLED } from "@/lib/releaseFeatures";
+import { PUBLIC_AI_ENABLED, PUBLIC_SOCIAL_ENABLED } from "@/lib/releaseFeatures";
 
 /**
  * v18.9: 通用AI解读按钮组件
@@ -69,7 +69,7 @@ const DEFAULT_SYSTEM_PROMPT = `你是传统文化研究者。请基于提供的�
 
 const DISCLAIMER = "\n\n本内容收录古代传统文史资料，仅用于国学、历法学术研究，不构成运势预测与人生决策建议。";
 
-export default function AIInterpretButton({
+function AIInterpretButtonEnabled({
   toolName,
   scope,
   contextData,
@@ -498,4 +498,9 @@ export default function AIInterpretButton({
       {qrModal}
     </>
   );
+}
+
+export default function AIInterpretButton(props: AIInterpretButtonProps) {
+  if (!PUBLIC_AI_ENABLED) return null;
+  return <AIInterpretButtonEnabled {...props} />;
 }

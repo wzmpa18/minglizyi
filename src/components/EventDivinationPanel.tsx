@@ -25,6 +25,7 @@ import { LoginPromptModal } from "@/components/LoginPromptModal";
 import MasterExchangePanel from "./MasterExchangePanel";
 // v25.0.47_12 深度报告提质：五段式/700-900字/典籍引用/合规语气（共享标准）
 import { buildDeepReportSystemPrompt, buildBaziDeepReportSystemPrompt } from "@/lib/deepReportPrompt";
+import { PUBLIC_AI_ENABLED } from "@/lib/releaseFeatures";
 
 /**
  * v19.6: 事情断法 + AI深度解读 组件
@@ -61,7 +62,7 @@ const QUICK_QUESTIONS = [
   "初学者应从哪些概念入手？",
 ];
 
-export default function EventDivinationPanel({
+function EventDivinationPanelEnabled({
   toolName,
   chartContext,
   isPaidTool = false,
@@ -796,4 +797,9 @@ export default function EventDivinationPanel({
       {qrModal}
     </div>
   );
+}
+
+export default function EventDivinationPanel(props: EventDivinationPanelProps) {
+  if (!PUBLIC_AI_ENABLED) return null;
+  return <EventDivinationPanelEnabled {...props} />;
 }

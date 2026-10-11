@@ -18,6 +18,8 @@ import AppUpgradeChecker from "@/components/AppUpgradeChecker";
 import OfflineInit from "@/components/OfflineInit";
 import { ToastHost } from "@/components/ui";
 import { PromoFloat } from "@/components/marketing/PromoFloat";
+import PrivacyConsentGate from "@/components/PrivacyConsentGate";
+import { PUBLIC_PROMOTION_ENABLED } from "@/lib/releaseFeatures";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://yandaoguoxue.yandao.vip"),
@@ -67,6 +69,7 @@ export default function RootLayout({
             构建时从 public/native-api-patch.js 读取源码内联进 HTML head —— 解析期同步执行，
             早于所有应用 JS（next/script 的 beforeInteractive 在静态导出下是运行时队列注入，时序不保险） */}
         <script dangerouslySetInnerHTML={{ __html: nativeApiPatchCode }} />
+        <PrivacyConsentGate>
         <ThemeProvider>
           <VersionChecker />
           {/* v25.0.48 原生壳升级检测：APP 内置资源版本落后时弹升级引导（网页版静默） */}
@@ -78,7 +81,7 @@ export default function RootLayout({
             <UserActivityInit />
             {/* v25.0.75 微信内打开网页版：静默 OAuth 识别身份（不建账号，第十九~二十章） */}
             <WechatOaIdentityInit />
-            <InviteCaptureInit />
+            {PUBLIC_PROMOTION_ENABLED && <InviteCaptureInit />}
             <ReminderSchedulerInit />
             <OfflineInit />
             <GlobalZoomProvider>
@@ -89,10 +92,11 @@ export default function RootLayout({
           <GlobalBackButton />
           <BottomNav />
           {/* P7-弹窗统一-01：全站统一营销浮窗（后台开关+页面白名单+频次+冷却期+永久关闭） */}
-          <PromoFloat />
+          {PUBLIC_PROMOTION_ENABLED && <PromoFloat />}
           {/* P7-弹窗统一-01：全站统一轻提示宿主（showToast 全局事件） */}
           <ToastHost />
         </ThemeProvider>
+        </PrivacyConsentGate>
       </body>
     </html>
   );
