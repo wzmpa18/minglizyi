@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { PrivacyPolicyDocument } from "@/app/privacy/page";
 
 const CONSENT_KEY = "yandao_privacy_consent_v1";
 const BRAND = "#7B2FBE";
@@ -44,6 +45,9 @@ export default function PrivacyConsentGate({
 
   if (document) {
     const isPrivacy = document === "privacy";
+    if (isPrivacy) {
+      return <PrivacyPolicyDocument onBack={() => setDocument(null)} />;
+    }
     return (
       <div style={{ minHeight: "100dvh", background: "#f5f2f8", padding: 18 }}>
         <article
@@ -60,23 +64,7 @@ export default function PrivacyConsentGate({
           <h1 style={{ margin: "0 0 14px", fontSize: 21, color: "#2D1A3E" }}>
             {isPrivacy ? "言道国学隐私政策" : "言道国学用户协议"}
           </h1>
-          {isPrivacy ? (
-            <>
-              <p>更新日期：2026年10月11日</p>
-              <p>
-                我们仅在提供账号登录、会员权益、学习记录、离线内容、支付订单和安全保障所必需的范围内处理信息。首次同意前，不启动账号、同步、统计、通知或其他网络服务。
-              </p>
-              <h2 style={{ fontSize: 17 }}>信息与权限</h2>
-              <p>
-                注册或登录时会处理手机号或第三方账号标识；保存学习和排盘记录时会处理您主动填写的内容；购买会员时会处理订单号、商品和支付状态。相机、相册、通知等权限仅在您主动使用对应功能时申请，拒绝不会影响无关功能。
-              </p>
-              <h2 style={{ fontSize: 17 }}>共享、推送与您的权利</h2>
-              <p>
-                我们不进行个性化广告推荐，不出售个人信息。必要的支付、登录和云服务仅按实现功能所需共享最少信息。您可在“我的－设置”管理通知、注销账号，并可申请查询、更正或删除个人信息。
-              </p>
-              <p>如有疑问，可通过应用内“我的－帮助与反馈”联系我们。</p>
-            </>
-          ) : (
+          {!isPrivacy && (
             <>
               <p>更新日期：2026年10月11日</p>
               <p>

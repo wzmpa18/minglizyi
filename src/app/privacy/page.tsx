@@ -61,11 +61,12 @@ function Li({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function PrivacyPage() {
+export function PrivacyPolicyDocument({ onBack }: { onBack?: () => void } = {}) {
   const router = useRouter();
 
   const handleBack = () => {
-    router.back();
+    if (onBack) onBack();
+    else router.back();
   };
 
   return (
@@ -80,7 +81,7 @@ export default function PrivacyPage() {
       }}
     >
       {/* 紫色头部 */}
-      <BrandHeader title="隐私政策" showBack />
+      <BrandHeader title="隐私政策" showBack onBack={onBack} />
 
       {/* 可滚动内容区 */}
       <div
@@ -417,4 +418,8 @@ export default function PrivacyPage() {
       <div className="page-bottom-nav-safe" aria-hidden="true" />
     </div>
   );
+}
+
+export default function PrivacyPage() {
+  return <PrivacyPolicyDocument />;
 }

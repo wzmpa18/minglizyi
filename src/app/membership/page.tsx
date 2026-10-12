@@ -67,9 +67,13 @@ export default function MembershipPage() {
   const [paymentsBlocked, setPaymentsBlocked] = useState(false);
   const [growthCampaign, setGrowthCampaign] = useState<NonNullable<InviteOverview["growthCampaign"]> | null>(null);
   const [useGrowthCoupon, setUseGrowthCoupon] = useState(true);
+  const [acceptedMembershipTerms, setAcceptedMembershipTerms] = useState(false);
 
   useEffect(() => {
     setPaymentsBlocked(isPaymentsBlocked());
+    try {
+      setAcceptedMembershipTerms(sessionStorage.getItem("yandao_membership_terms_accepted") === "1");
+    } catch {}
   }, []);
 
   useEffect(() => {
@@ -159,6 +163,12 @@ export default function MembershipPage() {
   const handlePay = async (overrideLevel?: MemberLevel) => {
     if (isPaymentsBlocked()) {
       setPayError(IOS_PAYMENT_DISABLED_TIP);
+      return;
+    }
+    if (!acceptedMembershipTerms) {
+      const msg = "请先阅读并同意《会员服务协议》";
+      setErrorMsg(msg);
+      setPayError(msg);
       return;
     }
     const level = overrideLevel ?? selectedPlan;
@@ -700,7 +710,7 @@ export default function MembershipPage() {
       {!paymentsBlocked && (
       <>
       {/* 文档流占位：抵消 fixed 按钮栏高度，防止遮挡页面尾部内容 */}
-      <div style={{ height: "132px" }} aria-hidden="true" />
+      <div style={{ height: "170px" }} aria-hidden="true" />
       <div
         style={{
           position: "fixed",
@@ -765,19 +775,51 @@ export default function MembershipPage() {
             {errorMsg}
           </div>
         )}
+        <label
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "7px",
+            marginBottom: "9px",
+            fontSize: "13px",
+            color: "#555",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={acceptedMembershipTerms}
+            onChange={(event) => {
+              const checked = event.target.checked;
+              setAcceptedMembershipTerms(checked);
+              try {
+                sessionStorage.setItem("yandao_membership_terms_accepted", checked ? "1" : "0");
+              } catch {}
+              if (checked) {
+                setErrorMsg("");
+                setPayError("");
+              }
+            }}
+            style={{ width: 17, height: 17, accentColor: BRAND }}
+          />
+          <span>我已阅读并同意</span>
+          <Link href="/membership-agreement" style={{ color: BRAND, fontWeight: 700 }}>
+            《会员服务协议》
+          </Link>
+        </label>
         <button
           onClick={() => void handlePay()}
-          disabled={paying}
+          disabled={paying || !acceptedMembershipTerms}
           style={{
             width: "100%",
             padding: "13px 0",
             borderRadius: "24px",
             border: "none",
-            backgroundColor: paying ? "#c9a3e8" : BRAND,
+            backgroundColor: paying || !acceptedMembershipTerms ? "#c9a3e8" : BRAND,
             color: "#fff",
             fontSize: "16px",
             fontWeight: 600,
-            cursor: paying ? "not-allowed" : "pointer",
+            cursor: paying || !acceptedMembershipTerms ? "not-allowed" : "pointer",
           }}
         >
           {paying

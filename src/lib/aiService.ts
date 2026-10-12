@@ -407,9 +407,22 @@ export async function getPermissionStatusFromServer(): Promise<PermissionStatus 
     if (response.status === 401) return { ...local, canUseAI: false, needLogin: true, paidAccess: false };
     if (!response.ok) return { ...local, paidAccess: false };
     const payload = await response.json();
-    if (payload?.success === true && payload?.data?.paidAccess === true) {
-      return { ...local, isLoggedIn: true, canUseAI: true, needLogin: false, needPayment: false,
-        message: '已购买的AI解读权益可用', paidAccess: true };
+    if (payload?.success === true) {
+      const paidAccess = payload?.data?.paidAccess === true;
+      const remaining = Number(payload?.data?.remaining ?? 0);
+      const unlimited = payload?.data?.dailyLimit === null || payload?.data?.dailyLimit === "Infinity";
+      const canUseAI = paidAccess || unlimited || remaining > 0;
+      if (canUseAI) {
+        return {
+          ...local,
+          isLoggedIn: true,
+          canUseAI: true,
+          needLogin: false,
+          needPayment: false,
+          message: paidAccess || unlimited ? "已购买的AI解读权益可用" : `今日剩余${remaining}次免费AI解读`,
+          paidAccess,
+        };
+      }
     }
   } catch { /* The request itself still enforces server authentication and quota. */ }
   return { ...local, paidAccess: false };
