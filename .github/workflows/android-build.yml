@@ -1,4 +1,4 @@
-name: Android Build (apk)
+name: Android Build (APK + AAB)
 
 # 言道国学 Android 云打包（fc12）
 # - ubuntu runner + Capacitor Android 工程（内置资源模式）
@@ -73,11 +73,11 @@ jobs:
           grep -q 'versionName "25.0.111"' android/app/build.gradle || { echo "FATAL: versionName 非 25.0.111"; exit 1; }
           echo "版本门禁 OK: versionCode 2098 / versionName 25.0.111"
 
-      - name: Build release APK
+      - name: Build release APK and AAB
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew assembleRelease bundleRelease --no-daemon
 
       - name: Show APK info
         run: |
@@ -99,9 +99,23 @@ jobs:
           path: android/app/build/outputs/apk/release/*.apk
           retention-days: 14
 
+      - name: Verify and upload AAB artifact
+        run: |
+          AAB="android/app/build/outputs/bundle/release/app-release.aab"
+          test -s "$AAB" || { echo "FATAL: AAB missing"; exit 1; }
+          jarsigner -verify -verbose -certs "$AAB" >/dev/null
+          echo "AAB 签名与结构校验 OK"
+
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: yandao-guoxue-android-aab
+          path: android/app/build/outputs/bundle/release/*.aab
+          retention-days: 14
+
       - name: Build summary
         run: |
           echo "### Android 构建结果" >> $GITHUB_STEP_SUMMARY
           echo "- Bundle: $BUNDLE_ID (versionCode 2098 / versionName 25.0.111)" >> $GITHUB_STEP_SUMMARY
           echo "- 模式: 国内商店合规原生内置资源 (v25.0.111, API 指向 https://yandaoguoxue.yandao.vip)" >> $GITHUB_STEP_SUMMARY
-          echo "- 产物: signed release apk" >> $GITHUB_STEP_SUMMARY
+          echo "- 产物: signed release APK + Google Play AAB" >> $GITHUB_STEP_SUMMARY
