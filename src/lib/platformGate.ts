@@ -1,5 +1,7 @@
 "use client";
 
+import { IS_GOOGLE_PLAY_BUILD, STORE_CHANNEL } from "./releaseFeatures";
+
 // ============================================================================
 // 平台功能开关 PLATFORM_FEATURE_MATRIX - FINAL-RC-02
 //
@@ -32,6 +34,11 @@ export const IOS_PAYMENT_ENABLED = false;
 /** iOS 付费关闭期间的统一提示文案（仅在开关关闭时展示） */
 export const IOS_PAYMENT_DISABLED_TIP =
   "iOS 版暂未开放购买功能，您已获得的会员权益登录后可正常使用。";
+
+/** Google Play 版未接入 Play Billing 前仅提供已购权益消费。 */
+export const PAYMENT_DISABLED_TIP = IS_GOOGLE_PLAY_BUILD
+  ? "Google Play 版暂未开放购买功能，您已获得的会员权益登录后可正常使用。"
+  : IOS_PAYMENT_DISABLED_TIP;
 
 // ==================== 平台功能矩阵 ====================
 // 与 backend_deploy/platformFeatureGate.js 中的矩阵保持一致。
@@ -137,6 +144,7 @@ export function isIOSNative(): boolean {
 /** 当前平台是否禁止付费（UI 隐藏 + 请求层双重拦截） */
 export function isPaymentsBlocked(): boolean {
   if (typeof window === "undefined") return false;
+  if (IS_GOOGLE_PLAY_BUILD) return true;
   const platform = getRuntimePlatform();
   return PLATFORM_FEATURE_MATRIX.payment[platform] === false;
 }
@@ -154,5 +162,8 @@ export function isFeatureEnabled(feature: string, platform?: RuntimePlatform): b
  * 服务端 platformFeatureGate 中间件依据该头对被关闭能力做最终裁决。
  */
 export function clientPlatformHeaders(): Record<string, string> {
-  return { "X-Client-Platform": getRuntimePlatform() };
+  return {
+    "X-Client-Platform": getRuntimePlatform(),
+    "X-Store-Channel": STORE_CHANNEL,
+  };
 }

@@ -26,7 +26,8 @@ import { getUserProfile } from "@/lib/auth";
 import { reportConsumptionRebate } from "@/lib/inviteApi";
 import { redeemCode, getMyRedemptions } from "@/lib/redeemCodeStore";
 import { getToolConfig } from "@/lib/toolConfigStore";
-import { isPaymentsBlocked, IOS_PAYMENT_DISABLED_TIP } from "@/lib/platformGate";
+import { isPaymentsBlocked, PAYMENT_DISABLED_TIP } from "@/lib/platformGate";
+import { IS_GOOGLE_PLAY_BUILD } from "@/lib/releaseFeatures";
 import { payForMembership, pollPaymentStatus } from "@/lib/paymentService";
 import { useNativePayQR } from "@/components/PayQRCodeModal";
 import { useServerPricing, mergePlansWithServer } from "@/lib/pricingStore";
@@ -64,7 +65,7 @@ export default function MembershipPage() {
   const [myRedemptions, setMyRedemptions] = useState<ReturnType<typeof getMyRedemptions>>([]);
   const [redeemEnabled, setRedeemEnabled] = useState(false);
   // FINAL-RC-02: iOS 本期不开放任何付费（静态导出需 useEffect 后置判定，避免水合不一致）
-  const [paymentsBlocked, setPaymentsBlocked] = useState(false);
+  const [paymentsBlocked, setPaymentsBlocked] = useState(IS_GOOGLE_PLAY_BUILD);
   const [growthCampaign, setGrowthCampaign] = useState<NonNullable<InviteOverview["growthCampaign"]> | null>(null);
   const [useGrowthCoupon, setUseGrowthCoupon] = useState(true);
   const [acceptedMembershipTerms, setAcceptedMembershipTerms] = useState(false);
@@ -162,7 +163,7 @@ export default function MembershipPage() {
   // v25.0.47_21: 支持 overrideLevel（登录回跳自动唤起支付时恢复原选中档位）
   const handlePay = async (overrideLevel?: MemberLevel) => {
     if (isPaymentsBlocked()) {
-      setPayError(IOS_PAYMENT_DISABLED_TIP);
+      setPayError(PAYMENT_DISABLED_TIP);
       return;
     }
     if (!acceptedMembershipTerms) {
@@ -316,7 +317,7 @@ export default function MembershipPage() {
         {paymentsBlocked && (
           <div style={{ margin: "12px", padding: "16px", borderRadius: "14px", backgroundColor: "#fff", border: "1px solid #eee", textAlign: "center" }}>
             <div style={{ fontSize: "15px", fontWeight: 600, color: "#333", marginBottom: "6px" }}>会员购买暂未开放</div>
-            <div style={{ fontSize: "13px", color: "#888", lineHeight: 1.7 }}>{IOS_PAYMENT_DISABLED_TIP}</div>
+            <div style={{ fontSize: "13px", color: "#888", lineHeight: 1.7 }}>{PAYMENT_DISABLED_TIP}</div>
           </div>
         )}
 
@@ -480,7 +481,7 @@ export default function MembershipPage() {
           </div>
           {status.level === "basic" ? (
             <div
-              onClick={() => { if (paymentsBlocked) { setErrorMsg(IOS_PAYMENT_DISABLED_TIP); return; } setSelectedPlan("yearly"); document.getElementById("plan-section")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
+              onClick={() => { if (paymentsBlocked) { setErrorMsg(PAYMENT_DISABLED_TIP); return; } setSelectedPlan("yearly"); document.getElementById("plan-section")?.scrollIntoView({ behavior: "smooth", block: "start" }); }}
               style={{ marginTop: "12px", padding: "10px", borderRadius: "10px", backgroundColor: "#faf6ff", border: `1px solid ${BRAND}55`, textAlign: "center", fontSize: "13px", color: BRAND, fontWeight: 600, cursor: "pointer" }}
             >
               升级会员解锁全部中医功能 →

@@ -22,7 +22,8 @@ import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
-import { isPaymentsBlocked, IOS_PAYMENT_DISABLED_TIP } from "@/lib/platformGate";
+import { isPaymentsBlocked, PAYMENT_DISABLED_TIP } from "@/lib/platformGate";
+import { IS_GOOGLE_PLAY_BUILD } from "@/lib/releaseFeatures";
 import { SafeRichText } from "@/components/SafeRichText";
 
 export interface InterpretationItem {
@@ -64,7 +65,7 @@ export default function InterpretationDrawer({
   const [aiLocked, setAiLocked] = useState(false); // v20.1: AI内容是否锁定
   const [showSingleUnlock, setShowSingleUnlock] = useState(false); // v20.1: 单次解锁弹窗
   // FINAL-RC-02: iOS 本期不开放任何付费，单次解锁/会员购买入口隐藏
-  const [paymentsBlocked, setPaymentsBlocked] = useState(false);
+  const [paymentsBlocked, setPaymentsBlocked] = useState(IS_GOOGLE_PLAY_BUILD);
   // v25.0.47_10: 价格 SSOT——展示与下单价格优先读服务端，本地常量仅兜底
   const { singleUnlockPrice: serverSinglePrice } = useAiPricing();
   const singlePrice = serverSinglePrice ?? SINGLE_UNLOCK_PRICE;
@@ -217,7 +218,7 @@ export default function InterpretationDrawer({
                       </svg>
                       <div style={{ fontSize: "11px", color: "#7B2FBE", fontWeight: "bold", marginTop: "4px" }}>后续深度内容已锁定</div>
                       {paymentsBlocked ? (
-                        <div style={{ fontSize: "10px", color: "#999", marginTop: "6px", lineHeight: 1.6 }}>{IOS_PAYMENT_DISABLED_TIP}</div>
+                        <div style={{ fontSize: "10px", color: "#999", marginTop: "6px", lineHeight: 1.6 }}>{PAYMENT_DISABLED_TIP}</div>
                       ) : (
                       <div style={{ display: "flex", gap: "6px", marginTop: "8px" }}>
                         <button
@@ -324,7 +325,7 @@ export default function InterpretationDrawer({
             <div style={{ padding: "14px" }}>
               {paymentsBlocked ? (
                 <div style={{ textAlign: "center", padding: "6px 0 10px", fontSize: "13px", color: "#888", lineHeight: 1.7 }}>
-                  {IOS_PAYMENT_DISABLED_TIP}
+                  {PAYMENT_DISABLED_TIP}
                 </div>
               ) : (
               <div style={{ textAlign: "center", marginBottom: "12px" }}>

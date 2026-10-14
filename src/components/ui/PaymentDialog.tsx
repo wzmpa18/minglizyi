@@ -9,6 +9,7 @@
 
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
+import { isPaymentsBlocked, PAYMENT_DISABLED_TIP } from "@/lib/platformGate";
 
 export function PaymentDialog({
   open,
@@ -37,6 +38,7 @@ export function PaymentDialog({
   children?: React.ReactNode;
   accent?: string;
 }) {
+  const paymentsBlocked = isPaymentsBlocked();
   useBodyScrollLock(open);
   usePopupBackHandler(() => {
     if (!paying) onClose();
@@ -59,6 +61,12 @@ export function PaymentDialog({
         aria-label={title}
       >
         <p className="text-center text-base font-bold text-gray-800">{title}</p>
+        {paymentsBlocked ? (
+          <div className="mt-4 rounded-xl bg-gray-50 px-4 py-5 text-center text-sm leading-7 text-gray-600">
+            {PAYMENT_DISABLED_TIP}
+          </div>
+        ) : (
+          <>
         {subtitle && <p className="mt-1.5 text-center text-[11px] text-gray-500">{subtitle}</p>}
         {typeof price === "number" && (
           <div className="mt-4 rounded-xl p-4" style={{ backgroundColor: "#FAF6ED", border: "1px solid #ece4cf" }}>
@@ -84,6 +92,8 @@ export function PaymentDialog({
         >
           {paying ? "支付处理中…" : "立即支付"}
         </button>
+          </>
+        )}
         <button
           onClick={() => !paying && onClose()}
           className="mt-2 w-full rounded-xl py-2.5 text-sm font-medium text-gray-500"

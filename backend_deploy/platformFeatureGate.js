@@ -129,6 +129,10 @@ function detectPlatform(req) {
   return "web";
 }
 
+function detectStoreChannel(req) {
+  return String(req.headers["x-store-channel"] || "default").toLowerCase().trim();
+}
+
 function isFeatureEnabled(feature, platform) {
   const row = PLATFORM_FEATURE_MATRIX[feature];
   if (!row) return true;
@@ -140,19 +144,23 @@ function isFeatureEnabled(feature, platform) {
 function createPlatformFeatureGate() {
   return function platformFeatureGate(req, res, next) {
     const platform = detectPlatform(req);
+    const storeChannel = detectStoreChannel(req);
     // 挂到 req 上供后续路由/日志使用
     req.clientPlatform = platform;
 
     try {
       // 1) 支付能力：iOS 关闭
-      if (!isFeatureEnabled("payment", platform)) {
+      if (!isFeatureEnabled("payment", platform) || storeChannel === "google") {
         const p = String(req.path || "").split("?")[0];
         if (PAYMENT_BLOCK_PATHS.indexOf(p) !== -1) {
           return res.status(403).json({
             success: false,
             error: "PLATFORM_PAYMENT_DISABLED",
-            message: IOS_PAYMENT_DISABLED_MESSAGE,
+            message: storeChannel === "google"
+              ? "Google Play 版暂未开放购买功能，已获得的会员权益登录后可正常使用。"
+              : IOS_PAYMENT_DISABLED_MESSAGE,
             platform: platform,
+            storeChannel: storeChannel,
           });
         }
       }
@@ -186,6 +194,7 @@ function createPlatformFeatureGate() {
 module.exports = {
   createPlatformFeatureGate,
   detectPlatform,
+  detectStoreChannel,
   isFeatureEnabled,
   PLATFORM_FEATURE_MATRIX,
 };

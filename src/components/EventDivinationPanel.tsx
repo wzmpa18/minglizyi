@@ -23,6 +23,8 @@ import { useAiPricing } from "@/lib/pricingStore";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import MasterExchangePanel from "./MasterExchangePanel";
+import { IS_GOOGLE_PLAY_BUILD } from "@/lib/releaseFeatures";
+import { PAYMENT_DISABLED_TIP } from "@/lib/platformGate";
 // v25.0.47_12 深度报告提质：五段式/700-900字/典籍引用/合规语气（共享标准）
 import { buildDeepReportSystemPrompt, buildBaziDeepReportSystemPrompt } from "@/lib/deepReportPrompt";
 import { PUBLIC_AI_ENABLED } from "@/lib/releaseFeatures";
@@ -167,6 +169,7 @@ function EventDivinationPanelEnabled({
   const [unlockPaying, setUnlockPaying] = useState(false);
   const [unlockMsg, setUnlockMsg] = useState("");
   const handleSingleUnlock = useCallback(async () => {
+    if (IS_GOOGLE_PLAY_BUILD) return;
     if (unlockPaying) return;
     const cKey = generateContentKey(toolName, chartContext + (activeMode === "event" ? userQuestion : "deep"));
     setUnlockPaying(true);
@@ -276,6 +279,7 @@ function EventDivinationPanelEnabled({
   const [purchasePaying, setPurchasePaying] = useState(false);
   const [purchaseMsg, setPurchaseMsg] = useState("");
   const handlePurchase = useCallback(async (planKey: string) => {
+    if (IS_GOOGLE_PLAY_BUILD) return;
     if (purchasePaying) return;
     const plan = paidPlans.find((p) => p.key === planKey);
     if (!plan) return;
@@ -520,7 +524,9 @@ function EventDivinationPanelEnabled({
                 </div>
               </div>
               {/* 两个解锁按钮 */}
-              <div style={{ display: "flex", gap: "8px" }}>
+              {IS_GOOGLE_PLAY_BUILD ? (
+                <div style={{ fontSize: "11px", color: "#777", lineHeight: 1.7 }}>{PAYMENT_DISABLED_TIP}</div>
+              ) : <div style={{ display: "flex", gap: "8px" }}>
                 <button
                   onClick={() => setShowSingleUnlock(true)}
                   style={{
@@ -553,14 +559,14 @@ function EventDivinationPanelEnabled({
                 >
                   开通会员无限看
                 </button>
-              </div>
+              </div>}
             </div>
           </div>
         )}
       </div>
 
       {/* 付费弹窗 */}
-      {showPayment && (
+      {showPayment && !IS_GOOGLE_PLAY_BUILD && (
         <div
           style={{
             position: "fixed",
@@ -678,7 +684,7 @@ function EventDivinationPanelEnabled({
       )}
 
       {/* v20.1: 单次解锁支付弹窗 */}
-      {showSingleUnlock && (
+      {showSingleUnlock && !IS_GOOGLE_PLAY_BUILD && (
         <div
           style={{
             position: "fixed",

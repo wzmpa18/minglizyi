@@ -24,6 +24,8 @@ import { reportConsumptionRebate } from "@/lib/inviteApi";
 import { ShareButton } from "@/components/ShareButton";
 import { payBatchInterpretAndWait } from "@/lib/paymentService";
 import { useNativePayQR } from "@/components/PayQRCodeModal";
+import { IS_GOOGLE_PLAY_BUILD } from "@/lib/releaseFeatures";
+import { PAYMENT_DISABLED_TIP } from "@/lib/platformGate";
 import {
   getMembershipStatus,
   BATCH_INTERPRET_DISCOUNTS,
@@ -436,6 +438,7 @@ export default function BatchNumberMatching({ toolType }: BatchNumberMatchingPro
 
   /** v25.0.47_12: 真实微信支付（Native扫码/JSAPI/终身会员免费放行） */
   const handlePay = async () => {
+    if (IS_GOOGLE_PLAY_BUILD) return;
     if (!requireLogin()) return;
     setPaying(true);
     try {
@@ -986,6 +989,9 @@ ${numberLabel}类型：${isPhone ? "手机号" : "车牌号"}
                 </div>
               ) : (
                 <>
+                  {IS_GOOGLE_PLAY_BUILD ? (
+                    <div className="rounded-xl bg-gray-50 p-4 text-center text-xs leading-6 text-gray-600">{PAYMENT_DISABLED_TIP}</div>
+                  ) : <>
                   {/* 支付方式选择 */}
                   <div className="mb-4">
                     <label className="block text-xs text-gray-500 mb-2">
@@ -1054,6 +1060,7 @@ ${numberLabel}类型：${isPhone ? "手机号" : "车牌号"}
                   <p className="mt-3 text-center text-[11px] text-gray-400">
                     支付成功后将自动生成完整分析报告，有效期 7 天
                   </p>
+                  </>}
                 </>
               )}
             </div>

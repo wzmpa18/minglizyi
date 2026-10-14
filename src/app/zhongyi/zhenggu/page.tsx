@@ -17,6 +17,8 @@ import { paySingleUnlockAndWait } from "@/lib/paymentService";
 import { isSingleUnlocked, activateSingleUnlock } from "@/lib/aiService";
 import { fetchMaterials, fetchKnowledge, fetchQuestions, type MaterialVo, type KnowledgeVo, type QuestionVo } from "@/lib/academyApi";
 import { learningDifficultyLabel } from "@/lib/learningDisplay";
+import { IS_GOOGLE_PLAY_BUILD } from "@/lib/releaseFeatures";
+import { PAYMENT_DISABLED_TIP } from "@/lib/platformGate";
 
 const BRAND = "#7B2FBE";
 const ZHENGGU_CATEGORY = "中华非遗正骨";
@@ -113,6 +115,7 @@ export default function ZhengguPage() {
 
   // 支付解锁（微信 JSAPI / Native 扫码双通道，成功后本地标记+权益服务端入库）
   const handleUnlock = useCallback(async () => {
+    if (IS_GOOGLE_PLAY_BUILD) return;
     if (paying || !access) return;
     if (!loggedIn) return;
     setPaying(true);
@@ -211,7 +214,11 @@ export default function ZhengguPage() {
                 <div>· 逐条知识点含出处标签，可追溯学习</div>
                 <div>· 配套题库练习（单选/判断），逐题解析</div>
               </div>
-              <div style={{ marginTop: "18px", padding: "12px", borderRadius: "12px", backgroundColor: "#FFF7E6", textAlign: "center" }}>
+              {IS_GOOGLE_PLAY_BUILD ? (
+                <div style={{ marginTop: "18px", padding: "14px", borderRadius: "12px", backgroundColor: "#f7f7f7", textAlign: "center", fontSize: "12px", color: "#666", lineHeight: 1.8 }}>
+                  {PAYMENT_DISABLED_TIP}
+                </div>
+              ) : <><div style={{ marginTop: "18px", padding: "12px", borderRadius: "12px", backgroundColor: "#FFF7E6", textAlign: "center" }}>
                 <div style={{ fontSize: "12px", color: "#8a6d3b" }}>一次性解锁 · 永久有效</div>
                 <div style={{ fontSize: "30px", fontWeight: "bold", color: "#C77700", marginTop: "4px" }}>
                   <span style={{ fontSize: "15px" }}>¥</span>
@@ -228,6 +235,7 @@ export default function ZhengguPage() {
               >
                 {paying ? "正在发起支付…" : "立即解锁正骨专区"}
               </button>
+              </>}
               {payMsg && <div style={{ marginTop: "10px", fontSize: "12px", color: "#C62828", textAlign: "center" }}>{payMsg}</div>}
               <p style={{ marginTop: "12px", fontSize: "10px", color: "#aaa", textAlign: "center", lineHeight: 1.7 }}>
                 支付成功后权益实时生效（服务端记账，换设备不丢失）<br />

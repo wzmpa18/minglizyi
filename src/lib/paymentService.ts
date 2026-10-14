@@ -9,7 +9,7 @@
 // ============================================================================
 
 import { getUserProfile, getUserToken } from "./auth";
-import { isPaymentsBlocked, IOS_PAYMENT_DISABLED_TIP, clientPlatformHeaders } from "./platformGate";
+import { isPaymentsBlocked, PAYMENT_DISABLED_TIP, clientPlatformHeaders } from "./platformGate";
 
 // ==================== 类型定义 ====================
 
@@ -264,8 +264,8 @@ export async function callPayment(
   if (isPaymentsBlocked()) {
     return {
       success: false,
-      error: IOS_PAYMENT_DISABLED_TIP,
-      message: IOS_PAYMENT_DISABLED_TIP,
+      error: PAYMENT_DISABLED_TIP,
+      message: PAYMENT_DISABLED_TIP,
     };
   }
 

@@ -21,6 +21,8 @@ import { useAiPricing } from "@/lib/pricingStore";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { SafeRichText } from "@/components/SafeRichText";
+import { IS_GOOGLE_PLAY_BUILD } from "@/lib/releaseFeatures";
+import { PAYMENT_DISABLED_TIP } from "@/lib/platformGate";
 import { ResourceDiscussion } from "@/components/ResourceDiscussion";
 import { PUBLIC_AI_ENABLED, PUBLIC_SOCIAL_ENABLED } from "@/lib/releaseFeatures";
 
@@ -200,6 +202,7 @@ function AIInterpretButtonEnabled({
   const [unlockPaying, setUnlockPaying] = useState(false);
   const [unlockMsg, setUnlockMsg] = useState("");
   const handleSingleUnlock = useCallback(async () => {
+    if (IS_GOOGLE_PLAY_BUILD) return;
     if (unlockPaying) return;
     const cKey = generateContentKey(toolName, scope + contextData.slice(0, 50));
     setUnlockPaying(true);
@@ -364,7 +367,9 @@ function AIInterpretButtonEnabled({
             <div style={{ fontSize: "12px", color: "#7B2FBE", fontWeight: "bold", marginTop: "4px" }}>
               后续深度内容已锁定
             </div>
-            <div style={{ display: "flex", gap: "6px", marginTop: "10px" }}>
+            {IS_GOOGLE_PLAY_BUILD ? (
+              <div style={{ fontSize: "11px", color: "#777", lineHeight: 1.7, marginTop: "10px" }}>{PAYMENT_DISABLED_TIP}</div>
+            ) : <div style={{ display: "flex", gap: "6px", marginTop: "10px" }}>
               <button
                 onClick={() => setShowSingleUnlock(true)}
                 style={{
@@ -401,13 +406,13 @@ function AIInterpretButtonEnabled({
               >
                 开通会员无限看
               </button>
-            </div>
+            </div>}
           </div>
         </div>
       )}
 
       {/* v20.1: 单次解锁支付弹窗 */}
-      {showSingleUnlock && (
+      {showSingleUnlock && !IS_GOOGLE_PLAY_BUILD && (
         <div
           style={{
             position: "fixed",
