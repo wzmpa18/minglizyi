@@ -26,28 +26,10 @@ import herbsJson from './data/herbs.json';
 // ============================================================================
 
 function deriveCategory(efficacy: string): string {
-  if (!efficacy) return '其他';
-  const e = efficacy;
-  if (/发汗解表|解肌|疏散|散寒解表|辛温解表|辛凉解表|宣肺解表/.test(e)) return '解表药';
-  if (/清热|泻火|凉血|解毒|燥湿|除烦/.test(e)) return '清热药';
-  if (/大补元气|补气|益气|补血|养血|补阴|滋阴|补阳|壮阳|益精|填髓|补脾|健脾|安胎/.test(e)) return '补虚药';
-  if (/利水|渗湿|利尿|消肿|通淋|利湿/.test(e)) return '利水渗湿药';
-  if (/活血|化瘀|逐瘀|通经|破血|散瘀/.test(e)) return '活血化瘀药';
-  if (/化痰|止咳|平喘|降逆|祛痰/.test(e)) return '化痰止咳平喘药';
-  if (/安神|定志|宁心|安魂/.test(e)) return '安神药';
-  if (/温中|回阳|散寒|温经|助阳/.test(e)) return '温里药';
-  if (/理气|行气|降气|疏肝|解郁|消痞/.test(e)) return '理气药';
-  if (/消食|化积|导滞/.test(e)) return '消食药';
-  if (/止血/.test(e)) return '止血药';
-  if (/祛风|除湿|通络|痹痛|舒筋/.test(e)) return '祛风湿药';
-  if (/平肝|熄风|息风|止痉|潜阳/.test(e)) return '平肝熄风药';
-  if (/开窍|醒神|辟恶|通窍|醒脑/.test(e)) return '开窍药';
-  if (/收敛|固涩|止汗|止泻|固精|缩尿/.test(e)) return '收涩药';
-  if (/泻下|攻积|通便|润肠/.test(e)) return '泻下药';
-  if (/驱虫|杀虫|去三虫/.test(e)) return '驱虫药';
-  return '其他';
+  // This is a literal text index, not an inferred pharmacological classification.
+  const keyword = efficacy?.match(/解表|解肌|补气|益气|补血|养血|补脾|健脾|清热|泻火|凉血|解毒|燥湿|利水|渗湿|活血|化瘀|化痰|止咳|平喘|安神|宁心|温中|散寒|理气|行气|消食|止血|祛风|通络|平肝|开窍|收敛|固涩|泻下|通便|驱虫/);
+  return keyword ? `资料词·${keyword[0]}` : '其他资料';
 }
-
 // ============================================================================
 // 辅助函数：从 nature 字段拆分 taste 和 nature
 // nature 格式如 "辛、甘，温" → taste="辛、甘", nature="温"
@@ -101,12 +83,10 @@ interface RawHerbEntry {
 function mapRawHerbToTcm(entry: RawHerbEntry): TcmHerb {
   const { taste, nature } = splitTasteNature(entry.nature);
   const category = deriveCategory(entry.efficacy);
-  // 有毒药材判定
-  const toxicKeywords = ['毒', '有毒', '大毒', '小毒', '剧毒'];
-  const isToxic = toxicKeywords.some(k => 
-    (entry.contraindications && entry.contraindications.includes(k)) ||
-    (entry.nature && entry.nature.includes(k))
-  );
+  // Display explicit labels from the nature field only. A mention of 热毒/解毒
+  // in indications or contraindications does not label the herb itself toxic.
+  // Absence of this source label is not evidence of safety.
+  const isToxic = /(?:^|[，,、；;。\s（(])(?:有毒|大毒|小毒|剧毒)(?=$|[，,、；;。\s）)])/.test(entry.nature || '');
   return {
     id: entry.id,
     name: entry.name,

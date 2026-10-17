@@ -14,7 +14,7 @@ import { useToolBack } from "@/lib/useToolBack";
 const BRAND = "#7B2FBE";
 const BRAND_LIGHT = "#9B5ECF";
 const COMPLIANCE_TEXT = "本APP内容仅供传统文化研究参考，不构成医疗建议。如有身体不适，请及时就医。";
-const TOXIC_WARNING = "⚠️ 有毒，需专业医师指导使用";
+const TOXIC_WARNING = "⚠️ 原资料性味栏标注有毒。请向专业医师或药师咨询，不可自行用药。";
 
 // 分类标签颜色配置
 const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
@@ -120,7 +120,8 @@ function HerbListPage() {
         </div>
       </div>
 
-      {/* 分类标签 */}
+      <p style={{ margin: "12px 12px 0", fontSize: "11px", color: "#666", lineHeight: 1.7 }}>下方索引按资料中的功效词生成，不代表药物分类。风险标签只转述原资料性味栏；没有标签不代表安全，不可据此自行用药。</p>
+      {/* 资料词索引，不推断药物分类 */}
       <div style={{ padding: "12px", overflowX: "auto", whiteSpace: "nowrap" }}>
         <button
           onClick={() => setActiveCategory(null)}
@@ -176,7 +177,7 @@ function HerbListPage() {
               >
                 {herb.toxic && (
                   <span style={{ position: "absolute", top: "10px", right: "10px", fontSize: "10px", padding: "2px 6px", borderRadius: "4px", backgroundColor: "#FFEBEE", color: "#C62828", fontWeight: "bold" }}>
-                    有毒
+                    原资料标注有毒
                   </span>
                 )}
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
@@ -272,7 +273,8 @@ function HerbDetailPage({ herbId }: { herbId: string }) {
         </div>
       </div>
 
-      {/* 毒性警示（如果有毒） */}
+      <p style={{ margin: "12px", fontSize: "11px", color: "#666", lineHeight: 1.7 }}>本页转述资料供学习；资料词索引不是药物分类，未显示风险标签不代表安全或适合个人使用。请勿据此自行用药。</p>
+      {/* 原资料明确标注的风险，不从禁忌中的任意“毒”字推断 */}
       {herb.toxic && (
         <div style={{ margin: "12px", padding: "10px 14px", backgroundColor: "#FFEBEE", borderRadius: "10px", border: "1px solid #FFCDD2" }}>
           <p style={{ margin: 0, fontSize: "12px", color: "#C62828", fontWeight: "bold", textAlign: "center" }}>{TOXIC_WARNING}</p>
