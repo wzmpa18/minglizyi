@@ -30,17 +30,18 @@ export default function BooksPage() {
     let active = true;
     const reload = async () => {
       const pack = await loadJsonPack<GuoxueClassicsPack>("guoxue-classics-approved");
-      const fullTextPack = Array.isArray(pack?.books)
+      if (!active || !pack) return;
+      const fullTextPack = Array.isArray(pack.books)
         && pack.books.length > 0
         && pack.books.every((book) => book.completeness === "full" && book.sectionCount > 0);
       if (active && pack?.schema === "yandao.guoxue.classics.v1" && fullTextPack) {
         setCatalogue({ books: pack.books, notice: pack.notice || classicsData.notice, version: pack.version });
       }
     };
-    void reload();
+    void reload().catch(() => { /* Keep the bundled catalogue when an optional pack is unavailable. */ });
     const onInstalled = (event: Event) => {
       const detail = (event as CustomEvent<{ packId?: string }>).detail;
-      if (detail?.packId === "guoxue-classics-approved") void reload();
+      if (detail?.packId === "guoxue-classics-approved") void reload().catch(() => {});
     };
     window.addEventListener("offline-pack-installed", onInstalled);
     return () => { active = false; window.removeEventListener("offline-pack-installed", onInstalled); };

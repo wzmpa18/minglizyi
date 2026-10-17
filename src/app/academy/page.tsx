@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BrandHeader } from "@/components/shared";
 import { fetchTracks, LEVEL_NAMES, type TrackOverview } from "@/lib/academyApi";
-import { PageLoginGuard } from "@/components/PageLoginGuard";
+import LearningEntryPanel from "@/components/LearningEntryPanel";
 import { getToolConfig } from "@/lib/toolConfigStore";
 import { PUBLIC_SOCIAL_ENABLED } from "@/lib/releaseFeatures";
 
@@ -119,8 +119,9 @@ export default function AcademyPage() {
 
   return (
     <div style={{ maxWidth: "420px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f5f5f5" }}>
-      <PageLoginGuard />
       <BrandHeader title="言道学堂" showBack />
+
+      <LearningEntryPanel />
 
       {/* 顶部定位 */}
       <div
@@ -247,7 +248,7 @@ export default function AcademyPage() {
         )}
 
         <p className="mt-4 text-center text-[10px] leading-relaxed text-gray-300">
-          内容仅供文化娱乐参考，不构成任何专业建议
+          内容用于知识学习与练习，不替代医疗诊疗；学习结业记录不属于执业资格证明
         </p>
       </div>
 

@@ -38,6 +38,11 @@ export default function QuestionBankPage() {
   const router = useRouter();
   void favTick; // 收藏状态刷新触发器
 
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("track");
+    if (TRACK_LIST.some((item) => item.key === requested)) setTrack(requested!);
+  }, []);
+
   // P6-补03 阶段3：随机练习模式下打乱题序（洗牌一次，随筛选条件变化重洗）
   const displayQuestions = useMemo(() => {
     if (practiceMode !== "random") return questions;

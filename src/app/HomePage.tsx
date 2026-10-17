@@ -6,6 +6,7 @@ import { Solar, Lunar } from "lunar-javascript";
 import IcpFooter from "@/components/IcpFooter";
 import AnnouncementBar from "@/components/AnnouncementBar";
 import { isIOSNative } from "@/lib/platformGate";
+import LearningEntryPanel from "@/components/LearningEntryPanel";
 
 const BRAND = "#7B2FBE";
 
@@ -260,6 +261,8 @@ export default function HomePage(){
       {/* 官方公告栏（永久功能：升级/维护通知，未登录可见） */}
       <AnnouncementBar />
 
+      <LearningEntryPanel />
+
       {/* 双大按钮（IOS-4.3B：iOS 版第一入口为"易学学习"——教育定位；Web/Android 保持易学排盘） */}
       <div className="mt-3 flex gap-3 px-3">
         {iosProfile?(
@@ -301,7 +304,7 @@ export default function HomePage(){
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 text-lg">🎓</span>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold">言道学堂</p>
-          <p className="text-[10px] opacity-80">AI 知识工厂 · 学习考级 · 电子证书认证</p>
+          <p className="text-[10px] opacity-80">经典阅读 · 章节练习 · 错题复习</p>
         </div>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="9 18 15 12 9 6" />

@@ -21,6 +21,7 @@ export default function AcademyLayout({ children }: { children: React.ReactNode 
             言道国学学习中心：易学与中医章节化知识体系，提供知识点学习、章节练习、错题复习、学习笔记与收藏功能，学习进度自动记录，适合系统化自学打卡。
           </p>
           <div className="flex flex-col gap-1.5">
+            <Link href="/academy/start/" className="rounded-lg bg-[#edf7f2] px-2.5 py-2 text-[11.5px] font-semibold text-[#267364]">中医学习入门课——无需登录，阅读、自测与本机错题重练</Link>
             {YIXUE_SUBJECTS.map((s) => (
               <Link
                 key={s.key}
@@ -40,7 +41,7 @@ export default function AcademyLayout({ children }: { children: React.ReactNode 
             </Link>
           </div>
           <p className="mt-3 text-[11px] leading-relaxed text-gray-400">
-            学习内容整理自传统典籍与公开教学资料，知识点附术语解释与出处，题目均含答案解析；学习进度与打卡记录保存在个人账号下，更换设备登录后自动同步。
+            入门课内容随应用提供，进度仅保存在本机；进阶学习与题库按页面要求联网、登录使用。账号学习记录与入门课进度分别管理。学习记录不属于执业资格证明。
           </p>
         </div>
       </section>
