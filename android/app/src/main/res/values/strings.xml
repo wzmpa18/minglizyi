@@ -6,7 +6,7 @@
     <string name="custom_url_scheme">com.yandao.guoxue</string>
 
     <!-- 黄历桌面小组件 -->
-    <string name="widget_huangli_desc">言道黄历 - 每日宜忌查询</string>
-    <string name="widget_huangli_small_label">言道黄历(小)</string>
-    <string name="widget_huangli_large_label">言道黄历(大)</string>
+    <string name="widget_huangli_desc">言道日历 · 同源农历与系统时钟</string>
+    <string name="widget_huangli_small_label">言道简约时钟</string>
+    <string name="widget_huangli_large_label">言道四柱日历</string>
 </resources>

@@ -1,5 +1,6 @@
-﻿"use client";
+"use client";
 
+import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { closeInitialToolPopup } from "@/lib/leaveToolPage";
@@ -295,6 +296,7 @@ function calcTaiyi(year: number, month: number, day: number, hour: number): Taiy
 // 主组件
 // ============================================================================
 export default function TaiyiSanshiPage() {
+  useInterfaceLocale();
   useIOSLearningRedirect("taiyi-sanshi"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const pageKey = "yixue_taiyi_sanshi"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   const [taiyiYear, setTaiyiYear] = useState(2026);
@@ -448,13 +450,13 @@ export default function TaiyiSanshiPage() {
                 </td>
               </tr>
               <tr className="border-b border-gray-100">
-                <td className="py-1.5 text-xs font-medium text-gray-500">公历</td>
+                <td className="py-1.5 text-xs font-medium text-gray-500">{ui("公历")}</td>
                 <td colSpan={4} className="py-1.5 text-sm">
                   {result.year}年{result.month}月{result.day}日 {result.hour}时
                 </td>
               </tr>
               <tr className="border-b border-gray-100">
-                <td className="py-1.5 text-xs font-medium text-gray-500">农历</td>
+                <td className="py-1.5 text-xs font-medium text-gray-500">{ui("农历")}</td>
                 <td colSpan={4} className="py-1.5 text-sm">{result.lunarStr}</td>
               </tr>
               <tr className="border-b border-gray-100">
@@ -463,13 +465,13 @@ export default function TaiyiSanshiPage() {
               </tr>
               <tr className="border-b border-gray-100 bg-gray-50/50">
                 <td className="py-1"></td>
-                <td className="py-1 text-xs font-medium text-gray-500">年柱</td>
-                <td className="py-1 text-xs font-medium text-gray-500">月柱</td>
-                <td className="py-1 text-xs font-medium text-gray-500">日柱</td>
-                <td className="py-1 text-xs font-medium text-gray-500">时柱</td>
+                <td className="py-1 text-xs font-medium text-gray-500">{ui("年柱")}</td>
+                <td className="py-1 text-xs font-medium text-gray-500">{ui("月柱")}</td>
+                <td className="py-1 text-xs font-medium text-gray-500">{ui("日柱")}</td>
+                <td className="py-1 text-xs font-medium text-gray-500">{ui("时柱")}</td>
               </tr>
               <tr>
-                <td className="py-1 text-xs font-medium text-gray-500">四柱</td>
+                <td className="py-1 text-xs font-medium text-gray-500">{ui("四柱")}</td>
                 {[result.yearGZ, result.monthGZ, result.dayGZ, result.hourGZ].map((gz, i) => (
                   <td key={i} className="py-1">
                     <div className="text-lg font-bold leading-tight">{gz[0]}</div>

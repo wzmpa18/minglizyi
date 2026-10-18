@@ -25,6 +25,7 @@
         android:layout_weight="1"
         android:orientation="vertical">
 
+        <TextClock android:id="@+id/widget_clock_small" android:layout_width="wrap_content" android:layout_height="wrap_content" android:format24Hour="HH:mm" android:format12Hour="h:mm a" android:textColor="#352B40" android:textSize="20sp" />
         <TextView
             android:id="@+id/tv_solar_small"
             android:layout_width="wrap_content"

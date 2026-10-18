@@ -59,7 +59,8 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: "/admin", label: "总览", icon: <LayoutDashboard size={18} />, desc: "老板驾驶舱·20项核心指标", scope: "all" },
   { href: "/admin/announcements", label: "公告管理", icon: <Bell size={18} />, desc: "官方公告·置顶·升级通知", scope: "ops" },
-  { href: "/admin/study-comments", label: "穴位学习留言", icon: <MessagesSquare size={18} />, desc: "待审·举报·屏蔽·有据置顶", scope: "ops" },
+  { href: "/admin/tongchen", label: "同辰雅集", icon: <MessagesSquare size={18} />, desc: "名称·开关·交流审核", scope: "ops" },
+  { href: "/admin/study-comments", label: "工具与穴位交流", icon: <MessagesSquare size={18} />, desc: "待审·举报·屏蔽·有据置顶", scope: "ops" },
   { href: "/admin/company", label: "公司与产品介绍", icon: <Flag size={18} />, desc: "公开介绍·官网·软件开发业务", scope: "ops" },
   { href: "/admin/feedback", label: "反馈与广告投诉", icon: <Flag size={18} />, desc: "私有反馈·审核处理·用户回复", scope: "ops" },
   { href: "/admin/moderation", label: "用户管理", icon: <Users size={18} />, desc: "搜索·封禁·禁言·风险记录", scope: "ops" },

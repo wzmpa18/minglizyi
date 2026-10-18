@@ -1,4 +1,5 @@
 "use client";
+import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { chartHandoffFromRecord, consumeChartHandoff, writeChartHandoff } from "@/lib/chartHandoff";
 import { pillarRelations } from "@/lib/baziRelations";
 
@@ -362,7 +363,7 @@ function TabChart({result,shensha,shengxiao,gender,lunarDateStr,solarDateStr,tru
         <tbody>
           {/* 标题行 */}
           <tr>
-            <td className="py-[6px] px-1 text-[14px] text-[#666] font-medium align-middle">四柱</td>
+            <td className="py-[6px] px-1 text-[14px] text-[#666] font-medium align-middle">{ui("四柱")}</td>
             {colLabels.map((l,i)=>{
               const p = pillars[i];
               const ss = getGanShishen(p, i);
@@ -998,7 +999,7 @@ function TabDetail({result,gender}:{
         <tbody>
           {/* 四柱列头 */}
           <tr>
-            <td className="py-[6px] px-1 text-[13px] text-[#666] font-medium">四柱</td>
+            <td className="py-[6px] px-1 text-[13px] text-[#666] font-medium">{ui("四柱")}</td>
             {displayPillars.map((dp, i) => (
               <td key={i} className="py-[6px] px-1 text-[13px] text-[#666] font-medium leading-tight">
                 <div>{dp.label}</div>
@@ -1653,6 +1654,7 @@ function TabXingge({result}:{result:BaziResult}){
 // ===== TabNotes =====
 // ===== main =====
 export default function BaziPage(){
+  useInterfaceLocale();
   useIOSLearningRedirect("bazi"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const pageKey = "yixue_bazi"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   const chartInputRef = useRef<Record<string, unknown> | null>(null);
@@ -2213,7 +2215,7 @@ export default function BaziPage(){
                       {isMember && !rec.note?.startsWith("cloud:") && (
                         <button onClick={() => uploadRecordToCloud(rec)} disabled={cloudLoading} style={{ flex: 1, padding: "5px", borderRadius: "6px", border: `1px solid ${BRAND_PURPLE}`, background: "#fff", color: BRAND_PURPLE, fontSize: "11px", fontWeight: "bold", cursor: cloudLoading ? "not-allowed" : "pointer", opacity: cloudLoading ? 0.6 : 1 }}>☁ 备份云端</button>
                       )}
-                      <button onClick={() => { deletePaipanRecord(rec.id).then(() => listPaipanRecords("bazi")).then(setHistoryList).catch(() => {}); }} style={{ padding: "5px 10px", borderRadius: "6px", border: "1px solid #ddd", background: "#fff", color: "#c62828", fontSize: "11px", cursor: "pointer" }}>删除</button>
+                      <button onClick={() => { deletePaipanRecord(rec.id).then(() => listPaipanRecords("bazi")).then(setHistoryList).catch(() => {}); }} style={{ padding: "5px 10px", borderRadius: "6px", border: "1px solid #ddd", background: "#fff", color: "#c62828", fontSize: "11px", cursor: "pointer" }}>{ui("删除")}</button>
                     </div>
                   </div>
                 ))

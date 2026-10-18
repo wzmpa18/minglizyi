@@ -1,5 +1,6 @@
-﻿"use client";
+"use client";
 
+import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Solar, SolarMonth } from "lunar-javascript";
@@ -37,6 +38,7 @@ interface DayCell {
 }
 
 export default function WannianliPage() {
+  useInterfaceLocale();
   const router = useRouter();
   const [viewYear, setViewYear] = useState(2026);
   const [viewMonth, setViewMonth] = useState(1);
@@ -281,7 +283,7 @@ export default function WannianliPage() {
                 className="flex flex-col items-center gap-1 rounded-[10px] bg-white py-2.5 shadow-sm active:opacity-70"
               >
                 <span className="text-xl">⏰</span>
-                <span className="text-xs font-medium text-gray-700">记事提醒</span>
+                <span className="text-xs font-medium text-gray-700">{ui("记事提醒")}</span>
               </button>
             )}
             {fieldConfig.showZeriEntry && (
@@ -732,7 +734,7 @@ export default function WannianliPage() {
                         onClick={() => { deleteEvent(o.event.id); setEventsVersion(v => v + 1); }}
                         className="ml-auto text-[10px] text-gray-400 active:text-red-500"
                         title="删除此事项"
-                      >删除</button>
+                      >{ui("删除")}</button>
                     </div>
                   ))}
                 </div>

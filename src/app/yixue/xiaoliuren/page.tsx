@@ -1,5 +1,6 @@
-﻿"use client";
+"use client";
 
+import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { leaveToolPage, isManagedBackNavigation } from "@/lib/leaveToolPage";
@@ -179,6 +180,7 @@ function PalmCell({
 // 主组件
 // ============================================================================
 export default function XiaoliurenPage() {
+  useInterfaceLocale();
   useIOSLearningRedirect("xiaoliuren"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const pageKey = "yixue_xiaoliuren"; const { showResult, setShowResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   // ---- 输入状态 ----
@@ -435,7 +437,7 @@ export default function XiaoliurenPage() {
                 borderBottom: "1px solid #f0f0f0",
               }}
             >
-              <span style={{ fontSize: "16px", fontWeight: "bold", color: "#333" }}>小六壬</span>
+              <span style={{ fontSize: "16px", fontWeight: "bold", color: "#333" }}>{ui("小六壬")}</span>
               <button
                 onClick={() => setShowPopup(false)}
                 style={{
@@ -487,7 +489,7 @@ export default function XiaoliurenPage() {
 
               {/* 时间选择 */}
               <div style={{ marginBottom: "16px" }}>
-                <div style={{ fontSize: "13px", color: "#666", marginBottom: "8px" }}>当前时间</div>
+                <div style={{ fontSize: "13px", color: "#666", marginBottom: "8px" }}>{ui("当前时间")}</div>
                 <div
                   onClick={() => setShowDatePicker(true)}
                   style={{
@@ -716,10 +718,10 @@ export default function XiaoliurenPage() {
               {/* 四柱表头 (对标 jishiyu: class="qimen-table-header" 行) */}
               <tr style={{ backgroundColor: "#fafafa" }}>
                 <td style={{ padding: "3px 1px", fontSize: "13px" }}></td>
-                <td style={{ color: "#2e4487", fontWeight: "600", fontSize: "13px", padding: "3px 1px" }}>年柱</td>
-                <td style={{ color: "#2e4487", fontWeight: "600", fontSize: "13px", padding: "3px 1px" }}>月柱</td>
-                <td style={{ color: "#2e4487", fontWeight: "600", fontSize: "13px", padding: "3px 1px" }}>日柱</td>
-                <td style={{ color: "#2e4487", fontWeight: "600", fontSize: "13px", padding: "3px 1px" }}>时柱</td>
+                <td style={{ color: "#2e4487", fontWeight: "600", fontSize: "13px", padding: "3px 1px" }}>{ui("年柱")}</td>
+                <td style={{ color: "#2e4487", fontWeight: "600", fontSize: "13px", padding: "3px 1px" }}>{ui("月柱")}</td>
+                <td style={{ color: "#2e4487", fontWeight: "600", fontSize: "13px", padding: "3px 1px" }}>{ui("日柱")}</td>
+                <td style={{ color: "#2e4487", fontWeight: "600", fontSize: "13px", padding: "3px 1px" }}>{ui("时柱")}</td>
               </tr>
 
               {/* 四柱 */}

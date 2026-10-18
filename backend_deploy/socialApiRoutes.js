@@ -266,6 +266,9 @@ function initTables(d) {
       if (!ccols.includes('deleted_at')) d.exec(`ALTER TABLE comments ADD COLUMN deleted_at TEXT DEFAULT ''`);
       if (!ccols.includes('deleted_by')) d.exec(`ALTER TABLE comments ADD COLUMN deleted_by TEXT DEFAULT ''`);
     }
+    const chatcols = d.prepare('PRAGMA table_info(chat_messages)').all().map(c => c.name);
+    if(!chatcols.includes('review_status'))d.exec("ALTER TABLE chat_messages ADD COLUMN review_status TEXT NOT NULL DEFAULT 'active'");
+    if(!chatcols.includes('review_reason'))d.exec("ALTER TABLE chat_messages ADD COLUMN review_reason TEXT NOT NULL DEFAULT ''");
     const rccols = d.prepare('PRAGMA table_info(resource_comments)').all().map(c => c.name);
     if (rccols.includes('id')) {
       if (!rccols.includes('review_reason')) d.exec(`ALTER TABLE resource_comments ADD COLUMN review_reason TEXT DEFAULT ''`);
@@ -281,10 +284,10 @@ function initTables(d) {
 
 // v25.0.42：存量会话回填——把 chat_messages 里已有的会话补进 user_conversations（幂等）
 function backfillUserConversations(d) {
-  const convs = d.prepare('SELECT conversation_id, MAX(id) AS max_id, MAX(created_at) AS last_at FROM chat_messages GROUP BY conversation_id').all();
+  const convs = d.prepare("SELECT conversation_id, MAX(id) AS max_id, MAX(created_at) AS last_at FROM chat_messages WHERE review_status = 'active' GROUP BY conversation_id").all();
   // 修正：better-sqlite3 混用匿名?与编号?N会误判参数个数（Too many parameter values），改用具名参数
   const stmt = d.prepare(`INSERT OR IGNORE INTO user_conversations (user_id, conversation_id, conv_type, peer_id, group_id, updated_at)
-    VALUES (@u, @cid, @ty, @peer, @gid, COALESCE((SELECT created_at FROM chat_messages WHERE conversation_id = @cid ORDER BY id DESC LIMIT 1), datetime('now','localtime')))`);
+    VALUES (@u, @cid, @ty, @peer, @gid, COALESCE((SELECT created_at FROM chat_messages WHERE conversation_id = @cid AND review_status = 'active' ORDER BY id DESC LIMIT 1), datetime('now','localtime')))`);
   for (const c of convs) {
     const cid = c.conversation_id;
     if (cid.startsWith('private:')) {
@@ -550,6 +553,7 @@ function rowToPost(row, currentUserId) {
 function createRouter() {
   const router = express.Router();
   router.use(express.json({ limit: '6mb' }));
+  router.use('/tongchen',require('./tongchenRoutes').createTongchenRouter({getDb,getUserDb,authRequired,userPublicInfo,privateConvId,checkPlatformMute,moderateResourceComment,upsertUserConversation}));
   // 第七十五~八十章：限频事件留痕接 social.db（引擎单实例注入，避免环依赖）
   rateLimit.setDbProvider(() => { try { return getDb(); } catch { return null; } });
 
@@ -1081,9 +1085,12 @@ function createRouter() {
   router.get('/messages/private/:peerId', authRequired, (req, res) => {
     try {
       if (!featureEnabled('private_chat_enabled', req)) return featureDisabled(res, '私聊');
+      if(isBlockedBy(req.user.userId,req.params.peerId)||isBlockedBy(req.params.peerId,req.user.userId))return res.status(403).json({success:false,error:'此交流已被屏蔽'});
+      const pair=friendKeyPair(req.user.userId,req.params.peerId);
+      if(!getDb().prepare('SELECT 1 FROM friendships WHERE user_a=? AND user_b=?').get(...pair))return res.status(403).json({success:false,error:'请先获得对方同意'});
       const convId = privateConvId(req.user.userId, req.params.peerId);
       const afterId = parseInt(req.query.afterId, 10) || 0;
-      const rows = getDb().prepare('SELECT * FROM chat_messages WHERE conversation_id = ? AND id > ? ORDER BY id ASC LIMIT 200').all(convId, afterId);
+      const rows = getDb().prepare("SELECT * FROM chat_messages WHERE conversation_id = ? AND id > ? AND review_status = 'active' ORDER BY id ASC LIMIT 200").all(convId, afterId);
       res.json({
         success: true,
         messages: rows.map(r => ({ id: String(r.id), senderId: r.sender_id, senderName: r.sender_name, content: r.content, type: r.msg_type, createdAt: r.created_at })),
@@ -1107,6 +1114,10 @@ function createRouter() {
       const d = getDb();
       const me = String(req.user.userId);
       const peer = String(req.params.peerId);
+      const pair=friendKeyPair(me,peer);
+      const friendship=d.prepare('SELECT * FROM friendships WHERE user_a=? AND user_b=?').get(...pair);
+      if(!friendship)return res.status(403).json({success:false,error:'请先获得对方同意'});
+      if(friendship.source==='tongchen')return res.status(403).json({success:false,error:'请通过同辰雅集的纯文字交流入口发送'});
       const msgType = String(type);
       let finalContent;
 
@@ -1578,7 +1589,7 @@ function createRouter() {
       const members = JSON.parse(row.member_ids || '[]');
       if (!members.includes(String(req.user.userId))) return res.status(403).json({ success: false, error: '你不是群成员' });
       const afterId = parseInt(req.query.afterId, 10) || 0;
-      const msgs = getDb().prepare('SELECT * FROM chat_messages WHERE conversation_id = ? AND id > ? ORDER BY id ASC LIMIT 200')
+      const msgs = getDb().prepare("SELECT * FROM chat_messages WHERE conversation_id = ? AND id > ? AND review_status = 'active' ORDER BY id ASC LIMIT 200")
         .all(`group:${row.id}`, afterId);
       res.json({
         success: true,
@@ -1667,9 +1678,9 @@ function createRouter() {
       const conversations = [];
       let totalUnread = 0;
       for (const r of rows) {
-        const lastRow = d.prepare('SELECT * FROM chat_messages WHERE conversation_id = ? ORDER BY id DESC LIMIT 1').get(r.conversation_id);
+        const lastRow = d.prepare("SELECT * FROM chat_messages WHERE conversation_id = ? AND review_status = 'active' ORDER BY id DESC LIMIT 1").get(r.conversation_id);
         if (!lastRow) continue; // 无消息的空会话不展示
-        const unread = d.prepare('SELECT COUNT(*) AS c FROM chat_messages WHERE conversation_id = ? AND id > ? AND sender_id != ?').get(r.conversation_id, r.last_read_msg_id, me).c;
+        const unread = d.prepare("SELECT COUNT(*) AS c FROM chat_messages WHERE conversation_id = ? AND id > ? AND sender_id != ? AND review_status = 'active'").get(r.conversation_id, r.last_read_msg_id, me).c;
         if (!r.muted) totalUnread += unread; // 免打扰会话不计入总未读（微信同款角标语义）
         const conv = {
           conversationId: r.conversation_id,

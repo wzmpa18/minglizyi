@@ -10,7 +10,7 @@
 
 import { Solar, Lunar } from "lunar-javascript";
 import { getClientUserId } from "./auth";
-import { lunarBirthdayInYear, solarBirthdayInYear, civilTimeEpoch, reminderDueAt, DEFAULT_BIRTHDAY_RULES, type BirthdayRules } from "./calendarRecurrence";
+import { lunarBirthdayInYear, solarBirthdayInYear, civilTimeEpoch, reminderDueAt, DEFAULT_BIRTHDAY_RULES, validCivilDate, type BirthdayRules } from "./calendarRecurrence";
 export { type BirthdayRules } from "./calendarRecurrence";
 
 // ==================== 类型定义 ====================
@@ -207,7 +207,9 @@ export function createEvent(input: CreateEventInput): { success: boolean; error?
   if (!input.title || !input.title.trim()) return { success: false, error: "请填写事件标题" };
   if (input.title.trim().length > 50) return { success: false, error: "标题不能超过50字" };
   if (input.note && input.note.length > 500) return { success: false, error: "备注不能超过500字" };
-  if (!input.year || !input.month || !input.day) return { success: false, error: "请选择日期" };
+  if (!validCivilDate(input.year,input.month,input.day)) return { success: false, error: "请选择有效日期" };
+  if (input.eventTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(input.eventTime)) return {success:false,error:"事件钟点无效"};
+  try{new Intl.DateTimeFormat("en",{timeZone:input.timeZone||Intl.DateTimeFormat().resolvedOptions().timeZone});}catch{return {success:false,error:"请输入有效的IANA时区，如Asia/Shanghai"};}
 
   const now = new Date().toISOString();
   const ev: CalendarEvent = {
@@ -246,6 +248,9 @@ export function updateEvent(id: string, patch: Partial<CalendarEvent>): { succes
   const idx = list.findIndex((e) => e.id === id);
   if (idx < 0) return { success: false, error: "事件不存在" };
   const merged = { ...list[idx], ...patch, id: list[idx].id, userId: list[idx].userId, updatedAt: new Date().toISOString() };
+  if (!validCivilDate(merged.year,merged.month,merged.day))return {success:false,error:"日期无效"};
+  if(merged.eventTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(merged.eventTime))return {success:false,error:"事件钟点无效"};
+  try{new Intl.DateTimeFormat("en",{timeZone:merged.timeZone||Intl.DateTimeFormat().resolvedOptions().timeZone});}catch{return {success:false,error:"事件时区无效"};}
   if (merged.dateMode === "lunar") {
     const lm = solarToLunarMd(merged.year, merged.month, merged.day);
     merged.lunarMonth = lm.lunarMonth;
@@ -358,7 +363,7 @@ function buildOccurrence(event: CalendarEvent, y: number, m: number, d: number, 
     d,
     ts,
     lunarDesc,
-    daysAway: Math.round((ts - todayTs) / 86400000),
+    daysAway: Math.round((dayTs(y,m,d) - todayTs) / 86400000),
   };
 }
 

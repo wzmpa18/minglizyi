@@ -1,5 +1,6 @@
 "use client";
 
+import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { chartHandoffFromRecord, consumeChartHandoff, writeChartHandoff } from "@/lib/chartHandoff";
 import { useToolMatrix } from "@/lib/sectionGate";
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
@@ -429,6 +430,7 @@ function getAuxStars(palaceIdx: number, ziweiIdx: number, tianfuIdx: number, yea
 // ====================================================================
 
 export default function ZiweiPage() {
+  useInterfaceLocale();
   useIOSLearningRedirect("ziwei"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const pageKey = "yixue_ziwei"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
 
@@ -1198,7 +1200,7 @@ export default function ZiweiPage() {
       {showBaziConfirm&&<div className="fixed inset-0 z-[20000] flex items-center justify-center bg-black/50 p-5" onClick={()=>setShowBaziConfirm(false)}>
         <section role="dialog" aria-modal="true" aria-labelledby="bazi-jump-title" className="w-full max-w-sm rounded-2xl bg-white p-5 text-gray-900 shadow-xl" onClick={event=>event.stopPropagation()}>
           <h2 id="bazi-jump-title" className="text-lg font-bold">打开此四柱的八字？</h2><p className="mt-3 text-sm leading-6">沿用此人的出生资料和校时选项，直接打开排好的八字基本信息。</p>
-          <div className="mt-5 flex justify-end gap-3"><button type="button" onClick={()=>setShowBaziConfirm(false)} className="rounded-lg border px-4 py-2">取消</button><button type="button" onClick={openCorrespondingBazi} className="rounded-lg bg-purple-800 px-4 py-2 text-white">打开八字基本信息</button></div>
+          <div className="mt-5 flex justify-end gap-3"><button type="button" onClick={()=>setShowBaziConfirm(false)} className="rounded-lg border px-4 py-2">{ui("取消")}</button><button type="button" onClick={openCorrespondingBazi} className="rounded-lg bg-purple-800 px-4 py-2 text-white">打开八字基本信息</button></div>
         </section></div>}
       {/* 输入表单 DatePicker 弹窗 */}
       <DatePicker onRecordImport={applyMingzhuProfile} onRecordRestore={handleRestoreHistory}

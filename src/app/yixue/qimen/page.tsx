@@ -1,5 +1,6 @@
-﻿"use client";
+"use client";
 
+import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { closeInitialToolPopup } from "@/lib/leaveToolPage";
@@ -171,6 +172,7 @@ function SegmentedRow<T extends string>({
 // ============================================================================
 
 export default function QimenPage() {
+  useInterfaceLocale();
   const [chartFull,setChartFull]=useState(false);
   useIOSLearningRedirect("qimen"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const pageKey = "yixue_qimen"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
@@ -657,10 +659,10 @@ export default function QimenPage() {
         <thead>
           <tr style={{ backgroundColor: "#f5f5f5" }}>
             <th style={{ border: "1px solid #ddd", padding: "3px", fontWeight: 500, color: "#666", width: "20%" }}></th>
-            <th style={{ border: "1px solid #ddd", padding: "3px", fontWeight: 500, color: "#666", width: "20%" }}>年柱</th>
-            <th style={{ border: "1px solid #ddd", padding: "3px", fontWeight: 500, color: "#666", width: "20%" }}>月柱</th>
-            <th style={{ border: "1px solid #ddd", padding: "3px", fontWeight: 500, color: "#666", width: "20%" }}>日柱</th>
-            <th style={{ border: "1px solid #ddd", padding: "3px", fontWeight: 500, color: "#666", width: "20%" }}>时柱</th>
+            <th style={{ border: "1px solid #ddd", padding: "3px", fontWeight: 500, color: "#666", width: "20%" }}>{ui("年柱")}</th>
+            <th style={{ border: "1px solid #ddd", padding: "3px", fontWeight: 500, color: "#666", width: "20%" }}>{ui("月柱")}</th>
+            <th style={{ border: "1px solid #ddd", padding: "3px", fontWeight: 500, color: "#666", width: "20%" }}>{ui("日柱")}</th>
+            <th style={{ border: "1px solid #ddd", padding: "3px", fontWeight: 500, color: "#666", width: "20%" }}>{ui("时柱")}</th>
           </tr>
         </thead>
         <tbody>

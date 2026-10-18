@@ -2,6 +2,7 @@ package com.yandao.guoxue;
 
 import android.app.DownloadManager;
 import android.content.Context;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -47,7 +48,9 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(OfflineFilesPlugin.class);
         registerPlugin(LocalTtsPlugin.class);
         registerPlugin(LocalSkyLocationPlugin.class);
+        registerPlugin(com.yandao.guoxue.plugins.LocalCalendarPlugin.class);
         super.onCreate(savedInstanceState);
+        if(getIntent().getBooleanExtra("open_calendar",false))getBridge().getWebView().post(()->getBridge().getWebView().loadUrl("https://localhost/calendar/"));
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
@@ -66,6 +69,12 @@ public class MainActivity extends BridgeActivity {
                 }
             }
         });
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        if(intent.getBooleanExtra("open_calendar",false)&&getBridge()!=null)getBridge().getWebView().post(()->getBridge().getWebView().loadUrl("https://localhost/calendar/"));
     }
 
     @Override

@@ -1,5 +1,6 @@
 "use client";
 
+import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PUBLIC_SOCIAL_ENABLED } from "@/lib/releaseFeatures";
@@ -40,7 +41,7 @@ const ALL_TABS = [
 
 const TABS = PUBLIC_SOCIAL_ENABLED
   ? ALL_TABS
-  : ALL_TABS.filter((tab) => tab.key !== "discover" && tab.key !== "friends");
+  : ALL_TABS.map(tab => tab.key === "friends" ? {...tab,label:"交流",href:"/discover/tongchen/?view=contacts"} : tab);
 
 function HomeIcon({ active }: { active: boolean }) {
   return (
@@ -97,6 +98,7 @@ function ProfileIcon({ active }: { active: boolean }) {
 }
 
 export default function BottomNav() {
+  useInterfaceLocale();
   const pathname = usePathname();
 
   // P7-社交修复-01：私聊页隐藏底部Tab栏（聊天输入栏 fixed bottom-0 与Tab栏重叠互斥，
@@ -186,7 +188,7 @@ export default function BottomNav() {
             }}
           >
             <tab.Icon active={isActive} />
-            <span>{tab.label}</span>
+            <span>{ui(tab.label)}</span>
           </Link>
         );
       })}

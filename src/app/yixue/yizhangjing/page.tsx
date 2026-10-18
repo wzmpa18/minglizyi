@@ -1,5 +1,6 @@
-﻿"use client";
+"use client";
 
+import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { closeInitialToolPopup } from "@/lib/leaveToolPage";
@@ -73,6 +74,7 @@ const DI_ZHI = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "
 // ============================================================================
 
 export default function YizhangjingPage() {
+  useInterfaceLocale();
   useIOSLearningRedirect("yizhangjing"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const pageKey = "yixue_yizhangjing"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   const router = useRouter();
@@ -422,15 +424,15 @@ export default function YizhangjingPage() {
               {/* 四柱表头 */}
               <tr style={{ backgroundColor: "#f5f5f5" }}>
                 <td style={{ padding: "4px 6px" }}></td>
-                <td style={{ padding: "4px 6px", color: "#2e4487", fontWeight: 600 }}>年柱</td>
-                <td style={{ padding: "4px 6px", color: "#2e4487", fontWeight: 600 }}>月柱</td>
-                <td style={{ padding: "4px 6px", color: "#2e4487", fontWeight: 600 }}>日柱</td>
-                <td style={{ padding: "4px 6px", color: "#2e4487", fontWeight: 600 }}>时柱</td>
+                <td style={{ padding: "4px 6px", color: "#2e4487", fontWeight: 600 }}>{ui("年柱")}</td>
+                <td style={{ padding: "4px 6px", color: "#2e4487", fontWeight: 600 }}>{ui("月柱")}</td>
+                <td style={{ padding: "4px 6px", color: "#2e4487", fontWeight: 600 }}>{ui("日柱")}</td>
+                <td style={{ padding: "4px 6px", color: "#2e4487", fontWeight: 600 }}>{ui("时柱")}</td>
               </tr>
 
               {/* 四柱 */}
               <tr style={{ borderBottom: "1px solid #eee" }}>
-                <td style={{ padding: "8px 6px", color: "#2e4487", fontWeight: 600 }}>四柱</td>
+                <td style={{ padding: "8px 6px", color: "#2e4487", fontWeight: 600 }}>{ui("四柱")}</td>
                 {result.pillars.map((p, i) => (
                   <td key={i} style={{ padding: "8px 6px" }}>
                     <div style={{ fontSize: "16px", fontWeight: "bold" }}>{p.gan}</div>

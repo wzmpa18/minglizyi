@@ -1,4 +1,6 @@
-﻿import type { Metadata, Viewport } from "next";
+﻿import { NativeCalendarInit } from "@/components/NativeCalendarInit";
+import { InterfaceLocaleInit } from "@/components/InterfaceLanguageSettings";
+import type { Metadata, Viewport } from "next";
 import fs from "fs";
 import path from "path";
 import "./globals.css";
@@ -73,6 +75,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: nativeApiPatchCode }} />
         <PrivacyConsentGate>
         <ThemeProvider>
+          <InterfaceLocaleInit />
           <VersionChecker />
           {/* v25.0.48 原生壳升级检测：APP 内置资源版本落后时弹升级引导（网页版静默） */}
           <AppUpgradeChecker />
@@ -86,6 +89,7 @@ export default function RootLayout({
             <WechatOaIdentityInit />
             {PUBLIC_PROMOTION_ENABLED && <InviteCaptureInit />}
             <ReminderSchedulerInit />
+            <NativeCalendarInit />
             <OfflineInit />
             <GlobalZoomProvider>
               {children}

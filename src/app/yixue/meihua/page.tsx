@@ -1,5 +1,6 @@
-﻿"use client";
+"use client";
 
+import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import {
   meihuaTimeDivination,
@@ -371,6 +372,7 @@ const DIRECTION_MAP: { dir: string; num: number; trigram: TrigramName }[] = [
 // 主组件
 // ============================================================================
 export default function MeihuaPage() {
+  useInterfaceLocale();
   useIOSLearningRedirect("meihua"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const pageKey = "yixue_meihua"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   // ---- 输入状态 ----
@@ -616,7 +618,7 @@ export default function MeihuaPage() {
         <div style={{ padding: "12px", background: "#fff" }}>
           {/* 方法选择 */}
           <div style={{ marginBottom: "12px" }}>
-            <div style={{ fontSize: "14px", fontWeight: "bold", color: "#7B2FBE", marginBottom: "8px" }}>起卦方式</div>
+            <div style={{ fontSize: "14px", fontWeight: "bold", color: "#7B2FBE", marginBottom: "8px" }}>{ui("起卦方式")}</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
               {([
                 { key: "time", label: "时间起卦" },
@@ -744,7 +746,7 @@ export default function MeihuaPage() {
 
       {!showPopup && !result && (
         <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
-          <button onClick={() => { clearPaipanState("meihua"); setShowPopup(true); }} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">开始排盘</button>
+          <button onClick={() => { clearPaipanState("meihua"); setShowPopup(true); }} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">{ui("开始排盘")}</button>
         </div>
       )}
 

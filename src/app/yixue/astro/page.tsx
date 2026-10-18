@@ -1,5 +1,6 @@
-﻿"use client";
+"use client";
 
+import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { DatePicker } from "@/components/shared";
 import { ASTRO_CITIES, calcNatalChart, ASTRO_ENGINE_VERSION } from "@/algorithm-core";
@@ -37,6 +38,7 @@ const TERM_NOTES: Array<{ term: string; note: string }> = [
 // 主组件
 // ============================================================================
 export default function AstroPage() {
+  useInterfaceLocale();
   useIOSLearningRedirect("astro"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const astroCfg = useMemo(() => getToolConfig().astro, []);
   const [birth, setBirth] = useState({ year: 2000, month: 1, day: 1, hour: 12, minute: 0 });
@@ -403,7 +405,7 @@ export default function AstroPage() {
 
           {/* 分享预览（分享前必须确认） */}
           <div className="mb-3 rounded-lg border border-gray-100 p-2.5">
-            <div className="text-xs font-bold text-gray-700">分享</div>
+            <div className="text-xs font-bold text-gray-700">{ui("分享")}</div>
             <div className="mt-1 text-[10px] text-gray-400">分享前请先预览并确认公开内容范围，分享文本不含精确坐标</div>
             <button
               onClick={() => { setShowSharePreview(true); setShareConfirmed(false); }}

@@ -16,7 +16,7 @@ export default function StudyCommentAdmin(){
   async function action(path:string,body:unknown){if(busy)return;setBusy(true);try{await api(path,body);setMessage('已保存');await load();}catch(e){setMessage(e instanceof Error?e.message:'操作失败');}finally{setBusy(false);}}
   function review(id:number,status:string,pinned=false){if(!note.trim()){setMessage('请先填写审核依据');return;}void action(`/comment/${id}`,{status,note,pinned,evidenceUrl:evidence});}
   return <div style={{padding:16,color:'#333'}}>
-    <h1 style={{fontSize:22,fontWeight:700}}>穴位学习留言管理</h1>
+    <h1 style={{fontSize:22,fontWeight:700}}>工具与穴位学习交流管理</h1>
     <p>纯文字、每条500字素。所有投稿先待审；审核服务或人工队列不可用时不自动公开。请在24小时内处理待审与举报。</p>
     {message&&<p role="status" style={{color:'#B45309'}}>{message}</p>}
     <AdminCard title="运营开关与审核依据">
@@ -28,9 +28,9 @@ export default function StudyCommentAdmin(){
         <button style={styles.btnSecondary} disabled={busy} onClick={()=>{if(window.confirm('开放纯文字学习投稿？新留言先进入待审队列，未经审核不会公开。请安排管理员持续处理审核及举报。'))void action('/config',{enabled:true});}}>全局开放（管理员）</button>
         <button style={styles.btnDanger} disabled={busy} onClick={()=>void action('/config',{enabled:false})}>暂停全部讨论</button>
       </div>
-      <label style={styles.label}>单穴控制<input value={target} onChange={e=>setTarget(e.target.value)} placeholder="例如 standard:LU1" style={styles.input}/></label>
-      <button disabled={busy||!target} style={styles.btnSecondary} onClick={()=>void action('/config',{enabled:false,targetId:target})}>关闭本穴</button>{' '}
-      <button disabled={busy||!target} style={styles.btnSecondary} onClick={()=>void action('/config',{enabled:true,targetId:target})}>恢复本穴</button>
+      <label style={styles.label}>单讨论区控制<input value={target} onChange={e=>setTarget(e.target.value)} placeholder="例如 tool:bazi 或 standard:LU1" style={styles.input}/></label>
+      <button disabled={busy||!target} style={styles.btnSecondary} onClick={()=>void action('/config',{enabled:false,targetId:target})}>关闭本区</button>{' '}
+      <button disabled={busy||!target} style={styles.btnSecondary} onClick={()=>void action('/config',{enabled:true,targetId:target})}>恢复本区</button>
     </AdminCard>
     <AdminCard title={`待审核 ${data?.comments.length??0} 条`} style={{marginTop:14}}>
       {data?.comments.map(row=><article key={row.id} style={{borderBottom:'1px solid #DDD',padding:'12px 0'}}>

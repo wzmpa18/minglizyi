@@ -1,5 +1,6 @@
-﻿"use client";
+"use client";
 
+import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useToolBack } from "@/lib/useToolBack";
 import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
@@ -356,6 +357,7 @@ function WuxingBalanceBar({ balance }: { balance: Record<string, number> }) {
 // 主页面组件
 // ============================================================================
 export default function NameAnalysisPage() {
+  useInterfaceLocale();
   useIOSLearningRedirect("name"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const pageKey = "yixue_name";
   const { showResult, savedParams, saveParams, goToResult } = useToolBack({
@@ -694,7 +696,7 @@ export default function NameAnalysisPage() {
 
           {/* 姓名输入 */}
           <div className="mb-3">
-            <label className="mb-1 block text-xs text-gray-500">姓名</label>
+            <label className="mb-1 block text-xs text-gray-500">{ui("姓名")}</label>
             <input
               type="text"
               value={fullName}
@@ -746,7 +748,7 @@ export default function NameAnalysisPage() {
 
           {/* 性别 */}
           <div className="mb-3">
-            <label className="mb-1 block text-xs text-gray-500">性别</label>
+            <label className="mb-1 block text-xs text-gray-500">{ui("性别")}</label>
             <div className="flex rounded-full bg-gray-100 p-1">
               <button
                 onClick={() => setGender("male")}
@@ -909,7 +911,7 @@ export default function NameAnalysisPage() {
             {baziAnalysis && (
               <div className="mt-2.5 rounded-lg bg-white p-2.5 text-xs">
                 <div className="mb-1.5 flex items-center gap-2">
-                  <span className="font-bold text-purple-700">八字排盘</span>
+                  <span className="font-bold text-purple-700">{ui("八字排盘")}</span>
                   <span className="font-mono text-sm font-bold text-gray-800">{baziAnalysis.baziText}</span>
                 </div>
                 <div className="flex flex-wrap gap-x-3 gap-y-1 text-gray-600">

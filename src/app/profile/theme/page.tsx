@@ -1,5 +1,6 @@
 "use client";
 
+import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import React from "react";
 import { useRouter } from "next/navigation";
 import { useTheme, PRESET_THEMES, FontSize } from "@/components/ThemeProvider";
@@ -9,6 +10,7 @@ import { ToggleSwitch } from "@/components/shared";
 
 // ==================== 主页面 ====================
 export default function ThemeSettingsPage() {
+  useInterfaceLocale();
   const router = useRouter();
   const { theme, applyPreset, applyCustom, setDarkMode, setFontSize, resetTheme } = useTheme();
 
@@ -50,7 +52,7 @@ export default function ThemeSettingsPage() {
           style={{ backgroundColor: "var(--theme-card-bg)", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}
         >
           <div className="px-4 pt-3 pb-2">
-            <p className="text-xs font-medium" style={{ color: "var(--theme-text-hint)" }}>预设主题</p>
+            <p className="text-xs font-medium" style={{ color: "var(--theme-text-hint)" }}>{ui("预设主题")}</p>
           </div>
           <div className="grid grid-cols-3 gap-2 px-4 pb-4">
             {PRESET_THEMES.map((preset) => {
@@ -81,7 +83,7 @@ export default function ThemeSettingsPage() {
                     </div>
                   </div>
                   <span className="text-xs" style={{ color: isSelected ? preset.primaryColor : "var(--theme-text-secondary)" }}>
-                    {preset.name}
+                    {ui(preset.name)}
                   </span>
                 </button>
               );

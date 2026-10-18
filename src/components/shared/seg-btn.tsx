@@ -12,6 +12,7 @@ interface SegBtnProps {
 }
 
 export function SegBtn({ options, onClick }: SegBtnProps) {
+  useInterfaceLocale();
   return (
     <div className="flex overflow-hidden rounded border border-primary">
       {options.map((opt) => (
@@ -23,9 +24,10 @@ export function SegBtn({ options, onClick }: SegBtnProps) {
             opt.active ? "bg-primary text-white" : "bg-white text-gray-600"
           }`}
         >
-          {opt.label}
+          {ui(opt.label)}
         </button>
       ))}
     </div>
   );
+import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 }

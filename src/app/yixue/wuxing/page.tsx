@@ -1,5 +1,6 @@
 "use client";
 
+import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState, useMemo } from "react";
 import {
   GAN, ZHI,
@@ -25,6 +26,7 @@ const WUXING_COLORS: Record<string, string> = {
 type TabKey = "tiangan" | "dizhi";
 
 export default function WuXingPage() {
+  useInterfaceLocale();
   const [activeTab, setActiveTab] = useState<TabKey>("tiangan");
 
   // 天干数据
@@ -219,7 +221,7 @@ export default function WuXingPage() {
                     <th className="py-2 px-1 text-muted-foreground">阴阳</th>
                     <th className="py-2 px-1 text-muted-foreground">六合</th>
                     <th className="py-2 px-1 text-muted-foreground">六冲</th>
-                    <th className="py-2 px-1 text-muted-foreground">三合</th>
+                    <th className="py-2 px-1 text-muted-foreground">{ui("三合")}</th>
                     <th className="py-2 px-1 text-muted-foreground">三会</th>
                     <th className="py-2 px-1 text-muted-foreground">六害</th>
                     <th className="py-2 px-1 text-muted-foreground">相刑</th>

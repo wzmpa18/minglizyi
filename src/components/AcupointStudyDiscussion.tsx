@@ -1,4 +1,5 @@
 "use client";
+import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import Link from "next/link";
 import { useEffect,useRef,useState } from "react";
 import { getUserProfile,getUserToken } from "@/lib/auth";
@@ -9,6 +10,7 @@ export function AcupointStudyDiscussion({targetId,title}:{targetId:string;title:
   return <PointDiscussion key={`${getUserProfile()?.userId||'guest'}:${targetId}`} targetId={targetId} title={title}/>;
 }
 function PointDiscussion({targetId,title}:{targetId:string;title:string}){
+  useInterfaceLocale();
   const [comments,setComments]=useState<StudyComment[]>([]),[text,setText]=useState(''),[message,setMessage]=useState(''),[config,setConfig]=useState<StudyCommentConfig|null>(null);
   const [mine,setMine]=useState<{id?:string;status?:string}[]>([]),[blocks,setBlocks]=useState<{userId?:string}[]>([]),[reply,setReply]=useState<StudyComment|null>(null);
   const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[draftReady,setDraftReady]=useState(false);
@@ -43,30 +45,30 @@ function PointDiscussion({targetId,title}:{targetId:string;title:string}){
     setMessage(result.message||(result.success?'操作已完成':result.error||'操作失败'));if(result.success)await load();setBusy(false);
   }
   return <section aria-label="文字学习交流" style={{margin:'12px',padding:'14px',background:'white',borderRadius:16,color:'#333',fontSize:13}}>
-    <strong style={{fontSize:15}}>💬 {title}</strong><p style={{color:'#666',fontSize:12}}>用户学习讨论 · 与正文和医学依据分开 · 仅限文字，审核通过后公开</p>
-    {reply&&<div style={{padding:8,background:'#F3EDF7'}}>回复{reply.authorName}<button onClick={()=>{setReply(null);requestId.current='';}} style={{marginLeft:8}}>取消回复</button></div>}
+    <strong style={{fontSize:15}}>💬 {ui(title)}</strong><p style={{color:'#666',fontSize:12}}>用户学习讨论 · 与正文和医学依据分开 · 仅限文字，审核通过后公开</p>
+    {reply&&<div style={{padding:8,background:'#F3EDF7'}}>回复{reply.authorName}<button onClick={()=>{setReply(null);requestId.current='';}} style={{marginLeft:8}}>{ui("取消回复")}</button></div>}
     <textarea disabled={busy} aria-label="学习留言，仅支持文字" value={text} rows={4} onChange={e=>{setText(e.target.value);requestId.current='';}} onPaste={e=>{if(Array.from(e.clipboardData.items).some(item=>item.kind==='file')){e.preventDefault();setMessage('仅支持纯文字，不能粘贴图片或附件');}}} onDrop={e=>{e.preventDefault();setMessage('不支持图片或文件，请输入文字');}} placeholder="提问、分享理解或指出资料问题…" style={{width:'100%',boxSizing:'border-box',padding:10,border:'1px solid #CDB8DC',borderRadius:10,background:'#FAF7FC',color:'#333',fontSize:14,lineHeight:1.7}}/>
     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:8,gap:8}}>
       <span aria-live="polite" style={{color:count>500?'#B71C1C':'#666'}}>{countSupported?`${count}/500`:'系统暂不支持文字计数'}</span>
-      <button type="button" onClick={()=>void submit()} disabled={busy||!countSupported||count===0||count>500||!config?.enabled} style={{padding:'8px 14px',border:0,borderRadius:20,background:'#7B2FBE',color:'white',opacity:busy||!config?.enabled||count>500 ? .5 : 1}}>{busy?'处理中…':'提交审核'}</button>
+      <button type="button" onClick={()=>void submit()} disabled={busy||!countSupported||count===0||count>500||!config?.enabled} style={{padding:'8px 14px',border:0,borderRadius:20,background:'#7B2FBE',color:'white',opacity:busy||!config?.enabled||count>500 ? .5 : 1}}>{ui(busy?'处理中…':'提交审核')}</button>
     </div>
     {!config?.enabled&&!loading&&<p style={{color:'#666'}}>学习讨论暂未开放。输入仅保存在本机，尚未发表。</p>}
     {message&&<p role="status" style={{color:'#8D3800'}}>{message}</p>}
-    <div style={{display:'flex',gap:12,margin:'10px 0'}}><button onClick={()=>void load()} disabled={loading||busy}>刷新留言</button><Link href="/profile/feedback/">用户反馈</Link></div>
+    <div style={{display:'flex',gap:12,margin:'10px 0'}}><button onClick={()=>void load()} disabled={loading||busy}>{ui("刷新留言")}</button><Link href="/profile/feedback/">{ui("用户反馈")}</Link></div>
     {mine.filter(item=>item.status==='PENDING').map(item=><div key={item.id} style={{padding:8,background:'#FFF8E1'}}>我的留言 #{item.id} · 待审核 <button disabled={busy} onClick={()=>{if(window.confirm('撤回这条待审留言？'))void action(`/comment/${item.id}`,'DELETE');}}>撤回</button></div>)}
-    {loading?<p>正在加载…</p>:comments.length===0?<p style={{color:'#777'}}>暂无已通过审核的学习留言。</p>:comments.map(comment=><article key={comment.id} style={{padding:'12px 0',borderTop:'1px solid #EEE'}}>
+    {loading?<p>{ui("正在加载…")}</p>:comments.length===0?<p style={{color:'#777'}}>暂无已通过审核的学习留言。</p>:comments.map(comment=><article key={comment.id} style={{padding:'12px 0',borderTop:'1px solid #EEE'}}>
       <div style={{fontWeight:700,color:'#6C2D98'}}>{comment.authorName}{comment.pinned?' · 置顶解答':''}</div>
       {comment.parentId&&<small style={{color:'#777'}}>回复留言 #{comment.parentId}</small>}
       <p style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',lineHeight:1.8}}>{comment.content}</p>
       {comment.evidenceUrl&&<a href={comment.evidenceUrl} target="_blank" rel="noopener noreferrer">解答依据</a>}
       <div style={{display:'flex',flexWrap:'wrap',gap:12,fontSize:12}}>
-        <button disabled={busy} onClick={()=>{setReply(comment);requestId.current='';}}>回复</button>
-        {String(comment.authorId)===myId?<button disabled={busy} onClick={()=>{if(window.confirm('删除自己的留言及其回复？'))void action(`/comment/${comment.id}`,'DELETE');}}>删除</button>:<>
-          <button disabled={busy} onClick={()=>{if(window.confirm('举报这条不当留言？'))void action(`/comment/${comment.id}/report`,'POST',{reason:'用户举报：请审核本条学习留言'});}}>举报</button>
-          <button disabled={busy} onClick={()=>{if(window.confirm('屏蔽此用户在学习讨论中的留言？'))void action(`/blocks/${encodeURIComponent(comment.authorId)}`,'POST');}}>屏蔽用户</button>
+        <button disabled={busy} onClick={()=>{setReply(comment);requestId.current='';}}>{ui("回复")}</button>
+        {String(comment.authorId)===myId?<button disabled={busy} onClick={()=>{if(window.confirm('删除自己的留言及其回复？'))void action(`/comment/${comment.id}`,'DELETE');}}>{ui("删除")}</button>:<>
+          <button disabled={busy} onClick={()=>{if(window.confirm('举报这条不当留言？'))void action(`/comment/${comment.id}/report`,'POST',{reason:'用户举报：请审核本条学习留言'});}}>{ui("举报")}</button>
+          <button disabled={busy} onClick={()=>{if(window.confirm('屏蔽此用户在学习讨论中的留言？'))void action(`/blocks/${encodeURIComponent(comment.authorId)}`,'POST');}}>{ui("屏蔽用户")}</button>
         </>}
       </div>
     </article>)}
-    {blocks.length>0&&<details style={{marginTop:12}}><summary>学习讨论屏蔽管理（{blocks.length}）</summary>{blocks.map(item=><div key={item.userId}>用户{item.userId} <button disabled={busy} onClick={()=>void action(`/blocks/${encodeURIComponent(item.userId||'')}`,'DELETE')}>取消屏蔽</button></div>)}</details>}
+    {blocks.length>0&&<details style={{marginTop:12}}><summary>学习讨论屏蔽管理（{blocks.length}）</summary>{blocks.map(item=><div key={item.userId}>用户{item.userId} <button disabled={busy} onClick={()=>void action(`/blocks/${encodeURIComponent(item.userId||'')}`,'DELETE')}>{ui("取消屏蔽")}</button></div>)}</details>}
   </section>;
 }

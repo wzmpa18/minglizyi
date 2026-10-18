@@ -14,6 +14,7 @@
 // 协议：排盘数据与判读口径由算法层输出；断语由知识库引擎输出并受后台开关管控。
 // ============================================================================
 
+import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { QizhengPalaceSheet } from "@/components/QizhengPalaceSheet";
@@ -124,6 +125,7 @@ const HOURS = ["00:00-01:00", "01:00-03:00", "03:00-05:00", "05:00-07:00", "07:0
 const PAIPAN_KEY = "yandao_qizheng_input";
 
 export default function QizhengPage() {
+  useInterfaceLocale();
   useIOSLearningRedirect("qizheng"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const [mounted, setMounted] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -1210,7 +1212,7 @@ export default function QizhengPage() {
             </g>
             {/* 第一圈层·命理核心（v25.0.84 P1-3：加命度/身度宿度，提升信息密度） */}
             <circle cx={C} cy={C} r={R_CORE} fill={PAN_DARK} stroke={PAN_LINE} strokeWidth={1} />
-            <text x={C} y={C - 13} textAnchor="middle" fontSize={7} fill="#bfa76a">七政四余</text>
+            <text x={C} y={C - 13} textAnchor="middle" fontSize={7} fill="#bfa76a">{ui("七政四余")}</text>
             <text x={C} y={C - 3.5} textAnchor="middle" fontSize={8.5} fill={GOLD} fontWeight={700}>{result.mingGong.branch}宫立命</text>
             <text x={C} y={C + 5.5} textAnchor="middle" fontSize={7} fill="#bfa76a">{result.shenGong.branch}宫安身</text>
             <text x={C} y={C + 14} textAnchor="middle" fontSize={5.5} fill="#ff8a80">命度·{result.mingDu.xiuName}{result.mingDu.xiuDegree.toFixed(0)}°</text>

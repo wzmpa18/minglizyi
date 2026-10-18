@@ -217,6 +217,8 @@ jobs:
       - run: npx tsx --test scripts/chart-handoff.test.ts
       - run: npx tsx --test scripts/solar-to-lunar.test.ts
       - run: npx tsx --test scripts/calendar-recurrence.test.ts
+      - run: npx tsx --test scripts/calendar-snapshot.test.ts
+      - run: node --test scripts/tongchen.test.cjs
       - run: npx tsx --test scripts/planetarium-projection.test.ts
       - run: node --experimental-strip-types --test scripts/offline-versions.test.cjs
       - run: node --experimental-strip-types --test scripts/offline-download-link.test.cjs

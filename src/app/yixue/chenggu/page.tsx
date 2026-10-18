@@ -1,5 +1,6 @@
-﻿"use client";
+"use client";
 
+import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState } from "react";
 import { getYearGanZhi, hourToZhi } from "@/algorithm-core";
 import type { Gender } from "@/algorithm-core";
@@ -332,6 +333,7 @@ function getPiyu(totalQian: number, gender: Gender): string {
 // ============================================================================
 
 export default function ChengguPage() {
+  useInterfaceLocale();
   useIOSLearningRedirect("chenggu"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const [year, setYear] = useState(1990);
   const [month, setMonth] = useState(1);
@@ -459,7 +461,7 @@ export default function ChengguPage() {
         </div>
 
         <div className="mb-4">
-          <label className="block text-sm text-muted-foreground mb-2">性别</label>
+          <label className="block text-sm text-muted-foreground mb-2">{ui("性别")}</label>
           <div className="flex gap-4">
             <button
               onClick={() => setGender("male")}

@@ -7,6 +7,7 @@
 // 新增/编辑/删除/暂停；提醒历史查询；导出与彻底删除（隐私合规）。
 // ============================================================================
 
+import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { BrandHeader, SolarDatePicker, SegBtn, ToggleSwitch } from "@/components/shared";
 import {
@@ -67,6 +68,7 @@ interface FormState {
 }
 
 export default function CalendarEventsPage() {
+  useInterfaceLocale();
   const [tab, setTab] = useState<"list" | "upcoming" | "history">("list");
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [upcoming, setUpcoming] = useState<ReturnType<typeof getUpcomingEvents>>([]);
@@ -567,7 +569,7 @@ export default function CalendarEventsPage() {
 
                 {/* 历法模式 */}
                 <div className="mb-3">
-                  <label className="mb-1 block text-xs font-medium text-gray-600">历法</label>
+                  <label className="mb-1 block text-xs font-medium text-gray-600">{ui("历法")}</label>
                   <SegBtn
                     options={[
                       { value: "solar", label: "公历", active: form.dateMode === "solar" },

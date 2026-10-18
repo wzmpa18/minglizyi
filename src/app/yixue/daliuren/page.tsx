@@ -1,5 +1,6 @@
-﻿"use client";
+"use client";
 
+import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { closeInitialToolPopup } from "@/lib/leaveToolPage";
@@ -307,7 +308,7 @@ function InputPanel({
                 onChange={(e) => setZhanbuTime(e.target.value)}
                 className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:border-[#7B2FBE]"
               >
-                <option value="">当前时间</option>
+                <option value="">{ui("当前时间")}</option>
                 {SHI_CHEN_LIST.map((z) => (
                   <option key={z} value={z}>{z}时</option>
                 ))}
@@ -397,6 +398,7 @@ function InputPanel({
 // ============================================================================
 
 export default function DaLiuRenPage() {
+  useInterfaceLocale();
   useIOSLearningRedirect("daliuren"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const pageKey = "yixue_daliuren"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   const [showForm, setShowForm] = useState(true);

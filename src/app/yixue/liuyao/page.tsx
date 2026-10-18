@@ -1,5 +1,6 @@
-﻿"use client";
+"use client";
 
+import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { calculateLiuyao } from "@/algorithm-core";
 import type { LiuyaoResult, YaoType, LiuyaoYao } from "@/algorithm-core/types/liuyao";
@@ -259,6 +260,7 @@ function YaoRow({
 // ============================================================================
 
 export default function LiuyaoPage() {
+  useInterfaceLocale();
   useIOSLearningRedirect("liuyao"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const pageKey = "yixue_liuyao"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   // 输入状态
@@ -547,7 +549,7 @@ export default function LiuyaoPage() {
           <div style={{ padding: "12px" }}>
             {/* 方法选择 */}
             <div style={{ marginBottom: "12px" }}>
-              <div style={{ fontSize: "14px", fontWeight: "bold", color: BRAND, marginBottom: "8px" }}>起卦方式</div>
+              <div style={{ fontSize: "14px", fontWeight: "bold", color: BRAND, marginBottom: "8px" }}>{ui("起卦方式")}</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
                 {([
                   { key: "time", label: "时间起卦" },
@@ -747,7 +749,7 @@ export default function LiuyaoPage() {
 
         {!showForm && !result && (
           <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
-            <button onClick={() => setShowForm(true)} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">开始排盘</button>
+            <button onClick={() => setShowForm(true)} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">{ui("开始排盘")}</button>
           </div>
         )}
 
@@ -828,9 +830,9 @@ export default function LiuyaoPage() {
                   <tr>
                     <th style={{ width: "38px", fontSize: "11px", fontWeight: "bold", color: BRAND, padding: "2px 2px 4px", borderBottom: "1px solid #eee" }}>六神</th>
                     <th style={{ width: "38px", fontSize: "11px", fontWeight: "bold", color: BRAND, padding: "2px 2px 4px", borderBottom: "1px solid #eee" }}>爻位</th>
-                    <th style={{ fontSize: "11px", fontWeight: "bold", color: BRAND, padding: "2px 2px 4px", borderBottom: "1px solid #eee" }}>本卦</th>
+                    <th style={{ fontSize: "11px", fontWeight: "bold", color: BRAND, padding: "2px 2px 4px", borderBottom: "1px solid #eee" }}>{ui("本卦")}</th>
                     {result.bianGua && (
-                      <th style={{ fontSize: "11px", fontWeight: "bold", color: BRAND, padding: "2px 2px 4px", borderBottom: "1px solid #eee", borderLeft: "1px dashed #ddd" }}>变卦</th>
+                      <th style={{ fontSize: "11px", fontWeight: "bold", color: BRAND, padding: "2px 2px 4px", borderBottom: "1px solid #eee", borderLeft: "1px dashed #ddd" }}>{ui("变卦")}</th>
                     )}
                   </tr>
                   <tr>

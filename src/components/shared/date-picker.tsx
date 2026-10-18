@@ -1,5 +1,6 @@
 "use client";
 
+import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState, useCallback, useEffect } from "react";
 import { Lunar } from "lunar-javascript";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
@@ -237,6 +238,7 @@ export default function DatePicker({
   onRecordImport,
   onRecordRestore,
 }: DatePickerProps) {
+  useInterfaceLocale();
   const [recordsOpen, setRecordsOpen] = useState(false);
   const [records, setRecords] = useState<PaipanRecord[]>([]);
   const [recordQuery, setRecordQuery] = useState("");
@@ -420,7 +422,7 @@ export default function DatePicker({
         {/* 标题栏 - 右上角×关闭按钮（对标吉时雨 closeBtn: 1） */}
         <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2 sticky top-0 bg-white z-10">
           <div className="w-8" />
-          <span className="text-base font-bold text-gray-800">{title}</span>
+          <span className="text-base font-bold text-gray-800">{ui(title)}</span>
           <button
             type="button"
             onClick={() => onClose()}
@@ -502,7 +504,7 @@ export default function DatePicker({
           {/* 3. 日期 - 原生select下拉框（对标吉时雨 mydate + RolldateFull） */}
           <div>
               <div className="mb-1 flex items-center justify-between">
-              <label className="text-sm text-gray-700">日期</label>
+              <label className="text-sm text-gray-700">{ui("日期")}</label>
               <button type="button" onClick={openRecords} className="rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-xs font-semibold text-purple-800">排盘记录 / 导入</button>
             </div>
             {recordsOpen && <section data-testid="date-records" className="mb-3 rounded-xl border border-purple-200 bg-purple-50 p-3">
@@ -613,7 +615,7 @@ export default function DatePicker({
           {showOptions && showToggles && (
             <>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-700">早晚子时</span>
+                <span className="text-sm text-gray-700">{ui("早晚子时")}</span>
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
@@ -643,7 +645,7 @@ export default function DatePicker({
               {/* 5. 真太阳时 + 夏令时（对标吉时雨 realsun radio + summertime switch） */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-700">真太阳时</span>
+                  <span className="text-sm text-gray-700">{ui("真太阳时")}</span>
                   <button
                     type="button"
                     onClick={() => setOptions(prev => ({ ...prev, zhenTaiyang: true }))}
@@ -669,7 +671,7 @@ export default function DatePicker({
                 </div>
                 {/* 夏令时开关（对标吉时雨 summertime switch） */}
                 <div className="flex items-center gap-1.5">
-                  <span className="text-sm text-gray-700">夏令时</span>
+                  <span className="text-sm text-gray-700">{ui("夏令时")}</span>
                   <button
                     type="button"
                     onClick={() => setOptions(prev => ({ ...prev, xiaLing: !prev.xiaLing }))}
@@ -693,7 +695,7 @@ export default function DatePicker({
                 <div className="flex flex-col">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-sm text-gray-700">夏令时</span>
+                      <span className="text-sm text-gray-700">{ui("夏令时")}</span>
                       <button
                         type="button"
                         onClick={() => setOptions(prev => ({ ...prev, xiaLing: !prev.xiaLing }))}
@@ -780,7 +782,7 @@ export default function DatePicker({
             onClick={handleSubmit}
             className="w-full rounded-full bg-[#7B2FBE] py-2.5 text-base font-bold text-white shadow-lg transition-colors active:bg-[#5B1A8A]"
           >
-            {submitText}
+            {ui(submitText)}
           </button>
         </div>
       </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Solar, LunarTime } from "lunar-javascript";
@@ -41,6 +42,7 @@ const SHICHEN_LIST = [
 ];
 
 export default function HuangliPage() {
+  useInterfaceLocale();
   const router = useRouter();
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date(2026, 0, 1));
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
@@ -230,7 +232,7 @@ export default function HuangliPage() {
           <div className="text-base font-bold">
             {y}年{m}月{d}日 星期{weekday}
           </div>
-          {isToday && <div className="text-[11px] opacity-80">今天</div>}
+          {isToday && <div className="text-[11px] opacity-80">{ui("今天")}</div>}
         </div>
         <button
           onClick={goNext}
@@ -751,7 +753,7 @@ function AddToHomeScreen() {
                 <div className="space-y-2 text-xs text-gray-500">
                   <div className="flex items-start gap-2">
                     <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white text-[10px] font-bold" style={{ backgroundColor: BRAND }}>1</span>
-                    <span>点击 Safari 底部的<span className="font-semibold" style={{ color: BRAND }}> 分享 </span>按钮</span>
+                    <span>点击 Safari 底部的<span className="font-semibold" style={{ color: BRAND }}>{ui("分享")}</span>按钮</span>
                   </div>
                   <div className="flex items-start gap-2">
                     <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white text-[10px] font-bold" style={{ backgroundColor: BRAND }}>2</span>

@@ -1,5 +1,6 @@
 "use client";
 
+import { InterfaceLanguageSettings } from "@/components/InterfaceLanguageSettings";
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -323,6 +324,7 @@ export default function SettingsPage() {
         />
       </div>
 
+      <InterfaceLanguageSettings />
       {/* ===== 个性化 ===== */}
       <div className="mx-3 mt-3 rounded-xl bg-white shadow-sm overflow-hidden">
         <div className="px-4 pt-3 pb-1">

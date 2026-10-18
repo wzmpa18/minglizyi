@@ -1,5 +1,6 @@
 "use client";
 
+import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { PUBLIC_PROMOTION_ENABLED } from "@/lib/releaseFeatures";
@@ -16,6 +17,7 @@ interface BrandHeaderProps {
 }
 
 export function BrandHeader({ title = "言道排盘", showBack = false, backUrl, onEdit, onBack, onTitleClick, color, children }: BrandHeaderProps) {
+  useInterfaceLocale();
   const router = useRouter();
 
   const handleBack = () => {
@@ -41,13 +43,13 @@ export function BrandHeader({ title = "言道排盘", showBack = false, backUrl,
           onClick={handleBack}
           className="absolute left-0 top-0 h-10 w-10 flex items-center justify-center text-white hover:bg-white/10 transition-colors"
           style={{ top: "env(safe-area-inset-top, 0px)" }}
-          aria-label="返回"
+          aria-label={ui("返回")}
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
       )}
       <div style={{ textAlign: "center" }} onClick={onTitleClick} className={onTitleClick ? "cursor-pointer" : undefined}>
-        <span className="text-white text-[18px] font-bold">{title}</span>
+        <span className="text-white text-[18px] font-bold">{ui(title)}</span>
         <div style={{ fontSize: "10px", fontWeight: "normal", opacity: 0.65, lineHeight: "1.4", color: "white" }}>{PUBLIC_PROMOTION_ENABLED ? "yandao.vip 分享下载有礼" : "经典研读 · 传统文化学习"}</div>
       </div>
       {onEdit && (

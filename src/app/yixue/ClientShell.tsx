@@ -1,5 +1,6 @@
 "use client";
 
+import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { leaveToolPage } from "@/lib/leaveToolPage";
@@ -25,6 +26,7 @@ const TOOL_PATHS = [
 declare global { interface Window { __yixueBackHandled?: boolean; } }
 
 export default function YixueClientShell({ children }: { children: React.ReactNode }) {
+  useInterfaceLocale();
   const pathname = usePathname();
   const router = useRouter();
   // v25.0.16: trailingSlash:true 下 pathname 带尾斜杠("/yixue/")，全等比较恒为 false，
@@ -104,13 +106,13 @@ export default function YixueClientShell({ children }: { children: React.ReactNo
         </button>
 
         <div className="text-center text-white font-bold" style={{ fontSize: "17px", lineHeight: "48px", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
-          {pageTitle}
+          {ui(pageTitle)}
         </div>
 
         {normPathname!=="/yixue/ziwei" ? <button
           onClick={async () => {
             try {
-              const shareData = { title: pageTitle, text: `言道国学 - ${pageTitle}`, url: window.location.href };
+              const shareData = { title: pageTitle, text: `言道国学 - ${ui(pageTitle)}`, url: window.location.href };
               if (navigator.share) {
                 await navigator.share(shareData);
               } else {

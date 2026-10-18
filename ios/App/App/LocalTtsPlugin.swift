@@ -119,5 +119,6 @@ class GuoxueBridgeViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(LocalTtsPlugin())
         bridge?.registerPluginInstance(AppleLearningStorePlugin())
         bridge?.registerPluginInstance(LocalSkyLocationPlugin())
+        bridge?.registerPluginInstance(LocalCalendarPlugin())
     }
 }
