@@ -1,4 +1,5 @@
 "use client";
+import {prepareChartTime,baziSectForOptions} from "@/lib/chartTimeInput";
 import { InterfaceButton } from "@/components/InterfaceControls";
 import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { chartHandoffFromRecord, consumeChartHandoff, writeChartHandoff } from "@/lib/chartHandoff";
@@ -9,7 +10,6 @@ import { useRouter } from "next/navigation";
 import { closeInitialToolPopup } from "@/lib/leaveToolPage";
 import {
   solarToBazi,
-  calcTrueSolarTime,
   calculateAllShenSha,
   GAN_WUXING,
   ZHI_WUXING,
@@ -1928,10 +1928,12 @@ export default function BaziPage(){
     const d=override?.day??day; const h=override?.hour??hour;
     const mi=override?.minute??0;
     const g=override?.gender??gender;
-    try{const bz=solarToBazi({year:y,month:m,day:d,hour:h,minute:mi,gender:g}) as BaziResult;setResult(bz);
+    const selectedLateZi=Boolean(override?.birthInput?.zaoWanZi??zaoWanZi),selectedSolar=Boolean(override?.birthInput?.zhenTaiyang??zhenTaiyang),selectedDst=Boolean(override?.birthInput?.xiaLing??xiaLing);
+    const selectedName=typeof override?.birthInput?.name==="string"?override.birthInput.name:name;
+    try{const bz=solarToBazi({year:y,month:m,day:d,hour:h,minute:mi,gender:g,sect:baziSectForOptions(selectedLateZi)}) as BaziResult;setResult(bz);
       const ss=calculateAllShenSha({yearGan:bz.pillars[0].gan as TianGan,yearZhi:bz.pillars[0].zhi as DiZhi,monthGan:bz.pillars[1].gan as TianGan,monthZhi:bz.pillars[1].zhi as DiZhi,dayGan:bz.dayGan as TianGan,dayZhi:bz.dayZhi as DiZhi,hourGan:bz.pillars[3].gan as TianGan,hourZhi:bz.pillars[3].zhi as DiZhi,gender:g});
       const place=override?.birthPlace??birthPlace;
-      chartInputRef.current={birthInput:override?.birthInput,year:y,month:m,day:d,hour:h,minute:mi,gender:g,name,longitude,birthPlace:place,zhenTaiyang,zaoWanZi,xiaLing};
+      chartInputRef.current={birthInput:override?.birthInput,year:y,month:m,day:d,hour:h,minute:mi,gender:g,name:selectedName,longitude,birthPlace:place,zhenTaiyang:selectedSolar,zaoWanZi:selectedLateZi,xiaLing:selectedDst};
       setBirthMinute(mi); setBirthPlace(place);
       setShensha(ss);setShowForm(false);savePaipanState("bazi",{input:{year:y,month:m,day:d,hour:h,minute:mi,gender:g,calType,name,longitude,birthPlace:place},result:bz,showForm:false,_ts:Date.now()});
       // v25.0.87: 排盘历史记录（完整参数+结果，同参数自动去重置顶）——记录保存需注册，游客不落记录
@@ -1939,7 +1941,7 @@ export default function BaziPage(){
       if(getUserPermissionLevel()!=="visitor"){
         savePaipanRecord({
           tool:"bazi",
-          input:{birthInput:override?.birthInput,year:y,month:m,day:d,hour:h,minute:mi,gender:g,calType,useTrueSolar:zhenTaiyang,longitude,birthPlace:place,name,zaoWanZi,xiaLing,_trueSolarDisplay:trueSolarDisplay,_solarCorrection:solarCorrection},
+          input:{birthInput:override?.birthInput,year:y,month:m,day:d,hour:h,minute:mi,gender:g,calType,useTrueSolar:selectedSolar,longitude,birthPlace:place,name:selectedName,zaoWanZi:selectedLateZi,xiaLing:selectedDst,_trueSolarDisplay:selectedSolar||selectedDst?`${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")} ${String(h).padStart(2,"0")}:${String(mi).padStart(2,"0")}`:null,_solarCorrection:override?.birthInput?override.birthInput.correctionInfo:solarCorrection},
           result:bz as unknown as Record<string, unknown>,
           profileId:mingzhu?.id??null,
           title:`${g==="male"?"男":"女"}命 ${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")} ${String(h).padStart(2,"0")}:${String(mi).padStart(2,"0")} ${bz.pillars.map(p=>p.gan+p.zhi).join(" ")}`,
@@ -1956,7 +1958,7 @@ export default function BaziPage(){
     if(!incoming)return;
     const p=incoming;
     try {
-      const bz=solarToBazi({...p.calculation,gender:p.gender}) as BaziResult;
+      const bz=solarToBazi({...p.calculation,gender:p.gender,sect:baziSectForOptions(p.zaoWanZi)}) as BaziResult;
       restoreHistoryRecord({id:0,input:{...p.calculation,name:p.name,gender:p.gender,longitude:p.longitude,birthPlace:p.birthPlace,useTrueSolar:p.zhenTaiyang,zaoWanZi:p.zaoWanZi,xiaLing:p.xiaLing,birthInput:{...p.civil,name:p.name,gender:p.gender,longitude:p.longitude,birthPlace:p.birthPlace,zhenTaiyang:p.zhenTaiyang,zaoWanZi:p.zaoWanZi,xiaLing:p.xiaLing,calculationDateTime:p.calculation}},result:bz} as unknown as PaipanRecord);
       setYear(p.civil.year);setMonth(p.civil.month);setDay(p.civil.day);setHour(p.civil.hour);setBirthMinute(p.civil.minute);
       setZaoWanZi(p.zaoWanZi);setXiaLing(p.xiaLing);setCalType("gongli");
@@ -2062,24 +2064,13 @@ export default function BaziPage(){
         setCalType(opts.calType === "solar" ? "gongli" : opts.calType === "lunar" ? "nongli" : "sizhu");
         setZaoWanZi(opts.zaoWanZi); setZhenTaiyang(opts.zhenTaiyang); setXiaLing(opts.xiaLing);
         // S2-4: 真太阳时校正——勾选后按出生地经度修正年月日时再排盘（与紫微/奇门同一算法）
-        let calcDate = { year: dateVal.year, month: dateVal.month, day: dateVal.day, hour: dateVal.hour, minute: dateVal.minute || 0 };
-        if (opts.zhenTaiyang) {
-          const std = new Date(dateVal.year, dateVal.month - 1, dateVal.day, dateVal.hour, dateVal.minute || 0);
-          const tst = calcTrueSolarTime(std, opts.longitude ?? longitude);
-          const t = tst.trueSolarTime;
-          calcDate = { year: t.getFullYear(), month: t.getMonth() + 1, day: t.getDate(), hour: t.getHours(), minute: t.getMinutes() };
-          const p2 = (n: number) => String(n).padStart(2, "0");
-          const lon = opts.longitude ?? longitude;
-          const sign = tst.totalOffset >= 0 ? "+" : "-";
-          const absMin = Math.abs(tst.totalOffset);
-          setTrueSolarDisplay(`${t.getFullYear()}-${p2(t.getMonth() + 1)}-${p2(t.getDate())} ${p2(t.getHours())}:${p2(t.getMinutes())}`);
-          setSolarCorrection(`${lon.toFixed(1)}°E · 经差${tst.longitudeOffset >= 0 ? "+" : ""}${tst.longitudeOffset.toFixed(1)}分 · 均时差${tst.equationOfTime >= 0 ? "+" : ""}${tst.equationOfTime.toFixed(1)}分 = 修正${sign}${Math.floor(absMin)}分`);
-        } else {
-          setTrueSolarDisplay(null);
-          setSolarCorrection(null);
-        }
+        const prepared=prepareChartTime({...dateVal,minute:dateVal.minute||0},{xiaLing:opts.xiaLing,zhenTaiyang:opts.zhenTaiyang,longitude:opts.longitude??longitude});
+        const calcDate=prepared.calculation,p2=(n:number)=>String(n).padStart(2,"0");
+        setTrueSolarDisplay(opts.zhenTaiyang||opts.xiaLing?`${calcDate.year}-${p2(calcDate.month)}-${p2(calcDate.day)} ${p2(calcDate.hour)}:${p2(calcDate.minute)}`:null);
+        const correctionInfo=[opts.xiaLing?"夏令时钟面已减1小时，按标准时计算":"",prepared.solar?`${(opts.longitude??longitude).toFixed(1)}°E · 经差${prepared.solar.longitudeOffset.toFixed(1)}分 · 均时差${prepared.solar.equationOfTime.toFixed(1)}分`:""].filter(Boolean).join(" · ")||null;
+        setSolarCorrection(correctionInfo);
         if (opts.longitude !== undefined) setLongitude(opts.longitude);
-        handleSubmit({ ...calcDate, gender: opts.gender as Gender, birthPlace: opts.birthPlace, birthInput:{...dateVal,name,gender:opts.gender,longitude:opts.longitude ?? longitude,birthPlace:opts.birthPlace,zhenTaiyang:opts.zhenTaiyang,zaoWanZi:opts.zaoWanZi,xiaLing:opts.xiaLing,calculationDateTime:{...calcDate},calendar:"solar"} });
+        handleSubmit({ ...calcDate, gender: opts.gender as Gender, birthPlace: opts.birthPlace, birthInput:{...dateVal,name:opts.recordName??name,correctionInfo,gender:opts.gender,longitude:opts.longitude ?? longitude,birthPlace:opts.birthPlace,zhenTaiyang:opts.zhenTaiyang,zaoWanZi:opts.zaoWanZi,xiaLing:opts.xiaLing,calculationDateTime:{...calcDate},calendar:"solar"} });
       }}
       initialDate={{year, month, day, hour, minute: birthMinute}}
       initialOptions={{

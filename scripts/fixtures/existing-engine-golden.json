@@ -1,0 +1,132 @@
+{
+  "purpose": "固定既有资料的回归用例；不是吉时雨运行结果，也不是所有流派的准确性证明。",
+  "references": [
+    {
+      "file": "mystilight_排盘结果.json",
+      "sha256": "2b7b841a06fb34e90c96aa802b5bb2b26483cff3493380526614adc8a7c64bf6"
+    },
+    {
+      "file": "iztro_排盘结果.json",
+      "sha256": "73101da62d9abda5b4845d866b64d113e001358cfe1653d8a0f46212d1dedaaa"
+    }
+  ],
+  "input": {
+    "year": 1990,
+    "month": 5,
+    "day": 15,
+    "hour": 14,
+    "minute": 30,
+    "gender": "male"
+  },
+  "bazi": [
+    "庚午",
+    "辛巳",
+    "庚辰",
+    "癸未"
+  ],
+  "ziwei": {
+    "fiveElementsClass": "土五局",
+    "soulStar": "禄存",
+    "bodyStar": "火星",
+    "earthlyBranchOfSoulPalace": "戌",
+    "earthlyBranchOfBodyPalace": "子",
+    "palaces": [
+      {
+        "index": 0,
+        "name": "官禄",
+        "branch": "寅",
+        "majorStars": [
+          "廉贞"
+        ]
+      },
+      {
+        "index": 1,
+        "name": "交友",
+        "branch": "卯",
+        "majorStars": []
+      },
+      {
+        "index": 2,
+        "name": "迁移",
+        "branch": "辰",
+        "majorStars": [
+          "破军"
+        ]
+      },
+      {
+        "index": 3,
+        "name": "疾厄",
+        "branch": "巳",
+        "majorStars": [
+          "天同"
+        ]
+      },
+      {
+        "index": 4,
+        "name": "财帛",
+        "branch": "午",
+        "majorStars": [
+          "武曲",
+          "天府"
+        ]
+      },
+      {
+        "index": 5,
+        "name": "子女",
+        "branch": "未",
+        "majorStars": [
+          "太阳",
+          "太阴"
+        ]
+      },
+      {
+        "index": 6,
+        "name": "夫妻",
+        "branch": "申",
+        "majorStars": [
+          "贪狼"
+        ]
+      },
+      {
+        "index": 7,
+        "name": "兄弟",
+        "branch": "酉",
+        "majorStars": [
+          "天机",
+          "巨门"
+        ]
+      },
+      {
+        "index": 8,
+        "name": "命宫",
+        "branch": "戌",
+        "majorStars": [
+          "紫微",
+          "天相"
+        ]
+      },
+      {
+        "index": 9,
+        "name": "父母",
+        "branch": "亥",
+        "majorStars": [
+          "天梁"
+        ]
+      },
+      {
+        "index": 10,
+        "name": "福德",
+        "branch": "子",
+        "majorStars": [
+          "七杀"
+        ]
+      },
+      {
+        "index": 11,
+        "name": "田宅",
+        "branch": "丑",
+        "majorStars": []
+      }
+    ]
+  }
+}

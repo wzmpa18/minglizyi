@@ -1264,7 +1264,8 @@ export function solarToBazi(params) {
     shensha: shensha,
     input: {
       solarDate: year + '-' + (month < 10 ? '0' + month : month) + '-' + (day < 10 ? '0' + day : day),
-      time: hour + ':00',
+      time: String(hour).padStart(2,'0') + ':' + String(minute).padStart(2,'0'),
+      sect: sect,
       gender: gender
     },
     lunarDate: lunar.getYearInChinese() + '年' + lunar.getMonthInChinese() + '月' + lunar.getDayInChinese() + ' ' + lunar.getTimeZhi() + '时',

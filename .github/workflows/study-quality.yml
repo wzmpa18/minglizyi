@@ -214,6 +214,7 @@ jobs:
       - run: npx tsx --test scripts/astronomy-study.test.ts
       - run: npx tsx --test scripts/liuren-calendar.test.ts
       - run: npx tsx --test scripts/chart-corrections.test.ts
+      - run: npx tsx --test scripts/chart-time-options.test.ts
       - run: npx tsx --test scripts/chart-handoff.test.ts
       - run: npx tsx --test scripts/solar-to-lunar.test.ts
       - run: npx tsx --test scripts/calendar-learning.test.ts

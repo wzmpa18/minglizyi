@@ -1,20 +1,21 @@
 /**
  * 紫微斗数排盘核心算法层（v2.0 - 基于 排盘引擎 官方库）
  *
- * 原始来源：排盘引擎 v2.5.8 - https://github.com/SylarLong/排盘引擎
+ * 原始来源：排盘引擎 v2.5.8 - https://github.com/SylarLong/iztro
  * 修改记录：2026-07-29 重写核心算法层，直接集成 排盘引擎 官方库作为排盘引擎，
  *           修复原有3个P0致命Bug：
  *             1) 公历转农历缺失（原代码直接用公历月日代替农历）
  *             2) 十二宫名称顺序错误
  *             3) 月份索引错误（左辅右弼等用公历月导致位置偏移）
  * 排盘引擎 内部使用 lunar-lite 完成精确的公历→农历转换、五虎遁、
- *           安星诀、大限顺逆、四化飞星等全部排盘逻辑，与 jishiyu 一致。
+ *           安星诀、大限顺逆、四化飞星等排盘逻辑。共享依赖不代表已与吉时雨逐模块对拍。
  *
  * 导出：calculateZiwei(input: ZiweiInput): ZiweiResult
  *       getShichenOptions(): 时辰选项列表
  */
 
 import { astro } from 'iztro';
+import {withZiweiDayRule} from './dayRule';
 import type { ZiweiResult, ZiweiInput, ZiweiPalace, ZiweiStar, ZiweiSihua } from '../../types/ziwei';
 import type { TianGan, DiZhi } from '../../types/common';
 
@@ -111,7 +112,7 @@ export function calculateZiwei(input: ZiweiInput): ZiweiResult {
 
  // 2. 调用 排盘引擎 核心排盘（fixLeap=true 处理闰月，zh-CN 输出简体中文）
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const astrolabe = (astro as any).bySolar(solarDateStr, timeIndex, genderStr, true, 'zh-CN');
+  const astrolabe = withZiweiDayRule(input.separateLateZi,()=>(astro as any).bySolar(solarDateStr, timeIndex, genderStr, true, 'zh-CN'));
 
   // 3. 提取年柱天干地支（从 chineseDate 字符串解析，格式 "庚午 壬午 辛亥 戊子"）
   const pillars = astrolabe.chineseDate.split(' ');

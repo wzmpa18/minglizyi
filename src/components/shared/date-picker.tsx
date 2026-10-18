@@ -24,6 +24,7 @@ export interface DatePickerValue {
 }
 
 export interface DatePickerOptions {
+  recordName?:string;
   gender: "male" | "female";
   calType: "solar" | "lunar" | "sizhu";
   zaoWanZi: boolean;
@@ -351,6 +352,7 @@ export default function DatePicker({
     const finalDate = options.calType === "lunar" ? lunarToSolarDate(date) : date;
     onSubmit(finalDate, {
       ...options,
+      recordName:nameState,
       birthPlace,
       birthLocation,
       longitude: birthLocation?.longitude ?? options.longitude,

@@ -93,6 +93,7 @@ export interface ZiweiResult {
 }
 
 export interface ZiweiInput {
+  separateLateZi?:boolean;
   year: number;
   month: number;
   day: number;

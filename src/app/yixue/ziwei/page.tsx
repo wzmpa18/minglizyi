@@ -1,11 +1,12 @@
 "use client";
 
+import {prepareChartTime,baziSectForOptions} from "@/lib/chartTimeInput";
 import { InterfaceButton } from "@/components/InterfaceControls";
 import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { chartHandoffFromRecord, consumeChartHandoff, writeChartHandoff } from "@/lib/chartHandoff";
 import { useToolMatrix } from "@/lib/sectionGate";
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { calculateZiwei, solarToBazi, calcTrueSolarTime } from "@/algorithm-core";
+import { calculateZiwei, solarToBazi } from "@/algorithm-core";
 import {
   getZwDecadalList,
   getZwYearlyList,
@@ -564,23 +565,25 @@ export default function ZiweiPage() {
     const y=override?.year??year; const m=override?.month??month;
     const d=override?.day??day; const h=override?.hour??hour;
     const g=override?.gender??gender;
+    const selectedLateZi=Boolean(override?.birthInput?.zaoWanZi??zaoWanZi),selectedSolar=Boolean(override?.birthInput?.zhenTaiyang??zhenTaiyang),selectedDst=Boolean(override?.birthInput?.xiaLing??xiaLing);
+    const selectedName=typeof override?.birthInput?.name==="string"?override.birthInput.name:name;
     try {
-      const res = calculateZiwei({ year:y, month:m, day:d, hour:h, gender:g });
+      const res = calculateZiwei({ year:y, month:m, day:d, hour:h, gender:g,separateLateZi:selectedLateZi });
       setResult(res);
-      chartInputRef.current={birthInput:override?.birthInput,year:y,month:m,day:d,hour:h,minute:override?.minute??birthMinute,gender:g,name,longitude,zhenTaiyang,zaoWanZi,xiaLing,birthPlace:historyDateOptions.birthPlace||""};
+      chartInputRef.current={birthInput:override?.birthInput,year:y,month:m,day:d,hour:h,minute:override?.minute??birthMinute,gender:g,name:selectedName,longitude,zhenTaiyang:selectedSolar,zaoWanZi:selectedLateZi,xiaLing:selectedDst,birthPlace:historyDateOptions.birthPlace||""};
       setShowForm(false);
-      savePaipanState("ziwei",{input:{year:y,month:m,day:d,hour:h,gender:g,calType,zaoWanZi,zhenTaiyang,xiaLing,longitude,...historyDateOptions},showForm:false,_ts:Date.now()});
+      savePaipanState("ziwei",{input:{year:y,month:m,day:d,hour:h,gender:g,calType,...historyDateOptions,zaoWanZi:selectedLateZi,zhenTaiyang:selectedSolar,xiaLing:selectedDst,longitude},showForm:false,_ts:Date.now()});
       // 保存客户记录
       try{saveRecord({clientId:selectedClient?selectedClient.id:"",type:"ziwei",data:{...res,inputParams:{year:y,month:m,day:d,hour:h,gender:g}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
       // v25.0.88: 排盘记录自动落库（原生壳为SQLite，同参数原位去重）
       savePaipanRecord({
         tool: "ziwei",
-        title: `${name || "未命名"}·紫微排盘 ${y}-${m}-${d}`,
+        title: `${selectedName || "未命名"}·紫微排盘 ${y}-${m}-${d}`,
         input: {
           birthInput: override?.birthInput,
           calculationInput: { year: y, month: m, day: d, hour: h, gender: g },
-          name, year: y, month: m, day: d, hour: h, gender: g, calType,
-          zaoWanZi, zhenTaiyang, xiaLing, longitude,
+          name:selectedName, year: y, month: m, day: d, hour: h, gender: g, calType,
+          zaoWanZi:selectedLateZi, zhenTaiyang:selectedSolar, xiaLing:selectedDst, longitude,
           viewState: { viewMode, selectedDaxian, selectedLiunian, selectedLiuyue, selectedLiuri, selectedLiushi, tongxianActive, dxLayer, lnLayer },
         },
         result: res as unknown as Record<string, unknown>,
@@ -704,7 +707,7 @@ export default function ZiweiPage() {
   useEffect(() => {
     const p=consumeChartHandoff("ziwei");if(!p)return;
     try {
-      const res=calculateZiwei({...p.calculation,gender:p.gender});
+      const res=calculateZiwei({...p.calculation,gender:p.gender,separateLateZi:p.zaoWanZi});
       handleRestoreHistory({id:0,input:{...p.calculation,name:p.name,gender:p.gender,longitude:p.longitude,calType:"gongli",birthInput:{normalizedDateTime:p.civil,calculationDateTime:p.calculation,name:p.name,gender:p.gender,longitude:p.longitude,birthPlace:p.birthPlace,zhenTaiyang:p.zhenTaiyang,zaoWanZi:p.zaoWanZi,xiaLing:p.xiaLing}},result:res} as unknown as PaipanRecord);
       setViewMode("sanhe");setProfessionalLayout(false);setFocusedPalace(null);
     }catch{setError("出生资料无法计算，请核对原排盘资料。");}
@@ -741,7 +744,7 @@ export default function ZiweiPage() {
     if (!result) return null;
     try {
       const linked=chartHandoffFromRecord(chartInputRef.current||{year,month,day,hour,minute:birthMinute,gender},"bazi");
-      const baziRes = solarToBazi({ ...(linked?.calculation||{year,month,day,hour,minute:birthMinute}), gender:linked?.gender||gender });
+      const baziRes = solarToBazi({ ...(linked?.calculation||{year,month,day,hour,minute:birthMinute}), gender:linked?.gender||gender,sect:baziSectForOptions(linked?.zaoWanZi??zaoWanZi) });
       return baziRes;
     } catch {
       return null;
@@ -813,8 +816,9 @@ export default function ZiweiPage() {
   // v25.0.24 ZW-TIME 时间轴引擎输入（P6-I-PLUS 规则6：全部时间层级统一走引擎）
   const zwInput = useMemo<ZwTimeInput | null>(() => {
     if (!result) return null;
-    return { year, month, day, hour, gender };
-  }, [result, year, month, day, hour, gender]);
+    const linked=chartHandoffFromRecord(chartInputRef.current||{year,month,day,hour,minute:birthMinute,gender,zaoWanZi},"ziwei");
+    return {...(linked?.calculation||{year,month,day,hour}),gender:linked?.gender||gender,separateLateZi:linked?.zaoWanZi??zaoWanZi};
+  }, [result, year, month, day, hour, gender,birthMinute,zaoWanZi]);
 
  // v25.0.24 大限四化由引擎统一计算（排盘引擎 horoscope 大限干四化）
   const zwDecadal = useMemo(() => {
@@ -1214,27 +1218,17 @@ export default function ZiweiPage() {
           setZaoWanZi(opts.zaoWanZi); setZhenTaiyang(opts.zhenTaiyang); setXiaLing(opts.xiaLing);
           setHistoryDateOptions(opts);
           // S2-4: 真太阳时校正——勾选后按出生地经度修正年月日时再排盘
-          let calcDate = { year: dateVal.year, month: dateVal.month, day: dateVal.day, hour: dateVal.hour, minute:dateVal.minute||0 };
-          let correctionInfo: string | null = null;
-          if (opts.zhenTaiyang) {
-            const std = new Date(dateVal.year, dateVal.month - 1, dateVal.day, dateVal.hour, dateVal.minute || 0);
-            const tst = calcTrueSolarTime(std, opts.longitude ?? longitude);
-            const t = tst.trueSolarTime;
-            calcDate = { year: t.getFullYear(), month: t.getMonth() + 1, day: t.getDate(), hour: t.getHours(), minute:t.getMinutes() };
-            const sign = tst.totalOffset >= 0 ? "+" : "-";
-            const absMin = Math.abs(tst.totalOffset);
-            correctionInfo = `真太阳时 ${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")} ${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}（${(opts.longitude ?? longitude).toFixed(1)}°E，修正${sign}${Math.floor(absMin)}分）`;
-            setSolarCorrection(correctionInfo);
-          } else {
-            setSolarCorrection(null);
-          }
+          const prepared=prepareChartTime({...dateVal,minute:dateVal.minute||0},{xiaLing:opts.xiaLing,zhenTaiyang:opts.zhenTaiyang,longitude:opts.longitude??longitude});
+          const calcDate=prepared.calculation;
+          const correctionInfo=[opts.xiaLing?"夏令时钟面已减1小时":"",prepared.solar?`真太阳时 ${calcDate.year}-${calcDate.month}-${calcDate.day} ${calcDate.hour}:${String(calcDate.minute).padStart(2,"0")}（${(opts.longitude??longitude).toFixed(1)}°E，修正${prepared.solar.totalOffset.toFixed(1)}分）`:""].filter(Boolean).join(" · ")||null;
+          setSolarCorrection(correctionInfo);
           if (opts.longitude !== undefined) setLongitude(opts.longitude);
           handleSubmit({
             ...calcDate,
             gender: opts.gender as Gender,
             birthInput: {
               normalizedDateTime: { ...dateVal },
-              name,
+              name:opts.recordName??name,
               gender: opts.gender,
               longitude: opts.longitude ?? longitude,
               latitude: opts.latitude,

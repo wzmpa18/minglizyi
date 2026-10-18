@@ -23,6 +23,7 @@
  */
 
 import { astro } from 'iztro';
+import {withZiweiDayRule} from './dayRule';
 import type { Horoscope } from 'iztro/lib/data/types/astro';
 import { lunar2solar, getTotalDaysOfLunarMonth, getHeavenlyStemAndEarthlyBranchBySolarDate } from 'lunar-lite';
 
@@ -33,6 +34,7 @@ import { lunar2solar, getTotalDaysOfLunarMonth, getHeavenlyStemAndEarthlyBranchB
 export type ZwTimeLevel = 'natal' | 'decadal' | 'yearly' | 'monthly' | 'daily' | 'hourly';
 
 export interface ZwTimeInput {
+  separateLateZi?:boolean;
   /** 公历年 */
   year: number;
   /** 公历月 */
@@ -145,17 +147,17 @@ let cacheKey = '';
 let cacheAstrolabe: ReturnType<typeof astro.bySolar> | null = null;
 
 function getAstrolabe(input: ZwTimeInput) {
-  const key = `${input.year}-${input.month}-${input.day}-${input.hour}-${input.gender}`;
+  const key = `${input.year}-${input.month}-${input.day}-${input.hour}-${input.gender}-${!!input.separateLateZi}`;
   if (cacheKey === key && cacheAstrolabe) return cacheAstrolabe;
   const solarDateStr = `${input.year}-${input.month}-${input.day}`;
   const timeIndex = hourToTimeIndex(input.hour);
-  cacheAstrolabe = astro.bySolar(solarDateStr, timeIndex, input.gender === 'male' ? '男' : '女', true, 'zh-CN');
+  cacheAstrolabe = withZiweiDayRule(input.separateLateZi,()=>astro.bySolar(solarDateStr, timeIndex, input.gender === 'male' ? '男' : '女', true, 'zh-CN'));
   cacheKey = key;
   return cacheAstrolabe;
 }
 
 function horoscopeAt(input: ZwTimeInput, date: Date | string): Horoscope {
-  return getAstrolabe(input).horoscope(date) as unknown as Horoscope;
+  return withZiweiDayRule(input.separateLateZi,()=>getAstrolabe(input).horoscope(date)) as unknown as Horoscope;
 }
 
 /** 流入宫 → 本命盘宫位名 */
