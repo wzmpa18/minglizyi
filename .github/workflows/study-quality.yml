@@ -25,6 +25,8 @@ on:
       - 'src/components/QizhengDetailedChart.tsx'
       - 'scripts/chart-corrections.test.ts'
       - 'src/lib/chartHandoff.ts'
+      - 'src/lib/lunar.ts'
+      - 'scripts/solar-to-lunar.test.ts'
       - 'scripts/chart-handoff.test.ts'
       - 'src/hooks/useCompassSensor.ts'
       - 'android/app/src/main/java/com/yandao/guoxue/plugins/LocalSkyLocationPlugin.java'
@@ -212,6 +214,7 @@ jobs:
       - run: npx tsx --test scripts/liuren-calendar.test.ts
       - run: npx tsx --test scripts/chart-corrections.test.ts
       - run: npx tsx --test scripts/chart-handoff.test.ts
+      - run: npx tsx --test scripts/solar-to-lunar.test.ts
       - run: npx tsx --test scripts/planetarium-projection.test.ts
       - run: node --experimental-strip-types --test scripts/offline-versions.test.cjs
       - run: node --experimental-strip-types --test scripts/offline-download-link.test.cjs

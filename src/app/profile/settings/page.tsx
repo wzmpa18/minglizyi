@@ -170,7 +170,7 @@ export default function SettingsPage() {
     setAllowNearby(storeNearby);
   }, []);
 
-  // v25.0.21：屏幕放大开关（关闭后全站禁用双指捏拉/双击/Ctrl+滚轮缩放）
+  // v25.0.21：屏幕放大开关（关闭后全站禁用双指捏拉/Ctrl+滚轮缩放）
   const toggleZoom = useCallback(() => {
     setZoomEnabled((v) => {
       const next = !v;
@@ -275,7 +275,7 @@ export default function SettingsPage() {
         />
         <div className="px-4 pb-3">
           <p className="text-[11px] leading-4 text-gray-400">
-            开启后可双指捏拉 / 双击 / Ctrl+滚轮放大页面；关闭后禁用全部放大交互，页面固定 100%
+            默认关闭。开启后可双指捏拉或 Ctrl+滚轮缩放，放大后可拖动查看，也可点击“恢复原大小”；关闭后恢复 100%。星图和盘面自带缩放另行控制。
           </p>
         </div>
       </div>
