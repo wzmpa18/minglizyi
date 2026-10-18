@@ -118,8 +118,8 @@ function ShengxiaoIcon({ name }: { name: string }) {
   return (
     <div className="flex flex-col items-center">
       <div
-        className="w-[72px] h-[72px] flex items-center justify-center text-[40px] bg-white"
-        style={{ borderRadius: "28px", border: "3px solid " + BRAND_PURPLE }}
+        className="w-[72px] h-[72px] flex items-center justify-center text-[40px]"
+        style={{ borderRadius: "50%", border: "2px solid #b29450", background: "#201e17" }}
       >
         {sxMap[name] || "🐴"}
       </div>
@@ -346,7 +346,7 @@ function TabChart({result,shensha,shengxiao,gender,lunarDateStr,solarDateStr,tru
       if (pillarIdx !== 2) {
         ssName = (p.shishen.zhi && p.shishen.zhi[idx]) || "";
       } else {
-        ssName = idx === 0 ? (gender === "male" ? "元男" : "元女") : ((p.shishen.zhi && p.shishen.zhi[idx]) || "");
+        ssName = getShiShen(dayGan, g as TianGan) || "";
       }
       return { gan: g, wx, shishen: ssName, isDayMaster: pillarIdx === 2 && idx === 0 };
     });
@@ -381,21 +381,21 @@ function TabChart({result,shensha,shengxiao,gender,lunarDateStr,solarDateStr,tru
 
   return <div className="px-2 pt-2">
     {/* 头部信息卡 - 白底无圆角阴影 */}
-    <div className="bg-white mb-2 px-3 py-3">
+    <div className="mb-2 px-3 py-3" style={{ background: "linear-gradient(145deg,#111,#302d26,#151515)" }}>
       <table className="w-full border-collapse"><colgroup><col width="22%"/><col width="78%"/></colgroup><tbody>
         <tr>
           <td rowSpan={3} className="text-center align-top pr-2 pt-1">
             <ShengxiaoIcon name={shengxiao} />
           </td>
-          <td className="text-[17px] text-[#333] pb-1">
-            农历：{lunarDateStr} <span className="text-[#9B5ECF] font-bold">({gender==="male"?"乾造":"坤造"})</span>
+          <td className="text-[17px] text-white pb-1">
+            农历：{lunarDateStr} <span className="text-[#b29450] font-bold">({gender==="male"?"乾造":"坤造"})</span>
           </td>
         </tr>
         <tr>
-          <td className="text-[17px] text-[#333] pb-1">北京时间：{solarDateStr}</td>
+          <td className="text-[17px] text-white pb-1">北京时间：{solarDateStr}</td>
         </tr>
         <tr>
-          <td className="text-[17px] text-[#333]">真太阳时：{trueSolarStr}</td>
+          <td className="text-[17px] text-white">真太阳时：{trueSolarStr}</td>
         </tr>
       </tbody></table>
       {solarCorrection && (
@@ -467,16 +467,22 @@ function TabChart({result,shensha,shengxiao,gender,lunarDateStr,solarDateStr,tru
                   return (
                     <div key={idx} className="leading-[24px]">
                       <span style={{color: WX_COLORS[it.wx || "火"], fontSize:"17px"}}>{it.gan}</span>
-                      {it.shishen && <span style={{color: WX_COLORS[it.wx || "火"], fontSize:"15px", marginLeft:"2px"}}>{it.shishen}</span>}
+                      <span style={{color: WX_COLORS[it.wx || "火"], fontSize:"15px", marginLeft:"2px"}}>{it.wx}</span>
                     </div>
                   );
                 })}
               </td>;
             })}
           </tr>
+          <tr style={{backgroundColor:"#f8f8f8"}}>
+            <td className="py-[5px] px-1 text-[14px] text-[#666] align-top">副星</td>
+            {pillars.map((p,i)=><td key={i} className="py-[5px] px-1 text-[15px] text-[#333] align-top">
+              {getCangGanWithShiShen(p,i).map((item,index)=><div key={index} className="leading-[24px]">{item.shishen || "—"}</div>)}
+            </td>)}
+          </tr>
           {/* 地势(长生十二神) */}
           <tr style={{backgroundColor:"#f8f8f8"}}>
-            <td className="py-[5px] px-1 text-[14px] text-[#666] align-middle">地势</td>
+            <td className="py-[5px] px-1 text-[14px] text-[#666] align-middle">星运</td>
             {pillars.map((p,i)=><td key={i} className="py-[5px] px-1 text-[15px] text-[#333] align-middle">
               {getZuoChangSheng(p)}
             </td>)}
@@ -511,7 +517,7 @@ function TabChart({result,shensha,shengxiao,gender,lunarDateStr,solarDateStr,tru
               const ny = p.nayin || getNaYin(p.ganzhi) || "-";
               // 纳音五行取最后一个字
               const wx = ["金","木","水","火","土"].find(w => ny.includes(w));
-              return <td key={i} className="py-[5px] px-1 text-[15px] align-middle" style={{color: wx ? WX_COLORS[wx] : "#333"}}>{ny}</td>;
+              return <td key={i} className="py-[5px] px-1 text-[15px] align-middle text-[#333]">{ny}</td>;
             })}
           </tr>
           {/* 神煞 */}
@@ -519,7 +525,7 @@ function TabChart({result,shensha,shengxiao,gender,lunarDateStr,solarDateStr,tru
             <td className="py-[5px] px-1 text-[14px] text-[#666] align-top">神煞</td>
             {[0,1,2,3].map(i=>{
               const ss = getPillarShenshaNames(shensha, i);
-              return <td key={i} className="py-[5px] px-1 text-[15px] align-top text-[#2e4487] leading-[22px]">
+              return <td key={i} className="py-[5px] px-1 text-[15px] align-top text-[#b29450] leading-[22px]">
                 {ss.length>0 ? ss.map((n,idx)=><div key={idx}>{n}</div>) : "-"}
               </td>;
             })}
@@ -683,7 +689,7 @@ function TabDetail({result,gender}:{
       if (pillarIdx !== 2) {
         ssName = (p.shishen.zhi && p.shishen.zhi[idx]) || "";
       } else {
-        ssName = idx === 0 ? (gender === "male" ? "元男" : "元女") : ((p.shishen.zhi && p.shishen.zhi[idx]) || "");
+        ssName = getShiShen(dayGan, g as TianGan) || "";
       }
       return { gan: g, wx, shishen: ssName };
     });
@@ -1005,7 +1011,7 @@ function TabDetail({result,gender}:{
       const wx = getGanWuxing(g as TianGan);
       let ssName = "";
       if (dp.isDayPillar) {
-        ssName = idx === 0 ? (gender === "male" ? "元男" : "元女") : ((dp.shishenZhi && dp.shishenZhi[idx]) || "");
+        ssName = getShiShen(dayGan, g as TianGan) || "";
       } else if (dp.isDayun || dp.isLiunian || dp.isLiuyue || dp.isLiuri || dp.isLiushi) {
         ssName = getShiShen(dayGan, g as TianGan) || "";
       } else {
