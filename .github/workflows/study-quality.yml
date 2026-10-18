@@ -4,6 +4,18 @@ on:
     paths:
       - '.github/workflows/study-quality.yml'
       - 'src/app/yixue/**'
+      - 'src/app/zhongyi/**'
+      - 'src/app/profile/**'
+      - 'src/app/admin/company/**'
+      - 'src/components/AnatomyStudyAtlas.tsx'
+      - 'src/components/ZhengguPreview.tsx'
+      - 'src/components/CompanyIntroduction.tsx'
+      - 'backend_deploy/academyRoutes.js'
+      - 'backend_deploy/zhengguPreviewPolicy.js'
+      - 'backend_deploy/companyProfile.default.json'
+      - 'backend_deploy/posterConfigRoutes.js'
+      - 'scripts/zhenggu-preview-http.test.cjs'
+      - 'public/assets/anatomy/**'
       - 'src/components/GlobalZoomProvider.tsx'
       - 'src/lib/baziRelations.ts'
       - 'src/components/QizhengDetailedChart.tsx'
@@ -207,6 +219,7 @@ jobs:
           npm install --prefix "$RUNNER_TEMP/study-http-deps" --no-save --package-lock=false express@4.22.2 better-sqlite3@13.0.3 jsonwebtoken@9.0.3
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/study-comments-http.test.cjs
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/offline-download-http.test.cjs
+          NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/zhenggu-preview-http.test.cjs
       - name: Verify Apple signature rejection and authenticated purchase endpoints with real dependencies
         run: |
           npm ci --prefix backend_deploy/apple-iap-runtime --ignore-scripts

@@ -1,4 +1,7 @@
 "use client";
+import { ZhengguPreview } from "@/components/ZhengguPreview";
+import { AnatomyStudyAtlas } from "@/components/AnatomyStudyAtlas";
+import { ResourceDiscussion } from "@/components/ResourceDiscussion";
 
 // ============================================================================
 // 中华非遗正骨专区 - v25.0.72
@@ -10,7 +13,6 @@
 // ============================================================================
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BrandHeader } from "@/components/shared";
-import { PageLoginGuard } from "@/components/PageLoginGuard";
 import { getLoginState, getUserToken } from "@/lib/auth";
 import { useNativePayQR } from "@/components/PayQRCodeModal";
 import { paySingleUnlockAndWait } from "@/lib/paymentService";
@@ -73,7 +75,7 @@ export default function ZhengguPage() {
 
   useEffect(() => { void loadAccess(); }, [loadAccess]);
 
-  const unlocked = !!access && (access.unlocked || isSingleUnlocked(ZHENGGU_TOOL_ID));
+  const unlocked = !!access?.unlocked;
 
   // 解锁后拉取正骨内容（学院库类目接口，服务端已做付费门控）
   const loadContent = useCallback(async () => {
@@ -144,7 +146,6 @@ export default function ZhengguPage() {
   if (accessLoading) {
     return (
       <div style={{ maxWidth: "420px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f5f5f5" }}>
-        <PageLoginGuard />
         <BrandHeader title="正骨专区" showBack backUrl="/zhongyi" />
         <div style={{ padding: "40px 0", textAlign: "center", color: "#999", fontSize: "13px" }}>加载中…</div>
       </div>
@@ -155,7 +156,6 @@ export default function ZhengguPage() {
   if (access && (access.status === "OFF" || access.status === "MAINTENANCE")) {
     return (
       <div style={{ maxWidth: "420px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f5f5f5" }}>
-        <PageLoginGuard />
         <BrandHeader title="正骨专区" showBack backUrl="/zhongyi" />
         <div style={{ padding: "24px 16px" }}>
           <div style={{ backgroundColor: "#fff", borderRadius: "16px", padding: "32px 20px", textAlign: "center" }}>
@@ -169,25 +169,11 @@ export default function ZhengguPage() {
     );
   }
 
-  // 未登录
-  if (!loggedIn) {
-    return (
-      <div style={{ maxWidth: "420px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f5f5f5" }}>
-        <PageLoginGuard />
-        <BrandHeader title="正骨专区" showBack backUrl="/zhongyi" />
-        <div style={{ padding: "40px 16px", textAlign: "center", color: "#999", fontSize: "13px" }}>
-          登录后即可查看正骨专区
-        </div>
-      </div>
-    );
-  }
-
   // 付费墙（未解锁）
   if (!unlocked) {
     const price = access ? access.price : 89;
     return (
       <div style={{ maxWidth: "420px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f5f5f5" }}>
-        <PageLoginGuard />
         <BrandHeader title="正骨专区" showBack backUrl="/zhongyi" />
         <div style={{ padding: "16px 12px" }}>
           <div style={{ backgroundColor: "#fff", borderRadius: "16px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
@@ -199,7 +185,7 @@ export default function ZhengguPage() {
             <div style={{ padding: "18px 16px" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
                 {[
-                  { n: "15", t: "部传承资料" },
+                  { n: "15", t: "传承核心资料" },
                   { n: "212", t: "个知识点" },
                   { n: "266", t: "道练习题" },
                 ].map((x) => (
@@ -243,6 +229,7 @@ export default function ZhengguPage() {
               </p>
             </div>
           </div>
+          <AnatomyStudyAtlas /><ZhengguPreview />
         </div>
         {qrModal}
       </div>
@@ -293,6 +280,7 @@ export default function ZhengguPage() {
       <div style={{ padding: "12px 12px 24px" }}>
         {contentLoading && <div style={{ padding: "24px 0", textAlign: "center", color: "#999", fontSize: "13px" }}>内容加载中…</div>}
 
+        <AnatomyStudyAtlas />
         {/* 知识点 Tab：章节分组手风琴 */}
         {!contentLoading && tab === "knowledge" && (
           <>
@@ -348,7 +336,8 @@ export default function ZhengguPage() {
                             </button>
                             {kpOpen && (
                               <div style={{ padding: "0 14px 12px", backgroundColor: "#fafafa" }}>
-                                <p style={{ fontSize: "12px", lineHeight: 1.8, color: "#555", margin: 0, whiteSpace: "pre-wrap" }}>{p.content}</p>
+                                <p className="select-none" style={{ fontSize: "14px", lineHeight: 1.8, color: "#333", margin: 0, whiteSpace: "pre-wrap" }}>{p.content}</p>
+                                <ResourceDiscussion resourceType="academy" resourceId={`zhenggu-${p.id}`} title="本知识点学习留言"/>
                                 {p.sourceText && (
                                   <p style={{ fontSize: "10px", color: "#999", marginTop: "8px" }}>出处：{p.sourceText}</p>
                                 )}

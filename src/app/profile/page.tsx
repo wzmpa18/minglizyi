@@ -1,5 +1,6 @@
 "use client";
 
+import { CompanyIntroduction } from "@/components/CompanyIntroduction";
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -1250,6 +1251,7 @@ export default function ProfilePage() {
         )}
       </div>
 
+      <CompanyIntroduction />
       <IcpFooter />
 
       {/* ===== 弹窗 ===== */}

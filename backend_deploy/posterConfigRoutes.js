@@ -20,6 +20,7 @@
 'use strict';
 
 const express = require('express');
+const companyDefaults=require('./companyProfile.default.json');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
@@ -199,6 +200,14 @@ router.put('/poster/config', (req, res) => {
         if (!newConfig.features || !Array.isArray(newConfig.features)) {
             return res.json({ success: false, error: '卖点列表格式不正确' });
         }
+        if(newConfig.companyProfile!==undefined){
+            const p=newConfig.companyProfile;
+            if(!p||typeof p!=="object"||Array.isArray(p))return res.status(400).json({success:false,error:"公司介绍格式不正确"});
+            for(const key of ["companyName","productName","introduction","services","website"])if(typeof p[key]!=="string"||p[key].length>2000)return res.status(400).json({success:false,error:"公司介绍字段须为不超过2000字的文本"});
+            if(!Array.isArray(p.products)||p.products.length>10||p.products.some(v=>typeof v!=="string"||v.length>300)||typeof p.enabled!=="boolean")return res.status(400).json({success:false,error:"产品介绍格式不正确"});
+            try{if(new URL(p.website).protocol!=="https:")throw Error();}catch{return res.status(400).json({success:false,error:"官网地址须为HTTPS网址"});}
+            newConfig.companyProfile=Object.fromEntries(["companyName","productName","introduction","services","website","products","enabled"].map(k=>[k,p[k]]));
+        }
         saveConfig(newConfig);
         console.log('[PosterConfig] 海报配置已更新');
         res.json({ success: true, message: '海报配置更新成功', config: newConfig });
@@ -238,6 +247,7 @@ router.get('/poster/config/public', (req, res) => {
     // 只返回前端需要的部分，不暴露管理员字段
     res.json({
         success: true,
+        companyProfile: {...companyDefaults,...(config.companyProfile||{})},
         title: config.titles[config.currentTitleIndex || 0],
         subtitle: config.subtitle,
         features: config.features,

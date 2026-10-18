@@ -57,6 +57,9 @@ function HerbListPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [dbLoaded, setDbLoaded] = useState(false);
+  const [natureFilter,setNatureFilter]=useState("");
+  const [tasteFilter,setTasteFilter]=useState("");
+  const [meridianFilter,setMeridianFilter]=useState("");
 
   useEffect(() => {
     loadFullHerbsDatabase().then(() => setDbLoaded(true));
@@ -83,8 +86,8 @@ function HerbListPage() {
     } else {
       herbs = searchFullHerbs('');
     }
-    return herbs;
-  }, [searchQuery, activeCategory, dbLoaded]);
+    return herbs.filter(h=>(!natureFilter||(h.nature||"").includes(natureFilter))&&(!tasteFilter||(h.taste||"").includes(tasteFilter))&&(!meridianFilter||(h.meridian||"").includes(meridianFilter)));
+  }, [searchQuery, activeCategory, dbLoaded,natureFilter,tasteFilter,meridianFilter]);
 
   const handleHerbClick = (herb: TcmHerb) => {
     addRecentItem({ type: "herb", id: herb.id, name: herb.name, category: herb.category });
@@ -120,7 +123,12 @@ function HerbListPage() {
         </div>
       </div>
 
-      <p style={{ margin: "12px 12px 0", fontSize: "11px", color: "#666", lineHeight: 1.7 }}>下方索引按资料中的功效词生成，不代表药物分类。风险标签只转述原资料性味栏；没有标签不代表安全，不可据此自行用药。</p>
+      <section className="m-3 rounded-xl bg-white p-3 text-sm text-gray-700"><h2 className="font-semibold">本草性味归经</h2><p className="my-2 leading-6">四气五味与归经分别记录药性、味和作用趋向。古籍三品分类与现代功效分类、药典标准应分别阅读，不能把后世归经术语都当成《本草经》原文。</p><div className="grid grid-cols-3 gap-2">
+        <label>药性<select aria-label="按药性筛选" value={natureFilter} onChange={e=>setNatureFilter(e.target.value)} className="w-full border rounded p-1"><option value="">全部</option>{["寒","凉","平","温","热"].map(n=><option key={n}>{n}</option>)}</select></label>
+        <label>药味<select aria-label="按药味筛选" value={tasteFilter} onChange={e=>setTasteFilter(e.target.value)} className="w-full border rounded p-1"><option value="">全部</option>{["辛","甘","酸","苦","咸","淡","涩"].map(n=><option key={n}>{n}</option>)}</select></label>
+        <label>归经<select aria-label="按归经筛选" value={meridianFilter} onChange={e=>setMeridianFilter(e.target.value)} className="w-full border rounded p-1"><option value="">全部</option>{["心","肝","脾","肺","肾","胃","胆","大肠","小肠","膀胱","三焦","心包"].map(n=><option key={n}>{n}</option>)}</select></label>
+      </div><p className="mt-2 text-xs">符合条件：{filteredHerbs.length}味；未记录的性味归经不自动补写。</p><Link href="/zhongyi/classic/?book=shennong-original" className="block mt-3 text-purple-800 underline">《神农本草经》整本 · 上中下三品原文</Link><details className="mt-3 text-xs leading-6"><summary>药典与用药规律学习</summary><p>2025年版《中国药典》自2025年10月1日起实施。药材、饮片与成方制剂应区分基原、性状、鉴别、检查和含量测定等质量条目，再读性味归经、功能主治、用法用量、注意与贮藏。处方配伍须结合证候和专业药学审查，不能由古籍文字直接推定个人剂量。</p><p>现有条目为学习整理，尚未逐味与2025年版药典校核，不标为药典全量全文。</p><a href="https://www.nmpa.gov.cn/xxgk/fgwj/gzwj/gzwjyp/20250325184202175.html" target="_blank" rel="noopener noreferrer" className="underline">国家药监局实施公告</a></details></section>
+      <details className="mx-3 mb-3"><summary className="text-sm text-gray-700">功效词检索（原整理标签）</summary>
       {/* 资料词索引，不推断药物分类 */}
       <div style={{ padding: "12px", overflowX: "auto", whiteSpace: "nowrap" }}>
         <button
@@ -156,6 +164,7 @@ function HerbListPage() {
         })}
       </div>
 
+      </details>
       {/* 药材卡片列表 */}
       <div style={{ padding: "0 12px" }}>
         {filteredHerbs.length === 0 ? (
@@ -273,7 +282,7 @@ function HerbDetailPage({ herbId }: { herbId: string }) {
         </div>
       </div>
 
-      <p style={{ margin: "12px", fontSize: "11px", color: "#666", lineHeight: 1.7 }}>本页转述资料供学习；资料词索引不是药物分类，未显示风险标签不代表安全或适合个人使用。请勿据此自行用药。</p>
+      <p style={{ margin: "12px", fontSize: "11px", color: "#666", lineHeight: 1.7 }}>性、味、归经依本条资料分栏展示；古籍记载与现代标准分别标识。未显示风险标签不代表安全或适合个人使用，请勿据此自行用药。</p>
       {/* 原资料明确标注的风险，不从禁忌中的任意“毒”字推断 */}
       {herb.toxic && (
         <div style={{ margin: "12px", padding: "10px 14px", backgroundColor: "#FFEBEE", borderRadius: "10px", border: "1px solid #FFCDD2" }}>

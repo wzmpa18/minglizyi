@@ -20,6 +20,7 @@ const path = require('path');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const {knowledgePreview}=require('./zhengguPreviewPolicy');
 
 // P6-TCM-02 质量治理层：嵌入流水线节点，不替换任何原有步骤
 const QG = require('./qualityGate');
@@ -1176,6 +1177,16 @@ function createRouter() {
   });
 
   // ---------- v25.0.72 正骨专区访问态（开关+价格SSOT+权益，一次查询） ----------
+  // Server-truncated previews never contain full text, source snippets, files or question answers.
+  router.get('/zhenggu/preview',(req,res)=>{
+    try {
+      const t=zhengguToolEntry();
+      if(t.status!=='ON'||['DISABLED','AI_CREDIT'].includes(t.payMode))return res.status(403).json({success:false,error:'正骨专区暂不可用'});
+      const rows=getDb().prepare(`SELECT k.id,k.title,k.chapter,k.content FROM knowledge_points k LEFT JOIN materials m ON m.id=k.material_id WHERE k.status='approved' AND (k.category=? OR m.category=?) ORDER BY k.id LIMIT 1000`).all(ZHENGGU_CATEGORY,ZHENGGU_CATEGORY);
+      res.set('Cache-Control','no-store').json({success:true,points:rows.map(knowledgePreview),exportAllowed:false});
+    }catch{res.status(503).json({success:false,error:'试看暂不可用，请稍后重试'});}
+  });
+
   router.get('/zhenggu/access', authRequired, (req, res) => {
     try {
       const t = zhengguToolEntry();
@@ -1276,6 +1287,7 @@ function createRouter() {
         }
         sql += ')';
       }
+      if(!isAdmin(req)&&zhengguGateBlock(req)){sql+=` AND COALESCE(category,'') != ?`;params.push(ZHENGGU_CATEGORY);}
       sql += ' ORDER BY id DESC LIMIT 200';
       res.json({ success: true, materials: d.prepare(sql).all(...params).map(materialVo) });
     } catch (e) {
@@ -1379,6 +1391,7 @@ function createRouter() {
       }
       if (isAdmin(req)) { if (status) { sql += ' AND k.status = ?'; params.push(status); } }
       else { sql += ` AND k.status = 'approved'`; }
+      if(!isAdmin(req)&&zhengguGateBlock(req)){sql+=` AND COALESCE(k.category,'') != ? AND COALESCE(m.category,'') != ?`;params.push(ZHENGGU_CATEGORY,ZHENGGU_CATEGORY);}
       const beforeId = Number(req.query.beforeId);
       if (Number.isSafeInteger(beforeId) && beforeId > 0) { sql += ' AND k.id < ?'; params.push(beforeId); }
       const offlineCursorLimit = Math.min(1000, Math.max(1, parseInt(limitStr, 10) || 300));
@@ -1405,6 +1418,9 @@ function createRouter() {
       const row = getDb().prepare('SELECT * FROM knowledge_points WHERE id = ?').get(parseInt(req.params.id, 10));
       if (!row) return res.status(404).json({ success: false, error: '知识点不存在' });
       if (row.status !== 'approved' && !isAdmin(req)) return res.status(403).json({ success: false, error: '知识点审核中' });
+      const parent=row.material_id?getDb().prepare('SELECT category FROM materials WHERE id=?').get(row.material_id):null;
+      if(row.category===ZHENGGU_CATEGORY||parent?.category===ZHENGGU_CATEGORY){const block=zhengguGateBlock(req);if(block)return res.status(block.code).json({success:false,error:block.error,paywall:block.paywall||null});}
+
       res.json({ success: true, point: knowledgeVo(row) });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
@@ -1435,6 +1451,10 @@ function createRouter() {
   // 2.1 来源证据链反查：任意正式知识点可回溯「资料→原文位置→AI→审核→版本」
   router.get('/knowledge/:id/trace', authRequired, (req, res) => {
     try {
+      const row=getDb().prepare('SELECT k.*,m.category AS parent_category FROM knowledge_points k LEFT JOIN materials m ON m.id=k.material_id WHERE k.id=?').get(parseInt(req.params.id,10));
+      if(!row)return res.status(404).json({success:false,error:'知识点不存在'});
+      if(row.status!=='approved'&&!isAdmin(req))return res.status(403).json({success:false,error:'知识点审核中'});
+      if(row.category===ZHENGGU_CATEGORY||row.parent_category===ZHENGGU_CATEGORY){const block=zhengguGateBlock(req);if(block)return res.status(block.code).json({success:false,error:block.error});}
       const trace = QG.traceKnowledge(getDb(), parseInt(req.params.id, 10));
       if (!trace) return res.status(404).json({ success: false, error: '知识点不存在' });
       res.json({ success: true, trace });
@@ -1586,6 +1606,7 @@ function createRouter() {
       if (type) { sql += ' AND type = ?'; params.push(type); }
       if (isAdmin(req)) { if (status) { sql += ' AND status = ?'; params.push(status); } }
       else { sql += ` AND status = 'approved'`; }
+      if(!isAdmin(req)&&zhengguGateBlock(req)){sql+=` AND COALESCE(category,'') != ? AND NOT EXISTS (SELECT 1 FROM knowledge_points k LEFT JOIN materials m ON m.id=k.material_id WHERE k.id=questions.knowledge_id AND (k.category=? OR m.category=?))`;params.push(ZHENGGU_CATEGORY,ZHENGGU_CATEGORY,ZHENGGU_CATEGORY);}
       const beforeId = Number(req.query.beforeId);
       if (Number.isSafeInteger(beforeId) && beforeId > 0) { sql += ' AND id < ?'; params.push(beforeId); }
       const offlineCursorLimit = Math.min(1000, Math.max(1, parseInt(limitStr, 10) || 300));

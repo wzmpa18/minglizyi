@@ -176,7 +176,7 @@ export function timeDivinationNumbers(year:number, month:number, day:number, hou
   const check=new Date(Date.UTC(2000,month-1,day));check.setUTCFullYear(year);
   if (check.getUTCMonth()!==month-1 || check.getUTCDate()!==day) throw Error('日期不存在');
   const lunar=Solar.fromYmdHms(year,month,day,hour,0,0).getLunar();
-  return {yearNumber:lunar.getYearZhiIndex()+1,lunarMonth:Math.abs(lunar.getMonth()),lunarDay:lunar.getDay(),hourNumber:Math.floor((hour+1)/2)%12+1};
+  return {yearNumber:"子丑寅卯辰巳午未申酉戌亥".indexOf(lunar.getYearZhi())+1,lunarMonth:Math.abs(lunar.getMonth()),lunarDay:lunar.getDay(),hourNumber:Math.floor((hour+1)/2)%12+1};
 }
 
 export function timeDivination(year: number, month: number, day: number, hour: number): {
