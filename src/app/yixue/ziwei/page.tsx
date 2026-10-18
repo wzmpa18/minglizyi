@@ -462,6 +462,7 @@ export default function ZiweiPage() {
   // ---- 视图模式 ----
   const [viewMode, setViewMode] = useState<"sihua" | "sanhe" | "feixing">("sanhe");
   const [professionalLayout, setProfessionalLayout] = useState(false);
+  const [showBaziConfirm,setShowBaziConfirm]=useState(false);
   const {tools: toolMatrix} = useToolMatrix();
   const ziweiControls = toolMatrix.ziwei;
   const aiVisible = ziweiControls?.aiEnabled !== false;
@@ -476,8 +477,8 @@ export default function ZiweiPage() {
   const [selectedLiuyue, setSelectedLiuyue] = useState<number>(-1);
   const [interpretPanel, setInterpretPanel] = useState<{palaceName: string; palaceGanZhi: string; interpretations: Array<{type: string; title: string; content: string; source: string}>} | null>(null);
   // P1-REOPEN: 宫位解读面板改规范BottomSheet（85vh内滚+弹窗时隐藏Tab栏，根治APP端底部遮挡）
-  useBodyScrollLock(!!interpretPanel);
-  usePopupBackHandler(() => setInterpretPanel(null), !!interpretPanel);
+  useBodyScrollLock(!!interpretPanel||showBaziConfirm);
+  usePopupBackHandler(() => {setInterpretPanel(null);setShowBaziConfirm(false);}, !!interpretPanel||showBaziConfirm);
   // v18.6: 宫位大运名称展开状态（点击宫位展开/收起大运宫名）
   const [expandedPalaceIdx, setExpandedPalaceIdx] = useState<number | null>(null);
   // v19.2: 流日/流时选中状态
@@ -706,9 +707,9 @@ export default function ZiweiPage() {
     }catch{setError("出生资料无法计算，请核对原排盘资料。");}
   }, [handleRestoreHistory]);
   const openCorrespondingBazi=()=>{
-    if(!window.confirm("是否用此命盘的相同出生资料打开八字基本信息？"))return;
     const payload=chartHandoffFromRecord(chartInputRef.current||{year,month,day,hour,minute:birthMinute,gender,name,longitude,zhenTaiyang,zaoWanZi,xiaLing},"bazi");
     if(!payload||!writeChartHandoff(payload)){setError("无法读取本次完整出生资料，请重新排盘后再打开八字。");return;}
+    window.__skipPopupCleanup=true;setShowBaziConfirm(false);
     router.push("/yixue/bazi/");
   };
   // ---- 派生数据 ----
@@ -1194,6 +1195,11 @@ export default function ZiweiPage() {
     <div className="bg-[#ededed] min-h-screen flex justify-center">
       <div className="w-full" style={{ maxWidth: professionalLayout ? "720px" : "420px", paddingBottom: "calc(74px + env(safe-area-inset-bottom, 0px))" }}>
       <style>{`body:has([aria-label="专业紫微盘快捷功能"]) #app-bottom-nav { display: none !important; }`}</style>
+      {showBaziConfirm&&<div className="fixed inset-0 z-[20000] flex items-center justify-center bg-black/50 p-5" onClick={()=>setShowBaziConfirm(false)}>
+        <section role="dialog" aria-modal="true" aria-labelledby="bazi-jump-title" className="w-full max-w-sm rounded-2xl bg-white p-5 text-gray-900 shadow-xl" onClick={event=>event.stopPropagation()}>
+          <h2 id="bazi-jump-title" className="text-lg font-bold">打开此四柱的八字？</h2><p className="mt-3 text-sm leading-6">沿用此人的出生资料和校时选项，直接打开排好的八字基本信息。</p>
+          <div className="mt-5 flex justify-end gap-3"><button type="button" onClick={()=>setShowBaziConfirm(false)} className="rounded-lg border px-4 py-2">取消</button><button type="button" onClick={openCorrespondingBazi} className="rounded-lg bg-purple-800 px-4 py-2 text-white">打开八字基本信息</button></div>
+        </section></div>}
       {/* 输入表单 DatePicker 弹窗 */}
       <DatePicker onRecordImport={applyMingzhuProfile} onRecordRestore={handleRestoreHistory}
         show={showForm}
@@ -1338,7 +1344,7 @@ export default function ZiweiPage() {
                   })()}
                 </svg>}
 
-                {professionalLayout && <ProfessionalZiweiBoard onOpenBazi={openCorrespondingBazi} result={result} mode={viewMode} focus={focusedPalace}
+                {professionalLayout && <ProfessionalZiweiBoard onOpenBazi={()=>setShowBaziConfirm(true)} result={result} mode={viewMode} focus={focusedPalace}
                   mutagenTable={TIANGAN_SIHUA} laiyinPalaceIndex={laiyinPalaceIdx}
                   onSelect={setFocusedPalace} onDetails={openProfessionalPalaceDetails}
                   overlay={overlayInfo} dynamicLabels={dynamicStarsByPalace}
@@ -1412,7 +1418,7 @@ export default function ZiweiPage() {
                             const parts = result.chineseDate ? result.chineseDate.split(/\s+/) : [];
                             const labels = ["年", "月", "日", "时"];
                             return (
-                              <button type="button" aria-label="用此四柱打开八字基本信息" title="点击打开八字基本信息" onClick={(event)=>{event.stopPropagation();openCorrespondingBazi();}} className="flex w-full gap-0.5 border-0 bg-transparent p-0" style={{ marginBottom: "1px", marginTop: "1px" }}>
+                              <button type="button" aria-label="用此四柱打开八字基本信息" title="点击打开八字基本信息" onClick={(event)=>{event.stopPropagation();setShowBaziConfirm(true);}} className="flex w-full gap-0.5 border-0 bg-transparent p-0" style={{ marginBottom: "1px", marginTop: "1px" }}>
                                 {labels.map((label, pi) => {
                                   const gz = parts[pi] || "--";
                                   const gan = gz.charAt(0);

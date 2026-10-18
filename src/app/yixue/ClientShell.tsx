@@ -106,7 +106,7 @@ export default function YixueClientShell({ children }: { children: React.ReactNo
           {pageTitle}
         </div>
 
-        <button
+        {normPathname!=="/yixue/ziwei" ? <button
           onClick={async () => {
             try {
               const shareData = { title: pageTitle, text: `言道国学 - ${pageTitle}`, url: window.location.href };
@@ -130,7 +130,7 @@ export default function YixueClientShell({ children }: { children: React.ReactNo
             <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
             <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
           </svg>
-        </button>
+        </button> : <span aria-hidden="true" />}
       </header>
 
       {/* v25.0.27: 移除 52px 空白占位（sticky header 已在文档流中），内容直接顶到品牌栏下方 */}
