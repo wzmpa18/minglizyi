@@ -78,7 +78,8 @@ export default function OfflinePage() {
         if (res.ok) v = (await res.json()).version || "";
       } catch { /* ignore */ }
     }
-    if (v) setAppVersion(v.replace(/^v/, ""));
+    v = v.trim().replace(/^v/i, "");
+    if (v) setAppVersion(v);
 
     const manifest = await fetchManifest();
     if (!manifest) {

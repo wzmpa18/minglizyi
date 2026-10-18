@@ -17,6 +17,8 @@
 
 import { get, put, remove, listMeta } from "./storageManager";
 import { getUserToken } from "./auth";
+import { compareVersion, meetsMinAppVersion } from "./offlineVersions";
+export { compareVersion, meetsMinAppVersion } from "./offlineVersions";
 
 export interface ManifestPack {
   packId: string;
@@ -73,23 +75,6 @@ export async function getInstalledPacks(): Promise<InstalledPackRecord[]> {
   return Object.values(await getInstalledIndex());
 }
 
-/** 版本比较（语义化 x.y.z）：返回 1/0/-1 */
-export function compareVersion(a: string, b: string): number {
-  const pa = a.split(".").map(Number);
-  const pb = b.split(".").map(Number);
-  for (let i = 0; i < 3; i++) {
-    const x = pa[i] || 0, y = pb[i] || 0;
-    if (x > y) return 1;
-    if (x < y) return -1;
-  }
-  return 0;
-}
-
-/** APP 版本比较 minAppVersion：本地低于要求时该包不可用 */
-export function meetsMinAppVersion(minAppVersion: string, appVersion: string): boolean {
-  return compareVersion(appVersion, minAppVersion) >= 0;
-}
-
 export interface PackUpdatePlan {
   packId: string;
   action: "INSTALL" | "UPDATE" | "UP_TO_DATE" | "INCOMPATIBLE";
@@ -105,7 +90,9 @@ export async function checkUpdates(appVersion: string, manifest: OfflineManifest
       return { packId: p.packId, action: "INCOMPATIBLE" as const, manifestPack: p };
     }
     if (!rec) return { packId: p.packId, action: "INSTALL" as const, manifestPack: p };
-    const cmp = compareVersion(p.version, rec.version);
+    let cmp: number;
+    try { cmp = compareVersion(p.version, rec.version); }
+    catch { return { packId: p.packId, action: "INCOMPATIBLE" as const, manifestPack: p }; }
     return {
       packId: p.packId,
       action: cmp > 0 ? ("UPDATE" as const) : ("UP_TO_DATE" as const),
