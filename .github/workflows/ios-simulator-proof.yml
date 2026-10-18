@@ -47,9 +47,6 @@ jobs:
             set -e
             xcrun xcresulttool export attachments --path "$RUNNER_TEMP/$kind.xcresult" --output-path "$RUNNER_TEMP/guoxue-screen-proof/$kind"
             if [ "$TEST_STATUS" -ne 0 ]; then exit "$TEST_STATUS"; fi
-            xcrun simctl openurl "$MODEL" "yandaoguoxue://calendar"
-            sleep 8
-            xcrun simctl io "$MODEL" screenshot "$RUNNER_TEMP/guoxue-screen-proof/${kind}_04_真实应用_言道日历.png"
             xcrun simctl shutdown "$MODEL"
           done
       - name: Preserve authentic screenshot evidence, including failed UI steps
