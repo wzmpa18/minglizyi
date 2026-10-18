@@ -11,6 +11,7 @@ ui.add_dependency(app)
 file = project.main_group.new_file('../../scripts/ios-study-screenshots.swift')
 ui.source_build_phase.add_file_reference(file)
 ui.build_configurations.each do |configuration|
+  configuration.build_settings['PRODUCT_NAME'] = 'GuoxueStudyUITests'
   configuration.build_settings['PRODUCT_BUNDLE_IDENTIFIER'] = 'com.yandaoguoxue.app.StudyUITests'
   configuration.build_settings['TEST_TARGET_NAME'] = 'App'
   configuration.build_settings['SWIFT_VERSION'] = '5.0'

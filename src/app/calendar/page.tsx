@@ -1,5 +1,6 @@
 "use client";
 import { InterfaceButton, InterfaceLabel, InterfaceOption } from "@/components/InterfaceControls";
+import {CalendarLearningPreferences} from "@/components/CalendarLearningPreferences";
 import Link from "next/link";
 import {useEffect,useMemo,useState} from "react";
 import {Solar} from "lunar-javascript";
@@ -32,7 +33,7 @@ export default function CalendarPage(){
    <h2 className="my-3 font-semibold">当天私有记事</h2>{events.length?events.map(o=><p key={o.event.id} className="my-2">{o.event.eventTime||"00:00"} · {o.event.title}</p>):<p className="text-sm opacity-70">这一天暂无安排。</p>}
   </section>
   <section className="m-3 rounded-2xl p-4" style={{background:"var(--theme-card-bg)"}}><input aria-label="搜索本机日程" placeholder="搜索未来60天的本机日程" className="w-full rounded border p-2" value={query} onChange={e=>setQuery(e.target.value)}/>{upcoming.slice(0,20).map(o=><p className="my-3 border-b pb-2 text-sm" key={`${o.event.id}:${o.ts}`}>{o.y}-{o.m}-{o.d} · {o.event.title}</p>)}</section>
-  <section className="m-3 rounded-2xl p-4 text-sm leading-7" style={{background:"var(--theme-card-bg)"}}><h2 className="font-semibold">文化学习 · 自主选择</h2><Link href="/yixue/jieqi/">二十四节气</Link> · <Link href="/zhongyi/yunqi/">五运六气原典</Link> · <Link href="/academy/astronomy/">天文馆</Link><p className="text-xs opacity-70">传统文化参考与私人日程分开，不据出生信息诊断、开药或推送灾祸。非必要文化通知默认关闭。</p><Link href="/profile/theme/">国风主题</Link> · <Link href="/calendar/widgets/">桌面组件与提醒设置</Link></section>
+  <section className="m-3 rounded-2xl p-4 text-sm leading-7" style={{background:"var(--theme-card-bg)"}}><h2 className="font-semibold">文化学习 · 自主选择</h2><CalendarLearningPreferences/><Link href="/yixue/jieqi/">二十四节气</Link> · <Link href="/zhongyi/yunqi/">五运六气原典</Link> · <Link href="/academy/astronomy/">天文馆</Link><p className="text-xs opacity-70">传统文化参考与私人日程分开，不据出生信息诊断、开药或推送灾祸。非必要文化通知默认关闭。</p><Link href="/profile/theme/">国风主题</Link> · <Link href="/calendar/widgets/">桌面组件与提醒设置</Link></section>
   {clock&&<CalendarClock observation={observation} onClose={()=>setClock(false)}/>}
  </main>;
 }

@@ -89,7 +89,7 @@ export default function YixueClientShell({ children }: { children: React.ReactNo
 
   return (
     <div className="flex min-h-screen flex-col" style={{ backgroundColor: "#ededed", maxWidth: "420px", margin: "0 auto" }}>
-      <header
+      {normPathname!=="/yixue/wannianli/events" && <header
         className="sticky top-0 z-50 grid w-full items-center"
         // v25.0.80: iOS 刘海屏顶栏避让——viewport-fit=cover 下补 safe-area-inset-top，
         // 否则返回键/分享键被灵动岛遮挡（Android 安全区为 0，零影响）
@@ -134,7 +134,7 @@ export default function YixueClientShell({ children }: { children: React.ReactNo
             <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
           </svg>
         </button> : <span aria-hidden="true" />}
-      </header>
+      </header>}
 
       {/* v25.0.27: 移除 52px 空白占位（sticky header 已在文档流中），内容直接顶到品牌栏下方 */}
       <main className="flex-1" style={{ paddingBottom: "72px" }}>

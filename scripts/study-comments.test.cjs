@@ -74,3 +74,15 @@ test('tool discussions share the moderated store and never use a private chart a
  assert.equal(s.remove(posted.id,'learner').success,true);
  } finally {db.close();}
 });
+
+test('admin rate configuration validates atomically and affects actual submissions',()=>{
+ const {db,service:s,body,tick}=setup();try{
+  s.setConfig('admin',{perTargetDay:1,minIntervalSeconds:1});
+  assert.equal(s.config('standard:LU1').limits.perTargetDay,1);
+  s.submit('standard:LU1','alice','甲',body('第一条学习留言'));tick();
+  assert.throws(()=>s.submit('standard:LU1','alice','甲',body('第二条学习留言')),/本讨论区/);
+  assert.throws(()=>s.setConfig('admin',{perDay:2,perTargetDay:999}),/范围/);
+  assert.equal(s.config('standard:LU1').limits.perDay,20);
+  assert.throws(()=>s.setConfig('admin',{reviewBeforePublish:false}),/字段/);
+ }finally{db.close();}
+});

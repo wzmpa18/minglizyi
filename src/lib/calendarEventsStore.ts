@@ -8,6 +8,7 @@
 // 存储：localStorage（按真实账号／游客隔离），本模块不自动上传。
 // ============================================================================
 
+import {learningReminderEvents} from "./calendarLearning";
 import { Solar, Lunar } from "lunar-javascript";
 import { getClientUserId,getUserProfile,getUserToken } from "./auth";
 import { lunarBirthdayInYear, solarBirthdayInYear, civilTimeEpoch, reminderDueAt, DEFAULT_BIRTHDAY_RULES, validCivilDate, type BirthdayRules } from "./calendarRecurrence";
@@ -419,6 +420,7 @@ export function getOccurrenceReminders(occurrence:EventOccurrence):{at:number;of
 }
 export function getPendingReminderOccurrences(days=30):EventOccurrence[]{
   const result=getUpcomingEvents(days);
+  for(const event of learningReminderEvents(calendarStorageOwner())){const current=eventCivilToday(event);result.push(...getOccurrences(event,current.y,current.m,current.d,days));}
   for(const event of listEvents()){
     const snooze=event.snoozedReminder;if(!snooze||snooze.at<Date.now()-1800000)continue;
     const [y,m,d]=snooze.date.split("-").map(Number);
@@ -504,7 +506,7 @@ export function dispatchDueReminders(
   if (!isBrowser()) return result;
 
   const now = Date.now();
-  const list = listEvents().filter((e) => !e.paused);
+  const list = [...listEvents(),...learningReminderEvents(calendarStorageOwner())].filter((e) => !e.paused);
   const log = safeGet<ReminderLogEntry[]>(logKey(), []);
   const logIds = new Set(log.map((l) => l.id));
 
@@ -573,7 +575,7 @@ export function detectMissedReminders(): { eventTitle: string; dueAt: string }[]
   const missed: { eventTitle: string; dueAt: string }[] = [];
   const log = safeGet<ReminderLogEntry[]>(logKey(), []);
   const logIds = new Set(log.map((l) => l.id));
-  for (const ev of listEvents().filter((e) => !e.paused)) {
+  for (const ev of [...listEvents(),...learningReminderEvents(calendarStorageOwner())].filter((e) => !e.paused)) {
     const localToday=eventCivilToday(ev);
     const occs = getOccurrences(ev,localToday.y,localToday.m,localToday.d-1,10);
     for (const occ of occs) {

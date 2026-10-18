@@ -512,7 +512,7 @@ export default function CalendarEventsPage() {
         </div>
 
         {/* ===== 新建按钮 ===== */}
-        <div className="fixed inset-x-0 bottom-0 z-40 px-4 pb-[calc(76px + env(safe-area-inset-bottom))] pt-2" style={{ maxWidth: "500px", margin: "0 auto", pointerEvents: "none" }}>
+        <div className="fixed inset-x-0 z-40 px-4 pt-2" style={{ maxWidth: "420px", margin: "0 auto", bottom:"calc(var(--bottom-nav-height, 64px) + env(safe-area-inset-bottom) + 12px)", pointerEvents: "none" }}>
           <InterfaceButton
             onClick={openCreate}
             className="pointer-events-auto w-full rounded-xl py-3 text-sm font-bold text-white shadow-lg active:opacity-80"
@@ -525,7 +525,7 @@ export default function CalendarEventsPage() {
         {/* ===== 上限提示 ===== */}
         {limitReached && (
           <div
-            className="fixed inset-0 z-[70] flex justify-center bg-black/40 px-6"
+            className="fixed inset-0 z-[1200] flex justify-center bg-black/40 px-6"
             style={{ paddingTop: "max(8vh, 48px)", alignItems: "flex-start" }}
             onClick={() => setLimitReached(false)}
           >
@@ -542,7 +542,7 @@ export default function CalendarEventsPage() {
         {/* ===== 新建/编辑弹窗（P7-补05 统一规范：居中偏上 + 最大80vh + 内部滚动 + 蒙层/右上角双关闭） ===== */}
         {showForm && (
           <div
-            className="fixed inset-0 z-[60] flex justify-center bg-black/40"
+            className="fixed inset-0 z-[1200] flex justify-center bg-black/40"
             style={{ paddingTop: "max(8vh, 48px)", alignItems: "flex-start", paddingBottom: "12vh" }}
             onClick={() => setShowForm(false)}
           >
@@ -745,7 +745,7 @@ export default function CalendarEventsPage() {
         {/* ===== P7-补05：提交前重复规则确认弹窗（居中偏上） ===== */}
         {confirming && (
           <div
-            className="fixed inset-0 z-[80] flex justify-center bg-black/50"
+            className="fixed inset-0 z-[1300] flex justify-center bg-black/50"
             style={{ paddingTop: "max(8vh, 48px)", alignItems: "flex-start" }}
             onClick={() => setConfirming(false)}
           >
@@ -795,7 +795,7 @@ export default function CalendarEventsPage() {
         {/* ===== 导出确认弹窗 ===== */}
         {showExport && (
           <div
-            className="fixed inset-0 z-[60] flex justify-center bg-black/40 px-6"
+            className="fixed inset-0 z-[1200] flex justify-center bg-black/40 px-6"
             style={{ paddingTop: "max(8vh, 48px)", alignItems: "flex-start" }}
             onClick={() => setShowExport(false)}
           >

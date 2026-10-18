@@ -216,6 +216,7 @@ jobs:
       - run: npx tsx --test scripts/chart-corrections.test.ts
       - run: npx tsx --test scripts/chart-handoff.test.ts
       - run: npx tsx --test scripts/solar-to-lunar.test.ts
+      - run: npx tsx --test scripts/calendar-learning.test.ts
       - run: npx tsx --test scripts/calendar-storage.test.ts
       - run: npx tsx --test scripts/calendar-recurrence.test.ts
       - run: npx tsx --test scripts/calendar-snapshot.test.ts
