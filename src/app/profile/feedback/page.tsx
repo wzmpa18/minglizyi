@@ -30,6 +30,14 @@ export default function FeedbackPage() {
   const [showHistory, setShowHistory] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const toolId = params.get("toolId") || "";
+    if (params.get("type") === "ad" && /^[a-z0-9_-]{1,60}$/i.test(toolId)) {
+      setSelectedType("complaint"); setTitle(`广告投诉（${toolId}）`);
+    }
+  }, []);
+
   // 加载用户反馈历史
   const loadHistory = useCallback(async () => {
     setLoadingHistory(true);

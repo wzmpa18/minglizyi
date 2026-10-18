@@ -44,6 +44,9 @@ export interface CallPaymentParams {
   /** 业务扩展参数 */
   extra?: {
     unlockTargetId?: string;
+    /** AI次数包及AI时卡：数量和价格由服务器配置裁决 */
+    packageId?: string;
+    planKey?: string;
     membershipLevel?: string;
     membershipDays?: number;
     pointsAmount?: number;

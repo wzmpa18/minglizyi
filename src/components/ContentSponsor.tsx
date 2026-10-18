@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useToolMatrix } from "@/lib/sectionGate";
 import { getMembershipStatus, isSuperAccount } from "@/lib/membershipStore";
 
@@ -24,5 +25,6 @@ export function ContentSponsor({ toolId }: { toolId: string }) {
   const card = <><span style={{ fontSize: 10, color: "#757575" }}>广告</span><strong style={{ display: "block", margin: "5px 0", fontSize: 14 }}>{entry.adTitle}</strong>{image && <img src={image} alt={entry.adTitle} loading="lazy" referrerPolicy="no-referrer" style={{ display: "block", maxWidth: "100%", maxHeight: 220, borderRadius: 8, objectFit: "contain" }} />}</>;
   return <aside aria-label="学习页面广告" style={{ maxWidth: 420, margin: "12px auto 24px", padding: 14, border: "1px solid #deded3", borderRadius: 12, background: "#fafaf5", color: "#35453c" }}>
     {href ? <a href={href} target={href.startsWith("https:") ? "_blank" : undefined} rel="noopener noreferrer sponsored" style={{ color: "inherit", textDecoration: "none" }}>{card}</a> : card}
+    <Link href={`/profile/feedback?type=ad&toolId=${encodeURIComponent(toolId)}`} style={{ display: "inline-block", marginTop: 10, fontSize: 11, color: "#666" }}>举报此广告</Link>
   </aside>;
 }
