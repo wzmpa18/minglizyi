@@ -1,0 +1,36 @@
+{
+  "date": "2026-10-18",
+  "tool": "built-in image_gen",
+  "purpose": "言道国学学习主题宣传插画；不是应用截图或医学/天文标准图",
+  "publicationStatus": "候选素材，尚未上传商店或投放",
+  "assets": [
+    {
+      "file": "01_经典阅读.png",
+      "source": "exec-4a2e0a2a-97db-4c29-aa82-ef1f46d67837.png",
+      "prompt": "Use case: ads-marketing. Create an original premium Chinese educational app campaign poster, portrait 2:3, for 言道国学. Main scene: a beautifully crafted open classical Chinese book, subtle paper grain and jade-green cover, beside a modern reading notebook, delicate botanical study sketches as atmospheric accents. Contemporary editorial museum design, warm ivory background, deep forest green and restrained copper-gold, spacious elegant Chinese typography. Exact prominent text: 「言道国学」「把经典读进日常」. Exact smaller copy: 「篇章阅读 · 资料查阅 · 学习笔记」. A small bottom label: 「学习主题插画」. No phone mockup, no invented app interface, no divination charts, zodiac symbols, medical diagrams, efficacy claims, review badges, QR codes, prices or download promises. This is an honest brand illustration, not an app screenshot. Carefully render every Chinese character.",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 2476714,
+      "sha256": "6644dbd82d275927bc71afff1fd50155a8c71297ae836ff20c28371061d6dbff"
+    },
+    {
+      "file": "02_中医资料.png",
+      "source": "exec-51820467-0822-4786-8e42-06fd8f0c60db.png",
+      "prompt": "Use case: ads-marketing. Create an original premium Chinese educational app campaign poster, portrait 2:3, for 言道国学. Main scene: a refined study desk containing plant specimen cards, a magnifying glass, a beautifully bound book titled 「本草」 and a pencil notebook; luxurious subtle paper-cut depth and botanical illustration aesthetics. Ivory, muted sage and terracotta, exceptional magazine art direction, generous readable type, visually distinct from divination ads. Exact text: 「言道国学」「学中医，从读懂资料开始」. Smaller exact copy: 「典籍 · 本草 · 经络 · 练习」. Bottom small exact label: 「学习主题插画」. Do not depict acupoint positions, human anatomy, needles, prescriptions or claims of diagnosis/treatment; no fake app UI, fake exam certification, prices, review approval badges, phone screenshots or QR codes. Original artwork, not copied commercial assets.",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 2880114,
+      "sha256": "968ba31144a521a41aa831dfb071b5f9cc5f5265e7e62ef1f8b767432d91a2cd"
+    },
+    {
+      "file": "03_天文学习.png",
+      "source": "exec-860996cf-6d13-4acf-8e38-325cf2588bae.png",
+      "prompt": "Use case: ads-marketing. Create an original premium Chinese educational app campaign poster, portrait 2:3, for 言道国学, astronomy learning theme. Editorial paper sculpture meets sophisticated science museum design: a quiet observer silhouette looking toward a broad night sky, an elegant simple telescope, a restrained luminous moon and sparse stars, generous deep midnight-blue negative space and luminous warm ivory type. No zodiac wheel or divination graphics. Exact headline text: 「言道国学」「从书页，望向星空」. Exact subheading: 「天文观察 · 节气学习 · 传统历法」. Small bottom label: 「学习主题插画」. This is atmospheric original illustration, NOT an accurate star chart and NOT an app screenshot. Do not show orbit diagrams, technical data, invented constellations, celestial predictions about people, fake interfaces, review badges, QR codes, prices or certification claims. Render Chinese text accurately.",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 2122179,
+      "sha256": "77a598aa3a09fe28ac20ff8eb8faa965f01068e6ae1e1fc5f3aac12152989d7d"
+    }
+  ],
+  "verification": "已逐图检查主标题、品牌与学习主题插画标记。图片不宣称内容全审、医学定位准确或已经上架；实际功能展示须另用新版实拍截图。"
+}
