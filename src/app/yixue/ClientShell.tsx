@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { leaveToolPage } from "@/lib/leaveToolPage";
+import { ToolStudyDiscussion } from "@/components/ToolStudyDiscussion";
 
 // 工具页面路径
 const TOOL_PATHS = [
@@ -136,6 +137,7 @@ export default function YixueClientShell({ children }: { children: React.ReactNo
       {/* v25.0.27: 移除 52px 空白占位（sticky header 已在文档流中），内容直接顶到品牌栏下方 */}
       <main className="flex-1" style={{ paddingBottom: "72px" }}>
         {children}
+        <ToolStudyDiscussion />
         {/* P6-补03 第二阶段：工具页统一页脚提示（仅此一行，无冗余来源说明） */}
         <div className="w-full text-center" style={{ padding: "8px 0 4px", fontSize: "10px", color: "#b0a8bd" }}>
           内容仅供文化娱乐参考，不构成任何专业建议

@@ -42,7 +42,7 @@ function PointDiscussion({targetId,title}:{targetId:string;title:string}){
     const turn=version.current;setBusy(true);const result=await studyRequest(path,method,body);if(turn!==version.current)return;
     setMessage(result.message||(result.success?'操作已完成':result.error||'操作失败'));if(result.success)await load();setBusy(false);
   }
-  return <section aria-label="穴位文字学习讨论" style={{margin:'12px',padding:'14px',background:'white',borderRadius:16,color:'#333',fontSize:13}}>
+  return <section aria-label="文字学习交流" style={{margin:'12px',padding:'14px',background:'white',borderRadius:16,color:'#333',fontSize:13}}>
     <strong style={{fontSize:15}}>💬 {title}</strong><p style={{color:'#666',fontSize:12}}>用户学习讨论 · 与正文和医学依据分开 · 仅限文字，审核通过后公开</p>
     {reply&&<div style={{padding:8,background:'#F3EDF7'}}>回复{reply.authorName}<button onClick={()=>{setReply(null);requestId.current='';}} style={{marginLeft:8}}>取消回复</button></div>}
     <textarea disabled={busy} aria-label="学习留言，仅支持文字" value={text} rows={4} onChange={e=>{setText(e.target.value);requestId.current='';}} onPaste={e=>{if(Array.from(e.clipboardData.items).some(item=>item.kind==='file')){e.preventDefault();setMessage('仅支持纯文字，不能粘贴图片或附件');}}} onDrop={e=>{e.preventDefault();setMessage('不支持图片或文件，请输入文字');}} placeholder="提问、分享理解或指出资料问题…" style={{width:'100%',boxSizing:'border-box',padding:10,border:'1px solid #CDB8DC',borderRadius:10,background:'#FAF7FC',color:'#333',fontSize:14,lineHeight:1.7}}/>

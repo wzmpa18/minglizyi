@@ -10,6 +10,8 @@
 
 import { Solar, Lunar } from "lunar-javascript";
 import { getClientUserId } from "./auth";
+import { lunarBirthdayInYear, solarBirthdayInYear, civilTimeEpoch, reminderDueAt, DEFAULT_BIRTHDAY_RULES, type BirthdayRules } from "./calendarRecurrence";
+export { type BirthdayRules } from "./calendarRecurrence";
 
 // ==================== 类型定义 ====================
 
@@ -47,6 +49,10 @@ export interface CalendarEvent {
   customUnit?: "day" | "week" | "month" | "year";
   /** 提醒档位列表（可多选） */
   reminders: ReminderOffset[];
+  birthdayRules?: BirthdayRules;
+  eventTime?: string;
+  timeZone?: string;
+  completed?: boolean;
   paused: boolean;
   createdAt: string;
   updatedAt: string;
@@ -166,29 +172,8 @@ export function solarToLunarMd(y: number, m: number, d: number): { lunarMonth: n
   return { lunarMonth: lunar.getMonth(), lunarDay: lunar.getDay() };
 }
 
-/** 农历月日 → 指定公历年内的公历日期（农历月可为负=闰月；若该年无此月则顺延到下一年） */
-export function lunarMdToSolarInYear(year: number, lunarMonth: number, lunarDay: number): { y: number; m: number; d: number } {
-  try {
-    const lunar = Lunar.fromYmd(year, Math.abs(lunarMonth), lunarDay);
-    if (lunar.getMonth() !== lunarMonth) {
-      // 该年无此闰月，顺延一年
-      const next = Lunar.fromYmd(year + 1, Math.abs(lunarMonth), lunarDay);
-      const s = next.getSolar();
-      return { y: s.getYear(), m: s.getMonth(), d: s.getDay() };
-    }
-    const s = lunar.getSolar();
-    return { y: s.getYear(), m: s.getMonth(), d: s.getDay() };
-  } catch {
-    // 农历日超出该月天数（如三十在小月不存在）时回退为该月最后一天
-    try {
-      const lunar = Lunar.fromYmd(year, Math.abs(lunarMonth), 1);
-      const s = lunar.getSolar();
-      return { y: s.getYear(), m: s.getMonth(), d: s.getDay() };
-    } catch {
-      return { y: year, m: 1, d: 1 };
-    }
-  }
-}
+/** Missing/leap days follow the user's saved rule; no invented fallback dates. */
+export const lunarMdToSolarInYear = lunarBirthdayInYear;
 
 // ==================== CRUD ====================
 
@@ -213,6 +198,9 @@ export interface CreateEventInput {
   customInterval?: number;
   customUnit?: "day" | "week" | "month" | "year";
   reminders?: ReminderOffset[];
+  birthdayRules?: BirthdayRules;
+  eventTime?: string;
+  timeZone?: string;
 }
 
 export function createEvent(input: CreateEventInput): { success: boolean; error?: string; event?: CalendarEvent } {
@@ -238,7 +226,10 @@ export function createEvent(input: CreateEventInput): { success: boolean; error?
     repeat: input.repeat || "none",
     customInterval: input.repeat === "custom" ? Math.max(1, input.customInterval || 1) : undefined,
     customUnit: input.repeat === "custom" ? input.customUnit || "day" : undefined,
-    reminders: input.reminders && input.reminders.length > 0 ? input.reminders : [{ offsetMinutes: 1440 }],
+    reminders: input.reminders !== undefined ? input.reminders : [{ offsetMinutes: 1440 }],
+    birthdayRules: input.birthdayRules || { ...DEFAULT_BIRTHDAY_RULES },
+    eventTime: input.eventTime || "09:00",
+    timeZone: input.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone,
     paused: false,
     createdAt: now,
     updatedAt: now,
@@ -246,6 +237,7 @@ export function createEvent(input: CreateEventInput): { success: boolean; error?
   const list = safeGet<CalendarEvent[]>(eventsKey(), []);
   list.push(ev);
   safeSet(eventsKey(), list);
+  if(isBrowser())window.dispatchEvent(new Event("yandao-calendar-changed"));
   return { success: true, event: ev };
 }
 
@@ -253,7 +245,7 @@ export function updateEvent(id: string, patch: Partial<CalendarEvent>): { succes
   const list = safeGet<CalendarEvent[]>(eventsKey(), []);
   const idx = list.findIndex((e) => e.id === id);
   if (idx < 0) return { success: false, error: "事件不存在" };
-  const merged = { ...list[idx], ...patch, updatedAt: new Date().toISOString() };
+  const merged = { ...list[idx], ...patch, id: list[idx].id, userId: list[idx].userId, updatedAt: new Date().toISOString() };
   if (merged.dateMode === "lunar") {
     const lm = solarToLunarMd(merged.year, merged.month, merged.day);
     merged.lunarMonth = lm.lunarMonth;
@@ -264,6 +256,7 @@ export function updateEvent(id: string, patch: Partial<CalendarEvent>): { succes
   }
   list[idx] = merged;
   safeSet(eventsKey(), list);
+  if(isBrowser())window.dispatchEvent(new Event("yandao-calendar-changed"));
   return { success: true };
 }
 
@@ -272,6 +265,7 @@ export function deleteEvent(id: string): boolean {
   const next = list.filter((e) => e.id !== id);
   if (next.length === list.length) return false;
   safeSet(eventsKey(), next);
+  if(isBrowser())window.dispatchEvent(new Event("yandao-calendar-changed"));
   return true;
 }
 
@@ -299,6 +293,7 @@ export function deleteAllEvents(): boolean {
   try {
     localStorage.removeItem(eventsKey());
     localStorage.removeItem(logKey());
+    window.dispatchEvent(new Event("yandao-calendar-changed"));
     return true;
   } catch {
     return false;
@@ -309,73 +304,53 @@ export function deleteAllEvents(): boolean {
 
 /** 计算某事件从 fromTs 起 days 天窗口内的所有发生日（公历） */
 export function getOccurrences(event: CalendarEvent, fromY: number, fromM: number, fromD: number, days: number): EventOccurrence[] {
-  const out: EventOccurrence[] = [];
-  const startTs = dayTs(fromY, fromM, fromD);
-  const endTs = startTs + days * 86400000;
-  const todayTs = dayTs(new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate());
-
-  if (event.paused) return out;
-
-  const anchorTs = dayTs(event.year, event.month, event.day);
-
-  if (event.repeat === "none") {
-    if (anchorTs >= startTs && anchorTs <= endTs) {
-      out.push(buildOccurrence(event, event.year, event.month, event.day, todayTs));
+  if (event.paused || event.completed || !Number.isInteger(days) || days < 0 || days > 1096) return [];
+  const start = new Date(fromY, fromM-1, fromD, 12), end = new Date(start);
+  end.setDate(end.getDate()+days);
+  const today = new Date(), todayTs = dayTs(today.getFullYear(),today.getMonth()+1,today.getDate());
+  const rules = event.birthdayRules || DEFAULT_BIRTHDAY_RULES;
+  const annual = new Set<string>();
+  if (event.repeat === "yearly") {
+    for (let year=start.getFullYear()-1; year<=end.getFullYear()+1; year++) {
+      const date = event.dateMode === "lunar" && event.lunarMonth && event.lunarDay
+        ? lunarBirthdayInYear(year,event.lunarMonth,event.lunarDay,rules)
+        : solarBirthdayInYear(year,event.month,event.day,rules.feb29);
+      if (date) annual.add(fmtDate(date.y,date.m,date.d));
     }
-    return out;
   }
-
-  if (event.repeat === "yearly" && event.dateMode === "lunar" && event.lunarMonth && event.lunarDay) {
-    // 农历每年：在窗口涉及的每个公历年中找农历对应日
-    for (let y = fromY - 1; y <= fromY + Math.ceil(days / 365) + 1; y++) {
-      const sol = lunarMdToSolarInYear(y, event.lunarMonth, event.lunarDay);
-      const ts = dayTs(sol.y, sol.m, sol.d);
-      if (ts >= startTs && ts <= endTs) {
-        out.push(buildOccurrence(event, sol.y, sol.m, sol.d, todayTs, `农历${event.lunarMonth < 0 ? "闰" : ""}${Math.abs(event.lunarMonth)}月${event.lunarDay}日`));
+  const result: EventOccurrence[] = [];
+  const anchorOrdinal = Date.UTC(event.year,event.month-1,event.day)/86400000;
+  for (const cursor = new Date(start); cursor<=end; cursor.setDate(cursor.getDate()+1)) {
+    const y=cursor.getFullYear(),m=cursor.getMonth()+1,d=cursor.getDate();
+    const ordinal=Date.UTC(y,m-1,d)/86400000, diff=ordinal-anchorOrdinal;
+    if (diff<0) continue;
+    let hit=false;
+    if (event.repeat==="none") hit=diff===0;
+    else if (event.repeat==="yearly") hit=annual.has(fmtDate(y,m,d));
+    else if (event.repeat==="weekly") hit=diff%7===0;
+    else if (event.repeat==="monthly") hit=d===Math.min(event.day,new Date(y,m,0).getDate());
+    else if (event.repeat==="custom" && Number.isSafeInteger(event.customInterval) && event.customInterval!>0) {
+      const n=event.customInterval!;
+      const monthDiff=(y-event.year)*12+m-event.month;
+      if(event.customUnit==="day") hit=diff%n===0;
+      if(event.customUnit==="week") hit=diff%(n*7)===0;
+      if(event.customUnit==="month") hit=monthDiff%n===0 && d===Math.min(event.day,new Date(y,m,0).getDate());
+      if(event.customUnit==="year") {
+        const date=solarBirthdayInYear(y,event.month,event.day,rules.feb29);
+        hit=(y-event.year)%n===0 && !!date && date.m===m && date.d===d;
       }
     }
-    return out;
-  }
-
-  if (event.repeat === "custom" && event.customUnit && event.customInterval) {
-    // 自定义间隔：从锚点按单位步进
-    const unitMs =
-      event.customUnit === "day" ? 86400000 : event.customUnit === "week" ? 7 * 86400000 : event.customUnit === "month" ? 30 * 86400000 : 365 * 86400000;
-    let ts = anchorTs;
-    let guard = 0;
-    while (ts <= endTs && guard < 5000) {
-      if (ts >= startTs) {
-        const dt = new Date(ts);
-        out.push(buildOccurrence(event, dt.getFullYear(), dt.getMonth() + 1, dt.getDate(), todayTs));
-      }
-      ts += unitMs * event.customInterval;
-      guard++;
+    if(hit) {
+      const occurrence=buildOccurrence(event,y,m,d,todayTs,event.dateMode==="lunar"?`农历${event.lunarMonth!<0?"闰":""}${Math.abs(event.lunarMonth!)}月${event.lunarDay}日`:undefined);
+      if(Number.isFinite(occurrence.ts)) result.push(occurrence);
     }
-    return out;
   }
-
-  // 公历 yearly / monthly / weekly：逐日扫描窗口（窗口≤120天，性能可接受）
-  for (let ts = startTs; ts <= endTs; ts += 86400000) {
-    const dt = new Date(ts);
-    const y = dt.getFullYear();
-    const m = dt.getMonth() + 1;
-    const d = dt.getDate();
-    let hit = false;
-    if (event.repeat === "yearly" && event.dateMode === "solar") {
-      hit = m === event.month && d === event.day;
-    } else if (event.repeat === "monthly") {
-      hit = d === event.day || (d === new Date(y, m, 0).getDate() && event.day > new Date(y, m, 0).getDate());
-    } else if (event.repeat === "weekly") {
-      const anchorDow = new Date(anchorTs).getDay();
-      hit = dt.getDay() === anchorDow && ts >= anchorTs - 6 * 86400000;
-    }
-    if (hit) out.push(buildOccurrence(event, y, m, d, todayTs));
-  }
-  return out;
+  return result;
 }
 
 function buildOccurrence(event: CalendarEvent, y: number, m: number, d: number, todayTs: number, lunarDesc?: string): EventOccurrence {
-  const ts = dayTs(y, m, d);
+  const [hour,minute]=(event.eventTime||"00:00").split(":").map(Number);
+  const ts = civilTimeEpoch(y,m,d,hour,minute,event.timeZone||Intl.DateTimeFormat().resolvedOptions().timeZone) ?? NaN;
   return {
     event,
     y,
@@ -460,9 +435,9 @@ export function dispatchDueReminders(
     const occs = getOccurrences(ev, nowD.getFullYear(), nowD.getMonth() + 1, nowD.getDate() - 1, 9);
     for (const occ of occs) {
       for (const r of ev.reminders) {
-        const dueTs = occ.ts + r.offsetMinutes * 60000;
+        const dueTs = reminderDueAt(occ.ts, r.offsetMinutes);
         // 触发窗口：[due-5min, due+30min]，超过30分钟的漏发只记失败告警不再补发打扰
-        if (now < dueTs - 5 * 60000 || now > dueTs + 30 * 60000) continue;
+        if (now < dueTs || now > dueTs + 30 * 60000) continue;
         const logId = makeLogId(ev.id, occ.ts, r.offsetMinutes);
         if (logIds.has(logId)) continue; // 已触发，幂等跳过
         logIds.add(logId);
@@ -492,7 +467,7 @@ export function dispatchDueReminders(
         }
         if (pushSystem) {
           try {
-            const ok = pushSystem(title, body);
+            const ok = pushSystem("言道日历", "有一项安排，请打开应用查看");
             if (ok) entry.channels.push("push");
           } catch {
             // 系统推送失败不阻断，站内消息已兜底
@@ -523,7 +498,7 @@ export function detectMissedReminders(): { eventTitle: string; dueAt: string }[]
     const occs = getOccurrences(ev, nowD.getFullYear(), nowD.getMonth() + 1, nowD.getDate(), 1);
     for (const occ of occs) {
       for (const r of ev.reminders) {
-        const dueTs = occ.ts + r.offsetMinutes * 60000;
+        const dueTs = reminderDueAt(occ.ts, r.offsetMinutes);
         if (now > dueTs + 30 * 60000 && !logIds.has(makeLogId(ev.id, occ.ts, r.offsetMinutes))) {
           missed.push({ eventTitle: ev.title, dueAt: new Date(dueTs).toISOString() });
         }

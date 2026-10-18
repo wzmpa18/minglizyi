@@ -19,7 +19,7 @@ function createStudyCommentStore(db, targets, now = () => Date.now()) {
       target TEXT, note TEXT, created_ms INTEGER);
     INSERT OR IGNORE INTO study_comment_settings VALUES ('enabled','false');`);
   const fail = (message, status = 400) => { const error = new Error(message); error.status = status; throw error; };
-  const target = id => { if (typeof id !== 'string' || !targets.has(id)) fail('穴位不存在或编号不受支持', 404); return id; };
+  const target = id => { if (typeof id !== 'string' || !targets.has(id)) fail('学习讨论对象不存在或编号不受支持', 404); return id; };
   const settings = () => Object.fromEntries(db.prepare('SELECT key,value FROM study_comment_settings').all().map(row => [row.key, row.value]));
   const config = id => { target(id); const s = settings(); return { enabled: s.enabled === 'true' && s[`closed:${id}`] !== 'true', maxCharacters: 500, reviewBeforePublish: true, contactUrl: 'https://yandaoguoxue.yandao.vip/profile/feedback/', schemaVersion: 1 }; };
   const user = id => { if (!id) fail('请先登录', 401); return String(id); };
@@ -56,7 +56,7 @@ function createStudyCommentStore(db, targets, now = () => Date.now()) {
       const last=db.prepare('SELECT created_ms FROM study_comments WHERE user_id=? ORDER BY id DESC LIMIT 1').get(me);
       if (last && stamp-last.created_ms<30000) fail('请间隔30秒再发表',429);
       if (db.prepare('SELECT COUNT(*) n FROM study_comments WHERE user_id=? AND created_ms>=?').get(me,startDay).n>=20) fail('今日留言已达20条，请明天再来',429);
-      if (db.prepare('SELECT COUNT(*) n FROM study_comments WHERE user_id=? AND target_id=? AND created_ms>=?').get(me,id,startDay).n>=5) fail('今日在本穴位的留言已达5条',429);
+      if (db.prepare('SELECT COUNT(*) n FROM study_comments WHERE user_id=? AND target_id=? AND created_ms>=?').get(me,id,startDay).n>=5) fail('今日在本讨论区的留言已达5条',429);
       if (db.prepare('SELECT 1 FROM study_comments WHERE user_id=? AND target_id=? AND content_hash=? AND created_ms>=?').get(me,id,hash,stamp-86400000)) fail('请勿重复发表相同内容',409);
       if (parentId!==null) {
         const parent=db.prepare("SELECT * FROM study_comments WHERE id=? AND target_id=? AND status='APPROVED'").get(parentId,id);

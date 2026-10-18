@@ -246,7 +246,7 @@ function AIInterpretButtonEnabled({
         >
           {loading ? "🤖 AI解读中..." : (buttonText || `🤖 AI${scope}`)}
         </button>
-        {PUBLIC_SOCIAL_ENABLED && discussionEnabled && (
+        {PUBLIC_SOCIAL_ENABLED && discussionType !== "yixue" && discussionEnabled && (
           <button
             type="button"
             onClick={() => setShowDiscussion((value) => !value)}
@@ -258,7 +258,7 @@ function AIInterpretButtonEnabled({
         )}
       </div>
 
-      {PUBLIC_SOCIAL_ENABLED && discussionEnabled && showDiscussion && (
+      {PUBLIC_SOCIAL_ENABLED && discussionType !== "yixue" && discussionEnabled && showDiscussion && (
         <div style={{ marginLeft: -12, marginRight: -12 }}>
           <ResourceDiscussion
             resourceType={discussionType}

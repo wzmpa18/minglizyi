@@ -6,6 +6,7 @@ const path=require('node:path');
 const {authMiddleware,verifyToken}=require('./middleware/auth');
 const {adminAuth}=require('./adminRoles');
 const {createStudyCommentStore}=require('./studyCommentStore');
+const {STUDY_TOOL_TARGETS}=require('./studyToolTargets');
 
 let store,accounts;
 function getStore(){
@@ -14,7 +15,7 @@ function getStore(){
   const location=process.env.STUDY_COMMENT_DB_PATH||path.join(__dirname,'data/study-comments.db');
   fs.mkdirSync(path.dirname(location),{recursive:true});
   const db=new Database(location); db.pragma('journal_mode = WAL'); db.pragma('busy_timeout = 5000');
-  store=createStudyCommentStore(db,new Set(catalog.targets)); return store;
+  store=createStudyCommentStore(db,new Set([...catalog.targets,...STUDY_TOOL_TARGETS])); return store;
 }
 function account(id){
   if(!accounts)accounts=new Database(process.env.DB_PATH||process.env.USER_DB_PATH||'/root/backend-auth/data/yandao_users.db',{readonly:true});

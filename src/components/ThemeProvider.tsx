@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { getThemeConfig, saveThemeConfig } from "@/lib/themeStore";
@@ -30,6 +30,10 @@ export interface PresetTheme {
 
 // ==================== 5 套预设主题 ====================
 export const PRESET_THEMES: PresetTheme[] = [
+  { key: "guofeng", name: "素雅国风", primaryColor: "#714786", bgColor: "#F6F0E4", cardBg: "#FFFCF5", textPrimary: "#29251F", isDark: false },
+  { key: "cinnabar", name: "朱砂鎏金", primaryColor: "#9E342C", bgColor: "#FAF1E5", cardBg: "#FFFCF6", textPrimary: "#35271F", isDark: false },
+  { key: "ink-night", name: "墨夜", primaryColor: "#CAB498", bgColor: "#171C24", cardBg: "#222B35", textPrimary: "#F3EBDD", isDark: true },
+
   {
     key: "classic",
     name: "经典紫",

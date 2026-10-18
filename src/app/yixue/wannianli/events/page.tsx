@@ -28,6 +28,7 @@ import {
   type DateMode,
   type RepeatRule,
   type ReminderOffset,
+  type BirthdayRules,
 } from "@/lib/calendarEventsStore";
 import { getToolConfig } from "@/lib/toolConfigStore";
 import { requestPushPermission } from "@/components/ReminderSchedulerInit";
@@ -49,6 +50,9 @@ function fmtYMD(y: number, m: number, d: number): string {
 }
 
 interface FormState {
+  birthdayRules: BirthdayRules;
+  eventTime: string;
+  timeZone: string;
   id?: string;
   type: CalendarEventType;
   title: string;
@@ -83,6 +87,9 @@ export default function CalendarEventsPage() {
   const emptyForm: FormState = useMemo(
     () => ({
       type: "birthday",
+      birthdayRules: {leapMonth:"skip",missingLunarDay:"skip",feb29:"skip"},
+      eventTime: "09:00",
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       title: "",
       relatedName: "",
       note: "",
@@ -138,6 +145,9 @@ export default function CalendarEventsPage() {
   const openEdit = (ev: CalendarEvent) => {
     setForm({
       id: ev.id,
+      birthdayRules: ev.birthdayRules || {leapMonth:"skip",missingLunarDay:"skip",feb29:"skip"},
+      eventTime: ev.eventTime || "00:00",
+      timeZone: ev.timeZone || Intl.DateTimeFormat().resolvedOptions().timeZone,
       type: ev.type,
       title: ev.title,
       relatedName: ev.relatedName || "",
@@ -196,6 +206,9 @@ export default function CalendarEventsPage() {
     if (form.id) {
       const r = updateEvent(form.id, {
         type: form.type,
+        birthdayRules: form.birthdayRules,
+        eventTime: form.eventTime,
+        timeZone: form.timeZone,
         title: form.title,
         relatedName: form.relatedName,
         note: form.note,
@@ -216,6 +229,9 @@ export default function CalendarEventsPage() {
     } else {
       const r = createEvent({
         type: form.type,
+        birthdayRules: form.birthdayRules,
+        eventTime: form.eventTime,
+        timeZone: form.timeZone,
         title: form.title,
         relatedName: form.relatedName,
         note: form.note,
@@ -232,7 +248,7 @@ export default function CalendarEventsPage() {
         showTip(r.error || "创建失败");
         return;
       }
-      showTip("已创建，将按设置提醒");
+      showTip("已创建；系统提醒能力和授权状态请查看下方说明");
     }
     setShowForm(false);
     refresh();
@@ -291,6 +307,7 @@ export default function CalendarEventsPage() {
     <div className="flex min-h-screen flex-col bg-[#ededed]" style={{ maxWidth: "500px", margin: "0 auto", paddingBottom: "calc(72px + env(safe-area-inset-bottom))" }}>
       <BrandHeader title="记事提醒" showBack backUrl="/yixue/wannianli" />
 
+      <p className="m-3 rounded-lg bg-white p-3 text-xs leading-6 text-gray-600">本机离线记事。网页站内提醒需要应用保持打开；系统通知需授权。强行停止、关机或系统限制会影响送达，不能保证所有状态准点。锁屏默认仅显示“有一项安排”。</p>
       {/* Tab 切换 */}
       <div className="bg-white px-3 py-2">
         <SegBtn
@@ -323,7 +340,7 @@ export default function CalendarEventsPage() {
                 <div className="rounded-[10px] bg-white p-8 text-center shadow-sm">
                   <div className="mb-2 text-3xl">⏰</div>
                   <div className="text-sm text-gray-500">暂无记事</div>
-                  <div className="mt-1 text-xs text-gray-400">添加生日、纪念日、待办，到点自动提醒</div>
+                  <div className="mt-1 text-xs text-gray-400">添加生日、纪念日、学习任务与待办</div>
                 </div>
               )}
               {events.map((ev) => {
@@ -577,6 +594,14 @@ export default function CalendarEventsPage() {
                   )}
                 </div>
 
+                <div className="mb-4 space-y-2 text-sm text-gray-800">
+                  <label className="block">事件钟点 <input aria-label="事件钟点" type="time" value={form.eventTime} onChange={e=>setForm(f=>({...f,eventTime:e.target.value}))}/></label>
+                  <label className="block">事件时区 <input aria-label="事件时区" className="w-full border rounded p-2" value={form.timeZone} onChange={e=>setForm(f=>({...f,timeZone:e.target.value}))}/></label>
+                  <label className="block">无同名闰月的年份 <select value={form.birthdayRules.leapMonth} onChange={e=>setForm(f=>({...f,birthdayRules:{...f.birthdayRules,leapMonth:e.target.value as BirthdayRules["leapMonth"]}}))}><option value="skip">该年不提醒</option><option value="regular">按同名普通月提醒</option></select></label>
+                  <label className="block">农历小月没有三十 <select value={form.birthdayRules.missingLunarDay} onChange={e=>setForm(f=>({...f,birthdayRules:{...f.birthdayRules,missingLunarDay:e.target.value as BirthdayRules["missingLunarDay"]}}))}><option value="skip">该年不提醒</option><option value="last-day">按该月最后一天提醒</option></select></label>
+                  <label className="block">公历平年没有2月29日 <select value={form.birthdayRules.feb29} onChange={e=>setForm(f=>({...f,birthdayRules:{...f.birthdayRules,feb29:e.target.value as BirthdayRules["feb29"]}}))}><option value="skip">该年不提醒</option><option value="feb28">2月28日提醒</option><option value="mar1">3月1日提醒</option></select></label>
+                  <p className="text-xs text-gray-500">记事默认私有，不读取通讯录，不加入同辰搜索。重复的夏令时时刻按第一次执行，不存在的时刻跳过。</p>
+                </div>
                 {/* 重复规则 */}
                 <div className="mb-3">
                   <label className="mb-1 block text-xs font-medium text-gray-600">重复</label>

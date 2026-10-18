@@ -32,7 +32,7 @@ test('everything is pending until manual approval; read, reply, block, report an
 });
 test('strict target/payload, idempotency, mute, duplicate content and per-point rate limits are enforced on the server',()=>{
  const {db,service:s,body,tick}=setup();
- assert.throws(()=>s.submit('unknown','a','甲',body('内容')),/穴位/);
+ assert.throws(()=>s.submit('unknown','a','甲',body('内容')),/讨论对象/);
  assert.throws(()=>s.submit('standard:LU1','a','甲',{...body('内容'),userId:'b'}),/仅接受/);
  assert.throws(()=>s.submit('standard:LU1','a','甲',body('字'.repeat(501))),/500/);
  const request=body('第一条');const first=s.submit('standard:LU1','a','甲',request);
@@ -41,7 +41,7 @@ test('strict target/payload, idempotency, mute, duplicate content and per-point 
  assert.throws(()=>s.submit('standard:LU1','a','甲',body('过快')),/30秒/);tick();
  assert.throws(()=>s.submit('standard:LU1','a','甲',body('第一条')),/相同内容/);
  for(let i=2;i<=5;i++){s.submit('standard:LU1','a','甲',body(`第${i}条`));tick();}
- assert.throws(()=>s.submit('standard:LU1','a','甲',body('第六条')),/本穴位/);
+ assert.throws(()=>s.submit('standard:LU1','a','甲',body('第六条')),/本讨论区/);
  s.mute('admin','a',24,'违规待复核');assert.throws(()=>s.submit('standard:LU2','a','甲',body('不能绕过禁言')),/账号暂不可/);
  s.setConfig('admin',{enabled:false});assert.equal(s.list('standard:LU1').length,0);assert.throws(()=>s.submit('standard:LU2','b','乙',body('关闭时不能发布')),/暂未开放/);
  db.close();
@@ -55,4 +55,22 @@ test('rejected parent, server defaults, pin evidence and per-day limits remain c
  assert.throws(()=>s.submit('standard:LU5','b','乙',body('第二十一条')),/20条/);
  const isolated=new DatabaseSync(':memory:');const fresh=createStudyCommentStore(isolated,new Set(['standard:LU1']));assert.equal(fresh.config('standard:LU1').enabled,false);
  db.close();isolated.close();
+});
+
+
+test('tool discussions share the moderated store and never use a private chart as target',()=>{
+ const {STUDY_TOOL_TARGETS}=require('../backend_deploy/studyToolTargets');
+ const db=new DatabaseSync(':memory:'); const s=createStudyCommentStore(db,new Set(STUDY_TOOL_TARGETS));
+ try {
+ s.setConfig('admin',{enabled:true});
+ const body={content:'如何阅读这个盘面的干支？',requestId:'tool-comment-request-123456'};
+ const posted=s.submit('tool:bazi','learner','学友',body);
+ assert.equal(s.list('tool:bazi').length,0);
+ s.review(posted.id,'admin',{status:'APPROVED',note:'正常术语提问'});
+ assert.equal(s.list('tool:bazi').length,1);assert.equal(s.list('tool:ziwei').length,0);
+ assert.throws(()=>s.submit('tool:bazi:private-birthday','learner','学友',body),/讨论对象/);
+ s.setConfig('admin',{targetId:'tool:bazi',enabled:false});
+ assert.equal(s.list('tool:bazi').length,0);
+ assert.equal(s.remove(posted.id,'learner').success,true);
+ } finally {db.close();}
 });
