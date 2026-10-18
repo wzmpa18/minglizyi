@@ -35,6 +35,7 @@ jobs:
         run: |
           set -e
           mkdir -p "$RUNNER_TEMP/guoxue-screen-proof"
+          python3 -c "import os,json;json.dump({'source':os.environ['GITHUB_SHA'],'channel':os.environ['NEXT_PUBLIC_STORE_CHANNEL'],'kind':'actual bundled app in simulator, not a physical device acceptance'},open(os.environ['RUNNER_TEMP']+'/guoxue-screen-proof/source.json','w'))"
           for kind in iphone ipad; do
             MODEL=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=[x for rows in json.load(sys.stdin)['devices'].values() for x in rows]; preferred=[x for x in d if ('iPhone' in x['name'] and 'Pro Max' in x['name'])] if '$kind'=='iphone' else [x for x in d if 'iPad Pro' in x['name'] and '13-inch' in x['name']]; print(preferred[0]['udid'] if preferred else '')")
             test -n "$MODEL"

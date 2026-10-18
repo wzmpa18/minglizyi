@@ -31,10 +31,16 @@ final class GuoxueStudyScreenshots: XCTestCase {
         let app=XCUIApplication();app.launchArguments += ["-AppleLanguages","(zh-Hans)","-AppleLocale","zh_CN"]
         app.launch()
         let consent=app.buttons["同意并继续"]
-        if consent.waitForExistence(timeout:20){consent.tap()}
-        shot("00_真实应用_学习首页",app)
         let start=app.links.matching(NSPredicate(format:"label CONTAINS %@","开始入门学习")).firstMatch
-        if start.waitForExistence(timeout:25){start.tap()}
+        // A fresh WebKit process can show the privacy gate after the launch
+        // snapshot. Wait for the real UI, rather than skipping late consent.
+        for _ in 0..<30 {
+            if consent.exists && consent.isHittable {consent.tap()}
+            if start.waitForExistence(timeout:3){break}
+        }
+        XCTAssertTrue(start.exists,"Learning home must load after the visible privacy gate")
+        shot("00_真实应用_学习首页",app)
+        start.tap()
         let lesson=app.buttons["标记已读，开始自测"]
         XCTAssertTrue(lesson.waitForExistence(timeout:40),"Real bundled learning screen did not load")
         shot("01_真实应用_经典入门与连续听学",app)
