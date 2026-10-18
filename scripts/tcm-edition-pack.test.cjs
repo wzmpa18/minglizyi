@@ -4,10 +4,10 @@ const assert = require('node:assert/strict');
 const { buildPack } = require('../backend_deploy/build_tcm_original_editions_pack');
 const { isCompatibleTcmEditionPack, mergeTcmEditionPack } = require('../src/lib/tcmEditionPack.ts');
 
-test('seven complete source editions validate, retain old study links and accept a corrected paragraph', () => {
+test('ten complete source editions validate, retain old study links and accept a corrected paragraph', () => {
   const pack = buildPack();
-  assert.equal(pack.books.length, 7);
-  assert.equal(pack.books.reduce((sum, book) => sum + book.chapters.length, 0), 309);
+  assert.equal(pack.books.length, 10);
+  assert.equal(pack.books.reduce((sum, book) => sum + book.chapters.length, 0), 340);
   const legacy = { ...pack.books[0], id: 'suwen-notes', sourceUrl: undefined };
   const baseline = [...pack.books, legacy];
   assert.equal(isCompatibleTcmEditionPack(pack, baseline), true);
@@ -15,7 +15,7 @@ test('seven complete source editions validate, retain old study links and accept
   updated.books[0].chapters[0].content += '\n校勘补充说明';
   assert.equal(isCompatibleTcmEditionPack(updated, baseline), true);
   const merged = mergeTcmEditionPack(baseline, updated);
-  assert.equal(merged.length, 8);
+  assert.equal(merged.length, 11);
   assert.equal(merged.at(-1), legacy);
   assert.equal(merged[0], updated.books[0]);
 });

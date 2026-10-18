@@ -1,5 +1,6 @@
 "use client";
 
+import { InterfaceButton, InterfaceLabel, InterfaceOption } from "@/components/InterfaceControls";
 import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState, useCallback, useEffect } from "react";
 import { Lunar } from "lunar-javascript";
@@ -423,7 +424,7 @@ export default function DatePicker({
         <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2 sticky top-0 bg-white z-10">
           <div className="w-8" />
           <span className="text-base font-bold text-gray-800">{ui(title)}</span>
-          <button
+          <InterfaceButton
             type="button"
             onClick={() => onClose()}
             className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 transition-colors"
@@ -431,7 +432,7 @@ export default function DatePicker({
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <path d="M18 6L6 18M6 6l12 12" />
             </svg>
-          </button>
+          </InterfaceButton>
         </div>
 
         <div className="space-y-2 px-3 py-2">
@@ -452,7 +453,7 @@ export default function DatePicker({
             <div className="flex items-center justify-between">
               {showGender && (
                 <div className="flex items-center gap-3">
-                  <button
+                  <InterfaceButton
                     type="button"
                     onClick={() => setOptions(prev => ({ ...prev, gender: "male" }))}
                     className={`px-3 py-1 rounded text-sm font-medium transition-all ${
@@ -462,8 +463,8 @@ export default function DatePicker({
                     }`}
                   >
                     男
-                  </button>
-                  <button
+                  </InterfaceButton>
+                  <InterfaceButton
                     type="button"
                     onClick={() => setOptions(prev => ({ ...prev, gender: "female" }))}
                     className={`px-3 py-1 rounded text-sm font-medium transition-all ${
@@ -473,7 +474,7 @@ export default function DatePicker({
                     }`}
                   >
                     女
-                  </button>
+                  </InterfaceButton>
                 </div>
               )}
               {showCalType && (
@@ -483,7 +484,7 @@ export default function DatePicker({
                     { val: "lunar", label: "农历" },
                     { val: "sizhu", label: "四柱" },
                   ] as const).map(t => (
-                    <button
+                    <InterfaceButton
                       key={t.val}
                       type="button"
                       onClick={() => setOptions(prev => ({ ...prev, calType: t.val }))}
@@ -494,7 +495,7 @@ export default function DatePicker({
                       }`}
                     >
                       {t.label}
-                    </button>
+                    </InterfaceButton>
                   ))}
                 </div>
               )}
@@ -504,17 +505,17 @@ export default function DatePicker({
           {/* 3. 日期 - 原生select下拉框（对标吉时雨 mydate + RolldateFull） */}
           <div>
               <div className="mb-1 flex items-center justify-between">
-              <label className="text-sm text-gray-700">{ui("日期")}</label>
-              <button type="button" onClick={openRecords} className="rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-xs font-semibold text-purple-800">排盘记录 / 导入</button>
+              <InterfaceLabel className="text-sm text-gray-700">{ui("日期")}</InterfaceLabel>
+              <InterfaceButton type="button" onClick={openRecords} className="rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-xs font-semibold text-purple-800">排盘记录 / 导入</InterfaceButton>
             </div>
             {recordsOpen && <section data-testid="date-records" className="mb-3 rounded-xl border border-purple-200 bg-purple-50 p-3">
-              <div className="mb-2 flex items-center justify-between"><strong className="text-sm text-purple-900">全部工具排盘记录</strong><button type="button" onClick={()=>setRecordsOpen(false)} className="text-xs text-purple-700">收起记录</button></div>
+              <div className="mb-2 flex items-center justify-between"><strong className="text-sm text-purple-900">全部工具排盘记录</strong><InterfaceButton type="button" onClick={()=>setRecordsOpen(false)} className="text-xs text-purple-700">收起记录</InterfaceButton></div>
               <input aria-label="搜索可导入记录" value={recordQuery} onChange={e=>setRecordQuery(e.target.value)} placeholder="搜索姓名、工具或日期" className="mb-2 w-full rounded-lg border bg-white p-2 text-sm" />
               <div className="max-h-60 space-y-2 overflow-y-auto">
                 {recordMessage ? <p className="text-xs text-gray-500">{recordMessage}</p> : records.filter(r=>`${r.title} ${TOOL_NAMES[r.tool]||r.tool} ${String(r.input.name||"")} ${r.note||""}`.toLocaleLowerCase().includes(recordQuery.trim().toLocaleLowerCase())).map(r=>{const p=profileFromRecord(r);return <div key={r.id} className="rounded-lg bg-white p-2 text-xs">
                   <div className="font-semibold">{TOOL_NAMES[r.tool]||r.tool} · {String(r.input.name||r.title)}</div>
                   {r.note && <div className="mt-1 text-gray-600">备注：{r.note}</div>}
-                  {p ? <><div className="my-1 text-gray-600">{p.gender} {p.birthDate} {p.birthTime}</div><button type="button" className="rounded-lg bg-purple-700 px-3 py-2 text-white" onClick={()=>{
+                  {p ? <><div className="my-1 text-gray-600">{p.gender} {p.birthDate} {p.birthTime}</div><InterfaceButton type="button" className="rounded-lg bg-purple-700 px-3 py-2 text-white" onClick={()=>{
                     const [year, month, day] = (p.birthDate || "").split("-").map(Number);
                     const [hour, minute] = (p.birthTime || "").split(":").map(Number);
                     if (year && month && day && Number.isFinite(hour)) setDate({ year, month, day, hour, minute: Number.isFinite(minute) ? minute : 0 });
@@ -541,7 +542,7 @@ export default function DatePicker({
                     }));
                     if (r.tool === currentRecordTool() && onRecordRestore) onRecordRestore(r); else onRecordImport?.(p);
                     setNameState(p.name); setRecordNote(r.note || ""); onNameChange?.(p.name); setRecordsOpen(false); setRecordQuery("");
-                  }}>导入此人资料</button></> : <div className="mt-1 text-gray-500">无完整出生资料，可在工具记录中查看原盘</div>}
+                  }}>导入此人资料</InterfaceButton></> : <div className="mt-1 text-gray-500">无完整出生资料，可在工具记录中查看原盘</div>}
                 </div>;})}
                 {!recordMessage && records.length===0 && <p className="text-xs text-gray-500">暂无记录，排盘后自动保存</p>}
               </div>
@@ -554,7 +555,7 @@ export default function DatePicker({
                 className={selectClass}
               >
                 {yearsExtended.map(y => (
-                  <option key={y} value={y}>{y}年</option>
+                  <InterfaceOption key={y} value={y}>{y}年</InterfaceOption>
                 ))}
               </select>
               <select
@@ -564,7 +565,7 @@ export default function DatePicker({
                 className={selectClass}
               >
                 {months.map(m => (
-                  <option key={m} value={m}>{m}月</option>
+                  <InterfaceOption key={m} value={m}>{m}月</InterfaceOption>
                 ))}
               </select>
               <select
@@ -574,7 +575,7 @@ export default function DatePicker({
                 className={selectClass}
               >
                 {days.map(d => (
-                  <option key={d} value={d}>{d}日</option>
+                  <InterfaceOption key={d} value={d}>{d}日</InterfaceOption>
                 ))}
               </select>
             </div>
@@ -586,7 +587,7 @@ export default function DatePicker({
                 className={selectClass}
               >
                 {hours.map(h => (
-                  <option key={h} value={h}>{String(h).padStart(2, "0")}时</option>
+                  <InterfaceOption key={h} value={h}>{String(h).padStart(2, "0")}时</InterfaceOption>
                 ))}
               </select>
               {showMinute && (
@@ -596,18 +597,18 @@ export default function DatePicker({
                   className={selectClass}
                 >
                   {minutes.map(m => (
-                    <option key={m} value={m}>{String(m).padStart(2, "0")}分</option>
+                    <InterfaceOption key={m} value={m}>{String(m).padStart(2, "0")}分</InterfaceOption>
                   ))}
                 </select>
               )}
               {/* 当前时间按钮（对标吉时雨 app-time-btn） */}
-              <button
+              <InterfaceButton
                 type="button"
                 onClick={handleNow}
                   className="shrink-0 rounded-md border border-[#7B2FBE] bg-[#F3EDF7] px-2 py-1.5 text-[13px] font-medium text-[#7B2FBE] transition-colors hover:bg-[#C9A8DC]"
               >
                 当前
-              </button>
+              </InterfaceButton>
             </div>
           </div>
 
@@ -617,7 +618,7 @@ export default function DatePicker({
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-700">{ui("早晚子时")}</span>
                 <div className="flex items-center gap-3">
-                  <button
+                  <InterfaceButton
                     type="button"
                     onClick={() => setOptions(prev => ({ ...prev, zaoWanZi: true }))}
                     className={`px-3 py-1 rounded text-sm transition-all ${
@@ -627,8 +628,8 @@ export default function DatePicker({
                     }`}
                   >
                     是
-                  </button>
-                  <button
+                  </InterfaceButton>
+                  <InterfaceButton
                     type="button"
                     onClick={() => setOptions(prev => ({ ...prev, zaoWanZi: false }))}
                     className={`px-3 py-1 rounded text-sm transition-all ${
@@ -638,7 +639,7 @@ export default function DatePicker({
                     }`}
                   >
                     否
-                  </button>
+                  </InterfaceButton>
                 </div>
               </div>
 
@@ -646,7 +647,7 @@ export default function DatePicker({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-700">{ui("真太阳时")}</span>
-                  <button
+                  <InterfaceButton
                     type="button"
                     onClick={() => setOptions(prev => ({ ...prev, zhenTaiyang: true }))}
                     className={`px-2.5 py-0.5 rounded text-sm transition-all ${
@@ -656,8 +657,8 @@ export default function DatePicker({
                     }`}
                   >
                     是
-                  </button>
-                  <button
+                  </InterfaceButton>
+                  <InterfaceButton
                     type="button"
                     onClick={() => setOptions(prev => ({ ...prev, zhenTaiyang: false }))}
                     className={`px-2.5 py-0.5 rounded text-sm transition-all ${
@@ -667,12 +668,12 @@ export default function DatePicker({
                     }`}
                   >
                     否
-                  </button>
+                  </InterfaceButton>
                 </div>
                 {/* 夏令时开关（对标吉时雨 summertime switch） */}
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm text-gray-700">{ui("夏令时")}</span>
-                  <button
+                  <InterfaceButton
                     type="button"
                     onClick={() => setOptions(prev => ({ ...prev, xiaLing: !prev.xiaLing }))}
                     className={`relative h-6 w-11 rounded-full transition-colors ${
@@ -684,7 +685,7 @@ export default function DatePicker({
                         options.xiaLing ? "left-[22px]" : "left-0.5"
                       }`}
                     />
-                  </button>
+                  </InterfaceButton>
                 </div>
               </div>
 
@@ -696,7 +697,7 @@ export default function DatePicker({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm text-gray-700">{ui("夏令时")}</span>
-                      <button
+                      <InterfaceButton
                         type="button"
                         onClick={() => setOptions(prev => ({ ...prev, xiaLing: !prev.xiaLing }))}
                         className={`relative h-6 w-11 rounded-full transition-colors ${
@@ -708,7 +709,7 @@ export default function DatePicker({
                             options.xiaLing ? "left-[22px]" : "left-0.5"
                           }`}
                         />
-                      </button>
+                      </InterfaceButton>
                     </div>
                     {chinaDstInfo(date.year, date.month, date.day, date.hour, date.minute).active && (
                       <span className="text-[10px] leading-tight text-amber-600">
@@ -731,23 +732,23 @@ export default function DatePicker({
                   {options.locationMissing && (
                     <div role="alert" className="flex items-center justify-between gap-2 rounded-md bg-amber-50 px-2 py-1.5 text-xs text-amber-700">
                       <span>此历史记录未保存出生地，请在下方补充后再排盘。</span>
-                      <button type="button" onClick={() => setOptions(prev => ({ ...prev, locationMissing: false }))} className="shrink-0 rounded border border-amber-300 bg-white px-2 py-1 font-semibold">确认此地</button>
+                      <InterfaceButton type="button" onClick={() => setOptions(prev => ({ ...prev, locationMissing: false }))} className="shrink-0 rounded border border-amber-300 bg-white px-2 py-1 font-semibold">确认此地</InterfaceButton>
                     </div>
                   )}
-                  <label className="block text-sm text-gray-700">
+                  <InterfaceLabel className="block text-sm text-gray-700">
                     出生地（东经{" "}
                     <span className="font-medium text-[#7B2FBE]">{(options.longitude ?? 0).toFixed(4)}°</span>
                     ）
-                  </label>
+                  </InterfaceLabel>
                   <div className="grid grid-cols-3 gap-1">
                     <select data-testid="birth-region-province" value={region.p} onChange={(e) => onProvinceChange(parseInt(e.target.value, 10))} className="min-w-0 rounded-md border border-gray-200 px-1 py-1.5 text-xs outline-none focus:border-[#7B2FBE] bg-white">
-                      {REGIONS.map((p, i) => <option key={p.name} value={i}>{p.name}</option>)}
+                      {REGIONS.map((p, i) => <InterfaceOption key={p.name} value={i}>{p.name}</InterfaceOption>)}
                     </select>
                     <select data-testid="birth-region-city" value={region.c} onChange={(e) => onCityChange(parseInt(e.target.value, 10))} className="min-w-0 rounded-md border border-gray-200 px-1 py-1.5 text-xs outline-none focus:border-[#7B2FBE] bg-white">
-                      {cities.map((c, i) => <option key={c.name} value={i}>{c.name}</option>)}
+                      {cities.map((c, i) => <InterfaceOption key={c.name} value={i}>{c.name}</InterfaceOption>)}
                     </select>
                     <select data-testid="birth-region-district" value={region.d} onChange={(e) => onDistrictChange(parseInt(e.target.value, 10))} className="min-w-0 rounded-md border border-gray-200 px-1 py-1.5 text-xs outline-none focus:border-[#7B2FBE] bg-white">
-                      {districts.map((d, i) => <option key={d.name} value={i}>{d.name}</option>)}
+                      {districts.map((d, i) => <InterfaceOption key={d.name} value={i}>{d.name}</InterfaceOption>)}
                     </select>
                   </div>
                   <div className="flex items-center gap-2">
@@ -776,14 +777,14 @@ export default function DatePicker({
 
         {/* 排盘按钮（对标吉时雨 submitFormBtn class="app-paipan-button"） */}
         <div className="px-3 pb-3 pt-1">
-          <button
+          <InterfaceButton
             data-testid="date-picker-submit"
             type="button"
             onClick={handleSubmit}
             className="w-full rounded-full bg-[#7B2FBE] py-2.5 text-base font-bold text-white shadow-lg transition-colors active:bg-[#5B1A8A]"
           >
             {ui(submitText)}
-          </button>
+          </InterfaceButton>
         </div>
       </div>
     </div>

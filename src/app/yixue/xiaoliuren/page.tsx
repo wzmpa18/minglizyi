@@ -1,5 +1,6 @@
 "use client";
 
+import { InterfaceButton } from "@/components/InterfaceControls";
 import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -438,7 +439,7 @@ export default function XiaoliurenPage() {
               }}
             >
               <span style={{ fontSize: "16px", fontWeight: "bold", color: "#333" }}>{ui("小六壬")}</span>
-              <button
+              <InterfaceButton
                 onClick={() => setShowPopup(false)}
                 style={{
                   position: "absolute",
@@ -453,7 +454,7 @@ export default function XiaoliurenPage() {
                 }}
               >
                 ✕
-              </button>
+              </InterfaceButton>
             </div>
 
             {/* 弹窗内容 */}
@@ -466,7 +467,7 @@ export default function XiaoliurenPage() {
                     { value: "time" as const, label: "时间起课" },
                     { value: "number" as const, label: "报数起课" },
                   ].map((opt) => (
-                    <button
+                    <InterfaceButton
                       key={opt.value}
                       onClick={() => setDivMethod(opt.value)}
                       style={{
@@ -482,7 +483,7 @@ export default function XiaoliurenPage() {
                       }}
                     >
                       {opt.label}
-                    </button>
+                    </InterfaceButton>
                   ))}
                 </div>
               </div>
@@ -530,7 +531,7 @@ export default function XiaoliurenPage() {
 
               {/* 按钮组 */}
               <div style={{ display: "flex", gap: "8px" }}>
-                <button
+                <InterfaceButton
                   onClick={handleDivination}
                   style={{
                     flex: 1,
@@ -545,9 +546,9 @@ export default function XiaoliurenPage() {
                   }}
                 >
                   开始排盘
-                </button>
+                </InterfaceButton>
                 <PaipanHistoryButton toolKey="xiaoliuren" onRestore={handleRestoreHistory} />
-                <button
+                <InterfaceButton
                   onClick={() => setShowPopup(false)}
                   style={{
                     padding: "12px 24px",
@@ -560,7 +561,7 @@ export default function XiaoliurenPage() {
                   }}
                 >
                   排盘记录
-                </button>
+                </InterfaceButton>
               </div>
             </div>
           </div>
@@ -595,7 +596,7 @@ export default function XiaoliurenPage() {
         <div style={{ padding: "0 0 50px 0" }}>
           {/* 返回按钮 */}
           <div style={{ padding: "8px 12px" }}>
-            <button
+            <InterfaceButton
               onClick={handleBackToPopup}
               style={{
                 fontSize: "12px",
@@ -608,7 +609,7 @@ export default function XiaoliurenPage() {
               }}
             >
               返回修改时间
-            </button>
+            </InterfaceButton>
           </div>
 
           {/* 主表格 (严格对标 jishiyu layui-table 风格) */}
@@ -836,7 +837,7 @@ export default function XiaoliurenPage() {
                         <span style={{ fontSize: "15px", fontWeight: "bold" }}>
                           {interpretPanel.title}
                         </span>
-                        <button
+                        <InterfaceButton
                           onClick={() => setInterpretPanel(null)}
                           style={{
                             background: "rgba(255,255,255,0.2)",
@@ -853,7 +854,7 @@ export default function XiaoliurenPage() {
                           }}
                         >
                           ✕
-                        </button>
+                        </InterfaceButton>
                       </div>
 
                       {/* 内容区 */}
@@ -1000,7 +1001,7 @@ export default function XiaoliurenPage() {
 
           {/* 重新排盘 */}
           <div style={{ padding: "8px" }}>
-            <button
+            <InterfaceButton
               onClick={handleBackToPopup}
               style={{
                 width: "100%",
@@ -1015,7 +1016,7 @@ export default function XiaoliurenPage() {
               }}
             >
               重新排盘
-            </button>
+            </InterfaceButton>
           </div>
 
           {/* AI智能解读 */}

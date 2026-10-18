@@ -1,5 +1,6 @@
-﻿"use client";
+"use client";
 
+import { InterfaceButton, InterfaceLabel } from "@/components/InterfaceControls";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { Solar } from "lunar-javascript";
 import { DatePicker } from "@/components/shared";
@@ -235,13 +236,13 @@ export default function ZeriPage() {
         <div className="bg-white px-3 py-3">
           {/* 事项类型（LOC 后台可配置：增删改、启停） */}
           <div className="mb-3">
-            <label className="mb-1 flex items-center justify-between text-xs text-gray-500">
+            <InterfaceLabel className="mb-1 flex items-center justify-between text-xs text-gray-500">
               <span>选择事项</span>
               <span className="text-[10px] text-gray-400">规则版本 {zeriCfg.version}</span>
-            </label>
+            </InterfaceLabel>
             <div className="grid grid-cols-4 gap-1.5">
               {enabledEventTypes.map((e) => (
-                <button
+                <InterfaceButton
                   key={e.id}
                   onClick={() => setEventType(e.id)}
                   className={`flex flex-col items-center rounded-lg border py-2 text-xs transition-all ${
@@ -252,15 +253,15 @@ export default function ZeriPage() {
                 >
                   <span className="text-base font-bold">{e.name.slice(0, 1)}</span>
                   <span className="mt-0.5 text-[10px]">{e.name}</span>
-                </button>
+                </InterfaceButton>
               ))}
             </div>
           </div>
 
           {/* 日期范围 */}
           <div className="mb-3">
-            <label className="mb-1 block text-xs text-gray-500">开始日期</label>
-            <button
+            <InterfaceLabel className="mb-1 block text-xs text-gray-500">开始日期</InterfaceLabel>
+            <InterfaceButton
               type="button"
               onClick={() => setShowStartPicker(true)}
               className="flex w-full items-center justify-between rounded-lg border border-gray-200 px-3 py-2.5 text-left text-sm transition-colors active:bg-gray-50"
@@ -269,11 +270,11 @@ export default function ZeriPage() {
                 {startYear}-{String(startMonth).padStart(2, "0")}-{String(startDay).padStart(2, "0")}
               </span>
               <span className="text-xs text-gray-400">点击修改</span>
-            </button>
+            </InterfaceButton>
           </div>
           <div className="mb-3">
-            <label className="mb-1 block text-xs text-gray-500">结束日期</label>
-            <button
+            <InterfaceLabel className="mb-1 block text-xs text-gray-500">结束日期</InterfaceLabel>
+            <InterfaceButton
               type="button"
               onClick={() => setShowEndPicker(true)}
               className="flex w-full items-center justify-between rounded-lg border border-gray-200 px-3 py-2.5 text-left text-sm transition-colors active:bg-gray-50"
@@ -282,27 +283,27 @@ export default function ZeriPage() {
                 {endYear}-{String(endMonth).padStart(2, "0")}-{String(endDay).padStart(2, "0")}
               </span>
               <span className="text-xs text-gray-400">点击修改</span>
-            </button>
+            </InterfaceButton>
           </div>
 
           {/* 生肖（可选） */}
           <div className="mb-3">
-            <label className="mb-1 block text-xs text-gray-500">您的生肖（可选，避开冲日）</label>
+            <InterfaceLabel className="mb-1 block text-xs text-gray-500">您的生肖（可选，避开冲日）</InterfaceLabel>
             <div className="flex flex-wrap gap-1">
-              <button
+              <InterfaceButton
                 onClick={() => setUserShengXiao("")}
                 className={`rounded-full px-2 py-0.5 text-[10px] ${userShengXiao === "" ? "bg-[#7B2FBE] text-white" : "bg-gray-100 text-gray-500"}`}
               >
                 不选
-              </button>
+              </InterfaceButton>
               {SHENGXIAO.map((sx) => (
-                <button
+                <InterfaceButton
                   key={sx}
                   onClick={() => setUserShengXiao(sx)}
                   className={`rounded-full px-2 py-0.5 text-[10px] ${userShengXiao === sx ? "bg-[#7B2FBE] text-white" : "bg-gray-100 text-gray-500"}`}
                 >
                   {sx}
-                </button>
+                </InterfaceButton>
               ))}
             </div>
           </div>
@@ -315,14 +316,14 @@ export default function ZeriPage() {
           </div>
 
           <div className="flex gap-2">
-            <button
+            <InterfaceButton
               onClick={handleSearch}
               disabled={loading}
               className="flex-1 rounded-full py-2.5 text-sm font-semibold text-white transition-all active:scale-[0.98] disabled:opacity-50"
               style={{ backgroundColor: BRAND }}
             >
               {loading ? "查询中..." : "查询吉日"}
-            </button>
+            </InterfaceButton>
             <PaipanHistoryButton toolKey="zeri" onRestore={handleRestoreHistory} />
           </div>
 
@@ -542,7 +543,7 @@ export default function ZeriPage() {
                   <span style={{ fontSize: "15px", fontWeight: "bold" }}>
                     {interpretPanel.title}
                   </span>
-                  <button
+                  <InterfaceButton
                     onClick={() => setInterpretPanel(null)}
                     style={{
                       background: "rgba(255,255,255,0.2)",
@@ -559,7 +560,7 @@ export default function ZeriPage() {
                     }}
                   >
                     ✕
-                  </button>
+                  </InterfaceButton>
                 </div>
 
                 {/* 内容区 */}
@@ -610,13 +611,13 @@ export default function ZeriPage() {
           )}
 
           <div className="mt-3 flex gap-2 px-1">
-            <button
+            <InterfaceButton
               onClick={() => { clearPaipanState("zeri"); setHasResult(false); }}
               className="flex-1 rounded-full py-2 text-sm font-semibold text-white transition-all active:scale-[0.98]"
               style={{ backgroundColor: BRAND }}
             >
               重新查询
-            </button>
+            </InterfaceButton>
           </div>
 
           <EventDivinationPanel

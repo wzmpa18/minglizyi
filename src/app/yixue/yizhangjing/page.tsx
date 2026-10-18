@@ -1,5 +1,6 @@
 "use client";
 
+import { InterfaceButton, InterfaceOption } from "@/components/InterfaceControls";
 import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -305,7 +306,7 @@ export default function YizhangjingPage() {
                   { val: "lunar", label: "农历" },
                   { val: "sizhu", label: "四柱" },
                 ] as const).map(t => (
-                  <button
+                  <InterfaceButton
                     key={t.val}
                     onClick={() => setDateType(t.val)}
                     style={{
@@ -316,7 +317,7 @@ export default function YizhangjingPage() {
                     }}
                   >
                     {t.label}
-                  </button>
+                  </InterfaceButton>
                 ))}
               </div>
             </div>
@@ -342,7 +343,7 @@ export default function YizhangjingPage() {
                         outline: "none", cursor: "pointer", textAlign: "center",
                       }}
                     >
-                      {TIAN_GAN.map(g => <option key={g} value={g}>{g}</option>)}
+                      {TIAN_GAN.map(g => <InterfaceOption key={g} value={g}>{g}</InterfaceOption>)}
                     </select>
                     <select
                       value={sizhuInput[p.zhiKey]}
@@ -353,7 +354,7 @@ export default function YizhangjingPage() {
                         outline: "none", cursor: "pointer", textAlign: "center",
                       }}
                     >
-                      {DI_ZHI.map(z => <option key={z} value={z}>{z}</option>)}
+                      {DI_ZHI.map(z => <InterfaceOption key={z} value={z}>{z}</InterfaceOption>)}
                     </select>
                   </div>
                 ))}
@@ -380,7 +381,7 @@ export default function YizhangjingPage() {
               </div>
             )}
 
-            <button
+            <InterfaceButton
               onClick={handleDoPaipan}
               style={{
                 width: "100%", padding: "12px", borderRadius: "8px", border: "none",
@@ -389,7 +390,7 @@ export default function YizhangjingPage() {
               }}
             >
               开始排盘
-            </button>
+            </InterfaceButton>
           </div>
         )}
 
@@ -558,7 +559,7 @@ export default function YizhangjingPage() {
                         <span style={{ fontSize: "15px", fontWeight: "bold" }}>
                           {interpretPanel.title}
                         </span>
-                        <button
+                        <InterfaceButton
                           onClick={() => setInterpretPanel(null)}
                           style={{
                             background: "rgba(255,255,255,0.2)",
@@ -575,7 +576,7 @@ export default function YizhangjingPage() {
                           }}
                         >
                           ✕
-                        </button>
+                        </InterfaceButton>
                       </div>
 
                       {/* 内容区 */}
@@ -634,7 +635,7 @@ export default function YizhangjingPage() {
                     width: "100%", overflow: "auto", lineHeight: "30px",
                     display: "flex", justifyContent: "center", gap: "15px",
                   }}>
-                    <button
+                    <InterfaceButton
                       onClick={handlePrev}
                       style={{
                         padding: "6px 16px", borderRadius: "6px",
@@ -644,8 +645,8 @@ export default function YizhangjingPage() {
                       }}
                     >
                       上一时辰
-                    </button>
-                    <button
+                    </InterfaceButton>
+                    <InterfaceButton
                       onClick={handleNext}
                       style={{
                         padding: "6px 16px", borderRadius: "6px",
@@ -655,7 +656,7 @@ export default function YizhangjingPage() {
                       }}
                     >
                       下一时辰
-                    </button>
+                    </InterfaceButton>
                   </div>
                 </td>
               </tr>

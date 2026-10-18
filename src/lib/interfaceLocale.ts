@@ -17,6 +17,7 @@ export function setInterfaceLocale(value:InterfaceLocale) {
   try{localStorage.setItem(KEY,value);}catch{}
   if(typeof document!=="undefined")document.documentElement.lang=value;
   listeners.forEach(fn=>fn());
+  if(typeof window!=="undefined")window.dispatchEvent(new Event("yandao-calendar-changed"));
 }
 export function restoreInterfaceLocale(){try{const value=localStorage.getItem(KEY) as InterfaceLocale;if(INTERFACE_LOCALES.includes(value))setInterfaceLocale(value);}catch{}}
 function subscribe(fn:()=>void){listeners.add(fn);return()=>{listeners.delete(fn);};}

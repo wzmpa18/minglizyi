@@ -1,5 +1,6 @@
-﻿"use client";
+"use client";
 
+import { InterfaceButton, InterfaceLabel } from "@/components/InterfaceControls";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import ClientSelector from "@/components/ClientSelector";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
@@ -296,7 +297,7 @@ export default function JiemengPage() {
             <PaipanHistoryButton toolKey="jiemeng" onRestore={handleRestoreHistory} />
           </div>
           <div className="mb-3">
-            <label className="mb-1 block text-xs text-gray-500">梦境关键词</label>
+            <InterfaceLabel className="mb-1 block text-xs text-gray-500">梦境关键词</InterfaceLabel>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -306,14 +307,14 @@ export default function JiemengPage() {
                 placeholder="输入梦见的事物，如：蛇、鱼、掉牙"
                 className="flex-1 rounded-lg border border-gray-200 px-3 py-3 text-sm outline-none focus:border-[#7B2FBE]"
               />
-              <button
+              <InterfaceButton
                 onClick={handleSearch}
                 disabled={!query.trim() || loading}
                 className="rounded-full px-4 py-2.5 text-sm font-semibold text-white transition-all active:scale-[0.98] disabled:opacity-50"
                 style={{ backgroundColor: query.trim() && !loading ? BRAND : "#ccc" }}
               >
                 解梦
-              </button>
+              </InterfaceButton>
             </div>
           </div>
 
@@ -322,13 +323,13 @@ export default function JiemengPage() {
             <div className="mb-1.5 text-xs text-gray-500">热门搜索</div>
             <div className="flex flex-wrap gap-1.5">
               {HOT_KEYWORDS.map((kw) => (
-                <button
+                <InterfaceButton
                   key={kw}
                   onClick={() => handleKeywordClick(kw)}
                   className="rounded-full border border-gray-200 px-2.5 py-1 text-xs text-gray-600 active:bg-purple-50 active:border-[#7B2FBE] active:text-[#7B2FBE]"
                 >
                   {kw}
-                </button>
+                </InterfaceButton>
               ))}
             </div>
           </div>
@@ -338,7 +339,7 @@ export default function JiemengPage() {
             <div className="mb-1.5 text-xs text-gray-500">分类浏览</div>
             <div className="mb-2 flex gap-1 overflow-x-auto pb-1">
               {CATEGORIES.map((cat) => (
-                <button
+                <InterfaceButton
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
                   className={`shrink-0 rounded-full px-3 py-1 text-xs transition-all ${
@@ -349,12 +350,12 @@ export default function JiemengPage() {
                   style={activeCategory === cat ? { backgroundColor: BRAND } : {}}
                 >
                   {cat}
-                </button>
+                </InterfaceButton>
               ))}
             </div>
             <div className="max-h-[280px] space-y-1 overflow-y-auto">
               {categoryEntries.map((entry) => (
-                <button
+                <InterfaceButton
                   key={entry.keyword}
                   onClick={() => handleEntryClick(entry)}
                   className="flex w-full items-center justify-between rounded-lg border border-gray-100 bg-gray-50 px-2.5 py-2 text-left active:bg-purple-50"
@@ -364,7 +365,7 @@ export default function JiemengPage() {
                     <span className="ml-1.5 rounded bg-purple-100 px-1 py-0.5 text-[9px]" style={{ color: BRAND }}>{entry.category}</span>
                   </div>
                   <span className="text-xs text-gray-400">›</span>
-                </button>
+                </InterfaceButton>
               ))}
             </div>
           </div>
@@ -389,12 +390,12 @@ export default function JiemengPage() {
               </div>
               <div className="text-xs text-gray-500">共找到 {results.length} 条相关解析</div>
             </div>
-            <button
+            <InterfaceButton
               onClick={() => { setHasResult(false); setQuery(""); }}
               className="rounded-full bg-white px-3 py-1 text-xs text-gray-500 shadow-sm"
             >
               返回
-            </button>
+            </InterfaceButton>
           </div>
 
           {results.length === 0 ? (
@@ -403,13 +404,13 @@ export default function JiemengPage() {
               <p className="mt-1 text-xs text-gray-300">请尝试其他关键词或浏览分类</p>
               <div className="mt-3 flex flex-wrap justify-center gap-1.5">
                 {HOT_KEYWORDS.slice(0, 6).map((kw) => (
-                  <button
+                  <InterfaceButton
                     key={kw}
                     onClick={() => handleKeywordClick(kw)}
                     className="rounded-full border border-gray-200 px-2.5 py-1 text-xs text-gray-500"
                   >
                     {kw}
-                  </button>
+                  </InterfaceButton>
                 ))}
               </div>
             </div>
@@ -436,13 +437,13 @@ export default function JiemengPage() {
                     <div className="mt-1.5 flex flex-wrap gap-1">
                       <span className="text-[10px] text-gray-400">相关：</span>
                       {r.entry.tags.slice(0, 5).map((tag) => (
-                        <button
+                        <InterfaceButton
                           key={tag}
                           onClick={() => handleKeywordClick(tag)}
                           className="text-[10px] text-gray-500 underline"
                         >
                           {tag}
-                        </button>
+                        </InterfaceButton>
                       ))}
                     </div>
                   )}
@@ -452,13 +453,13 @@ export default function JiemengPage() {
           )}
 
           <div className="mt-3 flex gap-2 px-1">
-            <button
+            <InterfaceButton
               onClick={() => { setHasResult(false); }}
               className="flex-1 rounded-full py-2 text-sm font-semibold text-white transition-all active:scale-[0.98]"
               style={{ backgroundColor: BRAND }}
             >
               继续查询
-            </button>
+            </InterfaceButton>
           </div>
 
           <EventDivinationPanel

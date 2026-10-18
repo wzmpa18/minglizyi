@@ -1,5 +1,6 @@
 "use client";
 
+import { InterfaceButton, InterfaceLabel } from "@/components/InterfaceControls";
 import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { DatePicker } from "@/components/shared";
@@ -184,17 +185,17 @@ export default function AstroPage() {
 
           {/* 出生地 */}
           <div className="mb-3">
-            <label className="mb-1 block text-xs text-gray-500">出生城市</label>
+            <InterfaceLabel className="mb-1 block text-xs text-gray-500">出生城市</InterfaceLabel>
             <div className="flex max-h-28 flex-wrap gap-1 overflow-y-auto rounded-lg border border-gray-100 bg-gray-50/60 p-2">
               {ASTRO_CITIES.map((c, i) => (
-                <button
+                <InterfaceButton
                   key={c.name}
                   onClick={() => setCityIdx(i)}
                   className={`rounded-full px-2.5 py-1 text-[11px] ${cityIdx === i ? "text-white" : "bg-white text-gray-600"}`}
                   style={cityIdx === i ? { backgroundColor: BRAND } : { border: "1px solid #e5e7eb" }}
                 >
                   {c.name}
-                </button>
+                </InterfaceButton>
               ))}
             </div>
             <div className="mt-1 text-[10px] text-gray-400">坐标：{city.lat.toFixed(2)}°, {city.lon.toFixed(2)}° · 时区 UTC+{city.tz}</div>
@@ -202,8 +203,8 @@ export default function AstroPage() {
 
           {/* 出生日期时间 */}
           <div className="mb-3">
-            <label className="mb-1 block text-xs text-gray-500">出生日期与时间（公历，尽量精确到分）</label>
-            <button
+            <InterfaceLabel className="mb-1 block text-xs text-gray-500">出生日期与时间（公历，尽量精确到分）</InterfaceLabel>
+            <InterfaceButton
               type="button"
               onClick={() => setShowPicker(true)}
               className="flex w-full items-center justify-between rounded-lg border border-gray-200 px-3 py-2.5 text-left text-sm active:bg-gray-50"
@@ -212,26 +213,26 @@ export default function AstroPage() {
                 {birth.year}-{String(birth.month).padStart(2, "0")}-{String(birth.day).padStart(2, "0")} {String(birth.hour).padStart(2, "0")}:{String(birth.minute).padStart(2, "0")}
               </span>
               <span className="text-xs text-gray-400">点击修改</span>
-            </button>
+            </InterfaceButton>
           </div>
 
           {error && <p className="mb-2 text-xs text-red-500">{error}</p>}
 
-          <button
+          <InterfaceButton
             onClick={handleCalc}
             disabled={loading || !astroCfg.enabled}
             className="w-full rounded-full py-2.5 text-sm font-semibold text-white transition-all active:scale-[0.98] disabled:opacity-50"
             style={{ backgroundColor: BRAND }}
           >
             {loading ? "计算中..." : "生成星盘"}
-          </button>
+          </InterfaceButton>
           <div className="mt-2 flex justify-center">
             <PaipanHistoryButton toolKey="astro" onRestore={handleRestoreHistory} />
           </div>
 
-          <button onClick={() => setShowTerms(!showTerms)} className="mt-3 w-full text-center text-xs text-gray-400">
+          <InterfaceButton onClick={() => setShowTerms(!showTerms)} className="mt-3 w-full text-center text-xs text-gray-400">
             {showTerms ? "收起术语说明 ▲" : "什么是上升点/宫位/相位？术语说明 ▼"}
-          </button>
+          </InterfaceButton>
           {showTerms && (
             <div className="mt-2 space-y-1.5 rounded-lg bg-gray-50 p-2.5">
               {TERM_NOTES.map((t) => (
@@ -295,10 +296,10 @@ export default function AstroPage() {
 
           {/* 古典尊贵说明（公版典籍框架） */}
           <div className="mb-3 rounded-lg border border-purple-100 p-2.5">
-            <button onClick={() => setShowDignity(!showDignity)} className="flex w-full items-center justify-between">
+            <InterfaceButton onClick={() => setShowDignity(!showDignity)} className="flex w-full items-center justify-between">
               <span className="text-xs font-bold text-gray-700">古典尊贵（庙旺陷弱）· {CLASSICAL_VERSION}</span>
               <span className="text-[10px] text-gray-400">{showDignity ? "收起 ▲" : "展开 ▼"}</span>
-            </button>
+            </InterfaceButton>
             {showDignity && (
               <div className="mt-2 space-y-1.5">
                 {chart.planets.filter((p) => ["太阳", "月亮", "水星", "金星", "火星", "木星", "土星"].includes(p.name)).map((p) => {
@@ -382,7 +383,7 @@ export default function AstroPage() {
                 maxLength={30}
                 className="flex-1 rounded-lg border border-gray-200 px-2.5 py-2 text-xs outline-none focus:border-purple-300"
               />
-              <button
+              <InterfaceButton
                 onClick={() => {
                   const r = saveChart(saveName, chart, astroCfg.maxSavedCharts);
                   if (r.success && r.chart) {
@@ -398,7 +399,7 @@ export default function AstroPage() {
                 style={{ backgroundColor: BRAND }}
               >
                 保存
-              </button>
+              </InterfaceButton>
             </div>
             {saveMsg && <div className="mt-1 text-[10px] text-gray-500">{saveMsg}</div>}
           </div>
@@ -407,20 +408,20 @@ export default function AstroPage() {
           <div className="mb-3 rounded-lg border border-gray-100 p-2.5">
             <div className="text-xs font-bold text-gray-700">{ui("分享")}</div>
             <div className="mt-1 text-[10px] text-gray-400">分享前请先预览并确认公开内容范围，分享文本不含精确坐标</div>
-            <button
+            <InterfaceButton
               onClick={() => { setShowSharePreview(true); setShareConfirmed(false); }}
               className="mt-2 w-full rounded-lg border py-2 text-xs font-semibold"
               style={{ borderColor: BRAND, color: BRAND }}
             >
               预览分享内容
-            </button>
+            </InterfaceButton>
             {showSharePreview && (
               <div className="mt-2 rounded-lg bg-gray-50 p-2 text-[11px] leading-relaxed text-gray-600">
                 {buildShareSnapshot({ id: "", title: saveName || "本命星盘", isPrivate: true, chart, createdAt: "", updatedAt: "" })}
-                <label className="mt-2 flex items-start gap-1.5 text-[10px] text-gray-500">
+                <InterfaceLabel className="mt-2 flex items-start gap-1.5 text-[10px] text-gray-500">
                   <input type="checkbox" checked={shareConfirmed} onChange={(e) => setShareConfirmed(e.target.checked)} className="mt-0.5" />
                   我已确认以上内容可以公开，了解其中包含我的出生日期与时间
-                </label>
+                </InterfaceLabel>
                 {shareConfirmed && (
                   <div className="mt-2">
                     <ShareButton type="tool" title="占星星盘" description="占星兴趣工具" variant="block" label="确认并分享" shareData={{
@@ -442,16 +443,16 @@ export default function AstroPage() {
             <div className="flex items-center justify-between">
               <div className="text-xs font-bold text-gray-700">我的星盘（{saved.length}/{astroCfg.maxSavedCharts}）</div>
               <div className="flex gap-2">
-                <button onClick={() => setShowMyCharts(!showMyCharts)} className="text-[10px] text-purple-600 underline">
+                <InterfaceButton onClick={() => setShowMyCharts(!showMyCharts)} className="text-[10px] text-purple-600 underline">
                   {showMyCharts ? "收起" : "展开"}
-                </button>
+                </InterfaceButton>
                 {saved.length > 0 && (
-                  <button
+                  <InterfaceButton
                     onClick={() => { if (confirm("确定彻底删除全部星盘数据？此操作不可恢复")) { deleteAllCharts(); setSaved([]); } }}
                     className="text-[10px] text-red-500 underline"
                   >
                     全部删除
-                  </button>
+                  </InterfaceButton>
                 )}
               </div>
             </div>
@@ -467,15 +468,15 @@ export default function AstroPage() {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <button
+                      <InterfaceButton
                         onClick={() => { setChart(s.chart); setBirth({ year: s.chart.input.year, month: s.chart.input.month, day: s.chart.input.day, hour: s.chart.input.hour, minute: s.chart.input.minute }); setShowMyCharts(false); }}
                         className="text-[10px] text-purple-600 underline"
                       >
                         查看
-                      </button>
-                      <button onClick={() => { deleteChart(s.id); setSaved(listCharts()); }} className="text-[10px] text-red-500 underline">
+                      </InterfaceButton>
+                      <InterfaceButton onClick={() => { deleteChart(s.id); setSaved(listCharts()); }} className="text-[10px] text-red-500 underline">
                         删除
-                      </button>
+                      </InterfaceButton>
                     </div>
                   </div>
                 ))}
@@ -484,13 +485,13 @@ export default function AstroPage() {
           </div>
 
           <div className="flex gap-2">
-            <button
+            <InterfaceButton
               onClick={() => { clearPaipanState("astro"); setChart(null); }}
               className="flex-1 rounded-full py-2 text-sm font-semibold text-white active:scale-[0.98]"
               style={{ backgroundColor: BRAND }}
             >
               重新排盘
-            </button>
+            </InterfaceButton>
           </div>
         </div>
       )}

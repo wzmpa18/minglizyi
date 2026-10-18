@@ -1,5 +1,6 @@
 "use client";
 
+import { InterfaceButton, InterfaceLabel, InterfaceOption } from "@/components/InterfaceControls";
 import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { calculateLiuyao } from "@/algorithm-core";
@@ -557,7 +558,7 @@ export default function LiuyaoPage() {
                   { key: "coin", label: "铜钱起卦" },
                   { key: "number", label: "报数起卦" },
                 ] as const).map(m => (
-                  <button
+                  <InterfaceButton
                     key={m.key}
                     onClick={() => setMethod(m.key)}
                     style={{
@@ -571,7 +572,7 @@ export default function LiuyaoPage() {
                       cursor: "pointer",
                       transition: "all 0.15s",
                     }}
-                  >{m.label}</button>
+                  >{m.label}</InterfaceButton>
                 ))}
               </div>
             </div>
@@ -600,27 +601,27 @@ export default function LiuyaoPage() {
                 <div style={{ display: "flex", gap: "6px", marginBottom: "8px" }}>
                   <select value={parsedYear} onChange={e => setParsedYear(Number(e.target.value))}
                     style={{ flex: 1, padding: "8px", border: "1px solid #ddd", borderRadius: "6px", fontSize: "13px" }}>
-                    {Array.from({ length: 120 }, (_, i) => 1940 + i).map(y => <option key={y} value={y}>{y}年</option>)}
+                    {Array.from({ length: 120 }, (_, i) => 1940 + i).map(y => <InterfaceOption key={y} value={y}>{y}年</InterfaceOption>)}
                   </select>
                   <select value={parsedMonth} onChange={e => setParsedMonth(Number(e.target.value))}
                     style={{ flex: 1, padding: "8px", border: "1px solid #ddd", borderRadius: "6px", fontSize: "13px" }}>
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{m}月</option>)}
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <InterfaceOption key={m} value={m}>{m}月</InterfaceOption>)}
                   </select>
                   <select value={parsedDay} onChange={e => setParsedDay(Number(e.target.value))}
                     style={{ flex: 1, padding: "8px", border: "1px solid #ddd", borderRadius: "6px", fontSize: "13px" }}>
-                    {Array.from({ length: 31 }, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}日</option>)}
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map(d => <InterfaceOption key={d} value={d}>{d}日</InterfaceOption>)}
                   </select>
                 </div>
                 <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                   <select value={hour} onChange={e => setHour(Number(e.target.value))}
                     style={{ flex: 1, padding: "8px", border: "1px solid #ddd", borderRadius: "6px", fontSize: "13px" }}>
-                    {hourOptions.map(h => <option key={h} value={h}>{pad2(h)}时</option>)}
+                    {hourOptions.map(h => <InterfaceOption key={h} value={h}>{pad2(h)}时</InterfaceOption>)}
                   </select>
                   <select value={minute} onChange={e => setMinute(Number(e.target.value))}
                     style={{ flex: 1, padding: "8px", border: "1px solid #ddd", borderRadius: "6px", fontSize: "13px" }}>
-                    {Array.from({ length: 60 }, (_, i) => i).map(m => <option key={m} value={m}>{pad2(m)}分</option>)}
+                    {Array.from({ length: 60 }, (_, i) => i).map(m => <InterfaceOption key={m} value={m}>{pad2(m)}分</InterfaceOption>)}
                   </select>
-                  <button onClick={handleUseNow} style={{ padding: "8px 12px", backgroundColor: "#f5f0fa", border: `1px solid ${BRAND}`, borderRadius: "6px", color: BRAND, fontSize: "12px", cursor: "pointer", whiteSpace: "nowrap" }}>此刻</button>
+                  <InterfaceButton onClick={handleUseNow} style={{ padding: "8px 12px", backgroundColor: "#f5f0fa", border: `1px solid ${BRAND}`, borderRadius: "6px", color: BRAND, fontSize: "12px", cursor: "pointer", whiteSpace: "nowrap" }}>此刻</InterfaceButton>
                 </div>
               </div>
             )}
@@ -634,7 +635,7 @@ export default function LiuyaoPage() {
                     <span style={{ width: "48px", fontSize: "12px", color: "#666", flexShrink: 0 }}>{name}</span>
                     <div style={{ display: "flex", gap: "4px", flex: 1 }}>
                       {YAO_OPTIONS.map(opt => (
-                        <button key={opt.value} onClick={() => setYaoValue(i, opt.value)}
+                        <InterfaceButton key={opt.value} onClick={() => setYaoValue(i, opt.value)}
                           style={{
                             flex: 1, padding: "6px 0", borderRadius: "4px",
                             border: manualYaos[i] === opt.value ? `2px solid ${BRAND}` : "1px solid #ddd",
@@ -642,7 +643,7 @@ export default function LiuyaoPage() {
                             color: manualYaos[i] === opt.value ? BRAND : "#666",
                             fontSize: "12px", cursor: "pointer", transition: "all 0.15s",
                           }}
-                        >{opt.label}</button>
+                        >{opt.label}</InterfaceButton>
                       ))}
                     </div>
                   </div>
@@ -676,19 +677,19 @@ export default function LiuyaoPage() {
                             </span>
                           </>
                         ) : (
-                          <button onClick={() => tossCoin(i)} style={{
+                          <InterfaceButton onClick={() => tossCoin(i)} style={{
                             flex: 1, padding: "8px 0", borderRadius: "6px",
                             border: `1px solid ${BRAND}`, backgroundColor: "#f5f0fa",
                             color: BRAND, fontSize: "13px", cursor: "pointer",
-                          }}>摇卦</button>
+                          }}>摇卦</InterfaceButton>
                         )}
                       </div>
                       {coins && (
-                        <button onClick={() => tossCoin(i)} style={{
+                        <InterfaceButton onClick={() => tossCoin(i)} style={{
                           padding: "4px 8px", borderRadius: "4px",
                           border: "1px solid #ddd", backgroundColor: "#fff",
                           color: "#999", fontSize: "11px", cursor: "pointer",
-                        }}>重摇</button>
+                        }}>重摇</InterfaceButton>
                       )}
                     </div>
                   );
@@ -705,19 +706,19 @@ export default function LiuyaoPage() {
                 <div style={{ fontSize: "14px", fontWeight: "bold", color: BRAND, marginBottom: "8px" }}>报数起卦（输入三个数字）</div>
                 <div style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
                   <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: "12px", color: "#666", display: "block", marginBottom: "4px" }}>上卦数</label>
+                    <InterfaceLabel style={{ fontSize: "12px", color: "#666", display: "block", marginBottom: "4px" }}>上卦数</InterfaceLabel>
                     <input type="number" min={1} max={999} value={numUpper}
                       onChange={e => setNumUpper(Number(e.target.value))}
                       style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "6px", fontSize: "14px", boxSizing: "border-box" }} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: "12px", color: "#666", display: "block", marginBottom: "4px" }}>下卦数</label>
+                    <InterfaceLabel style={{ fontSize: "12px", color: "#666", display: "block", marginBottom: "4px" }}>下卦数</InterfaceLabel>
                     <input type="number" min={1} max={999} value={numLower}
                       onChange={e => setNumLower(Number(e.target.value))}
                       style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "6px", fontSize: "14px", boxSizing: "border-box" }} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: "12px", color: "#666", display: "block", marginBottom: "4px" }}>动爻数</label>
+                    <InterfaceLabel style={{ fontSize: "12px", color: "#666", display: "block", marginBottom: "4px" }}>动爻数</InterfaceLabel>
                     <input type="number" min={1} max={6} value={numDong}
                       onChange={e => setNumDong(Number(e.target.value))}
                       style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "6px", fontSize: "14px", boxSizing: "border-box" }} />
@@ -734,13 +735,13 @@ export default function LiuyaoPage() {
             )}
 
             {/* 起卦按钮 */}
-            <button onClick={() => handleQigua()} style={{
+            <InterfaceButton onClick={() => handleQigua()} style={{
               width: "100%", padding: "14px 0",
               background: BRAND, color: "#fff",
               border: "none", borderRadius: "10px",
               fontSize: "16px", fontWeight: "bold", cursor: "pointer",
               boxShadow: "0 2px 8px rgba(123, 47, 190, 0.3)",
-            }}>起卦</button>
+            }}>起卦</InterfaceButton>
             <div style={{ display: "flex", justifyContent: "center", marginTop: "10px" }}>
               <PaipanHistoryButton toolKey="liuyao" onRestore={handleRestoreHistory} />
             </div>
@@ -749,7 +750,7 @@ export default function LiuyaoPage() {
 
         {!showForm && !result && (
           <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
-            <button onClick={() => setShowForm(true)} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">{ui("开始排盘")}</button>
+            <InterfaceButton onClick={() => setShowForm(true)} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">{ui("开始排盘")}</InterfaceButton>
           </div>
         )}
 
@@ -870,7 +871,7 @@ export default function LiuyaoPage() {
                           fontSize: "13px", fontWeight: "bold", color: "#333",
                           marginBottom: "4px",
                         }}>
-                          <button type="button" onClick={() => handleGuaNameClick(result.bianGua!.name)} style={{color:"#333",textDecoration:"underline"}}>{result.bianGua.name}</button>
+                          <InterfaceButton type="button" onClick={() => handleGuaNameClick(result.bianGua!.name)} style={{color:"#333",textDecoration:"underline"}}>{result.bianGua.name}</InterfaceButton>
                           <span style={{ fontSize: "11px", color: "#888", fontWeight: "normal" }}>
                             （{result.bianGua.gong}）
                           </span>
@@ -981,7 +982,7 @@ export default function LiuyaoPage() {
                   <span style={{ fontSize: "15px", fontWeight: "bold" }}>
                     {interpretPanel.title}
                   </span>
-                  <button
+                  <InterfaceButton
                     onClick={() => setInterpretPanel(null)}
                     style={{
                       background: "rgba(255,255,255,0.2)",
@@ -998,7 +999,7 @@ export default function LiuyaoPage() {
                     }}
                   >
                     ✕
-                  </button>
+                  </InterfaceButton>
                 </div>
 
                 {/* 内容区 */}
@@ -1065,7 +1066,7 @@ export default function LiuyaoPage() {
 
             {/* 重新起卦按钮 */}
             <div style={{ padding: "0 16px" }}>
-              <button
+              <InterfaceButton
                 onClick={handleReset}
                 style={{
                   width: "100%", padding: "12px 0",
@@ -1075,7 +1076,7 @@ export default function LiuyaoPage() {
                 }}
               >
                 重新起卦
-              </button>
+              </InterfaceButton>
             </div>
 
             <div className="px-3 py-2">

@@ -1,5 +1,6 @@
-﻿"use client";
+"use client";
 
+import { InterfaceButton, InterfaceLabel } from "@/components/InterfaceControls";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -571,7 +572,7 @@ export default function HehunPage() {
           <div className="grid grid-cols-2 gap-3">
             {/* 男方 */}
             <div>
-              <label className="flex items-center gap-1 text-sm font-bold mb-1.5" style={{ color: MALE_COLOR }}>
+              <InterfaceLabel className="flex items-center gap-1 text-sm font-bold mb-1.5" style={{ color: MALE_COLOR }}>
                 <span
                   className="inline-flex items-center justify-center rounded-full text-white text-xs font-bold"
                   style={{ width: "18px", height: "18px", backgroundColor: MALE_COLOR, fontSize: "10px" }}
@@ -579,20 +580,20 @@ export default function HehunPage() {
                   ♂
                 </span>
                 男方
-              </label>
-              <button
+              </InterfaceLabel>
+              <InterfaceButton
                 type="button"
                 onClick={() => setShowMalePicker(true)}
                 className="w-full rounded-lg border bg-white px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50"
                 style={{ borderColor: MALE_COLOR + "44", color: "#333" }}
               >
                 {maleYear}年{String(maleMonth).padStart(2, "0")}月{String(maleDay).padStart(2, "0")}日 {String(maleHour).padStart(2, "0")}时
-              </button>
+              </InterfaceButton>
             </div>
 
             {/* 女方 */}
             <div>
-              <label className="flex items-center gap-1 text-sm font-bold mb-1.5" style={{ color: FEMALE_COLOR }}>
+              <InterfaceLabel className="flex items-center gap-1 text-sm font-bold mb-1.5" style={{ color: FEMALE_COLOR }}>
                 <span
                   className="inline-flex items-center justify-center rounded-full text-white text-xs font-bold"
                   style={{ width: "18px", height: "18px", backgroundColor: FEMALE_COLOR, fontSize: "10px" }}
@@ -600,15 +601,15 @@ export default function HehunPage() {
                   ♀
                 </span>
                 女方
-              </label>
-              <button
+              </InterfaceLabel>
+              <InterfaceButton
                 type="button"
                 onClick={() => setShowFemalePicker(true)}
                 className="w-full rounded-lg border bg-white px-3 py-2 text-left text-sm transition-colors hover:bg-gray-50"
                 style={{ borderColor: FEMALE_COLOR + "44", color: "#333" }}
               >
                 {femaleYear}年{String(femaleMonth).padStart(2, "0")}月{String(femaleDay).padStart(2, "0")}日 {String(femaleHour).padStart(2, "0")}时
-              </button>
+              </InterfaceButton>
             </div>
           </div>
 
@@ -624,7 +625,7 @@ export default function HehunPage() {
 
           {/* 操作按钮 */}
           <div className="flex gap-2 mt-3">
-            <button
+            <InterfaceButton
               onClick={doHehun}
               disabled={loading}
               className="flex-1 rounded-full py-2.5 text-sm font-semibold text-white transition-all active:scale-[0.97] disabled:opacity-50"
@@ -634,23 +635,23 @@ export default function HehunPage() {
               }}
             >
               {loading ? "分析中..." : hasResult ? "重新合婚" : "开始合婚"}
-            </button>
+            </InterfaceButton>
             <PaipanHistoryButton toolKey="hehun" onRestore={handleRestoreHistory} />
           </div>
           <div className="flex gap-2 mt-2 justify-center">
-            <button
+            <InterfaceButton
               onClick={fillExample}
               className="rounded-full px-4 py-1.5 text-xs text-gray-500 border border-gray-200 hover:bg-gray-50"
             >
               填充示例
-            </button>
+            </InterfaceButton>
             {hasResult && (
-              <button
+              <InterfaceButton
                 onClick={doReset}
                 className="rounded-full px-4 py-1.5 text-xs text-gray-500 border border-gray-200 hover:bg-gray-50"
               >
                 重置
-              </button>
+              </InterfaceButton>
             )}
           </div>
         </div>
@@ -747,7 +748,7 @@ export default function HehunPage() {
                     <span style={{ fontSize: "15px", fontWeight: "bold" }}>
                       {interpretPanel.title}
                     </span>
-                    <button
+                    <InterfaceButton
                       onClick={() => setInterpretPanel(null)}
                       style={{
                         background: "rgba(255,255,255,0.2)",
@@ -764,7 +765,7 @@ export default function HehunPage() {
                       }}
                     >
                       ✕
-                    </button>
+                    </InterfaceButton>
                   </div>
 
                   {/* 内容区 */}

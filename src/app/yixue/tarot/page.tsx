@@ -1,5 +1,6 @@
-﻿"use client";
+"use client";
 
+import { InterfaceButton } from "@/components/InterfaceControls";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   TAROT_SPREADS,
@@ -152,7 +153,7 @@ export default function TarotPage() {
     card, reversed, positionName, faceUp, onClick,
   }: { card?: TarotCard; reversed: boolean; positionName: string; faceUp: boolean; onClick: () => void }) {
     return (
-      <button
+      <InterfaceButton
         onClick={onClick}
         className="relative flex flex-col overflow-hidden rounded-lg border transition-all duration-300"
         style={{
@@ -202,7 +203,7 @@ export default function TarotPage() {
             </div>
           </div>
         )}
-      </button>
+      </InterfaceButton>
     );
   }
 
@@ -274,7 +275,7 @@ export default function TarotPage() {
             <div className="mb-2 text-xs font-bold text-gray-700">选择牌阵（免费）</div>
             <div className="flex flex-col gap-2">
               {enabledSpreads.map((s) => (
-                <button
+                <InterfaceButton
                   key={s.id}
                   onClick={() => setSpreadId(s.id)}
                   className="flex items-center justify-between rounded-lg border p-2.5 text-left transition-colors"
@@ -295,19 +296,19 @@ export default function TarotPage() {
                   >
                     {s.positions.length}张
                   </div>
-                </button>
+                </InterfaceButton>
               ))}
             </div>
           </div>
 
-          <button
+          <InterfaceButton
             onClick={handleShuffle}
             disabled={shuffling}
             className="mt-1 w-full rounded-xl py-3 text-sm font-bold text-white transition-opacity disabled:opacity-60"
             style={{ background: `linear-gradient(135deg, ${BRAND}, #5e2a8e)` }}
           >
             {shuffling ? "洗牌中…" : "洗牌 · 开始"}
-          </button>
+          </InterfaceButton>
           <div className="mt-2 flex justify-center">
             <PaipanHistoryButton toolKey="tarot" onRestore={handleRestoreHistory} />
           </div>
@@ -409,31 +410,31 @@ export default function TarotPage() {
                     placeholder={`记录名称（默认：${spread.name}+日期）`}
                     className="flex-1 rounded-lg border border-gray-200 px-2 py-2 text-sm outline-none focus:border-[#7B2FBE]"
                   />
-                  <button
+                  <InterfaceButton
                     onClick={handleSave}
                     className="shrink-0 rounded-lg px-4 text-sm font-bold text-white"
                     style={{ backgroundColor: BRAND }}
                   >
                     保存
-                  </button>
+                  </InterfaceButton>
                 </div>
                 {saveMsg && <div className="mt-1.5 text-[11px]" style={{ color: BRAND }}>{saveMsg}</div>}
               </div>
 
-              <button
+              <InterfaceButton
                 onClick={() => { setShowResult(false); }}
                 className="w-full rounded-xl border py-2.5 text-sm font-bold"
                 style={{ borderColor: "#d9c2f2", color: BRAND, backgroundColor: "#fff" }}
               >
                 返回 · 换一个问题
-              </button>
-              <button
+              </InterfaceButton>
+              <InterfaceButton
                 onClick={handleShuffle}
                 className="w-full rounded-xl py-3 text-sm font-bold text-white"
                 style={{ background: `linear-gradient(135deg, ${BRAND}, #5e2a8e)` }}
               >
                 重新洗牌抽牌
-              </button>
+              </InterfaceButton>
             </>
           )}
         </div>
@@ -452,20 +453,20 @@ export default function TarotPage() {
             {saved.map((r) => (
               <div key={r.id} className="rounded-lg border border-gray-100">
                 <div className="flex items-center justify-between p-2">
-                  <button
+                  <InterfaceButton
                     className="flex-1 truncate text-left text-xs font-medium text-gray-700"
                     onClick={() => setOpenRecordId(openRecordId === r.id ? null : r.id)}
                   >
                     <span style={{ color: BRAND }}>{r.spreadName}</span> · {r.title}
                     {r.question && <span className="ml-1 text-[10px] text-gray-400">（{r.question}）</span>}
-                  </button>
-                  <button
+                  </InterfaceButton>
+                  <InterfaceButton
                     onClick={() => handleDelete(r.id)}
                     className="ml-2 shrink-0 text-[11px]"
                     style={{ color: "#c0392b" }}
                   >
                     删除
-                  </button>
+                  </InterfaceButton>
                 </div>
                 {openRecordId === r.id && (
                   <div className="border-t border-gray-100 p-2">

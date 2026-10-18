@@ -1,5 +1,6 @@
 "use client";
 
+import { InterfaceButton, InterfaceOption } from "@/components/InterfaceControls";
 import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -233,7 +234,7 @@ export default function WannianliPage() {
         className="flex items-center gap-2 px-4 py-3 text-white"
         style={{ background: `linear-gradient(135deg, ${BRAND} 0%, #9B5ECF 100%)` }}
       >
-        <button
+        <InterfaceButton
           onClick={() => {
             if (window.history.length > 1) router.back();
             else router.push("/");
@@ -245,8 +246,8 @@ export default function WannianliPage() {
             <path d="M19 12H5" />
             <path d="M12 19l-7-7 7-7" />
           </svg>
-        </button>
-        <button
+        </InterfaceButton>
+        <InterfaceButton
           onClick={goPrevMonth}
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/20 active:bg-white/30"
           aria-label="上一月"
@@ -254,15 +255,15 @@ export default function WannianliPage() {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 18l-6-6 6-6" />
           </svg>
-        </button>
-        <button
+        </InterfaceButton>
+        <InterfaceButton
           onClick={() => setShowPicker(!showPicker)}
           className="flex flex-1 flex-col items-center"
         >
           <div className="text-lg font-bold">{viewYear}年{viewMonth}月</div>
           <div className="text-[11px] opacity-80">点击选择年月</div>
-        </button>
-        <button
+        </InterfaceButton>
+        <InterfaceButton
           onClick={goNextMonth}
           className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 active:bg-white/30"
           aria-label="下一月"
@@ -270,7 +271,7 @@ export default function WannianliPage() {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M9 18l6-6-6-6" />
           </svg>
-        </button>
+        </InterfaceButton>
       </div>
 
       <div className="mx-auto w-full px-3 pt-3" style={{ maxWidth: "500px" }}>
@@ -278,31 +279,31 @@ export default function WannianliPage() {
         {fieldConfig && fieldConfig.functionEnabled && (
           <div className="mb-2.5 grid grid-cols-3 gap-2">
             {fieldConfig.showReminderEntry && (
-              <button
+              <InterfaceButton
                 onClick={() => router.push("/yixue/wannianli/events")}
                 className="flex flex-col items-center gap-1 rounded-[10px] bg-white py-2.5 shadow-sm active:opacity-70"
               >
                 <span className="text-xl">⏰</span>
                 <span className="text-xs font-medium text-gray-700">{ui("记事提醒")}</span>
-              </button>
+              </InterfaceButton>
             )}
             {fieldConfig.showZeriEntry && (
-              <button
+              <InterfaceButton
                 onClick={() => router.push("/yixue/zeri")}
                 className="flex flex-col items-center gap-1 rounded-[10px] bg-white py-2.5 shadow-sm active:opacity-70"
               >
                 <span className="text-xl">📅</span>
                 <span className="text-xs font-medium text-gray-700">择日</span>
-              </button>
+              </InterfaceButton>
             )}
             {fieldConfig.showMoreToolsEntry && (
-              <button
+              <InterfaceButton
                 onClick={() => setShowMoreTools(!showMoreTools)}
                 className="flex flex-col items-center gap-1 rounded-[10px] bg-white py-2.5 shadow-sm active:opacity-70"
               >
                 <span className="text-xl">🧰</span>
                 <span className="text-xs font-medium text-gray-700">更多工具</span>
-              </button>
+              </InterfaceButton>
             )}
           </div>
         )}
@@ -322,19 +323,19 @@ export default function WannianliPage() {
                 { name: "黄历", icon: "📜", path: "/yixue/huangli" },
                 { name: "节气", icon: "🍃", path: "/yixue/jieqi" },
               ].map((t) => (
-                <button
+                <InterfaceButton
                   key={t.path}
                   onClick={() => router.push(t.path)}
                   className="flex flex-col items-center gap-1 rounded-lg bg-[#f9f7fb] py-2 active:opacity-70"
                 >
                   <span className="text-lg">{t.icon}</span>
                   <span className="text-[10px] text-gray-600">{t.name}</span>
-                </button>
+                </InterfaceButton>
               ))}
             </div>
-            <button onClick={() => setShowMoreTools(false)} className="mt-2 w-full rounded-lg border py-1.5 text-xs text-gray-500">
+            <InterfaceButton onClick={() => setShowMoreTools(false)} className="mt-2 w-full rounded-lg border py-1.5 text-xs text-gray-500">
               收起
-            </button>
+            </InterfaceButton>
           </div>
         )}
 
@@ -348,7 +349,7 @@ export default function WannianliPage() {
                 className="flex-1 rounded-lg border border-gray-300 bg-white p-2 text-sm"
               >
                 {yearOptions.map((y) => (
-                  <option key={y} value={y}>{y}年</option>
+                  <InterfaceOption key={y} value={y}>{y}年</InterfaceOption>
                 ))}
               </select>
               <select
@@ -357,34 +358,34 @@ export default function WannianliPage() {
                 className="flex-1 rounded-lg border border-gray-300 bg-white p-2 text-sm"
               >
                 {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                  <option key={m} value={m}>{m}月</option>
+                  <InterfaceOption key={m} value={m}>{m}月</InterfaceOption>
                 ))}
               </select>
-              <button
+              <InterfaceButton
                 onClick={goToday}
                 className="rounded-lg px-3 py-2 text-sm font-semibold text-white"
                 style={{ backgroundColor: BRAND }}
               >
                 今天
-              </button>
+              </InterfaceButton>
             </div>
-            <button
+            <InterfaceButton
               onClick={() => setShowPicker(false)}
               className="mt-2 w-full rounded-lg border py-1.5 text-xs text-gray-500"
             >
               收起
-            </button>
+            </InterfaceButton>
           </div>
         )}
 
         {!showPicker && (
-          <button
+          <InterfaceButton
             onClick={goToday}
             className="mb-2.5 w-full rounded-lg border py-2 text-sm font-semibold"
             style={{ borderColor: BRAND, color: BRAND, backgroundColor: "#F3EDF7" }}
           >
             回到今日
-          </button>
+          </InterfaceButton>
         )}
 
         {/* ===== 日历表格 ===== */}
@@ -631,14 +632,14 @@ export default function WannianliPage() {
                   当日事项（{selectedYmd.m}月{selectedYmd.d}日）
                 </span>
                 <div className="flex items-center gap-2">
-                  <button
+                  <InterfaceButton
                     onClick={() => { setAddPanelOpen(v => !v); setAddError(null); }}
                     className="rounded-full px-2.5 py-0.5 text-[11px] font-semibold text-white"
                     style={{ backgroundColor: BRAND }}
-                  >＋ 登记提醒</button>
-                  <button onClick={() => router.push("/yixue/wannianli/events")} className="text-[11px] font-medium" style={{ color: BRAND }}>
+                  >＋ 登记提醒</InterfaceButton>
+                  <InterfaceButton onClick={() => router.push("/yixue/wannianli/events")} className="text-[11px] font-medium" style={{ color: BRAND }}>
                     管理 ›
-                  </button>
+                  </InterfaceButton>
                 </div>
               </div>
 
@@ -654,7 +655,7 @@ export default function WannianliPage() {
                   />
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {(Object.keys(EVENT_TYPE_META) as CalendarEventType[]).map((t) => (
-                      <button
+                      <InterfaceButton
                         key={t}
                         onClick={() => setAddType(t)}
                         className="rounded-full px-2.5 py-1 text-[11px]"
@@ -664,7 +665,7 @@ export default function WannianliPage() {
                           color: addType === t ? "#fff" : "#666",
                           fontWeight: addType === t ? 700 : 400,
                         }}
-                      >{EVENT_TYPE_META[t].icon} {EVENT_TYPE_META[t].label}</button>
+                      >{EVENT_TYPE_META[t].icon} {EVENT_TYPE_META[t].label}</InterfaceButton>
                     ))}
                   </div>
                   <div className="mt-2 text-[11px] text-gray-500">提醒时间（可多选）：</div>
@@ -672,7 +673,7 @@ export default function WannianliPage() {
                     {REMINDER_OFFSET_OPTIONS.map((o) => {
                       const on = addReminders.some(r => r.offsetMinutes === o.offsetMinutes);
                       return (
-                        <button
+                        <InterfaceButton
                           key={o.offsetMinutes}
                           onClick={() => setAddReminders(prev => on ? prev.filter(r => r.offsetMinutes !== o.offsetMinutes) : [...prev, { offsetMinutes: o.offsetMinutes }])}
                           className="rounded-full px-2.5 py-1 text-[11px]"
@@ -682,7 +683,7 @@ export default function WannianliPage() {
                             color: on ? BRAND : "#666",
                             fontWeight: on ? 700 : 400,
                           }}
-                        >{o.label}</button>
+                        >{o.label}</InterfaceButton>
                       );
                     })}
                   </div>
@@ -692,7 +693,7 @@ export default function WannianliPage() {
                       {EVENT_TYPE_META[addType].label}默认按每年农历重复提醒，可在「管理」中修改
                     </div>
                   )}
-                  <button
+                  <InterfaceButton
                     onClick={() => {
                       // P7-补05：生日/纪念日默认「每年农历重复」，其余类型单次公历提醒
                       const isMemorial = addType === "birthday" || addType === "anniversary";
@@ -714,7 +715,7 @@ export default function WannianliPage() {
                     }}
                     className="mt-2.5 w-full rounded-lg py-2 text-sm font-bold text-white"
                     style={{ backgroundColor: BRAND }}
-                  >保存并开启提醒</button>
+                  >保存并开启提醒</InterfaceButton>
                 </div>
               )}
 
@@ -730,11 +731,11 @@ export default function WannianliPage() {
                           · 提醒{o.event.reminders.map(r => REMINDER_OFFSET_OPTIONS.find(x => x.offsetMinutes === r.offsetMinutes)?.label || "").filter(Boolean).join("/")}
                         </span>
                       )}
-                      <button
+                      <InterfaceButton
                         onClick={() => { deleteEvent(o.event.id); setEventsVersion(v => v + 1); }}
                         className="ml-auto text-[10px] text-gray-400 active:text-red-500"
                         title="删除此事项"
-                      >{ui("删除")}</button>
+                      >{ui("删除")}</InterfaceButton>
                     </div>
                   ))}
                 </div>
@@ -780,7 +781,7 @@ export default function WannianliPage() {
                   <span style={{ fontSize: "15px", fontWeight: "bold" }}>
                     {interpretPanel.title}
                   </span>
-                  <button
+                  <InterfaceButton
                     onClick={() => setInterpretPanel(null)}
                     style={{
                       background: "rgba(255,255,255,0.2)",
@@ -797,7 +798,7 @@ export default function WannianliPage() {
                     }}
                   >
                     ✕
-                  </button>
+                  </InterfaceButton>
                 </div>
                 <div style={{ padding: "10px 12px", maxHeight: "360px", overflowY: "auto" }}>
                   {interpretPanel.items.map((item, idx) => {

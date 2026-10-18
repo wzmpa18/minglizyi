@@ -1,5 +1,6 @@
-﻿"use client";
+"use client";
 
+import { InterfaceButton, InterfaceLabel } from "@/components/InterfaceControls";
 import { useState, useCallback, useEffect } from "react";
 import { DatePicker } from "@/components/shared";
 import ClientSelector from "@/components/ClientSelector";
@@ -243,10 +244,10 @@ export default function XuankongFeixingPage() {
       {!hasResult && (
         <div className="bg-white px-3 py-3">
           <div className="mb-3">
-            <label className="mb-1 block text-xs text-gray-500">建筑坐山（二十四山）</label>
+            <InterfaceLabel className="mb-1 block text-xs text-gray-500">建筑坐山（二十四山）</InterfaceLabel>
             <div className="grid grid-cols-6 gap-1">
               {ER_SHI_SI_SHAN.map((s) => (
-                <button
+                <InterfaceButton
                   key={s}
                   onClick={() => setZuoShan(s)}
                   className={`rounded py-1.5 text-sm font-medium transition-all ${
@@ -257,7 +258,7 @@ export default function XuankongFeixingPage() {
                   style={zuoShan === s ? { backgroundColor: BRAND } : {}}
                 >
                   {s}
-                </button>
+                </InterfaceButton>
               ))}
             </div>
             <p className="mt-1 text-[10px] text-gray-400">
@@ -266,13 +267,13 @@ export default function XuankongFeixingPage() {
           </div>
 
           <div className="mb-3">
-            <label className="mb-1 block text-xs text-gray-500">
+            <InterfaceLabel className="mb-1 block text-xs text-gray-500">
               建造年份（元运）
               <span className="ml-2 rounded-full px-2 py-0.5 text-xs font-medium text-white" style={{ backgroundColor: BRAND }}>
                 {getYunName(currentYun)}
               </span>
-            </label>
-            <button
+            </InterfaceLabel>
+            <InterfaceButton
               type="button"
               onClick={() => { clearPaipanState("xuankong"); setShowForm(true); }}
               className="flex w-full items-center justify-between rounded-lg border border-gray-200 px-3 py-2.5 text-left text-sm transition-colors active:bg-gray-50"
@@ -281,11 +282,11 @@ export default function XuankongFeixingPage() {
                 {buildYear}年{month}月{day}日 {hour}时
               </span>
               <span className="text-xs text-gray-400">点击修改</span>
-            </button>
+            </InterfaceButton>
           </div>
 
           <div className="mb-3">
-            <label className="mb-1 block text-xs text-gray-500">楼层</label>
+            <InterfaceLabel className="mb-1 block text-xs text-gray-500">楼层</InterfaceLabel>
             <input
               type="number"
               value={floor}
@@ -302,14 +303,14 @@ export default function XuankongFeixingPage() {
           </div>
 
           <div className="flex gap-2">
-            <button
+            <InterfaceButton
               onClick={() => doPaipan()}
               disabled={loading}
               className="flex-1 rounded-full py-2.5 text-sm font-semibold text-white transition-all active:scale-[0.98] disabled:opacity-50"
               style={{ backgroundColor: BRAND }}
             >
               {loading ? "排盘中..." : "开始排盘"}
-            </button>
+            </InterfaceButton>
             <PaipanHistoryButton toolKey="xuankong" onRestore={handleRestoreHistory} />
           </div>
 
@@ -425,7 +426,7 @@ export default function XuankongFeixingPage() {
                   <span style={{ fontSize: "15px", fontWeight: "bold" }}>
                     {interpretPanel.title}
                   </span>
-                  <button
+                  <InterfaceButton
                     onClick={() => setInterpretPanel(null)}
                     style={{
                       background: "rgba(255,255,255,0.2)",
@@ -442,7 +443,7 @@ export default function XuankongFeixingPage() {
                     }}
                   >
                     ✕
-                  </button>
+                  </InterfaceButton>
                 </div>
 
                 {/* 内容区 */}
@@ -537,14 +538,14 @@ export default function XuankongFeixingPage() {
 
           {/* 排盘按钮 */}
           <div className="mt-3 flex gap-2 px-1">
-            <button
+            <InterfaceButton
               onClick={() => doPaipan()}
               disabled={loading}
               className="flex-1 rounded-full py-2 text-sm font-semibold text-white transition-all active:scale-[0.98] disabled:opacity-50"
               style={{ backgroundColor: BRAND }}
             >
               重新排盘
-            </button>
+            </InterfaceButton>
           </div>
 
           {/* AI智能解读 */}

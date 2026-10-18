@@ -28,7 +28,7 @@ public class CalendarSystemReceiver extends BroadcastReceiver {
         if(manager!=null&&old!=null)for(int i=0;i<old.length();i++)manager.cancel(alarmIntent(context,old.getJSONObject(i).getInt("id")));
         schedule(context);
     }
-    public static void schedule(Context context) {
+    public static synchronized void schedule(Context context) {
         AlarmManager manager=(AlarmManager)context.getSystemService(Context.ALARM_SERVICE);if(manager==null)return;
         JSONArray reminders=read(context).optJSONArray("reminders");if(reminders==null)return;
         for(int i=0;i<reminders.length();i++)try{
@@ -40,6 +40,7 @@ public class CalendarSystemReceiver extends BroadcastReceiver {
     }
     @Override public void onReceive(Context context,Intent intent) {
         if(!ACTION.equals(intent.getAction())){schedule(context);HuangliWidgetProvider.updateAll(context);return;}
+        synchronized(CalendarSystemReceiver.class){
         int id=intent.getIntExtra("id",0);JSONObject payload=read(context);JSONArray rows=payload.optJSONArray("reminders"),remaining=new JSONArray();boolean due=false;
         if(rows==null)return;
         for(int i=0;i<rows.length();i++)try{JSONObject row=rows.getJSONObject(i);if(row.getInt("id")==id){long delta=System.currentTimeMillis()-row.getLong("at");due=delta>=0&&delta<1800000;}else remaining.put(row);}catch(Exception ignored){}
@@ -52,5 +53,6 @@ public class CalendarSystemReceiver extends BroadcastReceiver {
         Notification.Builder builder=Build.VERSION.SDK_INT>=26?new Notification.Builder(context,"yandao-calendar"):new Notification.Builder(context);
         builder.setSmallIcon(android.R.drawable.ic_menu_my_calendar).setContentTitle(payload.optString("notificationTitle","言道日历")).setContentText(payload.optString("notificationBody","有一项安排，请打开应用查看")).setContentIntent(action).setAutoCancel(true).setVisibility(Notification.VISIBILITY_PRIVATE);
         try{manager.notify(id,builder.build());}catch(SecurityException ignored){}
+        }
     }
 }

@@ -9,7 +9,7 @@ function buildPack(version = '1.0.0') {
   const data = path.join(__dirname, '..', 'src', 'data');
   const read = name => JSON.parse(fs.readFileSync(path.join(data, name), 'utf8'));
   const books = [...read('tcmOriginalEditions.json'), read('nanjingOriginal.json'), ...read('tcmClinicalOriginalEditions.json')];
-  if (books.length !== 7) throw new Error('All seven complete source editions are required');
+  if (books.length !== 10) throw new Error('All ten complete source editions are required');
   const ids = new Set();
   for (const book of books) {
     if (ids.has(book.id) || !book.sourceRevisionUrl || !book.license || !book.verification || !book.chapters?.length) throw new Error('Missing source metadata: ' + book.id);

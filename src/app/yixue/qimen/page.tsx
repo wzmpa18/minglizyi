@@ -1,5 +1,6 @@
 "use client";
 
+import { InterfaceButton, InterfaceOption } from "@/components/InterfaceControls";
 import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -151,7 +152,7 @@ function SegmentedRow<T extends string>({
       <div className="mb-0.5 text-xs text-gray-700">{label}</div>
       <div className={`grid gap-1 ${columns === 4 ? "grid-cols-4" : "grid-cols-2"}`}>
         {options.map(o => (
-          <button
+          <InterfaceButton
             key={o.val}
             type="button"
             onClick={() => onChange(o.val)}
@@ -160,7 +161,7 @@ function SegmentedRow<T extends string>({
             }`}
           >
             {o.label}
-          </button>
+          </InterfaceButton>
         ))}
       </div>
     </div>
@@ -422,7 +423,7 @@ export default function QimenPage() {
                 <div className="rounded-lg bg-[#F3EDF7] px-3 py-1.5">
                   <div className="mb-1 text-xs text-gray-700">自选局数</div>
                   <div className="flex items-center gap-1.5">
-                    <button
+                    <InterfaceButton
                       type="button"
                       onClick={() => setFormData(prev => ({ ...prev, customYinYang: "yang" }))}
                       className={`rounded-lg px-3 py-2 text-sm font-medium transition-all ${
@@ -430,8 +431,8 @@ export default function QimenPage() {
                       }`}
                     >
                       阳遁
-                    </button>
-                    <button
+                    </InterfaceButton>
+                    <InterfaceButton
                       type="button"
                       onClick={() => setFormData(prev => ({ ...prev, customYinYang: "yin" }))}
                       className={`rounded-lg px-3 py-2 text-sm font-medium transition-all ${
@@ -439,14 +440,14 @@ export default function QimenPage() {
                       }`}
                     >
                       阴遁
-                    </button>
+                    </InterfaceButton>
                     <select
                       value={formData.customJu}
                       onChange={e => setFormData(prev => ({ ...prev, customJu: parseInt(e.target.value, 10) }))}
                       className="flex-1 rounded-lg border border-gray-200 bg-white px-2 py-2 text-center text-sm outline-none focus:border-[#7B2FBE]"
                     >
                       {[1,2,3,4,5,6,7,8,9].map(j => (
-                        <option key={j} value={j}>{j}局</option>
+                        <InterfaceOption key={j} value={j}>{j}局</InterfaceOption>
                       ))}
                     </select>
                   </div>
@@ -582,17 +583,17 @@ export default function QimenPage() {
     <div style={{ maxWidth: "420px", margin: "0 auto", backgroundColor: "#fff", minHeight: "100vh", paddingBottom: "60px" }}>
       {/* 操作栏 */}
       <div style={{ display: "flex", padding: "8px", gap: "6px", borderBottom: "1px solid #eee", alignItems: "center" }}>
-        <button onClick={() => shiftTime(-1)} style={{ flex: 1, padding: "6px", border: "1px solid #ddd", borderRadius: "4px", backgroundColor: "#fff", fontSize: "12px", cursor: "pointer" }}>上一局</button>
-        <button onClick={() => { setShowForm(true); }} style={{ flex: 1, padding: "6px", border: "1px solid " + BRAND_PURPLE, borderRadius: "4px", backgroundColor: BRAND_PURPLE_BG, color: BRAND_PURPLE, fontSize: "12px", cursor: "pointer" }}>当前盘</button>
-        <button onClick={() => shiftTime(1)} style={{ flex: 1, padding: "6px", border: "1px solid #ddd", borderRadius: "4px", backgroundColor: "#fff", fontSize: "12px", cursor: "pointer" }}>下一局</button>
-        <button
+        <InterfaceButton onClick={() => shiftTime(-1)} style={{ flex: 1, padding: "6px", border: "1px solid #ddd", borderRadius: "4px", backgroundColor: "#fff", fontSize: "12px", cursor: "pointer" }}>上一局</InterfaceButton>
+        <InterfaceButton onClick={() => { setShowForm(true); }} style={{ flex: 1, padding: "6px", border: "1px solid " + BRAND_PURPLE, borderRadius: "4px", backgroundColor: BRAND_PURPLE_BG, color: BRAND_PURPLE, fontSize: "12px", cursor: "pointer" }}>当前盘</InterfaceButton>
+        <InterfaceButton onClick={() => shiftTime(1)} style={{ flex: 1, padding: "6px", border: "1px solid #ddd", borderRadius: "4px", backgroundColor: "#fff", fontSize: "12px", cursor: "pointer" }}>下一局</InterfaceButton>
+        <InterfaceButton
           onClick={() => setFormData(prev => ({ ...prev, showZhangSheng: !prev.showZhangSheng }))}
           style={{ padding: "6px 8px", border: formData.showZhangSheng ? "1px solid " + BRAND_PURPLE : "1px solid #ddd", borderRadius: "4px", backgroundColor: formData.showZhangSheng ? BRAND_PURPLE_BG : "#fff", fontSize: "11px", cursor: "pointer" }}
-        >长生</button>
-        <button
+        >长生</InterfaceButton>
+        <InterfaceButton
           onClick={() => setFormData(prev => ({ ...prev, showDiShen: !prev.showDiShen }))}
           style={{ padding: "6px 8px", border: formData.showDiShen ? "1px solid " + BRAND_PURPLE : "1px solid #ddd", borderRadius: "4px", backgroundColor: formData.showDiShen ? BRAND_PURPLE_BG : "#fff", fontSize: "11px", cursor: "pointer" }}
-        >地八神</button>
+        >地八神</InterfaceButton>
       </div>
 
       {/* 局数 */}
@@ -683,7 +684,7 @@ export default function QimenPage() {
 
       {/* 九宫格排盘 */}
       <div data-chart-fullscreen={chartFull?"true":undefined} data-local-zoom="true" style={chartFull?{position:"fixed",inset:0,zIndex:11000,background:"white",paddingTop:"calc(env(safe-area-inset-top, 0px) + 18px)",paddingBottom:"env(safe-area-inset-bottom, 0px)",overflow:"auto"}:undefined}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 12px"}}><span style={{fontSize:12,color:"#444"}}>九宫盘 · 点击宫位阅读</span><button type="button" onClick={()=>setChartFull(v=>!v)} style={{border:"1px solid #aaa",borderRadius:6,padding:"6px 12px",color:"#333"}}>{chartFull?"退出全屏":"全屏九宫"}</button></div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 12px"}}><span style={{fontSize:12,color:"#444"}}>九宫盘 · 点击宫位阅读</span><InterfaceButton type="button" onClick={()=>setChartFull(v=>!v)} style={{border:"1px solid #aaa",borderRadius:6,padding:"6px 12px",color:"#333"}}>{chartFull?"退出全屏":"全屏九宫"}</InterfaceButton></div>
       <div style={{ padding: "2px", border: "2px solid #444", margin: "4px auto",width:chartFull?"min(98vw, calc(100dvh - 108px))":"calc(100% - 16px)","--qimen-cell-height":chartFull?"min(31vw, calc((100dvh - 125px)/3))":"clamp(112px, 31vw, 145px)"} as React.CSSProperties}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 0 }}>
           {LUOSHU_LAYOUT.flat().map((gongNum, idx) => {
@@ -811,7 +812,7 @@ export default function QimenPage() {
             <span style={{ fontSize: "15px", fontWeight: "bold" }}>
               {interpretPanel.palaceLabel}
             </span>
-            <button
+            <InterfaceButton
               onClick={() => setInterpretPanel(null)}
               style={{
                 background: "rgba(255,255,255,0.2)",
@@ -826,7 +827,7 @@ export default function QimenPage() {
                 alignItems: "center",
                 justifyContent: "center",
               }}
-            >✕</button>
+            >✕</InterfaceButton>
           </div>
 
           {/* 内容区 */}
@@ -886,14 +887,14 @@ export default function QimenPage() {
 
       {/* v25.0.27: 干支基础断法（QM-KB，四柱干支关系判断） */}
       <div style={{ padding: "2px 8px 6px" }}>
-        <button
+        <InterfaceButton
           onClick={() => setShowGanzhiKb(v => !v)}
           style={{
             width: "100%", padding: "7px", border: `1px solid ${BRAND_PURPLE}`, borderRadius: "8px",
             backgroundColor: showGanzhiKb ? "#F3EDF7" : "#fff", color: BRAND_PURPLE,
             fontSize: "12px", fontWeight: "bold", cursor: "pointer",
           }}
-        >📖 干支基础断法（合化·相穿·六冲·暗合·三合·墓库）{showGanzhiKb ? " ▲" : " ▼"}</button>
+        >📖 干支基础断法（合化·相穿·六冲·暗合·三合·墓库）{showGanzhiKb ? " ▲" : " ▼"}</InterfaceButton>
         {showGanzhiKb && (
           <div style={{ marginTop: "6px", border: "1px solid #e9def5", borderRadius: "8px", padding: "10px 12px", backgroundColor: "#faf7fd", maxHeight: "340px", overflowY: "auto" }}>
             {QM_GANZHI_JICHU.map((g, gi) => (

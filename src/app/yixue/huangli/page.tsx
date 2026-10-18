@@ -1,5 +1,6 @@
 "use client";
 
+import { InterfaceButton } from "@/components/InterfaceControls";
 import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -206,7 +207,7 @@ export default function HuangliPage() {
         className="flex items-center gap-2 px-4 py-3 text-white"
         style={{ background: `linear-gradient(135deg, ${BRAND} 0%, #9B5ECF 100%)` }}
       >
-        <button
+        <InterfaceButton
           onClick={() => {
             if (window.history.length > 1) router.back();
             else router.push("/");
@@ -218,8 +219,8 @@ export default function HuangliPage() {
             <path d="M19 12H5" />
             <path d="M12 19l-7-7 7-7" />
           </svg>
-        </button>
-        <button
+        </InterfaceButton>
+        <InterfaceButton
           onClick={goPrev}
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/20 text-white active:bg-white/30"
           aria-label="上一天"
@@ -227,14 +228,14 @@ export default function HuangliPage() {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M15 18l-6-6 6-6" />
           </svg>
-        </button>
+        </InterfaceButton>
         <div className="flex-1 text-center">
           <div className="text-base font-bold">
             {y}年{m}月{d}日 星期{weekday}
           </div>
           {isToday && <div className="text-[11px] opacity-80">{ui("今天")}</div>}
         </div>
-        <button
+        <InterfaceButton
           onClick={goNext}
           className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 text-white active:bg-white/30"
           aria-label="下一天"
@@ -242,19 +243,19 @@ export default function HuangliPage() {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M9 18l6-6-6-6" />
           </svg>
-        </button>
+        </InterfaceButton>
       </div>
 
       <div className="mx-auto w-full px-3 pt-3" style={{ maxWidth: "500px" }}>
         {/* 今天按钮 */}
         {!isToday && (
-          <button
+          <InterfaceButton
             onClick={goToday}
             className="mb-2.5 w-full rounded-lg border py-2 text-sm font-semibold"
             style={{ borderColor: BRAND, color: BRAND, backgroundColor: "#F3EDF7" }}
           >
             回到今日
-          </button>
+          </InterfaceButton>
         )}
 
         {/* 客户选择与保存 */}
@@ -262,13 +263,13 @@ export default function HuangliPage() {
           <ClientSelector selectedClient={selectedClient} onSelect={setSelectedClient} />
           {selectedClient && (
             <div className="px-3 pb-2">
-              <button
+              <InterfaceButton
                 onClick={handleSaveRecord}
                 className="w-full rounded-lg py-2 text-sm text-white font-medium"
                 style={{ backgroundColor: BRAND }}
               >
                 {saveTip || "保存当日黄历到客户档案"}
-              </button>
+              </InterfaceButton>
             </div>
           )}
         </div>
@@ -348,7 +349,7 @@ export default function HuangliPage() {
                 <span style={{ fontSize: "15px", fontWeight: "bold" }}>
                   {interpretPanel.title}
                 </span>
-                <button
+                <InterfaceButton
                   onClick={() => setInterpretPanel(null)}
                   style={{
                     background: "rgba(255,255,255,0.2)",
@@ -365,7 +366,7 @@ export default function HuangliPage() {
                   }}
                 >
                   ✕
-                </button>
+                </InterfaceButton>
               </div>
               <div style={{ padding: "10px 12px", maxHeight: "360px", overflowY: "auto" }}>
                 {interpretPanel.items.map((item, idx) => {
@@ -715,7 +716,7 @@ function AddToHomeScreen() {
   return (
     <>
       <div className="mx-3 mb-2">
-        <button
+        <InterfaceButton
           onClick={handleAddClick}
           className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed py-3 text-sm font-semibold transition-colors active:opacity-80"
           style={{ borderColor: BRAND, color: BRAND, backgroundColor: "#F3EDF7" }}
@@ -726,7 +727,7 @@ function AddToHomeScreen() {
             <line x1="12" y1="15" x2="12" y2="3" />
           </svg>
           添加黄历到手机桌面
-        </button>
+        </InterfaceButton>
       </div>
 
       {showModal && (
@@ -740,11 +741,11 @@ function AddToHomeScreen() {
           >
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-base font-bold text-gray-800">添加到桌面</h3>
-              <button onClick={() => setShowModal(false)} className="text-gray-400">
+              <InterfaceButton onClick={() => setShowModal(false)} className="text-gray-400">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
-              </button>
+              </InterfaceButton>
             </div>
 
             {isIOS ? (

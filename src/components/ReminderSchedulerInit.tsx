@@ -8,6 +8,7 @@
 // ============================================================================
 
 import { useEffect, useRef } from "react";
+import { hasNativeCalendar, LocalCalendar, syncNativeCalendar } from "@/lib/nativeCalendar";
 import { dispatchDueReminders, detectMissedReminders, detectDuplicateReminders } from "@/lib/calendarEventsStore";
 import { addNotification, CATEGORY_META } from "@/lib/notificationCenter";
 
@@ -15,7 +16,7 @@ const CHECK_INTERVAL_MS = 60 * 1000;
 
 function pushSystemNotification(title: string, body: string): boolean {
   try {
-    if (typeof Notification === "undefined") return false;
+    if (hasNativeCalendar() || typeof Notification === "undefined") return false;
     if (Notification.permission === "granted") {
       const n = new Notification(title, { body, icon: "/icon-192.png", tag: "yandao-reminder" });
       setTimeout(() => n.close(), 10000);
@@ -83,7 +84,8 @@ export default function ReminderSchedulerInit() {
 }
 
 // 供设置页调用：申请系统推送权限
-export function requestPushPermission(): Promise<boolean> {
+export async function requestPushPermission(): Promise<boolean> {
+  if(hasNativeCalendar()){try{const status=await LocalCalendar.requestAuthorization();await syncNativeCalendar();return status.notifications;}catch{return false;}}
   return new Promise((resolve) => {
     try {
       if (typeof Notification === "undefined") return resolve(false);

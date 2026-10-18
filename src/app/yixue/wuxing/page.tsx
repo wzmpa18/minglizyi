@@ -1,5 +1,6 @@
 "use client";
 
+import { InterfaceButton } from "@/components/InterfaceControls";
 import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState, useMemo } from "react";
 import {
@@ -118,7 +119,7 @@ export default function WuXingPage() {
 
       {/* 标签切换 */}
       <div className="mb-4 flex rounded-lg border bg-muted/30 p-1">
-        <button
+        <InterfaceButton
           onClick={() => setActiveTab("tiangan")}
           className={`flex-1 rounded-md py-2 text-sm font-medium transition-colors ${
             activeTab === "tiangan"
@@ -127,8 +128,8 @@ export default function WuXingPage() {
           }`}
         >
           天干五行
-        </button>
-        <button
+        </InterfaceButton>
+        <InterfaceButton
           onClick={() => setActiveTab("dizhi")}
           className={`flex-1 rounded-md py-2 text-sm font-medium transition-colors ${
             activeTab === "dizhi"
@@ -137,7 +138,7 @@ export default function WuXingPage() {
           }`}
         >
           地支五行
-        </button>
+        </InterfaceButton>
       </div>
 
       {/* 天干五行 Tab */}

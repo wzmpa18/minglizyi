@@ -1,5 +1,6 @@
 "use client";
 
+import { InterfaceButton, InterfaceLabel, InterfaceOption } from "@/components/InterfaceControls";
 import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useToolBack } from "@/lib/useToolBack";
@@ -1025,9 +1026,9 @@ export default function QimingPage() {
 
           {/* 姓氏类型 */}
           <div className="mb-3">
-            <label className="mb-1 block text-xs text-gray-500">姓氏类型</label>
+            <InterfaceLabel className="mb-1 block text-xs text-gray-500">姓氏类型</InterfaceLabel>
             <div className="flex rounded-full bg-gray-100 p-1">
-              <button
+              <InterfaceButton
                 onClick={() => {
                   setIsCompound(false);
                   setSurname("");
@@ -1039,8 +1040,8 @@ export default function QimingPage() {
                 }}
               >
                 单姓
-              </button>
-              <button
+              </InterfaceButton>
+              <InterfaceButton
                 onClick={() => {
                   setIsCompound(true);
                   setSurname("");
@@ -1052,13 +1053,13 @@ export default function QimingPage() {
                 }}
               >
                 复姓
-              </button>
+              </InterfaceButton>
             </div>
           </div>
 
           {/* 姓氏输入 */}
           <div className="mb-3">
-            <label className="mb-1 block text-xs text-gray-500">姓氏</label>
+            <InterfaceLabel className="mb-1 block text-xs text-gray-500">姓氏</InterfaceLabel>
             <input
               type="text"
               value={surname}
@@ -1092,7 +1093,7 @@ export default function QimingPage() {
                 {(isCompound ? compoundSurnames : commonSurnames)
                   .slice(0, 15)
                   .map((s) => (
-                    <button
+                    <InterfaceButton
                       key={s.c}
                       onClick={() => setSurname(s.c)}
                       className="rounded px-1.5 py-0.5 text-xs text-gray-500 transition-colors hover:bg-purple-50"
@@ -1102,7 +1103,7 @@ export default function QimingPage() {
                       }}
                     >
                       {s.c}
-                    </button>
+                    </InterfaceButton>
                   ))}
               </div>
             </div>
@@ -1120,9 +1121,9 @@ export default function QimingPage() {
 
           {/* 性别 */}
           <div className="mb-3">
-            <label className="mb-1 block text-xs text-gray-500">{ui("性别")}</label>
+            <InterfaceLabel className="mb-1 block text-xs text-gray-500">{ui("性别")}</InterfaceLabel>
             <div className="flex rounded-full bg-gray-100 p-1">
-              <button
+              <InterfaceButton
                 onClick={() => setGender("male")}
                 className="flex-1 rounded-full py-1.5 text-sm font-semibold transition-all"
                 style={{
@@ -1131,8 +1132,8 @@ export default function QimingPage() {
                 }}
               >
                 男
-              </button>
-              <button
+              </InterfaceButton>
+              <InterfaceButton
                 onClick={() => setGender("female")}
                 className="flex-1 rounded-full py-1.5 text-sm font-semibold transition-all"
                 style={{
@@ -1141,15 +1142,15 @@ export default function QimingPage() {
                 }}
               >
                 女
-              </button>
+              </InterfaceButton>
             </div>
           </div>
 
           {/* 名字字数 */}
           <div className="mb-3">
-            <label className="mb-1 block text-xs text-gray-500">名字字数</label>
+            <InterfaceLabel className="mb-1 block text-xs text-gray-500">名字字数</InterfaceLabel>
             <div className="flex rounded-full bg-gray-100 p-1">
-              <button
+              <InterfaceButton
                 onClick={() => setNameLength(1)}
                 className="flex-1 rounded-full py-1.5 text-sm font-semibold transition-all"
                 style={{
@@ -1158,8 +1159,8 @@ export default function QimingPage() {
                 }}
               >
                 单字名
-              </button>
-              <button
+              </InterfaceButton>
+              <InterfaceButton
                 onClick={() => setNameLength(2)}
                 className="flex-1 rounded-full py-1.5 text-sm font-semibold transition-all"
                 style={{
@@ -1168,23 +1169,23 @@ export default function QimingPage() {
                 }}
               >
                 双字名
-              </button>
+              </InterfaceButton>
             </div>
           </div>
 
           {/* 五行偏好 */}
           <div className="mb-3">
-            <label className="mb-1 block text-xs text-gray-500">五行偏好（可选）</label>
+            <InterfaceLabel className="mb-1 block text-xs text-gray-500">五行偏好（可选）</InterfaceLabel>
 
             {/* v20.1: 八字驱动起名 - 出生时间输入 */}
             <div className="mb-3 rounded-lg border border-purple-200 bg-purple-50 p-3">
-              <label className="mb-1.5 block text-xs font-semibold text-purple-700">
+              <InterfaceLabel className="mb-1.5 block text-xs font-semibold text-purple-700">
                 出生年月日时（推荐，自动排八字定喜用神）
-              </label>
+              </InterfaceLabel>
 
               {/* 公历/农历切换 */}
               <div className="mb-2 flex rounded-full bg-gray-200 p-0.5">
-                <button
+                <InterfaceButton
                   type="button"
                   onClick={() => setCalType("solar")}
                   className="flex-1 rounded-full py-1 text-xs font-semibold transition-all"
@@ -1194,8 +1195,8 @@ export default function QimingPage() {
                   }}
                 >
                   公历
-                </button>
-                <button
+                </InterfaceButton>
+                <InterfaceButton
                   type="button"
                   onClick={() => setCalType("lunar")}
                   className="flex-1 rounded-full py-1 text-xs font-semibold transition-all"
@@ -1205,7 +1206,7 @@ export default function QimingPage() {
                   }}
                 >
                   农历
-                </button>
+                </InterfaceButton>
               </div>
 
               {/* 公历模式 */}
@@ -1221,9 +1222,9 @@ export default function QimingPage() {
                       className="w-20 rounded-lg border border-gray-200 px-1 py-2 text-sm outline-none focus:border-[#7B2FBE]"
                     >
                       {Array.from({ length: 24 }, (_, i) => i).map((h) => (
-                        <option key={h} value={h}>
+                        <InterfaceOption key={h} value={h}>
                           {String(h).padStart(2, "0")}时
-                        </option>
+                        </InterfaceOption>
                       ))}
                     </select>
                     <select
@@ -1232,9 +1233,9 @@ export default function QimingPage() {
                       className="w-20 rounded-lg border border-gray-200 px-1 py-2 text-sm outline-none focus:border-[#7B2FBE]"
                     >
                       {Array.from({ length: 60 }, (_, i) => i).map((m) => (
-                        <option key={m} value={m}>
+                        <InterfaceOption key={m} value={m}>
                           {String(m).padStart(2, "0")}分
-                        </option>
+                        </InterfaceOption>
                       ))}
                     </select>
                   </div>
@@ -1251,7 +1252,7 @@ export default function QimingPage() {
                       className="flex-1 rounded-lg border border-gray-200 px-1 py-2 text-sm outline-none focus:border-[#7B2FBE]"
                     >
                       {Array.from({ length: 200 }, (_, i) => 1900 + i).map((y) => (
-                        <option key={y} value={y}>{y}年</option>
+                        <InterfaceOption key={y} value={y}>{y}年</InterfaceOption>
                       ))}
                     </select>
                     <select
@@ -1268,7 +1269,7 @@ export default function QimingPage() {
                       className="flex-1 rounded-lg border border-gray-200 px-1 py-2 text-sm outline-none focus:border-[#7B2FBE]"
                     >
                       {getLunarMonthOptions(lunarYear).map((opt) => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        <InterfaceOption key={opt.value} value={opt.value}>{opt.label}</InterfaceOption>
                       ))}
                     </select>
                     <select
@@ -1281,7 +1282,7 @@ export default function QimingPage() {
                         const isLeap = mNum < 0;
                         const mAbs = Math.abs(mNum);
                         return getLunarDayOptions(lunarYear, mAbs, isLeap).map((opt) => (
-                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          <InterfaceOption key={opt.value} value={opt.value}>{opt.label}</InterfaceOption>
                         ));
                       })()}
                     </select>
@@ -1293,9 +1294,9 @@ export default function QimingPage() {
                       className="w-20 rounded-lg border border-gray-200 px-1 py-2 text-sm outline-none focus:border-[#7B2FBE]"
                     >
                       {Array.from({ length: 24 }, (_, i) => i).map((h) => (
-                        <option key={h} value={h}>
+                        <InterfaceOption key={h} value={h}>
                           {String(h).padStart(2, "0")}时
-                        </option>
+                        </InterfaceOption>
                       ))}
                     </select>
                     <select
@@ -1304,9 +1305,9 @@ export default function QimingPage() {
                       className="w-20 rounded-lg border border-gray-200 px-1 py-2 text-sm outline-none focus:border-[#7B2FBE]"
                     >
                       {Array.from({ length: 60 }, (_, i) => i).map((m) => (
-                        <option key={m} value={m}>
+                        <InterfaceOption key={m} value={m}>
                           {String(m).padStart(2, "0")}分
-                        </option>
+                        </InterfaceOption>
                       ))}
                     </select>
                     <span className="flex-1 text-[10px] text-gray-400">农历已自动转公历排盘</span>
@@ -1350,7 +1351,7 @@ export default function QimingPage() {
             </div>
 
             <div className="flex gap-1">
-              <button
+              <InterfaceButton
                 onClick={() => setPreferredWuxing("")}
                 className="flex-1 rounded-lg py-1.5 text-sm font-semibold transition-all"
                 style={{
@@ -1359,9 +1360,9 @@ export default function QimingPage() {
                 }}
               >
                 自动
-              </button>
+              </InterfaceButton>
               {WUXING_LIST.map((wx) => (
-                <button
+                <InterfaceButton
                   key={wx}
                   onClick={() => setPreferredWuxing(wx)}
                   className="flex-1 rounded-lg py-1.5 text-sm font-bold transition-all"
@@ -1371,30 +1372,30 @@ export default function QimingPage() {
                   }}
                 >
                   {wx}
-                </button>
+                </InterfaceButton>
               ))}
             </div>
           </div>
 
           {/* 生肖 */}
           <div className="mb-3">
-            <label className="mb-1 block text-xs text-gray-500">生肖（可选）</label>
+            <InterfaceLabel className="mb-1 block text-xs text-gray-500">生肖（可选）</InterfaceLabel>
             <select
               value={zodiac}
               onChange={(e) => setZodiac(e.target.value)}
               className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-[#7B2FBE]"
             >
               {ZODIAC_OPTIONS.map((z) => (
-                <option key={z} value={z}>
+                <InterfaceOption key={z} value={z}>
                   {z || "不选生肖"}
-                </option>
+                </InterfaceOption>
               ))}
             </select>
           </div>
 
           {/* v20.1: 起名要求输入框 */}
           <div className="mb-3">
-            <label className="mb-1 block text-xs text-gray-500">起名要求（可选）</label>
+            <InterfaceLabel className="mb-1 block text-xs text-gray-500">起名要求（可选）</InterfaceLabel>
             <textarea
               value={customRequirement}
               onChange={(e) => setCustomRequirement(e.target.value)}
@@ -1406,7 +1407,7 @@ export default function QimingPage() {
           </div>
 
           {/* 生成按钮 */}
-          <button
+          <InterfaceButton
             onClick={handleGenerate}
             disabled={loading}
             className="w-full rounded-full py-2.5 text-sm font-semibold text-white transition-all active:scale-[0.98] disabled:opacity-50"
@@ -1415,7 +1416,7 @@ export default function QimingPage() {
             }}
           >
             {loading ? "生成中..." : "智能生成名字"}
-          </button>
+          </InterfaceButton>
           <div className="mt-2 flex justify-center">
             <PaipanHistoryButton toolKey="qiming" onRestore={handleRestoreHistory} />
           </div>

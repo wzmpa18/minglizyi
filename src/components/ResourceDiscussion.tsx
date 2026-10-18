@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   addResourceComment,
+  deleteResourceComment,
   fetchResourceComments,
   isLoggedIn,
   reportResourceComment,
@@ -11,6 +12,9 @@ import {
   type ResourceComment,
 } from "@/lib/socialApi";
 import { PUBLIC_SOCIAL_ENABLED } from "@/lib/releaseFeatures";
+import {countStudyCharacters,validateStudyText} from "@/lib/studyComments";
+import {ConfirmDialog} from "@/components/ui/ConfirmDialog";
+import {InterfaceButton} from "@/components/InterfaceControls";
 import { getUserProfile } from "@/lib/auth";
 
 interface ResourceDiscussionProps {
@@ -31,6 +35,7 @@ function ResourceDiscussionEnabled({
   title = "学习讨论",
   accent = "#7B2FBE",
 }: ResourceDiscussionProps) {
+  const [confirm,setConfirm]=useState<{message:string;run:()=>void}|null>(null);
   const [comments, setComments] = useState<ResourceComment[]>([]);
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
@@ -40,6 +45,7 @@ function ResourceDiscussionEnabled({
   const [blocking, setBlocking] = useState(false);
   const loadVersion = useRef(0);
   const myId = getUserProfile()?.userId;
+  let count=0;try{count=countStudyCharacters(content);}catch{count=501;}
 
   const load = useCallback(async () => {
     const version = ++loadVersion.current;
@@ -65,7 +71,6 @@ function ResourceDiscussionEnabled({
   const block = async (authorId: string) => {
     if (blocking) return;
     if (!isLoggedIn()) { setMessage("登录后可以屏蔽用户"); return; }
-    if (!window.confirm("屏蔽后不再显示此用户的讨论，并解除已有好友关系。是否继续？")) return;
     setBlocking(true);
     const result = await addServerBlacklist(authorId);
     if (result.success) { setBlockedIds(ids => [...new Set([...ids, authorId])]); setMessage("已屏蔽，可在黑名单管理中恢复。"); }
@@ -75,7 +80,9 @@ function ResourceDiscussionEnabled({
   const visibleComments = comments.filter(comment => !blockedIds.includes(String(comment.authorId)));
 
   const submit = async () => {
-    const text = content.trim();
+    const check=validateStudyText(content);
+    if(!check.ok){setMessage(check.error||"请检查文字");return;}
+    const text = check.text!;
     if (!text || submitting) return;
     if (!isLoggedIn()) {
       setMessage("登录后可以参与讨论");
@@ -101,7 +108,6 @@ function ResourceDiscussionEnabled({
       setMessage("登录后可以举报不当内容");
       return;
     }
-    if (!window.confirm("确认举报这条评论吗？")) return;
     const result = await reportResourceComment(commentId);
     setMessage(result.message || result.error || (result.success ? "举报已提交" : "举报失败，请稍后重试"));
   };
@@ -114,18 +120,18 @@ function ResourceDiscussionEnabled({
       </div>
       <textarea
         value={content}
-        onChange={(event) => setContent(event.target.value.slice(0, 500))}
+        onChange={(event) => setContent(event.target.value)}
         placeholder="交流学习心得、典籍理解或使用体会（仅支持文字）…"
         rows={3}
         className="placeholder:text-white/70"
         style={{ width: "100%", resize: "vertical", boxSizing: "border-box", border: "1px solid rgba(255,255,255,.38)", borderRadius: 10, padding: "10px 11px", fontSize: 13, lineHeight: 1.6, outlineColor: "#FFF", background: accent, color: "#FFF", caretColor: "#FFF", WebkitTextFillColor: "#FFF" }}
       />
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 8 }}>
-        <span style={{ color: "#999", fontSize: 10 }}>仅限文字交流；内容经审核后展示，不作为诊疗依据</span>
-        <button type="button" onClick={() => void submit()} disabled={!content.trim() || submitting}
+        <span style={{ color: "#999", fontSize: 10 }}>{count}/500 · 仅限文字，审核后展示，不作为诊疗依据</span>
+        <InterfaceButton type="button" onClick={() => void submit()} disabled={!content.trim() || count>500 || submitting}
           style={{ border: 0, borderRadius: 999, padding: "7px 14px", color: "#FFF", background: accent, opacity: !content.trim() || submitting ? .5 : 1, fontSize: 12, fontWeight: 700 }}>
           {submitting ? "发布中…" : "发布"}
-        </button>
+        </InterfaceButton>
       </div>
       {message && <div style={{ marginTop: 8, color: "#C62828", fontSize: 11 }}>{message}</div>}
       <div style={{ marginTop: 12, borderTop: "1px solid #F1F1F1" }}>
@@ -139,14 +145,16 @@ function ResourceDiscussionEnabled({
               <strong style={{ color: accent, fontSize: 12 }}>{comment.authorName || "国学爱好者"}</strong>
               <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <time style={{ color: "#AAA", fontSize: 10 }}>{comment.createdAt}</time>
-                <button type="button" onClick={() => void report(comment.id)} style={{ border: 0, padding: 0, color: "#AAA", background: "transparent", fontSize: 10 }}>举报</button>
-                {String(comment.authorId) !== String(myId) && <button type="button" disabled={blocking} onClick={() => void block(String(comment.authorId))} style={{ border: 0, padding: 0, color: "#777", background: "transparent", fontSize: 10 }}>屏蔽用户</button>}
+                <InterfaceButton type="button" onClick={() => setConfirm({message:"举报这条评论？",run:()=>{void report(comment.id);}})} style={{ border: 0, padding: 0, color: "#AAA", background: "transparent", fontSize: 10 }}>举报</InterfaceButton>
+                {String(comment.authorId) === String(myId) && <InterfaceButton type="button" onClick={()=>setConfirm({message:"删除自己的这条评论？",run:()=>{void deleteResourceComment(comment.id).then(result=>{if(result.success)void load();else setMessage(result.error||"删除失败");});}})}>删除</InterfaceButton>}
+                {String(comment.authorId) !== String(myId) && <InterfaceButton type="button" disabled={blocking} onClick={() => setConfirm({message:"屏蔽此用户并解除已有好友关系？",run:()=>{void block(String(comment.authorId));}})} style={{ border: 0, padding: 0, color: "#777", background: "transparent", fontSize: 10 }}>屏蔽用户</InterfaceButton>}
               </span>
             </div>
             <div style={{ color: "#444", fontSize: 13, lineHeight: 1.65, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{comment.content}</div>
           </article>
         ))}
       </div>
+      <ConfirmDialog open={!!confirm} title="请确认" message={confirm?.message} onCancel={()=>setConfirm(null)} onConfirm={()=>{const run=confirm?.run;setConfirm(null);run?.();}}/>
     </section>
   );
 }

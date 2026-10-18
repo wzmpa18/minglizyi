@@ -1,4 +1,4 @@
-"""Import three complete, pinned CC0 source editions, without generating text.
+"""Import complete, pinned CC0 source editions, without generating text.
 
 Default is a local integrity check; --fetch --write explicitly regenerates data.
 Only the plain book fragment from the source's public Git repository is read.
@@ -21,6 +21,10 @@ SOURCES = [
     {"id": "shanghan-original", "title": "傷寒論（宋本）", "name": "伤寒论·宋本原文", "author": "张机（张仲景）；历代传本", "dynasty": "东汉原作，后世传本", "revision": "b787d864bdd268b6d6cad760f2ed7ae5a9c08e89", "level": "h2", "count": 12, "minimum": 45000, "last": "已上二方，病證並在第七卷内。", "structure": "林亿校序、张仲景原序与卷一至卷十"},
     {"id": "jingui-original", "title": "金匱要略方論", "name": "金匮要略方论原文", "author": "张机（张仲景）；林亿等校传", "dynasty": "东汉原作，后世传本", "revision": "02f8d5fd4a6f47325c16969740efac05da476b15", "level": "h2", "count": 26, "minimum": 40000, "last": "通除諸毒藥。", "structure": "序及第一至第二十五篇"},
     {"id": "wenbing-original", "title": "溫病條辨", "name": "温病条辨原文", "author": "吴瑭（吴鞠通）", "dynasty": "清", "revision": "91bb425e75429516fad0cef2adec954b0a7ca99c", "level": "h1", "count": 9, "minimum": 100000, "last": "覽者諒之。", "structure": "原序、凡例、原病篇及卷一至卷六"},
+
+    {"id": "jiayi-original", "title": "針灸甲乙經", "name": "针灸甲乙经原文", "pinyin": "Zhen Jiu Jia Yi Jing", "author": "皇甫谧；历代校传", "dynasty": "晋，后世传本", "revision": "d1ed2f124774281ed4ea863e62780c5c509e490a", "level": "h1", "count": 15, "minimum": 140000, "last": "崑崙主之。", "structure": "林序、皇甫序、序例及卷一至卷十二"},
+    {"id": "maijing-original", "title": "脈經", "name": "脉经原文", "pinyin": "Mai Jing", "author": "王叔和；历代传本", "dynasty": "魏晋，后世传本", "revision": "b787d864bdd268b6d6cad760f2ed7ae5a9c08e89", "level": "h1", "count": 11, "minimum": 90000, "last": "尺弱，少血。", "structure": "序及卷一至卷十"},
+    {"id": "zhongzhong-original", "title": "醫學衷中參西錄", "name": "医学衷中参西录原文", "pinyin": "Yi Xue Zhong Zhong Can Xi Lu", "author": "张锡纯", "dynasty": "清末民国", "revision": "0f1836bbc3bd37250b0c2c838b299bb228d841ef", "level": "h1", "count": 5, "minimum": 550000, "last": "俾服數劑以善其後。", "structure": "医方、药物、医论、医话与医案五部分全文"},
 ]
 
 
@@ -120,7 +124,7 @@ def import_book(source):
     source_quality = quality.group(1) if quality else "未提供"
     public_url = "https://jicheng.tw/tcm/book/" + urllib.parse.quote(source["title"]) + "/index.html"
     revision_url = "https://gitlab.com/jicheng/jc.data/-/blob/" + source["revision"] + "/" + urllib.parse.quote(file, safe="/")
-    return {"id": source["id"], "name": source["name"], "pinyin": {"shanghan-original": "Shang Han Lun", "jingui-original": "Jin Kui Yao Lue Fang Lun", "wenbing-original": "Wen Bing Tiao Bian"}[source["id"]], "dynasty": source["dynasty"], "author": source["author"], "description": "完整收录本来源版本的" + source["structure"] + "，不含本站AI扩写。保留古版录文字形。", "sourceName": "中医笈成（固定Git源版本）", "sourceUrl": public_url, "sourceRevisionUrl": revision_url, "sourcePages": [{"url": public_url, "revisionUrl": revision_url}], "sourceRawSha256": hashlib.sha256(raw).hexdigest(), "sourceRevision": source["revision"], "sourceQualityLabel": source_quality, "license": "古代原作公有领域；中医笈成对公有领域文本的筛选、编排、标点、附注等编辑以CC0释出。许可声明：https://jicheng.tw/tcm/copyright.html 。未收录该站图片。仅去除HTML标签，将双行夹注加〔〕以便阅读，未改写原文字词。", "verification": "已核对本来源目录、完整卷篇、正文长度及末尾标记，并固定原始文件和正文SHA-256。来源自标「品质" + source_quality + "」（非本应用医学准确率，来源未说明计算口径）；本站尚未逐字对照影印本或完成医学校勘。古代药物、剂量和治法均为文献原文，不供自行诊疗、用药或针刺。", "contentSha256": digest(content), "chapters": chapters}
+    return {"id": source["id"], "name": source["name"], "pinyin": source.get("pinyin") or {"shanghan-original": "Shang Han Lun", "jingui-original": "Jin Kui Yao Lue Fang Lun", "wenbing-original": "Wen Bing Tiao Bian"}[source["id"]], "dynasty": source["dynasty"], "author": source["author"], "description": "完整收录本来源版本的" + source["structure"] + "，不含本站AI扩写。保留古版录文字形。", "sourceName": "中医笈成（固定Git源版本）", "sourceUrl": public_url, "sourceRevisionUrl": revision_url, "sourcePages": [{"url": public_url, "revisionUrl": revision_url}], "sourceRawSha256": hashlib.sha256(raw).hexdigest(), "sourceRevision": source["revision"], "sourceQualityLabel": source_quality, "license": "古代原作公有领域；中医笈成对公有领域文本的筛选、编排、标点、附注等编辑以CC0释出。许可声明：https://jicheng.tw/tcm/copyright.html 。未收录该站图片。仅去除HTML标签，将双行夹注加〔〕以便阅读，未改写原文字词。", "verification": "已核对本来源目录、完整卷篇、正文长度及末尾标记，并固定原始文件和正文SHA-256。来源自标「品质" + source_quality + "」（非本应用医学准确率，来源未说明计算口径）；本站尚未逐字对照影印本或完成医学校勘。古代药物、剂量和治法均为文献原文，不供自行诊疗、用药或针刺。", "contentSha256": digest(content), "chapters": chapters}
 
 
 def verify(books):

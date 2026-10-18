@@ -1,4 +1,5 @@
 "use client";
+import { InterfaceButton } from "@/components/InterfaceControls";
 import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { chartHandoffFromRecord, consumeChartHandoff, writeChartHandoff } from "@/lib/chartHandoff";
 import { pillarRelations } from "@/lib/baziRelations";
@@ -984,10 +985,10 @@ function TabDetail({result,gender}:{
   return <div className="px-2 pt-2 pb-4">
     <div className="mb-2 flex items-center justify-between gap-2 bg-white px-2 py-1.5">
       <span className="text-xs text-gray-500">详盘列序</span>
-      <button type="button" aria-pressed={flowColumnsFirst} onClick={() => setFlowColumnsFirst(!flowColumnsFirst)}
+      <InterfaceButton type="button" aria-pressed={flowColumnsFirst} onClick={() => setFlowColumnsFirst(!flowColumnsFirst)}
         className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700">
         {flowColumnsFirst ? "运年在左 · 切换四柱在前" : "四柱在前 · 切换运年在左"}
-      </button>
+      </InterfaceButton>
     </div>
     {/* 四柱详盘表格 - 白底无圆角阴影，对标jishiyu，支持4/5/6/7列动态 */}
     <div className="bg-white mb-2 overflow-hidden">
@@ -2093,9 +2094,9 @@ export default function BaziPage(){
     />
     {result&&<div>
       <div className="flex bg-black sticky top-10 z-30 overflow-x-auto" role="group" aria-label="八字页面模块">
-        {tabOrder.map(tab=><button type="button" aria-pressed={activeTab===tab} key={tab} onClick={()=>setActiveTab(tab)} className="shrink-0 px-4 py-3 text-center text-[15px] font-medium cursor-pointer" style={{color: activeTab===tab ? "#b29450" : "white"}}>{({basic:"基本信息",chart:"基本命盘",detail:"专业细盘",notes:"断事笔记"} as Record<string,string>)[tab] || tabLabels[tab]}</button>)}
+        {tabOrder.map(tab=><InterfaceButton type="button" aria-pressed={activeTab===tab} key={tab} onClick={()=>setActiveTab(tab)} className="shrink-0 px-4 py-3 text-center text-[15px] font-medium cursor-pointer" style={{color: activeTab===tab ? "#b29450" : "white"}}>{({basic:"基本信息",chart:"基本命盘",detail:"专业细盘",notes:"断事笔记"} as Record<string,string>)[tab] || tabLabels[tab]}</InterfaceButton>)}
       </div>
-      {activeTab==="basic"&&<><button type="button" onClick={openCorrespondingZiwei} className="mx-3 my-3 rounded border border-purple-300 bg-purple-50 px-4 py-3 text-sm font-semibold text-purple-900">同一出生资料 · 打开紫微三合盘</button><TabBasic result={result} shengxiao={shengxiao} name={name} birthPlace={birthPlace} longitude={longitude} dateStr={dateStr} lunarDateStr={lunarDateStr} solarDateStr={dateStr} trueSolarStr={trueSolarTimeStr} solarCorrection={solarCorrection} taiYuan={taiYuan} taiXi={taiXi} mingGong={mingGong} shenGong={shenGong} mingGua={mingGua} wuxingStats={wuxingStats} boneWeight={boneWeight} gender={gender}/></>}
+      {activeTab==="basic"&&<><InterfaceButton type="button" onClick={openCorrespondingZiwei} className="mx-3 my-3 rounded border border-purple-300 bg-purple-50 px-4 py-3 text-sm font-semibold text-purple-900">同一出生资料 · 打开紫微三合盘</InterfaceButton><TabBasic result={result} shengxiao={shengxiao} name={name} birthPlace={birthPlace} longitude={longitude} dateStr={dateStr} lunarDateStr={lunarDateStr} solarDateStr={dateStr} trueSolarStr={trueSolarTimeStr} solarCorrection={solarCorrection} taiYuan={taiYuan} taiXi={taiXi} mingGong={mingGong} shenGong={shenGong} mingGua={mingGua} wuxingStats={wuxingStats} boneWeight={boneWeight} gender={gender}/></>}
       {activeTab==="chart"&&<>
       <TabChart result={result} shensha={shensha} shengxiao={shengxiao} gender={gender} lunarDateStr={lunarDateStr} solarDateStr={dateStr} trueSolarStr={trueSolarTimeStr} solarCorrection={solarCorrection} wangshuaiArr={wangshuaiArr} onPillarClick={(label,gan,zhi,shishenGan,nayin,canggan)=>{
         const interp = getPillarInterpretation(label,gan,zhi,shishenGan,nayin,canggan);
@@ -2107,7 +2108,7 @@ export default function BaziPage(){
             <div>
               <span style={{ fontSize: "16px", fontWeight: "bold" }}>{interpretPanel.pillarLabel}</span>
             </div>
-            <button onClick={() => setInterpretPanel(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "white", width: "28px", height: "28px", borderRadius: "50%", cursor: "pointer", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>x</button>
+            <InterfaceButton onClick={() => setInterpretPanel(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "white", width: "28px", height: "28px", borderRadius: "50%", cursor: "pointer", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>x</InterfaceButton>
           </div>
           <div style={{ padding: "10px 12px" }}>
             {interpretPanel.items.map((item, idx) => (
@@ -2187,7 +2188,7 @@ export default function BaziPage(){
                 <div style={{ fontSize: "15px", fontWeight: "bold" }}>📋 排盘历史记录</div>
                 <div style={{ fontSize: "11px", opacity: 0.9, marginTop: "2px" }}>点击记录可直接恢复排盘结果</div>
               </div>
-              <button onClick={() => setShowHistory(false)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "white", width: "26px", height: "26px", borderRadius: "50%", cursor: "pointer", fontSize: "15px" }}>x</button>
+              <InterfaceButton onClick={() => setShowHistory(false)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "white", width: "26px", height: "26px", borderRadius: "50%", cursor: "pointer", fontSize: "15px" }}>x</InterfaceButton>
             </div>
 
             <div style={{ flex: 1, overflowY: "auto", padding: "12px" }}>
@@ -2211,18 +2212,18 @@ export default function BaziPage(){
                       </div>
                     </div>
                     <div style={{ display: "flex", gap: "6px", marginTop: "6px" }}>
-                      <button onClick={() => restoreHistoryRecord(rec)} style={{ flex: 1, padding: "5px", borderRadius: "6px", border: "none", background: BRAND_PURPLE, color: "white", fontSize: "11px", fontWeight: "bold", cursor: "pointer" }}>恢复</button>
+                      <InterfaceButton onClick={() => restoreHistoryRecord(rec)} style={{ flex: 1, padding: "5px", borderRadius: "6px", border: "none", background: BRAND_PURPLE, color: "white", fontSize: "11px", fontWeight: "bold", cursor: "pointer" }}>恢复</InterfaceButton>
                       {isMember && !rec.note?.startsWith("cloud:") && (
-                        <button onClick={() => uploadRecordToCloud(rec)} disabled={cloudLoading} style={{ flex: 1, padding: "5px", borderRadius: "6px", border: `1px solid ${BRAND_PURPLE}`, background: "#fff", color: BRAND_PURPLE, fontSize: "11px", fontWeight: "bold", cursor: cloudLoading ? "not-allowed" : "pointer", opacity: cloudLoading ? 0.6 : 1 }}>☁ 备份云端</button>
+                        <InterfaceButton onClick={() => uploadRecordToCloud(rec)} disabled={cloudLoading} style={{ flex: 1, padding: "5px", borderRadius: "6px", border: `1px solid ${BRAND_PURPLE}`, background: "#fff", color: BRAND_PURPLE, fontSize: "11px", fontWeight: "bold", cursor: cloudLoading ? "not-allowed" : "pointer", opacity: cloudLoading ? 0.6 : 1 }}>☁ 备份云端</InterfaceButton>
                       )}
-                      <button onClick={() => { deletePaipanRecord(rec.id).then(() => listPaipanRecords("bazi")).then(setHistoryList).catch(() => {}); }} style={{ padding: "5px 10px", borderRadius: "6px", border: "1px solid #ddd", background: "#fff", color: "#c62828", fontSize: "11px", cursor: "pointer" }}>{ui("删除")}</button>
+                      <InterfaceButton onClick={() => { deletePaipanRecord(rec.id).then(() => listPaipanRecords("bazi")).then(setHistoryList).catch(() => {}); }} style={{ padding: "5px 10px", borderRadius: "6px", border: "1px solid #ddd", background: "#fff", color: "#c62828", fontSize: "11px", cursor: "pointer" }}>{ui("删除")}</InterfaceButton>
                     </div>
                   </div>
                 ))
               )}
 
               {historyList.length > 0 && (
-                <button onClick={() => { if (window.confirm("确定清空全部本地排盘记录吗？")) { clearPaipanRecordsByTool("bazi").then(() => setHistoryList([])).catch(() => {}); } }} style={{ width: "100%", padding: "6px", borderRadius: "6px", border: "1px solid #ddd", background: "#fafafa", color: "#999", fontSize: "11px", cursor: "pointer", marginTop: "4px" }}>清空本地记录</button>
+                <InterfaceButton onClick={() => { if (window.confirm("确定清空全部本地排盘记录吗？")) { clearPaipanRecordsByTool("bazi").then(() => setHistoryList([])).catch(() => {}); } }} style={{ width: "100%", padding: "6px", borderRadius: "6px", border: "1px solid #ddd", background: "#fafafa", color: "#999", fontSize: "11px", cursor: "pointer", marginTop: "4px" }}>清空本地记录</InterfaceButton>
               )}
 
               {/* 云端备份（会员） */}
@@ -2241,7 +2242,7 @@ export default function BaziPage(){
                         <div style={{ fontSize: "11px", color: "#333", wordBreak: "break-all" }}>{c.title}</div>
                         <div style={{ fontSize: "10px", color: "#999" }}>{c.ts ? new Date(c.ts).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) : ""}</div>
                       </div>
-                      <button onClick={() => restoreCloudRecord(c.objectKey)} disabled={cloudLoading} style={{ padding: "5px 12px", borderRadius: "6px", border: `1px solid ${BRAND_PURPLE}`, background: "#fff", color: BRAND_PURPLE, fontSize: "11px", fontWeight: "bold", cursor: cloudLoading ? "not-allowed" : "pointer" }}>恢复</button>
+                      <InterfaceButton onClick={() => restoreCloudRecord(c.objectKey)} disabled={cloudLoading} style={{ padding: "5px 12px", borderRadius: "6px", border: `1px solid ${BRAND_PURPLE}`, background: "#fff", color: BRAND_PURPLE, fontSize: "11px", fontWeight: "bold", cursor: cloudLoading ? "not-allowed" : "pointer" }}>恢复</InterfaceButton>
                     </div>
                   ))
                 )}

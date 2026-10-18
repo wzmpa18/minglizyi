@@ -7,6 +7,7 @@
  * 禁止页面自行编写确认弹窗，一律引用本组件。
  */
 
+import { InterfaceButton } from "@/components/InterfaceControls";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
@@ -44,20 +45,20 @@ export function ConfirmDialog({
             {message && <p className="mt-2 text-center text-[13px] leading-relaxed text-gray-500">{message}</p>}
           </div>
           <div className="flex gap-3 px-6 pb-6 pt-3">
-            <button
+            <InterfaceButton
               onClick={onCancel}
               className="flex-1 rounded-xl py-2.5 text-sm font-medium text-gray-600 transition-colors active:bg-gray-100"
               style={{ backgroundColor: "#f5f5f5" }}
             >
               {cancelText}
-            </button>
-            <button
+            </InterfaceButton>
+            <InterfaceButton
               onClick={onConfirm}
               className="flex-1 rounded-xl py-2.5 text-sm font-semibold text-white transition-opacity active:opacity-80"
               style={{ backgroundColor: danger ? "#d9483b" : "#7B2FBE" }}
             >
               {confirmText}
-            </button>
+            </InterfaceButton>
           </div>
         </div>
       </div>

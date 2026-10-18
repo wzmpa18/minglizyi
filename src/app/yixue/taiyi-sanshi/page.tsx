@@ -1,5 +1,6 @@
 "use client";
 
+import { InterfaceButton } from "@/components/InterfaceControls";
 import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -600,7 +601,7 @@ export default function TaiyiSanshiPage() {
                 <span style={{ fontSize: "15px", fontWeight: "bold" }}>
                   {interpretPanel.title}
                 </span>
-                <button
+                <InterfaceButton
                   onClick={() => setInterpretPanel(null)}
                   style={{
                     background: "rgba(255,255,255,0.2)",
@@ -617,7 +618,7 @@ export default function TaiyiSanshiPage() {
                   }}
                 >
                   {"\u2715"}
-                </button>
+                </InterfaceButton>
               </div>
 
               {/* 内容区 */}
@@ -681,14 +682,14 @@ export default function TaiyiSanshiPage() {
 
           {/* 排盘按钮 */}
           <div className="mt-3 flex gap-2 px-1">
-            <button
+            <InterfaceButton
               onClick={() => doPaipan()}
               disabled={loading}
               className="flex-1 rounded-full py-2 text-sm font-semibold text-white transition-all active:scale-[0.98] disabled:opacity-50"
               style={{ backgroundColor: BRAND }}
             >
               重新排盘
-            </button>
+            </InterfaceButton>
           </div>
 
           {/* AI智能解读 */}

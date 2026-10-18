@@ -1,5 +1,6 @@
 "use client";
 
+import { InterfaceButton, InterfaceLabel, InterfaceOption } from "@/components/InterfaceControls";
 import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState } from "react";
 import { getYearGanZhi, hourToZhi } from "@/algorithm-core";
@@ -409,7 +410,7 @@ export default function ChengguPage() {
         <h2 className="font-semibold mb-3">输入出生信息</h2>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
           <div>
-            <label className="block text-sm text-muted-foreground mb-1">出生年份</label>
+            <InterfaceLabel className="block text-sm text-muted-foreground mb-1">出生年份</InterfaceLabel>
             <input
               type="number"
               value={year}
@@ -419,74 +420,74 @@ export default function ChengguPage() {
             />
           </div>
           <div>
-            <label className="block text-sm text-muted-foreground mb-1">出生月份 (农历)</label>
+            <InterfaceLabel className="block text-sm text-muted-foreground mb-1">出生月份 (农历)</InterfaceLabel>
             <select
               value={month}
               onChange={(e) => setMonth(parseInt(e.target.value))}
               className="w-full rounded-lg border px-3 py-2"
             >
               {MONTH_NAMES.map((name, i) => (
-                <option key={i + 1} value={i + 1}>{name} ({MONTH_WEIGHT[i + 1]})</option>
+                <InterfaceOption key={i + 1} value={i + 1}>{name} ({MONTH_WEIGHT[i + 1]})</InterfaceOption>
               ))}
             </select>
           </div>
           <div>
-            <label className="block text-sm text-muted-foreground mb-1">出生日期 (农历)</label>
+            <InterfaceLabel className="block text-sm text-muted-foreground mb-1">出生日期 (农历)</InterfaceLabel>
             <select
               value={day}
               onChange={(e) => setDay(parseInt(e.target.value))}
               className="w-full rounded-lg border px-3 py-2"
             >
               {Array.from({ length: 30 }, (_, i) => i + 1).map((d) => (
-                <option key={d} value={d}>
+                <InterfaceOption key={d} value={d}>
                   初{d} ({DAY_WEIGHT[d] ?? "?"})
-                </option>
+                </InterfaceOption>
               ))}
             </select>
           </div>
           <div>
-            <label className="block text-sm text-muted-foreground mb-1">出生时辰</label>
+            <InterfaceLabel className="block text-sm text-muted-foreground mb-1">出生时辰</InterfaceLabel>
             <select
               value={shichen}
               onChange={(e) => setShichen(e.target.value)}
               className="w-full rounded-lg border px-3 py-2"
             >
               {SHICHEN_OPTIONS.map((sc) => (
-                <option key={sc.value} value={sc.value}>
+                <InterfaceOption key={sc.value} value={sc.value}>
                   {sc.label} ({HOUR_WEIGHT[sc.value] ?? "?"})
-                </option>
+                </InterfaceOption>
               ))}
             </select>
           </div>
         </div>
 
         <div className="mb-4">
-          <label className="block text-sm text-muted-foreground mb-2">{ui("性别")}</label>
+          <InterfaceLabel className="block text-sm text-muted-foreground mb-2">{ui("性别")}</InterfaceLabel>
           <div className="flex gap-4">
-            <button
+            <InterfaceButton
               onClick={() => setGender("male")}
               className={`flex-1 rounded-lg border py-2 text-sm font-medium transition-colors ${gender === "male" ? "bg-blue-100 text-blue-800 border-blue-300" : "bg-background hover:bg-accent"
                 }`}
             >
               男
-            </button>
-            <button
+            </InterfaceButton>
+            <InterfaceButton
               onClick={() => setGender("female")}
               className={`flex-1 rounded-lg border py-2 text-sm font-medium transition-colors ${gender === "female" ? "bg-pink-100 text-pink-800 border-pink-300" : "bg-background hover:bg-accent"
                 }`}
             >
               女
-            </button>
+            </InterfaceButton>
           </div>
         </div>
 
         <div className="flex gap-2">
-          <button
+          <InterfaceButton
             onClick={handleCalculate}
             className="flex-1 rounded-lg bg-primary py-3 text-primary-foreground font-medium hover:opacity-90 transition-opacity"
           >
             开始称骨
-          </button>
+          </InterfaceButton>
           <PaipanHistoryButton toolKey="chenggu" onRestore={handleRestoreHistory} />
         </div>
       </div>

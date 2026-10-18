@@ -11,6 +11,7 @@
 // 协议：几何换算全部走 liji 引擎层；山向判读复用 compass 口径；本页不输出吉凶断语。
 // ============================================================================
 
+import { InterfaceButton } from "@/components/InterfaceControls";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CompassDial } from "@/components/CompassDial";
 import { LuopanDial } from "@/components/LuopanDial";
@@ -752,29 +753,29 @@ export default function LijiPage() {
                   支持 JPG/PNG；自动读取拍照方向并压缩，图纸全程在本机处理，不上传服务器
                 </p>
                 <div className="mt-1 flex w-full max-w-[280px] flex-col gap-2">
-                  <button
+                  <InterfaceButton
                     onClick={() => fileRef.current?.click()}
                     disabled={importing}
                     className="rounded-full py-2.5 text-sm font-semibold text-white active:scale-[0.98] disabled:opacity-50"
                     style={{ backgroundColor: BRAND }}
                   >
                     {importing ? "导入中…" : "从相册导入"}
-                  </button>
-                  <button
+                  </InterfaceButton>
+                  <InterfaceButton
                     onClick={() => camRef.current?.click()}
                     disabled={importing}
                     className="rounded-full border border-amber-200 bg-amber-50 py-2.5 text-sm font-semibold active:scale-[0.98] disabled:opacity-50"
                     style={{ color: BRAND }}
                   >
                     拍照导入
-                  </button>
+                  </InterfaceButton>
                   {hasProject && (
-                    <button
+                    <InterfaceButton
                       onClick={restoreProject}
                       className="rounded-full border border-gray-200 bg-gray-50 py-2 text-xs font-medium text-gray-500 active:scale-[0.98]"
                     >
                       恢复上次保存的工程
-                    </button>
+                    </InterfaceButton>
                   )}
                 </div>
               </div>
@@ -811,7 +812,7 @@ export default function LijiPage() {
                 { m: "measure", label: "点测山向" },
                 { m: "none", label: "自由拖动" },
               ] as Array<{ m: ClickMode; label: string }>).map((b) => (
-                <button
+                <InterfaceButton
                   key={b.m}
                   onClick={() => { setClickMode(b.m); if (b.m === "none") setMeasure(null); }}
                   className={`flex-1 rounded-full py-2 text-xs font-medium transition-all ${
@@ -820,13 +821,13 @@ export default function LijiPage() {
                   style={clickMode === b.m ? { backgroundColor: BRAND } : {}}
                 >
                   {b.label}
-                </button>
+                </InterfaceButton>
               ))}
             </div>
             <p className="mt-1 text-center text-[10px] text-gray-400">{modeLabel[clickMode]}</p>
 
             <div className="mt-2 flex items-center gap-1.5">
-              <button
+              <InterfaceButton
                 onClick={toggleLock}
                 className={`flex-1 rounded-full py-2 text-xs font-semibold ${
                   locked ? "text-white" : "border border-amber-200 bg-amber-50"
@@ -834,21 +835,21 @@ export default function LijiPage() {
                 style={locked ? { backgroundColor: "#8d6708" } : { color: BRAND }}
               >
                 {locked ? "已锁定（点此解锁）" : "锁定罗盘"}
-              </button>
-              <button
+              </InterfaceButton>
+              <InterfaceButton
                 onClick={centerDial}
                 disabled={locked}
                 className="flex-1 rounded-full border border-amber-200 bg-amber-50 py-2 text-xs font-semibold active:scale-[0.98] disabled:opacity-40"
                 style={{ color: BRAND }}
               >
                 一键居中
-              </button>
-              <button
+              </InterfaceButton>
+              <InterfaceButton
                 onClick={() => fileRef.current?.click()}
                 className="flex-1 rounded-full border border-gray-200 bg-gray-50 py-2 text-xs font-semibold text-gray-600 active:scale-[0.98]"
               >
                 换图
-              </button>
+              </InterfaceButton>
             </div>
           </>
         )}
@@ -876,14 +877,14 @@ export default function LijiPage() {
             </div>
             <div className="mt-2 flex items-center gap-1.5">
               {[-1, -0.1, 0.1, 1].map((d) => (
-                <button
+                <InterfaceButton
                   key={d}
                   onClick={() => fineRotate(d)}
                   disabled={locked}
                   className="flex-1 rounded-full border border-gray-200 bg-gray-50 py-1.5 text-xs font-semibold text-gray-600 active:scale-[0.98] disabled:opacity-40"
                 >
                   {d > 0 ? `+${d}°` : `${d}°`}
-                </button>
+                </InterfaceButton>
               ))}
               <input
                 type="number" min={0} max={359.9} step={0.1}
@@ -918,7 +919,7 @@ export default function LijiPage() {
             </div>
             <div className="grid grid-cols-8 gap-1">
               {SHAN_24.map((s) => (
-                <button
+                <InterfaceButton
                   key={s.name}
                   onClick={() => setFacingShan(s.name)}
                   className={`rounded py-1.5 text-xs font-medium transition-all ${
@@ -927,24 +928,24 @@ export default function LijiPage() {
                   style={facingShan === s.name ? { backgroundColor: BRAND } : {}}
                 >
                   {s.name}
-                </button>
+                </InterfaceButton>
               ))}
             </div>
             <div className="mt-2 flex gap-1.5">
-              <button
+              <InterfaceButton
                 onClick={alignDial}
                 disabled={locked}
                 className="flex-1 rounded-full py-2.5 text-sm font-semibold text-white active:scale-[0.98] disabled:opacity-40"
                 style={{ backgroundColor: BRAND }}
               >
                 对齐盘面
-              </button>
-              <button
+              </InterfaceButton>
+              <InterfaceButton
                 onClick={() => { setFacingPoint(null); setFacingShan(""); setMeasure(null); }}
                 className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-medium text-gray-500 active:scale-[0.98]"
               >
                 清除
-              </button>
+              </InterfaceButton>
             </div>
           </div>
 
@@ -973,14 +974,14 @@ export default function LijiPage() {
             />
             <div className="mt-2 flex rounded-full border border-gray-200 p-0.5">
               {(["simple", "full"] as const).map((v) => (
-                <button
+                <InterfaceButton
                   key={v}
                   onClick={() => setVariant(v)}
                   className={`flex-1 rounded-full py-2 text-sm font-medium ${variant === v ? "text-white" : "text-gray-500"}`}
                   style={variant === v ? { backgroundColor: BRAND } : {}}
                 >
                   {v === "simple" ? "简易二十四山" : "专业门派盘"}
-                </button>
+                </InterfaceButton>
               ))}
             </div>
             {variant === "full" && (
@@ -988,7 +989,7 @@ export default function LijiPage() {
                 <div className="mb-1.5 text-[11px] font-medium text-gray-600">门派与圈层（{getProfile(school).rings.length - hiddenRings.length}/{getProfile(school).rings.length} 圈层显示）</div>
                 <div className="flex rounded-full border border-gray-200 bg-white p-0.5">
                   {SCHOOL_OPTIONS.map((o) => (
-                    <button
+                    <InterfaceButton
                       key={o.id}
                       onClick={() => {
                         setSchool(o.id);
@@ -999,22 +1000,22 @@ export default function LijiPage() {
                       style={school === o.id ? { backgroundColor: BRAND } : {}}
                     >
                       {o.name}
-                    </button>
+                    </InterfaceButton>
                   ))}
                 </div>
-                <button
+                <InterfaceButton
                   onClick={() => setShowRingPanel((v) => !v)}
                   className="mt-1.5 flex w-full items-center justify-between px-0.5 text-[10px] text-gray-500"
                 >
                   <span>圈层开关</span>
                   <span className="text-gray-400">{showRingPanel ? "收起 ▲" : "展开 ▼"}</span>
-                </button>
+                </InterfaceButton>
                 {showRingPanel && (
                   <div className="mt-1 grid grid-cols-2 gap-1">
                     {getProfile(school).rings.map((r) => {
                       const on = !hiddenRings.includes(r.id);
                       return (
-                        <button
+                        <InterfaceButton
                           key={r.id}
                           onClick={() => {
                             setHiddenRings((prev) => {
@@ -1037,7 +1038,7 @@ export default function LijiPage() {
                               borderColor: on ? BRAND : "#d0d0d0",
                             }}
                           />
-                        </button>
+                        </InterfaceButton>
                       );
                     })}
                   </div>
@@ -1082,20 +1083,20 @@ export default function LijiPage() {
             <div className="mb-2 text-xs text-gray-500">客户定向记录（可选）</div>
             <ClientSelector selectedClient={selectedClient} onSelect={setSelectedClient} />
             <div className="mt-2 flex gap-1.5">
-              <button
+              <InterfaceButton
                 onClick={saveToClient}
                 disabled={!selectedClient}
                 className="flex-1 rounded-full border border-amber-200 py-2.5 text-sm font-semibold active:scale-[0.98] disabled:opacity-40"
                 style={{ color: BRAND, backgroundColor: "#fdf6e3" }}
               >
                 保存定向记录
-              </button>
-              <button
+              </InterfaceButton>
+              <InterfaceButton
                 onClick={saveProject}
                 className="flex-1 rounded-full border border-gray-200 bg-gray-50 py-2.5 text-sm font-semibold text-gray-600 active:scale-[0.98]"
               >
                 保存本机工程
-              </button>
+              </InterfaceButton>
             </div>
             {savedAt && (
               <p className="mt-1.5 text-[10px] text-gray-400">上次工程保存：{new Date(savedAt).toLocaleString("zh-CN")}</p>
@@ -1104,14 +1105,14 @@ export default function LijiPage() {
 
           {/* 导出与分享 */}
           <div className="mt-2 px-3 py-2">
-            <button
+            <InterfaceButton
               onClick={doExport}
               disabled={exporting}
               className="w-full rounded-full py-2.5 text-sm font-semibold text-white active:scale-[0.98] disabled:opacity-50"
               style={{ backgroundColor: BRAND }}
             >
               {exporting ? "正在合成高清图…" : "导出定向图（含罗盘与角度信息）"}
-            </button>
+            </InterfaceButton>
             <div className="mt-2">
               <ShareButton
                 type="tool"

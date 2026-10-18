@@ -1,5 +1,6 @@
 "use client";
 
+import { InterfaceButton, InterfaceLabel } from "@/components/InterfaceControls";
 import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState, useMemo, useCallback, useEffect } from "react";
 import {
@@ -626,7 +627,7 @@ export default function MeihuaPage() {
                 { key: "character", label: "汉字起卦" },
                 { key: "direction", label: "方位起卦" },
               ] as const).map(m => (
-                <button key={m.key} onClick={() => setDivMethod(m.key)}
+                <InterfaceButton key={m.key} onClick={() => setDivMethod(m.key)}
                   style={{
                     padding: "10px 0", borderRadius: "8px",
                     border: divMethod === m.key ? "2px solid #7B2FBE" : "2px solid #ddd",
@@ -635,7 +636,7 @@ export default function MeihuaPage() {
                     fontSize: "13px", fontWeight: divMethod === m.key ? "bold" : "normal",
                     cursor: "pointer", transition: "all 0.15s",
                   }}
-                >{m.label}</button>
+                >{m.label}</InterfaceButton>
               ))}
             </div>
           </div>
@@ -664,19 +665,19 @@ export default function MeihuaPage() {
               <div style={{ fontSize: "14px", fontWeight: "bold", color: "#7B2FBE", marginBottom: "8px" }}>输入三个数字</div>
               <div style={{ display: "flex", gap: "8px" }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: "12px", color: "#666", display: "block", marginBottom: "4px" }}>上卦数</label>
+                  <InterfaceLabel style={{ fontSize: "12px", color: "#666", display: "block", marginBottom: "4px" }}>上卦数</InterfaceLabel>
                   <input type="number" min={1} value={manualNumbers[0]}
                     onChange={e => setManualNumbers(prev => { const n = [...prev]; n[0] = e.target.value; return n; })}
                     style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "6px", fontSize: "14px", boxSizing: "border-box" }} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: "12px", color: "#666", display: "block", marginBottom: "4px" }}>下卦数</label>
+                  <InterfaceLabel style={{ fontSize: "12px", color: "#666", display: "block", marginBottom: "4px" }}>下卦数</InterfaceLabel>
                   <input type="number" min={1} value={manualNumbers[1]}
                     onChange={e => setManualNumbers(prev => { const n = [...prev]; n[1] = e.target.value; return n; })}
                     style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "6px", fontSize: "14px", boxSizing: "border-box" }} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: "12px", color: "#666", display: "block", marginBottom: "4px" }}>动爻数</label>
+                  <InterfaceLabel style={{ fontSize: "12px", color: "#666", display: "block", marginBottom: "4px" }}>动爻数</InterfaceLabel>
                   <input type="number" min={1} max={6} value={manualNumbers[2]}
                     onChange={e => setManualNumbers(prev => { const n = [...prev]; n[2] = e.target.value; return n; })}
                     style={{ width: "100%", padding: "8px", border: "1px solid #ddd", borderRadius: "6px", fontSize: "14px", boxSizing: "border-box" }} />
@@ -703,7 +704,7 @@ export default function MeihuaPage() {
               <div style={{ fontSize: "14px", fontWeight: "bold", color: "#7B2FBE", marginBottom: "8px" }}>选择方位</div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px", marginBottom: "12px" }}>
                 {DIRECTION_MAP.map((d, i) => (
-                  <button key={i} onClick={() => setDirectionIdx(i)}
+                  <InterfaceButton key={i} onClick={() => setDirectionIdx(i)}
                     style={{
                       padding: "8px 0", borderRadius: "6px",
                       border: directionIdx === i ? "2px solid #7B2FBE" : "1px solid #ddd",
@@ -712,7 +713,7 @@ export default function MeihuaPage() {
                       fontSize: "12px", fontWeight: directionIdx === i ? "bold" : "normal",
                       cursor: "pointer", transition: "all 0.15s",
                     }}
-                  >{d.dir}</button>
+                  >{d.dir}</InterfaceButton>
                 ))}
               </div>
               <div style={{ fontSize: "14px", fontWeight: "bold", color: "#7B2FBE", marginBottom: "8px" }}>起卦时间</div>
@@ -731,13 +732,13 @@ export default function MeihuaPage() {
           )}
 
           {/* 起卦按钮 */}
-          <button onClick={() => handleDivination()} style={{
+          <InterfaceButton onClick={() => handleDivination()} style={{
             width: "100%", padding: "14px 0",
             background: "#7B2FBE", color: "#fff",
             border: "none", borderRadius: "10px",
             fontSize: "16px", fontWeight: "bold", cursor: "pointer",
             boxShadow: "0 2px 8px rgba(123, 47, 190, 0.3)",
-          }}>起卦</button>
+          }}>起卦</InterfaceButton>
           <div style={{ display: "flex", justifyContent: "center", marginTop: "10px" }}>
             <PaipanHistoryButton toolKey="meihua" onRestore={handleRestoreHistory} />
           </div>
@@ -746,7 +747,7 @@ export default function MeihuaPage() {
 
       {!showPopup && !result && (
         <div className="flex flex-col items-center justify-center min-h-[60vh] px-4">
-          <button onClick={() => { clearPaipanState("meihua"); setShowPopup(true); }} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">{ui("开始排盘")}</button>
+          <InterfaceButton onClick={() => { clearPaipanState("meihua"); setShowPopup(true); }} className="rounded-full bg-[#7B2FBE] text-white font-bold text-lg px-8 py-3 shadow-lg">{ui("开始排盘")}</InterfaceButton>
         </div>
       )}
 
@@ -755,7 +756,7 @@ export default function MeihuaPage() {
         <div style={{ padding: "0 0 50px 0" }}>
           {/* 返回按钮 */}
           <div style={{ padding: "8px 12px" }}>
-            <button
+            <InterfaceButton
               onClick={handleBackToPopup}
               style={{
                 fontSize: "12px",
@@ -768,7 +769,7 @@ export default function MeihuaPage() {
               }}
             >
               返回修改时间
-            </button>
+            </InterfaceButton>
           </div>
 
           {/* 主表格: 对标 layui-table lay-even lay-size=sm lay-skin=nob */}
@@ -1030,7 +1031,7 @@ export default function MeihuaPage() {
                         <span style={{ fontSize: "15px", fontWeight: "bold" }}>
                           {interpretPanel.title}
                         </span>
-                        <button
+                        <InterfaceButton
                           onClick={() => setInterpretPanel(null)}
                           style={{
                             background: "rgba(255,255,255,0.2)",
@@ -1047,7 +1048,7 @@ export default function MeihuaPage() {
                           }}
                         >
                           ✕
-                        </button>
+                        </InterfaceButton>
                       </div>
 
                       {/* 内容区 */}

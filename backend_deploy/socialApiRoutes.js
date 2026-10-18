@@ -25,6 +25,7 @@ const path = require('path');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const { listActiveResourceComments } = require('./resourceDiscussionQueries');
+const {validateStudyText}=require('./studyCommentPolicy');
 const { getVisiblePost, listVisiblePosts, listVisiblePostComments, listVisibleFavoritePosts } = require('./socialVisibilityQueries');
 const { SOCIAL_FEATURE_KEYS, socialFeatureEnabled } = require('./socialFeaturePolicy');
 
@@ -382,7 +383,7 @@ async function moderateResourceComment(content) {
     const callAI = require('./academyRoutes').callAI;
     const result = await callAI(
       '你是社区评论审核器。只返回 PASS 或 REJECT:简短原因。拦截违法、色情、赌博、诈骗、广告引流、联系方式、隐私泄露、人身攻击、仇恨、煽动，以及鼓励自行针刺、用药、开方等危险医疗操作。正常的国学、中医学习讨论应通过。',
-      `待审核评论：${String(content).slice(0, 1000)}`,
+      `待审核评论：${String(content)}`,
       'resource_comment_moderation',
       {},
     );
@@ -759,8 +760,10 @@ function createRouter() {
       }
       const mute = checkPlatformMute(req.user.userId);
       if (mute) return res.status(403).json({ success: false, error: `你已被禁言（剩余约${mute.remainMinutes}分钟），暂不能评论`, code: 'USER_MUTED' });
-      const content = String((req.body && req.body.content) || '').trim().slice(0, 1000);
-      if (!content) return res.status(400).json({ success: false, error: '评论内容不能为空' });
+      if(!req.body||Object.keys(req.body).some(key=>key!=='content'))return res.status(400).json({success:false,error:'仅支持纯文字评论'});
+      const validation=validateStudyText(req.body.content);
+      if(!validation.ok)return res.status(400).json({success:false,error:validation.error});
+      const content=validation.text;
       const hits = findSensitiveWords(content);
       if (hits.length) {
         logSensitive(String(req.user.userId), 'resource_comment', content, hits);

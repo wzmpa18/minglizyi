@@ -1,5 +1,6 @@
 "use client";
 
+import { InterfaceButton, InterfaceLabel, InterfaceOption } from "@/components/InterfaceControls";
 import { useState, useMemo } from "react";
 import {
   GAN, ZHI, JIAZI_TABLE, NAYIN_TABLE, KONGWANG_BY_XUN,
@@ -111,7 +112,7 @@ export default function GanZhiPage() {
 
       {/* 模式切换 */}
       <div className="mb-4 flex rounded-lg border bg-muted/30 p-1">
-        <button
+        <InterfaceButton
           onClick={() => setMode("ganzhi-to-index")}
           className={`flex-1 rounded-md py-2 text-sm font-medium transition-colors ${
             mode === "ganzhi-to-index"
@@ -120,8 +121,8 @@ export default function GanZhiPage() {
           }`}
         >
           按干支查序号
-        </button>
-        <button
+        </InterfaceButton>
+        <InterfaceButton
           onClick={() => setMode("index-to-ganzhi")}
           className={`flex-1 rounded-md py-2 text-sm font-medium transition-colors ${
             mode === "index-to-ganzhi"
@@ -130,7 +131,7 @@ export default function GanZhiPage() {
           }`}
         >
           按序号查干支
-        </button>
+        </InterfaceButton>
       </div>
 
       {/* 模式一：按干支查序号 */}
@@ -139,26 +140,26 @@ export default function GanZhiPage() {
           <p className="mb-3 text-sm font-medium text-muted-foreground">选择天干和地支</p>
           <div className="flex gap-3 items-end mb-4">
             <div className="flex-1">
-              <label className="mb-1 block text-xs text-muted-foreground">天干</label>
+              <InterfaceLabel className="mb-1 block text-xs text-muted-foreground">天干</InterfaceLabel>
               <select
                 value={selectedGan}
                 onChange={(e) => setSelectedGan(e.target.value)}
                 className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary/50"
               >
                 {GAN.map((g) => (
-                  <option key={g} value={g}>{g}（{GAN_WUXING_MAP[g]}）</option>
+                  <InterfaceOption key={g} value={g}>{g}（{GAN_WUXING_MAP[g]}）</InterfaceOption>
                 ))}
               </select>
             </div>
             <div className="flex-1">
-              <label className="mb-1 block text-xs text-muted-foreground">地支</label>
+              <InterfaceLabel className="mb-1 block text-xs text-muted-foreground">地支</InterfaceLabel>
               <select
                 value={selectedZhi}
                 onChange={(e) => setSelectedZhi(e.target.value)}
                 className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary/50"
               >
                 {ZHI.map((z) => (
-                  <option key={z} value={z}>{z}（{ZHI_WUXING_MAP[z]}）</option>
+                  <InterfaceOption key={z} value={z}>{z}（{ZHI_WUXING_MAP[z]}）</InterfaceOption>
                 ))}
               </select>
             </div>
@@ -242,7 +243,7 @@ export default function GanZhiPage() {
           {/* 快捷选择按钮 */}
           <div className="mb-4 flex flex-wrap gap-1">
             {[1, 11, 21, 31, 41, 51].map((n) => (
-              <button
+              <InterfaceButton
                 key={n}
                 onClick={() => setInputIndex(n)}
                 className={`rounded-md border px-2 py-1 text-xs transition-colors ${
@@ -251,7 +252,7 @@ export default function GanZhiPage() {
               >
                 {n}
                 {n === 1 ? '（甲子）' : n === 11 ? '（甲戌）' : n === 21 ? '（甲申）' : n === 31 ? '（甲午）' : n === 41 ? '（甲辰）' : '（甲寅）'}
-              </button>
+              </InterfaceButton>
             ))}
           </div>
 

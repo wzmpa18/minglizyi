@@ -1,5 +1,6 @@
 "use client";
 
+import { InterfaceButton } from "@/components/InterfaceControls";
 import { useMemo, useState } from "react";
 import { ResourceDiscussion } from "@/components/ResourceDiscussion";
 import { YIXUE_SUBJECTS } from "@/lib/yixueSubjects";
@@ -55,8 +56,8 @@ export default function YixueLearnPage() {
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <a href={`/academy/learn?track=yixue&category=${encodeURIComponent(category)}`}
                     className="rounded-lg bg-purple-700 px-3 py-2 text-center text-xs font-semibold text-white">进入学习</a>
-                  <button type="button" onClick={() => setDiscussionKey(discussionOpen ? "" : subject.key)}
-                    className="rounded-lg border border-purple-700 bg-white px-3 py-2 text-xs font-semibold text-purple-800">💬 学派交流</button>
+                  <InterfaceButton type="button" onClick={() => setDiscussionKey(discussionOpen ? "" : subject.key)}
+                    className="rounded-lg border border-purple-700 bg-white px-3 py-2 text-xs font-semibold text-purple-800">💬 学派交流</InterfaceButton>
                 </div>
               </div>
               {discussionOpen && <ResourceDiscussion resourceType="yixue" resourceId={`learn:${subject.key}`} title={`${subject.name}学习讨论`} />}

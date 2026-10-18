@@ -9,6 +9,7 @@
 // 引擎：src/algorithm-core/modules/ruler（净室实现，RULER_PROFILE 可配置）。
 // ============================================================================
 
+import { InterfaceButton } from "@/components/InterfaceControls";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ShareButton } from "@/components/ShareButton";
 import ClientSelector from "@/components/ClientSelector";
@@ -272,35 +273,35 @@ export default function LubanPage() {
           />
           <div className="flex rounded-lg border border-gray-200 p-0.5">
             {(["mm", "cm", "m"] as Unit[]).map((u) => (
-              <button
+              <InterfaceButton
                 key={u}
                 onClick={() => switchUnit(u)}
                 className={`rounded-md px-2.5 py-1.5 text-xs font-semibold ${unit === u ? "text-white" : "text-gray-500"}`}
                 style={unit === u ? { backgroundColor: BRAND } : {}}
               >
                 {u}
-              </button>
+              </InterfaceButton>
             ))}
           </div>
         </div>
         {unitEquiv && <p className="mt-1.5 text-center text-[11px] text-gray-400">{unitEquiv}</p>}
         <div className="mt-2 flex gap-1.5">
           {[-5, -1, 1, 5].map((d) => (
-            <button
+            <InterfaceButton
               key={d}
               onClick={() => applyLen((valid ? lengthCm : 0) + d, "quick")}
               disabled={!valid && d < 0}
               className="flex-1 rounded-full border border-gray-200 bg-gray-50 py-1.5 text-xs font-semibold text-gray-600 active:scale-[0.98] disabled:opacity-40"
             >
               {d > 0 ? `+${d}cm` : `${d}cm`}
-            </button>
+            </InterfaceButton>
           ))}
-          <button
+          <InterfaceButton
             onClick={() => applyLen(0, "clear")}
             className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-500 active:scale-[0.98]"
           >
             清零
-          </button>
+          </InterfaceButton>
         </div>
         {mounted && calcCount > 0 && valid && (
           <p className="mt-1.5 text-center text-[10px] text-gray-400">已按 {activeProfile.name} 判读（本会话第 {calcCount} 次计算）</p>
@@ -311,14 +312,14 @@ export default function LubanPage() {
       <div className="mt-2 bg-white px-3 py-3">
         <div className="mb-2 flex rounded-full border border-gray-200 p-0.5">
           {(["luban", "dinglan"] as const).map((t) => (
-            <button
+            <InterfaceButton
               key={t}
               onClick={() => setTab(t)}
               className={`flex-1 rounded-full py-2 text-sm font-semibold ${tab === t ? "text-white" : "text-gray-500"}`}
               style={tab === t ? { backgroundColor: BRAND } : {}}
             >
               {t === "luban" ? "鲁班尺（阳尺）" : "丁兰尺（阴尺）"}
-            </button>
+            </InterfaceButton>
           ))}
         </div>
         <div className="mb-1.5 text-xs text-gray-500">尺制版本（{tab === "luban" ? "门公尺" : "阴尺"}）</div>
@@ -327,7 +328,7 @@ export default function LubanPage() {
             const activeId = tab === "luban" ? lubanId : dinglanId;
             const on = p.id === activeId;
             return (
-              <button
+              <InterfaceButton
                 key={p.id}
                 onClick={() => switchProfile(tab, p.id)}
                 className={`rounded-lg border px-2 py-2 text-center text-xs font-medium ${on ? "border-[#B8860B] bg-amber-50" : "border-gray-200 bg-gray-50 text-gray-600"}`}
@@ -335,7 +336,7 @@ export default function LubanPage() {
               >
                 <div>{p.name}</div>
                 <div className="mt-0.5 text-[10px] text-gray-400">{p.lengthCm}cm</div>
-              </button>
+              </InterfaceButton>
             );
           })}
         </div>
@@ -512,7 +513,7 @@ export default function LubanPage() {
             {suggestions.map((s) => {
               const st = LUCK_STYLE[s.reading.section.luck] || LUCK_STYLE["吉"];
               return (
-                <button
+                <InterfaceButton
                   key={s.lengthCm}
                   onClick={() => applyLen(s.lengthCm, "suggest")}
                   className="flex items-center justify-between rounded-lg border border-gray-100 bg-gray-50/60 px-3 py-2 text-left active:scale-[0.99]"
@@ -526,7 +527,7 @@ export default function LubanPage() {
                   <span className="text-[10px] text-gray-400">
                     {s.deltaCm >= 0 ? `+${s.deltaCm.toFixed(1)}` : s.deltaCm.toFixed(1)}cm
                   </span>
-                </button>
+                </InterfaceButton>
               );
             })}
           </div>
@@ -541,22 +542,22 @@ export default function LubanPage() {
         <div className="mt-2 bg-white px-3 py-3">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-xs text-gray-500">最近查询（本机）</span>
-            <button
+            <InterfaceButton
               onClick={() => { setHistory([]); localStorage.removeItem(HISTORY_KEY); }}
               className="text-[10px] text-gray-400"
             >
               清空
-            </button>
+            </InterfaceButton>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {history.map((h) => (
-              <button
+              <InterfaceButton
                 key={`${h.lengthCm}-${h.savedAt}`}
                 onClick={() => applyLen(h.lengthCm, "history")}
                 className="rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-600 active:bg-gray-200"
               >
                 {h.lengthCm.toFixed(1)}cm
-              </button>
+              </InterfaceButton>
             ))}
           </div>
         </div>
@@ -567,21 +568,21 @@ export default function LubanPage() {
         <div className="mb-2 text-xs text-gray-500">记录（可选）</div>
         <ClientSelector selectedClient={selectedClient} onSelect={setSelectedClient} />
         <div className="mt-2 flex gap-1.5">
-          <button
+          <InterfaceButton
             onClick={saveHistory}
             disabled={!valid}
             className="flex-1 rounded-full border border-gray-200 bg-gray-50 py-2.5 text-sm font-semibold text-gray-600 active:scale-[0.98] disabled:opacity-40"
           >
             记入最近查询
-          </button>
-          <button
+          </InterfaceButton>
+          <InterfaceButton
             onClick={saveToClient}
             disabled={!selectedClient || !valid}
             className="flex-1 rounded-full border border-amber-200 py-2.5 text-sm font-semibold active:scale-[0.98] disabled:opacity-40"
             style={{ color: BRAND, backgroundColor: "#fdf6e3" }}
           >
             存客户档案
-          </button>
+          </InterfaceButton>
         </div>
       </div>
 

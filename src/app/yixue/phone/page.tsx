@@ -1,5 +1,6 @@
-﻿"use client";
+"use client";
 
+import { InterfaceButton, InterfaceLabel } from "@/components/InterfaceControls";
 import { useState, useCallback, useEffect } from "react";
 import ClientSelector from "@/components/ClientSelector";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
@@ -100,7 +101,7 @@ export default function PhonePage() {
       {/* v19.7: 双档位Tab切换 */}
       <div className="bg-white px-3 pt-3">
         <div className="flex rounded-full bg-gray-100 p-1">
-          <button
+          <InterfaceButton
             onClick={() => setActiveTab("single")}
             className="flex-1 rounded-full py-2 text-sm font-semibold transition-all"
             style={{
@@ -109,8 +110,8 @@ export default function PhonePage() {
             }}
           >
             单号码分析 ¥9.9
-          </button>
-          <button
+          </InterfaceButton>
+          <InterfaceButton
             onClick={() => setActiveTab("batch")}
             className="flex-1 rounded-full py-2 text-sm font-semibold transition-all"
             style={{
@@ -119,7 +120,7 @@ export default function PhonePage() {
             }}
           >
             批量合号选号 ¥198
-          </button>
+          </InterfaceButton>
         </div>
       </div>
 
@@ -135,7 +136,7 @@ export default function PhonePage() {
       {!hasResult && (
         <div className="bg-white px-3 py-3">
           <div className="mb-3">
-            <label className="mb-1 block text-xs text-gray-500">手机号码</label>
+            <InterfaceLabel className="mb-1 block text-xs text-gray-500">手机号码</InterfaceLabel>
             <input
               type="tel"
               value={phoneNumber}
@@ -158,14 +159,14 @@ export default function PhonePage() {
           </div>
 
           <div className="flex gap-2">
-            <button
+            <InterfaceButton
               onClick={handleAnalyze}
               disabled={!isValid || loading}
               className="flex-1 rounded-full py-2.5 text-sm font-semibold text-white transition-all active:scale-[0.98] disabled:opacity-50"
               style={{ backgroundColor: isValid && !loading ? BRAND : "#ccc" }}
             >
               {loading ? "分析中..." : "开始分析"}
-            </button>
+            </InterfaceButton>
             <PaipanHistoryButton toolKey="phone" onRestore={handleRestoreHistory} />
           </div>
 
@@ -325,14 +326,14 @@ export default function PhonePage() {
           </div>
 
           <div className="flex gap-2 px-1">
-            <button
+            <InterfaceButton
               onClick={handleAnalyze}
               disabled={loading}
               className="flex-1 rounded-full py-2 text-sm font-semibold text-white transition-all active:scale-[0.98] disabled:opacity-50"
               style={{ backgroundColor: BRAND }}
             >
               重新分析
-            </button>
+            </InterfaceButton>
           </div>
 
           {/* v19.6: AI深度解读 + 事情断法（付费功能） */}

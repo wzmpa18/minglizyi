@@ -14,6 +14,7 @@
 // 协议：排盘数据与判读口径由算法层输出；断语由知识库引擎输出并受后台开关管控。
 // ============================================================================
 
+import { InterfaceButton, InterfaceLabel } from "@/components/InterfaceControls";
 import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -805,13 +806,13 @@ export default function QizhengPage() {
             <p>· 洞微大限行限表与任意虚岁行限度查询</p>
             <p>· 断语六节（垣殿/化曜/神煞/格局/十二宫断/歌赋），逐条标注古籍出处</p>
           </div>
-          <button
+          <InterfaceButton
             onClick={() => setShowForm(true)}
             className="mt-5 w-full rounded-full py-3 text-sm font-semibold text-white active:scale-[0.98]"
             style={{ backgroundColor: BRAND }}
           >
             开始排盘
-          </button>
+          </InterfaceButton>
           <div className="mt-3 flex items-center justify-center gap-2">
             <MingzhuProfilePicker
               value={mingzhu}
@@ -850,7 +851,7 @@ export default function QizhengPage() {
                 <div className="mb-1.5 text-xs text-gray-500">星制</div>
                 <div className="flex rounded-full border border-gray-200 p-0.5">
                   {([["tropical", "黄道回归今制"], ["sidereal", "恒星制（郑案）"]] as Array<[StarFrame, string]>).map(([k, label]) => (
-                    <button
+                    <InterfaceButton
                       key={k}
                       type="button"
                       onClick={() => setFrame(k)}
@@ -858,7 +859,7 @@ export default function QizhengPage() {
                       style={frame === k ? { backgroundColor: BRAND } : {}}
                     >
                       {label}
-                    </button>
+                    </InterfaceButton>
                   ))}
                 </div>
               </div>
@@ -866,7 +867,7 @@ export default function QizhengPage() {
                 <div className="mb-1.5 text-xs text-gray-500">命宫定法</div>
                 <div className="flex rounded-full border border-gray-200 p-0.5">
                   {([["mao", "遇卯安命（古法）"], ["sunrise", "日出定命"]] as Array<[MingGongMode, string]>).map(([k, label]) => (
-                    <button
+                    <InterfaceButton
                       key={k}
                       type="button"
                       onClick={() => setMingMode(k)}
@@ -874,7 +875,7 @@ export default function QizhengPage() {
                       style={mingMode === k ? { backgroundColor: BRAND } : {}}
                     >
                       {label}
-                    </button>
+                    </InterfaceButton>
                   ))}
                 </div>
               </div>
@@ -882,7 +883,7 @@ export default function QizhengPage() {
                 <div className="mb-1.5 text-xs text-gray-500">童限起岁</div>
                 <div className="flex rounded-full border border-gray-200 p-0.5">
                   {([10, 9] as Array<9 | 10>).map((k) => (
-                    <button
+                    <InterfaceButton
                       key={k}
                       type="button"
                       onClick={() => setDongweiStart(k)}
@@ -890,7 +891,7 @@ export default function QizhengPage() {
                       style={dongweiStart === k ? { backgroundColor: BRAND } : {}}
                     >
                       {k} 岁起（{k === 10 ? "通行古法" : "师传早一年"}）
-                    </button>
+                    </InterfaceButton>
                   ))}
                 </div>
               </div>
@@ -921,13 +922,13 @@ export default function QizhengPage() {
           <div className="text-sm font-bold text-gray-800">
             {name ? `${name} · ` : ""}七政四余星盘
           </div>
-          <button
+          <InterfaceButton
             onClick={() => setShowForm(true)}
             className="rounded-full border px-3 py-1 text-[11px] font-medium active:scale-95"
             style={{ borderColor: "#d9c7ee", color: BRAND }}
           >
             重新排盘
-          </button>
+          </InterfaceButton>
           <PaipanHistoryButton toolKey="qizheng" onRestore={handleRestoreHistory} />
         </div>
         <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
@@ -968,22 +969,22 @@ export default function QizhengPage() {
             {chartScale > 1 ? "（可拖动查看）" : "（双指捏合缩放）"}
           </span>
           <div className="flex flex-wrap items-center gap-1">
-            <button type="button" onClick={() => setProfessional(v => !v)} className="rounded-full border px-2 py-1 text-[10px] text-purple-700">{professional ? "当前详细盘 · 切简洁" : "当前简洁盘 · 切详细"}</button>
-            <button type="button" onClick={() => zoomBy(-0.25)} disabled={chartScale <= 1}
-              className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 text-sm font-bold text-gray-600 active:scale-95 disabled:opacity-40">−</button>
-            <button type="button" onClick={() => zoomBy(0.25)} disabled={chartScale >= 3}
-              className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 text-sm font-bold text-gray-600 active:scale-95 disabled:opacity-40">＋</button>
-            <button type="button" onClick={resetChart} disabled={chartScale === 1}
-              className="rounded-full border border-gray-200 px-2.5 py-1 text-[10px] font-medium text-gray-600 active:scale-95 disabled:opacity-40">复位</button>
-            <button type="button" onClick={toggleChartFull}
+            <InterfaceButton type="button" onClick={() => setProfessional(v => !v)} className="rounded-full border px-2 py-1 text-[10px] text-purple-700">{professional ? "当前详细盘 · 切简洁" : "当前简洁盘 · 切详细"}</InterfaceButton>
+            <InterfaceButton type="button" onClick={() => zoomBy(-0.25)} disabled={chartScale <= 1}
+              className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 text-sm font-bold text-gray-600 active:scale-95 disabled:opacity-40">−</InterfaceButton>
+            <InterfaceButton type="button" onClick={() => zoomBy(0.25)} disabled={chartScale >= 3}
+              className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 text-sm font-bold text-gray-600 active:scale-95 disabled:opacity-40">＋</InterfaceButton>
+            <InterfaceButton type="button" onClick={resetChart} disabled={chartScale === 1}
+              className="rounded-full border border-gray-200 px-2.5 py-1 text-[10px] font-medium text-gray-600 active:scale-95 disabled:opacity-40">复位</InterfaceButton>
+            <InterfaceButton type="button" onClick={toggleChartFull}
               className="rounded-full border px-2.5 py-1 text-[10px] font-medium active:scale-95"
               style={{ borderColor: "#d9c7ee", color: BRAND }}>
               {chartFull ? "退出全屏" : "全屏"}
-            </button>
-            <button type="button" onClick={() => setExportOpen(true)}
+            </InterfaceButton>
+            <InterfaceButton type="button" onClick={() => setExportOpen(true)}
               className="rounded-full border border-gray-200 px-2.5 py-1 text-[10px] font-medium text-gray-600 active:scale-95">
               导出
-            </button>
+            </InterfaceButton>
           </div>
         </div>
         <div
@@ -1270,12 +1271,12 @@ export default function QizhengPage() {
         <div>命主 {result.palaces[result.mingGong.branchIndex].owner} · 身主 {result.palaces[result.shenGong.branchIndex].owner} · 命度主 {result.mingDuZhu} · 身度主 {result.shenDuZhu}</div>
       </div>
       <div className="grid grid-cols-4 gap-1 bg-white px-3 pb-3">
-        {result.palaces.slice().sort((a,b)=>a.renshiIndex-b.renshiIndex).map(p=><button key={p.branch} onClick={()=>setSelectedPalace(p.branch)} className="rounded-lg bg-purple-50 px-1 py-2 text-xs text-purple-800">{p.renshiGong}·{p.branch}</button>)}
+        {result.palaces.slice().sort((a,b)=>a.renshiIndex-b.renshiIndex).map(p=><InterfaceButton key={p.branch} onClick={()=>setSelectedPalace(p.branch)} className="rounded-lg bg-purple-50 px-1 py-2 text-xs text-purple-800">{p.renshiGong}·{p.branch}</InterfaceButton>)}
       </div>
       {selectedPalace && <QizhengPalaceSheet chart={result} branch={selectedPalace} transit={liunian} age={xianAge === "" ? undefined : xianAge} onClose={()=>setSelectedPalace(null)} onSelect={setSelectedPalace} />}
       {/* 感应图层（v25.0.82 P1-1：12 项开关 + 连线绘制，RULE_ID 可追溯） */}
       <div className="mt-2 bg-white px-3 py-3">
-        <button
+        <InterfaceButton
           type="button"
           onClick={() => setLayersOpen((o) => !o)}
           className="flex w-full items-center justify-between active:opacity-70"
@@ -1287,7 +1288,7 @@ export default function QizhengPage() {
             </span>
           </span>
           <span className="text-xs text-gray-400">{layersOpen ? "收起 ▲" : "展开 ▼"}</span>
-        </button>
+        </InterfaceButton>
         {layersOpen && (
           <>
             <p className="mt-2 text-[10px] leading-relaxed text-gray-400">
@@ -1302,7 +1303,7 @@ export default function QizhengPage() {
                       const on = layerOn[d.key];
                       const hits = layerHitCount(d.key);
                       return (
-                        <button
+                        <InterfaceButton
                           key={d.key}
                           type="button"
                           onClick={() => {
@@ -1320,7 +1321,7 @@ export default function QizhengPage() {
                           />
                           {d.name}
                           <span className={on ? "opacity-80" : "text-gray-400"}>{hits}</span>
-                        </button>
+                        </InterfaceButton>
                       );
                     })}
                   </div>
@@ -1358,7 +1359,7 @@ export default function QizhengPage() {
       <div className="mt-2 bg-white px-3 py-3">
         <div className="flex items-center justify-between">
           <span className="text-sm font-bold" style={{ color: BRAND }}>流年模式</span>
-          <button
+          <InterfaceButton
             type="button"
             onClick={() => {
               const next = !liunianOn;
@@ -1371,20 +1372,20 @@ export default function QizhengPage() {
               : { borderColor: "#d9c7ee", color: BRAND }}
           >
             {liunianOn ? "关闭流年" : "开启流年"}
-          </button>
+          </InterfaceButton>
         </div>
         {liunianOn && liunian && (
           <>
             {/* 年份选择 */}
             <div className="mt-2 flex items-center gap-2">
               <div className="flex items-center rounded-full border border-gray-200">
-                <button
+                <InterfaceButton
                   type="button"
                   onClick={() => setLiunianYear((y) => Math.max(1900, y - 1))}
                   className="h-7 w-7 rounded-full text-sm text-gray-500 active:bg-gray-100"
                 >
                   −
-                </button>
+                </InterfaceButton>
                 <input
                   type="number"
                   min={1900}
@@ -1396,13 +1397,13 @@ export default function QizhengPage() {
                   }}
                   className="w-14 bg-transparent text-center text-sm font-semibold text-gray-800 outline-none"
                 />
-                <button
+                <InterfaceButton
                   type="button"
                   onClick={() => setLiunianYear((y) => Math.min(2100, y + 1))}
                   className="h-7 w-7 rounded-full text-sm text-gray-500 active:bg-gray-100"
                 >
                   ＋
-                </button>
+                </InterfaceButton>
               </div>
               <div className="flex-1 text-[11px] leading-tight text-gray-600">
                 <span className="font-semibold">{liunian.ganzhi.gan}{liunian.ganzhi.zhi}年</span>
@@ -1690,7 +1691,7 @@ export default function QizhengPage() {
                   const open = dyOpenSections.has(sec.key);
                   return (
                     <div key={sec.key} className="py-1">
-                      <button
+                      <InterfaceButton
                         type="button"
                         onClick={() => toggleDySection(sec.key)}
                         className="flex w-full items-center justify-between py-2 text-left active:opacity-70"
@@ -1700,7 +1701,7 @@ export default function QizhengPage() {
                           <span className="rounded-full bg-[#f5f0fa] px-1.5 py-0.5 text-[9px] text-gray-500">{sec.items.length}</span>
                         </span>
                         <span className="text-xs text-gray-400">{open ? "收起 ▲" : "展开 ▼"}</span>
-                      </button>
+                      </InterfaceButton>
                       {open && (
                         <div className="space-y-2 pb-2">
                           <p className="text-[10px] leading-relaxed text-gray-400">{sec.desc}</p>
@@ -1751,7 +1752,7 @@ export default function QizhengPage() {
       <div className="mt-2 bg-white px-3 py-3">
         <div className="mb-2 text-xs text-gray-500">客户排盘记录（可选）</div>
         <ClientSelector selectedClient={selectedClient} onSelect={setSelectedClient} />
-        <button
+        <InterfaceButton
           onClick={() => {
             if (!selectedClient) { showToast("请先选择客户"); return; }
             if (!lastInput) { showToast("无排盘数据"); return; }
@@ -1783,7 +1784,7 @@ export default function QizhengPage() {
           style={{ borderColor: "#d9c7ee", color: BRAND, backgroundColor: "#f5f0fa" }}
         >
           保存排盘到客户档案{savedCount > 0 ? `（已存 ${savedCount} 条）` : ""}
-        </button>
+        </InterfaceButton>
       </div>
 
       {/* 分享 */}
@@ -1850,7 +1851,7 @@ export default function QizhengPage() {
             </div>
             <div className="flex rounded-full border border-gray-200 p-0.5">
               {([["tropical", "今制"], ["sidereal", "恒星制"]] as Array<[StarFrame, string]>).map(([k, label]) => (
-                <button
+                <InterfaceButton
                   key={k}
                   type="button"
                   onClick={() => setFrame(k)}
@@ -1858,7 +1859,7 @@ export default function QizhengPage() {
                   style={frame === k ? { backgroundColor: BRAND } : {}}
                 >
                   {label}
-                </button>
+                </InterfaceButton>
               ))}
             </div>
           </div>
@@ -1875,8 +1876,8 @@ export default function QizhengPage() {
           >
             <div className="flex items-center justify-between">
               <span className="text-sm font-bold" style={{ color: BRAND }}>导出星盘（高清 PNG）</span>
-              <button type="button" onClick={() => setExportOpen(false)}
-                className="h-6 w-6 rounded-full bg-gray-100 text-xs text-gray-500 active:scale-95">✕</button>
+              <InterfaceButton type="button" onClick={() => setExportOpen(false)}
+                className="h-6 w-6 rounded-full bg-gray-100 text-xs text-gray-500 active:scale-95">✕</InterfaceButton>
             </div>
             <p className="mt-1 text-[10px] text-gray-400">矢量栅格化导出：星盘为当前盘面状态（含已开图层/流年标记，所见即所得）</p>
             <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2">
@@ -1889,7 +1890,7 @@ export default function QizhengPage() {
                 ["detail", "十一曜明细表"],
                 ["version", "引擎版本水印"],
               ] as Array<[keyof typeof exportCfg, string]>).map(([k, label]) => (
-                <label key={k} className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                <InterfaceLabel key={k} className="flex items-center gap-1.5 text-[11px] text-gray-600">
                   <input
                     type="checkbox"
                     checked={exportCfg[k]}
@@ -1897,10 +1898,10 @@ export default function QizhengPage() {
                     className="h-3.5 w-3.5 accent-[#7B2FBE]"
                   />
                   {label}
-                </label>
+                </InterfaceLabel>
               ))}
             </div>
-            <label className="mt-3 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] font-medium text-amber-800">
+            <InterfaceLabel className="mt-3 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] font-medium text-amber-800">
               <input
                 type="checkbox"
                 checked={exportCfg.privacy}
@@ -1908,12 +1909,12 @@ export default function QizhengPage() {
                 className="h-3.5 w-3.5 accent-amber-600"
               />
               隐私模式（隐藏姓名、出生时间与地点）
-            </label>
+            </InterfaceLabel>
             <div className="mt-3 flex items-center justify-between">
               <span className="text-[11px] text-gray-500">清晰度</span>
               <div className="flex rounded-full border border-gray-200 p-0.5">
                 {([[false, "标准 1080"], [true, "高清 1440"]] as Array<[boolean, string]>).map(([k, label]) => (
-                  <button
+                  <InterfaceButton
                     key={label}
                     type="button"
                     onClick={() => setExportHd(k)}
@@ -1921,11 +1922,11 @@ export default function QizhengPage() {
                     style={exportHd === k ? { backgroundColor: BRAND } : {}}
                   >
                     {label}
-                  </button>
+                  </InterfaceButton>
                 ))}
               </div>
             </div>
-            <button
+            <InterfaceButton
               type="button"
               onClick={() => { setExportOpen(false); void exportChartPng(); }}
               disabled={exportBusy}
@@ -1933,7 +1934,7 @@ export default function QizhengPage() {
               style={{ backgroundColor: BRAND }}
             >
               {exportBusy ? "导出中…" : "导出 PNG"}
-            </button>
+            </InterfaceButton>
           </div>
         </div>
       )}

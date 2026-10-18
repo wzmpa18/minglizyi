@@ -69,7 +69,16 @@ function createTongchenRouter({getDb,getUserDb,authRequired,userPublicInfo,priva
  router.get('/admin/messages',handle(()=>{service();return {success:true,items:getDb().prepare("SELECT id,sender_name,content,review_status,review_reason,created_at FROM chat_messages WHERE review_status='pending' ORDER BY id LIMIT 100").all()};}));
  router.put('/admin/message/:id',handle(req=>{
   service();if(!['active','rejected'].includes(req.body.status)||!String(req.body.reason||'').trim()){const error=new Error('请填写审核结果和依据');error.status=400;throw error;}
-  const result=getDb().prepare("UPDATE chat_messages SET review_status=?,review_reason=? WHERE id=? AND review_status='pending'").run(req.body.status,String(req.body.reason).slice(0,500),Number(req.params.id));
+  const db=getDb(),message=db.prepare("SELECT * FROM chat_messages WHERE id=? AND review_status='pending'").get(Number(req.params.id));
+  if(!message)return {success:false};
+  const result=db.prepare("UPDATE chat_messages SET review_status=?,review_reason=? WHERE id=? AND review_status='pending'").run(req.body.status,String(req.body.reason).slice(0,500),message.id);
+  if(result.changes===1&&req.body.status==='active'){
+   const relationship=db.prepare('SELECT user_a,user_b FROM friendships WHERE user_a=? OR user_b=?').all(message.sender_id,message.sender_id).find(row=>privateConvId(row.user_a,row.user_b)===message.conversation_id);
+   if(relationship){
+    const blocked=db.prepare('SELECT 1 FROM blacklists WHERE (user_id=? AND blocked_id=?) OR (user_id=? AND blocked_id=?)').get(relationship.user_a,relationship.user_b,relationship.user_b,relationship.user_a);
+    if(!blocked&&userInfo(relationship.user_a)&&userInfo(relationship.user_b))for(const [user,peer] of [[relationship.user_a,relationship.user_b],[relationship.user_b,relationship.user_a]])upsertUserConversation(db,user,message.conversation_id,'private',peer,0,Number(message.id),user===message.sender_id);
+   }
+  }
   audit(req.admin,'TONGCHEN_MESSAGE_REVIEW',String(req.params.id),'pending',req.body.status,String(req.body.reason).slice(0,500),req);
   return {success:result.changes===1};
  }));

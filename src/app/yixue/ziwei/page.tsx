@@ -1,5 +1,6 @@
 "use client";
 
+import { InterfaceButton } from "@/components/InterfaceControls";
 import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { chartHandoffFromRecord, consumeChartHandoff, writeChartHandoff } from "@/lib/chartHandoff";
 import { useToolMatrix } from "@/lib/sectionGate";
@@ -1200,7 +1201,7 @@ export default function ZiweiPage() {
       {showBaziConfirm&&<div className="fixed inset-0 z-[20000] flex items-center justify-center bg-black/50 p-5" onClick={()=>setShowBaziConfirm(false)}>
         <section role="dialog" aria-modal="true" aria-labelledby="bazi-jump-title" className="w-full max-w-sm rounded-2xl bg-white p-5 text-gray-900 shadow-xl" onClick={event=>event.stopPropagation()}>
           <h2 id="bazi-jump-title" className="text-lg font-bold">打开此四柱的八字？</h2><p className="mt-3 text-sm leading-6">沿用此人的出生资料和校时选项，直接打开排好的八字基本信息。</p>
-          <div className="mt-5 flex justify-end gap-3"><button type="button" onClick={()=>setShowBaziConfirm(false)} className="rounded-lg border px-4 py-2">{ui("取消")}</button><button type="button" onClick={openCorrespondingBazi} className="rounded-lg bg-purple-800 px-4 py-2 text-white">打开八字基本信息</button></div>
+          <div className="mt-5 flex justify-end gap-3"><InterfaceButton type="button" onClick={()=>setShowBaziConfirm(false)} className="rounded-lg border px-4 py-2">{ui("取消")}</InterfaceButton><InterfaceButton type="button" onClick={openCorrespondingBazi} className="rounded-lg bg-purple-800 px-4 py-2 text-white">打开八字基本信息</InterfaceButton></div>
         </section></div>}
       {/* 输入表单 DatePicker 弹窗 */}
       <DatePicker onRecordImport={applyMingzhuProfile} onRecordRestore={handleRestoreHistory}
@@ -1420,7 +1421,7 @@ export default function ZiweiPage() {
                             const parts = result.chineseDate ? result.chineseDate.split(/\s+/) : [];
                             const labels = ["年", "月", "日", "时"];
                             return (
-                              <button type="button" aria-label="用此四柱打开八字基本信息" title="点击打开八字基本信息" onClick={(event)=>{event.stopPropagation();setShowBaziConfirm(true);}} className="flex w-full gap-0.5 border-0 bg-transparent p-0" style={{ marginBottom: "1px", marginTop: "1px" }}>
+                              <InterfaceButton type="button" aria-label="用此四柱打开八字基本信息" title="点击打开八字基本信息" onClick={(event)=>{event.stopPropagation();setShowBaziConfirm(true);}} className="flex w-full gap-0.5 border-0 bg-transparent p-0" style={{ marginBottom: "1px", marginTop: "1px" }}>
                                 {labels.map((label, pi) => {
                                   const gz = parts[pi] || "--";
                                   const gan = gz.charAt(0);
@@ -1435,7 +1436,7 @@ export default function ZiweiPage() {
                                     </div>
                                   );
                                 })}
-                              </button>
+                              </InterfaceButton>
                             );
                           })()}
 
@@ -1461,9 +1462,9 @@ export default function ZiweiPage() {
 
                           {/* 紫色按钮组 */}
                           <div className="flex gap-1" style={{ marginTop: "1px", justifyContent: "center" }}>
-                            <button onClick={(event) => {event.stopPropagation();router.push("/academy/yixue/ziwei/");}} className="px-1.5 py-0.5 text-white font-bold rounded cursor-pointer border-0" style={{ background: BRAND_PURPLE, fontSize: "10px" }}>学紫微</button>
-                            <button onClick={(event) => {event.stopPropagation();setShowForm(true);}} className="px-1.5 py-0.5 text-purple-900 border border-purple-200 rounded" style={{fontSize:10}}>修改时辰</button>
-                            <button onClick={(event) => {event.stopPropagation();openProfessionalPalaceDetails(focusedPalace ?? ZHI_NAMES.indexOf(result.earthlyBranchOfSoulPalace));}} className="px-1.5 py-0.5 text-white rounded" style={{background:BRAND_PURPLE,fontSize:10}}>宫位资料</button>
+                            <InterfaceButton onClick={(event) => {event.stopPropagation();router.push("/academy/yixue/ziwei/");}} className="px-1.5 py-0.5 text-white font-bold rounded cursor-pointer border-0" style={{ background: BRAND_PURPLE, fontSize: "10px" }}>学紫微</InterfaceButton>
+                            <InterfaceButton onClick={(event) => {event.stopPropagation();setShowForm(true);}} className="px-1.5 py-0.5 text-purple-900 border border-purple-200 rounded" style={{fontSize:10}}>修改时辰</InterfaceButton>
+                            <InterfaceButton onClick={(event) => {event.stopPropagation();openProfessionalPalaceDetails(focusedPalace ?? ZHI_NAMES.indexOf(result.earthlyBranchOfSoulPalace));}} className="px-1.5 py-0.5 text-white rounded" style={{background:BRAND_PURPLE,fontSize:10}}>宫位资料</InterfaceButton>
                           </div>
 
                           {/* 自化图示 */}
@@ -1824,14 +1825,14 @@ export default function ZiweiPage() {
                     <span style={{ fontSize: "17px", fontWeight: "bold" }}>{interpretPanel.palaceName}</span>
                     <span style={{ fontSize: "12px", marginLeft: "8px", opacity: 0.9, fontWeight: "normal" }}>{interpretPanel.palaceGanZhi}</span>
                   </div>
-                  <button
+                  <InterfaceButton
                     className="modal-close-btn"
                     onClick={() => setInterpretPanel(null)}
                     style={{ background: "rgba(255,255,255,0.25)", color: "white", fontSize: "16px", lineHeight: 1 }}
                     aria-label="关闭解读面板"
                   >
                     ×
-                  </button>
+                  </InterfaceButton>
                 </div>
                 <div className="modal-bottom-sheet-body" style={{ padding: "12px 14px" }}>
                   {interpretPanel.interpretations.map((item, idx) => (
@@ -1845,7 +1846,7 @@ export default function ZiweiPage() {
                     </div>
                   ))}
                   {/* v18.9: AI解读此宫按钮 */}
-                  {aiVisible && <button
+                  {aiVisible && <InterfaceButton
                     onClick={() => {
                       const ctx = `${interpretPanel.palaceName}(${interpretPanel.palaceGanZhi})\n` + interpretPanel.interpretations.map(i => `${i.title}: ${i.content}`).join("\n");
                       handleAIInterpret("palace", ctx);
@@ -1855,7 +1856,7 @@ export default function ZiweiPage() {
                     style={{ background: aiInterpreting ? "#999" : BRAND_PURPLE }}
                   >
                     {aiInterpreting && aiScope === "palace" ? "AI解读中..." : "🤖 AI解读此宫"}
-                  </button>}
+                  </InterfaceButton>}
                   <div style={{ padding: "8px 0 2px", fontSize: "10px", color: "#999", textAlign: "center" }}>引经据典，仅供参考</div>
                 </div>
                 <div className="modal-safe-bottom" />
@@ -2237,7 +2238,7 @@ export default function ZiweiPage() {
               { key: "sanhe", label: "三合" },
               { key: "feixing", label: "飞星" },
             ].map(m => (
-              <button
+              <InterfaceButton
                 key={m.key}
                 data-testid={`ziwei-view-${m.key}`}
                 onClick={() => { setViewMode(m.key as any); setFocusedPalace(null); }}
@@ -2248,14 +2249,14 @@ export default function ZiweiPage() {
                 }}
               >
                 {m.label}
-              </button>
+              </InterfaceButton>
             ))}
           </div>
 
           {/* v19.2: 大运/流年/流日/流时 AI解读按钮 */}
           {aiVisible && (
             <details className="bg-white rounded-lg p-2 mb-2"><summary className="text-sm text-purple-900 cursor-pointer">AI学习解读</summary><div className="flex gap-2 flex-wrap">
-              <button
+              <InterfaceButton
                 onClick={() => {
                   const cur = decadalData[selectedDaxian];
                   if (!cur) return;
@@ -2270,8 +2271,8 @@ export default function ZiweiPage() {
                 style={{ background: aiInterpreting ? "#999" : BRAND_PURPLE }}
               >
                 {aiInterpreting && aiScope === "daxian" ? "AI解读中..." : "🤖 AI解读此大运"}
-              </button>
-              <button
+              </InterfaceButton>
+              <InterfaceButton
                 onClick={() => {
                   const cur = liunianYears[selectedLiunian];
                   if (!cur) return;
@@ -2285,9 +2286,9 @@ export default function ZiweiPage() {
                 style={{ background: aiInterpreting ? "#999" : BRAND_PURPLE_LIGHT }}
               >
                 {aiInterpreting && aiScope === "liunian" ? "AI解读中..." : "🤖 AI解读此流年"}
-              </button>
+              </InterfaceButton>
               {selectedLiuyue >= 0 && liuyueMonths[selectedLiuyue] && (
-                <button
+                <InterfaceButton
                   onClick={() => {
                     const cur = liuyueMonths[selectedLiuyue];
                     const ln = liunianYears[selectedLiunian];
@@ -2299,10 +2300,10 @@ export default function ZiweiPage() {
                   style={{ background: aiInterpreting ? "#999" : BRAND_PURPLE_LIGHT }}
                 >
                   {aiInterpreting && aiScope === "liuyue" ? "AI解读中..." : "🤖 AI解读此流月"}
-                </button>
+                </InterfaceButton>
               )}
               {selectedLiuri >= 0 && liuriDays[selectedLiuri] && (
-                <button
+                <InterfaceButton
                   onClick={() => {
                     const cur = liuriDays[selectedLiuri];
                     const ctx = `流日：${cur.lunarName} ${cur.gan}${cur.zhi}\n当前流年：${liunianYears[selectedLiunian]?.year || ""}年`;
@@ -2313,10 +2314,10 @@ export default function ZiweiPage() {
                   style={{ background: aiInterpreting ? "#999" : "#5B1A8A" }}
                 >
                   {aiInterpreting && aiScope === "liuri" ? "AI解读中..." : "🤖 AI解读此流日"}
-                </button>
+                </InterfaceButton>
               )}
               {selectedLiushi >= 0 && liushiHours[selectedLiushi] && (
-                <button
+                <InterfaceButton
                   onClick={() => {
                     const cur = liushiHours[selectedLiushi];
                     const ctx = `流时：${cur.gan}${cur.zhi}\n当前流日：${liuriDays[selectedLiuri]?.gan || ""}${liuriDays[selectedLiuri]?.zhi || ""}`;
@@ -2327,7 +2328,7 @@ export default function ZiweiPage() {
                   style={{ background: aiInterpreting ? "#999" : "#4a148c" }}
                 >
                   {aiInterpreting && aiScope === "liushi" ? "AI解读中..." : "🤖 AI解读此流时"}
-                </button>
+                </InterfaceButton>
               )}
             </div><EventDivinationPanel toolName="紫微斗数" chartContext={chartContextSummary} /></details>
           )}
@@ -2461,9 +2462,9 @@ export default function ZiweiPage() {
       {/* v20.1: 登录提示弹窗 */}
       <LoginPromptModal show={showLoginPrompt} onClose={() => setShowLoginPrompt(false)} />
       {result && !showForm && !interpretPanel && !showLoginPrompt && <nav aria-label="专业紫微盘快捷功能" style={{ position: "fixed", bottom: 0, left: 0, right: 0, margin: "0 auto", maxWidth: 720, zIndex: 60, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 5, padding: "7px 8px", paddingBottom: "calc(7px + env(safe-area-inset-bottom, 0px))", background: "#dedee0", borderTop: "1px solid #bbb" }}>
-        <button type="button" onClick={() => openProfessionalPalaceDetails(focusedPalace ?? ZHI_NAMES.indexOf(result.earthlyBranchOfSoulPalace))} style={{ padding: "6px 7px", background: "#f5f5fa", color: "#087dff", borderRadius: 4, fontSize: 14 }}>宫位资料</button>
-        <button type="button" onClick={() => setProfessionalLayout(v=>!v)} style={{padding:"6px 7px",fontSize:12,color:"#333"}}>{professionalLayout ? "恢复原盘" : "另一盘式"}</button>
-        <button type="button" onClick={() => setShowForm(true)} style={{ padding: "6px 7px", background: "#f5f5fa", color: "#087dff", borderRadius: 4, fontSize: 14 }}>快捷排盘</button>
+        <InterfaceButton type="button" onClick={() => openProfessionalPalaceDetails(focusedPalace ?? ZHI_NAMES.indexOf(result.earthlyBranchOfSoulPalace))} style={{ padding: "6px 7px", background: "#f5f5fa", color: "#087dff", borderRadius: 4, fontSize: 14 }}>宫位资料</InterfaceButton>
+        <InterfaceButton type="button" onClick={() => setProfessionalLayout(v=>!v)} style={{padding:"6px 7px",fontSize:12,color:"#333"}}>{professionalLayout ? "恢复原盘" : "另一盘式"}</InterfaceButton>
+        <InterfaceButton type="button" onClick={() => setShowForm(true)} style={{ padding: "6px 7px", background: "#f5f5fa", color: "#087dff", borderRadius: 4, fontSize: 14 }}>快捷排盘</InterfaceButton>
       </nav>}
       </div>
     </div>

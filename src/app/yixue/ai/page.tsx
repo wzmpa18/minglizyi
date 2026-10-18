@@ -1,5 +1,6 @@
 "use client";
 
+import { InterfaceButton } from "@/components/InterfaceControls";
 import { useState } from "react";
 import { callAI, getPermissionStatusFromServer } from "@/lib/aiService";
 import { useRequireLogin } from "@/lib/useRequireLogin";
@@ -73,9 +74,9 @@ export default function YixueAIPage() {
           placeholder="输入你的问题..."
           className="flex-1 rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary/50"
         />
-        <button onClick={handleSend} disabled={loading} className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50">
+        <InterfaceButton onClick={handleSend} disabled={loading} className="rounded-lg bg-primary px-4 py-2 text-sm text-primary-foreground disabled:opacity-50">
           发送
-        </button>
+        </InterfaceButton>
       </div>
       <p className="mt-2 text-center text-xs text-muted-foreground">
         仅供娱乐学习参考，不构成决策建议

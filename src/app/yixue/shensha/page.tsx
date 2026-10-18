@@ -1,5 +1,6 @@
 "use client";
 
+import { InterfaceButton } from "@/components/InterfaceControls";
 import { useState, useMemo } from "react";
 import { SHENSHA_DEFINITIONS } from "@/algorithm-core";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
@@ -102,7 +103,7 @@ export default function ShenShaPage() {
       {/* 分类标签 */}
       <div className="mb-4 flex rounded-lg border bg-muted/30 p-1">
         {CATEGORY_TABS.map((tab) => (
-          <button
+          <InterfaceButton
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`flex-1 rounded-md py-2 text-sm font-medium transition-colors ${
@@ -117,7 +118,7 @@ export default function ShenShaPage() {
                 ({tab === "吉" ? stats.ji : tab === "凶" ? stats.xiong : stats.zhong})
               </span>
             )}
-          </button>
+          </InterfaceButton>
         ))}
       </div>
 

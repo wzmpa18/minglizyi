@@ -1,5 +1,6 @@
 "use client";
 
+import { InterfaceLabel, InterfaceOption } from "@/components/InterfaceControls";
 import { useState, useMemo } from "react";
 import {
   GAN, ZHI, JIAZI_TABLE, NAYIN_TABLE,
@@ -88,26 +89,26 @@ export default function NaYinPage() {
         <p className="mb-3 text-sm font-medium text-muted-foreground">选择干支查询纳音五行</p>
         <div className="flex gap-3 items-end mb-4">
           <div className="flex-1">
-            <label className="mb-1 block text-xs text-muted-foreground">天干</label>
+            <InterfaceLabel className="mb-1 block text-xs text-muted-foreground">天干</InterfaceLabel>
             <select
               value={selectedGan}
               onChange={(e) => setSelectedGan(e.target.value)}
               className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary/50"
             >
               {GAN.map((g) => (
-                <option key={g} value={g}>{g}</option>
+                <InterfaceOption key={g} value={g}>{g}</InterfaceOption>
               ))}
             </select>
           </div>
           <div className="flex-1">
-            <label className="mb-1 block text-xs text-muted-foreground">地支</label>
+            <InterfaceLabel className="mb-1 block text-xs text-muted-foreground">地支</InterfaceLabel>
             <select
               value={selectedZhi}
               onChange={(e) => setSelectedZhi(e.target.value)}
               className="w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-primary/50"
             >
               {ZHI.map((z) => (
-                <option key={z} value={z}>{z}</option>
+                <InterfaceOption key={z} value={z}>{z}</InterfaceOption>
               ))}
             </select>
           </div>

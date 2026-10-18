@@ -1,5 +1,6 @@
 "use client";
 
+import { InterfaceButton, InterfaceLabel } from "@/components/InterfaceControls";
 import { useState, useMemo, useEffect } from "react";
 import { JIEQI_NAMES, JIE_NAMES, getJieQiDate } from "@/algorithm-core";
 
@@ -74,14 +75,14 @@ export default function JieQiPage() {
 
       {/* 年份选择器 */}
       <div className="rounded-xl border bg-card p-4 mb-4">
-        <label className="mb-2 block text-sm font-medium text-muted-foreground">选择年份</label>
+        <InterfaceLabel className="mb-2 block text-sm font-medium text-muted-foreground">选择年份</InterfaceLabel>
         <div className="flex items-center gap-3">
-          <button
+          <InterfaceButton
             onClick={() => setYear((y) => Math.max(1900, y - 1))}
             className="rounded-lg border px-3 py-2 text-sm hover:bg-accent transition-colors"
           >
             &lt; 上一年
-          </button>
+          </InterfaceButton>
           <input
             type="number"
             min={1900}
@@ -93,12 +94,12 @@ export default function JieQiPage() {
             }}
             className="w-24 rounded-lg border bg-background px-3 py-2 text-center text-lg font-bold outline-none focus:border-primary/50"
           />
-          <button
+          <InterfaceButton
             onClick={() => setYear((y) => Math.min(2100, y + 1))}
             className="rounded-lg border px-3 py-2 text-sm hover:bg-accent transition-colors"
           >
             下一年 &gt;
-          </button>
+          </InterfaceButton>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">范围：1900年 - 2100年</p>
       </div>

@@ -1,8 +1,7 @@
 "use client";
 import {Capacitor,registerPlugin} from "@capacitor/core";
 import {makeCalendarSnapshot,type CalendarObservation} from "./calendarSnapshot";
-import {getUpcomingEvents} from "./calendarEventsStore";
-import {reminderDueAt} from "./calendarRecurrence";
+import {getUpcomingEvents,getPendingReminderOccurrences,getOccurrenceReminders} from "./calendarEventsStore";
 export interface NativeCalendarStatus {native:boolean;platform:string;widgets:boolean;notifications:boolean;exactAlarms?:boolean;scheduled?:number;expiresAt?:number;}
 export const LocalCalendar=registerPlugin<{status:()=>Promise<NativeCalendarStatus>;requestAuthorization:()=>Promise<NativeCalendarStatus>;sync:(arg:{payload:string})=>Promise<NativeCalendarStatus>;addWidget:(arg:{kind:string})=>Promise<{requested:boolean;added:boolean}>;openExactSettings:()=>Promise<NativeCalendarStatus>;openDreamSettings:()=>Promise<void>}>("LocalCalendar");
 export const hasNativeCalendar=()=>Capacitor.isNativePlatform();
@@ -16,8 +15,8 @@ export async function syncNativeCalendar(){
  const snapshot=makeCalendarSnapshot(now,observation);
  const reminders:{id:number;at:number}[]=[],ids=new Set<number>();
  const occurrences=getUpcomingEvents(30);
- for(const occurrence of occurrences)for(const advance of occurrence.event.reminders){
-   const at=reminderDueAt(occurrence.ts,advance.offsetMinutes);if(at<=now+1000)continue;
+ for(const occurrence of getPendingReminderOccurrences(30))for(const advance of getOccurrenceReminders(occurrence)){
+   const at=advance.at;if(at<=now+1000)continue;
    let id=idFor(`${occurrence.event.id}:${occurrence.ts}:${advance.offsetMinutes}:${occurrence.event.updatedAt}`);
    while(ids.has(id))id=id===2147483646?1:id+1;ids.add(id);reminders.push({id,at});
  }

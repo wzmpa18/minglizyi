@@ -27,7 +27,8 @@ public class LocalCalendarPlugin extends Plugin {
     private JSObject state() {
         JSObject result=new JSObject();
         result.put("native",true);result.put("widgets",true);result.put("platform","android");
-        result.put("notifications",Build.VERSION.SDK_INT<33||getPermissionState("notifications")==PermissionState.GRANTED);
+        android.app.NotificationManager notifications=(android.app.NotificationManager)getContext().getSystemService(Context.NOTIFICATION_SERVICE);
+        result.put("notifications",(Build.VERSION.SDK_INT<33||getPermissionState("notifications")==PermissionState.GRANTED)&&(Build.VERSION.SDK_INT<24||notifications==null||notifications.areNotificationsEnabled()));
         AlarmManager alarms=(AlarmManager)getContext().getSystemService(android.content.Context.ALARM_SERVICE);
         result.put("exactAlarms",Build.VERSION.SDK_INT<31||(alarms!=null&&alarms.canScheduleExactAlarms()));
         return result;

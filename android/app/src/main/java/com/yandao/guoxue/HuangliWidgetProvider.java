@@ -35,7 +35,7 @@ public class HuangliWidgetProvider extends AppWidgetProvider {
             views.setTextViewText(R.id.tv_ganzhi_large,row==null?"":row.optString("pillars"));
             views.setTextViewText(R.id.tv_wuxing_large,row==null?"":("四柱快照 · "+row.optString("clock")));
             views.setTextViewText(R.id.tv_chongsha_large,zone+" · 标准民用时");
-            JSONArray reminders=payload.optJSONArray("reminders");
+            JSONArray reminders=payload.optJSONArray("agenda");
             views.setTextViewText(R.id.tv_yi_large,isAgenda()&&reminders!=null&&reminders.length()>0?payload.optString("notificationBody","有一项安排，请打开应用查看"):"时间由系统时钟显示");
             views.setTextViewText(R.id.tv_ji_large,"历法快照覆盖7天，过期请打开应用刷新");
             views.setTextViewText(R.id.tv_jieqi_large,row==null?"":row.optString("jieqi"));

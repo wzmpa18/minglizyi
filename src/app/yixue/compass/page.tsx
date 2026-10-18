@@ -1,4 +1,5 @@
 "use client";
+import { InterfaceButton } from "@/components/InterfaceControls";
 import { getLocalSkyPosition } from "@/lib/localSkyLocation";
 
 // 专业电子罗盘工具页 - NICHE-TOOLS-08 v25.0.69
@@ -335,13 +336,13 @@ export default function CompassPage() {
           <span className="text-[11px] text-gray-500">
             {profile.name} · {visibleCount}/{profile.rings.length} 圈层{hiddenCount > 0 ? `（已隐藏 ${hiddenCount}）` : ""}
           </span>
-          <button
+          <InterfaceButton
             onClick={openZoom}
             className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-semibold active:scale-95"
             style={{ color: BRAND }}
           >
             放大盘面
-          </button>
+          </InterfaceButton>
         </div>
 
         {/* 实时读数条 */}
@@ -368,28 +369,28 @@ export default function CompassPage() {
         <div className="mt-3 flex items-center gap-2">
           {mode === "sensor" ? (
             sensor.active ? (
-              <button
+              <InterfaceButton
                 onClick={() => { stop(); }}
                 className="flex-1 rounded-full border border-red-200 bg-red-50 py-2.5 text-sm font-semibold text-red-600 active:scale-[0.98]"
               >
                 停止测量
-              </button>
+              </InterfaceButton>
             ) : (
-              <button
+              <InterfaceButton
                 onClick={() => { start(); }}
                 className="flex-1 rounded-full py-2.5 text-sm font-semibold text-white active:scale-[0.98]"
                 style={{ backgroundColor: BRAND }}
               >
                 开始测量
-              </button>
+              </InterfaceButton>
             )
           ) : null}
-          <button
+          <InterfaceButton
             onClick={() => setMode(mode === "sensor" ? "manual" : "sensor")}
             className="flex-1 rounded-full border border-gray-200 bg-gray-50 py-2.5 text-sm font-semibold text-gray-600 active:scale-[0.98]"
           >
             {mode === "sensor" ? "切手动输入" : "切实时测量"}
-          </button>
+          </InterfaceButton>
         </div>
 
         {/* 传感器状态 */}
@@ -437,7 +438,7 @@ export default function CompassPage() {
         <div className="mb-2 text-xs text-gray-500">罗盘门派（圈层体系 Profile）</div>
         <div className="flex rounded-full border border-gray-200 p-0.5">
           {SCHOOL_OPTIONS.map((o) => (
-            <button
+            <InterfaceButton
               key={o.id}
               onClick={() => switchSchool(o.id)}
               className={`flex-1 rounded-full py-2 text-sm font-medium transition-all ${
@@ -446,7 +447,7 @@ export default function CompassPage() {
               style={school === o.id ? { backgroundColor: BRAND } : {}}
             >
               {o.name}
-            </button>
+            </InterfaceButton>
           ))}
         </div>
         <p className="mt-1.5 text-[10px] leading-relaxed text-gray-400">
@@ -456,7 +457,7 @@ export default function CompassPage() {
 
       {/* 圈层开关（Ring Visibility） */}
       <div className="mt-2 bg-white px-3 py-3">
-        <button
+        <InterfaceButton
           onClick={() => setShowRingPanel((v) => !v)}
           className="flex w-full items-center justify-between"
         >
@@ -464,14 +465,14 @@ export default function CompassPage() {
             圈层开关（{visibleCount}/{profile.rings.length} 显示中）
           </span>
           <span className="text-xs text-gray-400">{showRingPanel ? "收起 ▲" : "展开 ▼"}</span>
-        </button>
+        </InterfaceButton>
         {showRingPanel && (
           <div className="mt-2">
             <div className="grid grid-cols-2 gap-1.5">
               {profile.rings.map((r) => {
                 const on = visibleRingIds.has(r.id);
                 return (
-                  <button
+                  <InterfaceButton
                     key={r.id}
                     onClick={() => toggleRing(r.id)}
                     className={`flex items-center justify-between rounded-lg border px-2.5 py-2 text-left text-[11px] transition-all active:scale-[0.98] ${
@@ -486,17 +487,17 @@ export default function CompassPage() {
                         borderColor: on ? BRAND : "#d0d0d0",
                       }}
                     />
-                  </button>
+                  </InterfaceButton>
                 );
               })}
             </div>
             <div className="mt-2 flex items-center gap-2">
-              <button
+              <InterfaceButton
                 onClick={resetRings}
                 className="flex-1 rounded-full border border-gray-200 bg-gray-50 py-1.5 text-[11px] font-medium text-gray-600 active:scale-95"
               >
                 全部显示
-              </button>
+              </InterfaceButton>
             </div>
             <p className="mt-1.5 text-[10px] leading-relaxed text-gray-400">
               隐藏不用的圈层后，剩余圈层自动放宽环带、字号随之放大；每个圈层的排布依据（SOURCE/RULE/TEST）可在读数面板逐圈查看。
@@ -510,7 +511,7 @@ export default function CompassPage() {
         <div className="mb-2 text-xs text-gray-500">北基准（坐向判读口径）</div>
         <div className="flex rounded-full border border-gray-200 p-0.5">
           {(["magnetic", "true"] as NorthMode[]).map((m) => (
-            <button
+            <InterfaceButton
               key={m}
               onClick={() => setNorthMode(m)}
               className={`flex-1 rounded-full py-2 text-sm font-medium transition-all ${
@@ -519,7 +520,7 @@ export default function CompassPage() {
               style={northMode === m ? { backgroundColor: BRAND } : {}}
             >
               {m === "magnetic" ? "磁北（罗盘针）" : "真北（地理北）"}
-            </button>
+            </InterfaceButton>
           ))}
         </div>
         <p className="mt-1.5 text-[10px] leading-relaxed text-gray-400">
@@ -531,22 +532,22 @@ export default function CompassPage() {
       <div className="mt-2 bg-white px-3 py-3">
         <div className="mb-2 flex items-center justify-between">
           <span className="text-xs text-gray-500">测量位置（磁偏角解算）</span>
-          <button
+          <InterfaceButton
             onClick={locate}
             disabled={locating}
             className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-medium active:scale-95"
             style={{ color: BRAND }}
           >
             {locating ? "定位中…" : "GPS 定位"}
-          </button>
+          </InterfaceButton>
         </div>
-        <button
+        <InterfaceButton
           onClick={() => setShowRegionSel((v) => !v)}
           className="flex w-full items-center justify-between rounded-lg border border-gray-200 px-3 py-2 text-xs active:bg-gray-50"
         >
           <span className="text-gray-600">{locManual ? "自定义坐标（见下方输入框）" : `当前：${locName}（省/市/区县选择）`}</span>
           <span className="text-gray-400">{showRegionSel ? "收起 ▲" : "展开选择 ▼"}</span>
-        </button>
+        </InterfaceButton>
         {showRegionSel && (
           <div className="mt-2 rounded-lg bg-gray-50 p-2">
             <SharedBirthLocationSelector
@@ -632,7 +633,7 @@ export default function CompassPage() {
             {SHAN_24.map((s) => {
               const active = reading && reading.facing.shan === s.name;
               return (
-                <button
+                <InterfaceButton
                   key={s.name}
                   onClick={() => setManualHeading(s.center)}
                   className={`rounded py-1.5 text-xs font-medium transition-all ${
@@ -641,7 +642,7 @@ export default function CompassPage() {
                   style={active ? { backgroundColor: BRAND } : {}}
                 >
                   {s.name}
-                </button>
+                </InterfaceButton>
               );
             })}
           </div>
@@ -680,7 +681,7 @@ export default function CompassPage() {
       {/* 逐圈层读数面板 */}
       {ringReadings.length > 0 && (
         <div className="mt-2 bg-white px-3 py-3">
-          <button
+          <InterfaceButton
             onClick={() => setShowReadings((v) => !v)}
             className="flex w-full items-center justify-between"
           >
@@ -688,7 +689,7 @@ export default function CompassPage() {
               逐圈层读数（{profile.name.split("（")[0]}）
             </span>
             <span className="text-xs text-gray-400">{showReadings ? "收起 ▲" : "展开 ▼"}</span>
-          </button>
+          </InterfaceButton>
           {showReadings && (
             <div className="mt-2 divide-y divide-gray-100">
               {ringReadings.map((r) => (
@@ -721,14 +722,14 @@ export default function CompassPage() {
       <div className="mt-2 bg-white px-3 py-3">
         <div className="mb-2 text-xs text-gray-500">客户测量记录（可选）</div>
         <ClientSelector selectedClient={selectedClient} onSelect={setSelectedClient} />
-        <button
+        <InterfaceButton
           onClick={saveToClient}
           disabled={!selectedClient || !reading}
           className="mt-2 w-full rounded-full border border-amber-200 py-2.5 text-sm font-semibold active:scale-[0.98] disabled:opacity-40"
           style={{ color: BRAND, backgroundColor: "#fdf6e3" }}
         >
           保存本次测量{savedCount > 0 ? `（已存 ${savedCount} 条）` : ""}
-        </button>
+        </InterfaceButton>
       </div>
 
       {/* 分享 */}
@@ -795,12 +796,12 @@ export default function CompassPage() {
             />
           </div>
           <div className="mt-3 flex w-full max-w-[420px] items-center gap-2 px-3">
-            <button
+            <InterfaceButton
               onClick={() => setZoomed(false)}
               className="flex-1 rounded-full border border-amber-300/60 bg-amber-50/10 py-2.5 text-sm font-semibold text-[#e8c96a] active:scale-[0.98]"
             >
               关闭
-            </button>
+            </InterfaceButton>
           </div>
         </div>
       )}

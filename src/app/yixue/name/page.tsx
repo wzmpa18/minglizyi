@@ -1,5 +1,6 @@
 "use client";
 
+import { InterfaceButton, InterfaceLabel, InterfaceOption } from "@/components/InterfaceControls";
 import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useToolBack } from "@/lib/useToolBack";
@@ -696,7 +697,7 @@ export default function NameAnalysisPage() {
 
           {/* 姓名输入 */}
           <div className="mb-3">
-            <label className="mb-1 block text-xs text-gray-500">{ui("姓名")}</label>
+            <InterfaceLabel className="mb-1 block text-xs text-gray-500">{ui("姓名")}</InterfaceLabel>
             <input
               type="text"
               value={fullName}
@@ -721,9 +722,9 @@ export default function NameAnalysisPage() {
 
           {/* 姓氏类型 */}
           <div className="mb-3">
-            <label className="mb-1 block text-xs text-gray-500">姓氏类型</label>
+            <InterfaceLabel className="mb-1 block text-xs text-gray-500">姓氏类型</InterfaceLabel>
             <div className="flex rounded-full bg-gray-100 p-1">
-              <button
+              <InterfaceButton
                 onClick={() => setSurnameLength(1)}
                 className="flex-1 rounded-full py-1.5 text-sm font-semibold transition-all"
                 style={{
@@ -732,8 +733,8 @@ export default function NameAnalysisPage() {
                 }}
               >
                 单姓
-              </button>
-              <button
+              </InterfaceButton>
+              <InterfaceButton
                 onClick={() => setSurnameLength(2)}
                 className="flex-1 rounded-full py-1.5 text-sm font-semibold transition-all"
                 style={{
@@ -742,15 +743,15 @@ export default function NameAnalysisPage() {
                 }}
               >
                 复姓
-              </button>
+              </InterfaceButton>
             </div>
           </div>
 
           {/* 性别 */}
           <div className="mb-3">
-            <label className="mb-1 block text-xs text-gray-500">{ui("性别")}</label>
+            <InterfaceLabel className="mb-1 block text-xs text-gray-500">{ui("性别")}</InterfaceLabel>
             <div className="flex rounded-full bg-gray-100 p-1">
-              <button
+              <InterfaceButton
                 onClick={() => setGender("male")}
                 className="flex-1 rounded-full py-1.5 text-sm font-semibold transition-all"
                 style={{
@@ -759,8 +760,8 @@ export default function NameAnalysisPage() {
                 }}
               >
                 男
-              </button>
-              <button
+              </InterfaceButton>
+              <InterfaceButton
                 onClick={() => setGender("female")}
                 className="flex-1 rounded-full py-1.5 text-sm font-semibold transition-all"
                 style={{
@@ -769,19 +770,19 @@ export default function NameAnalysisPage() {
                 }}
               >
                 女
-              </button>
+              </InterfaceButton>
             </div>
           </div>
 
           {/* 出生时间 + 八字排盘 */}
           <div className="mb-3 rounded-lg border border-purple-200 bg-purple-50 p-3">
-            <label className="mb-1.5 block text-xs font-semibold text-purple-700">
+            <InterfaceLabel className="mb-1.5 block text-xs font-semibold text-purple-700">
               出生年月日时（可选，排八字定喜用神纳入评分）
-            </label>
+            </InterfaceLabel>
 
             {/* 公历/农历切换 */}
             <div className="mb-2 flex rounded-full bg-gray-200 p-0.5">
-              <button
+              <InterfaceButton
                 type="button"
                 onClick={() => setCalType("solar")}
                 className="flex-1 rounded-full py-1 text-xs font-semibold transition-all"
@@ -791,8 +792,8 @@ export default function NameAnalysisPage() {
                 }}
               >
                 公历
-              </button>
-              <button
+              </InterfaceButton>
+              <InterfaceButton
                 type="button"
                 onClick={() => setCalType("lunar")}
                 className="flex-1 rounded-full py-1 text-xs font-semibold transition-all"
@@ -802,7 +803,7 @@ export default function NameAnalysisPage() {
                 }}
               >
                 农历
-              </button>
+              </InterfaceButton>
             </div>
 
             {/* 公历模式 */}
@@ -817,9 +818,9 @@ export default function NameAnalysisPage() {
                     className="w-20 rounded-lg border border-gray-200 px-1 py-2 text-sm outline-none focus:border-[#7B2FBE]"
                   >
                     {Array.from({ length: 24 }, (_, i) => i).map((h) => (
-                      <option key={h} value={h}>
+                      <InterfaceOption key={h} value={h}>
                         {String(h).padStart(2, "0")}时
-                      </option>
+                      </InterfaceOption>
                     ))}
                   </select>
                   <select
@@ -828,9 +829,9 @@ export default function NameAnalysisPage() {
                     className="w-20 rounded-lg border border-gray-200 px-1 py-2 text-sm outline-none focus:border-[#7B2FBE]"
                   >
                     {Array.from({ length: 60 }, (_, i) => i).map((m) => (
-                      <option key={m} value={m}>
+                      <InterfaceOption key={m} value={m}>
                         {String(m).padStart(2, "0")}分
-                      </option>
+                      </InterfaceOption>
                     ))}
                   </select>
                 </div>
@@ -845,7 +846,7 @@ export default function NameAnalysisPage() {
                     className="flex-1 rounded-lg border border-gray-200 px-1 py-2 text-sm outline-none focus:border-[#7B2FBE]"
                   >
                     {Array.from({ length: 200 }, (_, i) => 1900 + i).map((y) => (
-                      <option key={y} value={y}>{y}年</option>
+                      <InterfaceOption key={y} value={y}>{y}年</InterfaceOption>
                     ))}
                   </select>
                   <select
@@ -861,7 +862,7 @@ export default function NameAnalysisPage() {
                     className="flex-1 rounded-lg border border-gray-200 px-1 py-2 text-sm outline-none focus:border-[#7B2FBE]"
                   >
                     {getLunarMonthOptions(lunarYear).map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      <InterfaceOption key={opt.value} value={opt.value}>{opt.label}</InterfaceOption>
                     ))}
                   </select>
                   <select
@@ -874,7 +875,7 @@ export default function NameAnalysisPage() {
                       const isLeap = mNum < 0;
                       const mAbs = Math.abs(mNum);
                       return getLunarDayOptions(lunarYear, mAbs, isLeap).map((opt) => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        <InterfaceOption key={opt.value} value={opt.value}>{opt.label}</InterfaceOption>
                       ));
                     })()}
                   </select>
@@ -886,9 +887,9 @@ export default function NameAnalysisPage() {
                     className="w-20 rounded-lg border border-gray-200 px-1 py-2 text-sm outline-none focus:border-[#7B2FBE]"
                   >
                     {Array.from({ length: 24 }, (_, i) => i).map((h) => (
-                      <option key={h} value={h}>
+                      <InterfaceOption key={h} value={h}>
                         {String(h).padStart(2, "0")}时
-                      </option>
+                      </InterfaceOption>
                     ))}
                   </select>
                   <select
@@ -897,9 +898,9 @@ export default function NameAnalysisPage() {
                     className="w-20 rounded-lg border border-gray-200 px-1 py-2 text-sm outline-none focus:border-[#7B2FBE]"
                   >
                     {Array.from({ length: 60 }, (_, i) => i).map((m) => (
-                      <option key={m} value={m}>
+                      <InterfaceOption key={m} value={m}>
                         {String(m).padStart(2, "0")}分
-                      </option>
+                      </InterfaceOption>
                     ))}
                   </select>
                   <span className="flex-1 text-[10px] text-gray-400">农历已自动转公历排盘</span>
@@ -949,7 +950,7 @@ export default function NameAnalysisPage() {
           </div>
 
           {/* 分析按钮 */}
-          <button
+          <InterfaceButton
             onClick={handleAnalyze}
             disabled={loading}
             className="w-full rounded-full py-2.5 text-sm font-semibold text-white transition-all active:scale-[0.98] disabled:opacity-50"
@@ -958,7 +959,7 @@ export default function NameAnalysisPage() {
             }}
           >
             {loading ? "解析中..." : "开始解析"}
-          </button>
+          </InterfaceButton>
           <div className="mt-2 flex justify-center">
             <PaipanHistoryButton toolKey="name" onRestore={handleRestoreHistory} />
           </div>

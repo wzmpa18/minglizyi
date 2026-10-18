@@ -1,5 +1,6 @@
 "use client";
 
+import { InterfaceButton, InterfaceOption } from "@/components/InterfaceControls";
 import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -120,7 +121,7 @@ function DLRRadioOption({
   onClick: () => void;
 }) {
   return (
-    <button
+    <InterfaceButton
       type="button"
       onClick={onClick}
       className="flex items-center cursor-pointer"
@@ -139,7 +140,7 @@ function DLRRadioOption({
       >
         {label}
       </span>
-    </button>
+    </InterfaceButton>
   );
 }
 
@@ -240,7 +241,7 @@ function InputPanel({
           {showTitle && (
           <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 sticky top-0 bg-white z-10">
             <span className="text-base font-bold text-gray-800">大六壬起课</span>
-            <button
+            <InterfaceButton
               type="button"
               onClick={() => onClose()}
               className="flex h-8 w-8 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 transition-colors"
@@ -248,7 +249,7 @@ function InputPanel({
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                 <path d="M18 6L6 18M6 6l12 12" />
               </svg>
-            </button>
+            </InterfaceButton>
           </div>
           )}
 
@@ -257,20 +258,20 @@ function InputPanel({
             <div>
               <div className="mb-1 text-sm font-medium text-gray-700">起课时间</div>
               <div className="flex gap-2">
-                <button
+                <InterfaceButton
                   type="button"
                   onClick={() => setShowDatePicker(true)}
                   className="flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-left hover:border-[#7B2FBE] transition-colors"
                 >
                   {dateStr}
-                </button>
-                <button
+                </InterfaceButton>
+                <InterfaceButton
                   type="button"
                   onClick={handleNow}
                   className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
                 >
                   当前时间
-                </button>
+                </InterfaceButton>
               </div>
             </div>
 
@@ -287,7 +288,7 @@ function InputPanel({
                   const y = 1950 + i;
                   const gz = getYearGanZhi(y);
                   return (
-                    <option key={y} value={y}>{y}年({gz[0]}{gz[1]})</option>
+                    <InterfaceOption key={y} value={y}>{y}年({gz[0]}{gz[1]})</InterfaceOption>
                   );
                 })}
               </select>
@@ -308,9 +309,9 @@ function InputPanel({
                 onChange={(e) => setZhanbuTime(e.target.value)}
                 className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm outline-none focus:border-[#7B2FBE]"
               >
-                <option value="">{ui("当前时间")}</option>
+                <InterfaceOption value="">{ui("当前时间")}</InterfaceOption>
                 {SHI_CHEN_LIST.map((z) => (
-                  <option key={z} value={z}>{z}时</option>
+                  <InterfaceOption key={z} value={z}>{z}时</InterfaceOption>
                 ))}
               </select>
             </div>
@@ -349,13 +350,13 @@ function InputPanel({
             </div>
 
             {/* 8. 开始起课按钮 */}
-            <button
+            <InterfaceButton
               type="button"
               onClick={handleSubmit}
               className="w-full rounded-full bg-[#7B2FBE] py-2.5 text-base font-bold text-white shadow-lg transition-colors active:bg-[#5B1A8A]"
             >
               开始起课
-            </button>
+            </InterfaceButton>
           </div>
         </div>
       </div>
@@ -1062,7 +1063,7 @@ export default function DaLiuRenPage() {
                   <div>
                     <span style={{ fontSize: "16px", fontWeight: "bold" }}>{interpretPanel.title}</span>
                   </div>
-                  <button onClick={() => setInterpretPanel(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "white", width: "28px", height: "28px", borderRadius: "50%", cursor: "pointer", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>x</button>
+                  <InterfaceButton onClick={() => setInterpretPanel(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "white", width: "28px", height: "28px", borderRadius: "50%", cursor: "pointer", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>x</InterfaceButton>
                 </div>
                 <div style={{ padding: "10px 12px" }}>
                   {interpretPanel.items.map((item, idx) => (
@@ -1099,7 +1100,7 @@ export default function DaLiuRenPage() {
         }}
       >
         {tabs.map((tab) => (
-          <button
+          <InterfaceButton
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
             style={{
@@ -1117,7 +1118,7 @@ export default function DaLiuRenPage() {
             }}
           >
             {tab.label}
-          </button>
+          </InterfaceButton>
         ))}
       </div>
 
