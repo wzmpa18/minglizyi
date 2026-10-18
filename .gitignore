@@ -28,6 +28,8 @@ tsconfig.tsbuildinfo
 # Deployment/verification scripts contain cloud secrets - excluded from repo
 # (these are local-only deployment tools, not source code)
 *.py
+!scripts/import_tcm_clinical_editions.py
+__pycache__/
 
 # Environment variables with secrets
 .env

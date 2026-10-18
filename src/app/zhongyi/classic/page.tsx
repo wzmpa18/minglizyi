@@ -4,13 +4,14 @@ import { SectionGate } from "@/components/SectionGate";
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { getAllBooks, getBookById, getChapterById, searchClassics } from '@/algorithm-core/modules/tcm/classics';
+import { searchClassics } from '@/algorithm-core/modules/tcm/classics';
 import type { ClassicBook, ClassicChapter } from '@/algorithm-core/modules/tcm/classics';
 import { addRecentItem } from '@/lib/tcmRecent';
 import { useToolBack } from "@/lib/useToolBack";
 import { LocalListenButton } from "@/components/LocalListenButton";
 import AIInterpretButton from "@/components/AIInterpretButton";
 import { ContinuousListenPlayer } from "@/components/ContinuousListenPlayer";
+import { TcmEditionProvider, useTcmEditions } from '@/components/TcmEditionProvider';
 
 // 阅读设置类型
 interface ReaderSettings {
@@ -56,8 +57,8 @@ function ClassicPageInner() {
   const chapterId = searchParams.get('chapter');
   const searchQuery = searchParams.get('q');
 
-  if (searchQuery) return <ClassicSearchPage keyword={searchQuery} />;
-  if (bookId && chapterId) return <ReaderPage bookId={bookId} chapterId={chapterId} />;
+  if (searchQuery) return <ClassicSearchPage keyword={searchQuery} originalOnly={searchParams.get('scope') === 'original'} />;
+  if (bookId && chapterId) return <ReaderPage key={`${bookId}:${chapterId}`} bookId={bookId} chapterId={chapterId} />;
   if (bookId) return <BookTocPage bookId={bookId} />;
   return <ClassicHomePage />;
 }
@@ -70,18 +71,20 @@ function ClassicPageOriginal() {
         <div style={{ textAlign: 'center', color: '#7B1FA2' }}>加载中...</div>
       </div>
     }>
-      <ClassicPageInner />
+      <TcmEditionProvider><ClassicPageInner /></TcmEditionProvider>
     </Suspense>
   );
 }
 
 // ==================== 典籍首页 ====================
 function ClassicHomePage() {
-  const books = getAllBooks();
+  const { books: allBooks, version } = useTcmEditions();
   const router = useRouter();
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [searchText, setSearchText] = useState('');
+  const [bookTab, setBookTab] = useState<'original' | 'notes'>('original');
+  const books = allBooks.filter(book => bookTab === 'original' ? !!book.sourceUrl : !book.sourceUrl);
 
   useEffect(() => {
     // 迁移兼容：先尝试新键名，没有则读取旧键名并迁移
@@ -98,7 +101,7 @@ function ClassicHomePage() {
 
   const handleSearch = () => {
     if (searchText.trim()) {
-      router.push(`/zhongyi/classic?q=${encodeURIComponent(searchText.trim())}`);
+      router.push(`/zhongyi/classic?q=${encodeURIComponent(searchText.trim())}${bookTab === 'original' ? '&scope=original' : ''}`);
     }
   };
 
@@ -150,7 +153,9 @@ function ClassicHomePage() {
       )}
 
       <div style={{ padding: '16px' }}>
-        <div style={{ fontSize: '13px', color: '#999', marginBottom: '12px' }}>共 {books.length} 部经典</div>
+        <p style={{ fontSize: 11, color: "#697960", marginBottom: 10 }}>文献版本：{version} · 支持离线阅读与后续原文校勘更新</p>
+        <div role="tablist" aria-label="中医文献类型" style={{ display: 'flex', gap: 8, marginBottom: 14 }}>{(['original', 'notes'] as const).map(tab => <button type="button" role="tab" aria-selected={bookTab === tab} key={tab} onClick={() => setBookTab(tab)} style={{ flex: 1, padding: '11px 8px', borderRadius: 10, border: '1px solid #cad5c8', background: bookTab === tab ? '#264e3f' : '#fffdf5', color: bookTab === tab ? '#fffaf0' : '#42604e', fontSize: 14 }}>{tab === 'original' ? '原文整本' : '学习整理'} · {allBooks.filter(book => tab === 'original' ? !!book.sourceUrl : !book.sourceUrl).length}</button>)}</div>
+        <p style={{ fontSize: 12, lineHeight: 1.9, color: '#6a7866', margin: '0 0 14px' }}>{bookTab === 'original' ? '整本收录所列来源版本，包含序与附篇；各书可查来源及校勘状态。目录完整不等同于逐字医学校勘。' : '原有研读资料全部保留；部分含节选或AI辅助整理，可在“原文整本”对照对应完整版本。'}</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {books.map((book) => (
             <Link
@@ -173,7 +178,7 @@ function ClassicHomePage() {
                   <div style={{ fontSize: '16px', fontWeight: 600, color: '#333', marginBottom: '4px' }}>{book.name}</div>
                   <div style={{ fontSize: '12px', color: '#9C27B0', marginBottom: '6px' }}>{book.dynasty} · {book.author}</div>
                   <div style={{ fontSize: '13px', color: '#666', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{book.description}</div>
-                  <div style={{ fontSize: '11px', color: '#777', marginTop: '6px' }}>共 {book.chapters.length} 篇 · {book.sourceUrl ? '原文篇章齐备 · 来源可查' : '学习整理 · 含节选或 AI 补充'}</div>
+                  <div style={{ fontSize: '11px', color: '#777', marginTop: '6px' }}>共 {book.chapters.length} 篇卷 · {book.sourceUrl ? '整本录文 · 来源及校勘状态可查' : '学习整理 · 含节选或 AI 补充'}</div>
                 </div>
               </div>
             </Link>
@@ -189,7 +194,8 @@ function ClassicHomePage() {
 // ==================== 目录页 ====================
 function BookTocPage({ bookId }: { bookId: string }) {
   const router = useRouter();
-  const book = getBookById(bookId);
+  const { books } = useTcmEditions();
+  const book = books.find(item => item.id === bookId);
   const [searchText, setSearchText] = useState('');
 
   if (!book) {
@@ -281,8 +287,11 @@ function BookTocPage({ bookId }: { bookId: string }) {
 // ==================== 阅读页 ====================
 function ReaderPage({ bookId, chapterId }: { bookId: string; chapterId: string }) {
   const router = useRouter();
-  const book = getBookById(bookId);
-  const chapter = getChapterById(bookId, chapterId);
+  const { books } = useTcmEditions();
+  // A downloaded correction becomes available on the next chapter, never in
+  // the middle of the paragraph or listening queue currently being read.
+  const [book] = useState(() => books.find(item => item.id === bookId));
+  const chapter = book?.chapters.find(item => item.id === chapterId);
   const [showToc, setShowToc] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState<ReaderSettings>(DEFAULT_SETTINGS);
@@ -548,20 +557,22 @@ function ReaderPage({ bookId, chapterId }: { bookId: string; chapterId: string }
 }
 
 // ==================== 搜索结果页 ====================
-function ClassicSearchPage({ keyword }: { keyword: string }) {
+function ClassicSearchPage({ keyword, originalOnly = false }: { keyword: string; originalOnly?: boolean }) {
   const router = useRouter();
-  const results = useMemo(() => searchClassics(keyword), [keyword]);
+  const { books } = useTcmEditions();
+  const results = useMemo(() => searchClassics(keyword, originalOnly, books), [keyword, originalOnly, books]);
   const [searchText, setSearchText] = useState(keyword);
 
   const handleSearch = () => {
     if (searchText.trim()) {
-      router.push(`/zhongyi/classic?q=${encodeURIComponent(searchText.trim())}`);
+      router.push(`/zhongyi/classic?q=${encodeURIComponent(searchText.trim())}${originalOnly ? '&scope=original' : ''}`);
     }
   };
 
   const highlightText = (text: string) => {
     if (!keyword) return text;
-    const parts = text.split(new RegExp(`(${keyword})`, 'gi'));
+    const literal = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const parts = text.split(new RegExp(`(${literal})`, 'gi'));
     return parts.map((part, i) =>
       part.toLowerCase() === keyword.toLowerCase()
         ? <mark key={i} style={{ backgroundColor: '#FFEB3B', padding: '0 2px', borderRadius: '2px' }}>{part}</mark>

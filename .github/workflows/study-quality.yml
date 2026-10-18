@@ -5,6 +5,12 @@ on:
       - '.github/workflows/study-quality.yml'
       - 'src/data/nanjingOriginal.json'
       - 'src/data/tcmOriginalEditions.json'
+      - 'src/data/tcmClinicalOriginalEditions.json'
+      - 'scripts/import_tcm_clinical_editions.py'
+      - 'src/lib/tcmEditionPack.ts'
+      - 'src/components/TcmEditionProvider.tsx'
+      - 'backend_deploy/build_tcm_original_editions_pack.js'
+      - 'scripts/tcm-edition-pack.test.cjs'
       - 'src/algorithm-core/modules/tcm/classics.ts'
       - 'src/algorithm-core/modules/bazi/base.ts'
       - 'scripts/bazi-yun-metadata.test.ts'
@@ -151,6 +157,7 @@ jobs:
       - run: npx tsx --test scripts/astronomy-study.test.ts
       - run: node --test scripts/ios-full-profile.test.cjs
       - run: npx tsx --test scripts/classic-reading.test.ts
+      - run: node --experimental-strip-types --test scripts/tcm-edition-pack.test.cjs
       - run: node --test scripts/native-listening.test.cjs
       - name: Verify discussion HTTP authentication and moderation against production dependency versions
         run: |
@@ -162,6 +169,7 @@ jobs:
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/apple-iap-http.test.cjs
       - name: Verify original edition chapter sequence and provenance
         run: |
+          python3 scripts/import_tcm_clinical_editions.py
           node --input-type=module <<'JS'
           import fs from 'node:fs';
           import assert from 'node:assert/strict';

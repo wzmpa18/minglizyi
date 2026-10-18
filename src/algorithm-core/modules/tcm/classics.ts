@@ -1,7 +1,7 @@
 /**
  * 中医典籍数据模块
  * 收录7部核心中医典籍：黄帝内经素问、灵枢、伤寒论、金匮要略、温病条辨、难经、神农本草经
- * 数据来源：权威校勘本结构化整理
+ * 原文与学习整理分别标识；来源版本和校勘状态以各书元数据为准。
  * 合规说明：原文仅供学习研究，不构成诊疗指导
  */
 
@@ -5416,6 +5416,7 @@ const CLASSICS_DATA: ClassicBook[] = [
 import { CHAPTER_APPENDS, EXTRA_BOOKS } from "./classicsExtra";
 import nanjingOriginal from "@/data/nanjingOriginal.json";
 import tcmOriginalEditions from "@/data/tcmOriginalEditions.json";
+import tcmClinicalOriginalEditions from "@/data/tcmClinicalOriginalEditions.json";
 
 // 合并后完整书库（内置数据 + 补全章节 + 新增典籍）
 function buildMergedBooks(): ClassicBook[] {
@@ -5425,7 +5426,7 @@ function buildMergedBooks(): ClassicBook[] {
   });
   // Keep every existing entry and link; the independently sourced edition is
   // additive, and must not be confused with the older AI-assisted study notes.
-  return [...tcmOriginalEditions, nanjingOriginal, ...merged, ...EXTRA_BOOKS];
+  return [...tcmOriginalEditions, nanjingOriginal, ...tcmClinicalOriginalEditions, ...merged, ...EXTRA_BOOKS];
 }
 
 // 导出函数
@@ -5442,9 +5443,10 @@ export function getChapterById(bookId: string, chapterId: string): ClassicChapte
   return book?.chapters.find(c => c.id === chapterId);
 }
 
-export function searchClassics(keyword: string): Array<{ bookId: string; bookName: string; chapterId: string; chapterTitle: string; snippet: string }> {
+export function searchClassics(keyword: string, originalOnly = false, books: ClassicBook[] = buildMergedBooks()): Array<{ bookId: string; bookName: string; chapterId: string; chapterTitle: string; snippet: string }> {
   const results: Array<{ bookId: string; bookName: string; chapterId: string; chapterTitle: string; snippet: string }> = [];
-  for (const book of buildMergedBooks()) {
+  for (const book of books) {
+    if (originalOnly && !book.sourceUrl) continue;
     for (const chapter of book.chapters) {
       if (chapter.title.includes(keyword) || chapter.content.includes(keyword)) {
         const idx = chapter.content.indexOf(keyword);
