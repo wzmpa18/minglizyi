@@ -16,12 +16,12 @@ final class GuoxueStudyScreenshots: XCTestCase {
         XCTAssertTrue(title.waitForExistence(timeout:30),"Missing product label: "+name)
         for _ in 0..<40 {
             let y=title.frame.minY
-            if title.isHittable && y >= 70 && y < app.frame.height * 0.3 {
+            if title.isHittable {
                 shot("IAP_"+key+"_真实商品入口_未模拟价格",app);return
             }
             let from=app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.72))
             let to=app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.52))
-            if y < 70 {to.press(forDuration:0.05,thenDragTo:from)}
+            if y > 0 && y < 70 {to.press(forDuration:0.05,thenDragTo:from)}
             else {from.press(forDuration:0.05,thenDragTo:to)}
         }
         XCTFail("Could not frame product: "+name)
@@ -41,6 +41,14 @@ final class GuoxueStudyScreenshots: XCTestCase {
         tapVisible(app.links,"打开中医典籍库",app)
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format:"label CONTAINS %@","典籍")).firstMatch.waitForExistence(timeout:25))
         shot("02_真实应用_中医整本典籍",app)
+        tapVisible(app.links,"首页",app)
+        tapVisible(app.links,"言道日历",app)
+        XCTAssertTrue(app.buttons["全屏国风时钟"].waitForExistence(timeout:30),"Calendar must actually render")
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","非出生四柱")).firstMatch.exists)
+        shot("04_真实应用_言道日历_已验证页面",app)
+        tapVisible(app.links,"桌面组件与提醒设置",app)
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","当前包已接入")).firstMatch.waitForExistence(timeout:20),"Native calendar plugin must report widget support")
+        shot("05_真实应用_系统组件支持说明",app)
         tapVisible(app.links,"我的",app)
         tapVisible(app.links,"会员中心",app)
         let purchase=app.staticTexts["把经典读深，把学习继续"]
@@ -51,13 +59,5 @@ final class GuoxueStudyScreenshots: XCTestCase {
         }
         tapVisible(app.links,"AI点数",app)
         for count in [10,50,100,500] {captureProduct("\(count)点AI学习点数","credits\(count)",app)}
-        tapVisible(app.links,"首页",app)
-        tapVisible(app.links,"言道日历",app)
-        XCTAssertTrue(app.buttons["全屏国风时钟"].waitForExistence(timeout:30),"Calendar must actually render")
-        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","非出生四柱")).firstMatch.exists)
-        shot("04_真实应用_言道日历_已验证页面",app)
-        tapVisible(app.links,"桌面组件与提醒设置",app)
-        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","当前包已接入")).firstMatch.waitForExistence(timeout:20),"Native calendar plugin must report widget support")
-        shot("05_真实应用_系统组件支持说明",app)
     }
 }
