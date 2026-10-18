@@ -202,7 +202,7 @@ function readAdminConfig(filename) {
   try {
     const fs = require('fs');
     const path = require('path');
-    const p = path.join(__dirname, 'data', filename);
+    const p = path.join(process.env.PRICING_DATA_DIR || path.join(__dirname, 'data'), filename);
     if (!fs.existsSync(p)) return null;
     return JSON.parse(fs.readFileSync(p, 'utf-8'));
   } catch (e) {

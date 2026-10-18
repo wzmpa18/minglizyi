@@ -124,9 +124,35 @@ async function worker(root){
       assert.equal(catalog.ai.packages[0].price,22.4);assert.equal(catalog.ai.timePlans[0].price,2.32);assert.equal(catalog.ai.singleUnlockPrice,7.92);
       assert.equal(catalog.ai.tools[0].price,14.4);
       assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root,'admin-membership-config.json'),'utf8')),regular);
+      // Execute the actual payment module in an isolated module context. Only the
+      // registration bootstrap is replaced with the already-tested JWT/DB middleware;
+      // no payment credentials or provider requests exist in this worker.
+      for(const key of ['WECHAT_MCH_ID','WECHAT_API_V3_KEY','WECHAT_API_CERT_PATH','WECHAT_CERT_SERIAL_NO','ALIPAY_APP_ID','ALIPAY_APP_PRIVATE_KEY','ALIPAY_PUBLIC_KEY'])delete process.env[key];
+      accounts.exec(`INSERT INTO users(user_id,nickname,status) VALUES ('123456','测试购买账号','active');
+        CREATE TABLE user_orders(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id TEXT,order_no TEXT UNIQUE,amount REAL,order_type TEXT,status TEXT,payment_method TEXT,created_at TEXT,paid_at TEXT);`);
+      const actualRequire=require('node:module').createRequire(path.resolve(__dirname,'../backend_deploy/paymentRoutes.js'));
+      const paymentModule={exports:{}};
+      const context={module:paymentModule,exports:paymentModule.exports,__dirname:path.resolve(__dirname,'../backend_deploy'),process,Buffer,console,setInterval,clearInterval,URL,
+        require:name=>name==='./register_routes'?{authMiddleware:require('../backend_deploy/middleware/auth').authMiddleware}:actualRequire(name)};
+      require('node:vm').runInNewContext(fs.readFileSync(path.resolve(__dirname,'../backend_deploy/paymentRoutes.js'),'utf8'),context,{filename:'paymentRoutes.js'});
+      app.use('/api/payment',paymentModule.exports.router);
+      async function checkout(amount,extra={}){
+        const response=await fetch(`http://127.0.0.1:${server.address().port}/api/payment/create`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token('123456')},body:JSON.stringify({type:'MEMBERSHIP',amount,extra:{membershipLevel:'monthly',...extra}})});
+        return {status:response.status,body:await response.json()};
+      }
+      assert.equal((await checkout(0.01)).status,409);
+      assert.equal(accounts.prepare('SELECT COUNT(*) n FROM user_orders').get().n,0);
+      assert.equal((await checkout(37,{salesPromotion:{discountPercent:99},growthCampaign:{commissionPolicy:'EXCLUDED'}})).status,200);
+      const pending=accounts.prepare('SELECT amount,extra,status FROM user_orders').get();
+      assert.equal(pending.amount,29.6);assert.equal(pending.status,'PENDING');
+      const snapshot=JSON.parse(pending.extra);
+      assert.equal(snapshot.salesPromotion.discountPercent,20);assert.equal(snapshot.salesPromotion.basePrice,37);assert.equal(snapshot.growthCampaign,undefined);
+      assert.equal((await fetch(`http://127.0.0.1:${server.address().port}/api/payment/pricing`).then(r=>r.json())).data.membershipPlans[1].price,29.6);
       const current=(await pricing('/promotion')).body.data;
       assert.equal((await pricing('/promotion','PUT',admin,{expectedRevision:current.revision,config:{...current,enabled:false}})).status,200);
       assert.equal((await pricing()).body.data.membershipPlans[1].price,37);
+      assert.equal((await checkout(29.6)).status,409);
+      assert.equal(accounts.prepare('SELECT COUNT(*) n FROM user_orders').get().n,1);
       console.log('PASS: real promotion HTTP public catalog, administrator-only writes, revision conflicts, sale prices and original-price preservation.');
       const matrixModule=require('../backend_deploy/toolAdminRoutes');
       app.use('/api/admin/tool-matrix',matrixModule.router);
