@@ -1155,6 +1155,15 @@ export default function DaLiuRenPage() {
           {activeTab === "pingzhu" && (
             <div>
               <div style={{ fontWeight: 600, color: "#333", marginBottom: "4px", fontSize: "13px" }}>评注</div>
+              {(() => {
+                const explanation = getKeTiInterpretation(data.keTi);
+                return explanation && <details open className="mb-4 rounded border border-gray-200 p-3">
+                  <summary className="font-bold text-gray-800">{explanation.title} · 课体学习说明</summary>
+                  <p className="mt-2">{explanation.summary}</p>
+                  {explanation.details.map((line, index) => <p key={index} className="mt-1">{line}</p>)}
+                  <p className="mt-2 text-[10px] text-gray-500">本库学习整理，所列参考书：{explanation.source}。此处不是古籍逐字原文或个人决策依据。</p>
+                </details>;
+              })()}
               <LocalStudyNotes key={JSON.stringify(prefillParams || data.siZhu)} storageKey={`yandao_daliuren_notes_v1:${JSON.stringify(prefillParams || data.siZhu)}`} />
             </div>
           )}

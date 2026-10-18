@@ -22,6 +22,7 @@ export interface ClassicBook {
   sourceName?: string;
   sourceUrl?: string;
   sourceRevisionUrl?: string;
+  sourcePages?: { url: string; revisionUrl: string }[];
   license?: string;
   verification?: string;
 }
@@ -5414,6 +5415,7 @@ const CLASSICS_DATA: ClassicBook[] = [
 // 生成管道：服务器混元AI批量生成 → scripts合入 classicsExtra.ts → 此处自动合并生效
 import { CHAPTER_APPENDS, EXTRA_BOOKS } from "./classicsExtra";
 import nanjingOriginal from "@/data/nanjingOriginal.json";
+import tcmOriginalEditions from "@/data/tcmOriginalEditions.json";
 
 // 合并后完整书库（内置数据 + 补全章节 + 新增典籍）
 function buildMergedBooks(): ClassicBook[] {
@@ -5423,7 +5425,7 @@ function buildMergedBooks(): ClassicBook[] {
   });
   // Keep every existing entry and link; the independently sourced edition is
   // additive, and must not be confused with the older AI-assisted study notes.
-  return [nanjingOriginal, ...merged, ...EXTRA_BOOKS];
+  return [...tcmOriginalEditions, nanjingOriginal, ...merged, ...EXTRA_BOOKS];
 }
 
 // 导出函数

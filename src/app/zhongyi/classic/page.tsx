@@ -41,6 +41,9 @@ function ClassicSourceNotice({ book }: { book: ClassicBook }) {
       <p>{book.verification}</p>
       <p>{book.license}</p>
       <a href={book.sourceRevisionUrl || book.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>查看本次收录的来源版本</a>
+      {book.sourcePages && <details style={{ marginTop: 6 }}><summary>查看全部 {book.sourcePages.length} 卷来源版本</summary>
+        {book.sourcePages.map((page, index) => <a key={page.revisionUrl} href={page.revisionUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'block', textDecoration: 'underline' }}>来源卷 {index + 1}</a>)}
+      </details>}
     </> : <>
       <strong>学习整理资料</strong>
       <p>本条目含节选或 AI 辅助整理内容，尚未逐字校勘，不作为古籍校核全文。原有章节和学习功能继续保留。</p>

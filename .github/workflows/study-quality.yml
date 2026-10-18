@@ -4,6 +4,8 @@ on:
     paths:
       - '.github/workflows/study-quality.yml'
       - 'src/data/nanjingOriginal.json'
+      - 'src/data/tcmOriginalEditions.json'
+      - 'src/algorithm-core/modules/tcm/classics.ts'
       - 'src/app/zhongyi/classic/page.tsx'
       - 'src/app/yixue/ziwei/page.tsx'
       - 'src/app/yixue/bazi/page.tsx'
@@ -61,6 +63,16 @@ jobs:
           assert.match(book.sourceRevisionUrl, /^https:\/\/zh\.wikisource\.org\/w\/index\.php\?oldid=\d+$/);
           assert.ok(book.license && book.verification && book.contentSha256.length === 64);
           console.log('PASS: 81 attributed original chapters; no AI-summary blocks.');
+          const editions = JSON.parse(fs.readFileSync('src/data/tcmOriginalEditions.json', 'utf8'));
+          assert.deepEqual(editions.map(b => [b.id, b.chapters.length, b.sourcePages.length]), [
+            ['suwen-original', 81, 24], ['lingshu-original', 81, 12], ['shennong-original', 19, 1]
+          ]);
+          for (const edition of editions) {
+            assert.equal(new Set(edition.chapters.map(c => c.id)).size, edition.chapters.length);
+            assert.ok(edition.chapters.every(c => c.title && c.content.length > 20 && !/Public domain|此作品在|【白话提要】/.test(c.content)));
+            assert.ok(edition.sourcePages.every(p => /^https:\/\/zh\.wikisource\.org\/w\/index\.php\?oldid=\d+$/.test(p.revisionUrl)));
+          }
+          console.log('PASS: Suwen 81 chapters, Lingshu 81 chapters, Shennong 19 source sections, 37 revision links.');
           JS
       - name: Build review preview
         if: inputs.preview == true
