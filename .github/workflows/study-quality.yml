@@ -26,6 +26,7 @@ on:
       - 'scripts/chart-corrections.test.ts'
       - 'src/lib/chartHandoff.ts'
       - 'src/lib/lunar.ts'
+      - 'src/components/shared/date-picker.tsx'
       - 'scripts/solar-to-lunar.test.ts'
       - 'scripts/chart-handoff.test.ts'
       - 'src/hooks/useCompassSensor.ts'

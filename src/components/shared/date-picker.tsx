@@ -438,7 +438,7 @@ export default function DatePicker({
               <input
                 type="text"
                 value={nameState}
-                onChange={(e) => setNameState(e.target.value)}
+                onChange={(e) => { const value=e.target.value;setNameState(value);onNameChange?.(value); }}
                 placeholder="姓名 / 记录名称"
                 className="min-w-0 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#7B2FBE]"
               />
