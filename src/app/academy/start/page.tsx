@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BrandHeader } from "@/components/shared";
+import { ContinuousListenPlayer } from "@/components/ContinuousListenPlayer";
 import { STARTER_LESSONS, STARTER_STORAGE_KEY, emptyStarterProgress, parseStarterProgress, type StarterProgress, type StarterQuestion } from "@/data/studyStarter";
 
 export default function StudyStarterPage() {
@@ -59,6 +60,8 @@ export default function StudyStarterPage() {
         <progress className="mt-2 h-2 w-full accent-white" max={allQuestions.length} value={correct} aria-label="自测答对题数" />
       </section>
       {storageFailed && <p role="alert" className="mx-3 mt-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-900">本机存储不可用；仍可学习和作答，但关闭页面后进度可能丢失。</p>}
+      <div className="mx-3"><ContinuousListenPlayer collectionId="starter-lessons-v1" title="入门课程连续听学"
+        items={STARTER_LESSONS.map(item => ({ id: item.id, title: item.title, text: item.paragraphs.join("\n\n") }))} /></div>
       <div className="mx-3 mt-3 flex gap-2">
         <button type="button" onClick={() => setReviewOnly(false)} aria-pressed={!reviewOnly} className={`flex-1 rounded-xl py-3 text-sm font-semibold ${!reviewOnly ? "bg-[#267364] text-white" : "bg-white text-gray-700"}`}>课程与自测</button>
         <button type="button" onClick={() => setReviewOnly(true)} aria-pressed={reviewOnly} className={`flex-1 rounded-xl py-3 text-sm font-semibold ${reviewOnly ? "bg-[#267364] text-white" : "bg-white text-gray-700"}`}>错题重练（{wrongs.length}）</button>

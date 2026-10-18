@@ -19,6 +19,9 @@ on:
       - 'src/lib/listeningQueue.ts'
       - 'scripts/continuous-listening.test.ts'
       - 'src/app/academy/learn/page.tsx'
+      - 'src/app/academy/start/page.tsx'
+      - 'src/app/books/page.tsx'
+      - 'src/app/yixue/learn/page.tsx'
   workflow_dispatch:
     inputs:
       preview:

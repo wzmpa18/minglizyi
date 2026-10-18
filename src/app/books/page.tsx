@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { BrandHeader } from "@/components/shared";
 import { LocalListenButton } from "@/components/LocalListenButton";
+import { ContinuousListenPlayer } from "@/components/ContinuousListenPlayer";
 import AIInterpretButton from "@/components/AIInterpretButton";
 import classicsData from "@/data/guoxueClassics.json";
 import { loadJsonPack } from "@/lib/offlinePackClient";
@@ -21,6 +22,7 @@ export default function BooksPage() {
   const [selectedId, setSelectedId] = useState("");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("全部");
+  useEffect(() => { setSelectedId(new URLSearchParams(window.location.search).get("book") || ""); }, []);
   const [catalogue, setCatalogue] = useState<{ books: GuoxueBook[]; notice: string; version: string }>({
     books: classicsData.books,
     notice: classicsData.notice,
@@ -56,7 +58,11 @@ export default function BooksPage() {
     return keywordMatched && (category === "全部" || book.category === category);
   }), [catalogue.books, category, query]);
 
-  if (selected) return <BookReader book={selected} onBack={() => setSelectedId("")} />;
+  if (selected) return <BookReader key={selected.id} book={selected} onBack={() => {
+    setSelectedId("");
+    const url = new URL(window.location.href); url.searchParams.delete("book");
+    window.history.replaceState(window.history.state, "", url);
+  }} />;
 
   return (
     <div className="flex min-h-screen flex-col" style={{ backgroundColor: "#f5f5f5", maxWidth: 520, margin: "0 auto" }}>
@@ -65,7 +71,7 @@ export default function BooksPage() {
         <section className="mb-4 rounded-2xl bg-white p-4 shadow-sm">
           <h1 className="text-base font-bold" style={{ color: BRAND }}>经典原文 · 离线阅读 · 本地听学</h1>
           <p className="mt-1 text-xs leading-5 text-gray-500">
-            当前收录 {catalogue.books.length} 部已通过篇章完整性核验的古籍全文，不发布节选。每部典籍均可听读、AI辅助理解并参与学习讨论。
+            当前收录 {catalogue.books.length} 部典籍资料，可离线阅读和连续听学。各书来源与收录范围见阅读页；篇章检查不等于逐字校勘。
           </p>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <a href="/zhongyi/classic" className="rounded-xl border border-purple-100 bg-purple-50 p-3 text-center text-xs font-semibold text-purple-800">中医典籍库</a>
@@ -123,6 +129,8 @@ function BookReader({ book, onBack }: { book: GuoxueBook; onBack: () => void }) 
       <main className="px-4 py-4">
         <section className="mb-3 rounded-xl border border-gray-100 bg-white p-3">
           <LocalListenButton text={`${book.title}。${book.content}`} contentId={`guoxue:${book.id}`} />
+          <ContinuousListenPlayer collectionId={`guoxue:${book.id}`} title="全书连续听学"
+            items={[{ id: book.id, title: book.title, text: book.content }]} />
           <div className="mt-2">
             <AIInterpretButton discussionEnabled discussionType="classic" discussionId={`guoxue:${book.id}`}
               discussionTitle={`${book.title}学习讨论`} toolName={`《${book.title}》`} scope="原文解读"
@@ -131,7 +139,7 @@ function BookReader({ book, onBack }: { book: GuoxueBook; onBack: () => void }) 
           </div>
         </section>
         <article className="whitespace-pre-wrap rounded-2xl bg-white px-5 py-6 text-[17px] leading-9 text-gray-800 shadow-sm">{book.content}</article>
-        <p className="my-4 text-center text-[10px] leading-5 text-gray-400">原文来源：{book.sourceName} · {book.license}</p>
+        <p className="my-4 text-center text-[10px] leading-5 text-gray-500">原文来源：<a href={book.sourceUrl} target="_blank" rel="noopener noreferrer" className="underline">{book.sourceName}</a> · {book.license}<br />来源记录 {book.sectionCount} 个文本区块，尚未逐字校勘。</p>
       </main>
     </div>
   );
