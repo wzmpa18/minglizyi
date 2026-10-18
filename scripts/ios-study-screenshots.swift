@@ -57,7 +57,7 @@ final class GuoxueStudyScreenshots: XCTestCase {
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","非出生四柱")).firstMatch.exists)
         shot("04_真实应用_言道日历_已验证页面",app)
         tapVisible(app.links,"桌面组件与提醒设置",app)
-        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","WidgetKit")).firstMatch.waitForExistence(timeout:20))
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","当前包已接入")).firstMatch.waitForExistence(timeout:20),"Native calendar plugin must report widget support")
         shot("05_真实应用_系统组件支持说明",app)
     }
 }
