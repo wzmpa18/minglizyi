@@ -7,7 +7,7 @@ import { createPortal } from "react-dom";
  * v25.0.21: 全局缩放组件（新增可关闭开关）
  *
  * 功能：
- * 1. 移动端：双指捏拉缩放，双击切换100%/200%
+ * 1. 移动端：显式开启后双指捏拉缩放；不响应双击放大
  * 2. 桌面端：Ctrl+滚轮缩放，放大后按住拖动查看
  * 3. 缩放范围：100% ~ 250%，localStorage全局记忆
  * 4. 放大后支持上下左右拖动查看（桌面端鼠标拖动，移动端原生滚动）
@@ -63,7 +63,7 @@ export default function GlobalZoomProvider({
     try {
       const disabled = localStorage.getItem(DISABLED_KEY);
       explicitlyEnabled = disabled === "0";
-      if (!explicitlyEnabled) setZoomDisabled(true);
+      setZoomDisabled(!explicitlyEnabled);
 
       if (explicitlyEnabled) {
         const saved = localStorage.getItem(STORAGE_KEY);
@@ -127,6 +127,7 @@ export default function GlobalZoomProvider({
     if (!el) return;
 
     const handleWheel = (e: WheelEvent) => {
+      if ((e.target as HTMLElement).closest("[data-local-zoom]")) return;
       if (e.ctrlKey) {
         e.preventDefault();
         const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
@@ -150,6 +151,7 @@ export default function GlobalZoomProvider({
       if (e.button !== 0) return;
       // 排除按钮、链接、输入框等交互元素
       const target = e.target as HTMLElement;
+      if(target.closest("[data-local-zoom]"))return;
       if (
         target.tagName === "BUTTON" ||
         target.tagName === "A" ||

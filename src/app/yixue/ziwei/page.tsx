@@ -736,7 +736,8 @@ export default function ZiweiPage() {
   const baziPillars = useMemo(() => {
     if (!result) return null;
     try {
-      const baziRes = solarToBazi({ year, month, day, hour, gender });
+      const linked=chartHandoffFromRecord(chartInputRef.current||{year,month,day,hour,minute:birthMinute,gender},"bazi");
+      const baziRes = solarToBazi({ ...(linked?.calculation||{year,month,day,hour,minute:birthMinute}), gender:linked?.gender||gender });
       return baziRes;
     } catch {
       return null;

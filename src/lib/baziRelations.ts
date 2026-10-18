@@ -1,5 +1,7 @@
 export type PillarRelation = {text:string;type:"he"|"chong"|"xing"|"po"|null};
 const GAN_HE=["甲己","乙庚","丙辛","丁壬","戊癸"];
+const GAN_WX:Record<string,string>={甲:"木",乙:"木",丙:"火",丁:"火",戊:"土",己:"土",庚:"金",辛:"金",壬:"水",癸:"水"};
+const KE:Record<string,string>={木:"土",土:"水",水:"火",火:"金",金:"木"};
 const GAN_CHONG=["甲庚","乙辛","丙壬","丁癸"];
 const ZHI_PAIRS:ReadonlyArray<readonly[string,string,"he"|"chong"|"xing"|"po"]>=[
  ["子丑","六合","he"],["寅亥","六合","he"],["卯戌","六合","he"],["辰酉","六合","he"],["巳申","六合","he"],["午未","六合","he"],
@@ -16,6 +18,7 @@ export function pillarRelations(pillars:ReadonlyArray<{gan:string;zhi:string}>,k
   if(kind==="gan"){
    if(GAN_HE.some(p=>hasPair(p,a,b)))out.push({text:prefix+"五合（合不等于化）",type:"he"});
    if(GAN_CHONG.some(p=>hasPair(p,a,b)))out.push({text:prefix+"相冲",type:"chong"});
+   if(KE[GAN_WX[a]]===GAN_WX[b]||KE[GAN_WX[b]]===GAN_WX[a])out.push({text:prefix+"五行相克",type:null});
   }else{
    for(const [p,label,type] of ZHI_PAIRS)if(hasPair(p,a,b))out.push({text:prefix+label,type});
    if(a===b&&"辰午酉亥".includes(a))out.push({text:prefix+"自刑",type:"xing"});

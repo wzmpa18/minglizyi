@@ -101,12 +101,12 @@ export default function CompassPage() {
       const raw = localStorage.getItem(LOC_KEY);
       if (raw) {
         const l = JSON.parse(raw) as SavedLoc;
-        if (typeof l.lat === "number" && typeof l.lon === "number") {
+        if (l.manual === true && typeof l.lat === "number" && typeof l.lon === "number") {
           setLat(l.lat);
           setLon(l.lon);
           setLocName(l.name || "自定义");
-          setLocManual(!!l.manual);
-        }
+          setLocManual(true);
+        } else { localStorage.removeItem(LOC_KEY); }
       }
       const nm = localStorage.getItem("yandao_compass_north") as NorthMode | null;
       if (nm === "magnetic" || nm === "true") setNorthMode(nm);
@@ -123,7 +123,7 @@ export default function CompassPage() {
   useEffect(() => {
     if (!mounted) return;
     const s: SavedLoc = { lat, lon, name: locName, manual: locManual };
-    try { localStorage.setItem(LOC_KEY, JSON.stringify(s)); } catch { /* ignore */ }
+    try { if(locManual)localStorage.setItem(LOC_KEY, JSON.stringify(s));else localStorage.removeItem(LOC_KEY); } catch { /* ignore */ }
   }, [mounted, lat, lon, locName, locManual]);
 
   useEffect(() => {

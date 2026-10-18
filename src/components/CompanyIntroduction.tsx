@@ -4,7 +4,7 @@ import Link from "next/link";
 import initial from "../../backend_deploy/companyProfile.default.json";
 export function CompanyIntroduction(){
  const [profile,setProfile]=useState(initial);
- useEffect(()=>{let active=true;fetch("/api/admin/poster-config/poster/config/public",{cache:"no-store"}).then(r=>r.json()).then(d=>{const p=d?.companyProfile;if(active&&p&&typeof p.companyName==="string"&&Array.isArray(p.products))setProfile({...initial,...p});}).catch(()=>{});return()=>{active=false;};},[]);
+ useEffect(()=>{let active=true;fetch("/api/admin/poster-config/poster/config/public",{cache:"no-store"}).then(r=>r.json()).then(d=>{const p=d?.companyProfile;if(active&&p){const next={...initial};for(const key of ["companyName","productName","introduction","services","website"] as const){if(typeof p[key]==="string")next[key]=p[key].slice(0,2000);}if(typeof p.enabled==="boolean")next.enabled=p.enabled;if(Array.isArray(p.products))next.products=p.products.filter((v:unknown)=>typeof v==="string").slice(0,10).map((v:string)=>v.slice(0,300));setProfile(next);}}).catch(()=>{});return()=>{active=false;};},[]);
  if(!profile.enabled)return null;
  let website=initial.website;try{const u=new URL(profile.website);if(u.protocol==="https:")website=u.href;}catch{}
  return <section aria-label="公司与产品介绍" className="m-3 rounded-xl border border-purple-100 bg-white p-4 text-sm text-gray-700">

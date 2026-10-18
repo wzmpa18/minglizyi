@@ -1,7 +1,7 @@
 "use client";
 import {useEffect,useMemo,useRef,useState} from "react";
 import {createPortal} from "react-dom";
-import {Body,EquatorFromVector,HelioVector,Horizon,Observer,RotateVector,Rotation_EQJ_ECL,Rotation_EQJ_EQD,Vector} from "astronomy-engine";
+import {MakeTime,Body,EquatorFromVector,HelioVector,Horizon,Observer,RotateVector,Rotation_EQJ_ECL,Rotation_EQJ_EQD,Vector} from "astronomy-engine";
 import {projectSky,projectSpace} from "@/lib/planetariumProjection";
 import {useBodyScrollLock} from "@/hooks/useBodyScrollLock";
 type Star={id:number;hip:number|null;name:string;ra:number;dec:number;mag:number;distancePc:number|null};
@@ -22,7 +22,7 @@ export function InteractivePlanetarium({date,latitude,longitude,bodies}:{date:Da
  const stars=useMemo(()=>{
   if(!catalogue)return[];
   const observer=new Observer(latitude,longitude,0),rotation=Rotation_EQJ_EQD(date);
-  return catalogue.stars.map(s=>{const a=s.ra*15*RAD,d=s.dec*RAD,x=Math.cos(d)*Math.cos(a),y=Math.cos(d)*Math.sin(a),z=Math.sin(d),eq=EquatorFromVector(RotateVector(rotation,new Vector(x,y,z,date))),hor=Horizon(date,observer,eq.ra,eq.dec,"normal");return {...s,azimuth:hor.azimuth,altitude:hor.altitude,x,y,z};});
+  return catalogue.stars.map(s=>{const a=s.ra*15*RAD,d=s.dec*RAD,x=Math.cos(d)*Math.cos(a),y=Math.cos(d)*Math.sin(a),z=Math.sin(d),eq=EquatorFromVector(RotateVector(rotation,new Vector(x,y,z,MakeTime(date)))),hor=Horizon(date,observer,eq.ra,eq.dec,"normal");return {...s,azimuth:hor.azimuth,altitude:hor.altitude,x,y,z};});
  // Star directions include precession; proper motion is not extrapolated.
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[catalogue,dateValue,latitude,longitude]);

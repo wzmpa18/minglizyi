@@ -1739,7 +1739,7 @@ export default function BaziPage(){
       if (inp.year) setYear(inp.year);
       if (inp.month) setMonth(inp.month);
       if (inp.day) setDay(inp.day);
-      if (inp.hour) setHour(inp.hour);
+      if (inp.hour !== undefined) setHour(inp.hour);
       if (inp.gender) setGender(inp.gender);
       if (inp.calType) setCalType(inp.calType);
       if (inp.minute !== undefined) setBirthMinute(inp.minute);
@@ -1816,6 +1816,9 @@ export default function BaziPage(){
     if (inp.hour !== undefined) setHour(inp.hour);
     if (inp.gender) setGender(inp.gender);
     if (inp.calType) setCalType(inp.calType);
+    if (inp.minute !== undefined) setBirthMinute(inp.minute);
+    if (inp.zaoWanZi !== undefined) setZaoWanZi(!!inp.zaoWanZi);
+    if (inp.xiaLing !== undefined) setXiaLing(!!inp.xiaLing);
     if (inp.useTrueSolar !== undefined) setZhenTaiyang(!!inp.useTrueSolar);
     if (inp.longitude !== undefined) setLongitude(inp.longitude);
     if (inp.birthPlace !== undefined) setBirthPlace(inp.birthPlace || "");

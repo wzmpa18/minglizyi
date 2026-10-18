@@ -50,6 +50,11 @@ function createRouter() {
       const result = ledger.apply(db(), transaction, policy(), req.account.user_id);
       res.json({ success: true, data: result });
     } catch (error) {
+      // Bounded operational diagnostics: no account, token, signed payload or
+      // transaction identifiers. They distinguish delivery failures from Apple UI success.
+      const message=typeof error?.message==='string'?error.message:'';
+      const reason=message.startsWith('此账号未配置')?'sandbox_not_enabled':message.startsWith('该苹果购买')?'account_mismatch':message.startsWith('购买所属账号')?'account_unavailable':message==='苹果购买验证未通过，请稍后重试'?'signature_rejected':'delivery_not_confirmed';
+      console.warn('[apple-iap] transaction rejected: '+reason);
       // Return only our controlled business errors, never SDK internals/JWS.
       res.status(409).json({ success: false, error: error.message === '苹果购买验证未通过，请稍后重试' || /^(该苹果购买|此账号未配置|购买所属账号)/.test(error.message) ? error.message : '苹果订单尚未确认，请勿重复购买，可稍后恢复购买' });
     }
