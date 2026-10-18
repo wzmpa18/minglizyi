@@ -94,3 +94,6 @@ work-liji/
 work-qizheng/
 work-ruler/
 work-verify/
+
+# Maintained pinned-artifact deployment, not a one-off Python scratch file.
+!scripts/deploy_verified_web_preview.py
