@@ -1,5 +1,10 @@
 name: Real iOS simulator study screenshots
 on:
+  push:
+    paths:
+      - '.github/workflows/ios-simulator-proof.yml'
+      - 'scripts/ios-simulator-proof.rb'
+      - 'scripts/ios-study-screenshots.swift'
   workflow_dispatch:
 permissions:
   contents: read
