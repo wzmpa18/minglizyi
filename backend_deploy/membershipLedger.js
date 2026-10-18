@@ -23,16 +23,27 @@ function capture(db, userId, now) {
   db.prepare('INSERT OR IGNORE INTO membership_baselines(user_id,level,expires_at,captured_at) VALUES(?,?,?,?)').run(String(userId), level, expires, now);
 }
 function calculate(baseline, grants, now) {
-  let level = normalize(baseline.level);
-  let end = level === 'basic' ? 0 : level === 'lifetime' || !baseline.expires_at ? Infinity : Date.parse(baseline.expires_at);
-  for (const grant of grants) {
-    if (grant.revoked_at != null || grant.purchased_at <= baseline.reset_at) continue;
+  let level = 'basic', end = 0;
+  const applyGrant = grant => {
+    if (grant.revoked_at != null || grant.purchased_at <= baseline.reset_at) return;
     if (end <= grant.purchased_at) { level = 'basic'; end = grant.purchased_at; }
     // A lower-tier renewal never downgrades an active higher-tier membership.
     if (levels.indexOf(grant.level) > levels.indexOf(level)) level = grant.level;
     if (grant.level === 'lifetime' || end === Infinity) end = Infinity;
     else end = Math.max(end, grant.purchased_at) + grant.days * 86400000;
+  };
+  // Restore history predating this ledger must first age on its own timeline.
+  // Otherwise an expired 2024 time card would extend a valid 2026 Android plan.
+  const capturedAt = baseline.captured_at;
+  for (const grant of grants) if (grant.purchased_at < capturedAt) applyGrant(grant);
+  const baseLevel = normalize(baseline.level);
+  const baseEnd = baseLevel === 'basic' ? 0 : baseLevel === 'lifetime' || !baseline.expires_at ? Infinity : Date.parse(baseline.expires_at);
+  if (end <= capturedAt) { level = 'basic'; end = capturedAt; }
+  if (baseEnd > capturedAt) {
+    if (levels.indexOf(baseLevel) > levels.indexOf(level)) level = baseLevel;
+    end = end === Infinity || baseEnd === Infinity ? Infinity : end + baseEnd - capturedAt;
   }
+  for (const grant of grants) if (grant.purchased_at >= capturedAt) applyGrant(grant);
   if (end <= now) return { level: 'basic', expiresAt: null };
   return { level, expiresAt: end === Infinity ? null : new Date(end).toISOString() };
 }

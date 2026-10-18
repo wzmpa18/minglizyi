@@ -27,7 +27,8 @@ import { reportConsumptionRebate } from "@/lib/inviteApi";
 import { redeemCode, getMyRedemptions } from "@/lib/redeemCodeStore";
 import { getToolConfig } from "@/lib/toolConfigStore";
 import { isPaymentsBlocked, PAYMENT_DISABLED_TIP } from "@/lib/platformGate";
-import { IS_GOOGLE_PLAY_BUILD } from "@/lib/releaseFeatures";
+import { IS_GOOGLE_PLAY_BUILD, IS_IOS_FULL_BUILD } from "@/lib/releaseFeatures";
+import AppleLearningStore from "@/components/AppleLearningStore";
 import { payForMembership, pollPaymentStatus } from "@/lib/paymentService";
 import { useNativePayQR } from "@/components/PayQRCodeModal";
 import { useServerPricing, mergePlansWithServer } from "@/lib/pricingStore";
@@ -37,6 +38,10 @@ import { isPromotionActiveFor } from "@/lib/salesPromotion";
 const BRAND = "#7B2FBE";
 
 export default function MembershipPage() {
+  return IS_IOS_FULL_BUILD ? <AppleLearningStore kind="membership" /> : <StandardMembershipPage />;
+}
+
+function StandardMembershipPage() {
   const { goBack } = useToolBack();
   const router = useRouter();
   // v25.0.47_9: Native扫码支付弹层（全场景兜底收款通道）

@@ -374,6 +374,7 @@ function broadcastLoginState(
     };
     localStorage.setItem("yandao_login_broadcast", JSON.stringify(message));
     localStorage.removeItem("yandao_login_broadcast");
+    window.dispatchEvent(new Event("yandao-auth-change"));
   } catch {
     // 广播失败不影响主流程
   }

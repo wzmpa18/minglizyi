@@ -67,6 +67,18 @@ on:
       - 'backend_deploy/paymentRoutes.js'
       - 'backend_deploy/paymentAiCredits.js'
       - 'backend_deploy/membershipLedger.js'
+      - 'backend_deploy/appleIap*'
+      - 'backend_deploy/apple-iap-runtime/**'
+      - 'backend_deploy/apple-root-certificates/**'
+      - 'backend_deploy/adminUnifiedRoutes.js'
+      - 'backend_deploy/accountDeleteRoutes.js'
+      - 'src/lib/appleIap.ts'
+      - 'src/lib/auth.ts'
+      - 'src/components/AppleLearningStore.tsx'
+      - 'src/components/ApplePurchaseInit.tsx'
+      - 'src/components/shared/brand-header.tsx'
+      - 'src/app/membership-agreement/page.tsx'
+      - 'scripts/apple-iap-*.test.cjs'
       - 'scripts/membership-ledger.test.cjs'
       - 'scripts/paid-ai-credits.test.cjs'
       - 'backend_deploy/middleware/auth.js'
@@ -127,6 +139,8 @@ jobs:
       - run: node --test scripts/sales-promotion.test.cjs
       - run: node --test scripts/paid-ai-credits.test.cjs
       - run: node --test scripts/membership-ledger.test.cjs
+      - run: node --test scripts/apple-iap-ledger.test.cjs
+      - run: node --test scripts/apple-iap-client.test.cjs
       - run: node --test scripts/content-sponsor.test.cjs
       - run: npx tsx --test scripts/acupoint-study.test.ts
       - run: node --test scripts/study-comments.test.cjs
@@ -138,6 +152,10 @@ jobs:
         run: |
           npm install --prefix "$RUNNER_TEMP/study-http-deps" --no-save --package-lock=false express@4.22.2 better-sqlite3@13.0.3 jsonwebtoken@9.0.3
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/study-comments-http.test.cjs
+      - name: Verify Apple signature rejection and authenticated purchase endpoints with real dependencies
+        run: |
+          npm ci --prefix backend_deploy/apple-iap-runtime --ignore-scripts
+          NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/apple-iap-http.test.cjs
       - name: Verify original edition chapter sequence and provenance
         run: |
           node --input-type=module <<'JS'

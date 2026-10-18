@@ -727,6 +727,7 @@ console.log('[Server] ✅ Admin路由已挂载: /api/admin/*');
 
 // ==================== 额外路由 ====================
 const extraRoutes = [
+  { file: 'appleIapRoutes', path: '/api/apple-iap', name: 'App Store学习商品购买与恢复' },
   { file: 'contentImportRoutes', path: '/api/admin/content-import', name: '内容导入' },
   { file: 'feedbackRoutes', path: '/api/feedback', name: '反馈' },
   { file: 'pointsConfigRoutes', path: '/api/admin/points-config', name: '积分配置' },

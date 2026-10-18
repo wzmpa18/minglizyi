@@ -28,6 +28,10 @@ on:
         description: '签名成功后上传 TestFlight'
         type: boolean
         default: false
+      release_build:
+        description: '唯一递增的苹果构建号（不得重用已上传的构建号）'
+        type: string
+        default: '8'
 
 jobs:
   verify-api-only:
@@ -46,7 +50,7 @@ jobs:
       APP_NAME: 言道国学
       BUNDLE_ID: com.yandaoguoxue.app
       RELEASE_VERSION: 25.0.115
-      RELEASE_BUILD: 7
+      RELEASE_BUILD: ${{ inputs.release_build || '8' }}
       PROFILE_NAME: yandao guoxue iOS App Store 20260902
 
     steps:

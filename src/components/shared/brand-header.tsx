@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { PUBLIC_PROMOTION_ENABLED } from "@/lib/releaseFeatures";
 
 interface BrandHeaderProps {
   title?: string;
@@ -47,7 +48,7 @@ export function BrandHeader({ title = "言道排盘", showBack = false, backUrl,
       )}
       <div style={{ textAlign: "center" }} onClick={onTitleClick} className={onTitleClick ? "cursor-pointer" : undefined}>
         <span className="text-white text-[18px] font-bold">{title}</span>
-        <div style={{ fontSize: "10px", fontWeight: "normal", opacity: 0.65, lineHeight: "1.4", color: "white" }}>yandao.vip 分享下载有礼</div>
+        <div style={{ fontSize: "10px", fontWeight: "normal", opacity: 0.65, lineHeight: "1.4", color: "white" }}>{PUBLIC_PROMOTION_ENABLED ? "yandao.vip 分享下载有礼" : "经典研读 · 传统文化学习"}</div>
       </div>
       {onEdit && (
         <button

@@ -9,11 +9,16 @@ import { callPayment, pollPaymentStatus } from "@/lib/paymentService";
 import { isPaymentsBlocked } from "@/lib/platformGate";
 import { useNativePayQR } from "@/components/PayQRCodeModal";
 import { isPromotionActiveFor } from "@/lib/salesPromotion";
-import { PUBLIC_AI_ENABLED } from "@/lib/releaseFeatures";
+import { PUBLIC_AI_ENABLED, IS_IOS_FULL_BUILD } from "@/lib/releaseFeatures";
+import AppleLearningStore from "@/components/AppleLearningStore";
 
 interface CreditBalance { credits: number; activePlan: boolean; entries: { purchased: number; remaining: number; expiresAt: string | null; createdAt: string }[] }
 
 export default function AICreditsPage() {
+  return IS_IOS_FULL_BUILD ? <AppleLearningStore kind="aiCredits" /> : <StandardAICreditsPage />;
+}
+
+function StandardAICreditsPage() {
   const router = useRouter();
   const { ai, promotion, ready } = useServerPricing();
   const [balance, setBalance] = useState<CreditBalance | null>(null);

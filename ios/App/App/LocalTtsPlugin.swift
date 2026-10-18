@@ -115,5 +115,8 @@ public class LocalTtsPlugin: CAPPlugin, CAPBridgedPlugin, AVSpeechSynthesizerDel
 }
 
 class GuoxueBridgeViewController: CAPBridgeViewController {
-    override func capacitorDidLoad() { bridge?.registerPluginInstance(LocalTtsPlugin()) }
+    override func capacitorDidLoad() {
+        bridge?.registerPluginInstance(LocalTtsPlugin())
+        bridge?.registerPluginInstance(AppleLearningStorePlugin())
+    }
 }
