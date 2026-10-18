@@ -96,6 +96,7 @@ on:
         type: choice
         default: tencent
         options:
+          - default
           - tencent
           - google
           - ios-full-learning
