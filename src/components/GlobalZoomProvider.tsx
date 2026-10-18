@@ -108,6 +108,8 @@ export default function GlobalZoomProvider({
     } catch {}
   }, [zoom]);
 
+  useEffect(()=>{document.body.dataset.screenZoomed=String(!zoomDisabled&&zoom>1);return()=>{delete document.body.dataset.screenZoomed;};},[zoom,zoomDisabled]);
+
   // ====== v25.0.21：从 100% 放大时弹自动关闭提醒（3秒） ======
   useEffect(() => {
     if (zoom > 1.0) {

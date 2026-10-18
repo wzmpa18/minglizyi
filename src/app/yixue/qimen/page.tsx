@@ -171,6 +171,7 @@ function SegmentedRow<T extends string>({
 // ============================================================================
 
 export default function QimenPage() {
+  const [chartFull,setChartFull]=useState(false);
   useIOSLearningRedirect("qimen"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
   const pageKey = "yixue_qimen"; const { showResult, savedParams, saveParams, goToResult } = useToolBack({ pageKey, eventName: "yixue-back", globalFlag: "__yixueBackHandled" });
   const [showForm, setShowForm] = useState(true);
@@ -518,13 +519,13 @@ export default function QimenPage() {
   // 宫格样式辅助函数
   const getPalaceStyle = (gongNum: number, isZhong: boolean) => {
     const p = result.palaces[gongNum - 1];
-    if (!p) return { backgroundColor: "#fff", border: "1px solid #ccc", padding: "2px", minHeight: "85px", display: "flex" as const, flexDirection: "column" as const, alignItems: "center", justifyContent: "center", position: "relative" as const, cursor: "default", transition: "background-color 0.15s" };
+    if (!p) return { backgroundColor: "#fff", border: "1px solid #ccc", padding: "2px", minHeight: "var(--qimen-cell-height, clamp(112px, 31vw, 145px))", display: "flex" as const, flexDirection: "column" as const, alignItems: "center", justifyContent: "center", position: "relative" as const, cursor: "default", transition: "background-color 0.15s" };
     const bg = p.jixing ? "#ffe0e0" : p.rumu ? "#fff3cd" : p.menpo ? "#e0f0ff" : "#fff";
     return {
       backgroundColor: bg,
       border: "1px solid #ccc",
       padding: "2px",
-      minHeight: "85px",
+      minHeight: "var(--qimen-cell-height, clamp(112px, 31vw, 145px))",
       display: "flex",
       flexDirection: "column" as const,
       alignItems: "center",
@@ -679,7 +680,9 @@ export default function QimenPage() {
       </table>
 
       {/* 九宫格排盘 */}
-      <div style={{ padding: "6px", border: "2px solid #333", margin: "4px 8px" }}>
+      <div data-local-zoom="true" style={chartFull?{position:"fixed",inset:0,zIndex:11000,background:"white",paddingTop:"calc(env(safe-area-inset-top, 0px) + 18px)",paddingBottom:"env(safe-area-inset-bottom, 0px)",overflow:"auto"}:undefined}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 12px"}}><span style={{fontSize:12,color:"#444"}}>九宫盘 · 点击宫位阅读</span><button type="button" onClick={()=>setChartFull(v=>!v)} style={{border:"1px solid #aaa",borderRadius:6,padding:"6px 12px",color:"#333"}}>{chartFull?"退出全屏":"全屏九宫"}</button></div>
+      <div style={{ padding: "2px", border: "2px solid #444", margin: "4px auto",width:chartFull?"min(98vw, calc(100dvh - 108px))":"calc(100% - 16px)","--qimen-cell-height":chartFull?"min(31vw, calc((100dvh - 125px)/3))":"clamp(112px, 31vw, 145px)"} as React.CSSProperties}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 0 }}>
           {LUOSHU_LAYOUT.flat().map((gongNum, idx) => {
             const p = result.palaces[gongNum - 1];
@@ -733,36 +736,36 @@ export default function QimenPage() {
                 ) : (
                   <>
                     {/* 八神（最上） */}
-                    <div style={{ fontSize: "11px", fontWeight: 500, color: getShenColor(p.tianShen), lineHeight: 1.2 }}>
+                    <div style={{ position:"absolute",top:16,left:12,fontSize: "14px", fontWeight: 500, color: getShenColor(p.tianShen), lineHeight: 1.2 }}>
                       {p.tianShen}
                     </div>
                     {/* 地八神（可选） */}
                     {formData.showDiShen && p.diShen && (
-                      <div style={{ fontSize: "9px", color: getShenColor(p.diShen), lineHeight: 1.1 }}>
+                      <div style={{position:"absolute",top:34,left:12,fontSize: "10px", color: getShenColor(p.diShen), lineHeight: 1.1 }}>
                         {p.diShen}
                       </div>
                     )}
                     {/* 天盘天干 */}
-                    <div style={{ fontSize: "18px", fontWeight: 700, color: getGanColor(p.tianPanGan), lineHeight: 1.2 }}>
+                    <div style={{position:"absolute",top:"45%",right:10,fontSize: "22px", fontWeight: 700, color: getGanColor(p.tianPanGan), lineHeight: 1.2 }}>
                       {p.tianPanGan}
                       {p.tianPanJiXing && <span style={{ fontSize: "10px", color: COLOR_RED, marginLeft: "1px" }}>刑</span>}
                       {p.tianPanRuMu && <span style={{ fontSize: "10px", color: "#a06319", marginLeft: "1px" }}>墓</span>}
                     </div>
                     {/* 九星 */}
-                    <div style={{ fontSize: "11px", fontWeight: 500, color: getXingColor(p.star), lineHeight: 1.2 }}>
+                    <div style={{position:"absolute",top:"47%",left:18,fontSize: "15px", fontWeight: 500, color: getXingColor(p.star), lineHeight: 1.2 }}>
                       {p.star}
                     </div>
                     {/* 八门 */}
-                    <div style={{ fontSize: "12px", fontWeight: 700, color: getMenColor(p.door), lineHeight: 1.2 }}>
-                      {p.door ? p.door.replace("门", "") : ""}
+                    <div style={{position:"absolute",bottom:12,left:14,fontSize: "16px", fontWeight: 700, color: getMenColor(p.door), lineHeight: 1.2 }}>
+                      {p.door || ""}
                     </div>
                     {/* 地盘天干 */}
-                    <div style={{ fontSize: "13px", fontWeight: 500, color: getGanColor(p.diPanGan), lineHeight: 1.2, textDecoration: "underline", textUnderlineOffset: "2px" }}>
+                    <div style={{position:"absolute",bottom:10,right:10,fontSize: "16px", fontWeight: 500, color: getGanColor(p.diPanGan), lineHeight: 1.2 }}>
                       {p.diPanGan}
                     </div>
                     {/* 暗干 */}
                     {p.anGan && (
-                      <div style={{ fontSize: "9px", color: getGanColor(p.anGan), lineHeight: 1.1, position: "absolute", bottom: "1px", right: "2px" }}>
+                      <div style={{ fontSize: "12px", color: "#555", lineHeight: 1.1, position: "absolute", top: "48%", left: "2px" }}>
                         {p.anGan}
                       </div>
                     )}
@@ -784,6 +787,7 @@ export default function QimenPage() {
         </div>
       </div>
 
+      </div>
       {/* 宫位解读面板 */}
       {interpretPanel && (
         <div style={{

@@ -2,8 +2,8 @@ import Link from "next/link";
 
 const ENTRIES = [
   { href: "/zhongyi/classic", label: "典籍阅读", detail: "按书名与篇章查阅" },
-  { href: "/zhongyi/herb", label: "中药资料", detail: "名称检索与知识整理" },
-  { href: "/zhongyi/formula", label: "方剂资料", detail: "组成与术语学习" },
+  { href: "/zhongyi/herb", label: "中药性味归经", detail: "药性、药味与归经检索" },
+  { href: "/zhongyi/formula", label: "经典方剂", detail: "组成、配伍与原典对照" },
   { href: "/zhongyi/meridian", label: "经络穴位", detail: "图文对照与名称查询" },
   { href: "/academy/astronomy", label: "天文馆", detail: "时间地点与日月行星" },
   { href: "/zhongyi/yunqi", label: "五运六气", detail: "主客气对照与原典听学" },

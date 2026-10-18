@@ -103,7 +103,7 @@ function isInteractiveElement(el: HTMLElement | null): boolean {
   // 明确禁用滑动返回的区域
   if (
     el.closest(
-      '[role="dialog"], [data-modal], [data-drawer], [data-swipeback-disabled]'
+      '[role="dialog"], [data-modal], [data-drawer], [data-swipeback-disabled], [data-local-zoom]'
     )
   ) {
     return true;
@@ -402,6 +402,7 @@ export function useSwipeBack(
     // ==================== 事件处理 ====================
 
     function handleTouchStart(e: TouchEvent): void {
+      if(document.body.dataset.screenZoomed==="true")return;
       const s = stateRef.current;
 
       // 排除首页、底部Tab主页面等（trailingSlash:true 下 pathname 带尾斜杠，需规范化）

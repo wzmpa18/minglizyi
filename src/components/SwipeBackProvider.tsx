@@ -33,6 +33,7 @@ export default function SwipeBackProvider({
   return (
     <div
       ref={contentRef}
+      data-swipe-back-root="true"
       style={{
         position: "relative",
         // 确保容器有背景色，使遮罩在非滑动状态下被完全遮盖

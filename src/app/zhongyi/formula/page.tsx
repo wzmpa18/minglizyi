@@ -1,4 +1,5 @@
 "use client";
+import { TcmStudyRoadmap } from "@/components/TcmStudyRoadmap";
 
 import { SectionGate } from "@/components/SectionGate";
 import { useState, useEffect, useMemo, Suspense } from "react";
@@ -174,6 +175,7 @@ function FormulaListPage() {
       </div>
 
       {/* 方剂卡片列表 */}
+      <TcmStudyRoadmap kind="formula"/>
       <div style={{ padding: "0 12px" }}>
         {filteredFormulas.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px 20px", color: "#999" }}>

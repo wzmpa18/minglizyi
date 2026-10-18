@@ -6,6 +6,7 @@ import { Solar, Lunar } from "lunar-javascript";
 import IcpFooter from "@/components/IcpFooter";
 import AnnouncementBar from "@/components/AnnouncementBar";
 import { isLegacyIOSLearningProfile } from "@/lib/platformGate";
+import { IS_IOS_FULL_BUILD } from "@/lib/releaseFeatures";
 import LearningEntryPanel from "@/components/LearningEntryPanel";
 import { yunqiStudyAt } from "@/lib/astronomyStudy";
 
@@ -263,7 +264,7 @@ export default function HomePage(){
       {/* 官方公告栏（永久功能：升级/维护通知，未登录可见） */}
       <AnnouncementBar />
 
-      <LearningEntryPanel />
+      {(IS_IOS_FULL_BUILD || iosProfile) && <LearningEntryPanel />}
 
       {/* 双大按钮（IOS-4.3B：iOS 版第一入口为"易学学习"——教育定位；Web/Android 保持易学排盘） */}
       <div className="mt-3 flex gap-3 px-3">
@@ -412,7 +413,8 @@ export default function HomePage(){
           </div>
           )}
 
-          <IcpFooter />
+          {!IS_IOS_FULL_BUILD && !iosProfile && <LearningEntryPanel />}
+      <IcpFooter />
         </div>
       </div>
 

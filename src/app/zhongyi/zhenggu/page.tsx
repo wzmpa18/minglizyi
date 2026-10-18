@@ -245,8 +245,7 @@ export default function ZhengguPage() {
 
   return (
     <div style={{ maxWidth: "420px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f5f5f5" }}>
-      <PageLoginGuard />
-      <BrandHeader title="正骨专区" showBack backUrl="/zhongyi" />
+        <BrandHeader title="正骨专区" showBack backUrl="/zhongyi" />
 
       {/* 头部横幅 */}
       <div style={{ padding: "12px 12px 0" }}>

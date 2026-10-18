@@ -17,6 +17,10 @@ on:
       - 'scripts/zhenggu-preview-http.test.cjs'
       - 'public/assets/anatomy/**'
       - 'src/components/GlobalZoomProvider.tsx'
+      - 'src/components/InteractivePlanetarium.tsx'
+      - 'src/lib/planetariumProjection.ts'
+      - 'public/assets/astronomy/**'
+      - 'scripts/planetarium-projection.test.ts'
       - 'src/lib/baziRelations.ts'
       - 'src/components/QizhengDetailedChart.tsx'
       - 'scripts/chart-corrections.test.ts'
@@ -205,6 +209,7 @@ jobs:
       - run: npx tsx --test scripts/astronomy-study.test.ts
       - run: npx tsx --test scripts/liuren-calendar.test.ts
       - run: npx tsx --test scripts/chart-corrections.test.ts
+      - run: npx tsx --test scripts/planetarium-projection.test.ts
       - run: node --experimental-strip-types --test scripts/offline-versions.test.cjs
       - run: node --experimental-strip-types --test scripts/offline-download-link.test.cjs
       - run: node --test scripts/learning-cors.test.cjs

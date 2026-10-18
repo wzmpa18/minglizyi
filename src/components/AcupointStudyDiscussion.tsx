@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect,useRef,useState } from "react";
 import { getUserProfile,getUserToken } from "@/lib/auth";
 import { countStudyCharacters,validateStudyText,studyRequest,type StudyComment,type StudyCommentConfig } from "@/lib/studyComments";
@@ -51,7 +52,7 @@ function PointDiscussion({targetId,title}:{targetId:string;title:string}){
     </div>
     {!config?.enabled&&!loading&&<p style={{color:'#666'}}>学习讨论暂未开放。输入仅保存在本机，尚未发表。</p>}
     {message&&<p role="status" style={{color:'#8D3800'}}>{message}</p>}
-    <div style={{display:'flex',gap:12,margin:'10px 0'}}><button onClick={()=>void load()} disabled={loading||busy}>刷新留言</button><a href="/profile/feedback/">联系开发者</a></div>
+    <div style={{display:'flex',gap:12,margin:'10px 0'}}><button onClick={()=>void load()} disabled={loading||busy}>刷新留言</button><Link href="/profile/feedback/">用户反馈</Link></div>
     {mine.filter(item=>item.status==='PENDING').map(item=><div key={item.id} style={{padding:8,background:'#FFF8E1'}}>我的留言 #{item.id} · 待审核 <button disabled={busy} onClick={()=>{if(window.confirm('撤回这条待审留言？'))void action(`/comment/${item.id}`,'DELETE');}}>撤回</button></div>)}
     {loading?<p>正在加载…</p>:comments.length===0?<p style={{color:'#777'}}>暂无已通过审核的学习留言。</p>:comments.map(comment=><article key={comment.id} style={{padding:'12px 0',borderTop:'1px solid #EEE'}}>
       <div style={{fontWeight:700,color:'#6C2D98'}}>{comment.authorName}{comment.pinned?' · 置顶解答':''}</div>

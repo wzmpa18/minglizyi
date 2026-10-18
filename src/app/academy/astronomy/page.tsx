@@ -1,4 +1,5 @@
 "use client";
+import { InteractivePlanetarium } from "@/components/InteractivePlanetarium";
 import { SectionGate } from "@/components/SectionGate";
 
 import { useEffect, useMemo, useState } from "react";
@@ -88,6 +89,7 @@ function AstronomyStudyContent() {
     <div className="mt-3 flex flex-wrap items-center gap-3"><button type="button" disabled={locating} onClick={() => void locate()} className="rounded-lg border border-[#9cddd4] px-4 py-3 text-sm font-bold text-[#a9e0d8] disabled:opacity-50">{locating ? "正在定位…" : "使用当前位置"}</button><span className="text-xs text-[#a9bfce]">仅在本机使用 · 可拒绝</span></div>
     {locationMessage && <p role="status" className="mt-2 text-xs leading-6 text-[#bcd3df]">{locationMessage}</p>}
     <section aria-label="天空时间演示" className="mt-4 rounded-2xl border border-[#294251] p-4"><h2 className="font-bold">让天空随时间变化</h2><div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => advanceTime(-stepMinutes)} className="rounded-lg border border-[#3e5d70] px-3 py-2 text-sm">退一步</button><button type="button" aria-pressed={timePlaying} onClick={() => setTimePlaying(old => !old)} className="rounded-lg bg-[#9cddd4] px-4 py-2 text-sm font-bold text-[#102433]">{timePlaying ? "暂停时间演示" : "播放时间演示"}</button><button type="button" onClick={() => advanceTime(stepMinutes)} className="rounded-lg border border-[#3e5d70] px-3 py-2 text-sm">进一步</button></div><label className="mt-3 block text-xs text-[#a9bfce]">每步推进<select aria-label="天文馆时间步长" value={stepMinutes} onChange={event => setStepMinutes(Number(event.target.value))} className="ml-3 rounded border border-[#3e5d70] bg-[#081827] p-2 text-white"><option value={10}>10分钟</option><option value={60}>1小时</option><option value={1440}>1天</option><option value={10080}>7天</option></select></label><p className="mt-3 text-xs leading-6 text-[#9eb5c6]">支持公元1—3000年（统一使用延伸公历与固定UTC+8，历史日期须先换算）。远古或未来结果用于计算演示，未承诺逐年、逐天体的统一观测精度；古代地球自转与历法换算会增加误差。</p></section>
+    <InteractivePlanetarium date={parseChinaTime(applied.time)} latitude={applied.lat} longitude={applied.lon} bodies={sky.bodies}/>
     <section id="sky-view" aria-label="日月行星观测图" className="mt-4 rounded-2xl border border-[#294251] p-4">
       <h2 className="text-lg font-bold">仰望天空</h2><p className="mt-2 text-xs leading-6 text-[#9eb5c6]">{formatChinaTime(parseChinaTime(applied.time))} · 北纬{applied.lat}° · 东经{applied.lon}°。中心为天顶，圆周为地平线，面向天空时东在左。这里只绘出地平线上方的日月行星，不是完整恒星星图。</p>
       <svg viewBox="0 0 360 360" role="img" aria-label="天顶投影，北在上东在左；天体数值见下方列表" className="mx-auto w-full max-w-md">

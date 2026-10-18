@@ -86,7 +86,7 @@ function HerbListPage() {
     } else {
       herbs = searchFullHerbs('');
     }
-    return herbs.filter(h=>(!natureFilter||(h.nature||"").includes(natureFilter))&&(!tasteFilter||(h.taste||"").includes(tasteFilter))&&(!meridianFilter||(h.meridian||"").includes(meridianFilter)));
+    return herbs.filter(h=>(!natureFilter||(h.nature||"").includes(natureFilter))&&(!tasteFilter||(h.taste||"").includes(tasteFilter))&&(!meridianFilter||(meridianFilter==="心"?/心(?!包)/.test(h.meridian||""):(h.meridian||"").includes(meridianFilter))));
   }, [searchQuery, activeCategory, dbLoaded,natureFilter,tasteFilter,meridianFilter]);
 
   const handleHerbClick = (herb: TcmHerb) => {

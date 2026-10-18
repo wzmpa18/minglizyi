@@ -450,7 +450,7 @@ function MeridianListPage() {
 
   const filteredAcupoints = useMemo(() => {
     if (!searchQuery.trim()) return [];
-    if (activeTab === "dong") return searchDongAcupoints(searchQuery).slice(0, 10);
+    if (activeTab === "dong") return searchDongAcupoints(searchQuery);
     if (activeTab === "others") return [];
     return searchAcupoints(searchQuery).slice(0, 10);
   }, [searchQuery, dbLoaded, activeTab]);
@@ -1025,6 +1025,7 @@ function DongAcupointDetailPage({ acupointName }: { acupointName: string }) {
         <p style={{ margin: 0, fontSize: "12px", color: "#C62828", fontWeight: "bold", textAlign: "center" }}>{PROFESSIONAL_WARNING}</p>
       </div>
 
+      <p style={{padding:"12px",background:"#fff7e6",color:"#6b4e1d",fontSize:12,lineHeight:1.7}}>董氏奇穴学习整理：当前收录{DONG_ACUPOINTS_DB.length}项，并非董氏体系全集。DT编号为本应用内部索引，定位与针法尚未完成专业逐项校核，不能据此自行针刺；不同传承版本需对照来源。</p>
       {/* 穴位信息卡片 */}
       <div style={{ margin: "12px", background: "white", borderRadius: "16px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
         <div style={{ padding: "16px", background: "linear-gradient(135deg, #FFF8E1 0%, white 100%)", borderBottom: "1px solid #f0f0f0" }}>

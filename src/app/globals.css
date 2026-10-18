@@ -584,3 +584,5 @@ body.modal-open.nav-hide #app-bottom-nav {
   position: absolute;
   inset: -6px;
 }
+
+body[data-screen-zoomed="true"] [data-swipe-back-root] { touch-action: pan-x pan-y !important; }

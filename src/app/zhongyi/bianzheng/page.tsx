@@ -1,4 +1,5 @@
 "use client";
+import { TcmStudyRoadmap } from "@/components/TcmStudyRoadmap";
 
 import { SectionGate } from "@/components/SectionGate";
 import { useState } from "react";
@@ -284,6 +285,7 @@ function BianZhengPageOriginal() {
   return (
     <div className="mx-auto max-w-[420px] min-h-screen" style={{ backgroundColor: "#0f1419" }}>
       <BrandHeader title="辨证学习" showBack={true} backUrl="/zhongyi" />
+      <TcmStudyRoadmap/>
 
       {/* 页面标题 */}
       <div className="px-4 pt-3 mb-3">
