@@ -33,6 +33,21 @@ const DEFAULT_SETTINGS: ReaderSettings = {
   eyeCareMode: false,
 };
 
+function ClassicSourceNotice({ book }: { book: ClassicBook }) {
+  return <aside style={{ margin: '12px 16px', padding: '12px', borderRadius: 10, background: '#f3edf7', color: '#593473', fontSize: 12, lineHeight: 1.7 }}>
+    {book.sourceUrl ? <>
+      <strong>原文来源：{book.sourceName}</strong>
+      <p>{book.verification}</p>
+      <p>{book.license}</p>
+      <a href={book.sourceRevisionUrl || book.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>查看本次收录的来源版本</a>
+    </> : <>
+      <strong>学习整理资料</strong>
+      <p>本条目含节选或 AI 辅助整理内容，尚未逐字校勘，不作为古籍校核全文。原有章节和学习功能继续保留。</p>
+    </>}
+    <p>仅供文献学习，不作为个人诊断、处方或操作依据。</p>
+  </aside>;
+}
+
 function ClassicPageInner() {
   const searchParams = useSearchParams();
   const bookId = searchParams.get('book');
@@ -156,7 +171,7 @@ function ClassicHomePage() {
                   <div style={{ fontSize: '16px', fontWeight: 600, color: '#333', marginBottom: '4px' }}>{book.name}</div>
                   <div style={{ fontSize: '12px', color: '#9C27B0', marginBottom: '6px' }}>{book.dynasty} · {book.author}</div>
                   <div style={{ fontSize: '13px', color: '#666', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{book.description}</div>
-                  <div style={{ fontSize: '11px', color: '#999', marginTop: '6px' }}>共 {book.chapters.length} 篇</div>
+                  <div style={{ fontSize: '11px', color: '#777', marginTop: '6px' }}>共 {book.chapters.length} 篇 · {book.sourceUrl ? '原文篇章齐备 · 来源可查' : '学习整理 · 含节选或 AI 补充'}</div>
                 </div>
               </div>
             </Link>
@@ -201,6 +216,7 @@ function BookTocPage({ bookId }: { bookId: string }) {
           <h1 style={{ fontSize: '18px', fontWeight: 600, margin: 0, flex: 1 }}>{book.name}</h1>
         </div>
         <div style={{ fontSize: '12px', opacity: 0.8, marginBottom: '12px' }}>{book.dynasty} · {book.author} · 共{book.chapters.length}篇</div>
+        {book.sourceUrl && <p style={{ fontSize: 12, marginBottom: 12 }}>原文篇章齐备 · 来源版本可追溯</p>}
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <input
             type="text"
@@ -383,6 +399,8 @@ function ReaderPage({ bookId, chapterId }: { bookId: string; chapterId: string }
         </button>
         <button onClick={() => setShowSettings(!showSettings)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '20px', cursor: 'pointer', padding: '8px' }}>Aa</button>
       </div>
+
+      <ClassicSourceNotice book={book} />
 
       {/* 目录侧栏 */}
       {showToc && (

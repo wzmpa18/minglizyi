@@ -457,6 +457,7 @@ export default function ZiweiPage() {
 
   // ---- 视图模式 ----
   const [viewMode, setViewMode] = useState<"sihua" | "sanhe" | "feixing">("sanhe");
+  const [professionalLayout, setProfessionalLayout] = useState(false);
 
   // ---- 三方四正高亮宫位（地支索引 0-11，null 表示无高亮） ----
   const [focusedPalace, setFocusedPalace] = useState<number | null>(null);
@@ -507,7 +508,7 @@ export default function ZiweiPage() {
     if (!outer || !inner) return;
     const update = () => {
       const w = outer.clientWidth;
-      setChartScale(Math.min(1, w / CHART_DESIGN_W));
+      setChartScale(Math.min(professionalLayout ? 1.6 : 1, w / CHART_DESIGN_W));
       setChartInnerH(inner.scrollHeight);
     };
     update();
@@ -515,7 +516,7 @@ export default function ZiweiPage() {
     ro.observe(outer);
     ro.observe(inner);
     return () => ro.disconnect();
-  }, [result, viewMode]);
+  }, [result, viewMode, professionalLayout]);
   const [selectedClient, setSelectedClient] = useState<Client|null>(null);
   // v25.0.88: 命主档案（跨工具共享）
   const [mingzhu, setMingzhu] = useState<MingzhuProfile | null>(null);
@@ -1148,7 +1149,7 @@ export default function ZiweiPage() {
 
   return (
     <div className="bg-[#ededed] min-h-screen flex justify-center">
-      <div className="w-full" style={{ maxWidth: "420px", paddingBottom: "10px" }}>
+      <div className="w-full" style={{ maxWidth: professionalLayout ? "720px" : "420px", paddingBottom: "10px" }}>
       {/* 输入表单 DatePicker 弹窗 */}
       <DatePicker onRecordImport={applyMingzhuProfile} onRecordRestore={handleRestoreHistory}
         show={showForm}
@@ -1219,7 +1220,19 @@ export default function ZiweiPage() {
       {/* 排盘结果 */}
       {/* ================================================================ */}
       {result && (
-        <div className="px-2">
+        <div className={professionalLayout ? "px-0" : "px-2"}>
+          <div role="group" aria-label="紫微盘面布局" className="mb-1 flex flex-wrap items-center gap-1 border-y border-gray-300 bg-white p-1">
+            <button type="button" aria-pressed={professionalLayout} onClick={() => setProfessionalLayout(!professionalLayout)}
+              className="rounded border border-purple-200 px-2 py-1 text-xs font-semibold text-purple-800">
+              {professionalLayout ? "返回标准盘面" : "专业大盘"}
+            </button>
+            {(["feixing", "sanhe", "sihua"] as const).map((mode) => <button type="button" key={mode}
+              aria-pressed={viewMode === mode} onClick={() => { setViewMode(mode); setFocusedPalace(null); }}
+              className="rounded border px-2 py-1 text-xs" style={{ background: viewMode === mode ? BRAND_PURPLE : "#f5f5f5", color: viewMode === mode ? "white" : "#444" }}>
+              {{ feixing: "飞星", sanhe: "三合", sihua: "四化" }[mode]}
+            </button>)}
+            <button type="button" onClick={() => setShowForm(true)} className="ml-auto px-2 py-1 text-xs text-purple-800">重新排盘</button>
+          </div>
           {/* S2-4: 真太阳时修正说明（勾选真太阳时后显示） */}
           {solarCorrection && (
             <div className="mb-1 rounded-lg border border-[#7B2FBE] bg-[#F3EDF7] px-3 py-1.5 text-[11px] leading-relaxed text-[#5B21B6]">
@@ -1300,7 +1313,7 @@ export default function ZiweiPage() {
                 </svg>
 
                 {/* 4x4 宫格仅纵向收紧约 10%，保留原列宽、内容和算法；外层仍等比适配屏宽。 */}
-                <div data-testid="ziwei-palace-grid" className="grid grid-cols-4 grid-rows-4" style={{ position: "relative", zIndex: 1, aspectRatio: "0.84" }}>
+                <div data-testid="ziwei-palace-grid" data-layout={professionalLayout ? "professional" : "standard"} className="grid grid-cols-4 grid-rows-4" style={{ position: "relative", zIndex: 1, aspectRatio: professionalLayout ? "0.74" : "0.84" }}>
                   {/* 12宫位卡片 */}
                   {GRID_4X4.flat().map((idx, pos) => {
                     // 中心 4 格合并为命宫详情

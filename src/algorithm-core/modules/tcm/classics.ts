@@ -19,6 +19,11 @@ export interface ClassicBook {
   author: string;
   description: string;
   chapters: ClassicChapter[];
+  sourceName?: string;
+  sourceUrl?: string;
+  sourceRevisionUrl?: string;
+  license?: string;
+  verification?: string;
 }
 
 // 典籍数据（精选核心章节，原文保留原貌）
@@ -5408,6 +5413,7 @@ const CLASSICS_DATA: ClassicBook[] = [
 // v25.0.49: 混元AI全量导入——外挂数据模块（现有典籍章节补全 + 新增典籍）
 // 生成管道：服务器混元AI批量生成 → scripts合入 classicsExtra.ts → 此处自动合并生效
 import { CHAPTER_APPENDS, EXTRA_BOOKS } from "./classicsExtra";
+import nanjingOriginal from "@/data/nanjingOriginal.json";
 
 // 合并后完整书库（内置数据 + 补全章节 + 新增典籍）
 function buildMergedBooks(): ClassicBook[] {
@@ -5415,7 +5421,9 @@ function buildMergedBooks(): ClassicBook[] {
     const extra = CHAPTER_APPENDS[b.id];
     return extra && extra.length > 0 ? { ...b, chapters: [...b.chapters, ...extra] } : b;
   });
-  return [...merged, ...EXTRA_BOOKS];
+  // Keep every existing entry and link; the independently sourced edition is
+  // additive, and must not be confused with the older AI-assisted study notes.
+  return [nanjingOriginal, ...merged, ...EXTRA_BOOKS];
 }
 
 // 导出函数

@@ -1,0 +1,34 @@
+name: Study content and layout quality
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      - run: npx tsc --noEmit --incremental false
+      - name: Verify original edition chapter sequence and provenance
+        run: |
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          import assert from 'node:assert/strict';
+          const book = JSON.parse(fs.readFileSync('src/data/nanjingOriginal.json', 'utf8'));
+          assert.equal(book.chapters.length, 81);
+          assert.equal(new Set(book.chapters.map(c => c.id)).size, 81);
+          book.chapters.forEach((chapter, index) => {
+            assert.equal(chapter.id, `nanjing-original-${index + 1}`);
+            assert.ok(chapter.content.length >= 20);
+            assert.ok(!chapter.content.includes('【白话提要】'));
+          });
+          assert.match(book.sourceRevisionUrl, /^https:\/\/zh\.wikisource\.org\/w\/index\.php\?oldid=\d+$/);
+          assert.ok(book.license && book.verification && book.contentSha256.length === 64);
+          console.log('PASS: 81 attributed original chapters; no AI-summary blocks.');
+          JS
