@@ -1,0 +1,16 @@
+{
+  "appId": "6807592575",
+  "bundleId": "com.yandaoguoxue.app",
+  "revision": 1,
+  "priceAuthorization": "2026-10-18负责人同意中国区采用不高于安卓八折活动价的最近苹果价档；安卓基础价不变。此目录不表示付款功能已上线。",
+  "products": [
+    { "key": "monthly", "productId": "com.yandaoguoxue.app.membership.monthly.v1", "type": "NON_RENEWING_SUBSCRIPTION", "kind": "membership", "days": 30, "androidBasePrice": 37, "chinaPrice": 29, "name": "月度学习会员（30天）", "description": "30天学习会员，不自动续费；具体学习权益见会员页。", "englishName": "Monthly Learning Membership", "englishDescription": "30-day learning access. No auto-renewal." },
+    { "key": "quarterly", "productId": "com.yandaoguoxue.app.membership.quarterly.v1", "type": "NON_RENEWING_SUBSCRIPTION", "kind": "membership", "days": 90, "androidBasePrice": 99, "chinaPrice": 79, "name": "季度学习会员（90天）", "description": "90天学习会员，不自动续费；具体学习权益见会员页。", "englishName": "Quarterly Learning Membership", "englishDescription": "90-day learning access. No auto-renewal." },
+    { "key": "yearly", "productId": "com.yandaoguoxue.app.membership.yearly.v1", "type": "NON_RENEWING_SUBSCRIPTION", "kind": "membership", "days": 365, "androidBasePrice": 374, "chinaPrice": 299, "name": "年度学习会员（365天）", "description": "365天学习会员，不自动续费；具体学习权益见会员页。", "englishName": "Annual Learning Membership", "englishDescription": "365-day learning access. No auto-renewal." },
+    { "key": "lifetime", "productId": "com.yandaoguoxue.app.membership.lifetime.v1", "type": "NON_CONSUMABLE", "kind": "membership", "days": null, "androidBasePrice": 3600, "chinaPrice": 2849, "name": "终身学习会员", "description": "一次购买永久学习会员；具体学习权益见会员页。", "englishName": "Lifetime Learning Membership", "englishDescription": "One-time purchase for lifetime access." },
+    { "key": "pack_10", "productId": "com.yandaoguoxue.app.ai.credits10.v1", "type": "CONSUMABLE", "kind": "aiCredits", "count": 10, "androidBasePrice": 28, "chinaPrice": 22, "name": "AI学习点数10点", "description": "10点通用AI学习额度，购买点数不过期；专项工具另计。", "englishName": "10 AI Learning Credits", "englishDescription": "10 general AI credits. No expiration." },
+    { "key": "pack_50", "productId": "com.yandaoguoxue.app.ai.credits50.v1", "type": "CONSUMABLE", "kind": "aiCredits", "count": 50, "androidBasePrice": 130, "chinaPrice": 104, "name": "AI学习点数50点", "description": "50点通用AI学习额度，购买点数不过期；专项工具另计。", "englishName": "50 AI Learning Credits", "englishDescription": "50 general AI credits. No expiration." },
+    { "key": "pack_100", "productId": "com.yandaoguoxue.app.ai.credits100.v1", "type": "CONSUMABLE", "kind": "aiCredits", "count": 100, "androidBasePrice": 200, "chinaPrice": 160, "name": "AI学习点数100点", "description": "100点通用AI学习额度，购买点数不过期；专项工具另计。", "englishName": "100 AI Learning Credits", "englishDescription": "100 general AI credits. No expiration." },
+    { "key": "pack_500", "productId": "com.yandaoguoxue.app.ai.credits500.v1", "type": "CONSUMABLE", "kind": "aiCredits", "count": 500, "androidBasePrice": 800, "chinaPrice": 639, "name": "AI学习点数500点", "description": "500点通用AI学习额度，购买点数不过期；专项工具另计。", "englishName": "500 AI Learning Credits", "englishDescription": "500 general AI credits. No expiration." }
+  ]
+}
