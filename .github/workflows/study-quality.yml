@@ -71,6 +71,7 @@ on:
       - 'backend_deploy/middleware/activeAccount.js'
       - 'backend_deploy/feedbackRoutes.js'
       - 'src/lib/feedbackService.ts'
+      - 'src/app/admin/feedback/**'
       - 'src/app/ai-credits/page.tsx'
       - 'src/lib/paymentService.ts'
       - 'src/app/profile/feedback/page.tsx'
