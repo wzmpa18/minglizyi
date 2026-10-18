@@ -1,5 +1,6 @@
 "use client";
 
+import { useToolMatrix } from "@/lib/sectionGate";
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { calculateZiwei, solarToBazi, calcTrueSolarTime } from "@/algorithm-core";
 import {
@@ -459,6 +460,10 @@ export default function ZiweiPage() {
   // ---- 视图模式 ----
   const [viewMode, setViewMode] = useState<"sihua" | "sanhe" | "feixing">("sanhe");
   const [professionalLayout, setProfessionalLayout] = useState(false);
+  const {tools: toolMatrix} = useToolMatrix();
+  const ziweiControls = toolMatrix.ziwei;
+  const aiVisible = ziweiControls?.aiEnabled !== false;
+  const shareVisible = ziweiControls?.shareEnabled !== false;
 
   // ---- 三方四正高亮宫位（地支索引 0-11，null 表示无高亮） ----
   const [focusedPalace, setFocusedPalace] = useState<number | null>(null);
@@ -1100,10 +1105,10 @@ export default function ZiweiPage() {
 
       const baseContext = contextData || (() => {
         if (!result) return "";
-        const palaceSummary = result.palaces.map(p => 
+        const palaceSummary = result.palaces.map(p =>
           `${p.name}(${p.heavenlyStem}${p.earthlyBranch}): 主星[${(p.majorStars||[]).join(",")}] 辅星[${(p.auspiciousStars||[]).join(",")}] 煞星[${(p.shaStars||[]).join(",")}]`
         ).join("\n");
-        const sihua = result.sihua ? 
+        const sihua = result.sihua ?
           `化禄:${result.sihua.huaLu?.star||""} 化权:${result.sihua.huaQuan?.star||""} 化科:${result.sihua.huaKe?.star||""} 化忌:${result.sihua.huaJi?.star||""}` : "";
         return `生年干支：${result.heavenlyStem}${result.earthlyBranch}\n命宫：${result.earthlyBranchOfSoulPalace}\n身宫：${result.earthlyBranchOfBodyPalace}\n五行局：${result.fiveElementsClass}\n四化：${sihua}\n十二宫星曜分布：\n${palaceSummary}`;
       })();
@@ -1156,7 +1161,7 @@ export default function ZiweiPage() {
 
   const openProfessionalPalaceDetails = (index: number) => {
     if (!result) return;
-    const palace = result.palaces.find(p => p.index === index);
+    const palace = result.palaces.find(p => (p.index ?? ZHI_NAMES.indexOf(p.earthlyBranch)) === index);
     if (!palace) return;
     const palaceInterp = getPalaceInterpretation(palace.name);
     const interpretations: { type: "palace" | "star" | "sihua"; title: string; content: string; source: string }[] = getPalaceAllStarInterpretations(palace.majorStars || [], palace.name, result.sihua);
@@ -1168,8 +1173,8 @@ export default function ZiweiPage() {
 
   return (
     <div className="bg-[#ededed] min-h-screen flex justify-center">
-      <div className="w-full" style={{ maxWidth: professionalLayout ? "720px" : "420px", paddingBottom: professionalLayout ? "calc(64px + env(safe-area-inset-bottom, 0px))" : "10px" }}>
-      <style>{`body[data-ziwei-layout="professional"] #app-bottom-nav { display: none !important; }`}</style>
+      <div className="w-full" style={{ maxWidth: professionalLayout ? "720px" : "420px", paddingBottom: "calc(74px + env(safe-area-inset-bottom, 0px))" }}>
+      <style>{`body:has([aria-label="专业紫微盘快捷功能"]) #app-bottom-nav { display: none !important; }`}</style>
       {/* 输入表单 DatePicker 弹窗 */}
       <DatePicker onRecordImport={applyMingzhuProfile} onRecordRestore={handleRestoreHistory}
         show={showForm}
@@ -1241,24 +1246,6 @@ export default function ZiweiPage() {
       {/* ================================================================ */}
       {result && (
         <div className={professionalLayout ? "px-0" : "px-2"}>
-          <div role="group" aria-label="紫微盘面布局" className="mb-1 flex flex-wrap items-center gap-1 border-y border-gray-300 bg-white p-1">
-            <button type="button" aria-pressed={professionalLayout} onClick={() => setProfessionalLayout(!professionalLayout)}
-              className="rounded border border-purple-200 px-2 py-1 text-xs font-semibold text-purple-800">
-              {professionalLayout ? "返回标准盘面" : "专业大盘"}
-            </button>
-            {(["feixing", "sanhe", "sihua"] as const).map((mode) => <button type="button" key={mode}
-              aria-pressed={viewMode === mode} onClick={() => { setViewMode(mode); setFocusedPalace(null); }}
-              className="rounded border px-2 py-1 text-xs" style={{ background: viewMode === mode ? BRAND_PURPLE : "#f5f5f5", color: viewMode === mode ? "white" : "#444" }}>
-              {{ feixing: "飞星", sanhe: "三合", sihua: "四化" }[mode]}
-            </button>)}
-            <button type="button" onClick={() => setShowForm(true)} className="ml-auto px-2 py-1 text-xs text-purple-800">重新排盘</button>
-          </div>
-          {/* S2-4: 真太阳时修正说明（勾选真太阳时后显示） */}
-          {solarCorrection && (
-            <div className="mb-1 rounded-lg border border-[#7B2FBE] bg-[#F3EDF7] px-3 py-1.5 text-[11px] leading-relaxed text-[#5B21B6]">
-              ☀ {solarCorrection}
-            </div>
-          )}
           {/* v25.0.33（P7-整改-01）：移除宫盘上方叠宫图例/动态星图例/技法按钮等冗余说明，命盘紧贴顶部品牌栏 */}
 
           {/* ---- v25.0.29: 缩放容器（恒为适配屏宽整体等比缩放） ---- */}
@@ -1356,7 +1343,8 @@ export default function ZiweiPage() {
                           {/* Row 0: 标题 */}
                           <div className="text-center font-bold" style={{ color: BRAND_PURPLE, fontSize: "13px", lineHeight: 1.2, marginBottom: "1px", position: "relative" }}>
                             言道•紫微斗数
-                            <span style={{ position: "absolute", right: 0, top: 0, fontSize: "7px", color: "#999", fontWeight: "normal" }}>v1.0</span>
+                            <div style={{fontSize:10,fontWeight:400,color:"#333"}}>姓名：{name || "未命名"}</div>
+
                           </div>
 
                           {/* Row 1: 阴阳性别 + 五行局 */}
@@ -1371,31 +1359,31 @@ export default function ZiweiPage() {
                           })()}
 
                           {/* Row 2: 公历 + 时辰范围 */}
-                          <div style={{ fontSize: "8px", color: "#666", lineHeight: 1.3, display: "flex", justifyContent: "space-between", padding: "0 2px" }}>
+                          <div style={{ fontSize: "10px", color: "#444", lineHeight: 1.35, display: "flex", justifyContent: "space-between", padding: "0 2px" }}>
                             <span>公历：{result.solarDate || "-"}</span>
                             <span>{result.timeRange || ""}</span>
                           </div>
 
                           {/* Row 3: 农历 + 时辰名 */}
-                          <div style={{ fontSize: "8px", color: "#666", lineHeight: 1.3, display: "flex", justifyContent: "space-between", padding: "0 2px" }}>
+                          <div style={{ fontSize: "10px", color: "#444", lineHeight: 1.35, display: "flex", justifyContent: "space-between", padding: "0 2px" }}>
                             <span>农历：{result.lunarDate || "-"}</span>
                             <span>{result.time || ""}</span>
                           </div>
 
                           {/* Row 4: 属相 + 星座 */}
-                          <div style={{ fontSize: "8px", color: "#666", lineHeight: 1.3, display: "flex", justifyContent: "space-between", padding: "0 2px", marginTop: "1px" }}>
+                          <div style={{ fontSize: "10px", color: "#444", lineHeight: 1.35, display: "flex", justifyContent: "space-between", padding: "0 2px", marginTop: "1px" }}>
                             <span>属相：{result.zodiac || "-"}</span>
                             <span>星座：{result.sign || "-"}</span>
                           </div>
 
                           {/* Row 5: 身宫 + 命宫（地支） */}
-                          <div style={{ fontSize: "8px", color: "#666", lineHeight: 1.3, display: "flex", justifyContent: "space-between", padding: "0 2px" }}>
+                          <div style={{ fontSize: "10px", color: "#444", lineHeight: 1.35, display: "flex", justifyContent: "space-between", padding: "0 2px" }}>
                             <span>身宫：<span style={{ color: "#000", fontWeight: "bold" }}>{result.earthlyBranchOfBodyPalace || "-"}</span></span>
                             <span>命宫：<span style={{ color: "#000", fontWeight: "bold" }}>{result.earthlyBranchOfSoulPalace || "-"}</span></span>
                           </div>
 
                           {/* Row 6: 命主 + 身主 */}
-                          <div style={{ fontSize: "8px", color: "#666", lineHeight: 1.3, display: "flex", justifyContent: "space-between", padding: "0 2px" }}>
+                          <div style={{ fontSize: "10px", color: "#444", lineHeight: 1.35, display: "flex", justifyContent: "space-between", padding: "0 2px" }}>
                             <span>命主：<span style={{ color: "#000", fontWeight: "bold" }}>{result.soulStar || mingZhu}</span></span>
                             <span>身主：<span style={{ color: "#000", fontWeight: "bold" }}>{result.bodyStar || shenZhu}</span></span>
                           </div>
@@ -1446,10 +1434,9 @@ export default function ZiweiPage() {
 
                           {/* 紫色按钮组 */}
                           <div className="flex gap-1" style={{ marginTop: "1px", justifyContent: "center" }}>
-                            <button className="px-1.5 py-0.5 text-white font-bold rounded cursor-pointer border-0" style={{ background: BRAND_PURPLE, fontSize: "9px" }}>學紫微</button>
-                            <button className="px-1.5 py-0.5 text-white font-bold rounded cursor-pointer border-0" style={{ background: BRAND_PURPLE_LIGHT, fontSize: "9px" }}>時↑</button>
-                            <button className="px-1.5 py-0.5 text-white font-bold rounded cursor-pointer border-0" style={{ background: BRAND_PURPLE_LIGHT, fontSize: "9px" }}>時↓</button>
-                            <button className="px-1.5 py-0.5 text-white font-bold rounded cursor-pointer border-0" style={{ background: BRAND_PURPLE, fontSize: "9px" }}>解命盤</button>
+                            <button onClick={(event) => {event.stopPropagation();router.push("/academy/yixue/ziwei/");}} className="px-1.5 py-0.5 text-white font-bold rounded cursor-pointer border-0" style={{ background: BRAND_PURPLE, fontSize: "10px" }}>学紫微</button>
+                            <button onClick={(event) => {event.stopPropagation();setShowForm(true);}} className="px-1.5 py-0.5 text-purple-900 border border-purple-200 rounded" style={{fontSize:10}}>修改时辰</button>
+                            <button onClick={(event) => {event.stopPropagation();openProfessionalPalaceDetails(focusedPalace ?? ZHI_NAMES.indexOf(result.earthlyBranchOfSoulPalace));}} className="px-1.5 py-0.5 text-white rounded" style={{background:BRAND_PURPLE,fontSize:10}}>宫位资料</button>
                           </div>
 
                           {/* 自化图示 */}
@@ -1571,7 +1558,7 @@ export default function ZiweiPage() {
                           const dynCols = Math.min(3, Math.ceil(dynList.length / 10) || (dynList.length ? 1 : 0));
                           const starPadRight = 12 + dynCols * 8 + laiyinPadPx;
                           return (
-                        <div style={{ flex: "1 1 auto", minHeight: "50px", display: "flex", flexDirection: "row", flexWrap: "nowrap", alignContent: "flex-start", gap: "2px 2px", overflow: "hidden", padding: `0 ${starPadRight}px 0 2px`, position: "relative", zIndex: 1 }}>
+                        <div style={{ flex: "1 1 auto", minHeight: "50px", display: "flex", flexDirection: "row", flexWrap: "wrap", alignContent: "flex-start", gap: "3px 2px", overflow: "hidden", padding: `0 ${starPadRight}px 0 2px`, position: "relative", zIndex: 1 }}>
                           {(() => {
                             // 数据归类：主星→六吉→六煞→杂曜 全部入A区
                             const mainAndAuxStars: Array<{name: string; isMajor: boolean; color: string; weight: string; category: "major" | "aux" | "minor"}> = [
@@ -1592,7 +1579,7 @@ export default function ZiweiPage() {
                             let subFsPx = 9;
                             if (subCount > 0) {
                               const remW = availW - majorCount * majorColW - 2 * (totalCount - 1);
-                              subFsPx = Math.max(4, Math.min(9, Math.floor(remW / subCount) - 1));
+                              subFsPx = 10; // readable auxiliary/minor columns wrap inside the palace
                             }
                             // v25.0.29（P7-5）：运限四化星名（ZW-TIME 引擎统一计算；仅用户点击对应层后展开）
                             const dxMut = dxLayer && zwDecadalAligned[selectedDaxian]?.mutagen;
@@ -1831,7 +1818,7 @@ export default function ZiweiPage() {
                     </div>
                   ))}
                   {/* v18.9: AI解读此宫按钮 */}
-                  <button
+                  {aiVisible && <button
                     onClick={() => {
                       const ctx = `${interpretPanel.palaceName}(${interpretPanel.palaceGanZhi})\n` + interpretPanel.interpretations.map(i => `${i.title}: ${i.content}`).join("\n");
                       handleAIInterpret("palace", ctx);
@@ -1841,7 +1828,7 @@ export default function ZiweiPage() {
                     style={{ background: aiInterpreting ? "#999" : BRAND_PURPLE }}
                   >
                     {aiInterpreting && aiScope === "palace" ? "AI解读中..." : "🤖 AI解读此宫"}
-                  </button>
+                  </button>}
                   <div style={{ padding: "8px 0 2px", fontSize: "10px", color: "#999", textAlign: "center" }}>引经据典，仅供参考</div>
                 </div>
                 <div className="modal-safe-bottom" />
@@ -2239,8 +2226,8 @@ export default function ZiweiPage() {
           </div>
 
           {/* v19.2: 大运/流年/流日/流时 AI解读按钮 */}
-          {decadalData.length > 0 && (
-            <div className="bg-white rounded-lg p-2 mb-2 flex gap-2 flex-wrap">
+          {aiVisible && (
+            <details className="bg-white rounded-lg p-2 mb-2"><summary className="text-sm text-purple-900 cursor-pointer">AI学习解读</summary><div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => {
                   const cur = decadalData[selectedDaxian];
@@ -2315,7 +2302,7 @@ export default function ZiweiPage() {
                   {aiInterpreting && aiScope === "liushi" ? "AI解读中..." : "🤖 AI解读此流时"}
                 </button>
               )}
-            </div>
+            </div><EventDivinationPanel toolName="紫微斗数" chartContext={chartContextSummary} /></details>
           )}
 
           {/* ---- v25.0.24: ZW-TIME 时间轴状态卡（20260826用户指令：从命盘下方移至页面最底部；含叠宫对照行/运限四化） ---- */}
@@ -2418,11 +2405,11 @@ export default function ZiweiPage() {
           </div>
 
           {/* v19.6: 事情断法面板（AI解读统一沉底） */}
-          <EventDivinationPanel toolName="紫微斗数" chartContext={chartContextSummary} />
+
 
           {/* 分享排盘结果 */}
           <div className="px-3 py-2">
-            <ShareButton
+            {shareVisible && <ShareButton
               type="tool"
               title="紫微斗数排盘结果"
               description="紫微斗数命盘"
@@ -2436,7 +2423,7 @@ export default function ZiweiPage() {
                   summaryLines: chartContextSummary.split("\n").filter(Boolean),
                 },
               }}
-            />
+            />}
         <div className="mt-2">
           <PostToSquareButton tool="紫微斗数" summary="紫微命盘已排出，星曜布局与命宫格局清晰" />
         </div>
@@ -2446,9 +2433,9 @@ export default function ZiweiPage() {
 
       {/* v20.1: 登录提示弹窗 */}
       <LoginPromptModal show={showLoginPrompt} onClose={() => setShowLoginPrompt(false)} />
-      {result && professionalLayout && !showForm && !interpretPanel && !showLoginPrompt && <nav aria-label="专业紫微盘快捷功能" style={{ position: "fixed", bottom: 0, left: 0, right: 0, margin: "0 auto", maxWidth: 720, zIndex: 60, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 5, padding: "7px 8px", paddingBottom: "calc(7px + env(safe-area-inset-bottom, 0px))", background: "#dedee0", borderTop: "1px solid #bbb" }}>
+      {result && !showForm && !interpretPanel && !showLoginPrompt && <nav aria-label="专业紫微盘快捷功能" style={{ position: "fixed", bottom: 0, left: 0, right: 0, margin: "0 auto", maxWidth: 720, zIndex: 60, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 5, padding: "7px 8px", paddingBottom: "calc(7px + env(safe-area-inset-bottom, 0px))", background: "#dedee0", borderTop: "1px solid #bbb" }}>
         <button type="button" onClick={() => openProfessionalPalaceDetails(focusedPalace ?? ZHI_NAMES.indexOf(result.earthlyBranchOfSoulPalace))} style={{ padding: "6px 7px", background: "#f5f5fa", color: "#087dff", borderRadius: 4, fontSize: 14 }}>宫位资料</button>
-        <div role="group" aria-label="切换紫微盘模式" style={{ display: "flex", borderRadius: 5, overflow: "hidden", border: "1px solid #7766cc" }}>{(["feixing", "sanhe", "sihua"] as const).map(mode => <button type="button" key={mode} aria-pressed={viewMode === mode} onClick={() => { setViewMode(mode); setFocusedPalace(null); }} style={{ padding: "6px 8px", fontSize: 16, lineHeight: 1.3, background: viewMode === mode ? "#7766cc" : "#777", color: "white", borderRight: mode === "sihua" ? undefined : "1px solid #aaa" }}>{{ feixing: "飞星", sanhe: "三合", sihua: "四化" }[mode]}</button>)}</div>
+        <button type="button" onClick={() => setProfessionalLayout(v=>!v)} style={{padding:"6px 7px",fontSize:12,color:"#333"}}>{professionalLayout ? "恢复原盘" : "另一盘式"}</button>
         <button type="button" onClick={() => setShowForm(true)} style={{ padding: "6px 7px", background: "#f5f5fa", color: "#087dff", borderRadius: 4, fontSize: 14 }}>快捷排盘</button>
       </nav>}
       </div>

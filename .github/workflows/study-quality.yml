@@ -3,6 +3,14 @@ on:
   push:
     paths:
       - '.github/workflows/study-quality.yml'
+      - 'src/app/yixue/**'
+      - 'src/components/GlobalZoomProvider.tsx'
+      - 'src/lib/baziRelations.ts'
+      - 'src/components/QizhengDetailedChart.tsx'
+      - 'scripts/chart-corrections.test.ts'
+      - 'src/hooks/useCompassSensor.ts'
+      - 'android/app/src/main/java/com/yandao/guoxue/plugins/LocalSkyLocationPlugin.java'
+      - 'src/algorithm-core/modules/meihua/**'
       - 'src/data/nanjingOriginal.json'
       - 'src/data/tcmOriginalEditions.json'
       - 'src/data/tcmClinicalOriginalEditions.json'
@@ -184,6 +192,7 @@ jobs:
       - run: node --test scripts/study-comments.test.cjs
       - run: npx tsx --test scripts/astronomy-study.test.ts
       - run: npx tsx --test scripts/liuren-calendar.test.ts
+      - run: npx tsx --test scripts/chart-corrections.test.ts
       - run: node --experimental-strip-types --test scripts/offline-versions.test.cjs
       - run: node --experimental-strip-types --test scripts/offline-download-link.test.cjs
       - run: node --test scripts/learning-cors.test.cjs

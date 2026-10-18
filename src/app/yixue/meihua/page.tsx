@@ -66,7 +66,7 @@ type ActiveGua = "ben" | "hu" | "bian";
 // 体用标记组件 (严格对标 jishiyu meihua-guagap + meihua-tiyong)
 // ============================================================================
 function TiyongGuagap({ changeYao }: { changeYao: number }) {
-  // 动爻 > 3 则上卦为体、下卦为用；否则上卦为用、下卦为体
+  // 动爻所在卦为用，另一卦为体；DOM反向后与六爻对齐。
   // jishiyu renderTiyong: 用 column-reverse，所以 DOM 顺序与视觉相反
   // DOM: [体, 用] → visual: [用, 体] (deltaYao > 3)
   // DOM: [用, 体] → visual: [体, 用] (deltaYao <= 3)
@@ -86,7 +86,7 @@ function TiyongGuagap({ changeYao }: { changeYao: number }) {
         style={{
           color: "#000",
           fontSize: "12px",
-          height: "32px",
+          height: "72px",
           width: "8px",
           display: "flex",
           alignItems: "center",
@@ -99,7 +99,7 @@ function TiyongGuagap({ changeYao }: { changeYao: number }) {
         style={{
           color: "#000",
           fontSize: "12px",
-          height: "32px",
+          height: "72px",
           width: "8px",
           display: "flex",
           alignItems: "center",
@@ -128,7 +128,7 @@ function DongyaoGuagap({ changeYao }: { changeYao: number }) {
         margin: "10px 0px 10px 0px",
       }}
     >
-      {Array.from({ length: changeYao }, (_, i) => (
+      {Array.from({ length: 6 }, (_, i) => (
         <div
           key={i}
           style={{
@@ -136,7 +136,7 @@ function DongyaoGuagap({ changeYao }: { changeYao: number }) {
             borderRadius: "50%",
             height: "8px",
             width: "8px",
-            margin: "2px 0",
+            margin: "8px 0",
             boxSizing: "border-box",
           }}
         />
@@ -200,7 +200,9 @@ function HexagramDisplay({
         alignItems: "center",
         margin: "10px 0px 10px 10px",
         cursor: "pointer",
-        opacity: isActive ? 1 : 0.5,
+        opacity: 1,
+        outline: isActive ? "1px solid #7B2FBE" : undefined,
+        outlineOffset: 3,
         transition: "opacity 0.2s",
       }}
     >
@@ -219,7 +221,7 @@ function HexagramDisplay({
       {/* 每爻包裹 MAIN_ROW(爻线) + FU_SHEN_ROW(伏神层)，与六爻 HexagramRow 结构统一 */}
       {allLines.map((line, i) => {
         const isUpper = line.pos >= 4;
-        const color = isUpper ? upperColor : lowerColor;
+        const color = line.pos === changeYao ? "#c62828" : "#111111";
         const hb = fushenLayer?.[i];
         const fuShenText = hb ? `伏${hb.liuQinShort}${hb.gan}${hb.zhi}` : "";
         return (
@@ -275,7 +277,7 @@ function HexagramDisplay({
                 style={
                   hb?.isMissingLiuQin
                     ? { color: "#B45309", fontWeight: "bold" } // 传统缺亲伏神（琥珀醒目）
-                    : { color: "#c4c4c4" } // 本宫隐藏层参考（浅灰）
+                    : { color: "#525252" } // 本宫隐藏层参考（浅灰）
                 }
               >
                 {fuShenText}
@@ -496,12 +498,12 @@ export default function MeihuaPage() {
       let divResult: { upperTrigram: TrigramName; lowerTrigram: TrigramName; changeYao: number; hexNum: number };
 
       if (divMethod === "time") {
-        // 时间起卦
+        // 年支数+农历月日+时支数，详见卷一“年月日时起例”。
         divResult = meihuaTimeDivination(y, mo, d, h);
       } else if (divMethod === "number") {
         // 数字起卦
-        const nums = manualNumbers.map(n => parseInt(n, 10) || 1);
-        if (nums.some(n => n < 1)) {
+        const nums = manualNumbers.map(n => Number(n));
+        if (nums.some(n => !Number.isSafeInteger(n) || n < 1)) {
           setError("请输入有效的数字（大于0）");
           return;
         }
@@ -689,7 +691,7 @@ export default function MeihuaPage() {
                 placeholder="请输入1-2个汉字..."
                 maxLength={4}
                 style={{ width: "100%", padding: "10px 12px", border: "1px solid #ddd", borderRadius: "8px", fontSize: "16px", outline: "none", boxSizing: "border-box" }} />
-              <div style={{ fontSize: "11px", color: "#999", marginTop: "4px" }}>根据汉字 Unicode 编码起卦</div>
+              <div style={{ fontSize: "11px", color: "#999", marginTop: "4px" }}>现代编码起卦（非古籍笔画起卦）；古法请用数字起卦输入所取笔画数</div>
             </div>
           )}
 
@@ -718,6 +720,7 @@ export default function MeihuaPage() {
             </div>
           )}
 
+          <details style={{fontSize:12,color:"#444",marginBottom:12}}><summary>起卦规则与取数依据</summary><p>时间法取农历年支数（子1至亥12）、农历月日数、时支数（子1至亥12），除8取上下卦、除6取动爻，余0分别记8与6。闰月沿用该月数；本页按所填公历日换算农历，不自动把23时改为次日。数字法取三数；汉字编码和方位时间法为本页自定义方法，不能冒充古籍字占。</p><a href="https://zh.wikisource.org/wiki/梅花易數/卷一" target="_blank" rel="noopener noreferrer">《梅花易数》卷一 · 年月日时起例、观梅占</a></details>
           {/* 错误提示 */}
           {error && (
             <div style={{ padding: "8px 12px", marginBottom: "8px", backgroundColor: "#FFEBEE", borderRadius: "6px", fontSize: "12px", color: "#D93025" }}>

@@ -14,14 +14,17 @@
 // 协议：本层只做物理量解算，不输出任何吉凶断语。
 // ============================================================================
 
+import { Capacitor, registerPlugin, type PluginListenerHandle } from "@capacitor/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CircularSmoother, normalizeDeg } from "@/algorithm-core/modules/compass";
 
+const LocalCompass=registerPlugin<{startCompass():Promise<void>;stopCompass():Promise<void>;addListener(event:"heading",listener:(value:{heading:number;accuracy:number;needsCalibration:boolean;screenUp:boolean;landscape:boolean})=>void):Promise<PluginListenerHandle>;addListener(event:"headingStopped",listener:()=>void):Promise<PluginListenerHandle>}>("LocalSkyLocation");
 const RAD = Math.PI / 180;
 const DEG = 180 / Math.PI;
 
 /** 航向数据来源 */
 export type CompassSource =
+  | "native"
   | "absolute"     // deviceorientationabsolute（Rotation Vector）
   | "webkit"       // iOS webkitCompassHeading
   | "accel-mag"    // 加速度计+磁力计自解算
@@ -151,6 +154,8 @@ export function useCompassSensor() {
   const accReading = useRef<{ x: number; y: number; z: number; t: number } | null>(null);
   const sourceRef = useRef<CompassSource>("none");
   const lastEmit = useRef(0);
+  const nativeHandles = useRef<PluginListenerHandle[]>([]);
+  const nativeGeneration = useRef(0);
 
   const emit = useCallback((patch: Partial<CompassSensorState>) => {
     setState((s) => ({ ...s, ...patch }));
@@ -175,6 +180,9 @@ export function useCompassSensor() {
   }, [emit]);
 
   const stop = useCallback(() => {
+    nativeGeneration.current++;
+    for(const handle of nativeHandles.current)void handle.remove();nativeHandles.current=[];
+    if(Capacitor.isPluginAvailable("LocalSkyLocation"))void LocalCompass.stopCompass().catch(()=>{});
     if (orientationAbsHandler.current && typeof window !== "undefined") {
       window.removeEventListener("deviceorientationabsolute", orientationAbsHandler.current as EventListener);
       orientationAbsHandler.current = null;
@@ -204,6 +212,22 @@ export function useCompassSensor() {
   const start = useCallback(async (): Promise<void> => {
     if (typeof window === "undefined") return;
     setState({ ...INITIAL, supported: true, active: true });
+
+    if(Capacitor.isNativePlatform() && Capacitor.isPluginAvailable("LocalSkyLocation")) {
+      for(const handle of nativeHandles.current)void handle.remove();nativeHandles.current=[];
+      const generation=++nativeGeneration.current;
+      try {
+        const heading=await LocalCompass.addListener("heading",value=>{if(generation!==nativeGeneration.current)return;sourceRef.current="native";emit({source:"native",active:true,needsCalibration:value.needsCalibration});pushHeading(value.heading,value.screenUp,value.landscape);});
+        const paused=await LocalCompass.addListener("headingStopped",()=>{if(generation===nativeGeneration.current)emit({active:false});});
+        if(generation!==nativeGeneration.current){await heading.remove();await paused.remove();return;}
+        nativeHandles.current=[heading,paused];await LocalCompass.startCompass();
+        if(generation!==nativeGeneration.current)await LocalCompass.stopCompass();
+        return;
+      }catch{
+        for(const handle of nativeHandles.current)void handle.remove();nativeHandles.current=[];
+        emit({active:false,error:"原生方向传感器暂不可用，请重试或使用手动模式。"});return;
+      }
+    }
 
     // iOS 13+ 需要用户手势授权 DeviceOrientation（start 由按钮触发，满足手势要求）
     const DOE = window.DeviceOrientationEvent as unknown as {

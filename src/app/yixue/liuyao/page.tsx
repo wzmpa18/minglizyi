@@ -340,7 +340,7 @@ export default function LiuyaoPage() {
   }, []);
 
   // 爻位点击 → 显示爻位解读（含伏神信息）
-  const handleYaoClick = useCallback((yao: LiuyaoYao) => {
+  const handleYaoClick = useCallback((yao: LiuyaoYao, isChanged = false) => {
     const interp = getYaoInterpretation(
       yao.position - 1,
       yao.liuQin,
@@ -365,7 +365,7 @@ export default function LiuyaoPage() {
           source: "纳甲法·伏神查找",
         };
     setInterpretPanel({
-      title: YAO_NAMES[yao.position - 1] + "解读",
+      title: (isChanged ? "变卦 · " : "本卦 · ") + YAO_NAMES[yao.position - 1] + "解读",
       items: [...interp.items, fushenItem],
     });
   }, []);
@@ -868,7 +868,7 @@ export default function LiuyaoPage() {
                           fontSize: "13px", fontWeight: "bold", color: "#333",
                           marginBottom: "4px",
                         }}>
-                          {result.bianGua.name}
+                          <button type="button" onClick={() => handleGuaNameClick(result.bianGua!.name)} style={{color:"#333",textDecoration:"underline"}}>{result.bianGua.name}</button>
                           <span style={{ fontSize: "11px", color: "#888", fontWeight: "normal" }}>
                             （{result.bianGua.gong}）
                           </span>
@@ -933,6 +933,7 @@ export default function LiuyaoPage() {
                                 isYuePo: false,
                                 isRiChong: false,
                               }}
+                              onClick={() => handleYaoClick(bianYao, true)}
                               isBianGua
                               isDongLine={benYao.isDong}
                               bianYang={bianYao.isYang}

@@ -26,7 +26,7 @@ const TIANCHI_MIN = 36; // 天池最小半径
 
 const BRASS_LINE = "#8a6d3b";
 const BONE = "#f5ecd7";
-const GOLD_TEXT = "#e8c96a";
+const GOLD_TEXT = "#242018";
 const DARK = "#221c14";
 const RED_TEXT = "#8c2f24";
 
@@ -91,7 +91,7 @@ function layoutBands(rings: LuopanRing[]): Band[] {
 
 function toneFill(sec: RingSector, ring: LuopanRing): string {
   if (sec.tone === "wang") return RED_TEXT;
-  if (sec.tone === "blank") return "#9a9a9a";
+  if (sec.tone === "blank") return "#52504a";
   // 地盘正针为全盘基准，用朱红以示区别（通行罗盘地盘红字制式）
   return ring.id === "dipan24" ? RED_TEXT : RING_CFG[ring.kind].textFill;
 }
@@ -328,13 +328,13 @@ export function LuopanDial({
           {overlay ? (
             <>
               <circle cx={C} cy={C} r={Math.min(30, tianChiR * 0.6)} fill="rgba(20,16,11,0.25)" stroke={BRASS_LINE} strokeWidth={1} />
-              <circle cx={C} cy={C} r={5} fill="none" stroke="#e8c96a" strokeWidth={1.6} />
+              <circle cx={C} cy={C} r={5} fill="none" stroke="#242018" strokeWidth={1.6} />
             </>
           ) : (
             <>
               <polygon points={`${C},${C - tianChiR + 6} ${C - 5},${C} ${C + 5},${C}`} fill="#cfe4f5" stroke="#7fa8c9" strokeWidth={0.8} />
               <polygon points={`${C},${C + tianChiR - 6} ${C - 5},${C} ${C + 5},${C}`} fill="#e53935" stroke="#a02725" strokeWidth={0.8} />
-              <circle cx={C} cy={C} r={5.5} fill="#e8c96a" stroke="#8a6d3b" strokeWidth={1} />
+              <circle cx={C} cy={C} r={5.5} fill="#242018" stroke="#8a6d3b" strokeWidth={1} />
               <circle cx={C} cy={C - tianChiR + 3} r={3} fill="#ff5252" />
             </>
           )}

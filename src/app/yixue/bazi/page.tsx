@@ -1,4 +1,5 @@
 "use client";
+import { pillarRelations } from "@/lib/baziRelations";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -158,63 +159,8 @@ function getZuoChangSheng(p: { changsheng?: string }): string {
   // v17.7 修复：直接使用算法层预计算的 changsheng，禁止中间层重新计算
   return p.changsheng || "-";
 }
-function getGanLiuYi(result: BaziResult): {text:string; type:"he"|"chong"|null}[] {
-  const tips: {text:string; type:"he"|"chong"|null}[] = [];
-  const allGan = result.pillars.map(p=>p.gan as TianGan);
-  const checked=new Set<number>();
-  for(let i=0;i<allGan.length;i++){
-    if(checked.has(i)) continue;
-    const partner=getGanHePartner(allGan[i]); if(!partner) continue;
-    for(let j=i+1;j<allGan.length;j++){
-      if(allGan[j]===partner.partner){
-        tips.push({text:allGan[i]+allGan[j]+"合化"+partner.huaWuXing, type:"he"});
-        checked.add(i);checked.add(j);break;
-      }
-    }
-  }
-  // 天干相克
-  for(let i=0;i<allGan.length;i++){
-    for(let j=i+1;j<allGan.length;j++){
-      const wx1 = getGanWuxing(allGan[i]);
-      const wx2 = getGanWuxing(allGan[j]);
-      if(wx1 && wx2 && WUXING_KE[wx1]===wx2){
-        tips.push({text:allGan[i]+"克"+allGan[j], type:"chong"});
-      }
-    }
-  }
-  return tips;
-}
-function getZhiLiuYi(result: BaziResult): {text:string; type:"he"|"chong"|"xing"|"po"|null}[] {
-  const tips: {text:string; type:"he"|"chong"|"xing"|"po"|null}[] = [];
-  const allZhi = result.pillars.map(p=>p.zhi as DiZhi);
-  // 六合
-  for(let i=0;i<allZhi.length;i++){
-    const p=getZhiHePartner(allZhi[i]); if(!p) continue;
-    for(let j=i+1;j<allZhi.length;j++){if(allZhi[j]===p.partner) tips.push({text:allZhi[i]+allZhi[j]+"半合"+p.hua+"局", type:"he"});}
-  }
-  // 六冲
-  for(let i=0;i<allZhi.length;i++){
-    const p=getZhiChongPartner(allZhi[i]); if(!p) continue;
-    for(let j=i+1;j<allZhi.length;j++){if(allZhi[j]===p) tips.push({text:allZhi[i]+allZhi[j]+"相冲", type:"chong"});}
-  }
-  // 自刑
-  const xingMap: Record<string,string> = {"午":"午","辰":"辰","酉":"酉","亥":"亥"};
-  const countMap: Record<string,number> = {};
-  allZhi.forEach(z=>{countMap[z]=(countMap[z]||0)+1;});
-  Object.entries(xingMap).forEach(([z])=>{
-    if((countMap[z]||0)>=2) tips.push({text:z+z+"自刑", type:"xing"});
-  });
-  // 相破(简单版)
-  const poMap: Record<string,string> = {"子":"酉","酉":"子","卯":"午","午":"卯","寅":"亥","亥":"寅","巳":"申","申":"巳","辰":"丑","丑":"辰","未":"戌","戌":"未"};
-  for(let i=0;i<allZhi.length;i++){
-    for(let j=i+1;j<allZhi.length;j++){
-      if(poMap[allZhi[i]]===allZhi[j]){
-        tips.push({text:allZhi[i]+allZhi[j]+"相破", type:"po"});
-      }
-    }
-  }
-  return tips;
-}
+function getGanLiuYi(result:BaziResult){return pillarRelations(result.pillars,"gan");}
+function getZhiLiuYi(result:BaziResult){return pillarRelations(result.pillars,"zhi");}
 function getPillarShenshaNames(shensha: ReturnType<typeof calculateAllShenSha>|null, pillarIdx: number): string[] {
   if(!shensha) return [];
   const keys=["年柱","月柱","日柱","时柱"] as const;

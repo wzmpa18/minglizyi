@@ -1,3 +1,4 @@
+import { Solar } from 'lunar-javascript';
 /**
  * ============================================================================
  * 梅花易数算法模块
@@ -153,6 +154,7 @@ export function numberDivination(num1: number, num2: number, num3: number): {
   changeYao: number;
   hexNum: number;
 } {
+  if (![num1,num2,num3].every(n=>Number.isSafeInteger(n)&&n>0)) throw Error("起卦数须为大于零的安全整数");
   const upperNum = ((num1 - 1) % 8) + 1;
   const lowerNum = ((num2 - 1) % 8) + 1;
   const changeYao = ((num3 - 1) % 6) + 1;
@@ -168,15 +170,26 @@ export function numberDivination(num1: number, num2: number, num3: number): {
  * 下卦 = (年 + 月 + 日 + 时) % 8（余0为8）
  * 动爻 = (年 + 月 + 日 + 时) % 6（余0为6）
  */
+/** Civil date -> traditional counts. Lunar year changes at lunar New Year; leap month keeps its month number; 23/00 both 子=1. */
+export function timeDivinationNumbers(year:number, month:number, day:number, hour:number) {
+  if (![year,month,day,hour].every(Number.isInteger) || year<1 || year>3000 || month<1 || month>12 || day<1 || day>31 || hour<0 || hour>23) throw Error('请输入有效日期与小时');
+  const check=new Date(Date.UTC(2000,month-1,day));check.setUTCFullYear(year);
+  if (check.getUTCMonth()!==month-1 || check.getUTCDate()!==day) throw Error('日期不存在');
+  const lunar=Solar.fromYmdHms(year,month,day,hour,0,0).getLunar();
+  return {yearNumber:lunar.getYearZhiIndex()+1,lunarMonth:Math.abs(lunar.getMonth()),lunarDay:lunar.getDay(),hourNumber:Math.floor((hour+1)/2)%12+1};
+}
+
 export function timeDivination(year: number, month: number, day: number, hour: number): {
   upperTrigram: TrigramName;
   lowerTrigram: TrigramName;
   changeYao: number;
   hexNum: number;
 } {
-  const upperNum = ((year + month + day) % 8) || 8;
-  const lowerNum = ((year + month + day + hour) % 8) || 8;
-  const changeYao = ((year + month + day + hour) % 6) || 6;
+  const { yearNumber, lunarMonth, lunarDay, hourNumber } = timeDivinationNumbers(year, month, day, hour);
+  const sum = yearNumber + lunarMonth + lunarDay;
+  const upperNum = (sum % 8) || 8;
+  const lowerNum = ((sum + hourNumber) % 8) || 8;
+  const changeYao = ((sum + hourNumber) % 6) || 6;
   const upperTrigram = TRIGRAM_NUMBER_MAP[upperNum];
   const lowerTrigram = TRIGRAM_NUMBER_MAP[lowerNum];
   const hexNum = findHexagramNumber(upperTrigram, lowerTrigram);
@@ -225,6 +238,7 @@ export function getBianGua(
   lower: TrigramName,
   changeYao: number
 ): { upper: TrigramName; lower: TrigramName; name: string; num: number } {
+  if(!Number.isInteger(changeYao)||changeYao<1||changeYao>6)throw Error("动爻须为1至6");
   const upperLines = getTrigramInfo(upper).lines;
   const lowerLines = getTrigramInfo(lower).lines;
   const allLines = lowerLines + upperLines;

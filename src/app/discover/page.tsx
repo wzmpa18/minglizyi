@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import Link from "next/link";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { BrandHeader } from "@/components/shared";
@@ -1049,7 +1050,7 @@ export default function DiscoverPage() {
       <BrandHeader title="发现" />
       {postMessage && <p role="status" className="mx-3 mt-3 rounded-xl border border-purple-200 bg-purple-50 p-3 text-sm leading-6 text-purple-900">{postMessage}</p>}
 
-      <div className="mx-3 mt-3 flex items-center gap-3 text-sm"><button type="button" disabled={ownBusy} onClick={() => void loadOwnPosts()} className="rounded-lg border border-purple-200 bg-white px-3 py-2 text-purple-800">{ownBusy ? "正在读取…" : "我的动态"}</button><a href="/profile/feedback/" className="text-xs text-gray-600 underline">联系开发者</a></div>
+      <div className="mx-3 mt-3 flex items-center gap-3 text-sm"><button type="button" disabled={ownBusy} onClick={() => void loadOwnPosts()} className="rounded-lg border border-purple-200 bg-white px-3 py-2 text-purple-800">{ownBusy ? "正在读取…" : "我的动态"}</button><Link href="/profile/feedback/" className="text-sm font-medium text-purple-800 underline">用户反馈 / 联系开发者</Link></div>
       {showOwnPosts && <section aria-label="我的动态与审核状态" className="mx-3 mt-3 rounded-xl bg-white p-4"><div className="flex items-center justify-between"><h2 className="font-bold">我的动态</h2><button type="button" onClick={() => setShowOwnPosts(false)} className="text-xs text-gray-500">收起</button></div>{ownPosts.length ? ownPosts.map(post => <article key={post.postId} className="mt-3 border-t pt-3"><p className="text-xs font-bold text-purple-800">{post.status === "pending" ? "待审核，尚未公开" : post.status === "active" ? "已公开" : "已下架"}</p><p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6">{post.content}</p>{post.images.length > 0 && <p className="mt-1 text-xs text-gray-500">包含{post.images.length}张附图，随动态一起审核</p>}<button type="button" disabled={ownBusy} onClick={() => void removeOwnPost(post.postId)} className="mt-2 text-xs text-red-700">撤回自己的动态</button></article>) : <p className="mt-3 text-sm text-gray-500">{ownBusy ? "正在读取…" : "暂无提交记录。"}</p>}</section>}
       {/* 附近用户入口 */}
       <div className="flex gap-2 px-3 pt-3 overflow-x-auto" style={{ marginBottom: "0" }}>

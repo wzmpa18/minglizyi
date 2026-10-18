@@ -1,4 +1,5 @@
 "use client";
+import { getLocalSkyPosition } from "@/lib/localSkyLocation";
 
 // 专业电子罗盘工具页 - NICHE-TOOLS-08 v25.0.69
 // ============================================================================
@@ -43,6 +44,7 @@ const SCHOOL_KEY = "yandao_compass_school";
 const RINGS_KEY = "yandao_compass_rings_v1";
 
 const SOURCE_LABEL: Record<string, string> = {
+  native: "本机磁北方向传感器",
   absolute: "Rotation Vector 绝对方位",
   webkit: "iOS 磁力计",
   "accel-mag": "加速度计+磁力计",
@@ -240,30 +242,15 @@ export default function CompassPage() {
   }, [school]);
 
   // GPS 定位
-  const locate = useCallback(() => {
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      showToast("当前环境不支持定位，请手动选择位置");
-      return;
-    }
+  const locate = useCallback(async () => {
     setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const la = Math.round(pos.coords.latitude * 10000) / 10000;
-        const lo = Math.round(pos.coords.longitude * 10000) / 10000;
-        setLat(la);
-        setLon(lo);
-        setRegionIdx(nearestRegion(lo));
-        setLocName("GPS定位");
-        setLocManual(false);
-        setLocating(false);
-        showToast("定位成功，磁偏角已按 WMM2025 更新");
-      },
-      () => {
-        setLocating(false);
-        showToast("定位失败（未授权或信号弱），可展开选择测量地");
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
-    );
+    try {
+      const pos = await getLocalSkyPosition();
+      const la=Math.round(pos.latitude*10000)/10000,lo=Math.round(pos.longitude*10000)/10000;
+      setLat(la);setLon(lo);setRegionIdx(nearestRegion(lo));setLocName("本机定位");setLocManual(false);
+      showToast("地点已更新；点击开始测量后，方向由磁力计读取");
+    } catch(error) {showToast(error instanceof Error ? error.message : "无法定位，请手动选择测量地");}
+    finally {setLocating(false);}
   }, [showToast]);
 
   // 保存客户记录

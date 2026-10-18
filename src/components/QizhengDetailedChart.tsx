@@ -33,8 +33,8 @@ export function QizhengDetailedChart({chart,transit,name,age,onPalace,svgRef}: {
   return <g key={p.branch}>{list.map((s,n)=>{const a=p.startLon+p.width*(n+1)/(list.length+1);const chars=Array.from(s.name.replace(/（.*?）/g,""));return <g key={`${s.name}-${n}`}><title>{p.branch}宫 · {s.name}</title>{chars.map((c,k)=><g key={k}>{text(inner+11+(outer-inner-22)*k/Math.max(chars.length-1,1),a,c,color,13)}</g>)}</g>;})}</g>;
  });
  const clock=(utc:string|null)=>utc?new Date(utc).toLocaleTimeString("zh-CN",{timeZone:"Asia/Shanghai",hour:"2-digit",minute:"2-digit"}):"—";
- return <svg ref={svgRef} data-testid="qizheng-detailed-chart" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1000" width="100%" height="100%" style={{fontFamily:"'Microsoft YaHei','PingFang SC',sans-serif"}}>
-  <rect width={1200} height={1000} fill="white"/>
+ return <svg ref={svgRef} data-testid="qizheng-detailed-chart" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1470" width="100%" height="100%" style={{fontFamily:"'Microsoft YaHei','PingFang SC',sans-serif"}}>
+  <rect width={900} height={1470} fill="white"/>
   <text data-chart-private="true" x={28} y={30} fontSize={22} fontWeight="bold" fill="#151515">{name||"七政四余"} · 详细星盘</text>
   <text x={28} y={53} fontSize={12} fill="#666">蓝：本命　绿：流年　外沿：行限虚岁／年份　点击任一宫位查看本地解读</text>
   {[52,95,119,146,178,253,291,343,398,412].map(r=><circle key={r} cx={CX} cy={CY} r={r} fill="none" stroke="#333" strokeWidth={r===412?1:.65}/>)}
@@ -70,7 +70,7 @@ export function QizhengDetailedChart({chart,transit,name,age,onPalace,svgRef}: {
   <text x={CX} y={CY-22} textAnchor="middle" fontSize={12} fill="#1a9a36">身宫 {chart.shenGong.branch}</text>
   {chart.palaces.map(p=><path key={`hit-${p.branch}`} d={sector(p.startLon,p.startLon+p.width,52,398)} fill="transparent" role="button" tabIndex={0}
     aria-label={`解读${p.renshiGong}（${p.branch}宫）`} style={{cursor:"pointer"}} onClick={()=>onPalace(p.branch)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();onPalace(p.branch);}}}/>)}
-  <g transform="translate(884,30)" fill="#222" fontSize={13} data-testid="qizheng-parameter-table">
+  <g transform="translate(28,1020)" fill="#222" fontSize={13} data-testid="qizheng-parameter-table">
    <g data-chart-private="true"><text y={0} fontSize={17} fontWeight="bold">出生与四柱（真太阳时）</text>
    <text y={25}>{i.year}/{i.month}/{i.day} {String(i.hour).padStart(2,"0")}:{String(i.minute).padStart(2,"0")}　{i.gender==="female"?"女":"男"}</text>
    <text y={49}>年　月　日　时</text>
@@ -78,19 +78,19 @@ export function QizhengDetailedChart({chart,transit,name,age,onPalace,svgRef}: {
    <text y={97}>真太阳时 {chart.trueSolar.trueSolarTime}　{chart.dayNight.isDay?"昼生":"夜生"}</text></g>
    <text y={121}>命：{chart.mingGong.branch}{dm(chart.mingDu.palaceDegree)}　{chart.mingDu.xiuName}{dm(chart.mingDu.xiuDegree)}</text>
    <text y={145}>身：{chart.shenGong.branch}　{chart.shenDu.xiuName}{dm(chart.shenDu.xiuDegree)}</text>
-   <text y={173} fontSize={17} fontWeight="bold">十一曜宫度 · 宿度</text>
-   <text y={196} fill="#666">星曜　宫内度数　　 宿内度数</text>
-   {chart.stars.map((s,n)=><text key={s.key} y={221+n*24} data-table-star={s.key}>
+   </g><g transform="translate(475,1020)" fill="#222" fontSize={13}><text y={0} fontSize={17} fontWeight="bold">十一曜宫度 · 宿度</text>
+   <text y={23} fill="#666">星曜　宫内度数　　 宿内度数</text>
+   {chart.stars.map((s,n)=><text key={s.key} y={48+n*24} data-table-star={s.key}>
      {SHORT[s.key]}　{s.palaceBranch}{dm(s.palaceDegree)}　{s.xiuName}{dm(s.xiuDegree)}{s.retrograde?" 逆":""}
    </text>)}
-   <text y={505} fontSize={17} fontWeight="bold">化曜与星曜状态</text>
-   {chart.stars.map((s,n)=>{const info=basics.flatMap(b=>b.stars).find(t=>t.key===s.key);const hs=hua.filter(h=>h.starKey===s.key).map(h=>h.huaName);return <text key={s.key} y={531+n*23} fontSize={11}>
+   </g><g transform="translate(28,1210)" fill="#222" fontSize={13}><text y={0} fontSize={17} fontWeight="bold">化曜与星曜状态</text>
+   {chart.stars.map((s,n)=>{const info=basics.flatMap(b=>b.stars).find(t=>t.key===s.key);const hs=hua.filter(h=>h.starKey===s.key).map(h=>h.huaName);return <text key={s.key} y={26+n*18} fontSize={11}>
      {SHORT[s.key]}　{[...hs,...(info?.states||[]),info?.seasonStrength||""].join(" · ")||"—"}
    </text>;})}
-   <text y={802} fontSize={17} fontWeight="bold">限度与流年</text>
-   <text y={829}>流年：{transit?`${transit.year}年 ${transit.ganzhi.gan}${transit.ganzhi.zhi}`:"未开启"}</text>
-   <text y={854}>大限：{xian?`${age}岁 ${xian.row.palaceBranch}宫 ${xian.xiuName}${dm(xian.xiuDegree)}`:"选择行限年龄后显示"}</text>
-   <text y={879}>小限／月限：资料未提供完整起算法</text>
+   </g><g transform="translate(475,1370)" fill="#222" fontSize={13}><text y={0} fontSize={17} fontWeight="bold">限度与流年</text>
+   <text y={24}>流年：{transit?`${transit.year}年 ${transit.ganzhi.gan}${transit.ganzhi.zhi}`:"未开启"}</text>
+   <text y={48}>大限：{xian?`${age}岁 ${xian.row.palaceBranch}宫 ${xian.xiuName}${dm(xian.xiuDegree)}`:"选择行限年龄后显示"}</text>
+   <text y={72}>小限／月限：资料未提供完整起算法</text>
   </g>
   <g fontSize={13} fill="#333">
    <text data-chart-private="true" x={30} y={920}>{i.placeName||"出生地"}　经度 {i.lon.toFixed(4)}°　纬度 {i.lat.toFixed(4)}°　UTC{(i.tzOffset??8)>=0?"+":""}{i.tzOffset??8}</text>

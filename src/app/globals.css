@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Prevent iOS focus zoom from trapping users in a magnified form. */
+@media (pointer: coarse) { input, select, textarea { font-size: 16px !important; } }
+
 /* Tailwind v4 主题色定义 */
 @theme {
   --color-primary: #7B2FBE;

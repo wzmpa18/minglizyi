@@ -48,7 +48,7 @@ const GUA_LIST: Array<{ name: string; center: number }> = [
 
 const BRASS_LINE = "#8a6d3b";
 const BONE = "#f5ecd7";
-const GOLD_TEXT = "#e8c96a";
+const GOLD_TEXT = "#242018";
 const DARK = "#221c14";
 
 export interface CompassDialProps {
@@ -239,13 +239,13 @@ export function CompassDial({
           {overlay ? (
             <>
               <circle cx={C} cy={C} r={30} fill="rgba(20,16,11,0.25)" stroke={BRASS_LINE} strokeWidth={1} />
-              <circle cx={C} cy={C} r={5} fill="none" stroke="#e8c96a" strokeWidth={1.6} />
+              <circle cx={C} cy={C} r={5} fill="none" stroke="#242018" strokeWidth={1.6} />
             </>
           ) : (
             <>
               <polygon points={`${C},${C - 70} ${C - 5},${C} ${C + 5},${C}`} fill="#cfe4f5" stroke="#7fa8c9" strokeWidth={0.8} />
               <polygon points={`${C},${C + 70} ${C - 5},${C} ${C + 5},${C}`} fill="#e53935" stroke="#a02725" strokeWidth={0.8} />
-              <circle cx={C} cy={C} r={5.5} fill="#e8c96a" stroke="#8a6d3b" strokeWidth={1} />
+              <circle cx={C} cy={C} r={5.5} fill="#242018" stroke="#8a6d3b" strokeWidth={1} />
               {/* 盘面北位标记（0° 处小红点，与针尖对应） */}
               <circle cx={C} cy={C - 74} r={3} fill="#ff5252" />
             </>

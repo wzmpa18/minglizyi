@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 
 /**
  * v25.0.21: 全局缩放组件（新增可关闭开关）
@@ -22,7 +23,7 @@ const DISABLED_KEY = "yandao_zoom_disabled";
 const MIN_ZOOM = 1.0;
 const MAX_ZOOM = 2.5;
 const ZOOM_STEP = 0.1;
-const DOUBLE_TAP_MS = 300;
+
 
 export default function GlobalZoomProvider({
   children,
@@ -32,9 +33,9 @@ export default function GlobalZoomProvider({
   const [zoom, setZoom] = useState(1.0);
   const [showHint, setShowHint] = useState(false);
   const [showRemind, setShowRemind] = useState(false);
-  const [zoomDisabled, setZoomDisabled] = useState(false);
+  const [zoomDisabled, setZoomDisabled] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
-  const lastTapRef = useRef(0);
+
   const pinchStartRef = useRef<{ dist: number; zoom: number } | null>(null);
 
   // 桌面端拖动相关
@@ -209,7 +210,7 @@ export default function GlobalZoomProvider({
   // ====== 移动端：双指捏拉缩放 ======
   const handleTouchStart = useCallback(
     (e: React.TouchEvent) => {
-      if (zoomDisabled) return;
+      if (zoomDisabled || (e.target as HTMLElement).closest("[data-local-zoom]")) return;
       if (e.touches.length === 2) {
         const dx = e.touches[0].clientX - e.touches[1].clientX;
         const dy = e.touches[0].clientY - e.touches[1].clientY;
@@ -222,7 +223,7 @@ export default function GlobalZoomProvider({
 
   const handleTouchMove = useCallback(
     (e: React.TouchEvent) => {
-      if (zoomDisabled) return;
+      if (zoomDisabled || (e.target as HTMLElement).closest("[data-local-zoom]")) return;
       if (e.touches.length === 2 && pinchStartRef.current) {
         e.preventDefault();
         const dx = e.touches[0].clientX - e.touches[1].clientX;
@@ -242,34 +243,35 @@ export default function GlobalZoomProvider({
         pinchStartRef.current = null;
       }
 
-      // 双击切换 100% / 200%
-      if (e.touches.length === 0 && e.changedTouches.length === 1) {
-        const now = Date.now();
-        if (now - lastTapRef.current < DOUBLE_TAP_MS) {
-          setZoomSafe(zoom > 1.5 ? 1.0 : 2.0);
-          lastTapRef.current = 0;
-        } else {
-          lastTapRef.current = now;
-        }
-      }
+
     },
     [zoom, setZoomSafe, zoomDisabled]
   );
 
+  useEffect(() => {
+    const element=containerRef.current;if(!element)return;
+    const onMove=(event:TouchEvent)=>handleTouchMove(event as unknown as React.TouchEvent);
+    element.addEventListener("touchmove",onMove,{passive:false});
+    return()=>element.removeEventListener("touchmove",onMove);
+  },[handleTouchMove]);
+
   return (
+    <>
     <div
       ref={containerRef}
       style={{
-        zoom: zoom,
+        zoom: zoomDisabled ? 1 : zoom,
+        touchAction: "pan-x pan-y",
         // 放大时允许内容溢出并可滚动查看
         overflow: zoom > 1.0 ? "auto" : "visible",
         minHeight: zoom > 1.0 ? "100vh" : undefined,
       }}
       onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
       {children}
+    </div>
+    {typeof document !== "undefined" && createPortal(<>
 
       {/* 首次使用提示 */}
       {showHint && !zoomDisabled && (
@@ -291,7 +293,7 @@ export default function GlobalZoomProvider({
             animation: "zoomHintFade 0.3s ease",
           }}
         >
-          双指捏拉可放大页面 · 双击切换
+          双指捏拉可放大页面 · 右下角可随时复位
         </div>
       )}
 
@@ -325,7 +327,7 @@ export default function GlobalZoomProvider({
           onClick={() => setZoomSafe(1.0)}
           style={{
             position: "fixed",
-            bottom: "70px",
+            bottom: "calc(76px + env(safe-area-inset-bottom, 0px))",
             right: "16px",
             background: "rgba(123,47,190,0.9)",
             color: "#fff",
@@ -339,7 +341,7 @@ export default function GlobalZoomProvider({
             boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
           }}
         >
-          {Math.round(zoom * 100)}% ✕
+          {Math.round(zoom * 100)}% · 恢复原大小
         </button>
       )}
 
@@ -349,6 +351,7 @@ export default function GlobalZoomProvider({
           to { opacity: 1; transform: translateX(-50%) translateY(0); }
         }
       `}</style>
-    </div>
+    </>, document.body)}
+    </>
   );
 }

@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import CoreLocation
 import Capacitor
 
@@ -7,11 +8,42 @@ import Capacitor
 public class LocalSkyLocationPlugin: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDelegate {
     public let identifier = "LocalSkyLocationPlugin"
     public let jsName = "LocalSkyLocation"
-    public let pluginMethods: [CAPPluginMethod] = [CAPPluginMethod(name: "getCurrentPosition", returnType: CAPPluginReturnPromise)]
+    public let pluginMethods: [CAPPluginMethod] = [CAPPluginMethod(name: "getCurrentPosition", returnType: CAPPluginReturnPromise), CAPPluginMethod(name: "startCompass", returnType: CAPPluginReturnPromise), CAPPluginMethod(name: "stopCompass", returnType: CAPPluginReturnPromise)]
     private var manager: CLLocationManager?
     private var pending: CAPPluginCall?
     private var timeout: Timer?
     private var requested = false
+
+    private var headingManager: CLLocationManager?
+    private var headingPauseObserver: NSObjectProtocol?
+    public override func load() {
+        headingPauseObserver = NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in
+            self?.headingManager?.stopUpdatingHeading()
+            self?.notifyListeners("headingStopped", data: [:])
+        }
+    }
+    @objc func startCompass(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            guard CLLocationManager.headingAvailable() else { call.reject("设备无可用方向传感器，请使用手动模式。"); return }
+            self.headingManager?.stopUpdatingHeading()
+            let m = CLLocationManager(); m.delegate = self; m.headingFilter = 1
+            switch UIDevice.current.orientation {
+            case .landscapeLeft: m.headingOrientation = .landscapeLeft
+            case .landscapeRight: m.headingOrientation = .landscapeRight
+            case .portraitUpsideDown: m.headingOrientation = .portraitUpsideDown
+            default: m.headingOrientation = .portrait
+            }
+            self.headingManager = m; m.startUpdatingHeading(); call.resolve()
+        }
+    }
+    @objc func stopCompass(_ call: CAPPluginCall) {
+        DispatchQueue.main.async { self.headingManager?.stopUpdatingHeading(); self.headingManager?.delegate = nil; self.headingManager = nil; call.resolve() }
+    }
+    public func locationManager(_ manager: CLLocationManager, didUpdateHeading heading: CLHeading) {
+        guard heading.headingAccuracy >= 0 else { return }
+        notifyListeners("heading", data: ["heading": heading.magneticHeading, "accuracy": heading.headingAccuracy, "needsCalibration": heading.headingAccuracy > 20, "screenUp": true, "landscape": UIDevice.current.orientation.isLandscape])
+    }
+    deinit { if let observer = headingPauseObserver { NotificationCenter.default.removeObserver(observer) } }
 
     @objc func getCurrentPosition(_ call: CAPPluginCall) {
         DispatchQueue.main.async {

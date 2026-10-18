@@ -81,4 +81,6 @@
     <!-- Explicitly suppress permissions reintroduced by transitive Android libraries. -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove" />
     <uses-permission android:name="android.permission.BIND_DEVICE_ADMIN" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 </manifest>

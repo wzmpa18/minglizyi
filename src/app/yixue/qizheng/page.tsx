@@ -281,7 +281,7 @@ export default function QizhengPage() {
 
     // 星盘（当前盘面状态：含已开图层/流年标记，所见即所得）
     parts.push(`<g transform="translate(${(W - CHART) / 2},${y}) scale(${CHART / chartUnits})">${new XMLSerializer().serializeToString(SRC)}</g>`);
-    y += CHART * (professional ? 5 / 6 : 1) + 24;
+    y += CHART * (professional ? 1.63 : 1) + 24;
 
     // 命身要略
     if (exportCfg.yaolue) {
@@ -959,14 +959,14 @@ export default function QizhengPage() {
       </div>
 
       {/* 星盘（v25.0.84 P1-4：缩放/全屏/复位，双指 pinch + 按钮控制） */}
-      <div className={chartFull ? "fixed inset-0 z-[70] flex flex-col bg-[#0e1526]" : "mt-2 bg-white px-2 py-3"}>
+      <div data-local-zoom="true" className={chartFull ? "fixed inset-0 z-[11000] flex flex-col bg-white" : "mt-2 bg-white px-2 py-3"} style={chartFull ? {paddingTop:"calc(env(safe-area-inset-top, 0px) + 18px)",paddingBottom:"env(safe-area-inset-bottom, 0px)"} : undefined}>
         <div className={chartFull ? "flex items-center justify-between gap-2 px-3 py-2" : "flex items-center justify-between gap-2 px-1 pb-1.5"}>
-          <span className={`text-[10px] ${chartFull ? "text-gray-300" : "text-gray-400"}`}>
+          <span className={`text-[10px] ${chartFull ? "text-gray-700" : "text-gray-400"}`}>
             星盘{chartFull ? " · 全屏" : ""} · {Math.round(chartScale * 100)}%
             {chartScale > 1 ? "（可拖动查看）" : "（双指捏合缩放）"}
           </span>
           <div className="flex flex-wrap items-center gap-1">
-            <button type="button" onClick={() => setProfessional(v => !v)} className="rounded-full border px-2 py-1 text-[10px] text-purple-700">{professional ? "详细盘" : "简洁盘"}</button>
+            <button type="button" onClick={() => setProfessional(v => !v)} className="rounded-full border px-2 py-1 text-[10px] text-purple-700">{professional ? "当前详细盘 · 切简洁" : "当前简洁盘 · 切详细"}</button>
             <button type="button" onClick={() => zoomBy(-0.25)} disabled={chartScale <= 1}
               className="flex h-7 w-7 items-center justify-center rounded-full border border-gray-200 text-sm font-bold text-gray-600 active:scale-95 disabled:opacity-40">−</button>
             <button type="button" onClick={() => zoomBy(0.25)} disabled={chartScale >= 3}
@@ -993,9 +993,9 @@ export default function QizhengPage() {
           className="mx-auto"
           style={
             {
-              "--qz-base": professional ? "min(960px, 92vw)" : chartFull ? "min(96vw, calc(100vh - 80px))" : "344px",
+              "--qz-base": chartFull ? "min(98vw, calc(100dvh - 112px))" : "min(96vw, 404px)",
               width: `calc(var(--qz-base) * ${chartScale})`,
-              height: `calc(var(--qz-base) * ${chartScale} * ${professional ? 5 / 6 : 1})`,
+              height: `calc(var(--qz-base) * ${chartScale} * ${professional ? 1.63 : 1})`,
             } as React.CSSProperties
           }
         >
@@ -1003,7 +1003,7 @@ export default function QizhengPage() {
           style={
             {
               width: "var(--qz-base)",
-              height: professional ? "calc(var(--qz-base) * 5 / 6)" : "var(--qz-base)",
+              height: professional ? "calc(var(--qz-base) * 1.63)" : "var(--qz-base)",
               transform: `scale(${chartScale})`,
               transformOrigin: "top left",
             } as React.CSSProperties
@@ -1223,7 +1223,7 @@ export default function QizhengPage() {
           </svg>}
         </div>
         </div>
-        <div className={`mt-1 flex flex-wrap justify-center gap-2 text-[10px] ${chartFull ? "text-gray-300" : "text-gray-500"}`}>
+        <div className={`mt-1 flex flex-wrap justify-center gap-2 text-[10px] ${chartFull ? "text-gray-700" : "text-gray-500"}`}>
           <span><span className="mr-0.5 inline-block h-2 w-2 rounded-full align-middle" style={{ backgroundColor: "#e53935" }} />命度</span>
           <span><span className="mr-0.5 inline-block h-2 w-2 rounded-full align-middle" style={{ backgroundColor: "#4fc3f7" }} />身度</span>
           <span><span className="mr-0.5 inline-block h-2 w-2 rounded-full align-middle" style={{ backgroundColor: "rgba(123,47,190,0.55)" }} />命宫</span>
@@ -1240,7 +1240,7 @@ export default function QizhengPage() {
           <span>｜人事宫内缘小字＝行限岁段</span>
         </div>
         {/* 五行配色图例（v25.0.84 P1-3 H2：七政五行 + 四余分色，由内到外五圈层） */}
-        <div className={`mt-1 flex flex-wrap justify-center gap-x-2.5 gap-y-0.5 pb-2 text-[9px] ${chartFull ? "text-gray-300" : "text-gray-500"}`}>
+        <div className={`mt-1 flex flex-wrap justify-center gap-x-2.5 gap-y-0.5 pb-2 text-[9px] ${chartFull ? "text-gray-700" : "text-gray-500"}`}>
           {([
             ["金", "venus"], ["木", "jupiter"], ["水", "mercury"], ["火", "mars"], ["土", "saturn"],
             ["炁", "qi"], ["罗", "luo"], ["计", "ji"], ["孛", "bei"],
@@ -1573,7 +1573,7 @@ export default function QizhengPage() {
                     {(hyMap[s.key] ?? []).length > 0 ? (
                       <span className="font-medium" style={{ color: BRAND }}>{(hyMap[s.key] ?? []).join("、")}</span>
                     ) : (
-                      <span className="text-gray-300">--</span>
+                      <span className="text-gray-700">--</span>
                     )}
                   </td>
                   <td className="py-1.5">
