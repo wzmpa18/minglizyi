@@ -43,11 +43,13 @@ jobs:
             xcrun simctl bootstatus "$MODEL" -b
             xcrun simctl status_bar "$MODEL" override --time 09:41 --dataNetwork wifi --wifiMode active --wifiBars 3 --batteryState charged --batteryLevel 100
             set +e
-            xcodebuild test -project ios/App/App.xcodeproj -scheme GuoxueScreenshots -configuration Debug -destination "id=$MODEL" -derivedDataPath "$RUNNER_TEMP/guoxue-simulator-build" -resultBundlePath "$RUNNER_TEMP/$kind.xcresult" CODE_SIGNING_ALLOWED=NO
+            xcodebuild test -project ios/App/App.xcodeproj -scheme GuoxueScreenshots -configuration Debug -destination "id=$MODEL" -derivedDataPath "$RUNNER_TEMP/guoxue-simulator-build" -resultBundlePath "$RUNNER_TEMP/$kind.xcresult" CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO
             TEST_STATUS=$?
             set -e
             xcrun xcresulttool export attachments --path "$RUNNER_TEMP/$kind.xcresult" --output-path "$RUNNER_TEMP/guoxue-screen-proof/$kind"
             if [ "$TEST_STATUS" -ne 0 ]; then exit "$TEST_STATUS"; fi
+            GROUP=$(xcrun simctl get_app_container "$MODEL" com.yandaoguoxue.app group.com.yandaoguoxue.calendar)
+            python3 -c "import json,sys,pathlib; p=pathlib.Path(sys.argv[1])/'calendar-v1.json'; data=json.loads(p.read_text()); assert data['snapshot']['schemaVersion']==1 and len(data['snapshot']['entries'])>1; assert all(set(x)=={'at'} for x in data['agenda']); json.dump({'sharedContainerWritten':True,'snapshotEntries':len(data['snapshot']['entries']),'privateAgendaItems':len(data['agenda']),'reminders':len(data['reminders'])},open(sys.argv[2],'w'))" "$GROUP" "$RUNNER_TEMP/guoxue-screen-proof/${kind}_shared-container-proof.json"
             xcrun simctl shutdown "$MODEL"
           done
       - name: Preserve authentic screenshot evidence, including failed UI steps

@@ -54,6 +54,8 @@ final class GuoxueStudyScreenshots: XCTestCase {
         shot("04_真实应用_言道日历_已验证页面",app)
         tapVisible(app.links,"桌面组件与提醒设置",app)
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","当前包已接入")).firstMatch.waitForExistence(timeout:20),"Native calendar plugin must report widget support")
+        app.buttons["刷新组件快照与提醒"].tap()
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","已向系统同步0条提醒")).firstMatch.waitForExistence(timeout:30),"Snapshot must be written through the real native bridge")
         shot("05_真实应用_系统组件支持说明",app)
         tapVisible(app.links,"我的",app)
         tapVisible(app.links,"会员中心",app)
