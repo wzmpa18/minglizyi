@@ -40,10 +40,13 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 60
     env:
+      NEXT_PUBLIC_STORE_CHANNEL: ios-full-learning
       KEY_ID: ${{ secrets.ASC_KEY_ID }}
       TEAM_ID: WM586465ZD
       APP_NAME: 言道国学
       BUNDLE_ID: com.yandaoguoxue.app
+      RELEASE_VERSION: 25.0.115
+      RELEASE_BUILD: 6
       PROFILE_NAME: yandao guoxue iOS App Store 20260902
 
     steps:
@@ -73,6 +76,7 @@ jobs:
           npm run build
           test -f out/index.html || { echo "FATAL: 静态导出产物缺失 out/index.html"; exit 1; }
           grep -q '__nativeApiPatchInstalled' out/index.html || { echo "FATAL: 原生 API 改写脚本未内联进 HTML（layout 注入缺失）"; exit 1; }
+          grep -q 'var STORE_CHANNEL = "ios-full-learning"' out/index.html || { echo "FATAL: full learning release profile not embedded"; exit 1; }
           rm -rf www
           mkdir -p www
           cp -r out/. www/
@@ -200,6 +204,23 @@ jobs:
           IPA=$(ls "$RUNNER_TEMP/export/"*.ipa | head -1)
           echo "ipa_size=$(du -h "$IPA" | cut -f1)" >> "$GITHUB_OUTPUT"
 
+      - name: Verify signed IPA identity and version
+        if: steps.creds.outputs.mode == 'signed' && steps.export.outcome == 'success'
+        run: |
+          python3 <<'PY'
+          import os, pathlib, plistlib, zipfile, hashlib
+          ipa = next((pathlib.Path(os.environ['RUNNER_TEMP'])/'export').glob('*.ipa'))
+          with zipfile.ZipFile(ipa) as archive:
+              files = [p for p in archive.namelist() if p.startswith('Payload/') and p.count('/') == 2 and p.endswith('.app/Info.plist')]
+              assert len(files) == 1, 'Expected one main app Info.plist'
+              info = plistlib.loads(archive.read(files[0]))
+              assert info['CFBundleIdentifier'] == os.environ['BUNDLE_ID'], 'Bundle mismatch'
+              assert info['CFBundleShortVersionString'] == os.environ['RELEASE_VERSION'], 'Version mismatch'
+              assert info['CFBundleVersion'] == os.environ['RELEASE_BUILD'], 'Build mismatch'
+              print('PASS: signed IPA identity', info['CFBundleIdentifier'], info['CFBundleShortVersionString'], info['CFBundleVersion'])
+          print('IPA SHA-256', hashlib.sha256(ipa.read_bytes()).hexdigest())
+          PY
+
       - name: Upload ipa artifact
         if: steps.creds.outputs.mode == 'signed' && steps.export.outcome == 'success'
         uses: actions/upload-artifact@v4
@@ -250,3 +271,11 @@ jobs:
         run: |
           rm -f "$HOME/private_keys/AuthKey_${KEY_ID}.p8" "$RUNNER_TEMP/dist.p12" "$RUNNER_TEMP/app.mobileprovision"
           security delete-keychain ci-build.keychain-db 2>/dev/null || true
+
+      - name: Require successful signed export for a release build
+        if: always()
+        env:
+          SIGNING_MODE: ${{ steps.creds.outputs.mode }}
+          EXPORT_OUTCOME: ${{ steps.export.outcome }}
+        run: |
+          test "$SIGNING_MODE" = "signed" && test "$EXPORT_OUTCOME" = "success" || { echo "Release incomplete: no verified signed IPA. Archive artifact is diagnostic only."; exit 1; }

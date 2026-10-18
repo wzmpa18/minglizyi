@@ -21,6 +21,10 @@
   if (window.__nativeApiPatchInstalled) return;
 
   var API_SERVER = "https://yandaoguoxue.yandao.vip";
+  var STORE_CHANNEL = "__YANDAO_STORE_CHANNEL__";
+  var CLIENT_VERSION = "__YANDAO_CLIENT_VERSION__";
+  if (STORE_CHANNEL.indexOf("__YANDAO_") === 0) STORE_CHANNEL = "default";
+  if (CLIENT_VERSION.indexOf("__YANDAO_") === 0) CLIENT_VERSION = "0.0.0";
 
   function detectNativePlatform() {
     try {
@@ -46,7 +50,7 @@
 
   // iOS 教育版（工具暂不上架，App Review 要求仅学习内容）：
   // 隐藏网页版 SEO 工具导航区块（data-seo-nav），原生壳内只见学习内容；Web/安卓不受影响
-  if (platform === "ios") {
+  if (platform === "ios" && STORE_CHANNEL !== "ios-full-learning") {
     document.documentElement.classList.add("ios-edu-shell");
     var eduStyle = document.createElement("style");
     eduStyle.textContent = ".ios-edu-shell [data-seo-nav]{display:none!important}";
@@ -66,6 +70,16 @@
   }
 
   window.fetch = function (input, init) {
+    var inputUrl = typeof input === "string" ? input : input && typeof input.url === "string" ? input.url : input instanceof URL ? input.toString() : "";
+    var targetUrl = rewriteUrl(inputUrl);
+    if (typeof targetUrl === "string" && targetUrl.indexOf(API_SERVER + "/api/") === 0) {
+      var headers = new Headers(input && input.headers || {});
+      new Headers(init && init.headers || {}).forEach(function (value, name) { headers.set(name, value); });
+      headers.set("X-Client-Platform", platform);
+      headers.set("X-Store-Channel", STORE_CHANNEL);
+      headers.set("X-Client-Version", CLIENT_VERSION);
+      init = Object.assign({}, init || {}, { headers: headers });
+    }
     if (typeof input === "string") {
       return origFetch(rewriteUrl(input), init);
     }

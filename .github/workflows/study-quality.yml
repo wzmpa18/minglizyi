@@ -47,12 +47,27 @@ on:
       - 'src/app/zhongyi/yunqi/**'
       - 'src/components/LearningEntryPanel.tsx'
       - 'scripts/astronomy-study.test.ts'
+      - 'backend_deploy/releaseProfilePolicy.js'
+      - 'backend_deploy/platformFeatureGate.js'
+      - 'src/lib/releaseFeatures.ts'
+      - 'src/lib/platformGate.ts'
+      - 'public/native-api-patch.js'
+      - 'src/components/IOSLearningRedirect.tsx'
+      - 'scripts/ios-full-profile.test.cjs'
   workflow_dispatch:
     inputs:
       preview:
         description: Build a static review preview without publishing
         type: boolean
         default: false
+      store_channel:
+        description: Compiled client profile for review preview
+        type: choice
+        default: tencent
+        options:
+          - tencent
+          - google
+          - ios-full-learning
 permissions:
   contents: read
 jobs:
@@ -73,6 +88,7 @@ jobs:
       - run: npx tsx --test scripts/acupoint-study.test.ts
       - run: node --test scripts/study-comments.test.cjs
       - run: npx tsx --test scripts/astronomy-study.test.ts
+      - run: node --test scripts/ios-full-profile.test.cjs
       - name: Verify original edition chapter sequence and provenance
         run: |
           node --input-type=module <<'JS'
@@ -104,7 +120,7 @@ jobs:
       - name: Build review preview
         if: inputs.preview == true
         env:
-          NEXT_PUBLIC_STORE_CHANNEL: tencent
+          NEXT_PUBLIC_STORE_CHANNEL: ${{ inputs.store_channel || 'tencent' }}
         run: npm run build
       - name: Upload review preview
         if: inputs.preview == true

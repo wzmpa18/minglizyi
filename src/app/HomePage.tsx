@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Solar, Lunar } from "lunar-javascript";
 import IcpFooter from "@/components/IcpFooter";
 import AnnouncementBar from "@/components/AnnouncementBar";
-import { isIOSNative } from "@/lib/platformGate";
+import { isLegacyIOSLearningProfile } from "@/lib/platformGate";
 import LearningEntryPanel from "@/components/LearningEntryPanel";
 
 const BRAND = "#7B2FBE";
@@ -201,7 +201,7 @@ export default function HomePage(){
   // IOS-4.3B-RECOVERY：iOS 正式产品 Profile（国学/中医/传统文化学习）。
   // 首页第一眼必须是学习产品：易学排盘入口 → 易学学习；隐藏八字个性化模块；
   // 历法数据保留，择吉预测元素降级。Web/Android 完全不变。
-  const iosProfile=mounted&&isIOSNative();
+  const iosProfile=mounted&&isLegacyIOSLearningProfile();
 
   useEffect(()=>{setMounted(true);try{const s=localStorage.getItem("yandao_user_bazi");if(s){const o=JSON.parse(s);setUserDayGan(o.dayGan||null);setUserDayZhi(o.dayZhi||null);}}catch{}},[]);
 

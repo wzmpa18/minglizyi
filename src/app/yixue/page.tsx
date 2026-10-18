@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { solarToLunar, getLunarDateString } from "@/lib/lunar";
 import { solarToBazi, GAN, ZHI } from "@/algorithm-core";
-import { isIOSNative } from "@/lib/platformGate";
+import { isLegacyIOSLearningProfile } from "@/lib/platformGate";
 
 // 五行颜色映射
 const WUXING_COLOR: Record<string, string> = {
@@ -134,7 +134,7 @@ function ToolIcon({ icon }: { icon: string }) {
 export default function YixueHome() {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
-  const iosProfile = mounted && isIOSNative();
+  const iosProfile = mounted && isLegacyIOSLearningProfile();
 
   const todayData = useMemo(() => {
     const now = mounted ? new Date() : new Date(2026, 0, 1, 12, 0, 0);

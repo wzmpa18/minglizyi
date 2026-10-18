@@ -16,6 +16,7 @@
 // ============================================================================
 
 "use strict";
+const { isNewIOSFullProfile } = require('./releaseProfilePolicy');
 
 // ==================== 平台功能矩阵 ====================
 
@@ -166,7 +167,8 @@ function createPlatformFeatureGate() {
       }
 
       // 2) 预测/命理类：WECHAT / QQ 永久关闭；iOS 永久关闭（IOS-4.3B-RECOVERY）
-      if (platform === "wechat" || platform === "qq" || platform === "ios") {
+      const newFullIOS = isNewIOSFullProfile(platform, storeChannel, req.headers['x-client-version']);
+      if (platform === "wechat" || platform === "qq" || (platform === "ios" && !newFullIOS)) {
         const p = String(req.path || "");
         for (let i = 0; i < FORTUNE_BLOCK_PREFIXES.length; i++) {
           if (p.indexOf(FORTUNE_BLOCK_PREFIXES[i]) === 0) {

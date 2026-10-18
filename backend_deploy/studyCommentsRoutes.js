@@ -17,7 +17,7 @@ function getStore(){
   store=createStudyCommentStore(db,new Set(catalog.targets)); return store;
 }
 function account(id){
-  if(!accounts)accounts=new Database(process.env.USER_DB_PATH||'/root/backend-auth/data/yandao_users.db',{readonly:true});
+  if(!accounts)accounts=new Database(process.env.DB_PATH||process.env.USER_DB_PATH||'/root/backend-auth/data/yandao_users.db',{readonly:true});
   const row=accounts.prepare('SELECT user_id,nickname,status,deleted_at FROM users WHERE user_id=?').get(String(id));
   if(!row || row.deleted_at || row.status==='banned') {const error=new Error('账号不可用，请重新登录或联系客服');error.status=403;throw error;}
   return row;

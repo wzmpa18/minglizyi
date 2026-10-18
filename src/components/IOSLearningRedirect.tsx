@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { isIOSNative } from "@/lib/platformGate";
+import { isLegacyIOSLearningProfile } from "@/lib/platformGate";
 
 // IOS-4.3B-RECOVERY-EDUCATION-EDITION-14 §18：旧排盘深链接防护
 // iOS 壳内访问旧排盘工具 URL 时跳转到易学学习中心对应学科，
@@ -41,7 +41,7 @@ export function useIOSLearningRedirect(tool: string) {
   const router = useRouter();
 
   useEffect(() => {
-    if (!isIOSNative()) return;
+    if (!isLegacyIOSLearningProfile()) return;
     const subject = SUBJECT_BY_TOOL[tool];
     router.replace(subject ? `/academy/yixue/${subject}?from=${tool}` : "/academy/yixue");
   }, [tool, router]);

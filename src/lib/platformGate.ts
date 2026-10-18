@@ -1,6 +1,6 @@
 "use client";
 
-import { IS_GOOGLE_PLAY_BUILD, STORE_CHANNEL } from "./releaseFeatures";
+import { CLIENT_VERSION, IS_GOOGLE_PLAY_BUILD, IS_IOS_FULL_BUILD, STORE_CHANNEL } from "./releaseFeatures";
 
 // ============================================================================
 // 平台功能开关 PLATFORM_FEATURE_MATRIX - FINAL-RC-02
@@ -141,6 +141,11 @@ export function isIOSNative(): boolean {
   return getRuntimePlatform() === "ios";
 }
 
+/** Legacy profile stays intact; the full profile ships only in a new binary. */
+export function isLegacyIOSLearningProfile(): boolean {
+  return isIOSNative() && !IS_IOS_FULL_BUILD;
+}
+
 /** 当前平台是否禁止付费（UI 隐藏 + 请求层双重拦截） */
 export function isPaymentsBlocked(): boolean {
   if (typeof window === "undefined") return false;
@@ -152,6 +157,7 @@ export function isPaymentsBlocked(): boolean {
 /** 查询某功能在指定平台（默认当前平台）是否可用 */
 export function isFeatureEnabled(feature: string, platform?: RuntimePlatform): boolean {
   const target = platform || getRuntimePlatform();
+  if (target === "ios" && IS_IOS_FULL_BUILD && !["payment", "store"].includes(feature)) return true;
   const row = PLATFORM_FEATURE_MATRIX[feature];
   if (!row) return true;
   return row[target] !== false;
@@ -165,5 +171,6 @@ export function clientPlatformHeaders(): Record<string, string> {
   return {
     "X-Client-Platform": getRuntimePlatform(),
     "X-Store-Channel": STORE_CHANNEL,
+    "X-Client-Version": CLIENT_VERSION,
   };
 }

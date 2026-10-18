@@ -19,7 +19,7 @@ import OfflineInit from "@/components/OfflineInit";
 import { ToastHost } from "@/components/ui";
 import { PromoFloat } from "@/components/marketing/PromoFloat";
 import PrivacyConsentGate from "@/components/PrivacyConsentGate";
-import { PUBLIC_PROMOTION_ENABLED } from "@/lib/releaseFeatures";
+import { CLIENT_VERSION, PUBLIC_PROMOTION_ENABLED, STORE_CHANNEL } from "@/lib/releaseFeatures";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://yandaoguoxue.yandao.vip"),
@@ -35,7 +35,8 @@ export const metadata: Metadata = {
 const nativeApiPatchCode = fs.readFileSync(
   path.join(process.cwd(), "public", "native-api-patch.js"),
   "utf-8"
-);
+).replace('"__YANDAO_STORE_CHANNEL__"', JSON.stringify(STORE_CHANNEL))
+ .replace('"__YANDAO_CLIENT_VERSION__"', JSON.stringify(CLIENT_VERSION));
 
 export const viewport: Viewport = {
   width: "device-width",
