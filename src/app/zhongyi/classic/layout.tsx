@@ -31,7 +31,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div style={{ background: "#fff", borderRadius: 16, padding: 16, boxShadow: "0 1px 4px rgba(74,43,112,.06)" }}>
           <h2 style={{ fontSize: 15, fontWeight: 700, color: "#2D1A3E", margin: "0 0 8px" }}>工具说明</h2>
           <p style={{ fontSize: 12, lineHeight: 1.9, color: "#6B5B80", margin: "0 0 8px" }}>中医典籍在线阅读：《黄帝内经》《伤寒论》《金匮要略》等经典医书原文查阅，支持搜索与分篇浏览，附典籍导读与阅读顺序建议，适合中医学习者研读原始文献。</p>
-          <p style={{ fontSize: 12, lineHeight: 1.9, color: "#6B5B80", margin: 0 }}>本工具免费在线使用，无需下载安装，计算即时完成；登录后可保存与同步历史记录。内容基于传统典籍与现代历法推算整理，仅供传统文化学习与研究参考，不构成医疗、投资或其他专业建议。</p>
+          <p style={{ fontSize: 12, lineHeight: 1.9, color: "#6B5B80", margin: 0 }}>本页用于中医文献与知识学习。资料范围、来源及复核状态以页面标注为准；学习记录的保存方式以具体功能说明为准。古籍记载不能直接用作个人诊疗或操作依据。</p>
           <h3 style={{ fontSize: 13, fontWeight: 700, color: "#5E2293", margin: "14px 0 8px" }}>全部中医工具导航</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             {ZHONGYI_TOOLS.map((g) => (

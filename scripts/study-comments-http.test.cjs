@@ -62,6 +62,48 @@ async function worker(root){
     assert.equal((await request(target,'GET',bob)).body.comments.length,0);
     assert.equal((await request('/admin/comment/'+id,'PUT',admin,{status:'APPROVED',note:'不得复活已删除评论'})).status,404);
     console.log('PASS: real HTTP/JWT/account lookup, role scopes, 500 characters, origin/body limits, pending moderation, idempotency, report, block and own deletion. Isolated data only.');
+
+    process.env.SOCIAL_DB_PATH=path.join(root,'social.db');
+    process.env.SOCIAL_RATE_LIMIT_CONFIG=path.join(root,'social-rate-limit.json');
+    app.use('/api/social',require('../backend_deploy/socialApiRoutes').createRouter());
+    const socialBase=`http://127.0.0.1:${server.address().port}/api/social`;
+    async function social(route,method='GET',credential=bob,body){
+      const response=await fetch(socialBase+route,{method,headers:{'Content-Type':'application/json',...(credential?{Authorization:'Bearer '+credential}:{})},body:body===undefined?undefined:JSON.stringify(body)});
+      return {status:response.status,body:await response.json()};
+    }
+    assert.equal((await social('/posts')).status,200); // Initializes an isolated real schema.
+    const socialDb=new Database(process.env.SOCIAL_DB_PATH);
+    try{
+      socialDb.exec(`INSERT INTO posts(post_id,user_id,nickname,content,status) VALUES
+        ('visible','alice','甲','正常学习动态','active'),('blocked','banned','乙','屏蔽动态','active'),
+        ('reverse','deleted','丙','双向屏蔽动态','active'),('hidden','alice','甲','已下架动态','hidden');
+        INSERT INTO blacklists(user_id,blocked_id) VALUES ('bob','banned'),('deleted','bob');
+        INSERT INTO favorites(user_id,post_id) SELECT 'bob',post_id FROM posts;
+        INSERT INTO comments(id,post_id,user_id,nickname,content,parent_id,deleted) VALUES
+          (1,'visible','banned','乙','屏蔽根评论',0,0), (2,'visible','alice','甲','屏蔽根的回复',1,0),
+          (3,'visible','alice','甲','旧删除正文不得泄露',0,1), (4,'visible','alice','甲','可见回复',3,0);`);
+      assert.deepEqual((await social('/posts')).body.posts.map(p=>p.postId),['visible']);
+      assert.deepEqual((await social('/favorites/mine')).body.posts.map(p=>p.postId),['visible']);
+      for(const postId of ['blocked','reverse','hidden']){
+        for(const suffix of ['', '/comments'])assert.equal((await social('/posts/'+postId+suffix)).status,404);
+        for(const [suffix,body] of [['/like',{}],['/favorite',{}],['/comments',{content:'验证不可评论'}]])
+          assert.equal((await social('/posts/'+postId+suffix,'POST',bob,body)).status,404);
+      }
+      const visibleComments=(await social('/posts/visible/comments')).body.comments;
+      assert.deepEqual(visibleComments.map(c=>c.id),['3','4']);
+      assert.equal(visibleComments[0].content,'该评论已删除');
+      assert.equal((await social('/posts/visible/comments','POST',bob,{content:'不能回复已屏蔽作者',parentId:1})).status,404);
+      assert.equal((await social('/posts/visible/comments','POST',bob,{content:'不能回复已删除根',parentId:4})).status,404);
+      for(const id of ['missing','banned','deleted'])assert.equal((await social('/posts/visible/like','POST',token(id),{})).status,403);
+      assert.equal((await social('/posts/visible/like','POST',jwt.sign({},process.env.JWT_SECRET),{})).status,401);
+      assert.equal((await social('/posts/visible/like','POST','invalid-jwt',{})).status,401);
+      assert.equal((await social('/posts/visible/like','POST',bob,{})).status,200);
+      assert.equal((await social('/posts/visible/comments','POST',bob,{content:'正文与版本应对应阅读'})).status,200);
+      accounts.exec('DROP TABLE users');
+      assert.equal((await social('/posts/visible/like','POST',bob,{})).status,503);
+      console.log('PASS: real social HTTP routes enforce feed/detail/favorite/comment two-way blocks, inactive posts, deleted text, reply checks, real accounts and fail-closed database errors.');
+    }finally{socialDb.close();}
+
   }finally{await new Promise(resolve=>server.close(resolve));accounts.close();}
 }
 
@@ -69,7 +111,7 @@ if(process.argv[2]==='--worker'){
   worker(process.argv[3]).then(()=>process.exit(0)).catch(error=>{console.error(error.message);process.exit(1);});
 }else{
   const test=require('node:test');
-  test('acupoint discussion HTTP lifecycle enforces real authentication and moderation',()=>{
+  test('acupoint and social HTTP lifecycles enforce real authentication, moderation and blocking',()=>{
     const tempRoot=fs.realpathSync(os.tmpdir());
     const root=fs.mkdtempSync(path.join(tempRoot,'guoxue-study-http-'));
     try{

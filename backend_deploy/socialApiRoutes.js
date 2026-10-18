@@ -25,9 +25,10 @@ const path = require('path');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const { listActiveResourceComments } = require('./resourceDiscussionQueries');
+const { getVisiblePost, listVisiblePosts, listVisiblePostComments, listVisibleFavoritePosts } = require('./socialVisibilityQueries');
 
 const SOCIAL_DB_PATH = process.env.SOCIAL_DB_PATH || path.join(__dirname, 'data', 'social.db');
-const USER_DB_PATH = process.env.USER_DB_PATH || '/root/backend-auth/data/yandao_users.db';
+const USER_DB_PATH = process.env.DB_PATH || process.env.USER_DB_PATH || '/root/backend-auth/data/yandao_users.db';
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
   throw new Error('JWT_SECRET 未配置或长度不足32位，服务拒绝启动（fail-closed）。请在部署 .env 设置 ≥32 位随机密钥。');
@@ -448,15 +449,19 @@ function authRequired(req, res, next) {
     return res.status(401).json({ success: false, error: '登录已过期，请重新登录' });
   }
   // v25.0.61 FINAL-SEAL D19：封禁/注销账号全社交链路拦截（后台封禁原先只在后台显示）
-  const udb = getUserDb();
-  if (udb) {
-    try {
-      const row = udb.prepare('SELECT status, deleted_at FROM users WHERE user_id = ? OR CAST(user_id AS TEXT) = ?').get(req.user.userId, String(req.user.userId));
-      if (row) {
-        if (row.deleted_at) return res.status(403).json({ success: false, error: '该账号已注销', code: 'ACCOUNT_DELETED' });
-        if (row.status === 'banned') return res.status(403).json({ success: false, error: '该账号已被封禁，如有疑问请联系客服', code: 'ACCOUNT_BANNED' });
-      }
-    } catch (e) { /* DB异常不阻断鉴权 */ }
+  const userId = req.user && req.user.userId;
+  if (!['string', 'number'].includes(typeof userId) || !String(userId).trim()) {
+    return res.status(401).json({ success: false, error: '登录信息无效，请重新登录' });
+  }
+  try {
+    const udb = getUserDb();
+    if (!udb) return res.status(503).json({ success: false, error: '账号验证暂不可用，请稍后重试' });
+    const row = udb.prepare('SELECT status, deleted_at FROM users WHERE user_id = ? OR CAST(user_id AS TEXT) = ?').get(userId, String(userId));
+    if (!row) return res.status(403).json({ success: false, error: '账号不可用，请重新登录', code: 'ACCOUNT_NOT_FOUND' });
+    if (row.deleted_at) return res.status(403).json({ success: false, error: '该账号已注销', code: 'ACCOUNT_DELETED' });
+    if (row.status === 'banned') return res.status(403).json({ success: false, error: '该账号已被封禁，如有疑问请联系客服', code: 'ACCOUNT_BANNED' });
+  } catch {
+    return res.status(503).json({ success: false, error: '账号验证暂不可用，请稍后重试' });
   }
   next();
 }
@@ -573,23 +578,10 @@ function createRouter() {
     try {
       const d = getDb();
       const { tag = '', circle = '', cursor = 0, limit = 20 } = req.query;
-      const lim = Math.min(parseInt(limit, 10) || 20, 50);
-      const cur = (parseInt(cursor, 10) || 0) > 0 ? parseInt(cursor, 10) : 9007199254740992; // cursor缺省=首页
+      const lim = Math.max(1, Math.min(parseInt(limit, 10) || 20, 50));
       const ck = circle && SOCIAL_CIRCLES[circle] ? circle : '';
-      let rows;
-      if (ck && tag) {
-        rows = d.prepare(`SELECT * FROM posts WHERE status='active' AND circle=? AND tags LIKE ? AND id < ? ORDER BY id DESC LIMIT ?`)
-          .all(ck, `%"${tag}"%`, cur, lim);
-      } else if (ck) {
-        rows = d.prepare(`SELECT * FROM posts WHERE status='active' AND circle=? AND id < ? ORDER BY id DESC LIMIT ?`)
-          .all(ck, cur, lim);
-      } else if (tag) {
-        rows = d.prepare(`SELECT * FROM posts WHERE status='active' AND tags LIKE ? AND id < ? ORDER BY id DESC LIMIT ?`)
-          .all(`%"${tag}"%`, cur, lim);
-      } else {
-        rows = d.prepare(`SELECT * FROM posts WHERE status='active' AND id < ? ORDER BY id DESC LIMIT ?`).all(cur, lim);
-      }
       const currentUserId = req.user ? String(req.user.userId) : '';
+      const rows = listVisiblePosts(d, { viewerId: currentUserId, tag, circle: ck, cursor, limit: lim });
       const posts = rows.map(r => rowToPost(r, currentUserId));
       const nextCursor = rows.length === lim ? rows[rows.length - 1].id : 0;
       res.json({ success: true, posts, nextCursor });
@@ -649,7 +641,7 @@ function createRouter() {
   // GET /api/social/posts/:postId
   router.get('/posts/:postId', authOptional, (req, res) => {
     try {
-      const row = getDb().prepare(`SELECT * FROM posts WHERE post_id = ? AND status='active'`).get(req.params.postId);
+      const row = getVisiblePost(getDb(), req.params.postId, req.user ? req.user.userId : '');
       if (!row) return res.status(404).json({ success: false, error: '动态不存在' });
       const currentUserId = req.user ? String(req.user.userId) : '';
       res.json({ success: true, post: rowToPost(row, currentUserId) });
@@ -679,7 +671,7 @@ function createRouter() {
       const d = getDb();
       const postId = req.params.postId;
       const uid = String(req.user.userId);
-      const post = d.prepare(`SELECT * FROM posts WHERE post_id = ?`).get(postId);
+      const post = getVisiblePost(d, postId, uid);
       if (!post) return res.status(404).json({ success: false, error: '动态不存在' });
       const existing = d.prepare('SELECT 1 FROM likes WHERE post_id = ? AND user_id = ?').get(postId, uid);
       if (existing) {
@@ -706,7 +698,7 @@ function createRouter() {
       const d = getDb();
       const postId = req.params.postId;
       const me = String(req.user.userId);
-      const post = d.prepare('SELECT * FROM posts WHERE post_id = ?').get(postId);
+      const post = getVisiblePost(d, postId, req.user.userId);
       if (!post) return res.status(404).json({ success: false, error: '动态不存在' });
       const dup = d.prepare('SELECT 1 FROM reports WHERE target_type = ? AND target_id = ? AND reporter_id = ?')
         .get('post', postId, me);
@@ -839,14 +831,16 @@ function createRouter() {
 
   // 第一百一十八~一百二十章：评论读视图（两级结构：roots + replies；平铺兼容字段保留）
   // GET /api/social/posts/:postId/comments
-  router.get('/posts/:postId/comments', (req, res) => {
+  router.get('/posts/:postId/comments', authOptional, (req, res) => {
     try {
-      const rows = getDb().prepare('SELECT * FROM comments WHERE post_id = ? ORDER BY id ASC LIMIT 500').all(req.params.postId);
+      const viewerId = req.user ? String(req.user.userId) : '';
+      if (!getVisiblePost(getDb(), req.params.postId, viewerId)) return res.status(404).json({ success: false, error: '动态不存在' });
+      const rows = listVisiblePostComments(getDb(), req.params.postId, viewerId);
       const map = new Map();
       const flat = rows.map(r => {
         const c = {
           id: String(r.id), postId: r.post_id, parentId: String(r.parent_id || 0),
-          authorId: r.user_id, authorName: r.nickname, content: r.content,
+          authorId: r.user_id, authorName: r.nickname, content: r.deleted ? '该评论已删除' : r.content,
           deleted: !!(r.deleted), deletedAt: r.deleted_at || '', createdAt: r.created_at,
           _pid: Number(r.parent_id || 0),
         };
@@ -894,7 +888,7 @@ function createRouter() {
         return res.status(400).json({ success: false, error: '评论包含违规内容，已拦截' });
       }
       const d = getDb();
-      const post = d.prepare(`SELECT * FROM posts WHERE post_id = ?`).get(req.params.postId);
+      const post = getVisiblePost(d, req.params.postId, req.user.userId);
       if (!post) return res.status(404).json({ success: false, error: '动态不存在' });
 
       // parentId 校验 + 两级拍平（父评论若本身是回复 → 挂到其根上）
@@ -907,6 +901,12 @@ function createRouter() {
         if (String(parentRow.post_id) !== String(req.params.postId)) return res.status(400).json({ success: false, error: '只能回复同一条动态下的评论' });
         storedParentId = Number(parentRow.parent_id || 0) > 0 ? Number(parentRow.parent_id) : pid;
         parentRow = d.prepare('SELECT * FROM comments WHERE id = ?').get(storedParentId) || parentRow;
+        const reader = String(req.user.userId);
+        const blocked = d.prepare('SELECT 1 FROM blacklists WHERE (user_id = ? AND blocked_id = ?) OR (user_id = ? AND blocked_id = ?)');
+        const target = d.prepare('SELECT user_id FROM comments WHERE id = ?').get(pid);
+        if (parentRow.deleted || [parentRow, target].some(row => row && blocked.get(reader, String(row.user_id), String(row.user_id), reader))) {
+          return res.status(404).json({ success: false, error: '回复的目标评论不存在' });
+        }
       }
 
       const info = userPublicInfo(req.user.userId) || { nickname: '国学爱好者' };
@@ -1844,7 +1844,7 @@ function createRouter() {
       const d = getDb();
       const postId = req.params.postId;
       const me = String(req.user.userId);
-      const post = d.prepare('SELECT * FROM posts WHERE post_id = ? AND status = ?').get(postId, 'active');
+      const post = getVisiblePost(d, postId, me);
       if (!post) return res.status(404).json({ success: false, error: '动态不存在' });
       const existing = d.prepare('SELECT 1 FROM favorites WHERE post_id = ? AND user_id = ?').get(postId, me);
       if (existing) {
@@ -1864,7 +1864,7 @@ function createRouter() {
     try {
       const d = getDb();
       const me = String(req.user.userId);
-      const rows = d.prepare(`SELECT p.* FROM favorites f JOIN posts p ON p.post_id = f.post_id WHERE f.user_id = ? AND p.status = 'active' ORDER BY f.created_at DESC LIMIT 100`).all(me);
+      const rows = listVisibleFavoritePosts(d, me);
       res.json({ success: true, posts: rows.map(r => rowToPost(r, me)) });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
