@@ -55,8 +55,12 @@ class Chapters(HTMLParser):
                 self.current = None
         if tag == "p" and self.paragraph:
             text = "".join(self.buffer).strip()
-            if text and self.current:
-                self.current["paragraphs"].append(text)
+            # Source editorial endnotes and the page's licence badge follow
+            # chapter 81 without another heading. They are not its body text.
+            editorial = re.match(r"^\[\d+\]", text)
+            licence = "此作品在" in text or "Public domain" in text
+            if text and self.current and not editorial and not licence:
+                self.current["paragraphs"].append(re.sub(r"\[\d+\]", "", text))
             self.paragraph = False
         if tag == "div":
             if self.depth == self.root:
@@ -84,7 +88,7 @@ def main():
     for index, row in enumerate(parser.rows, 1):
         content = "\n\n".join(row["paragraphs"])
         assert len(content) >= 20, f"Chapter {index} is missing text"
-        assert not any(word in content for word in ("Creative Commons", "此页面最后", "本页面最后"))
+        assert not any(word in content for word in ("Creative Commons", "Public domain", "此作品在", "此页面最后", "本页面最后"))
         chapters.append({"id": f"nanjing-original-{index}", "title": row["title"], "content": content})
     revision = re.search(r'id="t-permalink".*?oldid=(\d+)', html, re.S)
     assert revision, "No revision identity; refuse an untraceable import"

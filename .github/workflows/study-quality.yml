@@ -33,6 +33,7 @@ jobs:
             assert.equal(chapter.id, `nanjing-original-${index + 1}`);
             assert.ok(chapter.content.length >= 20);
             assert.ok(!chapter.content.includes('【白话提要】'));
+            assert.ok(!/Public domain|此作品在|\[\d+\]/.test(chapter.content));
           });
           assert.match(book.sourceRevisionUrl, /^https:\/\/zh\.wikisource\.org\/w\/index\.php\?oldid=\d+$/);
           assert.ok(book.license && book.verification && book.contentSha256.length === 64);
