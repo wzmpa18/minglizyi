@@ -513,10 +513,10 @@ export default function DaLiuRenPage() {
   const renderShenshaValue = (label: string, value: string) => {
     const needBorder = label === "日空" || label === "时空";
     if (!needBorder) {
-      return <span style={{ color: "#000", fontWeight: 500, fontSize: "10px" }}>{value}</span>;
+      return <span style={{ color: "#000", fontWeight: 500, fontSize: "14px" }}>{value}</span>;
     }
     return (
-      <span style={{ fontSize: "10px", fontWeight: 500 }}>
+      <span style={{ fontSize: "14px", fontWeight: 500 }}>
         {value.split("").map((ch, i) => (
           <span
             key={i}
@@ -575,7 +575,7 @@ export default function DaLiuRenPage() {
                 <span style={{
                   backgroundColor: COLOR_GRAY_LABEL,
                   color: "#fff",
-                  fontSize: "10px",
+                  fontSize: "14px",
                   padding: "1px 6px",
                   borderRadius: "2px",
                   lineHeight: 1.4,
@@ -600,7 +600,7 @@ export default function DaLiuRenPage() {
           })}
         </div>
         {/* 右侧：日期/农历/节气 */}
-        <div style={{ flex: 1, textAlign: "right", fontSize: "10px", color: "#000", lineHeight: 1.6, paddingLeft: "6px", alignSelf: "center" }}>
+        <div style={{ flex: 1, textAlign: "right", fontSize: "14px", color: "#000", lineHeight: 1.6, paddingLeft: "6px", alignSelf: "center" }}>
           <div>{data.dateStr}</div>
           <div>农历{data.lunarDate}</div>
           <div>{data.jieqiInfo}</div>
@@ -610,17 +610,19 @@ export default function DaLiuRenPage() {
       {/* ====== 2. 主体区域 flex ====== */}
       <div style={{ display: "flex", backgroundColor: "#fff" }}>
         {/* ---- 左侧竖栏（约30%） ---- */}
-        <div style={{
-          width: "30%",
+        <div data-testid="liuren-shensha" style={{
+          width: "32%",
+          minWidth: "112px",
+          maxWidth: "170px",
           flexShrink: 0,
-          borderRight: "1px solid #ccc",
+          borderRight: "1.5px solid #89949d",
           backgroundColor: "#fff",
           padding: "4px 4px",
-          fontSize: "11px",
+          fontSize: "13px",
           boxSizing: "border-box",
         }}>
           {/* 出生信息 */}
-          <div style={{ textAlign: "center", marginBottom: "6px", fontSize: "12px", color: "#000", lineHeight: 1.3, fontWeight: 500 }}>
+          <div style={{ textAlign: "center", marginBottom: "6px", fontSize: "14px", color: "#000", lineHeight: 1.3, fontWeight: 500 }}>
             {prefillParams?.name ? `${prefillParams.name} · ` : ""}{data.shengXiao}({data.birthYear}) {data.isMan ? "男" : "女"}
           </div>
 
@@ -629,19 +631,19 @@ export default function DaLiuRenPage() {
             { label: "本命", gan: data.benMing[0], zhi: data.benMing[1], isUnderline: false },
             { label: "行年", gan: data.xingYear[0], zhi: data.xingYear[1], isUnderline: false },
           ].map((item, i) => (
-            <div key={`top-${i}`} style={{ display: "flex", alignItems: "center", padding: "1px 2px", marginBottom: "2px", fontSize: "10px", lineHeight: 1.4 }}>
+            <div key={`top-${i}`} style={{ display: "flex", alignItems: "center", padding: "1px 2px", marginBottom: "2px", fontSize: "13px", lineHeight: 1.55 }}>
               <span style={{
                 backgroundColor: COLOR_GRAY_LABEL,
                 color: "#fff",
-                fontSize: "10px",
+                fontSize: "13px",
                 padding: "1px 4px",
                 borderRadius: "2px",
                 marginRight: "4px",
                 flexShrink: 0,
-                lineHeight: 1.4,
+                lineHeight: 1.55,
               }}>{item.label}</span>
               <span style={{
-                fontSize: "14px",
+                fontSize: "16px",
                 fontWeight: 700,
                 color: item.isUnderline ? BRAND_RED : ganColorRender(item.gan, data.dayGan),
                 textDecoration: item.isUnderline ? "underline" : "none",
@@ -650,7 +652,7 @@ export default function DaLiuRenPage() {
               }}>{item.gan}</span>
               {item.zhi && (
                 <span style={{
-                  fontSize: "14px",
+                  fontSize: "16px",
                   fontWeight: 700,
                   color: item.isUnderline ? BRAND_RED : zhiColorRender(item.zhi, data.dayGan),
                   textDecoration: item.isUnderline ? "underline" : "none",
@@ -663,19 +665,19 @@ export default function DaLiuRenPage() {
 
           {/* 月将 - 单独区域，上面有粗线 */}
           <div style={{ borderTop: "2px solid #333", marginTop: "3px", paddingTop: "3px" }}>
-            <div style={{ display: "flex", alignItems: "center", padding: "1px 2px", marginBottom: "2px", fontSize: "10px", lineHeight: 1.4 }}>
+            <div style={{ display: "flex", alignItems: "center", padding: "1px 2px", marginBottom: "2px", fontSize: "13px", lineHeight: 1.55 }}>
               <span style={{
                 backgroundColor: COLOR_GRAY_LABEL,
                 color: "#fff",
-                fontSize: "10px",
+                fontSize: "13px",
                 padding: "1px 4px",
                 borderRadius: "2px",
                 marginRight: "4px",
                 flexShrink: 0,
-                lineHeight: 1.4,
+                lineHeight: 1.55,
               }}>月将</span>
               <span style={{
-                fontSize: "14px",
+                fontSize: "16px",
                 fontWeight: 700,
                 color: BRAND_RED,
                 textDecoration: "underline",
@@ -694,19 +696,19 @@ export default function DaLiuRenPage() {
                     display: "flex",
                     alignItems: "center",
                     padding: "1px 2px",
-                    fontSize: "10px",
-                    lineHeight: 1.4,
+                    fontSize: "13px",
+                    lineHeight: 1.55,
                   }}
                 >
                   <span style={{
                     backgroundColor: COLOR_GRAY_LABEL,
                     color: "#fff",
-                    fontSize: "9px",
+                    fontSize: "12px",
                     padding: "0 3px",
                     borderRadius: "2px",
                     marginRight: "3px",
                     flexShrink: 0,
-                    lineHeight: 1.4,
+                    lineHeight: 1.55,
                   }}>{ss.label}</span>
                   {renderShenshaValue(ss.label, ss.value)}
                 </div>
@@ -718,7 +720,7 @@ export default function DaLiuRenPage() {
 
           {/* 自选神煞 */}
           <div style={{ marginTop: "6px", borderTop: "1px dashed #ccc", paddingTop: "4px" }}>
-            <div style={{ fontSize: "11px", fontWeight: 600, color: "#000", marginBottom: "2px", paddingLeft: "2px" }}>自選神煞</div>
+            <div style={{ fontSize: "13px", fontWeight: 600, color: "#000", marginBottom: "2px", paddingLeft: "2px" }}>自選神煞</div>
             {data.zixuanShensha.map((ss, i) => (
               <div
                 key={i}
@@ -726,21 +728,21 @@ export default function DaLiuRenPage() {
                   display: "flex",
                   alignItems: "center",
                   padding: "1px 2px",
-                  fontSize: "10px",
-                  lineHeight: 1.4,
+                  fontSize: "13px",
+                  lineHeight: 1.55,
                 }}
               >
                 <span style={{
                   backgroundColor: COLOR_GRAY_LABEL,
                   color: "#fff",
-                  fontSize: "9px",
+                  fontSize: "12px",
                   padding: "0 3px",
                   borderRadius: "2px",
                   marginRight: "3px",
                   flexShrink: 0,
-                  lineHeight: 1.4,
+                  lineHeight: 1.55,
                 }}>{ss.label}</span>
-                <span style={{ color: "#000", fontWeight: 500, fontSize: "10px" }}>{ss.value}</span>
+                <span style={{ color: "#000", fontWeight: 500, fontSize: "13px" }}>{ss.value}</span>
               </div>
             ))}
           </div>
@@ -959,8 +961,8 @@ export default function DaLiuRenPage() {
                         flexDirection: "column",
                         alignItems: "center",
                         justifyContent: "center",
-                        borderRight: (col < 4 && !(row >= 2 && row <= 3 && col === 1)) ? "1px solid #ccc" : "none",
-                        borderBottom: (row < 4 && !(col >= 2 && col <= 3 && row === 1)) ? "1px solid #ccc" : "none",
+                        borderRight: (col < 4 && !(row >= 2 && row <= 3 && col === 1)) ? "1.5px solid #92999e" : "none",
+                        borderBottom: (row < 4 && !(col >= 2 && col <= 3 && row === 1)) ? "1.5px solid #92999e" : "none",
                         padding: "3px 2px",
                         minHeight: "52px",
                         boxSizing: "border-box",
@@ -1017,7 +1019,7 @@ export default function DaLiuRenPage() {
                   flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "center",
-                  border: "1px solid #ccc",
+                  border: "1.5px solid #92999e",
                   boxSizing: "border-box",
                   padding: "3px 4px",
                   minHeight: "104px",

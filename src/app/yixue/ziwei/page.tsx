@@ -458,7 +458,7 @@ export default function ZiweiPage() {
 
   // ---- 视图模式 ----
   const [viewMode, setViewMode] = useState<"sihua" | "sanhe" | "feixing">("sanhe");
-  const [professionalLayout, setProfessionalLayout] = useState(true);
+  const [professionalLayout, setProfessionalLayout] = useState(false);
 
   // ---- 三方四正高亮宫位（地支索引 0-11，null 表示无高亮） ----
   const [focusedPalace, setFocusedPalace] = useState<number | null>(null);

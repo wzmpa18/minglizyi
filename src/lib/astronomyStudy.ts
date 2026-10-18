@@ -1,4 +1,4 @@
-import { Body, Equator, Horizon, Illumination, MoonPhase, Observer, SearchRiseSet, SearchSunLongitude } from "astronomy-engine";
+import { Body, Equator, Horizon, Illumination, MoonPhase, Observer, SearchRiseSet, SearchSunLongitude, SunPosition } from "astronomy-engine";
 
 export const ASTRONOMY_SOURCE = "https://github.com/cosinekitty/astronomy/tree/v2.1.19/source/js";
 export const SKY_BODIES = [
@@ -18,11 +18,13 @@ export function parseChinaTime(input: string): Date {
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(input)) throw new Error("请填写完整的日期和时间。");
   const date = new Date(input + ":00+08:00");
   const year = Number(input.slice(0, 4));
-  if (!Number.isFinite(date.getTime()) || year < 1900 || year > 2100 || chinaTimeInput(date) !== input) throw new Error("请选择1900—2100年内的有效日期和时间。");
+  if (!Number.isFinite(date.getTime()) || year < 1 || year > 3000 || chinaTimeInput(date) !== input) throw new Error("请选择公元1—3000年内的有效日期和时间。");
   return date;
 }
 export function formatChinaTime(date: Date) {
-  return new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).format(date);
+  // Fixed UTC+8 even before modern standard time; Asia/Shanghai uses historic
+  // local mean time for early years and would contradict the input label.
+  return new Intl.DateTimeFormat("zh-CN", { timeZone: "Etc/GMT-8", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).format(date);
 }
 
 /** Zenith-centred azimuthal equidistant diagram, looking UP: N top, E left. */
@@ -50,7 +52,7 @@ export function calculateStudySky(date: Date, latitude: number, longitude: numbe
     };
     return { body, rise: event(1), set: event(-1) };
   });
-  return { bodies, events, moonPhase: MoonPhase(date), daylight: bodies[0].altitude >= 0 };
+  return { bodies, events, moonPhase: MoonPhase(date), sunLongitude: SunPosition(date).elon, daylight: bodies[0].altitude >= 0 };
 }
 
 const QI_MAIN = ["厥阴风木", "少阴君火", "少阳相火", "太阴湿土", "阳明燥金", "太阳寒水"] as const;

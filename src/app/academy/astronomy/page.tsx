@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { ASTRONOMY_SOURCE, calculateStudySky, chinaTimeInput, formatChinaTime, parseChinaTime, skyDiagramPoint } from "@/lib/astronomyStudy";
 import { LocalStudyNotes } from "@/components/LocalStudyNotes";
+import { getLocalSkyPosition } from "@/lib/localSkyLocation";
+import { SkyYunqiLesson } from "@/components/SkyYunqiLesson";
 
 const LOCATIONS = [
   { name: "东莞", lat: 23.02, lon: 113.75 }, { name: "北京", lat: 39.90, lon: 116.40 },
@@ -27,11 +29,14 @@ function AstronomyStudyContent() {
   const [latitude, setLatitude] = useState("23.02"), [longitude, setLongitude] = useState("113.75");
   const [applied, setApplied] = useState({ time: "2026-10-18T20:00", lat: 23.02, lon: 113.75 });
   const [selected, setSelected] = useState("Moon"), [error, setError] = useState("");
+  const [locating, setLocating] = useState(false), [locationMessage, setLocationMessage] = useState("");
+  const [timePlaying, setTimePlaying] = useState(false), [stepMinutes, setStepMinutes] = useState(60);
   const [answer, setAnswer] = useState<number | null>(null);
   useEffect(() => { const current = chinaTimeInput(new Date()); setTime(current); setApplied(old => ({ ...old, time: current })); }, []);
   const sky = useMemo(() => calculateStudySky(parseChinaTime(applied.time), applied.lat, applied.lon), [applied]);
   const body = sky.bodies.find(item => item.body === selected) || sky.bodies[1];
   const update = (value = time) => {
+    setTimePlaying(false);
     try {
       parseChinaTime(value);
       if (!latitude.trim() || !longitude.trim()) throw new Error("请填写经度和纬度。");
@@ -40,17 +45,48 @@ function AstronomyStudyContent() {
       setTime(value); setApplied({ time: value, lat, lon }); setError("");
     } catch (reason) { setError(reason instanceof Error ? reason.message : "请检查输入。"); }
   };
+  const locate = async () => {
+    if (locating) return;
+    setLocating(true); setLocationMessage("正在请求一次定位；不会上传或保存位置。");
+    try {
+      const position = await getLocalSkyPosition();
+      if (![position.latitude, position.longitude, position.accuracy].every(Number.isFinite) || Math.abs(position.latitude) > 90 || Math.abs(position.longitude) > 180 || position.accuracy < 0) throw Error("系统未返回有效的位置，请手动选择地点。");
+      const lat = Number(position.latitude.toFixed(5)), lon = Number(position.longitude.toFixed(5));
+      setLatitude(String(lat)); setLongitude(String(lon)); setTimePlaying(false);
+      setApplied(old => ({ ...old, lat, lon }));
+      setLocationMessage(`已按当前位置更新天空，系统报告精度约${Math.round(position.accuracy)}米。位置仅在当前页面临时使用。`); setError("");
+    } catch (reason) { setLocationMessage(reason instanceof Error ? reason.message : "定位未成功，可以继续手动选择地点。"); }
+    finally { setLocating(false); }
+  };
+  const observeTime = (value: string) => {
+    try { parseChinaTime(value); setTimePlaying(false); setTime(value); setApplied(old => ({ ...old, time: value })); setError(""); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : "日期超出可用范围。"); }
+  };
+  const advanceTime = (minutes: number) => observeTime(chinaTimeInput(new Date(parseChinaTime(applied.time).getTime() + minutes * 60000)));
+  useEffect(() => {
+    if (!timePlaying) return;
+    const timer = setInterval(() => {
+      const value = chinaTimeInput(new Date(parseChinaTime(applied.time).getTime() + stepMinutes * 60000));
+      try { parseChinaTime(value); setApplied(old => ({ ...old, time: value })); }
+      catch { setTimePlaying(false); setError("时间演示已到公元1—3000年的边界。"); }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [timePlaying, stepMinutes, applied.time]);
+  useEffect(() => { if (timePlaying) setTime(applied.time); }, [applied.time, timePlaying]);
   return <div className="mx-auto max-w-3xl bg-[#081827] px-4 py-5 text-[#e6edf5]">
     <Link href="/academy" className="text-sm text-[#a7cadb]">‹ 返回学堂</Link>
     <header className="my-5"><p className="text-xs tracking-widest text-[#8ed3ce]">观察 · 理解 · 记录</p><h1 className="mt-2 text-3xl font-bold">天文馆</h1><p className="mt-3 text-sm leading-7 text-[#b9cbd8]">把时间与地点放进天空。认识日月行星的位置，再回到传统历法，理解古人如何观察时序。</p></header>
     <details className="rounded-2xl border border-[#294251] bg-[#102433] p-4"><summary className="cursor-pointer text-sm font-semibold text-[#9cddd4]">调整观测时间与地点</summary>
     <form onSubmit={event => { event.preventDefault(); update(); }} className="mt-4">
-      <label className="block text-sm">观测时间（北京时间 UTC+8）<input aria-label="观测时间" type="datetime-local" min="1900-01-01T00:00" max="2100-12-31T23:59" value={time} onInput={event => setTime(event.currentTarget.value)} onChange={event => setTime(event.target.value)} className="mt-2 block w-full min-w-0 rounded-lg border border-[#3e5d70] bg-[#081827] p-3 text-white [color-scheme:dark]" /></label>
+      <label className="block text-sm">观测时间（北京时间 UTC+8）<input aria-label="观测时间" type="datetime-local" min="0001-01-01T00:00" max="3000-12-31T23:59" value={time} onInput={event => { setTimePlaying(false); setTime(event.currentTarget.value); }} onChange={event => { setTimePlaying(false); setTime(event.target.value); }} className="mt-2 block w-full min-w-0 rounded-lg border border-[#3e5d70] bg-[#081827] p-3 text-white [color-scheme:dark]" /></label>
       <div className="my-3 flex flex-wrap gap-2">{LOCATIONS.map(location => <button type="button" key={location.name} onClick={() => { setLatitude(String(location.lat)); setLongitude(String(location.lon)); }} className="rounded-full border border-[#3e5d70] px-3 py-2 text-xs">{location.name}</button>)}</div>
       <div className="grid grid-cols-2 gap-3"><label className="text-xs">北纬为正、南纬为负<input aria-label="纬度" type="number" step="any" min="-90" max="90" value={latitude} onChange={event => setLatitude(event.target.value)} className="mt-2 w-full rounded-lg bg-[#081827] p-3" required /></label><label className="text-xs">东经为正、西经为负<input aria-label="经度" type="number" step="any" min="-180" max="180" value={longitude} onChange={event => setLongitude(event.target.value)} className="mt-2 w-full rounded-lg bg-[#081827] p-3" required /></label></div>
       <div className="mt-4 flex flex-wrap gap-2"><button type="submit" className="rounded-lg bg-[#9cddd4] px-4 py-3 text-sm font-bold text-[#102433]">更新观测图</button><button type="button" onClick={() => update(chinaTimeInput(new Date()))} className="rounded-lg border border-[#3e5d70] px-4 py-3 text-sm">回到现在</button></div>
-      <p className="mt-3 text-xs text-[#9eb5c6]">地点由你选择，计算在设备内完成，不申请定位权限。</p>{error && <p role="alert" className="mt-3 text-sm text-[#ffb0a6]">{error} 图中仍为上次有效输入。</p>}
+      <p className="mt-3 text-xs text-[#9eb5c6]">点击“使用当前位置”才会向系统请求一次定位，位置只在本机临时用于计算，不上传、不后台跟踪；也可手动选城。</p>{error && <p role="alert" className="mt-3 text-sm text-[#ffb0a6]">{error} 图中仍为上次有效输入。</p>}
     </form></details>
+    <div className="mt-3 flex flex-wrap items-center gap-3"><button type="button" disabled={locating} onClick={() => void locate()} className="rounded-lg border border-[#9cddd4] px-4 py-3 text-sm font-bold text-[#a9e0d8] disabled:opacity-50">{locating ? "正在定位…" : "使用当前位置"}</button><span className="text-xs text-[#a9bfce]">仅在本机使用 · 可拒绝</span></div>
+    {locationMessage && <p role="status" className="mt-2 text-xs leading-6 text-[#bcd3df]">{locationMessage}</p>}
+    <section aria-label="天空时间演示" className="mt-4 rounded-2xl border border-[#294251] p-4"><h2 className="font-bold">让天空随时间变化</h2><div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => advanceTime(-stepMinutes)} className="rounded-lg border border-[#3e5d70] px-3 py-2 text-sm">退一步</button><button type="button" aria-pressed={timePlaying} onClick={() => setTimePlaying(old => !old)} className="rounded-lg bg-[#9cddd4] px-4 py-2 text-sm font-bold text-[#102433]">{timePlaying ? "暂停时间演示" : "播放时间演示"}</button><button type="button" onClick={() => advanceTime(stepMinutes)} className="rounded-lg border border-[#3e5d70] px-3 py-2 text-sm">进一步</button></div><label className="mt-3 block text-xs text-[#a9bfce]">每步推进<select aria-label="天文馆时间步长" value={stepMinutes} onChange={event => setStepMinutes(Number(event.target.value))} className="ml-3 rounded border border-[#3e5d70] bg-[#081827] p-2 text-white"><option value={10}>10分钟</option><option value={60}>1小时</option><option value={1440}>1天</option><option value={10080}>7天</option></select></label><p className="mt-3 text-xs leading-6 text-[#9eb5c6]">支持公元1—3000年（统一使用延伸公历与固定UTC+8，历史日期须先换算）。远古或未来结果用于计算演示，未承诺逐年、逐天体的统一观测精度；古代地球自转与历法换算会增加误差。</p></section>
     <section aria-label="日月行星观测图" className="mt-4 rounded-2xl border border-[#294251] p-4">
       <h2 className="text-lg font-bold">仰望天空</h2><p className="mt-2 text-xs leading-6 text-[#9eb5c6]">{formatChinaTime(parseChinaTime(applied.time))} · 北纬{applied.lat}° · 东经{applied.lon}°。中心为天顶，圆周为地平线，面向天空时东在左。这里只绘出地平线上方的日月行星，不是完整恒星星图。</p>
       <svg viewBox="0 0 360 360" role="img" aria-label="天顶投影，北在上东在左；天体数值见下方列表" className="mx-auto w-full max-w-md">
@@ -66,6 +102,7 @@ function AstronomyStudyContent() {
       <article className="mt-4 rounded-xl bg-[#152f40] p-4" aria-live="polite"><h3 className="font-bold">{body.name}</h3><p className="my-2 text-sm leading-7">{FACTS[body.body]}</p><dl className="grid grid-cols-2 gap-3 text-xs text-[#b9cbd8]"><div><dt>方位角（北0°，东90°）</dt><dd className="mt-1 text-base text-white">{body.azimuth.toFixed(2)}°</dd></div><div><dt>高度角</dt><dd className="mt-1 text-base text-white">{body.altitude.toFixed(2)}°</dd></div><div><dt>赤经 / 赤纬（当日）</dt><dd className="mt-1">{body.ra.toFixed(3)}时 / {body.dec.toFixed(2)}°</dd></div><div><dt>视星等（数值越小越亮）</dt><dd className="mt-1">{body.magnitude.toFixed(2)}</dd></div></dl></article>
     </section>
     <section className="mt-4 rounded-2xl border border-[#294251] p-4"><h2 className="font-bold">这一天的日月</h2><p className="mt-2 text-sm">月面照明比例 {(sky.bodies[1].illuminated * 100).toFixed(1)}% · 月相角 {sky.moonPhase.toFixed(1)}°</p><p className="mt-2 text-xs leading-6 text-[#a9bfce]">月相角0°为朔、90°上弦、180°望、270°下弦。下表只搜索所选北京时间自然日；没有事件时如实留空。</p>{sky.events.map(event => <div key={event.body} className="mt-3 rounded-lg bg-[#102433] p-3 text-sm"><p className="mb-2 font-bold">{event.body === "Sun" ? "太阳" : "月球"}</p><p>升起：{event.rise ? formatChinaTime(event.rise) : "本日无升起事件"}</p><p className="mt-2">落下：{event.set ? formatChinaTime(event.set) : "本日无落下事件"}</p></div>)}</section>
+    <SkyYunqiLesson date={parseChinaTime(applied.time)} sunLongitude={sky.sunLongitude} onObserve={observeTime} />
     <section className="mt-4 rounded-2xl border border-[#294251] p-4"><h2 className="font-bold">观察自测</h2><p className="mt-3 text-sm">把地点换到另一座城市，为什么同一时刻的太阳高度会变化？</p><div className="mt-3 space-y-2">{["天空会根据个人生日改变", "观测者在地球表面的位置改变了", "方位角和高度角与地点无关"].map((option, index) => <button key={option} type="button" aria-pressed={answer === index} onClick={() => setAnswer(index)} className="block w-full rounded-lg border border-[#3e5d70] p-3 text-left text-sm">{option}</button>)}</div>{answer !== null && <p role="status" className="mt-3 text-sm leading-7 text-[#9cddd4]">{answer === 1 ? "答对了。" : "再想一想。"}高度角和方位角属于观测者的地平坐标，取决于时间和地点。可保留时间、修改经纬度，点击更新来比较。</p>}</section>
     <section className="mt-4 rounded-2xl bg-[#e8efea] p-4 text-[#16312f]"><h2 className="mb-3 font-bold">观察笔记</h2><LocalStudyNotes storageKey="astronomy-observation-notes-v1" placeholder="记录地点、时间、所选天体、天气与观察结果；计算位置和亲眼所见分开写。" /></section>
     <footer className="mt-5 text-xs leading-7 text-[#a9bfce]"><p>计算采用 Astronomy Engine（MIT许可）。高度加入标准大气折射模型，升落时间按标准平坦地平线估算，未计实时天气、山体与建筑遮挡；显示小数位不代表实测精度。</p><a href={ASTRONOMY_SOURCE} target="_blank" rel="noreferrer" className="underline">算法与坐标说明 ↗</a><div className="mt-3 flex flex-wrap gap-3"><Link href="/yixue/jieqi" className="underline">二十四节气</Link><Link href="/zhongyi/yunqi" className="underline">五运六气学习</Link><Link href="/zhongyi/classic" className="underline">经典阅读</Link></div></footer>

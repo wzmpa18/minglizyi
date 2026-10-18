@@ -8,6 +8,12 @@ test("civil input is explicit UTC+8, validates calendar dates and preserves the 
   assert.throws(() => parseChinaTime("2026-02-30T12:00"));
   assert.throws(() => parseChinaTime("2026-10-18T24:00"));
   assert.throws(() => calculateStudySky(new Date(), 91, 0));
+  for (const year of ['0001', '0099', '1054', '1900', '3000']) {
+    const input = `${year}-07-04T12:00`;
+    assert.equal(chinaTimeInput(parseChinaTime(input)), input);
+  }
+  assert.throws(() => parseChinaTime('0000-01-01T00:00'));
+  assert.throws(() => parseChinaTime('3001-01-01T00:00'));
 });
 
 test("sky projection preserves looking-up cardinal directions and hides below-horizon points", () => {
@@ -23,6 +29,7 @@ test("real ephemerides respond to time/location and return no invented polar ris
   const noon = calculateStudySky(new Date("2026-06-21T04:00Z"), 39.9, 116.4);
   const night = calculateStudySky(new Date("2026-06-21T16:00Z"), 39.9, 116.4);
   assert.ok(noon.bodies[0].altitude > 65);
+  assert.ok(noon.sunLongitude > 89 && noon.sunLongitude < 91);
   assert.ok(night.bodies[0].altitude < 0);
   assert.equal(noon.bodies.length, 9);
   assert.ok(noon.bodies.every(b => Number.isFinite(b.altitude) && b.azimuth >= 0 && b.azimuth < 360));
@@ -31,6 +38,11 @@ test("real ephemerides respond to time/location and return no invented polar ris
   // Total-solar-eclipse date is an independent known near-new-moon sanity case.
   const eclipse = calculateStudySky(new Date("2024-04-08T18:00Z"), 0, 0);
   assert.ok(eclipse.bodies[1].illuminated < 0.001);
+  for (const year of ['0001', '0099', '1054', '3000']) {
+    const historical = calculateStudySky(parseChinaTime(`${year}-07-04T12:00`), 39.9, 116.4);
+    assert.ok(historical.bodies.every(body => Number.isFinite(body.altitude) && Number.isFinite(body.ra)), year);
+    assert.ok(historical.sunLongitude >= 0 && historical.sunLongitude < 360);
+  }
 });
 
 test("yunqi annual mappings repeat in 60 years and guest third/sixth positions stay aligned", () => {

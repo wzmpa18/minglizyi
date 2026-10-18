@@ -19,16 +19,16 @@ const ALL_TABS = [
     Icon: DiscoverIcon,
   },
   {
+    key: "study",
+    label: "言道学堂",
+    href: "/academy",
+    Icon: StudyIcon,
+  },
+  {
     key: "friends",
     label: "聊天",
     href: "/friends",
     Icon: ChatIcon,
-  },
-  {
-    key: "study",
-    label: "学习",
-    href: "/academy",
-    Icon: StudyIcon,
   },
   {
     key: "profile",

@@ -1,6 +1,7 @@
 // Maintenance: prepare ONLY the approved Guoxue products. Never submits review.
 // Default is read-only. --apply permits draft metadata/prices; the existing
-// availability is preserved. New product availability is left for final review.
+// availability is preserved unless --sync-availability explicitly mirrors the
+// already configured app territories. Neither option submits App Review.
 // Credentials: ASC_KEY_ID, ASC_ISSUER_ID, ASC_PRIVATE_KEY_PATH (protected file).
 // Optional ASC_EVIDENCE_PATH stores non-sensitive read-back results outside Git.
 import fs from 'node:fs';
@@ -18,7 +19,8 @@ for (const p of catalog.products) {
   assert.ok(p.englishName.length <= 30 && p.englishDescription.length <= 45);
 }
 const apply = process.argv.includes('--apply');
-const reviewNote = 'Learning product draft. Price and localized metadata are configured; StoreKit purchase, restore, refund integration and final review screenshots are under development. Not submitted for review.';
+const syncAvailability = process.argv.includes('--sync-availability');
+const reviewNote = 'Learning product draft. StoreKit 2 purchase, restore and signed server delivery/refund integration are implemented in TestFlight 25.0.115 (8). Real sandbox acceptance and final purchase screenshots are pending. Not submitted for review.';
 const origin = 'https://api.appstoreconnect.apple.com';
 function token() {
   for (const k of ['ASC_KEY_ID', 'ASC_ISSUER_ID', 'ASC_PRIVATE_KEY_PATH']) assert.ok(process.env[k], `Missing ${k}`);
@@ -50,6 +52,20 @@ function save() {
   if (process.env.ASC_EVIDENCE_PATH) fs.writeFileSync(process.env.ASC_EVIDENCE_PATH, JSON.stringify(report, null, 2) + '\n');
 }
 try {
+  let appTerritories;
+  let newTerritories;
+  if (syncAvailability) {
+    assert.ok(apply, '--sync-availability also requires --apply');
+    const availability = (await api(`/v1/apps/${catalog.appId}/appAvailabilityV2`)).data;
+    const related = availability.relationships?.territoryAvailabilities?.links?.related;
+    assert.ok(related, 'Configure app availability before synchronizing products');
+    const records = await all(`${related}?include=territory&limit=200`);
+    appTerritories = records.filter(record => record.attributes.available === true).map(record => record.relationships.territory.data.id).sort();
+    assert.ok(appTerritories.length > 0 && appTerritories.length <= 250);
+    assert.equal(new Set(appTerritories).size, appTerritories.length);
+    newTerritories = availability.attributes.availableInNewTerritories === true;
+    report.appAvailability = { territories: appTerritories, availableInNewTerritories: newTerritories };
+  }
   const existing = await all(`/v1/apps/${catalog.appId}/inAppPurchasesV2?limit=200`);
   for (const product of catalog.products) {
     let remote = existing.find(p => p.attributes.productId === product.productId);
@@ -102,6 +118,20 @@ try {
       }
     }
     if (apply && row.priceVerified && row.localizations.length === 2 && remote.attributes.reviewNote !== reviewNote) await api(`/v2/inAppPurchases/${remote.id}`, 'PATCH', { data: { type: 'inAppPurchases', id: remote.id, attributes: { reviewNote } } });
+    if (syncAvailability) {
+      let current;
+      try { current = (await api(`/v2/inAppPurchases/${remote.id}/inAppPurchaseAvailability`)).data; }
+      catch (error) { if (error.status !== 404) throw error; }
+      const territories = current ? (await all(current.relationships.availableTerritories.links.related + '?limit=200')).map(record => record.id).sort() : [];
+      if (!current || JSON.stringify(territories) !== JSON.stringify(appTerritories) || current.attributes.availableInNewTerritories !== newTerritories) {
+        await api('/v1/inAppPurchaseAvailabilities', 'POST', { data: { type: 'inAppPurchaseAvailabilities', attributes: { availableInNewTerritories: newTerritories }, relationships: { inAppPurchase: { data: { type: 'inAppPurchases', id: remote.id } }, availableTerritories: { data: appTerritories.map(id => ({ type: 'territories', id })) } } } });
+      }
+      const confirmed = (await api(`/v2/inAppPurchases/${remote.id}/inAppPurchaseAvailability`)).data;
+      const countries = (await all(confirmed.relationships.availableTerritories.links.related + '?limit=200')).map(record => record.id).sort();
+      assert.deepEqual(countries, appTerritories);
+      assert.equal(confirmed.attributes.availableInNewTerritories, newTerritories);
+      row.availability = { territories: countries.length, availableInNewTerritories: newTerritories, verified: true };
+    }
     const readback = (await api(`/v2/inAppPurchases/${remote.id}`)).data;
     row.state = readback.attributes.state;
     row.reviewNoteMatchesActualSetup = readback.attributes.reviewNote === reviewNote;

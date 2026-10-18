@@ -11,6 +11,14 @@ on:
       - 'src/components/TcmEditionProvider.tsx'
       - 'backend_deploy/build_tcm_original_editions_pack.js'
       - 'scripts/tcm-edition-pack.test.cjs'
+      - 'src/components/BottomNav.tsx'
+      - 'src/components/LocalChartNotebook.tsx'
+      - 'src/lib/chartNotebook.ts'
+      - 'scripts/chart-notebook.test.cjs'
+      - 'src/components/SkyYunqiLesson.tsx'
+      - 'src/lib/localSkyLocation.ts'
+      - 'scripts/local-sky-location.test.cjs'
+      - 'ios/App/App/LocalSkyLocationPlugin.swift'
       - 'src/algorithm-core/modules/tcm/classics.ts'
       - 'src/algorithm-core/modules/bazi/base.ts'
       - 'scripts/bazi-yun-metadata.test.ts'
@@ -158,6 +166,8 @@ jobs:
       - run: node --test scripts/ios-full-profile.test.cjs
       - run: npx tsx --test scripts/classic-reading.test.ts
       - run: node --experimental-strip-types --test scripts/tcm-edition-pack.test.cjs
+      - run: node --experimental-strip-types --test scripts/chart-notebook.test.cjs
+      - run: node --test scripts/local-sky-location.test.cjs
       - run: node --test scripts/native-listening.test.cjs
       - name: Verify discussion HTTP authentication and moderation against production dependency versions
         run: |

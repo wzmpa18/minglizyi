@@ -43,6 +43,9 @@ import {
 import { getUserPermissionLevel } from "@/lib/aiService";
 import { useToolBack } from "@/lib/useToolBack";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
+import { LocalChartNotebook } from "@/components/LocalChartNotebook";
+import { chartNotebookKey } from "@/lib/chartNotebook";
+import { getUserProfile } from "@/lib/auth";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 
@@ -1701,56 +1704,6 @@ function TabXingge({result}:{result:BaziResult}){
 }
 
 // ===== TabNotes =====
-function TabNotes({storageKey}:{storageKey:string}){
-  const [note,setNote]=useState("");
-  const [saved,setSaved]=useState(false);
-
-  useEffect(()=>{
-    if(typeof window!=="undefined"){
-      const NEW_KEY = "yandao_bazi_note"+storageKey;
-      const OLD_KEY = "bazi_note_"+storageKey;
-      let savedNote = localStorage.getItem(NEW_KEY);
-      // 鍏煎鏃ч敭鍚嶈縼绉伙紙bazi_note_ 鈫?yandao_bazi_note_锛?
-      if(!savedNote){
-        const oldData = localStorage.getItem(OLD_KEY);
-        if(oldData){
-          savedNote = oldData;
-          localStorage.setItem(NEW_KEY, oldData);
-          localStorage.removeItem(OLD_KEY);
-        }
-      }
-      if(savedNote) setNote(savedNote);
-    }
-  },[storageKey]);
-
-  const handleSave=()=>{
-    if(typeof window!=="undefined"){
-      localStorage.setItem("yandao_bazi_note"+storageKey, note);
-      setSaved(true);
-      setTimeout(()=>setSaved(false),1500);
-    }
-  };
-
-  return <div className="px-2 pt-2">
-    <div className="bg-white mb-2 px-3 py-3">
-      <div className="flex items-center justify-between mb-2">
-        <div className="text-[16px] font-bold text-[#333]">命理笔记</div>
-        <button onClick={handleSave} className="px-3 py-1 text-[12px] text-white border-none rounded cursor-pointer" style={{backgroundColor:BRAND_PURPLE}}>
-          {saved?"已保存":"保存"}
-        </button>
-      </div>
-      <textarea
-        value={note}
-        onChange={e=>setNote(e.target.value)}
-        placeholder="在此记录命理学习笔记，离开前请点击保存…"
-        className="w-full box-border border border-[#ddd] rounded px-2 py-2 text-[13px] outline-none resize-y"
-        style={{minHeight:"200px",lineHeight:"1.6",fontFamily:"inherit"}}
-      />
-      <div className="text-[11px] text-[#999] mt-1">笔记保存在本地浏览器，不会上传到服务器。</div>
-    </div>
-  </div>;
-}
-
 // ===== main =====
 export default function BaziPage(){
   useIOSLearningRedirect("bazi"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
@@ -1879,7 +1832,7 @@ export default function BaziPage(){
 
   // v25.0.87: 游客身份落到受限Tab（如恢复状态残留）时回落到命盘
   useEffect(() => {
-    if (isVisitor && ["jingpi","xingge","notes"].includes(activeTab)) setActiveTab("chart");
+    if (isVisitor && ["jingpi","xingge"].includes(activeTab)) setActiveTab("chart");
   }, [isVisitor, activeTab]);
 
   // v25.0.88: 应用命主档案——回填姓名/性别/生日/时辰到表单，实现跨工具共享（清空选择时不动表单）
@@ -2072,9 +2025,9 @@ export default function BaziPage(){
     return calcBoneWeight(yGz, mZhi, day, hZhi, gender);
   },[result,day,gender,pillars]);
 
-  const tabLabels:Record<string,string>={basic:"基本",chart:"命盘",detail:"详盘",jingpi:"精批",xingge:"性格",notes:"笔记"};
-  // v25.0.87: 游客仅开放基础排盘（基本/命盘/详盘），精批/性格/笔记解读类Tab需注册后可见
-  const tabOrder:("basic"|"chart"|"detail"|"jingpi"|"xingge"|"notes")[]=isVisitor?["basic","chart","detail"]:["basic","chart","detail","jingpi","xingge","notes"];
+  const tabLabels:Record<string,string>={basic:"基本",chart:"命盘",detail:"详盘",jingpi:"精批",xingge:"性格",notes:"断事笔记"};
+  // 本机断事笔记向游客开放；精批和性格仍沿用原有账号规则。
+  const tabOrder:("basic"|"chart"|"detail"|"jingpi"|"xingge"|"notes")[]=isVisitor?["basic","chart","detail","notes"]:["basic","chart","detail","jingpi","xingge","notes"];
 
   // v25.0.87: AI详批整体上下文（白话精批增强版）
   // 供 EventDivinationPanel 深度解读使用：四柱全量（藏干十神纳音）+ 五行 + 强弱格局
@@ -2166,7 +2119,7 @@ export default function BaziPage(){
     />
     {result&&<div>
       <div className="flex bg-black sticky top-10 z-30 overflow-x-auto" role="group" aria-label="八字页面模块">
-        {tabOrder.map(tab=><button type="button" aria-pressed={activeTab===tab} key={tab} onClick={()=>setActiveTab(tab)} className="shrink-0 px-4 py-3 text-center text-[15px] font-medium cursor-pointer" style={{color: activeTab===tab ? "#b29450" : "white"}}>{({basic:"基本信息",chart:"基本命盘",detail:"专业细盘",notes:"学习笔记"} as Record<string,string>)[tab] || tabLabels[tab]}</button>)}
+        {tabOrder.map(tab=><button type="button" aria-pressed={activeTab===tab} key={tab} onClick={()=>setActiveTab(tab)} className="shrink-0 px-4 py-3 text-center text-[15px] font-medium cursor-pointer" style={{color: activeTab===tab ? "#b29450" : "white"}}>{({basic:"基本信息",chart:"基本命盘",detail:"专业细盘",notes:"断事笔记"} as Record<string,string>)[tab] || tabLabels[tab]}</button>)}
       </div>
       {activeTab==="basic"&&<TabBasic result={result} shengxiao={shengxiao} name={name} birthPlace={birthPlace} longitude={longitude} dateStr={dateStr} lunarDateStr={lunarDateStr} solarDateStr={dateStr} trueSolarStr={trueSolarTimeStr} solarCorrection={solarCorrection} taiYuan={taiYuan} taiXi={taiXi} mingGong={mingGong} shenGong={shenGong} mingGua={mingGua} wuxingStats={wuxingStats} boneWeight={boneWeight} gender={gender}/>}
       {activeTab==="chart"&&<>
@@ -2201,7 +2154,12 @@ export default function BaziPage(){
       {activeTab==="detail"&&<TabDetail result={result} gender={gender}/>}
       {activeTab==="jingpi"&&<TabJingpi result={result} gender={gender} wuxingStats={wuxingStats}/>}
       {activeTab==="xingge"&&<TabXingge result={result}/>}
-      {activeTab==="notes"&&<TabNotes storageKey={`${year}${month}${day}${hour}${gender}`}/>}
+      {activeTab==="notes"&&<LocalChartNotebook
+        key={chartNotebookKey([getUserProfile()?.userId || "local", mingzhu?.id || selectedClient?.id || name.trim() || "unnamed", year, month, day, hour, birthMinute, gender, calType, longitude, birthPlace, zhenTaiyang, zaoWanZi, xiaLing])}
+        storageKey={chartNotebookKey([getUserProfile()?.userId || "local", mingzhu?.id || selectedClient?.id || name.trim() || "unnamed", year, month, day, hour, birthMinute, gender, calType, longitude, birthPlace, zhenTaiyang, zaoWanZi, xiaLing])}
+        legacyKey={`${year}${month}${day}${hour}${gender}`}
+        subject={`${name.trim() || "未命名命主"} · ${dateStr} · ${gender === "male" ? "男" : "女"}${birthPlace ? " · " + birthPlace : ""}`}
+      />}
       {/* v18.6: 排盘结果分享入口 */}
       <div className="px-3 py-3">
         <ShareButton

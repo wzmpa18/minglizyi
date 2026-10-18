@@ -118,5 +118,6 @@ class GuoxueBridgeViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(LocalTtsPlugin())
         bridge?.registerPluginInstance(AppleLearningStorePlugin())
+        bridge?.registerPluginInstance(LocalSkyLocationPlugin())
     }
 }
