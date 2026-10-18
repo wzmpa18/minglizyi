@@ -103,7 +103,7 @@ function HerbListPage() {
           <div>
             <h1 style={{ fontSize: "18px", fontWeight: "bold", margin: 0 }}>中药库</h1>
           
-            <p style={{ fontSize: "11px", opacity: 0.8, margin: 0 }}>共 {totalCount} 味常用中药材</p>
+            <p style={{ fontSize: "11px", opacity: 0.8, margin: 0 }}>共 {totalCount} 条本草学习条目</p>
           </div>
         </div>
 
@@ -123,7 +123,7 @@ function HerbListPage() {
         </div>
       </div>
 
-      <section className="m-3 rounded-xl bg-white p-3 text-sm text-gray-700"><h2 className="font-semibold">本草性味归经</h2><p className="my-2 leading-6">四气五味与归经分别记录药性、味和作用趋向。古籍三品分类与现代功效分类、药典标准应分别阅读，不能把后世归经术语都当成《本草经》原文。</p><div className="grid grid-cols-3 gap-2">
+      <section className="m-3 rounded-xl bg-white p-3 text-sm text-gray-700"><h2 className="font-semibold">本草性味归经</h2><p className="my-2 leading-6">四气五味与归经分别记录药性、味和作用趋向。古籍三品分类与现代功效分类、药典标准应分别阅读，不能把后世归经术语都当成《本草经》原文。条目包含古籍药名与现代常用中药，请按典籍出处区分时代与标准；古籍矿石、毒性药物的历史记述仅作文献学习。</p><div className="grid grid-cols-3 gap-2">
         <label>药性<select aria-label="按药性筛选" value={natureFilter} onChange={e=>setNatureFilter(e.target.value)} className="w-full border rounded p-1"><option value="">全部</option>{["寒","凉","平","温","热"].map(n=><option key={n}>{n}</option>)}</select></label>
         <label>药味<select aria-label="按药味筛选" value={tasteFilter} onChange={e=>setTasteFilter(e.target.value)} className="w-full border rounded p-1"><option value="">全部</option>{["辛","甘","酸","苦","咸","淡","涩"].map(n=><option key={n}>{n}</option>)}</select></label>
         <label>归经<select aria-label="按归经筛选" value={meridianFilter} onChange={e=>setMeridianFilter(e.target.value)} className="w-full border rounded p-1"><option value="">全部</option>{["心","肝","脾","肺","肾","胃","胆","大肠","小肠","膀胱","三焦","心包"].map(n=><option key={n}>{n}</option>)}</select></label>
@@ -202,6 +202,7 @@ function HerbListPage() {
                 <p style={{ fontSize: "12px", color: "#666", margin: 0, lineHeight: 1.6, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                   {herb.efficacy}
                 </p>
+                <p style={{fontSize:"11px",color:"#665477",margin:"4px 0 0"}}>典籍出处：{herb.source || "待核实"}</p>
               </button>
             );
           })
