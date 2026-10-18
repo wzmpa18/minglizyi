@@ -1,5 +1,5 @@
 export function classicReadingBlocks(content: string) {
-  return content.split(/\n\s*\n/).map(text => text.trim()).filter(Boolean).map((text, index) => ({
+  return content.split(/\n\s*\n/).map(text => text.trim()).filter(text => /[^\s\u200B\uFEFF]/.test(text)).map((text, index) => ({
     id: `reading-block-${index}`, text,
     heading: text.length < 40 && !/[。！？：；]/.test(text) && /[卷篇章节][上中下甲乙丙丁一二三四五六七八九十百\d]*$/.test(text),
   }));

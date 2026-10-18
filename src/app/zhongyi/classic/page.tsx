@@ -35,6 +35,14 @@ const DEFAULT_SETTINGS: ReaderSettings = {
 };
 
 function ClassicSourceNotice({ book }: { book: ClassicBook }) {
+  if (book.sourceUrl) return <details style={{ margin: '12px 0 18px', padding: '12px', border: '1px solid #d5dfd2', borderRadius: 12, background: '#f0f4ea', color: '#304b3e', fontSize: 12, lineHeight: 1.8 }}>
+    <summary style={{ cursor: 'pointer', fontWeight: 600 }}>原文版本与来源 · {book.sourceName}</summary>
+    <div style={{ marginTop: 10 }}><p>{book.verification}</p><p>{book.license}</p>
+      <a href={book.sourceRevisionUrl || book.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>查看本次收录的来源版本</a>
+      {book.sourcePages && <details style={{ marginTop: 6 }}><summary>查看全部 {book.sourcePages.length} 卷来源版本</summary>{book.sourcePages.map((page, index) => <a key={page.revisionUrl} href={page.revisionUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'block', textDecoration: 'underline' }}>来源卷 {index + 1}</a>)}</details>}
+      <p>仅供文献学习，不作为个人诊断、处方或操作依据。</p>
+    </div>
+  </details>;
   return <aside style={{ margin: '12px 16px', padding: '12px', borderRadius: 10, background: '#f3edf7', color: '#593473', fontSize: 12, lineHeight: 1.7 }}>
     {book.sourceUrl ? <>
       <strong>原文来源：{book.sourceName}</strong>
@@ -391,7 +399,7 @@ function ReaderPage({ bookId, chapterId }: { bookId: string; chapterId: string }
       {/* 顶部导航 */}
       <div style={{
         position: 'static', height: '56px',
-        backgroundColor: settings.nightMode ? '#2a2a2a' : '#7B1FA2',
+        backgroundColor: settings.nightMode ? '#24392f' : '#244b40',
         display: 'flex', alignItems: 'center', padding: '0 12px', zIndex: 100,
         gap: '4px',
       }}>
@@ -400,14 +408,12 @@ function ReaderPage({ bookId, chapterId }: { bookId: string; chapterId: string }
           <div style={{ color: '#fff', fontSize: '15px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chapter.title}</div>
           <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '11px' }}>{book.name}</div>
         </div>
-        <button onClick={() => setShowToc(!showToc)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '20px', cursor: 'pointer', padding: '8px' }}>☰</button>
-        <button onClick={toggleBookmark} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', padding: '8px' }}>
+        <button aria-label="展开章节目录" onClick={() => setShowToc(!showToc)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '20px', cursor: 'pointer', padding: '8px' }}>☰</button>
+        <button aria-label={isBookmarked ? "取消本章书签" : "收藏本章书签"} aria-pressed={isBookmarked} onClick={toggleBookmark} style={{ background: 'none', border: 'none', color: '#e7d29b', fontSize: '20px', cursor: 'pointer', padding: '8px' }}>
           {isBookmarked ? '⭐' : '☆'}
         </button>
-        <button onClick={() => setShowSettings(!showSettings)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '20px', cursor: 'pointer', padding: '8px' }}>Aa</button>
+        <button aria-label="阅读设置" onClick={() => setShowSettings(!showSettings)} style={{ background: 'none', border: 'none', color: '#fff', fontSize: '20px', cursor: 'pointer', padding: '8px' }}>Aa</button>
       </div>
-
-      <ClassicSourceNotice book={book} />
 
       {/* 目录侧栏 */}
       {showToc && (
@@ -492,11 +498,13 @@ function ReaderPage({ bookId, chapterId }: { bookId: string; chapterId: string }
 
       {/* 正文 */}
       <div style={{ padding: '20px 18px' }}>
-        <h1 style={{ fontSize: `${settings.fontSize + 6}px`, fontWeight: 600, color: theme.text, textAlign: 'center', marginBottom: '8px', lineHeight: 1.4 }}>{chapter.title}</h1>
-        <div style={{ textAlign: 'center', fontSize: '13px', color: theme.meta, marginBottom: '24px', paddingBottom: '16px', borderBottom: `1px solid ${theme.border}` }}>
-          {book.name} · {book.dynasty} · {book.author}
-        </div>
-        <div style={{ marginBottom: '18px', padding: '12px', borderRadius: '12px', backgroundColor: theme.cardBg, border: `1px solid ${theme.border}` }}>
+        <section style={{ marginBottom: 16, padding: '20px', backgroundColor: settings.nightMode ? '#20382e' : '#244b40', borderRadius: 16, color: '#fbf4dc' }}>
+          <p style={{ fontSize: 12, color: '#c0d1bd', marginBottom: 12 }}>{book.name} · 文献阅读</p>
+          <h1 style={{ fontSize: `${settings.fontSize + 6}px`, fontWeight: 600, marginBottom: 12, lineHeight: 1.6, fontFamily: '"Noto Serif SC", "Songti SC", SimSun, serif' }}>{chapter.title}</h1>
+          <p style={{ fontSize: 11, lineHeight: 1.8, color: '#d5dfc9' }}>第 {chapterIndex + 1} / {book.chapters.length} 篇 · {book.dynasty}</p>
+        </section>
+        <ClassicSourceNotice book={book} />
+        <details style={{ marginBottom: '18px', padding: '12px', borderRadius: '12px', backgroundColor: theme.cardBg, border: `1px solid ${theme.border}`, color: theme.text }}><summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>本章听学、释义与学习讨论</summary><div style={{ marginTop: 12 }}>
           <LocalListenButton text={`${chapter.title}。${chapter.content}`} contentId={`classic:${bookId}:${chapterId}`} />
           <div style={{ marginTop: '10px' }}>
             <AIInterpretButton
@@ -512,12 +520,12 @@ function ReaderPage({ bookId, chapterId }: { bookId: string; chapterId: string }
               systemPrompt="你是中医古籍阅读助手。只能依据用户提供的本章原文解释字词、句义、篇章结构与历史语境；引用时明确标注本章原句，不虚构书名、篇名、页码或医家观点。可以说明传统理论背景，但不得进行个体诊断、开具处方、给出药量或指导普通用户自行针刺。回答使用现代中文，并明确区分原文、释义和学习提示。"
             />
           </div>
-        </div>
-        <div style={{ fontSize: `${settings.fontSize}px`, lineHeight: 2, color: theme.text }}>
+        </div></details>
+        <article aria-label="中医典籍原文" style={{ fontSize: `${settings.fontSize}px`, lineHeight: 2.1, color: theme.text, border: `1px solid ${theme.border}`, background: theme.cardBg, borderRadius: 16, padding: '20px 18px', fontFamily: '"Noto Serif SC", "Songti SC", SimSun, serif' }}>
           {paragraphs.map((p, i) => (
             <p key={i} style={{ marginBottom: '1em', textIndent: '2em', textAlign: 'justify' }}>{p.trim()}</p>
           ))}
-        </div>
+        </article>
       </div>
 
       {/* 章节导航 */}

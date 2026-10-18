@@ -7,7 +7,7 @@ test("reader paragraph layout preserves every non-whitespace character in all bu
   for (const book of classics.books) {
     const blocks = classicReadingBlocks(book.content);
     assert.ok(blocks.length);
-    assert.equal(blocks.map(block => block.text).join("").replace(/\s/g, ""), book.content.replace(/\s/g, ""), book.id);
+    assert.equal(blocks.map(block => block.text).join("").replace(/[\s\u200B\uFEFF]/g, ""), book.content.replace(/[\s\u200B\uFEFF]/g, ""), book.id);
     assert.equal(new Set(blocks.map(block => block.id)).size, blocks.length);
   }
   const yinfu = classics.books.find(book => book.id === "huangdi_yinfujing")!;
