@@ -75,6 +75,9 @@ on:
       - 'src/lib/offlinePackClient.ts'
       - 'src/app/offline/page.tsx'
       - 'scripts/offline-versions.test.cjs'
+      - 'backend_deploy/configure_learning_cos.js'
+      - 'backend_deploy/learningCorsPolicy.js'
+      - 'scripts/learning-cors.test.cjs'
       - 'backend_deploy/releaseProfilePolicy.js'
       - 'backend_deploy/platformFeatureGate.js'
       - 'src/lib/releaseFeatures.ts'
@@ -178,6 +181,7 @@ jobs:
       - run: npx tsx --test scripts/astronomy-study.test.ts
       - run: npx tsx --test scripts/liuren-calendar.test.ts
       - run: node --experimental-strip-types --test scripts/offline-versions.test.cjs
+      - run: node --test scripts/learning-cors.test.cjs
       - run: node --test scripts/ios-full-profile.test.cjs
       - run: npx tsx --test scripts/classic-reading.test.ts
       - run: node --experimental-strip-types --test scripts/tcm-edition-pack.test.cjs
