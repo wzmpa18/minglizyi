@@ -8,6 +8,7 @@
 // ============================================================================
 
 import { useEffect, useState } from "react";
+import type { SalesPromotionConfig } from "./salesPromotion";
 
 export interface ServerMembershipPlan {
   level: string;
@@ -29,6 +30,7 @@ export interface ServerAIPricing {
 
 export interface ServerPricing {
   source: string;
+  promotion?: SalesPromotionConfig;
   membershipPlans: ServerMembershipPlan[] | null;
   ai: ServerAIPricing | null;
   complianceLabel: string;
@@ -67,10 +69,10 @@ export function getCachedPricing(): ServerPricing | null {
 
 /** 拉取服务端价格 SSOT（带内存缓存；失败返回 null，调用方走本地 fallback） */
 export async function fetchServerPricing(force = false): Promise<ServerPricing | null> {
+  if (inflight) return inflight;
   if (!force) {
     const hit = getCachedPricing();
     if (hit) return hit;
-    if (inflight) return inflight;
   }
   inflight = (async () => {
     try {
@@ -102,6 +104,7 @@ export async function fetchServerPricing(force = false): Promise<ServerPricing |
 export function useServerPricing(): {
   plans: ServerMembershipPlan[] | null;
   ai: ServerAIPricing | null;
+  promotion: SalesPromotionConfig | null;
   ready: boolean;
 } {
   const [data, setData] = useState<ServerPricing | null>(() => getCachedPricing());
@@ -109,19 +112,20 @@ export function useServerPricing(): {
 
   useEffect(() => {
     let alive = true;
-    fetchServerPricing().then((d) => {
+    const refresh = () => { void fetchServerPricing(true).then(d => {
       if (!alive) return;
-      setData(d);
-      setReady(true);
-    });
-    return () => {
-      alive = false;
-    };
+      setData(d); setReady(true);
+    }); };
+    refresh();
+    const timer = window.setInterval(refresh, 60_000);
+    window.addEventListener("focus", refresh);
+    return () => { alive = false; window.clearInterval(timer); window.removeEventListener("focus", refresh); };
   }, []);
 
   return {
     plans: data?.membershipPlans && data.membershipPlans.length > 0 ? data.membershipPlans : null,
     ai: data?.ai || null,
+    promotion: data?.promotion || null,
     ready,
   };
 }

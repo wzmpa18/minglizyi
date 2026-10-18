@@ -32,6 +32,7 @@ import {
   type ToolMatrixItem,
 } from "@/lib/admin/client";
 import type { AIConfig, MembershipConfig, MembershipPlanConfig } from "@/lib/admin/types";
+import SalesPromotionPanel from "./SalesPromotionPanel";
 
 /** AI 时卡（admin-ai-config.json 中的 timePlans） */
 interface AITimePlan {
@@ -155,6 +156,7 @@ export default function PricingCenterPage() {
   return (
     <div>
       {toastNode}
+      <SalesPromotionPanel />
 
       <div
         style={{

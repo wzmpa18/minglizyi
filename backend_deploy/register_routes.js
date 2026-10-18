@@ -2099,6 +2099,10 @@ function createRouter() {
       let growthCampaign = null;
       try {
         growthCampaign = require('./growthCampaignEngine').syncUser(db, userId);
+        const sale = require('./salesPromotion');
+        if (growthCampaign && sale.active(sale.getConfig(), 'MEMBERSHIP')) {
+          growthCampaign = { ...growthCampaign, enabled: false, coupon: null, deferredByPublicPromotion: true };
+        }
       } catch (e) {
         console.error('[GrowthCampaign] 活动状态读取失败:', e.message);
       }

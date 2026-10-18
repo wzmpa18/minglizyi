@@ -32,6 +32,7 @@ import { payForMembership, pollPaymentStatus } from "@/lib/paymentService";
 import { useNativePayQR } from "@/components/PayQRCodeModal";
 import { useServerPricing, mergePlansWithServer } from "@/lib/pricingStore";
 import { getInviteOverview, type InviteOverview } from "@/lib/inviteApi";
+import { isPromotionActiveFor } from "@/lib/salesPromotion";
 
 const BRAND = "#7B2FBE";
 
@@ -41,7 +42,8 @@ export default function MembershipPage() {
   // v25.0.47_9: Native扫码支付弹层（全场景兜底收款通道）
   const { qrModal, openQR } = useNativePayQR();
   // COMMERCIAL-CLEANUP-03: 价格 SSOT——套餐价格优先读服务端（后台改价实时生效），本地缓存兜底
-  const { plans: serverPlans, ready: pricingReady } = useServerPricing();
+  const { plans: serverPlans, ready: pricingReady, promotion } = useServerPricing();
+  const membershipSaleActive = isPromotionActiveFor(promotion, "MEMBERSHIP");
   const PLANS = mergePlansWithServer(MEMBERSHIP_PLANS, serverPlans);
   const [status, setStatus] = useState<MembershipStatus>(() => getMembershipStatus());
   const [selectedPlan, setSelectedPlan] = useState<MemberLevel>("yearly");
@@ -195,7 +197,7 @@ export default function MembershipPage() {
     try {
       const daysMap: Record<string, number> = { monthly: 30, quarterly: 90, yearly: 365, lifetime: -1 };
       const canUseGrowthCoupon = !!(
-        useGrowthCoupon && growthCampaign?.coupon?.status === "AVAILABLE" &&
+        useGrowthCoupon && !membershipSaleActive && growthCampaign?.coupon?.status === "AVAILABLE" &&
         growthCampaign.eligibleMembershipLevels.includes(plan.level)
       );
       const r = await payForMembership(plan.level, plan.price, daysMap[plan.level] ?? 30, canUseGrowthCoupon);
@@ -328,7 +330,7 @@ export default function MembershipPage() {
           </div>
         )}
 
-        {!paymentsBlocked && growthCampaign?.enabled && (
+        {!paymentsBlocked && !membershipSaleActive && growthCampaign?.enabled && (
           <div style={{ margin: "8px 12px 12px", padding: "14px 16px", borderRadius: "14px", background: "linear-gradient(135deg,#fff7e6,#fff)", border: "1px solid #f4c66a" }}>
             <div style={{ fontSize: "15px", fontWeight: 700, color: "#8a5312" }}>{growthCampaign.name}</div>
             {growthCampaign.coupon?.status === "AVAILABLE" ? (
@@ -346,12 +348,16 @@ export default function MembershipPage() {
           </div>
         )}
 
+        {membershipSaleActive && promotion && <div role="status" style={{ margin: "10px 12px", padding: "14px 16px", borderRadius: 14, color: "#77511d", background: "#fff4de", border: "1px solid #ead5a8", lineHeight: 1.7 }}>
+          <strong>{promotion.name}</strong><div style={{ fontSize: 12 }}>促销优惠{promotion.discountPercent}%，下方显示活动价；原套餐价格保留，同类优惠不叠加，不消耗助力八折券。</div>
+        </div>}
+
         {/* ===== 套餐列表 ===== */}
         {!paymentsBlocked && (PLANS || MEMBERSHIP_PLANS).map((plan) => {
           const isSelected = selectedPlan === plan.level;
           const levelColor = getLevelColor(plan.level);
           const couponApplies = !!(
-            useGrowthCoupon && growthCampaign?.coupon?.status === "AVAILABLE" &&
+            useGrowthCoupon && !membershipSaleActive && growthCampaign?.coupon?.status === "AVAILABLE" &&
             growthCampaign.eligibleMembershipLevels.includes(plan.level)
           );
           const shownPrice = couponApplies

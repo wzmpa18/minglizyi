@@ -228,7 +228,7 @@ router.get('/pricing', (req, res) => {
 
     res.json({
       success: true,
-      data: {
+      data: require('./salesPromotion').decoratePricing({
         aiPlans: timePlans,
         singleUnlockPrice,
         membershipPlans,
@@ -236,21 +236,10 @@ router.get('/pricing', (req, res) => {
         batchInterpret: readBatchConfig(),
         aiGlobalEnabled: aiCfg ? aiCfg.globalEnabled !== false : true,
         updatedAt: (aiCfg && aiCfg.updatedAt) || (memberCfg && memberCfg.updatedAt) || null,
-      },
+      }),
     });
-  } catch (error) {
-    // 配置异常时回退默认值，保证前端可用
-    res.json({
-      success: true,
-      data: {
-        aiPlans: DEFAULT_AI_TIME_PLANS,
-        singleUnlockPrice: DEFAULT_SINGLE_UNLOCK_PRICE,
-        membershipPlans: DEFAULT_MEMBERSHIP_PLANS,
-        batchInterpret: DEFAULT_BATCH_CONFIG,
-        aiGlobalEnabled: true,
-        updatedAt: null,
-      },
-    });
+  } catch {
+    res.status(503).json({ success: false, error: '价格配置暂不可用，请稍后重试' });
   }
 });
 
@@ -778,7 +767,7 @@ function readUserMemberLevel(userId) {
   }
 }
 
-function resolveServerPrice(type, extra, userId) {
+function resolveBaseServerPrice(type, extra, userId) {
   try {
     const aiCfg = readAdminConfig('admin-ai-config.json');
     const memberCfg = readAdminConfig('admin-membership-config.json');
@@ -795,7 +784,7 @@ function resolveServerPrice(type, extra, userId) {
       if (discount <= 0) return { price: 0, reason: '终身会员批量解读免费，无需支付' };
       const price = Math.round(Number(batchCfg.basePrice) * discount * 100) / 100;
       if (!(price > 0)) return { price: null, reason: '批量解读价格配置无效' };
-      return { price };
+      return { price, basePrice: Number(batchCfg.basePrice) };
     }
 
     if (type === 'MEMBERSHIP') {
@@ -875,12 +864,22 @@ function resolveServerPrice(type, extra, userId) {
   }
 }
 
+function resolveServerPrice(type, extra, userId) {
+  const result = resolveBaseServerPrice(type, extra, userId);
+  if ((!result && ['MEMBERSHIP', 'AI_PACKAGE', 'SINGLE_UNLOCK', 'BATCH_INTERPRET'].includes(type)) || (result?.price != null && !Number.isFinite(result.price))) {
+    return { price: null, reason: '商品价格暂不可用，请稍后重试' };
+  }
+  return result ? require('./salesPromotion').quote(type, result) : result;
+}
+
 // POST /api/payment/create — 创建支付订单
 // ============================================================================
 router.post('/create', require('./register_routes').authMiddleware, async (req, res) => {
   try {
     const { type, amount, title, channel, extra } = req.body;
     const effectiveExtra = extra && typeof extra === 'object' ? { ...extra } : {};
+    delete effectiveExtra.growthCampaign;
+    delete effectiveExtra.salesPromotion;
     const userId = String(req.user.userId);
     if (req.body.userId != null && String(req.body.userId) !== userId) {
       return jsonResponse(res, 403, false, '登录账号与付款账号不一致，请重新登录');
@@ -926,6 +925,7 @@ router.post('/create', require('./register_routes').authMiddleware, async (req, 
         console.warn(`[payment/create] 金额以服务端为准 type=${type} frontend=${amount} server=${resolved.price}`);
       }
       finalAmount = Number(resolved.price);
+      if (resolved.promotion) effectiveExtra.salesPromotion = resolved.promotion;
     } else if (Number(amount) > 10000) {
       return jsonResponse(res, 400, false, '金额超出合理范围');
     }
@@ -934,16 +934,23 @@ router.post('/create', require('./register_routes').authMiddleware, async (req, 
       const quote = require('./growthCampaignEngine').quoteMembership(paymentDb, {
         userId,
         membershipLevel: effectiveExtra.membershipLevel || effectiveExtra.level,
-        basePrice: finalAmount,
+        basePrice: resolved?.basePrice ?? finalAmount,
         useCoupon: true,
       });
-      if (!quote.applied) return jsonResponse(res, 400, false, quote.error || '助力八折券当前不可用');
-      finalAmount = quote.price;
-      effectiveExtra.growthCampaign = {
-        ...quote.campaignSnapshot,
-        couponId: quote.couponId,
-        couponCode: quote.couponCode,
-      };
+      if (!quote.applied && !resolved?.promotion) return jsonResponse(res, 400, false, quote.error || '助力八折券当前不可用');
+      if (quote.applied && quote.price < finalAmount) {
+        finalAmount = quote.price;
+        effectiveExtra.growthCampaign = {
+          ...quote.campaignSnapshot,
+          couponId: quote.couponId,
+          couponCode: quote.couponCode,
+        };
+        delete effectiveExtra.salesPromotion;
+      }
+    }
+
+    if (Math.round(finalAmount * 100) > Math.round(amount * 100)) {
+      return jsonResponse(res, 409, false, '价格已更新，请刷新商品价格后重试；未发起扣款', { code: 'PRICE_CHANGED', amount: finalAmount });
     }
 
     const validChannels = ['wechat', 'alipay'];

@@ -62,6 +62,16 @@ on:
       - 'src/lib/localTts.ts'
       - 'src/components/LocalListenButton.tsx'
       - 'scripts/native-listening.test.cjs'
+      - 'backend_deploy/salesPromotion.js'
+      - 'backend_deploy/publicPricingRoutes.js'
+      - 'backend_deploy/paymentRoutes.js'
+      - 'backend_deploy/register_routes.js'
+      - 'backend_deploy/toolAdminRoutes.js'
+      - 'scripts/sales-promotion.test.cjs'
+      - 'src/lib/salesPromotion.ts'
+      - 'src/lib/pricingStore.ts'
+      - 'src/app/membership/page.tsx'
+      - 'src/app/admin/pricing/**'
   workflow_dispatch:
     inputs:
       preview:
@@ -94,6 +104,7 @@ jobs:
       - run: npx tsx --test scripts/bazi-yun-metadata.test.ts
       - run: node --test scripts/resource-discussion.test.cjs
       - run: node --test scripts/social-visibility.test.cjs
+      - run: node --test scripts/sales-promotion.test.cjs
       - run: npx tsx --test scripts/acupoint-study.test.ts
       - run: node --test scripts/study-comments.test.cjs
       - run: npx tsx --test scripts/astronomy-study.test.ts

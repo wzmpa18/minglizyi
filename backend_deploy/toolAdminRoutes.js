@@ -15,7 +15,7 @@ const path = require('path');
 const crypto = require('crypto');
 
 const router = express.Router();
-const DATA_DIR = path.join(__dirname, 'data');
+const DATA_DIR = process.env.PRICING_DATA_DIR || path.join(__dirname, 'data');
 const MATRIX_FILE = path.join(DATA_DIR, 'tool-matrix.json');
 
 // ==================== 默认工具矩阵（与正式 14 款工具对齐）====================
@@ -147,10 +147,13 @@ router.put('/', adminAuthUnified('OPERATOR_ADMIN', 'ops'), (req, res) => {
 const publicRouter = express.Router();
 publicRouter.get('/', (_req, res) => {
   const cur = loadMatrix();
+  const promotion = require('./salesPromotion');
+  const campaign = promotion.getConfig();
   const tools = {};
   for (const [k, v] of Object.entries(cur.tools)) {
     tools[k] = {
-      name: v.name, status: v.status, payMode: v.payMode, price: v.price,
+      name: v.name, status: v.status, payMode: v.payMode,
+      price: promotion.quote('SINGLE_UNLOCK', { price: v.price }, campaign).price, basePrice: v.price,
       memberLevel: v.memberLevel, aiEnabled: v.aiEnabled !== false,
       dailyLimit: v.dailyLimit, shareEnabled: v.shareEnabled !== false,
       web: v.web !== false, android: v.android !== false, ios: v.ios !== false,

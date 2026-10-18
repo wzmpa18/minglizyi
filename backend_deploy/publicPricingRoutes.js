@@ -9,9 +9,10 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const salesPromotion = require('./salesPromotion');
 
 const router = express.Router();
-const DATA_DIR = path.join(__dirname, 'data');
+const DATA_DIR = process.env.PRICING_DATA_DIR || path.join(__dirname, 'data');
 
 // 默认会员套餐（与 paymentRoutes.js / server.js 对齐；admin-membership-config.json 未生成时的兜底）
 // v25.0.47_12：月度37 / 季度99 / 年度374 / 终身3600；B类工具超出免费额度统一按9.9元/次（取消阶梯折扣）
@@ -74,20 +75,43 @@ router.get('/', (_req, res) => {
       tools: (aiCfg.tools || []).map(t => ({ id: t.id, name: t.name, enabled: t.enabled !== false, price: t.price, category: t.category })),
     } : null;
 
+    // Public tool prices and checkout use the same authoritative tool matrix.
+    if (ai) {
+      const matrix = require('./toolAdminRoutes').loadMatrix();
+      ai.tools = ai.tools.map(tool => {
+        const entry = matrix.tools[tool.id];
+        return entry && entry.payMode === 'ONE_TIME' ? { ...tool, price: entry.price, enabled: tool.enabled && entry.status === 'ON' } : tool;
+      });
+    }
+    res.set('Cache-Control', 'no-store');
     res.json({
       success: true,
-      data: {
+      data: salesPromotion.decoratePricing({
         source: 'server-ssot',
         membershipPlans,
         batchInterpret,
         ai,
         complianceLabel: (memCfg && memCfg.complianceLabel) || '传统文化学习服务',
         generatedAt: new Date().toISOString(),
-      },
+      }),
     });
   } catch (e) {
     res.status(500).json({ success: false, error: '价格配置读取失败' });
   }
+});
+
+router.get('/promotion', (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  try { res.json({ success: true, data: salesPromotion.getConfig() }); }
+  catch { res.status(503).json({ success: false, error: '促销配置暂不可用' }); }
+});
+router.put('/promotion', require('./adminRoles').adminAuth('ADMIN', 'ops'), (req, res) => {
+  try {
+    const previous = salesPromotion.getConfig();
+    const updated = salesPromotion.saveConfig(req.body.config, req.body.expectedRevision);
+    require('./adminRoles').audit(req.admin, 'SALES_PROMOTION_UPDATE', updated.id, JSON.stringify(previous), JSON.stringify(updated), '全场促销配置调整', req);
+    res.json({ success: true, data: updated });
+  } catch (error) { res.status(error.status || 400).json({ success: false, error: error.message }); }
 });
 
 module.exports = { router };

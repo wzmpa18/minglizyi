@@ -101,6 +101,33 @@ async function worker(root){
       assert.equal((await social('/posts/visible/like','POST','invalid-jwt',{})).status,401);
       assert.equal((await social('/posts/visible/like','POST',bob,{})).status,200);
       assert.equal((await social('/posts/visible/comments','POST',bob,{content:'正文与版本应对应阅读'})).status,200);
+      process.env.PRICING_DATA_DIR=root;
+      process.env.SALES_PROMOTION_FILE=path.join(root,'sales-promotion.json');
+      const regular={plans:[{level:'basic',name:'普通会员',price:0},{level:'monthly',name:'月度会员',price:37,originalPrice:59,duration:'30天'}]};
+      fs.writeFileSync(path.join(root,'admin-membership-config.json'),JSON.stringify(regular));
+      fs.writeFileSync(path.join(root,'admin-ai-config.json'),JSON.stringify({singleUnlockPrice:9.9,packages:[{id:'pack_10',count:10,price:28}],timePlans:[{key:'single',price:2.9}],tools:[{id:'phone_number',price:18}]}));
+      fs.writeFileSync(path.join(root,'tool-matrix.json'),JSON.stringify({tools:{phone_number:{price:18}}}));
+      app.use('/api/public/pricing',require('../backend_deploy/publicPricingRoutes').router);
+      const pricingBase=`http://127.0.0.1:${server.address().port}/api/public/pricing`;
+      async function pricing(route='',method='GET',credential='',body){
+        const response=await fetch(pricingBase+route,{method,headers:{'Content-Type':'application/json',...(credential?{Authorization:'Bearer '+credential}:{})},body:body===undefined?undefined:JSON.stringify(body)});
+        return {status:response.status,body:await response.json()};
+      }
+      const initial=(await pricing('/promotion')).body.data;
+      assert.equal(initial.enabled,false);
+      const payload={expectedRevision:initial.revision,config:{...initial,enabled:true,discountPercent:20}};
+      for(const credential of ['',alice,support,finance]) assert.ok([401,403].includes((await pricing('/promotion','PUT',credential,payload)).status));
+      assert.equal((await pricing('/promotion','PUT',admin,payload)).status,200);
+      assert.equal((await pricing('/promotion','PUT',admin,payload)).status,409);
+      const catalog=(await pricing()).body.data;
+      assert.equal(catalog.membershipPlans[1].price,29.6);assert.equal(catalog.membershipPlans[1].basePrice,37);
+      assert.equal(catalog.ai.packages[0].price,22.4);assert.equal(catalog.ai.timePlans[0].price,2.32);assert.equal(catalog.ai.singleUnlockPrice,7.92);
+      assert.equal(catalog.ai.tools[0].price,14.4);
+      assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root,'admin-membership-config.json'),'utf8')),regular);
+      const current=(await pricing('/promotion')).body.data;
+      assert.equal((await pricing('/promotion','PUT',admin,{expectedRevision:current.revision,config:{...current,enabled:false}})).status,200);
+      assert.equal((await pricing()).body.data.membershipPlans[1].price,37);
+      console.log('PASS: real promotion HTTP public catalog, administrator-only writes, revision conflicts, sale prices and original-price preservation.');
       accounts.exec('DROP TABLE users');
       assert.equal((await social('/posts/visible/like','POST',bob,{})).status,503);
       console.log('PASS: real social HTTP routes enforce feed/detail/favorite/comment two-way blocks, inactive posts, deleted text, reply checks, real accounts and fail-closed database errors.');
