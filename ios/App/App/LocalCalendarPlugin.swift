@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import UserNotifications
 import Capacitor
+import WidgetKit
 
 @objc(LocalCalendarPlugin)
 public class LocalCalendarPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotificationCenterDelegate {
@@ -10,13 +11,14 @@ public class LocalCalendarPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotificatio
     public let pluginMethods:[CAPPluginMethod]=[
         CAPPluginMethod(name:"status",returnType:CAPPluginReturnPromise),
         CAPPluginMethod(name:"requestAuthorization",returnType:CAPPluginReturnPromise),
-        CAPPluginMethod(name:"sync",returnType:CAPPluginReturnPromise)]
+        CAPPluginMethod(name:"sync",returnType:CAPPluginReturnPromise),
+        CAPPluginMethod(name:"addWidget",returnType:CAPPluginReturnPromise)]
     private let worker=DispatchQueue(label:"com.yandaoguoxue.calendar.sync")
     public override func load(){UNUserNotificationCenter.current().delegate=self}
     private func state(_ call:CAPPluginCall,scheduled:Int?=nil){
         UNUserNotificationCenter.current().getNotificationSettings { settings in
             let allowed=settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional
-            var result:JSObject=["native":true,"platform":"ios","widgets":false,"notifications":allowed]
+            var result:JSObject=["native":true,"platform":"ios","widgets":ProcessInfo.processInfo.isOperatingSystemAtLeast(OperatingSystemVersion(majorVersion:17,minorVersion:0,patchVersion:0)) && FileManager.default.containerURL(forSecurityApplicationGroupIdentifier:"group.com.yandaoguoxue.calendar") != nil,"notifications":allowed]
             if let count=scheduled { result["scheduled"]=count }
             call.resolve(result)
         }
@@ -28,6 +30,7 @@ public class LocalCalendarPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotificatio
             self.state(call)
         }
     }
+    @objc func addWidget(_ call:CAPPluginCall){call.resolve(["requested":false,"added":false])}
     @objc func sync(_ call:CAPPluginCall){
         guard let text=call.getString("payload"),text.utf8.count<=250000,
               let bytes=text.data(using:.utf8),let payload=(try? JSONSerialization.jsonObject(with:bytes)) as? [String:Any],
@@ -37,6 +40,13 @@ public class LocalCalendarPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotificatio
         let now=Date().timeIntervalSince1970*1000
         guard rows.allSatisfy({ row in guard let id=row["id"] as? Int,let at=row["at"] as? Double else{return false};return id>0 && at>now && at<now+366*86400000 })else{call.reject("提醒时间无效");return}
         worker.async {
+            do {
+                guard let root=FileManager.default.containerURL(forSecurityApplicationGroupIdentifier:"group.com.yandaoguoxue.calendar")else{call.reject("系统未授予日历组件容器，请更新安装包后再试");return}
+                let file=root.appendingPathComponent("calendar-v1.json")
+                try bytes.write(to:file,options:.atomic)
+                try FileManager.default.setAttributes([.protectionKey:FileProtectionType.completeUntilFirstUserAuthentication],ofItemAtPath:file.path)
+                if #available(iOS 17.0,*) { for kind in ["YandaoCalendarClock","YandaoCalendarPillars","YandaoCalendarAgenda"]{WidgetCenter.shared.reloadTimelines(ofKind:kind)} }
+            }catch{call.reject("组件快照保存失败：\(error.localizedDescription)");return}
             let center=UNUserNotificationCenter.current(),ready=DispatchSemaphore(value:0)
             var old:[UNNotificationRequest]=[]
             center.getPendingNotificationRequests{items in old=items;ready.signal()}

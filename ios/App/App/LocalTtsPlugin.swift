@@ -115,10 +115,16 @@ public class LocalTtsPlugin: CAPPlugin, CAPBridgedPlugin, AVSpeechSynthesizerDel
 }
 
 class GuoxueBridgeViewController: CAPBridgeViewController {
+    var calendarLaunchRequested=false
+    func openCalendar(){
+        guard let web=bridge?.webView,let url=URL(string:"capacitor://localhost/calendar/")else{calendarLaunchRequested=true;return}
+        calendarLaunchRequested=false;web.load(URLRequest(url:url))
+    }
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(LocalTtsPlugin())
         bridge?.registerPluginInstance(AppleLearningStorePlugin())
         bridge?.registerPluginInstance(LocalSkyLocationPlugin())
         bridge?.registerPluginInstance(LocalCalendarPlugin())
+        if calendarLaunchRequested{openCalendar()}
     }
 }

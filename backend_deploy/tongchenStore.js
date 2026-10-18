@@ -1,10 +1,11 @@
 'use strict';
 const crypto=require('node:crypto');
 const {validateStudyText}=require('./studyCommentPolicy');
-const RULE='lunar-javascript-1.7.7/sect1/standard-civil-v1';
+const {CALENDAR_RULE_VERSION:RULE,civilTimeEpoch,createCalendarRules}=require('./calendarRules');
 const MODES=['solar-md','lunar-md','date','hour','pillars'];
 const INTERESTS=['古籍','八字','紫微','六壬','奇门','历法','天文','中医'];
 function createTongchenStore(db,{Solar,key,userInfo,now=()=>Date.now()}){
+ const rules=createCalendarRules(Solar);
  const fail=(message,status=400)=>{const error=new Error(message);error.status=status;throw error;};
  db.exec(`CREATE TABLE IF NOT EXISTS tongchen_profiles(user_id TEXT PRIMARY KEY,public_id TEXT UNIQUE NOT NULL,tokens TEXT NOT NULL,modes TEXT NOT NULL,interests TEXT NOT NULL,rule_version TEXT NOT NULL,accept_requests INTEGER NOT NULL,consent_version TEXT NOT NULL,joined_ms INTEGER NOT NULL);
  CREATE TABLE IF NOT EXISTS tongchen_settings(key TEXT PRIMARY KEY,value TEXT NOT NULL);
@@ -45,7 +46,10 @@ function createTongchenStore(db,{Solar,key,userInfo,now=()=>Date.now()}){
   if(known&&(!Number.isInteger(body.hour)||body.hour<0||body.hour>23||!Number.isInteger(body.minute)||body.minute<0||body.minute>59))fail('出生钟点无效');
   if(!known&&(modes.includes('hour')||modes.includes('pillars')))fail('时辰不详不能加入同时辰或时柱条件匹配');
   const interests=[...new Set(body.interests||[])];if(interests.length>8||interests.some(v=>!INTERESTS.includes(v)))fail('学习兴趣无效');
-  const lunar=Solar.fromYmdHms(y,m,d,known?body.hour:12,known?body.minute:0,0).getLunar(),ec=lunar.getEightChar();ec.setSect(1);
+  const lunar=Solar.fromYmdHms(y,m,d,known?body.hour:12,known?body.minute:0,0).getLunar();
+  const epoch=civilTimeEpoch(y,m,d,known?body.hour:12,known?body.minute:0,body.timeZone);
+  if(epoch===null)fail('此日期钟点在所选时区不存在，请核对夏令时或日期');
+  const pillars=rules.calendarAt(epoch,{timeZone:body.timeZone,placeName:''}).pillars.split(' · ');
   const tokens={};
   // Raw birth date/time/place are discarded after validation. HMAC indices are
   // still sensitive data, never claimed to be anonymised or exposed to clients.
@@ -53,7 +57,7 @@ function createTongchenStore(db,{Solar,key,userInfo,now=()=>Date.now()}){
   if(modes.includes('lunar-md'))tokens['lunar-md']=hash('lunar-md',`${lunar.getMonth()}-${lunar.getDay()}`);
   if(modes.includes('date'))tokens.date=hash('date',body.birthDate);
   if(modes.includes('hour'))tokens.hour=hash('hour',`${body.birthDate}:${Math.floor((body.hour+1)/2)%12}`);
-  if(modes.includes('pillars'))[ec.getYear(),ec.getMonth(),ec.getDay(),ec.getTime()].forEach((value,i)=>tokens[`pillar${i}`]=hash(`pillar${i}`,value));
+  if(modes.includes('pillars'))pillars.forEach((value,i)=>tokens[`pillar${i}`]=hash(`pillar${i}`,value));
   const old=profile(me),publicId=old?.public_id||crypto.randomBytes(16).toString('hex');
   db.prepare(`INSERT INTO tongchen_profiles VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET tokens=excluded.tokens,modes=excluded.modes,interests=excluded.interests,rule_version=excluded.rule_version,accept_requests=excluded.accept_requests,consent_version=excluded.consent_version,joined_ms=excluded.joined_ms`).run(String(me),publicId,JSON.stringify(tokens),JSON.stringify(modes),JSON.stringify(interests),RULE,body.acceptRequests===false?0:1,body.consentVersion,now());
   return {success:true,message:'已按你选择的精度加入。未读取任何客户排盘或亲友记事。'};

@@ -14,3 +14,12 @@ test("chosen observation zone changes civil date without taking a birth location
  const t=Date.UTC(2026,9,18,18),sh=calendarAt(t,{timeZone:"Asia/Shanghai",placeName:"上海"}),ny=calendarAt(t,{timeZone:"America/New_York",placeName:"纽约"});
  assert.equal(sh.solar,"2026-10-19");assert.equal(ny.solar,"2026-10-18");assert.notEqual(sh.pillars,ny.pillars);
 });
+
+
+test("solar term changes year/month at one instant globally; DST retains offset transitions",()=>{
+ const sh={timeZone:"Asia/Shanghai",placeName:"上海"},ny={timeZone:"America/New_York",placeName:"纽约"};
+ for(const zone of [sh,ny]){assert.ok(calendarAt(Date.UTC(2026,1,3,19,50),zone).pillars.startsWith("乙巳"));assert.ok(calendarAt(Date.UTC(2026,1,3,20,10),zone).pillars.startsWith("丙午"));}
+ const data=makeCalendarSnapshot(Date.UTC(2026,10,1,4),ny,5);
+ assert.ok(data.entries.some(row=>row.offsetMinutes===-240));assert.ok(data.entries.some(row=>row.offsetMinutes===-300));
+ assert.ok(data.entries.some(row=>row.from===Date.UTC(2026,10,1,6)));
+});

@@ -8,13 +8,15 @@ import {getEventsOnDate,getUpcomingEvents} from "@/lib/calendarEventsStore";
 import {CalendarClock} from "@/components/CalendarClock";
 import {useInterfaceLocale} from "@/lib/interfaceLocale";
 export default function CalendarPage(){
- const {ui}=useInterfaceLocale(),[now,setNow]=useState(Date.now()),[date,setDate]=useState(""),[view,setView]=useState<"day"|"month">("day"),[query,setQuery]=useState(""),[clock,setClock]=useState(false);
+ const [mounted,setMounted]=useState(false);
+ const {ui}=useInterfaceLocale(),[now,setNow]=useState(0),[date,setDate]=useState(""),[view,setView]=useState<"day"|"month">("day"),[query,setQuery]=useState(""),[clock,setClock]=useState(false);
  const [observation,setObservation]=useState<CalendarObservation>({timeZone:"Asia/Shanghai",placeName:"北京（手选）"}),[status,setStatus]=useState("");
- useEffect(()=>{try{const raw=localStorage.getItem("yandao-calendar-observation");if(raw){const value=JSON.parse(raw);calendarAt(Date.now(),value);setObservation(value);}}catch{}const timer=setInterval(()=>setNow(Date.now()),30000);return()=>clearInterval(timer);},[]);
+ useEffect(()=>{setMounted(true);setNow(Date.now());try{const raw=localStorage.getItem("yandao-calendar-observation");if(raw){const value=JSON.parse(raw);calendarAt(Date.now(),value);setObservation(value);}}catch{}const timer=setInterval(()=>setNow(Date.now()),30000);return()=>clearInterval(timer);},[]);
  const current=useMemo(()=>calendarAt(now,observation),[now,observation]);
  const chosen=date||current.solar,[year,month,day]=chosen.split("-").map(Number);
  const lunar=Solar.fromYmd(year,month,day).getLunar(),events=getEventsOnDate(year,month,day),upcoming=getUpcomingEvents(60).filter(o=>!query||o.event.title.includes(query));
  function saveObservation(zone:string,name:string){try{const value={timeZone:zone,placeName:name};calendarAt(Date.now(),value);setObservation(value);localStorage.setItem("yandao-calendar-observation",JSON.stringify(value));window.dispatchEvent(new Event("yandao-calendar-changed"));setStatus("观察时区已保存；此处采用标准民用时间，不套用出生地点。");}catch{setStatus("时区无效，请选择列表中的时区");}}
+ if(!mounted)return <main className="mx-auto max-w-[500px] p-5">正在加载本机日历…</main>;
  return <main className="mx-auto min-h-screen max-w-[500px] pb-24" style={{background:"var(--theme-bg)",color:"var(--theme-text-primary)"}}>
   <BrandHeader title={ui("言道日历")} showBack/>
   <section className="m-3 rounded-2xl p-5 shadow-sm" style={{background:"var(--theme-card-bg)",borderTop:"3px solid var(--theme-primary)"}}>

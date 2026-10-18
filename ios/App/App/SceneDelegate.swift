@@ -8,13 +8,16 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = scene as? UIWindowScene else { return }
 
         window = UIWindow(windowScene: windowScene)
-        window?.rootViewController = GuoxueBridgeViewController()
+        let controller=GuoxueBridgeViewController()
+        controller.calendarLaunchRequested=connectionOptions.urlContexts.contains{$0.url.scheme=="yandaoguoxue" && $0.url.host=="calendar"}
+        window?.rootViewController = controller
         window?.makeKeyAndVisible()
 
         SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)
     }
 
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        if URLContexts.contains(where:{$0.url.scheme=="yandaoguoxue" && $0.url.host=="calendar"}){(window?.rootViewController as? GuoxueBridgeViewController)?.openCalendar();return}
         SceneDelegateProxy.shared.scene(scene, openURLContexts: URLContexts)
     }
 

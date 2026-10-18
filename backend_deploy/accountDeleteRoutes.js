@@ -22,6 +22,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
+const {prepareCommunityDeletion}=require('./communityAccountDeletion');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
@@ -104,7 +105,9 @@ function createRouter() {
       const now = new Date().toISOString();
 
       // --- 事务：匿名化 + 关联数据删除 ---
+      const removeCommunity=prepareCommunityDeletion(db,process.env.SOCIAL_DB_PATH||path.join(__dirname,'data','social.db'));
       const tx = db.transaction(() => {
+        removeCommunity(userId);
         require('./membershipLedger').adminReset(db, userId, 'basic', null);
         db.prepare(`UPDATE users SET
           nickname = '已注销用户',

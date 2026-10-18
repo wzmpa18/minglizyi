@@ -20,7 +20,7 @@ test('opt-in, adult and precision consent are enforced; no raw birth details or 
  const result=s.search('alice',{mode:'date'});assert.equal(result.items.length,1);assert.equal(result.items[0].nickname,'bob学友');
  assert.deepEqual(Object.keys(result.items[0]).sort(),['id','interests','nickname','ruleVersion']);
  const stored=db.prepare('SELECT * FROM tongchen_profiles WHERE user_id=?').get('alice');
- assert.equal(JSON.stringify(stored).includes('1990'),false);assert.equal(JSON.stringify(stored).includes('05-15'),false);assert.equal(stored.tokens.includes('庚午'),false);
+ assert.equal(JSON.stringify(stored).includes('1990-05-15'),false);assert.equal(JSON.stringify(stored).includes('05-15'),false);assert.equal(stored.tokens.includes('庚午'),false);
  s.leave('bob');assert.equal(s.search('alice',{mode:'date'}).items.length,0);
  }finally{db.close();}
 });

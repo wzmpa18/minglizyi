@@ -1,16 +1,12 @@
 import { Solar } from "lunar-javascript";
-export const CALENDAR_RULE_VERSION = "lunar-javascript-1.7.7/sect1/standard-civil-v1";
+import { createCalendarRules,CALENDAR_RULE_VERSION } from "../../backend_deploy/calendarRules";
+export { CALENDAR_RULE_VERSION } from "../../backend_deploy/calendarRules";
 export interface CalendarObservation { timeZone:string; placeName:string; }
 export interface CalendarSnapshot {
   schemaVersion:1;ruleVersion:string;timeZone:string;placeName:string;generatedAt:number;expiresAt:number;
-  entries:{from:number;until:number;solar:string;lunar:string;pillars:string;jieqi:string;clock:string}[];
+  entries:{from:number;until:number;solar:string;lunar:string;pillars:string;jieqi:string;clock:string;secondsOfDay:number;offsetMinutes:number}[];
 }
-export function calendarAt(epoch:number, observation:CalendarObservation) {
-  const p=Object.fromEntries(new Intl.DateTimeFormat("en-CA",{timeZone:observation.timeZone,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).formatToParts(epoch).map(x=>[x.type,x.value]));
-  const solar=Solar.fromYmdHms(+p.year,+p.month,+p.day,+p.hour,+p.minute,+p.second);
-  const lunar=solar.getLunar(),ec=lunar.getEightChar();ec.setSect(1);
-  return {solar:`${p.year}-${p.month}-${p.day}`,lunar:`${lunar.getMonthInChinese()}月${lunar.getDayInChinese()}`,pillars:[ec.getYear(),ec.getMonth(),ec.getDay(),ec.getTime()].join(" · "),jieqi:lunar.getJieQi()||"",clock:`${p.hour}:${p.minute}`};
-}
+export const calendarAt=createCalendarRules(Solar).calendarAt;
 /** Native displays consume the same engine output, never another lunar table. */
 export function makeCalendarSnapshot(now:number,observation:CalendarObservation,hours=168):CalendarSnapshot {
   if(!Number.isFinite(now)||!Number.isInteger(hours)||hours<1||hours>192)throw new Error("日历覆盖期无效");
@@ -26,7 +22,7 @@ export function makeCalendarSnapshot(now:number,observation:CalendarObservation,
   const times=[...starts].sort((a,b)=>a-b),entries:CalendarSnapshot["entries"]=[];
   for(let i=0;i<times.length-1;i++){
     const data=calendarAt(times[i],observation),previous=entries.at(-1);
-    if(previous&&previous.solar===data.solar&&previous.lunar===data.lunar&&previous.pillars===data.pillars&&previous.jieqi===data.jieqi)previous.until=times[i+1];
+    if(previous&&previous.solar===data.solar&&previous.lunar===data.lunar&&previous.pillars===data.pillars&&previous.jieqi===data.jieqi&&previous.offsetMinutes===data.offsetMinutes)previous.until=times[i+1];
     else entries.push({from:times[i],until:times[i+1],...data});
   }
   return {schemaVersion:1,ruleVersion:CALENDAR_RULE_VERSION,...observation,generatedAt:now,expiresAt:end,entries};

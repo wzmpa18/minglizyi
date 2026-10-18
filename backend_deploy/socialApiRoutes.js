@@ -266,6 +266,7 @@ function initTables(d) {
       if (!ccols.includes('deleted_at')) d.exec(`ALTER TABLE comments ADD COLUMN deleted_at TEXT DEFAULT ''`);
       if (!ccols.includes('deleted_by')) d.exec(`ALTER TABLE comments ADD COLUMN deleted_by TEXT DEFAULT ''`);
     }
+    for(const table of ['friend_requests','friendships'])if(!d.prepare(`PRAGMA table_info(${table})`).all().some(row=>row.name==='source'))d.exec(`ALTER TABLE ${table} ADD COLUMN source TEXT NOT NULL DEFAULT 'legacy'`);
     const chatcols = d.prepare('PRAGMA table_info(chat_messages)').all().map(c => c.name);
     if(!chatcols.includes('review_status'))d.exec("ALTER TABLE chat_messages ADD COLUMN review_status TEXT NOT NULL DEFAULT 'active'");
     if(!chatcols.includes('review_reason'))d.exec("ALTER TABLE chat_messages ADD COLUMN review_reason TEXT NOT NULL DEFAULT ''");
@@ -989,9 +990,9 @@ function createRouter() {
       if (d.prepare('SELECT 1 FROM friendships WHERE user_a = ? AND user_b = ?').get(a, b)) {
         return res.json({ success: false, error: '你们已经是好友了' });
       }
-      const pending = d.prepare(`SELECT * FROM friend_requests WHERE from_id = ? AND to_id = ? AND status = 'pending'`).get(me, target);
+      const pending = d.prepare(`SELECT * FROM friend_requests WHERE from_id = ? AND to_id = ? AND status = 'pending' AND source='legacy'`).get(me, target);
       if (pending) return res.json({ success: false, error: '已发送过请求，等待对方处理' });
-      const reverse = d.prepare(`SELECT * FROM friend_requests WHERE from_id = ? AND to_id = ? AND status = 'pending'`).get(target, me);
+      const reverse = d.prepare(`SELECT * FROM friend_requests WHERE from_id = ? AND to_id = ? AND status = 'pending' AND source='legacy'`).get(target, me);
       if (reverse) {
         // 对方向我发过请求：直接互加好友
         d.prepare(`UPDATE friend_requests SET status='accepted', updated_at=datetime('now','localtime') WHERE id = ?`).run(reverse.id);
@@ -1026,6 +1027,7 @@ function createRouter() {
     try {
       const d = getDb();
       const row = d.prepare('SELECT * FROM friend_requests WHERE id = ?').get(parseInt(req.params.id, 10));
+      if(row?.source==='tongchen')return res.status(403).json({success:false,error:'请在同辰雅集中明确同意或拒绝该交流请求'});
       if (!row || String(row.to_id) !== String(req.user.userId)) {
         return res.status(404).json({ success: false, error: '请求不存在' });
       }

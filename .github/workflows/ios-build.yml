@@ -71,7 +71,7 @@ jobs:
       BUNDLE_ID: com.yandaoguoxue.app
       RELEASE_VERSION: 25.0.115
       RELEASE_BUILD: ${{ inputs.release_build || '8' }}
-      PROFILE_NAME: yandao guoxue iOS App Store 20260902
+      PROFILE_NAME: yandao guoxue Calendar Full 20261019
 
     steps:
       - name: Checkout
@@ -122,8 +122,9 @@ jobs:
           DIST_CERT: ${{ secrets.IOS_DIST_CERT_P12_B64 }}
           DIST_PASSWORD: ${{ secrets.IOS_DIST_P12_PASSWORD }}
           DIST_PROFILE: ${{ secrets.IOS_APPSTORE_PROFILE_B64 }}
+          WIDGET_PROFILE: ${{ secrets.IOS_WIDGET_PROFILE_B64 }}
         run: |
-          if [ -n "$DIST_CERT" ] && [ -n "$DIST_PASSWORD" ] && [ -n "$DIST_PROFILE" ]; then
+          if [ -n "$DIST_CERT" ] && [ -n "$DIST_PASSWORD" ] && [ -n "$DIST_PROFILE" ] && [ -n "$WIDGET_PROFILE" ]; then
             echo "mode=signed" >> "$GITHUB_OUTPUT"
             echo "签名模式：手动签名（分发证书 .p12 + App Store profile 资产化）"
           else
@@ -149,7 +150,9 @@ jobs:
           DIST_P12_B64: ${{ secrets.IOS_DIST_CERT_P12_B64 }}
           DIST_P12_PASSWORD: ${{ secrets.IOS_DIST_P12_PASSWORD }}
           PROFILE_B64: ${{ secrets.IOS_APPSTORE_PROFILE_B64 }}
-          EXPECTED_PROFILE_UUID: 917802a5-6e9b-432d-9710-ca862a4007fc
+          EXPECTED_PROFILE_UUID: 1e8e18d4-8ddd-4284-9de3-1074c9c60211
+          WIDGET_PROFILE_B64: ${{ secrets.IOS_WIDGET_PROFILE_B64 }}
+          EXPECTED_WIDGET_PROFILE_UUID: 83a41c92-a07f-4761-90fb-46c43eee8d94
         run: |
           set -e
           KEYCHAIN_DB=ci-build.keychain-db
@@ -175,6 +178,12 @@ jobs:
           fi
           cp "$RUNNER_TEMP/app.mobileprovision" "$PP_DIR/$PP_UUID.mobileprovision"
           echo "profile 安装完成: $PP_UUID.mobileprovision"
+          printf '%s' "$WIDGET_PROFILE_B64" | base64 -d > "$RUNNER_TEMP/widget.mobileprovision"
+          WIDGET_UUID=$(security cms -D -i "$RUNNER_TEMP/widget.mobileprovision" | plutil -extract UUID raw -o - -)
+          [ "$WIDGET_UUID" = "$EXPECTED_WIDGET_PROFILE_UUID" ] || { echo 'FATAL: Widget profile UUID mismatch'; exit 1; }
+          cp "$RUNNER_TEMP/widget.mobileprovision" "$PP_DIR/$WIDGET_UUID.mobileprovision"
+          echo "Widget profile identity verified"
+
 
       # 归档一律未签名（签名在导出阶段完成，避免归档期签名资产依赖）
       - name: Archive (unsigned)
@@ -214,7 +223,9 @@ jobs:
             <key>provisioningProfiles</key>
             <dict>
               <key>com.yandaoguoxue.app</key>
-              <string>yandao guoxue iOS App Store 20260902</string>
+              <string>yandao guoxue Calendar Full 20261019</string>
+              <key>com.yandaoguoxue.app.CalendarWidget</key>
+              <string>yandao guoxue Calendar Widget 20261019</string>
             </dict>
             <key>uploadSymbols</key>
             <true/>
@@ -246,6 +257,14 @@ jobs:
               assert info['CFBundleIdentifier'] == os.environ['BUNDLE_ID'], 'Bundle mismatch'
               assert info['CFBundleShortVersionString'] == os.environ['RELEASE_VERSION'], 'Version mismatch'
               assert info['CFBundleVersion'] == os.environ['RELEASE_BUILD'], 'Build mismatch'
+              widgets = [p for p in archive.namelist() if p.endswith('.appex/Info.plist') and '/PlugIns/' in p]
+              assert len(widgets) == 1, 'Expected a real embedded WidgetKit extension'
+              widget = plistlib.loads(archive.read(widgets[0]))
+              assert widget['CFBundleIdentifier'] == 'com.yandaoguoxue.app.CalendarWidget'
+              assert widget['CFBundleVersion'] == info['CFBundleVersion']
+              assert widget['CFBundleShortVersionString'] == info['CFBundleShortVersionString']
+              assert widget['NSExtension']['NSExtensionPointIdentifier'] == 'com.apple.widgetkit-extension'
+              print('PASS: real WidgetKit extension is embedded and versions match')
               print('PASS: signed IPA identity', info['CFBundleIdentifier'], info['CFBundleShortVersionString'], info['CFBundleVersion'])
           print('IPA SHA-256', hashlib.sha256(ipa.read_bytes()).hexdigest())
           PY
@@ -298,7 +317,7 @@ jobs:
       - name: Remove temporary signing credentials
         if: always()
         run: |
-          rm -f "$HOME/private_keys/AuthKey_${KEY_ID}.p8" "$RUNNER_TEMP/dist.p12" "$RUNNER_TEMP/app.mobileprovision"
+          rm -f "$HOME/private_keys/AuthKey_${KEY_ID}.p8" "$RUNNER_TEMP/dist.p12" "$RUNNER_TEMP/app.mobileprovision" "$RUNNER_TEMP/widget.mobileprovision"
           security delete-keychain ci-build.keychain-db 2>/dev/null || true
 
       - name: Require successful signed export for a release build

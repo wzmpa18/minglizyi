@@ -80,6 +80,13 @@ jobs:
             assert info['CFBundleIdentifier']=='com.yandaoguoxue.app'
             assert info['CFBundleShortVersionString']=='25.0.115'
             assert info['CFBundleVersion']==os.environ['EXPECTED_BUILD']
+            if int(info['CFBundleVersion']) >= 16:
+              widgets=[p for p in z.namelist() if p.endswith('.appex/Info.plist') and '/PlugIns/' in p]
+              assert len(widgets)==1, 'Missing WidgetKit extension'
+              widget=plistlib.loads(z.read(widgets[0]))
+              assert widget['CFBundleIdentifier']=='com.yandaoguoxue.app.CalendarWidget'
+              assert widget['CFBundleVersion']==info['CFBundleVersion']
+
             assert info.get('SKIncludeConsumableInAppPurchaseHistory') is True
           print('Verified package identity, build and SHA-256')
           PY

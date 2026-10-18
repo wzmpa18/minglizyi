@@ -15,7 +15,8 @@ export async function syncNativeCalendar(){
  try{const value=localStorage.getItem("yandao-calendar-observation");if(value)observation=JSON.parse(value);}catch{}
  const snapshot=makeCalendarSnapshot(now,observation);
  const reminders:{id:number;at:number}[]=[],ids=new Set<number>();
- for(const occurrence of getUpcomingEvents(30))for(const advance of occurrence.event.reminders){
+ const occurrences=getUpcomingEvents(30);
+ for(const occurrence of occurrences)for(const advance of occurrence.event.reminders){
    const at=reminderDueAt(occurrence.ts,advance.offsetMinutes);if(at<=now+1000)continue;
    let id=idFor(`${occurrence.event.id}:${occurrence.ts}:${advance.offsetMinutes}:${occurrence.event.updatedAt}`);
    while(ids.has(id))id=id===2147483646?1:id+1;ids.add(id);reminders.push({id,at});
@@ -24,5 +25,5 @@ export async function syncNativeCalendar(){
  const texts:Record<string,[string,string]>={"zh-CN":["言道日历","有一项安排，请打开应用查看"],"zh-TW":["言道日曆","有一項安排，請開啟應用程式查看"],ja:["言道カレンダー","予定があります。アプリで確認してください"],en:["Yandao calendar","You have an event. Open the app for details."]};
  const [notificationTitle,notificationBody]=texts[locale]||texts["zh-CN"];
  if(turn!==sequence)return null;
- return LocalCalendar.sync({payload:JSON.stringify({snapshot,reminders:reminders.sort((a,b)=>a.at-b.at).slice(0,64),notificationTitle,notificationBody,locale})});
+ return LocalCalendar.sync({payload:JSON.stringify({snapshot,agenda:occurrences.filter(o=>o.ts>now).slice(0,50).map(o=>({at:o.ts})),reminders:reminders.sort((a,b)=>a.at-b.at).slice(0,64),notificationTitle,notificationBody,locale})});
 }
