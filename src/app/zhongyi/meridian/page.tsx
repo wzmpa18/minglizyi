@@ -22,6 +22,7 @@ import { useToolBack } from "@/lib/useToolBack";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import { ResourceDiscussion } from "@/components/ResourceDiscussion";
+import { AcupointStudySources } from "@/components/AcupointStudySources";
 
 const BRAND = "#7B2FBE";
 const BRAND_LIGHT = "#9B5ECF";
@@ -170,9 +171,8 @@ function detectBodyArea(name: string, location: string, zone?: string): BodyArea
 type DiagramPoint = [number, number];
 type MeridianCourse = { total: number; view: "front" | "back"; points: DiagramPoint[] };
 
-// Simplified teaching courses. The selected point is placed by its standard
-// sequence number along the course; the written landmark remains the precise
-// positioning reference.
+// Schematic courses only. These paths have no verified point coordinates;
+// never interpolate sequence numbers into anatomical point locations.
 const MERIDIAN_COURSES: Record<string, MeridianCourse> = {
   LU: { total: 11, view: "front", points: [[94, 93], [76, 112], [62, 150], [51, 196], [43, 239]] },
   LI: { total: 20, view: "front", points: [[43, 239], [54, 194], [68, 143], [84, 93], [105, 72], [111, 55]] },
@@ -189,26 +189,6 @@ const MERIDIAN_COURSES: Record<string, MeridianCourse> = {
   GV: { total: 28, view: "back", points: [[120, 211], [120, 180], [120, 142], [120, 101], [120, 73], [120, 38], [118, 22], [112, 55]] },
   CV: { total: 24, view: "front", points: [[120, 211], [120, 183], [120, 148], [120, 112], [120, 82], [120, 61]] },
 };
-
-const FALLBACK_MARKERS: Record<BodyArea, DiagramPoint> = {
-  head: [120, 48], arms: [60, 155], hands: [43, 239], legs: [104, 292], feet: [106, 392],
-  torso: [120, 135], back: [120, 135],
-};
-
-function interpolateCourse(points: DiagramPoint[], ratio: number): DiagramPoint {
-  const lengths = points.slice(1).map((point, index) => Math.hypot(point[0] - points[index][0], point[1] - points[index][1]));
-  const total = lengths.reduce((sum, value) => sum + value, 0);
-  let remaining = Math.max(0, Math.min(1, ratio)) * total;
-  for (let index = 0; index < lengths.length; index += 1) {
-    if (remaining <= lengths[index]) {
-      const start = points[index], end = points[index + 1];
-      const part = lengths[index] ? remaining / lengths[index] : 0;
-      return [start[0] + (end[0] - start[0]) * part, start[1] + (end[1] - start[1]) * part];
-    }
-    remaining -= lengths[index];
-  }
-  return points[points.length - 1];
-}
 
 function parseCourseCode(code?: string): { prefix: string; index: number } | null {
   const match = String(code || "").toUpperCase().match(/^([A-Z]+)(\d+)$/);
@@ -232,32 +212,22 @@ function HumanOutline({ back }: { back: boolean }) {
 function BodyDiagramSVG({ area, acupointCode, acupointName }: { area: BodyArea; acupointCode?: string; acupointName: string }) {
   const parsed = parseCourseCode(acupointCode);
   const course = parsed ? MERIDIAN_COURSES[parsed.prefix] : null;
-  const selected = course && parsed
-    ? interpolateCourse(course.points, (Math.max(1, parsed.index) - 1) / Math.max(1, course.total - 1))
-    : FALLBACK_MARKERS[area];
-  const dots = course ? Array.from({ length: course.total }, (_, index) => interpolateCourse(course.points, index / Math.max(1, course.total - 1))) : [];
   const mirrored = (point: DiagramPoint): DiagramPoint => [240 - point[0], point[1]];
   const pathText = course?.points.map((point) => point.join(",")).join(" ") || "";
   const mirrorPathText = course?.points.map(mirrored).map((point) => point.join(",")).join(" ") || "";
   return (
-    <svg width="240" height="430" viewBox="0 0 240 430" role="img" aria-label={`${acupointName}经络定位示意图`}>
+    <svg width="240" height="430" viewBox="0 0 240 430" role="img" aria-label={`${acupointName}所属经络循行示意，未标注具体穴位位置`}>
       <rect x="1" y="1" width="238" height="418" rx="18" fill="#FCFAF7" stroke="#E6DDD5" />
       <text x="14" y="24" fill="#6D5C52" fontSize="11" fontWeight="700">{course?.view === "back" ? "人体背面" : "人体正面"} · 经络循行</text>
       <HumanOutline back={course?.view === "back" || area === "back"} />
       {course && <>
         <polyline points={pathText} fill="none" stroke={BRAND} strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.88" />
         {parsed?.prefix !== "GV" && parsed?.prefix !== "CV" && <polyline points={mirrorPathText} fill="none" stroke={BRAND} strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" opacity="0.45" />}
-        {dots.map((point, index) => <circle key={`p-${index}`} cx={point[0]} cy={point[1]} r="1.7" fill="#fff" stroke={BRAND} strokeWidth="1" />)}
       </>}
-      <circle cx={selected[0]} cy={selected[1]} r="9" fill="#EF535033" stroke="#EF5350" strokeWidth="1.5">
-        <animate attributeName="r" values="7;11;7" dur="1.5s" repeatCount="indefinite" />
-      </circle>
-      <circle cx={selected[0]} cy={selected[1]} r="4" fill="#D32F2F" stroke="#fff" strokeWidth="1.5" />
-      <path d={`M${selected[0] + 5} ${selected[1] - 5} L${Math.min(177, selected[0] + 28)} ${Math.max(30, selected[1] - 24)}`} stroke="#D32F2F" strokeWidth="1" />
       <rect x="147" y="28" width="80" height="35" rx="8" fill="#fff" stroke="#EF9A9A" />
       <text x="187" y="42" textAnchor="middle" fill="#C62828" fontSize="10" fontWeight="700">{acupointName}</text>
       <text x="187" y="56" textAnchor="middle" fill="#8D6E63" fontSize="9">{acupointCode || AREA_LABELS[area]}</text>
-      <text x="120" y="417" textAnchor="middle" fill="#9E8F84" fontSize="9">红点为本经穴位顺序位置 · 具体定位请看下方骨性标志</text>
+      <text x="120" y="417" textAnchor="middle" fill="#9E8F84" fontSize="9">仅示循行概念 · 未标注具体穴位位置</text>
     </svg>
   );
 }
@@ -307,12 +277,12 @@ function PositioningModal({
     setAiLoading(true);
     setAiError("");
     try {
-      const systemPrompt = `你是专业中医针灸专家，精通经络腧穴学定位。请提供以下穴位的详细定位信息，包括：1.详细解剖标志（骨性标志、肌肉、肌腱等体表可触及的标志）2.分步定位方法（从找到标志到确定穴位的具体步骤）3.常见定位错误及避免方法。请用中文回答，格式清晰，分点说明。`;
-      const userPrompt = `穴位名称：${acupointName}\n已有定位描述：${locationText}\n请提供详细的定位指导。`;
+      const systemPrompt = `你是中医文献学习助手。解释所给穴名、归经和定位描述中的解剖术语，并给出应查阅的可靠资料名称。已有资料可能只是占位文字，不能当作已核实事实。资料不足请明确说明，不编造准确位置、来源引文或标准条文，不提供针刺、放血等操作步骤、方向和深度。输出为学习辅助整理，不冒充医师或国标原文。`;
+      const userPrompt = `穴位名称：${acupointName}\n已有定位描述：${locationText}\n请说明这段资料中可学习的术语，以及仍需核实的内容。`;
       const result = await callAI({
         systemPrompt,
         userPrompt,
-        cacheKey: `zhongyi_position_${acupointName}`,
+        cacheKey: `zhongyi_position_study_v2_${acupointName}`,
         forceRefresh,
       });
       if (result.success) {
@@ -353,7 +323,7 @@ function PositioningModal({
           }}
         >
           <span style={{ fontSize: "15px", fontWeight: "bold", color: "white" }}>
-            📍 {acupointName} 定位图
+            📍 {acupointName} 图文学习
           </span>
           <button
             onClick={onClose}
@@ -404,13 +374,13 @@ function PositioningModal({
                 color: "white",
               }}
             >
-              🤖 AI 智能定位辅助
+              🤖 AI 定位资料学习辅助
             </button>
           )}
           {aiLoading && (
             <div style={{ textAlign: "center", padding: "12px", color: "#999", fontSize: "13px" }}>
               <span style={{ display: "inline-block", width: "16px", height: "16px", border: "2px solid #ccc", borderTopColor: BRAND, borderRadius: "50%", animation: "spin 1s linear infinite", marginRight: "6px", verticalAlign: "middle" }} />
-              AI 定位分析中...
+              AI 学习资料整理中...
             </div>
           )}
           {aiError && !aiLoading && (
@@ -427,7 +397,7 @@ function PositioningModal({
           {aiResult && !aiLoading && (
             <div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
-                <span style={{ fontSize: "13px", fontWeight: "bold", color: "#333" }}>🤖 AI 定位详解</span>
+                <span style={{ fontSize: "13px", fontWeight: "bold", color: "#333" }}>🤖 AI 辅助整理 · 待核实</span>
                 <button
                   onClick={() => handleAIEnhance(true)}
                   style={{ padding: "4px 10px", borderRadius: "12px", border: "none", fontSize: "11px", cursor: "pointer", background: BRAND_BG, color: BRAND }}
@@ -683,6 +653,7 @@ function AcupointListPage({ meridianName }: { meridianName: string }) {
         <div style={{ fontSize: "12px", color: "#666", fontWeight: "bold", margin: "2px 4px 8px" }}>经络穴位动态图</div>
         <MeridianChart meridianName={meridian.name} />
       </div>
+      <AcupointStudySources meridianName={meridian.name} />
 
 
       <div style={{ margin: "12px", background: "white", borderRadius: "16px", padding: "14px", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
@@ -794,8 +765,8 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
 
   const sections: { label: string; content: string | undefined }[] = [
     { label: "归经", content: acupoint.meridian },
-    { label: "定位", content: acupoint.location },
-    { label: "详细定位", content: acupoint.location_detail },
+    { label: "定位", content: acupoint.location === `${acupoint.name}穴` ? "定位资料待补充核实" : acupoint.location },
+    { label: "详细定位", content: acupoint.location_detail === `${acupoint.name}穴` ? undefined : acupoint.location_detail },
     { label: "功效", content: acupoint.function },
     { label: "典籍出处", content: acupoint.literature },
   ];
@@ -830,7 +801,7 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
             <div style={{ fontSize: "12px", color: "#999", marginBottom: "4px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               {section.label}
               {isLocation && (
-                <button onClick={() => setShowPositionModal(true)} style={{ background: "none", border: "none", color: BRAND, fontSize: "11px", cursor: "pointer", padding: 0 }}>📍 查看定位图</button>
+                <button onClick={() => setShowPositionModal(true)} style={{ background: "none", border: "none", color: BRAND, fontSize: "11px", cursor: "pointer", padding: 0 }}>📍 查看图文资料</button>
               )}
             </div>
             <div style={{ fontSize: "14px", color: "#333", lineHeight: 1.7, cursor: isLocation ? "pointer" : "default" }}
@@ -842,12 +813,14 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
         })}
       </div>
 
-      {/* 穴位详解（文字描述：定位/主治/配伍/进针方法/操作禁忌） */}
+      <AcupointStudySources meridianName={acupoint.meridian} selectedCode={acupoint.code} />
+
+      {/* 既有静态整理资料，尚未逐条与现行标准校对。 */}
       <div style={{ margin: "12px", background: "white", borderRadius: "16px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
         <div style={{ padding: "12px 16px", borderBottom: "1px solid #f0f0f0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <span style={{ fontSize: "14px", fontWeight: "bold", color: "#333" }}>📖 穴位详解</span>
-            <span style={{ fontSize: "10px", padding: "2px 6px", borderRadius: "4px", backgroundColor: "#E8F5E9", color: "#2E7D32" }}>国标数据</span>
+            <span style={{ fontSize: "10px", padding: "2px 6px", borderRadius: "4px", backgroundColor: "#E8F5E9", color: "#2E7D32" }}>本库整理 · 待复核</span>
           </div>
           {aiData && !scraping && (
             <button onClick={handleAIScrape}
@@ -1024,10 +997,10 @@ function DongAcupointDetailPage({ acupointName }: { acupointName: string }) {
     );
   }
 
-  const sections: { label: string; content: string }[] = [
+  const sections: { label: string; content: string | undefined }[] = [
     { label: "所属部位", content: acupoint.zone },
-    { label: "定位", content: acupoint.location },
-    { label: "详细定位", content: acupoint.location_detail },
+    { label: "定位", content: acupoint.location === `${acupoint.name}穴` ? "定位资料待补充核实" : acupoint.location },
+    { label: "详细定位", content: acupoint.location_detail === `${acupoint.name}穴` ? undefined : acupoint.location_detail },
     { label: "功效主治", content: acupoint.function },
     { label: "进针方式", content: acupoint.needling_method },
     { label: "针刺深度", content: acupoint.depth },
@@ -1068,7 +1041,7 @@ function DongAcupointDetailPage({ acupointName }: { acupointName: string }) {
             <div style={{ fontSize: "12px", color: "#999", marginBottom: "4px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               {section.label}
               {isLocation && (
-                <button onClick={() => setShowPositionModal(true)} style={{ background: "none", border: "none", color: "#E65100", fontSize: "11px", cursor: "pointer", padding: 0 }}>📍 查看定位图</button>
+                <button onClick={() => setShowPositionModal(true)} style={{ background: "none", border: "none", color: "#E65100", fontSize: "11px", cursor: "pointer", padding: 0 }}>📍 查看图文资料</button>
               )}
             </div>
             <div style={{ fontSize: "14px", color: "#333", lineHeight: 1.7, cursor: isLocation ? "pointer" : "default" }}
@@ -1085,7 +1058,7 @@ function DongAcupointDetailPage({ acupointName }: { acupointName: string }) {
         <div style={{ padding: "12px 16px", borderBottom: "1px solid #f0f0f0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <span style={{ fontSize: "14px", fontWeight: "bold", color: "#333" }}>📖 穴位详解</span>
-            <span style={{ fontSize: "10px", padding: "2px 6px", borderRadius: "4px", backgroundColor: "#E8F5E9", color: "#2E7D32" }}>国标数据</span>
+            <span style={{ fontSize: "10px", padding: "2px 6px", borderRadius: "4px", backgroundColor: "#E8F5E9", color: "#2E7D32" }}>本库整理 · 待复核</span>
           </div>
           {aiData && !scraping && (
             <button onClick={handleAIScrape}

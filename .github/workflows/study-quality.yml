@@ -26,6 +26,12 @@ on:
       - 'src/app/academy/start/page.tsx'
       - 'src/app/books/page.tsx'
       - 'src/app/yixue/learn/page.tsx'
+      - 'src/app/zhongyi/meridian/page.tsx'
+      - 'src/components/AcupointStudySources.tsx'
+      - 'src/data/acupointOpenSources.json'
+      - 'src/lib/tcmScraper.ts'
+      - 'public/assets/meridians/lung-open-reference.svg'
+      - 'scripts/acupoint-study.test.ts'
   workflow_dispatch:
     inputs:
       preview:
@@ -49,6 +55,7 @@ jobs:
       - run: npx tsx --test scripts/continuous-listening.test.ts
       - run: npx tsx --test scripts/bazi-yun-metadata.test.ts
       - run: node --test scripts/resource-discussion.test.cjs
+      - run: npx tsx --test scripts/acupoint-study.test.ts
       - name: Verify original edition chapter sequence and provenance
         run: |
           node --input-type=module <<'JS'

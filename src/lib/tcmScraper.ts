@@ -17,6 +17,7 @@ interface ScrapeResult {
   fetched_at: string;
   source: string;
   needs_refetch: boolean;
+  data_revision?: number;
 }
 
 // ==================== 穴位详细定位静态数据 ====================
@@ -284,7 +285,8 @@ interface CacheEntry {
 function getLocalCache(): Record<string, CacheEntry> {
   try {
     const raw = localStorage.getItem(LOCAL_CACHE_KEY);
-    return raw ? JSON.parse(raw) : {};
+    const parsed = raw ? JSON.parse(raw) : null;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
   } catch {
     return {};
   }
@@ -301,12 +303,12 @@ function setLocalCacheEntry(id: string, data: ScrapeResult): void {
 // ==================== 静态数据获取 ====================
 
 function buildResult(name: string, meridian: string): ScrapeResult {
-  const detail = ACUPOINT_DETAILS[name] || `${name}位于${meridian}上。具体定位：请参考《针灸学》国家标准（GB/T 12346-2006）或《经络腧穴学》教材。`;
-  const indications = INDICATIONS[name] || `${name}主治请参考《针灸学》相关章节，一般具有调理所属经络及脏腑相关病证的作用。`;
-  const combinations = COMBINATIONS[name] || `${name}常与同经或表里经穴位配伍使用，具体配穴方案请参考《针灸处方学》。`;
+  const detail = ACUPOINT_DETAILS[name] || `${name}归属${meridian}；本库尚无可核对的详细定位资料。请查阅GB/T 12346-2021《经穴名称与定位》等可靠资料。`;
+  const indications = INDICATIONS[name] || "本库暂无已整理的主治资料。";
+  const combinations = COMBINATIONS[name] || "本库暂无已整理的配伍资料。";
   const contraindications = CONTRAINDICATIONS[name] || `请在专业医师指导下确定进针角度、深度和手法。注意孕妇、体质虚弱者及有出血倾向者慎用。`;
   const image_url = ""; // 不再使用外部图片，改为纯文字描述
-  const needling_method = NEEDLING_METHODS[name] || `请在专业医师指导下确定进针角度、深度和手法。一般可直刺0.5-1寸，具体深度需根据穴位部位和患者体型调整。`;
+  const needling_method = NEEDLING_METHODS[name] || "本库暂无该穴的操作资料，不能推断针刺方向或深度。";
   return {
     detail,
     indications,
@@ -315,8 +317,9 @@ function buildResult(name: string, meridian: string): ScrapeResult {
     needling_method,
     image_url,
     fetched_at: new Date().toISOString(),
-    source: "静态预编译数据（参考《针灸学》国家标准 GB/T 12346-2006）",
+    source: "本库静态整理资料；尚未逐条核对来源及现行标准，非国标原文",
     needs_refetch: false,
+    data_revision: 2,
   };
 }
 
@@ -329,7 +332,7 @@ export function getCachedAcupointInfo(
   const entry = local[id];
   if (!entry) return null;
   // 检查缓存是否过期
-  if (Date.now() - entry.cachedAt > CACHE_TTL_MS) {
+  if (entry.data?.data_revision !== 2 || !Number.isFinite(entry.cachedAt) || Date.now() - entry.cachedAt > CACHE_TTL_MS) {
     // 缓存已过期，清除并返回null
     delete local[id];
     try {

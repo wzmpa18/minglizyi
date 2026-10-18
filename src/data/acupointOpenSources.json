@@ -1,0 +1,40 @@
+{
+  "checkedOn": "2026-10-18",
+  "standard": {
+    "title": "GB/T 12346-2021《经穴名称与定位》",
+    "url": "https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=397548AE7248D3D87DD15E0AB8107185&refer=outter",
+    "notice": "官方标准信息入口；本库整理文字尚未逐条与该版本核对。"
+  },
+  "images": [
+    {
+      "id": "lung-open-reference",
+      "meridians": ["肺经", "手太阴肺经"],
+      "title": "肺经穴位开放图示",
+      "asset": "/assets/meridians/lung-open-reference.svg",
+      "originalTitle": "Points of lung channel.svg",
+      "author": "Dimitrius",
+      "contributors": "忍者猫（2021年SVG整理）",
+      "source": "https://commons.wikimedia.org/wiki/File:Points_of_lung_channel.svg",
+      "revision": "https://commons.wikimedia.org/w/index.php?title=File:Points_of_lung_channel.svg&oldid=542674148",
+      "downloadUrl": "https://upload.wikimedia.org/wikipedia/commons/b/b8/Points_of_lung_channel.svg",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "changes": "图文件原样收录，未修改；中文对照表单独展示。",
+      "sha256": "9f3945ff51e7a7f0009a1c2fb3c79eed708ad24e55e3aa169750ca3320a357b9",
+      "notice": "开放许可不代表医学审校。图内P1–P11为肺经编号，对照本库LU1–LU11；仅作图文识读，不替代标准定位。",
+      "points": [
+        { "label": "P1", "code": "LU1", "name": "中府" },
+        { "label": "P2", "code": "LU2", "name": "云门" },
+        { "label": "P3", "code": "LU3", "name": "天府" },
+        { "label": "P4", "code": "LU4", "name": "侠白" },
+        { "label": "P5", "code": "LU5", "name": "尺泽" },
+        { "label": "P6", "code": "LU6", "name": "孔最" },
+        { "label": "P7", "code": "LU7", "name": "列缺" },
+        { "label": "P8", "code": "LU8", "name": "经渠" },
+        { "label": "P9", "code": "LU9", "name": "太渊" },
+        { "label": "P10", "code": "LU10", "name": "鱼际" },
+        { "label": "P11", "code": "LU11", "name": "少商" }
+      ]
+    }
+  ]
+}
