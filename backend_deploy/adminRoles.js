@@ -21,6 +21,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { sanitizeAdminData } = require('./adminPrivacy');
 
 // ADMIN_DATA_DIR 仅供隔离测试覆盖；生产默认目录不变
 const DATA_DIR = process.env.ADMIN_DATA_DIR || path.join(__dirname, 'data');
@@ -62,6 +63,51 @@ function sha256(s) {
   return crypto.createHash('sha256').update(String(s)).digest('hex');
 }
 
+function b64url(input) {
+  return Buffer.from(input).toString('base64url');
+}
+
+function sessionSecret() {
+  return process.env.ADMIN_SESSION_SECRET || process.env.ADMIN_API_KEY || '';
+}
+
+/** 账号密码登录成功后签发短期后台会话；浏览器永远拿不到主管理员密钥。 */
+function createAdminSession(admin, ttlSeconds = 8 * 60 * 60) {
+  const secret = sessionSecret();
+  if (!secret) throw new Error('后台会话密钥未配置');
+  const now = Math.floor(Date.now() / 1000);
+  const payload = b64url(JSON.stringify({
+    sub: String(admin.username || 'admin').slice(0, 64),
+    name: String(admin.name || '超级管理员').slice(0, 24),
+    role: ROLES[admin.role] ? admin.role : 'SUPER_ADMIN',
+    iat: now,
+    exp: now + Math.max(300, Math.min(Number(ttlSeconds) || 28800, 86400)),
+    nonce: crypto.randomBytes(8).toString('hex'),
+  }));
+  const sig = crypto.createHmac('sha256', secret).update(payload).digest('base64url');
+  return `YD-SESSION.${payload}.${sig}`;
+}
+
+function resolveAdminSession(token) {
+  if (!String(token || '').startsWith('YD-SESSION.')) return null;
+  const secret = sessionSecret();
+  if (!secret) return null;
+  const parts = String(token).split('.');
+  if (parts.length !== 3) return null;
+  const expected = crypto.createHmac('sha256', secret).update(parts[1]).digest('base64url');
+  const gotBuf = Buffer.from(parts[2]);
+  const expectedBuf = Buffer.from(expected);
+  if (gotBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(gotBuf, expectedBuf)) return null;
+  try {
+    const data = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'));
+    const now = Math.floor(Date.now() / 1000);
+    if (!data.exp || data.exp <= now || data.iat > now + 60 || !ROLES[data.role]) return null;
+    return { key: token, role: data.role, name: data.name || '管理员', username: data.sub, session: true };
+  } catch {
+    return null;
+  }
+}
+
 function loadKeys() {
   try {
     if (fs.existsSync(KEYS_FILE)) {
@@ -86,6 +132,8 @@ function saveKeys(keys) {
  */
 function resolveAdminKey(token) {
   if (!token) return null;
+  const session = resolveAdminSession(token);
+  if (session) return session;
   const envKey = process.env.ADMIN_API_KEY;
   if (envKey && token === envKey) {
     return { key: token, role: 'SUPER_ADMIN', name: '主密钥管理员' };
@@ -149,7 +197,7 @@ function adminAuth(minRole, scope) {
 
 function audit(admin, action, target, oldValue, newValue, reason, req) {
   try {
-    const entry = {
+    const entry = sanitizeAdminData({
       id: Date.now() + '_' + crypto.randomBytes(3).toString('hex'),
       operator: (admin && admin.name) || 'unknown',
       operatorRole: (admin && admin.role) || 'unknown',
@@ -161,7 +209,7 @@ function audit(admin, action, target, oldValue, newValue, reason, req) {
       reason: String(reason || ''),
       ip: ((req && req.headers['x-forwarded-for']) || (req && req.socket && req.socket.remoteAddress) || '').split(',')[0].trim(),
       ua: String((req && req.headers['user-agent']) || '').slice(0, 200),
-    };
+    });
     let logs = [];
     try { logs = JSON.parse(fs.readFileSync(AUDIT_FILE, 'utf-8')); } catch { /* 新文件 */ }
     logs.push(entry);
@@ -223,7 +271,7 @@ function listAudit(limit = 50, action) {
   try { logs = JSON.parse(fs.readFileSync(AUDIT_FILE, 'utf-8')); } catch { /* 空 */ }
   let list = logs.slice().reverse();
   if (action) list = list.filter((l) => (l.action || '').includes(action));
-  return list.slice(0, Math.min(200, limit));
+  return sanitizeAdminData(list.slice(0, Math.min(200, limit)));
 }
 
 module.exports = {
@@ -239,4 +287,6 @@ module.exports = {
   listSubKeys,
   disableSubKey,
   sha256,
+  createAdminSession,
+  resolveAdminSession,
 };

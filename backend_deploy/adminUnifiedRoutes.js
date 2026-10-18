@@ -33,6 +33,7 @@ const SOCIAL_DB_PATH = process.env.SOCIAL_DB_PATH || path.join(DATA_DIR, 'social
 // v25.0.47_13: 统一角色权限模块（ROLES/ROLE_SCOPES/鉴权/审计/子密钥管理，全后台唯一事实源）
 const adminRoles = require('./adminRoles');
 const { ROLES, ROLE_LABELS, adminAuth, audit } = adminRoles;
+const { maskPhone, maskEmail } = require('./adminPrivacy');
 // 兼容旧名（本文件内部全部路由使用）
 const adminAuthUnified = adminAuth;
 
@@ -483,7 +484,8 @@ router.get('/moderation/users', adminAuthUnified('SUPPORT_ADMIN', 'ops'), (req, 
                               LEFT JOIN user_activity_daily uad ON uad.user_id = u.user_id AND uad.stat_date = ?
                               WHERE ${where} ORDER BY u.user_id DESC LIMIT ? OFFSET ?`)
       .all(todayKey, ...params, size, (page - 1) * size);
-    res.json({ success: true, data: { total, page, size, today: todayKey, users: rows } });
+    const users = rows.map((u) => ({ ...u, phone: maskPhone(u.phone), email: maskEmail(u.email) }));
+    res.json({ success: true, data: { total, page, size, today: todayKey, users } });
   } catch (e) {
     console.error('[moderation/users]', e.message);
     res.status(500).json({ success: false, error: '用户查询失败' });
@@ -555,7 +557,8 @@ router.get('/moderation/activity/daily', adminAuthUnified('SUPPORT_ADMIN', 'ops'
       beijingToday
     );
 
-    res.json({ success: true, data: { date, today: beijingToday, page, size, total, stat, trend, users: rows } });
+    const users = rows.map((u) => ({ ...u, phone: maskPhone(u.phone), email: maskEmail(u.email) }));
+    res.json({ success: true, data: { date, today: beijingToday, page, size, total, stat, trend, users } });
   } catch (e) {
     console.error('[moderation/activity/daily]', e.message);
     res.status(500).json({ success: false, error: '活跃日报查询失败' });
@@ -800,7 +803,10 @@ router.get('/orders', adminAuthUnified('FINANCE_ADMIN', 'finance'), (req, res) =
     // 关联返佣状态
     const rebates = udb.prepare('SELECT order_no, status FROM consumption_rebates').all();
     const rebateMap = {}; for (const r of rebates) rebateMap[r.order_no] = r.status;
-    res.json({ success: true, data: { total, page, size, orders: rows.map(r => ({ ...r, rebateStatus: rebateMap[r.order_no] || null })) } });
+    res.json({ success: true, data: { total, page, size, orders: rows.map(r => ({
+      ...r, phone: maskPhone(r.phone), inviter_phone: maskPhone(r.inviter_phone),
+      rebateStatus: rebateMap[r.order_no] || null,
+    })) } });
   } catch (e) {
     console.error('[orders]', e.message);
     res.status(500).json({ success: false, error: '订单查询失败' });
@@ -826,11 +832,11 @@ router.get('/orders/export', adminAuthUnified('FINANCE_ADMIN', 'finance'), (req,
     const lines = [header.join(',')];
     for (const r of rows) {
       lines.push([
-        r.order_no, r.user_id, r.phone || '', r.nickname || '',
+        r.order_no, r.user_id, maskPhone(r.phone), r.nickname || '',
         TYPE_LABELS[r.order_type] || r.order_type || '', r.amount,
         STATUS_LABELS[r.status] || r.status, r.created_at, r.paid_at || '',
         r.transaction_id || '', r.payment_method || '',
-        r.inviter_nickname || '', r.inviter_phone || '',
+        r.inviter_nickname || '', maskPhone(r.inviter_phone),
         rebateMap[r.order_no] || '',
       ].map(esc).join(','));
     }

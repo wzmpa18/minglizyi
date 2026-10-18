@@ -71,6 +71,9 @@ on:
       - 'backend_deploy/apple-iap-runtime/**'
       - 'backend_deploy/apple-root-certificates/**'
       - 'backend_deploy/adminUnifiedRoutes.js'
+      - 'backend_deploy/adminRoles.js'
+      - 'backend_deploy/adminPrivacy.js'
+      - 'scripts/admin-session-privacy.test.cjs'
       - 'backend_deploy/accountDeleteRoutes.js'
       - 'src/lib/appleIap.ts'
       - 'src/lib/auth.ts'
@@ -141,6 +144,7 @@ jobs:
       - run: node --test scripts/membership-ledger.test.cjs
       - run: node --test scripts/apple-iap-ledger.test.cjs
       - run: node --test scripts/apple-iap-client.test.cjs
+      - run: node --test scripts/admin-session-privacy.test.cjs
       - run: node --test scripts/content-sponsor.test.cjs
       - run: npx tsx --test scripts/acupoint-study.test.ts
       - run: node --test scripts/study-comments.test.cjs
