@@ -1,4 +1,6 @@
 "use client";
+import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
+
 
 interface SegBtnOption {
   label: string;
@@ -29,5 +31,4 @@ export function SegBtn({ options, onClick }: SegBtnProps) {
       ))}
     </div>
   );
-import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 }

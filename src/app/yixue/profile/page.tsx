@@ -12,5 +12,4 @@ export default function YixueProfilePage() {
       <p className="mt-4 text-xs text-muted-foreground">数据与全局个人中心同源，不单独存储。</p>
     </div>
   );
-import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 }
