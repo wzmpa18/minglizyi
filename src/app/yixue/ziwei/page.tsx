@@ -1484,10 +1484,12 @@ export default function ZiweiPage() {
                       jiangqianStars = palace.jiangqian ? [palace.jiangqian] : [];
                       suiqianStars = palace.suiqian ? [palace.suiqian] : [];
                     } else if (viewMode === "feixing") {
-                      // 飞星模式：极简——14主星 + 禄存
-                      auspiciousStars = allAuspicious.filter(s => s === "禄存");
-                      shaStars = [];
-                      otherMinorStars = [];
+                      // Preserve the auxiliary and adverse stars used when
+                      // comparing flying-star charts; the former Lu Cun-only
+                      // view omitted visible reference-chart information.
+                      auspiciousStars = [...allAuspicious];
+                      shaStars = [...allSha];
+                      otherMinorStars = allOther.filter(s => ["天空", "天刑"].includes(s));
                       changshengStars = [];
                       boshiStars = [];
                       jiangqianStars = [];
