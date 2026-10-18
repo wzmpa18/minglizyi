@@ -6,6 +6,7 @@ on:
       - 'src/data/nanjingOriginal.json'
       - 'src/app/zhongyi/classic/page.tsx'
       - 'src/app/yixue/ziwei/page.tsx'
+      - 'src/app/yixue/bazi/page.tsx'
   workflow_dispatch:
 permissions:
   contents: read

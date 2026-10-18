@@ -335,6 +335,7 @@ function TabChart({result,shensha,shengxiao,gender,lunarDateStr,solarDateStr,tru
 }){
   const pillars=result.pillars;
   const colLabels=["年柱","月柱","日柱","时柱"];
+  const [flowColumnsFirst, setFlowColumnsFirst] = useState(false);
   const dayGan = result.dayGan as TianGan;
 
   // 计算每个柱的藏干+十神(全称) - v17.7 直接使用算法层预计算值
@@ -990,8 +991,15 @@ function TabDetail({result,gender}:{
       });
     }
 
+    if (flowColumnsFirst) {
+      return [
+        ...base.filter(p => p.isLiunian),
+        ...base.filter(p => p.isDayun),
+        ...base.filter(p => !p.isLiunian && !p.isDayun),
+      ];
+    }
     return base;
-  }, [pillars, curDy, curLn, curLy, curLr, curLs, dayGan, gender]);
+  }, [pillars, curDy, curLn, curLy, curLr, curLs, dayGan, gender, flowColumnsFirst]);
 
   // 藏干+十神（统一用于基础柱/大运/流年）- v17.7 基础柱使用预计算值
   const getCgSs = (dp: DisplayPillar) => {
@@ -1019,6 +1027,13 @@ function TabDetail({result,gender}:{
   const cgLineHeight = numPillars <= 4 ? "22px" : numPillars === 5 ? "19px" : numPillars === 6 ? "17px" : numPillars === 7 ? "15px" : "14px";
 
   return <div className="px-2 pt-2 pb-4">
+    <div className="mb-2 flex items-center justify-between gap-2 bg-white px-2 py-1.5">
+      <span className="text-xs text-gray-500">详盘列序</span>
+      <button type="button" aria-pressed={flowColumnsFirst} onClick={() => setFlowColumnsFirst(!flowColumnsFirst)}
+        className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700">
+        {flowColumnsFirst ? "运年在左 · 切换四柱在前" : "四柱在前 · 切换运年在左"}
+      </button>
+    </div>
     {/* 四柱详盘表格 - 白底无圆角阴影，对标jishiyu，支持4/5/6/7列动态 */}
     <div className="bg-white mb-2 overflow-hidden">
       <table className="w-full border-collapse text-center table-fixed">
