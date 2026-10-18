@@ -287,10 +287,11 @@ function BookTocPage({ bookId }: { bookId: string }) {
 // ==================== 阅读页 ====================
 function ReaderPage({ bookId, chapterId }: { bookId: string; chapterId: string }) {
   const router = useRouter();
-  const { books } = useTcmEditions();
+  const { books, version } = useTcmEditions();
   // A downloaded correction becomes available on the next chapter, never in
   // the middle of the paragraph or listening queue currently being read.
   const [book] = useState(() => books.find(item => item.id === bookId));
+  const [readingVersion] = useState(version);
   const chapter = book?.chapters.find(item => item.id === chapterId);
   const [showToc, setShowToc] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -501,6 +502,7 @@ function ReaderPage({ bookId, chapterId }: { bookId: string; chapterId: string }
           <p style={{ fontSize: 12, color: '#c0d1bd', marginBottom: 12 }}>{book.name} · 文献阅读</p>
           <h1 style={{ fontSize: `${settings.fontSize + 6}px`, fontWeight: 600, marginBottom: 12, lineHeight: 1.6, fontFamily: '"Noto Serif SC", "Songti SC", SimSun, serif' }}>{chapter.title}</h1>
           <p style={{ fontSize: 11, lineHeight: 1.8, color: '#d5dfc9' }}>第 {chapterIndex + 1} / {book.chapters.length} 篇 · {book.dynasty}</p>
+          <p style={{ fontSize: 11, lineHeight: 1.8, color: '#d5dfc9' }}>文献版本：{readingVersion}</p>
         </section>
         <ClassicSourceNotice book={book} />
         <details style={{ marginBottom: '18px', padding: '12px', borderRadius: '12px', backgroundColor: theme.cardBg, border: `1px solid ${theme.border}`, color: theme.text }}><summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>本章听学、释义与学习讨论</summary><div style={{ marginTop: 12 }}>

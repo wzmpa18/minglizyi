@@ -11,6 +11,7 @@ export const useTcmEditions = () => useContext(TcmEditions);
 
 export function TcmEditionProvider({ children }: { children: ReactNode }) {
   const [catalogue, setCatalogue] = useState({ books: bundled, version: '内置' });
+  const [ready, setReady] = useState(false);
   useEffect(() => {
     let active = true;
     const reload = async () => {
@@ -20,9 +21,11 @@ export function TcmEditionProvider({ children }: { children: ReactNode }) {
     const onInstalled = (event: Event) => {
       if ((event as CustomEvent<{ packId?: string }>).detail?.packId === 'tcm-original-editions-approved') void reload().catch(() => {});
     };
-    void reload().catch(() => {});
+    // Direct chapter links must select the installed edition before the reader
+    // freezes its paragraph/listening text. Later updates do not interrupt it.
+    void reload().catch(() => {}).finally(() => { if (active) setReady(true); });
     window.addEventListener('offline-pack-installed', onInstalled);
     return () => { active = false; window.removeEventListener('offline-pack-installed', onInstalled); };
   }, []);
-  return <TcmEditions.Provider value={catalogue}>{children}</TcmEditions.Provider>;
+  return <TcmEditions.Provider value={catalogue}>{ready ? children : <p role="status" className="p-6 text-center text-sm text-[#42604e]">正在打开本机文献…</p>}</TcmEditions.Provider>;
 }
