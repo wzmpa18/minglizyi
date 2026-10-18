@@ -10,6 +10,7 @@ import { addRecentItem } from '@/lib/tcmRecent';
 import { useToolBack } from "@/lib/useToolBack";
 import { LocalListenButton } from "@/components/LocalListenButton";
 import AIInterpretButton from "@/components/AIInterpretButton";
+import { ContinuousListenPlayer } from "@/components/ContinuousListenPlayer";
 
 // 阅读设置类型
 interface ReaderSettings {
@@ -247,6 +248,9 @@ function BookTocPage({ bookId }: { bookId: string }) {
       </div>
 
       <div style={{ padding: '12px 16px' }}>
+        <ContinuousListenPlayer key={`${book.id}:${searchText}`} collectionId={`classic:${book.id}:${searchText}`}
+          title={`${book.name} · 连续听学`}
+          items={filteredChapters.map(chapter => ({ id: chapter.id, title: chapter.title, text: chapter.content }))} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', backgroundColor: '#E0E0E0', borderRadius: '8px', overflow: 'hidden' }}>
           {filteredChapters.map((chapter, idx) => (
             <button

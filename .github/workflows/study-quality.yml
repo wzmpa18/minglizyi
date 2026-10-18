@@ -7,6 +7,10 @@ on:
       - 'src/app/zhongyi/classic/page.tsx'
       - 'src/app/yixue/ziwei/page.tsx'
       - 'src/app/yixue/bazi/page.tsx'
+      - 'src/components/ContinuousListenPlayer.tsx'
+      - 'src/lib/listeningQueue.ts'
+      - 'scripts/continuous-listening.test.ts'
+      - 'src/app/academy/learn/page.tsx'
   workflow_dispatch:
 permissions:
   contents: read
@@ -22,6 +26,7 @@ jobs:
           cache: npm
       - run: npm ci --legacy-peer-deps
       - run: npx tsc --noEmit --incremental false
+      - run: npx tsx --test scripts/continuous-listening.test.ts
       - name: Verify original edition chapter sequence and provenance
         run: |
           node --input-type=module <<'JS'

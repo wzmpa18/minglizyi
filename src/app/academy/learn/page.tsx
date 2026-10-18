@@ -14,6 +14,7 @@ import {
 import { PageLoginGuard } from "@/components/PageLoginGuard";
 import { learningDifficultyLabel } from "@/lib/learningDisplay";
 import { LocalListenButton } from "@/components/LocalListenButton";
+import { ContinuousListenPlayer } from "@/components/ContinuousListenPlayer";
 
 const BRAND = "#7B2FBE";
 
@@ -178,7 +179,7 @@ export default function AcademyLearnPage() {
             <div className="mb-2 flex items-center justify-between">
               <div>
                 <p className="text-sm font-bold" style={{ color: BRAND }}>🎧 听学当前内容</p>
-                <p className="text-[11px] text-gray-400">使用手机离线中文语音，可锁屏继续播放</p>
+                <p className="text-[11px] text-gray-400">合并朗读预览最多3万字；完整内容可用下方连续听学。</p>
               </div>
               <LocalListenButton
                 text={filteredPoints.map((pt) => `${pt.title}。${pt.content}`).join("。\n").slice(0, 30000)}
@@ -188,6 +189,11 @@ export default function AcademyLearnPage() {
             </div>
           </div>
         )}
+        {!loading && filteredPoints.length > 0 && <ContinuousListenPlayer
+          key={`knowledge:${track || "all"}:${category || "all"}:${term || "all"}`}
+          collectionId={`knowledge:${track || "all"}:${category || "all"}:${term || "all"}`}
+          title="知识点连续听学"
+          items={filteredPoints.map(point => ({ id: String(point.id), title: point.title, text: point.content || "" })).filter(point => point.text.trim())} />}
         {/* v25.0.24: 术语筛选提示条（工具页星曜术语跳转进入时显示） */}
         {term && (
           <div className="mb-2.5 flex items-center justify-between rounded-xl px-3 py-2 text-xs" style={{ backgroundColor: BRAND + "14", color: BRAND }}>
