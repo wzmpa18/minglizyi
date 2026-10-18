@@ -1101,22 +1101,19 @@ export function solarToBazi(params) {
 
   // 起运信息 (对标吉时雨 buildQiyunInfo)
   var startSolar = yun.getStartSolar();
-  var startYear = yun.getStartYear();
+  // Yun.getStartYear is an elapsed age, not a Gregorian calendar year.
+  // Keep the library's duration and its actual start date separate.
+  var elapsedYears = yun.getStartYear();
+  var startYear = startSolar.getYear();
   var startMonth = yun.getStartMonth();
   var startDay = yun.getStartDay();
   var startHour = yun.getStartHour();
   var forward = yun.isForward();
 
-  // 节气名称
-  var startLunar = startSolar.getLunar();
-  var curJieqi = startLunar.getCurrentJieQi();
-  var jieName = '';
-  if (curJieqi && curJieqi.isJie && curJieqi.isJie()) {
-    jieName = curJieqi.getName();
-  } else {
-    var yunJie = startLunar.getPrevJie();
-    jieName = yunJie.getName();
-  }
+  // Select the birth-adjacent Jie used by Yun, not a Jie years later.
+  var yunJie = forward ? lunar.getNextJie() : lunar.getPrevJie();
+  var jieName = yunJie.getName();
+  var daysToJie = Math.abs(yunJie.getSolar().getJulianDay() - solar.getJulianDay());
 
   // 构建大运列表 (对标吉时雨 buildDayunList)
   var dayunList = [];
@@ -1176,19 +1173,19 @@ export function solarToBazi(params) {
 
   // 起运信息文本
   var startAgeRaw = dayunArr[1] ? dayunArr[1].getStartAge() : 0;
-  var qiyunText = '起运: ' + startAgeRaw + '岁, ' + (forward ? '顺行' : '逆行') + ', ' + jieName + '后' + Math.round((startYear - year) * 365.25 / 3) + '天';
+  var qiyunText = '出生后' + elapsedYears + '年' + startMonth + '个月' + startDay + '天' + startHour + '小时起运（' + (forward ? '顺行' : '逆行') + '，公历' + startSolar.toYmd() + '）';
 
   var dayunResult = {
     forward: forward,
     direction: forward ? '顺排' : '逆排',
-    daysToJie: Math.round((startYear - year) * 365.25 / 3),
+    daysToJie: Math.round(daysToJie * 1000000) / 1000000,
     jieName: jieName,
     startAge: startAgeRaw,
     startAgeRaw: startAgeRaw,
     startMonth: startMonth,
     startDay: startDay,
     startHour: startHour,
-    startDate: startYear + '-' + (startMonth < 10 ? '0' + startMonth : startMonth) + '-' + (startDay < 10 ? '0' + startDay : startDay),
+    startDate: startSolar.toYmd(),
     startYear: startYear,
     dayunList: dayunList,
     jiaoyunGan1: dayunArr[1] && dayunArr[1].getLiuNian()[0] ? dayunArr[1].getLiuNian()[0].getGanZhi().charAt(0) : '',
