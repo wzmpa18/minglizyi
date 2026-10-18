@@ -1539,6 +1539,12 @@ export function calculateAllShenSha(bazi) {
         break;
     }
 
+    // These definitions explicitly specify the day pillar (including the
+    // season-dependent day rules). A matching year/month/hour is not a hit.
+    if (def.type === 'ganzhi' || def.type === 'season') {
+      pillars = pillars.filter(function(pillar) { return pillar === '日柱'; });
+    }
+
     if (pillars.length > 0) {
       // 特殊处理：金神同时出现在吉神和中性类
       var category = def.category;

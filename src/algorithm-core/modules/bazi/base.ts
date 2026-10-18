@@ -727,6 +727,7 @@ export function calculateShenSha(params) {
     if (!shensha || !shensha.data) return;
     var targets = shensha.data;
     for (var i = 0; i < allGanZhi.length; i++) {
+      if (shenShaName === '魁罡' && i !== 2) continue;
       if (targets.indexOf(allGanZhi[i]) >= 0) {
         if (!result[shenShaName]) result[shenShaName] = [];
         result[shenShaName].push(['年', '月', '日', '时'][i] + '柱');

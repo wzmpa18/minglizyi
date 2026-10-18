@@ -4,6 +4,7 @@ import { InterfaceButton } from "@/components/InterfaceControls";
 import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { chartHandoffFromRecord, chartTimeLabels, consumeChartHandoff, writeChartHandoff } from "@/lib/chartHandoff";
 import { pillarRelations } from "@/lib/baziRelations";
+import {boneWeightCalendar} from "@/lib/boneWeightCalendar";
 
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -264,7 +265,8 @@ function calcBoneWeight(yearGanZhi: string, monthZhi: string, day: number, hourZ
   if(lunarMonth===undefined) return null;
   const mw = MONTH_BONE[lunarMonth];
   if(mw===undefined) return null;
-  const dw = DAY_BONE[day] ?? DAY_BONE[15];
+  const dw = DAY_BONE[day];
+  if(dw===undefined) return null;
   const hIdx = ZHI_TO_HOUR[hourZhi];
   if(hIdx===undefined) return null;
   const hw = HOUR_BONE[hIdx];
@@ -560,6 +562,7 @@ function TabBasic({result,shengxiao,name,birthPlace,longitude,dateStr,lunarDateS
         <tr><td className="text-[13px] text-[#999] text-right pr-1 align-top">组成：</td><td className="text-[13px] text-[#666]">{boneWeight?.details||"--"}</td></tr>
         <tr><td className="text-[13px] text-[#999] text-right pr-1 align-top">歌决：</td><td className="text-[13px] text-[#333]" style={{wordWrap:"break-word"}}>{boneWeight?.poem||"--"}</td></tr>
       </tbody></table>
+      <p className="mt-2 text-xs leading-5 text-gray-500">此项按计算时间对应的农历年、月、日查既有民俗表；农历年以正月初一换年，日界午夜，闰月按相同月数。属于传统文化记数对照，不作人生预测。</p>
     </div>
   </div>;
 }
@@ -2008,11 +2011,12 @@ export default function BaziPage(){
 
   const boneWeight=useMemo(()=>{
     if(!result||pillars.length<4) return null;
-    const yGz=pillars[0].gan+pillars[0].zhi;
-    const mZhi=pillars[1].zhi;
-    const hZhi=pillars[3].zhi;
-    return calcBoneWeight(yGz, mZhi, day, hZhi, gender);
-  },[result,day,gender,pillars]);
+    const input=chartInputRef.current?chartHandoffFromRecord(chartInputRef.current,"ziwei")?.calculation:null;
+    const lunar=input?boneWeightCalendar(input):null;
+    if(!lunar)return null;
+    const value=calcBoneWeight(lunar.yearGanZhi,lunar.monthBranch,lunar.dayNumber,lunar.hourBranch,gender);
+    return value?{...value,details:`${lunar.lunarLabel}；${value.details}`}:null;
+  },[result,gender,pillars]);
 
   const tabLabels:Record<string,string>={basic:"基本",chart:"命盘",detail:"详盘",jingpi:"精批",xingge:"性格",notes:"断事笔记"};
   // 本机断事笔记向游客开放；精批和性格仍沿用原有账号规则。
