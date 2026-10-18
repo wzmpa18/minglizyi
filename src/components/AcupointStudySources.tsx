@@ -5,7 +5,7 @@ import sources from "@/data/acupointOpenSources.json";
 
 export function AcupointStudySources({ meridianName, selectedCode }: { meridianName: string; selectedCode?: string }) {
   const image = sources.images.find(item => item.meridians.includes(meridianName));
-  return <section aria-label="穴位学习资料与来源" style={{ margin: "12px", padding: "14px", borderRadius: "14px", background: "white", fontSize: "12px", lineHeight: 1.7 }}>
+  return <section aria-label="穴位学习资料与来源" style={{ margin: "12px", padding: "14px", borderRadius: "14px", background: "white", color: "#333", fontSize: "12px", lineHeight: 1.7 }}>
     <strong style={{ fontSize: "14px", color: "#7B2FBE" }}>图文对照与来源</strong>
     {image && <details open={!!selectedCode} style={{ marginTop: "10px" }}>
       <summary style={{ cursor: "pointer", fontWeight: 700 }}>{image.title} · 11穴对照</summary>
