@@ -138,6 +138,7 @@ async function worker(root){
       assert.equal((await social('/posts/'+pendingId,'DELETE',alice)).status,403);
       assert.equal((await social('/posts/'+pendingId,'DELETE',bob)).status,200);
       console.log('PASS: social posts require manual review, stay absent from feed/detail/likes before approval, and only their owner can withdraw them.');
+      accounts.exec("ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT ''; ALTER TABLE users ADD COLUMN bio TEXT DEFAULT '';");
       assert.equal((await social('/tongchen/mine','GET','')).status,401);
       assert.equal((await social('/tongchen/mine','PUT',token('deleted'),{})).status,403);
       assert.equal((await social('/tongchen/admin/config','PUT',support,{enabled:true})).status,403);

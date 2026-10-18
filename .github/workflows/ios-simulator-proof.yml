@@ -1,0 +1,54 @@
+name: Real iOS simulator study screenshots
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  screenshots:
+    runs-on: macos-15
+    timeout-minutes: 40
+    env:
+      NEXT_PUBLIC_STORE_CHANNEL: ios-full-learning
+      GEM_HOME: /tmp/guoxue-screenshot-gems
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: sudo xcode-select -s /Applications/Xcode_26.3.app
+      - run: npm ci
+      - name: Build actual bundled application and prepare UI-only test target
+        run: |
+          npm run build
+          mkdir -p www
+          cp -R out/. www/
+          npx cap sync ios
+          gem install xcodeproj --no-document
+          ruby scripts/ios-simulator-proof.rb
+      - name: Capture real app on iPhone and iPad simulators
+        run: |
+          set -e
+          mkdir -p "$RUNNER_TEMP/guoxue-screen-proof"
+          for kind in iphone ipad; do
+            MODEL=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=[x for rows in json.load(sys.stdin)['devices'].values() for x in rows]; preferred=[x for x in d if ('iPhone' in x['name'] and 'Pro Max' in x['name'])] if '$kind'=='iphone' else [x for x in d if 'iPad Pro' in x['name'] and '13-inch' in x['name']]; print(preferred[0]['udid'] if preferred else '')")
+            test -n "$MODEL"
+            xcrun simctl boot "$MODEL" || true
+            xcrun simctl bootstatus "$MODEL" -b
+            xcrun simctl status_bar "$MODEL" override --time 09:41 --dataNetwork wifi --wifiMode active --wifiBars 3 --batteryState charged --batteryLevel 100
+            xcodebuild test -project ios/App/App.xcodeproj -scheme GuoxueScreenshots -configuration Debug -destination "id=$MODEL" -derivedDataPath "$RUNNER_TEMP/guoxue-simulator-build" -resultBundlePath "$RUNNER_TEMP/$kind.xcresult" CODE_SIGNING_ALLOWED=NO
+            xcrun xcresulttool export attachments --path "$RUNNER_TEMP/$kind.xcresult" --output-path "$RUNNER_TEMP/guoxue-screen-proof/$kind"
+            xcrun simctl openurl "$MODEL" "yandaoguoxue://calendar"
+            sleep 8
+            xcrun simctl io "$MODEL" screenshot "$RUNNER_TEMP/guoxue-screen-proof/${kind}_04_真实应用_言道日历.png"
+            xcrun simctl shutdown "$MODEL"
+          done
+      - name: Preserve authentic screenshot evidence, including failed UI steps
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-ios-study-screenshots
+          path: |
+            ${{ runner.temp }}/guoxue-screen-proof/
+            ${{ runner.temp }}/*.xcresult
+          retention-days: 2
