@@ -1,4 +1,5 @@
 "use client";
+import { SectionGate } from "@/components/SectionGate";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -21,7 +22,7 @@ const FACTS: Record<string, string> = {
   Neptune: "海王星不能用肉眼直接看见。确认目标需要望远镜和更详细的星图，本页用于学习坐标与时间、地点的关系。",
 };
 
-export default function AstronomyStudyPage() {
+function AstronomyStudyContent() {
   const [time, setTime] = useState("2026-10-18T20:00");
   const [latitude, setLatitude] = useState("23.02"), [longitude, setLongitude] = useState("113.75");
   const [applied, setApplied] = useState({ time: "2026-10-18T20:00", lat: 23.02, lon: 113.75 });
@@ -70,3 +71,5 @@ export default function AstronomyStudyPage() {
     <footer className="mt-5 text-xs leading-7 text-[#a9bfce]"><p>计算采用 Astronomy Engine（MIT许可）。高度加入标准大气折射模型，升落时间按标准平坦地平线估算，未计实时天气、山体与建筑遮挡；显示小数位不代表实测精度。</p><a href={ASTRONOMY_SOURCE} target="_blank" rel="noreferrer" className="underline">算法与坐标说明 ↗</a><div className="mt-3 flex flex-wrap gap-3"><Link href="/yixue/jieqi" className="underline">二十四节气</Link><Link href="/zhongyi/yunqi" className="underline">五运六气学习</Link><Link href="/zhongyi/classic" className="underline">经典阅读</Link></div></footer>
   </div>;
 }
+
+export default function AstronomyStudyPage() { return <SectionGate toolId="academy_astronomy" title="天文馆" backHref="/academy"><AstronomyStudyContent /></SectionGate>; }

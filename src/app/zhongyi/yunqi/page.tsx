@@ -1,4 +1,5 @@
 "use client";
+import { SectionGate } from "@/components/SectionGate";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -17,7 +18,7 @@ const QUESTIONS = [
   { question: "页面的六步日期采用什么交界？", options: ["每月初一", "每个季节第一天", "大寒、春分、小满、大暑、秋分、小雪"], answer: 2, explanation: "本页采用明确标注的大寒起点、节气分步学习规则，日期由太阳视黄经计算；古法交司还有不同观点，不能混成唯一标准。" },
 ];
 
-export default function YunqiStudyPage() {
+function YunqiStudyContent() {
   const [year, setYear] = useState(2026), [selected, setSelected] = useState(0);
   const [now, setNow] = useState<Date | null>(null), [answers, setAnswers] = useState<Record<number, number>>({});
   useEffect(() => { const current = new Date(); setNow(current); setYear(Math.min(2099, Math.max(1900, current.getFullYear()))); }, []);
@@ -42,3 +43,5 @@ export default function YunqiStudyPage() {
     <footer className="mt-5 text-xs leading-7 text-[#627269]"><h2 className="font-bold">方法与出处</h2><p>本页采用“大寒起点、节气分步”的学习规则。古代及后世学者对交司起点、分步和时刻存在不同观点；未把太阳黄经交节时刻冒充全部古法的统一交司标准。传统运气术语与现代天文计算分别说明，不据年份预测个人疾病或给出用药方案。</p><p className="mt-2"><a href="https://zynj.shutcm.edu.cn/2023/0920/c4359a155053/page.htm" target="_blank" rel="noreferrer" className="underline">上海中医药大学：四时节律与五运六气比较 ↗</a><br /><a href="https://tjzhongyiyao.tjutcm.edu.cn/html/tjzyydxxb/2020/5/20200507.htm" target="_blank" rel="noreferrer" className="underline">天津中医药大学学报：交气起点的不同观点 ↗</a></p><div className="mt-3 flex flex-wrap gap-3"><Link href="/academy/astronomy" className="underline">天文馆</Link><Link href="/yixue/jieqi" className="underline">二十四节气</Link><Link href="/zhongyi/classic?book=suwen-original" className="underline">《素问》版本目录</Link></div></footer>
   </div>;
 }
+
+export default function YunqiStudyPage() { return <SectionGate toolId="zhongyi_yunqi" title="五运六气学习" backHref="/zhongyi"><YunqiStudyContent /></SectionGate>; }

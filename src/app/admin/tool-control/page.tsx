@@ -10,6 +10,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Coins, RefreshCw, ShieldCheck, Wrench, Zap } from "lucide-react";
+import ToolSponsorEditor from "./ToolSponsorEditor";
 import {
   THEME,
   AdminCard,
@@ -328,6 +329,16 @@ export default function ToolControlPage() {
                       </button>
                     </div>
                   </div>
+
+                  <div>
+                    <label style={labelStyle}>本板块要求的会员等级
+                      <select aria-label={`${t.name}会员等级`} value={t.memberLevel || "basic"} disabled={busy} onChange={e => criticalChange(toolId, t.name, { memberLevel: e.target.value }, `会员等级改为${e.target.value}`)} style={{ display: "block", padding: 9, width: "100%", marginTop: 8 }}>
+                        <option value="basic">普通用户</option><option value="monthly">月度会员</option><option value="quarterly">季度会员</option><option value="yearly">年度会员</option><option value="lifetime">终身会员</option>
+                      </select>
+                    </label>
+                    <p style={{ fontSize: 12, color: "#777" }}>选择“会员专享”收费模式后生效；历史已购权益需按权益记录核对。</p>
+                  </div>
+                  <ToolSponsorEditor key={toolId} tool={t} busy={busy} onSave={patch => criticalChange(toolId, t.name, patch, `广告${patch.adEnabled ? "开启" : "关闭"}：${patch.adTitle || "无标题"}；图片：${patch.adImageUrl || "无"}；链接：${patch.adLinkUrl || "无"}`)} />
 
                   {/* 开关组 */}
                   <div>

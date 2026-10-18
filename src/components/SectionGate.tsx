@@ -12,6 +12,7 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { useSectionGate } from "@/lib/sectionGate";
+import { ContentSponsor } from "@/components/ContentSponsor";
 
 const BRAND = "#7B2FBE";
 
@@ -61,7 +62,7 @@ export function SectionGate({
     return <SectionGateBlock reason={gate.reason} needLevelName={gate.needLevelName} backHref={backHref} />;
   }
 
-  return <>{children}</>;
+  return <>{children}<ContentSponsor toolId={toolId} /></>;
 }
 
 /** 拦截提示卡（关闭/维护/会员专享） */

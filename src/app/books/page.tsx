@@ -1,4 +1,5 @@
 "use client";
+import { SectionGate } from "@/components/SectionGate";
 
 import { useEffect, useMemo, useState } from "react";
 import { BrandHeader } from "@/components/shared";
@@ -19,7 +20,7 @@ interface GuoxueClassicsPack {
   books: GuoxueBook[];
 }
 
-export default function BooksPage() {
+function BooksContent() {
   const [selectedId, setSelectedId] = useState("");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("全部");
@@ -162,3 +163,5 @@ function BookReader({ book, onBack }: { book: GuoxueBook; onBack: () => void }) 
     </div>
   );
 }
+
+export default function BooksPage() { return <SectionGate toolId="guoxue_books" title="国学典籍" backHref="/academy"><BooksContent /></SectionGate>; }

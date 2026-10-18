@@ -18,6 +18,10 @@ export interface ToolMatrixEntry {
   price: number;
   memberLevel: string;
   aiEnabled?: boolean;
+  adEnabled?: boolean;
+  adTitle?: string;
+  adImageUrl?: string;
+  adLinkUrl?: string;
   dailyLimit?: number;
   shareEnabled?: boolean;
 }
@@ -67,13 +71,13 @@ const ALLOWED_DEFAULT: SectionGateInfo = {
   reason: "",
 };
 
-function readCache(): { tools: ToolMatrixMap; ts: number } | null {
+function readCache(allowStale = false): { tools: ToolMatrixMap; ts: number } | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = sessionStorage.getItem(CACHE_KEY);
     if (!raw) return null;
     const data = JSON.parse(raw);
-    if (data && data.tools && Date.now() - (data.ts || 0) < CACHE_TTL_MS) return data;
+    if (data && data.tools && (allowStale || Date.now() - (data.ts || 0) < CACHE_TTL_MS)) return data;
   } catch {
     /* ignore */
   }
@@ -102,9 +106,9 @@ export function fetchToolMatrixPublic(): Promise<ToolMatrixMap | null> {
     .then((json) => {
       const tools = json && json.success && json.data && json.data.tools ? json.data.tools : null;
       if (tools) writeCache(tools);
-      return tools;
+      return tools || readCache(true)?.tools || null;
     })
-    .catch(() => null)
+    .catch(() => readCache(true)?.tools || null)
     .finally(() => {
       inflight = null;
     });
@@ -133,7 +137,7 @@ export function evaluateSectionGate(entry: ToolMatrixEntry | undefined): Section
         payMode,
         memberLevel: needLevel,
         needLevelName: LEVEL_NAMES[needLevel] || needLevel,
-        reason: `该内容为${LEVEL_NAMES[needLevel] || needLevel}专享，开通会员即可解锁全部中医学习内容`,
+        reason: `该内容为${LEVEL_NAMES[needLevel] || needLevel}专享，达到所需会员等级后可访问本板块`,
       };
     }
   }

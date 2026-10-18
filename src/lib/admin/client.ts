@@ -444,6 +444,10 @@ export interface ToolMatrixItem {
   ios?: boolean;
   wechatMp?: boolean;
   qqMp?: boolean;
+  adEnabled?: boolean;
+  adTitle?: string;
+  adImageUrl?: string;
+  adLinkUrl?: string;
 }
 
 export interface ToolMatrixData {

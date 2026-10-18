@@ -57,7 +57,11 @@ const DEFAULT_MATRIX = {
   compass:  { name: '专业罗盘',   status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic', aiEnabled: false, aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
   liji:     { name: '立极尺',     status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic', aiEnabled: false, aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
   luban:    { name: '鲁班尺丁兰尺', status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic', aiEnabled: false, aiCreditCost: 0, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
+  academy_astronomy: { name: '天文馆', status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic', aiEnabled: false, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
+  zhongyi_yunqi: { name: '五运六气学习', status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic', aiEnabled: false, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
+  guoxue_books: { name: '国学经典阅读', status: 'ON', payMode: 'FREE', price: 0, memberLevel: 'basic', aiEnabled: true, dailyLimit: -1, shareEnabled: true, web: true, android: true, ios: true, wechatMp: false, qqMp: false },
 };
+for (const entry of Object.values(DEFAULT_MATRIX)) Object.assign(entry, { adEnabled: false, adTitle: '', adImageUrl: '', adLinkUrl: '' });
 
 function loadMatrix() {
   try {
@@ -95,7 +99,7 @@ router.get('/', adminAuthUnified('OPERATOR_ADMIN', 'ops'), (_req, res) => {
 });
 
 // 单工具更新（字段级 patch，白名单校验）
-const ALLOWED_FIELDS = ['status', 'payMode', 'price', 'memberLevel', 'aiEnabled', 'aiCreditCost', 'dailyLimit', 'shareEnabled', 'web', 'android', 'ios', 'wechatMp', 'qqMp'];
+const ALLOWED_FIELDS = ['status', 'payMode', 'price', 'memberLevel', 'aiEnabled', 'aiCreditCost', 'dailyLimit', 'shareEnabled', 'web', 'android', 'ios', 'wechatMp', 'qqMp', 'adEnabled', 'adTitle', 'adImageUrl', 'adLinkUrl'];
 // 运营角色可改字段（开关/维护/平台支持/分享）；资费字段（payMode/price/memberLevel/aiCreditCost/dailyLimit）需 ADMIN+
 const OPERATOR_FIELDS = ['status', 'shareEnabled', 'web', 'android', 'ios', 'wechatMp', 'qqMp'];
 
@@ -131,12 +135,15 @@ router.put('/', adminAuthUnified('OPERATOR_ADMIN', 'ops'), (req, res) => {
   }
 
   const cur = loadMatrix();
+  try {
+    if (patch.memberLevel != null && !['basic','monthly','quarterly','yearly','lifetime'].includes(patch.memberLevel)) throw Error('会员等级无效');
+    require('./contentSponsorPolicy').validateSponsor({ ...cur.tools[toolId], ...patch });
+  } catch (error) { return res.status(400).json({ success: false, error: error.message }); }
   const oldValue = { ...cur.tools[toolId] };
   cur.tools[toolId] = { ...cur.tools[toolId], ...patch };
   saveMatrix(cur.tools, req.admin.name);
   audit(req.admin, 'TOOL_MATRIX_UPDATE', toolId,
-    { status: oldValue.status, payMode: oldValue.payMode, price: oldValue.price },
-    { status: cur.tools[toolId].status, payMode: cur.tools[toolId].payMode, price: cur.tools[toolId].price },
+    oldValue, cur.tools[toolId],
     reason || '', req);
   console.log(`[toolMatrix] ${req.admin.name} 更新 ${toolId}: ${JSON.stringify(patch)}`);
   res.json({ success: true, data: cur });
@@ -154,6 +161,7 @@ publicRouter.get('/', (_req, res) => {
     tools[k] = {
       name: v.name, status: v.status, payMode: v.payMode,
       price: promotion.quote('SINGLE_UNLOCK', { price: v.price }, campaign).price, basePrice: v.price,
+      adEnabled: v.adEnabled === true, adTitle: v.adTitle || '', adImageUrl: v.adImageUrl || '', adLinkUrl: v.adLinkUrl || '',
       memberLevel: v.memberLevel, aiEnabled: v.aiEnabled !== false,
       dailyLimit: v.dailyLimit, shareEnabled: v.shareEnabled !== false,
       web: v.web !== false, android: v.android !== false, ios: v.ios !== false,

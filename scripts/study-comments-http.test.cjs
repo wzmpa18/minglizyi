@@ -128,6 +128,26 @@ async function worker(root){
       assert.equal((await pricing('/promotion','PUT',admin,{expectedRevision:current.revision,config:{...current,enabled:false}})).status,200);
       assert.equal((await pricing()).body.data.membershipPlans[1].price,37);
       console.log('PASS: real promotion HTTP public catalog, administrator-only writes, revision conflicts, sale prices and original-price preservation.');
+      const matrixModule=require('../backend_deploy/toolAdminRoutes');
+      app.use('/api/admin/tool-matrix',matrixModule.router);
+      app.use('/api/public/tool-matrix',matrixModule.publicRouter);
+      const origin=`http://127.0.0.1:${server.address().port}`;
+      const matrix=async (adminRoute=false,patch,credential=admin)=>{
+        const response=await fetch(origin+(adminRoute?'/api/admin/tool-matrix':'/api/public/tool-matrix'),{method:patch?'PUT':'GET',headers:{'Content-Type':'application/json',Authorization:'Bearer '+credential},body:patch?JSON.stringify(patch):undefined});
+        return {status:response.status,body:await response.json()};
+      };
+      const defaults=(await matrix()).body.data.tools;
+      for(const id of ['guoxue_books','academy_astronomy','zhongyi_yunqi']){assert.equal(defaults[id].payMode,'FREE');assert.equal(defaults[id].adEnabled,false);}
+      const control={toolId:'academy_astronomy',patch:{payMode:'MEMBERSHIP',memberLevel:'monthly',adEnabled:true,adTitle:'经典学习课程',adImageUrl:'',adLinkUrl:'/books/'}};
+      assert.equal((await matrix(true,control,support)).status,403);
+      assert.equal((await matrix(true,control)).status,200);
+      const published=(await matrix()).body.data.tools.academy_astronomy;
+      assert.equal(published.memberLevel,'monthly');assert.equal(published.adEnabled,true);assert.equal(published.adLinkUrl,'/books/');
+      assert.equal((await matrix(true,{toolId:'academy_astronomy',patch:{adLinkUrl:'javascript:alert(1)'}})).status,400);
+      assert.equal((await matrix(true,{toolId:'academy_astronomy',patch:{memberLevel:'invented'}})).status,400);
+      assert.equal((await matrix(true,{toolId:'academy_astronomy',patch:{script:'alert(1)'}})).status,400);
+      assert.equal((await matrix(true,{toolId:'academy_astronomy',patch:{payMode:'FREE',memberLevel:'basic',adEnabled:false,adTitle:'',adLinkUrl:''}})).status,200);
+      console.log('PASS: real administrator tool controls, new learning modules default free/ad-free, membership and static sponsorship fields, permissions and executable URL rejection.');
       accounts.exec('DROP TABLE users');
       assert.equal((await social('/posts/visible/like','POST',bob,{})).status,503);
       console.log('PASS: real social HTTP routes enforce feed/detail/favorite/comment two-way blocks, inactive posts, deleted text, reply checks, real accounts and fail-closed database errors.');
