@@ -876,3 +876,61 @@ sqlite3 /tmp/yandao_restore_test/social.db "SELECT COUNT(*) FROM friendships; SE
     :skip_obsolete_ios6
 
 - C盘读回可用20,453,433,344字节、E盘13,098,622,976字节，仅为当时系统读数，不能把空间变化全归为本轮清理。四份固定报告本段同步同字节并在提交后只读核验SHA一致；活动仓有效源码推送至2cdcaea16a6a55ed4594e1c0a5c397f767d135fa，文档独立提交后须核验status空和上游0/0。当前整体任务仍未完成：会员方案、原生验收、生产联调、医学内容/对标完整性、旧钥撤销和被拦清理不得省略。
+
+
+## 56. 2026-10-18 增量：八折促销、苹果价档落地、AI点数交付与远程控制
+
+### 已确定的商业方案（覆盖54/55节的等待答复）
+- 负责人确认手机实际为原会员价37/99/374/3600元，并明确要求“基础价不改，促销期间全部八折”，保留可管理的会员锁定与广告入口；随后明确同意苹果版使用相同或不高于安卓八折价的最近苹果中国区价档。此前“收费内购或全免费”二选一不再待答，不得再次擅自改为免费或把原价改成新基础价。
+- 安卓/网页会员活动价：30天29.60、90天79.20、365天299.20、终身2880元。AI10/50/100/500次包活动价：22.40/104/160/640元，原价28/130/200/800元不变。活动未指定截止日，当前由后台手动关闭；不能自行捏造结束日期或倒计时。
+- 苹果已批准并实际配置的中国区价格：30天29、90天79、365天299、终身2849元；AI10/50/100/500点22/104/160/639元。苹果价格由App Store管理，远程促销配置不能冒称已经改变Apple实际扣费价。将来改变活动须先核对Apple价档，并以StoreKit返回的当地币种/实际价格展示。
+- 促销覆盖本平台会员、AI包/时卡、单次数字工具与批量解读；现金充值与有第三方服务者结算的服务单不按虚拟折扣减少现金价值。同类优惠取更优、不二次叠加；活动期间不消耗原助力八折券，券的存储记录未清除。苹果购买AI点数按苹果规则不得过期，数量与通用AI用途一致；安卓原包30/90/180/365天规则暂保留。未用本机余额假冒付款到账。
+
+### 源码、真实行为与验证
+- 本节全部源码绝对基目录：C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/ 。提交链包括202680a、ef19ffd、010efc0、d0f2e29、ddf65b6、1a1f361、a232f06、ffb93ff、e2e21ce、28fc309、5df0e0c、e1d1a95。主要开发源码e1d1a95b8a65fd33a0e3d7fa8e6a016bb30a3487已推送；随后8e7289c仅修正Apple商品审核草稿备注逻辑（配置成功后才写已配置），实际8个商品备注已读回与未提审状态一致，不改变已构建网页/后端。文档提交另行核验。
+- backend_deploy/salesPromotion.js及publicPricingRoutes.js/paymentRoutes.js：以整数分计算折扣，原价格配置不改写，服务端统一报价，固定订单活动快照；管理写入需要ADMIN及ops域、配置版本一致、记录审计。损坏配置不能静默恢复高价；客户端显示金额小于当前应付价时409拒绝下单，不创建高价订单。公开聚合价格no-store。前端src/lib/salesPromotion.ts、pricingStore.ts与membership/page.tsx显示活动及原价，初始/焦点/定时刷新；admin/pricing/SalesPromotionPanel.tsx提供启停、比例、起止时间、商品范围和变更确认。
+- backend_deploy/paymentAiCredits.js、middleware/auth.js、paymentRoutes.js及src/app/ai-credits/page.tsx：增量包原来配置存在但服务端购买被503维护拦截，现恢复真实订单交付。包数量与有效期只取服务端可信快照，PAID前不发放，重复支付查询不重复增加，退款不恢复已撤销点数；老数据增量添加purchased/expires_at，账号余额与本人记录需登录。通用AI先用每日包含额度，再扣购买点数；有效时卡不扣购买点数，按最早到期顺序原子扣减。新购买页区分AI点数和签到积分，未登录转登录，到账需实际订单支付及权益交付，未进行真实收费测试。新版iOS在StoreKit未完成前仍禁止外部购买；国内tencent编译渠道AI关闭时不出售不可用AI包。
+- backend_deploy/contentSponsorPolicy.js/toolAdminRoutes.js、src/components/ContentSponsor.tsx/SectionGate.tsx、src/lib/sectionGate.ts、src/lib/admin/client.ts、src/app/admin/tool-control/ToolSponsorEditor.tsx/page.tsx：添加静态广告与会员最低档控制；天文馆academy_astronomy、五运六气zhongyi_yunqi、国学阅读guoxue_books接入。默认ON/FREE/basic/无广告，未实际启用任何广告。广告仅受控标题/自有HTTPS图片/明确点击链接，拒绝脚本、私网地址、未定义字段，付费有效会员不显示。页面标广告并链接投诉入口；配置有权限/审计，不下载执行代码，不按审核账号或审核状态隐藏功能。已随包公开的原文不是加密DRM，前端会员门禁不能冒称原文无法提取。
+- 新发现旧backend_deploy/feedbackRoutes.js的公开list接口可以越权返回反馈及联系方式，提交还信任body.userId。28fc309/e1d1a95修复为JWT真实有效账号归属，缺库异常503，查询本人、客户端身份不能冒充他人；限制文字/附件与频率，服务异常不回传内部错误或日志正文。新middleware/activeAccount.js只读真实账号库，不创建替代空库。反馈管理仅客服/运营域可看及回复，状态变更采用乐观版本防覆盖，审计不复制联系方式和投诉正文。
+- src/lib/feedbackService.ts同步Bearer并按当前账号过滤本机缓存；src/app/profile/feedback/page.tsx接广告投诉预填；新增src/app/admin/feedback/page.tsx与admin/ClientShell.tsx入口，管理员可筛选最近200条、查看和回复，用户只在本人记录看到结果。没有在生产创建测试投诉或替负责人给真实用户发回复。
+- scripts/sales-promotion.test.cjs、paid-ai-credits.test.cjs、content-sponsor.test.cjs及study-comments-http.test.cjs验证真实价格解析、Express/JWT/SQLite/角色隔离、陈旧价409、受信数量、支付幂等/过期/退款/优先额度、静态链接限制和私有反馈/后台处理。测试使用云端随机隔离库且无支付商户凭证。此前checkout夹具使用TEXT用户与生产INTEGER不一致导致401而非预期409，已d0f2e29修正；ddf65b6的packageId类型漏项由1a1f361修正，没有把失败CI当通过。
+- 最终质量运行 https://github.com/wzmpa18/minglizyi/actions/runs/39114811581 成功：44项行为测试、TypeScript、古籍来源/篇章结构及完整default网页构建；HTTP用例额外覆盖反馈防越权、联系方式隔离、运营回复、并发409、限流与账号库异常503。44为测试框架计数，不把每个HTTP断言虚增为测试项；仍不代替Apple付款/真机/医学人工校勘。私钥门禁检查1716条已跟踪路径通过。
+
+### 苹果商品实际配置与提审边界
+- 新增backend_deploy/appleIapCatalog.json与scripts/asc-learning-products.mjs。脚本为长期维护用途，默认只读，--apply才允许配置本App已批准商品/价格/版本化中英文本；按产品ID复用、读取全部分页，已有不同价格/文案先停止核查，不自动覆盖，也没有提交审核的能力。凭据仅来自保护文件与环境，日志/回执不含JWT、私钥或签名下载URL。
+- 苹果App仍为6807592575/com.yandaoguoxue.app。以下8个商品价格均从Apple价格计划再次读回一致，简体中文/英文描述均已核对；状态均MISSING_METADATA，尚缺最终材料/可售地区准备，不等于商品审核通过或已能购买：
+
+|权益|Apple商品ID后缀（前缀com.yandaoguoxue.app.）|资源ID|类型|中国区元|
+|---|---|---|---|---:|
+|30天会员|membership.monthly.v1|6824178134|NON_RENEWING_SUBSCRIPTION|29|
+|90天会员|membership.quarterly.v1|6824180449|NON_RENEWING_SUBSCRIPTION|79|
+|365天会员|membership.yearly.v1|6824180486|NON_RENEWING_SUBSCRIPTION|299|
+|终身会员|membership.lifetime.v1|6824180543|NON_CONSUMABLE|2849|
+|10点|ai.credits10.v1|6824180440|CONSUMABLE|22|
+|50点|ai.credits50.v1|6824179933|CONSUMABLE|104|
+|100点|ai.credits100.v1|6824180451|CONSUMABLE|160|
+|500点|ai.credits500.v1|6824180544|CONSUMABLE|639|
+
+- 月/季/年采用固定期限、不自动续费，与安卓购买方式对应；不能写成自动续订订阅。终身为非消耗权益；AI为可重复购买且购买额度不过期的消耗商品。此处配置了会员和四个AI增量包，不虚称AI时卡、所有单工具/批量内购均已完成。
+- Apple官方核对资料：https://developer.apple.com/documentation/appstoreconnectapi/managing-in-app-purchases （含版本化localizations、价格计划与首个内购随binary送审）及 https://developer.apple.com/app-store/review/guidelines/ 3.1.1（购买点数不过期）。800个中国区价格点已全分页核查，不把29.8向上冒充29.6。
+- 实际非敏感证据在 E:/八字命理类文档包括排盘方式电子版/言道国学项目归档/发布包/iOS/内购配置/ ：苹果商品与八折价档核查.json（配置前历史快照）、苹果商品配置回执_20261018.json（实际写入）、苹果商品只读复核_20261018.json（8/8价格及16条本地化读回）。未给其他App创建商品、改价或换密钥。
+- 原App此前REJECTED，无进行中审核可撤；本轮未删除原App、未上传新binary、未提审、未发布。现有E盘签名候选仍25.0.115(7)/7cf9e8b，不包含本节后续促销、AI购买页及反馈修复。不可用7包冒充全功能最终版。StoreKit2客户端、服务端JWS/订单归属与跨平台会员权益、恢复/退款/通知、沙盒购买、原生iPhone/iPad听学与全页面验证还没完成，须完成后重新构建8或更高、核对实际包，再把首批内购随新版送审。审核说明应如实披露学习辅助排盘及真实商业模式，不能临时隐藏后再远程放开。
+
+### 线上部署与真实页面
+- 已实际部署/www/yandaoguoxue-backend/下paymentRoutes.js、publicPricingRoutes.js、toolAdminRoutes.js、paymentAiCredits.js、middleware/auth.js、salesPromotion.js、contentSponsorPolicy.js，再补feedbackRoutes.js及middleware/activeAccount.js。线上register_routes.js有既有差异，只在唯一syncUser锚点补4行活动券展示控制，其余线上差异保留；server.js未覆盖，新社交/学习留言profile尚未挂载。
+- 唯一后端回滚集合为/www/yandaoguoxue-backend/.release-backup-commerce-latest/，含改前文件与manifest。所有部署文件及原基础价配置SHA已读回一致，PM2 yandaoguoxue-backend重启后正常响应。data/sales-promotion.json从默认关闭切为enabled=true/revision2/discountPercent20，并记入管理员审计。没有开启广告。
+- 最终生产网页current → /root/yandaoguoxue/releases/v25.0.115-study-commerce-e1d1a95；唯一网页回滚 /root/yandaoguoxue/releases/v25.0.107-admin-session-20261015。采用default编译渠道保留普通网站AI能力，未用tencent或iOS profile替代普通网页。版本25.0.115，buildId v25.0.115_D20261018，builtAt 2026-10-18T09:19:51.534Z；源提交e1d1a95，云产物12131609097，24946979字节，SHA-256 dec50a6c7c68fc373662ec32d803209e2edbc38cdb3f36e0e2683b325e9bf1ae。全部2218文件逐个核对后原子切换。
+- 最终公网会员/AI点数/后台反馈/经典阅读/天文馆/五运六气均HTTP200。public/pricing与payment/pricing读回会员0/29.60/79.20/299.20/2880，AI包22.40/104/160/640，aiGlobalEnabled=true。未登录/api/feedback/list、/api/feedback/admin/queue、/api/payment/ai-credits均401。新增学习模块仍FREE且adEnabled=false。
+- 负责人明确同意首次协议后，在生产域名390x844实测活动横幅、原价与活动价；点月度卡底部应付29.60，会员购买协议未勾选，未付款。未登录AI购买转登录。最终e1d1a95切换后重载会员及AI页，价格再次正确，document/body均390；不是iOS内购测试。
+- 同域天文馆切北京/2026-06-21 12:00得太阳高度73.2°；五运六气切2027得丁未木运不及，三之气起止2027/05/21 14:17至07/23 09:04、主少阳相火/客太阴湿土；原典链接到素问66/81篇，DOM原文1369字；阴符经三篇标题、字号22和本机记住位置均正常。学习页在初次a232f06生产网页实测，最终e1d1a95仅反馈改动、这些学习页源码不变。均无390px溢出，未宣称医学逐字审校或原生扬声器/锁屏验证。
+- C盘任务outputs/界面对标_20261018新增8张真实网页PNG：新版网页_待用户协议确认_20261018.png（确认前证据，现已接受）、线上会员八折与原价_20261018.png、线上AI次数包八折_20261018.png、线上AI购买未登录保护_20261018.png、线上天文馆北京夏至计算_20261018.png、线上五运六气2027三之气_20261018.png、线上黄帝内经完整章节_20261018.png、线上阴符经整本阅读字号22_20261018.png。会员/AI为最终部署后重拍，其余保留实际源构建说明。E盘发布包/学习与布局核查_20261018逐文件同步，验证记录共47项。
+- 上述E盘内购配置目录的线上八折部署核验_20261018.json、新版网页部署核验_20261018.json、服务器旧网页清理核验_20261018.json保存实际回执/价格/SHA。最终移除中间a232f06候选2208文件/61,138,741字节；累计清42套/1,421,815,190字节，服务器releases仅2目录。回滚包不包含旧生产订单库，禁止用旧数据库覆盖当前订单。
+- 浏览器临时视口已恢复，保留生产会员页作交付入口；无3113本机预览服务。
+
+### 清理、同步与下一步
+- 本次所有云构建依赖/SQLite测试库在云端，预览zip只在内存，C盘未重新创建node_modules/.next/out/www、解包目录、IPA副本或一次性物理脚本。保留的asc-learning-products.mjs为入仓维护工具，静态发布清理/部署过程没有另存一次性脚本。
+- 服务器旧网页实际清除41套静态发布目录，合计1,360,676,449字节；事前核对绝对路径、无软链接、无运行进程/NGINX引用、仅网页静态文件，保留新网页与已验证的v25.0.107-admin-session-20261015回滚版。后续中间候选清除及最终两代读回见上一段部署回执。服务器释放量不得计成C盘释放量。证据服务器/root/yandaoguoxue/cleanup-static-releases-20261018.json及E盘服务器旧网页清理核验_20261018.json。
+- C/E旧19个清理目标再次实查19/19不存在；前序自动审批拒绝的5个精确目标仍5/5存在、86,951,386字节。本轮未再次尝试删除、未换工具/语言绕过拒绝、实际这5项新增删除量0。原唯一CP936精确CMD与JSON清单仍按55节路径保留，需负责人手工执行后读回；97历史副本独有语料/变更仍待审，不盲删。不能声称全部旧物已清或所有物理版本已达两代。
+- 用户协议首次弹窗经负责人明确回复“同意，继续验收”后才点击接受；不默认代接受其他购买协议。未登录购买只验证转登录，不登录他人账号、不做真实收费。浏览器临时390x844视口已reset，生产会员页明确留作交付；无3113临时服务。
+- C盘当时可用20,777,537,536字节、E盘13,078,200,320字节，为系统快照，不把后台系统空间变化全归于本次清理。固定四份报告同字节同步，最终SHA另在验证记录中读回，避免报告内自引用自身哈希；收尾diff-check、私钥门禁、Git提交推送及空status/上游0 0另读回。
+- 下一步必须继续StoreKit及权益验证、新原生包/最终截图和审核答复；生产学习留言与全社交后端尚未挂载/联调，当前广告未启用。古籍其余书目全本/逐字校勘、医考真实医学审校、362穴版本与逐穴准确授权图、竞品各模块全面对照、旧泄露密钥撤销及历史副本/被拦清理仍未闭环。以上不因本轮价格上线而变成已完成。
