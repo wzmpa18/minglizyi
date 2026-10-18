@@ -907,7 +907,7 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
 
       <div style={{ margin: "0 12px", padding: "10px 14px", backgroundColor: "#fff8e1", borderRadius: "10px", border: "1px solid #ffecb3" }}>
         <p style={{ margin: 0, fontSize: "11px", color: "#f57f17", lineHeight: 1.6 }}>
-          本页未提供刺灸法操作细节，针灸操作必须由持有执业医师资格证的专业医师执行，禁止非专业人员自行操作。
+          本库整理资料尚待逐条复核，不可作为个人针刺操作依据；针灸操作应由具备相应资质的专业医师执行。
         </p>
       </div>
 

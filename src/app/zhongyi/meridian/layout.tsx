@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "经络穴位——十二经络循行与穴位查询｜言道国学",
-  description: "经络穴位查询：十二正经与任督二脉的循行路线、常用穴位定位与主治功效，附标准经络图参考，基于《经络腧穴学》整理，适合针灸推拿学习与穴位速查，免费在线使用，内容整理自传统典籍，仅供文化学习参考。",
+  description: "经络穴位查询：十二正经与任督二脉的循行资料、穴名与归经查询，提供经络学习图、开放图示署名和来源链接；本库整理文字尚待逐条复核，适合文献学习与图文对照，免费在线使用，内容整理自传统典籍，仅供文化学习参考。",
 };
 
 // TOOL_SEO_GROUP
@@ -16,7 +16,7 @@ const ZHONGYI_TOOLS = [
   { href: "/zhongyi/exam/", name: "医考题库", desc: "医考题库在线刷题：总题数、已练习、正确率与学习天数统计，按科目分章节练习，支持错题本与收藏，题目附答案解析，覆盖中医基础理论、中药学、方剂学、针灸学等科目，适合医考备考。" },
   { href: "/zhongyi/formula/", name: "经典方剂库", desc: "经典方剂库：按方名或主治查询方剂的组成、剂量、功用与主治，附方歌与出处，古籍记载剂量为非标准化剂量，仅供学习参考，临床用药请遵医嘱。" },
   { href: "/zhongyi/herb/", name: "中药库", desc: "中药库：按药名查询性味归经、功效主治与用法注意，含毒性药材标注，支持分类浏览，附中药学习记忆方法，内容基于《中药学》教材整理，仅供学习参考。" },
-  { href: "/zhongyi/meridian/", name: "经络穴位", desc: "经络穴位查询：十二正经与任督二脉的循行路线、常用穴位定位与主治功效，附标准经络图参考，基于《经络腧穴学》整理，适合针灸推拿学习与穴位速查。" },
+  { href: "/zhongyi/meridian/", name: "经络穴位", desc: "经络穴位查询：十二正经与任督二脉的循行资料、穴名与归经查询，提供经络学习图、开放图示署名和来源链接；本库整理文字尚待逐条复核，适合文献学习与图文对照。" },
   { href: "/zhongyi/shanghan/", name: "伤寒论辨证学习", desc: "伤寒论学习：输入症状对照六经辨证证型，附各方证的条文出处与鉴别要点，采用证型对照学习模式，基于《伤寒论》原文整理，适合经典方证学习与考研复习。" },
   { href: "/zhongyi/wenzhen/", name: "智能问诊", desc: "中医智能问诊进阶版：输入症状组合获得更完整的辨证分析与证型鉴别参考，会员可解锁完整结果，附辨证思路讲解，内容仅供中医学习参考，不构成诊疗建议。" },
   { href: "/zhongyi/yangsheng/", name: "中医养生", desc: "中医养生参考：按季节与主题整理养生功法、起居饮食与情志调摄建议，附八段锦、太极拳等传统功法简介，内容基于中医养生理论整理，适合日常养生参考学习。" },
@@ -30,7 +30,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <section data-seo-nav style={{ maxWidth: "420px", margin: "0 auto", padding: "12px 12px 64px", backgroundColor: "#f5f5f5" }}>
         <div style={{ background: "#fff", borderRadius: 16, padding: 16, boxShadow: "0 1px 4px rgba(74,43,112,.06)" }}>
           <h2 style={{ fontSize: 15, fontWeight: 700, color: "#2D1A3E", margin: "0 0 8px" }}>工具说明</h2>
-          <p style={{ fontSize: 12, lineHeight: 1.9, color: "#6B5B80", margin: "0 0 8px" }}>经络穴位查询：十二正经与任督二脉的循行路线、常用穴位定位与主治功效，附标准经络图参考，基于《经络腧穴学》整理，适合针灸推拿学习与穴位速查。</p>
+          <p style={{ fontSize: 12, lineHeight: 1.9, color: "#6B5B80", margin: "0 0 8px" }}>经络穴位查询：十二正经与任督二脉的循行资料、穴名与归经查询，提供经络学习图、开放图示署名和来源链接；本库整理文字尚待逐条复核，适合文献学习与图文对照。</p>
           <p style={{ fontSize: 12, lineHeight: 1.9, color: "#6B5B80", margin: 0 }}>本工具免费在线使用，无需下载安装，计算即时完成；登录后可保存与同步历史记录。内容基于传统典籍与现代历法推算整理，仅供传统文化学习与研究参考，不构成医疗、投资或其他专业建议。</p>
           <h3 style={{ fontSize: 13, fontWeight: 700, color: "#5E2293", margin: "14px 0 8px" }}>全部中医工具导航</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
