@@ -24,6 +24,7 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
+const { listActiveResourceComments } = require('./resourceDiscussionQueries');
 
 const SOCIAL_DB_PATH = process.env.SOCIAL_DB_PATH || path.join(__dirname, 'data', 'social.db');
 const USER_DB_PATH = process.env.USER_DB_PATH || '/root/backend-auth/data/yandao_users.db';
@@ -740,16 +741,14 @@ function createRouter() {
   });
 
   // 学习资源讨论区：穴位、典籍章节各自独立，不混入动态广场。
-  router.get('/resource/:resourceType/:resourceId/comments', (req, res) => {
+  router.get('/resource/:resourceType/:resourceId/comments', authOptional, (req, res) => {
     try {
       const resourceType = String(req.params.resourceType || '').trim();
       const resourceId = String(req.params.resourceId || '').trim().slice(0, 160);
       if (!['acupoint', 'classic', 'yixue', 'academy'].includes(resourceType) || !resourceId) {
         return res.status(400).json({ success: false, error: '资源参数错误' });
       }
-      const rows = getDb().prepare(`SELECT * FROM resource_comments
-        WHERE resource_type = ? AND resource_id = ? AND status = 'active'
-        ORDER BY id DESC LIMIT 200`).all(resourceType, resourceId);
+      const rows = listActiveResourceComments(getDb(), resourceType, resourceId, req.user?.userId || '');
       res.json({
         success: true,
         comments: rows.map(r => ({

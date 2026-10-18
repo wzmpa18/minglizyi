@@ -36,6 +36,8 @@ import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
 import { calculateDaLiuRen, tianYiGuiRen, type DaLiuRenResult, type SanChuanItem, type SiKeItem, type PanMap, type DaLiuRenInputParams } from "@/algorithm-core/modules/daliuren";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
+import { LocalStudyNotes } from "@/components/LocalStudyNotes";
+import { LocalChartArchive } from "@/components/LocalChartArchive";
 // ============================================================================
 // 颜色常量（严格对标截图）
 // ============================================================================
@@ -46,11 +48,11 @@ const COLOR_GRAY_BG = "#f0f0f0";
 
 // 五行颜色（严格对标截图：木绿/火红/土棕/金橙/水蓝）
 const WX_COLOR: Record<string, string> = {
-  "木": "#008000",
-  "火": "#d93025",
-  "土": "#b86000",
-  "金": "#cc7000",
-  "水": "#000080",
+  "木": "#008200",
+  "火": "#fd0000",
+  "土": "#9d4f00",
+  "金": "#ff8102",
+  "水": "#0000b5",
 };
 
 // 天干颜色（按五行）
@@ -75,12 +77,12 @@ function zhiColor(zhi: string): string {
 
 // 天将颜色（严格对标截图）
 const SHEN_COLOR: Record<string, string> = {
-  "贵": "#b86000",
-  "蛇": "#d93025", "朱": "#d93025",
-  "合": "#008000", "龙": "#008000",
-  "勾": "#000080", "空": "#b86000", "虎": "#cc7000", "玄": "#000080",
-  "阴": "#cc7000", "后": "#0000cc",
-  "常": "#b86000",
+  "贵": "#9d4f00",
+  "蛇": "#fd0000", "朱": "#fd0000",
+  "合": "#008200", "龙": "#008200",
+  "勾": "#9d4f00", "空": "#9d4f00", "虎": "#ff8102", "玄": "#0000b5",
+  "阴": "#ff8102", "后": "#0000b5",
+  "常": "#9d4f00",
 };
 
 // ============================================================================
@@ -89,15 +91,13 @@ const SHEN_COLOR: Record<string, string> = {
 
 const TAB_BLUE = "#007aff";
 
-/** 天将颜色：贵始终红色，其余按SHEN_COLOR */
+/** Reference chart colours distinguish celestial generals from day-marker accents. */
 function shenColor(shen: string): string {
-  if (shen === "贵") return BRAND_RED;
   return SHEN_COLOR[shen] || "#000";
 }
 
-/** 天干颜色：日干始终红色，其余按五行 */
-function ganColorRender(gan: string, dayGan: string): string {
-  if (gan === dayGan) return BRAND_RED;
+/** Stem text follows its element colour; day markers are drawn separately. */
+function ganColorRender(gan: string, _dayGan: string): string {
   return getGanColor(gan);
 }
 
@@ -1155,13 +1155,13 @@ export default function DaLiuRenPage() {
           {activeTab === "pingzhu" && (
             <div>
               <div style={{ fontWeight: 600, color: "#333", marginBottom: "4px", fontSize: "13px" }}>评注</div>
-              <p style={{ margin: 0 }}>此功能为学习版本，评注功能将在后续版本中完善。</p>
+              <LocalStudyNotes key={JSON.stringify(prefillParams || data.siZhu)} storageKey={`yandao_daliuren_notes_v1:${JSON.stringify(prefillParams || data.siZhu)}`} />
             </div>
           )}
           {activeTab === "dangan" && (
             <div>
               <div style={{ fontWeight: 600, color: "#333", marginBottom: "4px", fontSize: "13px" }}>档案</div>
-              <p style={{ margin: 0 }}>课例保存与管理功能将在后续版本中完善。</p>
+              <LocalChartArchive tool="daliuren" onRestore={record => { handleRestoreHistory(record); setActiveTab("panmian"); }} />
             </div>
           )}
         </div>

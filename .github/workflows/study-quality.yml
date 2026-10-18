@@ -9,6 +9,13 @@ on:
       - 'src/app/yixue/bazi/page.tsx'
       - 'src/components/ContinuousListenPlayer.tsx'
       - 'src/components/ProfessionalZiweiBoard.tsx'
+      - 'src/components/LocalStudyNotes.tsx'
+      - 'src/components/LocalChartArchive.tsx'
+      - 'src/app/yixue/daliuren/page.tsx'
+      - 'src/components/ResourceDiscussion.tsx'
+      - 'backend_deploy/resourceDiscussionQueries.js'
+      - 'backend_deploy/socialApiRoutes.js'
+      - 'scripts/resource-discussion.test.cjs'
       - 'src/lib/listeningQueue.ts'
       - 'scripts/continuous-listening.test.ts'
       - 'src/app/academy/learn/page.tsx'
@@ -33,6 +40,7 @@ jobs:
       - run: npm ci --legacy-peer-deps
       - run: npx tsc --noEmit --incremental false
       - run: npx tsx --test scripts/continuous-listening.test.ts
+      - run: node --test scripts/resource-discussion.test.cjs
       - name: Verify original edition chapter sequence and provenance
         run: |
           node --input-type=module <<'JS'

@@ -1,14 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   addResourceComment,
   fetchResourceComments,
   isLoggedIn,
   reportResourceComment,
+  addServerBlacklist,
+  fetchServerBlacklist,
   type ResourceComment,
 } from "@/lib/socialApi";
 import { PUBLIC_SOCIAL_ENABLED } from "@/lib/releaseFeatures";
+import { getUserProfile } from "@/lib/auth";
 
 interface ResourceDiscussionProps {
   resourceType: "acupoint" | "classic" | "yixue" | "academy";
@@ -33,20 +36,43 @@ function ResourceDiscussionEnabled({
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
+  const [blockedIds, setBlockedIds] = useState<string[]>([]);
+  const [blocking, setBlocking] = useState(false);
+  const loadVersion = useRef(0);
+  const myId = getUserProfile()?.userId;
 
   const load = useCallback(async () => {
+    const version = ++loadVersion.current;
     setLoading(true);
-    const result = await fetchResourceComments(resourceType, resourceId);
+    setComments([]);
+    const [result, blacklist] = await Promise.all([
+      fetchResourceComments(resourceType, resourceId),
+      isLoggedIn() ? fetchServerBlacklist() : Promise.resolve(null),
+    ]);
+    if (version !== loadVersion.current) return;
+    setBlockedIds(blacklist?.success ? (blacklist.blacklist || []).map(user => String(user.userId)) : []);
     if (result.success) {
       setComments(result.comments || []);
-      setMessage("");
+      setMessage(blacklist && !blacklist.success ? "屏蔽列表暂未读到，请稍后刷新。" : "");
     } else {
       setMessage(result.error || "讨论区暂时不可用");
     }
     setLoading(false);
   }, [resourceId, resourceType]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void load(); return () => { loadVersion.current++; }; }, [load]);
+
+  const block = async (authorId: string) => {
+    if (blocking) return;
+    if (!isLoggedIn()) { setMessage("登录后可以屏蔽用户"); return; }
+    if (!window.confirm("屏蔽后不再显示此用户的讨论，并解除已有好友关系。是否继续？")) return;
+    setBlocking(true);
+    const result = await addServerBlacklist(authorId);
+    if (result.success) { setBlockedIds(ids => [...new Set([...ids, authorId])]); setMessage("已屏蔽，可在黑名单管理中恢复。"); }
+    else setMessage(result.error || "屏蔽失败，请重试");
+    setBlocking(false);
+  };
+  const visibleComments = comments.filter(comment => !blockedIds.includes(String(comment.authorId)));
 
   const submit = async () => {
     const text = content.trim();
@@ -84,7 +110,7 @@ function ResourceDiscussionEnabled({
     <section style={{ margin: "12px", padding: "14px", borderRadius: 16, background: "#FFF", boxShadow: "0 2px 8px rgba(0,0,0,.04)" }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
         <strong style={{ color: "#333", fontSize: 14 }}>💬 {title}</strong>
-        <span style={{ color: "#999", fontSize: 11 }}>{comments.length} 条</span>
+        <span style={{ color: "#999", fontSize: 11 }}>{visibleComments.length} 条</span>
       </div>
       <textarea
         value={content}
@@ -105,15 +131,16 @@ function ResourceDiscussionEnabled({
       <div style={{ marginTop: 12, borderTop: "1px solid #F1F1F1" }}>
         {loading ? (
           <div style={{ padding: "14px 0", color: "#999", fontSize: 12 }}>正在加载讨论…</div>
-        ) : comments.length === 0 ? (
+        ) : visibleComments.length === 0 ? (
           <div style={{ padding: "14px 0", color: "#999", fontSize: 12 }}>还没有讨论，欢迎分享学习心得。</div>
-        ) : comments.map((comment) => (
+        ) : visibleComments.map((comment) => (
           <article key={comment.id} style={{ padding: "11px 0", borderBottom: "1px solid #F5F5F5" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 5 }}>
               <strong style={{ color: accent, fontSize: 12 }}>{comment.authorName || "国学爱好者"}</strong>
               <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <time style={{ color: "#AAA", fontSize: 10 }}>{comment.createdAt}</time>
                 <button type="button" onClick={() => void report(comment.id)} style={{ border: 0, padding: 0, color: "#AAA", background: "transparent", fontSize: 10 }}>举报</button>
+                {String(comment.authorId) !== String(myId) && <button type="button" disabled={blocking} onClick={() => void block(String(comment.authorId))} style={{ border: 0, padding: 0, color: "#777", background: "transparent", fontSize: 10 }}>屏蔽用户</button>}
               </span>
             </div>
             <div style={{ color: "#444", fontSize: 13, lineHeight: 1.65, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{comment.content}</div>

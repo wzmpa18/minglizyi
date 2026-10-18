@@ -52,7 +52,7 @@ export function ProfessionalZiweiBoard({ result, mode, focus, onSelect, onDetail
         if (!palace) return <div key={index} className="border border-gray-500" />;
         const major = palace.majorStars || [];
         const aux = [...(palace.auspiciousStars || []), ...(palace.shaStars || [])];
-        const minor = (palace.otherStars || []).filter(star => mode !== "feixing" || ["天空", "天刑"].includes(star));
+        const minor = (palace.otherStars || []).filter(star => mode === "sanhe" || ["天空", "天刑"].includes(star));
         const stars = [...major, ...aux, ...minor];
         const size = Math.min(mode === "sanhe" ? 13 : 16, Math.max(6, (102 - 2) / Math.max(stars.length, 1)));
         const range = palace.ageRange?.[0] ? `${palace.ageRange[0]}~${palace.ageRange[1]}` : "";

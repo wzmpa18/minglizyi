@@ -562,28 +562,26 @@ function TabBasic({result,shengxiao,name,birthPlace,longitude,dateStr,lunarDateS
   result:BaziResult;shengxiao:string;name:string;birthPlace:string;longitude:number;dateStr:string;lunarDateStr:string;solarDateStr:string;trueSolarStr:string;solarCorrection:string|null;taiYuan:string;taiXi:string;mingGong:string;shenGong:string;mingGua:string;
   wuxingStats:Record<string,number>|null;boneWeight:ReturnType<typeof calcBoneWeight>;gender:Gender;
 }){
-  return <div className="px-2 pt-2">
-    <div className="mb-2 bg-white px-3 py-3">
-      <div className="flex items-start gap-3">
-        <div className="shrink-0 pt-1"><ShengxiaoIcon name={shengxiao} /></div>
-        <div className="min-w-0 flex-1">
-          <div className="mb-1 flex items-center justify-between gap-2">
-            <strong className="truncate text-[16px] text-[#333]">{name || "未命名命盘"}</strong>
-            <span className="shrink-0 rounded bg-[#F3EDF7] px-2 py-0.5 text-[12px] font-bold text-[#7B2FBE]">{gender === "male" ? "男 · 乾造" : "女 · 坤造"}</span>
-          </div>
-          <div className="grid grid-cols-[68px_minmax(0,1fr)] gap-x-2 gap-y-1 text-[12px] leading-[1.55]">
-            <span className="text-[#999]">农历</span><span className="break-words text-[#333]">{lunarDateStr}</span>
-            <span className="text-[#999]">北京时间</span><span className="text-[#333]">{solarDateStr}</span>
-            <span className="text-[#999]">真太阳时</span><span className="text-[#333]">{trueSolarStr}</span>
-            <span className="text-[#999]">出生地区</span><span className="break-words text-[#333]">{birthPlace || `东经 ${longitude.toFixed(2)}°`}</span>
-            <span className="text-[#999]">四柱</span><strong className="tracking-wide text-[#333]">{result.pillars.map((p) => p.gan + p.zhi).join(" · ")}</strong>
-          </div>
-        </div>
-      </div>
-      {solarCorrection && <div className="mt-2 rounded bg-[#faf7ef] px-2 py-1.5 text-[11px] leading-relaxed text-[#8a6d3b]">真太阳时修正：{solarCorrection}</div>}
-      <div className="mt-2 grid grid-cols-5 gap-1 border-t border-[#eee] pt-2 text-center">
-        {[["胎元",taiYuan],["胎息",taiXi],["命宫",mingGong],["身宫",shenGong],["命卦",mingGua]].map(([label,value])=><div key={label}><div className="text-[10px] text-[#999]">{label}</div><div className="mt-0.5 text-[13px] font-bold text-[#333]">{value}</div></div>)}
-      </div>
+  const rows = [
+    ["姓名", `${name || "未命名命盘"}　${gender === "male" ? "乾造 · 男" : "坤造 · 女"}`],
+    ["农历", `${lunarDateStr}　生肖：${shengxiao}`],
+    ["阳历", solarDateStr], ["真太阳时", trueSolarStr],
+    ["出生地区", birthPlace || `东经 ${longitude.toFixed(2)}°`],
+    ...(result.jieQiInfo ? [["出生节气", `${result.jieQiInfo.prevJie}后${result.jieQiInfo.daysToPrevJie}天，${result.jieQiInfo.nextJie}前${result.jieQiInfo.daysToNextJie}天`]] : []),
+    ["四柱", result.pillars.map(p => p.gan + p.zhi).join("　")],
+    ["胎元", `${taiYuan}　　胎息：${taiXi}`], ["命宫", `${mingGong}　　身宫：${shenGong}`], ["命卦", mingGua],
+    ["起运", result.dayun?.qiyunText || "暂无起运资料"],
+  ];
+  return <div className="pt-0">
+    <div className="px-4 pb-8 pt-5 text-center" style={{ background: "linear-gradient(145deg,#111 15%,#302d26 55%,#151515)", color: "#b29450" }}>
+      <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border-2 text-4xl" style={{ borderColor: "#b29450" }}>{shengxiao}</div>
+      <strong className="mt-2 block text-lg">{name || "未命名命盘"}</strong>
+    </div>
+    <div className="relative -mt-4 mx-2 mb-3 overflow-hidden rounded-lg bg-white">
+      {rows.map(([label, value], index) => <div key={label} className="grid grid-cols-[78px_minmax(0,1fr)] gap-2 px-3 py-2.5 text-[13px] leading-5" style={{ background: index % 2 ? "#ececec" : "#fff" }}>
+        <span className="text-gray-600">{label}：</span><span className="break-words text-black">{value}</span>
+      </div>)}
+      {solarCorrection && <div className="bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">真太阳时修正：{solarCorrection}</div>}
     </div>
     <div className="bg-white mb-2 px-3 py-3">
       <div className="text-[16px] font-bold mb-2 text-[#333]">五行统计</div>
@@ -612,7 +610,7 @@ function TabBasic({result,shengxiao,name,birthPlace,longitude,dateStr,lunarDateS
 function TabDetail({result,gender}:{
   result:BaziResult;gender:Gender;
 }){
-  const [flowColumnsFirst, setFlowColumnsFirst] = useState(false);
+  const [flowColumnsFirst, setFlowColumnsFirst] = useState(true);
   const pillars=result.pillars;
   const dayGan = result.dayGan as TianGan;
   const colLabels=["年柱","月柱","日柱","时柱"];
@@ -1738,7 +1736,7 @@ function TabNotes({storageKey}:{storageKey:string}){
       <textarea
         value={note}
         onChange={e=>setNote(e.target.value)}
-        placeholder="在此记录命理分析笔记，自动保存到本地..."
+        placeholder="在此记录命理学习笔记，离开前请点击保存…"
         className="w-full box-border border border-[#ddd] rounded px-2 py-2 text-[13px] outline-none resize-y"
         style={{minHeight:"200px",lineHeight:"1.6",fontFamily:"inherit"}}
       />
@@ -2161,9 +2159,8 @@ export default function BaziPage(){
       submitText="排盘" title="八字排盘"
     />
     {result&&<div>
-      {/* Tab导航 - 紫色选中态 */}
-      <div className="flex border-b border-[#eee] bg-white/95 sticky top-10 z-30 overflow-x-auto">
-        {tabOrder.map(tab=><button key={tab} onClick={()=>setActiveTab(tab)} className={`shrink-0 px-3 py-2.5 text-center text-[15px] font-bold border-none bg-transparent cursor-pointer transition-colors duration-200 border-b-[3px]`} style={{color: activeTab===tab ? BRAND_PURPLE : "#666", borderBottomColor: activeTab===tab ? BRAND_PURPLE : "transparent", borderBottomStyle:"solid"}}>{tabLabels[tab]}</button>)}
+      <div className="flex bg-black sticky top-10 z-30 overflow-x-auto" role="group" aria-label="八字页面模块">
+        {tabOrder.map(tab=><button type="button" aria-pressed={activeTab===tab} key={tab} onClick={()=>setActiveTab(tab)} className="shrink-0 px-4 py-3 text-center text-[15px] font-medium cursor-pointer" style={{color: activeTab===tab ? "#b29450" : "white"}}>{({basic:"基本信息",chart:"基本命盘",detail:"专业细盘",notes:"学习笔记"} as Record<string,string>)[tab] || tabLabels[tab]}</button>)}
       </div>
       {activeTab==="basic"&&<TabBasic result={result} shengxiao={shengxiao} name={name} birthPlace={birthPlace} longitude={longitude} dateStr={dateStr} lunarDateStr={lunarDateStr} solarDateStr={dateStr} trueSolarStr={trueSolarTimeStr} solarCorrection={solarCorrection} taiYuan={taiYuan} taiXi={taiXi} mingGong={mingGong} shenGong={shenGong} mingGua={mingGua} wuxingStats={wuxingStats} boneWeight={boneWeight} gender={gender}/>}
       {activeTab==="chart"&&<>
