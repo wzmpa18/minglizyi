@@ -601,8 +601,7 @@ router.post('/moderation/users/:userId/membership', adminAuthUnified('ADMIN', 'o
         expireTime = bd.toISOString();
       }
     }
-    udb.prepare('UPDATE users SET member_level = ?, membership_expiry = ?, updated_at = ? WHERE user_id = ?')
-      .run(level, expireTime, new Date().toISOString(), userId);
+    require('./membershipLedger').adminReset(udb, userId, level, expireTime);
     try {
       udb.prepare('UPDATE user_assets SET member_level = ?, member_expire_at = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?')
         .run(level, expireTime, userId);

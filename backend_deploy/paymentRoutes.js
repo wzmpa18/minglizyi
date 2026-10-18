@@ -460,26 +460,11 @@ function deliverOrderBenefits(order) {
         const level = order.extra && order.extra.membershipLevel;
         const days = MEMBERSHIP_LEVEL_DAYS[level];
         if (!days) throw new Error('membershipLevel 无效: ' + level);
-        let expireTime = null;
-        if (days > 0) {
-          let base = Date.now();
-          try {
-            const row = db.prepare('SELECT membership_expiry FROM users WHERE user_id = ?').get(uid);
-            if (row && row.membership_expiry) {
-              const cur = new Date(row.membership_expiry).getTime();
-              if (cur > base) base = cur;
-            }
-          } catch (e) {}
-          expireTime = beijingEndOfDay(base + days * 86400000);
-        }
-        const info = db.prepare('UPDATE users SET member_level = ?, membership_expiry = ? WHERE user_id = ?')
-          .run(level, expireTime, uid);
-        if (info.changes === 0) throw new Error('用户不存在: ' + uid);
-        // P2-12 修复：同步写 user_assets.member_expire_at（字段一直存在但从未写入）
-        try {
-          db.prepare('UPDATE user_assets SET member_level = ?, member_expire_at = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?')
-            .run(level, expireTime, uid);
-        } catch (e) {}
+        const membership = require('./membershipLedger').purchase(db, {
+          source: 'payment:' + order.orderId, userId: uid, provider: 'payment', level, days,
+          purchasedAt: Date.parse(order.paidAt || order.createdAt),
+        });
+        const expireTime = membership.expiresAt;
         console.log(`[payment] 会员权益已交付 orderId=${order.orderId} userId=${order.userId} level=${level} expire=${expireTime || '永久'}`);
         // AI Phase 1（第十一~十二部分）：新购买会员即持久化权益快照，policyVersion 可追溯
         try {
@@ -626,6 +611,10 @@ function updateOrderRecord(orderId, status, channel) {
     }
   }
   if (status === ORDER_STATUS.REFUNDED) {
+    if (order.type === 'MEMBERSHIP') {
+      const db = getOrdersDb();
+      if (db) require('./membershipLedger').revoke(db, 'payment:' + orderId);
+    }
     // v25.0.41 退款返佣冲正：退款即扣回该订单已发放的一/二级返佣积分（幂等）
     try {
       const { reverseConsumptionRebate } = require('./register_routes');

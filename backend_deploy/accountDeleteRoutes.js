@@ -105,6 +105,7 @@ function createRouter() {
 
       // --- 事务：匿名化 + 关联数据删除 ---
       const tx = db.transaction(() => {
+        require('./membershipLedger').adminReset(db, userId, 'basic', null);
         db.prepare(`UPDATE users SET
           nickname = '已注销用户',
           avatar = '',

@@ -66,6 +66,8 @@ on:
       - 'backend_deploy/publicPricingRoutes.js'
       - 'backend_deploy/paymentRoutes.js'
       - 'backend_deploy/paymentAiCredits.js'
+      - 'backend_deploy/membershipLedger.js'
+      - 'scripts/membership-ledger.test.cjs'
       - 'scripts/paid-ai-credits.test.cjs'
       - 'backend_deploy/middleware/auth.js'
       - 'backend_deploy/middleware/activeAccount.js'
@@ -124,6 +126,7 @@ jobs:
       - run: node --test scripts/social-visibility.test.cjs
       - run: node --test scripts/sales-promotion.test.cjs
       - run: node --test scripts/paid-ai-credits.test.cjs
+      - run: node --test scripts/membership-ledger.test.cjs
       - run: node --test scripts/content-sponsor.test.cjs
       - run: npx tsx --test scripts/acupoint-study.test.ts
       - run: node --test scripts/study-comments.test.cjs
