@@ -1,0 +1,2 @@
+# Keep the attributed third-party SVG byte-for-byte identical on Windows too.
+public/assets/meridians/lung-open-reference.svg -text
