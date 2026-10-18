@@ -1,6 +1,6 @@
 # 言道国学 · FINAL_PROJECT_HANDOVER（唯一交接文档）
 
-> 本文档是全项目唯一交接文件（2026-08-26 FINAL-HANDOVER-STABILITY-SEAL 封板批次）。
+> 本文档是全项目唯一交接文件，采用持续增量维护；**最新 dated section 在本文末尾，遇到旧版信息冲突时以最新且有证据的增量为准**。原始封板基线为 2026-08-26 FINAL-HANDOVER-STABILITY-SEAL。
 > 目标：一位全新的 AI/开发只读本文档即可独立接管项目。历史细节见仓库根 `PROJECT_MASTER_LEDGER.md` 与《01_项目总账_宪法.md》（项目方持有副本）。
 > 本文档只写密钥**位置**，绝不写密钥**值**（第五十一章红线）。
 
@@ -448,3 +448,255 @@ sqlite3 /tmp/yandao_restore_test/social.db "SELECT COUNT(*) FROM friendships; SE
 - 发布：Web `v25.0.107_D20261007`；Android `25.0.107` / `2094`；GitHub Actions run `37625909881`；APK SHA-256 `02c748febf7dd8ad7aaaec20bfddda0191b50869f7c7e73a3651076bb57f0430`；签名指纹保持 `8ca0c414573d4b05fc2bd1ba9c6a2a8090c90c58e3815119494607443dc6d5a0`。
 - 分发：唯一入口 `https://yandaoguoxue.yandao.vip/app-download/latest.apk` 已替换；升级接口为25.0.107/2094且强制更新。
 - 限制：收尾时ADB无设备，未完成本版实体机覆盖安装，不将其标为已验收。
+
+## 2026-10-15 接手后交接增量：OPPO权限整改与三产品后台入口
+
+### OPPO隐私安全智护体系反馈
+
+- OPPO邮件针对应用版本号 **2096** 的权限材料审核：未通过项为“写入文件与文档”。审核给出的具体原因是申请截图与实际功能不一致，要求清晰演示视频及权限触发路径。
+- 当前候选源码在仓库 `codex/tencent-store-compliance`，HEAD `3b5caa0`，Android `25.0.112 / versionCode 2099`。`android/app/src/main/AndroidManifest.xml` 使用 `tools:node="remove"` 明确移除 `WRITE_EXTERNAL_STORAGE`、`READ_EXTERNAL_STORAGE` 和误带入的设备管理权限。此前 2097 包仍声明过 Android 9 存储权限；2098 期间有移除提交，但不能据此认定 OPPO 实际收到的包已更新。请以提交到 OPPO 的**最终 APK 合并清单**为准复核，不要只看源码声明。
+- 该版本不应再申请“写入文件与文档”，因此旧申请的截图/视频不应继续沿用；在 OPPO 权限申请界面删除该项。若平台要求说明，可填：**“当前版本不申请读写用户共享文件权限。用户主动检查更新并选择下载时，由系统下载管理流程处理安装包；应用不扫描、读取或管理用户文档。”** 这段话仅用于说明当前候选版本，提交前应以最终 APK 的权限扫描结果复核。
+- 旧包 `25.0.110 / 2097` 位于 `应用商店统一提交包_20261011/01_安装包/`，不能代表 2099。该目录目前没有 2099 的 OPPO 签名 APK；不得把 2097 冒充 2099 上传。Google Play AAB 也不能替代 OPPO 所需的 APK。
+- **未完成项**：当前浏览器停在 OPPO 欢太账号登录页，尚未进入开发者控制台；因此未保存权限申请变更或重新提交。也尚未取得/验证 2099 的 OPPO APK。只有在控制台移除该权限、并确认待提交 APK 的最终权限列表后，才可将此项标为完成。只有当最终 APK 仍声明该权限时，才需要补拍真实触发路径视频；不能用截图代替视频，也不能演示不存在的弹窗。
+
+### 后台入口和认证修复（2026-10-15）
+
+- 国学生产后台先前出现 `/admin/` 404：Nginx 精确路由指向不存在的 `software-home.html`。已在生产站点增加三产品选择页 `/admin/software-home.html`，并令 `/admin/` 提供该页；入口分别指向国学 `/admin/login.html`、外语 `https://yandao.vip/xuewaiyu/ai-ops-admin.html`、数字管家 `https://shuziguajia.yandao.vip/pay-admin/`。Nginx 配置备份为 `yandaoguoxue.vip.conf.bak-admin-root-20261015`；`nginx -t` 与 reload 通过。公网验收：`/admin/`、国学登录页均 200，页面含三个产品入口。
+- 国学管理页此前登录后空白的根因是登录页把管理员 token/role 存在 `sessionStorage`，后台请求端只读 `localStorage`。已恢复独立登录页并修复两种存储的兼容；生产 release 为 `/root/yandaoguoxue/releases/v25.0.107-admin-session-20261015`，dashboard 和登录页均返回 200。未用自动化代输管理员凭证；最终人工登录仍应由管理员确认。
+- 数字管家是广州服务器 `111.230.155.30` 上独立的 Commerce 服务（8791），页面路径 `/pay-admin/`，接口前缀 `/pay-api/`；不要把国学后台 token/key 用于它。生产公网页面与登录接口已做服务端验收，登录接口返回超级管理员角色。密钥和口令不写入交接文档；帐号仍应按独立产品的账号安全制度管理。
+
+### 其他关键状态与交接边界
+
+- Google Play：截至用户提供的 2026-10-14 控制台截图，正式版访问权限已批准，但发布向导尚未走完；因此不能声称 Google Play 已上架。旧封闭测试包与新候选版本应分开处理。详见 §41 的证据级状态及下一步。
+- 本次未更改排盘算法、学习内容、商品价格、支付、会员权益或其他产品业务数据。外语后台和数字管家仍使用各自的管理员认证与权限体系。
+- 接手人首要动作：①确认 OPPO 控制台权限清单是否已撤掉“写入文件与文档”；②从受控构建渠道取得 25.0.112/2099 的 OPPO APK 并核验包名、签名、versionCode、合并权限；③再提交 OPPO 审核并保存回执；④用管理员本人在三产品入口分别做登录验收。不要把“源码删除权限”写成“OPPO已复审通过”。
+
+## 41. 2026-10-17 增量：Google Play 与国内应用商店状态、接手优先级
+
+本节只记录应用商店事实、证据日期和接手操作，不包含公安机关审核材料。平台状态必须以控制台当前页面和提交回执为准；“开发者账号获准发布”不等于“某个应用版本通过审核”，`上传成功`、`保存草稿`、`测试轨道可用`也都不等于生产版已上架。
+
+### Google Play：逐项区分权限、审核和上架
+
+| 项目 | 已知证据与状态 | 结论 |
+|---|---|---|
+| Google Play 正式版访问权限 | 用户转发的 Google Play Console 团队通知称，应用 `言道国学`（`com.yandao.guoxue`）的 Production access 申请已批准；控制台截图亦显示正式版权限获批。 | **账号/应用获得正式版发布资格：已批准。** |
+| 已批准的具体生产发布版本 | 2026-10-14 用户截图显示，应用列表中的“言道国学”状态为“封闭式测试”、安装用户数 11、更新状态“可以发布”；发布概览显示仅完成 2/5 项任务，创建版本已完成，“预览并确认”“送交 Google 审核”“在 Google Play 中发布”仍未完成。 | **没有证据证明任何生产版已获审或已发布。** “可以发布”是可启动发布流程，不是审核通过。 |
+| 当前实时状态 / 商店可搜索性 | 本次接手时桌面浏览器自动化因无法可靠确认页面 URL 而停止；公开搜索未找到可核实的 `com.yandao.guoxue` 商店详情页，直接打开该包名的 Google Play 公开详情地址返回 404。搜索未命中或页面不可抓取仍不能单独证明未上架。 | **截至 2026-10-17 未能实时核实。当前不得声称 Google Play 已审核通过、已发布或已可搜索。** 必须由下一位开发者在已登录 Console 中查看生产轨道及商店详情链接，并保存当前状态证据。 |
+| 旧封闭测试版本与新版 | 用户明确要求先将已经完成测试的旧版本推进生产发布，再另行上传新版供审核。旧版 AAB 的实际版本代码、草稿/测试轨道状态以及新版 AAB 的版本代码，须在 Console 和构建产物中逐项核对；聊天截图不足以确认二进制身份。Google 版本需保留用户要求的社交功能，不可误用国内去社交版本。 | **先核实 AAB 文件、包名、签名证书、versionCode、社交功能及 Play Console 轨道；先完成旧测试包生产发布流程，再以新的、更高且未占用的 versionCode 单独建立新版更新。每一步保留 Console 回执。** |
+
+### 国内应用商店：最新已知状态
+
+以下渠道状态由原 `CHANNEL_STATUS_20261011.md`（更新时间 2026-10-11）并结合 2026-10-15 的 OPPO 邮件与 Console 记录合并整理。原状态表已清理；本节是其保留位置。它们不是 2026-10-17 各平台的实时查询结果。
+
+| 渠道 | 最新可证状态 | 关键阻塞 / 接手动作 |
+|---|---|---|
+| 腾讯应用宝 | 旧提交 `25.0.108 / 2095` 需整改；来自项目交付记录。 | 先读取 Console 当前驳回意见与待办；提交包、资料、平台回执逐项核对后才可重提。不要把资料准备或上传草稿当成已提交。 |
+| OPPO | 2026-10-15 邮件显示版本 `2096` 的“写入文件与文档”权限材料审核未通过，原因是申请场景截图与实际功能不符，平台要求真实清晰的视频及权限触发路径。源码候选为 `25.0.112 / 2099`，但尚无证据证明 OPPO 收到该包或已复审。 | 取得签名后的目标 APK；检查 APK 合并 Manifest、包名、签名与版本号；再按真实权限清单修改 Console 申请并提交，保存提交回执。不得用 2097 包替代 2099，也不得声称已复审通过。 |
+| 华为 AppGallery | 2026-10-11 渠道表记录 `25.0.109 / 2096` 审核中；缺少之后的终审回执。 | 查看当前审核状态和历史版本；保存审核结果。 |
+| vivo | 未形成独立提交回执；此前 OPPO 联盟同步不证明 vivo 已提交。 | 登录 vivo 控制台，确认是否同步为草稿；核对包、资料并独立提交，保存回执。 |
+| 小米 | 未形成独立提交回执。 | 登录小米开发者后台核对应用、包名和版本，完成独立提审并保存回执。 |
+| 荣耀 | 已知用户曾在开发者平台登录/准备，但无可核验的该版本提交回执。 | 检查应用状态与版本记录；没有回执就按未提交处理。 |
+| 应用汇 | 对话中用户报告升级流程第五步图标上传失败，平台要求 PNG；当前仓库记录未证明上传成功或更新提交。 | 准备符合平台尺寸/体积要求的 PNG 图标，在 Console 检查图片预览及保存结果，再核对提交状态。 |
+| 360、百度、魅族、三星等 | 2026-10-11 渠道表列为未处理或未核实。 | 先核实平台是否接受企业新应用、账号主体和在架应用状态，再决定是否投入；未经 Console 回执不标“已提交”。 |
+
+### 下一位开发者的商店接手顺序
+
+1. 在 Google Play Console 重新打开 `com.yandao.guoxue`：记录访问资格、生产轨道中每个 release 的状态、最新已提交版本代码、审核状态、国家/地区和商店详情链接。截取包含应用名与状态的证据；若商店详情链接尚未生成或打不开，记录原始错误，不用搜索引擎未命中替代 Console 结论。
+2. 对照构建系统/AAB 元数据核验用户所称“已经测试通过的旧包”及新版候选：包名必须为 `com.yandao.guoxue`；比对 versionCode、签名证书指纹、构建来源和社交功能；确认旧包确实在封闭测试中完成测试且可用于生产。严禁仅凭文件名认包。
+3. 按用户要求先推进已验证的旧测试 AAB 至生产轨道；逐页完成 Play Console 的预览、确认、审核提交与发布动作，并逐步留存结果。出现必须由账号持有人确认的最后发布动作时，及时请求用户接手；没有成功回执前不要写“已发布”。
+4. 旧版发布流程完成后，才以新的、更高且未占用的 versionCode 上传新版并提交审核；确保新版 Google Play 构建包含用户要求的社交功能，并与国内渠道的去社交候选包区分清楚。
+5. 国内渠道按上表逐个核对当前 Console；区分“材料已准备、草稿已保存、包已上传、已提交审核、审核通过、已上架”六种状态。将每个阶段的版本号和回执记录进本交接文档对应的下一次增量，不另造互相矛盾的状态总表。
+6. 检查营销素材必须来自当前待审 APK 的真实界面，分别按商店的尺寸、格式、文案政策提交。禁用旧“发现/聊天”截图代表无社交版本；Google 版素材和国内版素材不得混用。准备目录见项目资料中的 `营销图片与相关文案`，先核验文件实际存在及版本匹配。
+
+**本次核验结论**：Google 正式版访问资格已由官方通知/截图确认获批；具体生产发布是否审核通过或已在商店上线，当前没有新的 Console 证据，且 2026-10-14 截图显示流程未完成。下一位开发者应先做 §41 第 1 项实时核验，严禁将资格批准写成版本审核通过或已上架。
+
+## 42. 2026-10-17 增量：工作区过期资料与临时产物清理
+
+- 已将原 `CHANNEL_STATUS_20261011.md` 的渠道状态并入 §41 后，删除这份重复旧表；国内渠道历史判断仍保留在 §41，并明确标注其证据日期与非实时属性。
+- 清理当前 Codex 工作区内已完成的一次性合规文件/拓扑图生成脚本、旧的后台试验脚本、旧 APK 测试包和旧版本 APK、APK 109 解包目录、PDF/制度文档渲染与 QA 临时目录，以及不再使用的合规预览图。正式 PDF、ZIP、拓扑图及交付目录中的版本说明保留。
+- 删除 `docs/reports` 中两份已被当前累计交接报告替代的旧交接副本（2026-08-22、2026-09-23）；其他版本验收、事故处理和安全记录保留，避免丢失仍有追溯价值的历史证据。
+- 保留 Google 可能仍需推进生产发布的旧测试 AAB（`work/final-google.aab` 与 `outputs/yandao-guoxue-v25.0.92-google-internal.aab` 内容校验一致，SHA-256 `6757DD4A28B05AB3E38B8A7F66B5ECE6C315791C3AA94220CC1B2FFB5EDF2190`）；保留当前有记录的 `work/yandao-25.0.109.apk`、商店截图证据和所有 Google AAB。清理旧 APK 不代表这些版本曾上架。
+- 保留 `docs/reports` 中历史技术验收与事故记录、老版本 AAB、国内商店营销文案、源码归档包、三款软件正式 PDF/ZIP 和最终网络拓扑图，供审计、恢复及后续发布追溯；没有清理 D/E 盘源资料、密钥或生产配置。
+- 本次只清理临时与确认过时文件，不改应用源码、服务器状态或商店 Console 数据。下一位接手人仍须按 §41 实时确认 Google Play 与国内商店状态；删除了 APK 副本不影响服务器/应用商店中的版本。
+- 已将更新后的同一份 `FINAL_PROJECT_HANDOVER.md` 同步到 E 盘现存的 v25.0.107 核心备份目录；工作区与 E 盘副本 SHA-256 一致。后续仍在本报告续写，不另建交接报告。
+
+## 43. 2026-10-17 增量：交接报告唯一目录与强制更新制度
+
+- 已建立工作区权威交接目录 `C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\交接报告\`，权威报告文件名固定为 `FINAL_PROJECT_HANDOVER.md`；制度文件为 `交接报告更新与工作区清理制度.md`。该目录位于实际 Git 仓库内，作为唯一编辑源。
+- E 盘固定同步目录为 `E:\八字命理类文档包括排盘方式电子版\言道国学项目归档\交接报告\`。工作区报告是唯一编辑源，E 盘及旧兼容路径是镜像，不允许分别维护或另建“最新/最终2”报告。交付时需用 SHA-256 校验镜像一致。
+- 工作区根目录与项目目录已新增 `AGENTS.md` 强制指引；每位开发者开始前必须阅读制度、权威报告、主账本及项目局部指引。工作区根目录的 `交接报告\README.md` 只是入口，不保存第二份报告。每次完成前必须补充有日期的具体变更、绝对路径、验证证据、真实发布状态、未完成事项和清理结果，并同步镜像。
+- 制度要求每次收工盘点并清除已完成任务的临时脚本、日志、缓存、解包目录、失败产物、重复报告和过期安装包；保留源码、用户原始资料、密钥/生产配置、正式交付物、有效审核证据和仍在使用/回滚所需的包。D/E 盘用户归档与生产数据不得被默认当作可清理临时文件。
+- 本次建立的是项目作业制度与路径指引；后续开发须按该制度执行。若报告或镜像同步失败，任务必须标为未完成，不得只作口头承诺。
+
+## 44. 2026-10-17 增量：荣耀拒审接手核查（待取得本次拒审原文）
+
+- 用户报告荣耀已拒绝上架，要求认真核查功能问题并突出中医与学习。此为用户提供的新状态，覆盖 §41 荣耀“无提交回执”的历史判断；被拒版本、拒审原文、问题截图、规则编号及控制台当前状态尚未取得，不将推测记为平台原话。
+- 接手仓库绝对路径：`C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance`，分支 `codex/tencent-store-compliance`，HEAD `3b5caa0`。已有未提交交接、台账、旧报告删除及 AGENTS.md 变更，未覆盖或回滚。候选源码 package.json 为 v25.0.112；E 盘荣耀填写表仍指向25.0.110/2097，不能据此确认荣耀实际拒审包。
+- 官方依据：2026-10-17 搜索核对荣耀《不收录应用类型》https://developer.honor.com/cn/doc/guides/101536 ，官方搜索索引明确列出含算命、占卜、打卦或风水等封建迷信内容的应用。正文为动态页面，本次直接抓取仅返回页面壳；结论来自该官方页面的搜索索引，仍需对照本次拒审原文。
+- 代码证据：`src/lib/releaseFeatures.ts` 只为 google/tencent 定义既有差异，尚无荣耀学习版；`src/lib/platformGate.ts` 与 `backend_deploy/platformFeatureGate.js` 的 Android 预测类能力仍开启；`src/app/HomePage.tsx` 首页保留易学排盘入口、八字个性化养生与出行建议；`src/app/page.tsx` 的服务端导航仍展示排盘及风水工具，不能仅改首页可见按钮；`src/lib/toolNavData.ts` 仍含称骨算命、合婚、风水罗盘、号码解析等功能说明。将这些能力改称学习而保留原行为，不能作为整改完成证据。
+- 另需核查：`src/app/zhongyi/page.tsx` 辨证学入口含“智能问诊”，学堂首页有“电子证书认证”措辞；突出中医学习应同步明确知识查询、练习与实际诊疗/执业资格的边界。此处仅记录现存措辞，尚未完成逐功能医疗内容审核。
+- 本次已准备用户可查看的荣耀学习方向文案与整改清单：`C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\outputs\荣耀整改核查与学习介绍草稿_20261017.txt`。该文件为待核实草稿，不能当作已实施功能说明上传；未创建竞争交接报告。没有修改应用源码、APK、服务器、远程开关或任何商店资料；没有发送申诉或提审。
+- 下一步：用户提供荣耀完整拒审原文/被拒版本，或可访问的已登录控制台后，逐项对照问题，确定永久面向全部荣耀用户的实际学习功能范围；如采用学习版，必须同时处理导航、直接URL、离线算法入口、AI、历史记录、后台接口、营销与自更新跳转，禁止审核后恢复被移除能力。保留其他渠道既有产品差异，不能把Google包误改为国内版。
+- 验证：起始权威报告与E盘报告SHA-256一致（B3C938E89775E9FFEFDC078F243BEAD6347B1A19ACE679D049FAD2F796586D0E）；本轮仅文档核查，无源码修改，未构建或真机验证。当前可访问浏览器清单无荣耀控制台标签，因此未实时读取拒审详情。
+- 清理：本轮没有生成临时脚本、日志、解包目录、缓存或安装包；仅保留上述正式核查草稿与累计记录。用户原始资料、源码、有效审核证据和已有待提审包均保留。
+- 发布状态：用户报告“荣耀拒审”，具体版本/原因待核实；本轮未重新提交，未审核通过、未上架，功能整改任务尚未完成。同步方式为将本权威报告复制到E盘固定目录与两处兼容镜像，再计算四份SHA-256；具体哈希由本轮工具结果验证，避免在被校验文件中写入自身哈希造成循环。
+
+## 45. 2026-10-17 增量：荣耀“功能简单”真实回执整改与OPPO联盟原记录恢复
+
+### 回执与实时事实（覆盖§44的待核实假设）
+
+- 用户提供荣耀邮件原文：2026-10-11 13:12:26从OPPO开放平台提交的“言道国学”未通过荣耀上架审核，明确意见为“应用内容/功能简单，平台暂不收录此类应用，请丰富内容及功能并提供差异化、高质量体验”；测试环境为Wi-Fi、Magic6、Magic OS 10.0、中文。该邮件没有给出具体版本号，不能据提交日期擅自匹配2097/2098；本次拒审未提及迷信违规。§44关于迷信的内容是原文到达前的风险核查，不能当作此次官方拒审原因。
+- 用户完成OPPO登录后，实际进入企业移动应用列表：共有“言道国学”和“言道学外语”两项；国学仍存在，包名`com.yandao.guoxue`、OPPO appid `37853023`，当时最新审核记录为25.0.111/2098、不通过。学外语1.0.6显示上线，本轮未编辑学外语。
+- OPPO当前版本另有独立驳回原因：应用介绍、版本说明是面向用户的内容，给审核人员的反馈应移到审核补充说明。不能将这条OPPO意见与荣耀的“内容/功能简单”混为同一条回执。
+- 入口：`https://open.oppomobile.com/new/mcom/app/detail?app_id=37853023&pkg_symbol=0`。更新页刷新会先显示旧审核版本，稍后弹出“检测到已保存草稿内容，是否加载草稿？”；必须选“是”后核验，不能用加载草稿前的2098界面判断保存失败。本轮核验时曾过早读取旧版本并产生了额外恢复/重传，已明确纠正流程；具体最终状态见本节末尾。
+
+### 真实功能变更与源文件
+
+代码提交：`1d8098d`（学习入门和入口）→`a83fe4b`（中药索引与风险标签修正），已推送既有分支`codex/tencent-store-compliance`，未覆盖此前用户未提交的交接、制度、AGENTS.md及旧报告删除。源码基目录为`C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\`。
+
+新增或修改文件绝对路径：
+
+- `C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\src\data\studyStarter.ts`：4节原创资料阅读方法入门课、8道即时自测、解析、持久化schema与异常记录过滤。不包含个人诊断、处方或治疗操作指导，不将原创说明伪称古籍原文。
+- `C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\src\app\academy\start\page.tsx`和`C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\src\app\academy\start\layout.tsx`：无需登录的阅读、自测、答案解析、错题重练、全部完成提示及本机进度恢复；存储失败时明确提示，避免声称已经保存或云同步。
+- `C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\src\components\LearningEntryPanel.tsx`：首页和学堂共用的中医/经典学习入口，直接进入典籍、中药、方剂、经络穴位，以及进阶知识、章节题库和账号错题本。
+- `C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\src\app\HomePage.tsx`：学习面板置于公告后；学堂入口文案改为经典阅读、章节练习、错题复习，不再用“电子证书认证”作为此处宣传。
+- `C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\src\app\academy\page.tsx`：仅学堂目录移除进入即弹登录的守卫；账号题库、个人记录和权益校验仍按原规则。入门课游客体验不依赖云端题库。
+- `C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\src\app\academy\layout.tsx`：补充入门课导航，区分本机进度和账号学习记录，不再把入门记录说成跨设备同步。
+- `C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\src\app\academy\question-bank\page.tsx`：识别合法的`?track=`科目参数，修复中医题库直达仍停留所有科目的入口问题。
+- `C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\src\app\books\page.tsx`：修复可选离线包为空的TypeScript错误，加载失败保留内置目录，避免未处理的异步异常。
+- `C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\src\algorithm-core\modules\tcm\herbs.ts`：不再根据禁忌中的任意“毒”字推导药物有毒；仅转述性味栏明确毒性词。功效推断“药物分类”改为原资料中实际出现的文字索引，不编造药物类别。
+- `C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\src\app\zhongyi\herb\page.tsx`：注明“资料词索引并非药物分类”，风险标签注明原资料来源，并明确没有标签不等于安全，不能据此自行用药。
+- `C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\package.json`、`C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\package-lock.json`、`C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\android\app\build.gradle`、`C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\.github\workflows\android-build.yml`：最终版本25.0.114/2101，云构建检查入门页与错题功能进入内置资源。中间25.0.113/2100因补修风险标签已作废，不能替代最终2101。
+
+本轮保留现有传统文化/排盘工具，不宣称已永久移除预测与风水能力。没有修改排盘计算、支付、会员权益、Google渠道开关、生产Web、升级接口或其他产品。突出学习不等于已完成其他内容政策的全量审查。
+
+### 构建、验证与交付证据
+
+- 最终云构建成功：`https://github.com/wzmpa18/minglizyi/actions/runs/39028350585`，提交`a83fe4b`，国内构建沿用`tencent`配置（公开社交与公共AI入口关闭），不用于Google Play社交版。
+- APK：`C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\outputs\荣耀OPPO候选包_25.0.114_2101\app-release.apk`，25,442,965字节，包名com.yandao.guoxue，25.0.114/2101，targetSdk36。
+- APK SHA-256：`ECFF45D6EEBE0DC7752CF97DEC37CE3DD9F56D514BEEE17CDFE07926BA3EF245`；apksigner验签通过，正式证书SHA-256保持`8ca0c414573d4b05fc2bd1ba9c6a2a8090c90c58e3815119494607443dc6d5a0`。
+- 最终合并权限为INTERNET、ACCESS_NETWORK_STATE及应用自身DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION；无共享存储读写权限。内置app-native.json为2101/25.0.114，Capacitor无server.url，入门页已进入APK。
+- 全项目`tsc --noEmit --incremental false`通过；入门数据唯一性、答案范围、异常JSON、未知ID、越界答案、已读去重通过；中药回归验证禁忌提“热毒”不触发“有毒”、性味明确毒性词保留、索引词均来自原功效文字。ESLint因仓库缺少eslint.config文件不可运行，不标为通过。
+- 页面实测：游客阅读、标记已读、错答、解析、错题重练、答对移出、4课8题完成及刷新恢复通过；最终APK内置资源再次复测首页直达、错题流程、进度恢复和风险标签修复。ADB无设备，未做实体机覆盖安装或Magic6/Magic OS10回归；不把浏览器渲染说成真机验收。550条原始中药资料未逐条专业审校。
+- 用户提供的荣耀回执保存于`C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\outputs\荣耀审核回执原文_用户提供_20261017.txt`。
+- 填写文案沿用并改正原草稿：`C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\outputs\荣耀整改核查与学习介绍草稿_20261017.txt`，如实保留现有工具范围，不再以迷信作为本次官方拒审原因。应用介绍、版本说明与审核补充说明分栏；不在公共文案或本交接中记录测试密码。
+- 候选目录内`验证记录.json`、`安装包与验证说明.txt`记录验证边界。`商店截图\`有5张1080×1920、各小于1MB的PNG，来自最终APK内置资源的实际渲染，仅裁切内容区域、转换尺寸/色板，未虚构界面或叠加手机框；并非实体机截图。
+- OPPO原应用记录证据为`C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\outputs\OPPO应用记录_整改前.jpg`；最终进度恢复证据为同一outputs目录的`入门学习_最终包进度恢复.jpg`与`入门学习_最终包全页.jpg`。旧商店图片引用保存为`商店原截图引用_整改前.json`，供恢复，不删除平台历史对象。
+- 正式候选包、5张截图、验证说明、文案及原回执已复制到`E:\八字命理类文档包括排盘方式电子版\言道国学项目归档\发布包\国内商店\20261017_25.0.114_2101_学习整改\`；包目录内文件与E盘对应文件逐一SHA-256一致。
+
+### 清理与未完成边界
+
+- 本地验证服务已停止，自动生成的next-env.d.ts开发路径已恢复。源码、用户资料、原审核证据、原正式包及E盘用户归档均保留。
+- 清理本轮临时日志、复制的APK校验文件、解包资源、图片处理临时文件、.next/dev缓存和作废2100包时，自动审批返回`blocked by policy`，未提供更细原因；使用已核实绝对路径重试，以及单个日志文件的缩小范围删除，仍被拦截。没有换工具绕过，不声称已清理。临时文件仍在本轮工作区work目录及项目.next/dev；作废2100目录已加`已作废勿上传.txt`，不能作为最终交付包使用。**收尾清理仍未完成，本次整体任务不能标为全部完成。**
+- 本次未发送客服邮件、申诉、聊天或其他对外消息。荣耀同步涉及接受服务协议及向荣耀提供平台要求的开发者/联系人信息，须取得账号持有人对这些具体事项的当场确认后才能勾选并提交。未提交前不写“已重审”；提交后仍需等待平台结论。
+- 权威报告与E盘固定镜像及两处兼容镜像在本轮收尾同步；具体SHA-256由最终工具校验结果记录，避免将文件自身哈希写进自身造成循环。
+
+### 实时收尾状态（2026-10-17，等待荣耀同步协议确认）
+
+- 最终APK25.0.114/2101已上传至OPPO原应用更新表单。应用介绍、111字版本说明、207字审核补充说明与5张新截图已保存。
+- 已重新打开更新页，等待“是否加载草稿”弹窗，点击“是”并等待异步加载完成后复核：包名com.yandao.guoxue、25.0.114/2101、24.26MB；介绍包含无需登录入门课，版本说明包含资料风险标签修复；5张截图与原素材URL全部不同且均为1080×1920，审核说明保存了“开始入门学习”完整路径。不能在点击“是”后立即读取旧字段，须等待加载结果再核验。
+- 平台核验证据：`C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\outputs\OPPO最终2101草稿_加载核验.jpg`；同步确认页：`C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\outputs\荣耀联盟同步_待确认.jpg`。
+- 当前荣耀同步及个人信息授权项未勾选，尚未点击“提交审核”。需用户当场确认接受页面列明的荣耀开发者服务协议、Distribution Connect服务协议及个人信息使用授权/三方服务说明，并允许将本次应用资料与平台要求的开发者/联系人信息同步至荣耀。收到确认后才能勾选并提交；未获确认不替用户接受协议。
+- **发布事实：新版已构建、已上传、草稿已保存并核验；未重新提交审核，未过审、未上架。** 源码和材料阶段完成；平台提交与自动审批阻塞的清理仍未完成。后续状态继续追加本节，不另开报告。
+
+### 实时提审回执（2026-10-17 21:08:15 +09:00）
+
+- 用户当场明确答复“同意同步并提审”，授权25.0.114/2101安装包、商店资料和平台要求的开发者/联系人信息同步荣耀，接受此前列明的四项协议/授权，沿用审核后立即发布。已勾选荣耀及个人信息使用授权/三方服务说明，未勾选vivo或小米。
+- 首次点击提交时平台提示“请上传包”：草稿虽显示2101元数据，实际包绑定未满足正式校验。重新上传最终app-release.apk，等待进度完成并解析为com.yandao.guoxue、25.0.114/2101、24.26MB、targetSdk36后，再次提交；对已完成的公开介绍整改提示点击确认。
+- 平台返回“提交成功，预计审核时长1-2个工作日”；关闭回执后应用列表显示“言道国学 / 25.0.114 / 审核中”。这是OPPO正式接收且选择荣耀同步的证据，尚无荣耀独立接收/受理回执，不能宣称荣耀已过审或已上架。新版未过审、未发布。
+- 证据：C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\outputs\OPPO荣耀同步_提交成功.jpg；C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\outputs\言道国学25.0.114_审核中.jpg。最终包SHA-256重新核对为ECFF45D6EEBE0DC7752CF97DEC37CE3DD9F56D514BEEE17CDFE07926BA3EF245。
+- 本轮未修改源码或重建，沿用已验证2101学习整改包；git diff --check通过。报告、验证记录与上述回执同步E盘后核对SHA-256。未完成事项：平台审核/荣耀独立回执、Magic6实体机验证及此前被自动审批以blocked by policy拦截的临时文件/旧包清理。未再次尝试绕过清理拦截。
+
+## 46. 2026-10-17 增量：Google Play正式上架实时核实
+
+- 用户要求核实谷歌是否发布，未发布则处理。本次复用已登录Google Play Console，开发者“创世纪”，应用com.yandao.guoxue；仅查询，未修改商店资料、送审、发布、上传包或切换轨道，也未使用国内2101包替代Google版本。
+- 生产轨道版本列表与2081详情明确显示：25.0.94 / 2081“已在Google Play上架”，页面发布时间10月17日21:26，正式版、已面向19,299款设备发布。测试和发布总览显示2081正式版发布比例100%；生产轨道178个国家/地区（非逐国可用性验证）。这覆盖§41此前无法核实的历史状态；本轮没有执行此次发布，不冒领发布操作。
+- 公开地址 https://play.google.com/store/apps/details?id=com.yandao.guoxue 实际打开“言道国学 - Google Play上的应用”，开发者创世纪、显示“在更多设备上安装”及“在您的设备上可以使用此应用”；当前日本/简体中文账号环境可见。未执行安装，不声称所有国家或所有设备均可见。
+- 另有生产更新25.0.112 / 2099在发布概览显示“尚未提交送审的更改 / 开始全面发布”。这不是已上架2099，也不影响2081已正式发布。用户本次条件为未发布才处理，因此本轮不额外送审该更新；后续更新需核实Google社交版构建与数据安全声明。公开页目前声明不收集/不分享数据，同时标注用户互动；本轮未完成对实际账号/社交数据流的一致性审核，不推定声明正确。
+- 正式证据：C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\outputs\GooglePlay_2081正式上架_20261017.jpg；同目录GooglePlay_公开商店可安装_20261017.jpg。Console详情：https://play.google.com/console/u/0/developers/8539674148718133275/app/4973402841775693769/tracks/4698246885314028199/releases/2/details 。
+- 本轮仅更新本权威报告与C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\PROJECT_MASTER_LEDGER.md，保存两张有效发布证据并归档E盘发布包/GooglePlay/20261017_2081正式发布核实。未改源码、服务器、安装包，无需重新构建；git diff --check通过。没有创建临时脚本、日志、缓存或新安装包，两张有效证据保留；上一轮被自动审批拦截的临时文件/旧包清理仍未完成，本轮未绕过拦截。
+- 权威报告同步到E盘固定镜像、项目旧路径兼容镜像和E盘核心备份镜像，四份SHA-256核对一致；两张证据源/E盘副本逐一SHA-256核对一致。Google已发布核实目标已满足，后续2099送审及历史清理不标为完成。
+
+## 47. 2026-10-17 增量：用户收窄为国学清理、停止外语与新增提审
+
+- 用户最初要求清理国学并将国学最新Google包及学外语提审，随后明确停止学外语，交由其开发者处理，并指示“清理好你的国学项目的垃圾，就可以了”。按最新指令停止新增提审；国学正式资格已解锁，后续更新无需重走首次封闭测试，不能将学外语自身0测试人员/未解锁的要求套给国学。
+- 任务收窄前已启动国学Google专用云构建39032983589，25.0.114/2101、源a83fe4b、store_channel=google，Actions成功。首次下载因制品名不匹配未取得文件；实际制品名yandao-guoxue-android-aab。没有上传Google或提交审核，没有改源码。既有Google正式2081和待送审2099状态未变；不能把本次云构建成功说成已更新商店。
+- 学外语仅保存Play隐私政策网址和无广告声明；未上传包、未送审、未发布。新启动Codemagic构建6ad36b8fc25bb902c6db1c17收到用户停止指令后已取消，API读回canceled。该项目唯一D盘交接库中的总交接、机器JSON和变更总账已写停止状态，未覆盖其开发者源码/未提交工作。第三款应用完全未操作。
+- 本轮精确核对国学待清理三目标：C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\work（2194文件/111548943字节）；同任务outputs\荣耀OPPO候选包_25.0.113_2100（2文件/25442879字节）；本项目.next\dev（230文件/162849899字节）。总2426文件/299841721字节，约286MiB。包含本轮复制校验APK、解包、截图中间文件、开发日志/缓存及作废2100包。
+- 自动执行审批再次拒绝经绝对路径核对的Remove-Item清理操作，原文blocked by policy，未提供更细原因；命令未执行，三目标仍存在，实际删除0文件。没有更换工具/语言绕过，不能声称已清理完成。可交接精确清单C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\outputs\国学待清理清单_20261017.json；此为待删除资产清单，不是第二份交接报告。
+- 当前2101正式APK仍在，SHA-256复核ECFF45D6EEBE0DC7752CF97DEC37CE3DD9F56D514BEEE17CDFE07926BA3EF245；源码、正式交付物、有效审核证据、必要回滚、Google旧测试AAB、他人任务资料与D/E归档均保留。既有预览服务已停止；本轮未生成新临时脚本/日志/安装包。其他历史work内容含参考资料、正式AAB和可能仍需回滚的产物，未因泛称垃圾擅自删除。
+- 验证：清理列表JSON可解析，目标路径仍存在（阻塞事实），正式包哈希正确；git diff --check通过。更新PROJECT_MASTER_LEDGER.md及本权威报告并同步三镜像，四份SHA-256一致；清单同步E盘后哈希一致。当前任务状态：清理受自动审批阻塞，未完成；不承诺已释放磁盘空间，不把用户授权当成执行成功。
+
+## 48. 2026-10-18 增量：再次清理执行被拦截
+
+- 用户要求立即彻底清理本聊天工作区，释放C盘空间。再次阅读项目入口/制度/报告/主账本，沿用§47已核实的三处临时清理目标；未扩大到他人项目或用户归档。
+- 使用PowerShell原生Remove-Item，执行前包含绝对路径解析与目录联接检查，但自动执行审批在进程创建前拒绝，返回blocked by policy，无进一步原因。命令未执行，实际删除0文件、未释放空间；未切换工具绕过。不宣称清理完成。
+- 本次起始C盘可用7589146624字节（约7.07GiB）；§47待清理目标上次实测合计299841721字节（约286MiB），本次未重新统计其大小，不能把上次大小当本次释放量。源码、当前2101提审包及有效审核证据没有删除；没有变更源码、构建、部署、商店或外语项目。
+- 本轮只追加本权威报告和PROJECT_MASTER_LEDGER.md，没有新建临时脚本、日志或重复报告。用户可在资源管理器手动删除§47三处精确目录以处理执行限制；此处仅记录阻塞，不将手动操作记成已完成。权威报告与三处镜像同步并核对SHA-256一致；git diff --check结果由工具校验。
+
+## 49. 2026-10-18：完整盘点及用户手动CMD清理交付
+
+- 用户要求完整盘点并给本人CMD执行的删除命令。已只读核实本任务与国学三个源码副本，共16目录+3缓存文件、284444文件、7393524207字节（约7.39GB/6.89GiB）。前述286MiB仅是任务临时物及开发缓存子目录，并非全部。
+- 完整逐目录绝对路径/大小清单：C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\outputs\国学CMD清理清单_20261018.json。用户请求的命令文件同目录guoxue-clean-20261018.cmd，CP936编码，固定绝对路径rd /s /q及del /f /q；未由代理执行，不宣称已经释放空间。
+- 清理范围：当前tencent-store-compliance的node_modules、.next、out、www、android/app/build、android/.gradle；旧97副本相同存在目录及.gradle-home/.gradle-home-2；旧03副本.next/out；本任务work/作废2100包；三个tsbuildinfo。03副本node_modules为目录联接，已排除。各副本候选目录git ls-files均0；97副本存在未提交源码，整副本保留。
+- 不含源码/.git/密钥/生产配置/当前2101正式包/有效审核回执/其他产品/全局SDK及用途不明的历史证据。2101哈希复核ECFF45D6EEBE0DC7752CF97DEC37CE3DD9F56D514BEEE17CDFE07926BA3EF245。没有操作商店、服务器或构建。
+- 命令执行后逐目录检查残留，显示FAILED则未删净；本地再构建需重新安装依赖。待用户执行后核对实际空间，目前删除0文件。未生成新的临时脚本或日志，仅保留正式清理命令和清单。
+- 更新主账本，权威报告同步三镜像，四份SHA-256一致；git diff --check通过。
+
+## 50. 2026-10-18：未提交改动根因核实、强制提交/清理/两代留存制度
+
+- 用户明确授权加强制度：每次必须清理和提交，失败/无用临时物与指令清除，物理版本永远只留一份新版和一个旧版，新版验证正常后删除更老版本。本次已写入同目录《交接报告更新与工作区清理制度.md》第七节，并写入活动仓AGENTS.md入口；覆盖原本允许模糊“有追溯价值”无限保留旧包的宽泛做法，保留法定证据与密钥，物理备份数量按渠道实际不可互换的版本集合计算，不能各磁盘重复计数。
+- 事实纠正：当前活动仓a83fe4b的功能源码已提交并推送；当前脏改动主要是累计交接/主账本、未跟踪强制制度入口、两个已清理旧报告的删除记录，不能说成“新功能代码一直没提交”。本轮审查这些文档改动后集中提交并推送，最终以实际Git读回为准。
+- 旧minglizyi-release-v25.0.97为独立旧副本，HEAD7e68819/main；实时status汇总6修改/192删除/22未跟踪项目（目录项并非文件总数）。6修改具体是android/build.gradle（离线仓/依赖约束）、android/capacitor.settings.gradle（生成路径）、next-env.d.ts（开发路由生成路径）、典籍目录审计JSON、两份App Store审核维护脚本。git diff --numstat -- src为空：未发现受跟踪src业务代码差异；22项含两份Gradle缓存、离线资料包、待审语料、图像、旧脚本/报告等，不能一概称垃圾或源码。
+- 根因能由证据支持的是：独立旧副本的构建本机改动、生成文件及历史清理删除未形成提交闭环，活动仓又积累了文档未提交；此前缺少对所有副本的结束检查与唯一活动源码约束。Git工作区本身不记录未提交修改者与原因，不能推断责任人或伪造测试结论。上一轮只盘点缓存并保留这些未核实项，未解决历史债务，因此不得宣称全项目零未提交。
+- 处置边界：不将97副本的缓存、待审资料、审核脚本和192删除记录无审查全部提交，也不为满足“干净”强行丢弃。历史副本仍待差异审查/有效内容归并/敏感信息检查/必要验证后清除，仅此真实阻塞不能写成已经全部完成。03副本本次受跟踪工作区无改动。物理删除仍须用户执行先前命令后读回，代理删除被blocked by policy拦截的事实不变。
+- 规则执行顺序：审查有效差异→测试→更新交接与同步镜像→逐路径暂存并提交推送→核对HEAD/上游和空status→停止任务服务→精确清场→确认当前新版+唯一回滚版→记录已发生结果。清理结果应在最终文档提交前纳入，最后只读核验，禁止靠不断提交后改报告形成循环。
+- 本轮未修改功能源码/构建/部署/商店，未删除安装包或唯一语料。新增制度与报告/AGENTS/主账本的具体路径均在活动仓；严格按项目原制度同步E盘报告与制度镜像并校验，git diff --check验证。自动删除限制仍未解除，本次不冒称7.39GB已经释放。
+
+### 用户手动CMD清理命令（完整留存；尚未确认执行成功）
+
+以下为2026-10-18盘点出的16目录+3缓存文件，7393524207字节约6.89GiB。仅删除可再生成依赖/缓存/构建产物、任务临时物及作废2100；源码/.git/密钥/2101当前提审包与审核证据不在其中。目录联接已排除。旧命令执行前须再次确认目标仍为所述用途，不可盲目用于以后发生变化的目录。也可执行已交付的outputs/guoxue-clean-20261018.cmd，文件名固定，不另建多份脚本。结果出现FAILED即未清理完成。
+~~~cmd
+@echo off
+setlocal
+echo Guoxue workspace disposable files cleanup.
+echo Source, credentials, release 2101 and audit evidence are excluded.
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\work\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\work"
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\work\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\work
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\outputs\荣耀OPPO候选包_25.0.113_2100\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\outputs\荣耀OPPO候选包_25.0.113_2100"
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\outputs\荣耀OPPO候选包_25.0.113_2100\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\outputs\荣耀OPPO候选包_25.0.113_2100
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\node_modules\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\node_modules"
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\node_modules\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\node_modules
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\.next\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\.next"
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\.next\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\.next
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\out\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\out"
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\out\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\out
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\www\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\www"
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\www\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\www
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\android\app\build\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\android\app\build"
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\android\app\build\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\android\app\build
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\android\.gradle\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\android\.gradle"
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\android\.gradle\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\android\.gradle
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\node_modules\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\node_modules"
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\node_modules\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\node_modules
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\.next\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\.next"
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\.next\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\.next
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\android\app\build\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\android\app\build"
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\android\app\build\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\android\app\build
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\android\.gradle\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\android\.gradle"
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\android\.gradle\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\android\.gradle
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\.gradle-home\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\.gradle-home"
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\.gradle-home\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\.gradle-home
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\.gradle-home-2\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\.gradle-home-2"
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\.gradle-home-2\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\.gradle-home-2
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-ziwei-fix-03\.next\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-ziwei-fix-03\.next"
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-ziwei-fix-03\.next\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-ziwei-fix-03\.next
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-ziwei-fix-03\out\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-ziwei-fix-03\out"
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-ziwei-fix-03\out\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-ziwei-fix-03\out
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\tsconfig.tsbuildinfo" del /f /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\tsconfig.tsbuildinfo"
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\tsconfig.tsbuildinfo" del /f /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\tsconfig.tsbuildinfo"
+if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-ziwei-fix-03\tsconfig.tsbuildinfo" del /f /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-ziwei-fix-03\tsconfig.tsbuildinfo"
+echo Cleanup commands finished. Any FAILED lines require checking.
+endlocal
+
+~~~
