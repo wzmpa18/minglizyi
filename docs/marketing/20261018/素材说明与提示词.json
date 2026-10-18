@@ -6,12 +6,14 @@
   "assets": [
     {
       "file": "01_经典阅读.png",
-      "source": "exec-4a2e0a2a-97db-4c29-aa82-ef1f46d67837.png",
+      "source": "exec-5977b7dd-103b-41cb-9738-925f33896473.png",
       "prompt": "Use case: ads-marketing. Create an original premium Chinese educational app campaign poster, portrait 2:3, for 言道国学. Main scene: a beautifully crafted open classical Chinese book, subtle paper grain and jade-green cover, beside a modern reading notebook, delicate botanical study sketches as atmospheric accents. Contemporary editorial museum design, warm ivory background, deep forest green and restrained copper-gold, spacious elegant Chinese typography. Exact prominent text: 「言道国学」「把经典读进日常」. Exact smaller copy: 「篇章阅读 · 资料查阅 · 学习笔记」. A small bottom label: 「学习主题插画」. No phone mockup, no invented app interface, no divination charts, zodiac symbols, medical diagrams, efficacy claims, review badges, QR codes, prices or download promises. This is an honest brand illustration, not an app screenshot. Carefully render every Chinese character.",
       "width": 1024,
       "height": 1536,
-      "bytes": 2476714,
-      "sha256": "6644dbd82d275927bc71afff1fd50155a8c71297ae836ff20c28371061d6dbff"
+      "bytes": 2610866,
+      "sha256": "2202e29fb574eef84ec5fced1768842a499c7390ff17a0ed5bdede85c8af6592",
+      "revision": "负责人要求去掉论语，改用黄帝内经与阴符经；旧图不再用作当前宣传素材",
+      "editPrompt": "Use case: ads-marketing / precise-object-edit. Edit this original 言道国学 learning poster, preserving its warm ivory/forest-green museum-quality typography and the existing headlines exactly: 言道国学 / 把经典读进日常 / 篇章阅读 · 资料查阅 · 学习笔记 / 学习主题插画. The user does NOT want 论语 or Confucian literature in this campaign. Remove the open book titled 论语 and ALL its quotations; replace it with two beautifully crafted closed Chinese classic volumes with clearly readable cover titles exactly 「黄帝内经」 and 「阴符经」. The books must feel like premium classical editions, balanced with the study notebook and botanical atmosphere. Notebook may have only these readable study labels: 篇章 / 术语 / 出处 / 笔记. Do not invent classical quotations. Maintain excellent editorial composition and readable polished Chinese. No divination charts, anatomy, disease or treatment claims, fake UI screenshots, claims of complete medical review, prices, badges, QR codes. This remains an atmospheric brand illustration explicitly labelled 学习主题插画, not an actual app screenshot. Make no unrelated changes."
     },
     {
       "file": "02_中医资料.png",

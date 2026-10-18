@@ -7,6 +7,7 @@ import { ContinuousListenPlayer } from "@/components/ContinuousListenPlayer";
 import AIInterpretButton from "@/components/AIInterpretButton";
 import classicsData from "@/data/guoxueClassics.json";
 import { loadJsonPack } from "@/lib/offlinePackClient";
+import { classicReadingBlocks, isCompatibleGuoxuePack } from "@/lib/classicReading";
 
 const BRAND = "#7B2FBE";
 
@@ -33,9 +34,7 @@ export default function BooksPage() {
     const reload = async () => {
       const pack = await loadJsonPack<GuoxueClassicsPack>("guoxue-classics-approved");
       if (!active || !pack) return;
-      const fullTextPack = Array.isArray(pack.books)
-        && pack.books.length > 0
-        && pack.books.every((book) => book.completeness === "full" && book.sectionCount > 0);
+      const fullTextPack = isCompatibleGuoxuePack(pack);
       if (active && pack?.schema === "yandao.guoxue.classics.v1" && fullTextPack) {
         setCatalogue({ books: pack.books, notice: pack.notice || classicsData.notice, version: pack.version });
       }
@@ -117,17 +116,36 @@ export default function BooksPage() {
 }
 
 function BookReader({ book, onBack }: { book: GuoxueBook; onBack: () => void }) {
+  const blocks = useMemo(() => classicReadingBlocks(book.content), [book.content]);
+  const [fontSize, setFontSize] = useState(18), [bookmark, setBookmark] = useState(""), [message, setMessage] = useState("");
+  const bookmarkKey = `classic-reading-position-v1:${book.id}`;
+  useEffect(() => {
+    try { setBookmark(localStorage.getItem(bookmarkKey) || ""); } catch { setMessage("本机书签无法读取，正文仍可阅读。"); }
+  }, [bookmarkKey]);
+  const savePosition = () => {
+    const target = blocks.find(block => { const element = document.getElementById(block.id); return element && element.getBoundingClientRect().bottom > 90; });
+    if (!target) return;
+    try { localStorage.setItem(bookmarkKey, target.id); setBookmark(target.id); setMessage("已记住本机阅读位置。"); } catch { setMessage("书签保存失败，请先记下段落位置。"); }
+  };
   return (
-    <div className="min-h-screen bg-[#F7F5F2]" style={{ maxWidth: 520, margin: "0 auto" }}>
-      <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-gray-100 bg-white px-3 py-3">
-        <button type="button" onClick={onBack} className="rounded-lg px-2 py-1 text-xl text-gray-600">‹</button>
+    <div className="min-h-screen bg-[#f5f1e8]" style={{ maxWidth: 520, margin: "0 auto" }}>
+      <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-[#dce2d5] bg-[#fbf9f2] px-3 py-3" style={{ paddingTop: "max(12px, env(safe-area-inset-top))" }}>
+        <button type="button" aria-label="返回典籍目录" onClick={onBack} className="rounded-lg px-2 py-1 text-xl text-[#30483f]">‹</button>
         <div className="min-w-0">
           <h1 className="truncate text-sm font-bold text-gray-800">《{book.title}》</h1>
           <p className="text-[10px] text-gray-400">{book.author} · {book.category}</p>
         </div>
       </header>
       <main className="px-4 py-4">
-        <section className="mb-3 rounded-xl border border-gray-100 bg-white p-3">
+        <section className="mb-4 overflow-hidden rounded-2xl bg-[#244b40] px-5 py-6 text-[#fbf4dc]">
+          <p className="text-[11px] tracking-[0.2em] text-[#b6cbb7]">{book.category} · 典籍阅读</p>
+          <h2 className="mt-3 text-2xl font-semibold leading-relaxed" style={{ fontFamily: '"Noto Serif SC", "Songti SC", SimSun, serif' }}>《{book.title}》</h2>
+          <p className="mt-2 text-xs leading-6 text-[#d1ddca]">{book.author}</p>
+          <div className="mt-5 flex flex-wrap gap-2 text-[10px]"><span className="rounded-full border border-[#678577] px-2 py-1">原文阅读</span><span className="rounded-full border border-[#678577] px-2 py-1">连续听学</span><span className="rounded-full border border-[#678577] px-2 py-1">本机书签</span></div>
+        </section>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#fffdf7] p-3 text-[#30483f]"><div className="flex items-center gap-2"><span className="text-xs">字号</span>{[16, 18, 22].map(size => <button key={size} type="button" aria-label={`字号${size}`} aria-pressed={fontSize === size} onClick={() => setFontSize(size)} className="rounded-lg border px-3 py-2 text-xs" style={{ background: fontSize === size ? "#e4ecdf" : "transparent" }}>{size === 16 ? "小" : size === 18 ? "中" : "大"}</button>)}</div><button type="button" onClick={savePosition} className="text-xs underline">记住位置</button>{bookmark && <button type="button" onClick={() => document.getElementById(bookmark)?.scrollIntoView({ block: "start", behavior: "smooth" })} className="text-xs underline">继续上次阅读</button>}</div>
+        {message && <p role="status" className="mb-3 text-xs text-[#2a6351]">{message}</p>}
+        <details className="mb-3 rounded-xl border border-[#dce2d5] bg-[#fffdf7] p-3"><summary className="cursor-pointer text-sm font-semibold text-[#30483f]">听学与原文辅助</summary><div className="mt-3">
           <LocalListenButton text={`${book.title}。${book.content}`} contentId={`guoxue:${book.id}`} />
           <ContinuousListenPlayer collectionId={`guoxue:${book.id}`} title="全书连续听学"
             items={[{ id: book.id, title: book.title, text: book.content }]} />
@@ -137,8 +155,8 @@ function BookReader({ book, onBack }: { book: GuoxueBook; onBack: () => void }) 
               buttonText="🤖 AI解读本书" cacheKey={`guoxue_interpret:${book.id}`} contextData={book.content.slice(0, 12000)}
               systemPrompt="你是国学古籍阅读助手。只能依据用户提供的古籍原文解释字词、句义、篇章结构与历史语境；不得虚构书名、篇名、页码或人物观点。明确区分原文、释义与学习提示，不把古代观念直接包装成现代事实。" />
           </div>
-        </section>
-        <article className="whitespace-pre-wrap rounded-2xl bg-white px-5 py-6 text-[17px] leading-9 text-gray-800 shadow-sm">{book.content}</article>
+        </div></details>
+        <article aria-label="典籍原文" className="rounded-2xl border border-[#e8e1d2] bg-[#fffdf7] px-5 py-6 text-[#273c33] shadow-sm" style={{ fontSize, lineHeight: 2.05, fontFamily: '"Noto Serif SC", "Songti SC", SimSun, serif' }}>{blocks.map(block => block.heading ? <h3 key={block.id} id={block.id} className="mb-4 mt-7 scroll-mt-24 border-l-2 border-[#b2975a] pl-3 text-lg font-bold">{block.text}</h3> : <p key={block.id} id={block.id} className="mb-5 scroll-mt-24 whitespace-pre-line text-justify">{block.text}</p>)}</article>
         <p className="my-4 text-center text-[10px] leading-5 text-gray-500">原文来源：<a href={book.sourceUrl} target="_blank" rel="noopener noreferrer" className="underline">{book.sourceName}</a> · {book.license}<br />来源记录 {book.sectionCount} 个文本区块，尚未逐字校勘。</p>
       </main>
     </div>

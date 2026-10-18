@@ -20,6 +20,8 @@ export default function LearningEntryPanel() {
         {ENTRIES.map((entry) => <Link key={entry.href} href={entry.href} className="rounded-xl bg-[#f1f7f4] p-3"><span className="block text-sm font-semibold text-gray-800">{entry.label}</span><span className="mt-1 block text-[11px] text-gray-500">{entry.detail}</span></Link>)}
       </div>
       <div className="mt-3 flex flex-wrap gap-2 text-xs text-[#5c3677]">
+        <Link href="/books?book=huangdi_yinfujing" className="rounded-lg bg-[#f5f0f8] px-3 py-2">阴符经原文</Link>
+        <Link href="/zhongyi/classic?book=suwen-original" className="rounded-lg bg-[#f5f0f8] px-3 py-2">黄帝内经·素问</Link>
         <Link href="/academy/learn?track=zhongyi" className="rounded-lg bg-[#f5f0f8] px-3 py-2">进阶知识点</Link>
         <Link href="/academy/question-bank?track=zhongyi" className="rounded-lg bg-[#f5f0f8] px-3 py-2">章节题库</Link>
         <Link href="/academy/wrong-book" className="rounded-lg bg-[#f5f0f8] px-3 py-2">账号错题本</Link>

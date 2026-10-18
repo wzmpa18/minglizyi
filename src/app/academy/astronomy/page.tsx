@@ -42,13 +42,14 @@ export default function AstronomyStudyPage() {
   return <div className="mx-auto max-w-3xl bg-[#081827] px-4 py-5 text-[#e6edf5]">
     <Link href="/academy" className="text-sm text-[#a7cadb]">‹ 返回学堂</Link>
     <header className="my-5"><p className="text-xs tracking-widest text-[#8ed3ce]">观察 · 理解 · 记录</p><h1 className="mt-2 text-3xl font-bold">天文馆</h1><p className="mt-3 text-sm leading-7 text-[#b9cbd8]">把时间与地点放进天空。认识日月行星的位置，再回到传统历法，理解古人如何观察时序。</p></header>
-    <form onSubmit={event => { event.preventDefault(); update(); }} className="rounded-2xl border border-[#294251] bg-[#102433] p-4">
-      <label className="block text-sm">观测时间（北京时间 UTC+8）<input aria-label="观测时间" type="datetime-local" min="1900-01-01T00:00" max="2100-12-31T23:59" value={time} onChange={event => setTime(event.target.value)} className="mt-2 block w-full min-w-0 rounded-lg border border-[#3e5d70] bg-[#081827] p-3 text-white [color-scheme:dark]" /></label>
+    <details className="rounded-2xl border border-[#294251] bg-[#102433] p-4"><summary className="cursor-pointer text-sm font-semibold text-[#9cddd4]">调整观测时间与地点</summary>
+    <form onSubmit={event => { event.preventDefault(); update(); }} className="mt-4">
+      <label className="block text-sm">观测时间（北京时间 UTC+8）<input aria-label="观测时间" type="datetime-local" min="1900-01-01T00:00" max="2100-12-31T23:59" value={time} onInput={event => setTime(event.currentTarget.value)} onChange={event => setTime(event.target.value)} className="mt-2 block w-full min-w-0 rounded-lg border border-[#3e5d70] bg-[#081827] p-3 text-white [color-scheme:dark]" /></label>
       <div className="my-3 flex flex-wrap gap-2">{LOCATIONS.map(location => <button type="button" key={location.name} onClick={() => { setLatitude(String(location.lat)); setLongitude(String(location.lon)); }} className="rounded-full border border-[#3e5d70] px-3 py-2 text-xs">{location.name}</button>)}</div>
       <div className="grid grid-cols-2 gap-3"><label className="text-xs">北纬为正、南纬为负<input aria-label="纬度" type="number" step="any" min="-90" max="90" value={latitude} onChange={event => setLatitude(event.target.value)} className="mt-2 w-full rounded-lg bg-[#081827] p-3" required /></label><label className="text-xs">东经为正、西经为负<input aria-label="经度" type="number" step="any" min="-180" max="180" value={longitude} onChange={event => setLongitude(event.target.value)} className="mt-2 w-full rounded-lg bg-[#081827] p-3" required /></label></div>
       <div className="mt-4 flex flex-wrap gap-2"><button type="submit" className="rounded-lg bg-[#9cddd4] px-4 py-3 text-sm font-bold text-[#102433]">更新观测图</button><button type="button" onClick={() => update(chinaTimeInput(new Date()))} className="rounded-lg border border-[#3e5d70] px-4 py-3 text-sm">回到现在</button></div>
       <p className="mt-3 text-xs text-[#9eb5c6]">地点由你选择，计算在设备内完成，不申请定位权限。</p>{error && <p role="alert" className="mt-3 text-sm text-[#ffb0a6]">{error} 图中仍为上次有效输入。</p>}
-    </form>
+    </form></details>
     <section aria-label="日月行星观测图" className="mt-4 rounded-2xl border border-[#294251] p-4">
       <h2 className="text-lg font-bold">仰望天空</h2><p className="mt-2 text-xs leading-6 text-[#9eb5c6]">{formatChinaTime(parseChinaTime(applied.time))} · 北纬{applied.lat}° · 东经{applied.lon}°。中心为天顶，圆周为地平线，面向天空时东在左。这里只绘出地平线上方的日月行星，不是完整恒星星图。</p>
       <svg viewBox="0 0 360 360" role="img" aria-label="天顶投影，北在上东在左；天体数值见下方列表" className="mx-auto w-full max-w-md">
