@@ -67,7 +67,8 @@ router.put('/admin/:id', handle(req => {
   if (!row) { const error = Error('反馈不存在'); error.status = 404; throw error; }
   if (body.expectedUpdatedAt !== (row.updatedAt || row.createdAt)) { const error = Error('反馈已被更新，请刷新后重试'); error.status = 409; throw error; }
   const before = row.status;
-  row.status = body.status; row.adminReply = reply; row.updatedAt = new Date().toISOString(); row.repliedAt = row.updatedAt;
+  row.status = body.status; row.adminReply = reply;
+  row.updatedAt = new Date(Math.max(Date.now(), Date.parse(row.updatedAt || row.createdAt) + 1)).toISOString(); row.repliedAt = row.updatedAt;
   write(rows);
   audit(req.admin, 'FEEDBACK_REVIEW', row.id, before, { status: row.status, replyCharacters: reply.length }, '用户反馈处理', req);
   return { success: true, feedback: row };
