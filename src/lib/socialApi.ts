@@ -47,7 +47,7 @@ export function isLoggedIn(): boolean {
 export interface SocialPost {
   id: string; postId: string; authorId: string; authorName: string; authorAvatar: string;
   content: string; images: string[]; tags: string[]; toolType: string;
-  circle: string; circleLabel: string;
+  circle: string; circleLabel: string; status?: string;
   likeCount: number; commentCount: number; liked: boolean; createdAt: string;
 }
 
@@ -95,7 +95,7 @@ export async function reportComment(commentId: string, reason: string) {
 }
 
 export async function createPost(data: { content: string; images?: string[]; tags?: string[]; toolType?: string; circle?: string }) {
-  return api<{ success: boolean; post?: SocialPost; error?: string }>(`/api/social/posts`, {
+  return api<{ success: boolean; post?: SocialPost; pendingReview?: boolean; message?: string; error?: string }>(`/api/social/posts`, {
     method: "POST",
     body: JSON.stringify(data),
   });

@@ -33,6 +33,11 @@ on:
       - 'src/components/ResourceDiscussion.tsx'
       - 'backend_deploy/resourceDiscussionQueries.js'
       - 'backend_deploy/socialApiRoutes.js'
+      - 'backend_deploy/socialFeaturePolicy.js'
+      - 'scripts/social-feature-policy.test.cjs'
+      - 'src/app/discover/page.tsx'
+      - 'src/lib/socialApi.ts'
+      - 'src/app/admin/moderation/page.tsx'
       - 'scripts/resource-discussion.test.cjs'
       - 'backend_deploy/socialVisibilityQueries.js'
       - 'scripts/social-visibility.test.cjs'
@@ -153,6 +158,7 @@ jobs:
       - run: npx tsx --test scripts/bazi-yun-metadata.test.ts
       - run: node --test scripts/resource-discussion.test.cjs
       - run: node --test scripts/social-visibility.test.cjs
+      - run: node --test scripts/social-feature-policy.test.cjs
       - run: node --test scripts/sales-promotion.test.cjs
       - run: node --test scripts/paid-ai-credits.test.cjs
       - run: node --test scripts/membership-ledger.test.cjs

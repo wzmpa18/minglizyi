@@ -652,7 +652,7 @@ export default function AdminModerationPage() {
                     </Td>
                     <Td>
                       <Badge type={p.status === "active" ? "success" : "error"}>
-                        {p.status === "active" ? "正常" : p.status === "removed" ? "已下架" : p.status}
+                        {p.status === "active" ? "正常" : p.status === "removed" ? "已下架" : p.status === "pending" ? "待审核" : p.status}
                       </Badge>
                     </Td>
                     <Td style={{ fontSize: 11 }}>{fmtTime(p.created_at)}</Td>
@@ -673,14 +673,14 @@ export default function AdminModerationPage() {
                         />
                       ) : (
                         <OpBtn
-                          label="恢复"
+                          label={p.status === "pending" ? "审核通过" : "恢复"}
                           icon={<CheckCircle2 size={11} />}
                           onClick={() =>
                             setActionTarget({
                               kind: "posts",
                               id: p.post_id,
-                              title: "恢复动态",
-                              actions: [{ label: "恢复展示", value: "restore" }],
+                              title: p.status === "pending" ? "审核通过并公开动态" : "恢复动态",
+                              actions: [{ label: p.status === "pending" ? "确认内容及图片符合规则，公开展示" : "恢复展示", value: "restore" }],
                             })
                           }
                         />

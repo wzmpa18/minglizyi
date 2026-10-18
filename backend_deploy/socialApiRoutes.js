@@ -15,7 +15,7 @@
  *   3) 群聊完整第一版：解散/转让/管理员/全员禁言/成员禁言/群昵称/群头像/邀请好友/举报群/举报消息
  *   4) 服务端黑名单（blacklists 表 + 私聊/好友申请/动态流/评论隔离）
  *   5) 动态收藏（favorites）+ 评论回复（parent_id）+ 好友备注（friend_remarks）
- *   6) 功能开关全量放开：posts/comments/groups enabled
+ *   6) 功能按普通发布渠道配置；新动态先待审，未配置时关闭发布。
  */
 'use strict';
 
@@ -26,6 +26,7 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const { listActiveResourceComments } = require('./resourceDiscussionQueries');
 const { getVisiblePost, listVisiblePosts, listVisiblePostComments, listVisibleFavoritePosts } = require('./socialVisibilityQueries');
+const { SOCIAL_FEATURE_KEYS, socialFeatureEnabled } = require('./socialFeaturePolicy');
 
 const SOCIAL_DB_PATH = process.env.SOCIAL_DB_PATH || path.join(__dirname, 'data', 'social.db');
 const USER_DB_PATH = process.env.DB_PATH || process.env.USER_DB_PATH || '/root/backend-auth/data/yandao_users.db';
@@ -337,35 +338,20 @@ const SOCIAL_CIRCLES = {
 
 // ==================== P7-整改-01：功能总开关（后台一键开关） ====================
 // 数据来源：data/social_feature_config.json（服务器后台可直接编辑），环境变量同名大写可覆盖。
-// v25.0.42 社交最终封板：好友/私聊/群聊/动态/评论 全量放开（发现社交全链 E2E 依据）。
-const FEATURE_CONFIG_PATH = path.join(__dirname, 'data', 'social_feature_config.json');
-const FEATURE_DEFAULTS = {
-  friends_add_enabled: true,   // 好友添加（含扫码加好友）
-  private_chat_enabled: true,  // 一对一私聊（文字+图片）
-  posts_enabled: true,         // 动态发布（v25.0.42 放开）
-  comments_enabled: true,      // 公开评论（v25.0.42 放开）
-  groups_enabled: true,        // 群聊（v25.0.42 放开）
-};
+// 按渠道正常发布；没有配置或配置损坏时关闭，环境变量保留全局停止能力。
+const FEATURE_CONFIG_PATH = process.env.SOCIAL_FEATURE_CONFIG_PATH || path.join(__dirname, 'data', 'social_feature_config.json');
 let featureConfigCache = null;
 let featureConfigMtime = 0;
 
-function featureEnabled(key) {
-  let val;
-  const envKey = key.toUpperCase();
-  if (process.env[envKey] !== undefined) {
-    val = process.env[envKey];
-  } else {
-    try {
+function featureEnabled(key, req) {
+  try {
       const st = fs.statSync(FEATURE_CONFIG_PATH);
       if (!featureConfigCache || st.mtimeMs !== featureConfigMtime) {
         featureConfigMtime = st.mtimeMs;
         featureConfigCache = JSON.parse(fs.readFileSync(FEATURE_CONFIG_PATH, 'utf-8'));
       }
-      val = featureConfigCache[key];
-    } catch { /* 无配置文件时走默认值 */ }
-  }
-  const enabled = val === undefined ? FEATURE_DEFAULTS[key] : (val === true || val === 'true' || val === 1 || val === '1');
-  return enabled;
+  } catch { featureConfigCache = null; }
+  return socialFeatureEnabled(key, req, featureConfigCache);
 }
 
 function featureDisabled(res, label) {
@@ -557,6 +543,7 @@ function rowToPost(row, currentUserId) {
     commentCount: row.comment_count,
     liked,
     createdAt: row.created_at,
+    status: row.status,
   };
 }
 
@@ -571,6 +558,10 @@ function createRouter() {
   // GET /api/social/circles —— 8 个固定圈层目录（前端筛选栏数据源，永久冻结）
   router.get('/circles', (_req, res) => {
     res.json({ success: true, circles: Object.values(SOCIAL_CIRCLES) });
+  });
+  router.get('/features', (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    res.json({ success: true, features: Object.fromEntries(SOCIAL_FEATURE_KEYS.map(key => [key, featureEnabled(key, req)])), postsRequireReview: true });
   });
 
   // GET /api/social/posts?tag=&circle=&cursor=&limit=（circle 圈层筛选，不同领域不混排）
@@ -605,7 +596,7 @@ function createRouter() {
   // P6-I-PLUS 规则5：发布动态必须绑定圈层（排盘/证书分享按 toolType 自动匹配，无圈层拒绝发布）
   router.post('/posts', authRequired, socialRateLimitGate('post_publish'), (req, res) => {
     try {
-      if (!featureEnabled('posts_enabled')) return featureDisabled(res, '动态发布');
+      if (!featureEnabled('posts_enabled', req)) return featureDisabled(res, '动态发布');
       const _mute = checkPlatformMute(req.user.userId);
       if (_mute) return res.status(403).json({ success: false, error: `你已被禁言（剩余约${_mute.remainMinutes}分钟），暂不能发布动态`, code: 'USER_MUTED' });
       const { content, images = [], tags = [], toolType = '', circle = '' } = req.body;
@@ -626,13 +617,13 @@ function createRouter() {
       }
       const info = userPublicInfo(req.user.userId) || { nickname: '国学爱好者', avatar: '' };
       const postId = `p${Date.now()}${Math.floor(Math.random() * 1000)}`;
-      getDb().prepare(`INSERT INTO posts (post_id, user_id, nickname, avatar, content, images, tags, tool_type, circle) VALUES (?,?,?,?,?,?,?,?,?)`)
+      getDb().prepare(`INSERT INTO posts (post_id, user_id, nickname, avatar, content, images, tags, tool_type, circle, status) VALUES (?,?,?,?,?,?,?,?,?,'pending')`)
         .run(postId, String(req.user.userId), info.nickname, info.avatar, String(content).trim().slice(0, 5000),
           JSON.stringify(Array.isArray(images) ? images.slice(0, 9) : []),
           JSON.stringify(Array.isArray(tags) ? tags.slice(0, 5) : []),
           String(toolType || '').slice(0, 40), ck);
       const row = getDb().prepare('SELECT * FROM posts WHERE post_id = ?').get(postId);
-      res.json({ success: true, post: rowToPost(row, String(req.user.userId)) });
+      res.json({ success: true, pendingReview: true, message: '已提交审核，通过后公开。', post: rowToPost(row, String(req.user.userId)) });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
     }
@@ -755,7 +746,7 @@ function createRouter() {
 
   router.post('/resource/:resourceType/:resourceId/comments', authRequired, socialRateLimitGate('comment'), async (req, res) => {
     try {
-      if (!featureEnabled('comments_enabled')) return featureDisabled(res, '评论');
+      if (!featureEnabled('comments_enabled', req)) return featureDisabled(res, '评论');
       const resourceType = String(req.params.resourceType || '').trim();
       const resourceId = String(req.params.resourceId || '').trim().slice(0, 160);
       if (!['acupoint', 'classic', 'yixue', 'academy'].includes(resourceType) || !resourceId) {
@@ -875,7 +866,7 @@ function createRouter() {
   // parentId 必须指向同动态的未删除评论；回复回复自动拍平挂到根（两级展示，不无限缩进）
   router.post('/posts/:postId/comments', authRequired, socialRateLimitGate('comment'), (req, res) => {
     try {
-      if (!featureEnabled('comments_enabled')) return featureDisabled(res, '评论');
+      if (!featureEnabled('comments_enabled', req)) return featureDisabled(res, '评论');
       const _mute = checkPlatformMute(req.user.userId);
       if (_mute) return res.status(403).json({ success: false, error: `你已被禁言（剩余约${_mute.remainMinutes}分钟），暂不能评论`, code: 'USER_MUTED' });
       const { content, parentId = 0 } = req.body;
@@ -984,7 +975,7 @@ function createRouter() {
   // POST /api/social/friends/request { toId, message }
   router.post('/friends/request', authRequired, socialRateLimitGate('friend_request'), (req, res) => {
     try {
-      if (!featureEnabled('friends_add_enabled')) return featureDisabled(res, '添加好友');
+      if (!featureEnabled('friends_add_enabled', req)) return featureDisabled(res, '添加好友');
       const { toId, message = '' } = req.body;
       const me = String(req.user.userId);
       const target = String(toId || '');
@@ -1089,7 +1080,7 @@ function createRouter() {
   // GET /api/social/messages/private/:peerId?afterId=
   router.get('/messages/private/:peerId', authRequired, (req, res) => {
     try {
-      if (!featureEnabled('private_chat_enabled')) return featureDisabled(res, '私聊');
+      if (!featureEnabled('private_chat_enabled', req)) return featureDisabled(res, '私聊');
       const convId = privateConvId(req.user.userId, req.params.peerId);
       const afterId = parseInt(req.query.afterId, 10) || 0;
       const rows = getDb().prepare('SELECT * FROM chat_messages WHERE conversation_id = ? AND id > ? ORDER BY id ASC LIMIT 200').all(convId, afterId);
@@ -1107,7 +1098,7 @@ function createRouter() {
   // v25.0.42：黑名单拦截 + clientMsgId 幂等 + 统一会话模型（服务端未读）
   router.post('/messages/private/:peerId', authRequired, socialRateLimitGate('private_message'), (req, res) => {
     try {
-      if (!featureEnabled('private_chat_enabled')) return featureDisabled(res, '私聊');
+      if (!featureEnabled('private_chat_enabled', req)) return featureDisabled(res, '私聊');
       const _mute = checkPlatformMute(req.user.userId);
       if (_mute) return res.status(403).json({ success: false, error: `你已被禁言（剩余约${_mute.remainMinutes}分钟），暂不能发送消息`, code: 'USER_MUTED' });
       const { content, type = 'text', clientMsgId = '' } = req.body;
@@ -1179,7 +1170,7 @@ function createRouter() {
 
   // 群聊开关（默认关闭，仅拦截写操作；读取走 GET 不受影响）
   router.use('/groups', (req, res, next) => {
-    if (!featureEnabled('groups_enabled') && req.method !== 'GET') {
+    if (!featureEnabled('groups_enabled', req) && req.method !== 'GET') {
       return featureDisabled(res, '群聊');
     }
     next();

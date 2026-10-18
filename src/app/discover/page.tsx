@@ -30,7 +30,6 @@ import {
 } from "@/lib/discoverService";
 import {
   getPosts,
-  addPost,
   getLikedPosts,
   toggleLikePost,
   filterSensitive,
@@ -51,6 +50,8 @@ import {
   fetchComments as apiFetchComments,
   SOCIAL_CIRCLES,
   type SocialPost,
+  fetchMyPosts as apiFetchMyPosts,
+  deletePost as apiDeletePost,
 } from "@/lib/socialApi";
 import { communityActivity } from "@/lib/pointsStore";
 import { getMembershipStatus } from "@/lib/membershipStore";
@@ -133,6 +134,11 @@ function PublishPanel({
   usePopupBackHandler(onClose, true);
 
   useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(`social-post-draft-v1:${getUserProfile()?.userId || "guest"}`) || "null");
+      if (typeof saved?.text === "string") setText(saved.text);
+      if (typeof saved?.circle === "string") setCircle(saved.circle);
+    } catch {}
     textareaRef.current?.focus();
   }, []);
 
@@ -531,6 +537,9 @@ export default function DiscoverPage() {
 
   // 通用状态
   const [showPublish, setShowPublish] = useState(false);
+  const [postMessage, setPostMessage] = useState("");
+  const [showOwnPosts, setShowOwnPosts] = useState(false), [ownPosts, setOwnPosts] = useState<SocialPost[]>([]);
+  const [ownBusy, setOwnBusy] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [commentsMap, setCommentsMap] = useState<Record<string, Comment[]>>({});
   const [follows, setFollows] = useState<Set<string>>(new Set());
@@ -934,6 +943,8 @@ export default function DiscoverPage() {
             }));
           }
         } else {
+          setPostMessage(r?.error || "评论提交失败，尚未发表。文字已保留，请检查网络后重试。");
+          setCommentText(current => current || text);
           setCommentsMap((prev) => ({
             ...prev,
             [postId]: (prev[postId] || []).filter((c) => c.id !== localComment.id),
@@ -986,47 +997,42 @@ export default function DiscoverPage() {
   // ==================== 发布动态（v25.0.19：后端真实发布，全站用户可见） ====================
   const handlePublish = useCallback((content: string, circle: string) => {
     if (!requireLogin()) return;
-    const { filtered } = filterSensitive(content);
-    const user = getUserProfile();
-    const circleInfo = SOCIAL_CIRCLES.find((c) => c.key === circle);
-    const optimistic: QualityPost = {
-      id: `user_${Date.now()}`,
-      authorId: user?.userId || "anonymous",
-      authorName: user?.nickname || "言道用户",
-      authorAvatar: user?.avatar || "",
-      content: filtered,
-      images: [],
-      topic: circleInfo ? circleInfo.label : "",
-      likes: 0,
-      comments: 0,
-      shares: 0,
-      liked: false,
-      isAd: false,
-      createdAt: new Date().toISOString(),
-      qualityScore: 0,
-      tags: activeTag ? [activeTag] : [],
-    };
-    // 乐观插入
-    setPosts((prev) => [optimistic, ...prev]);
-    void apiCreatePost({
-      content: filtered,
-      circle,
-      tags: activeTag ? [activeTag] : undefined,
-    }).then((r) => {
-      if (r && r.success && r.post) {
-        const serverPost = toQualityPost(r.post);
-        // 用服务端真实动态替换本地乐观版本
-        setPosts((prev) => [serverPost, ...prev.filter((p) => p.id !== optimistic.id)]);
+    const actor = getUserProfile()?.userId;
+    const draftKey = `social-post-draft-v1:${actor || "guest"}`;
+    try { localStorage.setItem(draftKey, JSON.stringify({ text: content, circle })); } catch {}
+    setPostMessage("正在提交动态，请稍候…");
+    void apiCreatePost({ content, circle, tags: activeTag ? [activeTag] : undefined }).then(result => {
+      if (getUserProfile()?.userId !== actor) return;
+      if (!result.success || !result.post) { setPostMessage(result.error || "提交失败，文字草稿仍保留在本机，请重新打开发布面板重试。"); return; }
+      try { localStorage.removeItem(draftKey); } catch {}
+      if (result.pendingReview || result.post.status === "pending") {
+        setPostMessage("动态已提交审核，通过后才会公开。可在“我的动态”查看状态；文字和图片不经审核不会进入广场。");
       } else {
-        // 发布失败移除乐观版本并提示
-        setPosts((prev) => prev.filter((p) => p.id !== optimistic.id));
-        addPost(optimistic);
+        setPosts(previous => [toQualityPost(result.post!), ...previous]);
+        setPostMessage("动态已发布。");
+        try { communityActivity("发布动态"); } catch {}
       }
-    });
-    try {
-      communityActivity("发布动态");
-    } catch {}
+    }).catch(() => setPostMessage("网络请求失败，尚未确认发表；草稿保留在本机。"));
   }, [requireLogin, activeTag]);
+
+  const loadOwnPosts = async () => {
+    if (!requireLogin()) return;
+    setOwnBusy(true); setShowOwnPosts(true);
+    try {
+      const response = await apiFetchMyPosts();
+      if (response.success && response.posts) setOwnPosts(response.posts);
+      else setPostMessage("我的动态暂时读取失败，请检查登录状态后重试。");
+    } finally { setOwnBusy(false); }
+  };
+  const removeOwnPost = async (postId: string) => {
+    if (!window.confirm("撤回这条自己的动态？广场和其他用户将不再看到。")) return;
+    setOwnBusy(true);
+    try {
+      const response = await apiDeletePost(postId);
+      if (response.success) { setOwnPosts(previous => previous.filter(post => post.postId !== postId)); setPosts(previous => previous.filter(post => post.id !== postId)); setPostMessage("已撤回自己的动态。"); }
+      else setPostMessage(response.error || "撤回失败，请重试。");
+    } finally { setOwnBusy(false); }
+  };
 
   // ==================== 搜索过滤 ====================
   const filteredPosts = posts.filter((p) => {
@@ -1041,7 +1047,10 @@ export default function DiscoverPage() {
       style={{ backgroundColor: "#f5f5f5", maxWidth: "420px", margin: "0 auto", paddingBottom: "72px" }}
     >
       <BrandHeader title="发现" />
+      {postMessage && <p role="status" className="mx-3 mt-3 rounded-xl border border-purple-200 bg-purple-50 p-3 text-sm leading-6 text-purple-900">{postMessage}</p>}
 
+      <div className="mx-3 mt-3 flex items-center gap-3 text-sm"><button type="button" disabled={ownBusy} onClick={() => void loadOwnPosts()} className="rounded-lg border border-purple-200 bg-white px-3 py-2 text-purple-800">{ownBusy ? "正在读取…" : "我的动态"}</button><a href="/profile/feedback/" className="text-xs text-gray-600 underline">联系开发者</a></div>
+      {showOwnPosts && <section aria-label="我的动态与审核状态" className="mx-3 mt-3 rounded-xl bg-white p-4"><div className="flex items-center justify-between"><h2 className="font-bold">我的动态</h2><button type="button" onClick={() => setShowOwnPosts(false)} className="text-xs text-gray-500">收起</button></div>{ownPosts.length ? ownPosts.map(post => <article key={post.postId} className="mt-3 border-t pt-3"><p className="text-xs font-bold text-purple-800">{post.status === "pending" ? "待审核，尚未公开" : post.status === "active" ? "已公开" : "已下架"}</p><p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6">{post.content}</p>{post.images.length > 0 && <p className="mt-1 text-xs text-gray-500">包含{post.images.length}张附图，随动态一起审核</p>}<button type="button" disabled={ownBusy} onClick={() => void removeOwnPost(post.postId)} className="mt-2 text-xs text-red-700">撤回自己的动态</button></article>) : <p className="mt-3 text-sm text-gray-500">{ownBusy ? "正在读取…" : "暂无提交记录。"}</p>}</section>}
       {/* 附近用户入口 */}
       <div className="flex gap-2 px-3 pt-3 overflow-x-auto" style={{ marginBottom: "0" }}>
         <button

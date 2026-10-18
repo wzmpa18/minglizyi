@@ -47,7 +47,7 @@ export function LocalChartNotebook({ storageKey, legacyKey, subject }: { storage
     if (!files.length || busy || !ready) return;
     if (images.length + files.length > CHART_NOTE_MAX_IMAGES) { setMessage('每份笔记最多保存6张图片。'); return; }
     if (files.some(file => !CHART_NOTE_IMAGE_TYPES.includes(file.type) || file.size < 1 || file.size > CHART_NOTE_MAX_IMAGE_BYTES)) { setMessage('请选择JPG、PNG、WebP或GIF图片，每张不超过5MB。'); return; }
-    if ([...images, ...files].reduce((sum, file) => sum + ('bytes' in file ? file.bytes : file.size), 0) > CHART_NOTE_MAX_TOTAL_BYTES) { setMessage('本份笔记的图片总量不能超过20MB。'); return; }
+    if (images.reduce((sum, image) => sum + image.bytes, 0) + files.reduce((sum, file) => sum + file.size, 0) > CHART_NOTE_MAX_TOTAL_BYTES) { setMessage('本份笔记的图片总量不能超过20MB。'); return; }
     setBusy(true); setMessage('');
     try {
       const selected = await Promise.all(files.map(async file => {

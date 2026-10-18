@@ -127,6 +127,16 @@ async function worker(root){
       assert.equal((await social('/posts/visible/like','POST','invalid-jwt',{})).status,401);
       assert.equal((await social('/posts/visible/like','POST',bob,{})).status,200);
       assert.equal((await social('/posts/visible/comments','POST',bob,{content:'正文与版本应对应阅读'})).status,200);
+      const submitted=await social('/posts','POST',bob,{content:'学习交流投稿在审核前不可公开',circle:'TCM'});
+      assert.equal(submitted.status,200);assert.equal(submitted.body.pendingReview,true);assert.equal(submitted.body.post.status,'pending');
+      const pendingId=submitted.body.post.postId;
+      assert.equal((await social('/posts/'+pendingId)).status,404);
+      assert.ok((await social('/posts/mine')).body.posts.some(post=>post.postId===pendingId&&post.status==='pending'));
+      assert.ok(!(await social('/posts')).body.posts.some(post=>post.postId===pendingId));
+      assert.equal((await social('/posts/'+pendingId+'/like','POST',bob,{})).status,404);
+      assert.equal((await social('/posts/'+pendingId,'DELETE',alice)).status,403);
+      assert.equal((await social('/posts/'+pendingId,'DELETE',bob)).status,200);
+      console.log('PASS: social posts require manual review, stay absent from feed/detail/likes before approval, and only their owner can withdraw them.');
       process.env.PRICING_DATA_DIR=root;
       process.env.SALES_PROMOTION_FILE=path.join(root,'sales-promotion.json');
       const regular={plans:[{level:'basic',name:'普通会员',price:0},{level:'monthly',name:'月度会员',price:37,originalPrice:59,duration:'30天'}]};
