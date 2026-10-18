@@ -1,12 +1,15 @@
 "use client";
 
+import {InterfaceButton} from "@/components/InterfaceControls";
+
 interface ToggleSwitchProps {
+  label?:string;
   checked: boolean;
   onChange: () => void;
   size?: "sm" | "md";
 }
 
-export function ToggleSwitch({ checked, onChange, size = "md" }: ToggleSwitchProps) {
+export function ToggleSwitch({ checked, onChange, size = "md",label="开关" }: ToggleSwitchProps) {
   const isSm = size === "sm";
   const trackWidth = isSm ? 28 : 36;
   const trackHeight = isSm ? 16 : 20;
@@ -14,7 +17,8 @@ export function ToggleSwitch({ checked, onChange, size = "md" }: ToggleSwitchPro
   const knobOffset = isSm ? 13 : 18;
 
   return (
-    <button
+    <InterfaceButton
+      role="switch" aria-checked={checked} aria-label={label}
       type="button"
       onClick={onChange}
       style={{
@@ -44,6 +48,6 @@ export function ToggleSwitch({ checked, onChange, size = "md" }: ToggleSwitchPro
           transition: "left 0.2s",
         }}
       />
-    </button>
+    </InterfaceButton>
   );
 }

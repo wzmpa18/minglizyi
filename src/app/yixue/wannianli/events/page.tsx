@@ -414,7 +414,7 @@ export default function CalendarEventsPage() {
                         {ev.note && <div className="mt-1 line-clamp-2 text-[11px] text-gray-400">{ev.note}</div>}
                       </div>
                       <div className="flex flex-col items-end gap-2">
-                        <ToggleSwitch checked={!ev.paused} onChange={() => { setEventPaused(ev.id, !ev.paused); refresh(); }} size="sm" />
+                        <ToggleSwitch label={ev.paused?"恢复本条提醒":"暂停本条提醒"} checked={!ev.paused} onChange={() => { setEventPaused(ev.id, !ev.paused); refresh(); }} size="sm" />
                         <div className="flex gap-2">
                           <InterfaceButton onClick={() => openEdit(ev)} className="text-[11px] font-medium" style={{ color: BRAND }}>
                             编辑
@@ -699,7 +699,7 @@ export default function CalendarEventsPage() {
 
                 {/* 提醒档位（多选） */}
                 <div className="mb-3">
-                  <InterfaceLabel className="mb-1 block text-xs font-medium text-gray-600">提醒时间（可多选） *</InterfaceLabel>
+                  <InterfaceLabel className="mb-1 block text-xs font-medium text-gray-600">提醒时间（可多选，也可关闭）</InterfaceLabel>
                   <div className="flex flex-wrap gap-1.5">
                     {offsetOptions.map((o) => (
                       <InterfaceButton
@@ -724,7 +724,7 @@ export default function CalendarEventsPage() {
                     onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
                     maxLength={500}
                     rows={3}
-                    placeholder="补充说明，纯文本永久留存"
+                    placeholder="本机备注，请自行导出备份"
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-purple-400"
                   />
                 </div>
@@ -766,8 +766,9 @@ export default function CalendarEventsPage() {
                   {form.relatedName ? ` · ${form.relatedName}` : ""}
                 </div>
                 <div>
-                  日期：{form.dateStr}
-                  {form.dateMode === "lunar" && formLunarHint ? `（${formLunarHint}）` : ""} · {form.dateMode === "lunar" ? "农历" : "公历"}
+                  日期：{form.type==="birthday"?`${form.birthYearKnown?form.birthdayYear+"年":"出生年份未记录 · "}${form.dateMode==="lunar"?`农历${form.lunarMonth<0?"闰":""}${Math.abs(form.lunarMonth)}月${form.lunarDay}日`:`公历${Number(form.dateStr.split('-')[1])}月${Number(form.dateStr.split('-')[2])}日`}`:form.dateStr+(form.dateMode==="lunar"?`（${formLunarHint}）`:"（公历）")}
+                  <span className="block">{form.eventTime} · {form.timeZone}</span>
+                  {form.dateMode==="lunar"?<span className="block">无同名闰月：{form.birthdayRules.leapMonth==="regular"?"同名普通月提醒":"该年跳过"}；小月无三十：{form.birthdayRules.missingLunarDay==="last-day"?"月末提醒":"该年跳过"}</span>:<span className="block">平年无2月29日：{form.birthdayRules.feb29==="feb28"?"2月28日提醒":form.birthdayRules.feb29==="mar1"?"3月1日提醒":"该年跳过"}</span>}
                 </div>
                 <div>
                   重复规则：<span className="font-semibold" style={{ color: BRAND }}>{repeatSummary}</span>
@@ -776,7 +777,7 @@ export default function CalendarEventsPage() {
                   提醒档位：
                   {form.reminders
                     .map((o) => REMINDER_OFFSET_OPTIONS.find((x) => x.offsetMinutes === o)?.label || `提前${o}分钟`)
-                    .join("、")}
+                    .join("、")||"不启用提醒"}
                 </div>
               </div>
               <div className="mb-3 text-[11px] text-gray-400">确认后按上述规则推算并触发提醒；如需调整请返回修改。</div>
