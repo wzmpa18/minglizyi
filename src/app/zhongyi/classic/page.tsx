@@ -44,18 +44,8 @@ function ClassicSourceNotice({ book }: { book: ClassicBook }) {
     </div>
   </details>;
   return <aside style={{ margin: '12px 16px', padding: '12px', borderRadius: 10, background: '#f3edf7', color: '#593473', fontSize: 12, lineHeight: 1.7 }}>
-    {book.sourceUrl ? <>
-      <strong>原文来源：{book.sourceName}</strong>
-      <p>{book.verification}</p>
-      <p>{book.license}</p>
-      <a href={book.sourceRevisionUrl || book.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>查看本次收录的来源版本</a>
-      {book.sourcePages && <details style={{ marginTop: 6 }}><summary>查看全部 {book.sourcePages.length} 卷来源版本</summary>
-        {book.sourcePages.map((page, index) => <a key={page.revisionUrl} href={page.revisionUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'block', textDecoration: 'underline' }}>来源卷 {index + 1}</a>)}
-      </details>}
-    </> : <>
-      <strong>学习整理资料</strong>
-      <p>本条目含节选或 AI 辅助整理内容，尚未逐字校勘，不作为古籍校核全文。原有章节和学习功能继续保留。</p>
-    </>}
+    <strong>学习整理资料</strong>
+    <p>本条目含节选或 AI 辅助整理内容，尚未逐字校勘，不作为古籍校核全文。原有章节和学习功能继续保留。</p>
     <p>仅供文献学习，不作为个人诊断、处方或操作依据。</p>
   </aside>;
 }

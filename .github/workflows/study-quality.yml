@@ -57,6 +57,9 @@ on:
       - 'src/lib/classicReading.ts'
       - 'scripts/classic-reading.test.ts'
       - 'scripts/study-comments-http.test.cjs'
+      - 'src/lib/localTts.ts'
+      - 'src/components/LocalListenButton.tsx'
+      - 'scripts/native-listening.test.cjs'
   workflow_dispatch:
     inputs:
       preview:
@@ -93,6 +96,7 @@ jobs:
       - run: npx tsx --test scripts/astronomy-study.test.ts
       - run: node --test scripts/ios-full-profile.test.cjs
       - run: npx tsx --test scripts/classic-reading.test.ts
+      - run: node --test scripts/native-listening.test.cjs
       - name: Verify discussion HTTP authentication and moderation against production dependency versions
         run: |
           npm install --prefix "$RUNNER_TEMP/study-http-deps" --no-save --package-lock=false express@4.22.2 better-sqlite3@13.0.3 jsonwebtoken@9.0.3

@@ -46,7 +46,7 @@ jobs:
       APP_NAME: 言道国学
       BUNDLE_ID: com.yandaoguoxue.app
       RELEASE_VERSION: 25.0.115
-      RELEASE_BUILD: 6
+      RELEASE_BUILD: 7
       PROFILE_NAME: yandao guoxue iOS App Store 20260902
 
     steps:

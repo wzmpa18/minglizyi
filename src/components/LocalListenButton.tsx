@@ -25,8 +25,10 @@ export function LocalListenButton({ text, contentId, compact = false }: { text: 
   const [voices, setVoices] = useState<LocalTtsVoice[]>([]);
   const [voiceName, setVoiceName] = useState("");
   const cleanupRef = useRef<null | (() => void)>(null);
+  const playbackTurn = useRef(0);
 
   const stop = useCallback(() => {
+    playbackTurn.current++;
     cleanupRef.current?.(); cleanupRef.current = null;
     void stopLocalTts(); setState("idle"); setMessage("");
   }, []);
@@ -57,6 +59,7 @@ export function LocalListenButton({ text, contentId, compact = false }: { text: 
 
   const play = async () => {
     if (state === "speaking") { stop(); return; }
+    const turn = ++playbackTurn.current;
     setMessage("");
     try {
       try {
@@ -66,21 +69,24 @@ export function LocalListenButton({ text, contentId, compact = false }: { text: 
         else window.localStorage.removeItem(VOICE_KEY);
         window.localStorage.setItem(LAST_CONTENT_KEY, contentId);
       } catch { /* localStorage unavailable */ }
-      cleanupRef.current = await speakLocalText(text, rate, style, voiceName || undefined, (event) => {
+      const dispose = await speakLocalText(text, rate, style, voiceName || undefined, (event) => {
+        if (turn !== playbackTurn.current) return;
         if (event.state === "speaking") setState("speaking");
-        if (event.state === "finished" || event.state === "stopped") { setState("idle"); cleanupRef.current = null; }
-        if (event.state === "error") { setState("error"); setMessage(event.message || "朗读失败"); }
+        if (event.state === "finished" || event.state === "stopped") { playbackTurn.current++; setState("idle"); cleanupRef.current = null; }
+        if (event.state === "error") { playbackTurn.current++; setState("error"); setMessage(event.message || "朗读失败"); }
       });
+      if (turn !== playbackTurn.current) { dispose(); return; }
+      cleanupRef.current = dispose;
       setState("speaking");
     } catch (error) {
+      if (turn !== playbackTurn.current) return;
       setState("error"); setMessage(error instanceof Error ? error.message : "本机语音服务暂不可用");
-      setStatus((current) => current ? { ...current, available: false } : current);
     }
   };
 
   if (status && !status.available) {
     return <p className="text-[11px] text-amber-700">
-      {status.ready ? `${status.message}，可在手机系统的“文字转语音”设置中安装中文语音包。` : status.message}
+      {status.ready ? `${status.message}。请检查系统中文语音设置。` : status.message}
     </p>;
   }
   return (
@@ -99,7 +105,7 @@ export function LocalListenButton({ text, contentId, compact = false }: { text: 
         </select>
       )}
       {!compact && voices.length > 1 && (
-        <select aria-label="手机离线语音" value={voiceName} onChange={(e) => setVoiceName(e.target.value)}
+        <select aria-label="本机中文语音" value={voiceName} onChange={(e) => setVoiceName(e.target.value)}
           className="max-w-[180px] rounded-full border border-gray-200 bg-white px-2 py-1 text-xs text-gray-600">
           <option value="">自动选择柔和音色</option>
           {voices.map((voice) => <option key={voice.name} value={voice.name}>{voice.label}</option>)}
@@ -111,7 +117,7 @@ export function LocalListenButton({ text, contentId, compact = false }: { text: 
           <option value={0.7}>舒缓</option><option value={0.8}>标准</option><option value={0.92}>稍快</option>
         </select>
       )}
-      {!compact && <span className="self-center text-[10px] text-gray-400">离线朗读；音色设置保存在本机</span>}
+      {!compact && <span className="self-center text-[10px] text-gray-400">{status?.source === "ios" ? "系统中文语音" : "本机朗读"}；音色设置保存在本机</span>}
       {message && <span className="w-full text-[11px] text-red-600">{message}</span>}
     </div>
   );

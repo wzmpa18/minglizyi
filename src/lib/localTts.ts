@@ -7,7 +7,7 @@ export interface LocalTtsStatus {
   available: boolean;
   voiceName?: string;
   message: string;
-  source: "android" | "browser" | "unavailable";
+  source: "android" | "ios" | "browser" | "unavailable";
   engineName?: string;
 }
 
@@ -31,6 +31,7 @@ interface NativeLocalTts {
 
 const NativeTts = registerPlugin<NativeLocalTts>("LocalTts");
 let browserUtterance: SpeechSynthesisUtterance | null = null;
+let nativeSpeechGeneration = 0;
 
 function browserOfflineChineseVoices(): SpeechSynthesisVoice[] {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return [];
@@ -51,7 +52,7 @@ export async function getLocalTtsStatus(): Promise<LocalTtsStatus> {
       await new Promise((resolve) => setTimeout(resolve, 250));
       result = await NativeTts.getStatus();
     }
-    return { ...result, source: "android" };
+    return { ...result, source: Capacitor.getPlatform() === "ios" ? "ios" : "android" };
   }
   if (typeof window !== "undefined" && "speechSynthesis" in window) {
     let voice = browserOfflineChineseVoice();
@@ -89,21 +90,27 @@ export async function speakLocalText(
   const value = String(text || "").trim();
   if (!value) throw new Error("没有可朗读的文字");
   if (Capacitor.isNativePlatform() && Capacitor.isPluginAvailable("LocalTts")) {
+    const generation = ++nativeSpeechGeneration;
+    // Stop before attaching the new listener, so an old stop event cannot end
+    // the newly selected chapter. Stale widget cleanup cannot stop new speech.
+    await NativeTts.stop();
+    if (generation !== nativeSpeechGeneration) { onState?.({ state: "stopped" }); return () => {}; }
     let handle: PluginListenerHandle | null = null;
     handle = await NativeTts.addListener("stateChange", (event) => {
       onState?.(event);
-      if (event.state === "finished" || event.state === "error") {
+      if (event.state === "finished" || event.state === "error" || event.state === "stopped") {
         void handle?.remove();
         handle = null;
       }
     });
     try {
+      if (generation !== nativeSpeechGeneration) { await handle.remove(); handle = null; onState?.({ state: "stopped" }); return () => {}; }
       await NativeTts.speak({ text: value, rate, style, voiceName });
     } catch (error) {
       if (handle) await handle.remove();
       throw error;
     }
-    return () => { void NativeTts.stop(); void handle?.remove(); handle = null; };
+    return () => { if (generation === nativeSpeechGeneration) void NativeTts.stop(); void handle?.remove(); handle = null; };
   }
   const status = await getLocalTtsStatus();
   const voice = browserOfflineChineseVoice(voiceName);
@@ -123,6 +130,7 @@ export async function speakLocalText(
 }
 
 export async function stopLocalTts(): Promise<void> {
+  nativeSpeechGeneration++;
   if (Capacitor.isNativePlatform() && Capacitor.isPluginAvailable("LocalTts")) await NativeTts.stop();
   if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
   browserUtterance = null;
