@@ -56,6 +56,7 @@ on:
       - 'scripts/ios-full-profile.test.cjs'
       - 'src/lib/classicReading.ts'
       - 'scripts/classic-reading.test.ts'
+      - 'scripts/study-comments-http.test.cjs'
   workflow_dispatch:
     inputs:
       preview:
@@ -92,6 +93,10 @@ jobs:
       - run: npx tsx --test scripts/astronomy-study.test.ts
       - run: node --test scripts/ios-full-profile.test.cjs
       - run: npx tsx --test scripts/classic-reading.test.ts
+      - name: Verify discussion HTTP authentication and moderation against production dependency versions
+        run: |
+          npm install --prefix "$RUNNER_TEMP/study-http-deps" --no-save --package-lock=false express@4.22.2 better-sqlite3@13.0.3 jsonwebtoken@9.0.3
+          NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/study-comments-http.test.cjs
       - name: Verify original edition chapter sequence and provenance
         run: |
           node --input-type=module <<'JS'
