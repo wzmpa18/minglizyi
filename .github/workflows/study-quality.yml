@@ -75,6 +75,10 @@ on:
       - 'src/lib/offlinePackClient.ts'
       - 'src/app/offline/page.tsx'
       - 'scripts/offline-versions.test.cjs'
+      - 'src/lib/offlineDownloadLink.ts'
+      - 'scripts/offline-download-link.test.cjs'
+      - 'scripts/offline-download-http.test.cjs'
+      - 'backend_deploy/offlinePackRoutes.js'
       - 'backend_deploy/configure_learning_cos.js'
       - 'backend_deploy/learningCorsPolicy.js'
       - 'scripts/learning-cors.test.cjs'
@@ -181,6 +185,7 @@ jobs:
       - run: npx tsx --test scripts/astronomy-study.test.ts
       - run: npx tsx --test scripts/liuren-calendar.test.ts
       - run: node --experimental-strip-types --test scripts/offline-versions.test.cjs
+      - run: node --experimental-strip-types --test scripts/offline-download-link.test.cjs
       - run: node --test scripts/learning-cors.test.cjs
       - run: node --test scripts/ios-full-profile.test.cjs
       - run: npx tsx --test scripts/classic-reading.test.ts
@@ -192,6 +197,7 @@ jobs:
         run: |
           npm install --prefix "$RUNNER_TEMP/study-http-deps" --no-save --package-lock=false express@4.22.2 better-sqlite3@13.0.3 jsonwebtoken@9.0.3
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/study-comments-http.test.cjs
+          NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/offline-download-http.test.cjs
       - name: Verify Apple signature rejection and authenticated purchase endpoints with real dependencies
         run: |
           npm ci --prefix backend_deploy/apple-iap-runtime --ignore-scripts

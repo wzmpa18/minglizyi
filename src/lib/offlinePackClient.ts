@@ -17,6 +17,7 @@
 
 import { get, put, remove, listMeta } from "./storageManager";
 import { getUserToken } from "./auth";
+import { validateOfflineDownloadLink } from "./offlineDownloadLink";
 import { compareVersion, meetsMinAppVersion } from "./offlineVersions";
 export { compareVersion, meetsMinAppVersion } from "./offlineVersions";
 
@@ -185,8 +186,14 @@ export async function downloadPack(pack: ManifestPack, onProgress?: DownloadProg
     const headers: Record<string, string> = {};
     if (startByte > 0 && startByte < pack.size) headers["Range"] = `bytes=${startByte}-`;
     const token = getUserToken();
-    if (token) headers.Authorization = `Bearer ${token}`;
-    const res = await fetch(`${API_BASE}${pack.downloadUrl}`, { headers });
+    const appHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+    const resolution = await fetch(`${API_BASE}${pack.downloadUrl}?resolve=1`, { headers: appHeaders, cache: 'no-store' });
+    if (!resolution.ok) return { ok: false, packId: pack.packId, version: pack.version, error: `下载权限或地址未取得（HTTP ${resolution.status}），已安装资料保留` };
+    const link = validateOfflineDownloadLink(await resolution.json(), pack);
+    const res = await fetch(link.applicationAuth ? `${API_BASE}${link.url}` : link.url, {
+      headers: link.applicationAuth ? { ...headers, ...appHeaders } : headers,
+      credentials: link.applicationAuth ? 'same-origin' : 'omit',
+    });
 
     if (!(res.status === 200 || res.status === 206)) {
       return { ok: false, packId: pack.packId, version: pack.version, error: `下载失败 HTTP ${res.status}` };

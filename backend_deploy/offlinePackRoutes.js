@@ -102,7 +102,13 @@ function createRouter() {
       const signed = await objectStorage.ObjectStorageService.temporaryDownloadUrl('learning_content', r.objectKey, 900);
       if (!signed.ok) return res.status(503).json({ success: false, error: signed.error, code: signed.status || 'COS_URL_FAILED' });
       res.setHeader('Cache-Control', 'private, no-store');
+      if (req.query.resolve === '1') return res.json({ success: true, deliveryProvider: 'COS', downloadUrl: signed.url, sha256: r.sha256, size: r.size, version: r.row.version });
       return res.redirect(307, signed.url);
+    }
+
+    if (req.query.resolve === '1') {
+      res.setHeader('Cache-Control', 'private, no-store');
+      return res.json({ success: true, deliveryProvider: 'LOCAL', downloadUrl: `/api/offline/packs/${encodeURIComponent(req.params.packId)}/download`, sha256: r.sha256, size: r.size, version: r.row.version });
     }
 
     const stat = fs.statSync(r.filePath);
