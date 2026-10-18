@@ -1,0 +1,120 @@
+name: Upload verified Guoxue IPA to TestFlight
+on:
+  workflow_call:
+    inputs:
+      build_run_id:
+        required: true
+        type: string
+      ipa_sha256:
+        required: true
+        type: string
+      build_number:
+        required: true
+        type: string
+    secrets:
+      ASC_KEY_ID:
+        required: true
+      APP_STORE_CONNECT_ISSUER_ID:
+        required: true
+      APP_STORE_CONNECT_KEY:
+        required: true
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: 'Successful iOS Build run containing the verified IPA'
+        required: true
+        type: string
+      ipa_sha256:
+        description: 'Previously verified SHA-256 of the IPA (not the artifact ZIP)'
+        required: true
+        type: string
+      build_number:
+        description: 'Expected unique iOS build number'
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  upload:
+    runs-on: macos-15
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SOURCE_RUN: ${{ inputs.build_run_id }}
+      EXPECTED_SHA: ${{ inputs.ipa_sha256 }}
+      EXPECTED_BUILD: ${{ inputs.build_number }}
+      KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+    steps:
+      - name: Check trusted source build
+        run: |
+          [[ "$SOURCE_RUN" =~ ^[0-9]+$ ]] && [[ "$EXPECTED_BUILD" =~ ^[1-9][0-9]{0,8}$ ]] && [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{64}$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$SOURCE_RUN" > "$RUNNER_TEMP/source-run.json"
+          python3 <<'PY'
+          import json,os,pathlib
+          run=json.loads((pathlib.Path(os.environ['RUNNER_TEMP'])/'source-run.json').read_text())
+          assert run['conclusion']=='success' and run['status']=='completed'
+          assert run['path']=='.github/workflows/ios-build.yml'
+          assert run['head_branch']=='codex/tencent-store-compliance'
+          assert run['repository']['full_name']==os.environ['GITHUB_REPOSITORY']
+          print('Verified source build',run['id'],run['head_sha'])
+          PY
+      - uses: actions/download-artifact@v4
+        with:
+          name: yandao-guoxue-ios-ipa
+          path: ${{ runner.temp }}/verified-ipa
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.build_run_id }}
+      - name: Verify exact signed package
+        run: |
+          python3 <<'PY'
+          import os,pathlib,plistlib,zipfile,hashlib
+          files=list((pathlib.Path(os.environ['RUNNER_TEMP'])/'verified-ipa').glob('*.ipa'))
+          assert len(files)==1
+          ipa=files[0]; assert hashlib.sha256(ipa.read_bytes()).hexdigest()==os.environ['EXPECTED_SHA']
+          with zipfile.ZipFile(ipa) as z:
+            plists=[p for p in z.namelist() if p.startswith('Payload/') and p.count('/')==2 and p.endswith('.app/Info.plist')]
+            assert len(plists)==1
+            info=plistlib.loads(z.read(plists[0]))
+            assert info['CFBundleIdentifier']=='com.yandaoguoxue.app'
+            assert info['CFBundleShortVersionString']=='25.0.115'
+            assert info['CFBundleVersion']==os.environ['EXPECTED_BUILD']
+            assert info.get('SKIncludeConsumableInAppPurchaseHistory') is True
+          print('Verified package identity, build and SHA-256')
+          PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify Guoxue credentials and prevent duplicate upload
+        env:
+          ASC_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+        run: |
+          node <<'JS'
+          const crypto=require('node:crypto');
+          const now=Math.floor(Date.now()/1000), enc=v=>Buffer.from(JSON.stringify(v)).toString('base64url');
+          const value=enc({alg:'ES256',kid:process.env.KEY_ID,typ:'JWT'})+'.'+enc({iss:process.env.ASC_ISSUER_ID,iat:now-20,exp:now+600,aud:'appstoreconnect-v1'});
+          const token=value+'.'+crypto.sign('sha256',Buffer.from(value),{key:process.env.ASC_PRIVATE_KEY,dsaEncoding:'ieee-p1363'}).toString('base64url');
+          async function api(path){const r=await fetch('https://api.appstoreconnect.apple.com'+path,{headers:{Authorization:'Bearer '+token},signal:AbortSignal.timeout(45000)});const j=await r.json();if(!r.ok)throw Error('Apple verification failed: '+r.status);return j;}
+          (async()=>{
+            const app=(await api('/v1/apps/6807592575?fields[apps]=bundleId')).data;
+            if(app.attributes.bundleId!=='com.yandaoguoxue.app')throw Error('Wrong App');
+            const builds=(await api('/v1/builds?filter[app]=6807592575&filter[version]='+encodeURIComponent(process.env.EXPECTED_BUILD)+'&limit=200')).data;
+            if(builds.length)throw Error('Build number already exists; do not upload it again');
+            console.log('Verified only Guoxue; build number not already uploaded');
+          })().catch(()=>{console.error('Apple credential/duplicate validation failed; upload stopped');process.exitCode=1;});
+          JS
+      - name: Upload the exact verified IPA
+        env:
+          ASC_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+        run: |
+          set +x
+          sudo xcode-select -s /Applications/Xcode_26.3.app
+          mkdir -p "$RUNNER_TEMP/apple-upload/private_keys"
+          chmod 700 "$RUNNER_TEMP/apple-upload/private_keys"
+          key_file="$RUNNER_TEMP/apple-upload/private_keys/AuthKey_${KEY_ID}.p8"
+          trap 'rm -f "$key_file"' EXIT
+          printf '%s' "$ASC_PRIVATE_KEY" > "$key_file"
+          chmod 600 "$key_file"
+          cd "$RUNNER_TEMP/apple-upload"
+          xcrun altool --upload-app --type ios -f "$RUNNER_TEMP"/verified-ipa/*.ipa --apiKey "$KEY_ID" --apiIssuer "$ASC_ISSUER_ID"

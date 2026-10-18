@@ -32,14 +32,34 @@ on:
         description: '唯一递增的苹果构建号（不得重用已上传的构建号）'
         type: string
         default: '8'
+      upload_existing_run:
+        description: '只上传已验证成功运行的IPA，填写运行ID时不重新构建'
+        type: string
+        default: ''
+      verified_ipa_sha256:
+        description: '已验证IPA的SHA-256，仅在上传已有包时必填'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+  actions: read
 
 jobs:
+  upload-verified:
+    if: ${{ !inputs.verify_credentials_only && inputs.upload_existing_run != '' }}
+    uses: ./.github/workflows/ios-upload-verified.yml
+    with:
+      build_run_id: ${{ inputs.upload_existing_run }}
+      ipa_sha256: ${{ inputs.verified_ipa_sha256 }}
+      build_number: ${{ inputs.release_build }}
+    secrets: inherit
   verify-api-only:
     if: inputs.verify_credentials_only
     uses: ./.github/workflows/ios-api-credential-check.yml
     secrets: inherit
   build:
-    if: ${{ !inputs.verify_credentials_only }}
+    if: ${{ !inputs.verify_credentials_only && inputs.upload_existing_run == '' }}
     name: Archive & Export
     runs-on: macos-15
     timeout-minutes: 60
