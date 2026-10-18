@@ -15,6 +15,7 @@
 // @ts-nocheck
 
 import { calculateDayun, determinePattern, calculateShenQiangRuo } from './advanced';
+import type {BaziResult} from '../../types/bazi';
 import { Solar as LunarSolar } from 'lunar-javascript';
 
 // ============================================================================
@@ -986,7 +987,7 @@ export function getNearestJieQi(year, month, day) {
  * @param {number} [params.sect]  - 1=普通, 2=晚子时 (默认1)
  * @returns {Object} 完整八字排盘数据
  */
-export function solarToBazi(params) {
+export function solarToBazi(params):BaziResult {
   var year = params.year;
   var month = params.month;
   var day = params.day;
