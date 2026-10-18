@@ -934,3 +934,31 @@ sqlite3 /tmp/yandao_restore_test/social.db "SELECT COUNT(*) FROM friendships; SE
 - 用户协议首次弹窗经负责人明确回复“同意，继续验收”后才点击接受；不默认代接受其他购买协议。未登录购买只验证转登录，不登录他人账号、不做真实收费。浏览器临时390x844视口已reset，生产会员页明确留作交付；无3113临时服务。
 - C盘当时可用20,777,537,536字节、E盘13,078,200,320字节，为系统快照，不把后台系统空间变化全归于本次清理。固定四份报告同字节同步，最终SHA另在验证记录中读回，避免报告内自引用自身哈希；收尾diff-check、私钥门禁、Git提交推送及空status/上游0 0另读回。
 - 下一步必须继续StoreKit及权益验证、新原生包/最终截图和审核答复；生产学习留言与全社交后端尚未挂载/联调，当前广告未启用。古籍其余书目全本/逐字校勘、医考真实医学审校、362穴版本与逐穴准确授权图、竞品各模块全面对照、旧泄露密钥撤销及历史副本/被拦清理仍未闭环。以上不因本轮价格上线而变成已完成。
+
+
+## 57. 2026-10-18 苹果内购、原包上传与负责人测试资格（开发检查点，整项仍未完成）
+
+### 当前真实状态
+- 用户再次要求全部完成并提审，随后明确“我要测试”。截至本节：25.0.115（8）已签名、上传Apple并处理有效；本人内部测试邀请已建立。尚未重新提交App Store正式审核、未发布，不能称“全功能全部验收完成”。当前原App审核版本仍REJECTED；不能把TestFlight“准备提交”误说成正式版等待审核。
+- App ID 6807592575，bundle com.yandaoguoxue.app。构建ID 9d4785d8-d513-47ba-a4d3-218b676311a1。签名运行 https://github.com/wzmpa18/minglizyi/actions/runs/39118718256 ，源d494e0ad5a7e91206d60499f00448d128f6b099b；IPA 27,684,859字节，SHA-256 b009748ef8487ca8f9cfe5d0e19be681de8c9be256de9d5676c89b1925d8373f。下载ZIP和IPA仅在内存核验，没有新增C/E实体IPA。Mach-O含AppleLearningStorePlugin、LocalTtsPlugin；Info.plist为25.0.115/8，消耗品历史键开启，内置资源无server.url。
+- 首次8构建39118384910因归档实际仍用项目内旧构建号而被核验阻止，未上传；d494e0a将RELEASE_BUILD和RELEASE_VERSION显式传入xcodebuild，并关闭导出自动改构建号。没有删掉断言把失败当成功。
+- 上传运行 https://github.com/wzmpa18/minglizyi/actions/runs/39119431505 成功，上传的是上述已核验的同一IPA，先校验来源成功运行、包名/版本/构建号及SHA，再查询Apple防止重复上传，没有重编另一个同号包。
+- 浏览器重新登录后检查付费App协议有效、银行可用、税表使用中；Developer账户显示新版许可协议签发2026-10-14、已于2026-10-18接受。代理未接受新的法律协议，未改银行/税务信息，也未改其他App。
+- 原内部群组“言道国学”已有构建8但0测试员；只选择当前账户持有人本人，添加后Apple显示内部群组1人、本人“已邀请”。未邀请其他候选成员。负责人应在iPhone TestFlight用当前开发者对应Apple账号接受邀请并安装25.0.115（8）；这是阶段测试，不能当全部完成。测试内容已保存并明确剩余事项。
+
+### 代码、验证与生产部署
+- dd9a38a新增跨渠道会员账本；cf97f52完成StoreKit2客户端、官方Apple签名验证服务、购买/恢复/退款与UI；81246e2把生产已有后台会话/联系方式脱敏改进合回源码，避免后续覆盖退化；4aa5d47新增上传既有已核验IPA的维护工作流；3f894da新增服务器专有沙盒账号配置。全部已推送codex/tencent-store-compliance。
+- 主要文件位于本活动仓绝对目录 C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/ ：backend_deploy/membershipLedger.js、appleIapLedger.js、appleIapVerifier.js、appleIapPolicy.js、appleIapRoutes.js、appleIapCatalog.json、apple-iap-runtime/{package.json,package-lock.json,README.md}、apple-root-certificates/{manifest.json,三张公共CER}；paymentRoutes.js、adminUnifiedRoutes.js、accountDeleteRoutes.js、adminRoles.js、adminPrivacy.js、server.js；ios/App/App/AppleLearningStorePlugin.swift、LocalTtsPlugin.swift、Info.plist及App.xcodeproj/project.pbxproj；src/lib/appleIap.ts、auth.ts，src/components/AppleLearningStore.tsx、ApplePurchaseInit.tsx、shared/brand-header.tsx，src/app/layout.tsx、membership/page.tsx、ai-credits/page.tsx、membership-agreement/page.tsx；scripts/apple-iap-{ledger,client,http}.test.cjs、membership-ledger.test.cjs、admin-session-privacy.test.cjs及三个相关workflow。
+- 购买只接受服务器固定8个已批准SKU。客户端显示StoreKit实际displayPrice，不用安卓原价充当苹果历史价。取消/待家长批准不提前发放；服务器验证并提交权益后才finish，失败留待恢复。启动/前台/网络恢复及人工恢复会核对全部历史，账号切换不会把购买转给他人。苹果购买点数永久有效且重复恢复不补回已消耗点数；iOS外部收款仍关闭，不触发安卓返佣上报。会员服务协议补充苹果购买、固定期限、恢复与退款说明。
+- 会员投影保留既有安卓基线及后来独立订单；低档续购不降有效高档，历史已到期苹果时卡不能给当前安卓权益加时；按订单退款只撤对应赠予，旧回执不能复活退款，官方退款撤销通知只恢复未用剩余点数/原赠予。管理员调整/注销界限不会被旧购买恢复覆盖。未知历史订单退款不猜测扣除遗留权益，需个别对账。
+- 使用官方 @apple/app-store-server-library 3.1.0及Apple官网三张公共根证书，SHA固定，开启在线证书撤销检查。Production/Sandbox严格验证，拒绝Xcode/LocalTesting、错应用、错SKU/数量、未绑定appAccountToken及不匹配账号。私钥不需部署到业务服务器。Production/Sandbox交易分名空间，沙盒只允许服务器配置的当前App Store审核演示账号，不向真实顾客普遍开放；测试账本须排除实际收入统计。演示账号身份/密码不写本报告。
+- 质量运行 https://github.com/wzmpa18/minglizyi/actions/runs/39119711664 成功：64项行为测试、TypeScript、来源/篇章结构校验；cf97f52的ios-full-learning静态预览39118382932亦成功。测试覆盖交付/恢复/过期/跨渠道退款/撤销退款/账号归属/切换、真实HTTP/JWT/SQLite、官方验签器拒绝伪造载荷、后台会话和脱敏。不能替代真实Apple沙盒购买及iPhone/iPad听学验收。
+- 实际部署 /www/yandaoguoxue-backend/ 下20个文件；线上server.js有既有差异，仅在唯一extraRoutes锚点插入appleIapRoutes，未全覆盖。platformFeatureGate与releaseProfilePolicy同步使新正式ios-full-learning版本按已编译功能工作，旧版策略不变。adminUnified保留生产手机号/邮箱脱敏；adminRoles会话代码已先合回Git，无源码漂移遗失。旧会员/安卓付款代码已接新账本。
+- /api/health=200，/api/apple-iap/context未登录401、当前审核演示账号200且8SKU/受限沙盒=true；无效签名POST=409且交易账本没有变化；公开价格接口200、原活动保留。未做真实扣款或伪造成功Apple交易。服务器唯一后端回滚集合现为 /www/yandaoguoxue-backend/.release-backup-backend-previous/，已逐文件核验manifest。新服务正常验证后才清理旧commerce备份213,470字节，候选/安装缓存/暂存目录已不存在。
+
+### 证据、剩余任务与清理
+- 非敏感回执：E:/八字命理类文档包括排盘方式电子版/言道国学项目归档/发布包/iOS/内购配置/苹果内购候选包核验_20261018.json、苹果内购服务部署核验_20261018.json、苹果审核账号映射核验_20261018.json。真实后台截图C盘 outputs/界面对标_20261018/苹果TestFlight_25.0.115_8_已保存测试说明.png 与 苹果TestFlight_本人已邀请_20261018.png，均同步E盘学习与布局核查目录并加入验证记录。
+- 本轮核查《温病条辨》公开来源8部分时，原病篇和卷六来源明确标注校订不足/错误百出，未将它们作为准确全文上线。试导数据已恢复原有已核验数据，临时导入脚本已删除，未提交失败语料。素问/灵枢/难经/神农原文现有来源结构齐备，仍不能声称全部古籍已逐字医学校勘。金匮、伤寒、温病的完整可靠版本及逐穴定位/逐穴图仍待继续核对。
+- 新社交/穴位文字留言服务本轮尚未挂载或开启，不能把已有源码测试通过写成线上全社交完成。三模式紫微/八字/六壬已有改进，但仍非全模块一比一、逐像素验收完成；本轮未改竞品布局代码。最终真实iPhone/iPad截图、全链内购沙盒验收、8个商品余下可售地区/审核图片、所有专项工具/AI时卡苹果购买、正式审核说明更新及重新送审仍待完成。
+- C/E原5项待用户CMD清理未由代理删除；本轮创建的 C:/Users/ZhuanZ/AppData/Local/Temp/guoxue-iap-lock-cache 100文件15,645,522字节删除也被自动审批拒绝（仅返回blocked by policy，非文件系统权限不足）。没有改用其他工具/语言绕过。已将精确第6项加入同一CMD与E镜像，未执行；不能写成已清场。历史97副本独有源码/语料审结债务仍未处理，不能盲删/盲提交。
+- 当前CMD：cmd /c "C:/Users/ZhuanZ/Documents/Codex/2026-10-17/e-c-users-zhuanz-documents-codex/outputs/guoxue-clean-20261018.cmd"；CP936/CRLF，最新SHA-256 f9a6b6183396d47cb275a71cdb9c555d3909f14c67d87a3334c25604745407ac。原7号实体IPA保留校验后方允许删除过时6号；8号仅云端及Apple，无新增本地整包/解包/node_modules/.next/www。下一步先完成商品与负责人测试可用性，再补布局/社交/准确完整资料及最终正式提审，不重复提交已有审核任务。
