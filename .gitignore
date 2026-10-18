@@ -41,6 +41,9 @@ deploy_v20_1_final_server.sh
 # Certificate files (sensitive, local only)
 *.der
 *.pem
+*.p8
+*.p12
+*.pfx
 *.keystore
 
 # OS files

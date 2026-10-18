@@ -758,3 +758,37 @@ sqlite3 /tmp/yandao_restore_test/social.db "SELECT COUNT(*) FROM friendships; SE
 - 本轮内存验收服务84c8837、d2f6a7b、1c188af均在替换/结束时核对进程身份停止；最终15120已停止，3113无监听，临时手机宽度已恢复。没有本轮HTTP日志/解包/依赖缓存残留。之前22108已不存在。
 - 原19个清理目标再次检查19/19不存在。E盘旧预览58186025字节及C盘3张重复图1227811字节仍存在；此前删除被自动审批blocked by policy拒绝，未换工具绕过，当前4目标CMD为唯一有效执行清单。C盘可用21926944768字节、E盘13228249088字节；不能将系统空间变化全归因本轮。当前2101提审APK仍为25442965字节，SHA-256 ecff45d6eebe0dc7752cf97dec37ce3dd9f56d514beee17cdfe07926ba3ef245。
 - 本次功能改动完成提交/推送，报告与主账本收尾提交后以只读核验确认活动仓status空、HEAD/上游0/0；固定四份报告同步并实际核对SHA-256。没有新包、部署或商店操作。整体功能对标/逐穴和医学核验/原生听学验证/历史副本清场仍未完成，以上边界不得在接手时省略。
+
+
+## 53. 2026-10-18 增量：完整版学习开发、苹果真实拒审与密钥轮换
+
+### 用户本轮直接要求与当前边界
+- 已完整阅读负责人提供的E盘“言道国学_穴位留言完整古籍天文五运六气与苹果重提审_06.txt”和聊天粘贴附件。附件是参考资料；负责人后来直接要求完整社交、iOS新完整版和以后Android社交恢复，覆盖附件较窄的“仅穴位讨论”范围。只处理国学，外语/数字管家及其他产品不改。排盘既有功能须保留完善，不能仅换名假装学习，也不能声称竞品三模式及各模块已一比一完成。
+- 当前Capacitor客户端内置www、无server.url；新布局、连续听学、穴位留言和天文/五运六气界面需要重新构建安装包。兼容的内容/API可在服务端更新，不能远程加载可执行代码或审核后翻转能力绕过提审。没有部署本轮新代码、上传新IPA或重新提交商店。
+
+### 苹果官方页面实时核对
+- 国学App ID6807592575、iOS Bundle ID com.yandaoguoxue.app。当前版本“言道v25.0.77”为被拒，所选build1.0(5)；没有在审队列需要撤回。原submission为a8bea0c3-7244-4c2a-b655-3192af447954。
+- 页面最新2026-10-09意见为3.1.1非IAP会员购买，以及2.1要求说明会员是否付费、晋级是否付费、上级是否从下级招募/费用/交易/销售获益、用户付费产品/服务。此前还分别有4.3(b)同质化、2.3.6年龄控制声明不实、2.1会员按钮不跳转（iPad Air11 M3/iPadOS27）。旧审核备注声称全部排盘已移除，不能原样用于保留完整功能的新包。
+- 重新提审前须以新包真实行为处理这些意见、验证iPad/支付/社交/内容、制作真实截图和说明；仅强调传统文化学习不等于问题解决。现有源码iOS支付关闭且无StoreKit内购实现，不能据源码开关否认旧build5的审核现象。
+
+### 穴位文本讨论源码与验证（未部署）
+- 提交dd919e2已推送；完整云质量/静态构建39104296430成功，共16行为测试（旧12+新4），不代表真机/生产验收。
+- 源码绝对基目录为本权威报告所在仓库 C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/。新增backend_deploy/studyCommentPolicy.js、studyCommentStore.js、studyCommentsRoutes.js和data/study-acupoint-targets.json；server.js挂载独立/api/study-comments路由。src/lib/studyComments.ts、src/components/AcupointStudyDiscussion.tsx、src/app/admin/study-comments/page.tsx和admin/ClientShell.tsx新增讨论与管理；zhongyi/meridian/page.tsx两个穴位详情入口接入。
+- 前后端共用Intl.Segmenter按字素簇计500字上限，拒图片/HTML/媒体/身份注入字段；实名登录JWT对应有效账号，文本先PENDING，管理员审核后才公开，默认总开关关闭。具备两层回复、本人删除及回复联动删除、举报、双向屏蔽、限频、重复内容拦截、幂等请求、私有离线草稿、管理员审核/HTTPS来源置顶/禁言/开关/审计。400个合法目标是旧361标准目录加39董氏目录，不代表按现行362穴标准审校完成。
+- scripts/study-comments.test.cjs四项实际SQLite行为测试覆盖500/501字与复合emoji、审核/回复/屏蔽/删除、幂等/越权字段/关闭/限频、来源置顶等。尚待HTTP鉴权/生产数据库路径/管理员流程与新客户端UI联调，不将已写源码说成线上可用。
+
+### 苹果密钥事件、实际文件和整改
+- 发现11个历史scripts/asc*.js把同一旧私钥写入源码，3775a64移除正文并统一scripts/lib/ascCredentials.cjs环境变量/受保护文件读取；11脚本语法通过。当前源码无完整私钥块，但Git历史仍含旧钥，删除当前正文不等于完成泄露处置。
+- 用户首次手动生成KZHGL748BW后，代理尝试下载未得到文件且工具超时；页面一次性下载按钮消失。用户只点击生成，并未负责这次下载失败。该钥未落盘、未用于Secret、未撤销，不能假写成已保存或让下一位开发重复盲点下载。
+- 用户随后重新生成并自行下载了AuthKey_URY888FLWG.p8到 E:/八字命理类文档包括排盘方式电子版/苹果开发者/ 顶层；实际257字节。2026-10-18 15:55:47 +09:00用此文件生成短时ES256认证，Apple官方只读GET /v1/apps/6807592575?fields[apps]=name,bundleId返回国学App与正确bundle。私钥正文/JWT未输出。
+- 依负责人明确授权，2026-10-18 15:56:14至15:56:17 +09:00仅更新GitHub wzmpa18/minglizyi的APP_STORE_CONNECT_KEY、ASC_KEY_ID、APP_STORE_CONNECT_KEY_ID、APP_STORE_CONNECT_ISSUER_ID四项受保护Secret；通过进程stdin传入，未放入参数/源码。读回仅名称和更新时间。签名证书/profile/Android Secret和其他仓库未改。
+- 负责人要求的记事本已实际保存到 E:/八字命理类文档包括排盘方式电子版/苹果开发者/APP Stotr CONNECT API 最新秘钥.txt ，1054字节UTF-8 BOM，包含明确产品、公开ID、配套p8路径、验证/构建状态及负责人授权本地保存的私钥。此文件不入Git，不随报告镜像，禁止回显正文。原始p8保留Apple标准文件名；没有再放嵌套目录。
+- 旧UWQ354QP54尚未撤销；只读GitHub公开ID搜索发现AILOS仓库两份历史验收文档也引用旧ID，尚不能证明其当前构建是否依赖，故不擅自撤销影响外语。新钥只更换国学不等于旧共享钥可无条件撤销，仍需逐产品核对后处理。KZH未使用钥也待撤销核对。
+- 本轮新增scripts/check-private-keys.cjs和.github/workflows/private-key-check.yml，检查全部Git跟踪文件的完整私钥块和p8/p12/pfx；.gitignore新增三种凭证后缀；ios-build.yml移除UWQ默认回退、Secret通过环境传入、私钥临时文件权限收紧并always清理签名材料；新增只读ios-api-credential-check.yml可用云Secret验证国学访问而不构建/上传。强制制度新增第八节，AGENTS补入口要求，防止相同问题重复。
+
+### 生产只读核查与未完成事项
+- PM2生产脚本为/www/yandaoguoxue-backend/server.js，cwd同目录；不是旧/root/backend-auth。生产Web current仍指向/root/yandaoguoxue/releases/v25.0.107-admin-session-20261015，version.json buildId v25.0.107_D20261015。本轮未切换。
+- 真实academy.db为/www/yandaoguoxue-backend/data/academy.db。yikao状态approved2503、rejected254；但2503条govern_state均NEEDS_REVIEW、source_type为空、exam_spec_version均2025-tcm-zhiye-v1。不得将“approved条数”冒充医学人工审校全部通过；需逐题来源/审校与对外筛选核对。其他已批准数量是yixue2228、zhongyi10290，不能沿用旧库统计。
+- 天文馆/五运六气新界面、全量书目按版本补齐、362/361穴号迁移和逐穴准确图谱、医学审校、完整社交跨端、营销插画/真实包截图、新iOS包和提审均仍在推进。当前文墨/问真/六壬参考不能证明所有页已完全相同。
+- 国内25.0.114/2101原审核任务不重复提交；原APK SHA-256 ecff45d6eebe0dc7752cf97dec37ce3dd9f56d514beee17cdfe07926ba3ef245保护。没有把Google正式2081或云2101草稿当新发布。
+- 清理：本轮不新增依赖、解包/整源码副本或安装包。之前19个目标已不存在；前序被自动审批blocked by policy拦截的4个精确目标及97旧副本独有未核资料仍未解决，不换工具绕过。新增小体积苹果生成窗口截图为有效操作证据，不含私钥；源代码/制度/报告需全部审查提交推送并同步固定镜像，完成后只读核验空status和上游0/0。本节是进行中交接，不能据此宣称全量交付/已上架。
