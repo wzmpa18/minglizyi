@@ -335,7 +335,6 @@ function TabChart({result,shensha,shengxiao,gender,lunarDateStr,solarDateStr,tru
 }){
   const pillars=result.pillars;
   const colLabels=["年柱","月柱","日柱","时柱"];
-  const [flowColumnsFirst, setFlowColumnsFirst] = useState(false);
   const dayGan = result.dayGan as TianGan;
 
   // 计算每个柱的藏干+十神(全称) - v17.7 直接使用算法层预计算值
@@ -613,6 +612,7 @@ function TabBasic({result,shengxiao,name,birthPlace,longitude,dateStr,lunarDateS
 function TabDetail({result,gender}:{
   result:BaziResult;gender:Gender;
 }){
+  const [flowColumnsFirst, setFlowColumnsFirst] = useState(false);
   const pillars=result.pillars;
   const dayGan = result.dayGan as TianGan;
   const colLabels=["年柱","月柱","日柱","时柱"];
