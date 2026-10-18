@@ -1,5 +1,6 @@
 "use client";
 
+import { chartHandoffFromRecord, consumeChartHandoff, writeChartHandoff } from "@/lib/chartHandoff";
 import { useToolMatrix } from "@/lib/sectionGate";
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { calculateZiwei, solarToBazi, calcTrueSolarTime } from "@/algorithm-core";
@@ -449,6 +450,7 @@ export default function ZiweiPage() {
   const [zhenTaiyang, setZhenTaiyang] = useState(true);
   const [xiaLing, setXiaLing] = useState(false);
   // S2-4: 真太阳时修正说明（勾选真太阳时后排盘显示）
+  const chartInputRef = useRef<Record<string, unknown> | null>(null);
   const [solarCorrection, setSolarCorrection] = useState<string | null>(null);
   const [longitude, setLongitude] = useState(116.4);
   const [historyDateOptions, setHistoryDateOptions] = useState<Partial<DatePickerOptions>>({});
@@ -553,7 +555,7 @@ export default function ZiweiPage() {
   }, []);
 
   // ---- 提交 ----
-  const handleSubmit = (override?:{year:number;month:number;day:number;hour:number;gender:Gender;birthInput?:Record<string,unknown>}) => {
+  const handleSubmit = (override?:{year:number;month:number;day:number;hour:number;minute?:number;gender:Gender;birthInput?:Record<string,unknown>}) => {
     setError(null);
     const y=override?.year??year; const m=override?.month??month;
     const d=override?.day??day; const h=override?.hour??hour;
@@ -561,6 +563,7 @@ export default function ZiweiPage() {
     try {
       const res = calculateZiwei({ year:y, month:m, day:d, hour:h, gender:g });
       setResult(res);
+      chartInputRef.current={birthInput:override?.birthInput,year:y,month:m,day:d,hour:h,minute:override?.minute??birthMinute,gender:g,name,longitude,zhenTaiyang,zaoWanZi,xiaLing,birthPlace:historyDateOptions.birthPlace||""};
       setShowForm(false);
       savePaipanState("ziwei",{input:{year:y,month:m,day:d,hour:h,gender:g,calType,zaoWanZi,zhenTaiyang,xiaLing,longitude,...historyDateOptions},showForm:false,_ts:Date.now()});
       // 保存客户记录
@@ -588,8 +591,9 @@ export default function ZiweiPage() {
   const handleRestoreHistory = useCallback((rec: PaipanRecord) => {
     historyRecordIdRef.current = rec.id;
     const inp = rec.input as Record<string, any>;
+    chartInputRef.current=inp;
     const birthInput = inp.birthInput && typeof inp.birthInput === "object" ? inp.birthInput : {};
-    const raw = birthInput.rawDateTime && typeof birthInput.rawDateTime === "object" ? birthInput.rawDateTime : inp;
+    const raw = birthInput.normalizedDateTime || (birthInput.rawDateTime && typeof birthInput.rawDateTime === "object" ? birthInput.rawDateTime : inp);
     if (typeof inp.name === "string") setName(inp.name);
     if (Number(raw.year)) setYear(Number(raw.year));
     if (Number(raw.month)) setMonth(Number(raw.month));
@@ -693,6 +697,20 @@ export default function ZiweiPage() {
     }
   }, []);
 
+  useEffect(() => {
+    const p=consumeChartHandoff("ziwei");if(!p)return;
+    try {
+      const res=calculateZiwei({...p.calculation,gender:p.gender});
+      handleRestoreHistory({id:0,input:{...p.calculation,name:p.name,gender:p.gender,longitude:p.longitude,calType:"gongli",birthInput:{normalizedDateTime:p.civil,calculationDateTime:p.calculation,name:p.name,gender:p.gender,longitude:p.longitude,birthPlace:p.birthPlace,zhenTaiyang:p.zhenTaiyang,zaoWanZi:p.zaoWanZi,xiaLing:p.xiaLing}},result:res} as unknown as PaipanRecord);
+      setViewMode("sanhe");setProfessionalLayout(false);setFocusedPalace(null);
+    }catch{setError("出生资料无法计算，请核对原排盘资料。");}
+  }, [handleRestoreHistory]);
+  const openCorrespondingBazi=()=>{
+    if(!window.confirm("是否用此命盘的相同出生资料打开八字基本信息？"))return;
+    const payload=chartHandoffFromRecord(chartInputRef.current||{year,month,day,hour,minute:birthMinute,gender,name,longitude,zhenTaiyang,zaoWanZi,xiaLing},"bazi");
+    if(!payload||!writeChartHandoff(payload)){setError("无法读取本次完整出生资料，请重新排盘后再打开八字。");return;}
+    router.push("/yixue/bazi/");
+  };
   // ---- 派生数据 ----
   const mingPalace = result?.palaces?.find((p) => p.name === "命宫");
   const mingPalaceEarthlyBranch = mingPalace?.earthlyBranch || "";
@@ -1186,13 +1204,13 @@ export default function ZiweiPage() {
           setZaoWanZi(opts.zaoWanZi); setZhenTaiyang(opts.zhenTaiyang); setXiaLing(opts.xiaLing);
           setHistoryDateOptions(opts);
           // S2-4: 真太阳时校正——勾选后按出生地经度修正年月日时再排盘
-          let calcDate = { year: dateVal.year, month: dateVal.month, day: dateVal.day, hour: dateVal.hour };
+          let calcDate = { year: dateVal.year, month: dateVal.month, day: dateVal.day, hour: dateVal.hour, minute:dateVal.minute||0 };
           let correctionInfo: string | null = null;
           if (opts.zhenTaiyang) {
             const std = new Date(dateVal.year, dateVal.month - 1, dateVal.day, dateVal.hour, dateVal.minute || 0);
             const tst = calcTrueSolarTime(std, opts.longitude ?? longitude);
             const t = tst.trueSolarTime;
-            calcDate = { year: t.getFullYear(), month: t.getMonth() + 1, day: t.getDate(), hour: t.getHours() };
+            calcDate = { year: t.getFullYear(), month: t.getMonth() + 1, day: t.getDate(), hour: t.getHours(), minute:t.getMinutes() };
             const sign = tst.totalOffset >= 0 ? "+" : "-";
             const absMin = Math.abs(tst.totalOffset);
             correctionInfo = `真太阳时 ${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")} ${String(t.getHours()).padStart(2, "0")}:${String(t.getMinutes()).padStart(2, "0")}（${(opts.longitude ?? longitude).toFixed(1)}°E，修正${sign}${Math.floor(absMin)}分）`;
@@ -1319,7 +1337,7 @@ export default function ZiweiPage() {
                   })()}
                 </svg>}
 
-                {professionalLayout && <ProfessionalZiweiBoard result={result} mode={viewMode} focus={focusedPalace}
+                {professionalLayout && <ProfessionalZiweiBoard onOpenBazi={openCorrespondingBazi} result={result} mode={viewMode} focus={focusedPalace}
                   mutagenTable={TIANGAN_SIHUA} laiyinPalaceIndex={laiyinPalaceIdx}
                   onSelect={setFocusedPalace} onDetails={openProfessionalPalaceDetails}
                   overlay={overlayInfo} dynamicLabels={dynamicStarsByPalace}
@@ -1393,7 +1411,7 @@ export default function ZiweiPage() {
                             const parts = result.chineseDate ? result.chineseDate.split(/\s+/) : [];
                             const labels = ["年", "月", "日", "时"];
                             return (
-                              <div className="flex gap-0.5" style={{ marginBottom: "1px", marginTop: "1px" }}>
+                              <button type="button" aria-label="用此四柱打开八字基本信息" title="点击打开八字基本信息" onClick={(event)=>{event.stopPropagation();openCorrespondingBazi();}} className="flex w-full gap-0.5 border-0 bg-transparent p-0" style={{ marginBottom: "1px", marginTop: "1px" }}>
                                 {labels.map((label, pi) => {
                                   const gz = parts[pi] || "--";
                                   const gan = gz.charAt(0);
@@ -1408,7 +1426,7 @@ export default function ZiweiPage() {
                                     </div>
                                   );
                                 })}
-                              </div>
+                              </button>
                             );
                           })()}
 

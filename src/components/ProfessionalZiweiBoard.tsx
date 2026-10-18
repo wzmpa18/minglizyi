@@ -14,8 +14,8 @@ const ABBR: Record<string, string> = { 命宫:"命", 兄弟:"兄", 夫妻:"夫",
 const short = (name: string) => ABBR[name] || name.replace(/宫$/, "").slice(0, 1);
 
 /** Presentation only. All stars, ages, mutagens and overlays come from the existing engine. */
-export function ProfessionalZiweiBoard({ result, mode, focus, onSelect, onDetails, overlay, flyingStars, dynamicLabels, decadalMutagen, yearlyMutagen, mutagenTable, laiyinPalaceIndex }: {
-  result: ZiweiResult; mode: Mode; focus: number | null;
+export function ProfessionalZiweiBoard({ onOpenBazi, result, mode, focus, onSelect, onDetails, overlay, flyingStars, dynamicLabels, decadalMutagen, yearlyMutagen, mutagenTable, laiyinPalaceIndex }: {
+  onOpenBazi:()=>void; result: ZiweiResult; mode: Mode; focus: number | null;
   onSelect: (index: number) => void; onDetails: (index: number) => void;
   overlay: Overlay; flyingStars?: Mutagens; mutagenTable?: Record<string, Mutagens>; laiyinPalaceIndex?: number;
   dynamicLabels: Record<number, { abbr: string; level: string }[]>;
@@ -40,7 +40,7 @@ export function ProfessionalZiweiBoard({ result, mode, focus, onSelect, onDetail
             {mode === "sanhe" && <>
               <p className="mt-1 text-[10px] text-gray-600">命主：{result.soulStar}　身主：{result.bodyStar}</p>
               <p className="mt-1 text-[10px] text-gray-600">命宫：{result.earthlyBranchOfSoulPalace}　身宫：{result.earthlyBranchOfBodyPalace}</p>
-              <p className="mt-2 text-center text-[12px]">{result.chineseDate}</p>
+              <button type="button" onClick={onOpenBazi} className="mt-2 text-center text-[12px] text-purple-900 underline" aria-label="用此四柱打开八字基本信息">{result.chineseDate}</button>
             </>}
             <div className="mt-auto relative z-[4]">
               <button type="button" onClick={() => onDetails(selected)} className="rounded border border-gray-300 bg-white px-2 py-1 text-[10px] text-purple-800">查看{findPalace(selected)?.name || "宫位"}资料</button>
