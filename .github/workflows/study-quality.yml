@@ -8,10 +8,16 @@ on:
       - 'src/app/yixue/ziwei/page.tsx'
       - 'src/app/yixue/bazi/page.tsx'
       - 'src/components/ContinuousListenPlayer.tsx'
+      - 'src/components/ProfessionalZiweiBoard.tsx'
       - 'src/lib/listeningQueue.ts'
       - 'scripts/continuous-listening.test.ts'
       - 'src/app/academy/learn/page.tsx'
   workflow_dispatch:
+    inputs:
+      preview:
+        description: Build a static review preview without publishing
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -45,3 +51,15 @@ jobs:
           assert.ok(book.license && book.verification && book.contentSha256.length === 64);
           console.log('PASS: 81 attributed original chapters; no AI-summary blocks.');
           JS
+      - name: Build review preview
+        if: inputs.preview == true
+        env:
+          NEXT_PUBLIC_STORE_CHANNEL: tencent
+        run: npm run build
+      - name: Upload review preview
+        if: inputs.preview == true
+        uses: actions/upload-artifact@v4
+        with:
+          name: study-layout-review-preview
+          path: out/
+          retention-days: 2

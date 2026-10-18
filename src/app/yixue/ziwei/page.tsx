@@ -31,6 +31,7 @@ import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { savePaipanState, loadPaipanState } from "@/lib/paipanPersistence";
 import { useToolBack } from "@/lib/useToolBack";
 import { ShareButton } from "@/components/ShareButton";
+import { ProfessionalZiweiBoard } from "@/components/ProfessionalZiweiBoard";
 import { PostToSquareButton } from "@/components/PostToSquareButton";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
@@ -1147,6 +1148,18 @@ export default function ZiweiPage() {
     return "#fff";
   };
 
+  const openProfessionalPalaceDetails = (index: number) => {
+    if (!result) return;
+    const palace = result.palaces.find(p => p.index === index);
+    if (!palace) return;
+    const palaceInterp = getPalaceInterpretation(palace.name);
+    const interpretations: { type: "palace" | "star" | "sihua"; title: string; content: string; source: string }[] = getPalaceAllStarInterpretations(palace.majorStars || [], palace.name, result.sihua);
+    if (palaceInterp) interpretations.unshift({ type: "palace", title: palaceInterp.title, content: palaceInterp.summary + "\n" + palaceInterp.details.join("\n"), source: palaceInterp.source });
+    const notes = getKbTianjiPalaceNotes(palace.name);
+    if (notes.length) interpretations.push({ type: "palace", title: `${palace.name}·天纪断语（${notes.length}条）`, content: notes.map((note, i) => `${i + 1}. ${note}`).join("\n"), source: KB_TIANJI_SOURCE });
+    setInterpretPanel({ palaceName: palace.name, palaceGanZhi: palace.heavenlyStem + palace.earthlyBranch, interpretations });
+  };
+
   return (
     <div className="bg-[#ededed] min-h-screen flex justify-center">
       <div className="w-full" style={{ maxWidth: professionalLayout ? "720px" : "420px", paddingBottom: "10px" }}>
@@ -1283,7 +1296,7 @@ export default function ZiweiPage() {
                 }}
               >
                 {/* SVG 叠加层 */}
-                <svg
+                {!professionalLayout && <svg
                   style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 2 }}
                   viewBox="0 0 100 100"
                   preserveAspectRatio="none"
@@ -1310,10 +1323,17 @@ export default function ZiweiPage() {
                       />
                     );
                   })()}
-                </svg>
+                </svg>}
+
+                {professionalLayout && <ProfessionalZiweiBoard result={result} mode={viewMode} focus={focusedPalace}
+                  onSelect={setFocusedPalace} onDetails={openProfessionalPalaceDetails}
+                  overlay={overlayInfo} dynamicLabels={dynamicStarsByPalace}
+                  decadalMutagen={dxLayer ? zwDecadalAligned[selectedDaxian]?.mutagen : undefined}
+                  yearlyMutagen={lnLayer ? liunianYears[selectedLiunian]?.mutagen : undefined}
+                  flyingStars={TIANGAN_SIHUA[result.palaces.find(p => p.index === (focusedPalace ?? ZHI_NAMES.indexOf(result.earthlyBranchOfSoulPalace)))?.heavenlyStem || ""]} />}
 
                 {/* 4x4 宫格仅纵向收紧约 10%，保留原列宽、内容和算法；外层仍等比适配屏宽。 */}
-                <div data-testid="ziwei-palace-grid" data-layout={professionalLayout ? "professional" : "standard"} className="grid grid-cols-4 grid-rows-4" style={{ position: "relative", zIndex: 1, aspectRatio: professionalLayout ? "0.74" : "0.84" }}>
+                {!professionalLayout && <div data-testid="ziwei-palace-grid" data-layout="standard" className="grid grid-cols-4 grid-rows-4" style={{ position: "relative", zIndex: 1, aspectRatio: "0.84" }}>
                   {/* 12宫位卡片 */}
                   {GRID_4X4.flat().map((idx, pos) => {
                     // 中心 4 格合并为命宫详情
@@ -1745,7 +1765,7 @@ export default function ZiweiPage() {
                       </div>
                     );
                   })}
-                </div>
+                </div>}
               </div>
 
               {/* 方位标签 - 右侧 */}

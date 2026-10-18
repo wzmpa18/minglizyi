@@ -46,14 +46,14 @@ import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 
-// ===== 五行颜色 - 严格对标jishiyu =====
+// Five-element text colours sampled from the user-authorized phone reference.
 // 注意: 五行颜色为传统命理数据色(火=红)，品牌紫色(#7B2FBE)仅用于UI chrome
 const WX_COLORS: Record<string, string> = {
-  "金": "#ffa500",
-  "木": "#00a879",
-  "水": "#0074e4",
-  "火": "#ed4d49",
-  "土": "#a64b00",
+  "金": "#ef9104",
+  "木": "#07e930",
+  "水": "#2e83f6",
+  "火": "#d30505",
+  "土": "#8b6d03",
 };
 const BRAND_PURPLE = "#7B2FBE";
 const BRAND_PURPLE_LIGHT = "#9B5ECF";
