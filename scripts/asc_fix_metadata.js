@@ -1,11 +1,9 @@
 const crypto = require('crypto');
 const https = require('https');
 
-const ISSUER_ID = 'ee663add-beb6-40d2-92ad-e09fafec8110';
-const KEY_ID = 'UWQ354QP54';
-const P8 = `-----BEGIN PRIVATE KEY-----
-MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgDtIkaHRvdFTOos/oZdVd9nklnuRYnSsmlU28g7kPkbigCgYIKoZIzj0DAQehRANCAAQFfyjgrkwMGMax74CdmAPBT/A9+lPXgx1yGrUPYuuaQcx4dFdmZxzXhuYF0+byqCJ1PjPlH06gWOxv0XTMxLGo
------END PRIVATE KEY-----`;
+const ISSUER_ID = process.env.APP_STORE_CONNECT_ISSUER_ID;
+const KEY_ID = process.env.ASC_KEY_ID;
+const P8 = require('./lib/ascCredentials.cjs').readAscPrivateKey();
 const APP_INFO_ID = '157d4098-3c6f-4aa8-8418-4d60321ab9e8';
 const APP_ID = '6807592575';
 
