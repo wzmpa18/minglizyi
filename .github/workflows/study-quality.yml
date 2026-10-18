@@ -42,6 +42,11 @@ on:
       - 'src/app/admin/study-comments/page.tsx'
       - 'src/app/admin/ClientShell.tsx'
       - 'scripts/study-comments.test.cjs'
+      - 'src/lib/astronomyStudy.ts'
+      - 'src/app/academy/astronomy/**'
+      - 'src/app/zhongyi/yunqi/**'
+      - 'src/components/LearningEntryPanel.tsx'
+      - 'scripts/astronomy-study.test.ts'
   workflow_dispatch:
     inputs:
       preview:
@@ -67,6 +72,7 @@ jobs:
       - run: node --test scripts/resource-discussion.test.cjs
       - run: npx tsx --test scripts/acupoint-study.test.ts
       - run: node --test scripts/study-comments.test.cjs
+      - run: npx tsx --test scripts/astronomy-study.test.ts
       - name: Verify original edition chapter sequence and provenance
         run: |
           node --input-type=module <<'JS'

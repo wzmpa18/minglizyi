@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 /** A private, explicitly saved notebook for a single chart or lesson. */
-export function LocalStudyNotes({ storageKey }: { storageKey: string }) {
+export function LocalStudyNotes({ storageKey, placeholder = "记录四课三传结构、术语和典籍出处…" }: { storageKey: string; placeholder?: string }) {
   const [note, setNote] = useState("");
   const [review, setReview] = useState("");
   const [tab, setTab] = useState<"note" | "review">("note");
@@ -28,7 +28,7 @@ export function LocalStudyNotes({ storageKey }: { storageKey: string }) {
       onClick={() => setTab(value)} className="rounded border px-3 py-2 text-sm" style={{ color: tab === value ? "white" : "#444", background: tab === value ? "#7B2FBE" : "white" }}>{value === "note" ? "学习笔记" : "复盘记录"}</button>)}</div>
     <textarea aria-label={tab === "note" ? "学习笔记内容" : "复盘记录内容"} value={tab === "note" ? note : review}
       onChange={event => { (tab === "note" ? setNote : setReview)(event.target.value); setMessage(""); }}
-      placeholder={tab === "note" ? "记录四课三传结构、术语和典籍出处…" : "记录本课例的观察与复习结论…"}
+      placeholder={tab === "note" ? placeholder : "记录本课例的观察与复习结论…"}
       className="min-h-48 w-full rounded border border-gray-300 bg-white p-3 text-sm text-gray-800" />
     <div className="mt-2 flex items-center justify-between gap-3"><span className="text-xs text-gray-500">仅存本机；离开前请保存，清理应用数据后可能丢失。</span>
       <button type="button" onClick={save} disabled={!ready} className="shrink-0 rounded bg-purple-700 px-4 py-2 text-sm text-white disabled:opacity-40">保存笔记</button></div>

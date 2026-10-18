@@ -22,6 +22,8 @@ export default function AcademyLayout({ children }: { children: React.ReactNode 
           </p>
           <div className="flex flex-col gap-1.5">
             <Link href="/academy/start/" className="rounded-lg bg-[#edf7f2] px-2.5 py-2 text-[11.5px] font-semibold text-[#267364]">中医学习入门课——无需登录，阅读、自测与本机错题重练</Link>
+            <Link href="/academy/astronomy/" className="rounded-lg bg-[#edf7f2] px-2.5 py-2 text-[11.5px] font-semibold text-[#267364]">天文馆——日月行星、观测自测与本机笔记</Link>
+            <Link href="/zhongyi/yunqi/" className="rounded-lg bg-[#edf7f2] px-2.5 py-2 text-[11.5px] font-semibold text-[#267364]">五运六气——主客气对照、原典阅读与连续听学</Link>
             {YIXUE_SUBJECTS.map((s) => (
               <Link
                 key={s.key}
