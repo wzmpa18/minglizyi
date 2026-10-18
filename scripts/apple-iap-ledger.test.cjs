@@ -5,6 +5,11 @@ const { DatabaseSync } = require('node:sqlite');
 const ledger = require('../backend_deploy/appleIapLedger');
 const catalog = require('../backend_deploy/appleIapCatalog.json');
 const now = Date.parse('2026-10-18T10:00:00Z'), day = 86400000;
+test('sandbox policy accepts only explicit server-owned numeric account IDs', () => {
+  const { parsePolicy } = require('../backend_deploy/appleIapPolicy');
+  assert.deepEqual(parsePolicy({ sandboxUserIds: [1, '1', '2'] }), { sandboxUserIds: ['1', '2'] });
+  for (const value of [{ sandboxUserIds: '*' }, { sandboxUserIds: ['*'] }, { sandboxUserIds: ['-1'] }, { sandboxUserIds: [null] }, { sandboxUserIds: Array(51).fill('1') }]) assert.throws(() => parsePolicy(value));
+});
 function database() {
   const db = new DatabaseSync(':memory:');
   db.exec("CREATE TABLE users(user_id INTEGER PRIMARY KEY,member_level TEXT,membership_expiry TEXT,status TEXT,deleted_at TEXT); INSERT INTO users VALUES(1,'basic',NULL,'active',NULL),(2,'basic',NULL,'active',NULL)");

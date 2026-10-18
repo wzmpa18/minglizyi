@@ -7,7 +7,7 @@ const ledger = require('./appleIapLedger');
 const catalog = require('./appleIapCatalog.json');
 let database;
 const db = () => database || (database = new Database(process.env.DB_PATH || process.env.USER_DB_PATH || '/root/backend-auth/data/yandao_users.db', { fileMustExist: true }));
-const policy = () => ({ sandboxUserIds: (process.env.APPLE_IAP_SANDBOX_USER_IDS || '').split(',').map(s => s.trim()).filter(Boolean) });
+const policy = require('./appleIapPolicy').load;
 const limited = new Map();
 function rateLimit(req, res, next) {
   const key = String(req.account?.user_id || req.ip);
