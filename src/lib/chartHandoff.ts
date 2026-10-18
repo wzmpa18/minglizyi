@@ -38,3 +38,13 @@ export function chartHandoffFromRecord(input:Record<string,any>,target:ChartHand
   const p:ChartHandoff={version:1,target,createdAt:Date.now(),civil:dt(raw),calculation:dt(c),name:b.name??input.name??"",gender:b.gender??input.gender,longitude:b.longitude??input.longitude??116.4,birthPlace:b.birthPlace??input.birthPlace??"",zhenTaiyang:b.zhenTaiyang??input.zhenTaiyang??input.useTrueSolar??false,zaoWanZi:b.zaoWanZi??input.zaoWanZi??false,xiaLing:b.xiaLing??input.xiaLing??false};
   return validChartHandoff(p)?p:null;
 }
+
+/** Presentation reads the persisted civil/calculation pair, never a mixture of
+ * current form state and corrected minutes. Legacy records are not reversed. */
+export function chartTimeLabels(input:Record<string,any>) {
+  const handoff=chartHandoffFromRecord(input,"ziwei");
+  if(!handoff)return null;
+  const format=(v:ChartDateTime)=>`${v.year}-${String(v.month).padStart(2,"0")}-${String(v.day).padStart(2,"0")} ${String(v.hour).padStart(2,"0")}:${String(v.minute).padStart(2,"0")}`;
+  const original=input.birthInput;
+  return {civil:format(handoff.civil),calculation:format(handoff.calculation),civilKnown:!!(original&&(original.normalizedDateTime||Number.isInteger(original.year)))};
+}

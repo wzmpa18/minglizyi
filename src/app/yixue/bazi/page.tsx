@@ -2,7 +2,7 @@
 import {prepareChartTime,baziSectForOptions} from "@/lib/chartTimeInput";
 import { InterfaceButton } from "@/components/InterfaceControls";
 import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
-import { chartHandoffFromRecord, consumeChartHandoff, writeChartHandoff } from "@/lib/chartHandoff";
+import { chartHandoffFromRecord, chartTimeLabels, consumeChartHandoff, writeChartHandoff } from "@/lib/chartHandoff";
 import { pillarRelations } from "@/lib/baziRelations";
 
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
@@ -1739,13 +1739,20 @@ export default function BaziPage(){
     const saved = loadPaipanState("bazi");
     if (saved && saved.input) {
       const inp = saved.input as any;
-      if (inp.year) setYear(inp.year);
-      if (inp.month) setMonth(inp.month);
-      if (inp.day) setDay(inp.day);
-      if (inp.hour !== undefined) setHour(inp.hour);
+      chartInputRef.current = inp;
+      const civil=chartHandoffFromRecord(inp,"ziwei")?.civil||inp;
+      if (civil.year) setYear(civil.year);
+      if (civil.month) setMonth(civil.month);
+      if (civil.day) setDay(civil.day);
+      if (civil.hour !== undefined) setHour(civil.hour);
       if (inp.gender) setGender(inp.gender);
       if (inp.calType) setCalType(inp.calType);
-      if (inp.minute !== undefined) setBirthMinute(inp.minute);
+      if (civil.minute !== undefined) setBirthMinute(civil.minute);
+      if (inp.zaoWanZi !== undefined) setZaoWanZi(!!inp.zaoWanZi);
+      if (inp.xiaLing !== undefined) setXiaLing(!!inp.xiaLing);
+      if (inp.useTrueSolar !== undefined) setZhenTaiyang(!!inp.useTrueSolar);
+      if (inp._trueSolarDisplay !== undefined) setTrueSolarDisplay(inp._trueSolarDisplay||null);
+      if (inp._solarCorrection !== undefined) setSolarCorrection(inp._solarCorrection||null);
       if (inp.name !== undefined) setName(inp.name);
       if (inp.longitude !== undefined) setLongitude(inp.longitude);
       if (inp.birthPlace !== undefined) setBirthPlace(inp.birthPlace);
@@ -1813,13 +1820,14 @@ export default function BaziPage(){
   const restoreHistoryRecord = useCallback((rec: PaipanRecord) => {
     const inp = (rec.input || {}) as any;
     chartInputRef.current = inp;
-    if (inp.year) setYear(inp.year);
-    if (inp.month) setMonth(inp.month);
-    if (inp.day) setDay(inp.day);
-    if (inp.hour !== undefined) setHour(inp.hour);
+    const civil=chartHandoffFromRecord(inp,"ziwei")?.civil||inp;
+    if (civil.year) setYear(civil.year);
+    if (civil.month) setMonth(civil.month);
+    if (civil.day) setDay(civil.day);
+    if (civil.hour !== undefined) setHour(civil.hour);
     if (inp.gender) setGender(inp.gender);
     if (inp.calType) setCalType(inp.calType);
-    if (inp.minute !== undefined) setBirthMinute(inp.minute);
+    if (civil.minute !== undefined) setBirthMinute(civil.minute);
     if (inp.zaoWanZi !== undefined) setZaoWanZi(!!inp.zaoWanZi);
     if (inp.xiaLing !== undefined) setXiaLing(!!inp.xiaLing);
     if (inp.useTrueSolar !== undefined) setZhenTaiyang(!!inp.useTrueSolar);
@@ -1933,15 +1941,18 @@ export default function BaziPage(){
     try{const bz=solarToBazi({year:y,month:m,day:d,hour:h,minute:mi,gender:g,sect:baziSectForOptions(selectedLateZi)}) as BaziResult;setResult(bz);
       const ss=calculateAllShenSha({yearGan:bz.pillars[0].gan as TianGan,yearZhi:bz.pillars[0].zhi as DiZhi,monthGan:bz.pillars[1].gan as TianGan,monthZhi:bz.pillars[1].zhi as DiZhi,dayGan:bz.dayGan as TianGan,dayZhi:bz.dayZhi as DiZhi,hourGan:bz.pillars[3].gan as TianGan,hourZhi:bz.pillars[3].zhi as DiZhi,gender:g});
       const place=override?.birthPlace??birthPlace;
-      chartInputRef.current={birthInput:override?.birthInput,year:y,month:m,day:d,hour:h,minute:mi,gender:g,name:selectedName,longitude,birthPlace:place,zhenTaiyang:selectedSolar,zaoWanZi:selectedLateZi,xiaLing:selectedDst};
-      setBirthMinute(mi); setBirthPlace(place);
-      setShensha(ss);setShowForm(false);savePaipanState("bazi",{input:{year:y,month:m,day:d,hour:h,minute:mi,gender:g,calType,name,longitude,birthPlace:place},result:bz,showForm:false,_ts:Date.now()});
+      const recordInput={birthInput:override?.birthInput,year:y,month:m,day:d,hour:h,minute:mi,gender:g,name:selectedName,calType,longitude:override?.birthInput?.longitude??longitude,birthPlace:place,useTrueSolar:selectedSolar,zhenTaiyang:selectedSolar,zaoWanZi:selectedLateZi,xiaLing:selectedDst,_trueSolarDisplay:selectedSolar||selectedDst?`${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")} ${String(h).padStart(2,"0")}:${String(mi).padStart(2,"0")}`:null,_solarCorrection:override?.birthInput?override.birthInput.correctionInfo:solarCorrection};
+      chartInputRef.current=recordInput;
+      const civil=chartHandoffFromRecord(recordInput,"ziwei")?.civil;
+      if(civil){setYear(civil.year);setMonth(civil.month);setDay(civil.day);setHour(civil.hour);setBirthMinute(civil.minute);}
+      setName(selectedName);setBirthPlace(place);
+      setShensha(ss);setShowForm(false);savePaipanState("bazi",{input:recordInput,result:bz,showForm:false,_ts:Date.now()});
       // v25.0.87: 排盘历史记录（完整参数+结果，同参数自动去重置顶）——记录保存需注册，游客不落记录
       // v25.0.88: 底层切换统一原生存储（原生壳SQLite/网页localStorage），并关联命主档案
       if(getUserPermissionLevel()!=="visitor"){
         savePaipanRecord({
           tool:"bazi",
-          input:{birthInput:override?.birthInput,year:y,month:m,day:d,hour:h,minute:mi,gender:g,calType,useTrueSolar:selectedSolar,longitude,birthPlace:place,name:selectedName,zaoWanZi:selectedLateZi,xiaLing:selectedDst,_trueSolarDisplay:selectedSolar||selectedDst?`${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")} ${String(h).padStart(2,"0")}:${String(mi).padStart(2,"0")}`:null,_solarCorrection:override?.birthInput?override.birthInput.correctionInfo:solarCorrection},
+          input:recordInput,
           result:bz as unknown as Record<string, unknown>,
           profileId:mingzhu?.id??null,
           title:`${g==="male"?"男":"女"}命 ${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")} ${String(h).padStart(2,"0")}:${String(mi).padStart(2,"0")} ${bz.pillars.map(p=>p.gan+p.zhi).join(" ")}`,
@@ -1972,7 +1983,8 @@ export default function BaziPage(){
     router.push("/yixue/ziwei/");
   };
   const pillars=result?.pillars||[]; const shengxiao=pillars[0]?getShengXiao(pillars[0].zhi as DiZhi):"";
-  const dateStr=`${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")} ${String(hour).padStart(2,"0")}:${String(birthMinute).padStart(2,"0")}`;
+  const persistedTimeLabels=chartInputRef.current?chartTimeLabels(chartInputRef.current):null;
+  const dateStr=persistedTimeLabels?.civil||`${year}-${String(month).padStart(2,"0")}-${String(day).padStart(2,"0")} ${String(hour).padStart(2,"0")}:${String(birthMinute).padStart(2,"0")}`;
   // 真太阳时显示：勾选时用修正后的真实时间，否则回退为北京时间
   const trueSolarTimeStr = trueSolarDisplay ?? dateStr;
   const lunarDateStr = result?.lunarDate || (result ? `${result.input?.solarDate} ${result.input?.time}` : '');
