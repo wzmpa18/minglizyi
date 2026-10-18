@@ -18,6 +18,7 @@ for (const p of catalog.products) {
   assert.ok(p.englishName.length <= 30 && p.englishDescription.length <= 45);
 }
 const apply = process.argv.includes('--apply');
+const reviewNote = 'Learning product draft. Price and localized metadata are configured; StoreKit purchase, restore, refund integration and final review screenshots are under development. Not submitted for review.';
 const origin = 'https://api.appstoreconnect.apple.com';
 function token() {
   for (const k of ['ASC_KEY_ID', 'ASC_ISSUER_ID', 'ASC_PRIVATE_KEY_PATH']) assert.ok(process.env[k], `Missing ${k}`);
@@ -53,7 +54,7 @@ try {
   for (const product of catalog.products) {
     let remote = existing.find(p => p.attributes.productId === product.productId);
     if (!remote && apply) {
-      remote = (await api('/v2/inAppPurchases', 'POST', { data: { type: 'inAppPurchases', attributes: { name: '言道国学' + product.name, productId: product.productId, inAppPurchaseType: product.type, reviewNote: 'Draft learning product setup. Purchase, restore and refund integration is under development. Not submitted for review.' }, relationships: { app: { data: { type: 'apps', id: catalog.appId } } } } })).data;
+      remote = (await api('/v2/inAppPurchases', 'POST', { data: { type: 'inAppPurchases', attributes: { name: '言道国学' + product.name, productId: product.productId, inAppPurchaseType: product.type, reviewNote: 'Learning product draft under configuration. Purchase, restore and refund integration is under development. Not submitted for review.' }, relationships: { app: { data: { type: 'apps', id: catalog.appId } } } } })).data;
     }
     if (!remote) { report.products.push({ productId: product.productId, exists: false }); save(); continue; }
     assert.equal(remote.attributes.inAppPurchaseType, product.type, 'Product type must never change');
@@ -100,8 +101,10 @@ try {
         }
       }
     }
+    if (apply && row.priceVerified && row.localizations.length === 2 && remote.attributes.reviewNote !== reviewNote) await api(`/v2/inAppPurchases/${remote.id}`, 'PATCH', { data: { type: 'inAppPurchases', id: remote.id, attributes: { reviewNote } } });
     const readback = (await api(`/v2/inAppPurchases/${remote.id}`)).data;
     row.state = readback.attributes.state;
+    row.reviewNoteMatchesActualSetup = readback.attributes.reviewNote === reviewNote;
     save(); console.log(JSON.stringify(row));
   }
 } catch (error) {
