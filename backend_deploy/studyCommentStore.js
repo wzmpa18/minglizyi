@@ -21,7 +21,7 @@ function createStudyCommentStore(db, targets, now = () => Date.now()) {
   const fail = (message, status = 400) => { const error = new Error(message); error.status = status; throw error; };
   const target = id => { if (typeof id !== 'string' || !targets.has(id)) fail('穴位不存在或编号不受支持', 404); return id; };
   const settings = () => Object.fromEntries(db.prepare('SELECT key,value FROM study_comment_settings').all().map(row => [row.key, row.value]));
-  const config = id => { target(id); const s = settings(); return { enabled: s.enabled === 'true' && s[`closed:${id}`] !== 'true', maxCharacters: 500, reviewBeforePublish: true, contactUrl: 'https://www.yandao.vip', schemaVersion: 1 }; };
+  const config = id => { target(id); const s = settings(); return { enabled: s.enabled === 'true' && s[`closed:${id}`] !== 'true', maxCharacters: 500, reviewBeforePublish: true, contactUrl: 'https://yandaoguoxue.yandao.vip/profile/feedback/', schemaVersion: 1 }; };
   const user = id => { if (!id) fail('请先登录', 401); return String(id); };
   const blocked = (a,b) => !!db.prepare('SELECT 1 FROM study_comment_blocks WHERE (user_id=? AND blocked_id=?) OR (user_id=? AND blocked_id=?)').get(a,b,b,a);
   const audit = (actor,action,id,note='') => db.prepare('INSERT INTO study_comment_audit(actor,action,target,note,created_ms) VALUES (?,?,?,?,?)').run(String(actor),action,String(id),String(note).slice(0,1000),now());

@@ -25,7 +25,7 @@ export default function StudyCommentAdmin(){
       <label style={styles.label}>置顶解答的来源链接<input value={evidence} onChange={e=>setEvidence(e.target.value)} placeholder="https://…" style={styles.input}/></label>
       <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:10}}>
         <button style={styles.btnPrimary} disabled={busy} onClick={()=>void load()}>刷新队列</button>
-        <button style={styles.btnSecondary} disabled={busy} onClick={()=>{if(window.confirm('确认已具备持续审核和举报处理人员，开放文字学习讨论？'))void action('/config',{enabled:true});}}>全局开放（管理员）</button>
+        <button style={styles.btnSecondary} disabled={busy} onClick={()=>{if(window.confirm('开放纯文字学习投稿？新留言先进入待审队列，未经审核不会公开。请安排管理员持续处理审核及举报。'))void action('/config',{enabled:true});}}>全局开放（管理员）</button>
         <button style={styles.btnDanger} disabled={busy} onClick={()=>void action('/config',{enabled:false})}>暂停全部讨论</button>
       </div>
       <label style={styles.label}>单穴控制<input value={target} onChange={e=>setTarget(e.target.value)} placeholder="例如 standard:LU1" style={styles.input}/></label>
