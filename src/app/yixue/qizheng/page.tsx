@@ -959,7 +959,7 @@ export default function QizhengPage() {
       </div>
 
       {/* 星盘（v25.0.84 P1-4：缩放/全屏/复位，双指 pinch + 按钮控制） */}
-      <div data-local-zoom="true" className={chartFull ? "fixed inset-0 z-[11000] flex flex-col bg-white" : "mt-2 bg-white px-2 py-3"} style={chartFull ? {paddingTop:"calc(env(safe-area-inset-top, 0px) + 18px)",paddingBottom:"env(safe-area-inset-bottom, 0px)"} : undefined}>
+      <div data-chart-fullscreen={chartFull?"true":undefined} data-local-zoom="true" className={chartFull ? "fixed inset-0 z-[11000] flex flex-col bg-white" : "mt-2 bg-white px-2 py-3"} style={chartFull ? {paddingTop:"calc(env(safe-area-inset-top, 0px) + 18px)",paddingBottom:"env(safe-area-inset-bottom, 0px)"} : undefined}>
         <div className={chartFull ? "flex items-center justify-between gap-2 px-3 py-2" : "flex items-center justify-between gap-2 px-1 pb-1.5"}>
           <span className={`text-[10px] ${chartFull ? "text-gray-700" : "text-gray-400"}`}>
             星盘{chartFull ? " · 全屏" : ""} · {Math.round(chartScale * 100)}%

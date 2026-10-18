@@ -680,7 +680,7 @@ export default function QimenPage() {
       </table>
 
       {/* 九宫格排盘 */}
-      <div data-local-zoom="true" style={chartFull?{position:"fixed",inset:0,zIndex:11000,background:"white",paddingTop:"calc(env(safe-area-inset-top, 0px) + 18px)",paddingBottom:"env(safe-area-inset-bottom, 0px)",overflow:"auto"}:undefined}>
+      <div data-chart-fullscreen={chartFull?"true":undefined} data-local-zoom="true" style={chartFull?{position:"fixed",inset:0,zIndex:11000,background:"white",paddingTop:"calc(env(safe-area-inset-top, 0px) + 18px)",paddingBottom:"env(safe-area-inset-bottom, 0px)",overflow:"auto"}:undefined}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 12px"}}><span style={{fontSize:12,color:"#444"}}>九宫盘 · 点击宫位阅读</span><button type="button" onClick={()=>setChartFull(v=>!v)} style={{border:"1px solid #aaa",borderRadius:6,padding:"6px 12px",color:"#333"}}>{chartFull?"退出全屏":"全屏九宫"}</button></div>
       <div style={{ padding: "2px", border: "2px solid #444", margin: "4px auto",width:chartFull?"min(98vw, calc(100dvh - 108px))":"calc(100% - 16px)","--qimen-cell-height":chartFull?"min(31vw, calc((100dvh - 125px)/3))":"clamp(112px, 31vw, 145px)"} as React.CSSProperties}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 0 }}>
