@@ -7,7 +7,7 @@ import {calculateZiwei} from "../src/algorithm-core/modules/ziwei";
 import {withZiweiDayRule} from "../src/algorithm-core/modules/ziwei/dayRule";
 import fixture from "./fixtures/existing-engine-golden.json";
 test("existing E-drive reference facts remain stable, without claiming live Jishiyu parity",()=>{
- const bazi=solarToBazi(fixture.input);assert.deepEqual(bazi.pillars.map((p:{ganzhi:string})=>p.ganzhi),fixture.bazi);assert.equal(bazi.input.time,'14:30');
+ const bazi=solarToBazi(fixture.input);assert.deepEqual(bazi.pillars.map((p:{ganzhi:string})=>p.ganzhi),fixture.bazi);assert.ok(bazi.input);assert.equal(bazi.input.time,'14:30');
  const zw=calculateZiwei({...fixture.input,gender:'male'});
  for(const key of ['fiveElementsClass','soulStar','bodyStar','earthlyBranchOfSoulPalace','earthlyBranchOfBodyPalace'] as const)assert.equal(zw[key],fixture.ziwei[key]);
  assert.deepEqual(zw.palaces.map(p=>({index:p.index,name:p.name,branch:p.earthlyBranch,majorStars:p.majorStars})),fixture.ziwei.palaces);
