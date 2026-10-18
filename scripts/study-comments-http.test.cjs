@@ -63,6 +63,32 @@ async function worker(root){
     assert.equal((await request('/admin/comment/'+id,'PUT',admin,{status:'APPROVED',note:'不得复活已删除评论'})).status,404);
     console.log('PASS: real HTTP/JWT/account lookup, role scopes, 500 characters, origin/body limits, pending moderation, idempotency, report, block and own deletion. Isolated data only.');
 
+    process.env.FEEDBACK_DATA_DIR=path.join(root,'feedback');
+    app.use('/api/feedback',require('../backend_deploy/feedbackRoutes'));
+    async function feedback(route,method='GET',credential=alice,body){
+      const response=await fetch(`http://127.0.0.1:${server.address().port}/api/feedback`+route,{method,headers:{'Content-Type':'application/json',...(credential?{Authorization:'Bearer '+credential}:{})},body:body===undefined?undefined:JSON.stringify(body)});
+      return {status:response.status,body:await response.json()};
+    }
+    assert.equal((await feedback('/list','GET','')).status,401);
+    assert.equal((await feedback('/list?userId=bob')).status,403);
+    for(const id of ['missing','banned','deleted'])assert.equal((await feedback('/list','GET',token(id))).status,403);
+    const submittedFeedback=await feedback('/submit','POST',alice,{userId:'bob',userName:'forged',type:'complaint',title:'广告投诉',description:'请核对这个学习资料广告',contact:'private-test@example.invalid'});
+    assert.equal(submittedFeedback.status,200);
+    const ownFeedback=(await feedback('/list')).body.feedbacks[0];
+    assert.equal(ownFeedback.userId,'alice');assert.equal(ownFeedback.userName,'学习甲');
+    assert.equal((await feedback('/list','GET',bob)).body.feedbacks.length,0);
+    assert.equal((await feedback('/admin/queue','GET',alice)).status,401);
+    assert.equal((await feedback('/admin/queue','GET',finance)).status,403);
+    assert.equal((await feedback('/admin/queue','GET',support)).body.feedbacks.length,1);
+    const reply={status:'resolved',adminReply:'已复核并处理广告内容',expectedUpdatedAt:ownFeedback.createdAt};
+    assert.equal((await feedback('/admin/'+ownFeedback.id,'PUT',support,reply)).status,200);
+    assert.equal((await feedback('/admin/'+ownFeedback.id,'PUT',support,reply)).status,409);
+    assert.equal((await feedback('/list')).body.feedbacks[0].adminReply,reply.adminReply);
+    assert.equal((await feedback('/submit','POST',alice,{type:'complaint',title:'<script>x</script>',description:'不支持脚本形式的内容'})).status,400);
+    for(let i=0;i<2;i++)assert.equal((await feedback('/submit','POST',alice,{type:'suggestion',title:'学习建议',description:'请完善资料的来源介绍'})).status,200);
+    assert.equal((await feedback('/submit','POST',alice,{type:'suggestion',title:'重复建议',description:'超过限额应当暂缓提交'})).status,429);
+    console.log('PASS: feedback private ownership, trusted account identity, no public contact listing, ops-only reply, optimistic conflicts, plain text and rate limits.');
+
     process.env.SOCIAL_DB_PATH=path.join(root,'social.db');
     process.env.SOCIAL_RATE_LIMIT_CONFIG=path.join(root,'social-rate-limit.json');
     process.env.COMMENTS_ENABLED='true'; // Isolated worker only; production switches stay unchanged.
@@ -208,6 +234,7 @@ async function worker(root){
       assert.equal((await matrix(true,{toolId:'academy_astronomy',patch:{payMode:'FREE',memberLevel:'basic',adEnabled:false,adTitle:'',adLinkUrl:''}})).status,200);
       console.log('PASS: real administrator tool controls, new learning modules default free/ad-free, membership and static sponsorship fields, permissions and executable URL rejection.');
       accounts.exec('ALTER TABLE users RENAME TO inaccessible_users');
+      assert.equal((await feedback('/list','GET',token('123456'))).status,503);
       assert.equal((await social('/posts/visible/like','POST',bob,{})).status,503);
       console.log('PASS: real social HTTP routes enforce feed/detail/favorite/comment two-way blocks, inactive posts, deleted text, reply checks, real accounts and fail-closed database errors.');
     }finally{socialDb.close();}

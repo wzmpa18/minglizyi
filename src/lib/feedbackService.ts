@@ -11,6 +11,7 @@
  */
 
 "use client";
+import { getUserToken, getUserProfile } from "./auth";
 
 // ==================== 类型定义 ====================
 
@@ -74,10 +75,13 @@ const LOCAL_HISTORY_KEY = "yandao_feedback_history";
 export async function submitFeedback(
   feedback: Omit<Feedback, "id" | "status" | "createdAt">
 ): Promise<{ success: boolean; message: string; feedbackId?: string }> {
+  const token = getUserToken(), userId = getUserProfile()?.userId;
+  if (!token || !userId) return { success: false, message: "请先登录后提交反馈" };
+  feedback = { ...feedback, userId: String(userId) };
   try {
     const response = await fetch("/api/feedback/submit", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify(feedback),
     });
 
@@ -125,15 +129,17 @@ export async function submitFeedback(
  * 获取用户反馈历史（前端）
  */
 export async function getUserFeedbacks(userId: string): Promise<Feedback[]> {
+  const token = getUserToken(), ownId = String(getUserProfile()?.userId || "");
+  if (!token || !ownId) return [];
   try {
-    const response = await fetch(`/api/feedback/list?userId=${userId}`);
+    const response = await fetch("/api/feedback/list", { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
     const data = await response.json();
     if (data.success && data.feedbacks) {
       return data.feedbacks;
     }
   } catch {}
   // 降级到本地存储
-  return getLocalHistory();
+  return getLocalHistory().filter(item => String(item.userId) === ownId);
 }
 
 // ==================== 本地存储 ====================
