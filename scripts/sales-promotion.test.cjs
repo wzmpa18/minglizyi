@@ -46,8 +46,8 @@ test('operator configuration rejects unsafe schedules, percentages and monetary 
 
 test('real server quote functions apply the campaign to authoritative prices and ignore client amounts', () => {
   const text=fs.readFileSync('backend_deploy/paymentRoutes.js','utf8');
-  const source=text.slice(text.indexOf('function resolveBaseServerPrice('),text.indexOf('// POST /api/payment/create —'));
-  const config={plans:[{level:'monthly',price:37}],packages:[{id:'pack_10',price:28}],timePlans:[{key:'single',price:2.9}]};
+  const source=text.slice(text.indexOf('function resolveBaseServerPrice('),text.indexOf("router.get('/ai-credits'"));
+  const config={plans:[{level:'monthly',price:37}],packages:[{id:'pack_10',price:28,count:10,validity:30}],timePlans:[{key:'single',price:2.9}]};
   const context={readAdminConfig:()=>config,DEFAULT_MEMBERSHIP_PLANS:[],DEFAULT_AI_TIME_PLANS:[],DEFAULT_SINGLE_UNLOCK_PRICE:9.9,
     readBatchConfig:()=>({basePrice:200,discounts:{basic:1,yearly:0.8}}),readUserMemberLevel:()=> 'yearly',console,
     require:name=> name==='./salesPromotion'?{quote:(type,current)=>sale.quote(type,current,campaign)}:{loadMatrix:()=>({tools:{phone_number:{status:'ON',payMode:'ONE_TIME',price:18}}})}};

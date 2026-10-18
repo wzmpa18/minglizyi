@@ -380,7 +380,7 @@ function beijingEndOfDay(ms) {
 }
 
 function deliverOrderBenefits(order) {
-  if (!order || order.benefitDelivered) return;
+  if (!order || order.status !== ORDER_STATUS.PAID || order.benefitDelivered) return;
   if (order.type !== 'MEMBERSHIP' && order.type !== 'POINTS_RECHARGE') {
     // v25.0.60 P1-5：SINGLE_UNLOCK/AI时卡权益服务端入库（换设备/重装不再丢失）
     // B 类工具单次解锁（无 ai_plan_ 前缀）expire_at = NULL 表示永久
@@ -396,6 +396,13 @@ function deliverOrderBenefits(order) {
             throw new Error('订单用户无效，权益未交付');
           }
           if (order.type === 'SINGLE_UNLOCK' && !targetId) throw new Error('缺少解锁权益标识');
+          if (order.type === 'AI_PACKAGE' && order.extra?.aiPackage) {
+            const pack = order.extra.aiPackage;
+            const purchaseTime = Date.parse(order.paidAt || order.createdAt);
+            if (!Number.isFinite(purchaseTime) || !Number.isInteger(pack.validityDays) || pack.validityDays < 0) throw Error('AI购买快照无效');
+            const expiry = pack.validityDays > 0 ? new Date(purchaseTime + pack.validityDays * 86400000).toISOString() : null;
+            require('./paymentAiCredits').grant(db, uid, order.orderId, pack.count, expiry);
+          }
           if (targetId === 'ai_plan_single') {
             require('./paymentAiCredits').grant(db, uid, order.orderId);
           }
@@ -804,14 +811,16 @@ function resolveBaseServerPrice(type, extra, userId) {
         const pkg = aiCfg.packages.find(p => p.id === pkgId);
         if (pkg) {
           if (pkg.enabled === false) return { price: null, reason: '套餐已下架' };
-          return { price: Number(pkg.price) };
+          const count = Number(pkg.count), validityDays = Number(pkg.validity || 0);
+          if (!Number.isSafeInteger(count) || count < 1 || count > 1000000 || !Number.isInteger(validityDays) || validityDays < 0 || validityDays > 3650) return { price: null, reason: 'AI次数包配置无效' };
+          return { price: Number(pkg.price), aiPackage: { id: pkg.id, count, validityDays } };
         }
       }
       if (planKey) {
         const tps = (Array.isArray(aiCfg && aiCfg.timePlans) && aiCfg.timePlans.length)
           ? aiCfg.timePlans : DEFAULT_AI_TIME_PLANS;
         const tp = tps.find(p => p.key === planKey);
-        if (tp) return { price: Number(tp.price) };
+        if (tp && tp.enabled !== false) return { price: Number(tp.price), entitlementTarget: 'ai_plan_' + planKey };
       }
       return { price: null, reason: 'AI套餐不存在' };
     }
@@ -824,7 +833,7 @@ function resolveBaseServerPrice(type, extra, userId) {
         const tps = (Array.isArray(aiCfg && aiCfg.timePlans) && aiCfg.timePlans.length)
           ? aiCfg.timePlans : DEFAULT_AI_TIME_PLANS;
         const tp = tps.find(p => p.key === planKey);
-        if (tp) return { price: Number(tp.price) };
+        if (tp && tp.enabled !== false) return { price: Number(tp.price) };
         return { price: null, reason: 'AI套餐不存在' };
       }
       // B类付费工具（tool-matrix 单项收费）
@@ -872,6 +881,20 @@ function resolveServerPrice(type, extra, userId) {
   return result ? require('./salesPromotion').quote(type, result) : result;
 }
 
+router.get('/ai-credits', require('./register_routes').authMiddleware, (req, res) => {
+  try {
+    const db = getOrdersDb();
+    if (!db) return jsonResponse(res, 503, false, 'AI额度暂不可用');
+    const account = db.prepare('SELECT user_id,status,deleted_at FROM users WHERE user_id=?').get(Number(req.user.userId));
+    if (!account || account.deleted_at || account.status === 'banned') return jsonResponse(res, 403, false, '账号不可用');
+    const service = require('./paymentAiCredits');
+    const balance = service.status(db, account.user_id);
+    const entries = db.prepare('SELECT purchased,remaining,expires_at AS expiresAt,created_at AS createdAt FROM paid_ai_credits WHERE user_id=? ORDER BY created_at DESC,source_order_no DESC LIMIT 100').all(account.user_id);
+    res.set('Cache-Control', 'no-store');
+    return jsonResponse(res, 200, true, '获取成功', { credits: balance.credits, activePlan: balance.activePlan, entries });
+  } catch { return jsonResponse(res, 503, false, 'AI额度暂不可用，请稍后重试'); }
+});
+
 // POST /api/payment/create — 创建支付订单
 // ============================================================================
 router.post('/create', require('./register_routes').authMiddleware, async (req, res) => {
@@ -880,6 +903,7 @@ router.post('/create', require('./register_routes').authMiddleware, async (req, 
     const effectiveExtra = extra && typeof extra === 'object' ? { ...extra } : {};
     delete effectiveExtra.growthCampaign;
     delete effectiveExtra.salesPromotion;
+    delete effectiveExtra.aiPackage;
     const userId = String(req.user.userId);
     if (req.body.userId != null && String(req.body.userId) !== userId) {
       return jsonResponse(res, 403, false, '登录账号与付款账号不一致，请重新登录');
@@ -902,7 +926,7 @@ router.post('/create', require('./register_routes').authMiddleware, async (req, 
     if (type === 'SINGLE_UNLOCK' && (!extra || typeof extra.unlockTargetId !== 'string' || !extra.unlockTargetId.trim())) {
       return jsonResponse(res, 400, false, '缺少购买权益信息，未发起付款');
     }
-    if (!['MEMBERSHIP', 'POINTS_RECHARGE', 'SINGLE_UNLOCK', 'SERVICE_ORDER'].includes(type)) {
+    if (!['MEMBERSHIP', 'POINTS_RECHARGE', 'SINGLE_UNLOCK', 'SERVICE_ORDER', 'AI_PACKAGE'].includes(type)) {
       return jsonResponse(res, 503, false, '该购买项目交付服务正在维护，未发起付款');
     }
 
@@ -926,6 +950,8 @@ router.post('/create', require('./register_routes').authMiddleware, async (req, 
       }
       finalAmount = Number(resolved.price);
       if (resolved.promotion) effectiveExtra.salesPromotion = resolved.promotion;
+      if (resolved.aiPackage) { effectiveExtra.aiPackage = resolved.aiPackage; delete effectiveExtra.unlockTargetId; }
+      if (resolved.entitlementTarget) effectiveExtra.unlockTargetId = resolved.entitlementTarget;
     } else if (Number(amount) > 10000) {
       return jsonResponse(res, 400, false, '金额超出合理范围');
     }

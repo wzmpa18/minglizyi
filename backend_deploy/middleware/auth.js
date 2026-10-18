@@ -393,22 +393,24 @@ function checkAIQuota(req, res, next) {
 function consumeAIQuotaInDB(userId) {
   const db = getDB();
   if (!db) return { success: false };
-
   try {
-    if (!String(userId).startsWith('anon:')) {
-      const credits = require('../paymentAiCredits');
-      if (credits.status(db,userId).activePlan || credits.consume(db,userId)) return { success: true };
-    }
-    const today = beijingToday();
-
-    db.prepare(`
-      INSERT INTO ai_quota_usage (user_id, usage_date, used_count)
-      VALUES (?, ?, 1)
-      ON CONFLICT(user_id, usage_date)
-      DO UPDATE SET used_count = used_count + 1
-    `).run(userId, today);
-
-    return { success: true };
+    return db.transaction(() => {
+      const today = beijingToday();
+      if (!String(userId).startsWith('anon:')) {
+        const service = require('../paymentAiCredits');
+        const paid = service.status(db, userId);
+        if (paid.activePlan) return { success: true };
+        const baseLimit = getAIUsageDailyLimit(getMembershipFromDB(userId).level);
+        const used = db.prepare('SELECT used_count FROM ai_quota_usage WHERE user_id=? AND usage_date=?').get(userId, today)?.used_count || 0;
+        // Use the included daily allowance before consuming purchased credits.
+        if (baseLimit !== Infinity && used >= baseLimit) {
+          return service.consume(db, userId) ? { success: true } : { success: false, error: 'AI额度已用完' };
+        }
+      }
+      db.prepare(`INSERT INTO ai_quota_usage (user_id,usage_date,used_count) VALUES (?,?,1)
+        ON CONFLICT(user_id,usage_date) DO UPDATE SET used_count=used_count+1`).run(userId,today);
+      return { success: true };
+    }).immediate();
   } catch (e) {
     console.error('[middleware/auth] AI配额扣减失败:', e.message);
     return { success: false, error: e.message };

@@ -23,7 +23,7 @@ export interface ServerMembershipPlan {
 
 export interface ServerAIPricing {
   singleUnlockPrice: number;
-  packages: { id: string; name: string; count: number; price: number; validity: number; enabled: boolean }[];
+  packages: { id: string; name: string; count: number; price: number; basePrice?: number; validity: number; enabled: boolean }[];
   timePlans: { key: string; name: string; price: number; duration: string; desc?: string }[];
   tools: { id: string; name: string; enabled: boolean; price: number; category?: string }[];
 }

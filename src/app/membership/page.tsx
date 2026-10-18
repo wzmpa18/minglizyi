@@ -352,6 +352,8 @@ export default function MembershipPage() {
           <strong>{promotion.name}</strong><div style={{ fontSize: 12 }}>促销优惠{promotion.discountPercent}%，下方显示活动价；原套餐价格保留，同类优惠不叠加，不消耗助力八折券。</div>
         </div>}
 
+        <div style={{ margin: "8px 12px 14px", padding: "13px 16px", borderRadius: 12, background: "#eef4ed" }}><Link href="/ai-credits" style={{ color: "#285b47", fontWeight: 700 }}>AI点数与次数包 →</Link><p style={{ margin: "6px 0 0", fontSize: 12, color: "#66766c" }}>查看购买额度、次数包价格和有效期，与签到积分分别管理。</p></div>
+
         {/* ===== 套餐列表 ===== */}
         {!paymentsBlocked && (PLANS || MEMBERSHIP_PLANS).map((plan) => {
           const isSelected = selectedPlan === plan.level;
