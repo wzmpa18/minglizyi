@@ -36,6 +36,9 @@ async function worker(root){
     assert.equal((await request('/admin/queue','GET',support)).status,200);
     assert.equal((await request('/admin/config','PUT',support,{enabled:true})).status,403);
     assert.equal((await request('/admin/config','PUT',admin,{enabled:true})).status,200);
+    assert.equal((await request('/target/tool%3Abazi')).status,200);
+    const zhengguTarget=require('../backend_deploy/data/study-zhenggu-targets.json').targets[0];
+    assert.equal((await request('/target/'+encodeURIComponent(zhengguTarget))).status,200);
     const submitBody={content:'学'.repeat(500),requestId:crypto.randomUUID()};
     for(const credential of ['', 'invalid-jwt'])assert.equal((await request(target,'POST',credential,submitBody)).status,401);
     for(const id of ['missing','banned','deleted'])assert.equal((await request(target,'POST',token(id),submitBody)).status,403);

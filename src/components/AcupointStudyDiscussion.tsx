@@ -1,4 +1,5 @@
 "use client";
+import {useAccountScope} from "@/lib/useAccountScope";
 import {ConfirmDialog} from "@/components/ui/ConfirmDialog";
 import { InterfaceButton } from "@/components/InterfaceControls";
 import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
@@ -8,8 +9,9 @@ import { getUserProfile,getUserToken } from "@/lib/auth";
 import { countStudyCharacters,validateStudyText,studyRequest,type StudyComment,type StudyCommentConfig } from "@/lib/studyComments";
 
 export function AcupointStudyDiscussion({targetId,title}:{targetId:string;title:string}){
+  const owner=useAccountScope();
   // Remount on resource change so requests/drafts/replies cannot leak between points.
-  return <PointDiscussion key={`${getUserProfile()?.userId||'guest'}:${targetId}`} targetId={targetId} title={title}/>;
+  return <PointDiscussion key={`${owner}:${targetId}`} targetId={targetId} title={title}/>;
 }
 function PointDiscussion({targetId,title}:{targetId:string;title:string}){
   useInterfaceLocale();

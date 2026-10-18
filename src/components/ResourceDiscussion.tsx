@@ -1,5 +1,6 @@
 "use client";
 
+import {useAccountScope} from "@/lib/useAccountScope";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   addResourceComment,
@@ -25,8 +26,9 @@ interface ResourceDiscussionProps {
 }
 
 export function ResourceDiscussion(props: ResourceDiscussionProps) {
+  const owner=useAccountScope();
   if (!PUBLIC_SOCIAL_ENABLED) return null;
-  return <ResourceDiscussionEnabled {...props} />;
+  return <ResourceDiscussionEnabled key={`${owner}:${props.resourceType}:${props.resourceId}`} {...props} />;
 }
 
 function ResourceDiscussionEnabled({

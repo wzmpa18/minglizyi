@@ -1,5 +1,6 @@
 "use client";
 import { InterfaceButton, InterfaceLabel, InterfaceOption } from "@/components/InterfaceControls";
+import {useAccountScope} from "@/lib/useAccountScope";
 import Link from "next/link";
 import {useEffect,useRef,useState} from "react";
 import {BrandHeader} from "@/components/shared";
@@ -10,7 +11,8 @@ import {countStudyCharacters,validateStudyText} from "@/lib/studyComments";
 import {useInterfaceLocale} from "@/lib/interfaceLocale";
 const OPTIONS=[["solar-md","同公历月日"],["lunar-md","同农历月日（闰月分别匹配）"],["date","同年同月同日"],["hour","同年同月同日且同时辰"],["pillars","自选四柱条件"]];
 const GAN="甲乙丙丁戊己庚辛壬癸",ZHI="子丑寅卯辰巳午未申酉戌亥";
-export default function TongchenPage(){
+export default function TongchenPage(){const owner=useAccountScope();return <TongchenAccountPage key={owner}/>;}
+function TongchenAccountPage(){
  const {ui}=useInterfaceLocale(),[config,setConfig]=useState<TongchenConfig|null>(null),[joined,setJoined]=useState(false),[modes,setModes]=useState<string[]>([]),[interests,setInterests]=useState<string[]>([]),[matches,setMatches]=useState<TongchenCard[]>([]),[incoming,setIncoming]=useState<TongchenCard[]>([]),[friends,setFriends]=useState<TongchenCard[]>([]);
  const [birth,setBirth]=useState(""),[time,setTime]=useState(""),[zone,setZone]=useState("Asia/Shanghai"),[adult,setAdult]=useState(false),[precision,setPrecision]=useState(false),[allow,setAllow]=useState(true),[mode,setMode]=useState("solar-md"),[filter,setFilter]=useState(""),[pillars,setPillars]=useState(["","","",""]);
  const [message,setMessage]=useState(""),[busy,setBusy]=useState(false),[peer,setPeer]=useState<TongchenCard|null>(null),[text,setText]=useState(""),[messages,setMessages]=useState<{id:string;mine:boolean;content:string;createdAt:string}[]>([]),[confirm,setConfirm]=useState<{message:string;run:()=>void}|null>(null),[editing,setEditing]=useState(false);

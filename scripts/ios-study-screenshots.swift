@@ -17,6 +17,9 @@ final class GuoxueStudyScreenshots: XCTestCase {
         app.launch()
         let consent=app.buttons["同意并继续"]
         if consent.waitForExistence(timeout:20){consent.tap()}
+        shot("00_真实应用_学习首页",app)
+        let start=app.links.matching(NSPredicate(format:"label CONTAINS %@","开始入门学习")).firstMatch
+        if start.waitForExistence(timeout:25){start.tap()}
         let lesson=app.buttons["标记已读，开始自测"]
         XCTAssertTrue(lesson.waitForExistence(timeout:40),"Real bundled learning screen did not load")
         shot("01_真实应用_经典入门与连续听学",app)

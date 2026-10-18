@@ -12,10 +12,11 @@ let store,accounts;
 function getStore(){
   if(store)return store;
   const catalog=JSON.parse(fs.readFileSync(path.join(__dirname,'data/study-acupoint-targets.json'),'utf8'));
+  const zhenggu=JSON.parse(fs.readFileSync(path.join(__dirname,'data/study-zhenggu-targets.json'),'utf8'));
   const location=process.env.STUDY_COMMENT_DB_PATH||path.join(__dirname,'data/study-comments.db');
   fs.mkdirSync(path.dirname(location),{recursive:true});
   const db=new Database(location); db.pragma('journal_mode = WAL'); db.pragma('busy_timeout = 5000');
-  store=createStudyCommentStore(db,new Set([...catalog.targets,...STUDY_TOOL_TARGETS])); return store;
+  store=createStudyCommentStore(db,new Set([...catalog.targets,...STUDY_TOOL_TARGETS,...zhenggu.targets])); return store;
 }
 function account(id){
   if(!accounts)accounts=new Database(process.env.DB_PATH||process.env.USER_DB_PATH||'/root/backend-auth/data/yandao_users.db',{readonly:true});
