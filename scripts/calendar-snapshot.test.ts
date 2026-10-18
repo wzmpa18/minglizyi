@@ -1,6 +1,17 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
 import {calendarAt,makeCalendarSnapshot} from "../src/lib/calendarSnapshot";
+import {Solar} from "lunar-javascript";
+import officialCalendar from "./fixtures/hko-calendar-reference.json";
+
+test("1096 independently sourced HKO dates agree on UTC+8 lunar dates and lunar-year GanZhi",()=>{
+ const normalized=(value:string)=>value.replace("冬","十一").replace("腊","十二").replace("閏","闰");
+ assert.equal(officialCalendar.records.length,1096);
+ for(const row of officialCalendar.records){
+  const [year,month,day]=row.solar,lunar=Solar.fromYmd(year,month,day).getLunar();
+  assert.deepEqual([normalized(lunar.getMonthInChinese()),lunar.getDayInChinese(),lunar.getYearInGanZhi()],[normalized(row.month),row.day,row.yearGanZhi],row.solar.join("-"));
+ }
+});
 test("shared snapshot matches the official lunar fixture and has a bounded continuous timeline",()=>{
  const now=Date.UTC(2026,9,19,1,7),observation={timeZone:"Asia/Shanghai",placeName:"北京"};
  assert.equal(calendarAt(now,observation).lunar,"九月初十");
