@@ -66,7 +66,8 @@ try {
       return api(`/v1/inAppPurchasePriceSchedules/${schedule.id}/manualPrices?filter[territory]=CHN&include=inAppPurchasePricePoint,territory&limit=200`);
     }
     let prices = schedule ? await manualPrices() : null;
-    const matching = () => prices?.data.filter(p => p.attributes.endDate == null && p.attributes.startDate == null).some(p => prices.included?.find(x => x.id === p.relationships.inAppPurchasePricePoint.data.id)?.attributes.customerPrice === product.chinaPrice.toFixed(2));
+    const today = new Date().toISOString().slice(0, 10);
+    const matching = () => prices?.data.filter(p => (!p.attributes.endDate || p.attributes.endDate > today) && (!p.attributes.startDate || p.attributes.startDate <= today)).some(p => Number(prices.included?.find(x => x.id === p.relationships.inAppPurchasePricePoint.data.id)?.attributes.customerPrice) === product.chinaPrice);
     // Preserve any existing schedule with a different price for review; don't
     // silently overwrite historical or scheduled charges on a published product.
     if (schedule && !matching()) throw Error(`Existing schedule differs for ${product.productId}; inspect before changing`);
