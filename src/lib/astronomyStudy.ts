@@ -93,3 +93,17 @@ export function calculateYunqiStudy(year: number) {
 export function yunqiPhaseAt(study: ReturnType<typeof calculateYunqiStudy>, date: Date) {
   return study.phases.findIndex(phase => date >= phase.start && date < phase.end);
 }
+
+/** Resolve the same Dahan cycle on the home card and in the planetarium. */
+export function yunqiStudyAt(date: Date) {
+  if (!Number.isFinite(date.getTime())) return null;
+  const year = Number(chinaTimeInput(date).slice(0, 4));
+  if (year < 1900 || year > 2099) return null;
+  let study = calculateYunqiStudy(year);
+  if (date < study.phases[0].start) {
+    if (year === 1900) return null;
+    study = calculateYunqiStudy(year - 1);
+  }
+  const index = yunqiPhaseAt(study, date);
+  return index < 0 ? null : { study, phase: study.phases[index] };
+}

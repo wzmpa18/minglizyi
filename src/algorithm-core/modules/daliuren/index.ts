@@ -26,6 +26,7 @@ import {
   getYearGanZhi,
 } from "@/algorithm-core";
 import type { TianGan, DiZhi, YinYang } from "@/algorithm-core";
+import { Solar } from "lunar-javascript";
 
 // ============================================================================
 // 基础常量
@@ -218,17 +219,10 @@ function formatDate(y: number, m: number, d: number, h: number, min: number): st
   return `${y}年${String(m).padStart(2, "0")}月${String(d).padStart(2, "0")}日 ${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
 }
 
-/** 简单农历日期估算（非精确，仅用于显示） */
-function getLunarDateApprox(y: number, m: number, d: number): string {
-  const lunarMonths = ["正", "二", "三", "四", "五", "六", "七", "八", "九", "十", "冬", "腊"];
-  const lunarDays = [
-    "初一","初二","初三","初四","初五","初六","初七","初八","初九","初十",
-    "十一","十二","十三","十四","十五","十六","十七","十八","十九","二十",
-    "廿一","廿二","廿三","廿四","廿五","廿六","廿七","廿八","廿九","三十"
-  ];
-  const lm = Math.max(0, m - 1);
-  const ld = Math.min(29, Math.max(0, d - 1));
-  return `${lunarMonths[lm]}月${lunarDays[ld]}`;
+/** Actual lunar conversion, including leap months; never relabel Gregorian fields. */
+export function formatLiurenLunarDate(year: number, month: number, day: number): string {
+  const lunar = Solar.fromYmd(year, month, day).getLunar();
+  return `${lunar.getMonthInChinese()}月${lunar.getDayInChinese()}`;
 }
 
 // ============================================================================
@@ -640,7 +634,7 @@ export function calculateDaLiuRen(
   return {
     year, month, day, hour, minute,
     dateStr: formatDate(year, month, day, hour, minute),
-    lunarDate: getLunarDateApprox(year, month, day),
+    lunarDate: formatLiurenLunarDate(year, month, day),
     zhanbuTime: zhanbuTimeFinal,
     jieqiInfo,
     siZhu,

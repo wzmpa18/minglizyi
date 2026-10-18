@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { calculateStudySky, calculateYunqiStudy, chinaTimeInput, parseChinaTime, skyDiagramPoint, yunqiPhaseAt } from "../src/lib/astronomyStudy";
+import { calculateStudySky, calculateYunqiStudy, chinaTimeInput, parseChinaTime, skyDiagramPoint, yunqiPhaseAt, yunqiStudyAt } from "../src/lib/astronomyStudy";
 
 test("civil input is explicit UTC+8, validates calendar dates and preserves the moment", () => {
   assert.equal(parseChinaTime("2026-10-18T15:30").toISOString(), "2026-10-18T07:30:00.000Z");
@@ -70,4 +70,18 @@ test("six solar-term periods cover Dahan-to-Dahan with exact inclusive/exclusive
   assert.equal(yunqiPhaseAt(study, new Date(study.phases[0].start.getTime() - 1)), -1);
   assert.equal(yunqiPhaseAt(study, study.phases[5].end), -1);
   assert.throws(() => calculateYunqiStudy(2100));
+});
+
+test("home and sky resolve the same Dahan year across January and exact boundaries", () => {
+  assert.equal(yunqiStudyAt(parseChinaTime('2026-10-18T12:00'))?.phase.label, '五之气');
+  assert.equal(yunqiStudyAt(parseChinaTime('2026-10-18T12:00'))?.phase.mainQi, '阳明燥金');
+  const start = calculateYunqiStudy(2026).phases[0].start;
+  assert.equal(yunqiStudyAt(new Date(start.getTime() - 1))?.study.year, 2025);
+  assert.equal(yunqiStudyAt(new Date(start.getTime() - 1))?.phase.label, '终之气');
+  assert.equal(yunqiStudyAt(start)?.study.year, 2026);
+  assert.equal(yunqiStudyAt(start)?.phase.label, '初之气');
+  assert.equal(yunqiStudyAt(parseChinaTime('2026-01-01T12:00'))?.phase.mainQi, '太阳寒水');
+  assert.equal(yunqiStudyAt(parseChinaTime('1900-01-01T12:00')), null);
+  assert.equal(yunqiStudyAt(parseChinaTime('1054-07-04T12:00')), null);
+  assert.equal(yunqiStudyAt(new Date('invalid')), null);
 });

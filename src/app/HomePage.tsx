@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
@@ -7,6 +7,7 @@ import IcpFooter from "@/components/IcpFooter";
 import AnnouncementBar from "@/components/AnnouncementBar";
 import { isLegacyIOSLearningProfile } from "@/lib/platformGate";
 import LearningEntryPanel from "@/components/LearningEntryPanel";
+import { yunqiStudyAt } from "@/lib/astronomyStudy";
 
 const BRAND = "#7B2FBE";
 
@@ -89,33 +90,33 @@ const DIMUJING: Record<string,{shi:string;ji:string}> = {
   "癸亥":{shi:"太岁癸亥年，人民被水灾。秋冬井泉溢，春夏雨绵绵。",ji:"低田禾没水，高地收十分。蚕娘双泪落，桑空人无眠。"},
 };
 
-const JIEQI_YANGSHENG: Record<string,{yun:string;qi:string;advice:string[]}> = {
-  "立春":{yun:"初之气",qi:"厥阴风木",advice:["宜早睡早起，舒展筋骨","食辛甘发散之品，忌酸收","注意春捂，防风寒感冒","情志调畅，忌怒"]},
-  "雨水":{yun:"初之气",qi:"厥阴风木",advice:["健脾祛湿，食山药薏米","防寒湿，注意保暖","宜舒缓运动，忌大汗","调养脾胃，少生冷"]},
-  "惊蛰":{yun:"初之气",qi:"厥阴风木",advice:["养肝疏肝，食青色蔬菜","春雷动，宜早起运动","多食梨润肺防燥","防流感，注意通风"]},
-  "春分":{yun:"二之气",qi:"少阴君火",advice:["阴阳平衡，忌偏寒偏热","食时令春菜，如香椿、春笋","宜踏青户外活动","调和情志，心态平和"]},
-  "清明":{yun:"二之气",qi:"少阴君火",advice:["清肝明目，食菊花茶","踏青郊游，舒畅气机","饮食清淡，忌发物","防过敏性疾病"]},
-  "谷雨":{yun:"二之气",qi:"少阴君火",advice:["健脾祛湿，食茯苓薏米","赏牡丹怡情养性","采茶饮茶，清利头目","防湿邪，忌久居湿地"]},
-  "立夏":{yun:"三之气",qi:"少阳相火",advice:["养心安神，午休小憩","食苦味清心，如苦瓜、莲子","忌大汗淋漓，耗伤心阳","情志愉悦，忌大喜大悲"]},
-  "小满":{yun:"三之气",qi:"少阳相火",advice:["清热利湿，食冬瓜丝瓜","防皮肤病，注意清洁","饮食清淡，忌油腻厚味","防暑热，多饮温水"]},
-  "芒种":{yun:"三之气",qi:"少阳相火",advice:["防暑湿，食绿豆薏米","宜午休，养心血","衣衫勤换，防痱子湿疹","忌贪凉饮冷"]},
-  "夏至":{yun:"四之气",qi:"太阴湿土",advice:["阳极阴生，养阴护阳","食酸味生津，如乌梅、山楂","午休养心，忌烈日暴晒","忌过度贪凉，空调适度"]},
-  "小暑":{yun:"四之气",qi:"太阴湿土",advice:["清热解暑，食西瓜荷叶","防中暑，减少午后外出","心静自然凉，调息静心","饮食卫生，防肠道疾病"]},
-  "大暑":{yun:"四之气",qi:"太阴湿土",advice:["大暑最热，防暑湿并重","食冬瓜薏米汤清热祛湿","冬病夏治三伏贴","忌大汗后立即冲凉"]},
-  "立秋":{yun:"五之气",qi:"阳明燥金",advice:["立秋贴秋膘，润燥滋阴","食银耳百合润肺防燥","早睡早起，收敛神气","忌悲忧伤肺，心态平和"]},
-  "处暑":{yun:"五之气",qi:"阳明燥金",advice:["秋燥渐起，多食梨蜂蜜","早晚添衣防秋凉","宜秋游登高，舒畅肺气","忌辛辣刺激，防秋燥"]},
-  "白露":{yun:"五之气",qi:"阳明燥金",advice:["白露勿露身，注意保暖","滋阴润肺，食藕、梨、山药","防秋燥咳嗽，多饮水","收敛神气，勿剧烈运动"]},
-  "秋分":{yun:"六之气",qi:"太阳寒水",advice:["阴阳平衡，润燥防寒并重","食芝麻核桃滋阴","早睡早起，与鸡俱兴","防秋燥伤津"]},
-  "寒露":{yun:"六之气",qi:"太阳寒水",advice:["寒露脚不露，注意足部保暖","润肺生津，食柿子、栗子","宜散步缓行，忌大汗","防感冒，注意添衣"]},
-  "霜降":{yun:"六之气",qi:"太阳寒水",advice:["霜降进补，食羊肉牛肉","防秋郁，多晒太阳","护脾胃，忌生冷硬食","防咳嗽哮喘，注意保暖"]},
-  "立冬":{yun:"初之气",qi:"厥阴风木（来岁）",advice:["立冬补冬，食温补之品","早睡晚起，待日光而作","护阳气，注意背部保暖","情志安宁，忌烦扰"]},
-  "小雪":{yun:"初之气",qi:"厥阴风木（来岁）",advice:["温补养肾，食黑色食物（黑豆、黑芝麻）","宜室内运动，忌剧烈出汗","多晒太阳，防抑郁情绪","防感冒，勤通风"]},
-  "大雪":{yun:"初之气",qi:"厥阴风木（来岁）",advice:["大雪进补，食羊肉火锅","保暖防寒，护头护足","早卧晚起，保证睡眠","忌过量饮酒御寒"]},
-  "冬至":{yun:"二之气",qi:"少阴君火（来岁）",advice:["冬至一阳生，护阳养阴","食饺子/汤圆，团圆温补","冬至灸关元，补阳气","忌房事过度，耗伤元气"]},
-  "小寒":{yun:"二之气",qi:"少阴君火（来岁）",advice:["小寒大寒，防寒保暖","食腊八粥，温补脾胃","室内适度运动，通经络","防心脑血管疾病，忌骤冷骤热"]},
-  "大寒":{yun:"二之气",qi:"少阴君火（来岁）",advice:["大寒守岁，辞旧迎新","温补收尾，食糯米饭/八宝饭","防风御寒，迎新年","为春生发做准备，忌大寒伤阳"]},
+const JIEQI_YANGSHENG: Record<string,{advice:string[]}> = {
+  "立春":{advice:["宜早睡早起，舒展筋骨","食辛甘发散之品，忌酸收","注意春捂，防风寒感冒","情志调畅，忌怒"]},
+  "雨水":{advice:["健脾祛湿，食山药薏米","防寒湿，注意保暖","宜舒缓运动，忌大汗","调养脾胃，少生冷"]},
+  "惊蛰":{advice:["养肝疏肝，食青色蔬菜","春雷动，宜早起运动","多食梨润肺防燥","防流感，注意通风"]},
+  "春分":{advice:["阴阳平衡，忌偏寒偏热","食时令春菜，如香椿、春笋","宜踏青户外活动","调和情志，心态平和"]},
+  "清明":{advice:["清肝明目，食菊花茶","踏青郊游，舒畅气机","饮食清淡，忌发物","防过敏性疾病"]},
+  "谷雨":{advice:["健脾祛湿，食茯苓薏米","赏牡丹怡情养性","采茶饮茶，清利头目","防湿邪，忌久居湿地"]},
+  "立夏":{advice:["养心安神，午休小憩","食苦味清心，如苦瓜、莲子","忌大汗淋漓，耗伤心阳","情志愉悦，忌大喜大悲"]},
+  "小满":{advice:["清热利湿，食冬瓜丝瓜","防皮肤病，注意清洁","饮食清淡，忌油腻厚味","防暑热，多饮温水"]},
+  "芒种":{advice:["防暑湿，食绿豆薏米","宜午休，养心血","衣衫勤换，防痱子湿疹","忌贪凉饮冷"]},
+  "夏至":{advice:["阳极阴生，养阴护阳","食酸味生津，如乌梅、山楂","午休养心，忌烈日暴晒","忌过度贪凉，空调适度"]},
+  "小暑":{advice:["清热解暑，食西瓜荷叶","防中暑，减少午后外出","心静自然凉，调息静心","饮食卫生，防肠道疾病"]},
+  "大暑":{advice:["大暑最热，防暑湿并重","食冬瓜薏米汤清热祛湿","冬病夏治三伏贴","忌大汗后立即冲凉"]},
+  "立秋":{advice:["立秋贴秋膘，润燥滋阴","食银耳百合润肺防燥","早睡早起，收敛神气","忌悲忧伤肺，心态平和"]},
+  "处暑":{advice:["秋燥渐起，多食梨蜂蜜","早晚添衣防秋凉","宜秋游登高，舒畅肺气","忌辛辣刺激，防秋燥"]},
+  "白露":{advice:["白露勿露身，注意保暖","滋阴润肺，食藕、梨、山药","防秋燥咳嗽，多饮水","收敛神气，勿剧烈运动"]},
+  "秋分":{advice:["阴阳平衡，润燥防寒并重","食芝麻核桃滋阴","早睡早起，与鸡俱兴","防秋燥伤津"]},
+  "寒露":{advice:["寒露脚不露，注意足部保暖","润肺生津，食柿子、栗子","宜散步缓行，忌大汗","防感冒，注意添衣"]},
+  "霜降":{advice:["霜降进补，食羊肉牛肉","防秋郁，多晒太阳","护脾胃，忌生冷硬食","防咳嗽哮喘，注意保暖"]},
+  "立冬":{advice:["立冬补冬，食温补之品","早睡晚起，待日光而作","护阳气，注意背部保暖","情志安宁，忌烦扰"]},
+  "小雪":{advice:["温补养肾，食黑色食物（黑豆、黑芝麻）","宜室内运动，忌剧烈出汗","多晒太阳，防抑郁情绪","防感冒，勤通风"]},
+  "大雪":{advice:["大雪进补，食羊肉火锅","保暖防寒，护头护足","早卧晚起，保证睡眠","忌过量饮酒御寒"]},
+  "冬至":{advice:["冬至一阳生，护阳养阴","食饺子/汤圆，团圆温补","冬至灸关元，补阳气","忌房事过度，耗伤元气"]},
+  "小寒":{advice:["小寒大寒，防寒保暖","食腊八粥，温补脾胃","室内适度运动，通经络","防心脑血管疾病，忌骤冷骤热"]},
+  "大寒":{advice:["大寒守岁，辞旧迎新","温补收尾，食糯米饭/八宝饭","防风御寒，迎新年","为春生发做准备，忌大寒伤阳"]},
 };
-const DEFAULT_YS = {yun:"四之气",qi:"太阴湿土",advice:["饮食清淡，忌油腻生冷","早睡早起，适度运动","情志调畅，心态平和","根据气温及时增减衣物"]};
+const DEFAULT_YS = {advice:["饮食清淡，忌油腻生冷","早睡早起，适度运动","情志调畅，心态平和","根据气温及时增减衣物"]};
 
 function BaguaIcon(){return(<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="14" stroke="white" strokeWidth="1.5" fill="none"/><path d="M16 2a14 14 0 0 1 0 28" stroke="white" strokeWidth="1.5" fill="white" fillOpacity="0.15"/><path d="M16 2a14 14 0 0 0 0 28" stroke="white" strokeWidth="1.5" fill="none"/><circle cx="16" cy="9" r="4" fill="white" fillOpacity="0.9"/><circle cx="16" cy="23" r="4" fill="none" stroke="white" strokeWidth="1.5"/><circle cx="16" cy="9" r="1.5" fill={BRAND}/><circle cx="16" cy="23" r="1.5" fill="white"/></svg>)}
 function MedicineIcon(){return(<svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect x="5" y="10" width="22" height="18" rx="3" stroke={BRAND} strokeWidth="2" fill="none"/><rect x="12" y="3" width="8" height="9" rx="1.5" stroke={BRAND} strokeWidth="2" fill="none"/><line x1="16" y1="16" x2="16" y2="24" stroke={BRAND} strokeWidth="2" strokeLinecap="round"/><line x1="12" y1="20" x2="20" y2="20" stroke={BRAND} strokeWidth="2" strokeLinecap="round"/></svg>)}
@@ -239,13 +240,14 @@ export default function HomePage(){
       if(n){const ns=n.getSolar();const nd=new Date(ns.getYear(),ns.getMonth()-1,ns.getDay());nextJQ={name:String(n.getName()),day:Math.max(1,Math.floor((nd.getTime()-now.getTime())/(864e5)))};}
     }catch(e){}
     const ys=JIEQI_YANGSHENG[cJQ]||DEFAULT_YS;
+    const yunqi=yunqiStudyAt(now);
     const dm=DIMUJING[yearGZ]||{shi:"岁在"+yearGZ,ji:"四时有序，万物有时"};
     const festivals=[...(solar.getFestivals()as string[]||[]),...(lunar.getFestivals()as string[]||[])];
     const ba=getBaziAdvice(userDayGan,userDayZhi,dayGan,dayZhi);
     return{gongli:`${y}年${m}月${d}日 ${week}`,nongli:`农历${lunar.getMonthInChinese()}月${lunar.getDayInChinese()} ${lunar.getYearShengXiao()}年`,festivals,
       pillars:[{label:"年",ganzhi:yearGZ},{label:"月",ganzhi:monthGZ},{label:"日",ganzhi:dayGZ},{label:"时",ganzhi:timeGZ}],
       yi,ji,chong,sha,jianxing,tianshenType:tsType,tianshen:ts,nayin,pengzuGan:pzg,pengzuZhi:pzz,taiXin:tx,xingxiu:xx,jiShen:js,xiongSha:xs,
-      xiShen:xshen,caiShen:cshen,fuShen:fshen,jieqi:cJQ,prevJQ,nextJQ,yangsheng:ys,dimu:dm,baziAdvice:ba,dayGan,dayZhi};
+      xiShen:xshen,caiShen:cshen,fuShen:fshen,jieqi:cJQ,prevJQ,nextJQ,yangsheng:ys,yunqi,dimu:dm,baziAdvice:ba,dayGan,dayZhi};
   },[userDayGan,mounted]);
 
   const saveBazi=(gan:string,zhi:string)=>{setUserDayGan(gan);setUserDayZhi(zhi);localStorage.setItem("yandao_user_bazi",JSON.stringify({dayGan:gan,dayZhi:zhi}));setShowBaziInput(false);};
@@ -355,12 +357,13 @@ export default function HomePage(){
 
           {/* 五运六气养生（默认展开） */}
           <div className="mb-2 overflow-hidden rounded-xl" style={{backgroundColor:"#f0faf5"}}>
-            <div className="flex items-center justify-between px-3 py-2.5"><span className="text-sm font-semibold" style={{color:"#00a879"}}>五运六气·节令养生</span></div>
+            <div className="flex items-center justify-between px-3 py-2.5"><span className="text-sm font-semibold" style={{color:"#00a879"}}>五运六气·节令学习</span></div>
             <div className="px-3 pb-3 text-xs text-gray-700">
               <div className="mb-2 flex gap-2">
-                <span className="rounded px-2 py-0.5" style={{backgroundColor:"#e6f7f0",color:"#00a879"}}>{today.yangsheng.yun}</span>
-                <span className="rounded px-2 py-0.5" style={{backgroundColor:"#e6f7f0",color:"#00a879"}}>{today.yangsheng.qi}</span>
+                <span className="rounded px-2 py-0.5" style={{backgroundColor:"#e6f7f0",color:"#00a879"}}>{today.yunqi?.phase.label || "运气年限之外"}</span>
+                <span className="rounded px-2 py-0.5" style={{backgroundColor:"#e6f7f0",color:"#00a879"}}>{today.yunqi ? `主气${today.yunqi.phase.mainQi}` : "可查阅原典"}</span>
               </div>
+              <p className="mb-2 text-[11px] leading-5 text-gray-500">主气采用大寒起点的节气分步约定；下列是传统节令资料。<Link href="/academy/astronomy/#sky-yunqi" className="underline">到天文馆对照主客气与交节时刻 ›</Link></p>
               <div className="space-y-1">{today.yangsheng.advice.map((a,i)=><div key={i} className="flex items-start gap-1"><span style={{color:"#00a879"}}>•</span><span>{a}</span></div>)}</div>
             </div>
           </div>
