@@ -65,6 +65,8 @@ async function worker(root){
 
     process.env.SOCIAL_DB_PATH=path.join(root,'social.db');
     process.env.SOCIAL_RATE_LIMIT_CONFIG=path.join(root,'social-rate-limit.json');
+    process.env.COMMENTS_ENABLED='true'; // Isolated worker only; production switches stay unchanged.
+    process.env.POSTS_ENABLED='true';
     app.use('/api/social',require('../backend_deploy/socialApiRoutes').createRouter());
     const socialBase=`http://127.0.0.1:${server.address().port}/api/social`;
     async function social(route,method='GET',credential=bob,body){
@@ -87,7 +89,7 @@ async function worker(root){
       for(const postId of ['blocked','reverse','hidden']){
         for(const suffix of ['', '/comments'])assert.equal((await social('/posts/'+postId+suffix)).status,404);
         for(const [suffix,body] of [['/like',{}],['/favorite',{}],['/comments',{content:'验证不可评论'}]])
-          assert.equal((await social('/posts/'+postId+suffix,'POST',bob,body)).status,404);
+          assert.equal((await social('/posts/'+postId+suffix,'POST',bob,body)).status,404,postId+suffix);
       }
       const visibleComments=(await social('/posts/visible/comments')).body.comments;
       assert.deepEqual(visibleComments.map(c=>c.id),['3','4']);
