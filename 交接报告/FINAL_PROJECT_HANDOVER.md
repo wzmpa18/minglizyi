@@ -653,53 +653,9 @@ sqlite3 /tmp/yandao_restore_test/social.db "SELECT COUNT(*) FROM friendships; SE
 - 规则执行顺序：审查有效差异→测试→更新交接与同步镜像→逐路径暂存并提交推送→核对HEAD/上游和空status→停止任务服务→精确清场→确认当前新版+唯一回滚版→记录已发生结果。清理结果应在最终文档提交前纳入，最后只读核验，禁止靠不断提交后改报告形成循环。
 - 本轮未修改功能源码/构建/部署/商店，未删除安装包或唯一语料。新增制度与报告/AGENTS/主账本的具体路径均在活动仓；严格按项目原制度同步E盘报告与制度镜像并校验，git diff --check验证。自动删除限制仍未解除，本次不冒称7.39GB已经释放。
 
-### 用户手动CMD清理命令（完整留存；尚未确认执行成功）
+### 清理命令轮换说明（2026-10-18核实后修订）
 
-以下为2026-10-18盘点出的16目录+3缓存文件，7393524207字节约6.89GiB。仅删除可再生成依赖/缓存/构建产物、任务临时物及作废2100；源码/.git/密钥/2101当前提审包与审核证据不在其中。目录联接已排除。旧命令执行前须再次确认目标仍为所述用途，不可盲目用于以后发生变化的目录。也可执行已交付的outputs/guoxue-clean-20261018.cmd，文件名固定，不另建多份脚本。结果出现FAILED即未清理完成。
-~~~cmd
-@echo off
-setlocal
-echo Guoxue workspace disposable files cleanup.
-echo Source, credentials, release 2101 and audit evidence are excluded.
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\work\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\work"
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\work\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\work
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\outputs\荣耀OPPO候选包_25.0.113_2100\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\outputs\荣耀OPPO候选包_25.0.113_2100"
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\outputs\荣耀OPPO候选包_25.0.113_2100\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\outputs\荣耀OPPO候选包_25.0.113_2100
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\node_modules\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\node_modules"
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\node_modules\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\node_modules
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\.next\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\.next"
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\.next\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\.next
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\out\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\out"
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\out\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\out
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\www\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\www"
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\www\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\www
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\android\app\build\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\android\app\build"
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\android\app\build\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\android\app\build
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\android\.gradle\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\android\.gradle"
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\android\.gradle\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\android\.gradle
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\node_modules\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\node_modules"
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\node_modules\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\node_modules
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\.next\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\.next"
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\.next\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\.next
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\android\app\build\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\android\app\build"
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\android\app\build\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\android\app\build
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\android\.gradle\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\android\.gradle"
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\android\.gradle\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\android\.gradle
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\.gradle-home\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\.gradle-home"
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\.gradle-home\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\.gradle-home
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\.gradle-home-2\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\.gradle-home-2"
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\.gradle-home-2\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\.gradle-home-2
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-ziwei-fix-03\.next\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-ziwei-fix-03\.next"
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-ziwei-fix-03\.next\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-ziwei-fix-03\.next
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-ziwei-fix-03\out\" rd /s /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-ziwei-fix-03\out"
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-ziwei-fix-03\out\" echo FAILED: C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-ziwei-fix-03\out
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\tsconfig.tsbuildinfo" del /f /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\tsconfig.tsbuildinfo"
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\tsconfig.tsbuildinfo" del /f /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-release-v25.0.97\tsconfig.tsbuildinfo"
-if exist "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-ziwei-fix-03\tsconfig.tsbuildinfo" del /f /q "C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\minglizyi-ziwei-fix-03\tsconfig.tsbuildinfo"
-echo Cleanup commands finished. Any FAILED lines require checking.
-endlocal
-
-~~~
+本节原16目录+3缓存文件、7393524207字节的19个清理目标已经全部核实不存在，详见51节。对应可执行旧命令已从本报告和当前CMD删除，避免以后误用同名新目录；原始逐路径盘点留在outputs/国学CMD清理清单_20261018.json，命令历史可从Git追溯，不再另存重复脚本。唯一仍待执行的4个精确目标及命令见52节，原位文件为outputs/guoxue-clean-20261018.cmd。
 
 ## 51. 2026-10-18：清理结果读回、基准应用实机对照及学习首批改进（整体尚未完成）
 
@@ -733,3 +689,72 @@ endlocal
 - 六壬：尚未定位用户所指参考应用，已请求准确名称或在手机打开；未盲改算法/布局。八字/紫微只完成首批可切换布局与信息增补，完整差异矩阵/视觉验收仍待逐页完成。
 - 历史97副本的脏改动审结及物理版本严格两代轮换尚未全面落实；本次大缓存已核实清除不等于这些历史债务也消失。用户要求“已有功能不减少”始终保留。
 - 本轮没有在C盘安装依赖、创建本地构建缓存/临时日志/下载包，只新增正式源码及有效实机/平台证据。报告同步三镜像、制度同步E盘并核对SHA-256，交接提交后要求status为空、上游0/0。整体开发仍是进行中，不宣称全部复刻/内容补齐/审核通过。
+
+
+## 52. 2026-10-18：三种紫微模式、八字/六壬实机对照、连续听学与原文扩充（整体开发仍未完成）
+
+### 本次用户澄清与对照证据
+- 用户明确：六壬是手机首页“六壬”；紫微须逐项对照飞星、三合、四化；八字各模块列序/颜色也要对照；“收音机”为古籍与课程连续听学。本节覆盖51节中仍待确认的六壬/听学状态，不再重复询问这些已答问题。其他两个产品不处理。
+- 已正常打开gz.aas.calc6ren，实见盘面、辅助、神煞、评注。辅助有九类学习栏目；神煞为分类+条纹列表；评注为《六壬金鈐》《御定六壬》等课例说明，部分免费界面显示广告屏蔽/购买提示。没有购买或绕过限制，没有把这类评注误称全部为用户笔记；本产品本次在已有课体整理说明外新增个人笔记/复盘，两者分开。
+- 文墨基础2.0.12飞星/三合/四化都已实见。四化为灰黑星名、宫底干支/叠宫年龄/宫名分栏、红色A/B/C/D和宫干飞化连线；不能用同一个三合盘只改模式标签代替。问真2.1.6已补看基本信息、基本命盘、专业细盘、断事笔记。使用既有匿名样例、关闭保存；未录入用户真实出生资料，未创建竞品命例。
+- C盘有效截图目录：C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\outputs\界面对标_20261018。22份选定的竞品/本产品/OPPO证据已同步E:\八字命理类文档包括排盘方式电子版\言道国学项目归档\发布包\学习与布局核查_20261018，逐一SHA-256一致，清单为目录内验证记录.json；涉及手机界面的证据仅内部使用，不作为本产品商店图或提交公开仓库。
+
+### 具体改动与提交
+以下源码路径均在唯一活动仓C:\Users\ZhuanZ\Documents\Codex\2026-09-20\referenced-chatgpt-conversation-this-is-an\tencent-store-compliance\。
+- src/components/ProfessionalZiweiBoard.tsx、src/app/yixue/ziwei/page.tsx：专业大盘分别渲染三合/飞星/四化；三合保留全星曜与神煞/庙旺，飞星突出主辅煞星，四化灰黑星名和宫底分栏、ABCD及宫干飞化线；宫格选择与资料解读可操作。沿用既有星曜/运限数据和四化表，不抄竞品代码/图标。标准盘面和盘下原有功能入口保留，不宣称已逐像素一致或覆盖竞品付费全部功能。
+- src/app/yixue/bazi/page.tsx：五行颜色按用户授权实机参考取样，金#ef9104/木#07e930/水#2e83f6/火#d30505/土#8b6d03；模块黑金导航、资料分行条纹表、详盘默认流年/大运在左且仍可切回四柱在前。基本盘藏干与副星分行，星运标签、神煞金色；修复日柱首藏干被误标“元男/元女”，改用既有getShiShen关系。四柱算法未因颜色/布局而重写，原额外模块/权限门槛保留。
+- src/app/yixue/daliuren/page.tsx：按参考修正干支/天将颜色，贵人与勾陈为棕、日干仍按五行显示；评注接入本库课体学习说明（标明整理性质，不冒充逐字原文），另加本机学习笔记/复盘；档案从占位文案改为真实本机记录列表、搜索、刷新、恢复。
+- src/components/LocalStudyNotes.tsx、src/components/LocalChartArchive.tsx：按课例隔离本机笔记/复盘，显式保存和失败提示；档案沿用nativePaipanStore，不另造假档案，不在此删除/上传档案。实测匿名12:00课例“保存笔记→档案打开→重新进入评注”内容恢复；验收笔记随后清空保存。没有操作生产用户数据。
+- src/lib/listeningQueue.ts、src/components/ContinuousListenPlayer.tsx、scripts/continuous-listening.test.ts：本机连续听学，长文按段连播、上一/下一章、章节选择、语速、本机章节/段落恢复（恢复不自动播放）；序列化异步启动，离开停止。文本不截断为3万字，补充字符不拆开，损坏/过期进度安全回退。旧单篇朗读和音色选择仍保留。
+- 连续听学已接入src/app/zhongyi/classic/page.tsx、src/app/books/page.tsx、src/app/academy/learn/page.tsx、src/app/academy/start/page.tsx；src/app/yixue/learn/page.tsx增加《易经》到已有真实原文的直达，books支持?book=yijing。不会将目录中仅列书名当作原文已上架。
+- src/components/ResourceDiscussion.tsx：学习讨论增加屏蔽按钮、读服务端黑名单、立即过滤、避免切换资源时旧异步结果串入；原举报入口保留。backend_deploy/resourceDiscussionQueries.js、backend_deploy/socialApiRoutes.js：可选身份读取讨论，只显示active且按双向黑名单在LIMIT之前过滤。scripts/resource-discussion.test.cjs验证不同资源隔离、待审/已删不展示、双向屏蔽、参数绑定和隐藏作者不挤占200条名额。国内公开社交开关仍关闭；此后端改动尚未部署。
+- 实测发现旧起运元数据把yun.getStartYear()的“出生后经过年数”误作公历年份，显示负数节气天数。已依历法库官方接口https://6tail.cn/calendar/lunar.bazi.html修正src/algorithm-core/modules/bazi/base.ts：公历日期来自getStartSolar，持续年/月/日/时与日期分开；节气取出生相邻节而非多年后起运日期相邻节；daysToJie为库提供儒略日差。不重写四柱/安运算法。scripts/bazi-yun-metadata.test.ts覆盖男女顺逆、跨年、闰日，核对日期与四柱/首大运不变。此处是本轮额外发现并修复的数据适配问题，不再笼统说所有算法文件完全未改。
+- 功能提交依次9aaa9b7、2a3b66b、2099202、f2388b9、3a8eabf、f9eef0c、8b52c96，均已推送codex/tencent-store-compliance。交接提交号以收尾实际读回为准，禁止留下有效源码未提交。
+
+### 原文扩充与核验边界
+- src/data/tcmOriginalEditions.json、scripts/import_tcm_originals.py：新增独立素问原文24卷81篇112297字、灵枢原文12卷81篇81485字、神农本草经原文19个来源分节18355字。与此前新增难经81章合计4个独立原文版本262篇/分节。旧整理版全部保留，与来源原文分开。
+- 每个来源页面都有固定修订链接（新三书37页）和CC BY-SA 4.0/公有领域说明，正文保留繁体，不使用AI填补缺章。素问/灵枢核对1至81篇顺序；神农本草经是19个原有分节，不能说19章等于365种药逐条已审校。电子录文尚未逐字校勘或医学审校，不可宣传为专业标准、个人用药/针刺依据。
+- 素问内容SHA-256 aa05f868a9a51e837020cde708c663f0df1eade3e9633a1b390e55ca8828132c；灵枢0fdd712be6f80ef5a6f669bfe9e9359f467516fabd89a0f142f7eebb4626bc0c；神农本草经5497f5d72d8928c139c58f635374e56d609cbcd0402b35d80357363659ff206d。哈希用于版本追溯，不等于文本医学正确。
+- 查询到的维基文库《伤寒论》页面明确标有“校订不足”、部分方未校；未将该版本冒称校核全文加入新原文版。余下古籍、易学各书仍需逐书补齐、校对；既有42条国学书目不等于所有古籍均已补齐。
+
+### 验证、发布与清理真实状态
+- .github/workflows/study-quality.yml扩展全项目类型、原文来源/篇章检查、3项长文/进度测试、2项SQLite隔离测试、4项起运元数据测试，支持只生成静态验收预览，不部署不发商店。f2388b9完整构建39092470772成功；3a8eabf构建39093002250成功；f9eef0c构建39093146694成功。8b52c96完整构建39093307761已成功，9项行为测试及原文序列检查通过。
+- f2388b9本地静态页实测：紫微专业三模式切换、四化连线显示；六壬本机笔记保存/档案重开恢复；八字资料表及专业细盘流年→大运→四柱。发现起运负数后已修复并补回归，旧预览不能当作该修复后的验收。没有把构建通过说成新APK真机验收；实体机仅用于竞品对照，连续朗读跨章/锁屏/中断的原生回归仍未完成。
+- 没有新APK/AAB、没有部署Web/后端/下载升级接口，没有重提荣耀或改Google发布。国内商店仍以前序25.0.114/2101审核任务为准；“已有同版本入库审查”不作为新内容拒审。Google正式2081与未送审候选保持原状态，学外语及第三产品未再操作。
+- C盘没有重装node_modules、.next或本地构建产物。前序16目录+3缓存文件仍全部不存在。当前C可用22890016768字节，不能把全部空间变化归因于本轮。
+- E盘仅下载两份本次真实验收预览：页面验收预览_2a3b66b和页面验收预览_f2388b9；f2388b9通过基本功能验证后尝试轮换删除2a3b66b（2167文件/58186025字节）及C盘3张重复采集图，自动审批拒绝blocked by policy，未给出更细原因。没有换语言/工具绕过，4个目标仍在；未继续下载后续预览以避免第三套物理预览。当前CMD已原位替换为仅这4个目标，原19个已删目标不再保留无效执行命令；50节已删除不再有效的可执行命令，原始盘点及Git历史保留审计追溯。
+- 当前可人工执行的唯一CMD文件：C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\outputs\guoxue-clean-20261018.cmd；新增清理明细写回同目录国学CMD清理清单_20261018.json，并同步E盘本次证据目录。命令为：
+
+    rd /s /q "E:\八字命理类文档包括排盘方式电子版\言道国学项目归档\发布包\学习与布局核查_20261018\页面验收预览_2a3b66b"
+    del /f /q "C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\outputs\界面对标_20261018\文墨天机_四化切换前.png"
+    del /f /q "C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\outputs\界面对标_20261018\问真参考_模块核查.png"
+    del /f /q "C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\outputs\界面对标_20261018\六壬参考_辅助核查前.png"
+
+- 临时HTTP预览曾因Windows Python别名留下旧子进程导致空响应；已核对命令行并结束本轮6个旧进程，使用实际Python解释器后服务器200、全新浏览器页可正常验证。不是应用源码白屏，未绕过浏览器安全警告。收尾应停止本轮剩余服务器22108，避免后台占用。
+
+### 仍未完成，不能抹去的事项
+- 尚未达到竞品全部模块/三模式逐像素一致；付费/广告屏蔽界面未购买或绕过。新紫微飞化显示沿用现有表，不代表已对所有竞品流派设置逐项验收。
+- 361穴仍大量定位占位，仅28张经络总图；未生成近似图冒充逐穴标准图。用户已回复“暂无授权，继续整理可用公开资料”。本轮已接入一张有明确开放许可的肺经11穴总图，不代表361张逐穴图已补齐；其余仍需逐条可靠来源和医学审校，不能复制手机商业图谱或未授权WHO全部图片。
+- 原生连续听学、最新布局在新安装包中的实机回归、全量古籍补齐与医学审校、Google社交前后端联调/审核仍待完成。首次云质量通过不代表这些完成。
+- 历史97副本仍有6修改/192删除/22类未跟踪待审。已继续查明：Gradle为旧本地offline-m2依赖修补，next-env为开发生成路径，两个ASC脚本为2026-09-26一次性操作扩充；待审语料1503640字节、四版国学pack及穴位pack共20996361字节，ruanzhu_fix含38文件11112402字节。没有盲提交过时ASC写操作、密钥或待审语料，也没有删除唯一未核资料。严格只保留一个活动源码工作区/全物理包两代规则尚未全面落实，不能称全项目清场完成。
+- 本轮源码已提交推送；报告/台账同步并提交后再读回status和上游。固定4份报告SHA-256由收尾工具结果记录，避免自引用哈希循环。任务为进行中，不能写“全部复刻完成/穴位全齐/已经发布”。
+
+### 用户确认无图谱授权后的公开资料续办
+- 依据用户明确答复“暂无授权，继续整理可用公开资料”，新增src/data/acupointOpenSources.json、src/components/AcupointStudySources.tsx及public/assets/meridians/lung-open-reference.svg。开放肺经图作者Dimitrius、2021年SVG整理忍者猫，CC BY-SA 3.0，原样收录未修改，固定来源https://commons.wikimedia.org/w/index.php?title=File:Points_of_lung_channel.svg&oldid=542674148，图字节SHA-256 9f3945ff51e7a7f0009a1c2fb3c79eed708ad24e55e3aa169750ca3320a357b9。页面有作者/修订/许可/未修改说明，.gitattributes禁止该文件换行改写，图谱开放许可不等于医学审校。
+- 经络详情和穴位详情均加入资料来源；肺经图P1至P11与本库LU1至LU11对应的中文表可逐项打开，另有《灵枢·经脉第十》真实原文入口和GB/T 12346-2021《经穴名称与定位》官方信息链接。官方现行标准信息已查验https://openstd.samr.gov.cn/bzgk/std/newGbInfo?hcno=397548AE7248D3D87DD15E0AB8107185&refer=outter，旧GB/T 12346-2006已被代替，不将本库文字冒称已按现行标准逐条审校。
+- 排查发现旧src/lib/tcmScraper.ts为未知穴位统一回填“直刺0.5-1寸”，且无资料时推断通用主治/配伍。本轮取消这类臆补，缺资料明确显示未整理；保留具体已录的学习条目，统一标明待复核/非国标原文，旧版本缓存失效。页内原“国标数据”徽标改为“本库整理·待复核”；“穴名+穴”不再当定位正文。不是将静态整理全部说成AI生成。
+- src/app/zhongyi/meridian/page.tsx原简化循行SVG曾按编号等距推算红色穴点，不具备逐穴解剖坐标。本轮删除这类伪精确点标记，保留循行概念图并明确未标具体穴位；既有28张人体/骨骼动态图和放大功能保留，其来源授权尚需继续核对。AI入口保留为定位术语和资料学习辅助，不以AI冒充医师/标准定位，缓存键更新。
+- src/app/zhongyi/ClientShell.tsx修复420px内容框内导航被挤成逐字竖排：导航独立一行，各入口保留，并去掉重复64px占位。13个中医子页layout.tsx及src/lib/toolNavData.ts中同一条“标准经络图/教材整理”未经核实的宣传描述统一改为图文对照及待复核性质；页尾不再谎称未显示任何操作细节。
+- 未引入GiorgioHuang/chino-meds数据集：其DATA_SOURCES.md第6节明确数据许可仍待定，代码MIT不能代替数据授权。未搬用未明确授权的3D坐标或商业手机图谱，也没有把古代图谱当现代定位标准。
+- 新增scripts/acupoint-study.test.ts三项回归：未知穴不套针深/疗效、旧缓存与损坏缓存形状、开放SVG原文件哈希与11穴真实目录对应及无脚本/外链主动内容。84c8837功能提交、7722ead字节保留配置、d2f6a7b导航及宣传纠正均已推送。84c8837完整云构建39093947649成功，12项行为测试（听学3/起运4/讨论2/穴位3）及原文来源检查通过；导航收尾构建39098638714成功；390/320px实测发现资料卡summary继承浅色后，以1c188af补显式深色，最终完整云构建39098827033成功，类型/12测试/原文检查/静态导出均通过。
+- 84c8837云验收包仅在内存读取并服务127.0.0.1:3113，未下载/解包第三套物理预览。本产品网页实测云门显示缺定位资料、肺经11穴跳转尺泽及其既有条目加载、灵枢第10篇真实正文和来源可打开；浏览器不具备本机朗读支持，朗读按钮禁用，不冒称声音回归已通过。匿名八字样例显示出生节气“立夏后9天，芒种前22天”、起运“出生后7年3个月5天16小时，公历1997-08-21”，负数问题已在最新页面复核。
+- 两张新增内部验收图为C盘outputs/界面对标_20261018/本产品_肺经开放图及许可_84c8837.jpg、本产品_起运日期修正回归_84c8837.jpg；不含竞品素材入商店，不含安装包新增。最终证据清单/同步哈希/服务停止结果在本节收尾补记。
+
+### 本轮收尾读回（2026-10-18）
+- 功能源最终1c188afcd852c6a4e3050e542734c0542b051e1d已推送，最终完整验证https://github.com/wzmpa18/minglizyi/actions/runs/39098827033成功；新增公开资料卡在390px/320px截图验证，320px下document/body滚动宽度均320px，无横向溢出。新增最终图outputs/界面对标_20261018/本产品_公开肺经图_1c188af.jpg；三张本轮图片实际为JPEG，扩展名已核对，未编辑图像。
+- 验证记录.json已去掉过时“待构建”，记录各实际验收提交与12项通过测试；共25张有效内部证据与当前清理JSON/CMD同步E盘学习与布局核查_20261018并逐一哈希相同。不新增镜像报告、临时脚本、依赖或物理构建目录。
+- 补充资料版本边界：上海中医药大学公开存放的GB/T 12346-2021文件范围明确为362经穴，已有目录为传统361条且督脉存在旧编号/DU与GV混用；未将现有目录宣称现行362穴标准全集，也未静默改编号破坏已有记录。后续需按版本和别名迁移核对（含印堂），公开肺经图本次只用于图文识读。资料参考https://zynj.shutcm.edu.cn/_upload/article/files/66/b4/b34a95604d04b0bf686251b2d317/368ea8b0-187c-48a7-a402-ffdf1e11bb99.pdf；未把该PDF整本复制入应用。
+- 继续审计旧97副本：目前6修改/192删除/20未跟踪目录项（先前22项含已清缓存）；展开未跟踪66个文件，同相对路径与活动仓逐个哈希比较，没有完全相同项。待审语料30条全部app_approval_status=not_approved、completeness/quality均unverified，版权29条needs_review/1条自标public_domain但仍未审，不冒充可发布语料归并。独有资料与审核材料未误删；这一历史副本债务仍具体未解决，不把活动仓干净冒充全盘所有副本干净。
+- 本轮内存验收服务84c8837、d2f6a7b、1c188af均在替换/结束时核对进程身份停止；最终15120已停止，3113无监听，临时手机宽度已恢复。没有本轮HTTP日志/解包/依赖缓存残留。之前22108已不存在。
+- 原19个清理目标再次检查19/19不存在。E盘旧预览58186025字节及C盘3张重复图1227811字节仍存在；此前删除被自动审批blocked by policy拒绝，未换工具绕过，当前4目标CMD为唯一有效执行清单。C盘可用21926944768字节、E盘13228249088字节；不能将系统空间变化全归因本轮。当前2101提审APK仍为25442965字节，SHA-256 ecff45d6eebe0dc7752cf97dec37ce3dd9f56d514beee17cdfe07926ba3ef245。
+- 本次功能改动完成提交/推送，报告与主账本收尾提交后以只读核验确认活动仓status空、HEAD/上游0/0；固定四份报告同步并实际核对SHA-256。没有新包、部署或商店操作。整体功能对标/逐穴和医学核验/原生听学验证/历史副本清场仍未完成，以上边界不得在接手时省略。
