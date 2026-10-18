@@ -21,7 +21,7 @@ import type { TcmMeridian, TcmAcupoint, TcmDongAcupoint } from "@/algorithm-core
 import { useToolBack } from "@/lib/useToolBack";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
-import { ResourceDiscussion } from "@/components/ResourceDiscussion";
+import { AcupointStudyDiscussion } from "@/components/AcupointStudyDiscussion";
 import { AcupointStudySources } from "@/components/AcupointStudySources";
 
 const BRAND = "#7B2FBE";
@@ -911,7 +911,7 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
         </p>
       </div>
 
-      <ResourceDiscussion resourceType="acupoint" resourceId={`standard:${acupoint.code}`} title={`${acupoint.name}学习讨论`} />
+      <AcupointStudyDiscussion targetId={`standard:${acupoint.code}`} title={`${acupoint.name}学习讨论`} />
 
       <div style={{ padding: "12px" }}>
         <button onClick={() => router.push(`/zhongyi/meridian?meridian=${encodeURIComponent(acupoint.meridian)}`)}
@@ -1135,7 +1135,7 @@ function DongAcupointDetailPage({ acupointName }: { acupointName: string }) {
         )}
       </div>
 
-      <ResourceDiscussion resourceType="acupoint" resourceId={`dong:${acupoint.code}`} title={`${acupoint.name}学习讨论`} accent="#E65100" />
+      <AcupointStudyDiscussion targetId={`dong:${acupoint.code}`} title={`${acupoint.name}学习讨论`} />
 
       <div style={{ padding: "12px" }}>
         <button onClick={() => router.push("/zhongyi/meridian")}

@@ -733,6 +733,7 @@ const extraRoutes = [
   { file: 'posterConfigRoutes', path: '/api/admin/poster-config', name: '海报配置' },
   { file: 'shareConfigRoutes', path: '/api/admin/share-config', name: '分享配置' },
   { file: 'socialApiRoutes', path: '/api/social', name: '社交API' },
+  { file: 'studyCommentsRoutes', path: '/api/study-comments', name: '穴位文字学习讨论' },
   { file: 'academyRoutes', path: '/api/academy', name: '言道学堂' },
   { file: 'newsRoutes', path: '/api/news', name: '行业资讯' },
   { file: 'newsRoutes', path: '/api/admin/news', name: '资讯管理' },
