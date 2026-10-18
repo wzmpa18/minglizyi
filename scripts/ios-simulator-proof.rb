@@ -1,6 +1,8 @@
 # CI-only test target. Does not modify shipped app sources or bypass any app feature.
 require 'xcodeproj'
 project_path = 'ios/App/App.xcodeproj'
+project_file = File.join(project_path, 'project.pbxproj')
+File.binwrite(project_file, File.binread(project_file).delete_prefix("\xEF\xBB\xBF".b))
 project = Xcodeproj::Project.open(project_path)
 app = project.targets.find { |t| t.name == 'App' }
 raise 'App target missing' unless app

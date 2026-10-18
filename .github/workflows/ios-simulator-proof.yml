@@ -29,7 +29,7 @@ jobs:
           mkdir -p www
           cp -R out/. www/
           npx cap sync ios
-          gem install xcodeproj --no-document
+          gem install xcodeproj -v 1.28.1 --no-document
           ruby scripts/ios-simulator-proof.rb
       - name: Capture real app on iPhone and iPad simulators
         run: |
