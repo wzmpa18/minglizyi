@@ -458,7 +458,7 @@ export default function ZiweiPage() {
 
   // ---- 视图模式 ----
   const [viewMode, setViewMode] = useState<"sihua" | "sanhe" | "feixing">("sanhe");
-  const [professionalLayout, setProfessionalLayout] = useState(false);
+  const [professionalLayout, setProfessionalLayout] = useState(true);
 
   // ---- 三方四正高亮宫位（地支索引 0-11，null 表示无高亮） ----
   const [focusedPalace, setFocusedPalace] = useState<number | null>(null);
@@ -502,6 +502,12 @@ export default function ZiweiPage() {
   // ---- 结果状态 ----
   const [result, setResult] = useState<ZiweiResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!professionalLayout || !result) return;
+    document.body.setAttribute("data-ziwei-layout", "professional");
+    return () => { document.body.removeAttribute("data-ziwei-layout"); };
+  }, [professionalLayout, result]);
 
   useEffect(() => {
     const outer = chartOuterRef.current;
@@ -1162,7 +1168,8 @@ export default function ZiweiPage() {
 
   return (
     <div className="bg-[#ededed] min-h-screen flex justify-center">
-      <div className="w-full" style={{ maxWidth: professionalLayout ? "720px" : "420px", paddingBottom: "10px" }}>
+      <div className="w-full" style={{ maxWidth: professionalLayout ? "720px" : "420px", paddingBottom: professionalLayout ? "calc(64px + env(safe-area-inset-bottom, 0px))" : "10px" }}>
+      <style>{`body[data-ziwei-layout="professional"] #app-bottom-nav { display: none !important; }`}</style>
       {/* 输入表单 DatePicker 弹窗 */}
       <DatePicker onRecordImport={applyMingzhuProfile} onRecordRestore={handleRestoreHistory}
         show={showForm}
@@ -1326,6 +1333,7 @@ export default function ZiweiPage() {
                 </svg>}
 
                 {professionalLayout && <ProfessionalZiweiBoard result={result} mode={viewMode} focus={focusedPalace}
+                  mutagenTable={TIANGAN_SIHUA} laiyinPalaceIndex={laiyinPalaceIdx}
                   onSelect={setFocusedPalace} onDetails={openProfessionalPalaceDetails}
                   overlay={overlayInfo} dynamicLabels={dynamicStarsByPalace}
                   decadalMutagen={dxLayer ? zwDecadalAligned[selectedDaxian]?.mutagen : undefined}
@@ -2438,6 +2446,11 @@ export default function ZiweiPage() {
 
       {/* v20.1: 登录提示弹窗 */}
       <LoginPromptModal show={showLoginPrompt} onClose={() => setShowLoginPrompt(false)} />
+      {result && professionalLayout && !showForm && !interpretPanel && !showLoginPrompt && <nav aria-label="专业紫微盘快捷功能" style={{ position: "fixed", bottom: 0, left: 0, right: 0, margin: "0 auto", maxWidth: 720, zIndex: 60, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 5, padding: "7px 8px", paddingBottom: "calc(7px + env(safe-area-inset-bottom, 0px))", background: "#dedee0", borderTop: "1px solid #bbb" }}>
+        <button type="button" onClick={() => openProfessionalPalaceDetails(focusedPalace ?? ZHI_NAMES.indexOf(result.earthlyBranchOfSoulPalace))} style={{ padding: "6px 7px", background: "#f5f5fa", color: "#087dff", borderRadius: 4, fontSize: 14 }}>宫位资料</button>
+        <div role="group" aria-label="切换紫微盘模式" style={{ display: "flex", borderRadius: 5, overflow: "hidden", border: "1px solid #7766cc" }}>{(["feixing", "sanhe", "sihua"] as const).map(mode => <button type="button" key={mode} aria-pressed={viewMode === mode} onClick={() => { setViewMode(mode); setFocusedPalace(null); }} style={{ padding: "6px 8px", fontSize: 16, lineHeight: 1.3, background: viewMode === mode ? "#7766cc" : "#777", color: "white", borderRight: mode === "sihua" ? undefined : "1px solid #aaa" }}>{{ feixing: "飞星", sanhe: "三合", sihua: "四化" }[mode]}</button>)}</div>
+        <button type="button" onClick={() => setShowForm(true)} style={{ padding: "6px 7px", background: "#f5f5fa", color: "#087dff", borderRadius: 4, fontSize: 14 }}>快捷排盘</button>
+      </nav>}
       </div>
     </div>
   );

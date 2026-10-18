@@ -3,6 +3,7 @@
 import type { ZiweiResult } from "@/algorithm-core";
 
 type Mode = "feixing" | "sanhe" | "sihua";
+type Mutagens = { lu: string; quan: string; ke: string; ji: string };
 type Overlay = { dx?: { names: string[] } | null; ln?: { names: string[] } | null; deep?: { names: string[]; tag: string } | null } | null;
 const GRID = [3, 4, 5, 6, 2, null, null, 7, 1, null, null, 8, 0, 11, 10, 9];
 const ZHI = ["寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥", "子", "丑"];
@@ -13,10 +14,10 @@ const ABBR: Record<string, string> = { 命宫:"命", 兄弟:"兄", 夫妻:"夫",
 const short = (name: string) => ABBR[name] || name.replace(/宫$/, "").slice(0, 1);
 
 /** Presentation only. All stars, ages, mutagens and overlays come from the existing engine. */
-export function ProfessionalZiweiBoard({ result, mode, focus, onSelect, onDetails, overlay, flyingStars, dynamicLabels, decadalMutagen, yearlyMutagen }: {
+export function ProfessionalZiweiBoard({ result, mode, focus, onSelect, onDetails, overlay, flyingStars, dynamicLabels, decadalMutagen, yearlyMutagen, mutagenTable, laiyinPalaceIndex }: {
   result: ZiweiResult; mode: Mode; focus: number | null;
   onSelect: (index: number) => void; onDetails: (index: number) => void;
-  overlay: Overlay; flyingStars?: { lu: string; quan: string; ke: string; ji: string };
+  overlay: Overlay; flyingStars?: Mutagens; mutagenTable?: Record<string, Mutagens>; laiyinPalaceIndex?: number;
   dynamicLabels: Record<number, { abbr: string; level: string }[]>;
   decadalMutagen?: string[]; yearlyMutagen?: string[];
 }) {
@@ -53,8 +54,10 @@ export function ProfessionalZiweiBoard({ result, mode, focus, onSelect, onDetail
         const major = palace.majorStars || [];
         const aux = [...(palace.auspiciousStars || []), ...(palace.shaStars || [])];
         const minor = (palace.otherStars || []).filter(star => mode === "sanhe" || ["天空", "天刑"].includes(star));
-        const stars = [...major, ...aux, ...minor];
-        const size = Math.min(mode === "sanhe" ? 13 : 16, Math.max(6, (102 - 2) / Math.max(stars.length, 1)));
+        const stars = [...major, ...aux, ...(mode === "sanhe" ? [] : minor)];
+        const size = Math.min(16, Math.max(11, 98 / Math.max(stars.length, 1)));
+        const palaceMutagen = mutagenTable?.[palace.heavenlyStem];
+        const selfFlies = palaceMutagen ? [palaceMutagen.lu, palaceMutagen.quan, palaceMutagen.ke, palaceMutagen.ji] : [];
         const range = palace.ageRange?.[0] ? `${palace.ageRange[0]}~${palace.ageRange[1]}` : "";
         const dx = overlay?.dx?.names[index];
         const ln = overlay?.ln?.names[index];
@@ -63,17 +66,20 @@ export function ProfessionalZiweiBoard({ result, mode, focus, onSelect, onDetail
         return <div key={index} role="button" tabIndex={0} aria-label={`选择${palace.name}${palace.heavenlyStem}${palace.earthlyBranch}`} aria-pressed={isSelected}
           onClick={() => onSelect(index)} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelect(index); } }}
           className="relative flex min-w-0 flex-col overflow-hidden border border-gray-500 bg-white p-[2px]" style={{ boxShadow: isSelected ? "inset 0 0 0 1px #666" : undefined }}>
-          <div className="flex min-h-0 flex-1 items-start" style={{ gap: mode === "sanhe" ? 0.5 : 1 }}>
+          <div className="min-h-0 flex-1 overflow-y-auto" style={{ scrollbarWidth: "thin" }}>
+          <div className="flex flex-wrap items-start" style={{ gap: mode === "sanhe" ? 0.5 : 1 }}>
             {stars.map((name, i) => {
               const hua = natal.indexOf(name);
               const fly = selectedFlies.indexOf(name);
+              const self = selfFlies.indexOf(name);
               const brightness = result.stars.find(star => star.name === name && star.palace === palace.name)?.brightness;
               const color = mode === "sihua" ? (major.includes(name) ? "#111" : "#666") : major.includes(name) ? "#b90000" : aux.includes(name) || mode === "feixing" ? "#800080" : "#014fab";
-              return <div key={`${name}-${i}`} className="flex shrink-0 flex-col items-center leading-none" style={{ fontSize: size, color, fontWeight: major.includes(name) || mode === "feixing" ? 600 : 400 }}>
+              return <div key={`${name}-${i}`} className="flex shrink-0 flex-col items-center leading-none" style={{ fontSize: major.includes(name) ? size : Math.min(size, mode === "sihua" ? 16 : 14), color, fontWeight: major.includes(name) || mode === "feixing" ? 600 : 400 }}>
                 {Array.from(name).map((char, j) => <span key={j}>{char}</span>)}
                 {mode === "sanhe" && brightness && <span className="mt-[2px] text-[7px] font-normal text-gray-500">{brightness}</span>}
                 {hua >= 0 && <span className="mt-1 rounded-sm border px-[1px]" style={{ fontSize: mode === "sihua" ? size + 2 : 11, borderColor: mode === "sihua" ? "transparent" : HUA_COLORS[hua], color: mode === "sihua" ? "#ff5149" : HUA_COLORS[hua] }}>{mode === "sihua" ? "ABCD"[hua] : HUA[hua]}</span>}
                 {mode === "sihua" && fly >= 0 && <span className="text-[8px] text-[#ff5149]">↗{"ABCD"[fly]}</span>}
+                {mode === "feixing" && self >= 0 && <span title={`${palace.heavenlyStem}干对照：本宫${name}自化${HUA[self]}`} className="mt-1 text-[11px]" style={{ color: HUA_COLORS[self] }}>→{HUA[self]}</span>}
                 {[decadalMutagen, yearlyMutagen].map((mutagen, layer) => {
                   const h = mutagen?.indexOf(name) ?? -1;
                   return h >= 0 && h < 4 ? <span key={layer} className="mt-[1px] text-[8px]" style={{ color: layer ? "#16a34a" : "#2563eb" }}>{layer ? "年" : "大"}{HUA[h]}</span> : null;
@@ -81,6 +87,9 @@ export function ProfessionalZiweiBoard({ result, mode, focus, onSelect, onDetail
               </div>;
             })}
           </div>
+          {mode === "sanhe" && minor.length > 0 && <div className="mt-1 flex flex-wrap gap-x-1 text-[9px] leading-tight text-[#014fab]">{minor.map((star, i) => <span key={`${star}-${i}`}>{star}</span>)}</div>}
+          </div>
+          {index === laiyinPalaceIndex && <span className="absolute bottom-[42%] right-[2px] rounded border border-red-500 px-[1px] text-[8px] leading-tight text-red-500" style={{ writingMode: "vertical-rl" }}>来因</span>}
           {palace.isBodyPalace && <span className="absolute right-0 top-[40%] text-[8px] text-red-700" style={{ writingMode: "vertical-rl" }}>身宫</span>}
           <div className="flex justify-between gap-1 text-[7px] leading-tight text-gray-500">
             <span>{mode === "sanhe" ? [palace.boshi, palace.jiangqian, palace.suiqian].filter(Boolean).join(" · ") : ""}</span>
