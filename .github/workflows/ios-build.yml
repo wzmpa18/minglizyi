@@ -159,6 +159,7 @@ jobs:
       # 归档一律未签名（签名在导出阶段完成，避免归档期签名资产依赖）
       - name: Archive (unsigned)
         run: |
+          [[ "$RELEASE_BUILD" =~ ^[1-9][0-9]{0,8}$ ]] || { echo 'Invalid build number'; exit 1; }
           cd ios/App
           rm -rf "$RUNNER_TEMP/App.xcarchive"
           xcodebuild archive \
@@ -167,7 +168,9 @@ jobs:
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath "$RUNNER_TEMP/App.xcarchive" \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            MARKETING_VERSION="$RELEASE_VERSION" \
+            CURRENT_PROJECT_VERSION="$RELEASE_BUILD"
 
       # 分发签名：manual 模式，provisioningProfiles 按 profile 名称匹配
       - name: Export ipa (manual signing)
@@ -197,6 +200,8 @@ jobs:
             <true/>
             <key>stripSwiftSymbols</key>
             <true/>
+            <key>manageAppVersionAndBuildNumber</key>
+            <false/>
           </dict>
           </plist>
           EOF
