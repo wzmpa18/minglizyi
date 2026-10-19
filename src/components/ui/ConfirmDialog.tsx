@@ -42,7 +42,7 @@ export function ConfirmDialog({
         <div className="modal-center-body">
           <div className="flex flex-col items-center px-6 pb-2 pt-7">
             <h3 className="text-base font-bold text-gray-800">{title}</h3>
-            {message && <p className="mt-2 text-center text-[13px] leading-relaxed text-gray-500">{message}</p>}
+            {message && <p className="mt-2 whitespace-pre-wrap break-words text-left text-[13px] leading-relaxed text-gray-600">{message}</p>}
           </div>
           <div className="flex gap-3 px-6 pb-6 pt-3">
             <InterfaceButton
