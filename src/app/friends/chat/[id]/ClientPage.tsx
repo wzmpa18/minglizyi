@@ -6,6 +6,7 @@ import { BrandHeader } from "@/components/shared";
 import { useToolBack } from "@/lib/useToolBack";
 import {
   getChatMessages,
+  reconcileServerChatMessages,
   saveChatMessage,
   deleteChatMessage,
   batchDeleteChatMessages,
@@ -17,12 +18,18 @@ import {
 import { getCurrentUserId, getLoginState } from "@/lib/auth";
 import { sendPrivateMessage, fetchPrivateMessages, fetchUserProfile } from "@/lib/socialApi";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import {useAccountScope} from "@/lib/useAccountScope";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
 import { PageLoginGuard } from "@/components/PageLoginGuard";
 const BRAND = "#7B2FBE";
 
 export default function FriendChatPage({ routeId }: { routeId?: string }) {
+  const account=useAccountScope();return <FriendChatAccount key={account} routeId={routeId}/>;
+}
+function FriendChatAccount({routeId}:{routeId?:string}){
+  const active=useRef(true);
+  useEffect(()=>{active.current=true;return()=>{active.current=false;};},[]);
   const params = useParams();
   const router = useRouter();
   const friendId = routeId || (params.id as string);
@@ -83,7 +90,7 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
 
     // 强制从后端用户接口拉取最新昵称：好友改昵称后，聊天页标题与消息旁昵称实时同步
     void fetchUserProfile(friendId).then((r) => {
-      if (r && r.success && r.user && r.user.nickname) {
+      if (active.current && r && r.success && r.user && r.user.nickname) {
         setPeerNickname(r.user.nickname);
         const local = getFriends();
         const localFriend = local.find((f) => f.id === friendId);
@@ -114,7 +121,8 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
   const lastServerMsgIdRef = useRef(0);
 
   // v25.0.38 P0-2：服务端确认后用 srv_ 版本替换本地乐观消息（ID 统一，跨设备刷新不重复不丢失）
-  const confirmServerMessage = useCallback((optimisticId: string, serverMsg: { id: string; senderId: string; senderName: string; content: string; type: string; createdAt: string }) => {
+  const confirmServerMessage = useCallback((optimisticId: string, serverMsg: { id: string; senderId: string; senderName: string; content: string; type: string; createdAt: string; reviewStatus?: "active"|"pending"|"rejected" }) => {
+    if(!active.current)return;
     deleteChatMessage(chatKey, optimisticId);
     const confirmed: ChatMessage = {
       id: "srv_" + serverMsg.id,
@@ -124,6 +132,7 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
       type: (serverMsg.type === "image" || serverMsg.type === "system" ? serverMsg.type : "text") as ChatMessage["type"],
       timestamp: serverMsg.createdAt,
       status: "sent",
+      reviewStatus:serverMsg.reviewStatus||"active",
     };
     const local = getChatMessages(chatKey);
     if (!local.find((m) => m.id === confirmed.id)) saveChatMessage(chatKey, confirmed);
@@ -136,6 +145,7 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
 
   // v25.0.38 P0-2：发送失败标记（保留消息 + 红色感叹号，点击可重发）；401 显式提示重新登录
   const markMessageFailed = useCallback((optimisticId: string, err: string, isAuth: boolean) => {
+    if(!active.current)return;
     const local = getChatMessages(chatKey);
     const target = local.find((m) => m.id === optimisticId);
     if (target) {
@@ -165,7 +175,8 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
     setMessages((prev) => [...prev, optimistic]);
     setSending(true);
 
-    void sendPrivateMessage(friendId, text).then((r) => {
+    void sendPrivateMessage(friendId, text,"text",optimistic.id).then((r) => {
+      if(!active.current)return;
       setSending(false);
       if (r && r.success && r.message) {
         confirmServerMessage(optimistic.id, r.message);
@@ -220,7 +231,8 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
     saveChatMessage(chatKey, optimistic);
     setMessages((prev) => [...prev, optimistic]);
     setSending(true);
-    void sendPrivateMessage(friendId, target.content).then((r) => {
+    void sendPrivateMessage(friendId,target.content,"text",optimistic.id).then((r) => {
+      if(!active.current)return;
       setSending(false);
       if (r && r.success && r.message) {
         confirmServerMessage(optimistic.id, r.message);
@@ -250,8 +262,10 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
     }
     const reader = new FileReader();
     reader.onload = () => {
+      if(!active.current)return;
       const img = new Image();
       img.onload = () => {
+        if(!active.current)return;
         const MAX = 720;
         const scale = Math.min(1, MAX / Math.max(img.width, img.height));
         const canvas = document.createElement("canvas");
@@ -280,7 +294,8 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
         setMessages((prev) => [...prev, optimistic]);
         setSending(true);
 
-        void sendPrivateMessage(friendId, dataUrl, "image").then((r) => {
+        void sendPrivateMessage(friendId,dataUrl,"image",optimistic.id).then((r) => {
+          if(!active.current)return;
           setSending(false);
           if (r && r.success && r.message) {
             confirmServerMessage(optimistic.id, r.message);
@@ -305,12 +320,13 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
     const poll = async () => {
       if (stopped || document.visibilityState === "hidden") return;
       try {
-        const r = await fetchPrivateMessages(friendId, lastServerMsgIdRef.current);
+        const r = await fetchPrivateMessages(friendId,0);
+        if(stopped||!active.current)return;
         if (r && (r as any).code === 401) {
           setAuthExpired(true);
           return;
         }
-        if (r && r.success && r.messages && r.messages.length) {
+        if (r && r.success && r.messages) {
           for (const m of r.messages) {
             lastServerMsgIdRef.current = Math.max(lastServerMsgIdRef.current, parseInt(m.id, 10) || 0);
           }
@@ -323,13 +339,11 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
             type: (m.type === "image" || m.type === "system" ? m.type : "text") as ChatMessage["type"],
             timestamp: m.createdAt,
             status: "sent" as const,
+            reviewStatus:m.reviewStatus||"active",
           }));
-          setMessages((prev) => {
-            const existIds = new Set(prev.map((x) => x.id));
-            const fresh = incoming.filter((x) => !existIds.has(x.id));
-            for (const f of fresh) saveChatMessage(chatKey, f);
-            return fresh.length ? [...prev, ...fresh] : prev;
-          });
+          // A pending message can later become active without a new ID. Reconcile
+          // the current server window instead of advancing past its old cursor.
+          setMessages(reconcileServerChatMessages(chatKey,incoming));
         }
       } catch { /* 网络异常静默，下轮重试 */ }
     };
@@ -577,6 +591,7 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
                   </svg>
                 </button>
               )}
+              {isMe&&!manageMode&&msg.reviewStatus&&msg.reviewStatus!=='active'&&<span className="shrink-0 text-xs text-amber-900" role="status">{msg.reviewStatus==='rejected'?'未送达 · 请修改':'未送达 · 待核验'}</span>}
               {/* v25.0.38 P0-2：发送中时钟图标 */}
               {isMe && !manageMode && msg.status === "sending" && (
                 <div className="shrink-0 flex h-6 w-6 items-center justify-center">

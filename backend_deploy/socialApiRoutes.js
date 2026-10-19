@@ -25,7 +25,7 @@ const path = require('path');
 const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const { listActiveResourceComments } = require('./resourceDiscussionQueries');
-const {validateStudyText}=require('./studyCommentPolicy');
+const {validateStudyText,countStudyCharacters}=require('./studyCommentPolicy');
 const { getVisiblePost, listVisiblePosts, listVisiblePostComments, listVisibleFavoritePosts } = require('./socialVisibilityQueries');
 const { SOCIAL_FEATURE_KEYS, socialFeatureEnabled } = require('./socialFeaturePolicy');
 
@@ -268,6 +268,11 @@ function initTables(d) {
       if (!ccols.includes('deleted_by')) d.exec(`ALTER TABLE comments ADD COLUMN deleted_by TEXT DEFAULT ''`);
     }
     for(const table of ['friend_requests','friendships'])if(!d.prepare(`PRAGMA table_info(${table})`).all().some(row=>row.name==='source'))d.exec(`ALTER TABLE ${table} ADD COLUMN source TEXT NOT NULL DEFAULT 'legacy'`);
+    for(const table of ['comments','posts']){
+      const columns=d.prepare(`PRAGMA table_info(${table})`).all().map(c=>c.name);
+      if(table==='comments'&&!columns.includes('review_status'))d.exec("ALTER TABLE comments ADD COLUMN review_status TEXT NOT NULL DEFAULT 'active'");
+      if(!columns.includes('review_reason'))d.exec(`ALTER TABLE ${table} ADD COLUMN review_reason TEXT NOT NULL DEFAULT ''`);
+    }
     const chatcols = d.prepare('PRAGMA table_info(chat_messages)').all().map(c => c.name);
     if(!chatcols.includes('review_status'))d.exec("ALTER TABLE chat_messages ADD COLUMN review_status TEXT NOT NULL DEFAULT 'active'");
     if(!chatcols.includes('review_reason'))d.exec("ALTER TABLE chat_messages ADD COLUMN review_reason TEXT NOT NULL DEFAULT ''");
@@ -383,6 +388,8 @@ const moderateResourceComment=require('./socialModerationPolicy').createSelected
  audit:row=>{const d=getDb();d.exec(`CREATE TABLE IF NOT EXISTS social_text_moderation(user_id TEXT NOT NULL,content_hash TEXT NOT NULL,consent_version TEXT NOT NULL,status TEXT NOT NULL,checked_ms INTEGER NOT NULL,PRIMARY KEY(user_id,content_hash,consent_version))`);d.prepare('INSERT OR REPLACE INTO social_text_moderation VALUES (?,?,?,?,?)').run(row.userId,row.contentHash,row.version,row.status,Date.now());},
 });
 
+function moderateLegacyText(text,context){return countStudyCharacters(text)>500?Promise.resolve({status:'pending',reason:'长文字保留完整副本待核验，未向机器拆分或截断发送'}):moderateResourceComment(text,context);}
+
 function logSensitive(userId, scene, content, words) {
   try {
     getDb().prepare('INSERT INTO sensitive_logs (user_id, scene, content, words) VALUES (?,?,?,?)')
@@ -446,6 +453,8 @@ function authRequired(req, res, next) {
 
 // v25.0.61 FINAL-SEAL D19：平台级禁言（users.muted_until）检查。
 // 后台设置的禁言原先无任何生效点；现发布动态/评论/私聊/群消息时拒绝，到期自动恢复（仅返回剩余分钟数）。
+function availableSocialUser(id){try{const row=getUserDb()?.prepare('SELECT status,deleted_at FROM users WHERE user_id=?').get(String(id));return !!row&&!row.deleted_at&&row.status!=='banned';}catch{return false;}}
+
 function checkPlatformMute(userId) {
   const udb = getUserDb();
   if (!udb) return null;
@@ -541,6 +550,7 @@ function rowToPost(row, currentUserId) {
 
 function createRouter() {
   const router = express.Router();
+  router.use((_req,res,next)=>{res.set({'Cache-Control':'no-store','X-Robots-Tag':'noindex, nofollow'});next();});
   router.use(express.json({ limit: '6mb' }));
   router.use('/tongchen',require('./tongchenRoutes').createTongchenRouter({getDb,getUserDb,authRequired,userPublicInfo,privateConvId,checkPlatformMute,moderateResourceComment,upsertUserConversation}));
   router.use('/live',require('./liveChartRoutes').createLiveChartRouter({getDb,getUserDb,authRequired,userPublicInfo,featureEnabled,checkPlatformMute,moderateResourceComment}));
@@ -588,7 +598,7 @@ function createRouter() {
 
   // POST /api/social/posts  { content, images, tags, toolType, circle }
   // P6-I-PLUS 规则5：发布动态必须绑定圈层（排盘/证书分享按 toolType 自动匹配，无圈层拒绝发布）
-  router.post('/posts', authRequired, socialRateLimitGate('post_publish'), (req, res) => {
+  router.post('/posts', authRequired, socialRateLimitGate('post_publish'), async (req, res) => {
     try {
       if (!featureEnabled('posts_enabled', req)) return featureDisabled(res, '动态发布');
       const _mute = checkPlatformMute(req.user.userId);
@@ -598,7 +608,10 @@ function createRouter() {
         return res.status(400).json({ success: false, error: '动态内容不能为空' });
       }
       // 统一敏感词过滤：违规拦截并留痕（与私聊/群聊同规范）
-      const postText = String(content).trim().slice(0, 5000);
+      const postText = String(content).trim();
+      if(postText.length>5000)return res.status(400).json({success:false,error:'动态最多5000字，请主动精简，不会自动截断'});
+      if(!Array.isArray(images)||images.length>9||images.some(v=>typeof v!=='string'))return res.status(400).json({success:false,error:'图片列表无效'});
+      if(!Array.isArray(tags)||tags.length>5||tags.some(v=>typeof v!=='string'||v.length>40))return res.status(400).json({success:false,error:'标签无效'});
       const postHits = findSensitiveWords(postText);
       if (postHits.length) {
         logSensitive(String(req.user.userId), 'post', postText, postHits);
@@ -616,8 +629,11 @@ function createRouter() {
           JSON.stringify(Array.isArray(images) ? images.slice(0, 9) : []),
           JSON.stringify(Array.isArray(tags) ? tags.slice(0, 5) : []),
           String(toolType || '').slice(0, 40), ck);
+      // Images and longer historic posts are held for review; never send images or truncated chunks to the text model.
+      const review=images.length?{status:'pending',reason:'图片需另行内容核验，未公开'}:await moderateLegacyText([postText,...tags].join('\n'),{userId:req.user.userId,moderationVersion:req.body.moderationVersion});
+      if(featureEnabled('posts_enabled',req)&&!checkPlatformMute(req.user.userId)&&availableSocialUser(req.user.userId))getDb().prepare("UPDATE posts SET status=?,review_reason=? WHERE post_id=? AND status='pending'").run(review.status,review.reason,postId);
       const row = getDb().prepare('SELECT * FROM posts WHERE post_id = ?').get(postId);
-      res.json({ success: true, pendingReview: true, message: '已提交审核，通过后公开。', post: rowToPost(row, String(req.user.userId)) });
+      res.json({ success: true, pendingReview:row.status==='pending',rejected:row.status==='rejected',message:row.status==='active'?'已发布':row.status==='deleted'?'已撤回':'已提交，当前未公开',post:rowToPost(row,String(req.user.userId)) });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
     }
@@ -860,7 +876,7 @@ function createRouter() {
 
   // 第一百一十八~一百二十章：评论/层级回复 { content, parentId? }
   // parentId 必须指向同动态的未删除评论；回复回复自动拍平挂到根（两级展示，不无限缩进）
-  router.post('/posts/:postId/comments', authRequired, socialRateLimitGate('comment'), (req, res) => {
+  router.post('/posts/:postId/comments', authRequired, socialRateLimitGate('comment'), async (req, res) => {
     try {
       if (!featureEnabled('comments_enabled', req)) return featureDisabled(res, '评论');
       const _mute = checkPlatformMute(req.user.userId);
@@ -868,7 +884,8 @@ function createRouter() {
       const { content, parentId = 0 } = req.body;
       if (!content || !String(content).trim()) return res.status(400).json({ success: false, error: '评论内容不能为空' });
       // 统一敏感词过滤：违规拦截并留痕（与私聊/群聊同规范）
-      const cmText = String(content).trim().slice(0, 1000);
+      const validated=validateStudyText(content);if(!validated.ok)return res.status(400).json({success:false,error:validated.error});
+      const cmText = validated.text;
       const cmHits = findSensitiveWords(cmText);
       if (cmHits.length) {
         logSensitive(String(req.user.userId), 'comment', cmText, cmHits);
@@ -884,21 +901,26 @@ function createRouter() {
       const pid = parseInt(parentId, 10);
       if (pid > 0) {
         parentRow = d.prepare('SELECT * FROM comments WHERE id = ?').get(pid);
-        if (!parentRow || parentRow.deleted) return res.status(404).json({ success: false, error: '回复的目标评论不存在' });
+        if (!parentRow || parentRow.deleted || parentRow.review_status!=='active') return res.status(404).json({ success: false, error: '回复的目标评论不存在' });
         if (String(parentRow.post_id) !== String(req.params.postId)) return res.status(400).json({ success: false, error: '只能回复同一条动态下的评论' });
         storedParentId = Number(parentRow.parent_id || 0) > 0 ? Number(parentRow.parent_id) : pid;
         parentRow = d.prepare('SELECT * FROM comments WHERE id = ?').get(storedParentId) || parentRow;
         const reader = String(req.user.userId);
         const blocked = d.prepare('SELECT 1 FROM blacklists WHERE (user_id = ? AND blocked_id = ?) OR (user_id = ? AND blocked_id = ?)');
         const target = d.prepare('SELECT user_id FROM comments WHERE id = ?').get(pid);
-        if (parentRow.deleted || [parentRow, target].some(row => row && blocked.get(reader, String(row.user_id), String(row.user_id), reader))) {
+        if (parentRow.deleted || parentRow.review_status!=='active' || [parentRow, target].some(row => row && blocked.get(reader, String(row.user_id), String(row.user_id), reader))) {
           return res.status(404).json({ success: false, error: '回复的目标评论不存在' });
         }
       }
 
       const info = userPublicInfo(req.user.userId) || { nickname: '国学爱好者' };
-      const result = d.prepare('INSERT INTO comments (post_id, user_id, nickname, content, parent_id) VALUES (?,?,?,?,?)')
-        .run(req.params.postId, String(req.user.userId), info.nickname, String(content).trim().slice(0, 1000), storedParentId);
+      const result = d.prepare("INSERT INTO comments (post_id,user_id,nickname,content,parent_id,review_status) VALUES (?,?,?,?,?,'pending')").run(req.params.postId,String(req.user.userId),info.nickname,cmText,storedParentId);
+      const review=await moderateResourceComment(cmText,{userId:req.user.userId,moderationVersion:req.body.moderationVersion});
+      const currentParent=storedParentId?listVisiblePostComments(d,req.params.postId,req.user.userId).find(c=>c.id===storedParentId&&!c.deleted):true;
+      const stillAllowed=featureEnabled('comments_enabled',req)&&!checkPlatformMute(req.user.userId)&&availableSocialUser(req.user.userId)&&getVisiblePost(d,req.params.postId,req.user.userId)&&currentParent;
+      const updated=d.prepare("UPDATE comments SET review_status=?,review_reason=? WHERE id=? AND review_status='pending' AND deleted=0").run(stillAllowed?review.status:'pending',stillAllowed?review.reason:'访问或回复条件已改变，保持隔离',result.lastInsertRowid);
+      const current=d.prepare('SELECT * FROM comments WHERE id=?').get(result.lastInsertRowid);
+      if(!updated.changes||current.review_status!=='active')return res.json({success:true,pendingReview:current.review_status==='pending',rejected:current.review_status==='rejected',message:current.deleted?'已撤回':'已提交，当前未公开'});
       d.prepare('UPDATE posts SET comment_count = comment_count + 1 WHERE post_id = ?').run(req.params.postId);
       // 通知：根评论 → 动态作者；回复 → 被回复评论作者
       if (parentRow) {
@@ -928,7 +950,7 @@ function createRouter() {
       if (row.deleted) return res.json({ success: true, alreadyDeleted: true });
       d.prepare(`UPDATE comments SET deleted = 1, deleted_at = datetime('now','localtime'), deleted_by = ?, content = '该评论已删除' WHERE id = ?`)
         .run(String(req.user.userId), row.id);
-      d.prepare('UPDATE posts SET comment_count = MAX(comment_count - 1, 0) WHERE post_id = ?').run(row.post_id);
+      if(row.review_status==='active')d.prepare('UPDATE posts SET comment_count = MAX(comment_count - 1, 0) WHERE post_id = ?').run(row.post_id);
       res.json({ success: true, deleted: true, commentId: String(row.id) });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
@@ -1083,10 +1105,10 @@ function createRouter() {
       if(!getDb().prepare('SELECT 1 FROM friendships WHERE user_a=? AND user_b=?').get(...pair))return res.status(403).json({success:false,error:'请先获得对方同意'});
       const convId = privateConvId(req.user.userId, req.params.peerId);
       const afterId = parseInt(req.query.afterId, 10) || 0;
-      const rows = getDb().prepare("SELECT * FROM chat_messages WHERE conversation_id = ? AND id > ? AND review_status = 'active' ORDER BY id ASC LIMIT 200").all(convId, afterId);
+      const rows = getDb().prepare("SELECT * FROM (SELECT * FROM chat_messages WHERE conversation_id=? AND id>? AND (review_status='active' OR sender_id=?) ORDER BY id DESC LIMIT 200) ORDER BY id").all(convId,afterId,String(req.user.userId));
       res.json({
         success: true,
-        messages: rows.map(r => ({ id: String(r.id), senderId: r.sender_id, senderName: r.sender_name, content: r.content, type: r.msg_type, createdAt: r.created_at })),
+        messages: rows.map(r => ({ id: String(r.id), senderId: r.sender_id, senderName: r.sender_name, content: r.content, type:r.msg_type,createdAt:r.created_at,reviewStatus:r.review_status })),
       });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
@@ -1096,7 +1118,7 @@ function createRouter() {
   // POST /api/social/messages/private/:peerId { content, type: 'text' | 'image', clientMsgId? }
   // P7-整改-01：文字/图片消息；敏感词拦截留痕；单聊会话滚动覆盖仅保留最近100条
   // v25.0.42：黑名单拦截 + clientMsgId 幂等 + 统一会话模型（服务端未读）
-  router.post('/messages/private/:peerId', authRequired, socialRateLimitGate('private_message'), (req, res) => {
+  router.post('/messages/private/:peerId', authRequired, socialRateLimitGate('private_message'), async (req, res) => {
     try {
       if (!featureEnabled('private_chat_enabled', req)) return featureDisabled(res, '私聊');
       const _mute = checkPlatformMute(req.user.userId);
@@ -1111,7 +1133,9 @@ function createRouter() {
       const friendship=d.prepare('SELECT * FROM friendships WHERE user_a=? AND user_b=?').get(...pair);
       if(!friendship)return res.status(403).json({success:false,error:'请先获得对方同意'});
       if(friendship.source==='tongchen')return res.status(403).json({success:false,error:'请通过同辰雅集的纯文字交流入口发送'});
+      if(!availableSocialUser(peer))return res.status(403).json({success:false,error:'对方账号当前不可交流'});
       const msgType = String(type);
+      if(!['text','image'].includes(msgType))return res.status(400).json({success:false,error:'消息类型无效'});
       let finalContent;
 
       // v25.0.42：黑名单隔离——对方把我拉黑则拒发；我拉黑对方也拒发（提示先解除）
@@ -1124,7 +1148,8 @@ function createRouter() {
         const conv0 = privateConvId(me, peer);
         const dup = d.prepare('SELECT * FROM chat_messages WHERE conversation_id = ? AND client_msg_id = ?').get(conv0, cmi);
         if (dup) {
-          return res.json({ success: true, duplicated: true, message: { id: String(dup.id), senderId: dup.sender_id, senderName: dup.sender_name, content: dup.content, type: dup.msg_type, createdAt: dup.created_at } });
+          if(dup.sender_id!==me||dup.content!==String(content).trim()||dup.msg_type!==msgType)return res.status(409).json({success:false,error:'消息内容已改变，请重新确认发送'});
+          return res.json({success:true,duplicated:true,pendingReview:dup.review_status==='pending',message:{id:String(dup.id),senderId:dup.sender_id,senderName:dup.sender_name,content:dup.content,type:dup.msg_type,createdAt:dup.created_at,reviewStatus:dup.review_status}});
         }
       }
 
@@ -1140,7 +1165,8 @@ function createRouter() {
         finalContent = c;
       } else {
         // 文字消息：统一敏感词过滤，违规拦截并留痕
-        const text = String(content).trim().slice(0, 3000);
+        const text = String(content).trim();
+        if(text.length>3000)return res.status(400).json({success:false,error:'文字最多3000字，请主动精简，不会自动截断'});
         const hits = findSensitiveWords(text);
         if (hits.length) {
           logSensitive(me, 'private_message', text, hits);
@@ -1151,8 +1177,13 @@ function createRouter() {
 
       const info = userPublicInfo(me) || { nickname: '国学爱好者' };
       const convId = privateConvId(me, peer);
-      const result = d.prepare('INSERT INTO chat_messages (conversation_id, sender_id, sender_name, content, msg_type, client_msg_id) VALUES (?,?,?,?,?,?)')
-        .run(convId, me, info.nickname, finalContent, msgType === 'image' ? 'image' : 'text', cmi);
+      const result=d.prepare("INSERT INTO chat_messages(conversation_id,sender_id,sender_name,content,msg_type,client_msg_id,review_status) VALUES (?,?,?,?,?,?,'pending')").run(convId,me,info.nickname,finalContent,msgType,cmi);
+      const review=msgType==='image'?{status:'pending',reason:'图片需另行内容核验，未向对方展示'}:await moderateLegacyText(finalContent,{userId:me,moderationVersion:req.body.moderationVersion});
+      const currentFriendship=d.prepare('SELECT source FROM friendships WHERE user_a=? AND user_b=?').get(...pair);
+      const deliverable=currentFriendship&&currentFriendship.source!=='tongchen'&&!isBlockedBy(me,peer)&&!isBlockedBy(peer,me)&&!checkPlatformMute(me)&&availableSocialUser(me)&&availableSocialUser(peer)&&featureEnabled('private_chat_enabled',req);
+      d.prepare("UPDATE chat_messages SET review_status=?,review_reason=? WHERE id=? AND review_status='pending'").run(deliverable?review.status:'pending',deliverable?review.reason:'交流权限已改变，未送达对方',result.lastInsertRowid);
+      const row=d.prepare('SELECT * FROM chat_messages WHERE id=?').get(result.lastInsertRowid);
+      if(row.review_status!=='active')return res.json({success:true,pendingReview:row.review_status==='pending',message:{id:String(row.id),senderId:row.sender_id,senderName:row.sender_name,content:row.content,type:row.msg_type,createdAt:row.created_at,reviewStatus:row.review_status}});
 
       // 滚动覆盖：单聊会话仅保留最近100条
       d.prepare(`DELETE FROM chat_messages WHERE conversation_id = ? AND id NOT IN (SELECT id FROM chat_messages WHERE conversation_id = ? ORDER BY id DESC LIMIT 100)`).run(convId, convId);
@@ -1163,8 +1194,7 @@ function createRouter() {
 
       // v25.0.38 P0-2：通知跳转改 query 格式（静态导出下动态路由 /friends/chat/:id 会 404 兜底首页，B 端点通知进不去聊天页）
       notify(peer, 'chat', { userId: me, nickname: info.nickname }, msgType === 'image' ? '发来一张图片' : `发来消息：${finalContent.slice(0, 30)}`, `/friends/chat?id=${me}`);
-      const row = d.prepare('SELECT * FROM chat_messages WHERE id = ?').get(result.lastInsertRowid);
-      res.json({ success: true, message: { id: String(row.id), senderId: row.sender_id, senderName: row.sender_name, content: row.content, type: row.msg_type, createdAt: row.created_at } });
+      res.json({success:true,message:{id:String(row.id),senderId:row.sender_id,senderName:row.sender_name,content:row.content,type:row.msg_type,createdAt:row.created_at,reviewStatus:row.review_status}});
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
     }

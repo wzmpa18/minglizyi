@@ -196,7 +196,58 @@ async function worker(root){
       assert.equal((await social('/posts/'+pendingId,'DELETE',alice)).status,403);
       assert.equal((await social('/posts/'+pendingId,'DELETE',bob)).status,200);
       console.log('PASS: social posts require manual review, stay absent from feed/detail/likes before approval, and only their owner can withdraw them.');
-      accounts.exec("ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT ''; ALTER TABLE users ADD COLUMN bio TEXT DEFAULT '';");
+      accounts.exec("ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT ''; ALTER TABLE users ADD COLUMN bio TEXT DEFAULT ''; ALTER TABLE users ADD COLUMN member_level TEXT DEFAULT 'basic';");
+      // Legacy routes exercise the same strict adapter and per-send consent;
+      // only the provider transport is synthetic, never real users or model charges.
+      process.env.PRIVATE_CHAT_ENABLED='true';
+      const beforeCommentCount=socialDb.prepare("SELECT comment_count FROM posts WHERE post_id='visible'").get().comment_count;
+      const heldComment=await social('/posts/visible/comments','POST',bob,{content:'没有本次授权的评论应当隔离'});
+      assert.equal(heldComment.body.pendingReview,true);assert.equal((await social('/posts/visible/comments')).body.comments.some(c=>c.content==='没有本次授权的评论应当隔离'),false);
+      assert.equal(socialDb.prepare("SELECT comment_count FROM posts WHERE post_id='visible'").get().comment_count,beforeCommentCount);
+      const heldCommentId=socialDb.prepare("SELECT id FROM comments WHERE content='没有本次授权的评论应当隔离'").get().id;
+      assert.equal((await social('/posts/visible/comments','POST',alice,{content:'不能回复待审内容',parentId:heldCommentId})).status,404);
+      assert.equal((await social('/comments/'+heldCommentId,'DELETE',bob)).status,200);
+      assert.equal(socialDb.prepare("SELECT comment_count FROM posts WHERE post_id='visible'").get().comment_count,beforeCommentCount);
+      assert.equal((await social('/posts/visible/comments','POST',bob,{content:'🙂'.repeat(501)})).status,400);
+      socialDb.prepare("INSERT INTO friendships(user_a,user_b,source) VALUES ('alice','bob','legacy')").run();
+      process.env.STUDY_COMMENT_AUTOMATION='true';process.env.STUDY_AI_MODERATION_READY='true';process.env.HUNYUAN_API_KEY='synthetic-test-only';
+      let legacyCalls=0,blockDuringReview=false,providerOffline=false;const legacyFetch=global.fetch;
+      global.fetch=async(url,options)=>{
+        if(String(url)!=='https://tokenhub.tencentmaas.com/v1/chat/completions')return legacyFetch(url,options);
+        legacyCalls++;const sent=JSON.parse(options.body),selected=JSON.parse(sent.messages[1].content);
+        assert.deepEqual(Object.keys(selected).sort(),['public_display_name','public_text']);assert.equal(selected.public_display_name,'学习者');
+        assert.ok(!JSON.stringify(sent).includes('ACCOUNT_CANARY'));assert.ok(!JSON.stringify(sent).includes('data:image'));
+        if(blockDuringReview)socialDb.prepare("INSERT INTO blacklists VALUES ('bob','alice',datetime('now','localtime'))").run();
+        if(providerOffline)throw Error('synthetic provider outage');
+        return new Response(JSON.stringify({choices:[{finish_reason:'stop',message:{content:JSON.stringify({decision:'ALLOW',confidence:.99,needs_context:false,topic_learning:true,categories:Object.fromEntries(auto.CATEGORIES.map(k=>[k,'CLEAR']))})}}]}));
+      };
+      try{
+        const acceptedComment=await social('/posts/visible/comments','POST',alice,{content:'逐段核对历法原文',moderationVersion:auto.VERSION});assert.ok(acceptedComment.body.comment);
+        assert.ok((await social('/posts/visible/comments')).body.comments.some(c=>c.id===acceptedComment.body.comment.id));
+        const acceptedPost=await social('/posts','POST',alice,{content:'共同阅读历法经典',tags:['学习'],circle:'GuoXue',moderationVersion:auto.VERSION});assert.equal(acceptedPost.body.post.status,'active');
+        const beforeImages=legacyCalls;
+        assert.equal((await social('/posts','POST',alice,{content:'图片不能依靠文字通过',images:['synthetic.png'],circle:'GuoXue',moderationVersion:auto.VERSION})).body.pendingReview,true);assert.equal(legacyCalls,beforeImages);
+        const message={content:'只讨论节气学习方法',clientMsgId:crypto.randomUUID(),moderationVersion:auto.VERSION};
+        const delivered=await social('/messages/private/bob','POST',alice,message);assert.equal(delivered.body.message.reviewStatus,'active');
+        assert.equal((await social('/messages/private/alice','GET',bob)).body.messages.length,1);
+        assert.equal((await social('/messages/private/bob','POST',alice,message)).body.duplicated,true);
+        assert.equal((await social('/messages/private/bob','POST',alice,{...message,content:'修改同一发送编号'})).status,409);
+        assert.equal((await social('/messages/private/alice','POST',bob,message)).status,409);
+        const calls=legacyCalls,notices=socialDb.prepare("SELECT COUNT(*) n FROM notifications WHERE user_id='bob'").get().n;
+        const pending=await social('/messages/private/bob','POST',alice,{content:'没有单独审核授权的交流',clientMsgId:crypto.randomUUID()});assert.equal(pending.body.pendingReview,true);assert.equal(legacyCalls,calls);
+        assert.equal((await social('/messages/private/alice','GET',bob)).body.messages.length,1);assert.equal((await social('/messages/private/bob','GET',alice)).body.messages.length,2);
+        assert.equal(socialDb.prepare("SELECT COUNT(*) n FROM notifications WHERE user_id='bob'").get().n,notices);
+        const long='长'.repeat(501);const longMessage=await social('/messages/private/bob','POST',alice,{content:long,moderationVersion:auto.VERSION,clientMsgId:crypto.randomUUID()});assert.equal(longMessage.body.message.content,long);assert.equal(longMessage.body.pendingReview,true);assert.equal(legacyCalls,calls);
+        providerOffline=true;assert.equal((await social('/messages/private/bob','POST',alice,{content:'服务异常时不能直接送达',moderationVersion:auto.VERSION,clientMsgId:crypto.randomUUID()})).body.pendingReview,true);providerOffline=false;
+        blockDuringReview=true;assert.equal((await social('/messages/private/bob','POST',alice,{content:'期间屏蔽须重新校验权限',moderationVersion:auto.VERSION,clientMsgId:crypto.randomUUID()})).body.pendingReview,true);blockDuringReview=false;
+        assert.equal(socialDb.prepare("SELECT COUNT(*) n FROM notifications WHERE user_id='bob'").get().n,notices);
+        assert.equal((await social('/messages/private/alice','GET',bob)).status,403);socialDb.prepare("DELETE FROM blacklists WHERE user_id='bob' AND blocked_id='alice'").run();
+        const pendingId=pending.body.message.id;socialDb.prepare("UPDATE chat_messages SET review_status='active' WHERE id=?").run(pendingId);
+        assert.ok((await social('/messages/private/alice','GET',bob)).body.messages.some(m=>m.id===pendingId&&m.reviewStatus==='active'));
+        socialDb.prepare("DELETE FROM friendships WHERE user_a='alice' AND user_b='bob'").run();
+      }finally{global.fetch=legacyFetch;delete process.env.HUNYUAN_API_KEY;delete process.env.STUDY_COMMENT_AUTOMATION;delete process.env.STUDY_AI_MODERATION_READY;delete process.env.PRIVATE_CHAT_ENABLED;}
+      console.log('PASS: legacy text routes require per-send consent and strict review; pending comments/counters/notifications stay private, immutable message retries, image/long-text quarantine, provider outage and block-during-review recheck.');
+
       assert.equal((await social('/tongchen/mine','GET','')).status,401);
       assert.equal((await social('/tongchen/mine','PUT',token('deleted'),{})).status,403);
       assert.equal((await social('/tongchen/admin/config','PUT',support,{enabled:true})).status,403);

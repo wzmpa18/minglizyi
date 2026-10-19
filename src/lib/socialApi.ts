@@ -19,8 +19,17 @@ function tokenHeader(): Record<string, string> {
 
 async function api<T = any>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
-  if(init?.method==='POST'&&typeof init.body==='string'&&(/^\/api\/social\/resource\/[^/]+\/[^/]+\/comments$/.test(path)||/^\/api\/social\/groups(?:\/\d+\/(?:messages|update))?$/.test(path))){
-    try{const body=JSON.parse(init.body),text=[body.content,body.name,body.announcement].filter(v=>typeof v==='string'&&v.trim()).join('\n');const version=await consentForSocialText(text,path.includes('/resource/')?'公开学习交流':path.endsWith('/messages')?'定向学习交流':'学习群资料');init={...init,body:JSON.stringify({...body,moderationVersion:version})};}catch(error){return {success:false,error:error instanceof Error?error.message:'发送未确认'} as T;}
+  const textPost=path==='/api/social/posts'||/^\/api\/social\/posts\/[^/]+\/comments$/.test(path);
+  const privateText=/^\/api\/social\/messages\/private\/[^/]+$/.test(path);
+  if(init?.method==='POST'&&typeof init.body==='string'&&(textPost||privateText||(/^\/api\/social\/resource\/[^/]+\/[^/]+\/comments$/.test(path)||/^\/api\/social\/groups(?:\/\d+\/(?:messages|update))?$/.test(path)))){
+    try{
+      const body=JSON.parse(init.body);
+      if(body.type!=='image'){
+        const text=[body.content,...(path==='/api/social/posts'&&Array.isArray(body.tags)?body.tags:[]),body.name,body.announcement].filter(v=>typeof v==='string'&&v.trim()).join('\n');
+        const scope=privateText||path.endsWith('/messages')?'定向学习交流':textPost||path.includes('/resource/')?'公开学习交流':'学习群资料';
+        const version=await consentForSocialText(text,scope);init={...init,body:JSON.stringify({...body,moderationVersion:version})};
+      }
+    }catch(error){return {success:false,error:error instanceof Error?error.message:'发送未确认'} as T;}
   }
   try {
     res = await fetch(`${API_BASE}${path}`, {
@@ -123,7 +132,7 @@ export async function fetchComments(postId: string) {
 }
 
 export async function addComment(postId: string, content: string) {
-  return api<{ success: boolean; comment?: SocialComment; error?: string }>(`/api/social/posts/${postId}/comments`, {
+  return api<{ success: boolean; comment?: SocialComment; pendingReview?: boolean; rejected?: boolean; message?:string; error?: string }>(`/api/social/posts/${postId}/comments`, {
     method: "POST",
     body: JSON.stringify({ content }),
   });
@@ -209,10 +218,10 @@ export async function fetchPrivateMessages(peerId: string, afterId = 0) {
   return api<{ success: boolean; messages?: ChatMessage[] }>(`/api/social/messages/private/${peerId}?afterId=${afterId}`);
 }
 
-export async function sendPrivateMessage(peerId: string, content: string, type: "text" | "image" = "text") {
-  return api<{ success: boolean; message?: ChatMessage; error?: string }>(`/api/social/messages/private/${peerId}`, {
+export async function sendPrivateMessage(peerId: string, content: string, type: "text" | "image" = "text", clientMsgId:string=crypto.randomUUID()) {
+  return api<{ success: boolean; message?: ChatMessage; pendingReview?:boolean; error?: string }>(`/api/social/messages/private/${peerId}`, {
     method: "POST",
-    body: JSON.stringify({ content, type }),
+    body: JSON.stringify({ content, type, clientMsgId }),
   });
 }
 

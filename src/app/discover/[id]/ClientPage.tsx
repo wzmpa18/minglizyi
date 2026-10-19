@@ -180,42 +180,16 @@ export default function DiscoverDetailPage({ routeId }: { routeId?: string }) {
 
   const handleSendComment = async () => {
     const text = commentText.trim();
-    if (!text || !post) return;
+    if (!text || !post || submitting) return;
+    if(!online||!isLoggedIn()){flash('请联网并登录后提交，输入内容仍保留在当前页面');return;}
     setSubmitting(true);
-    if (online && isLoggedIn()) {
-      try {
-        const r = await addRemoteComment(post.id, text);
-        if (r.success) {
-          await loadData();
-          setCommentText("");
-          setSubmitting(false);
-          return;
-        }
-        flash(r.error || "评论失败");
-      } catch {
-        flash("网络异常，已本地记录");
-      }
-    }
-    try {
-      const user = getUserProfile();
-      const newComment: CommentItem = {
-        id: `cmt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        postId: post.id,
-        authorId: user?.userId || "anonymous",
-        authorName: user?.nickname || "匿名用户",
-        authorAvatar: user?.avatar || "",
-        content: text,
-        createdAt: new Date().toISOString(),
-      };
-      addComment(newComment);
-      setComments((prev) => [newComment, ...prev]);
-      setPost((prev) => (prev ? { ...prev, comments: prev.comments + 1 } : prev));
-      setCommentText("");
-    } catch (e) {
-      console.error("评论失败:", e);
-    } finally {
-      setSubmitting(false);
-    }
+    try{
+      const r=await addRemoteComment(post.id,text);
+      if(!r.success){flash(r.error||'未提交，输入内容已保留');return;}
+      await loadData();setCommentText('');
+      flash(r.message||(r.pendingReview?'已提交，当前未公开':r.rejected?'当前内容未公开，请修改':'已发布'));
+    }catch{flash('网络异常，未确认提交，输入内容已保留');}
+    finally{setSubmitting(false);}
   };
 
   const handleReport = async (reason: string) => {

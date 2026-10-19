@@ -52,6 +52,7 @@ test('comment reads hide blocked roots and their replies before the visible limi
     const insert = db.prepare("INSERT INTO comments VALUES (?,'one','blocked',0,0)");
     for (let id = 11; id <= 520; id++) insert.run(id);
     db.exec("INSERT INTO comments VALUES (521,'one','visible',0,0)");
+    db.exec("ALTER TABLE comments ADD COLUMN review_status TEXT NOT NULL DEFAULT 'active'; INSERT INTO comments(id,post_id,user_id,parent_id,deleted,review_status) VALUES (522,'one','visible',0,0,'pending'),(523,'one','visible',522,0,'active'),(524,'one','visible',0,0,'rejected');");
     assert.deepEqual(listVisiblePostComments(db, 'one', 'reader').map(row => row.id), [5,6,521]);
     for (const post of ['blocked','reverse','hidden','deleted','missing']) assert.deepEqual(listVisiblePostComments(db, post, 'reader'), []);
     assert.deepEqual(listVisiblePostComments(db, 'two', 'reader').map(row => row.id), [7]);

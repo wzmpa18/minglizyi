@@ -115,7 +115,7 @@ const OLD_KEYS: Record<string, string> = {
 export function getGroupAccountId():string{return getUserToken()?String(getUserProfile()?.userId||''):'';}
 function storageKey(key:string):string{
   // Preserve unowned legacy caches without assigning them to a new account.
-  return key===KEYS.GROUPS||key.startsWith(KEYS.GROUP_MESSAGES)?`${key}:account:${encodeURIComponent(getGroupAccountId()||'guest')}`:key;
+  return [KEYS.FRIENDS,KEYS.FRIEND_REQUESTS,KEYS.BLACKLIST,KEYS.GROUPS].includes(key)||key.startsWith(KEYS.CHAT_PREFIX)||key.startsWith(KEYS.GROUP_MESSAGES)?`${key}:account:${encodeURIComponent(getGroupAccountId()||'guest')}`:key;
 }
 function safeGet<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') return fallback;
@@ -193,6 +193,13 @@ export function saveChatMessage(chatKey: string, msg: ChatMessage): void {
   safeSet(KEYS.CHAT_PREFIX + chatKey, msgs);
 }
 
+/** Reconcile the current server window in one account-scoped write. Pending
+ * messages can change review status without acquiring a new message ID. */
+export function reconcileServerChatMessages(chatKey:string,incoming:ChatMessage[]):ChatMessage[]{
+  const next=[...getChatMessages(chatKey).filter(m=>!m.id.startsWith('srv_')),...incoming];
+  safeSet(KEYS.CHAT_PREFIX+chatKey,next);return next;
+}
+
 export function getUnreadCount(chatKey: string, lastReadTime: string): number {
   const msgs = getChatMessages(chatKey);
   return msgs.filter(m => m.timestamp > lastReadTime).length;
@@ -247,7 +254,7 @@ export function clearAllChats(): number {
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && (key.startsWith(KEYS.CHAT_PREFIX) || key.startsWith(KEYS.GROUP_MESSAGES))) {
+      if (key && (key.startsWith(KEYS.CHAT_PREFIX) || key.startsWith(KEYS.GROUP_MESSAGES)) && key.endsWith(':account:'+encodeURIComponent(getGroupAccountId()||'guest'))) {
         keysToRemove.push(key);
         cleared++;
       }

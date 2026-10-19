@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {getGroups,getGroupMessages,saveGroupMessage,getGroupAccountId} from '../src/lib/socialStore';
+import {getGroups,getGroupMessages,saveGroupMessage,getGroupAccountId,getChatMessages,saveChatMessage,reconcileServerChatMessages} from '../src/lib/socialStore';
 test('group caches use the authenticated account rather than the device visitor ID; unowned legacy data is preserved and never mounted',()=>{
  const before={window:globalThis.window,localStorage:globalThis.localStorage,sessionStorage:globalThis.sessionStorage};
  const values=new Map<string,string>(),storage={getItem:(k:string)=>values.get(k)??null,setItem:(k:string,v:string)=>values.set(k,v),removeItem:(k:string)=>values.delete(k)};
@@ -13,5 +13,14 @@ test('group caches use the authenticated account rather than the device visitor 
   saveGroupMessage('12',{...item,reviewStatus:'active'});assert.equal(getGroupMessages('12').length,1);assert.equal(getGroupMessages('12')[0].reviewStatus,'active');
   login('owner-2');assert.deepEqual(getGroupMessages('12'),[]);values.delete('yandao_user_token');assert.deepEqual(getGroupMessages('12'),[]);login('owner-1');assert.equal(getGroupMessages('12')[0].content,item.content);
   assert.ok(values.get('yandao_group_messages_12')?.includes('old-sensitive-context'));assert.ok(values.get('yandao_groups_list')?.includes('unknown-owner'));
+  values.set('yandao_friends_chat_private_peer',JSON.stringify([{id:'legacy-private-owner-unknown'}]));
+  assert.deepEqual(getChatMessages('private_peer'),[]);
+  const pending={...item,id:'srv_42',reviewStatus:'pending' as const};saveChatMessage('private_peer',pending);
+  const draft={...item,id:'unsent-draft',status:'failed' as const};saveChatMessage('private_peer',draft);
+  reconcileServerChatMessages('private_peer',[{...pending,reviewStatus:'active'}]);
+  assert.equal(getChatMessages('private_peer').filter(m=>m.id==='srv_42').length,1);assert.equal(getChatMessages('private_peer').find(m=>m.id==='srv_42')?.reviewStatus,'active');
+  reconcileServerChatMessages('private_peer',[]);assert.deepEqual(getChatMessages('private_peer').map(m=>m.id),['unsent-draft']);
+  login('owner-2');assert.deepEqual(getChatMessages('private_peer'),[]);login('owner-1');assert.equal(getChatMessages('private_peer')[0].id,'unsent-draft');
+  assert.ok(values.get('yandao_friends_chat_private_peer')?.includes('legacy-private-owner-unknown'));
  }finally{Object.assign(globalThis,before);}
 });

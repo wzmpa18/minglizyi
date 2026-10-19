@@ -27,11 +27,11 @@ function listVisiblePostComments(db, postId, viewerId = '') {
   const me = String(viewerId);
   return db.prepare(`SELECT c.* FROM comments c
     JOIN posts p ON p.post_id = c.post_id
-    WHERE c.post_id = ? AND p.status = 'active'
+    WHERE c.post_id = ? AND p.status = 'active' AND c.review_status='active'
       AND ${visibleAuthor('p')} AND ${visibleAuthor('c')}
       AND NOT EXISTS (SELECT 1 FROM comments parent
         WHERE parent.id = c.parent_id AND parent.post_id = c.post_id
-          AND NOT (${visibleAuthor('parent')}))
+          AND (parent.review_status!='active' OR NOT (${visibleAuthor('parent')})))
     ORDER BY c.id ASC LIMIT 500`).all(String(postId), me, me, me, me, me, me);
 }
 
