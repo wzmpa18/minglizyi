@@ -196,7 +196,7 @@ async function worker(root){
       assert.equal((await social('/posts/'+pendingId,'DELETE',alice)).status,403);
       assert.equal((await social('/posts/'+pendingId,'DELETE',bob)).status,200);
       console.log('PASS: social posts require manual review, stay absent from feed/detail/likes before approval, and only their owner can withdraw them.');
-      accounts.exec("ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT ''; ALTER TABLE users ADD COLUMN bio TEXT DEFAULT ''; ALTER TABLE users ADD COLUMN member_level TEXT DEFAULT 'basic';");
+      accounts.exec("ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT ''; ALTER TABLE users ADD COLUMN bio TEXT DEFAULT '';");
       // Legacy routes exercise the same strict adapter and per-send consent;
       // only the provider transport is synthetic, never real users or model charges.
       process.env.PRIVATE_CHAT_ENABLED='true';
