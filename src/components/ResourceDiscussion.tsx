@@ -28,8 +28,9 @@ interface ResourceDiscussionProps {
 export function ResourceDiscussion(props: ResourceDiscussionProps) {
   const owner=useAccountScope();
   if (!PUBLIC_SOCIAL_ENABLED) return null;
-  return <ResourceDiscussionEnabled key={`${owner}:${props.resourceType}:${props.resourceId}`} {...props} />;
+  return <ResourceDrawer key={`${owner}:${props.resourceType}:${props.resourceId}`} {...props} />;
 }
+function ResourceDrawer(props:ResourceDiscussionProps){const [open,setOpen]=useState(false);return <section className="m-3 overflow-hidden rounded-2xl border border-stone-200 bg-white"><InterfaceButton type="button" aria-expanded={open} onClick={()=>setOpen(v=>!v)} className="flex w-full justify-between p-4 text-left text-stone-800"><strong>💬 {props.title||"学习讨论"}</strong><span>{open?"收起交流":"展开交流"}</span></InterfaceButton>{open&&<ResourceDiscussionEnabled {...props}/>}</section>;}
 
 function ResourceDiscussionEnabled({
   resourceType,

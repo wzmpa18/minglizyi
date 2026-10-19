@@ -572,20 +572,21 @@ export default function ZiweiPage() {
       setResult(res);
       chartInputRef.current={birthInput:override?.birthInput,year:y,month:m,day:d,hour:h,minute:override?.minute??birthMinute,gender:g,name:selectedName,longitude,zhenTaiyang:selectedSolar,zaoWanZi:selectedLateZi,xiaLing:selectedDst,birthPlace:historyDateOptions.birthPlace||""};
       setShowForm(false);
-      savePaipanState("ziwei",{input:{year:y,month:m,day:d,hour:h,gender:g,calType,...historyDateOptions,zaoWanZi:selectedLateZi,zhenTaiyang:selectedSolar,xiaLing:selectedDst,longitude},showForm:false,_ts:Date.now()});
+      const durableInput={schemaVersion:3,birthInput:override?.birthInput,
+        calculationInput:{year:y,month:m,day:d,hour:h,minute:override?.minute??birthMinute,gender:g},
+        ...historyDateOptions,year:y,month:m,day:d,hour:h,minute:override?.minute??birthMinute,gender:g,name:selectedName,
+        calType:override?.birthInput?.calendar==="lunar"?"nongli":override?.birthInput?.calendar==="sizhu"?"sizhu":override?.birthInput?.calendar==="solar"?"gongli":calType,
+        zaoWanZi:selectedLateZi,zhenTaiyang:selectedSolar,xiaLing:selectedDst,longitude:override?.birthInput?.longitude??longitude,
+        viewState:{viewMode,selectedDaxian,selectedLiunian,selectedLiuyue,selectedLiuri,selectedLiushi,tongxianActive,dxLayer,lnLayer}};
+      chartInputRef.current=durableInput;
+      savePaipanState("ziwei",{input:durableInput,result:res,showForm:false,_ts:Date.now()});
       // 保存客户记录
       try{saveRecord({clientId:selectedClient?selectedClient.id:"",type:"ziwei",data:{...res,inputParams:{year:y,month:m,day:d,hour:h,gender:g}},note:"",status:"pending"});}catch(e){console.error("保存记录失败:",e);}
       // v25.0.88: 排盘记录自动落库（原生壳为SQLite，同参数原位去重）
       savePaipanRecord({
         tool: "ziwei",
         title: `${selectedName || "未命名"}·紫微排盘 ${y}-${m}-${d}`,
-        input: {
-          birthInput: override?.birthInput,
-          calculationInput: { year: y, month: m, day: d, hour: h, gender: g },
-          name:selectedName, year: y, month: m, day: d, hour: h, gender: g, calType,
-          zaoWanZi:selectedLateZi, zhenTaiyang:selectedSolar, xiaLing:selectedDst, longitude,
-          viewState: { viewMode, selectedDaxian, selectedLiunian, selectedLiuyue, selectedLiuri, selectedLiushi, tongxianActive, dxLayer, lnLayer },
-        },
+        input:durableInput,
         result: res as unknown as Record<string, unknown>,
         profileId: mingzhu?.id ?? null,
       }).then(id => { if (id >= 0) historyRecordIdRef.current = id; }).catch(() => {});
@@ -610,10 +611,10 @@ export default function ZiweiPage() {
     if (birthInput.gender || inp.gender) setGender((birthInput.gender || inp.gender) as Gender);
     const restoredCalType = birthInput.calendar === "lunar" ? "nongli" : birthInput.calendar === "sizhu" ? "sizhu" : inp.calType;
     if (restoredCalType === "gongli" || restoredCalType === "nongli" || restoredCalType === "sizhu") setCalType(restoredCalType);
-    if (typeof birthInput.zaoWanZi === "boolean") setZaoWanZi(birthInput.zaoWanZi);
-    if (typeof birthInput.zhenTaiyang === "boolean") setZhenTaiyang(birthInput.zhenTaiyang);
-    if (typeof birthInput.xiaLing === "boolean") setXiaLing(birthInput.xiaLing);
-    if (Number.isFinite(Number(birthInput.longitude))) setLongitude(Number(birthInput.longitude));
+    if (typeof (birthInput.zaoWanZi??inp.zaoWanZi) === "boolean") setZaoWanZi(birthInput.zaoWanZi??inp.zaoWanZi);
+    if (typeof (birthInput.zhenTaiyang??inp.zhenTaiyang) === "boolean") setZhenTaiyang(birthInput.zhenTaiyang??inp.zhenTaiyang);
+    if (typeof (birthInput.xiaLing??inp.xiaLing) === "boolean") setXiaLing(birthInput.xiaLing??inp.xiaLing);
+    if (Number.isFinite(Number(birthInput.longitude??inp.longitude))) setLongitude(Number(birthInput.longitude??inp.longitude));
     setSolarCorrection(typeof birthInput.correctionInfo === "string" ? birthInput.correctionInfo : null);
     setHistoryDateOptions({
       birthPlace: typeof birthInput.birthPlace === "string" ? birthInput.birthPlace : undefined,
@@ -693,16 +694,12 @@ export default function ZiweiPage() {
   // localStorage 持久化：恢复排盘状态
   useEffect(() => {
     const saved = loadPaipanState("ziwei");
-    if (saved && saved.input) {
-      const inp = saved.input as any;
-      if (inp.year) setYear(inp.year);
-      if (inp.month) setMonth(inp.month);
-      if (inp.day) setDay(inp.day);
-      if (inp.hour !== undefined) setHour(inp.hour);
-      if (inp.gender) setGender(inp.gender);
-      if (inp.calType) setCalType(inp.calType);
+    if(saved?.input){
+      // Restore the pinned result without recalculating or reapplying solar/DST corrections.
+      handleRestoreHistory({id:0,input:saved.input,result:saved.result||null} as unknown as PaipanRecord);
+      if(!saved.result)setShowForm(true); // Legacy partial cache has no trustworthy original instant.
     }
-  }, []);
+  }, [handleRestoreHistory]);
 
   useEffect(() => {
     const p=consumeChartHandoff("ziwei");if(!p)return;

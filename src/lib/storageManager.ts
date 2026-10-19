@@ -91,6 +91,32 @@ function tx<T>(store: string, mode: IDBTransactionMode, fn: (s: IDBObjectStore) 
 
 function sk(zone: StorageZone, key: string) { return `${zone}:${key}`; }
 
+/** Durable private writes resolve on transaction completion, never on request success.
+ * Vault ciphertext belongs to USER_PRIVATE_DATA and is excluded from every cache collector. */
+export async function privateAtomic(rows: {key:string; value:unknown}[]): Promise<void> {
+  const db=await openDb();
+  await new Promise<void>((resolve,reject)=>{
+    const t=db.transaction([STORE_DATA,STORE_META],"readwrite"), now=Date.now();
+    for(const row of rows){
+      t.objectStore(STORE_DATA).put(row.value,sk("USER_PRIVATE_DATA",row.key));
+      t.objectStore(STORE_META).put({zone:"USER_PRIVATE_DATA",key:row.key,size:sizeOf(row.value),createdAt:now,lastAccessedAt:now,protectedFromAutoClean:true},sk("USER_PRIVATE_DATA",row.key));
+    }
+    t.oncomplete=()=>resolve();t.onabort=()=>reject(t.error||new Error("私人记录未写入，原数据保留"));t.onerror=()=>reject(t.error);
+  });
+}
+export async function privateRead<T>(key:string):Promise<T|undefined>{
+  return tx(STORE_DATA,"readonly",s=>s.get(sk("USER_PRIVATE_DATA",key)) as IDBRequest<T|undefined>);
+}
+export async function privatePage(prefix:string,after="",limit=100):Promise<{key:string;value:unknown}[]>{
+  const db=await openDb(),start=sk("USER_PRIVATE_DATA",prefix);
+  return new Promise((resolve,reject)=>{
+    const out:{key:string;value:unknown}[]=[],t=db.transaction(STORE_DATA,"readonly");
+    const q=t.objectStore(STORE_DATA).openCursor(IDBKeyRange.bound(after?sk("USER_PRIVATE_DATA",after):start,start+"\uffff",!!after,false));
+    q.onsuccess=()=>{const c=q.result;if(c&&out.length<limit){out.push({key:String(c.key).slice("USER_PRIVATE_DATA:".length),value:c.value});c.continue();}};
+    t.oncomplete=()=>resolve(out);t.onabort=()=>reject(t.error);t.onerror=()=>reject(t.error);
+  });
+}
+
 function sizeOf(value: unknown): number {
   if (value instanceof ArrayBuffer) return value.byteLength;
   if (typeof Blob !== "undefined" && value instanceof Blob) return value.size;

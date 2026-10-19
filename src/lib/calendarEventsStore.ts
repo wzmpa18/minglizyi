@@ -56,6 +56,9 @@ export interface CalendarEvent {
   birthdayRules?: BirthdayRules;
   eventTime?: string;
   timeZone?: string;
+  /** Opaque local source only; never a note, birthday, medical text or cloud upload. */
+  sourceRef?: string;
+  endDate?: string;
   completed?: boolean;
   paused: boolean;
   createdAt: string;
@@ -197,6 +200,8 @@ export function listEvents(): CalendarEvent[] {
 }
 
 export interface CreateEventInput {
+  sourceRef?: string;
+  endDate?: string;
   type: CalendarEventType;
   title: string;
   relatedName?: string;
@@ -222,12 +227,16 @@ export function createEvent(input: CreateEventInput): { success: boolean; error?
   if (input.title.trim().length > 50) return { success: false, error: "标题不能超过50字" };
   if (input.note && input.note.length > 500) return { success: false, error: "备注不能超过500字" };
   if (!validCivilDate(input.year,input.month,input.day)) return { success: false, error: "请选择有效日期" };
+  if(input.endDate&&(!/^\d{4}-\d{2}-\d{2}$/.test(input.endDate)||!validCivilDate(...(input.endDate.split('-').map(Number) as [number,number,number]))||input.endDate<fmtDate(input.year,input.month,input.day)))return {success:false,error:"结束/复核日期无效"};
+  if(input.sourceRef&&!/^life:[\w-]{8,80}:[\w-]{8,80}$/.test(input.sourceRef))return {success:false,error:"本地来源编号无效"};
   if (input.eventTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(input.eventTime)) return {success:false,error:"事件钟点无效"};
   try{new Intl.DateTimeFormat("en",{timeZone:input.timeZone||Intl.DateTimeFormat().resolvedOptions().timeZone});}catch{return {success:false,error:"请输入有效的IANA时区，如Asia/Shanghai"};}
 
   if(input.dateMode==="lunar"&&((input.lunarMonth!==undefined&&(!Number.isInteger(input.lunarMonth)||!input.lunarMonth||Math.abs(input.lunarMonth)>12))||(input.lunarDay!==undefined&&(!Number.isInteger(input.lunarDay)||input.lunarDay<1||input.lunarDay>30))))return {success:false,error:"农历月日无效"};
   const now = new Date().toISOString();
   const ev: CalendarEvent = {
+    sourceRef:input.sourceRef,
+    endDate:input.endDate,
     id: genId(),
     userId: calendarStorageOwner(),
     type: input.type,
@@ -369,6 +378,7 @@ export function getOccurrences(event: CalendarEvent, fromY: number, fromM: numbe
   const anchorOrdinal = Date.UTC(event.year,event.month-1,event.day)/86400000;
   for (const cursor = new Date(start); cursor<=end; cursor.setDate(cursor.getDate()+1)) {
     const y=cursor.getFullYear(),m=cursor.getMonth()+1,d=cursor.getDate();
+    if(event.endDate&&fmtDate(y,m,d)>event.endDate)continue;
     const ordinal=Date.UTC(y,m-1,d)/86400000, diff=ordinal-anchorOrdinal;
     if (diff<0) continue;
     let hit=false;

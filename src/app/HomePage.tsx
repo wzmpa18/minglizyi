@@ -317,6 +317,7 @@ export default function HomePage(){
       <p className="mt-2 text-center text-xs text-gray-400">传统文化学习与研究 · 仅供学习参考</p>
 
       {/* 黄历区（在按钮下方） */}
+      <Link href="/profile/life/" className="mx-3 mt-3 block rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-purple-900">人生记录 <span className="text-xs text-stone-600">随手记下 · 本机私有 · 随时带走 ›</span></Link>
       <Link href="/calendar/" className="mx-3 mt-4 flex items-center justify-between rounded-xl px-4 py-3 font-semibold" style={{background:"var(--theme-card-bg)",color:"var(--theme-primary)"}}>言道日历 <span className="text-xs font-normal">生日 · 记事 · 四柱 · 桌面时钟 ›</span></Link>
       <div className="mx-3 mt-4 rounded-2xl overflow-hidden bg-white">
         {/* 黄历头（v25.0.44：深蓝渐变，与上方紫/绿板块区分，白字高对比） */}

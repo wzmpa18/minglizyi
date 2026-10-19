@@ -28,13 +28,14 @@ function createStudyCommentStore(db, targets, now = () => Date.now()) {
   const audit = (actor,action,id,note='') => db.prepare('INSERT INTO study_comment_audit(actor,action,target,note,created_ms) VALUES (?,?,?,?,?)').run(String(actor),action,String(id),String(note).slice(0,1000),now());
   const publicRow = r => ({ id:String(r.id), targetId:r.target_id, authorId:r.user_id, authorName:r.nickname,
     content:r.content, parentId:r.parent_id ? String(r.parent_id) : null, createdAt:new Date(r.created_ms).toISOString(), pinned:!!r.pinned, evidenceUrl:r.evidence_url || '' });
-  const list = (id,viewer='') => {
+  const list = (id,viewer='',options={}) => {
     target(id); if (!config(id).enabled) return [];
     return db.prepare(`SELECT c.* FROM study_comments c WHERE target_id=? AND status='APPROVED'
+      AND c.id<? AND (?!='featured' OR c.pinned=1) AND (?!='mine' OR c.user_id=?)
       AND NOT EXISTS (SELECT 1 FROM study_comment_blocks b WHERE (b.user_id=? AND b.blocked_id=c.user_id) OR (b.user_id=c.user_id AND b.blocked_id=?))
       AND (c.parent_id IS NULL OR EXISTS (SELECT 1 FROM study_comments p WHERE p.id=c.parent_id AND p.status='APPROVED'
         AND NOT EXISTS (SELECT 1 FROM study_comment_blocks b WHERE (b.user_id=? AND b.blocked_id=p.user_id) OR (b.user_id=p.user_id AND b.blocked_id=?))))
-      ORDER BY pinned DESC, id DESC LIMIT 200`).all(id,String(viewer),String(viewer),String(viewer),String(viewer)).map(publicRow);
+      ORDER BY id DESC LIMIT ?`).all(id,Number(options.before)||Number.MAX_SAFE_INTEGER,options.view||'recent',options.view||'recent',String(viewer),String(viewer),String(viewer),String(viewer),String(viewer),options.limit||200).map(publicRow);
   };
   function submit(id,me,nickname,body) {
     target(id); me=user(me);

@@ -45,6 +45,7 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         // BridgeActivity.onCreate builds the bridge; register before it snapshots plugins.
         registerPlugin(PaipanStorePlugin.class);
+        registerPlugin(com.yandao.guoxue.plugins.LifeVaultPlugin.class);
         registerPlugin(OfflineFilesPlugin.class);
         registerPlugin(LocalTtsPlugin.class);
         registerPlugin(LocalSkyLocationPlugin.class);

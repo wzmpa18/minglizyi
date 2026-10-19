@@ -37,7 +37,7 @@ function createRouter(){
   router.use(safeOrigin);
   router.get('/target/:targetId',handle(req=>{
     const me=verifyToken(req.headers.authorization||'');if(me)account(me.userId);
-    const service=getStore();return {success:true,config:service.config(req.params.targetId),comments:service.list(req.params.targetId,me?.userId||'')};
+    const service=getStore(),view=['recent','featured','mine'].includes(req.query.view)?req.query.view:'recent';if(view==='mine'&&!me)return {success:false,error:'登录后查看自己的留言'};const rows=service.list(req.params.targetId,me?.userId||'',{view,before:req.query.before,limit:21});return {success:true,config:service.config(req.params.targetId),comments:rows.slice(0,20),nextCursor:rows.length>20?rows[19].id:''};
   }));
   router.get('/mine/:targetId',authMiddleware,handle(req=>{account(req.user.userId);return {success:true,items:getStore().mine(req.params.targetId,req.user.userId)};}));
   router.post('/target/:targetId',authMiddleware,handle(req=>{const me=account(req.user.userId);return getStore().submit(req.params.targetId,me.user_id,me.nickname,req.body);}));

@@ -10,8 +10,12 @@ import { countStudyCharacters,validateStudyText,studyRequest,type StudyComment,t
 
 export function AcupointStudyDiscussion({targetId,title}:{targetId:string;title:string}){
   const owner=useAccountScope();
+  return <StudyDrawer key={`${owner}:${targetId}`} targetId={targetId} title={title}/>;
+}
+function StudyDrawer({targetId,title}:{targetId:string;title:string}){
+  const [open,setOpen]=useState(false);useInterfaceLocale();
   // Remount on resource change so requests/drafts/replies cannot leak between points.
-  return <PointDiscussion key={`${owner}:${targetId}`} targetId={targetId} title={title}/>;
+  return <section className="mx-3 my-3 overflow-hidden rounded-2xl border border-stone-200 bg-white text-stone-800"><InterfaceButton type="button" aria-expanded={open} onClick={()=>setOpen(x=>!x)} className="flex w-full items-center justify-between px-4 py-3 text-left font-semibold"><span>💬 {ui(title)}</span><span className="text-xs font-normal">{ui(open?'收起交流':'展开交流')}</span></InterfaceButton>{open&&<PointDiscussion targetId={targetId} title={title}/>}</section>;
 }
 function PointDiscussion({targetId,title}:{targetId:string;title:string}){
   useInterfaceLocale();
@@ -19,19 +23,20 @@ function PointDiscussion({targetId,title}:{targetId:string;title:string}){
   const [comments,setComments]=useState<StudyComment[]>([]),[text,setText]=useState(''),[message,setMessage]=useState(''),[config,setConfig]=useState<StudyCommentConfig|null>(null);
   const [mine,setMine]=useState<{id?:string;status?:string}[]>([]),[blocks,setBlocks]=useState<{userId?:string}[]>([]),[reply,setReply]=useState<StudyComment|null>(null);
   const [loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[draftReady,setDraftReady]=useState(false);
+  const [tab,setTab]=useState<'recent'|'featured'|'mine'>('recent'),[cursor,setCursor]=useState(''),[hasMore,setHasMore]=useState(false);
   const requestId=useRef(''),version=useRef(0),myId=String(getUserProfile()?.userId||'');
   const draftKey=`acupoint-study-draft-v1:${myId||'guest'}:${targetId}`;
   let count=0,countSupported=true;try{count=countStudyCharacters(text);}catch{countSupported=false;}
   useEffect(()=>{try{setText(localStorage.getItem(draftKey)||'');}catch{}setDraftReady(true);},[draftKey]);
   useEffect(()=>{if(!draftReady)return;try{if(text)localStorage.setItem(draftKey,text);else localStorage.removeItem(draftKey);}catch{setMessage('本机存储不可用，请保留尚未发表的输入');}},[text,draftKey,draftReady]);
-  async function load(){
+  async function load(more=false){
     const turn=++version.current;setLoading(true);
-    const [result,own,blocked]=await Promise.all([studyRequest(`/target/${encodeURIComponent(targetId)}`),getUserToken()?studyRequest(`/mine/${encodeURIComponent(targetId)}`):Promise.resolve(null),getUserToken()?studyRequest('/blocks'):Promise.resolve(null)]);
+    const [result,own,blocked]=await Promise.all([studyRequest(`/target/${encodeURIComponent(targetId)}?view=${tab}&before=${more?cursor:''}`),getUserToken()?studyRequest(`/mine/${encodeURIComponent(targetId)}`):Promise.resolve(null),getUserToken()?studyRequest('/blocks'):Promise.resolve(null)]);
     if(turn!==version.current)return;
-    if(result.success){setConfig(result.config||null);setComments(result.comments||[]);}else{setConfig(null);setComments([]);setMessage(result.error||'暂时无法读取学习讨论');}
+    if(result.success){setConfig(result.config||null);setComments(old=>more?[...old,...(result.comments||[])]:result.comments||[]);setCursor(result.nextCursor||'');setHasMore(!!result.nextCursor);}else{setConfig(null);setComments([]);setMessage(result.error||'暂时无法读取学习讨论');}
     setMine(own?.success?own.items||[]:[]);setBlocks(blocked?.success?blocked.items||[]:[]);setLoading(false);
   }
-  useEffect(()=>{void load();return()=>{version.current++;};},[targetId]);
+  useEffect(()=>{setCursor('');void load();return()=>{version.current++;};},[targetId,tab]);
   async function submit(){
     if(busy)return;if(!getUserToken()){setMessage('请先登录后参与学习讨论');return;}
     const check=validateStudyText(text);if(!check.ok){setMessage(check.error||'请检查输入');return;}
@@ -61,6 +66,7 @@ function PointDiscussion({targetId,title}:{targetId:string;title:string}){
     {message&&<p role="status" style={{color:'#8D3800'}}>{message}</p>}
     <div style={{display:'flex',gap:12,margin:'10px 0'}}><InterfaceButton onClick={()=>void load()} disabled={loading||busy}>{ui("刷新留言")}</InterfaceButton><Link href="/profile/feedback/">{ui("用户反馈")}</Link></div>
     {mine.filter(item=>item.status==='PENDING').map(item=><div key={item.id} style={{padding:8,background:'#FFF8E1'}}>我的留言 #{item.id} · 待审核 <InterfaceButton disabled={busy} onClick={()=>{setConfirmation({message:'撤回这条待审留言？',run:()=>{void action(`/comment/${item.id}`,'DELETE');}});}}>撤回</InterfaceButton></div>)}
+    <nav className="my-3 flex gap-3">{([['recent','最近'],['featured','精选'],['mine','我的']] as const).map(([key,label])=><InterfaceButton key={key} type="button" onClick={()=>setTab(key)} aria-pressed={tab===key} className={tab===key?'font-semibold text-purple-800':'text-stone-600'}>{ui(label)}</InterfaceButton>)}</nav>
     {loading?<p>{ui("正在加载…")}</p>:comments.length===0?<p style={{color:'#777'}}>暂无已通过审核的学习留言。</p>:comments.map(comment=><article key={comment.id} style={{padding:'12px 0',borderTop:'1px solid #EEE'}}>
       <div style={{fontWeight:700,color:'#6C2D98'}}>{comment.authorName}{comment.pinned?' · 置顶解答':''}</div>
       {comment.parentId&&<small style={{color:'#777'}}>回复留言 #{comment.parentId}</small>}
@@ -74,6 +80,7 @@ function PointDiscussion({targetId,title}:{targetId:string;title:string}){
         </>}
       </div>
     </article>)}
+    {hasMore&&<InterfaceButton disabled={busy||loading} onClick={()=>void load(true)}>{ui("加载更多")}</InterfaceButton>}
     {blocks.length>0&&<details style={{marginTop:12}}><summary>学习讨论屏蔽管理（{blocks.length}）</summary>{blocks.map(item=><div key={item.userId}>用户{item.userId} <InterfaceButton disabled={busy} onClick={()=>void action(`/blocks/${encodeURIComponent(item.userId||'')}`,'DELETE')}>{ui("取消屏蔽")}</InterfaceButton></div>)}</details>}
     <ConfirmDialog open={!!confirmation} title="请确认" message={confirmation?.message} onCancel={()=>setConfirmation(null)} onConfirm={()=>{const run=confirmation?.run;setConfirmation(null);run?.();}}/>
   </section>;

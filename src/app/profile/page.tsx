@@ -1251,6 +1251,7 @@ export default function ProfilePage() {
         )}
       </div>
 
+      <Link href="/profile/life/" className="mx-3 my-4 block rounded-xl border border-purple-200 bg-white p-4 text-purple-900"><strong>人生记录</strong><span className="mt-1 block text-xs text-stone-600">本机日记 · 健康原件 · 外部点评 · 搜索与备份</span></Link>
       <CompanyIntroduction />
       <IcpFooter />
 
