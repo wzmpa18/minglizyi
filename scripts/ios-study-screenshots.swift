@@ -40,6 +40,11 @@ final class GuoxueStudyScreenshots: XCTestCase {
         let record=app.buttons.matching(NSPredicate(format:"label CONTAINS %@","QA synthetic local record")).firstMatch
         XCTAssertTrue(record.waitForExistence(timeout:30),"Lock and reopen must retain the local original")
         record.tap();XCTAssertTrue(body.waitForExistence(timeout:15));XCTAssertEqual(body.value as? String,sample,"Private notes must not be truncated at the public 500-character limit")
+        tapVisible(app.buttons,"关闭编辑",app);tapVisible(app.buttons,"备份与导出",app);tapVisible(app.buttons,"刷新本机用量",app)
+        let space=app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","可用容量：")).firstMatch
+        XCTAssertTrue(space.waitForExistence(timeout:25),"Native disk capacity must be returned by LifeVault, not a browser quota")
+        XCTAssertNotNil(space.label.range(of:"[0-9]+\\.[0-9]+ (KiB|MiB)",options:.regularExpression),"Do not substitute an unknown capacity or a fabricated success")
+        shot("07_真实应用_本机容量与备份状态",app)
     }
     private func captureProduct(_ name:String,_ key:String,_ app:XCUIApplication){
         let title=app.staticTexts[name].firstMatch

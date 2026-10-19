@@ -11,6 +11,17 @@ import org.json.*;
 import java.io.*;
 @RunWith(AndroidJUnit4.class)
 public class LifeOfflineOcrTest {
+ @Test public void nativeCapacityBridgeReturnsActualDeviceFreeSpaceOffline()throws Exception{
+  try(androidx.test.core.app.ActivityScenario<com.yandao.guoxue.MainActivity> scenario=androidx.test.core.app.ActivityScenario.launch(com.yandao.guoxue.MainActivity.class)){
+   long until=System.currentTimeMillis()+30000;String response="";
+   for(boolean requested=false;System.currentTimeMillis()<until;){
+    java.util.concurrent.CountDownLatch done=new java.util.concurrent.CountDownLatch(1);java.util.concurrent.atomic.AtomicReference<String> result=new java.util.concurrent.atomic.AtomicReference<>("");
+    final boolean start=!requested;scenario.onActivity(activity->activity.getBridge().getWebView().evaluateJavascript(start?"(()=>{if(!window.Capacitor||!window.Capacitor.nativePromise)return 'WAIT';window.Capacitor.nativePromise('LifeVault','storageStatus',{}).then(r=>window.__qaPrivateCapacity=JSON.stringify(r)).catch(()=>window.__qaPrivateCapacity='ERROR');return 'REQUESTED';})()":"window.__qaPrivateCapacity||'WAIT'",value->{result.set(value);done.countDown();}));assertTrue(done.await(10,java.util.concurrent.TimeUnit.SECONDS));
+    response=String.valueOf(new org.json.JSONTokener(result.get()).nextValue());if(response.equals("REQUESTED"))requested=true;else if(response.startsWith("{"))break;else assertNotEquals("ERROR",response);Thread.sleep(100);
+   }
+   JSONObject value=new JSONObject(response);assertTrue(value.getLong("availableBytes")>0);assertTrue(value.getLong("databaseBytes")>=0);value.put("physicalDevice",false);value.put("nativeBridge",true);value.put("airplaneMode",android.provider.Settings.Global.getInt(InstrumentationRegistry.getInstrumentation().getTargetContext().getContentResolver(),android.provider.Settings.Global.AIRPLANE_MODE_ON,0));assertEquals(1,value.getInt("airplaneMode"));android.util.Log.i("YandaoVaultProof",value.toString());
+  }
+ }
  @Test public void bundledChineseEngineRunsWithoutGmsAndPreservesOriginal()throws Exception{
   Context app=InstrumentationRegistry.getInstrumentation().getTargetContext(),test=InstrumentationRegistry.getInstrumentation().getContext();boolean gms=false;try{app.getPackageManager().getPackageInfo("com.google.android.gms",0);gms=true;}catch(PackageManager.NameNotFoundException expected){}assertFalse("Use an AOSP image without GMS",gms);assertEquals("Airplane mode must be enabled for this test",1,android.provider.Settings.Global.getInt(app.getContentResolver(),android.provider.Settings.Global.AIRPLANE_MODE_ON,0));
   byte[] source;try(InputStream in=test.getAssets().open("life-ocr-synthetic.png");ByteArrayOutputStream out=new ByteArrayOutputStream()){byte[] buf=new byte[8192];int n;while((n=in.read(buf))!=-1)out.write(buf,0,n);source=out.toByteArray();}byte[] before=source.clone();long started=android.os.SystemClock.elapsedRealtime();JSObject result=AndroidOfflineOcr.recognize(app,source);assertArrayEquals(before,source);assertFalse(result.getBoolean("confirmed"));JSONArray blocks=result.getJSONArray("blocks");assertTrue("Actual native engine must produce text",blocks.length()>0);StringBuilder text=new StringBuilder();for(int i=0;i<blocks.length();i++){JSONObject line=blocks.getJSONObject(i);assertEquals(1,line.getInt("page"));assertEquals(4,line.getJSONArray("box").length());text.append(line.getString("text")).append('\n');}

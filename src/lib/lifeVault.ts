@@ -1,6 +1,7 @@
 import {LifeSearchIndex,lifeSearchText,validateLifeEntry,type LifeEntry,type LifeAttachment,type LifeRevision} from "./lifeRecords";
 import {b64,unb64,randomBytes,importVaultKey,passwordKey,seal,unseal,sha256,type Sealed} from "./lifeVaultCrypto";
-export interface VaultStorage {commit:(rows:{key:string;value:unknown}[],check?:{key:string;etag:string|null;deletePrefix?:string})=>Promise<void>;read:<T>(key:string)=>Promise<T|undefined>;page:(prefix:string,after?:string,limit?:number)=>Promise<{key:string;value:unknown}[]>;}
+export interface VaultStorage {commit:(rows:{key:string;value:unknown}[],check?:{key:string;etag:string|null;deletePrefix?:string})=>Promise<void>;read:<T>(key:string)=>Promise<T|undefined>;page:(prefix:string,after?:string,limit?:number)=>Promise<{key:string;value:unknown}[]>;capacity?:()=>Promise<{scope:string;availableBytes?:number;usageBytes?:number;quotaBytes?:number;databaseBytes?:number}>;}
+export interface VaultMaintenance {generatedBackup?:{at:string;sha256:string;bytes:number};destination?:{at:string;sha256:string;state:"native-system-confirmed"|"browser-request-only"};isolatedRestore?:{at:string;sourceMadeAt:string;entries:number;attachments:number};}
 export interface VaultHeader {schema:1;id:string;createdAt:string;salt:string;password:Sealed;recoverySalt:string;recovery:Sealed;}
 export interface VaultBackup {format:"YANDAO_PRIVATE_BACKUP";schema:1;kdf:"PBKDF2-SHA256-600000";salt:string;payload:Sealed;}
 const registry="life:registry:v1",headerKey=(id:string)=>`life:${id}:header`,prefix=(id:string)=>`life:${id}:data:`;
@@ -32,6 +33,16 @@ export class LifeVault {
  lock(){this.lockEpoch++;this.key=null;this.root?.fill(0);this.root=null;this.entries.clear();this.index.clear();}
  private checkEpoch(epoch:number){if(epoch!==this.lockEpoch)throw Error("档案已锁定，本次操作结果未挂载");}
  private active(){if(!this.key)throw Error("档案已锁定，请用独立档案密码解锁");return this.key;}
+ async backupStatus():Promise<VaultMaintenance>{this.active();const epoch=this.lockEpoch,stored=await this.storage.read<Sealed>(`life:${this.id}:maintenance`);this.checkEpoch(epoch);const status=stored?await unseal<VaultMaintenance>(this.active(),stored,aad(this.id,"maintenance")):{};this.checkEpoch(epoch);return status;}
+ private async maintenance(patch:Partial<VaultMaintenance>){const epoch=this.lockEpoch,key=`life:${this.id}:maintenance`,stored=await this.storage.read<Sealed>(key);this.checkEpoch(epoch);const old=stored?await unseal<VaultMaintenance>(this.active(),stored,aad(this.id,"maintenance")):{};const value=await seal(this.active(),{...old,...patch},aad(this.id,"maintenance"));this.checkEpoch(epoch);await this.storage.commit([{key,value}],{key,etag:stored?.etag??null});this.checkEpoch(epoch);}
+ async recordBackupDestination(sha256:string,state:"native-system-confirmed"|"browser-request-only"){return this.serial(async()=>{const status=await this.backupStatus();if(status.generatedBackup?.sha256!==sha256)throw Error("此保存回执不属于最近核验的备份包，未记录成功");if(!["native-system-confirmed","browser-request-only"].includes(state))throw Error("保存状态无效");await this.maintenance({destination:{at:new Date().toISOString(),sha256,state}});});}
+ async storageSummary(){
+  this.active();const epoch=this.lockEpoch;let after="",ciphertextBytes=0,rows=0;const encoder=new TextEncoder();
+  for(;;){const page=await this.storage.page(prefix(this.id),after,100);this.checkEpoch(epoch);for(const row of page){ciphertextBytes+=encoder.encode(JSON.stringify(row.value)).byteLength;rows++;}if(page.length<100)break;after=page.at(-1)!.key;await new Promise<void>(resolve=>setTimeout(resolve,0));}
+  const attachments=new Map<string,LifeAttachment>();for(const entry of this.entries.values())for(const attachment of entry.attachments)attachments.set(attachment.id,attachment);
+  const capacity=await this.storage.capacity?.(),maintenance=await this.backupStatus();this.checkEpoch(epoch);
+  return {entries:this.entries.size,trashed:[...this.entries.values()].filter(e=>e.deletedAt).length,attachments:attachments.size,originalBytes:[...attachments.values()].reduce((n,a)=>n+a.bytes,0),ciphertextBytes,rows,capacity,maintenance};
+ }
  private serial<T>(run:()=>Promise<T>):Promise<T>{const task=this.chain.then(run);this.chain=task.then(()=>{},()=>{});return task;}
  private async read<T>(key:string){const epoch=this.lockEpoch,row=await this.storage.read<Sealed>(prefix(this.id)+key);this.checkEpoch(epoch);const value=row?await unseal<T>(this.active(),row,aad(this.id,key)):undefined;this.checkEpoch(epoch);return value;}
  private async rows(){const all:{key:string;value:unknown}[]=[];let after="";for(;;){const page=await this.storage.page(prefix(this.id),after,100);all.push(...page);if(page.length<100)break;after=page.at(-1)!.key;}return all;}
@@ -68,6 +79,7 @@ export class LifeVault {
   this.active();if(!["image/jpeg","image/png","image/webp","application/pdf","text/plain"].includes(file.type))throw Error("仅支持JPEG/PNG/WebP、PDF和纯文字；不会执行HTML、SVG或宏");
   // Explicit capability bound, never truncate or silently compress original files.
   if(file.size>64*1024*1024)throw Error("此版本单个原件上限64MiB，未导入或截断；请按页选择，原文件不变");
+  const capacity=await this.storage.capacity?.();if(capacity?.availableBytes!==undefined&&capacity.availableBytes<file.size*2+1048576)throw Error("本机可用空间不足，未导入；不会自动删除原件或旧记录");
   const estimate=typeof navigator!=="undefined"?await navigator.storage?.estimate?.():undefined;
   if(estimate?.quota&&estimate.usage!==undefined&&estimate.quota-estimate.usage<file.size*2)throw Error("剩余空间不足，未导入；不会自动删除旧记录");
   const attachment:LifeAttachment={id:crypto.randomUUID(),name:file.name,type:file.type,bytes:file.size,sha256:"",chunks:[]};
@@ -83,7 +95,7 @@ export class LifeVault {
   const backup:VaultBackup={format:"YANDAO_PRIVATE_BACKUP",schema:1,kdf:"PBKDF2-SHA256-600000",salt,payload:encoded};
   // Read back cryptographically before offering the package; saving to a cloud provider remains the user's separate operation.
   const verified=await unseal<typeof body>(await passwordKey(password,salt),backup.payload,"yandao-user-backup-v1");if(verified.rows.length!==rows.length)throw Error("备份读回失败");
-  return new Blob([JSON.stringify(backup)],{type:"application/octet-stream"});
+  const blob=new Blob([JSON.stringify(backup)],{type:"application/octet-stream"});await this.maintenance({generatedBackup:{at:new Date().toISOString(),sha256:await sha256(new Uint8Array(await blob.arrayBuffer())),bytes:blob.size}});return blob;
  });}
  static async inspectBackup(blob:Blob,password:string){
   if(blob.size>256*1024*1024)throw Error("此版本恢复包上限256MiB；未修改原库，请在有足够内存的设备处理分批导出");
@@ -99,6 +111,6 @@ export class LifeVault {
   // Restore into an independent vault. Existing vaults remain unchanged; reminders are not armed.
   const created=await LifeVault.create(storage,newPassword,false),vault=created.vault;
   for(const [oldKey,oldValue] of inspected.plain){const value=structuredClone(oldValue);if(oldKey.startsWith("entry:")){const e=value as LifeEntry;e.ownerProfileId=vault.id;e.reminders=e.reminders?.map(r=>({...r,calendarEventId:undefined,needsConfirmation:true}));}if(oldKey.startsWith("revision:"))(value as LifeRevision).entry.ownerProfileId=vault.id;await storage.commit([{key:prefix(vault.id)+oldKey,value:await seal(vault.active(),value,aad(vault.id,oldKey))}]);}
-  await vault.reload();if(vault.entries.size!==inspected.entries.length)throw Error("恢复核查失败，原库仍保留");await LifeVault.register(storage,vault.header);return created;
+  await vault.reload();if(vault.entries.size!==inspected.entries.length)throw Error("恢复核查失败，原库仍保留");await vault.maintenance({isolatedRestore:{at:new Date().toISOString(),sourceMadeAt:inspected.summary.madeAt,entries:inspected.summary.entries,attachments:inspected.summary.attachments}});await LifeVault.register(storage,vault.header);return created;
  }
 }

@@ -9,8 +9,9 @@ import ImageIO
 public class LifeVaultPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPickerDelegate {
  public let identifier="LifeVaultPlugin"
  public let jsName="LifeVault"
- public let pluginMethods:[CAPPluginMethod]=[CAPPluginMethod(name:"commit",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"page",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"read",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"ocr",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"previewPdfPage",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"renderPdf",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"saveDocument",returnType:CAPPluginReturnPromise)]
+ public let pluginMethods:[CAPPluginMethod]=[CAPPluginMethod(name:"commit",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"page",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"read",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"ocr",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"previewPdfPage",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"renderPdf",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"saveDocument",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"storageStatus",returnType:CAPPluginReturnPromise)]
  private let queue=DispatchQueue(label:"vip.yandao.private-vault")
+ @objc func storageStatus(_ call:CAPPluginCall){queue.async{do{let dir=FileManager.default.urls(for:.applicationSupportDirectory,in:.userDomainMask)[0];let attrs=try FileManager.default.attributesOfFileSystem(forPath:dir.path);guard let free=attrs[.systemFreeSize] as? NSNumber else{throw NSError(domain:"VaultSpace",code:1)};let file=dir.appendingPathComponent("PrivateLifeVault/vault-v1.sqlite");let size=(try? FileManager.default.attributesOfItem(atPath:file.path)[.size] as? NSNumber)?.int64Value ?? 0;call.resolve(["availableBytes":free.int64Value,"databaseBytes":size])}catch{call.reject("当前设备未能读取剩余空间，未推测容量")}}}
  private var db:OpaquePointer?
  private var exportCall:CAPPluginCall?
  private var exportURL:URL?

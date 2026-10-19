@@ -48,6 +48,7 @@ on:
       - 'src/lib/socialStore.ts'
       - 'src/app/groups/**'
       - 'src/components/StudyGroupInvitations.tsx'
+      - 'src/components/LifeStorageSummary.tsx'
       - 'scripts/life-vault.test.cjs'
       - 'scripts/live-chart*.test.cjs'
       - 'src/app/profile/**'

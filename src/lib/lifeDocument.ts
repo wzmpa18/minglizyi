@@ -5,9 +5,10 @@ import type {OcrBlock} from "./lifeRecords";
 const plugin=registerPlugin<{ocr:(o:{base64:string;type:string;page:number})=>Promise<{model:string;blocks:OcrBlock[];page:number;totalPages:number}>;previewPdfPage:(o:{base64:string;page:number})=>Promise<{base64:string;totalPages:number}>;renderPdf:(o:{text:string})=>Promise<{base64:string}>;saveDocument:(o:{name:string;type:string;base64:string})=>Promise<{saved:boolean}>}>("LifeVault");
 export async function recognizeLifeImage(blob:Blob,page=1){if(!Capacitor.isNativePlatform()||!Capacitor.isPluginAvailable("LifeVault"))throw Error("本浏览器没有已验证的离线识字引擎，请手动录入核对；不会改用服务器或云AI");if(blob.size>20*1024*1024)throw Error("此版本本机识字单个文件上限20MiB，原件不变；可选择较小的副本，不能将识别失败当作已核对");if(!blob.type.startsWith("image/")&&blob.type!=="application/pdf")throw Error("只支持本机图片或逐页PDF识字");return plugin.ocr({base64:b64(new Uint8Array(await blob.arrayBuffer())),type:blob.type,page:blob.type==="application/pdf"?page:1});}
 export async function saveLifeDocument(blob:Blob,name:string){
- if(Capacitor.isNativePlatform()){if(!Capacitor.isPluginAvailable("LifeVault"))throw Error("请升级支持私人档案的安装包");const result=await plugin.saveDocument({name,type:blob.type||"application/octet-stream",base64:b64(new Uint8Array(await blob.arrayBuffer()))});if(!result.saved)throw Error("已取消保存，未记录备份成功");return;}
+ if(Capacitor.isNativePlatform()){if(!Capacitor.isPluginAvailable("LifeVault"))throw Error("请升级支持私人档案的安装包");const result=await plugin.saveDocument({name,type:blob.type||"application/octet-stream",base64:b64(new Uint8Array(await blob.arrayBuffer()))});if(!result.saved)throw Error("已取消保存，未记录备份成功");return {state:"native-system-confirmed" as const};}
  const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
  // A browser download gesture is not evidence of a completed cloud backup.
+ return {state:"browser-request-only" as const};
 }
 
 /** Native system fonts, local drawing only. Browser delegates to its print UI. */
