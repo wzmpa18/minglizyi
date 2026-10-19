@@ -30,6 +30,16 @@ function createLiveChartRouter(deps){
   if(body.replacesId){const previous=db().prepare('SELECT owner_id FROM live_chart_shares WHERE id=?').get(String(body.replacesId));if(previous?.owner_id!==me)fail('不能更正他人的分享',403);}
   db().prepare("INSERT INTO live_chart_shares(id,owner_id,peer_id,snapshots,permissions,state,expires_ms,created_ms,replaces_id,request_id,request_fingerprint) VALUES (?,?,?,?,?,'PENDING',?,?,?,?,?)").run(id,me,peer,JSON.stringify(copies),JSON.stringify(permissions),expires,Date.now(),body.replacesId||null,body.requestId,fingerprint);audit({id},me,'CREATE_MINIMAL_COPY');return {success:true,id,url:`https://yandaoguoxue.yandao.vip/discover/live/?share=${id}`,state:'PENDING'};
  }));
+ // Privacy action remains available with the channel disabled, expired links
+ // and broken friendships. Validate every owner before mutating any row.
+ router.post('/revoke',handle(req=>{
+  const me=String(req.user.userId),ids=req.body?.ids;
+  if(!Array.isArray(ids)||!ids.length||ids.length>50||new Set(ids).size!==ids.length||ids.some(id=>typeof id!=='string'||!/^[\w-]{32,40}$/.test(id)))fail('请选择1至50份本人发送的分享');
+  const rows=ids.map(id=>db().prepare('SELECT id,owner_id FROM live_chart_shares WHERE id=?').get(id));
+  if(rows.some(row=>!row||row.owner_id!==me))fail('所选项含有不存在或非本人发送的分享，本次未作更改',403);
+  db().transaction(()=>{for(const row of rows){const changed=db().prepare("UPDATE live_chart_shares SET state='REVOKED' WHERE id=? AND state!='REVOKED'").run(row.id);if(changed.changes)audit(row,me,'REVOKE_BATCH');}})();
+  return {success:true,revokedIds:ids,message:'已停止所选分享及其转发链的后续访问；不能收回此前已获准另存的副本或截图'};
+ }));
  router.post('/:id/accept',handle(req=>{const s=share(req.params.id,req.user.userId,true);if(s.peer_id!==String(req.user.userId))fail('只有指定接收人可接受',403);db().prepare("UPDATE live_chart_shares SET state='ACTIVE',accepted_ms=? WHERE id=? AND state='PENDING'").run(Date.now(),s.id);audit(s,req.user.userId,'ACCEPT');return {success:true};}));
  router.get('/:id',handle(req=>{const s=share(req.params.id,req.user.userId,true),mine=s.owner_id===String(req.user.userId);if(!mine&&s.state!=='ACTIVE')return {success:true,pending:true,id:s.id,ownerName:active(s.owner_id)?.nickname||'学友',permissions:JSON.parse(s.permissions),expiresAt:s.expires_ms};const charts=JSON.parse(s.snapshots).map(c=>({...revalidate(c),version:c.version}));return {success:true,id:s.id,mine,ownerName:active(s.owner_id)?.nickname||'学友',peerName:active(s.peer_id)?.nickname||'学友',charts,permissions:JSON.parse(s.permissions),expiresAt:s.expires_ms,state:s.state,replacesId:s.replaces_id};}));
  router.post('/:id/revoke',handle(req=>{const s=db().prepare('SELECT * FROM live_chart_shares WHERE id=?').get(String(req.params.id));if(!s||s.owner_id!==String(req.user.userId))fail('无权撤销',403);db().prepare("UPDATE live_chart_shares SET state='REVOKED' WHERE id=?").run(s.id);audit(s,req.user.userId,'REVOKE');return {success:true,message:'已停止后续访问；无法收回已获准另存的副本或截图'};}));

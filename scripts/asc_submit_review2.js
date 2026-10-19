@@ -19,6 +19,7 @@ function makeJwt() {
 }
 
 function api(method, path, body) {
+  require('./lib/formalReviewGate.cjs').guardAscMutation(method, path);
   return new Promise((resolve, reject) => {
     const payload = body ? JSON.stringify(body) : null;
     const headers = { Authorization: `Bearer ${makeJwt()}` };

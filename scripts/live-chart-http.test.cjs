@@ -20,6 +20,16 @@ db.prepare('INSERT INTO blacklists VALUES (?,?)').run('2','1');assert.equal((awa
   // on a 100-record client cache, and expired links do not reappear.
   const baseRow=db.prepare('SELECT * FROM live_chart_shares WHERE id=?').get(id),insert=db.prepare("INSERT INTO live_chart_shares(id,owner_id,peer_id,snapshots,permissions,state,expires_ms,created_ms,request_id) VALUES (?,?,?,?,?,'PENDING',?,?,?)");for(let i=0;i<105;i++)insert.run(crypto.randomUUID(),'1','2',baseRow.snapshots,baseRow.permissions,Date.now()+86400000,1000,crypto.randomUUID());
   let cursor='',seen=new Set();for(let page=0;page<5;page++){const r=await call(1,'/'+(cursor?'?cursor='+encodeURIComponent(cursor):''));assert.equal(r.status,200);for(const item of r.body.items){assert.ok(!seen.has(item.id));seen.add(item.id);}cursor=r.body.nextCursor;if(!cursor)break;}assert.equal(seen.size,105);assert.equal((await call(1,'/?cursor=invalid')).status,400);
+  const owned=[...seen].slice(0,3),foreign=(await call(2,'/','POST',{...input,recipientId:'3',requestId:crypto.randomUUID()})).body.id;
+  assert.ok(foreign);assert.equal((await call(1,'/revoke','POST',{ids:[owned[0],foreign]})).status,403);
+  assert.equal(db.prepare('SELECT state FROM live_chart_shares WHERE id=?').get(owned[0]).state,'PENDING');
+  assert.equal((await call(1,'/revoke','POST',{ids:owned})).body.success,true);
+  assert.equal((await call(1,'/revoke','POST',{ids:owned})).body.success,true);
+  assert.equal(db.prepare("SELECT COUNT(*) n FROM live_chart_actions WHERE action='REVOKE_BATCH'").get().n,3);
+  for(const item of owned)assert.equal((await call(2,'/'+item)).status,410);
+  assert.equal((await call(1,'/revoke','POST',{ids:[owned[0],owned[0]]})).status,400);
+  assert.equal((await call(2,'/'+foreign)).status,200);
+
 
  }finally{await new Promise(resolve=>server.close(resolve));db.close();}
 });

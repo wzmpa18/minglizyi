@@ -22,6 +22,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const {knowledgePreview}=require('./zhengguPreviewPolicy');
 const {validateStudyText}=require('./studyCommentPolicy');
+const {decodeStudyText,decodeStudyBase64}=require('./studyTextImport');
 
 // P6-TCM-02 质量治理层：嵌入流水线节点，不替换任何原有步骤
 const QG = require('./qualityGate');
@@ -1275,22 +1276,25 @@ function createRouter() {
         if (!org) return res.status(403).json({ success: false, error: '无权上传机构资料：需为机构管理员' });
         orgIdVal = org.id;
       }
+      // Decode and validate the whole file before touching disk or creating a
+      // pending material. File uploads previously left text_content empty.
+      const decoded=fileBase64?decodeStudyBase64(fileBase64):decodeStudyText(Buffer.from(String(textContent),'utf8'));
       let filePath = '';
       if (fileBase64) {
         if (!fs.existsSync(FILE_DIR)) fs.mkdirSync(FILE_DIR, { recursive: true });
         const safeName = `${Date.now()}_${String(fileName || 'file').replace(/[^\w.\-\u4e00-\u9fff]/g, '_').slice(0, 60)}`;
         filePath = path.join(FILE_DIR, safeName);
-        fs.writeFileSync(filePath, Buffer.from(fileBase64.replace(/^data:[^;]+;base64,/, ''), 'base64'));
+        fs.writeFileSync(filePath, decoded.original, {flag:'wx'});
       }
       if (!textContent && !filePath) return res.status(400).json({ success: false, error: '请提供文本内容或上传文件' });
       // P6-I-PLUS 规则4：上传即生成资料指纹（Knowledge Hash），供解析前去重比对
-      const matHash = filePath ? '' : materialHash(textContent);
+      const matHash = materialHash(decoded.text);
       const result = getDb().prepare('INSERT INTO materials (title, track, category, format, file_path, text_content, grade, status, uploader_id, uploader_name, visibility, org_id, content_hash) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)')
-        .run(String(title).trim().slice(0, 100), t, cat, 'text', filePath, String(textContent).slice(0, 200000),
+        .run(String(title).trim().slice(0, 100), t, cat, 'text', filePath, decoded.text,
           ['S', 'A', 'B', 'C'].includes(grade) ? grade : 'C', 'pending', String(req.user.userId), req.user.nickname || `用户${req.user.userId}`, vis, orgIdVal, matHash);
-      res.json({ success: true, materialId: String(result.lastInsertRowid), message: '资料已提交，等待解析与审核' });
+      res.json({ success: true, materialId: String(result.lastInsertRowid), encoding:decoded.encoding, sourceSha256:decoded.sha256, characters:decoded.text.length, message: '完整文字已接收，等待解析与审核' });
     } catch (e) {
-      res.status(500).json({ success: false, error: e.message });
+      res.status(e.status||500).json({ success: false, error: e.status?e.message:'资料接收未完成，请重试' });
     }
   });
 

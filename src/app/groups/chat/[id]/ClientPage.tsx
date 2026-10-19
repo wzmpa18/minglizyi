@@ -414,6 +414,7 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
         </button>
       </div>
 
+      {group?.reviewStatus==='active'&&<div className="border-b border-stone-200 bg-white px-4 py-2"><button className="rounded-lg border border-purple-200 px-3 py-2 text-sm font-semibold text-purple-900" onClick={()=>router.push(`/groups/cards/?group=${groupId}`)}>本群授权盘卡 · 选择接收成员</button></div>}
       {/* 全员禁言提示条 */}
       {group?.reviewStatus!=="active"&&<p className="px-4 py-2 text-xs bg-amber-50 text-amber-900">{group?.reviewStatus==="pending"?"学习群资料待审核，审核通过后方可邀请和发言。":group?.reviewStatus==="rejected"?"学习群资料未通过审核，暂不可邀请或发言。":"正在核对学习群审核状态，旧群不会自动重新开放。"}</p>}
       {muteAll && myRole === "member" && (
