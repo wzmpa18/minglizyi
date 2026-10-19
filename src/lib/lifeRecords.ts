@@ -71,3 +71,10 @@ export function lifeSearchHits(e:LifeEntry,query:string):LifeSearchHit[]{
 
 /** A peer's restricted quote must never lock the user's own subsequent notes. */
 export function exportableLifeEntries(entries:LifeEntry[]):LifeEntry[]{return entries.map(e=>({...structuredClone(e),sourceRefs:e.sourceRefs.filter(r=>r.kind!=='CHAT_QUOTE'||r.exportAllowed===true),chartRefs:e.chartRefs?.filter(c=>(c.record.permissions as {export?:boolean}|undefined)?.export!==false)}));}
+
+/** An autosave may finish after more typing. Advance only its base revision;
+ * keep every newer keystroke and never replace another record or manual revision. */
+export function mergeLifeAutosave(current:LifeEntry|null,submitted:LifeEntry,saved:LifeEntry):LifeEntry|null{
+ if(!current||current.id!==submitted.id||current.ownerProfileId!==submitted.ownerProfileId||current.revision!==submitted.revision)return current;
+ return JSON.stringify(current)===JSON.stringify(submitted)?saved:{...current,revision:saved.revision,updatedAt:saved.updatedAt};
+}
