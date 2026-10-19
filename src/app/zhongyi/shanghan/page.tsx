@@ -1,4 +1,5 @@
 "use client";
+import {InterfaceButton as Button,InterfaceLabel as Label,InterfaceOption as Option} from "@/components/InterfaceControls";
 
 import { SectionGate } from "@/components/SectionGate";
 import { useState, useCallback, useEffect, useRef } from "react";
@@ -202,7 +203,7 @@ function ShanghanPageOriginal() {
               color: "#e8edf0",
             }}
           />
-          <button
+          <Button
             onClick={addSymptomTag}
             disabled={!symptomsInput.trim()}
             className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-40"
@@ -212,7 +213,7 @@ function ShanghanPageOriginal() {
             }}
           >
             添加
-          </button>
+          </Button>
         </div>
 
         {/* 标签展示 */}
@@ -229,12 +230,12 @@ function ShanghanPageOriginal() {
                 }}
               >
                 {tag}
-                <button
+                <Button
                   onClick={() => removeSymptomTag(tag)}
                   className="ml-0.5 hover:opacity-80"
                 >
                   <X className="h-3 w-3" />
-                </button>
+                </Button>
               </span>
             ))}
           </div>
@@ -263,7 +264,7 @@ function ShanghanPageOriginal() {
               "脉微细",
               "下利",
             ].map((s) => (
-              <button
+              <Button
                 key={s}
                 onClick={() => {
                   if (!symptomTags.includes(s)) {
@@ -278,14 +279,14 @@ function ShanghanPageOriginal() {
                 }}
               >
                 {s}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
 
         {/* 操作按钮 */}
         <div className="flex gap-2">
-          <button
+          <Button
             onClick={handleAnalyze}
             disabled={symptomTags.length === 0}
             className="flex-1 rounded-lg py-2.5 text-sm font-medium transition-all duration-200 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
@@ -295,9 +296,9 @@ function ShanghanPageOriginal() {
             }}
           >
             开始对照学习
-          </button>
+          </Button>
           {symptomTags.length > 0 && (
-            <button
+            <Button
               onClick={handleReset}
               className="px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200"
               style={{
@@ -306,7 +307,7 @@ function ShanghanPageOriginal() {
               }}
             >
               重置
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -335,7 +336,7 @@ function ShanghanPageOriginal() {
                     border: "1px solid rgba(45, 90, 39, 0.15)",
                   }}
                 >
-                  <button
+                  <Button
                     onClick={() =>
                       setExpandedSyndrome(
                         expandedSyndrome === syndrome.name
@@ -390,7 +391,7 @@ function ShanghanPageOriginal() {
                             : "rotate(0deg)",
                       }}
                     />
-                  </button>
+                  </Button>
 
                   {/* 展开详情 */}
                   {expandedSyndrome === syndrome.name && (
@@ -592,7 +593,7 @@ function ShanghanPageOriginal() {
       )}
 
       {hasSearched&&<ResearchLearningDrawers selectedSymptoms={localMedicalConcepts(symptomTags.join('、'))} selfDescription=""/>}
-      <section className="mb-6 space-y-3 rounded-xl border border-stone-600 bg-stone-900 p-4 text-sm text-stone-100"><h2 className="font-semibold">六经目录与方剂名录 · 自主选读</h2><p className="text-xs leading-6">不会根据输入自动推荐方剂。以下为既有整理目录，尚需逐条专业校核；药量、用药和针法应回原典学习，不能照用于个人。</p><label className="block">选择目录<select aria-label="六经目录自主选读" value={studySyndromeName} onChange={e=>setStudySyndromeName(e.target.value)} className="mt-2 w-full rounded bg-white p-3 text-stone-900"><option value="">请选择学习条目</option>{SHANGHAN_SYNDROMES.map(item=><option key={item.name} value={item.name}>{item.name}</option>)}</select></label>{studySyndrome&&<><p>{studySyndrome.description}</p><Link className="block underline" href={`/zhongyi/classic/?q=${encodeURIComponent(studySyndrome.name)}&scope=original`}>在完整古籍中核对来源</Link><div className="flex flex-wrap gap-3">{studySyndrome.formulas.map(f=><Link key={f} className="underline" href={`/zhongyi/formula/?name=${encodeURIComponent(f)}`}>{f} · 查资料</Link>)}</div></>}</section>
+      <section className="mb-6 space-y-3 rounded-xl border border-stone-600 bg-stone-900 p-4 text-sm text-stone-100"><h2 className="font-semibold">六经目录与方剂名录 · 自主选读</h2><p className="text-xs leading-6">不会根据输入自动推荐方剂。以下为既有整理目录，尚需逐条专业校核；药量、用药和针法应回原典学习，不能照用于个人。</p><Label className="block">选择目录<select aria-label="六经目录自主选读" value={studySyndromeName} onChange={e=>setStudySyndromeName(e.target.value)} className="mt-2 w-full rounded bg-white p-3 text-stone-900"><Option value="">请选择学习条目</Option>{SHANGHAN_SYNDROMES.map(item=><Option key={item.name} value={item.name}>{item.name}</Option>)}</select></Label>{studySyndrome&&<><p>{studySyndrome.description}</p><Link className="block underline" href={`/zhongyi/classic/?q=${encodeURIComponent(studySyndrome.name)}&scope=original`}>在完整古籍中核对来源</Link><div className="flex flex-wrap gap-3">{studySyndrome.formulas.map(f=><Link key={f} className="underline" href={`/zhongyi/formula/?name=${encodeURIComponent(f)}`}>{f} · 查资料</Link>)}</div></>}</section>
 
       {/* ======================================== */}
       {/* 本APP内容仅供传统文化研究参考，不构成医疗建议。如有身体不适，请及时就医。 */}

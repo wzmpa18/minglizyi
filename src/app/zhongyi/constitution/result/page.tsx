@@ -1,4 +1,5 @@
 "use client";
+import {InterfaceButton as Button,InterfaceLabel as Label,InterfaceOption as Option} from "@/components/InterfaceControls";
 
 import { SectionGate } from "@/components/SectionGate";
 import { useState, useEffect, useMemo, Suspense } from "react";
@@ -103,7 +104,7 @@ function ConstitutionResultInner() {
       >
         <div style={{ textAlign: "center", color: "#999" }}>
           <p style={{ fontSize: "14px" }}>未找到测评结果</p>
-          <button
+          <Button
             onClick={handleHome}
             style={{
               marginTop: "16px",
@@ -117,7 +118,7 @@ function ConstitutionResultInner() {
             }}
           >
             返回首页
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -151,7 +152,7 @@ function ConstitutionResultInner() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <button
+          <Button
             onClick={handleHome}
             style={{
               background: "rgba(255,255,255,0.2)",
@@ -169,7 +170,7 @@ function ConstitutionResultInner() {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 18l-6-6 6-6" />
             </svg>
-          </button>
+          </Button>
           <h1 style={{ fontSize: "18px", fontWeight: "bold", margin: 0, flex: 1 }}>测评结果</h1>
           <span style={{ fontSize: "11px", opacity: 0.8 }}>{result.date}</span>
         </div>
@@ -353,7 +354,7 @@ function ConstitutionResultInner() {
         <h2 className="font-semibold">来源、计分与适用边界</h2>
         <p>{CONSTITUTION_PROVENANCE.note}</p><a className="underline" href={CONSTITUTION_PROVENANCE.officialUrl} target="_blank" rel="noopener noreferrer">核对现行标准公开信息</a>
         <p>转化分＝（原始分－条目数）÷（条目数×4）×100，反向题先按6减答案计分。这里显示问卷分数，不是疾病概率、健康分数或治疗指征。旧记录不会被重算或伪装为现行标准结果。</p>
-        <label className="block">自主选择术语学习<select aria-label="体质术语学习" value={studyTypeId} onChange={e=>setStudyTypeId(e.target.value)} className="mt-2 w-full rounded border bg-white p-3 text-stone-900"><option value="">请选择，不按问卷推荐调理</option>{allTypes.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
+        <Label className="block">自主选择术语学习<select aria-label="体质术语学习" value={studyTypeId} onChange={e=>setStudyTypeId(e.target.value)} className="mt-2 w-full rounded border bg-white p-3 text-stone-900"><Option value="">请选择，不按问卷推荐调理</Option>{allTypes.map(t=><Option key={t.id} value={t.id}>{t.name}</Option>)}</select></Label>
         {studyType&&<div className="space-y-3 rounded-xl border p-3"><h3 className="font-semibold">{studyType.name} · 编写者概述</h3><p>下列为历史整理笔记，尚未逐条专业核验，不是对你的状态描述。</p><p>{studyType.features}</p><p>{studyType.commonManifestations}</p><Link className="block underline" href={`/zhongyi/classic/?q=${encodeURIComponent(studyType.name)}&scope=original`}>检索完整古籍，核对原文语境</Link><div className="flex flex-wrap gap-4"><Link className="underline" href="/zhongyi/herb/">性味归经学习</Link><Link className="underline" href="/zhongyi/meridian/">经络与穴位文献</Link><Link className="underline" href="/zhongyi/classic/">饮食起居原典</Link></div><p>这些是独立资料入口，不根据答题生成适用于本人的药物、饮食限制或按穴方案。</p></div>}
       </section>
 
@@ -361,13 +362,13 @@ function ConstitutionResultInner() {
       <div style={{ padding: "16px 12px 0" }}>
         {/* 客户档案保存区 */}
         <div style={{ marginBottom: "12px" }}>
-          <label className="block text-sm text-stone-800">人物本地标签（选填）<input aria-label="人物本地标签" value={personLabel} onChange={e=>setPersonLabel(e.target.value)} maxLength={80} className="my-2 w-full rounded border bg-white p-3 text-stone-900"/></label>
-          <button onClick={handleSaveToClient} disabled={savedToClient} className="w-full rounded-xl bg-purple-700 p-3 text-sm text-white disabled:opacity-40">{savedToClient?'已交给本机草稿，请核对保存':'预览并存入本机人生记录'}</button>
+          <Label className="block text-sm text-stone-800">人物本地标签（选填）<input aria-label="人物本地标签" value={personLabel} onChange={e=>setPersonLabel(e.target.value)} maxLength={80} className="my-2 w-full rounded border bg-white p-3 text-stone-900"/></Label>
+          <Button onClick={handleSaveToClient} disabled={savedToClient} className="w-full rounded-xl bg-purple-700 p-3 text-sm text-white disabled:opacity-40">{savedToClient?'已交给本机草稿，请核对保存':'预览并存入本机人生记录'}</Button>
           <p className="mt-2 text-xs leading-6 text-stone-600">仅在当前页面进程交接；解锁独立档案后核对并保存，不经过客户档案云同步。历史结果也可另存，不改写原记录。</p>{saveError&&<p role="status" className="text-sm text-red-800">{saveError}</p>}
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          <button
+          <Button
             onClick={handleSave}
             disabled={saved || fromHistory}
             style={{
@@ -387,9 +388,9 @@ function ConstitutionResultInner() {
             }}
           >
             {saved ? "✓ 已保存到历史记录" : fromHistory ? "历史记录中的结果" : "保存结果到历史"}
-          </button>
+          </Button>
           <div style={{ display: "flex", gap: "10px" }}>
-            <button
+            <Button
               onClick={handleRetake}
               style={{
                 flex: 1,
@@ -412,8 +413,8 @@ function ConstitutionResultInner() {
                 <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
               </svg>
               重新测评
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleHome}
               style={{
                 flex: 1,
@@ -436,7 +437,7 @@ function ConstitutionResultInner() {
                 <polyline points="9 22 9 12 15 12 15 22" />
               </svg>
               返回首页
-            </button>
+            </Button>
           </div>
         </div>
       </div>

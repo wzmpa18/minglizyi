@@ -1,4 +1,5 @@
 "use client";
+import {InterfaceButton as Button,InterfaceLabel as Label,InterfaceOption as Option} from "@/components/InterfaceControls";
 
 import { SectionGate } from "@/components/SectionGate";
 import { useState, useMemo } from "react";
@@ -91,7 +92,7 @@ function ConstitutionQuizOriginal() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
-          <button
+          <Button
             onClick={handleBack}
             style={{
               background: "rgba(255,255,255,0.2)",
@@ -109,7 +110,7 @@ function ConstitutionQuizOriginal() {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 18l-6-6 6-6" />
             </svg>
-          </button>
+          </Button>
           <div style={{ flex: 1 }}>
             <h1 style={{ fontSize: "16px", fontWeight: "bold", margin: 0 }}>体质测评</h1>
             <p style={{ fontSize: "11px", opacity: 0.8, margin: 0 }}>
@@ -182,7 +183,7 @@ function ConstitutionQuizOriginal() {
             {OPTIONS.map((opt) => {
               const isSelected = currentAnswer === opt.value;
               return (
-                <button
+                <Button
                   key={opt.value}
                   onClick={() => handleSelect(opt.value)}
                   style={{
@@ -225,7 +226,7 @@ function ConstitutionQuizOriginal() {
                     </div>
                     <div style={{ fontSize: "11px", color: "#999", marginTop: "2px" }}>{opt.desc}</div>
                   </div>
-                </button>
+                </Button>
               );
             })}
           </div>
@@ -263,7 +264,7 @@ function ConstitutionQuizOriginal() {
           zIndex: 50,
         }}
       >
-        <button
+        <Button
           onClick={handlePrev}
           disabled={currentIndex === 0}
           style={{
@@ -279,8 +280,8 @@ function ConstitutionQuizOriginal() {
           }}
         >
           上一题
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={handleNext}
           disabled={!canGoNext}
           style={{
@@ -299,11 +300,11 @@ function ConstitutionQuizOriginal() {
           }}
         >
           {isLastQuestion ? "查看结果" : "下一题"}
-        </button>
+        </Button>
       </div>
 
       <p style={{ textAlign: "center", fontSize: 12, color: "#999", padding: "16px 0" }}>
-        体质测评仅供学习参考，不作为诊断依据
+        问卷计分用于术语学习，不据此判断健康状态
       </p>
     </div>
   );

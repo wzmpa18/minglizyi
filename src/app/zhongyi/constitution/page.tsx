@@ -1,4 +1,5 @@
 "use client";
+import {InterfaceButton as Button,InterfaceLabel as Label,InterfaceOption as Option} from "@/components/InterfaceControls";
 
 import { SectionGate } from "@/components/SectionGate";
 import { useState, useEffect } from "react";
@@ -130,7 +131,7 @@ function ConstitutionHomeOriginal() {
 
       {/* 开始测评按钮 */}
       <div style={{ padding: "16px 12px 0" }}>
-        <button
+        <Button
           onClick={handleStart}
           style={{
             width: "100%",
@@ -154,7 +155,7 @@ function ConstitutionHomeOriginal() {
             <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
           </svg>
           开始测评
-        </button>
+        </Button>
       </div>
 
       {/* 九种体质概览 */}
@@ -201,7 +202,7 @@ function ConstitutionHomeOriginal() {
             }}
           >
             {history.slice(0, 5).map((item, i) => (
-              <button
+              <Button
                 key={item.id}
                 onClick={() => handleHistoryClick(item)}
                 style={{
@@ -247,7 +248,7 @@ function ConstitutionHomeOriginal() {
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="9 18 15 12 9 6" />
                 </svg>
-              </button>
+              </Button>
             ))}
           </div>
         </div>

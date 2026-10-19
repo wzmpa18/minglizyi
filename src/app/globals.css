@@ -590,3 +590,11 @@ body[data-screen-zoomed="true"] [data-swipe-back-root] { touch-action: pan-x pan
 /* Keep the existing server-injected company shortcut clear of full-screen tools. */
 body.nav-hide > a[href="https://www.yandao.vip/"][style*="position:fixed"],
 body:has([data-chart-fullscreen="true"]) > a[href="https://www.yandao.vip/"][style*="position:fixed"] { display:none !important; }
+
+/* Medical worksheets use light cards inside the dark medical navigation shell. */
+.medical-literature-study input::placeholder,
+.medical-literature-study textarea::placeholder { color:#625869 !important; opacity:1; }
+@media (max-width:767px) {
+  /* Company information remains in Profile; the injected floating shortcut blocks tool actions. */
+  body > a[href="https://www.yandao.vip/"][style*="position:fixed"] { display:none !important; }
+}

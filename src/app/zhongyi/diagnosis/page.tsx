@@ -1,4 +1,5 @@
 "use client";
+import {InterfaceButton as Button,InterfaceLabel as Label,InterfaceOption as Option} from "@/components/InterfaceControls";
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -707,11 +708,11 @@ const SCHOOLS: School[] = [
     note: "宗叶天士、吴鞠通温病学说，以卫气营血与三焦辨证为纲。善用银翘、桑菊、白虎、清营等方，注重清热透邪、养阴保津，忌辛温发汗伤阴。",
   },
   {
-    id: "nihaisha", name: "倪海厦方案", desc: "经方大家，重视阳气与六经",
+    id: "nihaisha", name: "倪海厦文献主题", desc: "经方大家，重视阳气与六经",
     note: "经方大家倪海厦推崇阳主阴从，临证重视阳气与水饮、瘀血。常用桂枝汤类调和营卫，四逆汤类温阳救逆，注重六经提纲与阴阳辨证，强调恢复人体自愈之力。",
   },
   {
-    id: "like", name: "李可方案", desc: "擅治急症，重用附子回阳",
+    id: "like", name: "李可文献主题", desc: "著作与医案的阅读主题，须核对出处",
     note: "李可老中医善治急危重症，创破格救心汤，重用附子、山茱萸回阳救逆。强调阳气为本，重视肾气与中气，治沉疴痼疾多从温阳破阴、通瘀化痰入手。",
   },
 ];
@@ -902,8 +903,9 @@ export default function DiagnosisPage() {
   const canNext = step === 1 ? selectedCount > 0 : true;
 
   return (
-    <div
+    <div className="medical-literature-study"
       style={{
+        color:"#29232f",
         maxWidth: "420px",
         margin: "0 auto",
         minHeight: "100vh",
@@ -923,7 +925,7 @@ export default function DiagnosisPage() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "10px" }}>
-          <button
+          <Button
             onClick={handleHeaderBack}
             aria-label="返回"
             style={{
@@ -943,7 +945,7 @@ export default function DiagnosisPage() {
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 18l-6-6 6-6" />
             </svg>
-          </button>
+          </Button>
           <div style={{ flex: 1 }}>
             <h1 style={{ fontSize: "17px", fontWeight: "bold", margin: 0 }}>辨证文献研习</h1>
             <p style={{ fontSize: "11px", opacity: 0.85, margin: 0 }}>
@@ -1020,7 +1022,7 @@ export default function DiagnosisPage() {
                   { id: "female", label: "女" },
                 ] as const
               ).map((g) => (
-                <button
+                <Button
                   key={g.id}
                   onClick={() => setGender(g.id)}
                   style={{
@@ -1038,7 +1040,7 @@ export default function DiagnosisPage() {
                   }}
                 >
                   {g.label}
-                </button>
+                </Button>
               ))}
             </div>
             {gender === "female" && (
@@ -1071,12 +1073,12 @@ export default function DiagnosisPage() {
               style={{ flex: 1, border: "none", outline: "none", fontSize: "13px", background: "transparent" }}
             />
             {search && (
-              <button
+              <Button
                 onClick={() => setSearch("")}
-                style={{ background: "none", border: "none", color: "#999", cursor: "pointer", padding: 0, fontSize: "14px" }}
+                style={{ background: "none", border: "none", color: "#5c5265", cursor: "pointer", padding: 0, fontSize: "14px" }}
               >
                 ✕
-              </button>
+              </Button>
             )}
           </div>
 
@@ -1094,18 +1096,18 @@ export default function DiagnosisPage() {
               已选 <b style={{ color: BRAND }}>{selectedCount}</b> 项症状
             </span>
             {selectedCount > 0 && (
-              <button
+              <Button
                 onClick={handleClearAll}
-                style={{ background: "none", border: "none", color: "#999", fontSize: "12px", cursor: "pointer" }}
+                style={{ background: "none", border: "none", color: "#5c5265", fontSize: "12px", cursor: "pointer" }}
               >
                 清空选择
-              </button>
+              </Button>
             )}
           </div>
 
           {/* 症状分类折叠列表 */}
           {filteredCategories.length === 0 && (
-            <div style={{ textAlign: "center", color: "#999", padding: "40px 0", fontSize: "13px" }}>
+            <div style={{ textAlign: "center", color: "#5c5265", padding: "40px 0", fontSize: "13px" }}>
               未找到相关症状
             </div>
           )}
@@ -1123,7 +1125,7 @@ export default function DiagnosisPage() {
                   overflow: "hidden",
                 }}
               >
-                <button
+                <Button
                   onClick={() => toggleCategory(cat.id)}
                   style={{
                     width: "100%",
@@ -1173,7 +1175,7 @@ export default function DiagnosisPage() {
                   >
                     <polyline points="6 9 12 15 18 9" />
                   </svg>
-                </button>
+                </Button>
                 {isOpen && (
                   <div
                     style={{
@@ -1186,7 +1188,7 @@ export default function DiagnosisPage() {
                     {cat.symptoms.map((sym) => {
                       const checked = selectedIds.has(sym.id);
                       return (
-                        <button
+                        <Button
                           key={sym.id}
                           onClick={() => toggleSymptom(sym.id)}
                           style={{
@@ -1223,7 +1225,7 @@ export default function DiagnosisPage() {
                             )}
                           </span>
                           {sym.name}
-                        </button>
+                        </Button>
                       );
                     })}
                   </div>
@@ -1245,14 +1247,14 @@ export default function DiagnosisPage() {
             <div style={{ fontSize: "14px", fontWeight: "bold", color: "#333", marginBottom: "4px" }}>
               🩹 疼痛性质（如有疼痛，可多选）
             </div>
-            <div style={{ fontSize: "11px", color: "#999", marginBottom: "10px" }}>
-              补充疼痛特征有助于精确辨别病机
+            <div style={{ fontSize: "11px", color: "#5c5265", marginBottom: "10px" }}>
+              选择疼痛术语用于文献检索，不据此推断个人病机
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
               {PAIN_NATURES.map((n) => {
                 const checked = painNatureIds.includes(n.id);
                 return (
-                  <button
+                  <Button
                     key={n.id}
                     onClick={() => togglePain(n.id)}
                     title={n.hint}
@@ -1267,12 +1269,12 @@ export default function DiagnosisPage() {
                     }}
                   >
                     {n.name}
-                  </button>
+                  </Button>
                 );
               })}
             </div>
             {painNatureIds.length > 0 && (
-              <div style={{ marginTop: "8px", fontSize: "11px", color: "#888", lineHeight: 1.6 }}>
+              <div style={{ marginTop: "8px", fontSize: "11px", color: "#5c5265", lineHeight: 1.6 }}>
                 {painNatureIds
                   .map((id) => PAIN_NATURES.find((n) => n.id === id)?.hint)
                   .filter(Boolean)
@@ -1305,12 +1307,12 @@ export default function DiagnosisPage() {
                     <div key={sel.symptomId}>
                       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
                         <span style={{ fontSize: "13px", fontWeight: "500", color: BRAND }}>{sym.name}</span>
-                        <button
+                        <Button
                           onClick={() => toggleSymptom(sel.symptomId)}
                           style={{ background: "none", border: "none", color: "#bbb", cursor: "pointer", fontSize: "12px", marginLeft: "auto" }}
                         >
                           移除
-                        </button>
+                        </Button>
                       </div>
                       <input
                         type="text"
@@ -1392,7 +1394,7 @@ export default function DiagnosisPage() {
               const checked = systemId === sys.id;
               const locked = !isPremium && sys.id !== "bagang";
               return (
-                <button
+                <Button
                   key={sys.id}
                   onClick={() => {
                     if (locked) {
@@ -1432,23 +1434,23 @@ export default function DiagnosisPage() {
                       {sys.name}
                       {locked && <LockIcon />}
                     </div>
-                    <div style={{ fontSize: "12px", color: "#888", marginTop: "3px", lineHeight: 1.5 }}>{sys.desc}</div>
+                    <div style={{ fontSize: "12px", color: "#5c5265", marginTop: "3px", lineHeight: 1.5 }}>{sys.desc}</div>
                   </div>
-                </button>
+                </Button>
               );
             })}
           </div>
 
           {/* 流派方案选择 */}
           <div style={{ fontSize: "15px", fontWeight: "bold", color: "#333", margin: "0 0 10px" }}>
-            ② 选择流派方案
+            ② 选择流派文献主题
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "20px" }}>
             {SCHOOLS.map((sch) => {
               const checked = schoolId === sch.id;
               const locked = !isPremium && sch.id !== "jingfang";
               return (
-                <button
+                <Button
                   key={sch.id}
                   onClick={() => {
                     if (locked) {
@@ -1488,14 +1490,14 @@ export default function DiagnosisPage() {
                       {sch.name}
                       {locked && <LockIcon />}
                     </div>
-                    <div style={{ fontSize: "12px", color: "#888", marginTop: "3px", lineHeight: 1.5 }}>{sch.desc}</div>
+                    <div style={{ fontSize: "12px", color: "#5c5265", marginTop: "3px", lineHeight: 1.5 }}>{sch.desc}</div>
                     {checked && (
                       <div style={{ fontSize: "11px", color: "#6a5a7a", marginTop: "6px", lineHeight: 1.6, fontStyle: "italic" }}>
                         {sch.note}
                       </div>
                     )}
                   </div>
-                </button>
+                </Button>
               );
             })}
           </div>
@@ -1518,12 +1520,12 @@ export default function DiagnosisPage() {
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
               <span style={{ fontSize: "14px", fontWeight: "bold", color: "#333" }}>已选症状摘要</span>
-              <button
+              <Button
                 onClick={() => setStep(1)}
                 style={{ background: "none", border: "none", color: BRAND, fontSize: "12px", cursor: "pointer" }}
               >
                 修改 ›
-              </button>
+              </Button>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
               {selected.map((sel) => {
@@ -1545,7 +1547,7 @@ export default function DiagnosisPage() {
               })}
             </div>
             {painNatureIds.length > 0 && (
-              <div style={{ marginTop: "10px", fontSize: "12px", color: "#888" }}>
+              <div style={{ marginTop: "10px", fontSize: "12px", color: "#5c5265" }}>
                 疼痛性质：
                 {painNatureIds
                   .map((id) => PAIN_NATURES.find((n) => n.id === id)?.name)
@@ -1601,7 +1603,7 @@ export default function DiagnosisPage() {
           </SectionCard>
           <SectionCard title="🔎 证候与资料目录 · 自主选读" accent="#2E7D32">
             <p style={{fontSize:12,lineHeight:1.8,color:'#555'}}>下面是既有编写者整理的学习目录，尚未完成逐条文献和医学专业核验。请自主选择主题，未按你的症状自动推荐；整理概述不冒充古籍原文或医家本人观点。</p>
-            <label style={{display:'block',fontSize:14,color:'#333'}}>选择学习主题<select aria-label="证候学习主题" value={studyPatternId} onChange={e=>setStudyPatternId(e.target.value)} style={{width:'100%',padding:12,marginTop:8,border:'1px solid #aaa',borderRadius:8,background:'white',color:'#222'}}><option value="">请选择，不默认个人证型</option>{PATTERNS.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+            <Label style={{display:'block',fontSize:14,color:'#333'}}>选择学习主题<select aria-label="证候学习主题" value={studyPatternId} onChange={e=>setStudyPatternId(e.target.value)} style={{width:'100%',padding:12,marginTop:8,border:'1px solid #aaa',borderRadius:8,background:'white',color:'#222'}}><Option value="">请选择，不默认个人证型</Option>{PATTERNS.map(p=><Option key={p.id} value={p.id}>{p.name}</Option>)}</select></Label>
             {studyPattern&&<div className="space-y-3 pt-3 text-sm text-stone-800">
               <h3 className="font-semibold">{studyPattern.name} · 术语概述</h3><p>目录分类：{studyPattern.organ} · {studyPattern.biaoLi}/{studyPattern.hanRe}/{studyPattern.xuShi} · {studyPattern.sixMeridian}经</p><p>{studyPattern.pathogenesis}</p>
               <Link className="block underline" href={`/zhongyi/classic/?q=${encodeURIComponent(studyPattern.name)}&scope=original`}>到完整古籍核对该术语</Link>
@@ -1652,7 +1654,7 @@ export default function DiagnosisPage() {
       >
         {step < 3 ? (
           <>
-            <button
+            <Button
               onClick={handlePrev}
               disabled={step === 1}
               style={{
@@ -1668,8 +1670,8 @@ export default function DiagnosisPage() {
               }}
             >
               上一步
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={handleNext}
               disabled={!canNext}
               style={{
@@ -1688,11 +1690,11 @@ export default function DiagnosisPage() {
               }}
             >
               {step === 1 ? "下一步：选择体系" : "查找原文"}
-            </button>
+            </Button>
           </>
         ) : (
           <>
-            <button
+            <Button
               onClick={handleRestart}
               style={{
                 flex: 1,
@@ -1707,8 +1709,8 @@ export default function DiagnosisPage() {
               }}
             >
               重新学习
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => router.push("/zhongyi")}
               style={{
                 flex: 1,
@@ -1724,7 +1726,7 @@ export default function DiagnosisPage() {
               }}
             >
               返回中医首页
-            </button>
+            </Button>
           </>
         )}
       </div>
@@ -1771,7 +1773,7 @@ function SectionCard({
 
 function EmptyHint({ text }: { text: string }) {
   return (
-    <div style={{ textAlign: "center", color: "#999", fontSize: "12px", padding: "16px 0", lineHeight: 1.6 }}>
+    <div style={{ textAlign: "center", color: "#5c5265", fontSize: "12px", padding: "16px 0", lineHeight: 1.6 }}>
       {text}
     </div>
   );

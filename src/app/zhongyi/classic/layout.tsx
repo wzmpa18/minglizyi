@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import {ZHONGYI_TOOLS} from "@/lib/toolNavData";
 
 export const metadata: Metadata = {
   title: "中医典籍——经典医书在线阅读｜言道国学",
@@ -7,21 +8,7 @@ export const metadata: Metadata = {
 };
 
 // TOOL_SEO_GROUP
-const ZHONGYI_TOOLS = [
-  { href: "/zhongyi/ai/", name: "AI中医问答", desc: "AI中医问答：向AI助手咨询中医基础概念、药材功效、方剂组成与典籍出处等问题，附学习建议，回答基于公开中医资料整理，仅供学习参考，不构成诊疗建议，身体不适请线下就医。" },
-  { href: "/zhongyi/bianzheng/", name: "辨证学习", desc: "中医辨证学习：输入症状进行辨证分析练习，对照八纲辨证、脏腑辨证与六经辨证思路，附常见证型辨析要点，基于《中医诊断学》体系整理，适合中医专业学生与自学者练习辨证思维。" },
-  { href: "/zhongyi/classic/", name: "中医典籍", desc: "中医典籍在线阅读：《黄帝内经》《伤寒论》《金匮要略》等经典医书原文查阅，支持搜索与分篇浏览，附典籍导读与阅读顺序建议，适合中医学习者研读原始文献。" },
-  { href: "/zhongyi/constitution/", name: "中医体质测评", desc: "中医体质测评：按标准体质量表自测体质倾向，输出九种体质（平和、气虚、阳虚、阴虚、痰湿、湿热、血瘀、气郁、特禀）结果与调理建议，附体质辨识知识讲解，适合了解中医体质学说。" },
-  { href: "/zhongyi/diagnosis/", name: "中医智能问诊", desc: "中医智能问诊：选择性别与症状后获得证候分析参考，含妇科专项症状，输出可能的证型与调理方向，附问诊说明，结果仅供学习参考，不能替代执业医师诊断。" },
-  { href: "/zhongyi/exam/", name: "医考题库", desc: "医考题库在线刷题：总题数、已练习、正确率与学习天数统计，按科目分章节练习，支持错题本与收藏，题目附答案解析，覆盖中医基础理论、中药学、方剂学、针灸学等科目，适合医考备考。" },
-  { href: "/zhongyi/formula/", name: "经典方剂库", desc: "经典方剂库：按方名或主治查询方剂的组成、剂量、功用与主治，附方歌与出处，古籍记载剂量为非标准化剂量，仅供学习参考，临床用药请遵医嘱。" },
-  { href: "/zhongyi/herb/", name: "中药库", desc: "中药库：按药名查询性味归经、功效主治与用法注意，含毒性药材标注，支持分类浏览，附中药学习记忆方法，内容基于《中药学》教材整理，仅供学习参考。" },
-  { href: "/zhongyi/meridian/", name: "经络穴位", desc: "经络穴位查询：十二正经与任督二脉的循行资料、穴名与归经查询，提供经络学习图、开放图示署名和来源链接；本库整理文字尚待逐条复核，适合文献学习与图文对照。" },
-  { href: "/zhongyi/shanghan/", name: "伤寒论辨证学习", desc: "伤寒论学习：输入症状对照六经辨证证型，附各方证的条文出处与鉴别要点，采用证型对照学习模式，基于《伤寒论》原文整理，适合经典方证学习与考研复习。" },
-  { href: "/zhongyi/wenzhen/", name: "文献研习", desc: "中医文献研习：自由输入仅在本机检索既有原文索引，可核对书名、完整章节和自然段；通用文献阅读辅助沿用原有AI额度，不将自述发送AI生成个人证型、方药或操作建议。" },
-  { href: "/zhongyi/yangsheng/", name: "中医养生", desc: "中医养生参考：按季节与主题整理养生功法、起居饮食与情志调摄建议，附八段锦、太极拳等传统功法简介，内容基于中医养生理论整理，适合日常养生参考学习。" },
-  { href: "/zhongyi/zhenggu/", name: "正骨专区", desc: "正骨专区：中华非遗正骨流派知识整理，含正骨手法原理、流派传承与知识点学习，内容仅供专业了解，正骨操作须由专业医师进行，请勿自行模仿。" },
-];
+
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
