@@ -128,8 +128,8 @@ const PaipanStore = registerPlugin<PaipanStoreNative>("PaipanStore");
 
 const RECORDS_KEY = "paipan_records_v1";
 const PROFILES_KEY = "mingzhu_profiles_v1";
-/** 单工具在 localStorage 中的保留上限（防爆 5MB 配额） */
-const WEB_MAX_PER_TOOL = 100;
+// Legacy records are never evicted on save. Quota failure preserves the old data;
+// users can explicitly copy selected charts into the encrypted LifeVault.
 
 function readLS<T>(key: string): T[] {
   if (typeof window === "undefined") return [];
@@ -245,17 +245,7 @@ export async function insertPaipanRecord(opts: SaveRecordOptions): Promise<numbe
     updatedAt: now,
   };
   rows.unshift(record);
-  // 每工具只保留最近 N 条
-  const kept: PaipanRecord[] = [];
-  const perTool = new Map<string, number>();
-  for (const r of rows) {
-    const n = (perTool.get(r.tool) || 0) + 1;
-    if (n <= WEB_MAX_PER_TOOL) {
-      perTool.set(r.tool, n);
-      kept.push(r);
-    }
-  }
-  writeLS(RECORDS_KEY, kept);
+  writeLS(RECORDS_KEY, rows);
   return record.id;
 }
 
@@ -291,8 +281,7 @@ export async function listPaipanRecords(tool?: string): Promise<PaipanRecord[]> 
   const rows = readLS<PaipanRecord>(RECORDS_KEY);
   return rows
     .filter((r) => !tool || r.tool === tool)
-    .sort((a, b) => b.createdAt - a.createdAt)
-    .slice(0, 200);
+    .sort((a, b) => b.createdAt - a.createdAt);
 }
 
 /** 读取单条排盘记录 */

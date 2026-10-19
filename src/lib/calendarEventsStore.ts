@@ -274,6 +274,7 @@ export function updateEvent(id: string, patch: Partial<CalendarEvent>): { succes
   if (idx < 0) return { success: false, error: "事件不存在" };
   const merged = { ...list[idx], ...patch, id: list[idx].id, userId: list[idx].userId, updatedAt: new Date().toISOString() };
   if (!validCivilDate(merged.year,merged.month,merged.day))return {success:false,error:"日期无效"};
+  if(merged.endDate&&(!/^\d{4}-\d{2}-\d{2}$/.test(merged.endDate)||!validCivilDate(...(merged.endDate.split("-").map(Number) as [number,number,number]))||merged.endDate<fmtDate(merged.year,merged.month,merged.day)))return {success:false,error:"结束/复核日期无效"};
   if(merged.eventTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(merged.eventTime))return {success:false,error:"事件钟点无效"};
   try{new Intl.DateTimeFormat("en",{timeZone:merged.timeZone||Intl.DateTimeFormat().resolvedOptions().timeZone});}catch{return {success:false,error:"事件时区无效"};}
   if (merged.dateMode === "lunar") {
@@ -425,6 +426,7 @@ function eventCivilToday(event:CalendarEvent){
 }
 export function getOccurrenceReminders(occurrence:EventOccurrence):{at:number;offsetMinutes:number;snoozed?:boolean}[]{
   const snooze=occurrence.event.snoozedReminder;
+  if(snooze&&occurrence.event.endDate){const parts=new Intl.DateTimeFormat("en-CA",{timeZone:occurrence.event.timeZone||Intl.DateTimeFormat().resolvedOptions().timeZone,year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(snooze.at);const d=Object.fromEntries(parts.map(p=>[p.type,p.value]));if(`${d.year}-${d.month}-${d.day}`>occurrence.event.endDate)return [];}
   if(snooze?.date===fmtDate(occurrence.y,occurrence.m,occurrence.d)&&Number.isFinite(snooze.at))return [{at:snooze.at,offsetMinutes:(occurrence.ts-snooze.at)/60000,snoozed:true}];
   return occurrence.event.reminders.map(r=>({at:reminderDueAt(occurrence.ts,r.offsetMinutes),offsetMinutes:r.offsetMinutes}));
 }

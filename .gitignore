@@ -100,3 +100,5 @@ work-verify/
 
 # Maintained RAM-only QA server; no downloaded bundles or extraction on C.
 !scripts/serve_verified_web_preview.py
+
+!scripts/prepare_life_ocr_models.py

@@ -1,14 +1,14 @@
 import {LifeSearchIndex,lifeSearchText,validateLifeEntry,type LifeEntry,type LifeAttachment,type LifeRevision} from "./lifeRecords";
 import {b64,unb64,randomBytes,importVaultKey,passwordKey,seal,unseal,sha256,type Sealed} from "./lifeVaultCrypto";
-export interface VaultStorage {commit:(rows:{key:string;value:unknown}[],check?:{key:string;etag:string|null})=>Promise<void>;read:<T>(key:string)=>Promise<T|undefined>;page:(prefix:string,after?:string,limit?:number)=>Promise<{key:string;value:unknown}[]>;}
+export interface VaultStorage {commit:(rows:{key:string;value:unknown}[],check?:{key:string;etag:string|null;deletePrefix?:string})=>Promise<void>;read:<T>(key:string)=>Promise<T|undefined>;page:(prefix:string,after?:string,limit?:number)=>Promise<{key:string;value:unknown}[]>;}
 export interface VaultHeader {schema:1;id:string;createdAt:string;salt:string;password:Sealed;recoverySalt:string;recovery:Sealed;}
 export interface VaultBackup {format:"YANDAO_PRIVATE_BACKUP";schema:1;kdf:"PBKDF2-SHA256-600000";salt:string;payload:Sealed;}
 const registry="life:registry:v1",headerKey=(id:string)=>`life:${id}:header`,prefix=(id:string)=>`life:${id}:data:`;
 const aad=(id:string,key:string)=>`life-v1|${id}|${key}`;
 export class LifeVault {
  readonly storage:VaultStorage;readonly header:VaultHeader;
- readonly index=new LifeSearchIndex();readonly entries=new Map<string,LifeEntry>();
- private key:CryptoKey|null=null;private root:Uint8Array|null=null;private chain=Promise.resolve();
+ index=new LifeSearchIndex();readonly entries=new Map<string,LifeEntry>();
+ private key:CryptoKey|null=null;private root:Uint8Array|null=null;private chain=Promise.resolve();private lockEpoch=0;
  private constructor(storage:VaultStorage,header:VaultHeader){this.storage=storage;this.header=header;}
  static async list(storage:VaultStorage){return await storage.read<{id:string;createdAt:string}[]>(registry)||[];}
  private static async register(storage:VaultStorage,h:VaultHeader){
@@ -27,25 +27,43 @@ export class LifeVault {
  }
  get id(){return this.header.id;}
  get unlocked(){return !!this.key;}
- lock(){this.key=null;this.root?.fill(0);this.root=null;this.entries.clear();this.index.clear();}
+ async protectUnsavedDraft(entry:LifeEntry){validateLifeEntry(entry,this.id);return seal(this.active(),entry,aad(this.id,"emergency-draft"));}
+ async recoverUnsavedDraft(value:Sealed){const entry=await unseal<LifeEntry>(this.active(),value,aad(this.id,"emergency-draft"));validateLifeEntry(entry,this.id);return entry;}
+ lock(){this.lockEpoch++;this.key=null;this.root?.fill(0);this.root=null;this.entries.clear();this.index.clear();}
+ private checkEpoch(epoch:number){if(epoch!==this.lockEpoch)throw Error("档案已锁定，本次操作结果未挂载");}
  private active(){if(!this.key)throw Error("档案已锁定，请用独立档案密码解锁");return this.key;}
  private serial<T>(run:()=>Promise<T>):Promise<T>{const task=this.chain.then(run);this.chain=task.then(()=>{},()=>{});return task;}
- private async read<T>(key:string){const row=await this.storage.read<Sealed>(prefix(this.id)+key);return row?unseal<T>(this.active(),row,aad(this.id,key)):undefined;}
+ private async read<T>(key:string){const epoch=this.lockEpoch,row=await this.storage.read<Sealed>(prefix(this.id)+key);this.checkEpoch(epoch);const value=row?await unseal<T>(this.active(),row,aad(this.id,key)):undefined;this.checkEpoch(epoch);return value;}
  private async rows(){const all:{key:string;value:unknown}[]=[];let after="";for(;;){const page=await this.storage.page(prefix(this.id),after,100);all.push(...page);if(page.length<100)break;after=page.at(-1)!.key;}return all;}
- async reload(){this.active();this.entries.clear();this.index.clear();let after="";for(;;){const page=await this.storage.page(prefix(this.id)+"entry:",after,100);for(const r of page){const key=r.key.slice(prefix(this.id).length),e=await unseal<LifeEntry>(this.active(),r.value as Sealed,aad(this.id,key));validateLifeEntry(e,this.id);this.entries.set(e.id,e);if(!e.deletedAt)this.index.put(e.id,lifeSearchText(e));}if(page.length<100)break;after=page.at(-1)!.key;}}
+ async reload(onProgress?:(count:number)=>void){
+  this.active();const epoch=this.lockEpoch,entries=new Map<string,LifeEntry>(),index=new LifeSearchIndex();let after="";
+  for(;;){this.checkEpoch(epoch);const page=await this.storage.page(prefix(this.id)+"entry:",after,100);this.checkEpoch(epoch);
+   const values=await Promise.all(page.map(async r=>{const key=r.key.slice(prefix(this.id).length);const value=await unseal<LifeEntry>(this.active(),r.value as Sealed,aad(this.id,key));validateLifeEntry(value,this.id);return value;}));this.checkEpoch(epoch);
+   for(const e of values){entries.set(e.id,e);if(!e.deletedAt)index.put(e.id,lifeSearchText(e));}onProgress?.(entries.size);
+   if(page.length<100)break;after=page.at(-1)!.key;await new Promise<void>(resolve=>setTimeout(resolve,0));
+  }
+  this.checkEpoch(epoch);this.entries.clear();for(const [id,e] of entries)this.entries.set(id,e);this.index=index;
+ }
+ async deleteLocalVault(){return this.serial(async()=>{
+  this.active();const marker=await this.storage.read<{etag:string}>(registry+":generation"),list=await LifeVault.list(this.storage);
+  await this.storage.commit([{key:registry,value:list.filter(v=>v.id!==this.id)},{key:registry+":generation",value:{etag:crypto.randomUUID()}}],{key:registry+":generation",etag:marker?.etag??null,deletePrefix:`life:${this.id}:`});this.lock();
+ });}
  newEntry():LifeEntry {this.active();const now=new Date().toISOString();return {schema:1,id:crypto.randomUUID(),ownerProfileId:this.id,dataClass:"PRIVATE_LOCAL",consentScope:"LOCAL_ONLY",title:"",text:"",occurredAt:now,createdAt:now,updatedAt:now,categories:["生活随记"],tags:[],people:[],sourceRefs:[{kind:"SELF"}],attachments:[],revision:0,draft:true};}
  async save(input:LifeEntry,keepVersion=true){return this.serial(async()=>{
-  this.active();validateLifeEntry(input,this.id);const stored=await this.storage.read<Sealed>(prefix(this.id)+"entry:"+input.id);const previous=stored?await unseal<LifeEntry>(this.active(),stored,aad(this.id,"entry:"+input.id)):undefined;
+  const epoch=this.lockEpoch;this.active();validateLifeEntry(input,this.id);const stored=await this.storage.read<Sealed>(prefix(this.id)+"entry:"+input.id);const previous=stored?await unseal<LifeEntry>(this.active(),stored,aad(this.id,"entry:"+input.id)):undefined;
   if(previous&&previous.revision!==input.revision)throw Error("此记录已被另一页面修改；请保留当前草稿，刷新后比较，未覆盖原记录");
   const entry:LifeEntry={...structuredClone(input),updatedAt:new Date().toISOString(),revision:(previous?.revision||0)+1};
-  const rows:{key:string;value:unknown}[]=[];
-  if(previous&&keepVersion){const k=`revision:${entry.id}:${String(previous.revision).padStart(12,"0")}`;rows.push({key:prefix(this.id)+k,value:await seal(this.active(),{entry:previous,savedAt:entry.updatedAt} satisfies LifeRevision,aad(this.id,k))});}
+  this.checkEpoch(epoch);const rows:{key:string;value:unknown}[]=[];
+  const confirmedBefore=!!previous?.health?.confirmedAt||previous?.attachments.some(a=>a.ocr?.blocks.some(b=>b.confirmedAt));
+  if(previous&&(keepVersion||previous.draft===false||confirmedBefore)){const k=`revision:${entry.id}:${String(previous.revision).padStart(12,"0")}`;rows.push({key:prefix(this.id)+k,value:await seal(this.active(),{entry:previous,savedAt:entry.updatedAt} satisfies LifeRevision,aad(this.id,k))});}
   rows.push({key:prefix(this.id)+"generation",value:{etag:crypto.randomUUID()}});
   const k="entry:"+entry.id;rows.push({key:prefix(this.id)+k,value:await seal(this.active(),entry,aad(this.id,k))});
-  await this.storage.commit(rows,{key:prefix(this.id)+k,etag:stored?.etag??null});const verified=await this.read<LifeEntry>(k);if(verified?.revision!==entry.revision)throw Error("未能核实保存，请保留当前输入");
-  this.entries.set(entry.id,entry);if(entry.deletedAt)this.index.remove(entry.id);else this.index.put(entry.id,lifeSearchText(entry));return structuredClone(entry);
+  this.checkEpoch(epoch);await this.storage.commit(rows,{key:prefix(this.id)+k,etag:stored?.etag??null});this.checkEpoch(epoch);const verified=await this.read<LifeEntry>(k);if(verified?.revision!==entry.revision)throw Error("未能核实保存，请保留当前输入");
+  this.checkEpoch(epoch);this.entries.set(entry.id,entry);if(entry.deletedAt)this.index.remove(entry.id);else this.index.put(entry.id,lifeSearchText(entry));return structuredClone(entry);
  });}
- async versions(id:string){const page=await this.storage.page(prefix(this.id)+`revision:${id}:`,"",1000);return Promise.all(page.map(r=>unseal<LifeRevision>(this.active(),r.value as Sealed,aad(this.id,r.key.slice(prefix(this.id).length)))));}
+ async versions(id:string){const all:LifeRevision[]=[];let after="";const epoch=this.lockEpoch;
+  for(;;){this.checkEpoch(epoch);const page=await this.storage.page(prefix(this.id)+`revision:${id}:`,after,100);this.checkEpoch(epoch);const values=await Promise.all(page.map(r=>unseal<LifeRevision>(this.active(),r.value as Sealed,aad(this.id,r.key.slice(prefix(this.id).length)))));this.checkEpoch(epoch);all.push(...values);if(page.length<100)break;after=page.at(-1)!.key;await new Promise<void>(resolve=>setTimeout(resolve,0));}return all;
+ }
  async addAttachment(file:File):Promise<LifeAttachment>{return this.serial(async()=>{
   this.active();if(!["image/jpeg","image/png","image/webp","application/pdf","text/plain"].includes(file.type))throw Error("仅支持JPEG/PNG/WebP、PDF和纯文字；不会执行HTML、SVG或宏");
   // Explicit capability bound, never truncate or silently compress original files.

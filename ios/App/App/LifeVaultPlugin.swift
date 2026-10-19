@@ -9,7 +9,7 @@ import ImageIO
 public class LifeVaultPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPickerDelegate {
  public let identifier="LifeVaultPlugin"
  public let jsName="LifeVault"
- public let pluginMethods:[CAPPluginMethod]=[CAPPluginMethod(name:"commit",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"page",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"read",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"ocr",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"saveDocument",returnType:CAPPluginReturnPromise)]
+ public let pluginMethods:[CAPPluginMethod]=[CAPPluginMethod(name:"commit",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"page",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"read",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"ocr",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"renderPdf",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"saveDocument",returnType:CAPPluginReturnPromise)]
  private let queue=DispatchQueue(label:"vip.yandao.private-vault")
  private var db:OpaquePointer?
  private var exportCall:CAPPluginCall?
@@ -29,10 +29,11 @@ public class LifeVaultPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPickerDeleg
  private func valid(_ key:String)->Bool{key.range(of:"^life:[a-zA-Z0-9:_-]{1,240}$",options:.regularExpression) != nil}
  private func bind(_ s:OpaquePointer,_ i:Int32,_ text:String){sqlite3_bind_text(s,i,text,-1,transient)}
  @objc func commit(_ call:CAPPluginCall){queue.async{do{
-  let d=try self.database();guard let rows=call.getArray("rows") as? [[String:Any]],rows.count<=200 else{throw NSError(domain:"Vault",code:3)}
+  let d=try self.database();guard let rows=call.getArray("rows") as? [[String:Any]],rows.count<=20000 else{throw NSError(domain:"Vault",code:3)}
   guard sqlite3_exec(d,"BEGIN IMMEDIATE",nil,nil,nil)==SQLITE_OK else{throw NSError(domain:"Vault",code:4)}
-  do{if let expected=call.getObject("check"),let key=expected["key"] as? String {guard self.valid(key) else{throw NSError(domain:"Vault",code:14)};let current=try self.query("SELECT k,v FROM vault_items WHERE k=?",[key]).first?["value"] as? [String:Any];guard (current?["etag"] as? String)==(expected["etag"] as? String) else{throw NSError(domain:"Vault",code:15)}}
+  do{if let expected=call.getObject("check"),let key=expected["key"] as? String {guard self.valid(key) else{throw NSError(domain:"Vault",code:14)};let current=try self.query("SELECT k,v FROM vault_items WHERE k=?",[key]).first?["value"] as? [String:Any];guard (current?["etag"] as? String)==(expected["etag"] as? String) else{throw NSError(domain:"Vault",code:15)};if let prefix=expected["deletePrefix"] as? String{guard prefix.range(of:"^life:[a-zA-Z0-9_-]{8,80}:$",options:.regularExpression) != nil else{throw NSError(domain:"Vault",code:16)};var deletion:OpaquePointer?;guard sqlite3_prepare_v2(d,"DELETE FROM vault_items WHERE k>=? AND k<?",-1,&deletion,nil)==SQLITE_OK,let statement=deletion else{throw NSError(domain:"Vault",code:17)};self.bind(statement,1,prefix);self.bind(statement,2,prefix+"\u{ffff}");let code=sqlite3_step(statement);sqlite3_finalize(statement);guard code==SQLITE_DONE else{throw NSError(domain:"Vault",code:18)}}}
    for row in rows{guard let key=row["key"] as? String,self.valid(key),let value=row["value"] else{throw NSError(domain:"Vault",code:5)}
+    if value is NSNull {var deletion:OpaquePointer?;guard sqlite3_prepare_v2(d,"DELETE FROM vault_items WHERE k=?",-1,&deletion,nil)==SQLITE_OK,let statement=deletion else{throw NSError(domain:"Vault",code:19)};self.bind(statement,1,key);let code=sqlite3_step(statement);sqlite3_finalize(statement);guard code==SQLITE_DONE else{throw NSError(domain:"Vault",code:20)};continue}
     let data=try JSONSerialization.data(withJSONObject:value,options:[.fragmentsAllowed,.sortedKeys]);guard data.count<=2000000,let text=String(data:data,encoding:.utf8) else{throw NSError(domain:"Vault",code:6)}
     var stmt:OpaquePointer?;guard sqlite3_prepare_v2(d,"INSERT OR REPLACE INTO vault_items(k,v) VALUES (?,?)",-1,&stmt,nil)==SQLITE_OK,let s=stmt else{throw NSError(domain:"Vault",code:7)}
     self.bind(s,1,key);self.bind(s,2,text);let status=sqlite3_step(s);sqlite3_finalize(s);guard status==SQLITE_DONE else{throw NSError(domain:"Vault",code:8)}
@@ -56,11 +57,20 @@ public class LifeVaultPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPickerDeleg
   let blocks:[[String:Any]]=(request.results ?? []).enumerated().compactMap{index,observation in guard let text=observation.topCandidates(1).first else{return nil};let b=observation.boundingBox;return ["id":"line-\(index)","page":1,"text":text.string,"confidence":text.confidence,"box":[b.minX,1-b.maxY,b.width,b.height]]}
   call.resolve(["blocks":blocks,"model":"Apple Vision VNRecognizeTextRequest revision \(request.revision)","confirmed":false])
  }catch{call.reject("本机识字失败，请保留原件手动核对；未调用云端")}}}
+ @objc func renderPdf(_ call:CAPPluginCall){DispatchQueue.main.async{
+  guard let text=call.getString("text"),text.count<=2000000 else{call.reject("单次PDF上限200万字符，请分批导出");return}
+  let storage=NSTextStorage(string:text,attributes:[.font:UIFont.systemFont(ofSize:12),.foregroundColor:UIColor.black]);let layout=NSLayoutManager();storage.addLayoutManager(layout);let bounds=CGRect(x:0,y:0,width:595,height:842),area=CGRect(x:40,y:40,width:515,height:762);var ranges:[NSRange]=[]
+  repeat{let container=NSTextContainer(size:area.size);container.lineFragmentPadding=0;layout.addTextContainer(container);let range=layout.glyphRange(for:container);ranges.append(range);if NSMaxRange(range)>=layout.numberOfGlyphs{break};if range.length==0||ranges.count>10000{call.reject("PDF布局未完成，请分批导出；原件保留");return}}while true
+  let data=UIGraphicsPDFRenderer(bounds:bounds).pdfData{context in for range in ranges{context.beginPage();layout.drawBackground(forGlyphRange:range,at:area.origin);layout.drawGlyphs(forGlyphRange:range,at:area.origin)}}
+  call.resolve(["base64":data.base64EncodedString()])
+ }}
  @objc func saveDocument(_ call:CAPPluginCall){DispatchQueue.main.async{do{
-  guard self.exportCall==nil,let encoded=call.getString("base64"),let data=Data(base64Encoded:encoded) else{throw NSError(domain:"Export",code:1)}
+  guard self.exportCall==nil else{call.reject("已有系统保存窗口，请先完成或取消");return}
+  guard let presenter=self.bridge?.viewController else{call.reject("文件保存界面不可用");return}
+  guard let encoded=call.getString("base64"),let data=Data(base64Encoded:encoded) else{throw NSError(domain:"Export",code:1)}
   let name=(call.getString("name") ?? "言道资料.bin").unicodeScalars.map { scalar in CharacterSet.controlCharacters.contains(scalar) || scalar.value == 47 || scalar.value == 92 ? "_" : String(scalar) }.joined()
   let dir=FileManager.default.temporaryDirectory.appendingPathComponent("life-export-"+UUID().uuidString,isDirectory:true);try FileManager.default.createDirectory(at:dir,withIntermediateDirectories:true,attributes:[.protectionKey:FileProtectionType.complete]);let file=dir.appendingPathComponent(name);try data.write(to:file,options:[.atomic,.completeFileProtection]);self.exportURL=file;self.exportCall=call
-  let picker=UIDocumentPickerViewController(forExporting:[file],asCopy:true);picker.delegate=self;self.bridge?.viewController?.present(picker,animated:true)
+  let picker=UIDocumentPickerViewController(forExporting:[file],asCopy:true);picker.delegate=self;presenter.present(picker,animated:true)
  }catch{self.clearExport();call.reject("无法打开系统文件保存窗口")}}}
  private func clearExport(){if let file=exportURL{try? FileManager.default.removeItem(at:file);try? FileManager.default.removeItem(at:file.deletingLastPathComponent())};exportURL=nil;exportCall=nil}
  public func documentPicker(_ controller:UIDocumentPickerViewController,didPickDocumentsAt urls:[URL]){let call=exportCall;clearExport();call?.resolve(["saved":!urls.isEmpty])}

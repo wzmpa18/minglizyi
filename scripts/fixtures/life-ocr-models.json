@@ -1,0 +1,14 @@
+{
+  "engine": "Tesseract4Android 4.9.0 / Tesseract 5.5.1",
+  "engineSource": "https://github.com/adaptech-cz/Tesseract4Android/tree/4.9.0",
+  "license": "Apache-2.0; bundled native dependency notices are retained",
+  "aar": {"url":"https://jitpack.io/cz/adaptech/tesseract4android/tesseract4android/4.9.0/tesseract4android-4.9.0.aar","bytes":12848454,"sha256":"bce5d6413a1a5ae3d7240033fbbc851ba3217d0a08d9769400e17a077f42cb2a"},
+  "modelSource": "https://github.com/tesseract-ocr/tessdata_fast/tree/87416418657359cb625c412a48b6e1d6d41c29bd",
+  "modelRevision": "87416418657359cb625c412a48b6e1d6d41c29bd",
+  "models": [
+    {"name":"chi_sim","bytes":2469156,"sha256":"a5fcb6f0db1e1d6d8522f39db4e848f05984669172e584e8d76b6b3141e1f730"},
+    {"name":"chi_tra","bytes":2366642,"sha256":"529c5b5797d64b126065cd55f2bb4c7fd7b15790798091b1ff259941a829330b"},
+    {"name":"eng","bytes":4113088,"sha256":"7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2"}
+  ],
+  "runtime": "Bundled, no GMS, network client, telemetry or platform OCR proxy. Printed text is a draft; handwriting and medical fields require original-image verification."
+}

@@ -93,11 +93,12 @@ function sk(zone: StorageZone, key: string) { return `${zone}:${key}`; }
 
 /** Durable private writes resolve on transaction completion, never on request success.
  * Vault ciphertext belongs to USER_PRIVATE_DATA and is excluded from every cache collector. */
-export async function privateAtomic(rows: {key:string; value:unknown}[],check?:{key:string;etag:string|null}): Promise<void> {
+export async function privateAtomic(rows: {key:string; value:unknown}[],check?:{key:string;etag:string|null;deletePrefix?:string}): Promise<void> {
   const db=await openDb();
   await new Promise<void>((resolve,reject)=>{
     const t=db.transaction([STORE_DATA,STORE_META],"readwrite"), now=Date.now();
-    const write=()=>{for(const row of rows){
+    const write=()=>{if(check?.deletePrefix){if(!/^life:[\w-]{8,80}:$/.test(check.deletePrefix)){t.abort();return;}const start=sk("USER_PRIVATE_DATA",check.deletePrefix),q=t.objectStore(STORE_DATA).openCursor(IDBKeyRange.bound(start,start+"\uffff"));q.onsuccess=()=>{const c=q.result;if(c){t.objectStore(STORE_META).delete(c.key);c.delete();c.continue();}};}
+    for(const row of rows){if(row.value===null){t.objectStore(STORE_DATA).delete(sk("USER_PRIVATE_DATA",row.key));t.objectStore(STORE_META).delete(sk("USER_PRIVATE_DATA",row.key));continue;}
       t.objectStore(STORE_DATA).put(row.value,sk("USER_PRIVATE_DATA",row.key));
       t.objectStore(STORE_META).put({zone:"USER_PRIVATE_DATA",key:row.key,size:sizeOf(row.value),createdAt:now,lastAccessedAt:now,protectedFromAutoClean:true},sk("USER_PRIVATE_DATA",row.key));
     }};

@@ -43,12 +43,22 @@ jobs:
             xcrun simctl bootstatus "$MODEL" -b
             xcrun simctl status_bar "$MODEL" override --time 09:41 --dataNetwork wifi --wifiMode active --wifiBars 3 --batteryState charged --batteryLevel 100
             set +e
-            xcodebuild test -project ios/App/App.xcodeproj -scheme GuoxueScreenshots -configuration Debug -destination "id=$MODEL" -derivedDataPath "$RUNNER_TEMP/guoxue-simulator-build" -resultBundlePath "$RUNNER_TEMP/$kind.xcresult" CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO
+            xcodebuild test -project ios/App/App.xcodeproj -scheme GuoxueScreenshots -configuration Debug -destination "id=$MODEL" -parallel-testing-enabled NO -derivedDataPath "$RUNNER_TEMP/guoxue-simulator-build" -resultBundlePath "$RUNNER_TEMP/$kind.xcresult" CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO
             TEST_STATUS=$?
             set -e
             xcrun xcresulttool export attachments --path "$RUNNER_TEMP/$kind.xcresult" --output-path "$RUNNER_TEMP/guoxue-screen-proof/$kind"
             if [ "$TEST_STATUS" -ne 0 ]; then exit "$TEST_STATUS"; fi
             GROUP=$(xcrun simctl get_app_container "$MODEL" com.yandaoguoxue.app group.com.yandaoguoxue.calendar)
+            PRIVATE_CONTAINER=$(xcrun simctl get_app_container "$MODEL" com.yandaoguoxue.app data)
+            python3 - "$PRIVATE_CONTAINER" "$RUNNER_TEMP/guoxue-screen-proof/${kind}_private-vault-proof.json" <<'PY'
+          import json,sys,pathlib,sqlite3
+          root=pathlib.Path(sys.argv[1]);p=root/'Library/Application Support/PrivateLifeVault/vault-v1.sqlite'
+          db=sqlite3.connect(f'file:{p}?mode=ro',uri=True);rows=db.execute('SELECT k,v FROM vault_items').fetchall();db.close()
+          assert any(':entry:' in k for k,v in rows)
+          assert all('QA synthetic local record' not in v and 'Synthetic private note' not in v for k,v in rows)
+          assert b'Synthetic private note' not in p.read_bytes()
+          json.dump({'nativeSqliteWritten':True,'rows':len(rows),'syntheticPlaintextAbsent':True,'physicalDevice':False},open(sys.argv[2],'w'))
+          PY
             python3 -c "import json,sys,pathlib; p=pathlib.Path(sys.argv[1])/'calendar-v1.json'; data=json.loads(p.read_text()); assert data['snapshot']['schemaVersion']==1 and len(data['snapshot']['entries'])>1; assert all(set(x)=={'at'} for x in data['agenda']); json.dump({'sharedContainerWritten':True,'snapshotEntries':len(data['snapshot']['entries']),'privateAgendaItems':len(data['agenda']),'reminders':len(data['reminders'])},open(sys.argv[2],'w'))" "$GROUP" "$RUNNER_TEMP/guoxue-screen-proof/${kind}_shared-container-proof.json"
             xcrun simctl shutdown "$MODEL"
           done

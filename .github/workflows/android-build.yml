@@ -64,6 +64,9 @@ jobs:
           cp -r out/. www/
           echo "www 内置资源: $(find www -type f | wc -l) files, $(du -sh www | cut -f1)"
 
+      - name: Verify and bundle pinned offline Chinese OCR model and native library
+        run: python3 scripts/prepare_life_ocr_models.py
+
       - name: Sync Capacitor Android
         run: |
           node scripts/write-native-marker.js

@@ -8,8 +8,34 @@ final class GuoxueStudyScreenshots: XCTestCase {
     private func tapVisible(_ query:XCUIElementQuery,_ name:String,_ app:XCUIApplication){
         let element=query.matching(NSPredicate(format:"label CONTAINS %@",name)).firstMatch
         XCTAssertTrue(element.waitForExistence(timeout:30),"Missing UI: "+name)
-        for _ in 0..<12 {if element.isHittable {element.tap();return};app.swipeUp()}
+        for _ in 0..<16 {if element.isHittable {element.tap();return};if element.frame.minY<70{app.swipeDown()}else{app.swipeUp()}}
         XCTFail("UI not reachable: "+name)
+    }
+    func testLifePrivateNativeStorage() throws {
+        continueAfterFailure=false
+        let app=XCUIApplication();app.launchArguments += ["-AppleLanguages","(zh-Hans)","-AppleLocale","zh_CN"];app.launch()
+        let consent=app.buttons["同意并继续"];if consent.waitForExistence(timeout:8)&&consent.isHittable{consent.tap()}
+        tapVisible(app.links,"我的",app);tapVisible(app.links,"人生记录",app)
+        let password=app.secureTextFields["档案密码"].firstMatch
+        XCTAssertTrue(password.waitForExistence(timeout:30),"Private local mode must work without social login")
+        password.tap();password.typeText("qa-native-vault-20261019")
+        tapVisible(app.buttons,"新建独立档案",app)
+        let acknowledged=app.buttons["已自行妥善保存"]
+        XCTAssertTrue(acknowledged.waitForExistence(timeout:30),"Real WebCrypto and native SQLite must create an encrypted vault")
+        acknowledged.tap();tapVisible(app.buttons,"新增记录",app)
+        let title=app.textFields["标题"].firstMatch
+        XCTAssertTrue(title.waitForExistence(timeout:15));title.tap();title.typeText("QA synthetic local record")
+        let body=app.textViews.matching(NSPredicate(format:"label BEGINSWITH %@","正文")).firstMatch
+        XCTAssertTrue(body.exists);body.tap();let sample=String(repeating:"Synthetic private note, not a real patient. ",count:24);body.typeText(sample)
+        tapVisible(app.buttons,"保存记录",app)
+        XCTAssertTrue(app.staticTexts["已保存到本机档案，未上传"].waitForExistence(timeout:30))
+        tapVisible(app.buttons,"关闭编辑",app)
+        shot("06_真实应用_人生记录_合成测试数据",app)
+        tapVisible(app.buttons,"锁定",app)
+        XCTAssertTrue(password.waitForExistence(timeout:10));password.tap();password.typeText("qa-native-vault-20261019");tapVisible(app.buttons,"解锁档案",app)
+        let record=app.buttons.matching(NSPredicate(format:"label CONTAINS %@","QA synthetic local record")).firstMatch
+        XCTAssertTrue(record.waitForExistence(timeout:30),"Lock and reopen must retain the local original")
+        record.tap();XCTAssertTrue(body.waitForExistence(timeout:15));XCTAssertEqual(body.value as? String,sample,"Private notes must not be truncated at the public 500-character limit")
     }
     private func captureProduct(_ name:String,_ key:String,_ app:XCUIApplication){
         let title=app.staticTexts[name].firstMatch
