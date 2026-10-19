@@ -2,6 +2,7 @@
 
 import {prepareChartTime,baziSectForOptions} from "@/lib/chartTimeInput";
 import { InterfaceButton } from "@/components/InterfaceControls";
+import {ToolDiscussionButton} from "@/components/ToolStudyDiscussion";
 import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { chartHandoffFromRecord, consumeChartHandoff, writeChartHandoff } from "@/lib/chartHandoff";
 import { useToolMatrix } from "@/lib/sectionGate";
@@ -2450,12 +2451,14 @@ export default function ZiweiPage() {
         </div>
       )}
 
+      {!result&&!showForm&&<div className="m-3 rounded-lg border bg-white p-3"><ToolDiscussionButton toolId="ziwei" className="w-full py-2 font-semibold text-purple-900"/></div>}
       {/* v20.1: 登录提示弹窗 */}
       <LoginPromptModal show={showLoginPrompt} onClose={() => setShowLoginPrompt(false)} />
       {result && !showForm && !interpretPanel && !showLoginPrompt && <nav aria-label="专业紫微盘快捷功能" style={{ position: "fixed", bottom: 0, left: 0, right: 0, margin: "0 auto", maxWidth: 720, zIndex: 60, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 5, padding: "7px 8px", paddingBottom: "calc(7px + env(safe-area-inset-bottom, 0px))", background: "#dedee0", borderTop: "1px solid #bbb" }}>
         <InterfaceButton type="button" onClick={() => openProfessionalPalaceDetails(focusedPalace ?? ZHI_NAMES.indexOf(result.earthlyBranchOfSoulPalace))} style={{ padding: "6px 7px", background: "#f5f5fa", color: "#087dff", borderRadius: 4, fontSize: 14 }}>宫位资料</InterfaceButton>
         <InterfaceButton type="button" onClick={() => setProfessionalLayout(v=>!v)} style={{padding:"6px 7px",fontSize:12,color:"#333"}}>{professionalLayout ? "恢复原盘" : "另一盘式"}</InterfaceButton>
         <InterfaceButton type="button" onClick={() => setShowForm(true)} style={{ padding: "6px 7px", background: "#f5f5fa", color: "#087dff", borderRadius: 4, fontSize: 14 }}>快捷排盘</InterfaceButton>
+        <ToolDiscussionButton toolId="ziwei" style={{padding:"6px 7px",background:"#f5f5fa",color:"#6b21a8",borderRadius:4,fontSize:14}}/>
       </nav>}
       </div>
     </div>
