@@ -1,6 +1,7 @@
 'use strict';
 const crypto = require('node:crypto');
 const { validateStudyText } = require('./studyCommentPolicy');
+const {localFlags,capability}=require('./studyCommentSafety');
 
 function createStudyCommentStore(db, targets, now = () => Date.now()) {
   db.exec(`CREATE TABLE IF NOT EXISTS study_comments (
@@ -14,6 +15,7 @@ function createStudyCommentStore(db, targets, now = () => Date.now()) {
     CREATE TABLE IF NOT EXISTS study_comment_reports (id INTEGER PRIMARY KEY, comment_id INTEGER, user_id TEXT,
       reason TEXT, created_ms INTEGER, status TEXT DEFAULT 'PENDING', UNIQUE(comment_id,user_id));
     CREATE TABLE IF NOT EXISTS study_comment_mutes (user_id TEXT PRIMARY KEY, until_ms INTEGER NOT NULL, reason TEXT);
+    CREATE TABLE IF NOT EXISTS study_comment_safety(comment_id INTEGER PRIMARY KEY,content_hash TEXT NOT NULL,decision TEXT NOT NULL,provider TEXT NOT NULL,reason TEXT NOT NULL,flags_json TEXT NOT NULL,request_id TEXT NOT NULL,checked_ms INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS study_comment_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS study_comment_audit (id INTEGER PRIMARY KEY, actor TEXT, action TEXT,
       target TEXT, note TEXT, created_ms INTEGER);
@@ -67,7 +69,7 @@ function createStudyCommentStore(db, targets, now = () => Date.now()) {
       }
       const result=db.prepare("INSERT INTO study_comments(target_id,user_id,nickname,content,parent_id,status,request_id,content_hash,created_ms) VALUES (?,?,?,?,?,'PENDING',?,?,?)").run(id,me,String(nickname||'学习者').slice(0,40),validation.text,parentId,body.requestId,hash,stamp);
       audit(me,'SUBMIT',result.lastInsertRowid,'待人工审核，不自动放行');
-      db.exec('COMMIT'); return { success:true,pendingReview:true,status:'PENDING',id:String(result.lastInsertRowid),message:'已提交审核，通过后公开展示' };
+      db.exec('COMMIT'); return { success:true,pendingReview:true,status:'PENDING',id:String(result.lastInsertRowid),message:'已提交，可在“我的”查看处理状态' };
     } catch(error) { db.exec('ROLLBACK'); throw error; }
   }
   function remove(id,me) {
@@ -91,10 +93,32 @@ function createStudyCommentStore(db, targets, now = () => Date.now()) {
     else db.prepare('INSERT OR IGNORE INTO study_comment_blocks VALUES (?,?)').run(me,String(other));
     return {success:true};
   }
+  function safetyFor(row){
+    const check=db.prepare('SELECT * FROM study_comment_safety WHERE comment_id=? AND content_hash=?').get(row.id,row.content_hash);
+    return {decision:check?.decision||'NOT_CHECKED',provider:check?.provider||'local-and-manual',reason:check?.reason||'尚无云检测结果，须人工逐条复核',flags:localFlags(row.content+' '+row.nickname),requestId:check?.request_id||'',checkedAt:check?.checked_ms||null};
+  }
+  function recordSafety(id,result){
+    const row=db.prepare('SELECT * FROM study_comments WHERE id=?').get(id);
+    if(!row||row.status==='REMOVED'||row.content_hash!==result.fingerprint)return {success:false};
+    if(!['PASS','REVIEW','BLOCK','UNAVAILABLE'].includes(result.decision))fail('检测状态无效');
+    const previous=db.prepare('SELECT decision FROM study_comment_safety WHERE comment_id=?').get(row.id);
+    if(previous?.decision==='BLOCK'&&result.decision!=='PASS'){audit('content-safety','SAFETY_RECHECK_HELD',row.id,'原拦截结论未取得新的通过检测，继续禁止公开');return {success:true};}
+    db.prepare('INSERT OR REPLACE INTO study_comment_safety VALUES (?,?,?,?,?,?,?,?)').run(row.id,row.content_hash,result.decision,String(result.provider||'').slice(0,60),String(result.reason||'').slice(0,300),JSON.stringify(result.flags||[]).slice(0,2000),String(result.requestId||'').slice(0,120),now());
+    if(previous?.decision==='BLOCK'&&result.decision==='PASS'&&row.status==='REJECTED'&&!row.reviewed_ms)db.prepare("UPDATE study_comments SET status='PENDING' WHERE id=?").run(row.id);
+    // A late machine rejection must not leave an already public item visible.
+    if(result.decision==='BLOCK')db.prepare("UPDATE study_comments SET status='REJECTED',pinned=0 WHERE id=? OR parent_id=?").run(row.id,row.id);
+    audit('content-safety','SAFETY_'+result.decision,row.id,String(result.reason||'').slice(0,300));return {success:true};
+  }
   function review(id,actor,body) {
     if(!['APPROVED','REJECTED','REMOVED'].includes(body.status)) fail('审核状态无效');
     const note=String(body.note||'').trim();if(!note || note.length>1000) fail('请填写审核依据');
     const row=db.prepare('SELECT * FROM study_comments WHERE id=?').get(id);if(!row || row.status==='REMOVED') fail('留言已删除或不存在',404);
+    if(body.status==='APPROVED'){
+      const check=safetyFor(row);
+      if(check.decision==='BLOCK')fail('内容安全建议拦截，不能直接公开；请先修订或通过申诉复核检测',409);
+      if(body.safetyConfirmed!==true)fail('请先逐条核对涉政、违法、仇恨、暴恐、隐私与医疗操作风险，并确认人工合规复核',400);
+      const validation=validateStudyText(row.content);if(!validation.ok)fail('原留言未通过文字安全校验，不能公开',409);
+    }
     if(body.pinned && (body.status!=='APPROVED' || !/^https:\/\/[^\s]+$/.test(body.evidenceUrl||''))) fail('置顶解答需附HTTPS依据链接');
     if(body.status==='APPROVED' && row.parent_id && !db.prepare("SELECT 1 FROM study_comments WHERE id=? AND status='APPROVED'").get(row.parent_id)) fail('原留言未公开，不能通过回复');
     db.exec('BEGIN IMMEDIATE');try {
@@ -103,10 +127,11 @@ function createStudyCommentStore(db, targets, now = () => Date.now()) {
       audit(actor,body.status,id,note);db.exec('COMMIT');
     }catch(e){db.exec('ROLLBACK');throw e;} return {success:true};
   }
-  return {config,list,submit,remove,report,block,review,
+  return {config,list,submit,remove,report,block,review,recordSafety,
+    safetyInput:id=>{const r=db.prepare("SELECT id,content,content_hash FROM study_comments WHERE id=? AND status!='REMOVED'").get(id);if(!r)fail('留言不存在',404);return r;},
     mine:(id,me)=>{target(id);return db.prepare('SELECT id,status,created_ms FROM study_comments WHERE target_id=? AND user_id=? ORDER BY id DESC LIMIT 30').all(id,user(me));},
     blocks:me=>db.prepare('SELECT blocked_id AS userId FROM study_comment_blocks WHERE user_id=?').all(user(me)),
-    queue:()=>({comments:db.prepare("SELECT * FROM study_comments WHERE status='PENDING' ORDER BY id LIMIT 200").all(),recent:db.prepare("SELECT * FROM study_comments WHERE status='APPROVED' ORDER BY id DESC LIMIT 100").all(),reports:db.prepare("SELECT r.*,c.content,c.user_id author_id FROM study_comment_reports r JOIN study_comments c ON c.id=r.comment_id WHERE r.status='PENDING' ORDER BY r.id LIMIT 200").all(), overdue:db.prepare("SELECT COUNT(*) n FROM study_comments WHERE status='PENDING' AND created_ms<?").get(now()-86400000).n,audit:db.prepare('SELECT * FROM study_comment_audit ORDER BY id DESC LIMIT 50').all(),enabled:settings().enabled==='true',limits:limits()}),
+    queue:()=>({comments:db.prepare("SELECT * FROM study_comments WHERE status='PENDING' ORDER BY id LIMIT 200").all().map(row=>({...row,safety:safetyFor(row)})),safetyCapability:capability(),blocked:db.prepare("SELECT c.* FROM study_comments c JOIN study_comment_safety s ON s.comment_id=c.id WHERE c.status='REJECTED' AND s.decision='BLOCK' ORDER BY c.id DESC LIMIT 100").all().map(row=>({...row,safety:safetyFor(row)})),recent:db.prepare("SELECT * FROM study_comments WHERE status='APPROVED' ORDER BY id DESC LIMIT 100").all(),reports:db.prepare("SELECT r.*,c.content,c.user_id author_id FROM study_comment_reports r JOIN study_comments c ON c.id=r.comment_id WHERE r.status='PENDING' ORDER BY r.id LIMIT 200").all(), overdue:db.prepare("SELECT COUNT(*) n FROM study_comments WHERE status='PENDING' AND created_ms<?").get(now()-86400000).n,audit:db.prepare('SELECT * FROM study_comment_audit ORDER BY id DESC LIMIT 50').all(),enabled:settings().enabled==='true',limits:limits()}),
     setConfig:(actor,body)=>{
       if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).some(k=>!['enabled','targetId','minIntervalSeconds','perDay','perTargetDay'].includes(k)))fail('配置字段无效');
       if(body.enabled!==undefined&&typeof body.enabled!=='boolean')fail('开放状态无效');if(body.targetId){target(body.targetId);if(typeof body.enabled!=='boolean')fail('请明确讨论区开放状态');}

@@ -16,7 +16,7 @@ async function worker(root){
   const hash=value=>crypto.createHash('sha256').update(value).digest('hex');
   fs.writeFileSync(path.join(root,'admin_keys_v13.json'),JSON.stringify({keys:{[hash(support)]:{role:'SUPPORT_ADMIN',name:'test-support'},[hash(finance)]:{role:'FINANCE_ADMIN',name:'test-finance'}}}));
   const accounts=new Database(accountFile);
-  accounts.exec("CREATE TABLE users(user_id TEXT PRIMARY KEY,nickname TEXT,status TEXT,deleted_at TEXT); INSERT INTO users VALUES ('alice','学习甲','active',NULL),('bob','学习乙','active',NULL),('banned','禁言账号','banned',NULL),('deleted','已注销','active','2026-01-01');");
+  accounts.exec("CREATE TABLE users(user_id TEXT PRIMARY KEY,nickname TEXT,status TEXT,deleted_at TEXT,phone TEXT); INSERT INTO users VALUES ('alice','学习甲','active',NULL,'13800000001'),('bob','学习乙','active',NULL,'13800000002'),('banned','禁言账号','banned',NULL,'13800000003'),('deleted','已注销','active','2026-01-01','13800000004'),('email-only','合成邮箱账号','active',NULL,NULL);");
   const app=express();app.use(express.json({limit:'100kb',verify:(req,_res,buffer)=>{req.rawBody=buffer.toString('utf8');}}));
   app.use('/api/study-comments',require('../backend_deploy/studyCommentsRoutes').createRouter());
   const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));});
@@ -47,14 +47,16 @@ async function worker(root){
     assert.equal((await request(target,'POST',alice,{...submitBody,images:['example.png']})).status,400);
     assert.equal((await request(target,'POST',alice,{...submitBody,content:'学'.repeat(501)})).status,400);
     assert.equal((await request(target,'POST',alice,{...submitBody,content:'x'.repeat(75000)})).status,413);
+    assert.equal((await request(target,'POST',token('email-only'),submitBody)).status,403);
     const submitted=await request(target,'POST',alice,submitBody,'capacitor://localhost');
     assert.equal(submitted.status,200);assert.equal(submitted.body.pendingReview,true);
     const id=submitted.body.id;
     assert.equal((await request(target,'POST',alice,submitBody)).body.id,id);
     assert.equal((await request(target,'GET',bob)).body.comments.length,0);
     assert.equal((await request('/mine/standard%3ALU1','GET',alice)).body.items[0].status,'PENDING');
-    assert.equal((await request('/admin/comment/'+id,'PUT',finance,{status:'APPROVED',note:'test'})).status,403);
-    assert.equal((await request('/admin/comment/'+id,'PUT',support,{status:'APPROVED',note:'核对资料与文字后批准测试留言'})).status,200);
+    assert.equal((await request('/admin/comment/'+id,'PUT',finance,{status:'APPROVED',safetyConfirmed:true,note:'test'})).status,403);
+    assert.equal((await request('/admin/comment/'+id,'PUT',support,{status:'APPROVED',note:'未逐条确认不应公开'})).status,400);
+    assert.equal((await request('/admin/comment/'+id,'PUT',support,{status:'APPROVED',safetyConfirmed:true,note:'核对资料与文字后批准测试留言'})).status,200);
     assert.equal((await request(target,'GET',bob)).body.comments[0].content,submitBody.content);
     assert.equal((await request('/comment/'+id+'/report','POST',bob,{reason:'请复核引用资料的出处'})).status,200);
     assert.equal((await request('/blocks/alice','POST',bob)).status,200);
@@ -63,7 +65,7 @@ async function worker(root){
     assert.equal((await request('/comment/'+id,'DELETE',bob)).status,403);
     assert.equal((await request('/comment/'+id,'DELETE',alice)).status,200);
     assert.equal((await request(target,'GET',bob)).body.comments.length,0);
-    assert.equal((await request('/admin/comment/'+id,'PUT',admin,{status:'APPROVED',note:'不得复活已删除评论'})).status,404);
+    assert.equal((await request('/admin/comment/'+id,'PUT',admin,{status:'APPROVED',safetyConfirmed:true,note:'不得复活已删除评论'})).status,404);
     console.log('PASS: real HTTP/JWT/account lookup, role scopes, 500 characters, origin/body limits, pending moderation, idempotency, report, block and own deletion. Isolated data only.');
 
     process.env.FEEDBACK_DATA_DIR=path.join(root,'feedback');

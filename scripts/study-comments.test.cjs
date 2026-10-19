@@ -16,10 +16,10 @@ test('everything is pending until manual approval; read, reply, block, report an
  assert.equal(s.list('standard:LU1').length,0);
  assert.equal(db.prepare('SELECT status FROM study_comments WHERE id=?').get(first.id).status,'PENDING');
  assert.throws(()=>s.submit('standard:LU2','bob','乙',body('另一个穴位的回复',first.id)),/原留言/);
- s.review(first.id,'reviewer',{status:'APPROVED',note:'已核对为正常术语问题'});
+ s.review(first.id,'reviewer',{status:'APPROVED',safetyConfirmed:true,note:'已核对为正常术语问题'});
  const reply=s.submit('standard:LU1','bob','乙',body('可以先看经脉原文',first.id));
  assert.equal(s.list('standard:LU1').length,1);
- s.review(reply.id,'reviewer',{status:'APPROVED',note:'学习资料建议，无操作指导'});
+ s.review(reply.id,'reviewer',{status:'APPROVED',safetyConfirmed:true,note:'学习资料建议，无操作指导'});
  assert.throws(()=>s.submit('standard:LU1','carol','丙',body('拒绝形成孤儿深层回复',reply.id)),/嵌套/);
  assert.equal(s.list('standard:LU1').length,2);assert.equal(s.list('standard:LU2').length,0);
  s.report(first.id,'bob','资料表述可能有误');assert.equal(s.queue().reports.length,1);
@@ -27,7 +27,7 @@ test('everything is pending until manual approval; read, reply, block, report an
  s.block('bob','alice',true);assert.equal(s.list('standard:LU1','bob').length,2);
  assert.throws(()=>s.remove(first.id,'bob'),/只能删除/);
  s.remove(first.id,'alice');assert.equal(s.list('standard:LU1').length,0);
- assert.throws(()=>s.review(first.id,'reviewer',{status:'APPROVED',note:'不能恢复已删'}),/已删除/);
+ assert.throws(()=>s.review(first.id,'reviewer',{status:'APPROVED',safetyConfirmed:true,note:'不能恢复已删'}),/已删除/);
  assert.ok(db.prepare('SELECT COUNT(*) n FROM study_comment_audit').get().n>=5);db.close();
 });
 test('strict target/payload, idempotency, mute, duplicate content and per-point rate limits are enforced on the server',()=>{
@@ -49,7 +49,7 @@ test('strict target/payload, idempotency, mute, duplicate content and per-point 
 test('rejected parent, server defaults, pin evidence and per-day limits remain closed by default',()=>{
  const {db,service:s,body,tick}=setup();
  const first=s.submit('standard:LU1','a','甲',body('学习解答'));
- assert.throws(()=>s.review(first.id,'admin',{status:'APPROVED',note:'缺少来源不可置顶',pinned:true}),/依据链接/);
+ assert.throws(()=>s.review(first.id,'admin',{status:'APPROVED',safetyConfirmed:true,note:'缺少来源不可置顶',pinned:true}),/依据链接/);
  s.review(first.id,'admin',{status:'REJECTED',note:'拒绝展示'});assert.equal(s.list('standard:LU1').length,0);
  for(let n=1;n<=20;n++){s.submit(`standard:LU${Math.floor((n-1)/5)+1}`,'b','乙',body(`正常学习问题${n}`));tick();}
  assert.throws(()=>s.submit('standard:LU5','b','乙',body('第二十一条')),/20条/);
@@ -66,7 +66,7 @@ test('tool discussions share the moderated store and never use a private chart a
  const body={content:'如何阅读这个盘面的干支？',requestId:'tool-comment-request-123456'};
  const posted=s.submit('tool:bazi','learner','学友',body);
  assert.equal(s.list('tool:bazi').length,0);
- s.review(posted.id,'admin',{status:'APPROVED',note:'正常术语提问'});
+ s.review(posted.id,'admin',{status:'APPROVED',safetyConfirmed:true,note:'正常术语提问'});
  assert.equal(s.list('tool:bazi').length,1);assert.equal(s.list('tool:ziwei').length,0);
  assert.throws(()=>s.submit('tool:bazi:private-birthday','learner','学友',body),/讨论对象/);
  s.setConfig('admin',{targetId:'tool:bazi',enabled:false});

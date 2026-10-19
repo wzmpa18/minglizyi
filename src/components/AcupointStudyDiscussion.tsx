@@ -60,7 +60,7 @@ function PointDiscussion({targetId,title}:{targetId:string;title:string}){
     <textarea disabled={busy} aria-label="学习留言，仅支持文字" value={text} rows={4} onChange={e=>{setText(e.target.value);requestId.current='';}} onPaste={e=>{if(Array.from(e.clipboardData.items).some(item=>item.kind==='file')){e.preventDefault();setMessage('仅支持纯文字，不能粘贴图片或附件');}}} onDrop={e=>{e.preventDefault();setMessage('不支持图片或文件，请输入文字');}} placeholder="提问、分享理解或指出资料问题…" style={{width:'100%',boxSizing:'border-box',padding:10,border:'1px solid #CDB8DC',borderRadius:10,background:'#FAF7FC',color:'#333',fontSize:14,lineHeight:1.7}}/>
     <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:8,gap:8}}>
       <span aria-live="polite" style={{color:count>500?'#B71C1C':'#666'}}>{countSupported?`${count}/500`:'系统暂不支持文字计数'}</span>
-      <InterfaceButton type="button" onClick={()=>void submit()} disabled={busy||!countSupported||count===0||count>500||!config?.enabled} style={{padding:'8px 14px',border:0,borderRadius:20,background:'#7B2FBE',color:'white',opacity:busy||!config?.enabled||count>500 ? .5 : 1}}>{ui(busy?'处理中…':'提交审核')}</InterfaceButton>
+      <InterfaceButton type="button" onClick={()=>void submit()} disabled={busy||!countSupported||count===0||count>500||!config?.enabled} style={{padding:'8px 14px',border:0,borderRadius:20,background:'#7B2FBE',color:'white',opacity:busy||!config?.enabled||count>500 ? .5 : 1}}>{ui(busy?'处理中…':'提交')}</InterfaceButton>
     </div>
     {!config?.enabled&&!loading&&<p style={{color:'#666'}}>学习讨论暂未开放。输入仅保存在本机，尚未发表。</p>}
     {message&&<p role="status" style={{color:'#8D3800'}}>{message}</p>}
