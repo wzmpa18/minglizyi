@@ -707,7 +707,8 @@ function createRouter() {
       const info = userPublicInfo(me) || { nickname: '' };
       d.prepare('INSERT INTO reports (target_type, target_id, reporter_id, reporter_name, reason) VALUES (?,?,?,?,?)')
         .run('post', postId, me, info.nickname || '', String(req.body.reason || '其他').trim().slice(0, 200));
-      res.json({ success: true, message: '举报已提交，平台将尽快核实处理' });
+      d.prepare("UPDATE posts SET status='pending',review_reason='举报待复核' WHERE post_id=? AND status='active'").run(postId);
+      res.json({ success: true, message: '举报已提交，内容先行隔离，待核查后处理' });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
     }
@@ -720,14 +721,16 @@ function createRouter() {
       const commentId = req.params.commentId;
       const me = String(req.user.userId);
       const comment = d.prepare('SELECT * FROM comments WHERE id = ?').get(parseInt(commentId, 10));
-      if (!comment) return res.status(404).json({ success: false, error: '评论不存在' });
+      if (!comment||comment.deleted||comment.review_status!=='active'||!listVisiblePostComments(d,comment.post_id,me).some(c=>c.id===comment.id)) return res.status(404).json({ success: false, error: '评论不存在' });
       const dup = d.prepare('SELECT 1 FROM reports WHERE target_type = ? AND target_id = ? AND reporter_id = ?')
         .get('comment', commentId, me);
       if (dup) return res.json({ success: true, duplicated: true, message: '已收到你的举报，请勿重复提交' });
       const info = userPublicInfo(me) || { nickname: '' };
       d.prepare('INSERT INTO reports (target_type, target_id, reporter_id, reporter_name, reason) VALUES (?,?,?,?,?)')
         .run('comment', commentId, me, info.nickname || '', String(req.body.reason || '其他').trim().slice(0, 200));
-      res.json({ success: true, message: '举报已提交，平台将尽快核实处理' });
+      const isolated=d.prepare("UPDATE comments SET review_status='pending',review_reason='举报待复核' WHERE id=? AND review_status='active' AND deleted=0").run(comment.id);
+      if(isolated.changes)d.prepare('UPDATE posts SET comment_count=MAX(comment_count-1,0) WHERE post_id=?').run(comment.post_id);
+      res.json({ success: true, message: '举报已提交，内容先行隔离，待核查后处理' });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
     }
@@ -826,7 +829,8 @@ function createRouter() {
       const info = userPublicInfo(me) || { nickname: '' };
       d.prepare('INSERT INTO reports (target_type, target_id, reporter_id, reporter_name, reason) VALUES (?,?,?,?,?)')
         .run('resource_comment', commentId, me, info.nickname || '', String(req.body.reason || '不当内容').trim().slice(0, 200));
-      res.json({ success: true, message: '举报已提交，平台将尽快复核' });
+      d.prepare("UPDATE resource_comments SET status='pending',review_reason='举报待复核' WHERE id=? AND status='active'").run(comment.id);
+      res.json({success:true,message:'举报已提交，内容先行隔离，待核查后处理'});
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
     }
@@ -1183,6 +1187,8 @@ function createRouter() {
       const deliverable=currentFriendship&&currentFriendship.source!=='tongchen'&&!isBlockedBy(me,peer)&&!isBlockedBy(peer,me)&&!checkPlatformMute(me)&&availableSocialUser(me)&&availableSocialUser(peer)&&featureEnabled('private_chat_enabled',req);
       d.prepare("UPDATE chat_messages SET review_status=?,review_reason=? WHERE id=? AND review_status='pending'").run(deliverable?review.status:'pending',deliverable?review.reason:'交流权限已改变，未送达对方',result.lastInsertRowid);
       const row=d.prepare('SELECT * FROM chat_messages WHERE id=?').get(result.lastInsertRowid);
+      // Apply the same bounded retention to quarantined messages, too.
+      d.prepare(`DELETE FROM chat_messages WHERE conversation_id=? AND id NOT IN (SELECT id FROM chat_messages WHERE conversation_id=? ORDER BY id DESC LIMIT 100)`).run(convId,convId);
       if(row.review_status!=='active')return res.json({success:true,pendingReview:row.review_status==='pending',message:{id:String(row.id),senderId:row.sender_id,senderName:row.sender_name,content:row.content,type:row.msg_type,createdAt:row.created_at,reviewStatus:row.review_status}});
 
       // 滚动覆盖：单聊会话仅保留最近100条

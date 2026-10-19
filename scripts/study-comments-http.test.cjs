@@ -244,6 +244,11 @@ async function worker(root){
         assert.equal((await social('/messages/private/alice','GET',bob)).status,403);socialDb.prepare("DELETE FROM blacklists WHERE user_id='bob' AND blocked_id='alice'").run();
         const pendingId=pending.body.message.id;socialDb.prepare("UPDATE chat_messages SET review_status='active' WHERE id=?").run(pendingId);
         assert.ok((await social('/messages/private/alice','GET',bob)).body.messages.some(m=>m.id===pendingId&&m.reviewStatus==='active'));
+        const reviewCommentId=acceptedComment.body.comment.id;
+        assert.equal((await social('/comments/'+reviewCommentId+'/report','POST',bob,{reason:'请核对引文'})).status,200);
+        assert.equal((await social('/posts/visible/comments')).body.comments.some(c=>c.id===reviewCommentId),false);
+        assert.equal((await social('/posts/'+acceptedPost.body.post.postId+'/report','POST',bob,{reason:'需核对公开资料'})).status,200);
+        assert.equal((await social('/posts/'+acceptedPost.body.post.postId)).status,404);
         socialDb.prepare("DELETE FROM friendships WHERE user_a='alice' AND user_b='bob'").run();
       }finally{global.fetch=legacyFetch;delete process.env.HUNYUAN_API_KEY;delete process.env.STUDY_COMMENT_AUTOMATION;delete process.env.STUDY_AI_MODERATION_READY;delete process.env.PRIVATE_CHAT_ENABLED;}
       console.log('PASS: legacy text routes require per-send consent and strict review; pending comments/counters/notifications stay private, immutable message retries, image/long-text quarantine, provider outage and block-during-review recheck.');
