@@ -4,9 +4,10 @@ const {registerHooks}=require('node:module');
 const fs=require('node:fs');
 // Node's type stripping needs explicit .ts resolution; the application uses TS bundler resolution.
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){if(specifier.startsWith('.')&&!/\.[a-z]+$/i.test(specifier))return next(specifier+'.ts',context);throw error;}}});
+const {lifeReminderIcs}=require('../src/lib/lifeReminderExport.ts');
 const {LifeVault}=require('../src/lib/lifeVault.ts');
 const {scopedPrivateView}=require('../src/lib/lifeVaultView.ts');
-const {LifeSearchIndex,normalizeLifeText,lifeSearchHits,healthPreparation,compareLabUnits,privateOutboundAllowed}=require('../src/lib/lifeRecords.ts');
+const {LifeSearchIndex,normalizeLifeText,lifeSearchHits,comparableLabTimeline,possibleDuplicateMedicines,exportableLifeEntries,healthPreparation,compareLabUnits,privateOutboundAllowed}=require('../src/lib/lifeRecords.ts');
 function memoryStorage(){const rows=new Map();return {rows,async commit(items,check){if(check&&(rows.get(check.key)?.etag??null)!==check.etag)throw Error('revision conflict');if(check?.deletePrefix)for(const key of rows.keys())if(key.startsWith(check.deletePrefix))rows.delete(key);for(const row of items){if(row.value===null)rows.delete(row.key);else rows.set(row.key,structuredClone(row.value));}},async read(key){return structuredClone(rows.get(key));},async page(prefix,after='',limit=100){return [...rows].filter(([key])=>key.startsWith(prefix)&&key>after).sort(([a],[b])=>a.localeCompare(b,'en')).slice(0,limit).map(([key,value])=>({key,value:structuredClone(value)}));}};}
 test('long private records, independent vaults, quote provenance, versions and authenticated encryption',async()=>{
  const store=memoryStorage(),{vault,recoveryCode}=await LifeVault.create(store,'a-long-private-password');
@@ -62,5 +63,18 @@ test('1k / 10k / 100k synthetic short-record local index benchmark',()=>{
 });
 
 test('full licensed character normalization and source-located OCR hits never rewrite originals',()=>{
- const source='臺灣醫學筆記，左側與右側分開核對';assert.equal(normalizeLifeText(source),'台湾医学笔记，左侧与右侧分开核对');const e={title:'合成原件',text:'',people:[],tags:[],categories:[],sourceRefs:[],attachments:[{id:'photo',name:'原件.png',ocr:{blocks:[{text:source,page:2}]}}]};const hit=lifeSearchHits(e,'右侧')[0];assert.equal(hit.page,2);assert.equal(hit.attachmentId,'photo');assert.ok(hit.source.includes('OCR待核对'));assert.equal(e.attachments[0].ocr.blocks[0].text,source);
+ const source='臺灣醫學筆記，左側與右側分開核對';assert.equal(normalizeLifeText(source),'台湾医学笔记,左侧与右侧分开核对');const e={title:'合成原件',text:'',people:[],tags:[],categories:[],sourceRefs:[],attachments:[{id:'photo',name:'原件.png',ocr:{blocks:[{text:source,page:2}]}}]};const hit=lifeSearchHits(e,'右侧')[0];assert.equal(hit.page,2);assert.equal(hit.attachmentId,'photo');assert.ok(hit.source.includes('OCR待核对'));assert.equal(e.attachments[0].ocr.blocks[0].text,source);
+});
+
+test('health preparation isolates confirmed structured facts; units, methods and hospitals are never silently merged',()=>{
+ const base={id:'a',occurredAt:'2026-10-19',title:'梦境 SECRET_DREAM',text:'SECRET_CHART',sourceRefs:[{quote:'SECRET_CHAT'}],attachments:[],health:{kind:'lab',confirmedAt:'2026-10-19',confirmedText:'本人核对',labName:'合成项目',labValue:'0.5',unit:'mg',hospital:'合成甲院',labMethod:'方法甲',trendComparable:true}};
+ const good={...base,id:'b',health:{...base.health,labValue:'5.0'}},otherUnit={...good,id:'c',health:{...good.health,unit:'g'}},otherHospital={...good,id:'d',health:{...good.health,hospital:'合成乙院'}},otherMethod={...good,id:'e',health:{...good.health,labMethod:'方法乙'}};assert.equal(comparableLabTimeline([base,good,otherUnit,otherHospital,otherMethod],base).length,2);const prepared=healthPreparation([base]);assert.ok(!prepared.includes('SECRET'));assert.ok(prepared.includes('0.5'));assert.ok(prepared.includes('mg'));const medicine={...base,id:'m',health:{kind:'medicine',drug:'合成甲药',specification:'1mg'}};const duplicate={...medicine,id:'n',health:{...medicine.health,specification:'5mg'}};assert.equal(possibleDuplicateMedicines([medicine,duplicate],medicine).length,1);assert.equal(duplicate.health.specification,'5mg');
+});
+
+test('restricted peer quotes do not block own notes; ICS is private, finite, DST-correct and does not arm restored plans',()=>{
+ const rule={id:'test-rule',dateTime:'2026-03-07T09:00',endDate:'2026-03-21',timeZone:'America/New_York',repeat:'weekly',confirmedAt:'2026-03-01',needsConfirmation:false};const entry={id:'test',text:'my own note',sourceRefs:[{kind:'CHAT_QUOTE',quote:'RESTRICTED',exportAllowed:false},{kind:'SELF'}],chartRefs:[{record:{permissions:{export:false}}}],reminders:[rule]};const cleaned=exportableLifeEntries([entry])[0];assert.equal(cleaned.text,entry.text);assert.equal(cleaned.sourceRefs.length,1);assert.equal(cleaned.chartRefs.length,0);assert.equal(entry.sourceRefs.length,2);const ics=lifeReminderIcs([entry],0);assert.equal((ics.match(/BEGIN:VEVENT/g)||[]).length,3);assert.ok(ics.includes('20260307T140000Z'));assert.ok(ics.includes('20260314T130000Z'));assert.ok(!ics.includes('RESTRICTED'));assert.ok(!ics.includes('VALARM'));assert.throws(()=>lifeReminderIcs([{...entry,reminders:[{...rule,needsConfirmation:true}]}]),/没有已确认/);
+});
+
+test('locking a raw vault during database reads cannot repopulate its decrypted entries or index',async()=>{
+ const store=memoryStorage(),{vault}=await LifeVault.create(store,'a-long-private-password');await vault.save({...vault.newEntry(),text:'private late result'});const original=store.page;let enter,release;const entered=new Promise(resolve=>enter=resolve),gate=new Promise(resolve=>release=resolve);store.page=async(...args)=>{enter();await gate;return original(...args);};const reload=vault.reload();await entered;vault.lock();release();await assert.rejects(()=>reload,/已锁定/);assert.equal(vault.entries.size,0);assert.equal(vault.index.search('private').total,0);
 });

@@ -36,10 +36,11 @@ export function PromoFloat() {
   const [confirmNever, setConfirmNever] = useState(false);
 
   useEffect(() => {
-    if (!cfg.enabled) return;
+    if (/^\/(profile\/life|discover\/live)(\/|$)/.test(pathname)) {if(visible)setVisible(false);return;}
+    if (!cfg.enabled) {if(visible)setVisible(false);return;}
     // 页面白名单（前缀匹配；trailingSlash 规范化）
     const norm = pathname !== "/" && pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
-    if (!cfg.allowedPages.some((p) => norm === p || norm.startsWith(p + "/"))) return;
+    if (!cfg.allowedPages.some((p) => norm === p || norm.startsWith(p + "/"))) {if(visible)setVisible(false);return;}
 
     try {
       if (localStorage.getItem(LS_PERMANENT) === "1") return;

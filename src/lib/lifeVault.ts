@@ -20,10 +20,10 @@ export class LifeVault {
   await storage.commit([{key:headerKey(id),value:header}]);if(register)await LifeVault.register(storage,header);
   const vault=new LifeVault(storage,header);vault.root=root;vault.key=await importVaultKey(root);return {vault,recoveryCode};
  }
- static async open(storage:VaultStorage,id:string,password:string,recovery=false){
+ static async open(storage:VaultStorage,id:string,password:string,recovery=false,options?:{signal?:AbortSignal;onProgress?:(count:number)=>void}){
   const h=await storage.read<VaultHeader>(headerKey(id));if(!h||h.schema!==1||h.id!==id)throw Error("档案不存在或版本不受支持");
   const root=unb64(await unseal<string>(await passwordKey(password,recovery?h.recoverySalt:h.salt),recovery?h.recovery:h.password,aad(id,recovery?"recovery":"password")));
-  const vault=new LifeVault(storage,h);vault.root=root;vault.key=await importVaultKey(root);await vault.reload();return vault;
+  const vault=new LifeVault(storage,h);vault.root=root;vault.key=await importVaultKey(root);try{await vault.reload(options?.onProgress,options?.signal);return vault;}catch(error){vault.lock();throw error;}
  }
  get id(){return this.header.id;}
  get unlocked(){return !!this.key;}
@@ -35,9 +35,9 @@ export class LifeVault {
  private serial<T>(run:()=>Promise<T>):Promise<T>{const task=this.chain.then(run);this.chain=task.then(()=>{},()=>{});return task;}
  private async read<T>(key:string){const epoch=this.lockEpoch,row=await this.storage.read<Sealed>(prefix(this.id)+key);this.checkEpoch(epoch);const value=row?await unseal<T>(this.active(),row,aad(this.id,key)):undefined;this.checkEpoch(epoch);return value;}
  private async rows(){const all:{key:string;value:unknown}[]=[];let after="";for(;;){const page=await this.storage.page(prefix(this.id),after,100);all.push(...page);if(page.length<100)break;after=page.at(-1)!.key;}return all;}
- async reload(onProgress?:(count:number)=>void){
+ async reload(onProgress?:(count:number)=>void,signal?:AbortSignal){
   this.active();const epoch=this.lockEpoch,entries=new Map<string,LifeEntry>(),index=new LifeSearchIndex();let after="";
-  for(;;){this.checkEpoch(epoch);const page=await this.storage.page(prefix(this.id)+"entry:",after,100);this.checkEpoch(epoch);
+  for(;;){if(signal?.aborted)throw Error("已取消本机索引读取，原记录未改变");this.checkEpoch(epoch);const page=await this.storage.page(prefix(this.id)+"entry:",after,100);this.checkEpoch(epoch);
    const values=await Promise.all(page.map(async r=>{const key=r.key.slice(prefix(this.id).length);const value=await unseal<LifeEntry>(this.active(),r.value as Sealed,aad(this.id,key));validateLifeEntry(value,this.id);return value;}));this.checkEpoch(epoch);
    for(const e of values){entries.set(e.id,e);if(!e.deletedAt)index.put(e.id,lifeSearchText(e));}onProgress?.(entries.size);
    if(page.length<100)break;after=page.at(-1)!.key;await new Promise<void>(resolve=>setTimeout(resolve,0));

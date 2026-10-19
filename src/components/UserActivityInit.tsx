@@ -29,10 +29,11 @@ export default function UserActivityInit() {
     let tickTimer: ReturnType<typeof setInterval> | null = null;
 
     const tick = () => {
-      if (document.visibilityState === "visible") visibleSeconds += 1;
+      if (document.visibilityState === "visible"&&!window.location.pathname.startsWith("/profile/life")) visibleSeconds += 1;
     };
 
     const sendHeartbeat = async () => {
+      if(window.location.pathname.startsWith("/profile/life")){visibleSeconds=0;return;}
       const token = getUserToken();
       if (!token) return; // 未登录不上报
       const secs = visibleSeconds;
