@@ -227,18 +227,18 @@
     "configured": true,
     "dailyModelCallCap": 50,
     "userAICreditsCharged": false,
-    "remaining": "complaint/appeal exceptions remain held without resolution; legacy posts/comments/private routes still need migration; newer live/tongchen/group/resource text now uses per-send consent and the same strict Hy3 budget"
+    "remaining": "complaint/appeal exceptions, old published data and image/long-text review remain held or require verification; new legacy posts/comments/ordinary private text now uses per-send consent and the same strict budget, with purpose-isolated Tongchen conversations"
   },
   "evidence": {
-    "quality": 39248787242,
-    "source": "f003626cbe4a7c86d10b38b949b2bbcd842f841c",
+    "quality": 39256673357,
+    "source": "1a051ad211d1dd0bb6c4b81e64bb3eba0e84d950",
     "newContrastSource": "152346da1a287c2d994b26f46c4b8e3196d35d66",
-    "productionWeb": "v25.0.115-calendar-community-f003626",
+    "productionWeb": "v25.0.115-calendar-community-1a051ad",
     "androidInstalled": 2116,
     "iosTestFlightInternal": 26,
     "proofDirectory": "E:/八字命理类文档包括排盘方式电子版/言道国学项目归档/发布包/实机整改_20261018/",
-    "latestSoftwareSource": "f003626cbe4a7c86d10b38b949b2bbcd842f841c",
-    "backendSource": "eba736ca50873830396ac8dff377ac95b4550223",
+    "latestSoftwareSource": "1a051ad211d1dd0bb6c4b81e64bb3eba0e84d950",
+    "backendSource": "1a051ad211d1dd0bb6c4b81e64bb3eba0e84d950",
     "androidInstalledSource": "152346da1a287c2d994b26f46c4b8e3196d35d66",
     "iosTestFlightSource": "152346da1a287c2d994b26f46c4b8e3196d35d66"
   },

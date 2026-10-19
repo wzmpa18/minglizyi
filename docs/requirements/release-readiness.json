@@ -2,7 +2,7 @@
   "purpose": "Owner instruction: complete 07/09/10 and acceptance before any formal store submission. TestFlight internal testing is separate.",
   "scope": "com.yandaoguoxue.app",
   "overallComplete": false,
-  "candidateSource": "f003626cbe4a7c86d10b38b949b2bbcd842f841c",
+  "candidateSource": "1a051ad211d1dd0bb6c4b81e64bb3eba0e84d950",
   "checks": [
     {
       "id": "07-software-localization-calendar",

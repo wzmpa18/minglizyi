@@ -611,15 +611,20 @@
   "deliveryComplete": false,
   "formalSubmissionAllowed": false,
   "softwareCheckpoint": {
-    "source": "f003626cbe4a7c86d10b38b949b2bbcd842f841c",
-    "backendSource": "eba736ca50873830396ac8dff377ac95b4550223",
+    "source": "1a051ad211d1dd0bb6c4b81e64bb3eba0e84d950",
+    "backendSource": "1a051ad211d1dd0bb6c4b81e64bb3eba0e84d950",
     "newlyImplemented": [
       "group card UI",
       "direct-share batch revocation",
       "encrypted derived image crops",
       "selected export redaction and preview",
       "strict whole-file GBK/UTF import",
-      "per-send consent and shared-budget moderation for live/tongchen/groups/resources"
+      "per-send consent and shared-budget moderation for live/tongchen/groups/resources",
+      "body-portal modal focus and hit-tested save button",
+      "group sender membership nonce and shared mute rule",
+      "legacy feed/comment/private per-send strict text moderation",
+      "account-scoped ordinary chat caches",
+      "purpose-bound Tongchen conversations and authorized message previews"
     ],
     "remaining": [
       "whole historical interface localization",
@@ -627,10 +632,11 @@
       "full group card message anchoring and group batch revocation",
       "remaining 07/09 backup/sharing UI and physical tests",
       "medical sources/rights/professional validation",
-      "old diagnosis/constitution pathways and legacy feed/private governance",
-      "physical Apple sandbox entitlement recovery"
+      "physical Apple sandbox entitlement recovery",
+      "remaining old medical pathways; inherited public content, images, long-post and appeal review closure"
     ],
-    "webSource": "f003626cbe4a7c86d10b38b949b2bbcd842f841c",
-    "webLive": true
+    "webSource": "1a051ad211d1dd0bb6c4b81e64bb3eba0e84d950",
+    "webLive": true,
+    "qualityRun": 39256673357
   }
 }

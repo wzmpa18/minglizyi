@@ -1443,3 +1443,41 @@ sqlite3 /tmp/yandao_restore_test/social.db "SELECT COUNT(*) FROM friendships; SE
 - `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/交接报告/FINAL_PROJECT_HANDOVER.md`
 - `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/交接报告/交接报告更新与工作区清理制度.md`
 - `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/FINAL_PROJECT_HANDOVER.md`
+
+### 64.9 截图复查追加：导出/裁剪/发送确认脱离底栏层级（Web已验收）
+- 64.7后逐像素查看真实截图，发现f003626的导出弹窗仍被底部导航栏盖住，保存按钮可能无法点到；“按钮enabled”不等于实际命中可点击。因此f003626只能作为上一增量，不能把该弹窗UI记成完整验收通过。旧截图保留失败证据，不抹去问题。
+- 603b731/cb19bb4/0a0acf5增加统一ModalSurface，三个新增弹窗通过React Portal挂到body，z=30000且避开安全区、约束滚动；不受页面缩放/顶部条/底栏层级覆盖。初始焦点留在对话框说明，不主动打开手机键盘或跳过预览；Tab/Shift+Tab约束在当前可用控件，Escape可取消未处理中操作，导航变化取消待确认发送，处理中不误取消。关闭恢复原触发控件焦点；不改变公开文字授权和原件保存规则。
+- 新文件绝对路径：`C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/components/ui/ModalSurface.tsx`；并修改同目录上级LifeExportPreview.tsx、LifeImageCrop.tsx、SocialModerationConsent.tsx。源码0a0acf5b9c2fd38bedc089edd2738217218c7b29完整质量39251968475成功。真实390×844页面确认保存按钮y=766至804，中心命中按钮本身且enabled/focused；Tab正向回环、Shift+Tab反向回环、Escape关闭并恢复JSON触发按钮焦点均通过。裁剪弹窗同为body直接子层、z=30000、初始焦点在说明且scrollTop=0。证据10_弹窗层级与键盘真实验收.json、10_弹窗底栏遮挡修复后实际页面.png。
+
+- 0a0官网产物12186202147，ZIP SHA-256 59583a89ee7b6de39617c9cf3b910eda99f4a686565cfad408016422da9b3312；2320文件/70200302字节，清单SHA 7168c4b9b5972ad534e10d9ca1f8f3c11d8ee056ed46dcccc51d876fab53ea3b，12:40:45Z逐文件核验并原子上线/root/yandaoguoxue/releases/v25.0.115-calendar-community-0a0acf5。上一f003保留作增量回退（有已记录的旧弹窗遮挡限制，不称完全验收版）；更老152346d为原增量回退，物理目录清理尚未执行。
+- 实际正式站为https://yandaoguoxue.yandao.vip/，真实浏览器已读回新文献研习标题与抽屉，截图10_弹窗修复官网实际页面.png。www.yandao.vip是公司主站，不应把公司站下/zhongyi路径404误认为国学发布失败；此次未更改公司站或其他产品。部署回执10_弹窗修复官网实际部署.json已补浏览器验收事实。隔离预览专属PID12340已停；不关闭用户浏览器或共享ADB。
+
+### 64.10 分享者退群再加入不能复活旧群盘卡
+- 检查发现旧卡只绑定接收人入群nonce，分享者退群后再加入可能让旧授权恢复。因此studyGroupCards.js增owner_membership并将分享者本次入群身份写入固定指纹；读取、留档、导出均核对当前nonce。旧无stamp数据保持不可读，不猜测回填。退群再加入的旧请求重试409，必须重新预览明确分享；新分享才可访问。群内个人禁言/全员禁言同时约束盘卡通知，与文字使用同一canSpeak规则；原读取与本人撤销不受禁言阻断。
+- 产品源de53826d5b4552ebb6f9c6f546ffc4d0cca572ec；9ac346281c340c53bd2a4bed4aefcfa35fee2f7d仅修测试fixture为真实有效12宫数据，未删授权断言。完整质量39253780391成功，包含分享者/接收者各自退群重入、旧无stamp、幂等、群禁言与原权限回归。de53826阶段运行39253648952失败为fixture无效，已纠正后重跑，不记失败为通过。
+- 12:45:42Z按eba部署后11模块原hash严格比对，实际仅替换governedGroupRoutes.js与studyGroupCards.js，PM2健康/逐模块SHA读回通过；没有替换环境、主服务或用户订单库。10_群盘退群授权修复部署基线.json、10_群盘退群授权修复部署预检.json、10_群盘退群授权修复实际部署.json为证；原无渠道头关闭策略不因这次代码部署而打开。真实成年人两设备仍需另验。
+
+### 64.11 旧动态、动态评论和普通私聊的统一文字审核（最终验证见64.12）
+- a597830/ccbbf8b新增旧入口逐次正文授权，复用同一个Hy3预算/严格结构化判定/最小审计；模型不读私人库或原盘。短动态包含正文与标签，普通私聊只送本次正文。没有本版授权、不确定、失败或超过自动审核500字范围的长稿均保持隔离；不将长稿截断拆段后假称整体通过。旧动态5000/私聊3000上限内保留完整待审，超上限明确拒绝；图片保留待单独核验，不用文字模型代审图片。
+- 动态评论采用500个可见字符、待审不进评论列表/计数/通知，不能回复待审父项，删除待审不误减已有计数。举报后动态/评论/资源评论先隔离。普通私聊先写pending，审核后再次查双方有效账号、好友、屏蔽、禁言和渠道；失败或关系改变不通知接收人。发送ID绑定发送者/正文/类型，篡改重试409；待审与通过消息一并按原会话近100条限制保存，避免待审堆积。
+- 前端明确“未送达·待核验/请修改”，同ID状态变化可同步；快照一次写缓存。普通聊天、好友/申请/黑名单缓存另按已登录账号分区，未归属旧缓存原件保留且不自动迁给新账号，清聊天只作用当前账号；异步回执在换号卸载后不写入新账号。动态评论网络失败或取消授权不再本地伪造成功，保留输入待本人重试。没有自动恢复范围外旧群聊或全局打开社交。
+- 463c540875a5c0ef297d946609cc5bbcff77c088的39255903027实际发现64.12所述跨用途问题，未部署此失败源。a597830阶段39255545726失败来自测试重复添加认证层已迁移的member_level，463仅修重复fixture，仍保留实际HTTP权限与隔离断言；被替代的ccbb和重复自动测试已取消，未把取消写成通过。
+- 追加实际文件：backend_deploy/socialVisibilityQueries.js；scripts/study-comments-http.test.cjs、social-visibility.test.cjs、group-cache.test.ts、deploy_verified_learning_backend.py；src/app/discover/[id]/ClientPage.tsx、src/app/friends/chat/[id]/ClientPage.tsx、src/lib/socialApi.ts、src/lib/socialStore.ts、src/app/privacy/page.tsx（以上均相对64.8所列同一绝对仓根）。部署器新增socialVisibilityQueries.js后要求12模块完整精确基线；远端该旧文件SHA e0868d64fea03a0c333978e724f568a79480bf3fcb85fdea895d73db2b2a170c已核对9ac源一致，未盲覆盖。
+- 本轮新增测试使用隔离SQLite、真实JWT/HTTP/现有依赖，只有第三方传输为合成应答，不向真实用户发送或消耗真实模型额度；不当作两个成年人实际设备验收。历史已公开内容没有本轮逐条重审、图片/长稿/申诉待核验不能冒称自动治理闭环。旧diagnosis/constitution/shanghan等医学流程及64.6全部其他剩余继续承接；整体完成与正式提审允许均false。
+
+### 64.12 真实HTTP回归发现同辰与普通私聊混用，追加用途隔离（完整CI与后端上线通过）
+- 463阶段39255903027已通过新增旧文字审核用例，但随后原同辰“待审前对方0条”断言实际返回2条，证明普通私聊与同辰原来复用同一private会话，不能把这当fixture差异直接清测试记录掩盖。1a051ad211d1dd0bb6c4b81e64bb3eba0e84d950改同辰消息为独立用途会话，绑定双方当前自愿加入的public_id；仍复用同一个chat_messages/好友库，不复制账户或私人库。退出再加入的新身份不能自动读取旧会话，旧混用行保留待明确核验，不猜测归属迁移。
+- 同辰审核队列和批准接口只接收本用途会话，不能通过该入口批准普通私聊、群聊或活盘的待审文本；批准前核对当前双方加入、有效账号、关系和屏蔽。机器审核返回后也核对双方同一入群身份/当前禁言，异步期间改变不得恢复旧授权。
+- 消息中心在取预览/计未读前检查真实好友、双向屏蔽、用途、当前同辰身份/开关，或群当前成员/已加入历史下限。退出、未加入、旧同辰身份、已屏蔽的内容不能靠消息预览漏出；同辰会话链接到同辰页已有获准学友，不跳到普通私聊。新状态文案已加四语，并放在消息气泡内避免占用旁边一整列。
+- 新增修改绝对路径：`C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/friends/page.tsx`、`C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/discover/tongchen/page.tsx`。其余文件沿64.8/64.11同一源位置。完整质量39256673357的57个工作流步骤及静态构建成功，保留原“同辰审核前0条”断言并通过；完整质量与阶段失败回执10_旧社交与同辰隔离完整检查.json。自动重复39256673752已取消节省重复构建，不记成通过。13:04:28Z后端按12模块旧SHA精确基线部署同一1a051源，实际修改socialApiRoutes.js、socialVisibilityQueries.js、tongchenRoutes.js，其余模块核对未变；服务健康与12模块SHA读回通过，见10_旧社交审核修复实际部署.json。游客私有接口仍401/no-store，后台会话403，无渠道头五社交开关均false，见10_旧社交修复后游客权限与开关.json，不冒称全渠道/真用户验收。Web新产物12188295297仍在逐文件部署，最后切换事实以64.13为准；原生仍2116/26旧源。
+
+### 64.13 最终上线/未完成/清理读回（本轮增量核验，不是全任务完成）
+- 最终产品源1a051ad211d1dd0bb6c4b81e64bb3eba0e84d950，完整质量39256673357成功；官方产物12188295297，ZIP SHA-256 e9a61289c17fc369320172ebcd2e5023095600449294ce12ab96d78697898fc9。Web2320文件/70211185字节、逐文件清单SHA 39b46138e02a9ec9910cf856ff58e7775d9c2d9e979b3aed286453a213b3612d，13:08:24Z原子切换到/root/yandaoguoxue/releases/v25.0.115-calendar-community-1a051ad；上一已验增量回退0a0acf5。更老目录尚未物理删除，不能说服务器只剩两代。
+- 浏览器真实正式站隐私新文案已显示普通私聊/动态/评论的逐次授权，截图10_同辰用途隔离官网隐私实际页面.png；同辰页确有登录后自愿加入、活盘入口、同辰人生折叠区域，游客未参与匹配，截图10_同辰用途隔离官网入口实际页面.png。10_同辰用途隔离官网实际部署.json补完整浏览器验收事实，未注册假用户/给真实用户发消息/代为加入匹配。本次底栏遮挡修复实际图仍见64.9，不用仅enabled冒称按钮可点。
+- 本轮后续12模块后端与官网均已更新到该源，只有本轮各自改变的模块被替换。回退必须先核current与逐模块SHA，网页可原子回到0a0增量，后端对应.previous只恢复代码；已增列保持兼容，不覆盖当前生产用户/订单/讨论库，不把迁移前备份当当前数据库整体替换。回退会失去该轮已记录的旧入口治理/用途隔离修复，须先停对应写入口并重新验证，不能盲回退。
+- 本次后续未新打包、上传或正式提审Android/iOS。此前最后实机验收Android2116、Apple内部TestFlight26都是152346d源，本轮新UI/规则未因此自动成为原生新包；原生新增功能仍需重新打包与物理验收。苹果草稿最后读回仍选22/PREPARE_FOR_SUBMISSION属前轮记录，本轮没有改选构建、组装审核、撤回审核或提交；未重复提交荣耀。Apple购买成功弹框仍不等于到账，指定沙盒账号识别/恢复/权益核验未完成，未普遍放开沙盒资格。
+- 剩余必须继续：历史四语全界面/错误/说明；群盘消息锚点与群卡批量撤销；服务者资质/授权/收费服务验收及09其余备份恢复分享全链；10主动选择公开材料的AI整理与分歧分类；其余旧医学诊断/体质/伤寒流程整改；完整天文软件能力的代码和数据；旧已公开内容、图片/长稿/举报申诉的治理闭环。不能因短文字接了严格审核就说所有UGC和全部医学功能完成。
+- 外部验收继续承接64.6：两自愿成年人两台物理设备，Android/iOS真组件/锁屏/通知送达与修改取消/重启强停/权限/功耗，Apple指定沙盒账号到账恢复，全部医学来源、逐穴准确性/董氏图谱/28旧动画权利及专业校核、现代药典/医考/全部书籍权利，完整天文软件能力。没有医学专业签审、授权或全部功能真实操作证据的不改成PASS；07/09/10整体与正式允许继续false。
+- 唯一CMD未改，SHA仍6bc78b38a9a33fd75b0d251926a480fc9b93ff72bc756c75a8710e83cb98796a，三个文件均重新读SHA吻合/共56964392字节，旧2109目录仅可在文件删后空目录RD。10_继续完善清理目标重新核验.json为证；代理未执行文件删除，四目标仍待负责人本人运行，物理两代轮换未达标。不得重复执行报告50等过时清理目标。
+- 本轮未在C生成依赖树、构建输出、APK/IPA/ZIP或解包；node_modules/.next/out/www/android/app/build均不存在。本次隔离预览3113的专属进程已停，Windows Get-NetTCPConnection确认监听数0；一次socket探针超时不作为关端口证据。C可用16551292928字节为观察值，不归因于本轮释放。共享ADB、用户浏览器、其他产品、主树其他开发改动及密钥均未清除。有效源码、失败原因/回归截图、正式回滚与审计证据继续保留。
+- 本轮活动仓有效修改已审查并逐批提交推送；最终文档提交、空status、上游0/0、权威报告四副本SHA及制度/入口SHA由E盘10_继续完善收尾核验.json最终读回记录，避免报告自引用。旧共享主树22个修改为此前只读盘点，不是本轮可以盲提交/清除的源码；历史债务与本轮活动仓状态分开，不说整个所有工作树全干净。
