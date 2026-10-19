@@ -1,3 +1,4 @@
+import traditionalCharacters from "../data/lifeSearchTraditional.json" with {type:"json"};
 /** Private domain: no authentication, analytics, fetch, cloud client or AI dependency. */
 export const LIFE_SCHEMA=1;
 export const LIFE_CATEGORIES=["生活随记","健康记录","梦境","排盘点评","工作","人际往来","学习"];
@@ -16,9 +17,8 @@ export function validateLifeEntry(x:unknown,owner?:string):asserts x is LifeEntr
  for(const a of e.attachments)if(!a||!/^[-a-zA-Z0-9]{8,80}$/.test(a.id)||typeof a.name!=="string"||!Number.isSafeInteger(a.bytes)||a.bytes<0||a.bytes>64*1024*1024||!Array.isArray(a.chunks)||a.chunks.length>128||a.chunks.some(k=>!/^blob:[-a-zA-Z0-9:]+$/.test(k))||!a.sha256.match(/^[a-f0-9]{64}$/))throw Error("附件索引无效");
 }
 // Normalization affects the index only. Original spelling, units and quotes remain intact.
-const traditional="醫藥體夢學習記錄曆時間關係張陳劉會診過敏處頁轉備份復還檔案腎臟頭痛飲酒腸胃氣虛陽陰術後經驗對話師說見尋個資脈觀點";
-const simplified ="医药体梦学习记录历时间关系张陈刘会诊过敏处页转备份复还档案肾脏头痛饮酒肠胃气虚阳阴术后经验对话师说见寻个资脉观点";
-export function normalizeLifeText(s:string){return Array.from(s.normalize("NFKC").toLowerCase()).map(c=>{const i=traditional.indexOf(c);return i<0?c:simplified[i];}).join("");}
+const characterMap:Record<string,string>=traditionalCharacters;
+export function normalizeLifeText(s:string){return Array.from(s.normalize("NFKC").toLowerCase()).map(c=>characterMap[c]||c).join("");}
 export function lifeSearchText(e:LifeEntry){return [e.title,e.text,...e.categories,...e.tags,...e.people,e.occurredAt,...e.sourceRefs.flatMap(r=>[r.author,r.platform,r.quote,r.at]),...e.attachments.flatMap(a=>[a.name,...(a.ocr?.blocks||[]).map(b=>b.confirmedText??b.text)]),e.health&&Object.values(e.health).join(" ")].filter(Boolean).join("\n");}
 /** Frequent terms use compact bitmaps; sparse terms keep small sets. This avoids
  * allocating a full JS Set of 100,000 UUID strings for every common character. */
@@ -55,3 +55,10 @@ export function healthPreparation(entries:LifeEntry[]){
 }
 export function compareLabUnits(a:HealthData,b:HealthData){return a.kind==="lab"&&b.kind==="lab"&&!!a.unit&&a.unit===b.unit;}
 export function privateOutboundAllowed(dataClass:DataClass,purpose:string){return dataClass!=="PRIVATE_LOCAL"&&["EXPLICIT_SHARED_COPY","PUBLIC_CONTENT"].includes(purpose);}
+
+export interface LifeSearchHit {source:string;snippet:string;attachmentId?:string;page?:number;}
+export function lifeSearchHits(e:LifeEntry,query:string):LifeSearchHit[]{
+ const terms=normalizeLifeText(query).trim().split(/\s+/u).filter(Boolean);if(!terms.length)return [];
+ const fields:{source:string;text:string;attachmentId?:string;page?:number}[]=[{source:"标题",text:e.title},{source:"正文",text:e.text},{source:"人物/别名",text:e.people.join(' · ')},{source:"分类/标签",text:[...e.categories,...e.tags].join(' · ')},...e.sourceRefs.flatMap(r=>[{source:`来源 · ${r.author||r.kind}`,text:[r.platform,r.quote,r.at].filter(Boolean).join(' ')}]),...e.attachments.flatMap(a=>(a.ocr?.blocks||[]).map(b=>({source:`原件 · ${a.name} · 第${b.page}页${b.confirmedAt?'（已核对）':'（OCR待核对）'}`,text:b.confirmedText??b.text,attachmentId:a.id,page:b.page}))),...(e.health?[{source:"本人健康字段",text:Object.values(e.health).join(' ')}]:[])];
+ return fields.flatMap(field=>{const text=normalizeLifeText(field.text),position=Math.min(...terms.map(t=>text.indexOf(t)).filter(i=>i>=0));if(!Number.isFinite(position))return [];const start=Math.max(0,position-28);return [{source:field.source,snippet:(start?'…':'')+Array.from(field.text).slice(start,start+100).join('')+(Array.from(field.text).length>start+100?'…':''),attachmentId:field.attachmentId,page:field.page}];}).slice(0,6);
+}

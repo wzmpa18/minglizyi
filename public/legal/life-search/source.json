@@ -1,0 +1,8 @@
+{
+  "source": "https://raw.githubusercontent.com/BYVoid/OpenCC/ver.1.1.9/data/dictionary/TSCharacters.txt",
+  "tag": "ver.1.1.9",
+  "sourceSha256": "6b5a0a799bea2bb22c001f635eaa3fc2904310f0c08addbff275477a80ecf09a",
+  "entries": 4113,
+  "transformation": "TSCharacters first candidate, character normalization for search only; not the complete OpenCC context-aware converter; originals and medical terminology unchanged",
+  "license": "https://raw.githubusercontent.com/BYVoid/OpenCC/ver.1.1.9/LICENSE"
+}

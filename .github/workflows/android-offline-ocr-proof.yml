@@ -1,5 +1,10 @@
 name: Android offline OCR AOSP proof
 on:
+  push:
+    paths:
+      - ".github/workflows/android-offline-ocr-proof.yml"
+      - "android/app/src/androidTest/java/com/yandao/guoxue/plugins/LifeOfflineOcrTest.java"
+      - "scripts/run_android_offline_ocr_proof.sh"
   workflow_dispatch:
 permissions:
   contents: read

@@ -6,7 +6,7 @@ const fs=require('node:fs');
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){if(specifier.startsWith('.')&&!/\.[a-z]+$/i.test(specifier))return next(specifier+'.ts',context);throw error;}}});
 const {LifeVault}=require('../src/lib/lifeVault.ts');
 const {scopedPrivateView}=require('../src/lib/lifeVaultView.ts');
-const {LifeSearchIndex,normalizeLifeText,healthPreparation,compareLabUnits,privateOutboundAllowed}=require('../src/lib/lifeRecords.ts');
+const {LifeSearchIndex,normalizeLifeText,lifeSearchHits,healthPreparation,compareLabUnits,privateOutboundAllowed}=require('../src/lib/lifeRecords.ts');
 function memoryStorage(){const rows=new Map();return {rows,async commit(items,check){if(check&&(rows.get(check.key)?.etag??null)!==check.etag)throw Error('revision conflict');if(check?.deletePrefix)for(const key of rows.keys())if(key.startsWith(check.deletePrefix))rows.delete(key);for(const row of items){if(row.value===null)rows.delete(row.key);else rows.set(row.key,structuredClone(row.value));}},async read(key){return structuredClone(rows.get(key));},async page(prefix,after='',limit=100){return [...rows].filter(([key])=>key.startsWith(prefix)&&key>after).sort(([a],[b])=>a.localeCompare(b,'en')).slice(0,limit).map(([key,value])=>({key,value:structuredClone(value)}));}};}
 test('long private records, independent vaults, quote provenance, versions and authenticated encryption',async()=>{
  const store=memoryStorage(),{vault,recoveryCode}=await LifeVault.create(store,'a-long-private-password');
@@ -59,4 +59,8 @@ test('late private async results cannot appear after account/view switch or lock
 test('1k / 10k / 100k synthetic short-record local index benchmark',()=>{
  const results=[];for(const n of [1000,10000,100000]){const index=new LifeSearchIndex(),start=performance.now();for(let i=0;i<n;i++)index.put(String(i),`合成记录${i} 医生 样例${i%100} ${i===n-1?'唯一复查资料':'普通学习'} 2026-10-19`);const indexed=performance.now();assert.equal(index.search('唯一 复查').total,1);const cold=performance.now();for(let i=0;i<20;i++)assert.equal(index.search('唯一 复查').total,1);const hot=performance.now();index.put(String(n-1),'合成改写 唯一新资料');assert.equal(index.search('复查').total,0);results.push({records:n,indexMs:Math.round(indexed-start),firstQueryMs:+(cold-indexed).toFixed(3),hotMeanMs:+((hot-cold)/20).toFixed(3),indexStats:index.stats(),rss:process.memoryUsage().rss});index.clear();}
  console.log('SYNTHETIC_INDEX_BENCHMARK '+JSON.stringify({platform:process.platform,node:process.version,results,scope:'RAM search index; not native SQLite throughput, OCR, physical device energy or disk benchmark'}));
+});
+
+test('full licensed character normalization and source-located OCR hits never rewrite originals',()=>{
+ const source='臺灣醫學筆記，左側與右側分開核對';assert.equal(normalizeLifeText(source),'台湾医学笔记，左侧与右侧分开核对');const e={title:'合成原件',text:'',people:[],tags:[],categories:[],sourceRefs:[],attachments:[{id:'photo',name:'原件.png',ocr:{blocks:[{text:source,page:2}]}}]};const hit=lifeSearchHits(e,'右侧')[0];assert.equal(hit.page,2);assert.equal(hit.attachmentId,'photo');assert.ok(hit.source.includes('OCR待核对'));assert.equal(e.attachments[0].ocr.blocks[0].text,source);
 });

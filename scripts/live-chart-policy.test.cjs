@@ -10,3 +10,7 @@ test('astronomical longitude is retained, unknown tools and malformed charts fai
 test('hide all four pillars and daily stems, no hidden CSS or recomputation data',()=>{
  const c=snapshot('bazi',{pillars:Array.from({length:4},(_,i)=>({name:['年柱','月柱','日柱','时柱'][i],gan:'甲',zhi:'子'})),dayGan:'甲',input:{solarDate:'1990-05-15'}},{showPillars:false});assert.equal(c.data.pillars,undefined);assert.equal(c.data.dayGan,undefined);assert.ok(c.inferenceNotice.includes('无法保证匿名'));assert.equal(revalidate(c).data.pillars,undefined);
 });
+
+test('unknown nested birth extensions and a hidden individual pillar never reach the shared JSON',()=>{
+ const original={pillars:['甲子','乙丑','丙寅','丁卯'].map((v,i)=>({name:['年柱','月柱','日柱','时柱'][i],gan:v[0],zhi:v[1],birthDate:'SECRET_DATE',extraOwner:{name:'SECRET_NAME'}})),dayGan:'丙',patterns:['PRIVATE_DERIVED']};const c=snapshot('bazi',original,{showPillars:true,visiblePillars:[0,1,3]});assert.equal(c.data.pillars[2].hidden,true);assert.equal(c.data.pillars[2].gan,undefined);assert.equal(c.data.dayGan,undefined);assert.equal(c.data.patterns,undefined);assert.ok(!JSON.stringify(c).includes('SECRET'));assert.deepEqual(revalidate(c).data,c.data);assert.equal(original.pillars[2].gan,'丙');
+});
