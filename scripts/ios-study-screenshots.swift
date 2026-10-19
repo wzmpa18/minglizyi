@@ -11,10 +11,21 @@ final class GuoxueStudyScreenshots: XCTestCase {
         for _ in 0..<16 {if element.isHittable {if !element.isEnabled{let ready=XCTNSPredicateExpectation(predicate:NSPredicate(format:"enabled == true"),object:element);guard XCTWaiter.wait(for:[ready],timeout:15) == .completed else{XCTFail("UI remained disabled: "+name);return}};element.tap();return};if element.frame.minY<70{app.swipeDown()}else{app.swipeUp()}}
         XCTFail("UI not reachable: "+name)
     }
+    private func awaitHome(_ app:XCUIApplication){
+        let consent=app.buttons["同意并继续"],home=app.links["我的"].firstMatch
+        // A cold WKWebView can mount privacy consent after the launch animation.
+        // Wait for actual visible controls; do not assume an eight-second delay.
+        let ready=XCTNSPredicateExpectation(predicate:NSPredicate { _,_ in
+            (consent.exists && consent.isHittable) || (home.exists && home.isHittable)
+        },object:app)
+        guard XCTWaiter.wait(for:[ready],timeout:60) == .completed else{shot("00_实际启动未就绪",app);XCTFail("Actual privacy or home UI must become visible");return}
+        if consent.exists && consent.isHittable{consent.tap()}
+        guard home.waitForExistence(timeout:30) else{shot("00_实际首页未出现",app);XCTFail("Home must be reachable after consent");return}
+    }
     func testLifePrivateNativeStorage() throws {
         continueAfterFailure=false
         let app=XCUIApplication();app.launchArguments += ["-AppleLanguages","(zh-Hans)","-AppleLocale","zh_CN"];app.launch()
-        let consent=app.buttons["同意并继续"];if consent.waitForExistence(timeout:8)&&consent.isHittable{consent.tap()}
+        awaitHome(app)
         tapVisible(app.links,"我的",app);tapVisible(app.links,"人生记录",app)
         let password=app.secureTextFields["档案密码"].firstMatch
         XCTAssertTrue(password.waitForExistence(timeout:30),"Private local mode must work without social login")
