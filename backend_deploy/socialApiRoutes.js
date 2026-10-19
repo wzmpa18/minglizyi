@@ -378,23 +378,10 @@ function findSensitiveWords(text) {
   return hit;
 }
 
-async function moderateResourceComment(content) {
-  try {
-    const callAI = require('./academyRoutes').callAI;
-    const result = await callAI(
-      '你是社区评论审核器。只返回 PASS 或 REJECT:简短原因。拦截违法、色情、赌博、诈骗、广告引流、联系方式、隐私泄露、人身攻击、仇恨、煽动，以及鼓励自行针刺、用药、开方等危险医疗操作。正常的国学、中医学习讨论应通过。',
-      `待审核评论：${String(content)}`,
-      'resource_comment_moderation',
-      {},
-    );
-    const answer = String(result || '').trim();
-    if (/^PASS\b/i.test(answer)) return { status: 'active', reason: '', model: 'configured-ai' };
-    if (/^REJECT\b/i.test(answer)) return { status: 'rejected', reason: answer.slice(0, 200), model: 'configured-ai' };
-    return { status: 'pending', reason: 'AI审核结果无法识别，转人工复核', model: 'configured-ai' };
-  } catch (error) {
-    return { status: 'pending', reason: `AI审核暂不可用：${String(error && error.message || error).slice(0, 120)}`, model: 'unavailable' };
-  }
-}
+const moderateResourceComment=require('./socialModerationPolicy').createSelectedTextModerator({
+ screen:input=>require('./studyCommentsRoutes').screenSelectedText(input),
+ audit:row=>{const d=getDb();d.exec(`CREATE TABLE IF NOT EXISTS social_text_moderation(user_id TEXT NOT NULL,content_hash TEXT NOT NULL,consent_version TEXT NOT NULL,status TEXT NOT NULL,checked_ms INTEGER NOT NULL,PRIMARY KEY(user_id,content_hash,consent_version))`);d.prepare('INSERT OR REPLACE INTO social_text_moderation VALUES (?,?,?,?,?)').run(row.userId,row.contentHash,row.version,row.status,Date.now());},
+});
 
 function logSensitive(userId, scene, content, words) {
   try {
@@ -775,7 +762,7 @@ function createRouter() {
       const result = d.prepare(`INSERT INTO resource_comments
         (resource_type, resource_id, user_id, nickname, content, status) VALUES (?,?,?,?,?,'pending')`)
         .run(resourceType, resourceId, String(req.user.userId), info.nickname || '国学爱好者', content);
-      const review = await moderateResourceComment(content);
+      const review = await moderateResourceComment(content,{userId:req.user.userId,moderationVersion:req.body.moderationVersion});
       d.prepare(`UPDATE resource_comments SET status = ?, review_reason = ?, moderation_model = ?,
         reviewed_at = datetime('now','localtime') WHERE id = ?`)
         .run(review.status, review.reason, review.model, result.lastInsertRowid);

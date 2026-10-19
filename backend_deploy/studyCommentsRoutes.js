@@ -64,4 +64,4 @@ function createRouter(){
   router.put('/admin/report/:id',handle(req=>getStore().resolveReport(actor(req),req.params.id,String(req.body.note||'').slice(0,500))));
   return router;
 }
-module.exports={createRouter};
+module.exports={createRouter,screenSelectedText:input=>getStore().screenSelectedText(input)};

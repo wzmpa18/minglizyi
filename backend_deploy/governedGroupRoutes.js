@@ -33,7 +33,7 @@ function createGovernedGroupRouter({getDb,getUserDb,authRequired,userPublicInfo,
   if(old){const g=group(old.group_id,me);if(g.name!==valid.text||old.topic!==topic)fail('请求内容已改变，请重新确认',409);return {success:true,group:vo(g),duplicated:true};}
   if(db().prepare('SELECT COUNT(*) n FROM study_group_governance WHERE owner_id=? AND created_ms>?').get(me,Date.now()-86400000).n>=3)fail('今日建群已达限额',429);
   const created=db().transaction(()=>{const result=db().prepare('INSERT INTO groups(name,owner_id,owner_name,member_ids) VALUES (?,?,?,?)').run(valid.text,me,userPublicInfo(me)?.nickname||'学友',JSON.stringify([me]));const id=Number(result.lastInsertRowid);db().prepare('INSERT INTO study_group_governance(group_id,topic,request_id,owner_id,created_ms) VALUES (?,?,?,?,?)').run(id,topic,requestId,me,Date.now());db().prepare('INSERT INTO study_group_access(group_id,user_id,after_msg_id,joined_ms,membership_id) VALUES (?,?,0,?,?)').run(id,me,Date.now(),crypto.randomUUID());return id;})();
-  let review={status:'pending',reason:'等待内容审核'};try{review=await moderateResourceComment(valid.text+'\n学习专题：'+topic);}catch{}
+  let review={status:'pending',reason:'等待内容审核'};try{review=await moderateResourceComment(valid.text+'\n学习专题：'+topic,{userId:me,moderationVersion:req.body?.moderationVersion});}catch{}
   const status=['active','pending','rejected'].includes(review?.status)?review.status:'pending';db().prepare('UPDATE study_group_governance SET status=?,review_reason=? WHERE group_id=?').run(status,String(review?.reason||'').slice(0,500),created);
   return {success:true,group:vo(group(created,me)),pendingReview:status==='pending'};
  }));
@@ -65,7 +65,7 @@ function createGovernedGroupRouter({getDb,getUserDb,authRequired,userPublicInfo,
   const name=req.body?.name===undefined?g.name:req.body.name,announcement=req.body?.announcement===undefined?g.announcement:req.body.announcement;
   const validName=validateStudyText(name),validNotice=announcement===''?{ok:true,text:''}:validateStudyText(announcement);
   if(!validName.ok||Array.from(validName.text).length>30||!validNotice.ok)fail('群名限30字、公告限500字，并仅支持文字');
-  let review={status:'pending',reason:'等待内容审核'};try{review=await moderateResourceComment(validName.text+'\n'+validNotice.text);}catch{}
+  let review={status:'pending',reason:'等待内容审核'};try{review=await moderateResourceComment(validName.text+'\n'+validNotice.text,{userId:me,moderationVersion:req.body?.moderationVersion});}catch{}
   const status=['active','pending','rejected'].includes(review?.status)?review.status:'pending';group(g.id,me,true);
   db().transaction(()=>{db().prepare('INSERT OR REPLACE INTO study_group_edits VALUES (?,?,?,?,?,?)').run(g.id,validName.text,validNotice.text,status,String(review?.reason||'').slice(0,500),Date.now());if(status==='active')db().prepare('UPDATE groups SET name=?,announcement=? WHERE id=?').run(validName.text,validNotice.text,g.id);})();
   return {success:true,pendingReview:status==='pending',rejected:status==='rejected',group:vo(group(g.id,me)),message:status==='active'?'群资料已更新':status==='pending'?'资料已提交审核，审核前继续展示原资料':'资料未通过审核，原资料保留'};
@@ -84,7 +84,7 @@ function createGovernedGroupRouter({getDb,getUserDb,authRequired,userPublicInfo,
   if(existing){if(existing.sender_id!==me||existing.content!==validation.text)fail('发送编号已用于其他内容',409);return {success:true,duplicated:true,pendingReview:existing.review_status==='pending',message:toMessage(existing)};}
   if(db().prepare("SELECT COUNT(*) n FROM chat_messages WHERE conversation_id=? AND sender_id=? AND created_at>datetime('now','localtime','-1 minute')").get(cid,me).n>=10)fail('发送过于频繁',429);
   const nicks=JSON.parse(g.member_nicknames||'{}'),name=nicks[me]||userPublicInfo(me)?.nickname||'学友',insert=db().prepare("INSERT INTO chat_messages(conversation_id,sender_id,sender_name,content,msg_type,client_msg_id,review_status) VALUES (?,?,?,?,'text',?,'pending')").run(cid,me,name,validation.text,cmi);
-  let review={status:'pending',reason:'等待审核'};try{review=await moderateResourceComment(validation.text);}catch{}
+  let review={status:'pending',reason:'等待审核'};try{review=await moderateResourceComment(validation.text,{userId:me,moderationVersion:req.body?.moderationVersion});}catch{}
   let status=['active','pending','rejected'].includes(review?.status)?review.status:'pending';try{group(g.id,me,true);}catch{status='rejected';}
   db().prepare('UPDATE chat_messages SET review_status=?,review_reason=? WHERE id=?').run(status,String(review?.reason||'').slice(0,500),insert.lastInsertRowid);
   if(status==='active')for(const memberId of ids(group(g.id,me))){upsertUserConversation(db(),memberId,cid,'group','',g.id,Number(insert.lastInsertRowid),memberId===me);if(memberId!==me)notify(memberId,'group_chat',{userId:me,nickname:name},`在「${g.name}」发来消息`,'/groups/chat?id='+g.id);}

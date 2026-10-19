@@ -44,7 +44,7 @@ function createTongchenRouter({getDb,getUserDb,authRequired,userPublicInfo,priva
  router.post('/peer/:peerId/messages',authRequired,handle(async req=>{
   const s=service();s.joined(req.user.userId);const peer=s.relation(req.user.userId,req.params.peerId),me=String(req.user.userId),conv=privateConvId(me,peer.user_id),db=getDb();
   const bad=message=>{const error=new Error(message);error.status=400;throw error;};
-  if(Object.keys(req.body||{}).some(k=>!['content','requestId'].includes(k)))bad('仅支持文字交流');
+  if(Object.keys(req.body||{}).some(k=>!['content','requestId','moderationVersion'].includes(k)))bad('仅支持文字交流');
   const text=validateStudyText(req.body.content);if(!text.ok)bad(text.error);
   if(!/^[A-Za-z0-9_-]{16,64}$/.test(req.body.requestId||''))bad('请求编号无效');
   const old=db.prepare('SELECT sender_id,content,review_status FROM chat_messages WHERE conversation_id=? AND client_msg_id=?').get(conv,req.body.requestId);
@@ -52,7 +52,7 @@ function createTongchenRouter({getDb,getUserDb,authRequired,userPublicInfo,priva
   if(checkPlatformMute(me)){const error=new Error('账号暂不可发送交流文字');error.status=403;throw error;}
   s.limit(me,'message',100,10);
   const result=db.prepare("INSERT INTO chat_messages(conversation_id,sender_id,sender_name,content,msg_type,client_msg_id,review_status) VALUES (?,?,?,?,'text',?,'pending')").run(conv,me,userInfo(me)?.nickname||'学友',text.text,req.body.requestId);
-  const review=await moderateResourceComment(text.text);
+  const review=await moderateResourceComment(text.text,{userId:me,moderationVersion:req.body?.moderationVersion});
   // Recheck relationship/block status after asynchronous moderation.
   let stillAllowed=true;try{s.relation(me,req.params.peerId);}catch{stillAllowed=false;}
   const status=stillAllowed?review.status:'rejected';

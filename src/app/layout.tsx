@@ -5,6 +5,7 @@ import fs from "fs";
 import path from "path";
 import "./globals.css";
 import BottomNav from "@/components/BottomNav";
+import SocialModerationConsent from "@/components/SocialModerationConsent";
 import CloudSyncInit from "@/components/CloudSyncInit";
 import AuthRestoreInit from "@/components/AuthRestoreInit";
 import ApplePurchaseInit from "@/components/ApplePurchaseInit";
@@ -91,6 +92,7 @@ export default function RootLayout({
             <ReminderSchedulerInit />
             <NativeCalendarInit />
             <OfflineInit />
+            <SocialModerationConsent/>
             <GlobalZoomProvider>
               {children}
             </GlobalZoomProvider>

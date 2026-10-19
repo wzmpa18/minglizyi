@@ -7,6 +7,8 @@
 // ============================================================================
 
 import { getUserToken } from "./auth";
+import {consentForSocialText} from "./socialModerationConsent";
+import {clientPlatformHeaders} from "./platformGate";
 
 const API_BASE = typeof window !== "undefined" ? window.location.origin : "";
 
@@ -17,10 +19,13 @@ function tokenHeader(): Record<string, string> {
 
 async function api<T = any>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
+  if(init?.method==='POST'&&typeof init.body==='string'&&(/^\/api\/social\/resource\/[^/]+\/[^/]+\/comments$/.test(path)||/^\/api\/social\/groups(?:\/\d+\/(?:messages|update))?$/.test(path))){
+    try{const body=JSON.parse(init.body),text=[body.content,body.name,body.announcement].filter(v=>typeof v==='string'&&v.trim()).join('\n');const version=await consentForSocialText(text,path.includes('/resource/')?'公开学习交流':path.endsWith('/messages')?'定向学习交流':'学习群资料');init={...init,body:JSON.stringify({...body,moderationVersion:version})};}catch(error){return {success:false,error:error instanceof Error?error.message:'发送未确认'} as T;}
+  }
   try {
     res = await fetch(`${API_BASE}${path}`, {
       ...init,
-      headers: { "Content-Type": "application/json", ...tokenHeader(), ...(init?.headers || {}) },
+      headers: { "Content-Type": "application/json", ...clientPlatformHeaders(), ...tokenHeader(), ...(init?.headers || {}) },
     });
   } catch {
     // v25.0.38 P0-2：网络异常不再静默，返回结构化错误供调用方提示

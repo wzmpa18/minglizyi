@@ -1,4 +1,5 @@
 "use client";
+import {consentForSocialText} from "./socialModerationConsent";
 import {getUserToken} from "./auth";
 import {clientPlatformHeaders} from "./platformGate";
 import {snapshot as project} from "../../backend_deploy/liveChartPolicy";
@@ -9,5 +10,5 @@ export const makeLiveSnapshot=(tool:string,result:Record<string,unknown>,showPil
 /** Only explicitly projected SHARED_COLLABORATION objects can reach this endpoint.
  * PRIVATE_LOCAL originals/OCR/search/AI never import or call this client. */
 export async function liveRequest(path:string,method="GET",body?:unknown):Promise<LiveResult>{
- try{const token=getUserToken();if(!token)return {success:false,error:"请先登录，私人本机记录无需登录"};const response=await fetch(`/api/social/live${path}`,{method,headers:{"Content-Type":"application/json",...clientPlatformHeaders(),Authorization:`Bearer ${token}`},body:body===undefined?undefined:JSON.stringify(body),cache:"no-store"});const json=await response.json();return response.ok?json:{success:false,error:json.error||`操作失败（${response.status}）`};}catch{return {success:false,error:"网络暂不可用，尚未确认送达，请手动重试"};}
+ try{if(method==='POST'&&/^\/[\w-]+\/messages$/.test(path)&&body&&typeof body==='object'){const content=(body as {content?:unknown}).content;if(typeof content!=='string')throw Error('仅支持文字交流');body={...body,moderationVersion:await consentForSocialText(content,'定向学习交流')};}const token=getUserToken();if(!token)return {success:false,error:"请先登录，私人本机记录无需登录"};const response=await fetch(`/api/social/live${path}`,{method,headers:{"Content-Type":"application/json",...clientPlatformHeaders(),Authorization:`Bearer ${token}`},body:body===undefined?undefined:JSON.stringify(body),cache:"no-store"});const json=await response.json();return response.ok?json:{success:false,error:json.error||`操作失败（${response.status}）`};}catch(error){return {success:false,error:error instanceof Error?error.message:"网络暂不可用，尚未确认送达，请手动重试"};}
 }
