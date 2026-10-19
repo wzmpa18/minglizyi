@@ -9,7 +9,7 @@ import ImageIO
 public class LifeVaultPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPickerDelegate {
  public let identifier="LifeVaultPlugin"
  public let jsName="LifeVault"
- public let pluginMethods:[CAPPluginMethod]=[CAPPluginMethod(name:"commit",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"page",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"read",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"ocr",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"renderPdf",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"saveDocument",returnType:CAPPluginReturnPromise)]
+ public let pluginMethods:[CAPPluginMethod]=[CAPPluginMethod(name:"commit",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"page",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"read",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"ocr",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"previewPdfPage",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"renderPdf",returnType:CAPPluginReturnPromise),CAPPluginMethod(name:"saveDocument",returnType:CAPPluginReturnPromise)]
  private let queue=DispatchQueue(label:"vip.yandao.private-vault")
  private var db:OpaquePointer?
  private var exportCall:CAPPluginCall?
@@ -50,13 +50,22 @@ public class LifeVaultPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPickerDeleg
  }
  @objc func page(_ call:CAPPluginCall){queue.async{do{let p=call.getString("prefix") ?? "";guard self.valid(p) else{throw NSError(domain:"Vault",code:12)};let rows=try self.query("SELECT k,v FROM vault_items WHERE k>=? AND k<? AND k>? ORDER BY k LIMIT ?",[p,p+"\u{ffff}",call.getString("after") ?? "",String(max(1,min(1000,call.getInt("limit") ?? 100)))]);call.resolve(["rows":rows])}catch{call.reject("私人记录索引读取失败")}}}
  @objc func read(_ call:CAPPluginCall){queue.async{do{let k=call.getString("key") ?? "";guard self.valid(k) else{throw NSError(domain:"Vault",code:13)};let rows=try self.query("SELECT k,v FROM vault_items WHERE k=?",[k]);if let value=rows.first?["value"]{call.resolve(["value":value])}else{call.resolve([:])}}catch{call.reject("私人记录读取失败")}}}
+ private func pdfImage(_ data:Data,page:Int)throws->(CGImage,Int){
+  guard data.count<=20*1024*1024,let provider=CGDataProvider(data:data as CFData),let pdf=CGPDFDocument(provider),!pdf.isEncrypted,page>0,page<=pdf.numberOfPages,pdf.numberOfPages<=10000,let selected=pdf.page(at:page) else{throw NSError(domain:"PDF",code:1)}
+  let rect=selected.getBoxRect(.mediaBox);guard rect.width>0,rect.height>0 else{throw NSError(domain:"PDF",code:2)};let scale=3000/max(rect.width,rect.height),size=CGSize(width:rect.width*scale,height:rect.height*scale),format=UIGraphicsImageRendererFormat();format.scale=1;format.opaque=true
+  let image=UIGraphicsImageRenderer(size:size,format:format).image{context in UIColor.white.setFill();context.fill(CGRect(origin:.zero,size:size));let cg=context.cgContext;cg.translateBy(x:0,y:size.height);cg.scaleBy(x:scale,y:-scale);cg.translateBy(x:-rect.minX,y:-rect.minY);cg.drawPDFPage(selected)}
+  guard let cg=image.cgImage else{throw NSError(domain:"PDF",code:3)};return (cg,pdf.numberOfPages)
+ }
+ @objc func previewPdfPage(_ call:CAPPluginCall){queue.async{do{guard let encoded=call.getString("base64"),encoded.count<28000000,let data=Data(base64Encoded:encoded) else{throw NSError(domain:"PDF",code:4)};let (cg,total)=try self.pdfImage(data,page:call.getInt("page") ?? 1);guard let png=UIImage(cgImage:cg).pngData() else{throw NSError(domain:"PDF",code:5)};call.resolve(["base64":png.base64EncodedString(),"totalPages":total])}catch{call.reject("本机PDF页预览未完成，原件仍保留；未使用远程查看器")}}}
  @objc func ocr(_ call:CAPPluginCall){queue.async{do{
-  guard let encoded=call.getString("base64"),encoded.count<28000000,let data=Data(base64Encoded:encoded),let source=CGImageSourceCreateWithData(data as CFData,nil),let cg=CGImageSourceCreateThumbnailAtIndex(source,0,[kCGImageSourceCreateThumbnailFromImageAlways:true,kCGImageSourceCreateThumbnailWithTransform:true,kCGImageSourceThumbnailMaxPixelSize:4000] as CFDictionary) else{throw NSError(domain:"OCR",code:1)}
+  guard let encoded=call.getString("base64"),encoded.count<28000000,let data=Data(base64Encoded:encoded) else{throw NSError(domain:"OCR",code:1)};let cg:CGImage,total:Int,page:Int
+  if call.getString("type")=="application/pdf" {page=call.getInt("page") ?? 1;let rendered=try self.pdfImage(data,page:page);cg=rendered.0;total=rendered.1}
+  else{guard let source=CGImageSourceCreateWithData(data as CFData,nil),let image=CGImageSourceCreateThumbnailAtIndex(source,0,[kCGImageSourceCreateThumbnailFromImageAlways:true,kCGImageSourceCreateThumbnailWithTransform:true,kCGImageSourceThumbnailMaxPixelSize:4000] as CFDictionary) else{throw NSError(domain:"OCR",code:2)};cg=image;page=1;total=1}
   let request=VNRecognizeTextRequest();request.recognitionLevel = .accurate;request.recognitionLanguages=["zh-Hans","zh-Hant","en-US"];request.usesLanguageCorrection=false
   try VNImageRequestHandler(cgImage:cg,orientation:.up,options:[:]).perform([request])
-  let blocks:[[String:Any]]=(request.results ?? []).enumerated().compactMap{index,observation in guard let text=observation.topCandidates(1).first else{return nil};let b=observation.boundingBox;return ["id":"line-\(index)","page":1,"text":text.string,"confidence":text.confidence,"box":[b.minX,1-b.maxY,b.width,b.height]]}
-  call.resolve(["blocks":blocks,"model":"Apple Vision VNRecognizeTextRequest revision \(request.revision)","confirmed":false])
- }catch{call.reject("本机识字失败，请保留原件手动核对；未调用云端")}}}
+  let blocks:[[String:Any]]=(request.results ?? []).enumerated().compactMap{index,observation in guard let text=observation.topCandidates(1).first else{return nil};let b=observation.boundingBox;return ["id":"page-\(page)-line-\(index)","page":page,"text":text.string,"confidence":text.confidence,"box":[b.minX,1-b.maxY,b.width,b.height]]}
+  call.resolve(["blocks":blocks,"model":"Apple Vision VNRecognizeTextRequest revision \(request.revision)","confirmed":false,"page":page,"totalPages":total])
+ }catch{call.reject("本机识字失败，请保留原件手动核对；未调用云端。支持20MiB以内图片或逐页PDF")}}}
  @objc func renderPdf(_ call:CAPPluginCall){DispatchQueue.main.async{
   guard let text=call.getString("text"),text.count<=2000000 else{call.reject("单次PDF上限200万字符，请分批导出");return}
   let storage=NSTextStorage(string:text,attributes:[.font:UIFont.systemFont(ofSize:12),.foregroundColor:UIColor.black]);let layout=NSLayoutManager();storage.addLayoutManager(layout);let bounds=CGRect(x:0,y:0,width:595,height:842),area=CGRect(x:40,y:40,width:515,height:762);var ranges:[NSRange]=[]

@@ -17,6 +17,7 @@ import java.io.*;
 /** Opaque AEAD envelopes only. No network, analytics, content logging or backup permission. */
 @CapacitorPlugin(name="LifeVault")
 public class LifeVaultPlugin extends Plugin {
+ @Override public void load(){AndroidOfflineOcr.clearPdfTemps(getContext());}
  private SQLiteDatabase db;
  private byte[] exportBytes;
  private final ExecutorService ocrWorker=Executors.newSingleThreadExecutor();
@@ -36,10 +37,11 @@ public class LifeVaultPlugin extends Plugin {
  @PluginMethod public synchronized void read(PluginCall call){try(Cursor c=database().rawQuery("SELECT v FROM vault_items WHERE k=?",new String[]{valid(call.getString("key"))})){JSObject out=new JSObject();if(c.moveToFirst())out.put("value",new JSONTokener(c.getString(0)).nextValue());call.resolve(out);}catch(Exception e){call.reject("私人记录读取失败");}}
  @PluginMethod public synchronized void page(PluginCall call){try{String p=valid(call.getString("prefix")),after=call.getString("after","");int limit=Math.max(1,Math.min(1000,call.getInt("limit",100)));JSArray rows=new JSArray();try(Cursor c=database().rawQuery("SELECT k,v FROM vault_items WHERE k>=? AND k<? AND k>? ORDER BY k LIMIT ?",new String[]{p,p+"\uffff",after,String.valueOf(limit)})){while(c.moveToNext()){JSObject row=new JSObject();row.put("key",c.getString(0));row.put("value",new JSONTokener(c.getString(1)).nextValue());rows.put(row);}}JSObject out=new JSObject();out.put("rows",rows);call.resolve(out);}catch(Exception e){call.reject("私人记录索引读取失败");}}
  @PluginMethod public void ocr(PluginCall call){ocrWorker.execute(()->{
-  try{String value=call.getString("base64","");if(value.length()>28000000)throw new Exception();call.resolve(AndroidOfflineOcr.recognize(getContext(),Base64.decode(value,Base64.DEFAULT)));}
-  catch(Exception error){call.reject("离线识字未完成，请保留原件手动核对；未调用云端。支持20MiB以内单页图片。");}
+  try{String value=call.getString("base64","");if(value.length()>28000000)throw new Exception();call.resolve(AndroidOfflineOcr.recognize(getContext(),Base64.decode(value,Base64.DEFAULT),call.getString("type","image/png"),call.getInt("page",1)));}
+  catch(Exception error){call.reject("离线识字未完成，请保留原件手动核对；未调用云端。支持20MiB以内图片或逐页PDF；加密PDF请先用本人阅读器处理。");}
   catch(OutOfMemoryError error){call.reject("本机内存不足，已停止识字，原件保留；请选择较小的副本");}
  });}
+ @PluginMethod public void previewPdfPage(PluginCall call){ocrWorker.execute(()->{try{String value=call.getString("base64","");if(value.length()>28000000)throw new Exception();AndroidOfflineOcr.PdfImage image=AndroidOfflineOcr.pdfImage(getContext(),Base64.decode(value,Base64.DEFAULT),call.getInt("page",1));try{ByteArrayOutputStream bytes=new ByteArrayOutputStream();image.bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,bytes);JSObject result=new JSObject();result.put("base64",Base64.encodeToString(bytes.toByteArray(),Base64.NO_WRAP));result.put("totalPages",image.pages);call.resolve(result);}finally{image.bitmap.recycle();}}catch(Exception|OutOfMemoryError error){call.reject("本机PDF页预览未完成，原文件仍保留；未使用远程查看器");}});}
  @PluginMethod public void renderPdf(PluginCall call){ocrWorker.execute(()->{
   android.graphics.pdf.PdfDocument pdf=new android.graphics.pdf.PdfDocument();
   try{String text=call.getString("text","");if(text.length()>2000000)throw new Exception();android.graphics.Paint paint=new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);paint.setColor(android.graphics.Color.BLACK);paint.setTextSize(12);android.graphics.Paint.FontMetrics fm=paint.getFontMetrics();float lineHeight=18,y=40-fm.ascent;int pageNo=1;
