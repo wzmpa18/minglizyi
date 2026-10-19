@@ -20,3 +20,11 @@ test('additional fixed charts keep real palace values and exclude source counts,
  const cells=Object.fromEntries(Array.from({length:9},(_,i)=>[i+1,{shan:i+1,xiang:9-i,yun:9,name:'巽',bagua:'巽',stars:['太乙']} ]));const f=snapshot('xuankong-feixing',{zhaiMingData:cells,yunName:'九运',address:'SECRET'});assert.equal(f.data.zhaiMingData[1].shan,1);assert.equal(f.data.zhaiMingData[9].xiang,1);assert.deepEqual(revalidate(f).data,f.data);const t=snapshot('taiyi-sanshi',{gongData:cells,taiyiGong:4,year:1990});assert.equal(t.data.gongData[4].stars[0],'太乙');assert.equal(t.data.year,undefined);
 });
 test('legacy rule version is explicitly unknown and a known engine version survives revalidation',()=>{const c=snapshot('qizheng',{engineVersion:'qizheng-verified-v3',palaces:[],stars:[]});assert.equal(revalidate(c).engineVersion,'qizheng-verified-v3');assert.equal(snapshot('qizheng',{palaces:[],stars:[]}).engineVersion,'legacy-rule-version-unknown');});
+
+
+test('anchors only address fixed visible positions; hidden pillars and invented positions cannot be referenced',()=>{
+ const {validChartAnchor}=require('../backend_deploy/liveChartPolicy');
+ const b=snapshot('bazi',{pillars:Array.from({length:4},()=>({gan:'甲',zhi:'子'}))},{showPillars:true,visiblePillars:[0,2]});assert.equal(validChartAnchor(b,'pillar-0'),true);assert.equal(validChartAnchor(b,'pillar-1'),false);assert.equal(validChartAnchor(b,'pillar-7'),false);
+ const q=snapshot('qizheng',{palaces:[{branch:'子'}],stars:[{key:'sun',lon:10}]});assert.equal(validChartAnchor(q,'palace-子'),true);assert.equal(validChartAnchor(q,'star-sun'),true);assert.equal(validChartAnchor(q,'star-imaginary'),false);assert.equal(validChartAnchor(q,{}),false);
+ const g=snapshot('meihua',{benGua:{name:'乾'},bianGua:{name:'坤'}});assert.equal(validChartAnchor(g,'bianGua-5'),true);assert.equal(validChartAnchor(g,'huGua-0'),false);assert.equal(validChartAnchor(g,'benGua-6'),false);
+});

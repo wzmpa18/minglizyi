@@ -1,6 +1,6 @@
 'use strict';
 const express=require('express'),crypto=require('node:crypto');
-const {snapshot,revalidate}=require('./liveChartPolicy');
+const {snapshot,revalidate,validChartAnchor}=require('./liveChartPolicy');
 const {validateStudyText}=require('./studyCommentPolicy');
 function createStudyGroupCards({db,group,ids,getUserDb,userPublicInfo,checkPlatformMute,canSpeak,notify}){
  const router=express.Router({mergeParams:true});let ready=false;
@@ -17,6 +17,30 @@ function createStudyGroupCards({db,group,ids,getUserDb,userPublicInfo,checkPlatf
   const g=group(req.params.id,me,true);let before=Number.MAX_SAFE_INTEGER,beforeId='~';if(req.query.cursor){try{const cursor=JSON.parse(Buffer.from(String(req.query.cursor),'base64url').toString());if(!Array.isArray(cursor)||cursor.length!==2||!Number.isSafeInteger(cursor[0])||cursor[0]<0||typeof cursor[1]!=='string'||!/^[\w-]{32,40}$/.test(cursor[1]))fail('分页位置无效');[before,beforeId]=cursor;}catch{fail('分页位置无效');}}
   const rows=store().prepare("SELECT * FROM study_group_cards WHERE group_id=? AND state='active' AND expires_ms>? AND (created_ms<? OR (created_ms=? AND id<?)) ORDER BY created_ms DESC,id DESC LIMIT 50").all(g.id,Date.now(),before,before,beforeId),last=rows.at(-1);return {success:true,items:rows.flatMap(row=>{try{readable(row,me);return [{id:row.id,mine:row.owner_id===me,ownerName:row.owner_name,titles:JSON.parse(row.snapshots).map(c=>c.title),expiresAt:row.expires_ms}];}catch{return [];}}),nextCursor:rows.length===50?Buffer.from(JSON.stringify([last.created_ms,last.id])).toString('base64url'):undefined};
  }));
+ function position(req){let before=Number.MAX_SAFE_INTEGER,beforeId='~';if(req.query.cursor){try{const cursor=JSON.parse(Buffer.from(String(req.query.cursor),'base64url').toString());if(!Array.isArray(cursor)||cursor.length!==2||!Number.isSafeInteger(cursor[0])||cursor[0]<0||typeof cursor[1]!=='string'||!/^[\w-]{32,40}$/.test(cursor[1]))fail('分页位置无效');[before,beforeId]=cursor;}catch{fail('分页位置无效');}}return [before,beforeId];}
+ router.get('/mine',handle((req,me)=>{
+  if(!/^\d{1,16}$/.test(String(req.params.id)))fail('学习群编号无效');const [before,beforeId]=position(req),rows=store().prepare('SELECT * FROM study_group_cards WHERE group_id=? AND owner_id=? AND (created_ms<? OR (created_ms=? AND id<?)) ORDER BY created_ms DESC,id DESC LIMIT 50').all(req.params.id,me,before,before,beforeId),last=rows.at(-1);
+  return {success:true,items:rows.map(r=>({id:r.id,mine:true,ownerName:r.owner_name,titles:JSON.parse(r.snapshots).map(c=>c.title),expiresAt:r.expires_ms,state:r.state==='active'&&r.expires_ms<=Date.now()?'expired':r.state})),nextCursor:rows.length===50?Buffer.from(JSON.stringify([last.created_ms,last.id])).toString('base64url'):undefined};
+ }));
+ router.post('/revoke',handle((req,me)=>{
+  const ids=req.body?.ids;if(!Array.isArray(ids)||!ids.length||ids.length>50||new Set(ids).size!==ids.length||ids.some(id=>typeof id!=='string'||!/^[\w-]{32,40}$/.test(id)))fail('请明确选择1至50张本人分享的盘卡');
+  const rows=ids.map(id=>store().prepare('SELECT id,owner_id,state FROM study_group_cards WHERE id=? AND group_id=?').get(id,req.params.id));if(rows.some(r=>!r||r.owner_id!==me))fail('所选盘卡包含无权撤销的项目，本次未作任何更改',403);
+  let changed=0;store().transaction(()=>{for(const row of rows)if(row.state!=='revoked'){changed+=store().prepare("UPDATE study_group_cards SET state='revoked' WHERE id=? AND state!='revoked'").run(row.id).changes;audit(row,me,'REVOKE');}})();
+  return {success:true,changed,message:'所选盘卡已停止后续访问；已获准另存的副本和截图无法远程收回'};
+ }));
+ function resolveReferences(groupId,me,refs){
+  if(!Array.isArray(refs)||refs.length>4)fail('每条交流最多引用4个盘内位置');
+  const seen=new Set();return refs.map(ref=>{if(!ref||typeof ref!=='object'||Object.keys(ref).some(k=>!['cardId','version','anchor'].includes(k))||typeof ref.cardId!=='string'||typeof ref.version!=='string')fail('盘面引用无效');
+   const row=readable(store().prepare('SELECT * FROM study_group_cards WHERE id=? AND group_id=?').get(ref.cardId,groupId),me),chart=JSON.parse(row.snapshots).find(c=>c.version===ref.version);
+   if(!chart||!validChartAnchor(chart,ref.anchor))fail('所选盘版本或位置无效');const key=ref.cardId+':'+ref.version+':'+ref.anchor;if(seen.has(key))fail('请勿重复引用同一位置');seen.add(key);return {cardId:row.id,version:chart.version,anchor:ref.anchor};
+  });
+ }
+ function visibleReferences(groupId,me,value){
+  let refs;try{refs=JSON.parse(value||'[]');if(!Array.isArray(refs)||refs.length>4)throw Error();}catch{return {chartRefs:[],hasUnavailableReferences:true};}
+  const visible=refs.flatMap(ref=>{try{resolveReferences(groupId,me,[ref]);const row=store().prepare('SELECT snapshots FROM study_group_cards WHERE id=?').get(ref.cardId),chart=JSON.parse(row.snapshots).find(c=>c.version===ref.version);return [{...ref,title:chart.title}];}catch{return [];}});
+  return {chartRefs:visible,hasUnavailableReferences:visible.length!==refs.length};
+ }
+ router.resolveReferences=resolveReferences;router.visibleReferences=visibleReferences;
  router.post('/',handle((req,me)=>{
   const g=group(req.params.id,me,true),body=req.body||{},ownerMembership=currentStamp(g,me);if(checkPlatformMute(me))fail('当前账号暂不可分享',403);if(typeof canSpeak!=='function'||!canSpeak(g,me))fail('当前处于群内禁言状态，暂不可发送盘卡',403);
   if(body.inferenceConsent!==true||body.rightsConsent!==true||body.newMembersCanView!==false||!/^[\w-]{16,80}$/.test(body.requestId||''))fail('请确认分享权限、推断风险和仅限当前所选成员');

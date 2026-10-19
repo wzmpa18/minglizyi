@@ -2,12 +2,13 @@
 import {getUserToken} from './auth';
 import {clientPlatformHeaders} from './platformGate';
 import type {LiveSnapshot} from './liveCharts';
+export interface GroupChartReference {cardId:string;version:string;anchor:string;title?:string;}
 export interface GroupCard {
- id:string;mine:boolean;ownerName:string;expiresAt:number;titles?:string[];
+ id:string;mine:boolean;state?:'active'|'held'|'revoked'|'expired';ownerName:string;expiresAt:number;titles?:string[];
  charts?:LiveSnapshot[];permissions?:{view:boolean;archive:boolean;export:boolean;reshare:false;externalAI:false};
 }
 export interface GroupCardResult extends Partial<GroupCard> {
- success:boolean;error?:string;message?:string;items?:GroupCard[];nextCursor?:string;
+ success:boolean;error?:string;message?:string;items?:GroupCard[];nextCursor?:string;changed?:number;
 }
 /** Only explicit projected chart copies; never imports the private life vault. */
 export async function groupCardRequest(group:string,path='',method='GET',body?:unknown):Promise<GroupCardResult>{

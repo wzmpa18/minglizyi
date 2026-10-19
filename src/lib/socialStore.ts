@@ -1,4 +1,5 @@
 ﻿"use client";
+import type {GroupChartReference} from "./studyGroupCards";
 
 // ============================================================================
 // 社交数据存储层 - v18.4
@@ -29,6 +30,7 @@ export interface FriendRequest {
 }
 
 export interface ChatMessage {
+  chartRefs?:GroupChartReference[];hasUnavailableReferences?:boolean;
   id: string;
   senderId: string;
   senderName: string;

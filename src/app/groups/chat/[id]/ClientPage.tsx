@@ -240,7 +240,7 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
             content: m.content,
             type: (m.type === "image" || m.type === "system" ? m.type : "text") as ChatMessage["type"],
             timestamp: m.createdAt,
-            reviewStatus: m.reviewStatus,
+            reviewStatus:m.reviewStatus,chartRefs:m.chartRefs,hasUnavailableReferences:m.hasUnavailableReferences,
           }));
           if (incoming.length) {
             setMessages((prev) => {
@@ -267,7 +267,7 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
     };
   }, [groupId, currentUserId]);
 
-  const loadOlder=async()=>{if(!olderCursor||loadingOlder)return;setLoadingOlder(true);try{const r=await fetchGroupMessages(groupId,0,olderCursor);if(getGroupAccountId()!==currentUserId)return;if(!r?.success){showToast(r?.error||"加载失败，请重试");return;}const older:ChatMessage[]=(r.messages||[]).map(m=>({id:"gsrv_"+m.id,senderId:m.senderId,senderName:m.senderName,content:m.content,type:m.type==="image"?"image":"text",timestamp:m.createdAt,reviewStatus:m.reviewStatus}));for(const m of older)saveGroupMessage(groupId,m);if(chatListRef.current)restoreScroll.current={height:chatListRef.current.scrollHeight,top:chatListRef.current.scrollTop};setMessages(prev=>{const ids=new Set(prev.map(m=>m.id));return [...older.filter(m=>!ids.has(m.id)),...prev];});setOlderCursor(r.nextBefore||null);}finally{setLoadingOlder(false);}};
+  const loadOlder=async()=>{if(!olderCursor||loadingOlder)return;setLoadingOlder(true);try{const r=await fetchGroupMessages(groupId,0,olderCursor);if(getGroupAccountId()!==currentUserId)return;if(!r?.success){showToast(r?.error||"加载失败，请重试");return;}const older:ChatMessage[]=(r.messages||[]).map(m=>({id:"gsrv_"+m.id,senderId:m.senderId,senderName:m.senderName,content:m.content,type:m.type==="image"?"image":"text",timestamp:m.createdAt,reviewStatus:m.reviewStatus,chartRefs:m.chartRefs,hasUnavailableReferences:m.hasUnavailableReferences}));for(const m of older)saveGroupMessage(groupId,m);if(chatListRef.current)restoreScroll.current={height:chatListRef.current.scrollHeight,top:chatListRef.current.scrollTop};setMessages(prev=>{const ids=new Set(prev.map(m=>m.id));return [...older.filter(m=>!ids.has(m.id)),...prev];});setOlderCursor(r.nextBefore||null);}finally{setLoadingOlder(false);}};
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -515,7 +515,7 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
                     {msg.senderName}
                   </p>
                 )}
-                <p>{msg.content}</p>
+                <p translate="no">{msg.content}</p>{msg.chartRefs?.map(ref=><button key={ref.cardId+ref.version+ref.anchor} className="my-2 block text-left text-xs underline" onClick={()=>router.push(`/groups/cards/?group=${encodeURIComponent(groupId)}&card=${encodeURIComponent(ref.cardId)}&version=${encodeURIComponent(ref.version)}&anchor=${encodeURIComponent(ref.anchor)}`)}>跟随盘内引用 · {ref.title} · {ref.anchor||'整盘'} · {ref.version.slice(0,8)}</button>)}{msg.hasUnavailableReferences&&<p className="text-xs opacity-75">引用已失效或未向你授权</p>}
                 {isMe&&<p className="mt-1 text-[10px]">{failed?"未发送":msg.status==="sending"?"发送中":msg.reviewStatus==="pending"?"待审核，仅自己可见":msg.reviewStatus==="rejected"?"审核未通过，仅自己可见":msg.reviewStatus==="active"?"审核通过（不代表成员已读）":"历史消息"}</p>}
                 <p
                   className="mt-1 text-right text-[10px] flex items-center justify-end gap-1"

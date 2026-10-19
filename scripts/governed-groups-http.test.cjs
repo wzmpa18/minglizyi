@@ -6,14 +6,14 @@ const {VERSION}=require('../backend_deploy/studyModerationAutomation');
 async function fixture(run){
  const db=new Database(':memory:');db.exec(`CREATE TABLE groups(id INTEGER PRIMARY KEY,name TEXT,owner_id TEXT,owner_name TEXT,member_ids TEXT,announcement TEXT DEFAULT '',admins TEXT DEFAULT '[]',member_mutes TEXT DEFAULT '{}',member_nicknames TEXT DEFAULT '{}',mute_all INTEGER DEFAULT 0,status TEXT DEFAULT 'active',created_at TEXT DEFAULT CURRENT_TIMESTAMP);CREATE TABLE users(user_id TEXT PRIMARY KEY,status TEXT DEFAULT 'active',deleted_at TEXT);INSERT INTO users(user_id) VALUES('1'),('2'),('3'),('4');CREATE TABLE friendships(user_a TEXT,user_b TEXT);INSERT INTO friendships VALUES('1','2'),('1','3'),('2','3');CREATE TABLE blacklists(user_id TEXT,blocked_id TEXT);CREATE TABLE chat_messages(id INTEGER PRIMARY KEY,conversation_id TEXT,sender_id TEXT,sender_name TEXT,content TEXT,msg_type TEXT,client_msg_id TEXT,review_status TEXT,review_reason TEXT,created_at TEXT DEFAULT(datetime('now','localtime')),UNIQUE(conversation_id,client_msg_id));`);
  db.exec('CREATE TABLE reports(id INTEGER PRIMARY KEY,target_type TEXT,target_id TEXT,reporter_id TEXT,reporter_name TEXT,reason TEXT)');
- let review='active',muted=false;const delivered=[];
- const app=express();app.use(express.json());app.use('/groups',createGovernedGroupRouter({getDb:()=>db,getUserDb:()=>db,authRequired:(req,res,next)=>{if(!/^[1-4]$/.test(req.headers['x-test-account']||''))return res.status(401).json({success:false});req.user={userId:req.headers['x-test-account']};next();},userPublicInfo:id=>({nickname:'合成学友'+id}),checkPlatformMute:()=>muted,moderateResourceComment:createSelectedTextModerator({screen:async input=>{if(review==='offline')throw Error('offline');return {decision:review==='active'?'PASS':review==='rejected'?'BLOCK':'REVIEW',automatic:review==='active',flags:[],policyVersion:VERSION,fingerprint:crypto.createHash('sha256').update(input.content).digest('hex')};},audit:async()=>{}}),upsertUserConversation:(_db,member,conv)=>delivered.push([member,conv]),notify:()=>{}}));
+ let review='active',muted=false,screenHook=()=>{};const delivered=[];
+ const app=express();app.use(express.json());app.use('/groups',createGovernedGroupRouter({getDb:()=>db,getUserDb:()=>db,authRequired:(req,res,next)=>{if(!/^[1-4]$/.test(req.headers['x-test-account']||''))return res.status(401).json({success:false});req.user={userId:req.headers['x-test-account']};next();},userPublicInfo:id=>({nickname:'合成学友'+id}),checkPlatformMute:()=>muted,moderateResourceComment:createSelectedTextModerator({screen:async input=>{await screenHook(input);if(review==='offline')throw Error('offline');return {decision:review==='active'?'PASS':review==='rejected'?'BLOCK':'REVIEW',automatic:review==='active',flags:[],policyVersion:VERSION,fingerprint:crypto.createHash('sha256').update(input.content).digest('hex')};},audit:async()=>{}}),upsertUserConversation:(_db,member,conv)=>delivered.push([member,conv]),notify:()=>{}}));
  const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));const base='http://127.0.0.1:'+server.address().port+'/groups';
  const call=async(user,path='',method='GET',body)=>{const response=await fetch(base+path,{method,headers:{'Content-Type':'application/json',...(user?{'x-test-account':String(user)}:{})},body:body===undefined?undefined:JSON.stringify({...body,moderationVersion:body?.moderationVersion===null?null:VERSION})});return {status:response.status,body:await response.json()};};
  const create=async()=>{const input={name:'历法共读',topic:'calendar',adultConsent:true,requestId:crypto.randomUUID()};return {input,result:await call(1,'','POST',input)};};
  const invite=async(id,target='2')=>{assert.equal((await call(1,`/${id}/invite`,'POST',{userIds:[target]})).status,200);return (await call(target,'/invitations')).body.invitations[0].id;};
  const accept=async(user,id)=>call(user,`/invitations/${id}/accept`,'POST',{adultConsent:true,joinConsent:true});
- try{await run({db,call,create,invite,accept,review:value=>{review=value;},mute:value=>{muted=value;},delivered});}finally{await new Promise(resolve=>server.close(resolve));db.close();}
+ try{await run({db,call,create,invite,accept,review:value=>{review=value;},mute:value=>{muted=value;},delivered,screenHook:fn=>{screenHook=fn;}});}finally{await new Promise(resolve=>server.close(resolve));db.close();}
 }
 test('group invitation does not add a member; explicit adult acceptance, friendship, expiry, rejection and current-member history floor are enforced',()=>fixture(async({db,call,create,invite,accept})=>{
  assert.equal((await call(null)).status,401);assert.equal((await call(1,'','POST',{name:'未同意'})).status,400);
@@ -85,4 +85,43 @@ test('group mute also blocks chart-card notifications, while existing reads and 
  db.prepare("UPDATE groups SET member_mutes='{}',mute_all=1 WHERE id=?").run(group);
  assert.equal((await call(2,`/${group}/cards`,'POST',{...body,requestId:crypto.randomUUID()})).status,403);
  assert.equal((await call(1,`/${group}/cards`,'POST',{...body,recipientIds:['2'],requestId:crypto.randomUUID()})).status,200);
+}));
+
+
+test('group references pin card/version/visible anchor; receivers without a grant cannot read card metadata and revoked refs disappear',()=>fixture(async({db,call,create,invite,accept})=>{
+ const group=(await create()).result.body.group.id;await accept(2,await invite(group));await accept(3,await invite(group,'3'));
+ const body={requestId:crypto.randomUUID(),recipientIds:['2'],newMembersCanView:false,inferenceConsent:true,rightsConsent:true,charts:[{toolKey:'ziwei',result:{palaces:Array.from({length:12},(_,index)=>({index,name:'命宫',majorStars:['紫微']}))}}]};
+ const id=(await call(1,`/${group}/cards`,'POST',body)).body.id;const chart=(await call(2,`/${group}/cards/${id}`)).body.charts[0];
+ const refs=[{cardId:id,version:chart.version,anchor:'palace-4'}],message={content:'核对这一个固定宫位',clientMsgId:crypto.randomUUID(),chartRefs:refs};
+ const made=await call(1,`/${group}/messages`,'POST',message);assert.equal(made.status,200);assert.equal(made.body.message.chartRefs[0].version,chart.version);
+ assert.equal((await call(1,`/${group}/messages`,'POST',message)).body.duplicated,true);
+ assert.equal((await call(1,`/${group}/messages`,'POST',{...message,chartRefs:[{...refs[0],anchor:'palace-5'}]})).status,409);
+ assert.equal((await call(2,`/${group}/messages`)).body.messages[0].chartRefs[0].anchor,'palace-4');
+ const third=(await call(3,`/${group}/messages`)).body.messages[0];assert.deepEqual(third.chartRefs,[]);assert.equal(third.hasUnavailableReferences,true);assert.ok(!JSON.stringify(third).includes(id));assert.ok(!JSON.stringify(third).includes(chart.version));
+ for(const changes of [{anchor:'palace-99'},{version:'wrong-version'},{privateNote:'RAW_CANARY'}])assert.equal((await call(1,`/${group}/messages`,'POST',{...message,clientMsgId:crypto.randomUUID(),chartRefs:[{...refs[0],...changes}]})).status,400);
+ assert.equal((await call(3,`/${group}/messages`,'POST',{...message,clientMsgId:crypto.randomUUID()})).status,404);
+ assert.equal((await call(1,`/${group}/cards/revoke`,'POST',{ids:[id]})).body.changed,1);
+ const second=(await call(2,`/${group}/messages`)).body.messages[0];assert.deepEqual(second.chartRefs,[]);assert.equal(second.hasUnavailableReferences,true);
+}));
+
+test('a group card revoked during moderation cannot publish a usable reference or notify peers',()=>fixture(async({db,call,create,invite,accept,delivered,screenHook})=>{
+ const group=(await create()).result.body.group.id;await accept(2,await invite(group));
+ const made=await call(1,`/${group}/cards`,'POST',{requestId:crypto.randomUUID(),recipientIds:['2'],newMembersCanView:false,inferenceConsent:true,rightsConsent:true,charts:[{toolKey:'ziwei',result:{palaces:Array.from({length:12},(_,index)=>({index,name:'命宫'}))}}]});
+ const id=made.body.id,version=(await call(1,`/${group}/cards/${id}`)).body.charts[0].version,count=delivered.length;
+ screenHook(()=>{db.prepare("UPDATE study_group_cards SET state='revoked' WHERE id=?").run(id);});
+ const result=await call(1,`/${group}/messages`,'POST',{content:'审核期间撤回的盘卡',clientMsgId:crypto.randomUUID(),chartRefs:[{cardId:id,version,anchor:''}]});
+ assert.equal(result.body.message.reviewStatus,'rejected');assert.equal(delivered.length,count);assert.equal((await call(2,`/${group}/messages`)).body.messages.length,0);
+}));
+
+test('batch revoke is all-or-nothing, idempotent and owner-only; privacy actions work after departure or closure',()=>fixture(async({db,call,create,invite,accept})=>{
+ const group=(await create()).result.body.group.id;await accept(2,await invite(group));
+ const share=async(owner,recipient)=>{const r=await call(owner,`/${group}/cards`,'POST',{requestId:crypto.randomUUID(),recipientIds:[recipient],newMembersCanView:false,inferenceConsent:true,rightsConsent:true,charts:[{toolKey:'ziwei',result:{palaces:Array.from({length:12},(_,index)=>({index,name:'命宫'}))}}]});assert.equal(r.status,200);return r.body.id;};
+ const a=await share(1,'2'),b=await share(1,'2'),foreign=await share(2,'1');
+ assert.equal((await call(1,`/${group}/cards/revoke`,'POST',{ids:[a,foreign]})).status,403);assert.equal(db.prepare('SELECT state FROM study_group_cards WHERE id=?').get(a).state,'active');
+ for(const ids of [[],[a,a],Array(51).fill(a)])assert.equal((await call(1,`/${group}/cards/revoke`,'POST',{ids})).status,400);
+ assert.deepEqual(new Set((await call(1,`/${group}/cards/mine`)).body.items.map(c=>c.id)),new Set([a,b]));assert.equal((await call(1,`/${group}/cards/mine?cursor=invalid`)).status,400);
+ db.prepare("UPDATE groups SET status='closed',member_ids='[\"2\"]' WHERE id=?").run(group);
+ assert.equal((await call(1,`/${group}/cards/mine`)).body.items.length,2);
+ assert.equal((await call(1,`/${group}/cards/revoke`,'POST',{ids:[a,b]})).body.changed,2);assert.equal((await call(1,`/${group}/cards/revoke`,'POST',{ids:[a,b]})).body.changed,0);
+ assert.equal(db.prepare("SELECT COUNT(*) n FROM study_group_card_actions WHERE action='REVOKE'").get().n,2);assert.equal(db.prepare('SELECT state FROM study_group_cards WHERE id=?').get(foreign).state,'active');
 }));

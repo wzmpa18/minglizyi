@@ -64,7 +64,7 @@ export function ProfessionalZiweiBoard({ onOpenBazi, result, mode, focus, onSele
         const ln = overlay?.ln?.names[index];
         const deep = overlay?.deep?.names[index];
         const isSelected = selected === index;
-        return <div key={index} role="button" tabIndex={0} aria-label={`选择${palace.name}${palace.heavenlyStem}${palace.earthlyBranch}`} aria-pressed={isSelected}
+        return <div key={index} data-chart-anchor={`palace-${index}`} role="button" tabIndex={0} aria-label={`选择${palace.name}${palace.heavenlyStem}${palace.earthlyBranch}`} aria-pressed={isSelected}
           onClick={() => onSelect(index)} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); onSelect(index); } }}
           className="relative flex min-w-0 flex-col overflow-hidden border border-gray-500 bg-white p-[2px]" style={{ boxShadow: isSelected ? "inset 0 0 0 1px #666" : undefined }}>
           <div className="min-h-0 flex-1 overflow-y-auto" style={{ scrollbarWidth: "thin" }}>

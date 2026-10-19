@@ -50,4 +50,21 @@ function snapshot(tool,result,options={}){
  return {schemaVersion:1,toolKey:tool,title:NAMES[tool],adapterVersion:adapter.version,engineVersion:typeof result.engineVersion==='string'&&/^[a-zA-Z0-9_.:+/ -]{1,120}$/.test(result.engineVersion)?result.engineVersion:'legacy-rule-version-unknown',renderVersion:1,data,allowedLayers:['natal'],visiblePillars,redaction:{name:true,birthDate:true,birthPlace:true,notes:true,ai:true,age:true,pillars:!showPillars},inferenceNotice:'姓名、日期和地点已在发送前移除；保留的四柱、星位或卦象仍可能推知部分出生信息，无法保证匿名。隐去资料的流年/行限层不可重算。'};
 }
 function revalidate(s){if(s?.schemaVersion!==1||s.renderVersion!==1)fail('活盘版本不受支持');return snapshot(s.toolKey,{...s.data,engineVersion:s.engineVersion},{showPillars:s.redaction?.pillars===false,visiblePillars:s.visiblePillars});}
-module.exports={ADAPTERS,NAMES,snapshot,revalidate};
+// Anchors enumerate only visible, fixed snapshot positions, never raw input.
+function chartAnchorKeys(chart){
+ const data=chart?.data||{},keys=[''];
+ const indexed=(prefix,items)=>{if(Array.isArray(items))items.forEach((_,i)=>keys.push(prefix+i));};
+ switch(chart?.toolKey){
+ case 'ziwei':if(Array.isArray(data.palaces))data.palaces.forEach((p,i)=>keys.push('palace-'+(p.index??i)));break;
+ case 'bazi':if(Array.isArray(data.pillars))data.pillars.forEach((p,i)=>{if(!p.hidden)keys.push('pillar-'+i);});break;
+ case 'qimen':indexed('palace-',data.palaces);break;
+ case 'xuankong-feixing':case 'taiyi-sanshi':for(let i=1;i<=9;i++)if((data.zhaiMingData||data.gongData)?.[i])keys.push('palace-'+i);break;
+ case 'qizheng':if(Array.isArray(data.palaces))data.palaces.forEach(p=>keys.push('palace-'+p.branch));if(Array.isArray(data.stars))data.stars.forEach(p=>keys.push('star-'+p.key));break;
+ case 'daliuren':indexed('sike-',data.siKe);indexed('chuan-',data.sanChuan);break;
+ case 'xiaoliuren':for(const name of ['留连','速喜','赤口','大安','空亡','小吉'])keys.push('palm-'+name);break;
+ case 'meihua':case 'liuyao':for(const key of ['benGua','huGua','bianGua'])if(data[key])for(let i=0;i<6;i++)keys.push(key+'-'+i);break;
+ }
+ return [...new Set(keys)];
+}
+function validChartAnchor(chart,anchor){return typeof anchor==='string'&&/^[\w\u4e00-\u9fff-]{0,40}$/.test(anchor)&&chartAnchorKeys(chart).includes(anchor);}
+module.exports={ADAPTERS,NAMES,snapshot,revalidate,chartAnchorKeys,validChartAnchor};

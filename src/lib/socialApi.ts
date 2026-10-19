@@ -1,4 +1,5 @@
 "use client";
+import type {GroupChartReference} from "./studyGroupCards";
 
 // ============================================================================
 // 社交体系后端 API 客户端 - v25.0.19
@@ -210,6 +211,7 @@ export async function removeFriend(userId: string) {
 // ==================== 私聊 ====================
 
 export interface ChatMessage {
+  chartRefs?:GroupChartReference[];hasUnavailableReferences?:boolean;
   id: string; senderId: string; senderName: string; content: string; type: string; createdAt: string;
   reviewStatus?: "active" | "pending" | "rejected";
 }
@@ -295,10 +297,10 @@ export async function fetchGroupMessages(groupId: string, afterId = 0, beforeId?
   return api<{ success: boolean; messages?: ChatMessage[]; group?: GroupVo; error?: string; nextBefore?: string }>(`/api/social/groups/${groupId}/messages?afterId=${afterId}${beforeId ? `&beforeId=${encodeURIComponent(beforeId)}` : ""}`);
 }
 
-export async function sendGroupMessage(groupId: string, content: string, clientMsgId?: string) {
+export async function sendGroupMessage(groupId: string, content: string, clientMsgId?: string,chartRefs:GroupChartReference[]=[]) {
   return api<{ success: boolean; message?: ChatMessage; pendingReview?: boolean; error?: string }>(`/api/social/groups/${groupId}/messages`, {
     method: "POST",
-    body: JSON.stringify(clientMsgId ? { content, clientMsgId } : { content }),
+    body:JSON.stringify({content,clientMsgId:clientMsgId||crypto.randomUUID(),chartRefs}),
   });
 }
 
