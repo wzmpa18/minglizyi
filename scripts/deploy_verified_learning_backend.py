@@ -9,7 +9,7 @@ from pathlib import Path
 
 MODULES=['academyRoutes.js','studyTextImport.js','socialApiRoutes.js','socialModerationPolicy.js',
  'liveChartRoutes.js','liveChartPolicy.js','governedGroupRoutes.js','studyGroupCards.js',
- 'tongchenRoutes.js','studyCommentStore.js','studyCommentsRoutes.js','socialVisibilityQueries.js']
+ 'tongchenRoutes.js','studyCommentStore.js','studyCommentsRoutes.js','socialVisibilityQueries.js','providerRoutes.js']
 REMOTE=r'''
 import sys,json,base64,hashlib,os,subprocess,sqlite3,time,datetime,urllib.request
 from pathlib import Path
