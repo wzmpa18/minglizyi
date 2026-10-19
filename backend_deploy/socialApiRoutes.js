@@ -1106,7 +1106,9 @@ function createRouter() {
       if (!featureEnabled('private_chat_enabled', req)) return featureDisabled(res, '私聊');
       if(isBlockedBy(req.user.userId,req.params.peerId)||isBlockedBy(req.params.peerId,req.user.userId))return res.status(403).json({success:false,error:'此交流已被屏蔽'});
       const pair=friendKeyPair(req.user.userId,req.params.peerId);
-      if(!getDb().prepare('SELECT 1 FROM friendships WHERE user_a=? AND user_b=?').get(...pair))return res.status(403).json({success:false,error:'请先获得对方同意'});
+      const relationship=getDb().prepare('SELECT source FROM friendships WHERE user_a=? AND user_b=?').get(...pair);
+      if(!relationship)return res.status(403).json({success:false,error:'请先获得对方同意'});
+      if(relationship.source==='tongchen')return res.status(403).json({success:false,error:'请从同辰雅集的纯文字交流入口查看'});
       const convId = privateConvId(req.user.userId, req.params.peerId);
       const afterId = parseInt(req.query.afterId, 10) || 0;
       const rows = getDb().prepare("SELECT * FROM (SELECT * FROM chat_messages WHERE conversation_id=? AND id>? AND (review_status='active' OR sender_id=?) ORDER BY id DESC LIMIT 200) ORDER BY id").all(convId,afterId,String(req.user.userId));
@@ -1551,13 +1553,30 @@ function createRouter() {
       const conversations = [];
       let totalUnread = 0;
       for (const r of rows) {
-        const lastRow = d.prepare("SELECT * FROM chat_messages WHERE conversation_id = ? AND review_status = 'active' ORDER BY id DESC LIMIT 1").get(r.conversation_id);
+        let historyFloor=0,targetPath;
+        if(r.conv_type==='private'){
+          if((!r.conversation_id.startsWith('tongchen:')&&!featureEnabled('private_chat_enabled',req))||!availableSocialUser(r.peer_id)||isBlockedBy(me,r.peer_id)||isBlockedBy(r.peer_id,me))continue;
+          const relationship=d.prepare('SELECT source FROM friendships WHERE user_a=? AND user_b=?').get(...friendKeyPair(me,r.peer_id));if(!relationship)continue;
+          if(r.conversation_id.startsWith('tongchen:')){
+            if(!d.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tongchen_profiles'").get())continue;
+            if(d.prepare("SELECT value FROM tongchen_settings WHERE key='enabled'").get()?.value!=='true')continue;
+            const a=d.prepare('SELECT public_id FROM tongchen_profiles WHERE user_id=?').get(me),b=d.prepare('SELECT public_id FROM tongchen_profiles WHERE user_id=?').get(r.peer_id);
+            if(!a||!b||require('./tongchenRoutes').tongchenConversationId(a.public_id,b.public_id)!==r.conversation_id)continue;
+            targetPath='/discover/tongchen/?peer='+encodeURIComponent(b.public_id);
+          }else if(relationship.source==='tongchen'||r.conversation_id!==privateConvId(me,r.peer_id))continue;
+        }else if(r.conv_type==='group'){
+          if(!featureEnabled('groups_enabled',req))continue;
+          const g=d.prepare('SELECT * FROM groups WHERE id=?').get(r.group_id);if(!g||g.status!=='active'||!JSON.parse(g.member_ids||'[]').map(String).includes(me))continue;
+          if(!d.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='study_group_access'").get())continue;
+          const access=d.prepare('SELECT after_msg_id FROM study_group_access WHERE group_id=? AND user_id=?').get(r.group_id,me);if(!access)continue;historyFloor=access.after_msg_id;
+        }else continue;
+        const lastRow = d.prepare("SELECT * FROM chat_messages WHERE conversation_id=? AND id>? AND review_status='active' AND NOT EXISTS (SELECT 1 FROM blacklists WHERE (user_id=? AND blocked_id=sender_id) OR (blocked_id=? AND user_id=sender_id)) ORDER BY id DESC LIMIT 1").get(r.conversation_id,historyFloor,me,me);
         if (!lastRow) continue; // 无消息的空会话不展示
-        const unread = d.prepare("SELECT COUNT(*) AS c FROM chat_messages WHERE conversation_id = ? AND id > ? AND sender_id != ? AND review_status = 'active'").get(r.conversation_id, r.last_read_msg_id, me).c;
+        const unread=d.prepare("SELECT COUNT(*) AS c FROM chat_messages WHERE conversation_id=? AND id>? AND sender_id!=? AND review_status='active' AND NOT EXISTS (SELECT 1 FROM blacklists WHERE (user_id=? AND blocked_id=sender_id) OR (blocked_id=? AND user_id=sender_id))").get(r.conversation_id,Math.max(historyFloor,r.last_read_msg_id),me,me,me).c;
         if (!r.muted) totalUnread += unread; // 免打扰会话不计入总未读（微信同款角标语义）
         const conv = {
           conversationId: r.conversation_id,
-          type: r.conv_type, // 'private' | 'group'
+          type:r.conv_type,targetPath, // Same UI family, explicit purpose-specific destination.
           pinned: !!r.pinned,
           muted: !!r.muted,
           updatedAt: r.updated_at,

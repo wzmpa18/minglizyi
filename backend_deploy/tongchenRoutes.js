@@ -3,6 +3,7 @@ const express=require('express'),fs=require('node:fs'),path=require('node:path')
 const {adminAuth,audit}=require('./adminRoles');
 const {createTongchenStore}=require('./tongchenStore');
 const {validateStudyText}=require('./studyCommentPolicy');
+function tongchenConversationId(a,b){if(!/^[a-f0-9]{32}$/.test(a)||!/^[a-f0-9]{32}$/.test(b))throw Object.assign(Error('交流授权标识无效'),{status:403});return 'tongchen:'+ [a,b].sort().join(':');}
 function createTongchenRouter({getDb,getUserDb,authRequired,userPublicInfo,privateConvId,checkPlatformMute,moderateResourceComment,upsertUserConversation}){
  const router=express.Router();let store;
  const userInfo=id=>{const row=getUserDb()?.prepare('SELECT status,deleted_at FROM users WHERE user_id=?').get(String(id));return row&&!row.deleted_at&&row.status!=='banned'?userPublicInfo(id):null;};
@@ -23,6 +24,7 @@ function createTongchenRouter({getDb,getUserDb,authRequired,userPublicInfo,priva
   if(!columns.includes('review_reason'))db.exec("ALTER TABLE chat_messages ADD COLUMN review_reason TEXT NOT NULL DEFAULT ''");
   return store;
  }
+ const conversation=(s,me,peer)=>tongchenConversationId(s.joined(me).public_id,peer.public_id);
  const origins=new Set(['https://yandaoguoxue.yandao.vip','https://www.yandao.vip','https://localhost','http://localhost','capacitor://localhost']);
  router.use((req,res,next)=>{res.set('Cache-Control','no-store');if(req.headers.origin&&!origins.has(req.headers.origin))return res.status(403).json({success:false,error:'请求来源不受支持'});if(Buffer.byteLength(JSON.stringify(req.body||{}),'utf8')>70000)return res.status(413).json({success:false,error:'请求过大'});next();});
  const handle=fn=>async(req,res)=>{try{res.json(await fn(req));}catch(error){res.status(error.status||503).json({success:false,error:error.status?error.message:'同辰交流暂不可用，请稍后重试'});}};
@@ -38,11 +40,11 @@ function createTongchenRouter({getDb,getUserDb,authRequired,userPublicInfo,priva
  router.post('/peer/:peerId/block',authRequired,handle(req=>service().block(req.user.userId,req.params.peerId)));
  router.post('/peer/:peerId/report',authRequired,handle(req=>service().report(req.user.userId,req.params.peerId,req.body.reason)));
  router.get('/peer/:peerId/messages',authRequired,handle(req=>{
-  const peer=service().relation(req.user.userId,req.params.peerId),conv=privateConvId(req.user.userId,peer.user_id);
+  const s=service(),peer=s.relation(req.user.userId,req.params.peerId),conv=conversation(s,req.user.userId,peer);
   return {success:true,items:getDb().prepare("SELECT id,sender_id,content,created_at FROM chat_messages WHERE conversation_id=? AND msg_type='text' AND review_status='active' ORDER BY id DESC LIMIT 100").all(conv).reverse().map(row=>({id:String(row.id),mine:String(row.sender_id)===String(req.user.userId),content:row.content,createdAt:row.created_at}))};
  }));
  router.post('/peer/:peerId/messages',authRequired,handle(async req=>{
-  const s=service();s.joined(req.user.userId);const peer=s.relation(req.user.userId,req.params.peerId),me=String(req.user.userId),conv=privateConvId(me,peer.user_id),db=getDb();
+  const s=service();s.joined(req.user.userId);const peer=s.relation(req.user.userId,req.params.peerId),me=String(req.user.userId),conv=conversation(s,me,peer),db=getDb();
   const bad=message=>{const error=new Error(message);error.status=400;throw error;};
   if(Object.keys(req.body||{}).some(k=>!['content','requestId','moderationVersion'].includes(k)))bad('仅支持文字交流');
   const text=validateStudyText(req.body.content);if(!text.ok)bad(text.error);
@@ -54,26 +56,27 @@ function createTongchenRouter({getDb,getUserDb,authRequired,userPublicInfo,priva
   const result=db.prepare("INSERT INTO chat_messages(conversation_id,sender_id,sender_name,content,msg_type,client_msg_id,review_status) VALUES (?,?,?,?,'text',?,'pending')").run(conv,me,userInfo(me)?.nickname||'学友',text.text,req.body.requestId);
   const review=await moderateResourceComment(text.text,{userId:me,moderationVersion:req.body?.moderationVersion});
   // Recheck relationship/block status after asynchronous moderation.
-  let stillAllowed=true;try{s.relation(me,req.params.peerId);}catch{stillAllowed=false;}
+  let stillAllowed=true;try{const currentPeer=s.relation(me,req.params.peerId);stillAllowed=conversation(s,me,currentPeer)===conv&&!checkPlatformMute(me)&&!!userInfo(me)&&!!userInfo(peer.user_id);}catch{stillAllowed=false;}
   const status=stillAllowed?review.status:'rejected';
   db.prepare('UPDATE chat_messages SET review_status=?,review_reason=? WHERE id=?').run(status,review.reason||'',result.lastInsertRowid);
   if(status==='active'){
    upsertUserConversation(db,me,conv,'private',peer.user_id,0,Number(result.lastInsertRowid),true);
    upsertUserConversation(db,peer.user_id,conv,'private',me,0,Number(result.lastInsertRowid),false);
   }
-  return {success:true,status,message:status==='active'?'文字已送达':status==='pending'?'文字正在等待人工审核，尚未向对方展示':'文字未通过审核，未向对方展示'};
+  return {success:true,status,message:status==='active'?'文字已送达':status==='pending'?'文字已提交，当前未向对方展示，可修改或申请复核':'文字未通过审核，未向对方展示'};
  }));
  router.use('/admin',adminAuth(undefined,'ops'));
  router.get('/admin/config',handle(()=>({success:true,config:service().config()})));
  router.put('/admin/config',adminAuth('ADMIN'),handle(req=>{const result=service().configure(req.body);audit(req.admin,'TONGCHEN_CONFIG','tongchen','',JSON.stringify(req.body),'真实功能开关与名称',req);return result;}));
- router.get('/admin/messages',handle(()=>{service();return {success:true,items:getDb().prepare("SELECT id,sender_name,content,review_status,review_reason,created_at FROM chat_messages WHERE review_status='pending' ORDER BY id LIMIT 100").all()};}));
+ router.get('/admin/messages',handle(()=>{service();return {success:true,items:getDb().prepare("SELECT id,sender_name,content,review_status,review_reason,created_at FROM chat_messages WHERE review_status='pending' AND conversation_id LIKE 'tongchen:%' ORDER BY id LIMIT 100").all()};}));
  router.put('/admin/message/:id',handle(req=>{
   service();if(!['active','rejected'].includes(req.body.status)||!String(req.body.reason||'').trim()){const error=new Error('请填写审核结果和依据');error.status=400;throw error;}
-  const db=getDb(),message=db.prepare("SELECT * FROM chat_messages WHERE id=? AND review_status='pending'").get(Number(req.params.id));
+  const db=getDb(),message=db.prepare("SELECT * FROM chat_messages WHERE id=? AND review_status='pending' AND conversation_id LIKE 'tongchen:%'").get(Number(req.params.id));
   if(!message)return {success:false};
+  const parts=message.conversation_id.split(':'),profiles=db.prepare('SELECT user_id,public_id FROM tongchen_profiles WHERE public_id IN (?,?)').all(parts[1]||'',parts[2]||''),relationship=db.prepare('SELECT user_a,user_b FROM friendships WHERE user_a=? OR user_b=?').all(message.sender_id,message.sender_id).find(row=>{const a=profiles.find(p=>p.user_id===row.user_a),b=profiles.find(p=>p.user_id===row.user_b);return a&&b&&tongchenConversationId(a.public_id,b.public_id)===message.conversation_id;});
+  if(req.body.status==='active'){if(!relationship)return {success:false};try{service().joined(relationship.user_a);service().joined(relationship.user_b);}catch{return {success:false};}if(!userInfo(relationship.user_a)||!userInfo(relationship.user_b)||db.prepare('SELECT 1 FROM blacklists WHERE (user_id=? AND blocked_id=?) OR (user_id=? AND blocked_id=?)').get(relationship.user_a,relationship.user_b,relationship.user_b,relationship.user_a))return {success:false};}
   const result=db.prepare("UPDATE chat_messages SET review_status=?,review_reason=? WHERE id=? AND review_status='pending'").run(req.body.status,String(req.body.reason).slice(0,500),message.id);
   if(result.changes===1&&req.body.status==='active'){
-   const relationship=db.prepare('SELECT user_a,user_b FROM friendships WHERE user_a=? OR user_b=?').all(message.sender_id,message.sender_id).find(row=>privateConvId(row.user_a,row.user_b)===message.conversation_id);
    if(relationship){
     const blocked=db.prepare('SELECT 1 FROM blacklists WHERE (user_id=? AND blocked_id=?) OR (user_id=? AND blocked_id=?)').get(relationship.user_a,relationship.user_b,relationship.user_b,relationship.user_a);
     if(!blocked&&userInfo(relationship.user_a)&&userInfo(relationship.user_b))for(const [user,peer] of [[relationship.user_a,relationship.user_b],[relationship.user_b,relationship.user_a]])upsertUserConversation(db,user,message.conversation_id,'private',peer,0,Number(message.id),user===message.sender_id);
@@ -84,4 +87,4 @@ function createTongchenRouter({getDb,getUserDb,authRequired,userPublicInfo,priva
  }));
  return router;
 }
-module.exports={createTongchenRouter};
+module.exports={createTongchenRouter,tongchenConversationId};

@@ -279,11 +279,15 @@ async function worker(root){
       assert.equal(sent.status,200);assert.equal(sent.body.status,'pending');
       assert.equal((await social('/tongchen/peer/'+peer.id+'/messages','POST',alice,message)).body.duplicated,true);
       assert.equal((await social('/tongchen/peer/'+peer.id+'/messages','GET',alice)).body.items.length,0);
-      const queued=(await social('/tongchen/admin/messages','GET',support)).body.items[0];
+      const ordinaryPending=socialDb.prepare("SELECT id FROM chat_messages WHERE content='没有单独审核授权的交流'").get().id;
+      assert.equal((await social('/tongchen/admin/message/'+ordinaryPending,'PUT',support,{status:'active',reason:'不能跨用途批准'})).body.success,false);
+      const queued=(await social('/tongchen/admin/messages','GET',support)).body.items[0];assert.equal(queued.content,message.content);
       assert.equal((await social('/tongchen/admin/message/'+queued.id,'PUT',support,{status:'active',reason:'人工核对学习讨论'})).body.success,true);
       assert.equal((await social('/tongchen/peer/'+peer.id+'/messages','GET',alice)).body.items[0].content,message.content);
+      const tcConversations=(await social('/conversations','GET',alice)).body.conversations;assert.equal(tcConversations.length,1);assert.equal(tcConversations[0].targetPath,'/discover/tongchen/?peer='+peer.id);assert.ok(!JSON.stringify(tcConversations).includes('只讨论节气学习方法'));
       assert.equal((await social('/tongchen/peer/'+peer.id+'/block','POST',alice,{})).status,200);
       assert.equal((await social('/tongchen/peer/'+peer.id+'/messages','GET',alice)).status,404);
+      assert.equal((await social('/conversations','GET',alice)).body.conversations.length,0);
       assert.equal((await social('/tongchen/peer/'+peer.id+'/report','POST',alice,{reason:'屏蔽后仍能举报学习交流问题'})).status,200);
       assert.equal((await social('/tongchen/admin/config','PUT',admin,{enabled:false})).status,200);
       assert.equal((await social('/tongchen/mine','DELETE',alice)).status,200);

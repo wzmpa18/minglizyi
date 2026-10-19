@@ -339,6 +339,7 @@ export async function fetchUserProfile(userId: string) {
 
 export interface ConversationVo {
   conversationId: string;
+  targetPath?: string;
   type: "private" | "group";
   peerId?: string;
   peerName?: string;

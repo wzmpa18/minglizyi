@@ -18,6 +18,7 @@ import {
 import { getCurrentUserId, getLoginState } from "@/lib/auth";
 import { sendPrivateMessage, fetchPrivateMessages, fetchUserProfile } from "@/lib/socialApi";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
+import {useInterfaceLocale} from "@/lib/interfaceLocale";
 import {useAccountScope} from "@/lib/useAccountScope";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
@@ -28,6 +29,7 @@ export default function FriendChatPage({ routeId }: { routeId?: string }) {
   const account=useAccountScope();return <FriendChatAccount key={account} routeId={routeId}/>;
 }
 function FriendChatAccount({routeId}:{routeId?:string}){
+  const {ui}=useInterfaceLocale();
   const active=useRef(true);
   useEffect(()=>{active.current=true;return()=>{active.current=false;};},[]);
   const params = useParams();
@@ -591,7 +593,6 @@ function FriendChatAccount({routeId}:{routeId?:string}){
                   </svg>
                 </button>
               )}
-              {isMe&&!manageMode&&msg.reviewStatus&&msg.reviewStatus!=='active'&&<span className="shrink-0 text-xs text-amber-900" role="status">{msg.reviewStatus==='rejected'?'未送达 · 请修改':'未送达 · 待核验'}</span>}
               {/* v25.0.38 P0-2：发送中时钟图标 */}
               {isMe && !manageMode && msg.status === "sending" && (
                 <div className="shrink-0 flex h-6 w-6 items-center justify-center">
@@ -618,6 +619,7 @@ function FriendChatAccount({routeId}:{routeId?:string}){
                   cursor: manageMode ? "pointer" : "default",
                 }}
               >
+                {isMe&&!manageMode&&msg.reviewStatus&&msg.reviewStatus!=='active'&&<p className="mb-1 border-b border-white/40 pb-1 text-xs text-white" role="status">{ui(msg.reviewStatus==='rejected'?'未送达 · 请修改':'未送达 · 待核验')}</p>}
                 {msg.type === "image" && /^data:image\/|^https?:\/\//.test(msg.content) ? (
                   <img
                     src={msg.content}

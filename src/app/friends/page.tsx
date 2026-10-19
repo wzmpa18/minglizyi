@@ -1478,6 +1478,7 @@ function ConversationsView({ onOpenPrivate }: { onOpenPrivate: (peerId: string) 
 
   const open = (c: ConversationVo) => {
     void markConversationRead(c.conversationId).catch(() => {});
+    if(c.targetPath?.startsWith("/discover/tongchen/?peer=")){router.push(c.targetPath);return;}
     if (c.type === "group") {
       router.push(`/groups/chat?id=${encodeURIComponent(String(c.groupId ?? ""))}`);
     } else {
