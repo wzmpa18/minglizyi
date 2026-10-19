@@ -1282,7 +1282,7 @@ function createRouter() {
       let filePath = '';
       if (fileBase64) {
         if (!fs.existsSync(FILE_DIR)) fs.mkdirSync(FILE_DIR, { recursive: true });
-        const safeName = `${Date.now()}_${String(fileName || 'file').replace(/[^\w.\-\u4e00-\u9fff]/g, '_').slice(0, 60)}`;
+        const safeName = `${crypto.randomUUID()}_${String(fileName || 'file').replace(/[^\w.\-\u4e00-\u9fff]/g, '_').slice(0, 60)}`;
         filePath = path.join(FILE_DIR, safeName);
         fs.writeFileSync(filePath, decoded.original, {flag:'wx'});
       }
