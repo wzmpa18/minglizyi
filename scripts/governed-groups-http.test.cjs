@@ -57,3 +57,32 @@ test('group chart cards bind a fixed recipient list and membership nonce; no new
 }));
 
 test('an older unconsented client cannot auto-open a group or invite peers',()=>fixture(async({call})=>{const made=await call(1,'','POST',{name:'无授权合成学习群',topic:'classics',adultConsent:true,requestId:crypto.randomUUID(),moderationVersion:null});assert.equal(made.body.group.reviewStatus,'pending');assert.equal((await call(1,`/${made.body.group.id}/invite`,'POST',{userIds:['2']})).status,403);}));
+
+
+test('owner departure/rejoin never restores an old card grant, including idempotent retries; a new explicit share is required',()=>fixture(async({db,call,create,invite,accept})=>{
+ const made=await create(),group=made.result.body.group.id;await accept(2,await invite(group));await accept(3,await invite(group,'3'));
+ const body={requestId:crypto.randomUUID(),recipientIds:['2'],newMembersCanView:false,inferenceConsent:true,rightsConsent:true,permissions:{archive:true},charts:[{toolKey:'bazi',result:{pillars:[{gan:'甲',zhi:'子'},{gan:'乙',zhi:'丑'},{gan:'丙',zhi:'寅'},{gan:'丁',zhi:'卯'}]},showPillars:true}]};
+ const id=(await call(1,`/${group}/cards`,'POST',body)).body.id;assert.ok(id);assert.equal((await call(2,`/${group}/cards/${id}`)).status,200);
+ const old=db.prepare('SELECT owner_membership FROM study_group_cards WHERE id=?').get(id).owner_membership;
+ db.prepare("UPDATE groups SET owner_id='3',member_ids='[\"2\",\"3\"]' WHERE id=?").run(group);
+ assert.equal((await call(2,`/${group}/cards/${id}`)).status,410);
+ assert.equal((await call(3,`/${group}/invite`,'POST',{userIds:['1']})).status,200);const invitation=(await call(1,'/invitations')).body.invitations[0].id;assert.equal((await accept(1,invitation)).body.success,true);
+ const current=db.prepare('SELECT membership_id FROM study_group_access WHERE group_id=? AND user_id=?').get(group,'1').membership_id;assert.notEqual(current,old);
+ assert.equal((await call(2,`/${group}/cards/${id}`)).status,410);assert.equal((await call(1,`/${group}/cards/${id}/archive`)).status,410);
+ assert.equal((await call(1,`/${group}/cards`,'POST',body)).status,409);
+ const fresh=(await call(1,`/${group}/cards`,'POST',{...body,requestId:crypto.randomUUID()})).body.id;assert.ok(fresh);assert.equal((await call(2,`/${group}/cards/${fresh}`)).status,200);
+ // An older, unstamped row is held rather than guessed into authorization.
+ db.prepare("UPDATE study_group_cards SET owner_membership='' WHERE id=?").run(fresh);assert.equal((await call(2,`/${group}/cards/${fresh}`)).status,410);
+}));
+
+test('group mute also blocks chart-card notifications, while existing reads and owner revocation remain available',()=>fixture(async({db,call,create,invite,accept})=>{
+ const group=(await create()).result.body.group.id;await accept(2,await invite(group));
+ const body={requestId:crypto.randomUUID(),recipientIds:['1'],newMembersCanView:false,inferenceConsent:true,rightsConsent:true,permissions:{},charts:[{toolKey:'xiaoliuren',result:{monthStop:1,dayStop:2,hourStop:3,finalPosition:'速喜',steps:[]}}]};
+ const own=(await call(2,`/${group}/cards`,'POST',body)).body.id;assert.ok(own);
+ db.prepare('UPDATE groups SET member_mutes=? WHERE id=?').run(JSON.stringify({'2':new Date(Date.now()+60000).toISOString()}),group);
+ assert.equal((await call(2,`/${group}/cards`,'POST',{...body,requestId:crypto.randomUUID()})).status,403);assert.equal((await call(1,`/${group}/cards/${own}`)).status,200);
+ assert.equal((await call(2,`/${group}/cards/${own}/revoke`,'POST')).body.success,true);
+ db.prepare("UPDATE groups SET member_mutes='{}',mute_all=1 WHERE id=?").run(group);
+ assert.equal((await call(2,`/${group}/cards`,'POST',{...body,requestId:crypto.randomUUID()})).status,403);
+ assert.equal((await call(1,`/${group}/cards`,'POST',{...body,recipientIds:['2'],requestId:crypto.randomUUID()})).status,200);
+}));

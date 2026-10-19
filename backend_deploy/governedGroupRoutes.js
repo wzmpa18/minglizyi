@@ -16,6 +16,7 @@ function createGovernedGroupRouter({getDb,getUserDb,authRequired,userPublicInfo,
  const ids=row=>JSON.parse(row.member_ids||'[]').map(String);
  function group(id,me,active=false){if(!/^\d{1,16}$/.test(String(id)))fail('学习群不存在',404);const row=db().prepare('SELECT * FROM groups WHERE id=?').get(id);if(!row||!ids(row).includes(String(me)))fail('学习群不存在或你已不在群中',404);if(row.status==='closed')fail('此群已被平台关闭',403);const governance=db().prepare('SELECT * FROM study_group_governance WHERE group_id=?').get(row.id);if(active&&governance?.status!=='active')fail('此学习群尚未通过审核，暂不可发言或邀请',403);return {...row,governance};}
  const manager=(g,me)=>String(g.owner_id)===String(me)||JSON.parse(g.admins||'[]').includes(String(me));
+ const canSpeak=(g,me)=>manager(g,me)||!g.mute_all&&!(new Date(JSON.parse(g.member_mutes||'{}')[me]||0).getTime()>Date.now());
  function friends(a,b){if(a===b)fail('不能邀请自己');for(const id of [a,b]){const u=getUserDb()?.prepare('SELECT status,deleted_at FROM users WHERE user_id=?').get(id);if(!u||u.deleted_at||u.status==='banned')fail('此邀请不可用',403);}const [x,y]=[a,b].sort();if(!db().prepare('SELECT 1 FROM friendships WHERE user_a=? AND user_b=?').get(x,y))fail('只能邀请已双向同意的好友',403);if(db().prepare('SELECT 1 FROM blacklists WHERE (user_id=? AND blocked_id=?) OR (user_id=? AND blocked_id=?)').get(a,b,b,a))fail('此邀请不可用',403);}
  function vo(g){return {id:String(g.id),groupId:String(g.id),name:g.name,ownerId:g.owner_id,ownerName:g.owner_name,announcement:g.announcement,memberIds:ids(g),memberCount:ids(g).length,maxMembers:50,admins:JSON.parse(g.admins||'[]'),muteAll:!!g.mute_all,avatar:g.avatar||'',createdAt:g.created_at,reviewStatus:g.governance?.status||'legacy-unreviewed',topic:g.governance?.topic||''};}
  const handle=fn=>async(req,res)=>{res.set('Cache-Control','no-store');try{res.json(await fn(req,String(req.user.userId)));}catch(e){res.status(e.status||503).json({success:false,error:e.status?e.message:'学习群暂不可用，请重试'});}};
@@ -78,7 +79,7 @@ function createGovernedGroupRouter({getDb,getUserDb,authRequired,userPublicInfo,
  router.post('/:id/messages',handle(async(req,me)=>{
   const g=group(req.params.id,me,true),body=req.body||{},validation=validateStudyText(body.content),cmi=body.clientMsgId;
   if(!validation.ok)fail(validation.error);if(body.type&&body.type!=='text')fail('学习群仅支持文字及另行授权的盘卡，不支持图片');if(!/^[\w-]{16,80}$/.test(cmi||''))fail('发送编号无效，请更新客户端');
-  if(checkPlatformMute(me))fail('当前账号暂不可发言',403);const muted=JSON.parse(g.member_mutes||'{}')[me];if(!manager(g,me)&&(g.mute_all||new Date(muted||0).getTime()>Date.now()))fail('当前处于群内禁言状态',403);
+  if(checkPlatformMute(me))fail('当前账号暂不可发言',403);if(!canSpeak(g,me))fail('当前处于群内禁言状态',403);
   const cid='group:'+g.id,existing=db().prepare('SELECT * FROM chat_messages WHERE conversation_id=? AND client_msg_id=?').get(cid,cmi);
   const toMessage=row=>({id:String(row.id),senderId:row.sender_id,senderName:row.sender_name,content:row.content,type:'text',createdAt:row.created_at,reviewStatus:row.review_status});
   if(existing){if(existing.sender_id!==me||existing.content!==validation.text)fail('发送编号已用于其他内容',409);return {success:true,duplicated:true,pendingReview:existing.review_status==='pending',message:toMessage(existing)};}
@@ -91,7 +92,7 @@ function createGovernedGroupRouter({getDb,getUserDb,authRequired,userPublicInfo,
   return {success:true,pendingReview:status==='pending',message:toMessage(db().prepare('SELECT * FROM chat_messages WHERE id=?').get(insert.lastInsertRowid))};
  }));
  // Existing role, mute, remove, exit, dissolve and report routes remain the SSOT.
- router.use('/:id/cards',require('./studyGroupCards').createStudyGroupCards({db,group,ids,getUserDb,userPublicInfo,checkPlatformMute,notify}));
+ router.use('/:id/cards',require('./studyGroupCards').createStudyGroupCards({db,group,ids,getUserDb,userPublicInfo,checkPlatformMute,canSpeak,notify}));
  // Closed/legacy groups cannot bypass review via their old update routes.
  router.use((req,res,next)=>{if(/\/(leave|report|dissolve)$/.test(req.path))return next();try{const match=req.path.match(/^\/(\d+)\//);if(match)group(match[1],String(req.user.userId),req.method!=='GET');next();}catch(e){res.status(e.status||503).json({success:false,error:e.message});}});
  return router;
