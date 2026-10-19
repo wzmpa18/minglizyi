@@ -8,7 +8,7 @@ final class GuoxueStudyScreenshots: XCTestCase {
     private func tapVisible(_ query:XCUIElementQuery,_ name:String,_ app:XCUIApplication){
         let element=query.matching(NSPredicate(format:"label CONTAINS %@",name)).firstMatch
         XCTAssertTrue(element.waitForExistence(timeout:30),"Missing UI: "+name)
-        for _ in 0..<16 {if element.isHittable {element.tap();return};if element.frame.minY<70{app.swipeDown()}else{app.swipeUp()}}
+        for _ in 0..<16 {if element.isHittable {if !element.isEnabled{let ready=XCTNSPredicateExpectation(predicate:NSPredicate(format:"enabled == true"),object:element);guard XCTWaiter.wait(for:[ready],timeout:15) == .completed else{XCTFail("UI remained disabled: "+name);return}};element.tap();return};if element.frame.minY<70{app.swipeDown()}else{app.swipeUp()}}
         XCTFail("UI not reachable: "+name)
     }
     func testLifePrivateNativeStorage() throws {
@@ -28,7 +28,7 @@ final class GuoxueStudyScreenshots: XCTestCase {
         let body=app.textViews.matching(NSPredicate(format:"label BEGINSWITH %@","正文")).firstMatch
         XCTAssertTrue(body.exists);body.tap();let sample=String(repeating:"Synthetic private note, not a real patient. ",count:24);body.typeText(sample)
         tapVisible(app.buttons,"保存记录",app)
-        XCTAssertTrue(app.staticTexts["已保存到本机档案，未上传"].waitForExistence(timeout:30))
+        guard app.staticTexts["已保存到本机档案，未上传"].waitForExistence(timeout:30) else {shot("10_实际保存提示未出现",app);XCTFail("Manual save must acknowledge the real committed record");return}
         tapVisible(app.buttons,"关闭编辑",app)
         shot("06_真实应用_人生记录_合成测试数据",app)
         tapVisible(app.buttons,"锁定",app)
