@@ -140,7 +140,7 @@ function createRouter() {
 
   router.put('/services/:serviceId', authRequired, guard((req, res) => {
     const b = req.body || {};
-    const r = providerEngine.updateService({ userId: req.user.userId, serviceId: req.params.serviceId, ...b });
+    const r = providerEngine.updateService({ serviceName:b.serviceName,description:b.description,price:b.price,duration:b.duration,deliveryType:b.deliveryType,availability:b.availability,userId:req.user.userId,serviceId:req.params.serviceId });
     if (!r.ok) return res.status(400).json({ success: false, error: r.error });
     res.json({ success: true, data: r });
   }));
@@ -164,12 +164,9 @@ function createRouter() {
   }));
 
   router.get('/services/:serviceId', guard((req, res) => {
-    const list = providerEngine.listServices({});
-    const svc = list.find(s => String(s.serviceId) === String(req.params.serviceId));
-    if (svc) return res.json({ success: true, data: svc });
-    const raw = providerEngine.getService(req.params.serviceId);
-    if (!raw) return res.status(404).json({ success: false, error: '服务不存在' });
-    res.json({ success: true, data: { ...raw, priceYuan: providerEngine.centsToYuan(raw.price_cents) } });
+    const svc=providerEngine.listServices({onlineOnly:true}).find(s=>String(s.serviceId)===String(req.params.serviceId));
+    if(!svc)return res.status(404).json({success:false,error:'服务不存在或当前未公开'});
+    res.set('Cache-Control','no-store');res.json({success:true,data:svc});
   }));
 
   // 第三十八章：创建服务订单（只传 serviceId，金额服务端 SSOT）

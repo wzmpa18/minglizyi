@@ -1,0 +1,15 @@
+'use strict';
+const {test}=require('node:test'),assert=require('node:assert/strict'),crypto=require('node:crypto'),fs=require('node:fs'),path=require('node:path'),Module=require('node:module'),express=require('express'),jwt=require('jsonwebtoken');
+test('provider service edits bind actor and resource to JWT/path; anonymous details cannot disclose offline rows',async()=>{
+ const prior=process.env.JWT_SECRET;process.env.JWT_SECRET=crypto.randomBytes(32).toString('hex');const calls=[];
+ const engine={updateService(p){calls.push(p);return {ok:p.userId==='1'&&p.serviceId==='11',error:'无权修改他人服务'};},listServices(filter){return filter.onlineOnly?[{serviceId:11,status:'ONLINE',priceCents:8800}]:[{serviceId:11,status:'ONLINE'},{serviceId:22,status:'FROZEN',description:'PRIVATE_OFFLINE_SERVICE_CANARY'}];},getService(){return {serviceId:22,status:'FROZEN',description:'PRIVATE_OFFLINE_SERVICE_CANARY'};},centsToYuan(c){return c/100;}};
+ const filename=path.resolve(__dirname,'../backend_deploy/providerRoutes.js'),module=new Module(filename);module.filename=filename;module.paths=Module._nodeModulePaths(path.dirname(filename));const original=module.require.bind(module);module.require=name=>name==='./providerEngine'?engine:name==='./adminRoles'?{adminAuth:()=>((_req,res)=>res.status(403).json({success:false})),audit(){}}:original(name);module._compile(fs.readFileSync(filename,'utf8'),filename);
+ const app=express();app.use(express.json());app.use('/provider',module.exports.createRouter());const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));const base='http://127.0.0.1:'+server.address().port+'/provider';
+ async function call(url,user,method='GET',body){const r=await fetch(base+url,{method,headers:{'Content-Type':'application/json',...(user?{Authorization:'Bearer '+jwt.sign({userId:user},process.env.JWT_SECRET,{expiresIn:60})}:{})},body:body===undefined?undefined:JSON.stringify(body)});return {status:r.status,body:await r.json()};}
+ try{
+  assert.equal((await call('/services/11',null,'PUT',{userId:'1'})).status,401);assert.equal(calls.length,0);
+  const changed=await call('/services/11','1','PUT',{userId:'2',serviceId:'22',admin:'root',status:'ONLINE',serviceName:'合成课程',price:88});assert.equal(changed.status,200);assert.equal(calls[0].userId,'1');assert.equal(calls[0].serviceId,'11');assert.equal(calls[0].price,88);assert.ok(!('admin' in calls[0]));assert.ok(!('status' in calls[0]));
+  assert.equal((await call('/services/22','1','PUT',{userId:'1',serviceId:'11'})).status,400);assert.equal(calls[1].serviceId,'22');
+  assert.equal((await call('/services/11')).status,200);for(const user of [undefined,'1','2']){const hidden=await call('/services/22',user);assert.equal(hidden.status,404);assert.ok(!JSON.stringify(hidden.body).includes('PRIVATE_OFFLINE_SERVICE_CANARY'));}
+ }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));if(prior===undefined)delete process.env.JWT_SECRET;else process.env.JWT_SECRET=prior;}
+});
