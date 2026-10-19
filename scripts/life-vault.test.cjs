@@ -7,7 +7,7 @@ registerHooks({resolve(specifier,context,next){try{return next(specifier,context
 const {lifeReminderIcs}=require('../src/lib/lifeReminderExport.ts');
 const {LifeVault}=require('../src/lib/lifeVault.ts');
 const {scopedPrivateView}=require('../src/lib/lifeVaultView.ts');
-const {LifeSearchIndex,normalizeLifeText,lifeSearchHits,comparableLabTimeline,possibleDuplicateMedicines,exportableLifeEntries,mergeLifeAutosave,healthPreparation,compareLabUnits,privateOutboundAllowed}=require('../src/lib/lifeRecords.ts');
+const {LifeSearchIndex,normalizeLifeText,lifeSearchHits,segmentLifeQuery,comparableLabTimeline,possibleDuplicateMedicines,exportableLifeEntries,mergeLifeAutosave,healthPreparation,compareLabUnits,privateOutboundAllowed}=require('../src/lib/lifeRecords.ts');
 function memoryStorage(){const rows=new Map();return {rows,async commit(items,check){if(check&&(rows.get(check.key)?.etag??null)!==check.etag)throw Error('revision conflict');if(check?.deletePrefix)for(const key of rows.keys())if(key.startsWith(check.deletePrefix))rows.delete(key);for(const row of items){if(row.value===null)rows.delete(row.key);else rows.set(row.key,structuredClone(row.value));}},async read(key){return structuredClone(rows.get(key));},async page(prefix,after='',limit=100){return [...rows].filter(([key])=>key.startsWith(prefix)&&key>after).sort(([a],[b])=>a.localeCompare(b,'en')).slice(0,limit).map(([key,value])=>({key,value:structuredClone(value)}));}};}
 test('long private records, independent vaults, quote provenance, versions and authenticated encryption',async()=>{
  const store=memoryStorage(),{vault,recoveryCode}=await LifeVault.create(store,'a-long-private-password');
@@ -81,4 +81,8 @@ test('locking a raw vault during database reads cannot repopulate its decrypted 
 
 test('background autosave advances its own revision without losing newer typing or touching another editor',()=>{
  const submitted={id:'a',ownerProfileId:'p',text:'first',revision:1,updatedAt:'old'},saved={...submitted,text:'first',revision:2,updatedAt:'new'},typing={...submitted,text:'first plus newly typed words'};const merged=mergeLifeAutosave(typing,submitted,saved);assert.equal(merged.text,typing.text);assert.equal(merged.revision,2);assert.equal(submitted.revision,1);const another={...typing,id:'b'};assert.equal(mergeLifeAutosave(another,submitted,saved),another);const manual={...typing,revision:3};assert.equal(mergeLifeAutosave(manual,submitted,saved),manual);assert.equal(mergeLifeAutosave(submitted,submitted,saved),saved);
+});
+
+test('local Chinese word queries and optional typo candidates do not rewrite medical records or force synonyms',()=>{
+ const index=new LifeSearchIndex();index.put('a','医生建议复查 医疗记录 doctor');assert.equal(index.search(segmentLifeQuery('医生复查')).total,1);assert.equal(index.search('医疗记彔').total,1);assert.equal(index.search('医疗记错').total,0);assert.ok(index.suggestions('doctro').includes('doctor'));assert.ok(index.suggestions('医声').includes('医生'));assert.equal(index.search('医声').total,0);assert.deepEqual(index.suggestions('0.5mg'),[]);index.remove('a');assert.deepEqual(index.suggestions('医声'),[]);
 });

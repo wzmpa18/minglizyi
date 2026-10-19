@@ -224,6 +224,7 @@ jobs:
           cache: npm
       - run: npm ci --legacy-peer-deps
       - run: npx tsc --noEmit --incremental false
+      - run: npx tsx --test scripts/interface-controls.test.tsx
       - run: node --experimental-strip-types --test scripts/life-vault.test.cjs
       - run: node --experimental-strip-types --test scripts/legacy-history-retention.test.cjs
       - run: node --test scripts/live-chart-policy.test.cjs

@@ -47,6 +47,15 @@ export class LifeSearchIndex {
   for(const n of sets[0].values())if(sets.every(p=>p.has(n))&&words.every(w=>this.documents.get(n)!.includes(w))){if(total>=offset&&ids.length<limit)ids.push(this.ids[n]);total++;}
   return {ids,total};
  }
+ suggestions(query:string,limit=5):string[]{
+  const q=normalizeLifeText(query).trim(),letters=Array.from(q);if(letters.length<2||letters.length>12||/[0-9]/.test(q))return [];
+  const choices=[...this.grams(q)].map(g=>({g,p:this.postings.get(g)})).filter(x=>x.p?.count).sort((a,b)=>a.p!.count-b.p!.count);if(!choices.length)return [];
+  const close=(value:string)=>{const b=Array.from(value);if(Math.abs(b.length-letters.length)>1||value===q)return false;let x=0,y=0,edits=0;while(x<letters.length&&y<b.length){if(letters[x]===b[y]){x++;y++;continue;}if(++edits>1)return false;if(letters.length===b.length&&letters[x]===b[y+1]&&letters[x+1]===b[y]){x+=2;y+=2;}else if(letters.length>b.length)x++;else if(letters.length<b.length)y++;else{x++;y++;}}return edits+(letters.length-x)+(b.length-y)===1;};
+  const found=new Set<string>(),visited=new Set<number>(),segmenter=typeof Intl.Segmenter==='function'?new Intl.Segmenter('zh',{granularity:'word'}):null;
+  for(const {g,p} of choices.slice(0,6))for(const id of p!.values()){if(visited.has(id))continue;visited.add(id);if(visited.size>120)return [...found].slice(0,limit);const text=this.documents.get(id)!;let from=0;
+   for(let hit=0;hit<4;hit++){const at=text.indexOf(g,from);if(at<0)break;from=at+g.length;const window=text.slice(Math.max(0,at-16),at+32),words=segmenter?[...segmenter.segment(window)].filter(x=>x.isWordLike).map(x=>x.segment):window.split(/[\s，,。；;：:]/);for(const word of words)if(!/[0-9]/.test(word)&&close(word))found.add(word);if(found.size>=limit)return [...found];}
+  }return [...found];
+ }
  clear(){this.documents.clear();this.numbers.clear();this.ids=[];this.free=[];this.postings.clear();}
  stats(){return {documents:this.documents.size,terms:this.postings.size,characters:[...this.documents.values()].reduce((a,b)=>a+b.length,0),postingPayloadBytes:[...this.postings.values()].reduce((n,p)=>n+p.bytes(),0)};}
 }
@@ -78,3 +87,5 @@ export function mergeLifeAutosave(current:LifeEntry|null,submitted:LifeEntry,sav
  if(!current||current.id!==submitted.id||current.ownerProfileId!==submitted.ownerProfileId||current.revision!==submitted.revision)return current;
  return JSON.stringify(current)===JSON.stringify(submitted)?saved:{...current,revision:saved.revision,updatedAt:saved.updatedAt};
 }
+
+export function segmentLifeQuery(query:string){if(typeof Intl.Segmenter!=='function')throw Error("本浏览器不支持本机中文分词，请继续使用短词、片段或空格组合查询");return [...new Intl.Segmenter('zh',{granularity:'word'}).segment(normalizeLifeText(query))].filter(s=>s.isWordLike).map(s=>s.segment).join(' ');}
