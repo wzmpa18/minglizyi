@@ -2,27 +2,28 @@
 
 import { SectionGate } from "@/components/SectionGate";
 import { useState, useEffect, useMemo, Suspense } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   getConstitutionById,
   saveResult,
   COMPLIANCE_TEXT,
+  CONSTITUTION_PROVENANCE,
   getConstitutionTypes,
 } from "@/algorithm-core/modules/tcm/constitution";
 import type { ConstitutionResult } from "@/algorithm-core/modules/tcm/constitution";
-import ClientSelector from "@/components/ClientSelector";
-import { saveRecord } from "@/lib/clientStore";
-import type { Client } from "@/lib/clientStore";
+import {stageLifeImport} from "@/lib/lifeImport";
+import {getUserProfile} from "@/lib/auth";
 
 const BRAND = "#7B2FBE";
 const BRAND_LIGHT = "#9B5ECF";
 const BRAND_BG = "#F3EDF7";
 
 function getScoreLevel(score: number): { label: string; color: string } {
-  if (score >= 60) return { label: "明显", color: "#C62828" };
-  if (score >= 40) return { label: "是", color: "#E65100" };
-  if (score >= 30) return { label: "倾向", color: "#FF9800" };
-  return { label: "否", color: "#4CAF50" };
+  if (score >= 60) return { label: "≥60", color: "#C62828" };
+  if (score >= 40) return { label: "40–59", color: "#E65100" };
+  if (score >= 30) return { label: "30–39", color: "#FF9800" };
+  return { label: "<30", color: "#4CAF50" };
 }
 
 function ConstitutionResultInner() {
@@ -31,8 +32,11 @@ function ConstitutionResultInner() {
   const fromHistory = searchParams.get("from") === "history";
   const [result, setResult] = useState<ConstitutionResult | null>(null);
   const [saved, setSaved] = useState(false);
+  const [studyTypeId,setStudyTypeId]=useState('');
+  const studyType=getConstitutionById(studyTypeId);
   const [savedToClient, setSavedToClient] = useState(false);
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [personLabel,setPersonLabel]=useState('');
+  const [saveError,setSaveError]=useState('');
 
   useEffect(() => {
     try {
@@ -64,22 +68,11 @@ function ConstitutionResultInner() {
   };
 
   const handleSaveToClient = () => {
-    if (!result || !selectedClient || savedToClient) return;
-    saveRecord({
-      clientId: selectedClient.id,
-      type: "tcm-constitution",
-      data: {
-        primaryTypeName: result.primaryType.name,
-        primaryTypeId: result.primaryType.id,
-        isBalanced: result.isBalanced,
-        scores: result.scores,
-        secondaryTypes: result.secondaryTypes.map(t => ({ id: t.id, name: t.name })),
-        date: result.date,
-      },
-      note: `体质测评结果：${result.primaryType.name}${result.isBalanced ? "（健康体质）" : "（偏颇体质）"}`,
-      status: "pending",
-    });
-    setSavedToClient(true);
+    if (!result || savedToClient) return;
+    try{
+      stageLifeImport({title:'体质问卷学习计分',text:`${result.date}\n历史问卷规则标签：${result.primaryType.name}（不是健康结论）\n${result.scores.map(s=>`${s.name}：转化分${s.convertedScore} / 100`).join('\n')}\n${CONSTITUTION_PROVENANCE.note}`,categories:['学习','健康记录'],tags:['问卷学习','未经临床验证'],people:personLabel.trim()?[personLabel.trim()]:[],sourceRefs:[{kind:'SOURCE_USER_IMPORTED',platform:'本机历史问卷学习',at:new Date(result.timestamp).toISOString(),verified:false}]},String(getUserProfile()?.userId||''));
+      setSavedToClient(true);router.push('/profile/life/');
+    }catch(e){setSaveError(e instanceof Error?e.message:'留档尚未完成');}
   };
 
   const handleRetake = () => {
@@ -193,7 +186,7 @@ function ConstitutionResultInner() {
             textAlign: "center",
           }}
         >
-          <div style={{ fontSize: "12px", color: "#999", marginBottom: "8px" }}>您的主要体质类型是</div>
+          <div style={{ fontSize: "12px", color: "#999", marginBottom: "8px" }}>历史问卷规则标签（不是诊断）</div>
           <div style={{ fontSize: "56px", marginBottom: "8px" }}>{primaryType.icon}</div>
           <div
             style={{
@@ -217,17 +210,17 @@ function ConstitutionResultInner() {
               fontWeight: "bold",
             }}
           >
-            {isBalanced ? "健康体质" : "偏颇体质"} · {primaryScore}分
+            问卷转化分 · {primaryScore} / 100
           </div>
           {isBalanced && (
             <p style={{ fontSize: "12px", color: "#2E7D32", marginTop: "12px", margin: "12px auto 0", maxWidth: "280px", lineHeight: 1.6 }}>
-              恭喜！您的体质状态良好，阴阳气血调和，请继续保持健康的生活方式。
+              此标签只反映历史问卷的计分规则，不能据此判断健康或排除疾病。
             </p>
           )}
         </div>
       </div>
 
-      {/* 兼夹体质 */}
+      {/* 其他计分标签 */}
       {secondaryTypes.length > 0 && (
         <div style={{ padding: "12px 12px 0" }}>
           <div
@@ -239,7 +232,7 @@ function ConstitutionResultInner() {
             }}
           >
             <h3 style={{ fontSize: "14px", fontWeight: "bold", color: "#333", margin: "0 0 10px" }}>
-              🔍 兼夹体质倾向
+              🔍 其他计分标签倾向
             </h3>
             <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
               {secondaryTypes.map((t) => {
@@ -278,7 +271,7 @@ function ConstitutionResultInner() {
           }}
         >
           <h3 style={{ fontSize: "14px", fontWeight: "bold", color: "#333", margin: "0 0 14px" }}>
-            📊 各体质得分
+            📊 九个问卷维度的转化分
           </h3>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
             {allTypes.map((type) => {
@@ -317,7 +310,7 @@ function ConstitutionResultInner() {
                             color: type.color,
                           }}
                         >
-                          主要
+                          规则标签
                         </span>
                       )}
                     </div>
@@ -356,117 +349,21 @@ function ConstitutionResultInner() {
         </div>
       </div>
 
-      {/* 主要体质详细分析 */}
-      <div style={{ padding: "12px 12px 0" }}>
-        <div
-          style={{
-            background: "white",
-            borderRadius: "16px",
-            padding: "16px",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-          }}
-        >
-          <h3 style={{ fontSize: "14px", fontWeight: "bold", color: "#333", margin: "0 0 14px" }}>
-            {primaryType.icon} {primaryType.name} · 详细分析
-          </h3>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {[
-              { label: "总体特征", content: primaryType.features },
-              { label: "形体特征", content: primaryType.physicalTraits },
-              { label: "常见表现", content: primaryType.commonManifestations },
-              { label: "心理特征", content: primaryType.psychologicalTraits },
-              { label: "发病倾向", content: primaryType.diseaseTendency },
-              { label: "适应能力", content: primaryType.adaptability },
-            ].map((item) => (
-              <div key={item.label}>
-                <div style={{ fontSize: "12px", color: primaryType.color, fontWeight: "bold", marginBottom: "4px" }}>
-                  {item.label}
-                </div>
-                <div style={{ fontSize: "13px", color: "#555", lineHeight: 1.7 }}>{item.content}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* 调养建议 */}
-      <div style={{ padding: "12px 12px 0" }}>
-        <div
-          style={{
-            background: "white",
-            borderRadius: "16px",
-            padding: "16px",
-            boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-          }}
-        >
-          <h3 style={{ fontSize: "14px", fontWeight: "bold", color: "#333", margin: "0 0 14px" }}>
-            💡 养生调理建议
-          </h3>
-
-          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-            {[
-              { label: "饮食调养", icon: "🍲", content: primaryType.healthAdvice.diet },
-              { label: "运动保健", icon: "🏃", content: primaryType.healthAdvice.exercise },
-              { label: "穴位保健", icon: "📍", content: primaryType.healthAdvice.acupoints },
-              { label: "生活起居", icon: "🏠", content: primaryType.healthAdvice.lifestyle },
-            ].map((item) => (
-              <div
-                key={item.label}
-                style={{
-                  padding: "12px",
-                  borderRadius: "10px",
-                  backgroundColor: primaryType.bgColor,
-                }}
-              >
-                <div style={{ fontSize: "13px", fontWeight: "bold", color: primaryType.color, marginBottom: "6px" }}>
-                  {item.icon} {item.label}
-                </div>
-                <div style={{ fontSize: "12px", color: "#555", lineHeight: 1.7 }}>{item.content}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <section className="m-3 space-y-3 rounded-2xl bg-white p-4 text-sm leading-7 text-stone-800">
+        <h2 className="font-semibold">来源、计分与适用边界</h2>
+        <p>{CONSTITUTION_PROVENANCE.note}</p><a className="underline" href={CONSTITUTION_PROVENANCE.officialUrl} target="_blank" rel="noopener noreferrer">核对现行标准公开信息</a>
+        <p>转化分＝（原始分－条目数）÷（条目数×4）×100，反向题先按6减答案计分。这里显示问卷分数，不是疾病概率、健康分数或治疗指征。旧记录不会被重算或伪装为现行标准结果。</p>
+        <label className="block">自主选择术语学习<select aria-label="体质术语学习" value={studyTypeId} onChange={e=>setStudyTypeId(e.target.value)} className="mt-2 w-full rounded border bg-white p-3 text-stone-900"><option value="">请选择，不按问卷推荐调理</option>{allTypes.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
+        {studyType&&<div className="space-y-3 rounded-xl border p-3"><h3 className="font-semibold">{studyType.name} · 编写者概述</h3><p>下列为历史整理笔记，尚未逐条专业核验，不是对你的状态描述。</p><p>{studyType.features}</p><p>{studyType.commonManifestations}</p><Link className="block underline" href={`/zhongyi/classic/?q=${encodeURIComponent(studyType.name)}&scope=original`}>检索完整古籍，核对原文语境</Link><div className="flex flex-wrap gap-4"><Link className="underline" href="/zhongyi/herb/">性味归经学习</Link><Link className="underline" href="/zhongyi/meridian/">经络与穴位文献</Link><Link className="underline" href="/zhongyi/classic/">饮食起居原典</Link></div><p>这些是独立资料入口，不根据答题生成适用于本人的药物、饮食限制或按穴方案。</p></div>}
+      </section>
 
       {/* 操作按钮 */}
       <div style={{ padding: "16px 12px 0" }}>
         {/* 客户档案保存区 */}
         <div style={{ marginBottom: "12px" }}>
-          <ClientSelector
-            onSelect={setSelectedClient}
-            selectedClient={selectedClient}
-          />
-          <button
-            onClick={handleSaveToClient}
-            disabled={!selectedClient || savedToClient || fromHistory}
-            style={{
-              width: "100%",
-              padding: "12px",
-              borderRadius: "12px",
-              border: "none",
-              background:
-                !selectedClient || savedToClient || fromHistory
-                  ? "#e0e0e0"
-                  : `linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%)`,
-              color: !selectedClient || savedToClient || fromHistory ? "#999" : "white",
-              fontSize: "14px",
-              fontWeight: "bold",
-              cursor: !selectedClient || savedToClient || fromHistory ? "default" : "pointer",
-              boxShadow: !selectedClient || savedToClient || fromHistory ? "none" : "0 2px 8px rgba(76,175,80,0.3)",
-            }}
-          >
-            {savedToClient
-              ? "✓ 已保存到客户档案（中医服务记录）"
-              : fromHistory
-              ? "历史记录中的结果"
-              : selectedClient
-              ? `保存到「${selectedClient.name}」的中医服务记录`
-              : "请先选择客户以保存到档案"}
-          </button>
-          <p style={{ fontSize: "11px", color: "#999", textAlign: "center", marginTop: "6px" }}>
-            医考学习数据暂不接入客户档案
-          </p>
+          <label className="block text-sm text-stone-800">人物本地标签（选填）<input aria-label="人物本地标签" value={personLabel} onChange={e=>setPersonLabel(e.target.value)} maxLength={80} className="my-2 w-full rounded border bg-white p-3 text-stone-900"/></label>
+          <button onClick={handleSaveToClient} disabled={savedToClient} className="w-full rounded-xl bg-purple-700 p-3 text-sm text-white disabled:opacity-40">{savedToClient?'已交给本机草稿，请核对保存':'预览并存入本机人生记录'}</button>
+          <p className="mt-2 text-xs leading-6 text-stone-600">仅在当前页面进程交接；解锁独立档案后核对并保存，不经过客户档案云同步。历史结果也可另存，不改写原记录。</p>{saveError&&<p role="status" className="text-sm text-red-800">{saveError}</p>}
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>

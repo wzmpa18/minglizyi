@@ -1,6 +1,6 @@
 /**
- * 中医体质辨识模块 - 基于中华中医药学会标准 ZYYXH/T157-2009
- * (参照 GB/T 21156-2007《中医体质分类与判定》)
+ * 九种体质问卷学习模块。历史题目及计分仍需逐项专业核验。
+ * 不宣称实现现行 GB/T 46939-2025；旧注释的 GB/T 21156-2007 引用错误。
  *
  * 九种体质：平和质、气虚质、阳虚质、阴虚质、痰湿质、湿热质、血瘀质、气郁质、特禀质
  */
@@ -242,7 +242,7 @@ export const CONSTITUTION_TYPES: ConstitutionType[] = [
 ];
 
 // ============================================================================
-// 体质测评问卷（基于国家标准判定量表，约60+题）
+// 历史体质问卷学习条目（未完成现行标准逐题核验）
 // 评分标准：没有=1, 很少=2, 有时=3, 经常=4, 总是=5
 // 平和质部分条目为反向计分（reverse标记）
 // ============================================================================
@@ -337,7 +337,14 @@ export const CONSTITUTION_QUESTIONS: ConstitutionQuestion[] = [
 // 常量
 // ============================================================================
 
-export const COMPLIANCE_TEXT = "体质测评仅供学习参考，不作为诊断依据";
+export const COMPLIANCE_TEXT = "历史问卷计分仅供体质术语学习，不判定健康状况，不提供个人调养或取穴建议";
+export const CONSTITUTION_PROVENANCE = {
+ version:'legacy-questionnaire-study-v1',verified:false,
+ currentStandard:'GB/T 46939-2025',standardImplemented:false,
+ officialUrl:'https://std.samr.gov.cn/gb/search/gbDetailedCNF?id=473EBB99D729455EE06397BE0A0ABB9A',
+ checkedOn:'2026-10-19',
+ note:'现行标准自2026-04-01实施；本模块历史题目、阈值及概述未完成与该标准的逐项核对，不宣称符合现行标准或替代专业判定。',
+} as const;
 
 const HISTORY_KEY = "tcm_constitution_history";
 const MAX_HISTORY = 20;
@@ -369,7 +376,7 @@ export function getQuestionnaire(): ConstitutionQuestion[] {
 
 /**
  * 计算体质得分
- * 算法依据：中华中医药学会《中医体质分类与判定》标准
+ * 既有问卷计分演示；不是已验证的现行标准实现。
  *
  * 原始分 = 各条目分数之和
  * 转化分 = [(原始分 - 条目数) / (条目数 × 4)] × 100
@@ -383,13 +390,14 @@ export function getQuestionnaire(): ConstitutionQuestion[] {
 export function calculateConstitution(
   answers: Record<string, number>
 ): ConstitutionResult {
+  if (!answers || CONSTITUTION_QUESTIONS.some(q=>!Object.prototype.hasOwnProperty.call(answers,q.id)||!Number.isInteger(answers[q.id])||answers[q.id]<1||answers[q.id]>5)) throw new Error("请完成全部条目，每题选择1至5的有效答案；未作缺项推算");
   // 按体质分组计算原始分
   const rawScores: Record<string, number> = {};
   const questionCounts: Record<string, number> = {};
   const reverseFlags: Record<string, boolean> = {};
 
   for (const q of CONSTITUTION_QUESTIONS) {
-    const score = answers[q.id] ?? 0;
+    const score = answers[q.id];
     if (!rawScores[q.constitutionId]) {
       rawScores[q.constitutionId] = 0;
       questionCounts[q.constitutionId] = 0;

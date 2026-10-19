@@ -1,7 +1,7 @@
 "use client";
 
 import { SectionGate } from "@/components/SectionGate";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -20,6 +20,8 @@ import {
 } from "@/algorithm-core";
 import type { TcmSyndrome } from "@/algorithm-core";
 import { BrandHeader } from "@/components/shared";
+import {ResearchLearningDrawers} from "@/components/ResearchLearningDrawers";
+import {localMedicalConcepts} from "@/lib/medicalLearning";
 import { useToolBack } from "@/lib/useToolBack";
 
 // ============================================================
@@ -43,7 +45,11 @@ interface ClassicTextResult {
 
 function ShanghanPageOriginal() {
   useToolBack({ pageKey: "zhongyi_shanghan", eventName: "zhongyi-back", globalFlag: "__zhongyiBackHandled" });
-  const [symptomsInput, setSymptomsInput] = useState("");
+  const [symptomsInput, setSymptomsInput] = useState('');
+  const [studySyndromeName,setStudySyndromeName]=useState('');
+  const studySyndrome=SHANGHAN_SYNDROMES.find(s=>s.name===studySyndromeName);
+  const generation=useRef(0);
+  useEffect(()=>()=>{generation.current++;},[]);
   const [symptomTags, setSymptomTags] = useState<string[]>([]);
   const [matchedSyndromes, setMatchedSyndromes] = useState<TcmSyndrome[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
@@ -69,6 +75,7 @@ function ShanghanPageOriginal() {
   const handleAnalyze = useCallback(async () => {
     if (symptomTags.length === 0) return;
 
+    const turn=++generation.current;setClassicTexts([]);setLoadingTexts(false);
     const result = studySyndromeMatch(symptomTags);
     setMatchedSyndromes(
       result.syndromes.length > 0 ? result.syndromes : []
@@ -80,20 +87,17 @@ function ShanghanPageOriginal() {
     if (result.syndromes.length > 0) {
       setLoadingTexts(true);
       try {
-        const texts = await searchClassicTexts(symptomTags.join(" "), {
-          classic: "伤寒论",
-          limit: 5,
-        });
-        setClassicTexts(texts);
-      } catch {
-        setClassicTexts([]);
-      }
+        const pages=await Promise.all(symptomTags.map(term=>searchClassicTexts(term,{classic:'伤寒论',limit:5})));
+        if(turn!==generation.current)return;
+        const unique=new Map(pages.flat().map(t=>[`${t.classic}:${t.chapter}:${t.subsection}:${t.content_preview}`,t]));setClassicTexts([...unique.values()].slice(0,10));
+      } catch {if(turn!==generation.current)return;setClassicTexts([]);}
       setLoadingTexts(false);
     }
   }, [symptomTags]);
 
   // 重置
   const handleReset = useCallback(() => {
+    generation.current++;setLoadingTexts(false);
     setSymptomTags([]);
     setSymptomsInput("");
     setMatchedSyndromes([]);
@@ -319,7 +323,7 @@ function ShanghanPageOriginal() {
                 style={{ color: "#e8edf0" }}
               >
                 <Brain className="h-4 w-4" style={{ color: "#2d5a27" }} />
-                候选证型列表（{matchedSyndromes.length}个匹配）
+                学习目录命中（{matchedSyndromes.length}项）
               </h3>
 
               {matchedSyndromes.map((syndrome, idx) => (
@@ -370,21 +374,9 @@ function ShanghanPageOriginal() {
                               color: "#2d5a27",
                             }}
                           >
-                            匹配度：{syndrome.score}
+                            关键词包含关系：{syndrome.score}对
                           </span>
-                          {/* 进度条 */}
-                          <div
-                            className="flex-1 max-w-[80px] h-1.5 rounded-full overflow-hidden"
-                            style={{ backgroundColor: "rgba(45, 90, 39, 0.1)" }}
-                          >
-                            <div
-                              className="h-full rounded-full transition-all"
-                              style={{
-                                width: `${Math.min(100, (syndrome.score / 5) * 100)}%`,
-                                backgroundColor: "#2d5a27",
-                              }}
-                            />
-                          </div>
+
                         </div>
                       </div>
                     </div>
@@ -456,14 +448,13 @@ function ShanghanPageOriginal() {
                             className="h-3 w-3 inline mr-1"
                             style={{ color: "#d4a84b" }}
                           />
-                          推理过程
+                          目录检索规则
                         </p>
                         <p
                           className="text-sm leading-relaxed"
                           style={{ color: "#8b9a8b" }}
                         >
-                          您输入的症状与"{syndrome.name}"的典籍记载关键症状有
-                          {syndrome.score}项匹配，故列为候选证型。具体匹配的症状为：
+                          输入词与该目录关键词存在{syndrome.score}对包含关系，仅用于查资料，不是症状个数、诊断概率或临床验证。目录所列症状的完全同词命中：
                           {syndrome.symptoms
                             .filter((s) => symptomTags.includes(s))
                             .join("、") || "（部分匹配关键词）"}
@@ -471,33 +462,7 @@ function ShanghanPageOriginal() {
                         </p>
                       </div>
 
-                      {/* 推荐方剂 */}
-                      {syndrome.formulas.length > 0 && (
-                        <div>
-                          <p
-                            className="text-xs font-medium mb-1"
-                            style={{ color: "#6b7a6b" }}
-                          >
-                            推荐方剂（典籍记载）
-                          </p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {syndrome.formulas.map((f, i) => (
-                              <Link
-                                key={i}
-                                href={`/zhongyi/formula?name=${f}`}
-                                className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs transition-colors hover:bg-[#d4a84b]/10"
-                                style={{
-                                  backgroundColor: "rgba(212, 168, 75, 0.1)",
-                                  color: "#d4a84b",
-                                  border: "1px solid rgba(212, 168, 75, 0.2)",
-                                }}
-                              >
-                                {f}
-                              </Link>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                      <p className="text-xs leading-6 text-stone-300">此条为编写者目录概述，不冒充已逐条核验的古籍原文。请在下方完整来源章节核对语境；方剂名录由你另行选读。</p>
                     </div>
                   )}
                 </div>
@@ -516,10 +481,10 @@ function ShanghanPageOriginal() {
                 style={{ color: "#6b7a6b" }}
               />
               <p className="text-sm" style={{ color: "#8b9a8b" }}>
-                未找到匹配的证型
+                未找到关键词目录
               </p>
               <p className="text-xs mt-1" style={{ color: "#6b7a6b" }}>
-                请尝试输入更具体的症状描述，或使用其他关键词
+                可换一个文献术语检索；不会据此推断证型
               </p>
             </div>
           )}
@@ -538,7 +503,7 @@ function ShanghanPageOriginal() {
                 style={{ color: "#e8edf0" }}
               >
                 <BookOpen className="h-4 w-4" style={{ color: "#d4a84b" }} />
-                相关条文
+                旧版条目摘要 · 请核对完整原文
               </h3>
               <div className="space-y-2">
                 {classicTexts.map((text, idx) => (
@@ -625,6 +590,9 @@ function ShanghanPageOriginal() {
           </div>
         </div>
       )}
+
+      {hasSearched&&<ResearchLearningDrawers selectedSymptoms={localMedicalConcepts(symptomTags.join('、'))} selfDescription=""/>}
+      <section className="mb-6 space-y-3 rounded-xl border border-stone-600 bg-stone-900 p-4 text-sm text-stone-100"><h2 className="font-semibold">六经目录与方剂名录 · 自主选读</h2><p className="text-xs leading-6">不会根据输入自动推荐方剂。以下为既有整理目录，尚需逐条专业校核；药量、用药和针法应回原典学习，不能照用于个人。</p><label className="block">选择目录<select aria-label="六经目录自主选读" value={studySyndromeName} onChange={e=>setStudySyndromeName(e.target.value)} className="mt-2 w-full rounded bg-white p-3 text-stone-900"><option value="">请选择学习条目</option>{SHANGHAN_SYNDROMES.map(item=><option key={item.name} value={item.name}>{item.name}</option>)}</select></label>{studySyndrome&&<><p>{studySyndrome.description}</p><Link className="block underline" href={`/zhongyi/classic/?q=${encodeURIComponent(studySyndrome.name)}&scope=original`}>在完整古籍中核对来源</Link><div className="flex flex-wrap gap-3">{studySyndrome.formulas.map(f=><Link key={f} className="underline" href={`/zhongyi/formula/?name=${encodeURIComponent(f)}`}>{f} · 查资料</Link>)}</div></>}</section>
 
       {/* ======================================== */}
       {/* 本APP内容仅供传统文化研究参考，不构成医疗建议。如有身体不适，请及时就医。 */}

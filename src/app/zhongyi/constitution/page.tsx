@@ -82,7 +82,7 @@ function ConstitutionHomeOriginal() {
           <div>
             <h1 style={{ fontSize: "18px", fontWeight: "bold", margin: 0 }}>中医体质测评</h1>
           
-            <p style={{ fontSize: "11px", opacity: 0.8, margin: 0 }}>九种体质辨识 · 国家标准</p>
+            <p style={{ fontSize: "11px", opacity: 0.8, margin: 0 }}>九种体质术语 · 问卷学习</p>
           </div>
         </div>
       </div>
@@ -118,11 +118,10 @@ function ConstitutionHomeOriginal() {
                 什么是中医体质辨识？
               </h2>
               <p style={{ fontSize: "12px", color: "#666", lineHeight: 1.7, margin: 0 }}>
-                体质辨识是根据中华中医药学会《中医体质分类与判定》标准，通过问卷测评将人群分为九种体质类型。
-                了解自身体质有助于针对性地进行养生保健、饮食调养和运动锻炼。
+                本页保留历史问卷与本机记录，用于学习九种体质术语和计分方法。题目和计分尚未与现行标准逐项核验，不能据此认定体质、健康状况或选择个人治疗。
               </p>
               <p style={{ fontSize: "11px", color: "#999", lineHeight: 1.5, margin: "8px 0 0" }}>
-                共 {questionCount} 道题目，约需 3-5 分钟完成
+                共 {questionCount} 道题目；按自己的节奏完成，不上传答题内容
               </p>
             </div>
           </div>

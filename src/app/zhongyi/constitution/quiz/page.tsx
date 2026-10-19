@@ -24,6 +24,7 @@ function ConstitutionQuizOriginal() {
   const router = useRouter();
   const questions = useMemo(() => getQuestionnaire(), []);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [error,setError]=useState('');
   const [answers, setAnswers] = useState<Record<string, number>>({});
 
   const total = questions.length;
@@ -48,7 +49,7 @@ function ConstitutionQuizOriginal() {
     if (!canGoNext) return;
     if (isLastQuestion) {
       // Calculate result and navigate to result page
-      const result = calculateConstitution(answers);
+      let result;try{result=calculateConstitution(answers);}catch(e){setError(e instanceof Error?e.message:'答题尚未完成');return;}
       try {
         sessionStorage.setItem("tcm_constitution_result", JSON.stringify(result));
       } catch {
@@ -141,6 +142,7 @@ function ConstitutionQuizOriginal() {
         </div>
       </div>
 
+      {error&&<p role="status" className="m-4 rounded border border-amber-300 bg-amber-50 p-3 text-sm text-stone-900">{error}</p>}
       {/* 问题卡片 */}
       <div style={{ padding: "20px 16px" }}>
         <div

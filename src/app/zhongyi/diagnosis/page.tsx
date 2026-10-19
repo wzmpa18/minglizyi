@@ -4,6 +4,8 @@ import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getMembershipStatus, type MembershipStatus } from "@/lib/membershipStore";
+import {ResearchLearningDrawers} from "@/components/ResearchLearningDrawers";
+import {localMedicalConcepts} from "@/lib/medicalLearning";
 
 // ==================== 品牌色 / 常量 ====================
 const BRAND = "#7B2FBE";
@@ -735,161 +737,16 @@ function runDiagnosis(params: {
 }): DiagnosisResult {
   const { selected, painNatureIds, systemId, schoolId } = params;
 
-  // 1. 汇总证型得分
-  const scores: Record<string, number> = {};
-  for (const sel of selected) {
-    const sym = SYMPTOM_MAP[sel.symptomId];
-    if (!sym) continue;
-    for (const [pid, w] of Object.entries(sym.patterns)) {
-      scores[pid] = (scores[pid] || 0) + w;
-    }
-  }
-  for (const nid of painNatureIds) {
-    const nature = PAIN_NATURES.find((n) => n.id === nid);
-    if (!nature) continue;
-    for (const [pid, w] of Object.entries(nature.patterns)) {
-      scores[pid] = (scores[pid] || 0) + w;
-    }
-  }
-
-  // 2. 排序，取主要证型
-  const ranked: RankedPattern[] = Object.entries(scores)
-    .filter(([, s]) => s > 0)
-    .map(([id, score]) => ({ id, score, def: PATTERN_MAP[id] }))
-    .filter((r) => !!r.def)
-    .sort((a, b) => b.score - a.score);
-
-  const maxScore = ranked.length > 0 ? ranked[0].score : 0;
-  const primaryPatterns = ranked
-    .filter((r) => r.score >= Math.max(2, maxScore * 0.5))
-    .slice(0, 3);
-
-  // 3. 八纲属性汇总
-  let heatScore = 0;
-  let coldScore = 0;
-  let defScore = 0;
-  let exScore = 0;
-  let hasExterior = false;
-  for (const r of ranked.slice(0, 4)) {
-    if (r.def.hanRe === "热") heatScore += r.score;
-    else if (r.def.hanRe === "寒") coldScore += r.score;
-    else if (r.def.hanRe === "寒热错杂") {
-      heatScore += r.score * 0.5;
-      coldScore += r.score * 0.5;
-    }
-    if (r.def.xuShi === "虚") defScore += r.score;
-    else if (r.def.xuShi === "实") exScore += r.score;
-    else if (r.def.xuShi === "虚实夹杂") {
-      defScore += r.score * 0.5;
-      exScore += r.score * 0.5;
-    }
-    if (r.def.biaoLi === "表") hasExterior = true;
-  }
-
-  // 4. 辨证结论（随辨证体系切换）
-  const system = DIFF_SYSTEMS.find((s) => s.id === systemId) || DIFF_SYSTEMS[0];
-  const school = SCHOOLS.find((s) => s.id === schoolId) || SCHOOLS[0];
-  let conclusion = "";
-  let conclusionTags: string[] = [];
-
-  if (systemId === "bagang") {
-    const biaoLi = hasExterior && !primaryPatterns.every((p) => p.def.biaoLi === "里") ? "表证" : "里证";
-    const hanRe = heatScore > coldScore ? "热证" : coldScore > heatScore ? "寒证" : "寒热错杂";
-    const xuShi = defScore > exScore ? "虚证" : exScore > defScore ? "实证" : "虚实夹杂";
-    const yangCnt = (biaoLi === "表证" ? 1 : 0) + (hanRe === "热证" ? 1 : 0) + (xuShi === "实证" ? 1 : 0);
-    const yinCnt = (biaoLi === "里证" ? 1 : 0) + (hanRe === "寒证" ? 1 : 0) + (xuShi === "虚证" ? 1 : 0);
-    const yinYang = yangCnt > yinCnt ? "偏于阳证" : yinCnt > yangCnt ? "偏于阴证" : "阴阳错杂";
-    conclusionTags = [biaoLi, hanRe, xuShi, yinYang];
-    conclusion = `八纲辨证：${biaoLi} · ${hanRe} · ${xuShi}（${yinYang}）`;
-  } else if (systemId === "liujing") {
-    const sixScores: Record<string, number> = {};
-    for (const r of ranked) {
-      const m = r.def.sixMeridian;
-      sixScores[m] = (sixScores[m] || 0) + r.score;
-    }
-    const sixRanked = Object.entries(sixScores).sort((a, b) => b[1] - a[1]);
-    const mainMeridian = sixRanked[0]?.[0] || "太阴";
-    const secondMeridian = sixRanked[1]?.[0];
-    conclusionTags = sixRanked.slice(0, 3).map((e) => `${e[0]}经`);
-    conclusion =
-      secondMeridian && sixRanked[1][1] > 0
-        ? `六经辨证：${mainMeridian}经证为主，兼涉${secondMeridian}经`
-        : `六经辨证：${mainMeridian}经证`;
-  } else {
-    const names = primaryPatterns.map((p) => p.def.name);
-    conclusionTags = primaryPatterns.map((p) => p.def.organ);
-    conclusion =
-      names.length > 0
-        ? `脏腑辨证：${names.join("、")}`
-        : "脏腑辨证：证候不明显，请补充更多症状";
-  }
-
-  // 5. 病机分析
-  const pathoParts: string[] = [];
-  for (const p of primaryPatterns) {
-    pathoParts.push(`【${p.def.name}】${p.def.pathogenesis}`);
-  }
-  const painNames = painNatureIds
-    .map((nid) => PAIN_NATURES.find((n) => n.id === nid)?.name)
-    .filter(Boolean) as string[];
-  let painHint = "";
-  if (painNames.length > 0) {
-    const hints: string[] = [];
-    if (painNames.includes("刺痛")) hints.push("提示瘀血阻络");
-    if (painNames.includes("胀痛")) hints.push("提示气机郁滞");
-    if (painNames.includes("隐痛") || painNames.includes("空痛")) hints.push("提示虚损失养");
-    if (painNames.includes("灼痛")) hints.push("提示热邪灼络");
-    if (painNames.includes("冷痛")) hints.push("提示寒邪凝滞");
-    painHint = `疼痛性质为${painNames.join("、")}，${hints.join("、")}。`;
-  }
-  const tendency =
-    defScore > exScore
-      ? "整体属虚，治当扶正补虚为主。"
-      : exScore > defScore
-      ? "整体属实，治当祛邪泻实为先。"
-      : "整体虚实夹杂，治当攻补兼施。";
-  const pathogenesis = (
-    pathoParts.join("\n") +
-    (painHint ? "\n" + painHint : "") +
-    "\n" +
-    tendency
-  ).trim();
-
-  // 6. 方剂 / 穴位（去重合并）
-  const formulas = dedupByName(primaryPatterns.flatMap((p) => p.def.formulas)).slice(0, 6);
-  const acupoints = dedupByName(primaryPatterns.flatMap((p) => p.def.acupoints)).slice(0, 8);
-
-  // 7. 名家思路
-  const masterNotes: string[] = [];
-  const noteSeen = new Set<string>();
-  for (const p of primaryPatterns) {
-    if (p.def.masterNotes && !noteSeen.has(p.def.masterNotes)) {
-      noteSeen.add(p.def.masterNotes);
-      masterNotes.push(p.def.masterNotes);
-    }
-  }
-  masterNotes.push(`【${school.name}】${school.note}`);
-
-  const selectedSymptomNames = selected
-    .map((s) => SYMPTOM_MAP[s.symptomId]?.name)
-    .filter(Boolean) as string[];
-
-  return {
-    systemId,
-    systemName: system.name,
-    schoolId,
-    schoolName: school.name,
-    conclusion,
-    conclusionTags,
-    primaryPatterns,
-    pathogenesis,
-    formulas,
-    acupoints,
-    masterNotes,
-    selectedSymptomNames,
-    painNatureNames: painNames,
-    date: new Date().toLocaleString("zh-CN", { hour12: false }),
-  };
+  // Selection drives an on-device literature worksheet, never an individual treatment plan.
+  const system = DIFF_SYSTEMS.find(s=>s.id===systemId)||DIFF_SYSTEMS[0];
+  const school = SCHOOLS.find(s=>s.id===schoolId)||SCHOOLS[0];
+  const selectedSymptomNames = selected.map(s=>SYMPTOM_MAP[s.symptomId]?.name).filter(Boolean) as string[];
+  const painNames = painNatureIds.map(id=>PAIN_NATURES.find(n=>n.id===id)?.name).filter(Boolean) as string[];
+  return {systemId,systemName:system.name,schoolId,schoolName:school.name,
+    conclusion:`${system.name} · 文献对照学习`,conclusionTags:['本机检索','原文核对','不作个人证型判定'],
+    primaryPatterns:[],pathogenesis:'按所选术语查找实际古籍原段，不根据输入推断病机或推荐用药、取穴。证候、方剂和穴位目录需由你另行选择学习。',
+    formulas:[],acupoints:[],masterNotes:[],selectedSymptomNames,painNatureNames:painNames,
+    date:new Date().toLocaleString('zh-CN',{hour12:false})};
 }
 
 // ==================== localStorage 历史 ====================
@@ -917,7 +774,7 @@ function saveHistoryRecord(rec: HistoryRecord): void {
 }
 
 // ==================== 主组件 ====================
-const STEP_TITLES = ["症状选择", "辨证体系", "结果输出"];
+const STEP_TITLES = ["学习术语", "学习体系", "原文对照"];
 
 export default function DiagnosisPage() {
   const router = useRouter();
@@ -930,6 +787,8 @@ export default function DiagnosisPage() {
   const [systemId, setSystemId] = useState("bagang");
   const [schoolId, setSchoolId] = useState("jingfang");
   const [result, setResult] = useState<DiagnosisResult | null>(null);
+  const [studyPatternId,setStudyPatternId]=useState('');
+  const studyPattern=PATTERNS.find(p=>p.id===studyPatternId);
   const [history, setHistory] = useState<HistoryRecord[]>([]);
   const [saved, setSaved] = useState(false);
   const [membershipStatus, setMembershipStatus] = useState<MembershipStatus | null>(null);
@@ -1004,6 +863,7 @@ export default function DiagnosisPage() {
     } else if (step === 2) {
       const res = runDiagnosis({ selected, painNatureIds, systemId, schoolId });
       setResult(res);
+      setStudyPatternId('');
       setSaved(false);
       const rec: HistoryRecord = {
         id: `diag_${Date.now()}`,
@@ -1085,7 +945,7 @@ export default function DiagnosisPage() {
             </svg>
           </button>
           <div style={{ flex: 1 }}>
-            <h1 style={{ fontSize: "17px", fontWeight: "bold", margin: 0 }}>中医智能问诊</h1>
+            <h1 style={{ fontSize: "17px", fontWeight: "bold", margin: 0 }}>辨证文献研习</h1>
             <p style={{ fontSize: "11px", opacity: 0.85, margin: 0 }}>
               第 {step} 步 · {STEP_TITLES[step - 1]}
             </p>
@@ -1487,7 +1347,7 @@ export default function DiagnosisPage() {
               }}
             >
               <div style={{ fontSize: "14px", fontWeight: "bold", color: "#333", marginBottom: "10px" }}>
-                🕐 历史问诊（{history.length}）
+                🕐 历史学习记录（{history.length}）
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 {history.slice(0, 3).map((h) => (
@@ -1510,7 +1370,7 @@ export default function DiagnosisPage() {
                     </div>
                     <div style={{ color: "#555" }}>{h.conclusion}</div>
                     {h.primaryPatternNames.length > 0 && (
-                      <div style={{ marginTop: "2px" }}>证型：{h.primaryPatternNames.join("、")}</div>
+                      <div style={{ marginTop: "2px" }}>旧版匹配标签（未经核实）：{h.primaryPatternNames.join("、")}</div>
                     )}
                   </div>
                 ))}
@@ -1734,150 +1594,26 @@ export default function DiagnosisPage() {
             </div>
           </div>
 
-          {/* 主要证型 */}
-          {result.primaryPatterns.length > 0 && (
-            <SectionCard title="🔍 主要证型" accent={BRAND}>
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                {result.primaryPatterns.map((p, i) => (
-                  <div
-                    key={p.id}
-                    style={{
-                      padding: "12px",
-                      borderRadius: "10px",
-                      backgroundColor: BRAND_BG,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "12px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: "32px",
-                        height: "32px",
-                        borderRadius: "50%",
-                        background: BRAND,
-                        color: "white",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "14px",
-                        fontWeight: "bold",
-                        flexShrink: 0,
-                      }}
-                    >
-                      {i + 1}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: "14px", fontWeight: "bold", color: BRAND }}>{p.def.name}</div>
-                      <div style={{ fontSize: "11px", color: "#888", marginTop: "2px" }}>
-                        {p.def.organ} · {p.def.biaoLi}/{p.def.hanRe}/{p.def.xuShi} · {p.def.sixMeridian}经
-                      </div>
-                    </div>
-                    <div style={{ fontSize: "13px", fontWeight: "bold", color: BRAND }}>{p.score}分</div>
-                  </div>
-                ))}
-              </div>
-            </SectionCard>
-          )}
-
-          {/* 病机分析 */}
-          <SectionCard title="🧬 病机分析" accent="#E65100">
-            <p style={{ fontSize: "13px", color: "#555", lineHeight: 1.8, margin: 0, whiteSpace: "pre-wrap" }}>
-              {result.pathogenesis}
-            </p>
-            {result.selectedSymptomNames.length > 0 && (
-              <div style={{ marginTop: "12px" }}>
-                <div style={{ fontSize: "12px", color: "#999", marginBottom: "6px" }}>主要症状表现：</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                  {result.selectedSymptomNames.map((n, i) => (
-                    <span
-                      key={i}
-                      style={{ fontSize: "11px", padding: "3px 8px", borderRadius: "8px", backgroundColor: "#f5f0f9", color: "#7a6a8a" }}
-                    >
-                      {n}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
+          <SectionCard title="📚 原文检索与学习记录" accent={BRAND}>
+            <p style={{fontSize:13,lineHeight:1.8,color:'#555'}}>{result.pathogenesis}</p>
+            <p style={{fontSize:12,lineHeight:1.8,color:'#555'}}>本次术语：{result.selectedSymptomNames.join('、')} {result.painNatureNames.join('、')}。补充备注保留本机，不发送给AI或交流区。</p>
+            <ResearchLearningDrawers selectedSymptoms={localMedicalConcepts(result.selectedSymptomNames.join('、'))} selfDescription=""/>
           </SectionCard>
-
-          {/* 方案建议：经典方剂参考 */}
-          <SectionCard title="💊 方案建议 · 经典方剂参考" accent="#2E7D32">
-            {result.formulas.length === 0 ? (
-              <EmptyHint text="症状信息不足，无法匹配经典方剂，请补充更多症状。" />
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                {result.formulas.map((f, i) => (
-                  <div key={i} style={{ padding: "12px", borderRadius: "10px", border: "1px solid #e8f0e8", backgroundColor: "#fafff9" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                      <span style={{ fontSize: "16px" }}>📜</span>
-                      <span style={{ fontSize: "14px", fontWeight: "bold", color: "#2E7D32" }}>{f.name}</span>
-                    </div>
-                    <div style={{ fontSize: "12px", color: "#555", lineHeight: 1.7 }}>{f.desc}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </SectionCard>
-
-          {/* 针灸取穴建议（会员专享） */}
-          <SectionCard title="📍 针灸取穴建议" accent="#1565C0">
-            {isPremium ? (
-              result.acupoints.length === 0 ? (
-                <EmptyHint text="暂无明确取穴建议，请补充症状后重试。" />
-              ) : (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                  {result.acupoints.map((a, i) => (
-                    <div key={i} style={{ padding: "12px", borderRadius: "10px", backgroundColor: "#eef6fd" }}>
-                      <div style={{ fontSize: "14px", fontWeight: "bold", color: "#1565C0", marginBottom: "4px" }}>
-                        {a.name}
-                      </div>
-                      <div style={{ fontSize: "11px", color: "#555", lineHeight: 1.5 }}>{a.desc}</div>
-                    </div>
-                  ))}
-                </div>
-              )
-            ) : (
-              <UpgradePrompt message="升级会员解锁针灸取穴建议" />
-            )}
-          </SectionCard>
-
-          {/* 名家思路参考（会员专享） */}
-          <SectionCard title="🎓 名家思路参考" accent="#6A1B9A">
-            {isPremium ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                {result.masterNotes.map((note, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      padding: "12px",
-                      borderRadius: "10px",
-                      backgroundColor: i === result.masterNotes.length - 1 ? "#f3edf7" : "#faf6fe",
-                      borderLeft: `3px solid ${BRAND_LIGHT}`,
-                    }}
-                  >
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: "12px",
-                        color: i === result.masterNotes.length - 1 ? "#5a3a7a" : "#666",
-                        lineHeight: 1.8,
-                      }}
-                    >
-                      {note}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <UpgradePrompt message="升级会员解锁全部辨证流派与名家方案" />
-            )}
+          <SectionCard title="🔎 证候与资料目录 · 自主选读" accent="#2E7D32">
+            <p style={{fontSize:12,lineHeight:1.8,color:'#555'}}>下面是既有编写者整理的学习目录，尚未完成逐条文献和医学专业核验。请自主选择主题，未按你的症状自动推荐；整理概述不冒充古籍原文或医家本人观点。</p>
+            <label style={{display:'block',fontSize:14,color:'#333'}}>选择学习主题<select aria-label="证候学习主题" value={studyPatternId} onChange={e=>setStudyPatternId(e.target.value)} style={{width:'100%',padding:12,marginTop:8,border:'1px solid #aaa',borderRadius:8,background:'white',color:'#222'}}><option value="">请选择，不默认个人证型</option>{PATTERNS.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+            {studyPattern&&<div className="space-y-3 pt-3 text-sm text-stone-800">
+              <h3 className="font-semibold">{studyPattern.name} · 术语概述</h3><p>目录分类：{studyPattern.organ} · {studyPattern.biaoLi}/{studyPattern.hanRe}/{studyPattern.xuShi} · {studyPattern.sixMeridian}经</p><p>{studyPattern.pathogenesis}</p>
+              <Link className="block underline" href={`/zhongyi/classic/?q=${encodeURIComponent(studyPattern.name)}&scope=original`}>到完整古籍核对该术语</Link>
+              <h4 className="font-semibold">方剂名录</h4><p>仅打开资料条目，古籍用药记载不能转化为本人的治疗方案。</p><div className="flex flex-wrap gap-3">{studyPattern.formulas.map(f=><Link className="underline" key={f.name} href={`/zhongyi/formula/?name=${encodeURIComponent(f.name)}`}>{f.name}</Link>)}</div>
+              <h4 className="font-semibold">穴位与针灸文献</h4>{isPremium?<div className="flex flex-wrap gap-3">{studyPattern.acupoints.map(a=><Link className="underline" key={a.name} href={`/zhongyi/meridian/?q=${encodeURIComponent(a.name)}`}>{a.name} · 查阅来源</Link>)}</div>:<UpgradePrompt message="升级会员解锁针灸文献目录"/>}
+              <h4 className="font-semibold">流派文献研读</h4>{isPremium?<><p>当前自主选读：{result.schoolName}。下列为编写者概述，未经逐条出处校核。</p><p>{SCHOOLS.find(s=>s.id===result.schoolId)?.note}</p><Link className="block underline" href={`/zhongyi/classic/?q=${encodeURIComponent(result.schoolName)}&scope=original`}>在已有完整古籍中查找，未收录时不补造引文</Link></>:<UpgradePrompt message="升级会员解锁全部辨证流派学习资料"/>}
+            </div>}
           </SectionCard>
 
           {/* 保存状态 */}
           <div style={{ textAlign: "center", fontSize: "12px", color: "#2E7D32", padding: "4px 0" }}>
-            {saved ? "✓ 本次问诊已记录到历史" : ""}
+            {saved ? "✓ 本次文献学习已记录到历史" : ""}
           </div>
         </div>
       )}
@@ -1951,7 +1687,7 @@ export default function DiagnosisPage() {
                 boxShadow: canNext ? "0 2px 8px rgba(123,47,190,0.3)" : "none",
               }}
             >
-              {step === 1 ? "下一步：选择辨证" : "开始辨证"}
+              {step === 1 ? "下一步：选择体系" : "查找原文"}
             </button>
           </>
         ) : (
@@ -1970,7 +1706,7 @@ export default function DiagnosisPage() {
                 cursor: "pointer",
               }}
             >
-              重新问诊
+              重新学习
             </button>
             <button
               onClick={() => router.push("/zhongyi")}
