@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { generatePoster } from "@/lib/sharePoster";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
@@ -52,6 +53,8 @@ export function ShareButton({
   shareData,
   onShared,
 }: ShareButtonProps) {
+  const router=useRouter();
+  const openLive=type==="tool"&&shareData?()=>{setShowMenu(false);router.push(`/discover/live/?compose=${encodeURIComponent(shareData.toolType)}`);}:undefined;
   const [showMenu, setShowMenu] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [toast, setToast] = useState("");
@@ -280,6 +283,7 @@ export function ShareButton({
         </button>
         {showMenu && (
           <ShareMenu
+            onLive={openLive}
             onCopyLink={handleCopyLink}
             onPoster={handleGeneratePoster}
             onQr={handleShowQr}
@@ -312,7 +316,8 @@ export function ShareButton({
       </button>
       {showMenu && (
         <ShareMenu
-          onCopyLink={handleCopyLink}
+          onLive={openLive}
+            onCopyLink={handleCopyLink}
           onPoster={handleGeneratePoster}
           onQr={handleShowQr}
           onSystemShare={handleSystemShare}
@@ -327,12 +332,14 @@ export function ShareButton({
 
 // ==================== 分享菜单 ====================
 function ShareMenu({
+  onLive,
   onCopyLink,
   onPoster,
   onQr,
   onSystemShare,
   onClose,
 }: {
+  onLive?: () => void;
   onCopyLink: () => void;
   onPoster: () => void;
   onQr: () => void;
@@ -362,6 +369,7 @@ function ShareMenu({
           </button>
         </div>
         <div className="overflow-y-auto" style={{ WebkitOverflowScrolling: "touch" }}>
+        {onLive&&<div className="px-6 pb-4"><button type="button" onClick={onLive} className="w-full rounded-xl bg-purple-700 p-3 text-sm font-semibold text-white">分享活盘 · 指定学友</button><p className="mt-2 text-xs leading-5 text-stone-600">逐张选择本机盘，预览脱敏资料和权限后再发送。下方海报与二维码是另外的分享方式。</p></div>}
         <div className="grid grid-cols-4 gap-3 px-6 pb-4">
           <button
             onClick={onCopyLink}

@@ -190,6 +190,7 @@ export function PaipanHistoryButton({ toolKey, onRestore }: PaipanHistoryButtonP
                         >
                           {r.tool === toolKey ? "恢复" : "查看原盘"}
                         </button>
+                        <button onClick={()=>{setShowHistory(false);router.push(`/discover/live/?compose=${encodeURIComponent(r.tool)}&record=${r.id}`);}} className="rounded-lg border border-purple-200 px-2.5 py-1 text-[11px] text-purple-700">分享活盘</button>
                         <button onClick={() => beginEdit(r)} className="rounded-lg border border-purple-200 px-2.5 py-1 text-[11px] text-purple-700">编辑名称/备注</button>
                         <button
                           onClick={() => handleDelete(r.id)}
