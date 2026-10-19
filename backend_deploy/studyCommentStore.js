@@ -2,8 +2,10 @@
 const crypto = require('node:crypto');
 const { validateStudyText } = require('./studyCommentPolicy');
 const {localFlags,capability}=require('./studyCommentSafety');
+const {domainFor}=require('./studyResearchPolicy');
+const {createResearchDomain}=require('./studyResearchDomain');
 
-function createStudyCommentStore(db, targets, now = () => Date.now()) {
+function createStudyCommentStore(db, targets, now = () => Date.now(), options = {}) {
   db.exec(`CREATE TABLE IF NOT EXISTS study_comments (
     id INTEGER PRIMARY KEY, target_id TEXT NOT NULL, user_id TEXT NOT NULL, nickname TEXT NOT NULL,
     content TEXT NOT NULL, parent_id INTEGER, status TEXT NOT NULL DEFAULT 'PENDING',
@@ -21,28 +23,34 @@ function createStudyCommentStore(db, targets, now = () => Date.now()) {
       target TEXT, note TEXT, created_ms INTEGER);
     INSERT OR IGNORE INTO study_comment_settings VALUES ('enabled','false');`);
   const fail = (message, status = 400) => { const error = new Error(message); error.status = status; throw error; };
-  const target = id => { if (typeof id !== 'string' || !targets.has(id)) fail('学习讨论对象不存在或编号不受支持', 404); return id; };
+  const research=createResearchDomain(db,{now,lifeEligible:options.lifeEligible,accountEligible:options.accountEligible});
+  const target = id => { if (typeof id !== 'string' || !targets.has(id) && !domainFor(id)) fail('学习讨论对象不存在或编号不受支持', 404); return id; };
   const settings = () => Object.fromEntries(db.prepare('SELECT key,value FROM study_comment_settings').all().map(row => [row.key, row.value]));
   const limits=()=>{const s=settings();return {minIntervalSeconds:Number(s.minIntervalSeconds)||30,perDay:Number(s.perDay)||20,perTargetDay:Number(s.perTargetDay)||5};};
   const config = id => { target(id); const s = settings(); return { enabled: s.enabled === 'true' && s[`closed:${id}`] !== 'true', maxCharacters: 500, reviewBeforePublish: true, contactUrl: 'https://yandaoguoxue.yandao.vip/profile/feedback/', limits:limits(),schemaVersion: 1 }; };
   const user = id => { if (!id) fail('请先登录', 401); return String(id); };
   const blocked = (a,b) => !!db.prepare('SELECT 1 FROM study_comment_blocks WHERE (user_id=? AND blocked_id=?) OR (user_id=? AND blocked_id=?)').get(a,b,b,a);
   const audit = (actor,action,id,note='') => db.prepare('INSERT INTO study_comment_audit(actor,action,target,note,created_ms) VALUES (?,?,?,?,?)').run(String(actor),action,String(id),String(note).slice(0,1000),now());
-  const publicRow = r => ({ id:String(r.id), targetId:r.target_id, authorId:r.user_id, authorName:r.nickname,
-    content:r.content, parentId:r.parent_id ? String(r.parent_id) : null, createdAt:new Date(r.created_ms).toISOString(), pinned:!!r.pinned, evidenceUrl:r.evidence_url || '' });
+  const publicRow = (r,viewer='') => ({ id:String(r.id), targetId:r.target_id, authorId:r.user_id, authorName:r.nickname,
+    content:r.content, parentId:r.parent_id ? String(r.parent_id) : null, createdAt:new Date(r.created_ms).toISOString(), pinned:!!r.pinned, evidenceUrl:r.evidence_url || '',...research.row(r,viewer) });
   const list = (id,viewer='',options={}) => {
-    target(id); if (!config(id).enabled) return [];
-    return db.prepare(`SELECT c.* FROM study_comments c WHERE target_id=? AND status='APPROVED'
+    target(id); if(domainFor(id))research.assert(viewer,domainFor(id)); if (!config(id).enabled) return [];
+    const raw=db.prepare(`SELECT c.* FROM study_comments c WHERE target_id=? AND status='APPROVED'
+      AND (?='' OR EXISTS (SELECT 1 FROM study_comment_research m WHERE m.comment_id=c.id AND json_extract(m.metadata_json,'$.citation.chapterId')=?))
       AND c.id<? AND (?!='featured' OR c.pinned=1) AND (?!='mine' OR c.user_id=?)
       AND NOT EXISTS (SELECT 1 FROM study_comment_blocks b WHERE (b.user_id=? AND b.blocked_id=c.user_id) OR (b.user_id=c.user_id AND b.blocked_id=?))
       AND (c.parent_id IS NULL OR EXISTS (SELECT 1 FROM study_comments p WHERE p.id=c.parent_id AND p.status='APPROVED'
         AND NOT EXISTS (SELECT 1 FROM study_comment_blocks b WHERE (b.user_id=? AND b.blocked_id=p.user_id) OR (b.user_id=p.user_id AND b.blocked_id=?))))
-      ORDER BY id DESC LIMIT ?`).all(id,Number(options.before)||Number.MAX_SAFE_INTEGER,options.view||'recent',options.view||'recent',String(viewer),String(viewer),String(viewer),String(viewer),String(viewer),options.limit||200).map(publicRow);
+      ORDER BY id DESC LIMIT ?`).all(id,String(options.chapterId||''),String(options.chapterId||''),Number(options.before)||Number.MAX_SAFE_INTEGER,options.view||'recent',options.view||'recent',String(viewer),String(viewer),String(viewer),String(viewer),String(viewer),options.limit||200);
+    return Object.assign(raw.filter(r=>research.visible(r)).map(r=>publicRow(r,viewer)),{nextScanCursor:raw.length===(options.limit||200)?String(raw[raw.length-1].id):''});
   };
   function submit(id,me,nickname,body) {
     target(id); me=user(me);
+    const researchDomain=domainFor(id);if(researchDomain)research.assert(me,researchDomain);
+    const prepared=researchDomain?research.prepare(id,body?.research):null;
+    if(prepared&&prepared.content!==body?.content)fail('分享预览已变更，请重新核对');
     if (!config(id).enabled) fail('学习讨论暂未开放，草稿可保留在本机',503);
-    if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(k=>!['content','parentId','requestId'].includes(k))) fail('仅接受纯文字、回复编号和请求编号');
+    if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(k=>!['content','parentId','requestId',...(researchDomain?['research','replaceId']:[])].includes(k))) fail('仅接受纯文字、回复编号和请求编号');
     const validation=validateStudyText(body.content); if (!validation.ok) fail(validation.error);
     if (!/^[a-zA-Z0-9_-]{16,80}$/.test(body.requestId || '')) fail('请求编号无效');
     const parentId=body.parentId == null ? null : Number(body.parentId);
@@ -55,6 +63,7 @@ function createStudyCommentStore(db, targets, now = () => Date.now()) {
         if (existing.target_id!==id || existing.content_hash!==hash || existing.parent_id!==parentId) fail('请求编号已用于其他内容',409);
         db.exec('COMMIT'); return { success:true, pendingReview:existing.status==='PENDING', status:existing.status, id:String(existing.id), duplicated:true };
       }
+      let replaced=null;if(body.replaceId!==undefined){replaced=db.prepare("SELECT * FROM study_comments WHERE id=? AND user_id=? AND target_id=? AND status IN ('PENDING','APPROVED')").get(String(body.replaceId),me,id);if(!researchDomain||!replaced)fail('只能修改本人尚未删除的同主题片段',403);}
       const rates=limits(),stamp=now(), startDay=Math.floor((stamp+8*3600000)/86400000)*86400000-8*3600000;
       if (db.prepare('SELECT 1 FROM study_comment_mutes WHERE user_id=? AND until_ms>?').get(me,stamp)) fail('账号暂不可发表学习留言',403);
       const last=db.prepare('SELECT created_ms FROM study_comments WHERE user_id=? ORDER BY id DESC LIMIT 1').get(me);
@@ -68,6 +77,8 @@ function createStudyCommentStore(db, targets, now = () => Date.now()) {
         if (parent.parent_id !== null) fail('请回复原始留言，不支持嵌套多层回复');
       }
       const result=db.prepare("INSERT INTO study_comments(target_id,user_id,nickname,content,parent_id,status,request_id,content_hash,created_ms) VALUES (?,?,?,?,?,'PENDING',?,?,?)").run(id,me,String(nickname||'学习者').slice(0,40),validation.text,parentId,body.requestId,hash,stamp);
+      if(prepared)research.attach(result.lastInsertRowid,prepared.metadata);
+      if(replaced){db.prepare("UPDATE study_comments SET status='REMOVED',pinned=0 WHERE id=? OR parent_id=?").run(replaced.id,replaced.id);research.erase(replaced.id);audit(me,'REPLACE',replaced.id,String(result.lastInsertRowid));}
       audit(me,'SUBMIT',result.lastInsertRowid,'待人工审核，不自动放行');
       db.exec('COMMIT'); return { success:true,pendingReview:true,status:'PENDING',id:String(result.lastInsertRowid),message:'已提交，可在“我的”查看处理状态' };
     } catch(error) { db.exec('ROLLBACK'); throw error; }
@@ -76,19 +87,20 @@ function createStudyCommentStore(db, targets, now = () => Date.now()) {
     me=user(me); const row=db.prepare('SELECT * FROM study_comments WHERE id=?').get(id);
     if (!row || row.user_id!==me) fail('只能删除自己的留言',403);
     db.exec('BEGIN IMMEDIATE');
-    try { db.prepare("UPDATE study_comments SET status='REMOVED',pinned=0 WHERE id=? OR parent_id=?").run(id,id);audit(me,'REMOVE',id); db.exec('COMMIT'); }
+    try { db.prepare("UPDATE study_comments SET status='REMOVED',pinned=0 WHERE id=? OR parent_id=?").run(id,id);if(domainFor(row.target_id))research.erase(row.id);audit(me,'REMOVE',id); db.exec('COMMIT'); }
     catch(e){db.exec('ROLLBACK');throw e;}
     return {success:true};
   }
   function report(id,me,reason) {
     me=user(me); const row=db.prepare("SELECT * FROM study_comments WHERE id=? AND status='APPROVED'").get(id);
     if (!row || blocked(me,row.user_id)) fail('留言不存在',404);
+    if(domainFor(row.target_id))research.assert(me,domainFor(row.target_id));
     const check=validateStudyText(reason); if(!check.ok) fail(check.error);
     db.prepare('INSERT OR IGNORE INTO study_comment_reports(comment_id,user_id,reason,created_ms) VALUES (?,?,?,?)').run(id,me,check.text,now());
     return {success:true,message:'举报已提交，平台将审核处理'};
   }
   function block(me,other,undo=false) {
-    me=user(me); if(!other || other===me || String(other).length>100) fail('用户编号无效');
+    me=user(me); other=research.resolveUser(other); if(!other || other===me || String(other).length>100) fail('用户编号无效');
     if(undo) db.prepare('DELETE FROM study_comment_blocks WHERE user_id=? AND blocked_id=?').run(me,String(other));
     else db.prepare('INSERT OR IGNORE INTO study_comment_blocks VALUES (?,?)').run(me,String(other));
     return {success:true};
@@ -129,9 +141,13 @@ function createStudyCommentStore(db, targets, now = () => Date.now()) {
   }
   return {config,list,submit,remove,report,block,review,recordSafety,
     safetyInput:id=>{const r=db.prepare("SELECT id,content,content_hash FROM study_comments WHERE id=? AND status!='REMOVED'").get(id);if(!r)fail('留言不存在',404);return r;},
+    research,
+    researchState:(me,d)=>research.state(me,d),
+    researchJoin:(me,d,body)=>research.join(me,d,body),
+    researchLeave:(me,d)=>research.leave(me,d),
     mine:(id,me)=>{target(id);return db.prepare('SELECT id,status,created_ms FROM study_comments WHERE target_id=? AND user_id=? ORDER BY id DESC LIMIT 30').all(id,user(me));},
-    blocks:me=>db.prepare('SELECT blocked_id AS userId FROM study_comment_blocks WHERE user_id=?').all(user(me)),
-    queue:()=>({comments:db.prepare("SELECT * FROM study_comments WHERE status='PENDING' ORDER BY id LIMIT 200").all().map(row=>({...row,safety:safetyFor(row)})),safetyCapability:capability(),blocked:db.prepare("SELECT c.* FROM study_comments c JOIN study_comment_safety s ON s.comment_id=c.id WHERE c.status='REJECTED' AND s.decision='BLOCK' ORDER BY c.id DESC LIMIT 100").all().map(row=>({...row,safety:safetyFor(row)})),recent:db.prepare("SELECT * FROM study_comments WHERE status='APPROVED' ORDER BY id DESC LIMIT 100").all(),reports:db.prepare("SELECT r.*,c.content,c.user_id author_id FROM study_comment_reports r JOIN study_comments c ON c.id=r.comment_id WHERE r.status='PENDING' ORDER BY r.id LIMIT 200").all(), overdue:db.prepare("SELECT COUNT(*) n FROM study_comments WHERE status='PENDING' AND created_ms<?").get(now()-86400000).n,audit:db.prepare('SELECT * FROM study_comment_audit ORDER BY id DESC LIMIT 50').all(),enabled:settings().enabled==='true',limits:limits()}),
+    blocks:me=>db.prepare('SELECT blocked_id AS userId FROM study_comment_blocks WHERE user_id=?').all(user(me)).map(r=>({userId:research.publicUser(r.userId)})),
+    queue:()=>({research:{symptom:research.state('', 'symptom'),life:research.state('', 'life')},comments:db.prepare("SELECT * FROM study_comments WHERE status='PENDING' ORDER BY id LIMIT 200").all().map(row=>({...row,safety:safetyFor(row)})),safetyCapability:capability(),blocked:db.prepare("SELECT c.* FROM study_comments c JOIN study_comment_safety s ON s.comment_id=c.id WHERE c.status='REJECTED' AND s.decision='BLOCK' ORDER BY c.id DESC LIMIT 100").all().map(row=>({...row,safety:safetyFor(row)})),recent:db.prepare("SELECT * FROM study_comments WHERE status='APPROVED' ORDER BY id DESC LIMIT 100").all(),reports:db.prepare("SELECT r.*,c.content,c.user_id author_id FROM study_comment_reports r JOIN study_comments c ON c.id=r.comment_id WHERE r.status='PENDING' ORDER BY r.id LIMIT 200").all(), overdue:db.prepare("SELECT COUNT(*) n FROM study_comments WHERE status='PENDING' AND created_ms<?").get(now()-86400000).n,audit:db.prepare('SELECT * FROM study_comment_audit ORDER BY id DESC LIMIT 50').all(),enabled:settings().enabled==='true',limits:limits()}),
     setConfig:(actor,body)=>{
       if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).some(k=>!['enabled','targetId','minIntervalSeconds','perDay','perTargetDay'].includes(k)))fail('配置字段无效');
       if(body.enabled!==undefined&&typeof body.enabled!=='boolean')fail('开放状态无效');if(body.targetId){target(body.targetId);if(typeof body.enabled!=='boolean')fail('请明确讨论区开放状态');}

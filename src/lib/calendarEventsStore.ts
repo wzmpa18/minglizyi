@@ -234,7 +234,7 @@ export function createEvent(input: CreateEventInput): { success: boolean; error?
   if (!validCivilDate(input.year,input.month,input.day)) return { success: false, error: "请选择有效日期" };
   if(input.endDate&&(!/^\d{4}-\d{2}-\d{2}$/.test(input.endDate)||!validCivilDate(...(input.endDate.split('-').map(Number) as [number,number,number]))||input.endDate<fmtDate(input.year,input.month,input.day)))return {success:false,error:"结束/复核日期无效"};
   if(input.sourceRuleId&&!/^[-a-zA-Z0-9]{8,80}$/.test(input.sourceRuleId))return {success:false,error:"本地提醒标识无效"};
-  if(input.sourceRef&&!/^life:[\w-]{8,80}:[\w-]{8,80}$/.test(input.sourceRef))return {success:false,error:"本地来源编号无效"};
+  if(input.sourceRef&&!/^(?:life:[\w-]{8,80}:[\w-]{8,80}|study:(?:symptom:s\d{3}|life:[a-z-]{1,30}):[1-9]\d{0,15})$/.test(input.sourceRef))return {success:false,error:"本地来源编号无效"};
   if (input.eventTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(input.eventTime)) return {success:false,error:"事件钟点无效"};
   try{new Intl.DateTimeFormat("en",{timeZone:input.timeZone||Intl.DateTimeFormat().resolvedOptions().timeZone});}catch{return {success:false,error:"请输入有效的IANA时区，如Asia/Shanghai"};}
 

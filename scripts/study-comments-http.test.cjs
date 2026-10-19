@@ -68,6 +68,41 @@ async function worker(root){
     assert.equal((await request('/admin/comment/'+id,'PUT',admin,{status:'APPROVED',safetyConfirmed:true,note:'不得复活已删除评论'})).status,404);
     console.log('PASS: real HTTP/JWT/account lookup, role scopes, 500 characters, origin/body limits, pending moderation, idempotency, report, block and own deletion. Isolated data only.');
 
+    // Real HTTP, two isolated synthetic identities; never create production people.
+    const researchPolicy=require('../backend_deploy/studyResearchPolicy');
+    const researchTarget='/target/'+encodeURIComponent('research:symptom:s001');
+    assert.equal((await request('/research/symptom')).body.enabled,false);
+    assert.equal((await request(researchTarget)).status,401);
+    assert.equal((await request('/admin/research/symptom','PUT',support,{enabled:true})).status,403);
+    assert.equal((await request('/admin/research/symptom','PUT',admin,{enabled:true})).status,400);
+    const opening={enabled:true,operatorConfirmed:true,channelDisclosureConfirmed:true,note:'隔离测试完成值守安排与健康交流披露'};
+    assert.equal((await request('/admin/research/symptom','PUT',admin,opening)).status,200);
+    const consent={birthDate:'1990-05-15',adultConsent:true,inferenceConsent:true,publicScopeConsent:true,consentVersion:researchPolicy.topics.consentVersion};
+    assert.equal((await request('/research/symptom','PUT',alice,{...consent,birthDate:'2015-05-15'})).status,403);
+    for(const credential of [alice,bob])assert.equal((await request('/research/symptom','PUT',credential,consent)).status,200);
+    assert.equal((await request('/research/symptom','PUT',token('email-only'),consent)).status,403);
+    assert.equal((await request('/admin/config','PUT',admin,{minIntervalSeconds:1})).status,200);
+    await new Promise(resolve=>setTimeout(resolve,1100));
+    const research={mode:'knowledge',fields:{question:'请查这一古籍术语的原始语境'},confirmedFields:['question'],archiveConsent:true,consentVersion:researchPolicy.topics.consentVersion};
+    const payload={content:researchPolicy.prepareResearch('research:symptom:s001',research).content,research,requestId:crypto.randomUUID()};
+    assert.equal((await request(researchTarget,'POST',alice,{...payload,privateVault:'10_PRIVATE_CANARY'})).status,400);
+    const posted=await request(researchTarget,'POST',alice,payload);assert.equal(posted.status,200);assert.equal(posted.body.status,'PENDING');
+    assert.equal((await request(researchTarget,'GET',bob)).body.comments.length,0);
+    assert.equal((await request('/admin/comment/'+posted.body.id,'PUT',support,{status:'APPROVED',safetyConfirmed:true,note:'隔离数据逐条核对，无隐私或诊疗建议'})).status,200);
+    const shown=(await request(researchTarget,'GET',bob)).body.comments[0];assert.ok(shown.authorId.startsWith('research-user-'));assert.equal(shown.authorName.includes('学习甲'),false);assert.equal(shown.research.archiveConsent,true);
+    assert.equal((await request('/blocks/'+shown.authorId,'POST',bob)).status,200);
+    assert.equal((await request(researchTarget,'GET',bob)).body.comments.length,0);
+    assert.equal((await request('/blocks','GET',bob)).body.items[0].userId,shown.authorId);
+    assert.equal((await request('/blocks/'+shown.authorId,'DELETE',bob)).status,200);
+    assert.equal((await request('/comment/'+posted.body.id+'/report','POST',bob,{reason:'隔离测试复核来源'})).status,200);
+    assert.equal((await request('/research/symptom','DELETE',alice)).status,200);
+    assert.equal((await request(researchTarget,'GET',bob)).body.comments.length,0);
+    const researchDb=new Database(process.env.STUDY_COMMENT_DB_PATH);
+    assert.equal(researchDb.prepare('SELECT content FROM study_comments WHERE id=?').get(posted.body.id).content,'');
+    assert.equal(JSON.stringify(researchDb.prepare('SELECT * FROM study_research_consents').all()).includes('1990-05-15'),false);
+    assert.equal(JSON.stringify(researchDb.prepare('SELECT * FROM study_comments').all()).includes('10_PRIVATE_CANARY'),false);researchDb.close();
+    console.log('PASS: research real HTTP two-account consent, no guest/minor/email-only publishing, server opening prerequisites, pending moderation, stable pseudonyms, block/report, withdrawal and plaintext erasure. No production users or private-vault reads.');
+
     process.env.FEEDBACK_DATA_DIR=path.join(root,'feedback');
     app.use('/api/feedback',require('../backend_deploy/feedbackRoutes'));
     async function feedback(route,method='GET',credential=alice,body){

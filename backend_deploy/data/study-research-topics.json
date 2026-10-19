@@ -1,0 +1,746 @@
+{
+  "schema": 1,
+  "consentVersion": "research-20261019-v1",
+  "categories": [
+    {
+      "key": "toumian",
+      "label": "头面",
+      "icon": "👤",
+      "symptoms": [
+        {
+          "id": "头痛",
+          "label": "头痛",
+          "conceptId": "s001",
+          "aliases": [
+            "头痛"
+          ]
+        },
+        {
+          "id": "头晕",
+          "label": "头晕",
+          "conceptId": "s002",
+          "aliases": [
+            "头晕"
+          ]
+        },
+        {
+          "id": "面红",
+          "label": "面红目赤",
+          "conceptId": "s003",
+          "aliases": [
+            "面红",
+            "面红目赤"
+          ]
+        },
+        {
+          "id": "面色苍白",
+          "label": "面色苍白",
+          "conceptId": "s004",
+          "aliases": [
+            "面色苍白"
+          ]
+        },
+        {
+          "id": "面色萎黄",
+          "label": "面色萎黄",
+          "conceptId": "s005",
+          "aliases": [
+            "面色萎黄"
+          ]
+        },
+        {
+          "id": "面部浮肿",
+          "label": "面部浮肿",
+          "conceptId": "s006",
+          "aliases": [
+            "面部浮肿"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "wuguan",
+      "label": "五官",
+      "icon": "👁",
+      "symptoms": [
+        {
+          "id": "目赤肿痛",
+          "label": "目赤肿痛",
+          "conceptId": "s007",
+          "aliases": [
+            "目赤肿痛"
+          ]
+        },
+        {
+          "id": "视物模糊",
+          "label": "视物模糊",
+          "conceptId": "s008",
+          "aliases": [
+            "视物模糊"
+          ]
+        },
+        {
+          "id": "耳鸣",
+          "label": "耳鸣",
+          "conceptId": "s009",
+          "aliases": [
+            "耳鸣"
+          ]
+        },
+        {
+          "id": "耳聋",
+          "label": "耳聋",
+          "conceptId": "s010",
+          "aliases": [
+            "耳聋"
+          ]
+        },
+        {
+          "id": "鼻塞",
+          "label": "鼻塞流涕",
+          "conceptId": "s011",
+          "aliases": [
+            "鼻塞",
+            "鼻塞流涕"
+          ]
+        },
+        {
+          "id": "口苦",
+          "label": "口苦",
+          "conceptId": "s012",
+          "aliases": [
+            "口苦"
+          ]
+        },
+        {
+          "id": "口臭",
+          "label": "口臭",
+          "conceptId": "s013",
+          "aliases": [
+            "口臭"
+          ]
+        },
+        {
+          "id": "口干",
+          "label": "口干",
+          "conceptId": "s014",
+          "aliases": [
+            "口干"
+          ]
+        },
+        {
+          "id": "牙龈肿痛",
+          "label": "牙龈肿痛",
+          "conceptId": "s015",
+          "aliases": [
+            "牙龈肿痛"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "yanhou",
+      "label": "咽喉",
+      "icon": "🗣",
+      "symptoms": [
+        {
+          "id": "咽痛",
+          "label": "咽喉肿痛",
+          "conceptId": "s016",
+          "aliases": [
+            "咽痛",
+            "咽喉肿痛"
+          ]
+        },
+        {
+          "id": "咽干",
+          "label": "咽干",
+          "conceptId": "s017",
+          "aliases": [
+            "咽干"
+          ]
+        },
+        {
+          "id": "咽中异物感",
+          "label": "咽中异物感",
+          "conceptId": "s018",
+          "aliases": [
+            "咽中异物感"
+          ]
+        },
+        {
+          "id": "声音嘶哑",
+          "label": "声音嘶哑",
+          "conceptId": "s019",
+          "aliases": [
+            "声音嘶哑"
+          ]
+        },
+        {
+          "id": "咳嗽",
+          "label": "咳嗽",
+          "conceptId": "s020",
+          "aliases": [
+            "咳嗽"
+          ]
+        },
+        {
+          "id": "咳痰",
+          "label": "咳痰",
+          "conceptId": "s021",
+          "aliases": [
+            "咳痰"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "xiongfu",
+      "label": "胸腹",
+      "icon": "🫀",
+      "symptoms": [
+        {
+          "id": "胸闷",
+          "label": "胸闷",
+          "conceptId": "s022",
+          "aliases": [
+            "胸闷"
+          ]
+        },
+        {
+          "id": "心悸",
+          "label": "心悸",
+          "conceptId": "s023",
+          "aliases": [
+            "心悸"
+          ]
+        },
+        {
+          "id": "胸痛",
+          "label": "胸痛",
+          "conceptId": "s024",
+          "aliases": [
+            "胸痛"
+          ]
+        },
+        {
+          "id": "腹胀",
+          "label": "腹胀",
+          "conceptId": "s025",
+          "aliases": [
+            "腹胀"
+          ]
+        },
+        {
+          "id": "腹痛",
+          "label": "腹痛",
+          "conceptId": "s026",
+          "aliases": [
+            "腹痛"
+          ]
+        },
+        {
+          "id": "腹痛拒按",
+          "label": "腹痛拒按",
+          "conceptId": "s027",
+          "aliases": [
+            "腹痛拒按"
+          ]
+        },
+        {
+          "id": "腹痛喜温按",
+          "label": "腹痛喜温按",
+          "conceptId": "s028",
+          "aliases": [
+            "腹痛喜温按"
+          ]
+        },
+        {
+          "id": "胁肋胀痛",
+          "label": "胁肋胀痛",
+          "conceptId": "s029",
+          "aliases": [
+            "胁肋胀痛"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "yaobei",
+      "label": "腰背",
+      "icon": "🦴",
+      "symptoms": [
+        {
+          "id": "腰膝酸软",
+          "label": "腰膝酸软",
+          "conceptId": "s030",
+          "aliases": [
+            "腰膝酸软"
+          ]
+        },
+        {
+          "id": "腰痛",
+          "label": "腰痛",
+          "conceptId": "s031",
+          "aliases": [
+            "腰痛"
+          ]
+        },
+        {
+          "id": "腰冷",
+          "label": "腰膝发冷",
+          "conceptId": "s032",
+          "aliases": [
+            "腰冷",
+            "腰膝发冷"
+          ]
+        },
+        {
+          "id": "背痛",
+          "label": "背痛",
+          "conceptId": "s033",
+          "aliases": [
+            "背痛"
+          ]
+        },
+        {
+          "id": "脊柱强直",
+          "label": "脊柱强直",
+          "conceptId": "s034",
+          "aliases": [
+            "脊柱强直"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "sizhi",
+      "label": "四肢",
+      "icon": "🦵",
+      "symptoms": [
+        {
+          "id": "四肢不温",
+          "label": "四肢不温",
+          "conceptId": "s035",
+          "aliases": [
+            "四肢不温"
+          ]
+        },
+        {
+          "id": "肢体麻木",
+          "label": "肢体麻木",
+          "conceptId": "s036",
+          "aliases": [
+            "肢体麻木"
+          ]
+        },
+        {
+          "id": "关节疼痛",
+          "label": "关节疼痛",
+          "conceptId": "s037",
+          "aliases": [
+            "关节疼痛"
+          ]
+        },
+        {
+          "id": "肢体浮肿",
+          "label": "肢体浮肿",
+          "conceptId": "s038",
+          "aliases": [
+            "肢体浮肿"
+          ]
+        },
+        {
+          "id": "下肢水肿",
+          "label": "下肢水肿",
+          "conceptId": "s039",
+          "aliases": [
+            "下肢水肿"
+          ]
+        },
+        {
+          "id": "手脚心热",
+          "label": "五心烦热",
+          "conceptId": "s040",
+          "aliases": [
+            "手脚心热",
+            "五心烦热"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "erbian",
+      "label": "二便",
+      "icon": "🚽",
+      "symptoms": [
+        {
+          "id": "便秘",
+          "label": "大便秘结",
+          "conceptId": "s041",
+          "aliases": [
+            "便秘",
+            "大便秘结"
+          ]
+        },
+        {
+          "id": "便溏",
+          "label": "大便溏泄",
+          "conceptId": "s042",
+          "aliases": [
+            "便溏",
+            "大便溏泄"
+          ]
+        },
+        {
+          "id": "腹泻",
+          "label": "腹泻",
+          "conceptId": "s043",
+          "aliases": [
+            "腹泻"
+          ]
+        },
+        {
+          "id": "小便短黄",
+          "label": "小便短黄",
+          "conceptId": "s044",
+          "aliases": [
+            "小便短黄"
+          ]
+        },
+        {
+          "id": "小便清长",
+          "label": "小便清长",
+          "conceptId": "s045",
+          "aliases": [
+            "小便清长"
+          ]
+        },
+        {
+          "id": "尿频",
+          "label": "尿频",
+          "conceptId": "s046",
+          "aliases": [
+            "尿频"
+          ]
+        },
+        {
+          "id": "尿急尿痛",
+          "label": "尿急尿痛",
+          "conceptId": "s047",
+          "aliases": [
+            "尿急尿痛"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "shuimian",
+      "label": "睡眠",
+      "icon": "😴",
+      "symptoms": [
+        {
+          "id": "失眠",
+          "label": "失眠多梦",
+          "conceptId": "s048",
+          "aliases": [
+            "失眠",
+            "失眠多梦"
+          ]
+        },
+        {
+          "id": "入睡困难",
+          "label": "入睡困难",
+          "conceptId": "s049",
+          "aliases": [
+            "入睡困难"
+          ]
+        },
+        {
+          "id": "易醒",
+          "label": "易醒早醒",
+          "conceptId": "s050",
+          "aliases": [
+            "易醒",
+            "易醒早醒"
+          ]
+        },
+        {
+          "id": "嗜睡",
+          "label": "嗜睡",
+          "conceptId": "s051",
+          "aliases": [
+            "嗜睡"
+          ]
+        },
+        {
+          "id": "盗汗",
+          "label": "盗汗",
+          "conceptId": "s052",
+          "aliases": [
+            "盗汗"
+          ]
+        },
+        {
+          "id": "多梦",
+          "label": "多梦纷纭",
+          "conceptId": "s053",
+          "aliases": [
+            "多梦",
+            "多梦纷纭"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "yinshi",
+      "label": "饮食",
+      "icon": "🍚",
+      "symptoms": [
+        {
+          "id": "食欲不振",
+          "label": "食欲不振",
+          "conceptId": "s054",
+          "aliases": [
+            "食欲不振"
+          ]
+        },
+        {
+          "id": "多食易饥",
+          "label": "多食易饥",
+          "conceptId": "s055",
+          "aliases": [
+            "多食易饥"
+          ]
+        },
+        {
+          "id": "口渴",
+          "label": "口渴喜饮",
+          "conceptId": "s056",
+          "aliases": [
+            "口渴",
+            "口渴喜饮"
+          ]
+        },
+        {
+          "id": "口不渴",
+          "label": "口不渴",
+          "conceptId": "s057",
+          "aliases": [
+            "口不渴"
+          ]
+        },
+        {
+          "id": "喜热饮",
+          "label": "喜热饮",
+          "conceptId": "s058",
+          "aliases": [
+            "喜热饮"
+          ]
+        },
+        {
+          "id": "喜冷饮",
+          "label": "喜冷饮",
+          "conceptId": "s059",
+          "aliases": [
+            "喜冷饮"
+          ]
+        },
+        {
+          "id": "恶心呕吐",
+          "label": "恶心呕吐",
+          "conceptId": "s060",
+          "aliases": [
+            "恶心呕吐"
+          ]
+        },
+        {
+          "id": "泛酸",
+          "label": "泛酸嘈杂",
+          "conceptId": "s061",
+          "aliases": [
+            "泛酸",
+            "泛酸嘈杂"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "qingzhi",
+      "label": "情志",
+      "icon": "😔",
+      "symptoms": [
+        {
+          "id": "情志抑郁",
+          "label": "情志抑郁",
+          "conceptId": "s062",
+          "aliases": [
+            "情志抑郁"
+          ]
+        },
+        {
+          "id": "急躁易怒",
+          "label": "急躁易怒",
+          "conceptId": "s063",
+          "aliases": [
+            "急躁易怒"
+          ]
+        },
+        {
+          "id": "善太息",
+          "label": "善太息",
+          "conceptId": "s064",
+          "aliases": [
+            "善太息"
+          ]
+        },
+        {
+          "id": "焦虑",
+          "label": "焦虑不安",
+          "conceptId": "s065",
+          "aliases": [
+            "焦虑",
+            "焦虑不安"
+          ]
+        },
+        {
+          "id": "神疲乏力",
+          "label": "神疲乏力",
+          "conceptId": "s066",
+          "aliases": [
+            "神疲乏力"
+          ]
+        },
+        {
+          "id": "少气懒言",
+          "label": "少气懒言",
+          "conceptId": "s067",
+          "aliases": [
+            "少气懒言"
+          ]
+        }
+      ]
+    },
+    {
+      "key": "fuke",
+      "label": "妇科专项",
+      "icon": "🌸",
+      "symptoms": [
+        {
+          "id": "月经先期",
+          "label": "月经先期",
+          "conceptId": "s068",
+          "aliases": [
+            "月经先期"
+          ]
+        },
+        {
+          "id": "月经后期",
+          "label": "月经后期",
+          "conceptId": "s069",
+          "aliases": [
+            "月经后期"
+          ]
+        },
+        {
+          "id": "月经不调",
+          "label": "月经不调",
+          "conceptId": "s070",
+          "aliases": [
+            "月经不调"
+          ]
+        },
+        {
+          "id": "经量过多",
+          "label": "经量过多",
+          "conceptId": "s071",
+          "aliases": [
+            "经量过多"
+          ]
+        },
+        {
+          "id": "经量过少",
+          "label": "经量过少",
+          "conceptId": "s072",
+          "aliases": [
+            "经量过少"
+          ]
+        },
+        {
+          "id": "痛经",
+          "label": "痛经",
+          "conceptId": "s073",
+          "aliases": [
+            "痛经"
+          ]
+        },
+        {
+          "id": "经闭",
+          "label": "经闭",
+          "conceptId": "s074",
+          "aliases": [
+            "经闭"
+          ]
+        },
+        {
+          "id": "带下量多",
+          "label": "带下量多",
+          "conceptId": "s075",
+          "aliases": [
+            "带下量多"
+          ]
+        },
+        {
+          "id": "带下色黄",
+          "label": "带下色黄",
+          "conceptId": "s076",
+          "aliases": [
+            "带下色黄"
+          ]
+        },
+        {
+          "id": "带下清稀",
+          "label": "带下清稀",
+          "conceptId": "s077",
+          "aliases": [
+            "带下清稀"
+          ]
+        },
+        {
+          "id": "孕期不适",
+          "label": "孕期不适",
+          "conceptId": "s078",
+          "aliases": [
+            "孕期不适"
+          ]
+        },
+        {
+          "id": "产后腹痛",
+          "label": "产后腹痛",
+          "conceptId": "s079",
+          "aliases": [
+            "产后腹痛"
+          ]
+        }
+      ]
+    }
+  ],
+  "lifeTopics": [
+    {
+      "id": "environment",
+      "label": "同辰但不同成长环境"
+    },
+    {
+      "id": "choice",
+      "label": "相似选择，不同结果"
+    },
+    {
+      "id": "year-review",
+      "label": "同年经历回看"
+    },
+    {
+      "id": "theory",
+      "label": "传统理论与实际差异"
+    }
+  ]
+}

@@ -102,3 +102,6 @@ work-verify/
 !scripts/serve_verified_web_preview.py
 
 !scripts/prepare_life_ocr_models.py
+
+# Maintained derivative of existing pinned classic editions; no external corpus.
+!scripts/build_study_research_index.py

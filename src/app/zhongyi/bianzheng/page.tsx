@@ -1,4 +1,7 @@
 "use client";
+import researchTopics from "../../../../backend_deploy/data/study-research-topics.json";
+import { ResearchLearningDrawers } from "@/components/ResearchLearningDrawers";
+import { simulateEvidenceLearning } from "@/lib/researchLearning";
 import { TcmStudyRoadmap } from "@/components/TcmStudyRoadmap";
 
 import { SectionGate } from "@/components/SectionGate";
@@ -12,11 +15,9 @@ import {
 } from "lucide-react";
 import { BrandHeader } from "@/components/shared";
 import { useToolBack } from "@/lib/useToolBack";
-import { callAI, getPermissionStatusFromServer } from "@/lib/aiService";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
-import { WENZHEN_CATEGORIES, buildWenzhenSystemPrompt } from "@/data/wenzhen_data";
-import { buildZhengguPrompt } from "@/data/zhenggu_knowledge";
+import { WENZHEN_CATEGORIES } from "@/data/wenzhen_data";
 
 // ============================================================================
 // 辨证学习页
@@ -29,7 +30,7 @@ const BRAND = "#7B2FBE";
 
 // 辨证参数页顶部固定提示文案
 const TOP_NOTICE =
-  "建议仅在同一医学体系内选择，避免辨证逻辑冲突；选的医家/古籍越多，AI输出融合度越高";
+  "建议仅在同一医学体系内选择，避免辨证逻辑冲突；仅对照已收录原文；多选流派不代表个人诊断更准确";
 
 // 祝由专项合规声明
 const ZHUYOU_COMPLIANCE =
@@ -39,91 +40,7 @@ const ZHUYOU_COMPLIANCE =
 interface SymptomItem { id: string; label: string; }
 interface SymptomCategory { key: string; label: string; icon: string; symptoms: SymptomItem[]; }
 
-const SYMPTOM_CATEGORIES: SymptomCategory[] = [
-  {
-    key: "toumian", label: "头面", icon: "👤",
-    symptoms: [
-      { id: "头痛", label: "头痛" }, { id: "头晕", label: "头晕" }, { id: "面红", label: "面红目赤" },
-      { id: "面色苍白", label: "面色苍白" }, { id: "面色萎黄", label: "面色萎黄" }, { id: "面部浮肿", label: "面部浮肿" },
-    ],
-  },
-  {
-    key: "wuguan", label: "五官", icon: "👁",
-    symptoms: [
-      { id: "目赤肿痛", label: "目赤肿痛" }, { id: "视物模糊", label: "视物模糊" }, { id: "耳鸣", label: "耳鸣" },
-      { id: "耳聋", label: "耳聋" }, { id: "鼻塞", label: "鼻塞流涕" }, { id: "口苦", label: "口苦" },
-      { id: "口臭", label: "口臭" }, { id: "口干", label: "口干" }, { id: "牙龈肿痛", label: "牙龈肿痛" },
-    ],
-  },
-  {
-    key: "yanhou", label: "咽喉", icon: "🗣",
-    symptoms: [
-      { id: "咽痛", label: "咽喉肿痛" }, { id: "咽干", label: "咽干" }, { id: "咽中异物感", label: "咽中异物感" },
-      { id: "声音嘶哑", label: "声音嘶哑" }, { id: "咳嗽", label: "咳嗽" }, { id: "咳痰", label: "咳痰" },
-    ],
-  },
-  {
-    key: "xiongfu", label: "胸腹", icon: "🫀",
-    symptoms: [
-      { id: "胸闷", label: "胸闷" }, { id: "心悸", label: "心悸" }, { id: "胸痛", label: "胸痛" },
-      { id: "腹胀", label: "腹胀" }, { id: "腹痛", label: "腹痛" }, { id: "腹痛拒按", label: "腹痛拒按" },
-      { id: "腹痛喜温按", label: "腹痛喜温按" }, { id: "胁肋胀痛", label: "胁肋胀痛" },
-    ],
-  },
-  {
-    key: "yaobei", label: "腰背", icon: "🦴",
-    symptoms: [
-      { id: "腰膝酸软", label: "腰膝酸软" }, { id: "腰痛", label: "腰痛" }, { id: "腰冷", label: "腰膝发冷" },
-      { id: "背痛", label: "背痛" }, { id: "脊柱强直", label: "脊柱强直" },
-    ],
-  },
-  {
-    key: "sizhi", label: "四肢", icon: "🦵",
-    symptoms: [
-      { id: "四肢不温", label: "四肢不温" }, { id: "肢体麻木", label: "肢体麻木" }, { id: "关节疼痛", label: "关节疼痛" },
-      { id: "肢体浮肿", label: "肢体浮肿" }, { id: "下肢水肿", label: "下肢水肿" }, { id: "手脚心热", label: "五心烦热" },
-    ],
-  },
-  {
-    key: "erbian", label: "二便", icon: "🚽",
-    symptoms: [
-      { id: "便秘", label: "大便秘结" }, { id: "便溏", label: "大便溏泄" }, { id: "腹泻", label: "腹泻" },
-      { id: "小便短黄", label: "小便短黄" }, { id: "小便清长", label: "小便清长" }, { id: "尿频", label: "尿频" },
-      { id: "尿急尿痛", label: "尿急尿痛" },
-    ],
-  },
-  {
-    key: "shuimian", label: "睡眠", icon: "😴",
-    symptoms: [
-      { id: "失眠", label: "失眠多梦" }, { id: "入睡困难", label: "入睡困难" }, { id: "易醒", label: "易醒早醒" },
-      { id: "嗜睡", label: "嗜睡" }, { id: "盗汗", label: "盗汗" }, { id: "多梦", label: "多梦纷纭" },
-    ],
-  },
-  {
-    key: "yinshi", label: "饮食", icon: "🍚",
-    symptoms: [
-      { id: "食欲不振", label: "食欲不振" }, { id: "多食易饥", label: "多食易饥" }, { id: "口渴", label: "口渴喜饮" },
-      { id: "口不渴", label: "口不渴" }, { id: "喜热饮", label: "喜热饮" }, { id: "喜冷饮", label: "喜冷饮" },
-      { id: "恶心呕吐", label: "恶心呕吐" }, { id: "泛酸", label: "泛酸嘈杂" },
-    ],
-  },
-  {
-    key: "qingzhi", label: "情志", icon: "😔",
-    symptoms: [
-      { id: "情志抑郁", label: "情志抑郁" }, { id: "急躁易怒", label: "急躁易怒" }, { id: "善太息", label: "善太息" },
-      { id: "焦虑", label: "焦虑不安" }, { id: "神疲乏力", label: "神疲乏力" }, { id: "少气懒言", label: "少气懒言" },
-    ],
-  },
-  {
-    key: "fuke", label: "妇科专项", icon: "🌸",
-    symptoms: [
-      { id: "月经先期", label: "月经先期" }, { id: "月经后期", label: "月经后期" }, { id: "月经不调", label: "月经不调" },
-      { id: "经量过多", label: "经量过多" }, { id: "经量过少", label: "经量过少" }, { id: "痛经", label: "痛经" },
-      { id: "经闭", label: "经闭" }, { id: "带下量多", label: "带下量多" }, { id: "带下色黄", label: "带下色黄" },
-      { id: "带下清稀", label: "带下清稀" }, { id: "孕期不适", label: "孕期不适" }, { id: "产后腹痛", label: "产后腹痛" },
-    ],
-  },
-];
+const SYMPTOM_CATEGORIES: SymptomCategory[] = researchTopics.categories;
 
 // ---- 基础辨证维度（八纲/六经/脏腑，保留） ----
 const DIAGNOSIS_SYSTEMS = [
@@ -149,7 +66,7 @@ function BianZhengPageOriginal() {
   useToolBack({ pageKey: "zhongyi_bianzheng", eventName: "zhongyi-back", globalFlag: "__zhongyiBackHandled" });
 
   // v20.1: 登录守卫
-  const { requireLogin, showLoginPrompt, setShowLoginPrompt } = useRequireLogin();
+  const { showLoginPrompt, setShowLoginPrompt } = useRequireLogin();
 
   // 流程步骤：1=症状选择 2=辨证参数 3=结果输出
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -204,69 +121,12 @@ function BianZhengPageOriginal() {
 
   const handleAnalyze = async () => {
     if (loading) return;
-
-    // v20.1: 三级权限检查 - 未登录弹出登录引导
-    if (!requireLogin()) return;
-    const perm = await getPermissionStatusFromServer();
-    if (!perm.canUseAI) {
-      setStep(3);
-      setHasError(true);
-      setDiagnosisResult(perm.message || "今日AI解读次数已用完，开通会员或购买套餐继续使用");
-      return;
-    }
-
-    setLoading(true);
-    setDiagnosisResult("");
-    setHasError(false);
-    setStep(3);
-
+    setLoading(true); setHasError(false); setStep(3);
     try {
-      const systemLabel = DIAGNOSIS_SYSTEMS.find(s => s.key === selectedSystem)?.label || "综合辨证";
-      const therapyLabel = THERAPY_FOCUS.find(t => t.key === therapyFocus)?.label || "综合方案";
-      const symptomsText = Array.from(selectedSymptoms).join("、");
-      const detailText = symptomDetail.trim() ? `\n症状补充描述：${symptomDetail.trim()}` : "";
-
-      // 使用 buildWenzhenSystemPrompt 构建系统提示词（含门类、名家、补充说明）
-      const basePrompt = buildWenzhenSystemPrompt(
-        activeCategory,
-        Array.from(selectedMasters),
-        supplementText.trim()
-      );
-      // 追加基础辨证维度与疗法侧重（wenzhen_data.ts 只读，不修改原函数）
-      // 正骨为主时注入中华非遗正骨疼痛诊断依据库（核心内部资料）
-      const zhengguCtx = therapyFocus === "zhenggu" ? `\n\n${buildZhengguPrompt()}` : "";
-      const systemPrompt =
-        `${basePrompt}\n\n基础辨证维度：${systemLabel}\n疗法侧重：${therapyLabel}\n` +
-        `请在辨证分析与治法思路中体现上述基础辨证维度与疗法侧重，确保不同流派组合产生差异化的辨证方案。` +
-        (therapyFocus === "zhenggu"
-          ? "\n本例疗法侧重为正骨为主：疼痛类症状必须按下方正骨依据库给出「骨错位位置→触诊验证→轻手法方向」分析，并优先核对安全红线。"
-          : "") +
-        zhengguCtx;
-
-      const userPrompt = `请对以下症状进行辨证分析：\n\n选择症状：${symptomsText}${detailText}`;
-
-      const aiResult = await callAI({
-        systemPrompt,
-        userPrompt,
-        cacheKey: `zhongyi_bianzheng_${activeCategory}_${Array.from(selectedMasters).sort().join(",")}_${selectedSystem}_${therapyFocus}_${symptomsText.slice(0, 60)}`,
-      });
-
-      if (aiResult.success) {
-        let text = aiResult.content || "";
-        if (!text.includes("不构成")) {
-          text += "\n\n以上内容仅供中医学习参考，不构成诊疗建议，身体不适请及时就医。";
-        }
-        setDiagnosisResult(text);
-      } else {
-        setHasError(true);
-        setDiagnosisResult("AI分析服务暂时不可用，请稍后重试。");
-      }
-    } catch {
-      setHasError(true);
-      setDiagnosisResult("AI分析服务暂时不可用，请稍后重试。");
-    } finally {
-      setLoading(false);
-    }
+      const report = await simulateEvidenceLearning(Array.from(selectedSymptoms), selectedSystem, therapyFocus);
+      setDiagnosisResult(report);
+    } catch { setHasError(true); setDiagnosisResult("原文索引暂不可用，请从相关经典医案抽屉查看；不会生成无出处的诊断或处方。"); }
+    finally { setLoading(false); }
   };
 
   const handleReset = () => {
@@ -312,7 +172,7 @@ function BianZhengPageOriginal() {
               style={{ color: "#d4a84b" }}
             />
             <p className="text-xs leading-relaxed" style={{ color: "#c8b060" }}>
-              本页面内容均来源于中医经典典籍记载，仅供学习研究参考，不构成任何医疗诊断或用药建议。身体不适请及时就医。
+              原文卡来自所列版本；用户自述、学习对照与医学依据分别标记，仅供学习研究参考，不构成任何医疗诊断或用药建议。身体不适请及时就医。
             </p>
           </div>
         </div>
@@ -661,7 +521,7 @@ function BianZhengPageOriginal() {
           {/* 疗法侧重（单选，默认综合方案） */}
           <div>
             <p className="text-xs font-bold mb-2" style={{ color: "#d4a84b" }}>
-              疗法侧重（单选）
+              治法文献学习方向（非本人治疗方案）
             </p>
             <div className="flex gap-2 overflow-x-auto pb-1">
               {THERAPY_FOCUS.map((tf) => (
@@ -689,7 +549,7 @@ function BianZhengPageOriginal() {
             <textarea
               value={supplementText}
               onChange={(e) => setSupplementText(e.target.value.slice(0, 500))}
-              placeholder="可填写既往病史、药物过敏史、过往治疗经历、调理需求、禁忌事项等..."
+              placeholder="填写需要复习的概念或疑问；只保留在本页，不发送AI，不必录入病历或隐私。"
               rows={3}
               className="w-full rounded-lg p-3 text-sm resize-none outline-none"
               style={{
@@ -730,7 +590,7 @@ function BianZhengPageOriginal() {
               ) : (
                 <>
                   <Sparkles className="h-4 w-4" />
-                  开始辨证分析
+                  开始原文学习对照
                 </>
               )}
             </button>
@@ -747,7 +607,7 @@ function BianZhengPageOriginal() {
           {loading && (
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin mb-3" style={{ color: BRAND }} />
-              <p className="text-sm" style={{ color: "#8b9a8b" }}>AI正在进行辨证分析...</p>
+              <p className="text-sm" style={{ color: "#8b9a8b" }}>正在本机检索原文...</p>
               <p className="text-xs mt-1" style={{ color: "#6b7a6b" }}>
                 {category.name} · {Array.from(selectedMasters).length}位医家
               </p>
@@ -776,7 +636,7 @@ function BianZhengPageOriginal() {
                     className="text-sm font-bold"
                     style={{ color: hasError ? "#dc3545" : "#e8edf0" }}
                   >
-                    {hasError ? "分析提示" : "智能辨证分析结果"}
+                    {hasError ? "分析提示" : "模拟辨证学习对照"}
                   </p>
                 </div>
                 <p
@@ -820,19 +680,21 @@ function BianZhengPageOriginal() {
                   border: "1px solid rgba(255,255,255,0.1)",
                 }}
               >
-                ← 修改方案
+                ← 修改学习维度
               </button>
               <button
                 onClick={handleReset}
                 className="flex-1 py-2.5 rounded-lg text-sm font-bold transition-all duration-200"
                 style={{ backgroundColor: BRAND, color: "#fff" }}
               >
-                重新问诊
+                重新选择症状
               </button>
             </div>
           )}
         </div>
       )}
+
+      <ResearchLearningDrawers selectedSymptoms={Array.from(selectedSymptoms)} selfDescription={symptomDetail}/>
 
       {/* 底部免责声明 */}
       <div className="px-4 pb-8">

@@ -5,9 +5,10 @@ import {getAdminKey} from "@/lib/admin/client";
 import {AdminCard,styles} from "../_shared";
 interface Row{id:number;target_id:string;user_id:string;nickname:string;content:string;status:string;created_ms:number;safety?:{decision:string;provider:string;reason:string;flags:string[];checkedAt?:number;};}
 interface Report{id:number;comment_id:number;reason:string;content:string;author_id:string;created_ms:number;}
-interface Queue{safetyCapability?:{configured:boolean;manualReviewRequired:boolean;};comments:Row[];blocked?:Row[];recent:Row[];reports:Report[];overdue:number;enabled:boolean;limits?:{minIntervalSeconds:number;perDay:number;perTargetDay:number};audit:{id:number;actor:string;action:string;target:string;note:string;created_ms:number}[];}
+interface Queue{research?:{symptom:{enabled:boolean};life:{enabled:boolean}};safetyCapability?:{configured:boolean;manualReviewRequired:boolean;};comments:Row[];blocked?:Row[];recent:Row[];reports:Report[];overdue:number;enabled:boolean;limits?:{minIntervalSeconds:number;perDay:number;perTargetDay:number};audit:{id:number;actor:string;action:string;target:string;note:string;created_ms:number}[];}
 export default function StudyCommentAdmin(){
   const [safetyConfirmed,setSafetyConfirmed]=useState<Record<number,boolean>>({});
+  const [researchOpening,setResearchOpening]=useState<"symptom"|"life"|null>(null);
   const [opening,setOpening]=useState(false),[rates,setRates]=useState({minIntervalSeconds:30,perDay:20,perTargetDay:5});
   const [data,setData]=useState<Queue|null>(null),[note,setNote]=useState(''),[evidence,setEvidence]=useState(''),[target,setTarget]=useState(''),[message,setMessage]=useState(''),[busy,setBusy]=useState(false);
   async function api(path:string,body?:unknown){
@@ -20,12 +21,14 @@ export default function StudyCommentAdmin(){
   function review(id:number,status:string,pinned=false){if(!note.trim()){setMessage('请先填写审核依据');return;}void action(`/comment/${id}`,{status,note,pinned,evidenceUrl:evidence,safetyConfirmed:safetyConfirmed[id]===true});}
   return <div style={{padding:16,color:'#333'}}>
     <ConfirmDialog open={opening} title="开放学习讨论" message="投稿先进入待审队列，未经审核不会公开。请安排管理员持续处理审核及举报。" onCancel={()=>setOpening(false)} onConfirm={()=>{setOpening(false);void action('/config',{enabled:true});}}/>
+    <ConfirmDialog open={!!researchOpening} title="开放研习交流" message="只有已落实逐条人工审核、举报值守及当前渠道健康/UGC披露后才确认。开放记录会保留管理员及下方依据，不能将仅供学习代替治理。" onCancel={()=>setResearchOpening(null)} onConfirm={()=>{const domain=researchOpening;setResearchOpening(null);if(domain)void action(`/research/${domain}`,{enabled:true,operatorConfirmed:true,channelDisclosureConfirmed:true,note});}}/>
     <h1 style={{fontSize:22,fontWeight:700}}>工具与穴位学习交流管理</h1>
     <p>纯文字、每条500字素。所有投稿先待审；审核服务或人工队列不可用时不自动公开。请在24小时内处理待审与举报。</p>
     {message&&<p role="status" style={{color:'#B45309'}}>{message}</p>}
     <AdminCard title="运营开关与审核依据">
       <p>内容安全：{data?.safetyCapability?.configured?"已配置云检测，仍需人工复核":"云内容安全尚未配置，当前必须逐条人工合规复核；不会自动公开"}</p>
       <p>全局状态：{data?data.enabled?'已开放':'关闭':'读取中'}；超过24小时待审：{data?.overdue??'—'}条</p>
+      <div className="my-3 rounded border p-3"><strong>10号研习域（默认关闭，使用同一待审队列）</strong>{(['symptom','life'] as const).map(d=><p key={d}>{d==='symptom'?'同证研习':'同辰人生'}：{data?.research?.[d]?.enabled?'已开放':'关闭'} <button disabled={busy||note.trim().length<8} onClick={()=>setResearchOpening(d)}>确认值守/披露后开放</button> <button disabled={busy} onClick={()=>void action(`/research/${d}`,{enabled:false,note})}>暂停</button></p>)}</div>
       <label style={styles.label}>审核/撤回/禁言依据<textarea value={note} onChange={e=>setNote(e.target.value)} style={styles.input}/></label>
       <label style={styles.label}>置顶解答的来源链接<input value={evidence} onChange={e=>setEvidence(e.target.value)} placeholder="https://…" style={styles.input}/></label>
       <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:10}}>
