@@ -2,7 +2,8 @@
 
 import { useState, useCallback, useRef } from "react";
 import Link from "next/link";
-import {localMedicalWorksheet} from "@/lib/medicalLearning";
+import {localMedicalWorksheet,localMedicalConcepts} from "@/lib/medicalLearning";
+import {ResearchLearningDrawers} from "@/components/ResearchLearningDrawers";
 import { useRouter } from "next/navigation";
 import { WENZHEN_CATEGORIES, buildWenzhenSystemPrompt } from "@/data/wenzhen_data";
 import { buildZhengguPrompt } from "@/data/zhenggu_knowledge";
@@ -510,6 +511,7 @@ export default function WenzhenPage() {
       </div>
 
       <Link href="/zhongyi/bianzheng/" className="mx-4 my-3 block rounded-xl border border-purple-200 bg-white p-3 text-sm text-purple-900 underline">打开相关经典医案、原文出处与同证研习</Link>
+      <ResearchLearningDrawers selectedSymptoms={localMedicalConcepts([...Object.values(symptomInput),supplementText].join("\n"))} selfDescription={supplementText}/>
       {/* AI结果区 */}
       {aiLoading && (
         <div style={{ padding: "0 12px" }}>
