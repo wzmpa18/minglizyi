@@ -150,7 +150,7 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
   const handleSend = useCallback(() => {
     const text = inputText.trim();
     if (!text) return;
-    const validation=validateStudyText(text);if(!validation.ok){showToast(validation.error);return;}
+    const validation=validateStudyText(text);if(!validation.ok){showToast(validation.error||"文字不符合交流要求");return;}
 
     // v25.0.41：禁言拦截（全员禁言仅群主/管理员可发；个人禁言到期前不可发）
     const canSpeak = (myRole === "owner" || myRole === "admin") || (!muteAll && myMuteRemain <= 0);
