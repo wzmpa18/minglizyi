@@ -6,7 +6,7 @@
 // 后端：/api/academy/*（academyRoutes.js，SQLite academy.db）
 // ============================================================================
 
-import { getUserToken } from "./auth";
+import { getUserToken,getUserProfile } from "./auth";
 import { offlineAcademyResponse, prepareOfflineLearning } from "./offlineLearning";
 import { saveLearningCheckin, fetchLearningProgress } from "./offlineLearningProgress";
 
@@ -18,12 +18,22 @@ function tokenHeader(): Record<string, string> {
 }
 
 // 审核工作台管理员密钥（会话级保存，不落盘）
-export function setAcademyAdminKey(key: string) {
-  try { sessionStorage.setItem("yandao_academy_admin_key", key); } catch {}
-}
+let academyKey="",academyKeyOwner="";
+const credentialOwner=()=>getUserToken()?String(getUserProfile()?.userId||'pending-account'):'guest';
+export function setAcademyAdminKey(key: string) {academyKey=key;academyKeyOwner=credentialOwner();try{sessionStorage.removeItem("yandao_academy_admin_key");}catch{}}
 export function getAcademyAdminKey(): string {
-  try { return sessionStorage.getItem("yandao_academy_admin_key") || ""; } catch { return ""; }
+  try{sessionStorage.removeItem("yandao_academy_admin_key");}catch{}
+  if(academyKeyOwner!==credentialOwner()){academyKey="";academyKeyOwner="";}return academyKey;
 }
+export async function checkAcademyAdminAccess(candidate=getAcademyAdminKey()):Promise<{success:boolean;authorized?:boolean;error?:string}>{
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
+ try{const r=await fetch(`${API_BASE}/api/academy/admin/session`,{headers:{...tokenHeader(),...(candidate?{"x-admin-key":candidate}:{})},cache:"no-store",signal:controller.signal});const result=await r.json();return r.ok&&result.authorized===true?{success:true,authorized:true}:{success:false,error:r.status===403?"访问凭证或账号未获授权，不能进入审核工作台":"管理员验证未完成，请稍后重试"};}catch{return {success:false,error:"暂无法连接验证服务，未进入审核工作台"};}finally{clearTimeout(timer);}
+}
+export interface AcademyAdminApplication {id:string;track:string;status:string;experience?:string;reason?:string;review_note?:string;created_ms:number;user_id?:string;}
+export const submitAcademyAdminApplication=(body:{track:string;experience:string;reason:string;consent:boolean})=>api<{success:boolean;message?:string;error?:string}>("/api/academy/admin-applications",{method:"POST",body:JSON.stringify(body)});
+export const fetchMyAcademyAdminApplications=()=>api<{success:boolean;items?:AcademyAdminApplication[];error?:string}>("/api/academy/admin-applications/mine");
+export const fetchAcademyAdminApplications=()=>adminApi<{success:boolean;items?:AcademyAdminApplication[];error?:string}>("/api/academy/admin-applications");
+export const reviewAcademyAdminApplication=(id:string,action:"vetted"|"rejected",note:string)=>adminApi<{success:boolean;message?:string;error?:string}>(`/api/academy/admin-applications/${encodeURIComponent(id)}/review`,{method:"POST",body:JSON.stringify({action,note})});
 function adminHeader(): Record<string, string> {
   const key = getAcademyAdminKey();
   return key ? { "x-admin-key": key } : {};
@@ -44,6 +54,7 @@ async function api<T = any>(path: string, init?: RequestInit): Promise<T> {
 async function adminApi<T = any>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
+    cache: "no-store",
     headers: { "Content-Type": "application/json", ...tokenHeader(), ...adminHeader(), ...(init?.headers || {}) },
   });
   return res.json();
@@ -125,7 +136,7 @@ export async function fetchMaterials(opts?: { track?: string; category?: string;
   if (opts?.category) q.set("category", opts.category);
   if (opts?.status) q.set("status", opts.status);
   if (opts?.mine) q.set("mine", "1");
-  return api<{ success: boolean; materials?: MaterialVo[] }>(`/api/academy/materials?${q.toString()}`);
+  return (opts?.status&&opts.status!=="approved"&&!opts.mine?adminApi:api)<{ success: boolean; materials?: MaterialVo[];error?:string }>(`/api/academy/materials?${q.toString()}`);
 }
 
 export async function parseMaterial(materialId: string) {
@@ -153,7 +164,7 @@ export async function fetchKnowledge(opts?: { track?: string; category?: string;
   if (opts?.status) q.set("status", opts.status);
   if (opts?.materialId) q.set("materialId", opts.materialId);
   if (opts?.limit) q.set("limit", String(opts.limit));
-  return api<{ success: boolean; points?: KnowledgeVo[] }>(`/api/academy/knowledge?${q.toString()}`);
+  return (opts?.status&&opts.status!=="approved"?adminApi:api)<{ success: boolean; points?: KnowledgeVo[];error?:string }>(`/api/academy/knowledge?${q.toString()}`);
 }
 
 export async function reviewKnowledge(id: string, action: "approve" | "reject", patch?: { title?: string; content?: string }) {
@@ -185,7 +196,7 @@ export async function fetchQuestions(opts?: { track?: string; category?: string;
   if (opts?.status) q.set("status", opts.status);
   if (opts?.type) q.set("type", opts.type);
   if (opts?.limit) q.set("limit", String(opts.limit));
-  return api<{ success: boolean; questions?: QuestionVo[] }>(`/api/academy/questions?${q.toString()}`);
+  return (opts?.status&&opts.status!=="approved"?adminApi:api)<{ success: boolean; questions?: QuestionVo[];error?:string }>(`/api/academy/questions?${q.toString()}`);
 }
 
 export async function reviewQuestion(id: string, action: "approve" | "reject", patch?: { stem?: string; answer?: string; analysis?: string }) {

@@ -12,7 +12,7 @@ function createGovernedGroupRouter({getDb,getUserDb,authRequired,userPublicInfo,
  CREATE INDEX IF NOT EXISTS idx_study_invite_target ON study_group_invitations(target_id,state,created_ms DESC);
  CREATE TABLE IF NOT EXISTS study_group_access(group_id INTEGER NOT NULL,user_id TEXT NOT NULL,after_msg_id INTEGER NOT NULL,joined_ms INTEGER NOT NULL,PRIMARY KEY(group_id,user_id));
  CREATE TABLE IF NOT EXISTS study_group_edits(group_id INTEGER PRIMARY KEY,name TEXT NOT NULL,announcement TEXT NOT NULL,status TEXT NOT NULL,reason TEXT NOT NULL,created_ms INTEGER NOT NULL);
- `);initialized=true;}return d;}
+ `);const columns=d.prepare('PRAGMA table_info(study_group_access)').all();if(!columns.some(c=>c.name==='membership_id'))d.exec("ALTER TABLE study_group_access ADD COLUMN membership_id TEXT NOT NULL DEFAULT ''");for(const row of d.prepare("SELECT group_id,user_id FROM study_group_access WHERE membership_id=''").all())d.prepare('UPDATE study_group_access SET membership_id=? WHERE group_id=? AND user_id=?').run(crypto.randomUUID(),row.group_id,row.user_id);initialized=true;}return d;}
  const ids=row=>JSON.parse(row.member_ids||'[]').map(String);
  function group(id,me,active=false){if(!/^\d{1,16}$/.test(String(id)))fail('学习群不存在',404);const row=db().prepare('SELECT * FROM groups WHERE id=?').get(id);if(!row||!ids(row).includes(String(me)))fail('学习群不存在或你已不在群中',404);if(row.status==='closed')fail('此群已被平台关闭',403);const governance=db().prepare('SELECT * FROM study_group_governance WHERE group_id=?').get(row.id);if(active&&governance?.status!=='active')fail('此学习群尚未通过审核，暂不可发言或邀请',403);return {...row,governance};}
  const manager=(g,me)=>String(g.owner_id)===String(me)||JSON.parse(g.admins||'[]').includes(String(me));
@@ -32,7 +32,7 @@ function createGovernedGroupRouter({getDb,getUserDb,authRequired,userPublicInfo,
   const old=db().prepare('SELECT group_id,topic FROM study_group_governance WHERE owner_id=? AND request_id=?').get(me,requestId);
   if(old){const g=group(old.group_id,me);if(g.name!==valid.text||old.topic!==topic)fail('请求内容已改变，请重新确认',409);return {success:true,group:vo(g),duplicated:true};}
   if(db().prepare('SELECT COUNT(*) n FROM study_group_governance WHERE owner_id=? AND created_ms>?').get(me,Date.now()-86400000).n>=3)fail('今日建群已达限额',429);
-  const created=db().transaction(()=>{const result=db().prepare('INSERT INTO groups(name,owner_id,owner_name,member_ids) VALUES (?,?,?,?)').run(valid.text,me,userPublicInfo(me)?.nickname||'学友',JSON.stringify([me]));const id=Number(result.lastInsertRowid);db().prepare('INSERT INTO study_group_governance(group_id,topic,request_id,owner_id,created_ms) VALUES (?,?,?,?,?)').run(id,topic,requestId,me,Date.now());db().prepare('INSERT INTO study_group_access VALUES (?,?,0,?)').run(id,me,Date.now());return id;})();
+  const created=db().transaction(()=>{const result=db().prepare('INSERT INTO groups(name,owner_id,owner_name,member_ids) VALUES (?,?,?,?)').run(valid.text,me,userPublicInfo(me)?.nickname||'学友',JSON.stringify([me]));const id=Number(result.lastInsertRowid);db().prepare('INSERT INTO study_group_governance(group_id,topic,request_id,owner_id,created_ms) VALUES (?,?,?,?,?)').run(id,topic,requestId,me,Date.now());db().prepare('INSERT INTO study_group_access(group_id,user_id,after_msg_id,joined_ms,membership_id) VALUES (?,?,0,?,?)').run(id,me,Date.now(),crypto.randomUUID());return id;})();
   let review={status:'pending',reason:'等待内容审核'};try{review=await moderateResourceComment(valid.text+'\n学习专题：'+topic);}catch{}
   const status=['active','pending','rejected'].includes(review?.status)?review.status:'pending';db().prepare('UPDATE study_group_governance SET status=?,review_reason=? WHERE group_id=?').run(status,String(review?.reason||'').slice(0,500),created);
   return {success:true,group:vo(group(created,me)),pendingReview:status==='pending'};
@@ -47,7 +47,7 @@ function createGovernedGroupRouter({getDb,getUserDb,authRequired,userPublicInfo,
   if(req.body?.adultConsent!==true||req.body?.joinConsent!==true)fail('请确认本人已满18岁，并同意加入此群及文字交流规则');
   const g=group(invite.group_id,invite.inviter_id,true);if(!manager(g,invite.inviter_id))fail('邀请人已失去管理权限',410);friends(invite.inviter_id,me);
   if(db().prepare("SELECT COUNT(*) n FROM study_group_invitations WHERE target_id=? AND state='accepted' AND responded_ms>?").get(me,Date.now()-86400000).n>=20)fail('入群操作过于频繁',429);
-  db().transaction(()=>{const current=group(g.id,invite.inviter_id,true),members=ids(current);if(!members.includes(me)){if(members.length>=50)fail('此群已达50人上限',409);members.push(me);db().prepare('UPDATE groups SET member_ids=? WHERE id=?').run(JSON.stringify(members),g.id);const floor=db().prepare('SELECT COALESCE(MAX(id),0) id FROM chat_messages WHERE conversation_id=?').get('group:'+g.id).id;db().prepare('INSERT OR REPLACE INTO study_group_access VALUES (?,?,?,?)').run(g.id,me,floor,Date.now());}db().prepare("UPDATE study_group_invitations SET state='accepted',responded_ms=? WHERE id=? AND state='pending'").run(Date.now(),invite.id);})();
+  db().transaction(()=>{const current=group(g.id,invite.inviter_id,true),members=ids(current);if(!members.includes(me)){if(members.length>=50)fail('此群已达50人上限',409);members.push(me);db().prepare('UPDATE groups SET member_ids=? WHERE id=?').run(JSON.stringify(members),g.id);const floor=db().prepare('SELECT COALESCE(MAX(id),0) id FROM chat_messages WHERE conversation_id=?').get('group:'+g.id).id;db().prepare('INSERT OR REPLACE INTO study_group_access(group_id,user_id,after_msg_id,joined_ms,membership_id) VALUES (?,?,?,?,?)').run(g.id,me,floor,Date.now(),crypto.randomUUID());}db().prepare("UPDATE study_group_invitations SET state='accepted',responded_ms=? WHERE id=? AND state='pending'").run(Date.now(),invite.id);})();
   return {success:true,groupId:String(g.id)};
  }));
  router.post('/:id/join',handle((req,me)=>{group(req.params.id,me);return {success:true,group:vo(group(req.params.id,me))};}));
@@ -91,6 +91,7 @@ function createGovernedGroupRouter({getDb,getUserDb,authRequired,userPublicInfo,
   return {success:true,pendingReview:status==='pending',message:toMessage(db().prepare('SELECT * FROM chat_messages WHERE id=?').get(insert.lastInsertRowid))};
  }));
  // Existing role, mute, remove, exit, dissolve and report routes remain the SSOT.
+ router.use('/:id/cards',require('./studyGroupCards').createStudyGroupCards({db,group,ids,getUserDb,userPublicInfo,checkPlatformMute,notify}));
  // Closed/legacy groups cannot bypass review via their old update routes.
  router.use((req,res,next)=>{if(/\/(leave|report|dissolve)$/.test(req.path))return next();try{const match=req.path.match(/^\/(\d+)\//);if(match)group(match[1],String(req.user.userId),req.method!=='GET');next();}catch(e){res.status(e.status||503).json({success:false,error:e.message});}});
  return router;

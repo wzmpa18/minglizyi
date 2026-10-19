@@ -1187,7 +1187,7 @@ function createRouter() {
 
   // 群聊开关（默认关闭，仅拦截写操作；读取走 GET 不受影响）
   router.use('/groups', (req, res, next) => {
-    if (!featureEnabled('groups_enabled', req) && req.method !== 'GET' && !/\/(leave|report|reject|dissolve)$/.test(req.path)) {
+    if (!featureEnabled('groups_enabled', req) && req.method !== 'GET' && !/\/(leave|report|reject|dissolve|revoke)$/.test(req.path)) {
       return featureDisabled(res, '群聊');
     }
     next();

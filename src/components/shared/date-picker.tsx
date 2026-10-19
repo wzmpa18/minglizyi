@@ -246,6 +246,7 @@ export default function DatePicker({
   const [recordQuery, setRecordQuery] = useState("");
   const [recordMessage, setRecordMessage] = useState("");
   const [recordNote, setRecordNote] = useState("");
+  const [confirmLocation,setConfirmLocation]=useState(false),[submitError,setSubmitError]=useState("");
   const currentRecordTool = () => {
     const routeTool = typeof window === "undefined" ? "" : window.location.pathname.split("/").filter(Boolean).pop() || "";
     return ({ "taiyi-sanshi": "taiyi", "xuankong-feixing": "xuankong" } as Record<string, string>)[routeTool] || routeTool;
@@ -317,8 +318,10 @@ export default function DatePicker({
   }, []);
 
   // 提交（v18.1: 农历模式自动转换为公历后再传给算法）
-  const handleSubmit = useCallback(() => {
-    if (showRegion && options.locationMissing) return;
+  const performSubmit = useCallback((locationConfirmed=false) => {
+    setSubmitError("");
+    if (showRegion && options.locationMissing && !locationConfirmed) {setConfirmLocation(true);return;}
+    try {
     if (onNameChange) onNameChange(nameState);
     // 名称和备注跟随本次排盘自动保存；用户可在记录抽屉中随时修改或删除。
     setPendingPaipanRecordMeta(currentRecordTool(), nameState, recordNote);
@@ -360,7 +363,10 @@ export default function DatePicker({
       locationMissing: false,
     });
     onClose("submit");
+    setConfirmLocation(false);
+    }catch(error){setSubmitError(error instanceof Error?error.message:"排盘未完成，请核对日期与出生地后重试");}
   }, [date, options, region, showRegion, nameState, recordNote, onNameChange, onSubmit, onClose]);
+  const handleSubmit=()=>performSubmit(false);
 
   // P1-6: 统一滚动锁 + P1-7: 弹窗返回拦截
   // P1-REOPEN: 排盘弹窗保留底部导航栏（hideNav:false）+ 弹窗整体上移 56px 避让，
@@ -779,6 +785,8 @@ export default function DatePicker({
 
         {/* 排盘按钮（对标吉时雨 submitFormBtn class="app-paipan-button"） */}
         <div className="px-3 pb-3 pt-1">
+          {submitError&&<p role="alert" className="mb-2 rounded-lg bg-red-50 p-3 text-sm text-red-800">{submitError}</p>}
+          {confirmLocation&&<section role="alert" className="mb-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950"><p>旧记录缺少已确认的出生地。请核对上方地区与经度；不会擅自把默认地点当作你的出生地。</p><InterfaceButton type="button" className="mt-2 rounded-lg bg-purple-800 px-3 py-2 text-white" onClick={()=>{setOptions(prev=>({...prev,locationMissing:false}));performSubmit(true);}}>使用上述出生地并排盘</InterfaceButton><InterfaceButton type="button" className="ml-2 mt-2 rounded-lg border px-3 py-2" onClick={()=>setConfirmLocation(false)}>继续修改出生地</InterfaceButton></section>}
           <InterfaceButton
             data-testid="date-picker-submit"
             type="button"

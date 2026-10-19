@@ -43,6 +43,15 @@ on:
       - 'src/components/PaipanHistoryButton.tsx'
       - 'backend_deploy/liveChart*.js'
       - 'backend_deploy/governedGroupRoutes.js'
+      - 'backend_deploy/studyGroupCards.js'
+      - 'scripts/academy-admin-http.test.cjs'
+      - 'src/lib/academyApi.ts'
+      - 'src/app/academy/factory/**'
+      - 'src/components/AcademyReviewerApplication.tsx'
+      - 'src/components/AcademyReviewerApplications.tsx'
+      - 'src/lib/sectionGate.ts'
+      - 'src/app/privacy/page.tsx'
+      - 'src/app/guide/**'
       - 'scripts/governed-groups-http.test.cjs'
       - 'scripts/group-cache.test.ts'
       - 'src/lib/socialStore.ts'
@@ -298,6 +307,7 @@ jobs:
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/study-comments-http.test.cjs
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/live-chart-http.test.cjs
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/governed-groups-http.test.cjs
+          NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/academy-admin-http.test.cjs
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/offline-download-http.test.cjs
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/zhenggu-preview-http.test.cjs
       - name: Verify Apple signature rejection and authenticated purchase endpoints with real dependencies

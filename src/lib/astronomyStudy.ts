@@ -1,6 +1,6 @@
 import { Body, Equator, Horizon, Illumination, MoonPhase, Observer, SearchRiseSet, SearchSunLongitude, SunPosition } from "astronomy-engine";
 
-export const ASTRONOMY_SOURCE = "https://github.com/cosinekitty/astronomy/tree/v2.1.19/source/js";
+export const ASTRONOMY_SOURCE = "https://yandaoguoxue.yandao.vip/guide/astronomy/";
 export const SKY_BODIES = [
   { body: Body.Sun, name: "太阳", color: "#fbbf24" },
   { body: Body.Moon, name: "月球", color: "#e2e8f0" },

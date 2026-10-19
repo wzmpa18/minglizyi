@@ -26,8 +26,9 @@ jobs:
       - name: Prepare pinned offline engine and actual test assets
         run: |
           python3 scripts/prepare_life_ocr_models.py
+          NEXT_PUBLIC_STORE_CHANNEL=tencent npm run build
           mkdir -p www android/app/src/androidTest/assets
-          printf '<!doctype html><title>Native OCR instrumentation only</title>' > www/index.html
+          cp -R out/. www/
           cp scripts/fixtures/life-ocr-synthetic.png android/app/src/androidTest/assets/
           npx cap sync android
           chmod +x android/gradlew

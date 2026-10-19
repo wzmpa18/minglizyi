@@ -101,7 +101,8 @@ export function fetchToolMatrixPublic(): Promise<ToolMatrixMap | null> {
   const cached = readCache();
   if (cached) return Promise.resolve(cached.tools);
   if (inflight) return inflight;
-  inflight = fetch("/api/public/tool-matrix")
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
+  inflight = fetch("/api/public/tool-matrix",{signal:controller.signal})
     .then((r) => r.json())
     .then((json) => {
       const tools = json && json.success && json.data && json.data.tools ? json.data.tools : null;
@@ -110,6 +111,7 @@ export function fetchToolMatrixPublic(): Promise<ToolMatrixMap | null> {
     })
     .catch(() => readCache(true)?.tools || null)
     .finally(() => {
+      clearTimeout(timer);
       inflight = null;
     });
   return inflight;

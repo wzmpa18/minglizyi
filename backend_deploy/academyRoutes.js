@@ -21,6 +21,7 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const {knowledgePreview}=require('./zhengguPreviewPolicy');
+const {validateStudyText}=require('./studyCommentPolicy');
 
 // P6-TCM-02 质量治理层：嵌入流水线节点，不替换任何原有步骤
 const QG = require('./qualityGate');
@@ -516,9 +517,12 @@ function authRequired(req, res, next) {
 function isAdmin(req) {
   const key = req.headers['x-admin-key'];
   const adminKey = process.env.ADMIN_API_KEY;
-  if (adminKey && key === adminKey) return true;
+  if (typeof key==='string'&&typeof adminKey==='string'&&adminKey.length>=16&&key.length<=512&&Buffer.byteLength(key)===Buffer.byteLength(adminKey)&&crypto.timingSafeEqual(Buffer.from(key),Buffer.from(adminKey))) return true;
   const ids = (process.env.ACADEMY_ADMIN_IDS || '').split(',').map(s => s.trim()).filter(Boolean);
-  return !!(req.user && ids.includes(String(req.user.userId)));
+  let actor=req.user;const header=req.headers.authorization||'';
+  if(!actor&&typeof header==='string'&&header.startsWith('Bearer ')){try{actor=jwt.verify(header.slice(7),JWT_SECRET);}catch{return false;}}
+  if(!actor||!ids.includes(String(actor.userId)))return false;
+  let accountDb;try{const file=process.env.DB_PATH||'/root/backend-auth/data/yandao_users.db';if(!fs.existsSync(file))return false;accountDb=new Database(file,{readonly:true});const account=accountDb.prepare('SELECT status,deleted_at FROM users WHERE user_id=?').get(String(actor.userId));return !!account&&!account.deleted_at&&account.status==='active';}catch{return false;}finally{accountDb?.close();}
 }
 
 function adminRequired(req, res, next) {
@@ -1093,6 +1097,14 @@ function gradeAnswer(q, myAnswer) {
 function createRouter() {
   const router = express.Router();
   router.use(express.json({ limit: '12mb' }));
+  const failedKeys=new Map();router.use((req,res,next)=>{if(!req.headers['x-admin-key']||isAdmin(req))return next();const now=Date.now(),ip=String(req.ip||req.socket.remoteAddress||'unknown'),state=failedKeys.get(ip);if(state&&state.until>now&&state.count>=10)return res.status(429).set('Retry-After','60').json({success:false,error:'验证尝试过多，请稍后重试'});if(failedKeys.size>=10000)for(const [key,value] of failedKeys){if(value.until<=now)failedKeys.delete(key);}if(failedKeys.size>=10000)failedKeys.delete(failedKeys.keys().next().value);failedKeys.set(ip,state&&state.until>now?{...state,count:state.count+1}:{until:now+60000,count:1});next();});
+  // The review UI must obtain this server verdict before reading pending data.
+  router.get('/admin/session',adminRequired,(_req,res)=>res.set('Cache-Control','no-store').json({success:true,authorized:true}));
+  function applicationDb(){const d=getDb();d.exec("CREATE TABLE IF NOT EXISTS academy_admin_applications(id INTEGER PRIMARY KEY,user_id TEXT NOT NULL,track TEXT NOT NULL,experience TEXT NOT NULL,reason TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pending',review_note TEXT NOT NULL DEFAULT '',created_ms INTEGER NOT NULL,reviewed_ms INTEGER)");return d;}
+  router.post('/admin-applications',authRequired,(req,res)=>{try{const {track,experience,reason}=req.body||{},a=validateStudyText(experience),b=validateStudyText(reason);if(req.body?.consent!==true||!['zhongyi','yixue','guoxue','yikao'].includes(track)||!a.ok||!b.ok)return res.status(400).json({success:false,error:'请选择学科，并填写500字以内的经验与申请说明；请勿提交联系方式、病历或账号密码'});const d=applicationDb(),me=String(req.user.userId),old=d.prepare("SELECT id FROM academy_admin_applications WHERE user_id=? AND track=? AND status='pending'").get(me,track);if(old)return res.json({success:true,id:String(old.id),status:'pending',authorizationGranted:false,message:'已有待审登记，登记不会自动授予管理员权限'});if(d.prepare('SELECT COUNT(*) n FROM academy_admin_applications WHERE user_id=? AND created_ms>?').get(me,Date.now()-86400000).n>=3)return res.status(429).json({success:false,error:'今日登记已达限额，请等待复核'});const item=d.prepare('INSERT INTO academy_admin_applications(user_id,track,experience,reason,created_ms) VALUES (?,?,?,?,?)').run(me,track,a.text,b.text,Date.now());res.json({success:true,id:String(item.lastInsertRowid),status:'pending',authorizationGranted:false,message:'已登记，等待资质复核；未授予管理员权限'});}catch{res.status(503).json({success:false,error:'登记未完成，请稍后重试'});}});
+  router.get('/admin-applications/mine',authRequired,(req,res)=>{try{res.set('Cache-Control','no-store').json({success:true,items:applicationDb().prepare('SELECT id,track,status,review_note,created_ms,reviewed_ms FROM academy_admin_applications WHERE user_id=? ORDER BY id DESC LIMIT 20').all(String(req.user.userId)),authorizationGranted:false});}catch{res.status(503).json({success:false,error:'登记记录暂不可用'});}});
+  router.get('/admin-applications',adminRequired,(_req,res)=>{try{res.set('Cache-Control','no-store').json({success:true,items:applicationDb().prepare("SELECT * FROM academy_admin_applications WHERE status='pending' ORDER BY id LIMIT 50").all()});}catch{res.status(503).json({success:false,error:'登记列表暂不可用'});}});
+  router.post('/admin-applications/:id/review',adminRequired,(req,res)=>{try{const {action,note}=req.body||{},validation=validateStudyText(note);if(!['vetted','rejected'].includes(action)||!validation.ok)return res.status(400).json({success:false,error:'请填写复核结论与依据'});const d=applicationDb(),row=d.prepare("SELECT * FROM academy_admin_applications WHERE id=? AND status='pending'").get(req.params.id);if(!row)return res.status(409).json({success:false,error:'登记已处理或不存在'});d.transaction(()=>{d.prepare('UPDATE academy_admin_applications SET status=?,review_note=?,reviewed_ms=? WHERE id=?').run(action,validation.text,Date.now(),row.id);d.prepare('INSERT INTO loc_op_logs(admin_id,action,target,detail) VALUES (?,?,?,?)').run(req.user?.userId?String(req.user.userId):'admin_key','reviewer_application_'+action,String(row.id),validation.text);})();res.json({success:true,authorizationGranted:false,message:'复核已记录；账号权限仍须通过现有管理员名单单独配置，登记与复核不能自行提权'});}catch{res.status(503).json({success:false,error:'复核未确认，请刷新后核对'});}});
 
   // ---------- 板块概览（公开） ----------
   router.get('/tracks', authRequired, (req, res) => {
@@ -1259,6 +1271,7 @@ function createRouter() {
     try {
       const d = getDb();
       const { track = '', category = '', status = '', mine = '' } = req.query;
+      if(status&&status!=='approved'&&mine!=='1'&&!isAdmin(req))return res.status(403).json({success:false,error:'待审资料仅向有权限的管理员开放'});
       // v25.0.72：正骨类目资料强制门控（未解锁返回付费信息，服务端拒绝）
       if (category === ZHENGGU_CATEGORY) {
         const block = zhengguGateBlock(req);
@@ -1358,6 +1371,7 @@ function createRouter() {
     try {
       const d = getDb();
       const { track = '', category = '', status = '', materialId = '', limit: limitStr = '' } = req.query;
+      if(status&&status!=='approved'&&!isAdmin(req))return res.status(403).json({success:false,error:'待审知识点仅向有权限的管理员开放'});
       // v25.0.72：正骨类目知识点强制门控（类目直查与按资料查均判定归属）
       let zhengguScope = category === ZHENGGU_CATEGORY;
       if (!zhengguScope && materialId) {
@@ -1586,6 +1600,7 @@ function createRouter() {
     try {
       const d = getDb();
       const { track = '', category = '', status = '', type = '', limit: limitStr = '' } = req.query;
+      if(status&&status!=='approved'&&!isAdmin(req))return res.status(403).json({success:false,error:'待审题目仅向有权限的管理员开放'});
       // v25.0.72：正骨类目题目强制门控
       let zhengguWithAnswer = false;
       if (category === ZHENGGU_CATEGORY) {

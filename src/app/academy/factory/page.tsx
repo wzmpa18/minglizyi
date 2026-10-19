@@ -15,6 +15,7 @@ import {
   type OrgVo,
 } from "@/lib/academyApi";
 import { PageLoginGuard } from "@/components/PageLoginGuard";
+import AcademyReviewerApplication from "@/components/AcademyReviewerApplication";
 
 const BRAND = "#7B2FBE";
 
@@ -380,8 +381,9 @@ export default function FactoryPage() {
             onClick={() => router.push("/academy/factory/review")}
             className="w-full rounded-xl border border-gray-200 bg-white py-2.5 text-xs text-gray-500 active:bg-gray-50"
           >
-            管理员入口 · 审核工作台 →
+            管理人员访问验证（须服务器授权） →
           </button>
+          <AcademyReviewerApplication />
         </div>
       ) : (
         <div className="px-3 py-3 pb-24">

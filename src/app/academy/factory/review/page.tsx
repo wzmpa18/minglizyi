@@ -24,12 +24,17 @@ import {
   type QuestionVo,
 } from "@/lib/academyApi";
 import { PageLoginGuard } from "@/components/PageLoginGuard";
+import {checkAcademyAdminAccess} from "@/lib/academyApi";
+import {getUserProfile} from "@/lib/auth";
+import {useAccountScope} from "@/lib/useAccountScope";
+import AcademyReviewerApplication from "@/components/AcademyReviewerApplication";
+import AcademyReviewerApplications from "@/components/AcademyReviewerApplications";
 
 const BRAND = "#7B2FBE";
 
 type TabKey = "materials" | "knowledge" | "questions";
 
-export default function ReviewWorkbenchPage() {
+function ReviewWorkbenchAccount() {
   const [adminKey, setAdminKey] = useState("");
   const [authed, setAuthed] = useState(false);
   const [tab, setTab] = useState<TabKey>("materials");
@@ -55,11 +60,10 @@ export default function ReviewWorkbenchPage() {
   };
 
   useEffect(() => {
+    let live=true;
     const k = getAcademyAdminKey();
-    if (k) {
-      setAdminKey(k);
-      setAuthed(true);
-    }
+    void checkAcademyAdminAccess(k).then(result=>{if(!live)return;if(result.success&&result.authorized){setAdminKey(k);setAuthed(true);}else{setAcademyAdminKey("");setAuthed(false);}});
+    return()=>{live=false;};
   }, []);
 
   const loadCats = useCallback(async () => {
@@ -136,12 +140,10 @@ export default function ReviewWorkbenchPage() {
     void load();
   }, [load]);
 
-  const handleAuth = () => {
+  const handleAuth = async () => {
     const k = adminKey.trim();
-    if (!k) return;
-    setAcademyAdminKey(k);
-    setAuthed(true);
-    showToast("已启用管理员模式");
+    if(busy)return;const owner=String(getUserProfile()?.userId||'');setBusy(true);
+    try{const verified=await checkAcademyAdminAccess(k);if(String(getUserProfile()?.userId||'')!==owner)return;if(!verified.success||!verified.authorized){setAcademyAdminKey("");setAuthed(false);setMaterials([]);setPoints([]);setQuestions([]);showToast(verified.error||"账号或访问凭证未获授权");return;}setAcademyAdminKey(k);setAuthed(true);showToast("服务器已确认管理员权限");}finally{setBusy(false);}
   };
 
   const handleMaterial = async (id: string, action: "parse" | "approve" | "reject") => {
@@ -212,7 +214,7 @@ export default function ReviewWorkbenchPage() {
           <div className="rounded-2xl bg-white p-5 shadow-sm">
             <p className="text-sm font-bold text-gray-800">管理员验证</p>
             <p className="mt-1 text-[11px] leading-relaxed text-gray-400">
-              输入学堂管理员密钥（ADMIN_API_KEY）以进入审核工作台；密钥仅保存在当前会话，关闭浏览器后自动失效。
+              仅已获授权账号或有效管理凭证可以进入。必须由服务器验证；凭证只在本次页面内存使用，不保存到浏览器。普通用户可先登记申请。
             </p>
             <input
               type="password"
@@ -223,13 +225,16 @@ export default function ReviewWorkbenchPage() {
               style={{ outline: "none" }}
             />
             <button
-              onClick={handleAuth}
+              onClick={()=>void handleAuth()}
+              disabled={busy}
               className="mt-3 w-full rounded-xl py-3 text-sm font-bold text-white"
               style={{ backgroundColor: BRAND }}
             >
-              进入工作台
+              {busy?"正在服务器验证":"验证访问权限"}
             </button>
+            {toast&&<p role="alert" className="mt-3 text-sm text-red-700">{toast}</p>}
           </div>
+          <div className="mt-4"><AcademyReviewerApplication/></div>
         </div>
       </div>
     );
@@ -258,6 +263,7 @@ export default function ReviewWorkbenchPage() {
       </div>
 
       <div className="px-3 py-3 pb-24">
+        <AcademyReviewerApplications/>
         {/* 类目管理（仅题目页显示） */}
         {tab === "questions" && (
           <div className="mb-3 rounded-2xl bg-white p-4 shadow-sm">
@@ -508,3 +514,4 @@ export default function ReviewWorkbenchPage() {
     </div>
   );
 }
+export default function ReviewWorkbenchPage(){const scope=useAccountScope();return <ReviewWorkbenchAccount key={scope}/>;}
