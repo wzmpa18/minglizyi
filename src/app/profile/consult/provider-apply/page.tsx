@@ -22,6 +22,7 @@ import {
   type ConsultProvider,
   type ConsultService,
   type ConsultOrder,
+  LEGACY_CONSULT_CLIENT_DISABLED,
 } from "@/lib/consultServiceStore";
 import { getToolConfig } from "@/lib/toolConfigStore";
 import { getUserProfile } from "@/lib/auth";
@@ -153,6 +154,8 @@ export default function ProviderApplyPage() {
     runConsultMaintenance();
     refresh();
   }, [refresh]);
+
+  if(LEGACY_CONSULT_CLIENT_DISABLED)return <main className="mx-auto max-w-lg space-y-4 p-6 text-sm leading-7"><h1 className="text-lg font-semibold">学习服务核验中</h1><p>学习服务准入与交易核验尚未完成，此旧入口暂停操作。原本机记录保留，不作为身份、教学资格、医疗执业资格或真实收款凭证。</p><a className="underline" href="/profile/">返回个人中心</a></main>;
 
   if (!mounted) {
     return (

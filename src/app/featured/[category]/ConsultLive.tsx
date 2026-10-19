@@ -18,6 +18,7 @@ import {
   runConsultMaintenance,
   type ConsultService,
   type ConsultOrder,
+  LEGACY_CONSULT_CLIENT_DISABLED,
 } from "@/lib/consultServiceStore";
 import { getToolConfig } from "@/lib/toolConfigStore";
 import { payForConsultService } from "@/lib/paymentService";
@@ -106,7 +107,7 @@ export default function ConsultLive() {
 
   const refresh = useCallback(() => {
     const cfg = getToolConfig().consult;
-    setEnabled(cfg.enabled);
+    setEnabled(cfg.enabled&&!LEGACY_CONSULT_CLIENT_DISABLED);
     setDisclaimer(cfg.disclaimer);
     setServices(cfg.enabled ? listConsultServices({ onlineOnly: true }) : []);
     const user = getCurrentUser();
@@ -124,7 +125,7 @@ export default function ConsultLive() {
   if (!enabled) {
     return (
       <div className="rounded-2xl bg-white p-6 text-center shadow-sm">
-        <p className="text-sm text-gray-400">真人咨询服务当前未开放</p>
+        <p className="text-sm text-gray-400">学习服务预约暂未开放；需先完成服务端资格与交易核验，旧本机记录不作付款或认证凭证</p>
       </div>
     );
   }

@@ -15,6 +15,10 @@
 
 import { getToolConfig } from "./toolConfigStore";
 
+export const LEGACY_CONSULT_CLIENT_DISABLED = true;
+const LEGACY_HOLD = "此旧入口尚未完成服务端准入与交易核验，暂不可申请、预约或结算；原有本机记录保留，不作为真实认证或付款凭证。";
+
+
 // ==================== 类型定义 ====================
 
 /** 服务者入驻申请与档案 */
@@ -192,6 +196,7 @@ export interface ApplyProviderResult {
  * entryAuditRequired=true 时三要素齐备才可提交，审核通过后方可上架服务。
  */
 export function applyConsultProvider(input: ApplyProviderInput): ApplyProviderResult {
+  if (LEGACY_CONSULT_CLIENT_DISABLED) return {success:false,message:LEGACY_HOLD};
   const cfg = getToolConfig().consult;
   if (!cfg.enabled) return { success: false, message: "真人咨询服务当前未开放" };
 
@@ -269,6 +274,7 @@ export function listProviders(filter?: { auditStatus?: ConsultProvider["auditSta
 
 /** 管理端审核入驻申请 */
 export function auditConsultProvider(providerId: string, approved: boolean, note: string): { success: boolean; message: string } {
+  if (LEGACY_CONSULT_CLIENT_DISABLED) return {success:false,message:LEGACY_HOLD};
   const providers = safeGet<ConsultProvider[]>(PROVIDERS_KEY, []);
   const p = providers.find((x) => x.id === providerId);
   if (!p) return { success: false, message: "申请记录不存在" };
@@ -292,6 +298,7 @@ export function auditConsultProvider(providerId: string, approved: boolean, note
 
 /** 管理端冻结/解冻服务者：冻结时其全部在架服务同步下架（治理体系 §6.1-6） */
 export function setProviderFrozen(providerId: string, frozen: boolean): { success: boolean; message: string } {
+  if (LEGACY_CONSULT_CLIENT_DISABLED) return {success:false,message:LEGACY_HOLD};
   const providers = safeGet<ConsultProvider[]>(PROVIDERS_KEY, []);
   const p = providers.find((x) => x.id === providerId);
   if (!p) return { success: false, message: "服务者不存在" };
@@ -344,6 +351,7 @@ export interface PublishServiceResult {
  * 价格须在 consult.minPrice~maxPrice 区间、时限不超过 maxDeliveryDays（均后台可配）。
  */
 export function publishConsultService(input: PublishServiceInput): PublishServiceResult {
+  if (LEGACY_CONSULT_CLIENT_DISABLED) return {success:false,message:LEGACY_HOLD};
   const cfg = getToolConfig().consult;
   if (!cfg.enabled) return { success: false, message: "真人咨询服务当前未开放" };
 
@@ -399,6 +407,7 @@ export function getConsultService(serviceId: string): ConsultService | null {
 
 /** 服务者下架/恢复自己的服务；管理端可冻结任何服务 */
 export function setConsultServiceStatus(serviceId: string, status: ConsultService["status"], operator: "provider" | "admin"): { success: boolean; message: string } {
+  if (LEGACY_CONSULT_CLIENT_DISABLED) return {success:false,message:LEGACY_HOLD};
   const services = safeGet<ConsultService[]>(SERVICES_KEY, []);
   const svc = services.find((s) => s.id === serviceId);
   if (!svc) return { success: false, message: "服务不存在" };
@@ -430,6 +439,7 @@ export function createConsultOrder(input: {
   buyerNickname: string;
   requirement: string;
 }): CreateConsultOrderResult {
+  if (LEGACY_CONSULT_CLIENT_DISABLED) return {success:false,message:LEGACY_HOLD};
   const cfg = getToolConfig().consult;
   const svc = getConsultService(input.serviceId);
   if (!svc) return { success: false, message: "服务不存在或已下架" };
@@ -487,6 +497,7 @@ export function listConsultOrders(filter?: { providerId?: string; buyerId?: stri
 
 /** 服务者接单 */
 export function acceptConsultOrder(orderId: string, providerUserId: string): { success: boolean; message: string } {
+  if (LEGACY_CONSULT_CLIENT_DISABLED) return {success:false,message:LEGACY_HOLD};
   const provider = getMyProvider(providerUserId);
   const orders = safeGet<ConsultOrder[]>(ORDERS_KEY, []);
   const o = orders.find((x) => x.orderId === orderId);
@@ -507,6 +518,7 @@ export function acceptConsultOrder(orderId: string, providerUserId: string): { s
 
 /** 服务者交付 */
 export function deliverConsultOrder(orderId: string, providerUserId: string, content: string): { success: boolean; message: string } {
+  if (LEGACY_CONSULT_CLIENT_DISABLED) return {success:false,message:LEGACY_HOLD};
   const provider = getMyProvider(providerUserId);
   const orders = safeGet<ConsultOrder[]>(ORDERS_KEY, []);
   const o = orders.find((x) => x.orderId === orderId);
@@ -530,6 +542,7 @@ export function deliverConsultOrder(orderId: string, providerUserId: string, con
 
 /** 买家确认收货 → 进入结算期（settleDays 后可结算） */
 export function confirmConsultOrder(orderId: string, buyerId: string): { success: boolean; message: string } {
+  if (LEGACY_CONSULT_CLIENT_DISABLED) return {success:false,message:LEGACY_HOLD};
   const cfg = getToolConfig().consult;
   const orders = safeGet<ConsultOrder[]>(ORDERS_KEY, []);
   const o = orders.find((x) => x.orderId === orderId);
@@ -552,6 +565,7 @@ export function confirmConsultOrder(orderId: string, buyerId: string): { success
 
 /** 买家发起售后（交付前或交付后7天内） */
 export function startAfterSale(orderId: string, buyerId: string, reason: string): { success: boolean; message: string } {
+  if (LEGACY_CONSULT_CLIENT_DISABLED) return {success:false,message:LEGACY_HOLD};
   const orders = safeGet<ConsultOrder[]>(ORDERS_KEY, []);
   const o = orders.find((x) => x.orderId === orderId);
   if (!o) return { success: false, message: "订单不存在" };
@@ -575,6 +589,7 @@ export function startAfterSale(orderId: string, buyerId: string, reason: string)
 
 /** 管理端仲裁：退款（买家胜）或驳回（服务者胜，恢复 delivered） */
 export function arbitrateAfterSale(orderId: string, refund: boolean, note: string): { success: boolean; message: string } {
+  if (LEGACY_CONSULT_CLIENT_DISABLED) return {success:false,message:LEGACY_HOLD};
   const orders = safeGet<ConsultOrder[]>(ORDERS_KEY, []);
   const o = orders.find((x) => x.orderId === orderId);
   if (!o) return { success: false, message: "订单不存在" };
@@ -605,6 +620,7 @@ export function arbitrateAfterSale(orderId: string, refund: boolean, note: strin
 
 /** 结算到期订单（页面加载/定时触发）：confirmed 且过 settleDueAt → settled，入服务者钱包台账 */
 export function settleDueConsultOrders(): number {
+  if (LEGACY_CONSULT_CLIENT_DISABLED) return 0;
   const now = Date.now();
   let settled = 0;
   const orders = safeGet<ConsultOrder[]>(ORDERS_KEY, []);
@@ -655,6 +671,7 @@ export function settleDueConsultOrders(): number {
 
 /** 履约超时检测：accepted 超过承诺时限未交付 → 告警（禁止静默） */
 export function checkDeliveryTimeouts(): number {
+  if (LEGACY_CONSULT_CLIENT_DISABLED) return 0;
   const services = safeGet<ConsultService[]>(SERVICES_KEY, []);
   const orders = safeGet<ConsultOrder[]>(ORDERS_KEY, []);
   let flagged = 0;
