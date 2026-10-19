@@ -106,7 +106,7 @@ function createStudyCommentStore(db, targets, now = () => Date.now()) {
     db.prepare('INSERT OR REPLACE INTO study_comment_safety VALUES (?,?,?,?,?,?,?,?)').run(row.id,row.content_hash,result.decision,String(result.provider||'').slice(0,60),String(result.reason||'').slice(0,300),JSON.stringify(result.flags||[]).slice(0,2000),String(result.requestId||'').slice(0,120),now());
     if(previous?.decision==='BLOCK'&&result.decision==='PASS'&&row.status==='REJECTED'&&!row.reviewed_ms)db.prepare("UPDATE study_comments SET status='PENDING' WHERE id=?").run(row.id);
     // A late machine rejection must not leave an already public item visible.
-    if(result.decision==='BLOCK')db.prepare("UPDATE study_comments SET status='REJECTED',pinned=0 WHERE id=? OR parent_id=?").run(row.id,row.id);
+    if(result.decision==='BLOCK')db.prepare("UPDATE study_comments SET status='REJECTED',pinned=0 WHERE (id=? OR parent_id=?) AND status!='REMOVED'").run(row.id,row.id);
     audit('content-safety','SAFETY_'+result.decision,row.id,String(result.reason||'').slice(0,300));return {success:true};
   }
   function review(id,actor,body) {
