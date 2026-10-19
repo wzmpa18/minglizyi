@@ -108,3 +108,7 @@ work-verify/
 
 # Maintained exact-source backend deployer; no credentials or local bundles.
 !scripts/deploy_verified_learning_backend.py
+
+# Maintained pinned candidate and authentic-UI store gallery publishers.
+!scripts/publish_verified_android_test.py
+!scripts/publish_store_gallery.py

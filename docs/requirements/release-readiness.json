@@ -2,7 +2,7 @@
   "purpose": "Owner instruction: complete 07/09/10 and acceptance before any formal store submission. TestFlight internal testing is separate.",
   "scope": "com.yandaoguoxue.app",
   "overallComplete": false,
-  "candidateSource": "47b5db453592f1bfd0c2130234f180bf9249c2d2",
+  "candidateSource": "ade8e42726bd37198620e778be2330a08c947c72",
   "checks": [
     {
       "id": "07-software-localization-calendar",
@@ -61,5 +61,18 @@
     }
   ],
   "ownerInstruction": "2026-10-19: 全部完成才能提交审核；全部完成后一次清理",
-  "checkpointReport": "交接报告/FINAL_PROJECT_HANDOVER.md#65"
+  "checkpointReport": "交接报告/FINAL_PROJECT_HANDOVER.md#65",
+  "ownerScopeClarification": {
+    "date": "2026-10-19",
+    "localization": "Navigation, buttons and operation UI only. Classical texts, lesson bodies, medical sources and user content stay original; no Japanese/English body translation requirement.",
+    "internalDistribution": "Owner explicitly allows device testing after fresh internal TestFlight upload. Verified code/build checks permit internal upload and same-source web/Android test delivery; formal submission remains separately gated.",
+    "formalSubmission": "Complete applicable requirements and de-duplicate channel/version records before formal review."
+  },
+  "channelSpecificOwnerAuthorization": {
+    "date": "2026-10-20",
+    "channel": "google",
+    "action": "Replace pending old release with latest verified candidate and submit updated accurate listing for review. Keep current live release until approved replacement.",
+    "doesNotAssertOverallComplete": true,
+    "otherFormalChannelsUnchanged": true
+  }
 }
