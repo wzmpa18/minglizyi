@@ -8,7 +8,9 @@ export function ModalSurface({label,children,onClose,locked=false,className=''}:
  useEffect(()=>{
   const previous=document.activeElement instanceof HTMLElement?document.activeElement:null;
   const controls=()=>[...(root.current?.querySelectorAll<HTMLElement>('button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex="-1"])')||[])].filter(el=>el.getClientRects().length>0);
-  (controls()[0]||root.current)?.focus();
+  // Announce the dialog without opening a mobile keyboard or scrolling past
+  // the privacy preview. Tab then enters the first available control.
+  root.current?.focus({preventScroll:true});
   const key=(event:KeyboardEvent)=>{
    if(event.key==='Escape'){event.preventDefault();event.stopPropagation();if(!state.current.locked)state.current.onClose();return;}
    if(event.key!=='Tab')return;
@@ -22,5 +24,5 @@ export function ModalSurface({label,children,onClose,locked=false,className=''}:
   return()=>{document.removeEventListener('keydown',key,true);window.removeEventListener('popstate',navigation);if(previous?.isConnected)previous.focus();};
  },[]);
  if(typeof document==='undefined')return null;
- return createPortal(<div ref={root} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} className={'fixed inset-0 z-[30000] overflow-auto overscroll-contain p-4 pt-[max(28px,calc(env(safe-area-inset-top)+16px))] pb-[max(24px,calc(env(safe-area-inset-bottom)+16px))] '+className}>{children}</div>,document.body);
+ return createPortal(<div ref={root} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} className={'fixed inset-0 z-[30000] overflow-auto overscroll-contain outline-none p-4 pt-[max(28px,calc(env(safe-area-inset-top)+16px))] pb-[max(24px,calc(env(safe-area-inset-bottom)+16px))] '+className}>{children}</div>,document.body);
 }
