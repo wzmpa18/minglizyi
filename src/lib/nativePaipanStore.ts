@@ -115,7 +115,7 @@ interface PaipanStoreNative {
     result?: Record<string, unknown>;
     note?: string;
   }): Promise<{ id: number; savedAt: number }>;
-  listRecords(options: { tool?: string; limit?: number }): Promise<{ records: PaipanRecord[] }>;
+  listRecords(options: { tool?: string; limit?: number;beforeCreated?:number;beforeId?:number }): Promise<{ records: PaipanRecord[];supportsCursor?:boolean;nextCursor?:{createdAt:number;id:number} }>;
   getRecord(options: { id: number }): Promise<{ record: PaipanRecord | null }>;
   deleteRecord(options: { id: number }): Promise<{ success: boolean }>;
   clearAll(): Promise<{ success: boolean }>;
@@ -195,7 +195,7 @@ export async function savePaipanRecord(opts: SaveRecordOptions): Promise<number>
     note: useMeta.note,
   } : opts;
   // 同参数去重：最近一条 input 相同则更新原记录
-  const recent = (await listPaipanRecords(recordOpts.tool)).find((r) => r.tool === recordOpts.tool);
+  const recent = isNativeStoreAvailable()? (await PaipanStore.listRecords({tool:recordOpts.tool,limit:1})).records?.[0] : (await listPaipanRecords(recordOpts.tool)).find((r) => r.tool === recordOpts.tool);
   if (
     recent &&
     safeEq(recent.input, recordOpts.input) &&
@@ -272,8 +272,10 @@ export async function listPaipanRecords(tool?: string): Promise<PaipanRecord[]> 
   if (typeof window !== "undefined" && isNativeStoreAvailable()) {
     try {
       await migrateWebStore();
-      const ret = await PaipanStore.listRecords({ tool, limit: 500 });
-      return (ret.records || []).map(normalizeRecord);
+      const records:PaipanRecord[]=[];let cursor:{createdAt:number;id:number}|undefined;const seen=new Set<number>();
+      for(;;){const ret=await PaipanStore.listRecords({tool,limit:100,beforeCreated:cursor?.createdAt,beforeId:cursor?.id});for(const row of ret.records||[])if(!seen.has(row.id)){seen.add(row.id);records.push(normalizeRecord(row));}
+       if(!ret.nextCursor)break;if(cursor?.id===ret.nextCursor.id&&cursor.createdAt===ret.nextCursor.createdAt)throw Error("历史分页游标未前进，未删除原记录，请升级安装包");cursor=ret.nextCursor;await new Promise<void>(resolve=>setTimeout(resolve,0));}
+      return records;
     } catch (e) {
       throw e;
     }

@@ -227,14 +227,11 @@ public class PaipanStorePlugin extends Plugin {
             int limit = limitVal == null || limitVal <= 0 ? DEFAULT_LIMIT
                     : (int) Math.min(limitVal, MAX_LIMIT);
             SQLiteDatabase d = db().getReadableDatabase();
-            Cursor c;
-            if (tool != null && !tool.trim().isEmpty()) {
-                c = d.query("paipan_records", null, "tool=?",
-                        new String[]{tool.trim()}, null, null, "created_at DESC", String.valueOf(limit));
-            } else {
-                c = d.query("paipan_records", null, null, null, null, null,
-                        "created_at DESC", String.valueOf(limit));
-            }
+            Long beforeCreated=numericLong(call,"beforeCreated"),beforeId=numericLong(call,"beforeId");
+            String where="1=1";List<String> args=new ArrayList<>();
+            if(tool!=null&&!tool.trim().isEmpty()){where+=" AND tool=?";args.add(tool.trim());}
+            if(beforeCreated!=null&&beforeId!=null){where+=" AND (created_at<? OR (created_at=? AND id<?))";args.add(String.valueOf(beforeCreated));args.add(String.valueOf(beforeCreated));args.add(String.valueOf(beforeId));}
+            Cursor c=d.query("paipan_records",null,where,args.toArray(new String[0]),null,null,"created_at DESC,id DESC",String.valueOf(limit));
             List<JSObject> rows = new ArrayList<>();
             while (c.moveToNext()) rows.add(rowToRecord(c));
             c.close();
@@ -243,6 +240,8 @@ public class PaipanStorePlugin extends Plugin {
             org.json.JSONArray arr = new org.json.JSONArray();
             for (JSObject o : rows) arr.put(o);
             ret.put("records", arr);
+            ret.put("supportsCursor",true);
+            if(rows.size()==limit){JSObject last=rows.get(rows.size()-1),next=new JSObject();next.put("createdAt",last.get("createdAt"));next.put("id",last.get("id"));ret.put("nextCursor",next);}
             call.resolve(ret);
         } catch (Exception e) {
             call.reject("listRecords failed: " + e.getMessage());
