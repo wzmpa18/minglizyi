@@ -195,6 +195,7 @@ export async function savePaipanRecord(opts: SaveRecordOptions): Promise<number>
     note: useMeta.note,
   } : opts;
   // 同参数去重：最近一条 input 相同则更新原记录
+  if(isNativeStoreAvailable())await migrateWebStore();
   const recent = isNativeStoreAvailable()? (await PaipanStore.listRecords({tool:recordOpts.tool,limit:1})).records?.[0] : (await listPaipanRecords(recordOpts.tool)).find((r) => r.tool === recordOpts.tool);
   if (
     recent &&

@@ -6,6 +6,11 @@ on:
       - 'scripts/ios-simulator-proof.rb'
       - 'scripts/ios-study-screenshots.swift'
   workflow_dispatch:
+    inputs:
+      private_only:
+        description: Verify private vault and real native database only
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -43,7 +48,9 @@ jobs:
             xcrun simctl bootstatus "$MODEL" -b
             xcrun simctl status_bar "$MODEL" override --time 09:41 --dataNetwork wifi --wifiMode active --wifiBars 3 --batteryState charged --batteryLevel 100
             set +e
-            xcodebuild test -project ios/App/App.xcodeproj -scheme GuoxueScreenshots -configuration Debug -destination "id=$MODEL" -parallel-testing-enabled NO -derivedDataPath "$RUNNER_TEMP/guoxue-simulator-build" -resultBundlePath "$RUNNER_TEMP/$kind.xcresult" CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO
+            ONLY=""
+            if [ "${{ inputs.private_only }}" = "true" ]; then ONLY="-only-testing:GuoxueStudyUITests/GuoxueStudyScreenshots/testLifePrivateNativeStorage"; fi
+            xcodebuild test $ONLY -project ios/App/App.xcodeproj -scheme GuoxueScreenshots -configuration Debug -destination "id=$MODEL" -parallel-testing-enabled NO -derivedDataPath "$RUNNER_TEMP/guoxue-simulator-build" -resultBundlePath "$RUNNER_TEMP/$kind.xcresult" CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO
             TEST_STATUS=$?
             set -e
             xcrun xcresulttool export attachments --path "$RUNNER_TEMP/$kind.xcresult" --output-path "$RUNNER_TEMP/guoxue-screen-proof/$kind"
@@ -59,7 +66,9 @@ jobs:
           assert b'Synthetic private note' not in p.read_bytes()
           json.dump({'nativeSqliteWritten':True,'rows':len(rows),'syntheticPlaintextAbsent':True,'physicalDevice':False},open(sys.argv[2],'w'))
           PY
+            if [ "${{ inputs.private_only }}" != "true" ]; then
             python3 -c "import json,sys,pathlib; p=pathlib.Path(sys.argv[1])/'calendar-v1.json'; data=json.loads(p.read_text()); assert data['snapshot']['schemaVersion']==1 and len(data['snapshot']['entries'])>1; assert all(set(x)=={'at'} for x in data['agenda']); json.dump({'sharedContainerWritten':True,'snapshotEntries':len(data['snapshot']['entries']),'privateAgendaItems':len(data['agenda']),'reminders':len(data['reminders'])},open(sys.argv[2],'w'))" "$GROUP" "$RUNNER_TEMP/guoxue-screen-proof/${kind}_shared-container-proof.json"
+            fi
             xcrun simctl shutdown "$MODEL"
           done
       - name: Preserve authentic screenshot evidence, including failed UI steps

@@ -21,7 +21,7 @@ final class GuoxueStudyScreenshots: XCTestCase {
         password.tap();password.typeText("qa-native-vault-20261019")
         tapVisible(app.buttons,"新建独立档案",app)
         let acknowledged=app.buttons["已自行妥善保存"]
-        XCTAssertTrue(acknowledged.waitForExistence(timeout:30),"Real WebCrypto and native SQLite must create an encrypted vault")
+        guard acknowledged.waitForExistence(timeout:30) else {shot("09_实际原生档案新建失败现场",app);XCTFail("Real WebCrypto and native SQLite must create an encrypted vault");return}
         acknowledged.tap();tapVisible(app.buttons,"新增记录",app)
         let title=app.textFields["标题"].firstMatch
         XCTAssertTrue(title.waitForExistence(timeout:15));title.tap();title.typeText("QA synthetic local record")
