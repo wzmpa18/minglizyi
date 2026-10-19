@@ -11,6 +11,22 @@ test('academy admin is verified server-side; bad keys, ordinary users and revoke
   const verified=await call(1,'/admin/session',process.env.ADMIN_API_KEY);assert.equal(verified.body.authorized,true);assert.equal(verified.cache,'no-store');assert.equal((await call(3,'/admin/session')).body.authorized,true);users.prepare("UPDATE users SET status='banned' WHERE user_id='3'").run();assert.equal((await call(3,'/admin/session')).status,403);
   const form={track:'guoxue',experience:'经典文献学习与校对经验',reason:'希望参与来源和文字校对',consent:true};assert.equal((await call(2,'/admin-applications',undefined,'POST',{...form,consent:false})).status,400);const registered=await call(2,'/admin-applications',undefined,'POST',form);assert.equal(registered.body.authorizationGranted,false);assert.equal(registered.body.status,'pending');assert.equal((await call(2,'/admin-applications',undefined,'POST',form)).body.id,registered.body.id);assert.equal((await call(2,'/admin/session')).status,403);assert.equal((await call(1,'/admin-applications/mine')).body.items.length,0);assert.equal((await call(2,'/admin-applications')).status,403);
   const reviewed=await call(1,`/admin-applications/${registered.body.id}/review`,process.env.ADMIN_API_KEY,'POST',{action:'vetted',note:'合成复核记录，仍需独立授权'});assert.equal(reviewed.body.authorizationGranted,false);assert.equal((await call(2,'/admin/session')).status,403);assert.equal((await call(2,'/admin-applications/mine')).body.items[0].status,'vetted');
+  // Even an approved PRIVATE or ORG source must never leak through a direct
+  // material/knowledge ID, trace, public list, examination or old wrong-answer.
+  users.prepare("INSERT INTO users VALUES('4','active',NULL)").run();
+  for(const [id,visibility] of [[101,'PRIVATE'],[102,'ORG']]){
+   db.prepare("INSERT INTO materials(id,title,track,category,status,text_content,uploader_id,visibility,org_id) VALUES (?,'访问范围合成资料','guoxue','原典学习','approved',?,'1',?,7)").run(id,'PRIVATE_SOURCE_CANARY_'+id,visibility);
+   db.prepare("INSERT INTO knowledge_points(id,material_id,title,content,status,category,track) VALUES (?,?,'访问范围合成知识',?,'approved','原典学习','guoxue')").run(id,id,'PRIVATE_SOURCE_CANARY_'+id);
+   db.prepare("INSERT INTO questions(id,knowledge_id,track,category,type,stem,options,answer,status,difficulty) VALUES (?,?,'guoxue','原典学习','single',?,'[\"选项甲\",\"选项乙\"]','0','approved','easy')").run(id,id,'PRIVATE_SOURCE_CANARY_'+id);
+  }
+  db.prepare("INSERT INTO org_members(org_id,user_id,role) VALUES(7,'4','member')").run();
+  for(const id of [101,102])for(const part of [`/materials/${id}`,`/knowledge/${id}`,`/knowledge/${id}/trace`]){assert.equal((await call(2,part)).status,403);assert.equal((await call(1,part)).status,200);}
+  assert.equal((await call(4,'/materials/101')).status,403);assert.equal((await call(4,'/materials/102')).status,200);assert.equal((await call(4,'/knowledge/102')).status,200);
+  for(const part of ['materials','knowledge','questions']){const result=await call(2,'/'+part);assert.equal(result.status,200);assert.ok(!JSON.stringify(result.body).includes('PRIVATE_SOURCE_CANARY'));}
+  assert.equal((await call(2,'/knowledge?materialId=101')).status,403);assert.equal((await call(2,'/exams/start',undefined,'POST',{track:'guoxue',level:1})).body.empty,true);
+  const orgExam=await call(4,'/exams/start',undefined,'POST',{track:'guoxue',level:1});assert.equal(orgExam.body.success,true);assert.deepEqual(orgExam.body.questions.map(q=>q.id),['102']);
+  const old=db.prepare("INSERT INTO exams(user_id,track,level,question_ids,answers) VALUES('2','guoxue',1,'[101]','{}')").run();db.prepare("INSERT INTO wrong_answers(user_id,question_id,my_answer,exam_id) VALUES('2',101,'1',?)").run(old.lastInsertRowid);
+  assert.equal((await call(2,`/exams/${old.lastInsertRowid}/submit`,undefined,'POST',{answers:{101:'0'}})).status,403);assert.equal((await call(2,'/wrong-answers')).body.wrongs.length,0);
   let last;for(let i=0;i<12;i++)last=await call(2,'/admin/session','another-bad-password');assert.equal(last.status,429);
  }finally{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));db.close();users.close();for(const name of ['JWT_SECRET','ADMIN_API_KEY','ACADEMY_DB_PATH','DB_PATH','PRICING_DATA_DIR','ACADEMY_ADMIN_IDS']){if(previous[name]===undefined)delete process.env[name];else process.env[name]=previous[name];}fs.rmSync(folder,{recursive:true,force:true});}
 });

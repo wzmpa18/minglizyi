@@ -538,6 +538,33 @@ function myOrgIds(req) {
   } catch { return []; }
 }
 
+// Approval never changes PRIVATE/ORG into PUBLIC. Derived knowledge/questions
+// retain their source material's visibility, including direct IDs and exams.
+function canReadMaterial(req, material) {
+  if (!material) return false;
+  if (isAdmin(req) || String(material.uploader_id) === String(req.user?.userId)) return true;
+  if ((material.visibility || 'PUBLIC') === 'PUBLIC') return true;
+  return material.visibility === 'ORG' && myOrgIds(req).includes(material.org_id);
+}
+function materialScopeSql(req, alias, params) {
+  const me=String(req.user.userId),orgs=myOrgIds(req);
+  params.push(me);
+  let sql=`(COALESCE(${alias}.visibility,'PUBLIC')='PUBLIC' OR ${alias}.uploader_id=?`;
+  if(orgs.length){sql+=` OR (${alias}.visibility='ORG' AND ${alias}.org_id IN (${orgs.map(()=>'?').join(',')}))`;params.push(...orgs);}
+  return sql+')';
+}
+function canReadKnowledge(req, point) {
+  return !!point && (!point.material_id || canReadMaterial(req,getDb().prepare('SELECT * FROM materials WHERE id=?').get(point.material_id)));
+}
+function questionScopeSql(req,params) {
+  if(isAdmin(req))return '1=1';
+  return `(COALESCE(questions.knowledge_id,0)=0 OR EXISTS (SELECT 1 FROM knowledge_points qa_k LEFT JOIN materials qa_m ON qa_m.id=qa_k.material_id WHERE qa_k.id=questions.knowledge_id AND qa_k.status='approved' AND (COALESCE(qa_k.material_id,0)=0 OR (qa_m.id IS NOT NULL AND ${materialScopeSql(req,'qa_m',params)}))))`;
+}
+function canReadQuestion(req,question) {
+  if(isAdmin(req)||!question?.knowledge_id)return !!question;
+  return canReadKnowledge(req,getDb().prepare('SELECT * FROM knowledge_points WHERE id=?').get(question.knowledge_id));
+}
+
 // ==================== v25.0.72 正骨专区付费门控 ====================
 // 板块=「中华非遗正骨」（track=zhongyi 独立类目，15部资料/212知识点/266题在库）
 // 控制源：工具矩阵 SSOT（tool-matrix.json zhenggu 条目，后台「工具管理中心」实时可调）
@@ -1312,6 +1339,7 @@ function createRouter() {
     try {
       const row = getDb().prepare('SELECT * FROM materials WHERE id = ?').get(parseInt(req.params.id, 10));
       if (!row) return res.status(404).json({ success: false, error: '资料不存在' });
+      if(!canReadMaterial(req,row))return res.status(403).json({success:false,error:'无权查看此资料'});
       // v25.0.72：正骨类目资料详情强制门控（按资料归属类目判定）
       if (row.category === ZHENGGU_CATEGORY) {
         const block = zhengguGateBlock(req);
@@ -1398,13 +1426,14 @@ function createRouter() {
       if (materialId) {
         // P6-I-PLUS 规则4：指纹复用的资料展示其复用来源（dedup_of）的知识点
         const mid = parseInt(materialId, 10);
-        const src = d.prepare('SELECT dedup_of FROM materials WHERE id=?').get(mid);
+        const src = d.prepare('SELECT * FROM materials WHERE id=?').get(mid);
+        if(src&&!canReadMaterial(req,src))return res.status(403).json({success:false,error:'无权查看此资料的知识点'});
         const ids = src && src.dedup_of ? [mid, src.dedup_of] : [mid];
         sql += ` AND k.material_id IN (${ids.map(() => '?').join(',')})`;
         params.push(...ids);
       }
       if (isAdmin(req)) { if (status) { sql += ' AND k.status = ?'; params.push(status); } }
-      else { sql += ` AND k.status = 'approved'`; }
+      else { sql += ` AND k.status = 'approved' AND (COALESCE(k.material_id,0)=0 OR (m.id IS NOT NULL AND ${materialScopeSql(req,'m',params)}))`; }
       if(!isAdmin(req)&&zhengguGateBlock(req)){sql+=` AND COALESCE(k.category,'') != ? AND COALESCE(m.category,'') != ?`;params.push(ZHENGGU_CATEGORY,ZHENGGU_CATEGORY);}
       const beforeId = Number(req.query.beforeId);
       if (Number.isSafeInteger(beforeId) && beforeId > 0) { sql += ' AND k.id < ?'; params.push(beforeId); }
@@ -1431,6 +1460,7 @@ function createRouter() {
     try {
       const row = getDb().prepare('SELECT * FROM knowledge_points WHERE id = ?').get(parseInt(req.params.id, 10));
       if (!row) return res.status(404).json({ success: false, error: '知识点不存在' });
+      if(!canReadKnowledge(req,row))return res.status(403).json({success:false,error:'无权查看此知识点'});
       if (row.status !== 'approved' && !isAdmin(req)) return res.status(403).json({ success: false, error: '知识点审核中' });
       const parent=row.material_id?getDb().prepare('SELECT category FROM materials WHERE id=?').get(row.material_id):null;
       if(row.category===ZHENGGU_CATEGORY||parent?.category===ZHENGGU_CATEGORY){const block=zhengguGateBlock(req);if(block)return res.status(block.code).json({success:false,error:block.error,paywall:block.paywall||null});}
@@ -1467,6 +1497,7 @@ function createRouter() {
     try {
       const row=getDb().prepare('SELECT k.*,m.category AS parent_category FROM knowledge_points k LEFT JOIN materials m ON m.id=k.material_id WHERE k.id=?').get(parseInt(req.params.id,10));
       if(!row)return res.status(404).json({success:false,error:'知识点不存在'});
+      if(!canReadKnowledge(req,row))return res.status(403).json({success:false,error:'无权查看此知识点来源'});
       if(row.status!=='approved'&&!isAdmin(req))return res.status(403).json({success:false,error:'知识点审核中'});
       if(row.category===ZHENGGU_CATEGORY||row.parent_category===ZHENGGU_CATEGORY){const block=zhengguGateBlock(req);if(block)return res.status(block.code).json({success:false,error:block.error});}
       const trace = QG.traceKnowledge(getDb(), parseInt(req.params.id, 10));
@@ -1620,7 +1651,7 @@ function createRouter() {
       if (category) { sql += ' AND category = ?'; params.push(category); }
       if (type) { sql += ' AND type = ?'; params.push(type); }
       if (isAdmin(req)) { if (status) { sql += ' AND status = ?'; params.push(status); } }
-      else { sql += ` AND status = 'approved'`; }
+      else { sql += ` AND status = 'approved' AND ${questionScopeSql(req,params)}`; }
       if(!isAdmin(req)&&zhengguGateBlock(req)){sql+=` AND COALESCE(category,'') != ? AND NOT EXISTS (SELECT 1 FROM knowledge_points k LEFT JOIN materials m ON m.id=k.material_id WHERE k.id=questions.knowledge_id AND (k.category=? OR m.category=?))`;params.push(ZHENGGU_CATEGORY,ZHENGGU_CATEGORY,ZHENGGU_CATEGORY);}
       const beforeId = Number(req.query.beforeId);
       if (Number.isSafeInteger(beforeId) && beforeId > 0) { sql += ' AND id < ?'; params.push(beforeId); }
@@ -1683,10 +1714,11 @@ function createRouter() {
       const excludeZhenggu = normTrack(track) === 'zhongyi' && !zhengguUnlocked(req);
       const pickBy = (type, difficulty, n) => {
         if (n <= 0) return;
-        const rows = d.prepare(`SELECT * FROM questions WHERE status='approved' AND track=? AND type=? AND difficulty=?`
+        const args=[track,type,difficulty],visibility=questionScopeSql(req,args);
+        if(excludeZhenggu)args.push(ZHENGGU_CATEGORY);args.push(n);
+        const rows = d.prepare(`SELECT * FROM questions WHERE status='approved' AND track=? AND type=? AND difficulty=? AND ${visibility}`
           + (excludeZhenggu ? ` AND (category IS NULL OR category != ?)` : '')
-          + ` ORDER BY RANDOM() LIMIT ?`)
-          .all(...(excludeZhenggu ? [track, type, difficulty, ZHENGGU_CATEGORY, n] : [track, type, difficulty, n]));
+          + ` ORDER BY RANDOM() LIMIT ?`).all(...args);
         picked.push(...rows);
       };
       for (const [type, n] of Object.entries({ single: cfg.single, multi: cfg.multi, judge: cfg.judge, fill: cfg.fill || 0, qa: cfg.qa || 0, case: cfg.case || 0 })) {
@@ -1722,6 +1754,7 @@ function createRouter() {
       const { answers = {} } = req.body;
       const ids = JSON.parse(exam.question_ids || '[]');
       const questions = ids.map(qid => d.prepare('SELECT * FROM questions WHERE id = ?').get(qid)).filter(Boolean);
+      if(questions.some(q=>!canReadQuestion(req,q)))return res.status(403).json({success:false,error:'试卷中的资料访问范围已变化，请重新开始；未提交答案'});
       let total = 0, got = 0;
       const detail = [];
       const wrongInsert = d.prepare('INSERT INTO wrong_answers (user_id, question_id, my_answer, exam_id) VALUES (?,?,?,?)');
@@ -1837,7 +1870,7 @@ function createRouter() {
       const rows = d.prepare(`SELECT w.*, q.stem, q.options, q.answer, q.analysis, q.type, q.track FROM wrong_answers w JOIN questions q ON q.id = w.question_id WHERE w.user_id = ? ORDER BY w.id DESC LIMIT 200`).all(String(req.user.userId));
       res.json({
         success: true,
-        wrongs: rows.map(r => ({
+        wrongs: rows.filter(r=>canReadQuestion(req,d.prepare('SELECT * FROM questions WHERE id=?').get(r.question_id))).map(r => ({
           id: String(r.id), questionId: String(r.question_id), myAnswer: r.my_answer, type: r.type,
           track: r.track, stem: r.stem, options: JSON.parse(r.options || '[]'), answer: r.answer,
           analysis: r.analysis, createdAt: r.created_at,
