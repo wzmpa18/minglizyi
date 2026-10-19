@@ -9,6 +9,7 @@ test('default preview removes people, institution, dates, contacts and local att
  const entry=fixture(),before=structuredClone(entry),settings={...DEFAULT_LIFE_EXPORT_PRIVACY,extraWords:'额外身份线索'};
  const out=JSON.stringify(lifeExportProjection([entry],settings));
  for(const secret of ['李某','甲医院','张医生','2026-10-19','13812345678','case@example.test','https://example.test','额外身份线索','受限原作者','不得导出原话','private-photo','local-owner-0001','受限盘内容'])assert.ok(!out.includes(secret),secret);
+ assert.ok(!out.includes('12:30'));assert.ok(!out.includes('13:00'));
  assert.deepEqual(entry,before);assert.equal(lifeExportProjection([entry],settings)[0].health.confirmedText,'本人核对内容');
  const granted=JSON.stringify(lifeExportProjection([entry],{...settings,includeSources:true,includeCharts:true}));assert.ok(granted.includes('获准原话'));assert.ok(!granted.includes('不得导出原话'));assert.ok(!granted.includes('受限盘内容'));
 });
@@ -23,3 +24,5 @@ test('derived crop keeps original identity separate; invalid source/range reject
  const bad=structuredClone(entry);bad.attachments[1].derivedFrom.box=[0.8,0,0.5,1];assert.throws(()=>validateLifeEntry(bad),/裁剪/);
  const invalid=structuredClone(entry);invalid.attachments[1].derivedFrom.sourceSha256='unknown';assert.throws(()=>validateLifeEntry(invalid),/裁剪/);
 });
+
+test('hiding dates removes complete ISO timestamps; opting to keep dates does not misclassify a date as a telephone',()=>{const entry=fixture();const hidden=buildLifeExport([entry],'json',DEFAULT_LIFE_EXPORT_PRIVACY).body;assert.ok(!hidden.includes('T12:30'));assert.ok(!hidden.includes('T13:00'));const visible=buildLifeExport([entry],'json',{...DEFAULT_LIFE_EXPORT_PRIVACY,hideDates:false}).body;assert.ok(visible.includes('2026-10-19T12:30:00Z'));assert.ok(!visible.includes('13812345678'));});

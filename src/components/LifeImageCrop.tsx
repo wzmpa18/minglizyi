@@ -1,9 +1,11 @@
 "use client";
 import {useEffect,useRef,useState} from 'react';
+import {useInterfaceLocale} from '@/lib/interfaceLocale';
 import type {LifeAttachment} from '@/lib/lifeRecords';
 import {InterfaceButton as Button,InterfaceLabel as Label} from './InterfaceControls';
 const action='rounded-xl border border-stone-300 bg-white px-3 py-2 text-sm text-stone-950 disabled:opacity-40';
 export function LifeImageCrop({source,blob,onCancel,onSave}:{source:LifeAttachment;blob:Blob;onCancel:()=>void;onSave:(file:File,box:[number,number,number,number])=>Promise<void>}){
+ const {ui}=useInterfaceLocale();
  const [url,setUrl]=useState(''),[size,setSize]=useState<{width:number;height:number}|null>(null),[box,setBox]=useState<[number,number,number,number]>([0,0,100,100]),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const image=useRef<HTMLImageElement|null>(null),mounted=useRef(true);
  useEffect(()=>{mounted.current=true;const next=URL.createObjectURL(blob);setUrl(next);return()=>{mounted.current=false;URL.revokeObjectURL(next);};},[blob]);
@@ -21,9 +23,9 @@ export function LifeImageCrop({source,blob,onCancel,onSave}:{source:LifeAttachme
   }catch(e){if(mounted.current)setError(e instanceof Error?e.message:'裁剪未完成，原图保留');}finally{if(mounted.current)setBusy(false);}
  }
  return <div role="dialog" aria-modal="true" aria-label="裁剪独立副本" className="fixed inset-0 z-[135] overflow-auto bg-stone-950 p-4 pt-[max(28px,calc(env(safe-area-inset-top)+16px))] text-white"><div className="mx-auto max-w-3xl space-y-4">
-  <h2 className="text-lg font-semibold">裁剪独立副本</h2><p className="text-sm leading-6">只在本机处理，保留原图与原识字结果；新副本有独立指纹和来源，需重新识字核对。裁剪不等于完整脱敏，保存后请检查边缘文字。</p>
+  <h2 className="text-lg font-semibold">{ui('裁剪独立副本')}</h2><p className="text-sm leading-6">只在本机处理，保留原图与原识字结果；新副本有独立指纹和来源，需重新识字核对。裁剪不等于完整脱敏，保存后请检查边缘文字。</p>
   <div className="relative mx-auto w-full max-w-2xl">{url&&<img ref={image} src={url} alt="本人选择的本机裁剪原图" className="h-auto w-full" onLoad={e=>{setSize({width:e.currentTarget.naturalWidth,height:e.currentTarget.naturalHeight});}} onError={()=>setError('原图解码失败，未生成副本')}/>}<div aria-hidden="true" className="pointer-events-none absolute border-2 border-red-500 bg-white/10" style={{left:box[0]+'%',top:box[1]+'%',width:box[2]+'%',height:box[3]+'%'}}/></div>
-  <div className="grid grid-cols-2 gap-3">{['左侧起点','上侧起点','宽度','高度'].map((label,i)=><Label className="block text-sm" key={label}>{label}（%）<input type="number" min={i<2?0:1} max={100} value={box[i]} disabled={busy} className="mt-1 w-full rounded-lg bg-white p-3 text-base text-stone-950" onChange={e=>setBox(old=>old.map((v,j)=>i===j?Number(e.target.value):v) as [number,number,number,number])}/></Label>)}</div>
+  <div className="grid grid-cols-2 gap-3">{['左侧起点','上侧起点','宽度','高度'].map((label,i)=><Label className="block text-sm" key={label}>{ui(label)}（%）<input type="number" min={i<2?0:1} max={100} value={box[i]} disabled={busy} className="mt-1 w-full rounded-lg bg-white p-3 text-base text-stone-950" onChange={e=>setBox(old=>old.map((v,j)=>i===j?Number(e.target.value):v) as [number,number,number,number])}/></Label>)}</div>
   <p className="text-xs">{size?`原图${size.width} × ${size.height}像素`:'正在加载原图'} · PNG副本可能比压缩原图更大</p>{error&&<p role="alert" className="rounded-lg bg-red-100 p-3 text-red-950">{error}</p>}
   <div className="flex flex-wrap gap-3"><Button className={action} disabled={busy||!size} onClick={()=>void save()}>{busy?'正在本机保存…':'保存独立裁剪副本'}</Button><Button className={action} disabled={busy} onClick={onCancel}>取消</Button></div>
  </div></div>;

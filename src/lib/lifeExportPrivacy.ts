@@ -16,8 +16,10 @@ export function lifeExportProjection(entries:LifeEntry[],options:LifeExportPriva
  const ordered=[...words].sort((a,b)=>b.length-a.length);
  const redact=(input:string)=>{
   let text=input;for(const word of ordered)text=text.split(word).join('[已隐藏]');
-  if(options.hideContacts)text=text.replace(/(?<!\d)\+?\d[\d\s()\-]{5,}\d(?!\d)/gu,'[联系信息已隐藏]').replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/giu,'[邮箱已隐藏]').replace(/https?:\/\/[^\s<>"']+/giu,'[链接已隐藏]');
-  if(options.hideDates)text=text.replace(/\d{4}[-/.年]\d{1,2}[-/.月]\d{1,2}(?:日)?(?:[T\s]\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?/gu,'[日期已隐藏]').replace(/\d{1,2}月\d{1,2}日/gu,'[月日已隐藏]');
+  // Dates first: telephone-like masking must not eat only the date prefix and
+  // leave a private ISO time behind. An explicitly unhidden date is not a phone.
+  if(options.hideDates)text=text.replace(/\d{4}[-/.年]\d{1,2}[-/.月]\d{1,2}(?:日)?(?:[T\s]\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?)?/gu,'[日期已隐藏]').replace(/\d{1,2}月\d{1,2}日/gu,'[月日已隐藏]').replace(/(?<!\d)\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?(?!\d)/gu,'[时刻已隐藏]');
+  if(options.hideContacts)text=text.replace(/(?<!\d)\+?\d[\d\s()\-]{5,}\d(?!\d)/gu,match=>/^\d{4}-\d{1,2}-\d{1,2}$/.test(match)?match:'[联系信息已隐藏]').replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/giu,'[邮箱已隐藏]').replace(/https?:\/\/[^\s<>"']+/giu,'[链接已隐藏]');
   return text;
  };
  const walk=(value:unknown):unknown=>typeof value==='string'?redact(value):Array.isArray(value)?value.map(walk):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).map(([k,v])=>[k,walk(v)])):value;
