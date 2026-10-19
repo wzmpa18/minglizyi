@@ -1,4 +1,6 @@
 "use client";
+import {useInterfaceLocale} from "@/lib/interfaceLocale";
+import {InterfaceButton} from "@/components/InterfaceControls";
 
 import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
@@ -132,6 +134,7 @@ function ToolIcon({ icon }: { icon: string }) {
 }
 
 export default function YixueHome() {
+  const {ui}=useInterfaceLocale();
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
   const iosProfile = mounted && isLegacyIOSLearningProfile();
@@ -264,7 +267,7 @@ export default function YixueHome() {
                   {s.icon}
                 </span>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-gray-800">{s.name}</p>
+                  <p className="text-sm font-semibold text-gray-800">{ui(s.name)}</p>
                   <p className="truncate text-[10px] text-gray-500">{s.desc}</p>
                 </div>
               </Link>
@@ -283,7 +286,7 @@ export default function YixueHome() {
                 className="flex flex-col items-center gap-1 rounded-2xl bg-white py-3 shadow-sm active:opacity-90"
               >
                 <span className="text-xl">{it.icon}</span>
-                <span className="text-xs font-medium text-gray-700">{it.label}</span>
+                <span className="text-xs font-medium text-gray-700">{ui(it.label)}</span>
                 <span className="px-1 text-center text-[9px] leading-tight text-gray-400">{it.desc}</span>
               </Link>
             ))}
@@ -301,7 +304,7 @@ export default function YixueHome() {
                 className="flex w-[70px] flex-col items-center gap-1 rounded-[15px] bg-[#eee] py-2.5 text-center shadow-[0_2px_5px_#888888] transition-all active:scale-[0.96] active:shadow-sm"
               >
                 <ToolIcon icon={tool.icon} />
-                <span className="text-xs font-medium text-gray-700">{tool.label}</span>
+                <span className="text-xs font-medium text-gray-700">{ui(tool.label)}</span>
               </Link>
             ))}
           </div>
@@ -379,7 +382,7 @@ export default function YixueHome() {
             className="flex w-[70px] flex-col items-center gap-1 rounded-[15px] bg-[#eee] py-2.5 text-center shadow-[0_2px_5px_#888888] transition-all active:scale-[0.96] active:shadow-sm"
           >
             <ToolIcon icon={tool.icon} />
-            <span className="text-xs font-medium text-gray-700">{tool.label}</span>
+            <span className="text-xs font-medium text-gray-700">{ui(tool.label)}</span>
           </Link>
         ))}
       </div>

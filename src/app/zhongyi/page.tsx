@@ -1,4 +1,6 @@
 ﻿"use client";
+import {useInterfaceLocale} from "@/lib/interfaceLocale";
+import {InterfaceButton} from "@/components/InterfaceControls";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -294,6 +296,7 @@ function ChevronRight() {
 
 // ==================== 主组件 ====================
 export default function ZhongyiHome() {
+  const {ui}=useInterfaceLocale();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchItem[]>([]);
@@ -518,12 +521,12 @@ export default function ZhongyiHome() {
               }}
             />
             {searchQuery && (
-              <button
+              <InterfaceButton
                 onClick={() => { setSearchQuery(""); setShowResults(false); }}
                 style={{ background: "none", border: "none", color: "#999", cursor: "pointer", padding: "2px" }}
               >
                 ✕
-              </button>
+              </InterfaceButton>
             )}
           </div>
 
@@ -559,7 +562,7 @@ export default function ZhongyiHome() {
                 searchResults.map((r, i) => {
                   const meta = TYPE_META[r.type] || { bg: "#eee", fg: "#666" };
                   return (
-                    <button
+                    <InterfaceButton
                       key={i}
                       onClick={() => handleSearchItemClick(r)}
                       style={{
@@ -609,7 +612,7 @@ export default function ZhongyiHome() {
                           </span>
                         )}
                       </span>
-                    </button>
+                    </InterfaceButton>
                   );
                 })
               )}
@@ -654,7 +657,7 @@ export default function ZhongyiHome() {
                     <e.Icon color="#AAA" />
                   </div>
                   <div>
-                    <div style={{ fontSize: "16px", fontWeight: "bold", color: "#999" }}>{e.title}</div>
+                    <div style={{ fontSize: "16px", fontWeight: "bold", color: "#999" }}>{ui(e.title)}</div>
                     <div style={{ fontSize: "12px", color: "#BBB", marginTop: "2px" }}>🛠 维护中，稍后开放</div>
                   </div>
                 </div>
@@ -691,7 +694,7 @@ export default function ZhongyiHome() {
                 </div>
                 <div>
                   <div style={{ fontSize: "16px", fontWeight: "bold", color: "#333" }}>
-                    {e.title}
+                    {ui(e.title)}
                     {!gate.allowed && gate.needLevelName && (
                       <span style={{ fontSize: 11, color: "#C77700", marginLeft: 4 }}>🔒会员</span>
                     )}
@@ -815,7 +818,7 @@ export default function ZhongyiHome() {
               if (!opts.gate.allowed && opts.gate.status === "MAINTENANCE") {
                 return (
                   <div
-                    key={opts.title}
+                    key={ui(opts.title)}
                     style={{
                       display: "flex",
                       flexDirection: "column",
@@ -829,7 +832,7 @@ export default function ZhongyiHome() {
                     }}
                   >
                     <div style={{ width: "40px", height: "40px", borderRadius: "10px", backgroundColor: "#EEE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "20px" }}>🛠</div>
-                    <div style={{ fontSize: "13px", fontWeight: "bold", color: "#999" }}>{opts.title}</div>
+                    <div style={{ fontSize: "13px", fontWeight: "bold", color: "#999" }}>{ui(opts.title)}</div>
                     <div style={{ fontSize: "10px", color: "#BBB" }}>维护中</div>
                   </div>
                 );
@@ -854,7 +857,7 @@ export default function ZhongyiHome() {
                     {opts.emoji}
                   </div>
                   <div style={{ fontSize: "13px", fontWeight: "bold", color: opts.titleColor || "#333" }}>
-                    {opts.title}
+                    {ui(opts.title)}
                     {!opts.gate.allowed && opts.gate.needLevelName && (
                       <span style={{ fontSize: 10, color: "#C77700", marginLeft: 2 }}>🔒</span>
                     )}

@@ -1,4 +1,6 @@
 "use client";
+import {useInterfaceLocale} from "@/lib/interfaceLocale";
+import {InterfaceButton} from "@/components/InterfaceControls";
 
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -104,6 +106,7 @@ const TOOLS = [
 ];
 
 export default function AcademyPage() {
+  const {ui}=useInterfaceLocale();
   const router = useRouter();
   const [tracks, setTracks] = useState<TrackOverview[]>([]);
   const [loading, setLoading] = useState(true);
@@ -166,7 +169,7 @@ export default function AcademyPage() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-[15px] font-bold text-gray-800">{z.name}</span>
+                      <span className="text-[15px] font-bold text-gray-800">{ui(z.name)}</span>
                       {z.coming && (
                         <span className="rounded-full px-2 py-0.5 text-[9px] font-semibold" style={{ backgroundColor: z.color + "15", color: z.color }}>
                           持续完善中
@@ -205,7 +208,7 @@ export default function AcademyPage() {
                     {/* 区内入口 */}
                     <div className="flex flex-wrap gap-2 px-4 pb-3.5 pt-2">
                       {z.entries.filter((e) => PUBLIC_SOCIAL_ENABLED || e.key !== "community").map((e) => (
-                        <button
+                        <InterfaceButton
                           key={e.key}
                           onClick={() => router.push(e.url)}
                           className="rounded-full px-3.5 py-2 text-xs font-bold active:scale-[0.97] transition-transform"
@@ -214,8 +217,8 @@ export default function AcademyPage() {
                             color: z.key === "yikao" ? "#fff" : z.color,
                           }}
                         >
-                          {e.label}
-                        </button>
+                          {ui(e.label)}
+                        </InterfaceButton>
                       ))}
                     </div>
                   </>
@@ -229,7 +232,7 @@ export default function AcademyPage() {
         <p className="mb-2 mt-4 px-1 text-xs font-semibold text-gray-500">学习工具</p>
         <div className="grid grid-cols-4 gap-2.5">
           {TOOLS.map((e) => (
-            <button
+            <InterfaceButton
               key={e.key}
               onClick={() => router.push(e.url)}
               className="flex flex-col items-center rounded-2xl bg-white p-2.5 shadow-sm active:scale-[0.97] transition-transform"
@@ -237,9 +240,9 @@ export default function AcademyPage() {
               <span className="mb-1 flex h-9 w-9 items-center justify-center rounded-xl text-lg" style={{ backgroundColor: BRAND + "12" }}>
                 {e.emoji}
               </span>
-              <p className="text-[12px] font-bold text-gray-800">{e.name}</p>
+              <p className="text-[12px] font-bold text-gray-800">{ui(e.name)}</p>
               <p className="mt-0.5 text-center text-[9px] leading-tight text-gray-400">{e.desc}</p>
-            </button>
+            </InterfaceButton>
           ))}
         </div>
 

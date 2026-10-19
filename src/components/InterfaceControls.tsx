@@ -1,6 +1,9 @@
 "use client";
 import {Children,cloneElement,forwardRef,isValidElement,type ReactNode,type ButtonHTMLAttributes,type LabelHTMLAttributes,type OptionHTMLAttributes} from "react";
 import {useInterfaceLocale} from "@/lib/interfaceLocale";
+/** Explicit boundary for a navigation title supplied by a server layout.
+ * Never apply to a book passage, medical entry, user name or chart value. */
+export function InterfaceText({text}:{text:string}){const {ui}=useInterfaceLocale();return <>{ui(text)}</>;}
 export function translateControlChildren(children:ReactNode,ui:(value:string)=>string):ReactNode {
  return Children.map(children,node=>{
   if(typeof node==="string"){

@@ -1,4 +1,6 @@
 "use client";
+import {useInterfaceLocale} from "@/lib/interfaceLocale";
+import {InterfaceButton} from "@/components/InterfaceControls";
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
@@ -136,7 +138,7 @@ function Pillar({label,ganzhi}:{label:string;ganzhi:string}){
 
 function Collapse({title,children,defaultOpen=false,titleColor}:{title:string;children:React.ReactNode;defaultOpen?:boolean;titleColor?:string}){
   const[open,setOpen]=useState(defaultOpen);
-  return(<div className="mb-2 overflow-hidden rounded-xl bg-gray-50"><button onClick={()=>setOpen(!open)} className="flex w-full items-center justify-between px-3 py-2.5 text-left"><span className="text-sm font-semibold" style={{color:titleColor||"#333"}}>{title}</span><span className="text-gray-400 text-sm transition-transform" style={{transform:open?"rotate(180deg)":"none"}}>▼</span></button>{open&&<div className="px-3 pb-3">{children}</div>}</div>);
+  return(<div className="mb-2 overflow-hidden rounded-xl bg-gray-50"><InterfaceButton onClick={()=>setOpen(!open)} className="flex w-full items-center justify-between px-3 py-2.5 text-left"><span className="text-sm font-semibold" style={{color:titleColor||"#333"}}>{title}</span><span className="text-gray-400 text-sm transition-transform" style={{transform:open?"rotate(180deg)":"none"}}>▼</span></InterfaceButton>{open&&<div className="px-3 pb-3">{children}</div>}</div>);
 }
 
 // 今日宜/忌标签组（Web 常显区块与 iOS 折叠区块共用）
@@ -195,6 +197,7 @@ function getBaziAdvice(baziGan:string|null,baziZhi:string|null,dayGan:string,day
 }
 
 export default function HomePage(){
+  const {ui}=useInterfaceLocale();
   const[showBaziInput,setShowBaziInput]=useState(false);
   const[userDayGan,setUserDayGan]=useState<string|null>(null);
   const[userDayZhi,setUserDayZhi]=useState<string|null>(null);
@@ -270,15 +273,15 @@ export default function HomePage(){
       <div className="mt-3 flex gap-3 px-3">
         {iosProfile?(
           <Link href="/academy/yixue" className="flex flex-1 flex-col items-center justify-center rounded-2xl text-white shadow-lg" style={{height:"100px",background:`linear-gradient(135deg,${BRAND} 0%,#9B5ECF 100%)`,borderRadius:"16px"}}>
-            <BaguaIcon/><span className="mt-1 text-base font-bold">易学学习</span>
+            <BaguaIcon/><span className="mt-1 text-base font-bold">{ui("易学学习")}</span>
           </Link>
         ):(
           <Link href="/yixue" className="flex flex-1 flex-col items-center justify-center rounded-2xl text-white shadow-lg" style={{height:"100px",background:`linear-gradient(135deg,${BRAND} 0%,#9B5ECF 100%)`,borderRadius:"16px"}}>
-            <BaguaIcon/><span className="mt-1 text-base font-bold">易学排盘</span>
+            <BaguaIcon/><span className="mt-1 text-base font-bold">{ui("易学排盘")}</span>
           </Link>
         )}
         <Link href="/zhongyi" className="flex flex-1 flex-col items-center justify-center rounded-2xl shadow-md" style={{height:"100px",backgroundColor:"#EDE4F7",borderRadius:"16px",color:BRAND}}>
-          <MedicineIcon/><span className="mt-1 text-base font-bold">中医学习</span>
+          <MedicineIcon/><span className="mt-1 text-base font-bold">{ui("中医学习")}</span>
         </Link>
       </div>
 
@@ -288,14 +291,14 @@ export default function HomePage(){
           <Link href="/yixue/huangli" className="flex items-center gap-2 rounded-2xl bg-white px-3 py-3 shadow-sm active:opacity-90">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl text-lg" style={{backgroundColor:"#EEF2FB",color:"#2D5CA0"}}>📅</span>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-gray-800">传统历法黄历</p>
+              <p className="text-sm font-semibold text-gray-800">{ui("传统历法黄历")}</p>
               <p className="text-[10px] text-gray-500">农历 · 干支 · 节气 · 节日</p>
             </div>
           </Link>
           <Link href="/yixue/wannianli/events" className="flex items-center gap-2 rounded-2xl bg-white px-3 py-3 shadow-sm active:opacity-90">
             <span className="flex h-9 w-9 items-center justify-center rounded-xl text-lg" style={{backgroundColor:"#FBEEF6",color:BRAND}}>🎂</span>
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-gray-800">生日·纪念日提醒</p>
+              <p className="text-sm font-semibold text-gray-800">{ui("生日·纪念日提醒")}</p>
               <p className="text-[10px] text-gray-500">农历生日 · 节气 · 纪念日</p>
             </div>
           </Link>
@@ -306,7 +309,7 @@ export default function HomePage(){
       <Link href="/academy" className="mx-3 mt-3 flex items-center gap-3 rounded-2xl px-4 py-3 text-white shadow-md active:opacity-90" style={{background:"linear-gradient(135deg,#1E6B45 0%,#31996A 100%)"}}>
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 text-lg">🎓</span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold">言道学堂</p>
+          <p className="text-sm font-bold">{ui("言道学堂")}</p>
           <p className="text-[10px] opacity-80">经典阅读 · 章节练习 · 错题复习</p>
         </div>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -317,8 +320,8 @@ export default function HomePage(){
       <p className="mt-2 text-center text-xs text-gray-400">传统文化学习与研究 · 仅供学习参考</p>
 
       {/* 黄历区（在按钮下方） */}
-      <Link href="/profile/life/" className="mx-3 mt-3 block rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-purple-900">人生记录 <span className="text-xs text-stone-600">随手记下 · 本机私有 · 随时带走 ›</span></Link>
-      <Link href="/calendar/" className="mx-3 mt-4 flex items-center justify-between rounded-xl px-4 py-3 font-semibold" style={{background:"var(--theme-card-bg)",color:"var(--theme-primary)"}}>言道日历 <span className="text-xs font-normal">生日 · 记事 · 四柱 · 桌面时钟 ›</span></Link>
+      <Link href="/profile/life/" className="mx-3 mt-3 block rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-purple-900">{ui("人生记录")} <span className="text-xs text-stone-600">随手记下 · 本机私有 · 随时带走 ›</span></Link>
+      <Link href="/calendar/" className="mx-3 mt-4 flex items-center justify-between rounded-xl px-4 py-3 font-semibold" style={{background:"var(--theme-card-bg)",color:"var(--theme-primary)"}}>{ui("言道日历")} <span className="text-xs font-normal">生日 · 记事 · 四柱 · 桌面时钟 ›</span></Link>
       <div className="mx-3 mt-4 rounded-2xl overflow-hidden bg-white">
         {/* 黄历头（v25.0.44：深蓝渐变，与上方紫/绿板块区分，白字高对比） */}
         <div className="px-4 py-3 text-white" style={{background:"linear-gradient(135deg,#1B3A68 0%,#2D5CA0 100%)"}}>
@@ -382,12 +385,12 @@ export default function HomePage(){
                   {today.baziAdvice.chonghe&&<div className="text-[11px]" style={{color:"#ed4d49"}}>{today.baziAdvice.chonghe}</div>}
                 </div>
                 <div className="space-y-1">{today.baziAdvice.advice.map((a,i)=><div key={i} className="flex items-start gap-1"><span style={{color:BRAND}}>▸</span><span>{a}</span></div>)}</div>
-                <button onClick={()=>setShowBaziInput(true)} className="mt-2 text-[11px] underline" style={{color:BRAND}}>重新设置八字</button>
+                <InterfaceButton onClick={()=>setShowBaziInput(true)} className="mt-2 text-[11px] underline" style={{color:BRAND}}>重新设置八字</InterfaceButton>
               </div>
             ):(
               <div className="text-xs text-gray-500">
                 <div className="mb-2">设置您的八字日干，可获得今日个性化养生与出行参考</div>
-                <button onClick={()=>setShowBaziInput(true)} className="rounded-lg px-3 py-1.5 text-white text-xs" style={{backgroundColor:BRAND}}>设置我的八字</button>
+                <InterfaceButton onClick={()=>setShowBaziInput(true)} className="rounded-lg px-3 py-1.5 text-white text-xs" style={{backgroundColor:BRAND}}>设置我的八字</InterfaceButton>
               </div>
             )}
           </Collapse>
@@ -430,11 +433,11 @@ export default function HomePage(){
               <div className="text-xs text-gray-600 mb-1">日干（日主）</div>
               <div className="grid grid-cols-5 gap-1">
                 {Object.keys(GAN_WX).map(g=>(
-                  <button key={g} onClick={()=>{const z=prompt("请输入日支（子丑寅卯辰巳午未申酉戌亥）：")||"子";if(ZHI_WX[z])saveBazi(g,z);else alert("无效地支");}} className="rounded py-1 text-sm font-bold text-white" style={{backgroundColor:GAN_WX[g]}}>{g}</button>
+                  <InterfaceButton key={g} onClick={()=>{const z=prompt("请输入日支（子丑寅卯辰巳午未申酉戌亥）：")||"子";if(ZHI_WX[z])saveBazi(g,z);else alert("无效地支");}} className="rounded py-1 text-sm font-bold text-white" style={{backgroundColor:GAN_WX[g]}}>{g}</InterfaceButton>
                 ))}
               </div>
             </div>
-            <button onClick={()=>setShowBaziInput(false)} className="mt-2 w-full rounded-lg py-2 text-sm text-gray-500 hover:bg-gray-100">取消</button>
+            <InterfaceButton onClick={()=>setShowBaziInput(false)} className="mt-2 w-full rounded-lg py-2 text-sm text-gray-500 hover:bg-gray-100">取消</InterfaceButton>
           </div>
         </div>
       )}

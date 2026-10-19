@@ -1,3 +1,4 @@
+import {InterfaceText} from "@/components/InterfaceControls";
 import type { Metadata } from "next";
 import Link from "next/link";
 import {ZHONGYI_TOOLS} from "@/lib/toolNavData";
@@ -26,7 +27,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             {ZHONGYI_TOOLS.map((g) => (
               <Link key={g.href} href={g.href} style={{ display: "block", background: "#F3ECFA", borderRadius: 12, padding: "8px 10px" }}>
-                <span style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#5E2293" }}>{g.name}</span>
+                <span style={{ display: "block", fontSize: 12, fontWeight: 700, color: "#5E2293" }}><InterfaceText text={g.name}/></span>
                 <span style={{ display: "block", fontSize: 10.5, lineHeight: 1.6, color: "#6B5B80" }}>{g.desc.slice(0, 42)}…</span>
               </Link>
             ))}

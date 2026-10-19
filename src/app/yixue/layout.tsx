@@ -1,3 +1,4 @@
+import {InterfaceText} from "@/components/InterfaceControls";
 import type { Metadata } from "next";
 import Link from "next/link";
 import YixueClientShell from "./ClientShell";
@@ -29,7 +30,7 @@ export default function YixueLayout({ children }: { children: React.ReactNode })
                 href={t.href}
                 className="rounded-lg bg-[#f7f2fb] px-2 py-1.5 text-[11px] font-semibold text-gray-700"
               >
-                {t.name}
+                <InterfaceText text={t.name}/>
               </Link>
             ))}
           </div>

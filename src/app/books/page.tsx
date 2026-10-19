@@ -1,4 +1,5 @@
 "use client";
+import {InterfaceButton} from "@/components/InterfaceControls";
 import { SectionGate } from "@/components/SectionGate";
 
 import { useEffect, useMemo, useState } from "react";
@@ -83,16 +84,16 @@ function BooksContent() {
           className="mb-3 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none" />
         <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
           {categories.map((item) => (
-            <button key={item} type="button" onClick={() => setCategory(item)} className="shrink-0 rounded-full border px-3 py-1.5 text-xs"
+            <InterfaceButton key={item} type="button" onClick={() => setCategory(item)} className="shrink-0 rounded-full border px-3 py-1.5 text-xs"
               style={{ borderColor: category === item ? BRAND : "#E5E7EB", color: category === item ? "#FFF" : "#666", background: category === item ? BRAND : "#FFF" }}>
               {item}
-            </button>
+            </InterfaceButton>
           ))}
         </div>
 
         <div className="space-y-3">
           {visible.map((book, index) => (
-            <button key={book.id} type="button" onClick={() => setSelectedId(book.id)} className="flex w-full items-start gap-3 rounded-xl bg-white p-4 text-left shadow-sm">
+            <InterfaceButton translate="no" key={book.id} type="button" onClick={() => setSelectedId(book.id)} className="flex w-full items-start gap-3 rounded-xl bg-white p-4 text-left shadow-sm">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white" style={{ backgroundColor: BRAND }}>{index + 1}</div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
@@ -102,7 +103,7 @@ function BooksContent() {
                 <p className="mt-1 text-xs text-gray-500">{book.author}</p>
                 <p className="mt-2 line-clamp-2 text-xs leading-5 text-gray-400">{book.content.slice(0, 100)}</p>
               </div>
-            </button>
+            </InterfaceButton>
           ))}
           {!visible.length && <div className="rounded-xl bg-white p-6 text-center text-sm text-gray-400">没有找到匹配内容</div>}
         </div>
@@ -131,7 +132,7 @@ function BookReader({ book, onBack }: { book: GuoxueBook; onBack: () => void }) 
   return (
     <div className="min-h-screen bg-[#f5f1e8]" style={{ maxWidth: 520, margin: "0 auto" }}>
       <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-[#dce2d5] bg-[#fbf9f2] px-3 py-3" style={{ paddingTop: "max(12px, env(safe-area-inset-top))" }}>
-        <button type="button" aria-label="返回典籍目录" onClick={onBack} className="rounded-lg px-2 py-1 text-xl text-[#30483f]">‹</button>
+        <InterfaceButton type="button" aria-label="返回典籍目录" onClick={onBack} className="rounded-lg px-2 py-1 text-xl text-[#30483f]">‹</InterfaceButton>
         <div className="min-w-0">
           <h1 className="truncate text-sm font-bold text-gray-800">《{book.title}》</h1>
           <p className="text-[10px] text-gray-400">{book.author} · {book.category}</p>
@@ -144,7 +145,7 @@ function BookReader({ book, onBack }: { book: GuoxueBook; onBack: () => void }) 
           <p className="mt-2 text-xs leading-6 text-[#d1ddca]">{book.author}</p>
           <div className="mt-5 flex flex-wrap gap-2 text-[10px]"><span className="rounded-full border border-[#678577] px-2 py-1">原文阅读</span><span className="rounded-full border border-[#678577] px-2 py-1">连续听学</span><span className="rounded-full border border-[#678577] px-2 py-1">本机书签</span></div>
         </section>
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#fffdf7] p-3 text-[#30483f]"><div className="flex items-center gap-2"><span className="text-xs">字号</span>{[16, 18, 22].map(size => <button key={size} type="button" aria-label={`字号${size}`} aria-pressed={fontSize === size} onClick={() => setFontSize(size)} className="rounded-lg border px-3 py-2 text-xs" style={{ background: fontSize === size ? "#e4ecdf" : "transparent" }}>{size === 16 ? "小" : size === 18 ? "中" : "大"}</button>)}</div><button type="button" onClick={savePosition} className="text-xs underline">记住位置</button>{bookmark && <button type="button" onClick={() => document.getElementById(bookmark)?.scrollIntoView({ block: "start", behavior: "smooth" })} className="text-xs underline">继续上次阅读</button>}</div>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[#fffdf7] p-3 text-[#30483f]"><div className="flex items-center gap-2"><span className="text-xs">字号</span>{[16, 18, 22].map(size => <InterfaceButton key={size} type="button" aria-label={`字号${size}`} aria-pressed={fontSize === size} onClick={() => setFontSize(size)} className="rounded-lg border px-3 py-2 text-xs" style={{ background: fontSize === size ? "#e4ecdf" : "transparent" }}>{size === 16 ? "小" : size === 18 ? "中" : "大"}</InterfaceButton>)}</div><InterfaceButton type="button" onClick={savePosition} className="text-xs underline">记住位置</InterfaceButton>{bookmark && <InterfaceButton type="button" onClick={() => document.getElementById(bookmark)?.scrollIntoView({ block: "start", behavior: "smooth" })} className="text-xs underline">继续上次阅读</InterfaceButton>}</div>
         {message && <p role="status" className="mb-3 text-xs text-[#2a6351]">{message}</p>}
         <details className="mb-3 rounded-xl border border-[#dce2d5] bg-[#fffdf7] p-3"><summary className="cursor-pointer text-sm font-semibold text-[#30483f]">听学与原文辅助</summary><div className="mt-3">
           <LocalListenButton text={`${book.title}。${book.content}`} contentId={`guoxue:${book.id}`} />
