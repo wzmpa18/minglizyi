@@ -1,4 +1,5 @@
 import {researchConcepts,simulateEvidenceLearning} from './researchLearning';
+import {normalizeLifeText} from './lifeRecords';
 export const MEDICAL_STUDY_QUESTIONS=[
  '如何阅读《黄帝内经》的篇章结构？',
  '古籍中的阴阳与五行术语怎样做文献笔记？',
@@ -11,7 +12,7 @@ export const MEDICAL_LITERATURE_SYSTEM='你是医学文献学习助手，只讨�
 /** Only these fixed public questions can enter the general medical AI chat.
  * Free prose (including a personal history) remains an on-device search. */
 export function fixedMedicalStudyRequest(input:string){return MEDICAL_STUDY_QUESTIONS.find(q=>q===input.trim())||null;}
-export function localMedicalConcepts(text:string){return researchConcepts.filter(c=>[c.label,...c.aliases].some(label=>label&&text.includes(label))).map(c=>c.id);}
+export function localMedicalConcepts(text:string){const normalized=normalizeLifeText(text);return researchConcepts.filter(c=>[c.label,...c.aliases].some(label=>label&&normalized.includes(normalizeLifeText(label)))).map(c=>c.id);}
 export async function localMedicalWorksheet(text:string,focus='zhifa'){
  const ids=localMedicalConcepts(text);
  return simulateEvidenceLearning(ids,'bagang',focus);
