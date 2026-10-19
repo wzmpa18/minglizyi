@@ -22,9 +22,9 @@ test('everything is pending until manual approval; read, reply, block, report an
  s.review(reply.id,'reviewer',{status:'APPROVED',safetyConfirmed:true,note:'学习资料建议，无操作指导'});
  assert.throws(()=>s.submit('standard:LU1','carol','丙',body('拒绝形成孤儿深层回复',reply.id)),/嵌套/);
  assert.equal(s.list('standard:LU1').length,2);assert.equal(s.list('standard:LU2').length,0);
- s.report(first.id,'bob','资料表述可能有误');assert.equal(s.queue().reports.length,1);
- s.block('bob','alice');assert.equal(s.list('standard:LU1','bob').length,0);assert.equal(s.list('standard:LU1','alice').length,1);
- s.block('bob','alice',true);assert.equal(s.list('standard:LU1','bob').length,2);
+ s.report(first.id,'bob','资料表述可能有误');assert.equal(s.queue().reports.length,1);assert.equal(s.list('standard:LU1').length,0);
+ s.block('bob','alice');assert.equal(s.list('standard:LU1','bob').length,0);assert.equal(s.list('standard:LU1','alice').length,0);
+ s.block('bob','alice',true);assert.equal(s.list('standard:LU1','bob').length,0);
  assert.throws(()=>s.remove(first.id,'bob'),/只能删除/);
  s.remove(first.id,'alice');assert.equal(s.list('standard:LU1').length,0);
  assert.throws(()=>s.review(first.id,'reviewer',{status:'APPROVED',safetyConfirmed:true,note:'不能恢复已删'}),/已删除/);

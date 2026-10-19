@@ -3,6 +3,7 @@ const fs=require('node:fs'),os=require('node:os'),path=require('node:path'),cryp
 const assert=require('node:assert/strict');
 
 async function worker(root){
+  process.env.STUDY_COMMENT_AUTOMATION='true';process.env.STUDY_AI_MODERATION_READY='true';process.env.HUNYUAN_API_KEY='synthetic-test-only';
   const Database=require('better-sqlite3'),express=require('express'),jwt=require('jsonwebtoken');
   const accountFile=path.join(root,'accounts.db');
   process.env.DB_PATH=accountFile;
@@ -75,7 +76,7 @@ async function worker(root){
     assert.equal((await request(researchTarget)).status,401);
     assert.equal((await request('/admin/research/symptom','PUT',support,{enabled:true})).status,403);
     assert.equal((await request('/admin/research/symptom','PUT',admin,{enabled:true})).status,400);
-    const opening={enabled:true,operatorConfirmed:true,channelDisclosureConfirmed:true,note:'隔离测试完成值守安排与健康交流披露'};
+    const opening={enabled:true,automationConfirmed:true,channelDisclosureConfirmed:true,note:'隔离测试完成自动审核配置与健康交流披露'};
     assert.equal((await request('/admin/research/symptom','PUT',admin,opening)).status,200);
     const consent={birthDate:'1990-05-15',adultConsent:true,inferenceConsent:true,publicScopeConsent:true,consentVersion:researchPolicy.topics.consentVersion};
     assert.equal((await request('/research/symptom','PUT',alice,{...consent,birthDate:'2015-05-15'})).status,403);
@@ -102,6 +103,22 @@ async function worker(root){
     assert.equal(JSON.stringify(researchDb.prepare('SELECT * FROM study_research_consents').all()).includes('1990-05-15'),false);
     assert.equal(JSON.stringify(researchDb.prepare('SELECT * FROM study_comments').all()).includes('10_PRIVATE_CANARY'),false);researchDb.close();
     console.log('PASS: research real HTTP two-account consent, no guest/minor/email-only publishing, server opening prerequisites, pending moderation, stable pseudonyms, block/report, withdrawal and plaintext erasure. No production users or private-vault reads.');
+
+    // Mock only the fixed third-party transport; exercise real HTTP/auth/SQLite.
+    const originalFetch=global.fetch,auto=require('../backend_deploy/studyModerationAutomation');let providerCalls=0;
+    global.fetch=async(url,options)=>{if(String(url)==='https://tokenhub.tencentmaas.com/v1/chat/completions'){providerCalls++;const sent=JSON.parse(options.body);assert.deepEqual(Object.keys(JSON.parse(sent.messages[1].content)).sort(),['public_display_name','public_text']);return new Response(JSON.stringify({choices:[{finish_reason:'stop',message:{content:JSON.stringify({decision:'ALLOW',confidence:0.99,needs_context:false,topic_learning:true,categories:Object.fromEntries(auto.CATEGORIES.map(k=>[k,'CLEAR']))})}}]}));}return originalFetch(url,options);};
+    try{
+      await new Promise(resolve=>setTimeout(resolve,1100));
+      const approved=await request('/target/tool%3Aziwei','POST',alice,{content:'请问节气原文有哪几种解释？',requestId:crypto.randomUUID(),moderationConsentVersion:auto.VERSION});
+      assert.equal(approved.body.status,'APPROVED');assert.equal(approved.body.message,'已发布');assert.equal(providerCalls,1);
+      assert.equal((await request('/target/tool%3Aziwei','GET',bob)).body.comments.length,1);
+      assert.equal((await request('/comment/'+approved.body.id+'/report','POST',bob,{reason:'核对引文'})).status,200);
+      assert.equal((await request('/target/tool%3Aziwei','GET',bob)).body.comments.length,0);
+      assert.equal((await request('/comment/'+approved.body.id+'/recheck','POST',alice,{})).status,409);
+      assert.equal((await request('/comment/'+approved.body.id+'/recheck','POST',bob,{})).status,403);
+      assert.equal(providerCalls,1);
+      console.log('PASS: real HTTP opt-in automatic publication, minimal provider transport, immediate report quarantine and recheck permissions; synthetic provider only.');
+    }finally{global.fetch=originalFetch;}
 
     process.env.FEEDBACK_DATA_DIR=path.join(root,'feedback');
     app.use('/api/feedback',require('../backend_deploy/feedbackRoutes'));

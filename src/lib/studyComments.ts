@@ -3,7 +3,7 @@ import { getUserToken } from "./auth";
 import { clientPlatformHeaders } from "./platformGate";
 export { countStudyCharacters, validateStudyText, MAX_STUDY_CHARACTERS } from "../../backend_deploy/studyCommentPolicy";
 export interface StudyComment { mine?:boolean; research?:{domain:string;mode:string;fields?:Record<string,string>;archiveConsent:boolean;citation?:{id:string;title:string;bookId:string;chapterId:string;paragraph:number;sourceHash:string}|null}; id:string; targetId:string; authorId:string; authorName:string; content:string; parentId:string|null; createdAt:string; pinned:boolean; evidenceUrl:string; }
-export interface StudyCommentConfig { enabled:boolean; maxCharacters:number; reviewBeforePublish:boolean; contactUrl:string; schemaVersion:number; }
+export interface StudyCommentConfig { moderation?:{configured:boolean;providerName:string;consentVersion:string;privacyUrl:string}; enabled:boolean; maxCharacters:number; reviewBeforePublish:boolean; contactUrl:string; schemaVersion:number; }
 export interface StudyResult { nextCursor?:string; success:boolean; error?:string; message?:string; pendingReview?:boolean; config?:StudyCommentConfig; comments?:StudyComment[]; items?:{id?:string;status?:string;userId?:string}[]; }
 export async function studyRequest(path:string,method="GET",body?:unknown):Promise<StudyResult>{
   try {
