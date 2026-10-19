@@ -2,7 +2,7 @@
 API requests are GET-only proxies. Private canary content is counted, never logged.
 Stop with Ctrl+C. This is a maintained QA tool, not a deployed application route.
 """
-import argparse,hashlib,io,json,mimetypes,subprocess,zipfile
+import argparse,hashlib,io,json,mimetypes,os,socket,subprocess,zipfile
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import PurePosixPath
 from urllib.request import Request,urlopen
@@ -44,7 +44,12 @@ def main():
    self.send(503,b'{"success":false,"error":"QA preview blocks production mutations"}','application/json')
   do_PUT=do_POST
   do_DELETE=do_POST
- server=ThreadingHTTPServer(('127.0.0.1',args.port),Handler);print(json.dumps({**stats,'url':f'http://127.0.0.1:{args.port}/profile/life/','mode':'RAM, no package or extract on disk, production mutations disabled'}),flush=True)
+ class ExclusiveServer(ThreadingHTTPServer):
+  allow_reuse_address=False
+  def server_bind(self):
+   if os.name=='nt':self.socket.setsockopt(socket.SOL_SOCKET,socket.SO_EXCLUSIVEADDRUSE,1)
+   super().server_bind()
+ server=ExclusiveServer(('127.0.0.1',args.port),Handler);print(json.dumps({**stats,'pid':os.getpid(),'url':f'http://127.0.0.1:{args.port}/profile/life/','mode':'RAM, no package or extract on disk, production mutations disabled'}),flush=True)
  try:server.serve_forever()
  except KeyboardInterrupt:pass
  finally:server.server_close();print(json.dumps(stats),flush=True)

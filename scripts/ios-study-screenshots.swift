@@ -27,6 +27,10 @@ final class GuoxueStudyScreenshots: XCTestCase {
         XCTAssertTrue(title.waitForExistence(timeout:15));title.tap();title.typeText("QA synthetic local record")
         let body=app.textViews.matching(NSPredicate(format:"label BEGINSWITH %@","正文")).firstMatch
         XCTAssertTrue(body.exists);body.tap();let sample=String(repeating:"Synthetic private note, not a real patient. ",count:24);body.typeText(sample)
+        // Finish the native keyboard interaction before scrolling to the sticky
+        // toolbar. A WebKit keyboard scroll can otherwise consume the first tap.
+        let keyboardDone=app.toolbars.buttons["完成"].firstMatch
+        if keyboardDone.exists && keyboardDone.isHittable {keyboardDone.tap()}
         tapVisible(app.buttons,"保存记录",app)
         guard app.staticTexts["已保存到本机档案，未上传"].waitForExistence(timeout:30) else {shot("10_实际保存提示未出现",app);XCTFail("Manual save must acknowledge the real committed record");return}
         tapVisible(app.buttons,"关闭编辑",app)

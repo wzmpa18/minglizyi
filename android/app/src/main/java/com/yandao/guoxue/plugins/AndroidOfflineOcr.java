@@ -14,13 +14,23 @@ import java.security.MessageDigest;
 
 /** Bundled local engine, no GMS/HTTP client/telemetry. Originals never change. */
 public final class AndroidOfflineOcr {
- private static File prepareOcr(android.content.Context context)throws Exception{
+ private static synchronized File prepareOcr(android.content.Context context)throws Exception{
   JSONObject manifest;try(InputStream in=context.getAssets().open("life-ocr/model-manifest.json")){ByteArrayOutputStream out=new ByteArrayOutputStream();byte[] buffer=new byte[4096];int n;while((n=in.read(buffer))!=-1)out.write(buffer,0,n);manifest=new JSONObject(new String(out.toByteArray(),java.nio.charset.StandardCharsets.UTF_8));}
   File root=new File(context.getNoBackupFilesDir(),"life-ocr-v1"),directory=new File(root,"tessdata");if(!directory.isDirectory()&&!directory.mkdirs())throw new Exception();
   JSONArray models=manifest.getJSONArray("models");for(int i=0;i<models.length();i++){JSONObject model=models.getJSONObject(i);String name=model.getString("name");if(!name.matches("(chi_sim|chi_tra|eng)"))throw new Exception();File file=new File(directory,name+".traineddata");
-   if(!file.exists()){File pending=new File(directory,name+".pending");try(InputStream input=context.getAssets().open("life-ocr/tessdata/"+name+".traineddata");OutputStream output=new FileOutputStream(pending)){byte[] buffer=new byte[65536];int n;while((n=input.read(buffer))!=-1)output.write(buffer,0,n);}if(!pending.renameTo(file))throw new Exception();}
-   MessageDigest digest=MessageDigest.getInstance("SHA-256");try(InputStream input=new FileInputStream(file)){byte[] buffer=new byte[65536];int n;while((n=input.read(buffer))!=-1)digest.update(buffer,0,n);}StringBuilder hex=new StringBuilder();for(byte v:digest.digest())hex.append(String.format(java.util.Locale.ROOT,"%02x",v&255));if(file.length()!=model.getLong("bytes")||!hex.toString().equals(model.getString("sha256")))throw new Exception("Model integrity failure");
+   if(!validModel(file,model)){File pending=new File(directory,name+".pending");try{
+    try(InputStream input=context.getAssets().open("life-ocr/tessdata/"+name+".traineddata");FileOutputStream output=new FileOutputStream(pending)){byte[] buffer=new byte[65536];int n;while((n=input.read(buffer))!=-1)output.write(buffer,0,n);output.getFD().sync();}
+    if(!validModel(pending,model))throw new Exception("Bundled model integrity failure");
+    // Only the verified bundled model replaces this application's derived cache.
+    // Atomic rename never touches a user's original photo or encrypted vault.
+    android.system.Os.rename(pending.getAbsolutePath(),file.getAbsolutePath());
+   }finally{if(pending.exists())pending.delete();}}
+   if(!validModel(file,model))throw new Exception("Model integrity failure");
   }return root;
+ }
+ private static boolean validModel(File file,JSONObject model)throws Exception{
+  if(!file.isFile()||file.length()!=model.getLong("bytes"))return false;
+  MessageDigest digest=MessageDigest.getInstance("SHA-256");try(InputStream input=new FileInputStream(file)){byte[] buffer=new byte[65536];int n;while((n=input.read(buffer))!=-1)digest.update(buffer,0,n);}StringBuilder hex=new StringBuilder();for(byte v:digest.digest())hex.append(String.format(java.util.Locale.ROOT,"%02x",v&255));return hex.toString().equals(model.getString("sha256"));
  }
  public static final class PdfImage {public final Bitmap bitmap;public final int pages;PdfImage(Bitmap b,int p){bitmap=b;pages=p;}}
  public static void clearPdfTemps(Context context){File directory=new File(context.getNoBackupFilesDir(),"life-rendering-v1");File[] files=directory.listFiles();if(files!=null)for(File file:files)if(file.isFile()&&file.getName().matches("pdf-[0-9]+\\.pdf"))file.delete();}
