@@ -54,7 +54,7 @@ export function ProfessionalZiweiBoard({ onOpenBazi, result, mode, focus, onSele
         const major = palace.majorStars || [];
         const aux = [...(palace.auspiciousStars || []), ...(palace.shaStars || [])];
         const minor = (palace.otherStars || []).filter(star => mode === "sanhe" || ["天空", "天刑"].includes(star));
-        const stars = [...major, ...aux, ...(mode === "sanhe" ? [] : minor)];
+        const stars = [...major, ...aux, ...minor];
         const size = Math.min(16, Math.max(11, 98 / Math.max(stars.length, 1)));
         const palaceMutagen = mutagenTable?.[palace.heavenlyStem];
         const selfFlies = palaceMutagen ? [palaceMutagen.lu, palaceMutagen.quan, palaceMutagen.ke, palaceMutagen.ji] : [];
@@ -74,7 +74,7 @@ export function ProfessionalZiweiBoard({ onOpenBazi, result, mode, focus, onSele
               const self = selfFlies.indexOf(name);
               const brightness = result.stars.find(star => star.name === name && star.palace === palace.name)?.brightness;
               const color = mode === "sihua" ? (major.includes(name) ? "#111" : "#666") : major.includes(name) ? "#b90000" : aux.includes(name) || mode === "feixing" ? "#800080" : "#014fab";
-              return <div key={`${name}-${i}`} className="flex shrink-0 flex-col items-center leading-none" style={{ fontSize: major.includes(name) ? size : Math.min(size, mode === "sihua" ? 16 : 14), color, fontWeight: major.includes(name) || mode === "feixing" ? 600 : 400 }}>
+              return <div key={`${name}-${i}`} data-star={name} data-star-kind={major.includes(name) ? "major" : aux.includes(name) ? "auxiliary" : "minor"} className="flex shrink-0 flex-col items-center leading-none" style={{ fontSize: major.includes(name) ? size : Math.min(size, mode === "sihua" ? 16 : 14), color, fontWeight: major.includes(name) || mode === "feixing" ? 600 : 400 }}>
                 {Array.from(name).map((char, j) => <span key={j}>{char}</span>)}
                 {mode === "sanhe" && brightness && <span className="mt-[2px] text-[7px] font-normal text-gray-500">{brightness}</span>}
                 {hua >= 0 && <span className="mt-1 rounded-sm border px-[1px]" style={{ fontSize: mode === "sihua" ? size + 2 : 11, borderColor: mode === "sihua" ? "transparent" : HUA_COLORS[hua], color: mode === "sihua" ? "#ff5149" : HUA_COLORS[hua] }}>{mode === "sihua" ? "ABCD"[hua] : HUA[hua]}</span>}
@@ -87,23 +87,25 @@ export function ProfessionalZiweiBoard({ onOpenBazi, result, mode, focus, onSele
               </div>;
             })}
           </div>
-          {mode === "sanhe" && minor.length > 0 && <div className="mt-1 flex flex-wrap gap-x-1 text-[9px] leading-tight text-[#014fab]">{minor.map((star, i) => <span key={`${star}-${i}`}>{star}</span>)}</div>}
           </div>
           {index === laiyinPalaceIndex && <span className="absolute bottom-[42%] right-[2px] rounded border border-red-500 px-[1px] text-[8px] leading-tight text-red-500" style={{ writingMode: "vertical-rl" }}>来因</span>}
           {palace.isBodyPalace && <span className="absolute right-0 top-[40%] text-[8px] text-red-700" style={{ writingMode: "vertical-rl" }}>身宫</span>}
-          <div className="flex justify-between gap-1 text-[7px] leading-tight text-gray-500">
-            <span>{mode === "sanhe" ? [palace.boshi, palace.jiangqian, palace.suiqian].filter(Boolean).join(" · ") : ""}</span>
-            <span>{mode === "sanhe" ? palace.changsheng : ""}</span>
-          </div>
-          <div className="text-[7px] leading-tight text-blue-600">{dynamicLabels[index]?.map(star => star.abbr).join(" ")}</div>
+          <div data-palace-dynamic-stars className="flex flex-wrap justify-end gap-x-1 text-[10px] leading-[1.2] text-blue-700">{dynamicLabels[index]?.map((star, i) => <span key={`${star.level}-${star.abbr}-${i}`}>{star.abbr}</span>)}</div>
           {mode === "sihua" ? <div className="-mx-[2px] -mb-[2px] mt-1 grid grid-cols-[24%_52%_24%] border-t border-gray-500 text-center">
             <span className="flex flex-col justify-center border-r border-gray-500 text-[14px] leading-tight">{palace.heavenlyStem}<br />{palace.earthlyBranch}</span>
             <div><div className="border-b border-gray-500 text-[14px] leading-5">{dx ? `大${short(dx)}` : "本命"}</div><div className="text-[10px] font-semibold leading-5">{range}</div></div>
             <span className="flex items-center justify-center border-l border-gray-500 text-[13px] leading-none" style={{ writingMode: "vertical-rl" }}>{palace.name}</span>
           </div> : <div className="mt-1 flex items-end justify-between gap-[1px] leading-tight">
-            <div className="min-w-0 text-[8px] text-[#3b82b6]">{deep && <div>{overlay?.deep?.tag}{short(deep)}</div>}{ln && <div>年{short(ln)}</div>}{dx && <div>大{short(dx)}</div>}</div>
+            <div className="flex min-w-0 items-end gap-[2px]">
+              {mode === "sanhe" && <div data-palace-gods className="shrink-0 text-[9px] leading-[1.25]">
+                {palace.boshi && <div className="text-gray-700">{palace.boshi}</div>}
+                {palace.jiangqian && <div className="text-[#8b4513]">{palace.jiangqian}</div>}
+                {palace.suiqian && <div className="text-[#666]">{palace.suiqian}</div>}
+              </div>}
+              <div className="min-w-0 text-[9px] text-[#27628d]">{deep && <div>{overlay?.deep?.tag}{short(deep)}</div>}{ln && <div>年{short(ln)}</div>}{dx && <div>大{short(dx)}</div>}</div>
+            </div>
             <div className="text-center"><div className="text-[9px] text-black">{range}</div><strong className="text-[14px]" style={{ color: mode === "feixing" ? "#10066b" : "#b90000" }}>{palace.name}</strong><div className="text-[7px] text-gray-500">{mode === "sanhe" ? palace.ages?.slice(0, 4).join(",") : ""}</div></div>
-            <span className="text-[14px] font-semibold leading-tight">{palace.heavenlyStem}<br />{palace.earthlyBranch}</span>
+            <div className="shrink-0 text-right">{mode === "sanhe" && <div className="mb-[1px] text-[9px] text-[#8a6d3b]">{palace.changsheng}</div>}<span className="text-[14px] font-semibold leading-tight">{palace.heavenlyStem}<br />{palace.earthlyBranch}</span></div>
           </div>}
         </div>;
       })}
@@ -116,7 +118,7 @@ export function ProfessionalZiweiBoard({ onOpenBazi, result, mode, focus, onSele
         if (!source || !target) return null;
         // Self-transformations use a short loop; never invent another destination.
         return source === target ? <path key={hua} d={`M${source[0]},${source[1]} q-3,-4 -1,-6 q4,0 1,6`} fill="none" stroke="#ff5149" strokeWidth="0.2" markerEnd="url(#professional-hua-arrow)" /> : <g key={hua}><line x1={source[0]} y1={source[1]} x2={target[0]} y2={target[1]} stroke="#ff5149" strokeWidth="0.2" markerEnd="url(#professional-hua-arrow)" /><text x={target[0]} y={target[1] - 1} fill="#ff5149" fontSize="1.8">{"ABCD"[hua]}</text></g>;
-      }) : source && <path d={`M${ANCHORS[(selected + 6) % 12].join(",")} L${source.join(",")} L${ANCHORS[(selected + 4) % 12].join(",")} L${ANCHORS[(selected + 8) % 12].join(",")} Z`} fill="none" stroke="#bdbdbd" strokeWidth="0.25" strokeDasharray="0.8 0.4" />}
+      }) : source && <path data-sanfang-focus={selected} d={`M${source.join(",")} L${ANCHORS[(selected + 4) % 12].join(",")} L${ANCHORS[(selected + 8) % 12].join(",")} Z M${source.join(",")} L${ANCHORS[(selected + 6) % 12].join(",")}`} fill="none" stroke="#bdbdbd" strokeWidth="0.25" strokeDasharray="0.8 0.4" />}
     </svg>
   </div>;
 }
