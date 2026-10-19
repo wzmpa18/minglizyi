@@ -35,6 +35,8 @@ on:
       - 'src/app/discover/live/**'
       - 'src/lib/life*.ts'
       - 'src/lib/live*.ts'
+      - 'src/components/ProfessionalZiweiBoard.tsx'
+      - 'scripts/ziwei-board-layout.test.tsx'
       - 'src/components/LiveChartBoard.tsx'
       - 'src/components/LocalArchivedChart.tsx'
       - 'src/components/ShareButton.tsx'
@@ -234,7 +236,7 @@ jobs:
           cache: npm
       - run: npm ci --legacy-peer-deps
       - run: npx tsc --noEmit --incremental false
-      - run: npx tsx --test scripts/interface-controls.test.tsx
+      - run: npx tsx --test scripts/interface-controls.test.tsx scripts/ziwei-board-layout.test.tsx
       - run: node --experimental-strip-types --test scripts/life-vault.test.cjs
       - run: node --experimental-strip-types --test scripts/legacy-history-retention.test.cjs
       - run: node --test scripts/live-chart-policy.test.cjs

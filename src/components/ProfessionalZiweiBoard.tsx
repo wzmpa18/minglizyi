@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import type { ZiweiResult } from "@/algorithm-core";
 
 type Mode = "feixing" | "sanhe" | "sihua";
@@ -53,7 +54,7 @@ export function ProfessionalZiweiBoard({ onOpenBazi, result, mode, focus, onSele
         if (!palace) return <div key={index} className="border border-gray-500" />;
         const major = palace.majorStars || [];
         const aux = [...(palace.auspiciousStars || []), ...(palace.shaStars || [])];
-        const minor = (palace.otherStars || []).filter(star => mode === "sanhe" || ["天空", "天刑"].includes(star));
+        const minor = palace.otherStars || [];
         const stars = [...major, ...aux, ...minor];
         const size = Math.min(16, Math.max(11, 98 / Math.max(stars.length, 1)));
         const palaceMutagen = mutagenTable?.[palace.heavenlyStem];
@@ -90,14 +91,14 @@ export function ProfessionalZiweiBoard({ onOpenBazi, result, mode, focus, onSele
           </div>
           {index === laiyinPalaceIndex && <span className="absolute bottom-[42%] right-[2px] rounded border border-red-500 px-[1px] text-[8px] leading-tight text-red-500" style={{ writingMode: "vertical-rl" }}>来因</span>}
           {palace.isBodyPalace && <span className="absolute right-0 top-[40%] text-[8px] text-red-700" style={{ writingMode: "vertical-rl" }}>身宫</span>}
-          <div data-palace-dynamic-stars className="flex flex-wrap justify-end gap-x-1 text-[10px] leading-[1.2] text-blue-700">{dynamicLabels[index]?.map((star, i) => <span key={`${star.level}-${star.abbr}-${i}`}>{star.abbr}</span>)}</div>
+          <div data-palace-dynamic-stars className="flex flex-wrap justify-end gap-x-1 text-[12px] leading-[1.2] text-blue-700">{dynamicLabels[index]?.map((star, i) => <span key={`${star.level}-${star.abbr}-${i}`}>{star.abbr}</span>)}</div>
           {mode === "sihua" ? <div className="-mx-[2px] -mb-[2px] mt-1 grid grid-cols-[24%_52%_24%] border-t border-gray-500 text-center">
             <span className="flex flex-col justify-center border-r border-gray-500 text-[14px] leading-tight">{palace.heavenlyStem}<br />{palace.earthlyBranch}</span>
             <div><div className="border-b border-gray-500 text-[14px] leading-5">{dx ? `大${short(dx)}` : "本命"}</div><div className="text-[10px] font-semibold leading-5">{range}</div></div>
             <span className="flex items-center justify-center border-l border-gray-500 text-[13px] leading-none" style={{ writingMode: "vertical-rl" }}>{palace.name}</span>
           </div> : <div className="mt-1 flex items-end justify-between gap-[1px] leading-tight">
             <div className="flex min-w-0 items-end gap-[2px]">
-              {mode === "sanhe" && <div data-palace-gods className="shrink-0 text-[9px] leading-[1.25]">
+              {mode === "sanhe" && <div data-palace-gods className="shrink-0 text-[11px] leading-[1.25]">
                 {palace.boshi && <div className="text-gray-700">{palace.boshi}</div>}
                 {palace.jiangqian && <div className="text-[#8b4513]">{palace.jiangqian}</div>}
                 {palace.suiqian && <div className="text-[#666]">{palace.suiqian}</div>}
