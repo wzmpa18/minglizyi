@@ -732,6 +732,9 @@ router.get('/moderation/groups', adminAuthUnified('SUPPORT_ADMIN', 'ops'), (req,
     const rows = sdb.prepare(`SELECT id, name, owner_id, owner_name, status, created_at,
                                      length(member_ids) - length(replace(member_ids, ',', '')) + 1 AS member_count
                               FROM groups ORDER BY id DESC LIMIT ? OFFSET ?`).all(size, (page - 1) * size);
+    const governed=sdb.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='study_group_governance'").get();
+    const edits=sdb.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='study_group_edits'").get();
+    for(const row of rows){const review=governed?sdb.prepare('SELECT topic,status,review_reason FROM study_group_governance WHERE group_id=?').get(row.id):null;row.review_status=review?.status||'legacy-unreviewed';row.topic=review?.topic||'';row.review_reason=review?.review_reason||'';row.pending_edit=edits?sdb.prepare("SELECT name,announcement,reason FROM study_group_edits WHERE group_id=? AND status='pending'").get(row.id)||null:null;}
     res.json({ success: true, data: { total, page, size, groups: rows } });
   } catch (e) {
     res.status(500).json({ success: false, error: '群查询失败' });
@@ -744,6 +747,15 @@ router.post('/moderation/groups/:id/action', adminAuthUnified('CONTENT_ADMIN', '
     const { action, reason } = req.body || {};
     const g = sdb.prepare('SELECT id, name, status FROM groups WHERE id = ?').get(req.params.id);
     if (!g) return res.status(404).json({ success: false, error: '群不存在' });
+    if(['approve','reject','approve-edit','reject-edit'].includes(action)){
+      if(typeof reason!=='string'||reason.trim().length<2||reason.length>500)return res.status(400).json({success:false,error:'请填写2至500字审核依据'});
+      const isEdit=action.endsWith('-edit'),table=isEdit?'study_group_edits':'study_group_governance';
+      if(!sdb.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table))return res.status(409).json({success:false,error:'没有待审学习群资料'});
+      const pending=sdb.prepare(`SELECT * FROM ${table} WHERE group_id=? AND status='pending'`).get(g.id);if(!pending)return res.status(409).json({success:false,error:'资料已审核或不存在，请刷新'});
+      const status=action.startsWith('approve')?'active':'rejected';
+      sdb.transaction(()=>{if(isEdit){sdb.prepare('UPDATE study_group_edits SET status=?,reason=? WHERE group_id=?').run(status,reason.trim(),g.id);if(status==='active')sdb.prepare('UPDATE groups SET name=?,announcement=? WHERE id=?').run(pending.name,pending.announcement,g.id);}else sdb.prepare('UPDATE study_group_governance SET status=?,review_reason=? WHERE group_id=?').run(status,reason.trim(),g.id);audit(req.admin,'GROUP_'+action.toUpperCase(),`group:${g.id}`,'pending',status,reason,req);})();
+      return res.json({success:true,data:{review_status:status}});
+    }
     let newStatus;
     if (action === 'close') newStatus = 'closed';
     else if (action === 'reopen') newStatus = 'active';

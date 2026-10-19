@@ -178,6 +178,8 @@ export interface ModerationGroup {
   owner_name: string;
   status: string;
   member_count: number;
+  review_status?: string; topic?: string; review_reason?: string;
+  pending_edit?: { name: string; announcement: string; reason: string } | null;
   created_at: string;
 }
 

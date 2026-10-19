@@ -42,6 +42,12 @@ on:
       - 'src/components/ShareButton.tsx'
       - 'src/components/PaipanHistoryButton.tsx'
       - 'backend_deploy/liveChart*.js'
+      - 'backend_deploy/governedGroupRoutes.js'
+      - 'scripts/governed-groups-http.test.cjs'
+      - 'scripts/group-cache.test.ts'
+      - 'src/lib/socialStore.ts'
+      - 'src/app/groups/**'
+      - 'src/components/StudyGroupInvitations.tsx'
       - 'scripts/life-vault.test.cjs'
       - 'scripts/live-chart*.test.cjs'
       - 'src/app/profile/**'
@@ -237,6 +243,7 @@ jobs:
       - run: npm ci --legacy-peer-deps
       - run: npx tsc --noEmit --incremental false
       - run: npx tsx --test scripts/interface-controls.test.tsx scripts/ziwei-board-layout.test.tsx
+      - run: npx tsx --test scripts/group-cache.test.ts
       - run: node --experimental-strip-types --test scripts/life-vault.test.cjs
       - run: node --experimental-strip-types --test scripts/legacy-history-retention.test.cjs
       - run: node --test scripts/live-chart-policy.test.cjs
@@ -289,6 +296,7 @@ jobs:
           npm install --prefix "$RUNNER_TEMP/study-http-deps" --no-save --package-lock=false express@4.22.2 better-sqlite3@13.0.3 jsonwebtoken@9.0.3
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/study-comments-http.test.cjs
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/live-chart-http.test.cjs
+          NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/governed-groups-http.test.cjs
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/offline-download-http.test.cjs
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/zhenggu-preview-http.test.cjs
       - name: Verify Apple signature rejection and authenticated purchase endpoints with real dependencies

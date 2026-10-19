@@ -5,8 +5,10 @@
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import GroupChatClient from "./[id]/ClientPage";
+import {useAccountScope} from "@/lib/useAccountScope";
 
 function GroupChatInner() {
+  const scope=useAccountScope();
   const sp = useSearchParams();
   const id = sp.get("id") || "";
   if (!id) {
@@ -16,7 +18,7 @@ function GroupChatInner() {
       </div>
     );
   }
-  return <GroupChatClient routeId={id} />;
+  return <GroupChatClient key={scope+":"+id} routeId={id} />;
 }
 
 export default function Page() {

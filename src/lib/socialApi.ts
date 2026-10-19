@@ -197,6 +197,7 @@ export async function removeFriend(userId: string) {
 
 export interface ChatMessage {
   id: string; senderId: string; senderName: string; content: string; type: string; createdAt: string;
+  reviewStatus?: "active" | "pending" | "rejected";
 }
 
 export async function fetchPrivateMessages(peerId: string, afterId = 0) {
@@ -216,16 +217,17 @@ export interface GroupVo {
   id: string; groupId: string; name: string; ownerId: string; ownerName: string;
   announcement: string; memberIds: string[]; createdAt: string;
   memberCount?: number; avatar?: string; admins?: string[]; muteAll?: boolean;
+  reviewStatus?: "active" | "pending" | "rejected" | "legacy-unreviewed"; topic?: string; maxMembers?: number;
 }
 
-export async function fetchGroups() {
-  return api<{ success: boolean; groups?: GroupVo[] }>(`/api/social/groups`);
+export async function fetchGroups(before?: number) {
+  return api<{ success: boolean; groups?: GroupVo[]; nextBefore?: number; error?: string }>(`/api/social/groups${before ? `?before=${before}` : ""}`);
 }
 
-export async function createGroup(name: string) {
+export async function createGroup(name: string, options?: { topic: string; adultConsent: boolean; requestId: string }) {
   return api<{ success: boolean; group?: GroupVo; error?: string }>(`/api/social/groups`, {
     method: "POST",
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, ...options }),
   });
 }
 
@@ -269,21 +271,27 @@ export async function kickGroupMember(groupId: string, userId: string) {
 
 /** 群主修改群名/公告（传哪个字段改哪个） */
 export async function updateGroup(groupId: string, data: { name?: string; announcement?: string }) {
-  return api<{ success: boolean; group?: GroupVo; error?: string }>(`/api/social/groups/${groupId}/update`, {
+  return api<{ success: boolean; group?: GroupVo; pendingReview?: boolean; rejected?: boolean; message?: string; error?: string }>(`/api/social/groups/${groupId}/update`, {
     method: "POST",
     body: JSON.stringify(data),
   });
 }
 
-export async function fetchGroupMessages(groupId: string, afterId = 0) {
-  return api<{ success: boolean; messages?: ChatMessage[]; group?: GroupVo; error?: string }>(`/api/social/groups/${groupId}/messages?afterId=${afterId}`);
+export async function fetchGroupMessages(groupId: string, afterId = 0, beforeId?: string) {
+  return api<{ success: boolean; messages?: ChatMessage[]; group?: GroupVo; error?: string; nextBefore?: string }>(`/api/social/groups/${groupId}/messages?afterId=${afterId}${beforeId ? `&beforeId=${encodeURIComponent(beforeId)}` : ""}`);
 }
 
 export async function sendGroupMessage(groupId: string, content: string, clientMsgId?: string) {
-  return api<{ success: boolean; message?: ChatMessage; error?: string }>(`/api/social/groups/${groupId}/messages`, {
+  return api<{ success: boolean; message?: ChatMessage; pendingReview?: boolean; error?: string }>(`/api/social/groups/${groupId}/messages`, {
     method: "POST",
     body: JSON.stringify(clientMsgId ? { content, clientMsgId } : { content }),
   });
+}
+
+export interface GroupInvitation { id: string; groupId: string; name: string; inviterName: string; expiresAt: number; }
+export function fetchGroupInvitations() { return api<{ success: boolean; invitations?: GroupInvitation[]; error?: string }>("/api/social/groups/invitations"); }
+export function respondGroupInvitation(id: string, accept: boolean, consent = false) {
+  return api<{ success: boolean; groupId?: string; error?: string }>(`/api/social/groups/invitations/${encodeURIComponent(id)}/${accept ? "accept" : "reject"}`, { method: "POST", body: JSON.stringify({ adultConsent: consent, joinConsent: consent }) });
 }
 
 // ==================== 通知 ====================

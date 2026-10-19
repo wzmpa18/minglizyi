@@ -161,7 +161,7 @@ export default function GroupInfoClient({ routeId }: { routeId?: string }) {
   const handleUpdateGroup = async (data: { name?: string; announcement?: string }) => {
     const r = await updateGroup(groupId, data);
     if (r && r.success) {
-      showToast("已保存");
+      showToast(r.message||"群资料已更新");
       load();
     } else {
       showToast((r && r.error) || "保存失败");
@@ -189,7 +189,7 @@ export default function GroupInfoClient({ routeId }: { routeId?: string }) {
     if (ids.length === 0) { setInviteOpen(false); return; }
     const r = await inviteGroupMembers(groupId, ids);
     if (r && r.success) {
-      showToast(`已邀请${ids.length}位好友`);
+      showToast(`已发出${ids.length}份邀请，等待对方确认`);
       setInviteOpen(false);
       setInvitePicked(new Set());
       load();

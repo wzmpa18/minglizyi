@@ -1187,30 +1187,21 @@ function createRouter() {
 
   // 群聊开关（默认关闭，仅拦截写操作；读取走 GET 不受影响）
   router.use('/groups', (req, res, next) => {
-    if (!featureEnabled('groups_enabled', req) && req.method !== 'GET') {
+    if (!featureEnabled('groups_enabled', req) && req.method !== 'GET' && !/\/(leave|report|reject|dissolve)$/.test(req.path)) {
       return featureDisabled(res, '群聊');
     }
     next();
   });
 
-  // POST /api/social/groups { name, avatar? }
-  router.post('/groups', authRequired, (req, res) => {
-    try {
-      const { name, avatar = '' } = req.body;
-      if (!name || !String(name).trim()) return res.status(400).json({ success: false, error: '群名称不能为空' });
-      const info = userPublicInfo(req.user.userId) || { nickname: '国学爱好者' };
-      const result = getDb().prepare('INSERT INTO groups (name, owner_id, owner_name, member_ids, avatar) VALUES (?,?,?,?,?)')
-        .run(String(name).trim().slice(0, 30), String(req.user.userId), info.nickname, JSON.stringify([String(req.user.userId)]), String(avatar || '').slice(0, 500));
-      const row = getDb().prepare('SELECT * FROM groups WHERE id = ?').get(result.lastInsertRowid);
-      res.json({ success: true, group: groupToVo(row) });
-    } catch (e) {
-      res.status(500).json({ success: false, error: e.message });
-    }
-  });
+  // Governed creation, invitations, immutable retries and reviewed text use the shared router below.
+  router.use('/groups',require('./governedGroupRoutes').createGovernedGroupRouter({getDb,getUserDb,authRequired,userPublicInfo,checkPlatformMute,moderateResourceComment,upsertUserConversation,notify}));
+
 
   function groupToVo(row) {
     const memberIds = JSON.parse(row.member_ids || '[]');
+    const governance=getDb().prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='study_group_governance'").get()?getDb().prepare('SELECT topic,status FROM study_group_governance WHERE group_id=?').get(row.id):null;
     return {
+      reviewStatus:governance?.status||'legacy-unreviewed',topic:governance?.topic||'',maxMembers:50,
       id: String(row.id),
       groupId: String(row.id),
       name: row.name,
@@ -1240,34 +1231,10 @@ function createRouter() {
   }
 
   // GET /api/social/groups
-  router.get('/groups', authRequired, (req, res) => {
-    try {
-      const me = String(req.user.userId);
-      const rows = getDb().prepare('SELECT * FROM groups ORDER BY id DESC LIMIT 100').all();
-      const mine = rows.filter(r => JSON.parse(r.member_ids || '[]').includes(me));
-      res.json({ success: true, groups: mine.map(groupToVo) });
-    } catch (e) {
-      res.status(500).json({ success: false, error: e.message });
-    }
-  });
+
 
   // POST /api/social/groups/:id/join
-  router.post('/groups/:id/join', authRequired, (req, res) => {
-    try {
-      const d = getDb();
-      const row = d.prepare('SELECT * FROM groups WHERE id = ?').get(parseInt(req.params.id, 10));
-      if (!row) return res.status(404).json({ success: false, error: '群不存在' });
-      const members = JSON.parse(row.member_ids || '[]');
-      const me = String(req.user.userId);
-      if (!members.includes(me)) {
-        members.push(me);
-        d.prepare('UPDATE groups SET member_ids = ? WHERE id = ?').run(JSON.stringify(members), row.id);
-      }
-      res.json({ success: true, group: groupToVo({ ...row, member_ids: JSON.stringify(members) }) });
-    } catch (e) {
-      res.status(500).json({ success: false, error: e.message });
-    }
-  });
+
 
   // GET /api/social/groups/:id/detail 群详情（成员资料/角色/群昵称/我的禁言状态，仅成员可看）
   router.get('/groups/:id/detail', authRequired, (req, res) => {
@@ -1353,23 +1320,7 @@ function createRouter() {
   });
 
   // POST /api/social/groups/:id/update { name?, announcement?, avatar? } 群主/管理员改群名/公告/头像
-  router.post('/groups/:id/update', authRequired, (req, res) => {
-    try {
-      const d = getDb();
-      const row = d.prepare('SELECT * FROM groups WHERE id = ?').get(parseInt(req.params.id, 10));
-      if (!row) return res.status(404).json({ success: false, error: '群不存在' });
-      if (!isGroupManager(row, req.user.userId)) return res.status(403).json({ success: false, error: '仅群主/管理员可修改群资料' });
-      const name = req.body.name !== undefined ? String(req.body.name).trim().slice(0, 30) : row.name;
-      const announcement = req.body.announcement !== undefined ? String(req.body.announcement).trim().slice(0, 200) : row.announcement;
-      const avatar = req.body.avatar !== undefined ? String(req.body.avatar).slice(0, 500) : row.avatar;
-      if (!name) return res.status(400).json({ success: false, error: '群名称不能为空' });
-      d.prepare('UPDATE groups SET name = ?, announcement = ?, avatar = ? WHERE id = ?').run(name, announcement, avatar, row.id);
-      const updated = d.prepare('SELECT * FROM groups WHERE id = ?').get(row.id);
-      res.json({ success: true, group: groupToVo(updated) });
-    } catch (e) {
-      res.status(500).json({ success: false, error: e.message });
-    }
-  });
+
 
   // ==================== v25.0.42：群聊完整第一版管理路由 ====================
 
@@ -1509,36 +1460,8 @@ function createRouter() {
     }
   });
 
-  // POST /api/social/groups/:id/invite { userIds: [] } 成员邀请好友入群（v1直接入群+通知）
-  router.post('/groups/:id/invite', authRequired, (req, res) => {
-    try {
-      const d = getDb();
-      const row = d.prepare('SELECT * FROM groups WHERE id = ?').get(parseInt(req.params.id, 10));
-      if (!row) return res.status(404).json({ success: false, error: '群不存在' });
-      const me = String(req.user.userId);
-      const members = JSON.parse(row.member_ids || '[]');
-      if (!members.includes(me)) return res.status(403).json({ success: false, error: '你不是群成员' });
-      const userIds = Array.isArray(req.body.userIds) ? req.body.userIds.map(String).slice(0, 50) : [];
-      if (!userIds.length) return res.status(400).json({ success: false, error: '请选择要邀请的好友' });
-      const added = [];
-      const info = userPublicInfo(me) || { nickname: '成员' };
-      for (const uid of userIds) {
-        if (members.includes(uid)) continue; // 已在群
-        members.push(uid);
-        added.push(uid);
-        notify(uid, 'group_invite', { userId: me, nickname: info.nickname }, `「${info.nickname}」邀请你加入群「${row.name}」`, `/groups/chat?id=${row.id}`);
-      }
-      if (added.length) {
-        d.prepare('UPDATE groups SET member_ids = ? WHERE id = ?').run(JSON.stringify(members), row.id);
-        const updated = d.prepare('SELECT * FROM groups WHERE id = ?').get(row.id);
-        res.json({ success: true, group: groupToVo(updated), added });
-      } else {
-        res.json({ success: true, group: groupToVo(row), added: [] });
-      }
-    } catch (e) {
-      res.status(500).json({ success: false, error: e.message });
-    }
-  });
+  // Invitations require recipient acceptance in governedGroupRoutes; no direct membership writes here.
+
 
   // POST /api/social/groups/:id/report { reason } 举报群（幂等：同人同群仅一次）
   router.post('/groups/:id/report', authRequired, socialRateLimitGate('report'), (req, res) => {
@@ -1588,90 +1511,11 @@ function createRouter() {
   });
 
   // GET /api/social/groups/:id/messages?afterId=
-  router.get('/groups/:id/messages', authRequired, (req, res) => {
-    try {
-      const row = getDb().prepare('SELECT * FROM groups WHERE id = ?').get(parseInt(req.params.id, 10));
-      if (!row) return res.status(404).json({ success: false, error: '群不存在' });
-      const members = JSON.parse(row.member_ids || '[]');
-      if (!members.includes(String(req.user.userId))) return res.status(403).json({ success: false, error: '你不是群成员' });
-      const afterId = parseInt(req.query.afterId, 10) || 0;
-      const msgs = getDb().prepare("SELECT * FROM chat_messages WHERE conversation_id = ? AND id > ? AND review_status = 'active' ORDER BY id ASC LIMIT 200")
-        .all(`group:${row.id}`, afterId);
-      res.json({
-        success: true,
-        messages: msgs.map(r => ({ id: String(r.id), senderId: r.sender_id, senderName: r.sender_name, content: r.content, type: r.msg_type, createdAt: r.created_at })),
-        group: groupToVo(row),
-      });
-    } catch (e) {
-      res.status(500).json({ success: false, error: e.message });
-    }
-  });
+
 
   // POST /api/social/groups/:id/messages { content, clientMsgId? }
   // v25.0.42：全员禁言/成员禁言拦截 + clientMsgId 幂等 + 群昵称 + 统一会话模型 + 通知链接query修复
-  router.post('/groups/:id/messages', authRequired, socialRateLimitGate('group_message'), (req, res) => {
-    try {
-      const { content, type = 'text', clientMsgId = '' } = req.body;
-      if (!content || !String(content).trim()) return res.status(400).json({ success: false, error: '消息不能为空' });
-      // v25.0.61 D19：平台级禁言（群主/管理员同样受平台禁言约束）
-      const _pmute = checkPlatformMute(req.user.userId);
-      if (_pmute) return res.status(403).json({ success: false, error: `你已被禁言（剩余约${_pmute.remainMinutes}分钟），暂不能发送消息`, code: 'USER_MUTED' });
-      const d = getDb();
-      const row = d.prepare('SELECT * FROM groups WHERE id = ?').get(parseInt(req.params.id, 10));
-      if (!row) return res.status(404).json({ success: false, error: '群不存在' });
-      const members = JSON.parse(row.member_ids || '[]');
-      const me = String(req.user.userId);
-      if (!members.includes(me)) return res.status(403).json({ success: false, error: '你不是群成员' });
 
-      // v25.0.42：禁言拦截（群主/管理员不受限）
-      const manager = isGroupManager(row, me);
-      if (!manager) {
-        if (row.mute_all) return res.status(403).json({ success: false, error: '群主已开启全员禁言' });
-        const remain = memberMuteRemain(row, me);
-        if (remain > 0) return res.status(403).json({ success: false, error: `你已被禁言，剩余${Math.ceil(remain / 60)}分钟` });
-      }
-
-      // v25.0.42：文字消息敏感词过滤（与私聊同源）
-      if (String(type) !== 'image') {
-        const text = String(content).trim().slice(0, 3000);
-        const hits = findSensitiveWords(text);
-        if (hits.length) {
-          logSensitive(me, 'group_message', text, hits);
-          return res.status(400).json({ success: false, error: '消息包含违规内容，已拦截' });
-        }
-      }
-
-      const convId = `group:${row.id}`;
-      // v25.0.42：clientMsgId 幂等
-      const cmi = String(clientMsgId || '').slice(0, 64);
-      if (cmi) {
-        const dup = d.prepare('SELECT * FROM chat_messages WHERE conversation_id = ? AND client_msg_id = ?').get(convId, cmi);
-        if (dup) {
-          return res.json({ success: true, duplicated: true, message: { id: String(dup.id), senderId: dup.sender_id, senderName: dup.sender_name, content: dup.content, type: dup.msg_type, createdAt: dup.created_at } });
-        }
-      }
-
-      // v25.0.42：群昵称优先（群内显示名）
-      const nicks = JSON.parse(row.member_nicknames || '{}');
-      const info = userPublicInfo(me) || { nickname: '国学爱好者' };
-      const displayName = nicks[me] || info.nickname;
-      const result = d.prepare('INSERT INTO chat_messages (conversation_id, sender_id, sender_name, content, msg_type, client_msg_id) VALUES (?,?,?,?,?,?)')
-        .run(convId, me, displayName, String(content).trim().slice(0, 3000), String(type) === 'image' ? 'image' : 'text', cmi);
-
-      // v25.0.42：统一会话模型（全员会话维护，发送方已读推进）
-      for (const memberId of members) {
-        upsertUserConversation(d, memberId, convId, 'group', '', row.id, Number(result.lastInsertRowid), String(memberId) === me);
-      }
-
-      for (const memberId of members) {
-        if (memberId !== me) notify(memberId, 'group_chat', { userId: me, nickname: displayName }, `在「${row.name}」发来消息`, `/groups/chat?id=${row.id}`);
-      }
-      const msg = d.prepare('SELECT * FROM chat_messages WHERE id = ?').get(result.lastInsertRowid);
-      res.json({ success: true, message: { id: String(msg.id), senderId: msg.sender_id, senderName: msg.sender_name, content: msg.content, type: msg.msg_type, createdAt: msg.created_at } });
-    } catch (e) {
-      res.status(500).json({ success: false, error: e.message });
-    }
-  });
 
   // ==================== v25.0.42：统一会话模型（消息中心） ====================
 

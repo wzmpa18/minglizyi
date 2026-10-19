@@ -5,6 +5,7 @@
 // 设计原则：localStorage 持久化，键名统一 yandao_ 前缀，历史数据兼容迁移
 // ============================================================================
 
+import { getUserToken, getUserProfile } from "./auth";
 // --- 类型定义 ---
 export interface Friend {
   id: string;
@@ -36,6 +37,7 @@ export interface ChatMessage {
   timestamp: string;
   /** v25.0.38 P0-2：发送状态（本地乐观消息专用；服务端确认后 id 统一为 srv_ 前缀） */
   status?: 'sending' | 'sent' | 'failed';
+  reviewStatus?: 'active' | 'pending' | 'rejected';
 }
 
 export interface GroupInfo {
@@ -50,6 +52,7 @@ export interface GroupInfo {
   level: 'small' | 'medium' | 'large' | 'vip';
   createdAt: string;
   tags: string[];
+  reviewStatus?: string;
 }
 
 export interface GroupMember {
@@ -109,10 +112,15 @@ const OLD_KEYS: Record<string, string> = {
 };
 
 // --- 通用存储工具 ---
+export function getGroupAccountId():string{return getUserToken()?String(getUserProfile()?.userId||''):'';}
+function storageKey(key:string):string{
+  // Preserve unowned legacy caches without assigning them to a new account.
+  return key===KEYS.GROUPS||key.startsWith(KEYS.GROUP_MESSAGES)?`${key}:account:${encodeURIComponent(getGroupAccountId()||'guest')}`:key;
+}
 function safeGet<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') return fallback;
   try {
-    const raw = localStorage.getItem(key);
+    const raw = localStorage.getItem(storageKey(key));
     // 兼容旧键名
     if (!raw && OLD_KEYS[key]) {
       const oldRaw = localStorage.getItem(OLD_KEYS[key]);
@@ -128,7 +136,7 @@ function safeGet<T>(key: string, fallback: T): T {
 
 function safeSet<T>(key: string, value: T): void {
   if (typeof window === 'undefined') return;
-  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+  try { localStorage.setItem(storageKey(key), JSON.stringify(value)); } catch {}
 }
 
 // --- 好友管理 ---
@@ -308,7 +316,8 @@ export function getGroupMessages(groupId: string): ChatMessage[] {
 export function saveGroupMessage(groupId: string, msg: ChatMessage): void {
   const msgs = getGroupMessages(groupId);
   // v25.0.47：按ID幂等入库（轮询回包与发送回执可能先后落同一条服务端消息）
-  if (msgs.some((m) => m.id === msg.id)) return;
+  const existing=msgs.findIndex(m=>m.id===msg.id);
+  if(existing>=0){msgs[existing]={...msgs[existing],...msg};safeSet(KEYS.GROUP_MESSAGES+groupId,msgs);return;}
   msgs.push(msg);
   safeSet(KEYS.GROUP_MESSAGES + groupId, msgs);
 }

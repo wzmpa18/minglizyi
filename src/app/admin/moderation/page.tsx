@@ -791,16 +791,18 @@ export default function AdminModerationPage() {
                 groups.map((g) => (
                   <tr key={g.id}>
                     <Td style={{ fontFamily: "monospace", fontSize: 11 }}>{g.id}</Td>
-                    <Td>{g.name}</Td>
+                    <Td>{g.name}{g.pending_edit&&<div className="mt-2 text-xs"><b>待审修改：</b><p translate="no">{g.pending_edit.name}</p><p translate="no">{g.pending_edit.announcement}</p></div>}</Td>
                     <Td>{g.owner_name || g.owner_id}</Td>
                     <Td>{g.member_count}</Td>
                     <Td>
                       <Badge type={g.status === "closed" ? "error" : "success"}>
-                        {g.status === "closed" ? "已关闭" : "正常"}
+                        {g.status === "closed" ? "已关闭" : g.review_status==="pending"?"待审核":g.review_status==="rejected"?"审核未通过":g.review_status==="active"?"审核通过":"历史群待复核"}
                       </Badge>
                     </Td>
                     <Td style={{ fontSize: 11 }}>{fmtTime(g.created_at)}</Td>
                     <Td>
+                      {g.review_status==="pending"&&<OpBtn label="审核群资料" onClick={()=>setActionTarget({kind:"groups",id:g.id,title:`审核学习群「${g.name}」`,actions:[{label:"通过",value:"approve"},{label:"拒绝",value:"reject",danger:true}]})}/>}
+                      {g.pending_edit&&<OpBtn label="审核修改" onClick={()=>setActionTarget({kind:"groups",id:g.id,title:`审核群名及公告修改「${g.name}」`,actions:[{label:"通过修改",value:"approve-edit"},{label:"拒绝修改",value:"reject-edit",danger:true}]})}/>}
                       {g.status === "closed" ? (
                         <OpBtn
                           label="重开"

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -13,8 +13,9 @@ import {
   purgeLegacyGroups,
   type GroupInfo,
   type ChatMessage,
+  getGroupAccountId,
 } from "@/lib/socialStore";
-import { getCurrentUserId } from "@/lib/auth";
+import { validateStudyText } from "@/lib/studyComments";
 import {
   sendGroupMessage,
   fetchGroupMessages,
@@ -56,8 +57,10 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
   const [failIds, setFailIds] = useState<Set<string>>(new Set());
   const [reportTarget, setReportTarget] = useState<{ serverId: string; name: string } | null>(null);
   const [toast, setToast] = useState("");
+  const [olderCursor,setOlderCursor]=useState<string|null|undefined>(),[loadingOlder,setLoadingOlder]=useState(false);
+  const followTail=useRef(true),restoreScroll=useRef<{height:number;top:number}|null>(null);
 
-  const currentUserId = getCurrentUserId() || "current_user";
+  const currentUserId = getGroupAccountId();
   const currentUserName = (() => {
     try {
       const profileRaw = typeof window !== "undefined" ? localStorage.getItem("yandao_user_profile") : null;
@@ -122,7 +125,7 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
         setMyMuteRemain(r.myMuteRemain || 0);
         setMembers(r.members || []);
         if (r.group?.name && !groupId.startsWith("grp_")) {
-          setGroup((prev) => (prev && prev.name !== r.group!.name ? { ...prev, name: r.group!.name } : prev));
+          setGroup((prev) => prev?{...prev,name:r.group!.name,reviewStatus:r.group!.reviewStatus}:prev);
         }
       } catch { /* 网络异常静默，不误报群缺失 */ }
     };
@@ -133,7 +136,9 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
 
   useEffect(() => {
     if (chatListRef.current) {
-      chatListRef.current.scrollTop = chatListRef.current.scrollHeight;
+      const box=chatListRef.current;
+      if(restoreScroll.current){box.scrollTop=restoreScroll.current.top+box.scrollHeight-restoreScroll.current.height;restoreScroll.current=null;}
+      else if(followTail.current)box.scrollTop=box.scrollHeight;
     }
   }, [messages]);
 
@@ -145,6 +150,7 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
   const handleSend = useCallback(() => {
     const text = inputText.trim();
     if (!text) return;
+    const validation=validateStudyText(text);if(!validation.ok){showToast(validation.error);return;}
 
     // v25.0.41：禁言拦截（全员禁言仅群主/管理员可发；个人禁言到期前不可发）
     const canSpeak = (myRole === "owner" || myRole === "admin") || (!muteAll && myMuteRemain <= 0);
@@ -161,6 +167,7 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
       content: text,
       type: "text",
       timestamp: new Date().toISOString(),
+      status: "sending",
     };
 
     saveGroupMessage(groupId, newMsg);
@@ -168,6 +175,7 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
     setInputText("");
 
     void sendGroupMessage(groupId, text, newMsg.id).then((r) => {
+      if(getGroupAccountId()!==currentUserId)return;
       if (r && r.success && r.message) {
         const serverId = parseInt(r.message.id, 10) || 0;
         lastServerMsgIdRef.current = Math.max(lastServerMsgIdRef.current, serverId);
@@ -175,14 +183,15 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
         // v25.0.47：乐观消息改用服务端规范ID落库，换设备/清缓存重登后自己的历史消息也能从服务端拉回
         const canonicalId = "gsrv_" + r.message.id;
         deleteGroupMessage(groupId, newMsg.id);
-        saveGroupMessage(groupId, { ...newMsg, id: canonicalId });
+        saveGroupMessage(groupId, { ...newMsg, id: canonicalId, status: "sent", reviewStatus: r.message.reviewStatus });
         setMessages((prev) => {
           if (prev.some((m) => m.id === canonicalId)) return prev.filter((m) => m.id !== newMsg.id);
-          return prev.map((m) => (m.id === newMsg.id ? { ...m, id: canonicalId } : m));
+            return prev.map((m) => (m.id === newMsg.id ? { ...m, id: canonicalId, status: "sent", reviewStatus: r.message?.reviewStatus } : m));
         });
       } else {
         // v25.0.41：发送失败标记（可重发）
         setFailIds((prev) => new Set(prev).add(newMsg.id));
+        showToast(r?.error||"发送失败，内容仍保留，可重试");
       }
     }).catch(() => {
       setFailIds((prev) => new Set(prev).add(newMsg.id));
@@ -192,15 +201,16 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
   // v25.0.41：失败重发（v25.0.47：沿用原clientMsgId幂等，成功后同样落规范ID）
   const handleResend = (msg: ChatMessage) => {
     void sendGroupMessage(groupId, msg.content, msg.id.startsWith("gsrv_") ? undefined : msg.id).then((r) => {
+      if(getGroupAccountId()!==currentUserId)return;
       if (r && r.success && r.message) {
         setFailIds((prev) => { const n = new Set(prev); n.delete(msg.id); return n; });
         const canonicalId = "gsrv_" + r.message.id;
         if (msg.id !== canonicalId) {
           deleteGroupMessage(groupId, msg.id);
-          saveGroupMessage(groupId, { ...msg, id: canonicalId });
+          saveGroupMessage(groupId, { ...msg, id: canonicalId, status:"sent", reviewStatus:r.message.reviewStatus });
           setMessages((prev) => {
             if (prev.some((m) => m.id === canonicalId)) return prev.filter((m) => m.id !== msg.id);
-            return prev.map((m) => (m.id === msg.id ? { ...m, id: canonicalId } : m));
+            return prev.map((m) => (m.id === msg.id ? { ...m, id: canonicalId, status:"sent", reviewStatus:r.message?.reviewStatus } : m));
           });
         }
       } else {
@@ -216,7 +226,9 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
     const poll = async () => {
       if (stopped || document.visibilityState === "hidden") return;
       try {
-        const r = await fetchGroupMessages(groupId, lastServerMsgIdRef.current);
+        const r = await fetchGroupMessages(groupId, 0);
+        if(stopped||getGroupAccountId()!==currentUserId)return;
+        if(r?.success)setOlderCursor(old=>old===undefined?r.nextBefore||null:old);
         if (r && r.success && r.messages && r.messages.length) {
           for (const m of r.messages) {
             lastServerMsgIdRef.current = Math.max(lastServerMsgIdRef.current, parseInt(m.id, 10) || 0);
@@ -228,23 +240,17 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
             content: m.content,
             type: (m.type === "image" || m.type === "system" ? m.type : "text") as ChatMessage["type"],
             timestamp: m.createdAt,
+            reviewStatus: m.reviewStatus,
           }));
           if (incoming.length) {
             setMessages((prev) => {
               const existIds = new Set(prev.map((x) => x.id));
               const fresh = incoming.filter((x) => !existIds.has(x.id));
-              // v25.0.47：清理与自身历史重复的旧版乐观缓存（gmsg_本地消息 vs 服务端gsrv_历史）
-              const ownFresh = new Set(fresh.filter((x) => String(x.senderId) === String(currentUserId)).map((x) => x.content));
-              let base = prev;
-              if (ownFresh.size) {
-                const dups = prev.filter((x) => x.id.startsWith("gmsg_") && String(x.senderId) === String(currentUserId) && ownFresh.has(x.content));
-                if (dups.length) {
-                  dups.forEach((x) => deleteGroupMessage(groupId, x.id));
-                  base = prev.filter((x) => !dups.includes(x));
-                }
-              }
-              for (const f of fresh) saveGroupMessage(groupId, f);
-              return fresh.length || base !== prev ? [...base, ...fresh] : prev;
+              const base = prev; // Equal text is not a message identity.
+              for (const f of incoming) saveGroupMessage(groupId, f);
+              const updates=new Map(incoming.map(m=>[m.id,m]));
+              const merged=[...base.map(m=>updates.has(m.id)?{...m,...updates.get(m.id)}:m),...fresh];
+              return JSON.stringify(merged)===JSON.stringify(prev)?prev:merged;
             });
           }
         }
@@ -260,6 +266,8 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [groupId, currentUserId]);
+
+  const loadOlder=async()=>{if(!olderCursor||loadingOlder)return;setLoadingOlder(true);try{const r=await fetchGroupMessages(groupId,0,olderCursor);if(getGroupAccountId()!==currentUserId)return;if(!r?.success){showToast(r?.error||"加载失败，请重试");return;}const older:ChatMessage[]=(r.messages||[]).map(m=>({id:"gsrv_"+m.id,senderId:m.senderId,senderName:m.senderName,content:m.content,type:m.type==="image"?"image":"text",timestamp:m.createdAt,reviewStatus:m.reviewStatus}));for(const m of older)saveGroupMessage(groupId,m);if(chatListRef.current)restoreScroll.current={height:chatListRef.current.scrollHeight,top:chatListRef.current.scrollTop};setMessages(prev=>{const ids=new Set(prev.map(m=>m.id));return [...older.filter(m=>!ids.has(m.id)),...prev];});setOlderCursor(r.nextBefore||null);}finally{setLoadingOlder(false);}};
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -407,6 +415,7 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
       </div>
 
       {/* 全员禁言提示条 */}
+      {group?.reviewStatus!=="active"&&<p className="px-4 py-2 text-xs bg-amber-50 text-amber-900">{group?.reviewStatus==="pending"?"学习群资料待审核，审核通过后方可邀请和发言。":group?.reviewStatus==="rejected"?"学习群资料未通过审核，暂不可邀请或发言。":"正在核对学习群审核状态，旧群不会自动重新开放。"}</p>}
       {muteAll && myRole === "member" && (
         <div className="px-3 py-1.5 text-center text-xs" style={{ backgroundColor: "#fff7e6", color: "#d48806" }}>
           群主已开启全员禁言，仅管理员可发言
@@ -415,6 +424,7 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
 
       <div
         ref={chatListRef}
+        onScroll={()=>{const box=chatListRef.current;if(box)followTail.current=box.scrollHeight-box.scrollTop-box.clientHeight<80;}}
         className="flex-1 overflow-y-auto px-3 py-4 space-y-3"
       >
         {messages.length === 0 && (
@@ -444,6 +454,7 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
           </div>
         )}
 
+        {olderCursor&&<button className="w-full py-2 text-sm text-purple-800" disabled={loadingOlder} onClick={()=>void loadOlder()}>{loadingOlder?"正在加载":"加载更早消息"}</button>}
         {messages.map((msg) => {
           const isMe = msg.senderId === currentUserId;
           const failed = failIds.has(msg.id);
@@ -504,6 +515,7 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
                   </p>
                 )}
                 <p>{msg.content}</p>
+                {isMe&&<p className="mt-1 text-[10px]">{failed?"未发送":msg.status==="sending"?"发送中":msg.reviewStatus==="pending"?"待审核，仅自己可见":msg.reviewStatus==="rejected"?"审核未通过，仅自己可见":msg.reviewStatus==="active"?"审核通过（不代表成员已读）":"历史消息"}</p>}
                 <p
                   className="mt-1 text-right text-[10px] flex items-center justify-end gap-1"
                   style={{ opacity: isMe ? 0.7 : 0.5 }}
@@ -592,13 +604,13 @@ export default function GroupChatPage({ routeId }: { routeId?: string }) {
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="输入消息..."
+          placeholder="文字交流，最多500字"
           className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm focus:outline-none"
           style={{ outline: "none" }}
         />
         <button
           onClick={handleSend}
-          disabled={!inputText.trim()}
+          disabled={!inputText.trim()||group?.reviewStatus!=="active"}
           className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-colors"
           style={{
             backgroundColor: inputText.trim() ? BRAND : "#ccc",

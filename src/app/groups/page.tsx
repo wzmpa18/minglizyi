@@ -13,6 +13,7 @@ import {
 import { fetchGroups as apiFetchGroups, fetchConversations, type ConversationVo } from "@/lib/socialApi";
 
 import { PageLoginGuard } from "@/components/PageLoginGuard";
+import StudyGroupInvitations from "@/components/StudyGroupInvitations";
 const BRAND = "#7B2FBE";
 
 export default function GroupsPage() {
@@ -137,7 +138,8 @@ export default function GroupsPage() {
       style={{ maxWidth: "420px", margin: "0 auto" }}
     >
   <PageLoginGuard />
-      <BrandHeader title="群聊" showBack />
+      <BrandHeader title="学习群" showBack />
+      <StudyGroupInvitations />
 
       <div className="flex-1 overflow-y-auto">
         {groups.length === 0 ? (

@@ -17,7 +17,11 @@ if (gradleVersion !== versionName) {
 
 const webDir = path.join(root, 'www');
 if (!fs.existsSync(webDir)) throw new Error('www 不存在，请先把 out 同步到 www');
+const sourceCommit=process.env.GITHUB_SHA||require('node:child_process').execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim();
+if(!/^[a-f0-9]{40}$/.test(sourceCommit))throw new Error('无法核实原生内置资源的源码提交');
 const marker = {
+  sourceCommit,
+  storeChannel:process.env.NEXT_PUBLIC_STORE_CHANNEL||'default',
   isNativeApp: true,
   versionCode,
   versionName,
