@@ -50,6 +50,8 @@ export interface CalendarEvent {
   customUnit?: "day" | "week" | "month" | "year";
   /** 提醒档位列表（可多选） */
   reminders: ReminderOffset[];
+  /** Opt-in precision request, subject to system permission and delivery limits. */
+  exactReminder?: boolean;
   birthYearKnown?: boolean;
   completedDates?: string[];
   snoozedReminder?: {date:string;at:number};
@@ -216,6 +218,7 @@ export interface CreateEventInput {
   customInterval?: number;
   customUnit?: "day" | "week" | "month" | "year";
   reminders?: ReminderOffset[];
+  exactReminder?: boolean;
   birthYearKnown?: boolean;
   lunarMonth?: number;
   lunarDay?: number;
@@ -257,6 +260,7 @@ export function createEvent(input: CreateEventInput): { success: boolean; error?
     customInterval: input.repeat === "custom" ? Math.max(1, input.customInterval || 1) : undefined,
     customUnit: input.repeat === "custom" ? input.customUnit || "day" : undefined,
     reminders: input.reminders !== undefined ? input.reminders : [{ offsetMinutes: 1440 }],
+    exactReminder: input.exactReminder===true,
     birthYearKnown: input.type==="birthday" ? input.birthYearKnown!==false : undefined,
     birthdayRules: input.birthdayRules || { ...DEFAULT_BIRTHDAY_RULES },
     eventTime: input.eventTime || "09:00",

@@ -19,8 +19,11 @@ public class LocalCalendarPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotificatio
         UNUserNotificationCenter.current().getNotificationSettings { settings in
             let allowed=settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional
             var result:JSObject=["native":true,"platform":"ios","widgets":ProcessInfo.processInfo.isOperatingSystemAtLeast(OperatingSystemVersion(majorVersion:17,minorVersion:0,patchVersion:0)) && FileManager.default.containerURL(forSecurityApplicationGroupIdentifier:"group.com.yandaoguoxue.calendar") != nil,"notifications":allowed]
-            if let count=scheduled { result["scheduled"]=count }
-            call.resolve(result)
+            result["queueBudget"]=48 // Application budget with room for other local requests, not an OS guarantee.
+            if let root=FileManager.default.containerURL(forSecurityApplicationGroupIdentifier:"group.com.yandaoguoxue.calendar"),let bytes=try? Data(contentsOf:root.appendingPathComponent("calendar-v1.json")),let payload=(try? JSONSerialization.jsonObject(with:bytes)) as? [String:Any]{result["deferred"]=payload["deferred"] as? Int ?? 0;result["plannedThrough"]=payload["plannedThrough"] as? Double ?? 0}
+            UNUserNotificationCenter.current().getPendingNotificationRequests{requests in
+                var actual=result;actual["scheduled"]=requests.filter{$0.identifier.hasPrefix("yandao-calendar-")}.count;call.resolve(actual)
+            }
         }
     }
     @objc func status(_ call:CAPPluginCall){state(call)}
@@ -36,7 +39,7 @@ public class LocalCalendarPlugin: CAPPlugin, CAPBridgedPlugin, UNUserNotificatio
               let bytes=text.data(using:.utf8),let payload=(try? JSONSerialization.jsonObject(with:bytes)) as? [String:Any],
               let snapshot=payload["snapshot"] as? [String:Any],snapshot["schemaVersion"] as? Int == 1,
               let expires=snapshot["expiresAt"] as? Double,expires>Date().timeIntervalSince1970*1000,
-              let rows=payload["reminders"] as? [[String:Any]],rows.count<=64 else{call.reject("日历快照无效或过期");return}
+              let rows=payload["reminders"] as? [[String:Any]],rows.count<=48 else{call.reject("日历快照无效或过期");return}
         let now=Date().timeIntervalSince1970*1000
         guard rows.allSatisfy({ row in guard let id=row["id"] as? Int,let at=row["at"] as? Double else{return false};return id>0 && at>now && at<now+366*86400000 })else{call.reject("提醒时间无效");return}
         worker.async {

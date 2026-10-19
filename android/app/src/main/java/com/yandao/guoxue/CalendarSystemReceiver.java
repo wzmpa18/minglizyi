@@ -15,10 +15,10 @@ public class CalendarSystemReceiver extends BroadcastReceiver {
         Intent intent=new Intent(context,CalendarSystemReceiver.class).setAction(ACTION).putExtra("id",id);
         return PendingIntent.getBroadcast(context,id,intent,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
     }
-    public static synchronized void replace(Context context,JSONObject data) throws Exception {
+    public static synchronized int replace(Context context,JSONObject data) throws Exception {
         AlarmManager manager=(AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
         JSONArray old=read(context).optJSONArray("reminders");
-        JSONArray reminders=data.getJSONArray("reminders");if(reminders.length()>64)throw new Exception("最多预排64项提醒");
+        JSONArray reminders=data.getJSONArray("reminders");if(reminders.length()>128)throw new Exception("超过本应用本轮128项队列预算");
         long now=System.currentTimeMillis();
         for(int i=0;i<reminders.length();i++){
             JSONObject item=reminders.getJSONObject(i);long at=item.getLong("at");
@@ -26,17 +26,19 @@ public class CalendarSystemReceiver extends BroadcastReceiver {
         }
         if(!context.getSharedPreferences(PREFS,0).edit().putString("payload",data.toString()).commit())throw new Exception("本机存储失败");
         if(manager!=null&&old!=null)for(int i=0;i<old.length();i++)manager.cancel(alarmIntent(context,old.getJSONObject(i).getInt("id")));
-        schedule(context);
+        return schedule(context);
     }
-    public static synchronized void schedule(Context context) {
-        AlarmManager manager=(AlarmManager)context.getSystemService(Context.ALARM_SERVICE);if(manager==null)return;
-        JSONArray reminders=read(context).optJSONArray("reminders");if(reminders==null)return;
+    public static synchronized int schedule(Context context) {
+        AlarmManager manager=(AlarmManager)context.getSystemService(Context.ALARM_SERVICE);if(manager==null)return 0;
+        JSONArray reminders=read(context).optJSONArray("reminders");if(reminders==null)return 0;int registered=0,failed=0;
         for(int i=0;i<reminders.length();i++)try{
             JSONObject item=reminders.getJSONObject(i);long at=item.getLong("at");if(at<=System.currentTimeMillis())continue;
             PendingIntent intent=alarmIntent(context,item.getInt("id"));
-            if(Build.VERSION.SDK_INT<31||manager.canScheduleExactAlarms())manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,at,intent);
+            if(item.optBoolean("exact",false)&&(Build.VERSION.SDK_INT<31||manager.canScheduleExactAlarms()))manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,at,intent);
             else manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,at,intent);
-        }catch(Exception ignored){}
+            registered++;
+        }catch(Exception ignored){failed++;}
+        context.getSharedPreferences(PREFS,0).edit().putInt("registeredCount",registered).putInt("registrationFailed",failed).putLong("lastScheduleAt",System.currentTimeMillis()).apply();return registered;
     }
     @Override public void onReceive(Context context,Intent intent) {
         if(!ACTION.equals(intent.getAction())){schedule(context);HuangliWidgetProvider.updateAll(context);return;}

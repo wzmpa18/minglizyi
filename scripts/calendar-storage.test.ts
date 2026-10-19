@@ -19,7 +19,9 @@ test("calendar ownership, explicit migration, lunar month/day and completion/sno
   storage.setItem("yandao_user_id","fixture-device");
   assert.equal(calendarStorageOwner(),"guest:fixture-device");
   const guest=createEvent({type:"birthday",title:"本人农历生日",year:2000,month:1,day:1,dateMode:"lunar",lunarMonth:-2,lunarDay:1,birthYearKnown:false,repeat:"yearly",eventTime:"09:00",timeZone:"Asia/Shanghai",reminders:[]});
+  assert.equal(guest.event!.exactReminder,false);
   assert.equal(guest.success,true);assert.equal(guest.event!.birthYearKnown,false);
+  assert.equal(updateEvent(guest.event!.id,{exactReminder:true}).success,true);assert.equal(listEvents()[0].exactReminder,true);
   assert.equal(updateEvent(guest.event!.id,{title:"修改标题"}).success,true);assert.equal(listEvents()[0].lunarMonth,-2);
   login("alice");assert.equal(calendarStorageOwner(),"account:alice");assert.equal(listEvents().length,0);assert.equal(hasUnassignedCalendar(),true);
   assert.equal(claimUnassignedCalendar(false).success,false);assert.equal(listEvents().length,0);

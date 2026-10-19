@@ -79,6 +79,7 @@ interface FormState {
   customInterval: string;
   customUnit: "day" | "week" | "month" | "year";
   reminders: number[];
+  exactReminder: boolean;
 }
 
 export default function CalendarEventsPage() {
@@ -122,6 +123,7 @@ export default function CalendarEventsPage() {
       customInterval: "1",
       customUnit: "month",
       reminders: [1440],
+      exactReminder:false,
     }),
     []
   );
@@ -190,6 +192,7 @@ export default function CalendarEventsPage() {
       customInterval: String(ev.customInterval || 1),
       customUnit: ev.customUnit || "month",
       reminders: ev.reminders.map((r) => r.offsetMinutes),
+      exactReminder:ev.exactReminder===true,
     });
     setCalendarTouched(true);
     setShowForm(true);
@@ -258,6 +261,7 @@ export default function CalendarEventsPage() {
         customInterval: form.repeat === "custom" ? Math.max(1, Number(form.customInterval) || 1) : undefined,
         customUnit: form.repeat === "custom" ? form.customUnit : undefined,
         reminders,
+        exactReminder:form.exactReminder,
       });
       if (!r.success) {
         showTip(r.error || "保存失败");
@@ -284,6 +288,7 @@ export default function CalendarEventsPage() {
         customInterval: form.repeat === "custom" ? Math.max(1, Number(form.customInterval) || 1) : undefined,
         customUnit: form.repeat === "custom" ? form.customUnit : undefined,
         reminders,
+        exactReminder:form.exactReminder,
       });
       if (!r.success) {
         showTip(r.error || "创建失败");
@@ -696,6 +701,8 @@ export default function CalendarEventsPage() {
                     </div>
                   )}
                 </div>
+
+              <InterfaceLabel className="mb-3 block text-xs leading-6"><input type="checkbox" checked={form.exactReminder} onChange={e=>setForm({...form,exactReminder:e.target.checked})}/>本人确需准点提醒（安卓需系统授权；仍受关机、强停和设备限制）</InterfaceLabel>
 
                 {/* 提醒档位（多选） */}
                 <div className="mb-3">

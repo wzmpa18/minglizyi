@@ -26,6 +26,7 @@ public class LocalCalendarPlugin extends Plugin {
     @PluginMethod public void status(PluginCall call) { call.resolve(state()); }
     private JSObject state() {
         JSObject result=new JSObject();
+        JSONObject payload=CalendarSystemReceiver.read(getContext());android.content.SharedPreferences prefs=getContext().getSharedPreferences(CalendarSystemReceiver.PREFS,0);result.put("queueBudget",128);result.put("scheduled",prefs.getInt("registeredCount",0));result.put("registrationFailed",prefs.getInt("registrationFailed",0));result.put("plannedThrough",payload.optLong("plannedThrough",0));result.put("deferred",payload.optInt("deferred",0));
         result.put("native",true);result.put("widgets",true);result.put("platform","android");
         android.app.NotificationManager notifications=(android.app.NotificationManager)getContext().getSystemService(android.content.Context.NOTIFICATION_SERVICE);
         result.put("notifications",(Build.VERSION.SDK_INT<33||getPermissionState("notifications")==PermissionState.GRANTED)&&(Build.VERSION.SDK_INT<24||notifications==null||notifications.areNotificationsEnabled()));
@@ -44,9 +45,9 @@ public class LocalCalendarPlugin extends Plugin {
             if(raw.length()>250000)throw new Exception("日历快照过大");
             JSONObject payload=new JSONObject(raw),snapshot=payload.getJSONObject("snapshot");
             if(snapshot.getInt("schemaVersion")!=1||snapshot.getJSONArray("entries").length()>300||snapshot.getLong("expiresAt")<=System.currentTimeMillis())throw new Exception("日历快照已过期或版本不受支持");
-            CalendarSystemReceiver.replace(getContext(),payload);
+            int registered=CalendarSystemReceiver.replace(getContext(),payload);
             HuangliWidgetProvider.updateAll(getContext());
-            JSObject result=state();result.put("scheduled",payload.getJSONArray("reminders").length());result.put("expiresAt",snapshot.getLong("expiresAt"));call.resolve(result);
+            JSObject result=state();result.put("scheduled",registered);result.put("expiresAt",snapshot.getLong("expiresAt"));call.resolve(result);
         } catch(Exception error) {call.reject("日历同步失败："+error.getMessage());}
     }
     @PluginMethod public void addWidget(PluginCall call) {
