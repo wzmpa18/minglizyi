@@ -14,12 +14,13 @@ export function ModalSurface({label,children,onClose,locked=false,className=''}:
    if(event.key!=='Tab')return;
    const items=controls(),first=items[0],last=items.at(-1);
    if(!first){event.preventDefault();root.current?.focus();return;}
-   if(event.shiftKey&&(document.activeElement===first||!root.current?.contains(document.activeElement))){event.preventDefault();last?.focus();}
-   else if(!event.shiftKey&&(document.activeElement===last||!root.current?.contains(document.activeElement))){event.preventDefault();first.focus();}
+   if(event.shiftKey&&(document.activeElement===first||!items.includes(document.activeElement as HTMLElement))){event.preventDefault();last?.focus();}
+   else if(!event.shiftKey&&(document.activeElement===last||!items.includes(document.activeElement as HTMLElement))){event.preventDefault();first.focus();}
   };
-  document.addEventListener('keydown',key,true);
-  return()=>{document.removeEventListener('keydown',key,true);if(previous?.isConnected)previous.focus();};
+  const navigation=()=>{if(!state.current.locked)state.current.onClose();};
+  document.addEventListener('keydown',key,true);window.addEventListener('popstate',navigation);
+  return()=>{document.removeEventListener('keydown',key,true);window.removeEventListener('popstate',navigation);if(previous?.isConnected)previous.focus();};
  },[]);
  if(typeof document==='undefined')return null;
- return createPortal(<div ref={root} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} className={'fixed inset-0 z-[30000] overflow-auto p-4 pt-[max(28px,calc(env(safe-area-inset-top)+16px))] pb-[max(24px,calc(env(safe-area-inset-bottom)+16px))] '+className}>{children}</div>,document.body);
+ return createPortal(<div ref={root} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} className={'fixed inset-0 z-[30000] overflow-auto overscroll-contain p-4 pt-[max(28px,calc(env(safe-area-inset-top)+16px))] pb-[max(24px,calc(env(safe-area-inset-bottom)+16px))] '+className}>{children}</div>,document.body);
 }
