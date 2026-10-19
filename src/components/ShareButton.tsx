@@ -1,5 +1,6 @@
 "use client";
 
+import {useInterfaceLocale} from "@/lib/interfaceLocale";
 import { useRouter } from "next/navigation";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { generatePoster } from "@/lib/sharePoster";
@@ -346,6 +347,7 @@ function ShareMenu({
   onSystemShare: () => void;
   onClose: () => void;
 }) {
+  const {ui}=useInterfaceLocale();
   useBodyScrollLock(true);
   usePopupBackHandler(onClose, true);
 
@@ -369,7 +371,7 @@ function ShareMenu({
           </button>
         </div>
         <div className="overflow-y-auto" style={{ WebkitOverflowScrolling: "touch" }}>
-        {onLive&&<div className="px-6 pb-4"><button type="button" onClick={onLive} className="w-full rounded-xl bg-purple-700 p-3 text-sm font-semibold text-white">分享活盘 · 指定学友</button><p className="mt-2 text-xs leading-5 text-stone-600">逐张选择本机盘，预览脱敏资料和权限后再发送。下方海报与二维码是另外的分享方式。</p></div>}
+        {onLive&&<div className="px-6 pb-4"><button type="button" onClick={onLive} className="w-full rounded-xl bg-purple-700 p-3 text-sm font-semibold text-white">{ui("分享活盘 · 指定学友")}</button><p className="mt-2 text-xs leading-5 text-stone-600">逐张选择本机盘，预览脱敏资料和权限后再发送。下方海报与二维码是另外的分享方式。</p></div>}
         <div className="grid grid-cols-4 gap-3 px-6 pb-4">
           <button
             onClick={onCopyLink}

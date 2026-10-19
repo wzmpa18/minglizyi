@@ -1,5 +1,6 @@
 "use client";
 
+import {useInterfaceLocale} from "@/lib/interfaceLocale";
 import { useRouter } from "next/navigation";
 import { profileFromRecord, TOOL_NAMES } from "@/lib/paipanProfiles";
 import { afterPopupClose } from "@/lib/popupTransition";
@@ -39,6 +40,7 @@ export function PaipanHistoryButton({ toolKey, onRestore }: PaipanHistoryButtonP
     refresh(); window.addEventListener("storage", refresh);
     return () => window.removeEventListener("storage", refresh);
   }, []);
+  const {ui}=useInterfaceLocale();
   const router = useRouter();
   const [scope, setScope] = useState<"current" | "all">("all");
   const [query, setQuery] = useState("");
@@ -190,7 +192,7 @@ export function PaipanHistoryButton({ toolKey, onRestore }: PaipanHistoryButtonP
                         >
                           {r.tool === toolKey ? "恢复" : "查看原盘"}
                         </button>
-                        <button onClick={()=>{setShowHistory(false);router.push(`/discover/live/?compose=${encodeURIComponent(r.tool)}&record=${r.id}`);}} className="rounded-lg border border-purple-200 px-2.5 py-1 text-[11px] text-purple-700">分享活盘</button>
+                        <button onClick={()=>{setShowHistory(false);router.push(`/discover/live/?compose=${encodeURIComponent(r.tool)}&record=${r.id}`);}} className="rounded-lg border border-purple-200 px-2.5 py-1 text-[11px] text-purple-700">{ui("分享活盘")}</button>
                         <button onClick={() => beginEdit(r)} className="rounded-lg border border-purple-200 px-2.5 py-1 text-[11px] text-purple-700">编辑名称/备注</button>
                         <button
                           onClick={() => handleDelete(r.id)}

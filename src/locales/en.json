@@ -585,6 +585,14 @@
     "已发送与收到的活盘": "Sent and received chart links",
     "归档盘面": "Archived chart",
     "打开": "Open",
-    "收起": "Collapse"
+    "收起": "Collapse",
+    "分享活盘": "Share interactive chart",
+    "分享活盘 · 指定学友": "Share chart with a chosen friend",
+    "选择此盘预览定向分享": "Preview this chart for private sharing",
+    "打开原交流并核对再分享权限": "Open original discussion and check forwarding rights",
+    "加载更早活盘": "Load older chart links",
+    "预览导入正文": "Preview text import",
+    "确认追加完整文字": "Append the complete text",
+    "取消导入": "Cancel import"
   }
 }

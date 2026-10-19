@@ -89,3 +89,12 @@ export function mergeLifeAutosave(current:LifeEntry|null,submitted:LifeEntry,sav
 }
 
 export function segmentLifeQuery(query:string){if(typeof Intl.Segmenter!=='function')throw Error("本浏览器不支持本机中文分词，请继续使用短词、片段或空格组合查询");return [...new Intl.Segmenter('zh',{granularity:'word'}).segment(normalizeLifeText(query))].filter(s=>s.isWordLike).map(s=>s.segment).join(' ');}
+
+/** Exact UTF-8 text import; a bounded preview never truncates the actual import. */
+export async function importedLifeText(blob:Blob){
+ if(blob.size>1024*1024)throw Error('正文导入单次支持1MiB UTF-8文件；原件仍完整保存，请分段处理，未截断导入');
+ const text=new TextDecoder('utf-8',{fatal:true}).decode(await blob.arrayBuffer());
+ if(text.includes('\u0000'))throw Error('此文件包含二进制内容，未作为正文导入');
+ if(!text.trim())throw Error('文件没有可导入的文字');
+ return text;
+}
