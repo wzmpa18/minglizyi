@@ -11,114 +11,114 @@
     {
       "id": 1,
       "criterion": "核对活跃仓/07/09和既有设施，只改国学",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED_PARTIAL_ACCEPTANCE",
       "evidenceRequired": true
     },
     {
       "id": 2,
       "criterion": "复用11类症状，相关原文/同证折叠抽屉",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED_PARTIAL_ACCEPTANCE",
       "evidenceRequired": true
     },
     {
       "id": 3,
       "criterion": "概念与别名索引、原始来源卡与全文边界",
-      "status": "IN_PROGRESS",
+      "status": "PARTIAL_OR_PENDING",
       "evidenceRequired": true
     },
     {
       "id": 4,
       "criterion": "成年人验证账号、500字主题交流/筛选/举报屏蔽",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED_PARTIAL_ACCEPTANCE",
       "evidenceRequired": true
     },
     {
       "id": 5,
       "criterion": "三种分享方式、逐字段最小副本与脱敏确认",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED_PARTIAL_ACCEPTANCE",
       "evidenceRequired": true
     },
     {
       "id": 6,
       "criterion": "结构化个人经历，不输出他人可照用方案",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED_PARTIAL_ACCEPTANCE",
       "evidenceRequired": true
     },
     {
       "id": 7,
       "criterion": "固定原文引用、分歧列表与主动AI分类",
-      "status": "IN_PROGRESS",
+      "status": "PARTIAL_OR_PENDING",
       "evidenceRequired": true
     },
     {
       "id": 8,
       "criterion": "本机摘录、本人就诊关联及确认日历",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED_PARTIAL_ACCEPTANCE",
       "evidenceRequired": true
     },
     {
       "id": 9,
       "criterion": "成年自愿同辰原规则与口径",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED_PARTIAL_ACCEPTANCE",
       "evidenceRequired": true
     },
     {
       "id": 10,
       "criterion": "四主题及自愿人生片段，互相同意交流",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED_PARTIAL_ACCEPTANCE",
       "evidenceRequired": true
     },
     {
       "id": 11,
       "criterion": "可见域服务端隔离、资源权限、无健康SEO",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED_PARTIAL_ACCEPTANCE",
       "evidenceRequired": true
     },
     {
       "id": 12,
       "criterion": "统一审核/举报/申诉/封禁及真实渠道披露",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED_PARTIAL_ACCEPTANCE",
       "evidenceRequired": true
     },
     {
       "id": 13,
       "criterion": "模拟辨证规则原文对照，无个人诊断处方",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED_PARTIAL_ACCEPTANCE",
       "evidenceRequired": true
     },
     {
       "id": 14,
       "criterion": "不改价格佣金，隐私删除导出举报免费",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED_PARTIAL_ACCEPTANCE",
       "evidenceRequired": true
     },
     {
       "id": 15,
       "criterion": "分步开放，不具备资质/审核条件者关闭",
-      "status": "IN_PROGRESS",
+      "status": "IMPLEMENTED_PARTIAL_ACCEPTANCE",
       "evidenceRequired": true
     },
     {
       "id": 16,
       "criterion": "真实双人权限/隐私/边界/回归/原生测试",
-      "status": "IN_PROGRESS",
+      "status": "PARTIAL_OR_PENDING",
       "evidenceRequired": true
     },
     {
       "id": 17,
       "criterion": "同一权威交接内10号交付记录和真实状态",
-      "status": "IN_PROGRESS",
+      "status": "HANDOVER_CHECKPOINT_NOT_FINAL_DELIVERY",
       "evidenceRequired": true
     }
   ],
   "cases": [
     {
       "id": "10-concept-multiselect-clear",
-      "status": "NOT_YET_ACCEPTED"
+      "status": "AUTOMATED_PASS_AND_LIVE_WEB_MULTISELECT"
     },
     {
       "id": "10-all-literal-source-positions",
-      "status": "NOT_YET_ACCEPTED"
+      "status": "AUTOMATED_PASS_1053_LITERAL_CARDS"
     },
     {
       "id": "10-source-license-boundary",
@@ -126,7 +126,7 @@
     },
     {
       "id": "10-no-same-symptom-diagnosis",
-      "status": "NOT_YET_ACCEPTED"
+      "status": "LOCAL_RULE_FLOW_VERIFIED_NO_PERSONAL_AI"
     },
     {
       "id": "10-no-automatic-private-vault-read",
@@ -138,39 +138,39 @@
     },
     {
       "id": "10-field-confirmation-and-redaction",
-      "status": "NOT_YET_ACCEPTED"
+      "status": "AUTOMATED_PASS_PENDING_REAL_TWO_USER_UI"
     },
     {
       "id": "10-visible-500-501-emoji",
-      "status": "NOT_YET_ACCEPTED"
+      "status": "AUTOMATED_PASS"
     },
     {
       "id": "10-citation-authentic-and-chapter-filter",
-      "status": "NOT_YET_ACCEPTED"
+      "status": "LIVE_WEB_CASE_FILTER_FULL_CHAPTER_HIGHLIGHT_AND_AUTOMATED"
     },
     {
       "id": "10-pending-on-unavailable-safety",
-      "status": "NOT_YET_ACCEPTED"
+      "status": "AUTOMATED_PASS_AND_LIVE_SYNTHETIC_AI_PROBE"
     },
     {
       "id": "10-stable-pseudonym-and-private-identity",
-      "status": "NOT_YET_ACCEPTED"
+      "status": "ISOLATED_TWO_IDENTITY_HTTP_PASS"
     },
     {
       "id": "10-two-account-post-reply",
-      "status": "NOT_YET_ACCEPTED"
+      "status": "ISOLATED_HTTP_AND_STORE_PASS_NOT_TWO_PHYSICAL_USERS"
     },
     {
       "id": "10-block-report-mute-remove",
-      "status": "NOT_YET_ACCEPTED"
+      "status": "ISOLATED_HTTP_AND_STORE_PASS"
     },
     {
       "id": "10-edit-requires-new-review",
-      "status": "NOT_YET_ACCEPTED"
+      "status": "AUTOMATED_PASS"
     },
     {
       "id": "10-exit-erases-public-source-copy",
-      "status": "NOT_YET_ACCEPTED"
+      "status": "ISOLATED_HTTP_AND_STORE_PASS"
     },
     {
       "id": "10-excerpt-in-independent-private-vault",
@@ -190,34 +190,52 @@
     },
     {
       "id": "10-minor-guest-unjoined-withdrawn-hidden",
-      "status": "NOT_YET_ACCEPTED"
+      "status": "ISOLATED_HTTP_AND_STORE_PASS"
     },
     {
       "id": "10-existing-charts-pay-ai-quota-exam-regression",
-      "status": "NOT_YET_ACCEPTED"
+      "status": "QUALITY_REGRESSION_PASS_NOT_PHYSICAL_IAP_ENTITLEMENT"
     },
     {
       "id": "10-web-real-ui",
-      "status": "NOT_YET_ACCEPTED"
+      "status": "LIVE_RESEARCH_SOURCE_CITATION_AUTHORIZATION_UI_PLUS_152_CONTROL_PASS"
     },
     {
       "id": "10-android-real-ui",
-      "status": "NOT_YET_ACCEPTED"
+      "status": "PARTIAL_PHYSICAL_2116_NIGHT_CONTROL_PASS_NOT_TWO_USER_FLOW"
     },
     {
       "id": "10-ios-real-ui",
-      "status": "NOT_YET_ACCEPTED"
+      "status": "SIGNED_IPA_AND_INTERNAL_TESTFLIGHT26_NOT_PHYSICAL_UI"
     },
     {
       "id": "10-store-disclosure-and-submission",
-      "status": "NOT_YET_ACCEPTED"
+      "status": "APPLE_AGE_FIELDS_READ_TESTFLIGHT26_INTERNAL_FORMAL_NOT_SUBMITTED"
     }
   ],
   "openPrerequisites": [
-    "medical case/interpretation professional review",
-    "named moderation coverage and channel disclosures",
-    "opt-in public AI provider/selection/cost before AI summaries",
-    "07/09 remaining software and physical acceptance"
+    "professional verification/rights for medical interpretations and all missing concept mappings",
+    "resolve quarantined complaints/appeals; automation is not certified complete coverage",
+    "opt-in provider, selection and cost flow before AI public summaries (not moderation)",
+    "remaining 07/09 software, two physical users, reminders/widgets/power, Apple sandbox entitlement recovery and formal store review"
   ],
-  "report": "交接报告/FINAL_PROJECT_HANDOVER.md#63; no competing report"
+  "report": "交接报告/FINAL_PROJECT_HANDOVER.md#63; no competing report",
+  "checkpointDate": "2026-10-19",
+  "moderationOverride": {
+    "authority": "2026-10-19 owner direct reply: built-in filtering and AI; no daily human staffing",
+    "mode": "rules plus strict opt-in Hy3 classification; ambiguous/failure/conflict/report quarantine",
+    "configured": true,
+    "dailyModelCallCap": 50,
+    "userAICreditsCharged": false,
+    "remaining": "complaint/appeal exceptions remain held without resolution; no promise of zero governance or certified coverage; legacy social feeds/groups not migrated"
+  },
+  "evidence": {
+    "quality": 39241147478,
+    "source": "152346da1a287c2d994b26f46c4b8e3196d35d66",
+    "newContrastSource": "152346da1a287c2d994b26f46c4b8e3196d35d66",
+    "productionWeb": "v25.0.115-calendar-community-152346d",
+    "androidInstalled": 2116,
+    "iosTestFlightInternal": 26,
+    "proofDirectory": "E:/八字命理类文档包括排盘方式电子版/言道国学项目归档/发布包/实机整改_20261018/"
+  }
 }

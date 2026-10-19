@@ -1217,3 +1217,103 @@ sqlite3 /tmp/yandao_restore_test/social.db "SELECT COUNT(*) FROM friendships; SE
 - 按负责人最新要求仅提供CMD，代理未删除文件/服务器旧目录，本轮释放0。唯一有效命令文件 `C:/Users/ZhuanZ/Documents/Codex/2026-10-17/e-c-users-zhuanz-documents-codex/outputs/guoxue-clean-20261018.cmd` 为CP936/CRLF，SHA `6bc78b38a9a33fd75b0d251926a480fc9b93ff72bc756c75a8710e83cb98796a`。4精确目标共56964392字节：E发布包旧2109 APK28235991/AAB28601849、同目录仅非递归空目录rd、C下载合成备份126552字节。原文件与E合成保全备份SHA均再核一致，命令逐文件hash匹配才删，备份先验证E副本；不删2110/2102、源码、密钥或真实审计证据。
 - 负责人执行命令：`cmd /c "C:\Users\ZhuanZ\Documents\Codex\2026-10-17\e-c-users-zhuanz-documents-codex\outputs\guoxue-clean-20261018.cmd"`。尚未执行，四目标当前仍在；不能说物理两代/彻底清理已达标。新2113仅云/RAM/手机，E仍2110+已验证2102并有2109待CMD；不得将其误称当前正式市场版本。历史97共享Git的6改/192删/66独有未跟踪与历史密钥债务尚未审结，不盲删共享Git或盲提交私有资料。
 - 下一步先处理剩余07/09软件与逐项验收、旧UGC治理/真实内容安全和医学权利问题，再同一最终源做iOS签名/TestFlight/两端实机、截图与真实提审。清理待负责人CMD后逐目标核验；版本轮换必须保留已验回退。四固定报告已按同一权威源同步，最终SHA及文档提交/推送、上游0/0和空status写到本E目录 `09_本轮收尾核验.json`，不在报告内自引用最终SHA。这里只是可核查的紧急整改检查点，07/09及整体正式交付未完成。
+
+## 63. 2026-10-19 10号同证研习、同辰人生及负责人改为自动审核（阶段上线，07/09/10整体未完成）
+
+### 63.1 指令核对、边界与本轮真实范围
+- 已读唯一活动仓/父级AGENTS、强制制度、总账、最近三个交接增量及10号原件。10号唯一原件为 `E:/八字命理类文档包括排盘方式电子版/yandao_instruction_10.txt`，SHA-256 `96d14a8064a1895cf01373f8bf5b648f4f1054aeee79bf729a51d64dd79e3826`。验收契约 `docs/requirements/research-10.acceptance.json`列17节/25案例，overallComplete=false；数量不是完成数。不改学外语、其他产品、支付价格、佣金、会员权益或排盘内核，不盲批医学资料。
+- 负责人最新直接回复：“内置相关，敏感词汇来审查，内置，涉及比较模糊的可能敏感的，AI审查！人工肯定没办法搞定！”因此取消本轮此前设计的每条人工通过及每日值守前置，改为规则＋明确授权的机器分类；管理员开放条件改为实际自动审核已配置、渠道披露及依据，不虚构已安排人工。异常/冲突/举报保持隔离，申诉入口仍在；无处理结论时不恢复，不能承诺完全无人治理、专项认证或全部风险都被识别。
+- 以下为10号阶段交付，不替代62.6的07/09剩余清单。当前真实源码930c6d9已官网上线、安卓2115实装、苹果25内部测试可用；真机发现持续时间选择框在夜间主题太暗，152346d补白底深色字/原生日期与分享选择控件，正在生成最终2116/苹果26。后续本节63.7以最终核验覆盖本段候选状态，不能把旧包说成新源。
+
+### 63.2 学习内容、原文证据和私人资料边界
+- 复用原有11类79症状，并建立s001–s079稳定概念ID；别名保守使用现有字面名称，未编造医学同义词。多选、任一字面命中、多个命中优先、分页、清选及仅古籍记载医案筛选均有测试。
+- 只对已有9部来源版本生成派生原文索引，不另建医学数据库。1053卡逐一与原章节Unicode码点位置核对；其中95段来自《医学衷中参西录》“五、醫案”，沿原文37个案名标记为古籍记载医案；其他条文不冒充临床案例。卡列书名/作者/版本/章节/自然段/位置/许可/校核边界，链接同一来源完整章节和高亮自然段，不伪造页码/医生签名。原文截段检索不等于把整本古籍改成节选。
+- 46/79概念目前有字面命中，33概念无字面命中，明确空结果并保留整本检索；现代同义词、传统证候/治法结构化标注、现代释义和全部医学专业/影印本复核仍未完成。不能把1053卡、9来源索引或书架数量说成药典、全部医籍/董氏穴位和医考专业审校全部齐全。
+- 辨证学习保留症状、流派/老师/方向参数，持续时间和自述只在页面内存。原个人输入→AI生成证候/方药/触诊和手法的本页流程改为本机确定性原文对照与学习问题，不把所选老师标签冒作已建学术知识链，不改支付额度服务。此处修正不等于其他旧医疗AI页全部已整改。
+- 两个折叠抽屉为相关经典医案/原文依据、同证研习；同辰页新增四主题人生交流。知识/化名/本人经历（人生域为本人片段）逐字段选择、核对脱敏、含标题/依据合计500字，服务端重新组装并与预览逐字比对。固定引用卡ID验证当前主题，不接受自造作者/出处。拒绝原库/附件/未知字段、联系方式、医院身份线索、具体日期年龄位置及可照用剂量、停药或侵入操作指导；不是保证任意自然语言都已无敏感信息。
+- 继续复用同一study-comments.db、用户、审核/举报/屏蔽与本机加密人生记录。研习使用域内随机稳定化名，后台受限关联原账号；登录、活跃账号与现有短信验证手机号校验。成年日期仅本次应用层核验，不保存到研习表；不是独立政府实名/年龄认证。未加入、未成年、游客/退出者由服务端拒绝研习读取，不靠隐藏按钮保护。
+- 同辰人生沿原匹配、双方同意与退出规则，公开主题不证明两人真的同辰；成员public_id/joined_ms/ruleVersion nonce变化后旧人生授权失效，重新加入/编辑不会静默恢复。本人删除或退出清除本研习正文/结构化副本、昵称/hash与检测副本，保留最小处置审计及受限反骚扰映射；别人此前获准保存的本机摘录不能远程收回。
+- 已公开且允许留档的摘录经本人动作进入原加密库的RAM导入交接，带来源/作者/时间及未独立核实标记；可另行选同一本机库既有就诊记录，或明确选择提醒时间。日历锁屏不放健康正文、姓名或生日，保留本应用来源返回。没有给好友或同辰用户原库访问权。摘录/就诊关联/原生提醒的两真实用户完整UI和送达验收仍待完成。
+
+### 63.3 自动审核已上线：实际模型、授权、隔离与成本边界
+- 新模块 `backend_deploy/studyModerationAutomation.js`使用已配置腾讯云TokenHub混元Hy3，固定官方HTTPS端点、禁止重定向、关闭思考/工具、要求JSON，输出上限512 token，12秒超时和64KiB响应上限。没有复用旧资源评论的简单PASS字符串匹配，也没开通新付费TMS/WAF产品、没换短信/邮件/存储密钥。
+- 内置NFKC/零宽/拆空格处理后先挡联系方式、身份线索和危险操作；涉政风险语境、暴恐仇恨、违法营销、医疗风险等规则标记不自动判定历史观点/引文违法。所有自由文字余项仍需机器逐类确认：违法政治煽动、暴恐、仇恨骚扰、色情未成年人、诈骗赌博、广告联系、隐私、危险医学操作及提示注入。类别缺失、非JSON、截断、上下文不明、模型不确定、规则冲突、服务异常或预算耗尽保持隔离；模型自报confidence门限不是经过标定的98%准确率。
+- 提交前新增不预选的单独授权，列明腾讯云TokenHub隐私说明、拟公开正文/显示化名与用途；服务端存版本。没有该版本授权的旧客户端/旧投稿不调用混元、不自动公开。只向机器发送public_text/public_display_name，研习使用系统化名，不附账号ID、出生盘、定位、私人健康原件、OCR或人生原库。拒绝授权不会影响本机资料，不能静默代用户勾选。
+- 平台审核不扣用户AI点数。复用已有模型调用额度，实际可能产生原服务的调用费用；每日全局最多50次、2并发，相同公开文字/显示名/策略hash缓存15分钟，SQLite持久预算不因重启归零，缓存不存正文。只能说有限调用，不能称免费或专项内容安全已开通。隐私与审核政策已更新，旧动态/资源评论/私聊群并未全部迁入此模块，不声称全站UGC完成同等治理。
+- 每条先入PENDING；只有当前授权/内容hash/策略版本匹配、账号和主题仍可用、父留言已公开、没有未处理举报/旧Block且完整机器通过，才自动APPROVED。机器Block不能被异常重试洗掉，用户删除后迟到结果不复活；后续不确定结果会撤下已公开项。举报立即隔离本条及回复，未处理举报不能直接恢复；支持用户反馈申诉、屏蔽、删除及本人待处理项重检，未取得通过结论不公开。日常不要求逐条人工点击；异常申诉未解决时会继续隔离，不能说已经实现无人治理闭环。
+- 真实混元合成探针2次：正常节气原文问题PASS，要求绕过系统并发布赌博广告的合成文字BLOCK；finish=stop，输出122/125 token，未创建公开帖子、未读取私人记录。此为实际通道可用与样例结果，不能当作完整政治/医疗分类准确率验证。证据 `10_混元合成文字真实审核探针.json`。
+- 生产模块部署仅7个明确文件/派生JSON，先核旧Store/Routes SHA与d62现行完全一致，再依赖优先原子替换、node --check、PM2重启。原两模块各一份.previous回退；没有覆盖server.js、用户/订单/社交库或其他服务；现有.env只改3个公开审核开关为true/true/50，不复制或打印私钥。模块SHA、旧SHA和重启回执为 `10_后端同证研习与自动审核部署.json`。
+- 真实公开读回schemaVersion2、configured/automatic=true、manualReviewRequired=false、dailyLimit50、no-store；两个新研习域经管理员真实接口确认披露/自动审核后开放，原始回执 `10_自动审核生产能力读回.json`（开放前）与 `10_自愿研习域开放回执.json`。古籍学习无须参加，公开域没有伪造人群/帖子。后台入口 `/admin/study-comments/`，公开入口 `/zhongyi/bianzheng/`、`/discover/tongchen/`，反馈 `/profile/feedback/`。
+
+### 63.4 实际测试、官网/安卓/Apple及失败纠正
+- 本地21个评论/安全/研习/自动审核测试通过；6个研习测试覆盖全部1053字面位置、500/501、未成年/字段权限/两身份/编辑重审/退出明文清除/同辰nonce；5个自动审核测试覆盖完整判定、授权、零宽/全角隐私、持久预算与hash缓存、异常/删除/举报/旧Block不复活、固定第三方最小载荷。3个TSX原文学习测试和原有回归由云执行。
+- 实际Express/JWT/SQLite HTTP两合成身份验证了开放权限、短信/成年人、pending→通过、域内化名、屏蔽/举报/退出删除；新增机器通过→公开、举报→立即隔离、重检权限。第三方传输在HTTP测试内专门模拟，不是两个人两台实机，不用生产假用户。旧资源/支付/会员等回归保持，通过不能替代Apple真机沙盒到账。
+- 初次8c83bb6质量39235970724在两处TS类型推断失败，691ce72修复，完整质量39236318403通过。e819b65完整质量39237316204及自动39237317457通过；e819安卓2114签名39237643795、苹果24签名39237642850通过但均被后续功能源替代，未传本机/未上传Apple。55ac1f2质量39238844361、2f61f7c质量39239020084通过。2f61安卓2115首次39239020295因workflow仍写死2114门限失败，不是安装成功；930c6d9用 `scripts/verify-android-identity.js` 直接核Gradle/package/实际复制marker与源码，避免下一次重复漏改门限。
+- 930c6d9最终质量39239274255成功，官方预览artifact12180198115/ZIP SHA d54dc2a0143a2df5384ee4ae33d3614c1bcfb898af319db9dc532ff9dbd48b86，2309文件68555344字节、manifest SHA a432f7ac9adf045a306b294a672d52fba827e8b745fcc65e80f41fb3c48d7232。官网全文件hash核对、原子切换到 `/root/yandaoguoxue/releases/v25.0.115-calendar-community-930c6d9`，前一可回退d62。源包全程RAM，未在C/E写ZIP或解包。回执 `10_同证研习官网原子部署.json`。
+- 官网真实移动视口：选择头痛＋咳嗽，共374条字面相关段；勾只看医案后71段，首例2．虛勞兼勞碌過度，点击进入同源“醫案”完整章节并准确高亮第16自然段。真实工具交流显示“提交”、500字、未预选第三方授权；输入17字而未授权时按钮仍disabled，随后清空合成草稿并关闭，没有投稿。图 `10_官网同症状古籍医案实际页面.png`、`10_官网医案全文定位高亮.png`、`10_官网工具交流机器审核授权.png`。
+- 安卓25.0.115/2115，签名39239277760成功；APK artifact12180552310/ZIP SHA00236c129000749e7af00a2c7e3347cb35232c6511f1a3a8e61e60d75702ffa6，62999348字节、APK SHA9ac2a86dd4327efef76d2841f374241cec840dc3601c0fcf7ce649d6da8925aa，证书仍8ca0c414573d4b05fc2bd1ba9c6a2a8090c90c58e3815119494607443dc6d5a0。负责人回复后只读真实versionCode2115及已装APK hash匹配；保留数据/未卸载。真实首页仍有中央言道学堂，中医→辨证学习→同证研习可打开、选择头痛并显示最小分享/成年范围告知；没有代填真实/伪造成年日期或代发帖子。证据 `10_安卓2115签名与安装核验.json`、实际首页/辨证/研习PNG。持续时间暗色问题是本轮真实发现，152346d修，2116另验，不能改图冒充修后。
+- 苹果25来自2f61f7c签名39239024594，IPA artifact12179279870/ZIP SHA40061bf8e911f334d8ecaca3192b6bffe4c8e59105be4f7df0a79aecb4a39c87；IPA30399551字节/SHA f19168e27abeb95486dc639dbf9c0fcaf1df07448c5b8c0608c1a08d64236862，bundle com.yandaoguoxue.app，App/WidgetKit构建均25；RAM核实际包内同证UI、机器授权、医案筛选。iOS未内置Android的sourceCommit marker，来源取官方artifact/run，不伪造包内标记。930与2f仅Android门限/核验脚本不同，iOS客户端相同。
+- 单独上传workflow不在默认分支，首次dispatch404未执行；转用既有ios-build upload_existing_run只上传核过的上述IPA，运行39239839485成功，没有重复重打或重复上传。Apple真实build bf3ce08e-34db-41df-b2ed-1a24a21cba0a 为VALID、internal IN_BETA_TESTING、external READY_FOR_BETA_SUBMISSION；网页实际见25及原“言道国学”组/邀请1。API查组403，未执行任何组变更，网页已证实原组自动关联；未添加测试人员。证据 `10_iOS25签名包核验.json`、`10_苹果25上传与真实平台状态.json`、`10_TestFlight25实际平台页面.png`、`10_TestFlight25原内部组页面核验.json`。
+- 苹果正式App Store25.0.115仍PREPARE_FOR_SUBMISSION，旧草稿仍连build22；本轮尚未正式提审。正确的年龄声明GET为appInfos/{id}/ageRatingDeclaration，旧appStoreVersions关系404已更正；读回UGC、聊天、社交、健康=true，medical FREQUENT_OR_INTENSE；没有重复修改准确申报。原件 `10_苹果年龄申报正确接口核验.json`。全球销售设置沿既有授权，本轮不冒称重新验证所有国家。Apple26及2116对比度修正版后续核验见63.7。
+
+### 63.5 具体改动文件（完整绝对路径，均在同一活动仓）
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/.github/workflows/android-build.yml`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/.github/workflows/study-quality.yml`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/.gitignore`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/android/app/build.gradle`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/backend_deploy/data/study-research-evidence.json`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/backend_deploy/data/study-research-topics.json`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/backend_deploy/studyCommentStore.js`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/backend_deploy/studyCommentsRoutes.js`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/backend_deploy/studyModerationAutomation.js`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/backend_deploy/studyResearchDomain.js`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/backend_deploy/studyResearchPolicy.js`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/docs/requirements/research-10.acceptance.json`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/scripts/build_study_research_index.py`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/scripts/research-learning.test.ts`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/scripts/study-comments-http.test.cjs`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/scripts/study-comments.test.cjs`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/scripts/study-moderation-automation.test.cjs`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/scripts/study-research.test.cjs`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/scripts/verify-android-identity.js`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/algorithm-core/modules/tcm/classics.ts`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/admin/study-comments/page.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/calendar/page.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/discover/tongchen/page.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/privacy/page.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/profile/life/page.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/zhongyi/bianzheng/page.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/zhongyi/classic/page.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/components/AcupointStudyDiscussion.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/components/ResearchAccess.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/components/ResearchComposer.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/components/ResearchExcerptActions.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/components/ResearchLearningDrawers.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/lib/calendarEventsStore.ts`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/lib/lifeRecords.ts`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/lib/researchLearning.ts`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/lib/studyComments.ts`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/locales/en.json`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/locales/ja.json`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/locales/zh-CN.json`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/locales/zh-TW.json`
+
+### 63.6 剩余、清理与回退（当前仍未完成事项）
+- 本机摘录→既有就诊→提醒、所有分享模式/编辑/退出与两个真实成年人两设备UI、iOS新研习物理UI、通知送达/取消/重启强停/功耗仍待逐项实测。既有Apple沙盒“付款成功”尚未匹配已授权测试账号及恢复到账，不能给所有用户开放沙盒，不再重复扣款。07/09群盘卡前端/渠道、私库裁剪派生/批量撤销/导出脱敏/服务者准入、历史界面四语全覆盖仍有软件缺口。10号AI资料概括/自动分歧归类未开放，当前AI仅公开内容审核，不混同两者。
+- 33概念缺字面命中、全部医籍/药典/逐穴/董氏/图像授权与医学专业审校、旧个体诊疗AI用途、健康/权利/隐私完整披露与正式商店截图/提审仍未完成。不能仅凭“学习”免责声明放行未经核实医学知识或把本轮真实通道样例当法务/医学认证。没有重复荣耀已有审核、改其他产品或用假数据冒充交流人数。
+- 本轮只增加维护源码、测试及小体积真实E证据；未建C盘node_modules/.next/out/www/ZIP/APK/IPA/源码副本，未启动本地RAM预览，3113监听0。本次盘点C可用17462808576字节，是读数而非释放量。脚本/模型依赖和打包在云/RAM；验收有效PNG/JSON留E同一证据目录，不另建交接报告。源码及文档按具体路径审查提交，不为清场提交密钥、数据或包。
+- 按负责人要求删除只交CMD，代理本轮未执行文件/服务器旧release删除，释放0。唯一CMD仍 `C:/Users/ZhuanZ/Documents/Codex/2026-10-17/e-c-users-zhuanz-documents-codex/outputs/guoxue-clean-20261018.cmd`，SHA6bc78b38a9a33fd75b0d251926a480fc9b93ff72bc756c75a8710e83cb98796a，执行前须重新核本节/62.6精确清单。其E归档2109 APK/AAB/非递归空目录及C合成备份重复件4目标共56964392字节仍待负责人CMD；E已核SHA保全合成备份。未删源码、原始资料、有效证据、密钥、归档2110及回退2102。当前新包仅云/RAM/手机，E实体仍2110+2102并有2109待清，不能宣称“物理只两代”已达标。
+- 历史97共享Git的6改/192删/66独有未跟踪及历史共享密钥债务仍未审结；不能整目录盲删/盲交。苹果新钥仍唯一E苹果开发者顶层AuthKey_URY888FLWG.p8/中文说明，未改其他产品凭证、未新生成/撤销共享旧钥、私钥不入源码/交接/日志。每次提交前私钥扫描通过。
+- 回退：网站回到本轮切换前已验源d62（后续152稳定后以63.7最近已验源为准）；后端Store/Routes.previous为d62原文件，停用STUDY_COMMENT_AUTOMATION/STUDY_AI_MODERATION_READY及关闭研习域后原模块回退，保留新增表而不删用户数据，新依赖可留置不加载。不能把“上一目录”当已验回滚而不核hash。原生TestFlight旧已验22/安卓2113证据仍在，禁止卸载或降级清数据来回退。
+- 下一位先读63.7与验收契约：补剩余软件/真实两端验收、沙盒到账和医学权利后，才更新准确商店截图/草稿关联新包并正式提审。唯一报告四固定镜像以同一字节同步；最终SHA、提交推送/上游0/0/空status及清理盘点另存本E目录 `10_本轮收尾核验.json`，不在报告内自引用最终SHA。本节为执行中可接手检查点。
+
+### 63.7 2026-10-19 本轮最终读回：统一源152346d、安卓2116、TestFlight26（仍非07/09/10全部完成或正式上架）
+- 所有本轮最终客户端均固定152346da1a287c2d994b26f46c4b8e3196d35d66。完整质量39241147478及自动39241146000成功，私钥检查39241146018成功；21条评论/安全/研习/自动审核、3条TSX原文学习、真实隔离HTTP和既有回归及完整构建通过。没有把初次失败抹去，也没有在源变更后沿用旧成功假称新包。
+- Web最终artifact12181142353/ZIP SHA dcb471042270da19165c9511ae3a4606d2d307fa042c4f121a73f24137962746，2309文件68556280字节，manifest SHA cf1c41d99acfd6cd55061d832e64d83e4edfa1551651e61cc97e9207e552495f。真实原子切换/current为v25.0.115-calendar-community-152346d，前一已验回退930c6d9；回执 `10_最终对比度官网部署.json`。浏览器等加载完成后，实测持续时间控件白底/深色字、默认选填、两个学习抽屉仍在，截图 `10_官网最终夜间表单对比度.png`；第一次早期截到加载页的同名临时画面已被最终实测图覆盖，未拿加载中画面做通过证据。之前930的检索/全文/授权门限证据不改名冒充152重新执行全流程。
+- 后端与最终源的7个模块/派生索引字节相同，沿63.3已部署hash；未再改数据库内容、支付或AI额度。最终只读 `10_最终线上审核与研习权限读回.json`：自动审核true、两域enabled=true、未加入的匿名健康交流401、no-store/noindex。仅主动成年/单独授权后的最小分享，代理本轮生产帖子0、私有原库读取0；没有在真实用户账号上替其填写生日/同意公开。
+- 安卓最终2116签名39241150994成功，APK artifact12181252435/ZIP SHA c47b1a46ae9b43c66d89b349d38392366979fee340ef7d8c34d4f50040b8315e，62999516字节，APK SHA66050ad4d790350728ae23f0f618f42f830d4ec888204a1841d70ff8c054572e，证书仍原证书。官方ADB替换后先读回版本2116，再从/data/app原装包读SHA完全一致，保留数据/未卸载/未绕系统安全。手机实际首页→中医→辨证学习，并在夜间主题确认持续时间白底深字、原文/同证入口保留；证据 `10_安卓2116签名与安装核验.json`、`10_安卓2116夜间对比度实际页面.png`。2115手机截图只证明上一阶段研习选题/告知，不冒作2116的双人发帖/原生提醒验收。
+- 苹果最终26签名39241154945成功，IPA artifact12181077585/ZIP SHA96ed211b334e75062c98daee06d288ce96f4248a7307bb21bbd5b8a81a4ffdb9，IPA30399941字节/SHA211bc4239eb019d8ceaed5ace16f362a89cf40f817745ef5176d3dbb4ec0a4c5；App与Widget均26，RAM核同证/医案/授权及对比度代码确在包中。由既有upload_existing_run上传准确同一IPA，39241969906成功，只上传一次。
+- 上传后第一次GET26暂未出现，未因此重传；随后网页实际出现构建26，沿原“言道国学”组。最终2026-10-19T11:12:20Z Apple读回build fef053d1-4fd0-4a1a-8158-05229229eee1，VALID、未过期、internal IN_BETA_TESTING、external READY_FOR_BETA_SUBMISSION。网页“准备提交”不等于App Store正式审核中，正式25.0.115仍PREPARE_FOR_SUBMISSION且关联22。本轮26仅内部TestFlight可测，未新增测试人员、未正式提审或声称上架。证据 `10_iOS26最终签名包核验.json`、`10_苹果26最终上传与真实平台状态.json`、`10_TestFlight26最终实际平台页面.png`；26物理iPhone/iPad、沙盒到账/恢复仍待实际验收。
+- 10号契约已逐案记代码/自动化/真实UI/物理/未验收，overallComplete仍false；63.6列出的07/09/10软件、医学权利/审校和两真实用户/原生提醒/全部四语/支付恢复等缺口没有因为新包通过而消失。此回合完成可测试增量和自动审核上线，不能交成“全部功能全部审核发布完成”。
+- 本轮没有本机RAM预览/依赖/源码副本/包或解包目录。所有下载、包核验、网站传输和安装helper已正常结束，未杀共享ADB；3113未启动。小体积真实证据统一E目录，索引 `10_阶段验收证据索引.json`最终刷新；本轮删除0/释放0，唯一CMD4目标重核仍在56964392字节、E保全备份hash匹配，见 `10_唯一CMD精确清理目标重新核验.json`。旧服务器目录及97债务仍未删/未解决，两代物理轮换与全局清理未达标。最后盘点C可用16332480512字节仅为时点读数，不推断系统占用变化原因。
+- 修正文档新增EOF空行后再跑diff --check；唯一报告及三个固定镜像全部同步同一字节，提交前私钥检查。最终文档提交/推送、HEAD上游0/0、活动仓空status、四镜像SHA和未执行清理，写入同E `10_本轮收尾核验.json`。后续以此节优先，不能继续把旧25/2115当最新候选。剩余任务第一步按契约核验真正两用户/苹果真机与到账，并补专业来源和07/09软件；达标后才改正式草稿关联并真实提审。
