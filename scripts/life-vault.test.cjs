@@ -6,7 +6,7 @@ const fs=require('node:fs');
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){if(specifier.startsWith('.')&&!/\.[a-z]+$/i.test(specifier))return next(specifier+'.ts',context);throw error;}}});
 const {LifeVault}=require('../src/lib/lifeVault.ts');
 const {LifeSearchIndex,normalizeLifeText,healthPreparation,compareLabUnits,privateOutboundAllowed}=require('../src/lib/lifeRecords.ts');
-function memoryStorage(){const rows=new Map();return {rows,async commit(items){for(const row of items)rows.set(row.key,structuredClone(row.value));},async read(key){return structuredClone(rows.get(key));},async page(prefix,after='',limit=100){return [...rows].filter(([key])=>key.startsWith(prefix)&&key>after).sort(([a],[b])=>a.localeCompare(b,'en')).slice(0,limit).map(([key,value])=>({key,value:structuredClone(value)}));}};}
+function memoryStorage(){const rows=new Map();return {rows,async commit(items,check){if(check&&(rows.get(check.key)?.etag??null)!==check.etag)throw Error('revision conflict');for(const row of items)rows.set(row.key,structuredClone(row.value));},async read(key){return structuredClone(rows.get(key));},async page(prefix,after='',limit=100){return [...rows].filter(([key])=>key.startsWith(prefix)&&key>after).sort(([a],[b])=>a.localeCompare(b,'en')).slice(0,limit).map(([key,value])=>({key,value:structuredClone(value)}));}};}
 test('long private records, independent vaults, quote provenance, versions and authenticated encryption',async()=>{
  const store=memoryStorage(),{vault,recoveryCode}=await LifeVault.create(store,'a-long-private-password');
  let e=vault.newEntry();e.text='不能飲酒，醫師原文。'.repeat(300);e.title='医生资料';e.sourceRefs.push({kind:'SOURCE_USER_IMPORTED',author:'外部张老师',platform:'本人粘贴',quote:'原话不是我的改写',verified:false});e=await vault.save(e);
@@ -38,6 +38,10 @@ test('doctor preparation excludes dreams, chart comments and unconfirmed medical
 });
 test('private data modules do not import cloud/auth/AI/analytics clients',()=>{
  for(const name of ['lifeRecords.ts','lifeVault.ts','lifeVaultCrypto.ts']){const source=fs.readFileSync('src/lib/'+name,'utf8');assert.ok(!/\bfetch\s*\(|axios|sendBeacon|aiService|socialApi|fetchWithAuth/.test(source),name);}
+});
+test('concurrent edits cannot overwrite one another; losing input is rejected and the winning revision remains',async()=>{
+ const store=memoryStorage(),created=await LifeVault.create(store,'a-long-private-password');let e=await created.vault.save({...created.vault.newEntry(),text:'base'});const other=await LifeVault.open(store,created.vault.id,'a-long-private-password');
+ const results=await Promise.allSettled([created.vault.save({...e,text:'first'}),other.save({...e,text:'second'})]);assert.equal(results.filter(r=>r.status==='fulfilled').length,1);assert.equal(results.filter(r=>r.status==='rejected').length,1);const opened=await LifeVault.open(store,created.vault.id,'a-long-private-password');assert.ok(['first','second'].includes(opened.entries.get(e.id).text));assert.equal((await opened.versions(e.id)).length,1);
 });
 test('1k / 10k / 100k synthetic short-record local index benchmark',()=>{
  const results=[];for(const n of [1000,10000,100000]){const index=new LifeSearchIndex(),start=performance.now();for(let i=0;i<n;i++)index.put(String(i),`合成记录${i} 医生 样例${i%100} ${i===n-1?'唯一复查资料':'普通学习'} 2026-10-19`);const indexed=performance.now();assert.equal(index.search('唯一 复查').total,1);const cold=performance.now();for(let i=0;i<20;i++)assert.equal(index.search('唯一 复查').total,1);const hot=performance.now();index.put(String(n-1),'合成改写 唯一新资料');assert.equal(index.search('复查').total,0);results.push({records:n,indexMs:Math.round(indexed-start),firstQueryMs:+(cold-indexed).toFixed(3),hotMeanMs:+((hot-cold)/20).toFixed(3),indexStats:index.stats(),rss:process.memoryUsage().rss});index.clear();}

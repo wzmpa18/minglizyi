@@ -1,0 +1,596 @@
+{
+  "purpose": "产品需求与验收契约，不是已完成报告；实际交付状态只见权威交接。",
+  "scope": "言道国学；09覆盖07/08冲突项，保留07其余全部要求。",
+  "inputs": [
+    {
+      "name": "言道国学_活盘链接人生记录本地健康档案与合规互动整合指令_09.txt",
+      "sha256": "ae8b9bfe97fece6999622ac6d57c6cb0bd973a995b5def6e620fba5760cd8e3d"
+    },
+    {
+      "name": "07",
+      "sha256": "46715deba7c8428c81b6396e889071b71b886b4caa4c829c99d71727d09cb404"
+    },
+    {
+      "name": "09沟通原文",
+      "sha256": "a313f34deff4a56fe674aa7785853a1eca6d49890fa865a20f6adf6ca28c6e04"
+    }
+  ],
+  "dataClasses": {
+    "PRIVATE_LOCAL": "LifeVault / USER_PRIVATE_DATA; 无平台正文接口",
+    "USER_BACKUP": "用户选择保存的密码加密文件；不假设自动云备份",
+    "SHARED_COLLABORATION": "显式投影与指定接收人ACL；复用social.db/chat_messages",
+    "PUBLIC_CONTENT": "沿用古籍内容包、题库和study-comments治理"
+  },
+  "existingFacilities": {
+    "localStorageAndBridge": "保留nativePaipanStore原档案，新增私人库不自动迁移或删除旧数据",
+    "localDatabase": "storageManager USER_PRIVATE_DATA（Web）与原生密文SQLite",
+    "relationships": "social.db friendships / blacklists / friend_requests",
+    "messages": "social.db chat_messages，shareId隔离会话，不建第二好友库",
+    "calendar": "calendarEventsStore + LocalCalendar + WidgetKit/AppWidget，新增不含正文的本地来源引用",
+    "providers": "providerEngine/providerRoutes/commissionRouter，现有定价、分佣、钱包不改"
+  },
+  "sections": [
+    {
+      "id": "09-section-1",
+      "title": "一、先确认核心意图，不能再做偏",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-2",
+      "title": "二、项目接续与变更范围",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-3",
+      "title": "三、必须分成四个数据域",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-4",
+      "title": "四、活盘链接与交互式盘面",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-5",
+      "title": "五、真实脱敏与接收权限",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-6",
+      "title": "六、携盘会话与不同解读者分账",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-7",
+      "title": "多盘标签、消息引用、盘内锚点均版本锁定。“指给对方看”由对方主动定位；切盘后旧消息仍关联原盘。",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-8",
+      "title": "保留原话、作者当时昵称、来源、时间、原消息ID、盘版本、更正状态。用户修改原话须另存“我的整理”，AI写的是“AI整理”，不冒充医生或老师原话。",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-9",
+      "title": "七、人生记录：一个本地库，多分类、多入口",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-10",
+      "title": "支持文本、用户选择的图片、PDF以及已支持格式的附件；文件导入通过系统选择器，长文件逐页处理、断点续处理，不静默截掉后半本。任意附件不得执行HTML/SVG脚本、宏或远程嵌入内容。",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-11",
+      "title": "八、本地健康档案，帮助就诊沟通而非代替病历",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-12",
+      "title": "药名、规格、剂量、频次、途径、起止日期及“必要时服用”分别存储。未确认字段标“未确认”，不自动从模糊原文推断。不能把“每天两次”直接变成自己决定的具体钟点并自动提醒。",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-13",
+      "title": "九、图片与手写OCR：能看原图、能纠错、不能瞎认",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-14",
+      "title": "十、医嘱与生活提醒：提醒已有安排，不创造医疗决定",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-15",
+      "title": "十一、低耗电系统调度，不做假常驻",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-16",
+      "title": "用户数量多、日程多时使用系统容量允许的滚动队列；重复事件能用系统重复则用，明确当前已安排到哪天、后续补排条件。不得声称预登记了无限数量提醒；不把旧iOS API数字硬套现行所有设备。",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-17",
+      "title": "十二、本地搜索：先文字索引，再可选语义整理",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-18",
+      "title": "十三、AI的数据路径与成本：严格按用户选择",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-19",
+      "title": "十四、本机安全与长久保存",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-20",
+      "title": "附件、缩略图、OCR索引、导出暂存、通知、崩溃日志都要同等保护。默认不把医疗图片放公共相册；自动备份/系统迁移的实际范围要核验并告知，不笼统声称“本地就不会出设备”。",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-21",
+      "title": "十五、用户自己的云与导出：先做可恢复，不是假上传成功",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-22",
+      "title": "十六、Web版的能力边界不能藏起来",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-23",
+      "title": "十七、同辰、同校与同机构好奇心匹配",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-24",
+      "title": "搜索限频、禁止精确条件批量枚举/下载、隐藏稀有群组人数、分页控制、请求双方确认。只显示双方允许的共同标签，不返回出生原始库；不造“天生合适/最佳伴侣/命定缘分”评分。",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-25",
+      "title": "十八、工具抽屉交流、好友和学习群",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-26",
+      "title": "十九、师傅体系与交易：做真实资质，不做伪装市场",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-27",
+      "title": "价格、平台费、现有一级/二级/Partner政策从真实SSOT读取，沿用历史合同，不在此指令擅自改比例或强制叠加。支付状态与交付状态分开，退款佣金冲正、幂等、余额和对账实测。",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-28",
+      "title": "二十、产品留存与收费建议（先方案，不擅自改价）",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-29",
+      "title": "二十一、后台只管理公共服务，不管理用户私人日记",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-30",
+      "title": "二十二、技术验收，不只验证页面200",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-31",
+      "title": "二十三、必须执行的端到端验收用例",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-32",
+      "title": "20 锁屏、后台、断网、正常重启、时区变化、通知拒绝、精确权限拒绝分别实测。",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-33",
+      "title": "每项记环境、输入、期望、实际、证据、阻塞和修复提交；重跑后不得通过删断言掩盖失败。",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-34",
+      "title": "二十四、实施顺序与继续条件",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-35",
+      "title": "AI、云盘或平台缺能力时记录具体BLOCKED_EXTERNAL/CAPABILITY_UNSUPPORTED，保留离线基础体验，不能换一套虚假演示。有技术正确性缺陷继续修，不止出清单。",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-36",
+      "title": "仅验证码、扫码、设备解锁、新增费用、医学/平台或法律专业签审、需撤回在审版本等明确Owner动作才请求一次具体协助；禁止猜验证码和反复OCR，不反复问是否开始。",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-37",
+      "title": "二十五、版本、交付与报告",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-38",
+      "title": "当前基线、Runtime Commit、Web/APK/iOS与工作区状态；",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-39",
+      "title": "搜索、健康整理、外部点评、提醒、导出/备份恢复；",
+      "status": "IN_PROGRESS"
+    },
+    {
+      "id": "09-section-40",
+      "title": "二十六、依据及核查入口（实施当天复核）",
+      "status": "IN_PROGRESS"
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "09-01",
+      "requirement": "无账号离线新建长文字/照片，重启仍能看；不因500字留言规则截断私人笔记。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-02",
+      "requirement": "抓包确认PRIVATE_LOCAL正文/附件/OCR/搜索词未到言道或未授权第三方。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-03",
+      "requirement": "不同本机档案/登录用户不可互读；注销账号不误删未获删除授权的本地原件。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-04",
+      "requirement": "每个已支持工具发活盘卡→另一账户点开交互，不依赖截图/同设备本地ID。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-05",
+      "requirement": "接收方离线后重连能按授权收取副本；发送人本机关闭不假报链接仍可用。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-06",
+      "requirement": "隐藏字段在API/链接/卡片/详情/图形/AI/导出均不残留；推断风险提示实际出现。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-07",
+      "requirement": "未授权、另一人、撤销、过期、拉黑、越权WebSocket请求被拒。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-08",
+      "requirement": "两位不同解读者线程分离，消息引用多盘不串；更正版不覆盖历史。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-09",
+      "requirement": "多选聊天与外部粘贴分别保留作者/来源/时间，改写不冒充原话。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-10",
+      "requirement": "非注册外部解读者可做本地标签，不需要造平台用户。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-11",
+      "requirement": "医嘱原图→OCR框→用户核对→确认版，关键模糊药量停在未确认。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-12",
+      "requirement": "低置信/错别字/否定词/左右侧/小数点识别错误可纠正，不自动建药物提醒。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-13",
+      "requirement": "医院甲乙记录不会误合并不同病人、不同药或过敏；原单位/原件仍可查。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-14",
+      "requirement": "就诊准备导出默认不带梦境/命盘/他人私聊，无医院伪章。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-15",
+      "requirement": "文字/人物/日期/短中文/繁体/OCR模糊检索命中可跳原件，零云查询。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-16",
+      "requirement": "AI仅选中范围，端侧失败不偷偷云端；直连模式真实支持安全凭证且明确第三方。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-17",
+      "requirement": "原话/自述/医生资料/AI推断分开，AI不决定药物调整/星盘诊断。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-18",
+      "requirement": "AI/导入文中的恶意指令不能上传整库、付费、改权限或创日程。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-19",
+      "requirement": "日期不清楚必须确认，医生医嘱期限与复核点保留；修改取消旧提醒。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-20",
+      "requirement": "锁屏、后台、断网、正常重启、时区变化、通知拒绝、精确权限拒绝分别实测。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-21",
+      "requirement": "受系统强停/关机影响的情况如实显示，不宣称按时可达。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-22",
+      "requirement": "自己的生日/他人农历生日/闰月/跨年/2月29规则延续07，两个日历分类互不暴露。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-23",
+      "requirement": "用户出示“不饮酒”卡默认没有病历和身份证，不伪造医生认证。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-24",
+      "requirement": "删除缓存不删原件/归档；磁盘不足不静默删旧记录。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-25",
+      "requirement": "一致性备份含库和图片，读回校验且另一设备可恢复、可搜、可点盘。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-26",
+      "requirement": "密钥错误/损坏包/新schema/重复导入/路径穿越/解压炸弹安全处理。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-27",
+      "requirement": "备份失败不覆盖上次好备份；云盘未授权明确待设置，不显示备份成功。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-28",
+      "requirement": "恢复不自动触发过去药物闹钟；选定恢复提醒无重复。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-29",
+      "requirement": "Web清数据风险告知、包导入导出、无原生闹钟时降级正确。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-30",
+      "requirement": "同辰未加入/退出/未成年不入搜索，不能读生日原库；同校自填不标官方认证。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-31",
+      "requirement": "健康库医院从不进入找人接口；同就诊/病种/病房搜索不开放。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-32",
+      "requirement": "稳定化名不能绕拉黑，拒绝交流请求后无法发无限私信。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-33",
+      "requirement": "工具/穴位抽屉互相隔离、最近分页、500/501/emoji边界、举报/屏蔽/申诉真实生效。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-34",
+      "requirement": "群成员/管理员/外部人权限、加入退出、群分享盘对新增成员授权符合预览。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-35",
+      "requirement": "公共/私信风控和人工响应闭环；私有本地日记不送审核接口。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-36",
+      "requirement": "师傅身份徽章准确，受限服务未核准前不能收款；不把医疗用户定向推给师傅。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-37",
+      "requirement": "如开付费教学：真实下单/交付/取消/退款/幂等/唯一分佣和提现门禁全链路；测试与真实订单隔离。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-38",
+      "requirement": "iOS/国内各渠道的UGC、年龄、AI外发、付费真实披露，审核账户与普通用户一致。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-39",
+      "requirement": "会员过期不阻断本地读取/导出/隐私操作；原历史无限权益不被改。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-40",
+      "requirement": "新老包升级保留原盘出生地、笔记、附件和提醒；不要求卸载清数据。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-41",
+      "requirement": "最低支持/常用/低配置机记录实际表现，不用模拟器冒真机测试。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-42",
+      "requirement": "两用户两设备走完：选盘→授权链接→接受交互→交流→留档→外部点评导入→本地搜索→主动AI→确认提醒→备份→换机恢复。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-43",
+      "requirement": "健康独立链：拍医生原件→核对文字→生成就诊摘要→本地提醒→展示/导出选定信息，无私人原件平台上传。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    },
+    {
+      "id": "09-44",
+      "requirement": "零账户本地模式平台服务器关闭仍能读写/搜索/查看备份指引；联网社交不可用时不毁档。",
+      "status": "PENDING_E2E",
+      "environment": null,
+      "evidence": [],
+      "blocker": null
+    }
+  ],
+  "sevenRemaining": {
+    "wholeLegacyLocalization": "PENDING",
+    "physicalWidgetsAndPower": "PENDING_DEVICE",
+    "fullAuthoritativeMedicalAtlasAndReview": "BLOCKED_EXTERNAL",
+    "approvedDimu60YearEdition": "BLOCKED_SOURCE",
+    "sandboxEntitlementRestoration": "BLOCKED_ACCOUNT_IDENTIFICATION",
+    "realReviewSubmission": "NOT_SUBMITTED"
+  }
+}

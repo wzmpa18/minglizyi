@@ -12,7 +12,7 @@ export function validateLifeEntry(x:unknown,owner?:string):asserts x is LifeEntr
  if(!x||typeof x!=="object")throw Error("记录格式无效");const e=x as LifeEntry;
  if(e.schema!==1||e.dataClass!=="PRIVATE_LOCAL"||e.consentScope!=="LOCAL_ONLY"||!/^[-a-zA-Z0-9]{8,80}$/.test(e.id)||typeof e.ownerProfileId!=="string"||(owner&&owner!==e.ownerProfileId)||typeof e.title!=="string"||typeof e.text!=="string"||!Array.isArray(e.attachments)||!Array.isArray(e.sourceRefs)||!Array.isArray(e.categories)||!Array.isArray(e.tags)||!Array.isArray(e.people)||!Number.isSafeInteger(e.revision)||!Number.isFinite(Date.parse(e.occurredAt)))throw Error("记录格式或档案归属无效");
  for(const arr of [e.categories,e.tags,e.people])if(arr.some(t=>typeof t!=="string"))throw Error("分类格式无效");
- for(const a of e.attachments)if(!a||!/^[-a-zA-Z0-9]{8,80}$/.test(a.id)||typeof a.name!=="string"||!Number.isSafeInteger(a.bytes)||a.bytes<0||!Array.isArray(a.chunks)||a.chunks.some(k=>!/^blob:[-a-zA-Z0-9:]+$/.test(k))||!a.sha256.match(/^[a-f0-9]{64}$/))throw Error("附件索引无效");
+ for(const a of e.attachments)if(!a||!/^[-a-zA-Z0-9]{8,80}$/.test(a.id)||typeof a.name!=="string"||!Number.isSafeInteger(a.bytes)||a.bytes<0||a.bytes>64*1024*1024||!Array.isArray(a.chunks)||a.chunks.length>128||a.chunks.some(k=>!/^blob:[-a-zA-Z0-9:]+$/.test(k))||!a.sha256.match(/^[a-f0-9]{64}$/))throw Error("附件索引无效");
 }
 // Normalization affects the index only. Original spelling, units and quotes remain intact.
 const traditional="醫藥體夢學習記錄曆時間關係張陳劉會診過敏處頁轉備份復還檔案腎臟頭痛飲酒腸胃氣虛陽陰術後經驗對話師說見尋個資脈觀點";

@@ -1053,7 +1053,7 @@ function FullDiscoverPage() {
       style={{ backgroundColor: "#f5f5f5", maxWidth: "420px", margin: "0 auto", paddingBottom: "72px" }}
     >
       <BrandHeader title="发现" />
-      <TongchenEntry/>
+      <TongchenEntry/><Link href="/discover/live/" className="m-3 block rounded-2xl border bg-white p-4 text-purple-900">携盘交流 · 活盘链接 · 分人留档 ›</Link>
       {postMessage && <p role="status" className="mx-3 mt-3 rounded-xl border border-purple-200 bg-purple-50 p-3 text-sm leading-6 text-purple-900">{postMessage}</p>}
 
       <div className="mx-3 mt-3 flex items-center gap-3 text-sm"><button type="button" disabled={ownBusy} onClick={() => void loadOwnPosts()} className="rounded-lg border border-purple-200 bg-white px-3 py-2 text-purple-800">{ownBusy ? "正在读取…" : "我的动态"}</button><Link href="/profile/feedback/" className="text-sm font-medium text-purple-800 underline">用户反馈 / 联系开发者</Link></div>

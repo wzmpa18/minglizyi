@@ -1,6 +1,6 @@
 import {LifeSearchIndex,lifeSearchText,validateLifeEntry,type LifeEntry,type LifeAttachment,type LifeRevision} from "./lifeRecords";
 import {b64,unb64,randomBytes,importVaultKey,passwordKey,seal,unseal,sha256,type Sealed} from "./lifeVaultCrypto";
-export interface VaultStorage {commit:(rows:{key:string;value:unknown}[])=>Promise<void>;read:<T>(key:string)=>Promise<T|undefined>;page:(prefix:string,after?:string,limit?:number)=>Promise<{key:string;value:unknown}[]>;}
+export interface VaultStorage {commit:(rows:{key:string;value:unknown}[],check?:{key:string;etag:string|null})=>Promise<void>;read:<T>(key:string)=>Promise<T|undefined>;page:(prefix:string,after?:string,limit?:number)=>Promise<{key:string;value:unknown}[]>;}
 export interface VaultHeader {schema:1;id:string;createdAt:string;salt:string;password:Sealed;recoverySalt:string;recovery:Sealed;}
 export interface VaultBackup {format:"YANDAO_PRIVATE_BACKUP";schema:1;kdf:"PBKDF2-SHA256-600000";salt:string;payload:Sealed;}
 const registry="life:registry:v1",headerKey=(id:string)=>`life:${id}:header`,prefix=(id:string)=>`life:${id}:data:`;
@@ -33,13 +33,14 @@ export class LifeVault {
  async reload(){this.active();this.entries.clear();this.index.clear();let after="";for(;;){const page=await this.storage.page(prefix(this.id)+"entry:",after,100);for(const r of page){const key=r.key.slice(prefix(this.id).length),e=await unseal<LifeEntry>(this.active(),r.value as Sealed,aad(this.id,key));validateLifeEntry(e,this.id);this.entries.set(e.id,e);if(!e.deletedAt)this.index.put(e.id,lifeSearchText(e));}if(page.length<100)break;after=page.at(-1)!.key;}}
  newEntry():LifeEntry {this.active();const now=new Date().toISOString();return {schema:1,id:crypto.randomUUID(),ownerProfileId:this.id,dataClass:"PRIVATE_LOCAL",consentScope:"LOCAL_ONLY",title:"",text:"",occurredAt:now,createdAt:now,updatedAt:now,categories:["生活随记"],tags:[],people:[],sourceRefs:[{kind:"SELF"}],attachments:[],revision:0,draft:true};}
  async save(input:LifeEntry,keepVersion=true){return this.serial(async()=>{
-  this.active();validateLifeEntry(input,this.id);const previous=await this.read<LifeEntry>("entry:"+input.id);
+  this.active();validateLifeEntry(input,this.id);const stored=await this.storage.read<Sealed>(prefix(this.id)+"entry:"+input.id);const previous=stored?await unseal<LifeEntry>(this.active(),stored,aad(this.id,"entry:"+input.id)):undefined;
   if(previous&&previous.revision!==input.revision)throw Error("此记录已被另一页面修改；请保留当前草稿，刷新后比较，未覆盖原记录");
   const entry:LifeEntry={...structuredClone(input),updatedAt:new Date().toISOString(),revision:(previous?.revision||0)+1};
   const rows:{key:string;value:unknown}[]=[];
   if(previous&&keepVersion){const k=`revision:${entry.id}:${String(previous.revision).padStart(12,"0")}`;rows.push({key:prefix(this.id)+k,value:await seal(this.active(),{entry:previous,savedAt:entry.updatedAt} satisfies LifeRevision,aad(this.id,k))});}
+  rows.push({key:prefix(this.id)+"generation",value:{etag:crypto.randomUUID()}});
   const k="entry:"+entry.id;rows.push({key:prefix(this.id)+k,value:await seal(this.active(),entry,aad(this.id,k))});
-  await this.storage.commit(rows);const verified=await this.read<LifeEntry>(k);if(verified?.revision!==entry.revision)throw Error("未能核实保存，请保留当前输入");
+  await this.storage.commit(rows,{key:prefix(this.id)+k,etag:stored?.etag??null});const verified=await this.read<LifeEntry>(k);if(verified?.revision!==entry.revision)throw Error("未能核实保存，请保留当前输入");
   this.entries.set(entry.id,entry);if(entry.deletedAt)this.index.remove(entry.id);else this.index.put(entry.id,lifeSearchText(entry));return structuredClone(entry);
  });}
  async versions(id:string){const page=await this.storage.page(prefix(this.id)+`revision:${id}:`,"",1000);return Promise.all(page.map(r=>unseal<LifeRevision>(this.active(),r.value as Sealed,aad(this.id,r.key.slice(prefix(this.id).length)))));}
@@ -56,7 +57,7 @@ export class LifeVault {
  });}
  async attachment(a:LifeAttachment){const chunks:Uint8Array[]=[];for(const key of a.chunks){const value=await this.read<string>(key);if(value===undefined)throw Error("原件分块缺失，请从有效备份恢复");chunks.push(unb64(value));}const bytes=new Uint8Array(a.bytes);let i=0;for(const c of chunks){if(i+c.length>bytes.length)throw Error("原件长度错误");bytes.set(c,i);i+=c.length;}if(i!==a.bytes||await sha256(bytes)!==a.sha256)throw Error("原件校验失败，未展示损坏内容");return new Blob([bytes],{type:a.type});}
  async backup(password:string):Promise<Blob>{return this.serial(async()=>{
-  this.active();const rows=await this.rows(),salt=b64(randomBytes(16));
+  this.active();const generation=await this.storage.read<{etag:string}>(prefix(this.id)+"generation");const rows=(await this.rows()).filter(r=>!r.key.endsWith(":generation"));const after=await this.storage.read<{etag:string}>(prefix(this.id)+"generation");if(generation?.etag!==after?.etag)throw Error("备份期间档案发生修改，请停止其他页面的写入后重试，原备份不变");if(JSON.stringify(rows).length>180*1024*1024)throw Error("此版本完整包上限约180MiB，请分档案备份；未生成无法恢复的超大包");const salt=b64(randomBytes(16));
   const body={schema:1,header:this.header,root:b64(this.root!),rows,counts:{entries:this.entries.size,attachments:[...this.entries.values()].reduce((n,e)=>n+e.attachments.length,0)},madeAt:new Date().toISOString()};
   const encoded=await seal(await passwordKey(password,salt),body,"yandao-user-backup-v1");
   const backup:VaultBackup={format:"YANDAO_PRIVATE_BACKUP",schema:1,kdf:"PBKDF2-SHA256-600000",salt,payload:encoded};

@@ -2,7 +2,8 @@
 const crypto=require('node:crypto');
 const {validateStudyText}=require('./studyCommentPolicy');
 const {CALENDAR_RULE_VERSION:RULE,civilTimeEpoch,createCalendarRules}=require('./calendarRules');
-const MODES=['solar-md','lunar-md','date','hour','pillars'];
+const MODES=['solar-md','lunar-md','date','hour','pillars','school'];
+const normalizeSchool=name=>String(name||'').normalize('NFKC').toLowerCase().replace(/[\s·•・（）()]/gu,'').trim();
 const INTERESTS=['古籍','八字','紫微','六壬','奇门','历法','天文','中医'];
 function createTongchenStore(db,{Solar,key,userInfo,now=()=>Date.now()}){
  const rules=createCalendarRules(Solar);
@@ -29,9 +30,9 @@ function createTongchenStore(db,{Solar,key,userInfo,now=()=>Date.now()}){
  const joined=me=>{available();const p=profile(me);if(!p||p.consent_version!==config().consentVersion)fail('请先阅读告知并主动加入同辰雅集',403);return p;};
  const blocked=(a,b)=>!!db.prepare('SELECT 1 FROM blacklists WHERE (user_id=? AND blocked_id=?) OR (user_id=? AND blocked_id=?)').get(a,b,b,a);
  const peerFor=(id,me)=>{const p=db.prepare('SELECT * FROM tongchen_profiles WHERE public_id=?').get(String(id));if(!p||p.user_id===String(me)||blocked(String(me),p.user_id)||!userInfo(p.user_id))fail('此学友暂不可交流',404);return p;};
- const card=p=>{const info=userInfo(p.user_id);return info?{id:p.public_id,nickname:info.nickname||'学友',interests:JSON.parse(p.interests),ruleVersion:p.rule_version}:null;};
+ const card=p=>{const info=userInfo(p.user_id),tokens=JSON.parse(p.tokens);return info?{id:p.public_id,nickname:info.nickname||'学友',interests:JSON.parse(p.interests),ruleVersion:p.rule_version,...(tokens.school?{schoolLabel:tokens.schoolLabel,schoolSelfReported:true}:{} )}:null;};
  function join(me,body){
-  available();if(!body||Object.keys(body).some(k=>!['birthDate','hour','minute','timeZone','modes','interests','adultConsent','precisionConsent','consentVersion','acceptRequests'].includes(k)))fail('仅接受本人主动录入的匹配资料');
+  available();if(!body||Object.keys(body).some(k=>!['birthDate','hour','minute','timeZone','modes','interests','adultConsent','precisionConsent','consentVersion','acceptRequests','schoolName','schoolYear','schoolConsent'].includes(k)))fail('仅接受本人主动录入的匹配资料');
   if(body.adultConsent!==true||body.precisionConsent!==true||body.consentVersion!==config().consentVersion)fail('须由成年人本人确认用途和精度告知',403);
   if(!/^\d{4}-\d{2}-\d{2}$/.test(body.birthDate||''))fail('出生日期无效');
   const [y,m,d]=body.birthDate.split('-').map(Number),date=new Date(Date.UTC(y,m-1,d));
@@ -58,6 +59,7 @@ function createTongchenStore(db,{Solar,key,userInfo,now=()=>Date.now()}){
   if(modes.includes('date'))tokens.date=hash('date',body.birthDate);
   if(modes.includes('hour'))tokens.hour=hash('hour',`${body.birthDate}:${Math.floor((body.hour+1)/2)%12}`);
   if(modes.includes('pillars'))pillars.forEach((value,i)=>tokens[`pillar${i}`]=hash(`pillar${i}`,value));
+  if(modes.includes('school')){const label=String(body.schoolName||'').normalize('NFKC').trim();if(body.schoolConsent!==true||label.length<2||label.length>80||/[<>\n\r]/.test(label))fail('请独立同意公开本人自填学校标签（未经学校认证）');const normalized=normalizeSchool(label);if(!normalized)fail('学校名称无效');tokens.school=hash('school',normalized);tokens.schoolLabel=label;if(body.schoolYear!==undefined&&body.schoolYear!==''){const year=Number(body.schoolYear);if(!Number.isInteger(year)||year<1900||year>+today.year)fail('入学年份无效');tokens.schoolYear=year;}tokens.schoolConsent='school-self-reported-v1';}
   const old=profile(me),publicId=old?.public_id||crypto.randomBytes(16).toString('hex');
   db.prepare(`INSERT INTO tongchen_profiles VALUES (?,?,?,?,?,?,?,?,?) ON CONFLICT(user_id) DO UPDATE SET tokens=excluded.tokens,modes=excluded.modes,interests=excluded.interests,rule_version=excluded.rule_version,accept_requests=excluded.accept_requests,consent_version=excluded.consent_version,joined_ms=excluded.joined_ms`).run(String(me),publicId,JSON.stringify(tokens),JSON.stringify(modes),JSON.stringify(interests),RULE,body.acceptRequests===false?0:1,body.consentVersion,now());
   return {success:true,message:'已按你选择的精度加入。未读取任何客户排盘或亲友记事。'};
@@ -109,8 +111,8 @@ function createTongchenStore(db,{Solar,key,userInfo,now=()=>Date.now()}){
  function block(me,peerId){const peer=peerFor(peerId,me);db.prepare('INSERT OR IGNORE INTO blacklists(user_id,blocked_id) VALUES (?,?)').run(String(me),peer.user_id);const [a,b]=[String(me),peer.user_id].sort();db.prepare('DELETE FROM friendships WHERE user_a=? AND user_b=?').run(a,b);return {success:true,message:'已屏蔽并解除关系'};}
  function report(me,peerId,reason){const peer=db.prepare('SELECT user_id FROM tongchen_profiles WHERE public_id=? AND user_id<>?').get(String(peerId),String(me));if(!peer)fail('此学友资料已撤下',404);const text=validateStudyText(reason);if(!text.ok)fail(text.error);db.prepare('INSERT OR IGNORE INTO reports(target_type,target_id,reporter_id,reporter_name,reason) VALUES (?,?,?,?,?)').run('user',peer.user_id,String(me),userInfo(me)?.nickname||'',text.text);return {success:true,message:'举报已进入现有审核后台'};}
  return {config,join,search,leave,request,requests,answer,relation,revoke,block,report,joined,limit,
-  mine:me=>{const p=profile(me);return {success:true,joined:!!p,modes:p?JSON.parse(p.modes):[],interests:p?JSON.parse(p.interests):[],acceptRequests:!!p?.accept_requests,config:config()};},
+  mine:me=>{const p=profile(me);return {success:true,joined:!!p,modes:p?JSON.parse(p.modes):[],interests:p?JSON.parse(p.interests):[],acceptRequests:!!p?.accept_requests,...(p?{schoolName:JSON.parse(p.tokens).schoolLabel||'',schoolYear:JSON.parse(p.tokens).schoolYear||''}:{}),config:config()};},
   configure:body=>{if(Object.keys(body||{}).some(k=>!['enabled','name','searchPerDay','requestsPerDay'].includes(k)))fail('设置字段无效');for(const [k,v] of Object.entries(body)){if(k==='enabled'&&typeof v!=='boolean')fail('开关无效');if(k==='name'&&(typeof v!=='string'||v.length>20||!v.trim()||/[<>\n]/.test(v)))fail('名称无效');if(k.endsWith('PerDay')&&(!Number.isInteger(v)||v<1||v>100))fail('频率范围无效');db.prepare('INSERT OR REPLACE INTO tongchen_settings VALUES (?,?)').run(k,String(v));}return {success:true,config:config()};}
  };
 }
-module.exports={createTongchenStore,RULE,MODES};
+module.exports={createTongchenStore,RULE,MODES,normalizeSchool};

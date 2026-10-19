@@ -1,4 +1,4 @@
-export interface Sealed {v:1;iv:string;ciphertext:string;}
+export interface Sealed {v:1;iv:string;ciphertext:string;etag?:string;}
 const bytes=(s:string)=>new TextEncoder().encode(s);
 export const b64=(a:Uint8Array)=>{let s="";for(let i=0;i<a.length;i+=8192)s+=String.fromCharCode(...a.subarray(i,i+8192));return btoa(s);};
 export const unb64=(s:string)=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
@@ -9,7 +9,7 @@ export async function passwordKey(password:string,salt:string){
  const key=await crypto.subtle.importKey("raw",bytes(password),"PBKDF2",false,["deriveKey"]);
  return crypto.subtle.deriveKey({name:"PBKDF2",hash:"SHA-256",iterations:600000,salt:unb64(salt) as BufferSource},key,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
 }
-export async function seal(key:CryptoKey,value:unknown,aad:string):Promise<Sealed>{const iv=randomBytes(12),ciphertext=await crypto.subtle.encrypt({name:"AES-GCM",iv:iv as BufferSource,additionalData:bytes(aad)},key,bytes(JSON.stringify(value)));return {v:1,iv:b64(iv),ciphertext:b64(new Uint8Array(ciphertext))};}
+export async function seal(key:CryptoKey,value:unknown,aad:string):Promise<Sealed>{const iv=randomBytes(12),ciphertext=await crypto.subtle.encrypt({name:"AES-GCM",iv:iv as BufferSource,additionalData:bytes(aad)},key,bytes(JSON.stringify(value)));return {v:1,etag:crypto.randomUUID(),iv:b64(iv),ciphertext:b64(new Uint8Array(ciphertext))};}
 export async function unseal<T>(key:CryptoKey,s:Sealed,aad:string):Promise<T>{
  if(s?.v!==1||typeof s.iv!=="string"||typeof s.ciphertext!=="string"||unb64(s.iv).length!==12)throw Error("密文格式无效");
  const plain=await crypto.subtle.decrypt({name:"AES-GCM",iv:unb64(s.iv) as BufferSource,additionalData:bytes(aad)},key,unb64(s.ciphertext) as BufferSource);return JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(plain));

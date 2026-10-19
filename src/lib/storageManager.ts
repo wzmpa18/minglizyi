@@ -93,14 +93,15 @@ function sk(zone: StorageZone, key: string) { return `${zone}:${key}`; }
 
 /** Durable private writes resolve on transaction completion, never on request success.
  * Vault ciphertext belongs to USER_PRIVATE_DATA and is excluded from every cache collector. */
-export async function privateAtomic(rows: {key:string; value:unknown}[]): Promise<void> {
+export async function privateAtomic(rows: {key:string; value:unknown}[],check?:{key:string;etag:string|null}): Promise<void> {
   const db=await openDb();
   await new Promise<void>((resolve,reject)=>{
     const t=db.transaction([STORE_DATA,STORE_META],"readwrite"), now=Date.now();
-    for(const row of rows){
+    const write=()=>{for(const row of rows){
       t.objectStore(STORE_DATA).put(row.value,sk("USER_PRIVATE_DATA",row.key));
       t.objectStore(STORE_META).put({zone:"USER_PRIVATE_DATA",key:row.key,size:sizeOf(row.value),createdAt:now,lastAccessedAt:now,protectedFromAutoClean:true},sk("USER_PRIVATE_DATA",row.key));
-    }
+    }};
+    if(check){const q=t.objectStore(STORE_DATA).get(sk("USER_PRIVATE_DATA",check.key));q.onsuccess=()=>{if((q.result?.etag??null)!==check.etag)t.abort();else write();};}else write();
     t.oncomplete=()=>resolve();t.onabort=()=>reject(t.error||new Error("私人记录未写入，原数据保留"));t.onerror=()=>reject(t.error);
   });
 }

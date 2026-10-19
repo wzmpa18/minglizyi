@@ -9,6 +9,15 @@ function setup(){
  const birth=(patch={})=>({birthDate:'1990-05-15',hour:12,minute:0,timeZone:'Asia/Shanghai',modes:['solar-md','lunar-md','date','hour','pillars'],interests:['古籍'],adultConsent:true,precisionConsent:true,consentVersion:store.config().consentVersion,acceptRequests:true,...patch});
  store.configure({enabled:true});return {db,store,birth,active,tick:()=>{time+=61000;}};
 }
+test('same school is separately opted in, self-reported and never sourced from hospitals',()=>{
+ const {db,store:s,birth}=setup();try{
+  assert.throws(()=>s.join('alice',birth({modes:['school'],schoolName:'合成学校',schoolConsent:false})),/独立同意/);
+  s.join('alice',birth({modes:['school'],schoolName:'合成 Ａ 学校',schoolConsent:true}));s.join('bob',birth({modes:['school'],schoolName:'合成a学校',schoolConsent:true}));
+  const matches=s.search('alice',{mode:'school'});assert.equal(matches.items.length,1);assert.equal(matches.items[0].schoolSelfReported,true);assert.equal(matches.items[0].schoolLabel,'合成a学校');assert.equal(matches.items[0].birthDate,undefined);
+  assert.throws(()=>s.join('carol',birth({modes:['school'],schoolName:'合成学校',schoolConsent:true,hospital:'不允许患者找人'})),/本人主动录入/);
+  s.leave('bob');assert.equal(s.search('alice',{mode:'school'}).items.length,0);
+ }finally{db.close();}
+});
 test('opt-in, adult and precision consent are enforced; no raw birth details or implicit users in search',()=>{
  const {db,store:s,birth}=setup();try{
  assert.throws(()=>s.search('alice',{mode:'date'}),/主动加入/);
