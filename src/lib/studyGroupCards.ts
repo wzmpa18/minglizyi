@@ -8,7 +8,7 @@ export interface GroupCard {
  charts?:LiveSnapshot[];permissions?:{view:boolean;archive:boolean;export:boolean;reshare:false;externalAI:false};
 }
 export interface GroupCardResult extends Partial<GroupCard> {
- success:boolean;error?:string;message?:string;items?:GroupCard[];nextCursor?:string;changed?:number;
+ success:boolean;error?:string;message?:string;items?:GroupCard[];nextCursor?:string;changed?:number;quotes?:{id:string;author:string;authorId:string;at:string;text:string;chartRefs:GroupChartReference[]}[];
 }
 /** Only explicit projected chart copies; never imports the private life vault. */
 export async function groupCardRequest(group:string,path='',method='GET',body?:unknown):Promise<GroupCardResult>{

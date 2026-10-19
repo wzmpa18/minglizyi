@@ -5,7 +5,7 @@ import {useRouter} from 'next/navigation';
 import {useAccountScope} from '@/lib/useAccountScope';
 import {useInterfaceLocale} from '@/lib/interfaceLocale';
 import {fetchGroupDetail,type GroupMemberVo} from '@/lib/socialApi';
-import {getUserProfile} from '@/lib/auth';
+import {getUserProfile,getUserToken} from '@/lib/auth';
 import {listPaipanRecords,type PaipanRecord} from '@/lib/nativePaipanStore';
 import {makeLiveSnapshot,type LiveSnapshot} from '@/lib/liveCharts';
 import {groupCardRequest,type GroupCard,type GroupCardResult} from '@/lib/studyGroupCards';
@@ -32,28 +32,30 @@ function GroupCardsAccount(){
  const [busy,setBusy]=useState(false),[message,setMessage]=useState(''),[index,setIndex]=useState(0),[zoom,setZoom]=useState(1),[full,setFull]=useState(false),[report,setReport]=useState('');
  const [mine,setMine]=useState<GroupCard[]>([]),[mineCursor,setMineCursor]=useState<string|undefined>(),[revokeIds,setRevokeIds]=useState<string[]>([]),[anchor,setAnchor]=useState(''),[follow,setFollow]=useState(''),[height,setHeight]=useState(360),[collapsed,setCollapsed]=useState(false);
  const [confirm,setConfirm]=useState<{message:string;run:()=>void}|null>(null);
+ const accountToken=useRef(getUserToken()),accountValid=useRef(true);const sameAccount=()=>accountValid.current&&accountToken.current===getUserToken();
  const requestId=useRef(crypto.randomUUID()),generation=useRef(0),myId=String(getUserProfile()?.userId||'');
- const run=async(task:()=>Promise<void>)=>{setBusy(true);setMessage('');try{await task();}catch(error){setMessage(error instanceof Error?error.message:'操作未完成');}finally{setBusy(false);}};
+ const run=async(task:()=>Promise<void>)=>{setBusy(true);setMessage('');try{if(!sameAccount())return;await task();}catch(error){setMessage(error instanceof Error?error.message:'操作未完成');}finally{setBusy(false);}};
  const checked=(result:GroupCardResult)=>{if(!result.success)throw Error(result.error||'授权盘卡不可用');return result;};
- async function loadMine(id:string){const r=checked(await groupCardRequest(id,'/mine'));setMine(r.items||[]);setMineCursor(r.nextCursor);setRevokeIds([]);}
- async function load(id:string){await loadMine(id);const r=checked(await groupCardRequest(id));setCards(r.items||[]);setCursor(r.nextCursor);}
+ async function loadMine(id:string){const r=checked(await groupCardRequest(id,'/mine'));if(!sameAccount())return;setMine(r.items||[]);setMineCursor(r.nextCursor);setRevokeIds([]);}
+ async function load(id:string){await loadMine(id);if(!sameAccount())return;const r=checked(await groupCardRequest(id));if(!sameAccount())return;setCards(r.items||[]);setCursor(r.nextCursor);}
  async function open(id:string,cardId:string,version='',position=''){
-  setCurrent(null);setFull(false);setFollow('');setAnchor('');setCollapsed(false);const token=++generation.current,r=checked(await groupCardRequest(id,'/'+encodeURIComponent(cardId)));if(generation.current!==token)return;if(!r.charts||!r.id)throw Error('盘卡数据不完整，未展示其他缓存');
+  setCurrent(null);setFull(false);setFollow('');setAnchor('');setCollapsed(false);const token=++generation.current,r=checked(await groupCardRequest(id,'/'+encodeURIComponent(cardId)));if(generation.current!==token||!sameAccount())return;if(!r.charts||!r.id)throw Error('盘卡数据不完整，未展示其他缓存');
   const at=version?r.charts.findIndex(c=>c.version===version):0;if(at<0||!validChartAnchor(r.charts[at],position))throw Error('所引用的固定版本或位置不可用，未替换成其他命盘');setCurrent(r as GroupCard);setIndex(at);setFollow(position);setAnchor(position);setZoom(1);setCreating(false);
  }
  useEffect(()=>{const params=new URLSearchParams(window.location.search),id=params.get('group')||'',cardId=params.get('card');setGroup(id);void run(async()=>{
   if(!/^\d{1,16}$/.test(id))throw Error('请从已经加入的学习群打开授权盘卡');
-  await loadMine(id);const details=await fetchGroupDetail(id);if(!details.success)throw Error(details.error||'当前账号无权访问此学习群');
+  await loadMine(id);if(!sameAccount())return;const details=await fetchGroupDetail(id);if(!sameAccount())return;if(!details.success)throw Error(details.error||'当前账号无权访问此学习群');
   setMembers(details.members||[]);setGroupName(details.group?.name||'学习群');await load(id);if(cardId&&/^[\w-]{32,40}$/.test(cardId))await open(id,cardId,params.get('version')||'',params.get('anchor')||'');
  });return()=>{generation.current++;};},[]);
- const resetConsent=()=>{setConsent(false);requestId.current=crypto.randomUUID();};
- async function begin(){setCurrent(null);setRecords(await listPaipanRecords());setSelected([]);setRecipients([]);setPreview([]);setConsent(false);setArchive(false);setAllowExport(false);setCreating(true);requestId.current=crypto.randomUUID();}
+ useEffect(()=>{const clear=()=>{if(accountToken.current!==getUserToken()){accountValid.current=false;generation.current++;setCurrent(null);setCards([]);setMine([]);setMembers([]);setRecords([]);setPreview([]);setSelected([]);setRecipients([]);setConsent(false);setCreating(false);setConfirm(null);setMessage('账号已改变，请重新打开学习群');}};window.addEventListener('storage',clear);window.addEventListener('yandao-auth-change',clear);return()=>{window.removeEventListener('storage',clear);window.removeEventListener('yandao-auth-change',clear);};},[]);
+  const resetConsent=()=>{setConsent(false);requestId.current=crypto.randomUUID();};
+ async function begin(){setCurrent(null);const records=await listPaipanRecords();if(!sameAccount())return;setRecords(records);setSelected([]);setRecipients([]);setPreview([]);setConsent(false);setArchive(false);setAllowExport(false);setCreating(true);requestId.current=crypto.randomUUID();}
  async function send(){
   if(!consent||!preview.length||!recipients.length)throw Error('请预览最小副本、逐一选择当前成员并确认授权');
   const r=checked(await groupCardRequest(group,'','POST',{requestId:requestId.current,recipientIds:recipients,newMembersCanView:false,inferenceConsent:true,rightsConsent:true,days,permissions:{archive,export:allowExport},charts:preview.map(c=>({toolKey:c.toolKey,result:{...c.data,engineVersion:c.engineVersion},showPillars:!c.redaction.pillars,visiblePillars:c.visiblePillars}))}));
   await load(group);if(r.id)await open(group,r.id);setMessage('已向所选当前成员授权；未选成员和以后加入者看不到此卡，私人原件未上传');
  }
- async function archiveCurrent(){if(!current)return;const r=checked(await groupCardRequest(group,`/${current.id}/archive`));
+ async function archiveCurrent(){if(!current)return;const r=checked(await groupCardRequest(group,`/${current.id}/archive`));if(!sameAccount())return;
   stageLifeImport({title:'学习群授权盘面留档',text:'',categories:['排盘点评'],tags:['群盘卡授权副本'],people:[current.ownerName],sourceRefs:[{kind:'SOURCE_USER_IMPORTED',platform:'言道学习群授权盘卡',author:current.ownerName,at:new Date().toISOString(),verified:false}],chartRefs:(r.charts||[]).map(c=>({tool:c.toolKey,version:c.version,record:{...c,permissions:r.permissions,groupId:group,cardId:current.id}}))},myId);
   router.push('/profile/life/');
  }
@@ -81,7 +83,7 @@ function GroupCardsAccount(){
    <nav className="flex flex-wrap gap-2">{current.charts?.map((c,i)=><Button className={i===index?primary:action} key={c.version} onClick={()=>{setIndex(i);setZoom(1);setAnchor('');setFollow('');setCollapsed(false);}}>{c.title}</Button>)}</nav>
    {chart&&<><div className="flex flex-wrap items-center gap-2 text-sm">{[240,360,520].map((n,i)=><Button key={n} className={action} onClick={()=>{setHeight(n);setCollapsed(false);}}>{['小盘','中盘','大盘'][i]}</Button>)}<Label>盘面高度<input aria-label="盘面高度" type="range" min={180} max={700} step={10} value={height} onChange={e=>setHeight(Number(e.target.value))}/></Label></div><LiveChartViewport chart={chart} anchor={follow} onAnchor={setAnchor} height={height} collapsed={collapsed} onCollapsedChange={setCollapsed}/><p className="p-3 text-xs leading-6">{chart.inferenceNotice} · {chart.version}</p><GroupCardDiscussion key={current.id} group={group} card={current} reference={{cardId:current.id,version:chart.version,anchor}} onCompose={()=>setCollapsed(true)} onFollow={ref=>{const at=current.charts?.findIndex(c=>c.version===ref.version)??-1;if(at<0){setMessage('所引用版本不可用');return;}setIndex(at);setFollow(ref.anchor);setAnchor(ref.anchor);setCollapsed(false);}}/></>}
 
-   <div className="flex flex-wrap gap-2"><Button className={action} disabled={busy||!(current.mine||current.permissions?.archive)} onClick={()=>void run(archiveCurrent)}>{ui('保存到人生记录')}</Button><Button className={action} disabled={busy||!(current.mine||current.permissions?.export)} onClick={()=>void run(async()=>{const r=checked(await groupCardRequest(group,`/${current.id}/export`));await saveLifeDocument(new Blob([JSON.stringify({dataClass:'SHARED_COLLABORATION',charts:r.charts,permissions:r.permissions},null,2)],{type:'application/json'}),'言道群盘卡授权副本.json');setMessage('已请求保存获准的盘面副本，未附带群聊、成员名单或原始出生资料');})}>{ui('导出授权副本')}</Button>
+   <div className="flex flex-wrap gap-2"><Button className={action} disabled={busy||!(current.mine||current.permissions?.archive)} onClick={()=>void run(archiveCurrent)}>{ui('保存到人生记录')}</Button><Button className={action} disabled={busy||!(current.mine||current.permissions?.export)} onClick={()=>void run(async()=>{const r=checked(await groupCardRequest(group,`/${current.id}/export`));if(!sameAccount())return;await saveLifeDocument(new Blob([JSON.stringify({dataClass:'SHARED_COLLABORATION',charts:r.charts,permissions:r.permissions},null,2)],{type:'application/json'}),'言道群盘卡授权副本.json');setMessage('已请求保存获准的盘面副本，未附带群聊、成员名单或原始出生资料');})}>{ui('导出授权副本')}</Button>
    {current.mine&&<Button className={action} disabled={busy} onClick={()=>setConfirm({message:'停止此卡的后续访问？不能收回对方此前获准另存的副本或截图。',run:()=>{void run(async()=>{checked(await groupCardRequest(group,`/${current.id}/revoke`,'POST'));setCurrent(null);await load(group);setMessage('此盘卡后续访问已撤销');});}})}>{ui('撤销分享')}</Button>}</div>
    <details className="rounded-xl border p-3 text-sm"><summary>{ui('举报')}</summary><Label>举报原因<textarea className={field} value={report} onChange={e=>setReport(e.target.value)} rows={3}/></Label><Button className={action} disabled={busy||!report.trim()} onClick={()=>void run(async()=>{checked(await groupCardRequest(group,`/${current.id}/report`,'POST',{reason:report}));setReport('');setMessage('举报已登记，当前卡已隔离，待核查后处理');setCurrent(null);await load(group);})}>{ui('提交')}</Button></details>
    <Link href={`/groups/chat/?id=${group}`} className="block text-sm theme-primary-color underline">{ui('返回本群学习交流')}</Link>

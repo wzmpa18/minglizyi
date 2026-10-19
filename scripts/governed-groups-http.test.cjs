@@ -94,6 +94,7 @@ test('group references pin card/version/visible anchor; receivers without a gran
  const id=(await call(1,`/${group}/cards`,'POST',body)).body.id;const chart=(await call(2,`/${group}/cards/${id}`)).body.charts[0];
  const refs=[{cardId:id,version:chart.version,anchor:'palace-4'}],message={content:'核对这一个固定宫位',clientMsgId:crypto.randomUUID(),chartRefs:refs};
  const made=await call(1,`/${group}/messages`,'POST',message);assert.equal(made.status,200);assert.equal(made.body.message.chartRefs[0].version,chart.version);
+ const originalId=made.body.message.id;assert.equal((await call(1,`/${group}/cards/${id}/archive-messages`,'POST',{ids:[originalId]})).body.quotes[0].text,message.content);assert.equal((await call(2,`/${group}/cards/${id}/archive-messages`,'POST',{ids:[originalId]})).status,403);assert.equal((await call(1,`/${group}/cards/${id}/archive-messages`,'POST',{ids:[originalId,'999999']})).status,403);
  assert.equal((await call(1,`/${group}/messages`,'POST',message)).body.duplicated,true);
  assert.equal((await call(1,`/${group}/messages`,'POST',{...message,chartRefs:[{...refs[0],anchor:'palace-5'}]})).status,409);
  assert.equal((await call(2,`/${group}/messages`)).body.messages[0].chartRefs[0].anchor,'palace-4');
@@ -101,6 +102,7 @@ test('group references pin card/version/visible anchor; receivers without a gran
  for(const changes of [{anchor:'palace-99'},{version:'wrong-version'},{privateNote:'RAW_CANARY'}])assert.equal((await call(1,`/${group}/messages`,'POST',{...message,clientMsgId:crypto.randomUUID(),chartRefs:[{...refs[0],...changes}]})).status,400);
  assert.equal((await call(3,`/${group}/messages`,'POST',{...message,clientMsgId:crypto.randomUUID()})).status,404);
  assert.equal((await call(1,`/${group}/cards/revoke`,'POST',{ids:[id]})).body.changed,1);
+ assert.equal((await call(1,`/${group}/cards/${id}/archive-messages`,'POST',{ids:[originalId]})).status,404);
  const second=(await call(2,`/${group}/messages`)).body.messages[0];assert.deepEqual(second.chartRefs,[]);assert.equal(second.hasUnavailableReferences,true);
 }));
 

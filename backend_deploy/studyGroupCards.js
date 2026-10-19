@@ -56,6 +56,16 @@ function createStudyGroupCards({db,group,ids,getUserDb,userPublicInfo,checkPlatf
  }));
  router.get('/:cardId',handle((req,me)=>({success:true,...view(card(req,me),me)})));
  for(const action of ['archive','export'])router.get('/:cardId/'+action,handle((req,me)=>{const row=card(req,me);if(row.owner_id!==me&&JSON.parse(row.permissions)[action]!==true)fail(action==='archive'?'此盘卡未授权留档':'此盘卡未授权导出',403);audit(row,me,action.toUpperCase());return {success:true,...view(row,me)};}));
+ router.post('/:cardId/archive-messages',handle((req,me)=>{
+  const row=card(req,me);if(row.owner_id!==me&&JSON.parse(row.permissions).archive!==true)fail('此盘卡未授权留档',403);
+  const selected=req.body?.ids;if(!Array.isArray(selected)||!selected.length||selected.length>50||new Set(selected).size!==selected.length||selected.some(id=>typeof id!=='string'||!/^\d{1,17}$/.test(id)))fail('请选择1至50条原话');
+  const quotes=selected.map(id=>{const message=store().prepare("SELECT * FROM chat_messages WHERE id=? AND conversation_id=? AND review_status='active'").get(id,'group:'+row.group_id);if(!message)fail('所选原话已不可留档，请刷新后重新预览',403);
+   if(store().prepare('SELECT 1 FROM blacklists WHERE (user_id=? AND blocked_id=?) OR (user_id=? AND blocked_id=?)').get(me,message.sender_id,message.sender_id,me))fail('所选交流关系已被屏蔽',403);
+   const refs=visibleReferences(row.group_id,me,message.chart_refs).chartRefs.filter(ref=>ref.cardId===row.id);if(!refs.length)fail('所选原话未关联此卡或引用授权已改变',403);
+   return {id:String(message.id),author:message.sender_name,authorId:message.sender_id,at:message.created_at,text:message.content,chartRefs:refs};
+  });
+  audit(row,me,'ARCHIVE_MESSAGES');return {success:true,...view(row,me),quotes};
+ }));
  router.post('/:cardId/revoke',handle((req,me)=>{const row=store().prepare('SELECT * FROM study_group_cards WHERE id=? AND group_id=? AND owner_id=?').get(req.params.cardId,req.params.id,me);if(!row)fail('盘卡不存在或无权撤销',404);store().prepare("UPDATE study_group_cards SET state='revoked' WHERE id=?").run(row.id);audit(row,me,'REVOKE');return {success:true,message:'已停止后续访问，不能收回已获准另存的副本或截图'};}));
  router.post('/:cardId/report',handle((req,me)=>{const row=card(req,me),reason=validateStudyText(req.body?.reason);if(!reason.ok)fail(reason.error);if(!store().prepare("SELECT 1 FROM reports WHERE target_type='group_card' AND target_id=? AND reporter_id=?").get(row.id,me))store().prepare('INSERT INTO reports(target_type,target_id,reporter_id,reporter_name,reason) VALUES (?,?,?,?,?)').run('group_card',row.id,me,userPublicInfo(me)?.nickname||'学友',reason.text);store().prepare("UPDATE study_group_cards SET state='held' WHERE id=?").run(row.id);audit(row,me,'REPORT_QUARANTINE');return {success:true};}));
  return router;
