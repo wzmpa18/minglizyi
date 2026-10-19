@@ -77,7 +77,7 @@ test('owner departure/rejoin never restores an old card grant, including idempot
 
 test('group mute also blocks chart-card notifications, while existing reads and owner revocation remain available',()=>fixture(async({db,call,create,invite,accept})=>{
  const group=(await create()).result.body.group.id;await accept(2,await invite(group));
- const body={requestId:crypto.randomUUID(),recipientIds:['1'],newMembersCanView:false,inferenceConsent:true,rightsConsent:true,permissions:{},charts:[{toolKey:'xiaoliuren',result:{monthStop:1,dayStop:2,hourStop:3,finalPosition:'速喜',steps:[]}}]};
+ const body={requestId:crypto.randomUUID(),recipientIds:['1'],newMembersCanView:false,inferenceConsent:true,rightsConsent:true,permissions:{},charts:[{toolKey:'ziwei',result:{palaces:Array.from({length:12},(_,index)=>({index,name:'命宫',majorStars:['紫微']}))}}]};
  const own=(await call(2,`/${group}/cards`,'POST',body)).body.id;assert.ok(own);
  db.prepare('UPDATE groups SET member_mutes=? WHERE id=?').run(JSON.stringify({'2':new Date(Date.now()+60000).toISOString()}),group);
  assert.equal((await call(2,`/${group}/cards`,'POST',{...body,requestId:crypto.randomUUID()})).status,403);assert.equal((await call(1,`/${group}/cards/${own}`)).status,200);
