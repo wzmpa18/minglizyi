@@ -97,3 +97,6 @@ work-verify/
 
 # Maintained pinned-artifact deployment, not a one-off Python scratch file.
 !scripts/deploy_verified_web_preview.py
+
+# Maintained RAM-only QA server; no downloaded bundles or extraction on C.
+!scripts/serve_verified_web_preview.py

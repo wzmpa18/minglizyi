@@ -11,11 +11,13 @@ export class LifeVault {
  private key:CryptoKey|null=null;private root:Uint8Array|null=null;private chain=Promise.resolve();
  private constructor(storage:VaultStorage,header:VaultHeader){this.storage=storage;this.header=header;}
  static async list(storage:VaultStorage){return await storage.read<{id:string;createdAt:string}[]>(registry)||[];}
- private static async register(storage:VaultStorage,h:VaultHeader){const list=await LifeVault.list(storage);if(!list.some(x=>x.id===h.id))await storage.commit([{key:registry,value:[...list,{id:h.id,createdAt:h.createdAt}]}]);}
- static async create(storage:VaultStorage,password:string){
+ private static async register(storage:VaultStorage,h:VaultHeader){
+  for(let attempt=0;attempt<5;attempt++){const marker=await storage.read<{etag:string}>(registry+":generation"),list=await LifeVault.list(storage);if(list.some(x=>x.id===h.id))return;try{await storage.commit([{key:registry,value:[...list,{id:h.id,createdAt:h.createdAt}]},{key:registry+":generation",value:{etag:crypto.randomUUID()}}],{key:registry+":generation",etag:marker?.etag??null});return;}catch{if(attempt===4)throw Error("档案目录并发更新，请重试；原档案未覆盖");}}
+ }
+ static async create(storage:VaultStorage,password:string,register=true){
   const id=crypto.randomUUID(),createdAt=new Date().toISOString(),salt=b64(randomBytes(16)),recoverySalt=b64(randomBytes(16)),root=randomBytes(32),recoveryCode=b64(randomBytes(32));
   const header:VaultHeader={schema:1,id,createdAt,salt,recoverySalt,password:await seal(await passwordKey(password,salt),b64(root),aad(id,"password")),recovery:await seal(await passwordKey(recoveryCode,recoverySalt),b64(root),aad(id,"recovery"))};
-  await storage.commit([{key:headerKey(id),value:header}]);await LifeVault.register(storage,header);
+  await storage.commit([{key:headerKey(id),value:header}]);if(register)await LifeVault.register(storage,header);
   const vault=new LifeVault(storage,header);vault.root=root;vault.key=await importVaultKey(root);return {vault,recoveryCode};
  }
  static async open(storage:VaultStorage,id:string,password:string,recovery=false){
@@ -77,8 +79,8 @@ export class LifeVault {
  }
  static async restore(storage:VaultStorage,inspected:Awaited<ReturnType<typeof LifeVault.inspectBackup>>,newPassword:string){
   // Restore into an independent vault. Existing vaults remain unchanged; reminders are not armed.
-  const created=await LifeVault.create(storage,newPassword),vault=created.vault;
-  for(const [oldKey,oldValue] of inspected.plain){const value=structuredClone(oldValue);if(oldKey.startsWith("entry:"))(value as LifeEntry).ownerProfileId=vault.id;if(oldKey.startsWith("revision:"))(value as LifeRevision).entry.ownerProfileId=vault.id;await storage.commit([{key:prefix(vault.id)+oldKey,value:await seal(vault.active(),value,aad(vault.id,oldKey))}]);}
-  await vault.reload();if(vault.entries.size!==inspected.entries.length)throw Error("恢复核查失败，原库仍保留");return created;
+  const created=await LifeVault.create(storage,newPassword,false),vault=created.vault;
+  for(const [oldKey,oldValue] of inspected.plain){const value=structuredClone(oldValue);if(oldKey.startsWith("entry:")){const e=value as LifeEntry;e.ownerProfileId=vault.id;e.reminders=e.reminders?.map(r=>({...r,calendarEventId:undefined,needsConfirmation:true}));}if(oldKey.startsWith("revision:"))(value as LifeRevision).entry.ownerProfileId=vault.id;await storage.commit([{key:prefix(vault.id)+oldKey,value:await seal(vault.active(),value,aad(vault.id,oldKey))}]);}
+  await vault.reload();if(vault.entries.size!==inspected.entries.length)throw Error("恢复核查失败，原库仍保留");await LifeVault.register(storage,vault.header);return created;
  }
 }

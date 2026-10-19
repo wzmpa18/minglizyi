@@ -1,0 +1,13 @@
+{
+  "synthetic": true,
+  "purpose": "离线OCR小数点/单位/否定词/左右侧核对；不是医学建议或患者资料",
+  "expectedLines": [
+    "合成识字样例（非处方、非真实患者）",
+    "需要保留：0.5 mg / 5.0 mg",
+    "否定词：不能饮酒；不能自行加量",
+    "左右侧：左侧与右侧分别核对",
+    "不确定处标记：待核实 / 无法辨认"
+  ],
+  "sha256": "26ea827115692ed2ef28b09d2d80be0d3bafe64f25e24de595a1b4813e4843f7",
+  "createdWith": "Original plain-text fixture rendered locally; no hospital branding, seal, third-party clinical image or font file distributed."
+}

@@ -12,6 +12,6 @@ export async function passwordKey(password:string,salt:string){
 export async function seal(key:CryptoKey,value:unknown,aad:string):Promise<Sealed>{const iv=randomBytes(12),ciphertext=await crypto.subtle.encrypt({name:"AES-GCM",iv:iv as BufferSource,additionalData:bytes(aad)},key,bytes(JSON.stringify(value)));return {v:1,etag:crypto.randomUUID(),iv:b64(iv),ciphertext:b64(new Uint8Array(ciphertext))};}
 export async function unseal<T>(key:CryptoKey,s:Sealed,aad:string):Promise<T>{
  if(s?.v!==1||typeof s.iv!=="string"||typeof s.ciphertext!=="string"||unb64(s.iv).length!==12)throw Error("密文格式无效");
- const plain=await crypto.subtle.decrypt({name:"AES-GCM",iv:unb64(s.iv) as BufferSource,additionalData:bytes(aad)},key,unb64(s.ciphertext) as BufferSource);return JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(plain));
+ let plain:ArrayBuffer;try{plain=await crypto.subtle.decrypt({name:"AES-GCM",iv:unb64(s.iv) as BufferSource,additionalData:bytes(aad)},key,unb64(s.ciphertext) as BufferSource);}catch{throw Error("密码或恢复密钥不正确，或备份已损坏；没有修改本机原资料");}return JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(plain));
 }
 export async function sha256(a:Uint8Array){return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",a as BufferSource)),b=>b.toString(16).padStart(2,"0")).join("");}

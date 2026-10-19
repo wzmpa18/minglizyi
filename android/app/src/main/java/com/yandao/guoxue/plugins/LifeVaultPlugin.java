@@ -33,7 +33,7 @@ public class LifeVaultPlugin extends Plugin {
   try{JSArray rows=call.getArray("rows");if(rows==null||rows.length()>200)throw new Exception();d.beginTransaction();begun=true;
    JSObject expected=call.getObject("check");if(expected!=null){String wanted=expected.optString("etag",null),actual=null;try(Cursor c=d.rawQuery("SELECT v FROM vault_items WHERE k=?",new String[]{valid(expected.getString("key"))})){if(c.moveToFirst())actual=new JSONObject(c.getString(0)).optString("etag",null);}if(!java.util.Objects.equals(wanted,actual))throw new Exception("revision conflict");}
 
-   for(int i=0;i<rows.length();i++){JSONObject r=rows.getJSONObject(i);String k=valid(r.getString("key")),v=JSONObject.valueToString(r.get("value"));if(v.length()>2000000)throw new Exception();d.execSQL("INSERT OR REPLACE INTO vault_items(k,v) VALUES (?,?)",new Object[]{k,v});}
+   for(int i=0;i<rows.length();i++){JSONObject r=rows.getJSONObject(i);String k=valid(r.getString("key")),v=r.get("value").toString();if(v.length()>2000000)throw new Exception();d.execSQL("INSERT OR REPLACE INTO vault_items(k,v) VALUES (?,?)",new Object[]{k,v});}
    d.setTransactionSuccessful();d.endTransaction();begun=false;call.resolve();
   }catch(Exception e){if(begun)d.endTransaction();call.reject("私人记录未写入，原数据保留");}
  }
