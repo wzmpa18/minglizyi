@@ -105,3 +105,6 @@ work-verify/
 
 # Maintained derivative of existing pinned classic editions; no external corpus.
 !scripts/build_study_research_index.py
+
+# Maintained exact-source backend deployer; no credentials or local bundles.
+!scripts/deploy_verified_learning_backend.py
