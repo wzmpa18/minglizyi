@@ -2,6 +2,7 @@
 import Link from "next/link";
 import {useEffect,useRef,useState} from "react";
 import {LifeVault} from "@/lib/lifeVault";
+import {takeLifeImport} from "@/lib/lifeImport";
 import {vaultStorage} from "@/lib/lifeVaultStorage";
 import {LIFE_CATEGORIES,healthPreparation,type LifeEntry,type LifeAttachment,type HealthData,type LifeRevision} from "@/lib/lifeRecords";
 import {recognizeLifeImage,saveLifeDocument} from "@/lib/lifeDocument";
@@ -23,6 +24,7 @@ export default function LifePage(){
  const run=async(task:()=>Promise<void>)=>{setBusy(true);setMessage("");try{await task();setRevision(n=>n+1);}catch(e){setMessage(e instanceof Error?e.message:"操作未完成，原资料保留");}finally{setBusy(false);}};
  const lock=()=>{current.current.vault?.lock();setVault(null);setEntry(null);setPassword("");setQuery("");setVersions([]);setPreview(null);setRecoveryCode("");savedText.current="";};
  useEffect(()=>{void LifeVault.list(vaultStorage).then(v=>{setVaults(v);setChosen(v[0]?.id||"");}).catch(()=>setMessage("本机存储不可用，未创建档案"));setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone);const changed=()=>lock();window.addEventListener("yandao-auth-change",changed);return()=>{window.removeEventListener("yandao-auth-change",changed);current.current.vault?.lock();};},[]);
+ useEffect(()=>{if(!vault)return;const pending=takeLifeImport();if(!pending)return;const next={...vault.newEntry(),...pending,ownerProfileId:vault.id,dataClass:"PRIVATE_LOCAL" as const,consentScope:"LOCAL_ONLY" as const,draft:true};savedText.current="";setEntry(next);setMode("records");setMessage("所选交流已作为独立本机草稿打开；请核对作者、原话、日期和盘版本。原交流未改写。");},[vault]);
  useEffect(()=>{if(!preview)return;return()=>URL.revokeObjectURL(preview.url);},[preview]);
  useEffect(()=>{if(!vault||!entry||busy)return;const serialized=JSON.stringify(entry);if(serialized===savedText.current)return;
   const timer=setTimeout(()=>{void run(async()=>{const latest=current.current;if(latest.vault!==vault||latest.entry?.id!==entry.id)return;const saved=await vault.save(entry,false);savedText.current=JSON.stringify(saved);setEntry(old=>old?.id===saved.id&&JSON.stringify(old)===serialized?saved:old);setMessage("草稿已在本机加密保存");});},2000);return()=>clearTimeout(timer);
@@ -33,7 +35,7 @@ export default function LifePage(){
  const matched=vault?(query.trim()?vault.index.search(query,100000).ids.map(id=>vault.entries.get(id)!):[...vault.entries.values()]):[];
  const rows=(trash&&vault?[...vault.entries.values()].filter(e=>e.deletedAt):matched.filter(e=>!e.deletedAt)).filter(e=>!category||e.categories.includes(category)).sort((a,b)=>Number(b.pinned)-Number(a.pinned)||b.occurredAt.localeCompare(a.occurredAt));
  const exportEntries=async(format:"txt"|"md"|"html"|"csv"|"json"|"health")=>{
-  const selected=entry?[entry]:rows;if(!selected.length)throw Error("请先选择要导出的资料");
+  const selected=entry?[entry]:rows;if(!selected.length)throw Error("请先选择要导出的资料");if(selected.some(e=>e.chartRefs?.some(c=>(c.record.permissions as {export?:boolean}|undefined)?.export===false)))throw Error("所选交流副本未获得导出授权；可在本机查看和私人备份，请向原分享者取得独立导出许可，其他本机记录仍可正常导出");
   const text=selected.map(e=>`${e.title}\n${e.occurredAt}\n${e.text}\n\n${e.sourceRefs.map(r=>`来源：${r.kind} ${r.author||""} ${r.platform||""} ${r.at||""}\n${r.quote||""}`).join("\n")}\n${e.health?`本人核对：${e.health.confirmedText||"未核对"}`:""}`).join("\n\n——\n\n");
   let body=text,type="text/plain;charset=utf-8",ext=format;
   if(format==="health"){body=healthPreparation(selected);ext="txt";}if(format==="json"){body=JSON.stringify({schema:1,dataClass:"PRIVATE_LOCAL",entries:selected},null,2);type="application/json";}

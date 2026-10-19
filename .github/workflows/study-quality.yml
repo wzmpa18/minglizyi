@@ -225,6 +225,7 @@ jobs:
       - run: npm ci --legacy-peer-deps
       - run: npx tsc --noEmit --incremental false
       - run: node --experimental-strip-types --test scripts/life-vault.test.cjs
+      - run: node --test scripts/live-chart-policy.test.cjs
       - run: npx tsx --test scripts/continuous-listening.test.ts
       - run: npx tsx --test scripts/bazi-yun-metadata.test.ts
       - run: node --test scripts/resource-discussion.test.cjs
@@ -273,6 +274,7 @@ jobs:
         run: |
           npm install --prefix "$RUNNER_TEMP/study-http-deps" --no-save --package-lock=false express@4.22.2 better-sqlite3@13.0.3 jsonwebtoken@9.0.3
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/study-comments-http.test.cjs
+          NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/live-chart-http.test.cjs
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/offline-download-http.test.cjs
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/zhenggu-preview-http.test.cjs
       - name: Verify Apple signature rejection and authenticated purchase endpoints with real dependencies

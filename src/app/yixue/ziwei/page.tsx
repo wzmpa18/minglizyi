@@ -576,7 +576,7 @@ export default function ZiweiPage() {
         calculationInput:{year:y,month:m,day:d,hour:h,minute:override?.minute??birthMinute,gender:g},
         ...historyDateOptions,year:y,month:m,day:d,hour:h,minute:override?.minute??birthMinute,gender:g,name:selectedName,
         calType:override?.birthInput?.calendar==="lunar"?"nongli":override?.birthInput?.calendar==="sizhu"?"sizhu":override?.birthInput?.calendar==="solar"?"gongli":calType,
-        zaoWanZi:selectedLateZi,zhenTaiyang:selectedSolar,xiaLing:selectedDst,longitude:override?.birthInput?.longitude??longitude,
+        zaoWanZi:selectedLateZi,zhenTaiyang:selectedSolar,xiaLing:selectedDst,longitude:typeof override?.birthInput?.longitude==="number"?override.birthInput.longitude:longitude,
         viewState:{viewMode,selectedDaxian,selectedLiunian,selectedLiuyue,selectedLiuri,selectedLiushi,tongxianActive,dxLayer,lnLayer}};
       chartInputRef.current=durableInput;
       savePaipanState("ziwei",{input:durableInput,result:res,showForm:false,_ts:Date.now()});

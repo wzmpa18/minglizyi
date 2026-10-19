@@ -556,6 +556,7 @@ function createRouter() {
   const router = express.Router();
   router.use(express.json({ limit: '6mb' }));
   router.use('/tongchen',require('./tongchenRoutes').createTongchenRouter({getDb,getUserDb,authRequired,userPublicInfo,privateConvId,checkPlatformMute,moderateResourceComment,upsertUserConversation}));
+  router.use('/live',require('./liveChartRoutes').createLiveChartRouter({getDb,getUserDb,authRequired,userPublicInfo,featureEnabled,checkPlatformMute,moderateResourceComment}));
   // 第七十五~八十章：限频事件留痕接 social.db（引擎单实例注入，避免环依赖）
   rateLimit.setDbProvider(() => { try { return getDb(); } catch { return null; } });
 
