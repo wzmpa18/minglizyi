@@ -7,6 +7,7 @@ reviewed result and rerun the source-location tests before publishing content.
 """
 import hashlib
 import json
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,7 +26,11 @@ def main():
         metadata.append({k:book.get(k, '') for k in ['id','name','author','sourceName','sourceUrl','sourceRevision','sourceRevisionUrl','license','verification','contentSha256']})
         for chapter in book['chapters']:
             offset = 0
+            case_title = ""
+            is_case_chapter = book["id"] == "zhongzhong-original" and "醫案" in chapter["title"]
             for n, part in enumerate(chapter['content'].split('\n\n'), 1):
+                if is_case_chapter and re.fullmatch(r"\d+[．.、].{1,100}", part.strip()):
+                    case_title = part.strip()
                 normalized = norm(part)
                 matched = [(x, aliases) for x, aliases in concepts if any(a in normalized for a in aliases)]
                 if matched:
@@ -33,6 +38,7 @@ def main():
                     start = max(0, first-55)
                     end = min(len(part), start+220)
                     card = dict(id=hashlib.sha256((book['id']+'\0'+chapter['id']+'\0'+str(n)+'\0'+part).encode()).hexdigest()[:24],bookId=book['id'],chapterId=chapter['id'],chapterTitle=chapter['title'],paragraph=n,start=offset+start,end=offset+end,quote=part[start:end],conceptIds=[x['conceptId'] for x, _ in matched])
+                    card.update(kind='ANCIENT_CASE' if is_case_chapter and case_title else 'CLASSIC_PASSAGE',caseTitle=case_title if is_case_chapter else '')
                     assert chapter['content'][card['start']:card['end']] == card['quote']
                     cards.append(card)
                 offset += len(part)+2

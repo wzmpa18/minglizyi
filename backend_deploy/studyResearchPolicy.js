@@ -32,7 +32,7 @@ function prepareResearch(id,body){
  if(!selected.length||Object.values(fields).some(v=>typeof v!=='string')||!Array.isArray(body.confirmedFields)||selected.some(k=>!body.confirmedFields.includes(k))||body.confirmedFields.some(k=>!selected.includes(k)))fail('请逐项确认拟分享字段');
  if(selected.some(k=>privacyWarnings(fields[k]).length))fail('请移除联系方式、身份/医院、具体日期年龄位置及可照用剂量或操作；原记录可留在本机');
  let citation=null;
- if(body.citationId){const c=cards.get(body.citationId);if(!c||(domain==='symptom'&&!c.conceptIds.includes(id.split(':')[2])))fail('引用与当前症状主题不符或来源不存在');const b=books.get(c.bookId);citation={id:c.id,bookId:c.bookId,chapterId:c.chapterId,title:b.name+' · '+c.chapterTitle,paragraph:c.paragraph,sourceHash:b.contentSha256};}
+ if(body.citationId){const c=cards.get(body.citationId);if(!c||(domain==='symptom'&&!c.conceptIds.includes(id.split(':')[2])))fail('引用与当前症状主题不符或来源不存在');const b=books.get(c.bookId);citation={id:c.id,bookId:c.bookId,chapterId:c.chapterId,title:b.name+' · '+c.chapterTitle,paragraph:c.paragraph,sourceHash:b.contentSha256,kind:c.kind,caseTitle:c.caseTitle};}
  const label=mode==='experience'?'个人经历，未独立核实':mode==='fragment'?'本人自愿人生片段，未独立核实':'知识研习，不是个人诊断';
  const content=[label,...selected.map(k=>`${LABELS[k]}：${fields[k].trim()}`),...(citation?[`依据：${citation.title}，第${citation.paragraph}自然段（古籍原文，未经医学校勘）`]:[])].join('\n');
  const check=validateStudyText(content);if(!check.ok)fail(check.error);

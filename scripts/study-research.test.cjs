@@ -11,7 +11,7 @@ function fixture(){const db=new DatabaseSync(':memory:');let now=Date.UTC(2026,9
 test('all derived source cards locate literal original codepoints, and retain known editions instead of inventing medical cases',()=>{
  const books=[...require('../src/data/tcmOriginalEditions.json'),...require('../src/data/tcmClinicalOriginalEditions.json')];
  assert.equal(topics.categories.length,11);assert.equal(concepts.length,79);assert.equal(new Set(concepts.map(c=>c.conceptId)).size,79);assert.equal(evidence.cards.length,1053);
- for(const c of evidence.cards){const b=books.find(b=>b.id===c.bookId),ch=b?.chapters.find(ch=>ch.id===c.chapterId);assert.ok(ch);assert.equal(Array.from(ch.content).slice(c.start,c.end).join(''),c.quote);assert.ok(c.conceptIds.every(id=>concepts.some(x=>x.conceptId===id)));assert.ok(evidence.books.find(x=>x.id===b.id)?.license);}
+ for(const c of evidence.cards){const b=books.find(b=>b.id===c.bookId),ch=b?.chapters.find(ch=>ch.id===c.chapterId);assert.ok(ch);assert.equal(Array.from(ch.content).slice(c.start,c.end).join(''),c.quote);assert.ok(c.conceptIds.every(id=>concepts.some(x=>x.conceptId===id)));assert.ok(evidence.books.find(x=>x.id===b.id)?.license);if(c.kind==='ANCIENT_CASE'){assert.equal(c.chapterId,'zhongzhong-original-5');assert.ok(c.caseTitle&&ch.content.includes(c.caseTitle));}}
 });
 test('field-by-field consent, authentic citation, privacy and visible-character limits are required, never silently truncated',()=>{
  const b=body();assert.throws(()=>prepareResearch(target,{...b.research,confirmedFields:[]}),/逐项/);assert.throws(()=>prepareResearch(target,{...b.research,archiveConsent:false}),/摘录许可/);
@@ -30,7 +30,7 @@ test('research defaults closed; no guest, non-consenting or underage reader; bir
  join('a');assert.equal(s.researchState('a','symptom').joined,true);assert.equal(JSON.stringify(db.prepare('SELECT * FROM study_research_consents').all()).includes(consent.birthDate),false);assert.equal(db.prepare('SELECT COUNT(*) n FROM study_comments').get().n,0);db.close();
 });
 test('two identities: pending, opaque aliases, reply, report, block, revised fragment and exit preserve domain privacy',()=>{
- const {db,s,tick,join}=fixture();s.research.configure('symptom',true,'owner',open);join('alice');join('bob');
+ const {db,s,tick,join}=fixture();s.research.configure('symptom',true,'owner',open);s.block('outside','alice');join('alice');join('bob');assert.equal(s.blocks('outside')[0].userId,'alice');
  const first=s.submit(target,'alice','not-public-real-nickname',body());assert.equal(s.list(target,'bob').length,0);
  s.review(first.id,'moderator',{status:'APPROVED',safetyConfirmed:true,note:'逐条核对原文及风险'});
  let visible=s.list(target,'bob');assert.equal(visible.length,1);assert.notEqual(visible[0].authorId,'alice');assert.equal(JSON.stringify(visible).includes('not-public-real-nickname'),false);
@@ -46,4 +46,12 @@ test('same-birth life domain requires independent consent and current matching m
  const id='research:life:environment',r={mode:'fragment',fields:{environment:'在不同环境长大',choices:'主动选择继续学习'},confirmedFields:['environment','choices'],archiveConsent:true,consentVersion:version};
  const item=s.submit(id,'alice','private-real-name',{content:prepareResearch(id,r).content,research:r,requestId:require('node:crypto').randomUUID()});s.review(item.id,'moderator',{status:'APPROVED',safetyConfirmed:true,note:'未包含生辰或客户资料'});assert.equal(s.list(id,'bob').length,1);
  exitLife();assert.throws(()=>s.list(id,'bob'),/同辰/);assert.equal(db.prepare('SELECT COUNT(*) n FROM study_research_consents').get().n,2);db.close();
+});
+
+test('changing matching membership never silently reactivates the previous life-consent record',()=>{
+ const db=new DatabaseSync(':memory:');let nonce='joined-session-one';
+ const s=createStudyCommentStore(db,new Set(),()=>Date.UTC(2026,9,19),{lifeEligible:()=>nonce});s.setConfig('owner',{enabled:true});s.research.configure('life',true,'owner',open);
+ s.researchJoin('alice','life',consent);assert.equal(s.researchState('alice','life').joined,true);
+ nonce='rejoined-or-edited-session-two';assert.equal(s.researchState('alice','life').joined,false);assert.throws(()=>s.list('research:life:environment','alice'),/同辰/);
+ s.researchJoin('alice','life',consent);assert.equal(s.researchState('alice','life').joined,true);db.close();
 });

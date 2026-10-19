@@ -19,6 +19,7 @@ export interface ClassicBook {
   author: string;
   description: string;
   chapters: ClassicChapter[];
+  contentSha256?: string;
   sourceName?: string;
   sourceUrl?: string;
   sourceRevisionUrl?: string;

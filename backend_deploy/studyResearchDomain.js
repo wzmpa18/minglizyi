@@ -43,7 +43,6 @@ function createResearchDomain(db,{now=()=>Date.now(),lifeEligible=()=>false,acco
   prepare:(id,body)=>prepareResearch(id,body),
   attach:(id,metadata)=>db.prepare('INSERT INTO study_comment_research VALUES (?,?,?)').run(id,metadata.domain,JSON.stringify(metadata)),
   resolveUser:id=>db.prepare('SELECT user_id FROM study_research_aliases WHERE public_id=?').get(String(id))?.user_id||id,
-  publicUser:id=>db.prepare('SELECT public_id FROM study_research_aliases WHERE user_id=? ORDER BY domain LIMIT 1').get(String(id))?.public_id||id,
   configure:(d,value,actor='admin',confirmation={})=>{domain(d);if(value===true&&(confirmation.operatorConfirmed!==true||confirmation.channelDisclosureConfirmed!==true||typeof confirmation.note!=='string'||confirmation.note.trim().length<8))fail('开放前须确认人工审核值守、渠道披露并填写依据',400);if(typeof value!=='boolean')fail('开关无效',400);db.prepare('UPDATE study_comment_settings SET value=? WHERE key=?').run(String(value),`research:${d}:enabled`);db.prepare('INSERT INTO study_comment_audit(actor,action,target,note,created_ms) VALUES (?,?,?,?,?)').run(String(actor),'RESEARCH_CONFIG',d,String(confirmation.note||'关闭研习交流').slice(0,500),now());return {success:true};}
  };
 }

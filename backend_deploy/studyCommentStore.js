@@ -23,6 +23,7 @@ function createStudyCommentStore(db, targets, now = () => Date.now(), options = 
       target TEXT, note TEXT, created_ms INTEGER);
     INSERT OR IGNORE INTO study_comment_settings VALUES ('enabled','false');`);
   const fail = (message, status = 400) => { const error = new Error(message); error.status = status; throw error; };
+  if(!db.prepare('PRAGMA table_info(study_comment_blocks)').all().some(r=>r.name==='display_id'))db.exec("ALTER TABLE study_comment_blocks ADD COLUMN display_id TEXT NOT NULL DEFAULT ''");
   const research=createResearchDomain(db,{now,lifeEligible:options.lifeEligible,accountEligible:options.accountEligible});
   const target = id => { if (typeof id !== 'string' || !targets.has(id) && !domainFor(id)) fail('学习讨论对象不存在或编号不受支持', 404); return id; };
   const settings = () => Object.fromEntries(db.prepare('SELECT key,value FROM study_comment_settings').all().map(row => [row.key, row.value]));
@@ -100,9 +101,9 @@ function createStudyCommentStore(db, targets, now = () => Date.now(), options = 
     return {success:true,message:'举报已提交，平台将审核处理'};
   }
   function block(me,other,undo=false) {
-    me=user(me); other=research.resolveUser(other); if(!other || other===me || String(other).length>100) fail('用户编号无效');
+    me=user(me); const displayId=String(other); other=research.resolveUser(other); if(!other || other===me || String(other).length>100) fail('用户编号无效');
     if(undo) db.prepare('DELETE FROM study_comment_blocks WHERE user_id=? AND blocked_id=?').run(me,String(other));
-    else db.prepare('INSERT OR IGNORE INTO study_comment_blocks VALUES (?,?)').run(me,String(other));
+    else db.prepare('INSERT INTO study_comment_blocks(user_id,blocked_id,display_id) VALUES (?,?,?) ON CONFLICT(user_id,blocked_id) DO UPDATE SET display_id=excluded.display_id').run(me,String(other),displayId);
     return {success:true};
   }
   function safetyFor(row){
@@ -146,7 +147,7 @@ function createStudyCommentStore(db, targets, now = () => Date.now(), options = 
     researchJoin:(me,d,body)=>research.join(me,d,body),
     researchLeave:(me,d)=>research.leave(me,d),
     mine:(id,me)=>{target(id);return db.prepare('SELECT id,status,created_ms FROM study_comments WHERE target_id=? AND user_id=? ORDER BY id DESC LIMIT 30').all(id,user(me));},
-    blocks:me=>db.prepare('SELECT blocked_id AS userId FROM study_comment_blocks WHERE user_id=?').all(user(me)).map(r=>({userId:research.publicUser(r.userId)})),
+    blocks:me=>db.prepare("SELECT COALESCE(NULLIF(display_id,''),blocked_id) AS userId FROM study_comment_blocks WHERE user_id=?").all(user(me)),
     queue:()=>({research:{symptom:research.state('', 'symptom'),life:research.state('', 'life')},comments:db.prepare("SELECT * FROM study_comments WHERE status='PENDING' ORDER BY id LIMIT 200").all().map(row=>({...row,safety:safetyFor(row)})),safetyCapability:capability(),blocked:db.prepare("SELECT c.* FROM study_comments c JOIN study_comment_safety s ON s.comment_id=c.id WHERE c.status='REJECTED' AND s.decision='BLOCK' ORDER BY c.id DESC LIMIT 100").all().map(row=>({...row,safety:safetyFor(row)})),recent:db.prepare("SELECT * FROM study_comments WHERE status='APPROVED' ORDER BY id DESC LIMIT 100").all(),reports:db.prepare("SELECT r.*,c.content,c.user_id author_id FROM study_comment_reports r JOIN study_comments c ON c.id=r.comment_id WHERE r.status='PENDING' ORDER BY r.id LIMIT 200").all(), overdue:db.prepare("SELECT COUNT(*) n FROM study_comments WHERE status='PENDING' AND created_ms<?").get(now()-86400000).n,audit:db.prepare('SELECT * FROM study_comment_audit ORDER BY id DESC LIMIT 50').all(),enabled:settings().enabled==='true',limits:limits()}),
     setConfig:(actor,body)=>{
       if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).some(k=>!['enabled','targetId','minIntervalSeconds','perDay','perTargetDay'].includes(k)))fail('配置字段无效');

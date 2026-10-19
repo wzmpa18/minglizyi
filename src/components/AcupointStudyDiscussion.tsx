@@ -34,12 +34,15 @@ function PointDiscussion({targetId,title,researchCitationId}:{targetId:string;ti
   useEffect(()=>{if(!draftReady||isResearch)return;try{if(text)localStorage.setItem(draftKey,text);else localStorage.removeItem(draftKey);}catch{setMessage('本机存储不可用，请保留尚未发表的输入');}},[text,draftKey,draftReady]);
   async function load(more=false){
     const turn=++version.current;setLoading(true);
-    const [result,own,blocked]=await Promise.all([studyRequest(`/target/${encodeURIComponent(targetId)}?view=${tab}&before=${more?cursor:''}&chapter=${encodeURIComponent(chapterFilter)}`),getUserToken()?studyRequest(`/mine/${encodeURIComponent(targetId)}`):Promise.resolve(null),getUserToken()?studyRequest('/blocks'):Promise.resolve(null)]);
+    const anchor=isResearch?window.location.hash.match(/^#research-(symptom|life)-([a-z0-9-]+)-([1-9]\d{0,14})$/):null;
+    const anchorBefore=anchor&&`research:${anchor[1]}:${anchor[2]}`===targetId&&Number.isSafeInteger(Number(anchor[3])+1)?String(Number(anchor[3])+1):'';
+    const [result,own,blocked]=await Promise.all([studyRequest(`/target/${encodeURIComponent(targetId)}?view=${tab}&before=${more?cursor:anchorBefore}&chapter=${encodeURIComponent(chapterFilter)}`),getUserToken()?studyRequest(`/mine/${encodeURIComponent(targetId)}`):Promise.resolve(null),getUserToken()?studyRequest('/blocks'):Promise.resolve(null)]);
     if(turn!==version.current)return;
     if(result.success){setConfig(result.config||null);setComments(old=>more?[...old,...(result.comments||[])]:result.comments||[]);setCursor(result.nextCursor||'');setHasMore(!!result.nextCursor);}else{setConfig(null);setComments([]);setMessage(result.error||'暂时无法读取学习讨论');}
     setMine(own?.success?own.items||[]:[]);setBlocks(blocked?.success?blocked.items||[]:[]);setLoading(false);
   }
   useEffect(()=>{setCursor('');void load();return()=>{version.current++;};},[targetId,tab,chapterFilter]);
+  useEffect(()=>{if(!isResearch)return;const id=window.location.hash.match(/-([1-9]\d{0,14})$/)?.[1];if(id)document.getElementById(`study-comment-${id}`)?.scrollIntoView({block:'center'});},[comments,isResearch]);
   async function submit(){
     if(busy)return;if(!getUserToken()){setMessage('请先登录后参与学习讨论');return;}
     if(isResearch&&!researchPayload?.valid){setMessage('请逐项确认脱敏后的分享预览与摘录许可');return;}
@@ -73,11 +76,12 @@ function PointDiscussion({targetId,title,researchCitationId}:{targetId:string;ti
     {mine.filter(item=>item.status==='PENDING').map(item=><div key={item.id} style={{padding:8,background:'#FFF8E1'}}>我的留言 #{item.id} · 待审核 <InterfaceButton disabled={busy} onClick={()=>{setConfirmation({message:'撤回这条待审留言？',run:()=>{void action(`/comment/${item.id}`,'DELETE');}});}}>撤回</InterfaceButton></div>)}
     {isResearch&&targetId.startsWith('research:symptom:')&&<ResearchCitationFilter targetId={targetId} value={chapterFilter} disabled={busy} onChange={setChapterFilter}/>}
     <nav className="my-3 flex gap-3">{([['recent','最近'],['featured','精选'],['mine','我的']] as const).map(([key,label])=><InterfaceButton key={key} type="button" disabled={busy} onClick={()=>setTab(key)} aria-pressed={tab===key} className={tab===key?'font-semibold text-purple-800':'text-stone-600'}>{ui(label)}</InterfaceButton>)}</nav>
-    {loading?<p>{ui("正在加载…")}</p>:comments.length===0?<p style={{color:'#777'}}>暂无已通过审核的学习留言。</p>:comments.map(comment=><article key={comment.id} style={{padding:'12px 0',borderTop:'1px solid #EEE'}}>
+    {loading?<p>{ui("正在加载…")}</p>:comments.length===0?<p style={{color:'#777'}}>暂无已通过审核的学习留言。</p>:comments.map(comment=><article id={`study-comment-${comment.id}`} key={comment.id} style={{padding:'12px 0',borderTop:'1px solid #EEE'}}>
       <div style={{fontWeight:700,color:'#6C2D98'}}>{comment.authorName}{comment.pinned?' · 置顶解答':''}</div>
       {comment.parentId&&<small style={{color:'#777'}}>回复留言 #{comment.parentId}</small>}
       <p style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',lineHeight:1.8}}>{comment.content}</p>
       {comment.evidenceUrl&&<a href={comment.evidenceUrl} target="_blank" rel="noopener noreferrer">解答依据</a>}
+      {comment.research?.citation&&<Link className="text-xs underline" href={`/zhongyi/classic/?book=${comment.research.citation.bookId}&chapter=${comment.research.citation.chapterId}&sourceHash=${comment.research.citation.sourceHash}#classic-p-${comment.research.citation.paragraph}`}>打开所引古籍自然段</Link>}
       {comment.research&&<ResearchExcerptActions comment={comment}/>}
       <div style={{display:'flex',flexWrap:'wrap',gap:12,fontSize:12}}>
         <InterfaceButton disabled={busy} onClick={()=>{setReply(comment);setEditing(null);requestId.current='';}}>{ui("回复")}</InterfaceButton>

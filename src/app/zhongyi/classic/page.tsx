@@ -298,6 +298,12 @@ function ReaderPage({ bookId, chapterId }: { bookId: string; chapterId: string }
   const [settings, setSettings] = useState<ReaderSettings>(DEFAULT_SETTINGS);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [isBookmarked, setIsBookmarked] = useState(false);
+  const referenceParams=useSearchParams();
+  const expectedSource=referenceParams.get('sourceHash');
+  const [referenceParagraph,setReferenceParagraph]=useState<number|null>(null);
+  const referenceMatches=!expectedSource||book?.contentSha256===expectedSource;
+  useEffect(()=>{const match=window.location.hash.match(/^#classic-p-([1-9]\d{0,5})$/);const n=match?Number(match[1]):null;setReferenceParagraph(n);if(n&&referenceMatches)document.getElementById(`classic-p-${n}`)?.scrollIntoView({block:'start'});},[chapterId,referenceMatches]);
+
 
   // 加载设置和书签 (含旧键名迁移兼容)
   useEffect(() => {
@@ -389,7 +395,7 @@ function ReaderPage({ bookId, chapterId }: { bookId: string; chapterId: string }
   const theme = getThemeStyle();
 
   // 分段处理正文
-  const paragraphs = chapter.content.split('\n').filter(p => p.trim());
+  const paragraphs = chapter.content.split('\n\n').map((text,index)=>({text,index})).filter(p=>p.text.trim());
 
   return (
     <div style={{
@@ -522,9 +528,10 @@ function ReaderPage({ bookId, chapterId }: { bookId: string; chapterId: string }
             />
           </div>
         </div></details>
+        {expectedSource&&<p role="status" style={{padding:12,color:referenceMatches?'#23583d':'#9b281e'}}>{referenceMatches?'引用版本一致，已定位原文自然段；整章原文保持完整。':'当前阅读版本与引用卡版本不同，未自动定位；请在版本来源核对，不把新旧原文混同。'}</p>}
         <article aria-label="中医典籍原文" style={{ fontSize: `${settings.fontSize}px`, lineHeight: 2.1, color: theme.text, border: `1px solid ${theme.border}`, background: theme.cardBg, borderRadius: 16, padding: '20px 18px', fontFamily: '"Noto Serif SC", "Songti SC", SimSun, serif' }}>
           {paragraphs.map((p, i) => (
-            <p key={i} style={{ marginBottom: '1em', textIndent: '2em', textAlign: 'justify' }}>{p.trim()}</p>
+            <p key={i} id={`classic-p-${p.index+1}`} style={{ marginBottom: '1em', textIndent: '2em', textAlign: 'justify',whiteSpace:'pre-wrap',scrollMarginTop:90,outline:referenceMatches&&referenceParagraph===p.index+1?'2px solid #8b5c2a':undefined }}>{p.text.trim()}</p>
           ))}
         </article>
       </div>

@@ -99,3 +99,10 @@ export async function importedLifeText(blob:Blob){
  if(!text.trim())throw Error('文件没有可导入的文字');
  return text;
 }
+
+/** Explicit public-source navigation only; no private contents in URLs. */
+export function researchSourceHref(target:string|undefined,messageId:string|undefined){
+ const match=target?.match(/^research:(symptom|life):([a-z0-9-]{1,30})$/);
+ if(!match||!messageId||!/^\d{1,15}$/.test(messageId))return null;
+ return (match[1]==='life'?'/discover/tongchen/':'/zhongyi/bianzheng/')+`#research-${match[1]}-${match[2]}-${messageId}`;
+}
