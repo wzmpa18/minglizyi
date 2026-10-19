@@ -2,18 +2,64 @@
   "purpose": "Owner instruction: complete 07/09/10 and acceptance before any formal store submission. TestFlight internal testing is separate.",
   "scope": "com.yandaoguoxue.app",
   "overallComplete": false,
-  "candidateSource": null,
+  "candidateSource": "f003626cbe4a7c86d10b38b949b2bbcd842f841c",
   "checks": [
-    {"id":"07-software-localization-calendar","status":"INCOMPLETE","evidence":null},
-    {"id":"09-software-sharing-vault-provider","status":"INCOMPLETE","evidence":null},
-    {"id":"10-software-source-discussion-summary","status":"INCOMPLETE","evidence":null},
-    {"id":"medical-content-rights-professional-validation","status":"INCOMPLETE","evidence":null},
-    {"id":"legacy-medical-ai-and-ugc-governance","status":"INCOMPLETE","evidence":null},
-    {"id":"two-adult-two-device-end-to-end","status":"NOT_ACCEPTED","evidence":null},
-    {"id":"native-widgets-reminders-power","status":"NOT_ACCEPTED","evidence":null},
-    {"id":"apple-entitlement-restore","status":"NOT_ACCEPTED","evidence":null},
-    {"id":"candidate-source-signature-regression","status":"NOT_ACCEPTED","evidence":null},
-    {"id":"store-real-screenshots-disclosures-deduplication","status":"NOT_ACCEPTED","evidence":null},
-    {"id":"workspace-rotation-cleanup-and-four-handover-hashes","status":"NOT_ACCEPTED","evidence":null}
-  ]
+    {
+      "id": "07-software-localization-calendar",
+      "status": "INCOMPLETE",
+      "evidence": null
+    },
+    {
+      "id": "09-software-sharing-vault-provider",
+      "status": "INCOMPLETE",
+      "evidence": null
+    },
+    {
+      "id": "10-software-source-discussion-summary",
+      "status": "INCOMPLETE",
+      "evidence": null
+    },
+    {
+      "id": "medical-content-rights-professional-validation",
+      "status": "INCOMPLETE",
+      "evidence": null
+    },
+    {
+      "id": "legacy-medical-ai-and-ugc-governance",
+      "status": "INCOMPLETE",
+      "evidence": null
+    },
+    {
+      "id": "two-adult-two-device-end-to-end",
+      "status": "NOT_ACCEPTED",
+      "evidence": null
+    },
+    {
+      "id": "native-widgets-reminders-power",
+      "status": "NOT_ACCEPTED",
+      "evidence": null
+    },
+    {
+      "id": "apple-entitlement-restore",
+      "status": "NOT_ACCEPTED",
+      "evidence": null
+    },
+    {
+      "id": "candidate-source-signature-regression",
+      "status": "NOT_ACCEPTED",
+      "evidence": null
+    },
+    {
+      "id": "store-real-screenshots-disclosures-deduplication",
+      "status": "NOT_ACCEPTED",
+      "evidence": null
+    },
+    {
+      "id": "workspace-rotation-cleanup-and-four-handover-hashes",
+      "status": "NOT_ACCEPTED",
+      "evidence": null
+    }
+  ],
+  "ownerInstruction": "2026-10-19: 全部完成才能提交审核",
+  "checkpointReport": "交接报告/FINAL_PROJECT_HANDOVER.md#64"
 }

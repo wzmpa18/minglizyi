@@ -1317,3 +1317,129 @@ sqlite3 /tmp/yandao_restore_test/social.db "SELECT COUNT(*) FROM friendships; SE
 - 10号契约已逐案记代码/自动化/真实UI/物理/未验收，overallComplete仍false；63.6列出的07/09/10软件、医学权利/审校和两真实用户/原生提醒/全部四语/支付恢复等缺口没有因为新包通过而消失。此回合完成可测试增量和自动审核上线，不能交成“全部功能全部审核发布完成”。
 - 本轮没有本机RAM预览/依赖/源码副本/包或解包目录。所有下载、包核验、网站传输和安装helper已正常结束，未杀共享ADB；3113未启动。小体积真实证据统一E目录，索引 `10_阶段验收证据索引.json`最终刷新；本轮删除0/释放0，唯一CMD4目标重核仍在56964392字节、E保全备份hash匹配，见 `10_唯一CMD精确清理目标重新核验.json`。旧服务器目录及97债务仍未删/未解决，两代物理轮换与全局清理未达标。最后盘点C可用16332480512字节仅为时点读数，不推断系统占用变化原因。
 - 修正文档新增EOF空行后再跑diff --check；唯一报告及三个固定镜像全部同步同一字节，提交前私钥检查。最终文档提交/推送、HEAD上游0/0、活动仓空status、四镜像SHA和未执行清理，写入同E `10_本轮收尾核验.json`。后续以此节优先，不能继续把旧25/2115当最新候选。剩余任务第一步按契约核验真正两用户/苹果真机与到账，并补专业来源和07/09软件；达标后才改正式草稿关联并真实提审。
+
+## 64. 2026-10-19全部完成后才正式提审：继续补齐活盘、私库、学习与自动审核（阶段验收，整体仍未完成）
+
+### 64.1 负责人优先级与提审门禁
+- 已收到最新明确要求“请全部完成，全部完成才能提交审核”。本轮没有新建、组装或提交App Store正式审核，也未重复荣耀/OPPO同版本任务。制度新增第九节、AGENTS及release-readiness契约记录此前提；本仓三个历史ASC审核写脚本已接正式审核门禁，并交叉检查09的40分项/44用例和10的17分项/25用例及逐案证据，不能仅把总开关设true就放行。读取状态/内部TestFlight与正式审核明确分开；门禁不是苹果账号级锁。
+- 当前07/09/10总体仍false。不能把本轮补软件、CI通过、模块部署或内部TestFlight可用写成全部完成。正式提审继续禁止，剩余软件、资料权利/审校和物理验收见64.6。
+
+### 64.2 本轮实际软件改动
+- 群内授权盘卡：新增/groups/cards/，复用原social.db、群成员、原排盘历史与同一脱敏快照。选1至4张、逐一勾选当前成员、原始姓名/生日/位置/私人备注不随盘发送；预览、独立留档/导出许可、有效期、缩放全屏、举报隔离与本人撤销。成员nonce使新加入、离群重入者不继承旧卡。接群聊天入口和授权通知，群内普通聊天不自动透露其他成员的私卡。群卡目前逐张撤销；群内消息盘锚点及批量群卡撤销仍未全部补齐，不误写成完整09群协作验收。
+- 定向活盘支持一次1至50份本人分享的批量撤销，先全量校验归属再事务写入，含非本人一项则整批不变；重复请求不重复审计。关闭渠道、过期或好友关系断开仍保留撤销入口。原分享撤销后转发链后续读取一并失效，不能收回他人此前获准留存或截图的副本。
+- 本机图片独立裁剪：20MiB内图片可在本机预览区域、生成PNG独立副本并加密保存；原图/原识字不覆盖，记录原件ID/SHA、比例范围和生成时间，副本需重新识字。输出上限1600万像素，不宣称所有原图任意大小均可处理。浏览器实际1100×470原图裁取10%/15%/80%/60%区域，读回副本880×282且原图仍在。
+- 明文导出先预览：默认隐藏已登记人物/医生/机构/科室、常见日期时刻/联系方式，另可最多50项字面隐藏；原话、命盘和原件名称索引默认不含，未授权的他人原话/盘始终排除，本机原件/正文不改写。实际内容完整预览并另行确认后保存；ICS明确保留安排日期及通用标题，恢复用独立加密备份。不能保证任意自然语言匿名，用户仍须核对。首轮实际发现日期被电话规则吃掉前缀后残留ISO时间，8268d23改日期优先/完整时间遮盖且补回归；首轮问题截图只作失败证据，不当作修复后PASS。
+- 知识工厂上传先校验全文，支持UTF-8、GBK/GB18030、带BOM的UTF-16；保留原字节并填充完整text_content/来源哈希/实际编码响应。1MiB/20万字符超限、坏base64、二进制/不完整编码拒绝，不再静默截掉后文或留下空正文。文件UUID防重名；资料仍pending，不自动变成已授权/医学审校完成。真实HTTP测试核GBK完整末卷、原字节一致、无效文件不落盘、其他账号不可读私有资料。
+- 旧wenzhen/zhongyi-ai：自由症状/补充文字只在本机确定性原文对照，不发送模型，不扣用户AI次数；通用AI只收固定公开文献问题/阅读分类，不注入私人自述和骨错位→触诊→手法方案。旧缓存换命名空间，来源抽屉接同一索引，简繁字形归一不补造医学同义词；13处旧工具说明同步此页实际行为。此修正只覆盖已点名路径，不等于旧diagnosis、constitution、shanghan等医疗输出与全部医学内容已完成专项审校。
+- 新增44项控件四语并覆盖新裁剪/导出/发送确认标题；干支、原文和用户留言不机器翻译。全量历史UI与错误/帮助文字四语仍未完成，404个原字典键加本批控件不等于全APP完成。
+
+### 64.3 复用统一机器审核与逐次授权
+- 活盘消息、同辰定向消息、治理学习群资料/消息及资源评论不再以“模型输出PASS前缀”决定通过。改复用study-comments同一个严格Hy3审核器、SQLite预算/近期哈希缓存及2并发；仍全局50次/日，不扣用户AI点数，异常/疑点/无预算保持隔离。其他旧动态/评论/普通私聊尚未全部迁移，不能称所有UGC已统一整改。
+- 新客户端每次发送显示实际所选文字及公开/定向/群资料用途，单独未预选授权；取消或账号切换不发网络请求。只交文字与固定“学习者”标签，不另送账号ID/整盘/健康原库/OCR。用户自己写在文字内的信息仍是所选正文，预览明确须移除隐私；定向交流不是端到端加密。供应商与平台说明均有链接。
+- 无本版逐次授权的旧客户端保持pending且不调用模型。只有匹配策略版本、原文SHA、automatic=true、PASS且无规则标记才active；篡改/类PASS字符串/错hash/不明结果不可激活。审核审计入social.db仅保存受限账号关联、文字hash、策略版本、结果和时间，审计失败不公开；私人本机库不进入该链。
+- 新发送确认层高于旧群页z=10001顶部条，避免确认按钮被遮住。删除/举报/关系与成员检查仍是独立门槛；本轮没有自动批准历史待审材料或申诉。
+
+### 64.4 已部署后端与真实开关
+- 2026-10-19T11:52:20Z已部署固定源码eba736ca50873830396ac8dff377ac95b4550223的11个指定模块；上线前生产socialApiRoutes与历史cc6be0a逐字节一致，academyRoutes与a499d05一致。维护脚本deploy_verified_learning_backend.py先核每个旧SHA，再检查JS语法、保留一份.previous、切换并重启后核源SHA与health；不覆盖server.js、.env、密钥或用户/订单数据库。新增表兼容迁移前SQLite在线备份data/social.db.pre-live-chart-migration，未用工作区数据库替换生产。
+- 证据同一E盘发布包/实机整改_20261018内：10_活盘学习群上线前逐模块基线.json、10_活盘学习群后端部署预检.json、10_活盘学习群实际后端部署.json、10_活盘学习群上线后游客权限与渠道开关.json。
+- 上线后health200；游客live及群卡401；普通无凭证知识工厂管理员403。无渠道头默认社交五开关friends/private/posts/comments/groups均false，未把代码已部署混称所有渠道已向用户开放。新社交服务可验证不代表旧群、旧私聊或未治理动态已自动恢复。受控开放和渠道真实操作仍须继续验收。
+- 本轮Web已上线f003626cbe4a7c86d10b38b949b2bbcd842f841c；最终构建/实际预览/上线结果见64.7。安卓仍是前轮真实2116/源码152346d，iOS仍前轮内部TestFlight26/源码152346d；本轮新增客户端功能尚未进新的已验原生包，绝不把旧包当本轮全功能新包。
+
+### 64.5 验证证据与范围
+- 本轮阶段成功云验收39245609369（2fa2c0b）、39245949584（6dd0b33）、39246900171（eba736c）、39247279376（1e98499，包含真实路由与逐次授权/隔离测试）。包含TypeScript、原排盘/历法/支付回归、原文核查、SQLite/Express/JWT权限与本机加密库测试；合成模型响应并非真人两端验证或医学签审。最初75a9630的39245461377因裁剪回调JSX括号报错，2fa2c0b修复后通过，没有删断言掩盖失败。
+- 本机原20项加密/版本/离线索引测试通过，含1千/1万/10万条合成短记录基准；新增4项导出/裁剪来源测试、2项编码、2项审核策略、正式审核门禁测试通过。基准是Windows RAM索引，不是安卓/iOS数据库吞吐、OCR或耗电结论。
+- 隔离localhost真实浏览器首轮使用固定eba736c云产物12183394633，RAM静态服务+CSP connect-src none，API代理关闭；裁剪/私库保存/导出预览/回看原文、本机自述原文对照已实际操作。统计apiGetRequests=0、blockedMutations=0、privateCanaryRequests=0；不是生产环境完整抓包或两真实用户。首轮本机预览PID18180已停止；无ZIP/APK/IPA/解包写入C盘。
+- 首轮证据：10_离线裁剪与医疗学习首轮真实验收.json、10_新增裁剪副本真实页面.png、10_导出脱敏预览首轮实际页面.png。首轮导出截图含已发现旧ISO残留问题；修复后的最终UI证据须另行验证，不能拿该截图当PASS。
+
+### 64.6 尚未全部完成、下一步与清理边界
+- 继续补07/09剩余软件：历史全界面四语、群内盘锚点/批量群卡操作、服务者资质/授权与付费服务准入验收、备份/换机/全部分享编辑撤销的完整UI链；10主动AI公开资料整理及分歧归类尚未开放。旧医疗输出与旧动态/评论/普通私聊治理仍需专项实际整改。以上不是一概归为外部阻塞。
+- 外部/物理验收尚缺：两个自愿成年人两设备全链，Android/iOS真组件添加/锁屏/通知送达修改取消/强停重启/功耗，Apple沙盒指定账号识别后的恢复与真实到账。本轮未放宽所有用户沙盒资格，未让用户重复付款；不能用Apple成功弹框代替到账。
+- 医学资料仍缺33概念有来源的映射与专业校核；逐穴定位/董氏完整内容、28旧经络图授权、现代药典/医考/全部书籍和图谱权利/专业审校、完整天文软件能力均未因本轮补UI而完成。没有伪造签审、授权或复制手机竞品素材。正式截图、准确渠道披露及正式提审仍须在全部完成后处理。
+- 本轮删除用户文件0字节，未代执行CMD。唯一CMD仍为C:/Users/ZhuanZ/Documents/Codex/2026-10-17/e-c-users-zhuanz-documents-codex/outputs/guoxue-clean-20261018.cmd；四既定目标待本人执行核验。旧2109和C合成备份重复件尚不能称已清，E物理版本轮换未达仅两代。本轮源码/维护工具、正式回滚包和真实证据保留；临时产物仅RAM，验收结束须停本次专属预览进程，不停共享ADB/浏览器。
+- 历史97共享Git债务仍承接，不盲删共享Git或归并未知私有资料；本轮只读看到共有Git主树C:/Users/ZhuanZ/Projects/minglizyi存在另外22个受跟踪修改及历史删除，包含其他开发中的源码，不能冒称同前次6修改完全相同，更不能替其他工作树盲提交/抹去。活动仓本轮有效改动已逐批审查提交推送，最终空status/上游0/0另由E收尾核验记录。
+- 苹果钥仍E盘苹果开发者顶层既有AuthKey_URY888FLWG.p8，未复制/回显私钥、未生成或撤销共享旧钥、未改其他产品。提交前跟踪文件私钥扫描均通过，不能把扫描成功当历史密钥已撤销。
+
+### 64.7 最终网页验收与收尾（本轮增量完成核验，整体07/09/10未完成）
+- 最终产品源f003626cbe4a7c86d10b38b949b2bbcd842f841c，完整质量39248787242成功；阶段8268d23/47ec24c亦各自构建检查，最终只以f003626为新Web源。官方云产物12184367934、ZIP SHA-256 8e19d1aa806942d2d207f591eaa875aeb085c8bdfb4e7c6f96354f124cb56e57，2320文件/70198826字节，逐文件清单hash c7e6f919b9ca3887bd9ffb4984bf7decf85069c9ced59322c115ec04e89c2bc9。
+- 2026-10-19T12:12:41Z Web已原子切换到/root/yandaoguoxue/releases/v25.0.115-calendar-community-f003626，明确可回退到前轮已验152346d。官网真实浏览器已出现“中医文献研习——原文对照与阅读学习”及新抽屉，保存10_继续完善官网实际页面.png；部署回执10_继续完善官网实际部署.json。更老服务器目录尚未物理退役，不称全盘只剩两代；本轮无Android/iOS新包上传或正式提审。
+- 修复后用同一合成档案跨Web源升级重开：原正文和原图+裁剪副本两份附件均保留。导出实际预览姓名/机构/日期/ISO时刻尾部/测试号码均无残留，默认无原件索引；确认后保存按钮可用，编辑隐藏词后确认自动取消并禁用保存，未实际生成多余下载文件。原记录未被脱敏改写。证据10_导出脱敏修复后实际页面.png及10_修复后导出与繁体医案真实验收.json。
+- 最终文献学习输入“頭痛、咳嗽”查同两概念，374条原文；医案筛选71条。实际打开《医学衷中参西录》同一完整五、醫案章的classic-p-16，原文对应并有2px定位描边，sourceHash=546272df85248358f16b5e92b1312c23432627a6b1f61ec95bd516dab2d1f1ce。10_文献研习繁体与医案抽屉最终页面.png、10_文献研习完整章节定位最终页面.png为证。不是新增全部医学概念、现代解释或医学签审。
+- 最终隔离预览PID21388也已停止，3113不再监听；两次预览均RAM，无本轮依赖/构建/安装包/解包落C盘。合成数据在原隔离浏览器档案内保留作下一阶段升级/恢复验收，不删除其他档案。最终代理统计仍apiGetRequests=0、blockedMutations=0、privateCanaryRequests=0（CSP禁止外联范围内，不冒作生产完整抓包）。旧清理CMD哈希仍6bc78b38a9a33fd75b0d251926a480fc9b93ff72bc756c75a8710e83cb98796a，三文件及空目录四目标仍在/共56964392字节待负责人手动；本轮实际删除0，C盘可用16121815040字节为当时盘点，不归因于本轮释放。
+- 收尾增强正式门禁须交叉核对09的40分项/44用例、10的17分项/25用例及每案证据；新增“总开关true但分案未通过/证据空/重复用例”拒绝测试通过。当前整体、逐案与正式允许值仍false/未完成；不是改一个总布尔值就能正式提审。权威报告四固定副本、制度和入口按唯一源同步，最终实际SHA/文档提交推送/上游0/0/空status在E盘10_继续完善收尾核验.json读回，避免报告自引用最终hash。
+
+### 64.8 本轮实际源文件位置
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/.github/workflows/study-quality.yml`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/.gitignore`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/backend_deploy/academyRoutes.js`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/backend_deploy/governedGroupRoutes.js`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/backend_deploy/liveChartRoutes.js`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/backend_deploy/socialApiRoutes.js`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/backend_deploy/socialModerationPolicy.js`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/backend_deploy/studyCommentStore.js`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/backend_deploy/studyCommentsRoutes.js`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/backend_deploy/studyGroupCards.js`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/backend_deploy/studyTextImport.js`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/backend_deploy/tongchenRoutes.js`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/docs/requirements/release-readiness.json`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/scripts/academy-admin-http.test.cjs`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/scripts/asc_diag_item.js`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/scripts/asc_probe_item2.js`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/scripts/asc_submit_review2.js`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/scripts/deploy_verified_learning_backend.py`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/scripts/formal-review-gate.test.cjs`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/scripts/governed-groups-http.test.cjs`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/scripts/lib/formalReviewGate.cjs`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/scripts/life-export.test.cjs`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/scripts/live-chart-http.test.cjs`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/scripts/medical-learning.test.ts`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/scripts/social-moderation-policy.test.cjs`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/scripts/study-text-import.test.cjs`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/discover/live/page.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/groups/cards/page.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/groups/chat/[id]/ClientPage.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/layout.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/privacy/page.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/profile/life/page.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/zhongyi/ai/layout.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/zhongyi/ai/page.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/zhongyi/bianzheng/layout.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/zhongyi/classic/layout.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/zhongyi/constitution/layout.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/zhongyi/diagnosis/layout.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/zhongyi/exam/layout.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/zhongyi/formula/layout.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/zhongyi/herb/layout.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/zhongyi/meridian/layout.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/zhongyi/shanghan/layout.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/zhongyi/wenzhen/layout.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/zhongyi/wenzhen/page.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/zhongyi/yangsheng/layout.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/app/zhongyi/zhenggu/layout.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/components/LifeExportPreview.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/components/LifeImageCrop.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/components/SocialModerationConsent.tsx`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/data/wenzhen_data.ts`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/data/zhenggu_knowledge.ts`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/lib/lifeExport.ts`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/lib/lifeExportPrivacy.ts`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/lib/lifeRecords.ts`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/lib/liveCharts.ts`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/lib/medicalLearning.ts`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/lib/socialApi.ts`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/lib/socialModerationConsent.ts`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/lib/studyGroupCards.ts`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/lib/tongchenApi.ts`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/locales/en.json`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/locales/ja.json`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/locales/zh-CN.json`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/src/locales/zh-TW.json`
+
+本次收尾同时更新的权威制度、入口约束、验收契约与总账：
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/AGENTS.md`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/PROJECT_MASTER_LEDGER.md`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/docs/requirements/life-records-09.acceptance.json`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/docs/requirements/research-10.acceptance.json`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/docs/requirements/release-readiness.json`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/交接报告/FINAL_PROJECT_HANDOVER.md`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/交接报告/交接报告更新与工作区清理制度.md`
+- `C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance/FINAL_PROJECT_HANDOVER.md`

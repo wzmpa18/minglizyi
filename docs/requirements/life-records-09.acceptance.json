@@ -259,10 +259,12 @@
     {
       "id": "09-04",
       "requirement": "每个已支持工具发活盘卡→另一账户点开交互，不依赖截图/同设备本地ID。",
-      "status": "PENDING_E2E",
-      "environment": null,
-      "evidence": [],
-      "blocker": null
+      "status": "ISOLATED_HTTP_ADAPTERS_PASS_GROUP_UI_IMPLEMENTED_NOT_TWO_PHYSICAL_USERS",
+      "environment": "CI Node/Express/SQLite synthetic identities; isolated localhost browser where explicitly recorded",
+      "evidence": [
+        "交接报告/FINAL_PROJECT_HANDOVER.md#64"
+      ],
+      "blocker": "Remaining acceptance is separate; no formal review"
     },
     {
       "id": "09-05",
@@ -275,18 +277,22 @@
     {
       "id": "09-06",
       "requirement": "隐藏字段在API/链接/卡片/详情/图形/AI/导出均不残留；推断风险提示实际出现。",
-      "status": "PENDING_E2E",
-      "environment": null,
-      "evidence": [],
-      "blocker": null
+      "status": "ISOLATED_HTTP_PROJECTION_AND_REAL_WEB_EXPORT_PRIVACY_PASS_PENDING_PHYSICAL_E2E",
+      "environment": "CI Node/Express/SQLite synthetic identities; isolated localhost browser where explicitly recorded",
+      "evidence": [
+        "交接报告/FINAL_PROJECT_HANDOVER.md#64"
+      ],
+      "blocker": "Remaining acceptance is separate; no formal review"
     },
     {
       "id": "09-07",
       "requirement": "未授权、另一人、撤销、过期、拉黑、越权WebSocket请求被拒。",
-      "status": "PENDING_E2E",
-      "environment": null,
-      "evidence": [],
-      "blocker": null
+      "status": "ISOLATED_AUTHENTICATED_HTTP_EXPIRY_BLOCK_REVOKE_PASS_NOT_TWO_PHYSICAL_USERS",
+      "environment": "CI Node/Express/SQLite synthetic identities; isolated localhost browser where explicitly recorded",
+      "evidence": [
+        "交接报告/FINAL_PROJECT_HANDOVER.md#64"
+      ],
+      "blocker": "Remaining acceptance is separate; no formal review"
     },
     {
       "id": "09-08",
@@ -499,18 +505,22 @@
     {
       "id": "09-34",
       "requirement": "群成员/管理员/外部人权限、加入退出、群分享盘对新增成员授权符合预览。",
-      "status": "PENDING_E2E",
-      "environment": null,
-      "evidence": [],
-      "blocker": null
+      "status": "GROUP_CARD_MEMBER_NONCE_AND_STRICT_MODERATION_HTTP_PASS_WEB_UI_IMPLEMENTED_NOT_PHYSICAL_E2E",
+      "environment": "CI Node/Express/SQLite synthetic identities; isolated localhost browser where explicitly recorded",
+      "evidence": [
+        "交接报告/FINAL_PROJECT_HANDOVER.md#64"
+      ],
+      "blocker": "Remaining acceptance is separate; no formal review"
     },
     {
       "id": "09-35",
       "requirement": "公共/私信风控和人工响应闭环；私有本地日记不送审核接口。",
-      "status": "PENDING_E2E",
-      "environment": null,
-      "evidence": [],
-      "blocker": null
+      "status": "NEW_STUDY_CHANNELS_OPT_IN_STRICT_AUTOMATION_PASS_LEGACY_SOCIAL_PENDING",
+      "environment": "CI Node/Express/SQLite synthetic identities; isolated localhost browser where explicitly recorded",
+      "evidence": [
+        "交接报告/FINAL_PROJECT_HANDOVER.md#64"
+      ],
+      "blocker": "Remaining acceptance is separate; no formal review"
     },
     {
       "id": "09-36",
@@ -547,10 +557,12 @@
     {
       "id": "09-40",
       "requirement": "新老包升级保留原盘出生地、笔记、附件和提醒；不要求卸载清数据。",
-      "status": "PENDING_E2E",
-      "environment": null,
-      "evidence": [],
-      "blocker": null
+      "status": "SAME_SYNTHETIC_VAULT_REOPENED_BETWEEN_WEB_ARTIFACTS_ORIGINALS_RETAINED_NATIVE_UPGRADE_PENDING",
+      "environment": "isolated browser eba736c to f003626; not physical Android/iOS new package",
+      "evidence": [
+        "交接报告/FINAL_PROJECT_HANDOVER.md#64.7"
+      ],
+      "blocker": "physical new-package upgrade and full history/reminder preservation not yet accepted"
     },
     {
       "id": "09-41",
@@ -579,10 +591,12 @@
     {
       "id": "09-44",
       "requirement": "零账户本地模式平台服务器关闭仍能读写/搜索/查看备份指引；联网社交不可用时不毁档。",
-      "status": "PENDING_E2E",
-      "environment": null,
-      "evidence": [],
-      "blocker": null
+      "status": "ISOLATED_WEB_PRIVATE_CROP_SOURCE_READ_AND_EDIT_PASS_API_DISABLED_NOT_PHYSICAL_UPGRADE",
+      "environment": "CI Node/Express/SQLite synthetic identities; isolated localhost browser where explicitly recorded",
+      "evidence": [
+        "交接报告/FINAL_PROJECT_HANDOVER.md#64"
+      ],
+      "blocker": "Remaining acceptance is separate; no formal review"
     }
   ],
   "sevenRemaining": {
@@ -592,5 +606,31 @@
     "approvedDimu60YearEdition": "BLOCKED_SOURCE",
     "sandboxEntitlementRestoration": "BLOCKED_ACCOUNT_IDENTIFICATION",
     "realReviewSubmission": "NOT_SUBMITTED"
+  },
+  "checkpointDate": "2026-10-19",
+  "deliveryComplete": false,
+  "formalSubmissionAllowed": false,
+  "softwareCheckpoint": {
+    "source": "f003626cbe4a7c86d10b38b949b2bbcd842f841c",
+    "backendSource": "eba736ca50873830396ac8dff377ac95b4550223",
+    "newlyImplemented": [
+      "group card UI",
+      "direct-share batch revocation",
+      "encrypted derived image crops",
+      "selected export redaction and preview",
+      "strict whole-file GBK/UTF import",
+      "per-send consent and shared-budget moderation for live/tongchen/groups/resources"
+    ],
+    "remaining": [
+      "whole historical interface localization",
+      "provider qualification/authorization acceptance",
+      "full group card message anchoring and group batch revocation",
+      "remaining 07/09 backup/sharing UI and physical tests",
+      "medical sources/rights/professional validation",
+      "old diagnosis/constitution pathways and legacy feed/private governance",
+      "physical Apple sandbox entitlement recovery"
+    ],
+    "webSource": "f003626cbe4a7c86d10b38b949b2bbcd842f841c",
+    "webLive": true
   }
 }
