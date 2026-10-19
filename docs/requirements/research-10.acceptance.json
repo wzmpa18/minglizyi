@@ -217,9 +217,11 @@
     "professional verification/rights for medical interpretations and all missing concept mappings",
     "resolve quarantined complaints/appeals; automation is not certified complete coverage",
     "opt-in provider, selection and cost flow before AI public summaries (not moderation)",
-    "remaining 07/09 software, two physical users, reminders/widgets/power, Apple sandbox entitlement recovery and formal store review"
+    "remaining 07/09 software, two physical users, reminders/widgets/power, Apple sandbox entitlement recovery and formal store review",
+    "full provider qualifications/trade UI; unsafe browser-only fake approvals/payment/settlement are now held",
+    "three legacy medical paths now use local literature/private draft flows; whole medical source rights and professional review still missing"
   ],
-  "report": "交接报告/FINAL_PROJECT_HANDOVER.md#64; no competing report",
+  "report": "交接报告/FINAL_PROJECT_HANDOVER.md#65; no competing report",
   "checkpointDate": "2026-10-19",
   "moderationOverride": {
     "authority": "2026-10-19 owner direct reply: built-in filtering and AI; no daily human staffing",
@@ -230,17 +232,18 @@
     "remaining": "complaint/appeal exceptions, old published data and image/long-text review remain held or require verification; new legacy posts/comments/ordinary private text now uses per-send consent and the same strict budget, with purpose-isolated Tongchen conversations"
   },
   "evidence": {
-    "quality": 39256673357,
+    "quality": 39264707045,
     "source": "1a051ad211d1dd0bb6c4b81e64bb3eba0e84d950",
     "newContrastSource": "152346da1a287c2d994b26f46c4b8e3196d35d66",
-    "productionWeb": "v25.0.115-calendar-community-1a051ad",
+    "productionWeb": "v25.0.115-calendar-community-072db69",
     "androidInstalled": 2116,
     "iosTestFlightInternal": 26,
     "proofDirectory": "E:/八字命理类文档包括排盘方式电子版/言道国学项目归档/发布包/实机整改_20261018/",
-    "latestSoftwareSource": "1a051ad211d1dd0bb6c4b81e64bb3eba0e84d950",
-    "backendSource": "1a051ad211d1dd0bb6c4b81e64bb3eba0e84d950",
+    "latestSoftwareSource": "47b5db453592f1bfd0c2130234f180bf9249c2d2",
+    "backendSource": "47b5db453592f1bfd0c2130234f180bf9249c2d2",
     "androidInstalledSource": "152346da1a287c2d994b26f46c4b8e3196d35d66",
-    "iosTestFlightSource": "152346da1a287c2d994b26f46c4b8e3196d35d66"
+    "iosTestFlightSource": "152346da1a287c2d994b26f46c4b8e3196d35d66",
+    "webSource": "072db69eb84ac2051df5163002c168d78e4f25b4"
   },
   "formalSubmissionAllowed": false
 }

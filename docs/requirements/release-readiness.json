@@ -2,7 +2,7 @@
   "purpose": "Owner instruction: complete 07/09/10 and acceptance before any formal store submission. TestFlight internal testing is separate.",
   "scope": "com.yandaoguoxue.app",
   "overallComplete": false,
-  "candidateSource": "1a051ad211d1dd0bb6c4b81e64bb3eba0e84d950",
+  "candidateSource": "47b5db453592f1bfd0c2130234f180bf9249c2d2",
   "checks": [
     {
       "id": "07-software-localization-calendar",
@@ -60,6 +60,6 @@
       "evidence": null
     }
   ],
-  "ownerInstruction": "2026-10-19: 全部完成才能提交审核",
-  "checkpointReport": "交接报告/FINAL_PROJECT_HANDOVER.md#64"
+  "ownerInstruction": "2026-10-19: 全部完成才能提交审核；全部完成后一次清理",
+  "checkpointReport": "交接报告/FINAL_PROJECT_HANDOVER.md#65"
 }
