@@ -255,7 +255,7 @@ function BianZhengPageOriginal() {
             </div>
           ))}
 
-          <label className="block text-sm" style={{color:'#d4a84b'}}>持续时间（只留本页，不作病程判断）<select aria-label="症状持续时间" className="ml-2 rounded border p-2 text-stone-900" value={symptomDuration} onChange={e=>setSymptomDuration(e.target.value)}>{['','不足一天','一至七天','数周','数月','更久','不确定'].map(t=><option value={t} key={t}>{t||'选填'}</option>)}</select></label>
+          <label className="block text-sm" style={{color:'#d4a84b'}}>持续时间（只留本页，不作病程判断）<select aria-label="症状持续时间" className="ml-2 rounded border border-stone-400 bg-white p-2 text-stone-900" style={{colorScheme:'light'}} value={symptomDuration} onChange={e=>setSymptomDuration(e.target.value)}>{['','不足一天','一至七天','数周','数月','更久','不确定'].map(t=><option value={t} key={t}>{t||'选填'}</option>)}</select></label>
           {/* 补充症状描述 */}
           <div>
             <p className="text-xs font-bold mb-2" style={{ color: "#d4a84b" }}>
