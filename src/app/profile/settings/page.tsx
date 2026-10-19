@@ -1,6 +1,9 @@
 "use client";
 
 import { InterfaceLanguageSettings } from "@/components/InterfaceLanguageSettings";
+import {InterfaceButton} from "@/components/InterfaceControls";
+import {useInterfaceLocale} from "@/lib/interfaceLocale";
+import {generatedCacheBytes,clearGeneratedCache} from "@/lib/generatedCache";
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -26,20 +29,21 @@ function SettingsItem({
   onClick?: () => void;
   noBorder?: boolean;
 }) {
+  const {ui}=useInterfaceLocale();
   return (
-    <button
+    <InterfaceButton
       onClick={onClick}
       className="flex w-full items-center gap-3 bg-white px-4 py-3.5 text-left active:bg-gray-50"
       style={{ borderBottom: noBorder ? "none" : "1px solid #f5f5f5" }}
     >
       {icon ? <div className="flex h-8 w-8 shrink-0 items-center justify-center">{icon}</div> : null}
-      <span className="flex-1 text-sm text-gray-800">{label}</span>
+      <span className="flex-1 text-sm text-gray-800">{ui(label)}</span>
       {right || (
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="9 18 15 12 9 6" />
         </svg>
       )}
-    </button>
+    </InterfaceButton>
   );
 }
 
@@ -74,11 +78,11 @@ function BlacklistModal({ onClose }: { onClose: () => void }) {
       >
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
           <h3 className="text-base font-bold text-gray-800">黑名单管理</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <InterfaceButton aria-label="关闭" onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
             </svg>
-          </button>
+          </InterfaceButton>
         </div>
 
         <div className="flex-1 overflow-y-auto">
@@ -104,13 +108,13 @@ function BlacklistModal({ onClose }: { onClose: () => void }) {
                   <p className="text-sm font-semibold text-gray-800 truncate">{user.nickname}</p>
                   <p className="text-xs text-gray-400">ID: {user.userId}</p>
                 </div>
-                <button
+                <InterfaceButton
                   onClick={() => handleUnblock(user.userId)}
                   className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white active:opacity-80 transition-opacity"
                   style={{ backgroundColor: BRAND }}
                 >
                   解除拉黑
-                </button>
+                </InterfaceButton>
               </div>
             ))
           )}
@@ -125,6 +129,7 @@ function BlacklistModal({ onClose }: { onClose: () => void }) {
 }
 
 export default function SettingsPage() {
+  const {ui}=useInterfaceLocale();
   const router = useRouter();
   const [allowSearch, setAllowSearch] = useState(true);
   const [allowNearby, setAllowNearby] = useState(true);
@@ -185,15 +190,7 @@ export default function SettingsPage() {
 
   const calculateCacheSize = useCallback(() => {
     if (typeof window === "undefined") return;
-    let totalBytes = 0;
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key) totalBytes += key.length + (localStorage.getItem(key) || "").length;
-    }
-    for (let i = 0; i < sessionStorage.length; i++) {
-      const key = sessionStorage.key(i);
-      if (key) totalBytes += key.length + (sessionStorage.getItem(key) || "").length;
-    }
+    const totalBytes = generatedCacheBytes(localStorage)+generatedCacheBytes(sessionStorage);
     const kb = totalBytes / 1024;
     if (kb < 1024) setCacheSize(`${kb.toFixed(1)} KB`);
     else setCacheSize(`${(kb / 1024).toFixed(1)} MB`);
@@ -203,27 +200,10 @@ export default function SettingsPage() {
     if (isClearing) return;
     setIsClearing(true);
     try {
-      const preserveKeys = [
-        "yandao_user_id", "yandao_user_profile", "yandao_login_token", "yandao_login_state",
-        "yandao_login_user", "yandao_pwd_store", "yandao_token_expiry", "yandao_refresh_token",
-        "yandao_refresh_expiry", "yandao_user_phone",
-      ];
-      const preserved: Record<string, string | null> = {};
-      preserveKeys.forEach((key) => { preserved[key] = localStorage.getItem(key); });
-
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && !preserveKeys.includes(key)) keysToRemove.push(key);
-      }
-      keysToRemove.forEach((key) => localStorage.removeItem(key));
-      preserveKeys.forEach((key) => {
-        if (preserved[key] !== null) localStorage.setItem(key, preserved[key]!);
-      });
-
-      sessionStorage.clear();
+      clearGeneratedCache(localStorage);
+      clearGeneratedCache(sessionStorage);
       calculateCacheSize();
-      setCacheToast("缓存已清理，登录状态不受影响");
+      setCacheToast("可重建缓存已清理；本机记录、笔记、提醒、登录和设置均保留");
       setTimeout(() => setCacheToast(""), 3000);
     } catch {
       setCacheToast("清理失败，请重试");
@@ -242,7 +222,7 @@ export default function SettingsPage() {
       {/* ===== 隐私设置 ===== */}
       <div className="mx-3 mt-3 rounded-xl bg-white shadow-sm overflow-hidden">
         <div className="px-4 pt-3 pb-1">
-          <p className="text-xs font-medium text-gray-400">隐私设置</p>
+          <p className="text-xs font-medium text-gray-400">{ui("隐私设置")}</p>
         </div>
         <SettingsItem
           label="允许被搜索"
@@ -268,7 +248,7 @@ export default function SettingsPage() {
       {/* ===== 显示设置 ===== */}
       <div className="mx-3 mt-3 rounded-xl bg-white shadow-sm overflow-hidden">
         <div className="px-4 pt-3 pb-1">
-          <p className="text-xs font-medium text-gray-400">显示设置</p>
+          <p className="text-xs font-medium text-gray-400">{ui("显示设置")}</p>
         </div>
         <SettingsItem
           label="屏幕放大"
@@ -284,7 +264,7 @@ export default function SettingsPage() {
       {/* ===== 通知设置 ===== */}
       <div className="mx-3 mt-3 rounded-xl bg-white shadow-sm overflow-hidden">
         <div className="px-4 pt-3 pb-1">
-          <p className="text-xs font-medium text-gray-400">通知设置</p>
+          <p className="text-xs font-medium text-gray-400">{ui("通知设置")}</p>
         </div>
         <SettingsItem
           label="接收推送通知"
@@ -296,7 +276,7 @@ export default function SettingsPage() {
       {/* ===== 存储与缓存 ===== */}
       <div className="mx-3 mt-3 rounded-xl bg-white shadow-sm overflow-hidden">
         <div className="px-4 pt-3 pb-1">
-          <p className="text-xs font-medium text-gray-400">存储与缓存</p>
+          <p className="text-xs font-medium text-gray-400">{ui("存储与缓存")}</p>
         </div>
         <SettingsItem
           icon={
@@ -306,7 +286,7 @@ export default function SettingsPage() {
               <path d="M3 12a9 3 0 0 0 18 0" />
             </svg>
           }
-          label="当前缓存占用"
+          label="可重建缓存占用"
           right={<span className="text-xs text-gray-400">{cacheSize}</span>}
         />
         <SettingsItem
@@ -328,7 +308,7 @@ export default function SettingsPage() {
       {/* ===== 个性化 ===== */}
       <div className="mx-3 mt-3 rounded-xl bg-white shadow-sm overflow-hidden">
         <div className="px-4 pt-3 pb-1">
-          <p className="text-xs font-medium text-gray-400">个性化</p>
+          <p className="text-xs font-medium text-gray-400">{ui("个性化")}</p>
         </div>
         <Link href="/profile/theme" className="block" style={{ borderBottom: "1px solid #f5f5f5" }}>
           <div className="flex w-full items-center gap-3 bg-white px-4 py-3.5 text-left active:bg-gray-50">
@@ -341,7 +321,7 @@ export default function SettingsPage() {
                 <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.5-.7 1.5-1.5 0-.4-.2-.8-.4-1.1-.3-.3-.4-.7-.4-1.1 0-.8.7-1.5 1.5-1.5H16c3.3 0 6-2.7 6-6 0-5-4.5-9-10-9z" />
               </svg>
             </div>
-            <span className="flex-1 text-sm text-gray-800">主题与配色</span>
+            <span className="flex-1 text-sm text-gray-800">{ui("主题与配色")}</span>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />
             </svg>

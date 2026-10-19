@@ -12,7 +12,7 @@ const audit={appId:'6807592575',checkedAt:new Date().toISOString(),readOnly:true
 function makeJwt() {
   const header = { alg: 'ES256', kid: KEY_ID, typ: 'JWT' };
   const now = Math.floor(Date.now() / 1000);
-  const payload = { iss: ISSUER_ID, iat: now, exp: now + 1200, aud: 'appstoreconnect-v1' };
+  const payload = { iss: ISSUER_ID, iat: now - 30, exp: now + 600, aud: 'appstoreconnect-v1' };
   const enc = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
   const signingInput = `${enc(header)}.${enc(payload)}`;
   const signature = crypto.createSign('SHA256').update(signingInput).sign({ key: P8, dsaEncoding: 'ieee-p1363' }, 'base64url');

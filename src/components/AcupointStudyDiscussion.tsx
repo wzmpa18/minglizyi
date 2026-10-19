@@ -84,7 +84,7 @@ function PointDiscussion({targetId,title,researchCitationId}:{targetId:string;ti
       {comment.parentId&&<small style={{color:'#777'}}>回复留言 #{comment.parentId}</small>}
       <p style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',lineHeight:1.8}}>{comment.content}</p>
       {comment.evidenceUrl&&<a href={comment.evidenceUrl} target="_blank" rel="noopener noreferrer">解答依据</a>}
-      {comment.research?.citation&&<Link className="text-xs underline" href={`/zhongyi/classic/?book=${comment.research.citation.bookId}&chapter=${comment.research.citation.chapterId}&sourceHash=${comment.research.citation.sourceHash}#classic-p-${comment.research.citation.paragraph}`}>打开所引古籍自然段</Link>}
+      {comment.research?.citation&&<Link className="text-xs underline" href={`/zhongyi/classic/?book=${comment.research.citation.bookId}&chapter=${comment.research.citation.chapterId}&sourceHash=${comment.research.citation.sourceHash}#classic-p-${comment.research.citation.paragraph}`}>{ui("打开所引古籍自然段")}</Link>}
       {comment.research&&<ResearchExcerptActions comment={comment}/>}
       <div style={{display:'flex',flexWrap:'wrap',gap:12,fontSize:12}}>
         <InterfaceButton disabled={busy} onClick={()=>{setReply(comment);setEditing(null);requestId.current='';}}>{ui("回复")}</InterfaceButton>

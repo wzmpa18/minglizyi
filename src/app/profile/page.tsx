@@ -1,6 +1,7 @@
 "use client";
 
 import { CompanyIntroduction } from "@/components/CompanyIntroduction";
+import {useInterfaceLocale} from "@/lib/interfaceLocale";
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -40,12 +41,13 @@ function ZoneItem({
   noBorder?: boolean;
   href?: string;
 }) {
+  const {ui}=useInterfaceLocale();
   // v25.0.49: 支持 href 原生锚点模式——关键跳转入口（会员中心等）不依赖 JS，任何浏览器/JS异常下都可点击跳转
   const inner = (
     <>
       <div className="flex h-7 w-7 shrink-0 items-center justify-center">{icon}</div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-800">{label}</p>
+        <p className="text-sm text-gray-800">{ui(label)}</p>
         {sub && <p className="text-[11px] text-gray-400">{sub}</p>}
       </div>
       {right}
@@ -88,6 +90,7 @@ function Zone({
   defaultOpen?: boolean;
   storageKey?: string;
 }) {
+  const {ui}=useInterfaceLocale();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -123,7 +126,7 @@ function Zone({
         className="flex w-full items-center gap-2 px-4 pb-1.5 pt-3 active:bg-gray-50"
       >
         <span className="h-3.5 w-1 rounded-full" style={{ backgroundColor: BRAND }} />
-        <p className="flex-1 text-left text-[13px] font-semibold text-gray-700">{title}</p>
+        <p className="flex-1 text-left text-[13px] font-semibold text-gray-700">{ui(title)}</p>
         <svg
           width="14"
           height="14"

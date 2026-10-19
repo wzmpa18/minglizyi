@@ -1,4 +1,5 @@
 "use client";
+import {InterfaceButton} from "@/components/InterfaceControls";
 
 import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useRouter } from "next/navigation";
@@ -39,27 +40,27 @@ export function BrandHeader({ title = "言道排盘", showBack = false, backUrl,
       style={{ backgroundColor: color || "#7B2FBE", height: "calc(40px + env(safe-area-inset-top, 0px))", paddingTop: "env(safe-area-inset-top, 0px)" }}
     >
       {showBack && (
-        <button
+        <InterfaceButton
           onClick={handleBack}
           className="absolute left-0 top-0 h-10 w-10 flex items-center justify-center text-white hover:bg-white/10 transition-colors"
           style={{ top: "env(safe-area-inset-top, 0px)" }}
           aria-label={ui("返回")}
         >
           <ArrowLeft className="w-5 h-5" />
-        </button>
+        </InterfaceButton>
       )}
       <div style={{ textAlign: "center" }} onClick={onTitleClick} className={onTitleClick ? "cursor-pointer" : undefined}>
         <span className="text-white text-[18px] font-bold">{ui(title)}</span>
         <div style={{ fontSize: "10px", fontWeight: "normal", opacity: 0.65, lineHeight: "1.4", color: "white" }}>{PUBLIC_PROMOTION_ENABLED ? "yandao.vip 分享下载有礼" : "经典研读 · 传统文化学习"}</div>
       </div>
       {onEdit && (
-        <button
+        <InterfaceButton
           onClick={onEdit}
           className="absolute right-3 top-2 bg-white/20 hover:bg-white/30 border-0 rounded text-white text-xs px-2.5 py-1 cursor-pointer transition-colors"
           style={{ top: "calc(env(safe-area-inset-top, 0px) + 8px)" }}
         >
           编辑
-        </button>
+        </InterfaceButton>
       )}
       {children && (
         <div className="absolute left-0 right-0" style={{ top: "100%" }}>

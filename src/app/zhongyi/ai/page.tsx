@@ -1,4 +1,5 @@
 "use client";
+import {InterfaceButton} from "@/components/InterfaceControls";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -54,7 +55,7 @@ export default function ZhongyiAIPage() {
     <div className="mx-auto flex max-w-lg flex-col px-4 py-4" style={{ height: "calc(100vh - 8rem)" }}>
       <BrandHeader title="中医AI" showBack={true} backUrl="/zhongyi" />
       <p className="my-2 text-xs leading-6">自由输入只用于本机古籍词条对照，不发送个人健康资料。以下固定公开学习题可主动请求AI阅读辅助，沿用现有次数；不是诊疗服务。</p>
-      <div className="mb-3 flex max-h-32 flex-wrap gap-2 overflow-auto">{MEDICAL_STUDY_QUESTIONS.map(q=><button className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-left text-xs text-stone-950" disabled={loading} key={q} onClick={()=>setInput(q)}>{q}</button>)}</div><Link href="/zhongyi/bianzheng/" className="mb-2 text-sm underline">相关经典医案与原文出处</Link>
+      <div className="mb-3 flex max-h-32 flex-wrap gap-2 overflow-auto">{MEDICAL_STUDY_QUESTIONS.map(q=><InterfaceButton className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-left text-xs text-stone-950" translate="no" disabled={loading} key={q} onClick={()=>setInput(q)}>{q}</InterfaceButton>)}</div><Link href="/zhongyi/bianzheng/" className="mb-2 text-sm underline">相关经典医案与原文出处</Link>
       <div className="flex-1 overflow-y-auto space-y-3 mb-4">
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
@@ -74,9 +75,9 @@ export default function ZhongyiAIPage() {
           placeholder="输入你的问题..."
           className="flex-1 rounded-lg border bg-background px-3 py-2 text-sm outline-none focus:border-emerald-500/50"
         />
-        <button onClick={handleSend} disabled={loading} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white disabled:opacity-50">
+        <InterfaceButton onClick={handleSend} disabled={loading} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white disabled:opacity-50">
           发送
-        </button>
+        </InterfaceButton>
       </div>
       <p className="mt-2 text-center text-xs text-muted-foreground">
         本APP内容仅供传统文化研究参考，不构成医疗建议。如有身体不适，请及时就医

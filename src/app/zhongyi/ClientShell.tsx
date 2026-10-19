@@ -1,4 +1,6 @@
 "use client";
+import {InterfaceButton} from "@/components/InterfaceControls";
+import {useInterfaceLocale} from "@/lib/interfaceLocale";
 
 import Link from "next/link";
 import { useCallback, useRef } from "react";
@@ -21,6 +23,7 @@ const topNavLinks = [
 declare global { interface Window { __zhongyiBackHandled?: boolean; } }
 
 export default function ZhongyiClientShell({ children }: { children: React.ReactNode }) {
+  const {ui}=useInterfaceLocale();
   const pathname = usePathname();
   const router = useRouter();
   // v25.0.16: trailingSlash:true 下 pathname 带尾斜杠("/zhongyi/")，需规范化后再比较
@@ -80,7 +83,7 @@ export default function ZhongyiClientShell({ children }: { children: React.React
         }}
       >
         {!isHome && (
-          <button
+          <InterfaceButton
             onClick={handleBack}
             className="flex h-9 w-9 items-center justify-center rounded-full mr-1 flex-shrink-0"
             style={{ backgroundColor: "rgba(255,255,255,0.1)" }}
@@ -89,7 +92,7 @@ export default function ZhongyiClientShell({ children }: { children: React.React
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e8edf0" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 18l-6-6 6-6" />
             </svg>
-          </button>
+          </InterfaceButton>
         )}
 
         <Link href="/zhongyi" className="flex items-center gap-2.5 shrink-0">
@@ -116,7 +119,7 @@ export default function ZhongyiClientShell({ children }: { children: React.React
                   backgroundColor: isActive ? "rgba(45, 90, 39, 0.2)" : "transparent",
                 }}
               >
-                {link.label}
+                {ui(link.label)}
               </Link>
             );
           })}
