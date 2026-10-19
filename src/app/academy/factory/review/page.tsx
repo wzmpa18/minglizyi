@@ -37,6 +37,7 @@ type TabKey = "materials" | "knowledge" | "questions";
 function ReviewWorkbenchAccount() {
   const [adminKey, setAdminKey] = useState("");
   const [authed, setAuthed] = useState(false);
+  const [authError,setAuthError]=useState("");
   const [tab, setTab] = useState<TabKey>("materials");
   const [materials, setMaterials] = useState<MaterialVo[]>([]);
   const [points, setPoints] = useState<KnowledgeVo[]>([]);
@@ -142,8 +143,8 @@ function ReviewWorkbenchAccount() {
 
   const handleAuth = async () => {
     const k = adminKey.trim();
-    if(busy)return;const owner=String(getUserProfile()?.userId||'');setBusy(true);
-    try{const verified=await checkAcademyAdminAccess(k);if(String(getUserProfile()?.userId||'')!==owner)return;if(!verified.success||!verified.authorized){setAcademyAdminKey("");setAuthed(false);setMaterials([]);setPoints([]);setQuestions([]);showToast(verified.error||"账号或访问凭证未获授权");return;}setAcademyAdminKey(k);setAuthed(true);showToast("服务器已确认管理员权限");}finally{setBusy(false);}
+    if(busy)return;const owner=String(getUserProfile()?.userId||'');setAuthError("");setBusy(true);
+    try{const verified=await checkAcademyAdminAccess(k);if(String(getUserProfile()?.userId||'')!==owner)return;if(!verified.success||!verified.authorized){setAcademyAdminKey("");setAuthed(false);setMaterials([]);setPoints([]);setQuestions([]);setAuthError(verified.error||"账号或访问凭证未获授权");return;}setAcademyAdminKey(k);setAuthed(true);showToast("服务器已确认管理员权限");}finally{setBusy(false);}
   };
 
   const handleMaterial = async (id: string, action: "parse" | "approve" | "reject") => {
@@ -232,7 +233,7 @@ function ReviewWorkbenchAccount() {
             >
               {busy?"正在服务器验证":"验证访问权限"}
             </button>
-            {toast&&<p role="alert" className="mt-3 text-sm text-red-700">{toast}</p>}
+            {authError&&<p role="alert" className="mt-3 text-sm text-red-700">{authError}</p>}
           </div>
           <div className="mt-4"><AcademyReviewerApplication/></div>
         </div>
