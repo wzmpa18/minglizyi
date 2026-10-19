@@ -58,6 +58,7 @@ export interface CalendarEvent {
   timeZone?: string;
   /** Opaque local source only; never a note, birthday, medical text or cloud upload. */
   sourceRef?: string;
+  sourceRuleId?: string;
   endDate?: string;
   completed?: boolean;
   paused: boolean;
@@ -201,6 +202,7 @@ export function listEvents(): CalendarEvent[] {
 
 export interface CreateEventInput {
   sourceRef?: string;
+  sourceRuleId?: string;
   endDate?: string;
   type: CalendarEventType;
   title: string;
@@ -228,6 +230,7 @@ export function createEvent(input: CreateEventInput): { success: boolean; error?
   if (input.note && input.note.length > 500) return { success: false, error: "备注不能超过500字" };
   if (!validCivilDate(input.year,input.month,input.day)) return { success: false, error: "请选择有效日期" };
   if(input.endDate&&(!/^\d{4}-\d{2}-\d{2}$/.test(input.endDate)||!validCivilDate(...(input.endDate.split('-').map(Number) as [number,number,number]))||input.endDate<fmtDate(input.year,input.month,input.day)))return {success:false,error:"结束/复核日期无效"};
+  if(input.sourceRuleId&&!/^[-a-zA-Z0-9]{8,80}$/.test(input.sourceRuleId))return {success:false,error:"本地提醒标识无效"};
   if(input.sourceRef&&!/^life:[\w-]{8,80}:[\w-]{8,80}$/.test(input.sourceRef))return {success:false,error:"本地来源编号无效"};
   if (input.eventTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(input.eventTime)) return {success:false,error:"事件钟点无效"};
   try{new Intl.DateTimeFormat("en",{timeZone:input.timeZone||Intl.DateTimeFormat().resolvedOptions().timeZone});}catch{return {success:false,error:"请输入有效的IANA时区，如Asia/Shanghai"};}
@@ -236,6 +239,7 @@ export function createEvent(input: CreateEventInput): { success: boolean; error?
   const now = new Date().toISOString();
   const ev: CalendarEvent = {
     sourceRef:input.sourceRef,
+    sourceRuleId:input.sourceRuleId,
     endDate:input.endDate,
     id: genId(),
     userId: calendarStorageOwner(),
@@ -262,6 +266,7 @@ export function createEvent(input: CreateEventInput): { success: boolean; error?
     updatedAt: now,
   };
   const list = safeGet<CalendarEvent[]>(eventsKey(), []);
+  if(ev.sourceRuleId&&list.some(old=>old.sourceRuleId===ev.sourceRuleId))return {success:false,error:"此原提醒已存在，请先取消旧档案的安排或修改原事件，避免恢复后重复通知"};
   list.push(ev);
   if(!safeSet(eventsKey(), list))return {success:false,error:"本机存储未成功，请检查可用空间后重试；尚未保存"};
   if(isBrowser())window.dispatchEvent(new Event("yandao-calendar-changed"));
@@ -274,6 +279,7 @@ export function updateEvent(id: string, patch: Partial<CalendarEvent>): { succes
   if (idx < 0) return { success: false, error: "事件不存在" };
   const merged = { ...list[idx], ...patch, id: list[idx].id, userId: list[idx].userId, updatedAt: new Date().toISOString() };
   if (!validCivilDate(merged.year,merged.month,merged.day))return {success:false,error:"日期无效"};
+  if(merged.sourceRuleId&&(!/^[-a-zA-Z0-9]{8,80}$/.test(merged.sourceRuleId)||list.some((e,i)=>i!==idx&&e.sourceRuleId===merged.sourceRuleId)))return {success:false,error:"本地提醒标识无效或已重复"};
   if(merged.endDate&&(!/^\d{4}-\d{2}-\d{2}$/.test(merged.endDate)||!validCivilDate(...(merged.endDate.split("-").map(Number) as [number,number,number]))||merged.endDate<fmtDate(merged.year,merged.month,merged.day)))return {success:false,error:"结束/复核日期无效"};
   if(merged.eventTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(merged.eventTime))return {success:false,error:"事件钟点无效"};
   try{new Intl.DateTimeFormat("en",{timeZone:merged.timeZone||Intl.DateTimeFormat().resolvedOptions().timeZone});}catch{return {success:false,error:"事件时区无效"};}

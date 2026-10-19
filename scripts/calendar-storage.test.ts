@@ -33,6 +33,7 @@ test("calendar ownership, explicit migration, lunar month/day and completion/sno
   assert.equal(getOccurrenceReminders(next)[0].at,now+15*60000);assert.equal(getOccurrenceReminders(next)[0].snoozed,true);
   assert.equal(completeNextEventOccurrence(weekly.id).success,true);assert.equal(getUpcomingEvents(14).find(o=>o.event.id===weekly.id)!.d,26);
   assert.equal(undoEventCompletion(weekly.id).success,true);assert.equal(getUpcomingEvents(14).find(o=>o.event.id===weekly.id)!.d,19);
+  const sourceRule=createEvent({type:"todo",title:"有一项私人安排",year:2026,month:11,day:1,dateMode:"solar",sourceRef:"life:private-vault:private-entry",sourceRuleId:"original-reminder-id",reminders:[]});assert.equal(sourceRule.success,true);assert.equal(createEvent({type:"todo",title:"不重复恢复",year:2026,month:11,day:1,dateMode:"solar",sourceRef:"life:restored-vault:private-entry",sourceRuleId:"original-reminder-id",reminders:[]}).success,false);assert.equal(updateEvent(sourceRule.event!.id,{title:"仍是同一安排"}).success,true);
   storage.fail=true;assert.equal(updateEvent(weekly.id,{title:"不能假装保存成功"}).success,false);assert.equal(deleteEvent(weekly.id),false);storage.fail=false;
   assert.equal(listEvents().find(e=>e.id===weekly.id)!.title,"复习");assert.equal(deleteEvent(weekly.id),true);
   login("bob");assert.equal(listEvents().length,0);
