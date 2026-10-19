@@ -1,11 +1,13 @@
 "use client";
 import {InterfaceButton as Button,InterfaceLabel as Label,InterfaceOption as Option} from "@/components/InterfaceControls";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getMembershipStatus, type MembershipStatus } from "@/lib/membershipStore";
 import {ResearchLearningDrawers} from "@/components/ResearchLearningDrawers";
+import {getUserProfile,getUserToken} from "@/lib/auth";
+import {stageLifeImport} from "@/lib/lifeImport";
 import {localMedicalConcepts} from "@/lib/medicalLearning";
 
 // ==================== 品牌色 / 常量 ====================
@@ -750,30 +752,7 @@ function runDiagnosis(params: {
     date:new Date().toLocaleString('zh-CN',{hour12:false})};
 }
 
-// ==================== localStorage 历史 ====================
-const HISTORY_KEY = "yandao_diagnosis_history";
-
-function loadHistory(): HistoryRecord[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(HISTORY_KEY);
-    return raw ? (JSON.parse(raw) as HistoryRecord[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveHistoryRecord(rec: HistoryRecord): void {
-  if (typeof window === "undefined") return;
-  try {
-    const list = loadHistory();
-    list.unshift(rec);
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, 50)));
-  } catch {
-    // ignore
-  }
-}
-
+// Old unowned plaintext history is retained untouched, never automatically loaded into this account.
 // ==================== 主组件 ====================
 const STEP_TITLES = ["学习术语", "学习体系", "原文对照"];
 
@@ -792,14 +771,16 @@ export default function DiagnosisPage() {
   const studyPattern=PATTERNS.find(p=>p.id===studyPatternId);
   const [history, setHistory] = useState<HistoryRecord[]>([]);
   const [saved, setSaved] = useState(false);
+  const [saveConsent,setSaveConsent]=useState(false),[saveError,setSaveError]=useState('');
+  const account=useRef(getUserToken()||'');
   const [membershipStatus, setMembershipStatus] = useState<MembershipStatus | null>(null);
   const [lockNotice, setLockNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    setHistory(loadHistory());
     setMembershipStatus(getMembershipStatus());
   }, []);
 
+  useEffect(()=>{const clear=()=>{if(account.current!==(getUserToken()||'')){setHistory([]);setResult(null);setSelected([]);setPainNatureIds([]);setSearch('');setStep(1);setSaveConsent(false);setSaveError('账号已改变，旧学习内容已收起');}};window.addEventListener('storage',clear);window.addEventListener('yandao-auth-change',clear);return()=>{window.removeEventListener('storage',clear);window.removeEventListener('yandao-auth-change',clear);};},[]);
   // 会员等级判断：basic 为免费用户，monthly/yearly/lifetime 为付费会员
   const isPremium = membershipStatus
     ? membershipStatus.level !== "basic" && membershipStatus.isActive
@@ -858,6 +839,7 @@ export default function DiagnosisPage() {
   };
 
   const handleNext = () => {
+    if(account.current!==(getUserToken()||'')){setSaveError('请重新打开学习页面');return;}
     if (step === 1) {
       if (selectedCount === 0) return;
       setStep(2);
@@ -875,9 +857,9 @@ export default function DiagnosisPage() {
         symptomNames: res.selectedSymptomNames,
         primaryPatternNames: res.primaryPatterns.map((p) => p.def.name),
       };
-      saveHistoryRecord(rec);
-      setHistory(loadHistory());
-      setSaved(true);
+      setHistory(old=>[rec,...old].slice(0,50));
+      setSaveConsent(false);
+        setSaved(false);
       setStep(3);
       if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -899,6 +881,8 @@ export default function DiagnosisPage() {
     setPainNatureIds([]);
   };
 
+  const savePreview=result?[result.conclusion,result.date,'所选术语：'+result.selectedSymptomNames.join('、'),'疼痛术语：'+result.painNatureNames.join('、'),...selected.map(s=>`${SYMPTOM_MAP[s.symptomId]?.name||''} · 本人备注：${s.note}`)].join('\n'):'';
+  const saveWorksheet=()=>{try{if(!saveConsent||account.current!==(getUserToken()||''))throw Error('请核对本次预览并确认本机留档');stageLifeImport({title:'辨证文献学习记录',text:savePreview,categories:['学习','健康记录'],tags:['文献检索','不是诊断'],sourceRefs:[{kind:'SOURCE_USER_IMPORTED',platform:'本人选择的文献学习术语与备注',at:new Date().toISOString(),verified:false}]},String(getUserProfile()?.userId||''));router.push('/profile/life/');}catch(e){setSaveError(e instanceof Error?e.message:'尚未留档');}};
   const progress = (step / 3) * 100;
   const canNext = step === 1 ? selectedCount > 0 : true;
 
@@ -1349,7 +1333,7 @@ export default function DiagnosisPage() {
               }}
             >
               <div style={{ fontSize: "14px", fontWeight: "bold", color: "#333", marginBottom: "10px" }}>
-                🕐 历史学习记录（{history.length}）
+                🕐 本次会话学习（{history.length}）
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                 {history.slice(0, 3).map((h) => (
@@ -1613,10 +1597,7 @@ export default function DiagnosisPage() {
             </div>}
           </SectionCard>
 
-          {/* 保存状态 */}
-          <div style={{ textAlign: "center", fontSize: "12px", color: "#2E7D32", padding: "4px 0" }}>
-            {saved ? "✓ 本次文献学习已记录到历史" : ""}
-          </div>
+          <section className="space-y-3 rounded-xl border bg-white p-4 text-sm text-stone-800"><h3 className="font-semibold">本机留档预览</h3><pre className="whitespace-pre-wrap break-words text-sm" translate="no">{savePreview}</pre><Label className="block"><input type="checkbox" checked={saveConsent} onChange={e=>setSaveConsent(e.target.checked)}/>我已核对以上术语和备注，只交给本机独立档案保存</Label><Button disabled={!saveConsent} onClick={saveWorksheet} className="rounded-xl bg-purple-700 px-4 py-3 text-white disabled:opacity-40">预览并存入本机人生记录</Button><p className="text-xs leading-6">当前学习过程仅在本页内存，退出后不自动留明文历史；已保存的记录请到人生档案解锁查看。旧版未归属原件保留，没有自动迁移。</p>{saveError&&<p role="status">{saveError}</p>}</section>
         </div>
       )}
 

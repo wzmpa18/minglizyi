@@ -2,12 +2,15 @@
 import {InterfaceButton as Button,InterfaceLabel as Label,InterfaceOption as Option} from "@/components/InterfaceControls";
 
 import { SectionGate } from "@/components/SectionGate";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   getQuestionnaire,
   calculateConstitution,
 } from "@/algorithm-core/modules/tcm/constitution";
+
+import {getUserToken} from "@/lib/auth";
+import {stageMedicalStudyResult,clearMedicalStudyResult} from "@/lib/medicalStudySession";
 
 const BRAND = "#7B2FBE";
 const BRAND_LIGHT = "#9B5ECF";
@@ -23,11 +26,13 @@ const OPTIONS = [
 
 function ConstitutionQuizOriginal() {
   const router = useRouter();
+  const account=useRef(getUserToken()||'');
   const questions = useMemo(() => getQuestionnaire(), []);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [error,setError]=useState('');
   const [answers, setAnswers] = useState<Record<string, number>>({});
 
+  useEffect(()=>{const clear=()=>{if(account.current!==(getUserToken()||'')){clearMedicalStudyResult(account.current);setAnswers({});setCurrentIndex(0);setError('账号已改变，请返回后重新开始，旧答题未带入新账号');}};window.addEventListener('storage',clear);window.addEventListener('yandao-auth-change',clear);return()=>{window.removeEventListener('storage',clear);window.removeEventListener('yandao-auth-change',clear);};},[]);
   const total = questions.length;
   const currentQ = questions[currentIndex];
   const currentAnswer = answers[currentQ?.id];
@@ -47,15 +52,12 @@ function ConstitutionQuizOriginal() {
   };
 
   const handleNext = () => {
+    if(account.current!==(getUserToken()||'')){setError('账号已改变，请重新开始');return;}
     if (!canGoNext) return;
     if (isLastQuestion) {
       // Calculate result and navigate to result page
       let result;try{result=calculateConstitution(answers);}catch(e){setError(e instanceof Error?e.message:'答题尚未完成');return;}
-      try {
-        sessionStorage.setItem("tcm_constitution_result", JSON.stringify(result));
-      } catch {
-        // ignore
-      }
+      stageMedicalStudyResult(account.current,result);
       router.push("/zhongyi/constitution/result");
     } else {
       setCurrentIndex(currentIndex + 1);

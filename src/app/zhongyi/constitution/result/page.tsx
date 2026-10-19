@@ -2,19 +2,19 @@
 import {InterfaceButton as Button,InterfaceLabel as Label,InterfaceOption as Option} from "@/components/InterfaceControls";
 
 import { SectionGate } from "@/components/SectionGate";
-import { useState, useEffect, useMemo, Suspense } from "react";
+import { useState, useEffect, useMemo, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   getConstitutionById,
-  saveResult,
   COMPLIANCE_TEXT,
   CONSTITUTION_PROVENANCE,
   getConstitutionTypes,
 } from "@/algorithm-core/modules/tcm/constitution";
 import type { ConstitutionResult } from "@/algorithm-core/modules/tcm/constitution";
 import {stageLifeImport} from "@/lib/lifeImport";
-import {getUserProfile} from "@/lib/auth";
+import {getUserProfile,getUserToken} from "@/lib/auth";
+import {readMedicalStudyResult,clearMedicalStudyResult} from "@/lib/medicalStudySession";
 
 const BRAND = "#7B2FBE";
 const BRAND_LIGHT = "#9B5ECF";
@@ -32,44 +32,20 @@ function ConstitutionResultInner() {
   const searchParams = useSearchParams();
   const fromHistory = searchParams.get("from") === "history";
   const [result, setResult] = useState<ConstitutionResult | null>(null);
-  const [saved, setSaved] = useState(false);
+  const account=useRef(getUserToken()||'');
   const [studyTypeId,setStudyTypeId]=useState('');
   const studyType=getConstitutionById(studyTypeId);
   const [savedToClient, setSavedToClient] = useState(false);
   const [personLabel,setPersonLabel]=useState('');
   const [saveError,setSaveError]=useState('');
 
-  useEffect(() => {
-    try {
-      const key = fromHistory ? "tcm_constitution_view_result" : "tcm_constitution_result";
-      const raw = sessionStorage.getItem(key);
-      if (raw) {
-        const parsed: ConstitutionResult = JSON.parse(raw);
-        // Re-hydrate constitution types from data (in case stored data is stale)
-        const primaryType = getConstitutionById(parsed.primaryType.id);
-        if (primaryType) {
-          parsed.primaryType = primaryType;
-        }
-        parsed.secondaryTypes = parsed.secondaryTypes
-          .map((t) => getConstitutionById(t.id))
-          .filter(Boolean) as typeof parsed.secondaryTypes;
-        setResult(parsed);
-      }
-    } catch {
-      // ignore
-    }
-  }, [fromHistory]);
+  useEffect(()=>{setResult(fromHistory?null:readMedicalStudyResult(account.current));const clear=()=>{if(account.current!==(getUserToken()||'')){clearMedicalStudyResult(account.current);setResult(null);setPersonLabel('');setSaveError('账号已改变，旧结果已收起');}};window.addEventListener('storage',clear);window.addEventListener('yandao-auth-change',clear);return()=>{window.removeEventListener('storage',clear);window.removeEventListener('yandao-auth-change',clear);};},[fromHistory]);
 
   const allTypes = useMemo(() => getConstitutionTypes(), []);
 
-  const handleSave = () => {
-    if (!result || saved) return;
-    saveResult(result);
-    setSaved(true);
-  };
-
   const handleSaveToClient = () => {
     if (!result || savedToClient) return;
+    if(account.current!==(getUserToken()||'')){setResult(null);return;}
     try{
       stageLifeImport({title:'体质问卷学习计分',text:`${result.date}\n历史问卷规则标签：${result.primaryType.name}（不是健康结论）\n${result.scores.map(s=>`${s.name}：转化分${s.convertedScore} / 100`).join('\n')}\n${CONSTITUTION_PROVENANCE.note}`,categories:['学习','健康记录'],tags:['问卷学习','未经临床验证'],people:personLabel.trim()?[personLabel.trim()]:[],sourceRefs:[{kind:'SOURCE_USER_IMPORTED',platform:'本机历史问卷学习',at:new Date(result.timestamp).toISOString(),verified:false}]},String(getUserProfile()?.userId||''));
       setSavedToClient(true);router.push('/profile/life/');
@@ -77,11 +53,7 @@ function ConstitutionResultInner() {
   };
 
   const handleRetake = () => {
-    try {
-      sessionStorage.removeItem("tcm_constitution_result");
-    } catch {
-      // ignore
-    }
+    clearMedicalStudyResult(account.current);
     router.push("/zhongyi/constitution/quiz");
   };
 
@@ -368,27 +340,6 @@ function ConstitutionResultInner() {
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          <Button
-            onClick={handleSave}
-            disabled={saved || fromHistory}
-            style={{
-              width: "100%",
-              padding: "14px",
-              borderRadius: "12px",
-              border: "none",
-              background:
-                saved || fromHistory
-                  ? "#e0e0e0"
-                  : `linear-gradient(135deg, ${BRAND} 0%, ${BRAND_LIGHT} 100%)`,
-              color: saved || fromHistory ? "#999" : "white",
-              fontSize: "15px",
-              fontWeight: "bold",
-              cursor: saved || fromHistory ? "default" : "pointer",
-              boxShadow: saved || fromHistory ? "none" : "0 2px 8px rgba(123,47,190,0.3)",
-            }}
-          >
-            {saved ? "✓ 已保存到历史记录" : fromHistory ? "历史记录中的结果" : "保存结果到历史"}
-          </Button>
           <div style={{ display: "flex", gap: "10px" }}>
             <Button
               onClick={handleRetake}

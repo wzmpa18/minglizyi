@@ -28,6 +28,8 @@ on:
       - 'backend_deploy/data/study-research-*.json'
       - 'src/components/Research*.tsx'
       - 'src/lib/researchLearning.ts'
+      - 'src/lib/medical*.ts'
+      - 'scripts/medical-learning.test.ts'
       - 'scripts/study-research.test.cjs'
       - 'scripts/research-learning.test.ts'
       - 'backend_deploy/studyToolTargets.js'

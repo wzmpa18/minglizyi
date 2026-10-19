@@ -7,10 +7,9 @@ import { useRouter } from "next/navigation";
 import {
   getConstitutionTypes,
   getQuestionnaire,
-  getHistory,
   COMPLIANCE_TEXT,
 } from "@/algorithm-core/modules/tcm/constitution";
-import type { ConstitutionType, ConstitutionResult } from "@/algorithm-core/modules/tcm/constitution";
+import type { ConstitutionType } from "@/algorithm-core/modules/tcm/constitution";
 import { useToolBack } from "@/lib/useToolBack";
 
 const BRAND = "#7B2FBE";
@@ -34,28 +33,17 @@ function ConstitutionHomeOriginal() {
   useToolBack({ pageKey: "zhongyi_constitution", eventName: "zhongyi-back", globalFlag: "__zhongyiBackHandled" });
   const router = useRouter();
   const [types, setTypes] = useState<ConstitutionType[]>([]);
-  const [history, setHistory] = useState<ConstitutionResult[]>([]);
   const [questionCount, setQuestionCount] = useState(0);
 
   useEffect(() => {
     setTypes(getConstitutionTypes());
     setQuestionCount(getQuestionnaire().length);
-    setHistory(getHistory());
   }, []);
 
   const handleStart = () => {
     router.push("/zhongyi/constitution/quiz");
   };
 
-  const handleHistoryClick = (result: ConstitutionResult) => {
-    // Navigate to result page with result data stored in sessionStorage
-    try {
-      sessionStorage.setItem("tcm_constitution_view_result", JSON.stringify(result));
-      router.push("/zhongyi/constitution/result?from=history");
-    } catch {
-      // ignore
-    }
-  };
 
   return (
     <div
@@ -188,71 +176,7 @@ function ConstitutionHomeOriginal() {
       </div>
 
       {/* 历史记录 */}
-      {history.length > 0 && (
-        <div style={{ padding: "16px 12px 0" }}>
-          <h2 style={{ fontSize: "15px", fontWeight: "bold", color: "#333", margin: "0 0 10px" }}>
-            🕐 历史记录
-          </h2>
-          <div
-            style={{
-              background: "white",
-              borderRadius: "16px",
-              overflow: "hidden",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-            }}
-          >
-            {history.slice(0, 5).map((item, i) => (
-              <Button
-                key={item.id}
-                onClick={() => handleHistoryClick(item)}
-                style={{
-                  width: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  padding: "12px 14px",
-                  border: "none",
-                  background: i % 2 === 0 ? "white" : "#fafafa",
-                  textAlign: "left",
-                  cursor: "pointer",
-                  borderBottom: i < Math.min(history.length, 5) - 1 ? "1px solid #f5f5f5" : "none",
-                }}
-              >
-                <div
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "10px",
-                    backgroundColor: item.primaryType.bgColor,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "18px",
-                    flexShrink: 0,
-                  }}
-                >
-                  {item.primaryType.icon}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: "14px", fontWeight: "bold", color: item.primaryType.color }}>
-                    {item.primaryType.name}
-                    {item.secondaryTypes.length > 0 && (
-                      <span style={{ fontSize: "11px", color: "#999", fontWeight: "normal" }}>
-                        {" "}
-                        (兼{item.secondaryTypes.map((t) => t.name).join("、")})
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ fontSize: "11px", color: "#999", marginTop: "2px" }}>{item.date}</div>
-                </div>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="9 18 15 12 9 6" />
-                </svg>
-              </Button>
-            ))}
-          </div>
-        </div>
-      )}
+      <section className="m-4 rounded-xl border bg-white p-4 text-sm leading-7 text-stone-800"><h2 className="font-semibold">私人学习记录</h2><p>新结果由本人预览后存入独立人生档案，需解锁查看，不自动同步客户云档案。旧版本留存的未归属记录原件保留，未自动导入或对当前账号展示。</p><Button className="mt-2 rounded border px-4 py-2" onClick={()=>router.push('/profile/life/')}>打开本机人生记录</Button></section>
 
       {/* 合规提示 */}
       <div
