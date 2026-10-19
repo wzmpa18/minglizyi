@@ -120,6 +120,7 @@ async function worker(root){
       console.log('PASS: real HTTP opt-in automatic publication, minimal provider transport, immediate report quarantine and recheck permissions; synthetic provider only.');
     }finally{global.fetch=originalFetch;}
 
+    delete process.env.HUNYUAN_API_KEY;delete process.env.STUDY_COMMENT_AUTOMATION;delete process.env.STUDY_AI_MODERATION_READY;
     process.env.FEEDBACK_DATA_DIR=path.join(root,'feedback');
     app.use('/api/feedback',require('../backend_deploy/feedbackRoutes'));
     async function feedback(route,method='GET',credential=alice,body){
