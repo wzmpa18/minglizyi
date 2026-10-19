@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
+import Link from "next/link";
+import {localMedicalWorksheet} from "@/lib/medicalLearning";
 import { useRouter } from "next/navigation";
 import { WENZHEN_CATEGORIES, buildWenzhenSystemPrompt } from "@/data/wenzhen_data";
 import { buildZhengguPrompt } from "@/data/zhenggu_knowledge";
@@ -21,7 +23,7 @@ const COMPLIANCE_TEXT =
   "⚠️ 本APP内容仅供传统文化研究参考，不构成医疗建议。如有身体不适，请及时就医。";
 
 const TOP_NOTICE =
-  "⚠️ 提示：建议仅在同一医学体系内选择，不建议同时选中中原主流医学与少数民族医学，避免辨证逻辑冲突；选的医家/古籍越多，AI输出融合度越高。默认以北派倪海厦经方体系为基准。";
+  "文献分类与医家标签用于学习检索，不代表已核验各流派完整知识库。填写的症状、自述只在本机作原文词条对照；不发送给AI，不生成个人处方或手法。留空时可主动请求通用文献阅读方法，沿用原有AI额度。";
 
 // 询问症状输入
 interface SymptomInput {
@@ -100,6 +102,14 @@ export default function WenzhenPage() {
 
   // 开始辨证
   const handleDiagnose = useCallback(async () => {
+    const privateText=[...Object.values(symptomInput),supplementText].filter(Boolean).join('\n');
+    if(privateText.trim()){
+      setAiLoading(true);setAiError(false);setAiResult('');setAiFullContent('');setIsLocked(false);
+      try{const content=await localMedicalWorksheet(privateText,activeCategory==='anmo'?'zhenggu':activeCategory==='zhenjiu'?'zhenjiu':'zhifa');setAiFullContent(content);setAiResult(content);setQuotaMsg('本机原文对照，不上传自述、不扣AI次数；请在相关经典医案页核查原段。');}
+      catch{setAiError(true);setAiResult('本机来源索引暂不可用，请打开完整古籍核对；没有改用云端或生成个人诊疗意见。');}
+      finally{setAiLoading(false);}return;
+    }
+    // Only general, fixed literature topics use the existing metered AI path.
     // 权限检查
     const perm = await getPermissionStatusFromServer();
     setQuotaMsg(perm.message);
@@ -128,18 +138,7 @@ export default function WenzhenPage() {
         ? `${systemPrompt}\n\n${buildZhengguPrompt()}`
         : systemPrompt;
 
-      // 构建用户prompt
-      const userParts: string[] = [];
-      if (symptomInput.mainSymptom) userParts.push(`主要症状：${symptomInput.mainSymptom}`);
-      if (symptomInput.duration) userParts.push(`持续时间：${symptomInput.duration}`);
-      if (symptomInput.accompanying) userParts.push(`伴随症状：${symptomInput.accompanying}`);
-      if (symptomInput.pulseTongue) userParts.push(`脉象舌象：${symptomInput.pulseTongue}`);
-      if (supplementText) userParts.push(`补充说明：${supplementText}`);
-
-      const userPrompt =
-        userParts.length > 0
-          ? userParts.join("\n")
-          : "请根据当前门类和名医体系，讲解辨证思路和常见证型的辨识要点。";
+      const userPrompt='请仅根据当前公开文献分类，说明阅读原典与核对学术史来源的方法，列出尚需查原文的问题；不分析任何人的病情。';
 
       const cat = WENZHEN_CATEGORIES.find((c) => c.id === activeCategory);
       const cKey = generateContentKey(
@@ -246,8 +245,8 @@ export default function WenzhenPage() {
             ←
           </button>
           <div style={{ flex: 1 }}>
-            <h1 style={{ fontSize: "18px", fontWeight: "bold", margin: 0 }}>智能问诊</h1>
-            <p style={{ fontSize: "11px", opacity: 0.8, margin: 0 }}>（学习）历代名家医案 AI 模拟辨证</p>
+            <h1 style={{ fontSize: "18px", fontWeight: "bold", margin: 0 }}>文献研习</h1>
+            <p style={{ fontSize: "11px", opacity: 0.8, margin: 0 }}>原典对照 · 流派文献阅读</p>
           </div>
         </div>
       </div>
@@ -501,7 +500,7 @@ export default function WenzhenPage() {
             boxShadow: `0 4px 12px ${BRAND}33`,
           }}
         >
-          {aiLoading ? "AI辨证中..." : `开始辨证（${selectedMasters.size}位医家）`}
+          {aiLoading ? "正在整理学习资料..." : `文献学习（${selectedMasters.size}位医家）`}
         </button>
         {quotaMsg && (
           <div style={{ textAlign: "center", fontSize: "11px", color: "#999", marginTop: "4px" }}>
@@ -510,6 +509,7 @@ export default function WenzhenPage() {
         )}
       </div>
 
+      <Link href="/zhongyi/bianzheng/" className="mx-4 my-3 block rounded-xl border border-purple-200 bg-white p-3 text-sm text-purple-900 underline">打开相关经典医案、原文出处与同证研习</Link>
       {/* AI结果区 */}
       {aiLoading && (
         <div style={{ padding: "0 12px" }}>
@@ -523,7 +523,7 @@ export default function WenzhenPage() {
             }}
           >
             <div style={{ fontSize: "24px", marginBottom: "8px" }}>🤖</div>
-            <div style={{ fontSize: "14px", color: "#666" }}>AI正在根据您选择的医家体系进行辨证...</div>
+            <div style={{ fontSize: "14px", color: "#666" }}>正在整理所选公开文献分类的阅读方法...</div>
             <div style={{ marginTop: "10px", fontSize: "12px", color: "#999" }}>
               门类：{category.name} | 医家：{Array.from(selectedMasters).length}位
             </div>
@@ -542,7 +542,7 @@ export default function WenzhenPage() {
               border: "1px solid #ffcdd2",
             }}
           >
-            <div style={{ fontSize: "14px", color: "#c62828", marginBottom: "6px" }}>AI辨证请求失败</div>
+            <div style={{ fontSize: "14px", color: "#c62828", marginBottom: "6px" }}>文献整理未完成</div>
             <button
               onClick={handleDiagnose}
               style={{
@@ -573,7 +573,7 @@ export default function WenzhenPage() {
           >
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
               <span style={{ fontSize: "16px" }}>📋</span>
-              <span style={{ fontSize: "15px", fontWeight: "bold", color: "#333" }}>AI辨证结果</span>
+              <span style={{ fontSize: "15px", fontWeight: "bold", color: "#333" }}>文献学习结果</span>
               <span
                 style={{
                   fontSize: "10px",
@@ -611,7 +611,7 @@ export default function WenzhenPage() {
               >
                 <div style={{ fontSize: "24px", marginBottom: "6px" }}>🔒</div>
                 <div style={{ fontSize: "13px", color: "#666", marginBottom: "12px" }}>
-                  完整方药、取穴经验参考、开方思路详解已锁定
+                  完整文献阅读与术语对照已锁定
                 </div>
                 {IS_GOOGLE_PLAY_BUILD ? (
                   <div style={{ fontSize: "12px", color: "#777", lineHeight: 1.7 }}>{PAYMENT_DISABLED_TIP}</div>
@@ -707,7 +707,7 @@ export default function WenzhenPage() {
             <div style={{ fontSize: "32px", marginBottom: "8px" }}>💊</div>
             <h3 style={{ fontSize: "16px", fontWeight: "bold", margin: "0 0 8px" }}>解锁完整辨证结果</h3>
             <p style={{ fontSize: "13px", color: "#666", margin: "0 0 16px" }}>
-              支付 ¥{singlePrice} 解锁本次完整方药、取穴经验参考、开方思路详解
+              支付 ¥{singlePrice} 解锁本次完整文献阅读与术语对照
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               {unlockMsg && (

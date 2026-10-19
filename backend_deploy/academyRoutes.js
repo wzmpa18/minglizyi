@@ -29,7 +29,7 @@ const QG = require('./qualityGate');
 
 // MASTER-05：支持 ACADEMY_DB_PATH 环境变量覆盖（默认路径不变，仅隔离测试使用）
 const ACADEMY_DB_PATH = process.env.ACADEMY_DB_PATH || path.join(__dirname, 'data', 'academy.db');
-const FILE_DIR = path.join(__dirname, 'data', 'academy_files');
+const FILE_DIR = process.env.ACADEMY_FILE_DIR || path.join(__dirname, 'data', 'academy_files');
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
   throw new Error('JWT_SECRET 未配置或长度不足32位，服务拒绝启动（fail-closed）。请在部署 .env 设置 ≥32 位随机密钥。');

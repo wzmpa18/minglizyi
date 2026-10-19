@@ -329,49 +329,15 @@ export const WENZHEN_CATEGORIES: Category[] = [
 /**
  * 构建AI系统提示词 - 根据用户选择的门类和名医动态生成
  */
-export function buildWenzhenSystemPrompt(
-  categoryId: string,
-  selectedMasterIds: string[],
-  supplementText: string
-): string {
-  const category = WENZHEN_CATEGORIES.find((c) => c.id === categoryId);
-  if (!category) return "你是中医AI助手。";
-
-  const masters = category.masters.filter((m) => selectedMasterIds.includes(m.id));
-
-  const parts: string[] = [];
-
-  parts.push(`你是「智能问诊·学习」系统的AI辨证助手。`);
-  parts.push(`当前问诊门类：${category.name}（${category.subtitle}）`);
-  parts.push(`门类定位：${category.description}`);
-
-  if (masters.length > 0) {
-    parts.push(`\n用户选择的医家/流派：`);
-    for (const m of masters) {
-      parts.push(`- ${m.name}：著作${m.books.join("、")}；AI输出侧重：${m.focus}`);
-    }
-    parts.push(`\n请严格遵循上述医家的学术思想、用药习惯、辨证思路，输出差异化的辨证方案，禁止所有流派输出内容同质化。`);
-  }
-
-  if (category.id === "zhuyou") {
-    parts.push(`\n⚠️ 祝由板块专项合规要求：`);
-    parts.push(`本板块仅用于历史文化学习，AI输出仅限于典籍原文、历史背景、文化研究内容。`);
-    parts.push(`严禁输出任何具体的操作方法、治疗步骤、符咒内容。`);
-    parts.push(`所有内容必须标注典籍出处。`);
-  }
-
-  if (supplementText) {
-    parts.push(`\n用户补充说明：${supplementText}`);
-    parts.push(`请将上述信息作为辨证参考依据。`);
-  }
-
-  parts.push(`\n输出格式要求：`);
-  parts.push(`1. 病机分析（结合所选医家学术思想）`);
-  parts.push(`2. 辨证结论（明确证型）`);
-  parts.push(`3. 治法思路（体现所选流派特点）`);
-  parts.push(`4. 方药建议或取穴经验参考（引用原著原文）`);
-  parts.push(`5. 注意事项与禁忌`);
-  parts.push(`\n⚠️ 免责声明：以上内容仅供传统文化学习参考，不构成医疗诊断或治疗建议。如有身体不适，请前往正规医疗机构就诊。`);
-
-  return parts.join("\n");
+export function buildWenzhenSystemPrompt(categoryId:string,selectedMasterIds:string[],_supplementText:string):string {
+ const category=WENZHEN_CATEGORIES.find(c=>c.id===categoryId),masters=category?.masters.filter(m=>selectedMasterIds.includes(m.id))||[];
+ return [
+  '你是医学文献阅读与学术史学习助手，不是问诊或临床辨证系统。',
+  `当前文献分类：${category?.name||'中医文献'}；分类标签不是临床诊断。`,
+  ...masters.map(m=>`学习检索标签：${m.name}；拟查书目：${m.books.join('、')}。这些标签不代表已建立或核验该医家的完整知识库，不得冒充本人。`),
+  '只说明阅读方法、术语的历史语境、如何比较不同文献与提出待查问题。没有原文时不伪造引文、页码、流派观点或疗效数据。',
+  '不使用用户的症状、自述或个人资料生成本人证型、疾病、处方、药量、取穴建议、针刺、触诊或正骨操作；这些私人输入没有提供给你。',
+  '输出分为：文献学习范围、核对来源的方法、不同概念的比较问题、尚缺的原文与证据。传统记载与现代医疗依据须分清。',
+  '不提供符咒、治疗承诺、灾病预测或付费化解；身体不适请寻求合格医疗服务。',
+ ].join('\n');
 }

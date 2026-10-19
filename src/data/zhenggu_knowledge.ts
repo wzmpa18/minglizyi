@@ -171,26 +171,6 @@ const ZHENGGU_CONTRAINDICATIONS = [
 
 export const ZHENGGU_SOURCE_LABEL = "中华非遗正骨内部传承资料（疼痛类诊断与手法解决依据）";
 
-export function buildZhengguPrompt(): string {
-  const rules = ZHENGGU_RULES.map(
-    (r, i) => `${i + 1}. 症状：${r.symptom}\n   诊断依据：${r.basis}\n   解决方向：${r.solution}`
-  ).join("\n");
-  const axis = ZHENGGU_AXIS.map((a, i) => `${i + 1}. ${a}`).join("\n");
-  const contra = ZHENGGU_CONTRAINDICATIONS.map((c) => `- ${c}`).join("\n");
-  return [
-    `【${ZHENGGU_SOURCE_LABEL}】`,
-    "以下是疼痛类问题的骨错位诊断依据与手法解决方向，辨证时请优先对照：",
-    "",
-    "◆ 三大核心轴（诊治次序）：",
-    axis,
-    "",
-    "◆ 疼痛症状 → 骨位诊断 → 手法方向 对照：",
-    rules,
-    "",
-    "◆ 安全红线（输出方案时必须先排除）：",
-    contra,
-    "",
-    "要求：疼痛类症状请按上述体系给出「可能的骨错位位置 → 触诊验证要点 → 轻手法解决方向」三段式分析；三要素为力度适中、速度越慢越好、移动范围小；触及安全红线时必须明确提示转诊，禁止给出手法操作建议。",
-    "本内容仅供中医正骨学习参考，不构成诊疗建议。",
-  ].join("\n");
+export function buildZhengguPrompt():string {
+ return '正骨专题只讨论文献的来源、历史语境与解剖术语；现有内部资料未经独立医学审校，不把症状对照表视作确定诊断。不得给出骨错位判断、触诊验证、复位步骤、力度角度或可自行尝试的手法。不得从私人症状推导操作；需要核验的内容列为待查来源与专业审核事项。';
 }
