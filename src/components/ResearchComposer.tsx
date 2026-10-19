@@ -22,7 +22,7 @@ export function ResearchComposer({targetId,citationId,onPayload,disabled=false,i
  {error&&<p className="text-xs text-amber-900">{error}</p>}<p className="text-xs leading-6">不能照用他人的药量、针刺深度或复位步骤，不能停药或替代正规诊疗。突然严重胸痛、呼吸困难、意识异常等请及时联系当地急救或线下就医。此处不提供紧急救治服务。</p></fieldset>;
 }
 
-export function ResearchCitationFilter({targetId,value,onChange}:{targetId:string;value:string;onChange:(s:string)=>void}){
+export function ResearchCitationFilter({targetId,value,onChange,disabled=false}:{targetId:string;value:string;disabled?:boolean;onChange:(s:string)=>void}){
  const concept=targetId.split(':')[2],chapters=[...new Map(evidence.cards.filter(c=>c.conceptIds.includes(concept)).map(c=>[c.chapterId,c])).values()];
- return <Label className="my-3 block text-sm">按经典章节筛选<select className="my-1 block w-full rounded border p-2" value={value} onChange={e=>onChange(e.target.value)}><Option value="">全部原文与未引文讨论</Option>{chapters.map(c=><Option key={c.chapterId} value={c.chapterId}>{evidence.books.find(b=>b.id===c.bookId)?.name} · {c.chapterTitle}</Option>)}</select></Label>;
+ return <Label className="my-3 block text-sm">按经典章节筛选<select disabled={disabled} className="my-1 block w-full rounded border p-2" value={value} onChange={e=>onChange(e.target.value)}><Option value="">全部原文与未引文讨论</Option>{chapters.map(c=><Option key={c.chapterId} value={c.chapterId}>{evidence.books.find(b=>b.id===c.bookId)?.name} · {c.chapterTitle}</Option>)}</select></Label>;
 }

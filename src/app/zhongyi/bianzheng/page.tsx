@@ -74,6 +74,7 @@ function BianZhengPageOriginal() {
   // 第一步：症状选择
   const [selectedSymptoms, setSelectedSymptoms] = useState<Set<string>>(new Set());
   const [symptomDetail, setSymptomDetail] = useState("");
+  const [symptomDuration,setSymptomDuration]=useState("");
 
   // 第二步：辨证参数
   const [selectedSystem, setSelectedSystem] = useState<string>("bagang");
@@ -124,7 +125,8 @@ function BianZhengPageOriginal() {
     setLoading(true); setHasError(false); setStep(3);
     try {
       const report = await simulateEvidenceLearning(Array.from(selectedSymptoms), selectedSystem, therapyFocus);
-      setDiagnosisResult(report);
+      const context = `本机学习条件：持续时间${symptomDuration||"未填写"}；流派${category.name}。所选医家标签仅用于学习记录，未经人工建立与条文的学术对应，不代表这些医家的诊断或意见。`;
+      setDiagnosisResult(context+"\n\n"+report);
     } catch { setHasError(true); setDiagnosisResult("原文索引暂不可用，请从相关经典医案抽屉查看；不会生成无出处的诊断或处方。"); }
     finally { setLoading(false); }
   };
@@ -132,7 +134,7 @@ function BianZhengPageOriginal() {
   const handleReset = () => {
     setStep(1);
     setSelectedSymptoms(new Set());
-    setSymptomDetail("");
+    setSymptomDetail("");setSymptomDuration("");
     setSelectedSystem("bagang");
     setActiveCategory("beipai");
     setSelectedMasters(new Set(["nihaisha", "zhangzhongjing"]));
@@ -253,6 +255,7 @@ function BianZhengPageOriginal() {
             </div>
           ))}
 
+          <label className="block text-sm" style={{color:'#d4a84b'}}>持续时间（只留本页，不作病程判断）<select aria-label="症状持续时间" className="ml-2 rounded border p-2 text-stone-900" value={symptomDuration} onChange={e=>setSymptomDuration(e.target.value)}>{['','不足一天','一至七天','数周','数月','更久','不确定'].map(t=><option value={t} key={t}>{t||'选填'}</option>)}</select></label>
           {/* 补充症状描述 */}
           <div>
             <p className="text-xs font-bold mb-2" style={{ color: "#d4a84b" }}>

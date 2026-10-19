@@ -71,8 +71,8 @@ function PointDiscussion({targetId,title,researchCitationId}:{targetId:string;ti
     {message&&<p role="status" style={{color:'#8D3800'}}>{message}</p>}
     <div style={{display:'flex',gap:12,margin:'10px 0'}}><InterfaceButton onClick={()=>void load()} disabled={loading||busy}>{ui("刷新留言")}</InterfaceButton><Link href="/profile/feedback/">{ui("用户反馈")}</Link></div>
     {mine.filter(item=>item.status==='PENDING').map(item=><div key={item.id} style={{padding:8,background:'#FFF8E1'}}>我的留言 #{item.id} · 待审核 <InterfaceButton disabled={busy} onClick={()=>{setConfirmation({message:'撤回这条待审留言？',run:()=>{void action(`/comment/${item.id}`,'DELETE');}});}}>撤回</InterfaceButton></div>)}
-    {isResearch&&targetId.startsWith('research:symptom:')&&<ResearchCitationFilter targetId={targetId} value={chapterFilter} onChange={setChapterFilter}/>}
-    <nav className="my-3 flex gap-3">{([['recent','最近'],['featured','精选'],['mine','我的']] as const).map(([key,label])=><InterfaceButton key={key} type="button" onClick={()=>setTab(key)} aria-pressed={tab===key} className={tab===key?'font-semibold text-purple-800':'text-stone-600'}>{ui(label)}</InterfaceButton>)}</nav>
+    {isResearch&&targetId.startsWith('research:symptom:')&&<ResearchCitationFilter targetId={targetId} value={chapterFilter} disabled={busy} onChange={setChapterFilter}/>}
+    <nav className="my-3 flex gap-3">{([['recent','最近'],['featured','精选'],['mine','我的']] as const).map(([key,label])=><InterfaceButton key={key} type="button" disabled={busy} onClick={()=>setTab(key)} aria-pressed={tab===key} className={tab===key?'font-semibold text-purple-800':'text-stone-600'}>{ui(label)}</InterfaceButton>)}</nav>
     {loading?<p>{ui("正在加载…")}</p>:comments.length===0?<p style={{color:'#777'}}>暂无已通过审核的学习留言。</p>:comments.map(comment=><article key={comment.id} style={{padding:'12px 0',borderTop:'1px solid #EEE'}}>
       <div style={{fontWeight:700,color:'#6C2D98'}}>{comment.authorName}{comment.pinned?' · 置顶解答':''}</div>
       {comment.parentId&&<small style={{color:'#777'}}>回复留言 #{comment.parentId}</small>}

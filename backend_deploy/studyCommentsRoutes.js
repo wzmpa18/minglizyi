@@ -10,7 +10,7 @@ const {screenPublicComment}=require('./studyCommentSafety');
 const {STUDY_TOOL_TARGETS}=require('./studyToolTargets');
 
 let store,accounts,social;
-function lifeEligible(id){try{if(!social)social=new Database(process.env.SOCIAL_DB_PATH||path.join(__dirname,'data/social.db'),{readonly:true});return social.prepare("SELECT value FROM tongchen_settings WHERE key='enabled'").get()?.value==='true'&&!!social.prepare('SELECT 1 FROM tongchen_profiles WHERE user_id=? AND consent_version=?').get(String(id),'tongchen-20261019-v1');}catch{return false;}}
+function lifeEligible(id){try{if(!social)social=new Database(process.env.SOCIAL_DB_PATH||path.join(__dirname,'data/social.db'),{readonly:true});if(social.prepare("SELECT value FROM tongchen_settings WHERE key='enabled'").get()?.value!=='true')return false;const p=social.prepare('SELECT public_id,joined_ms,rule_version FROM tongchen_profiles WHERE user_id=? AND consent_version=?').get(String(id),'tongchen-20261019-v1');return p?`${p.public_id}:${p.joined_ms}:${p.rule_version}`:false;}catch{return false;}}
 function getStore(){
   if(store)return store;
   const catalog=JSON.parse(fs.readFileSync(path.join(__dirname,'data/study-acupoint-targets.json'),'utf8'));

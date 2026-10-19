@@ -19,7 +19,7 @@ const FIELDS={knowledge:['question','interpretation','uncertainty'],anonymous:['
 const LABELS={question:'学习问题',interpretation:'我的解释（未独立核实）',uncertainty:'分歧／待考证',symptoms:'症状自述',duration:'持续时间',actions:'本人曾采取的行动',visit:'自愿就医经历',outcome:'主观结果',review:'后续复盘',environment:'成长环境',choices:'自愿分享的选择',feelings:'人生感受'};
 function privacyWarnings(text){
  const value=String(text).normalize('NFKC').replace(/[\u200b-\u200f\ufeff]/g,'');
- return [/(?:1[3-9]\d[\s-]?\d{4}[\s-]?\d{4})|\b\d{17}[0-9Xx]\b|[\w.+-]+@[\w.-]+\.[a-z]{2,}/i.test(value)&&'联系方式或证件',/(?:医院|醫院|卫生院|衛生院|诊所|診所|门诊部|住院号|病案号|姓名[:：]|住址[:：]|地址[:：])/.test(value)&&'身份、医院或病历线索',/\d{4}[-年/.]\d{1,2}[-月/.]\d{1,2}|\d{1,3}\s*(?:岁|歲)|(?:东经|北纬|经度|纬度|街道|小区|路\d+号)/.test(value)&&'具体日期、年龄或位置',/(?:\d+(?:\.\d+)?|[一二三四五六七八九十半]+)\s*(?:mg|ml|g|克|毫克|毫升|片|粒|丸|錢|钱|两|兩|寸|厘米)|停药|停藥|自行复位|自行復位|针刺深度|針刺深度|正骨步骤|正骨步驟/i.test(value)&&'可照用剂量、停药或危险操作'].filter(Boolean);
+ return [/(?:1[3-9]\d[\s-]?\d{4}[\s-]?\d{4})|\b\d{17}[0-9Xx]\b|[\w.+-]+@[\w.-]+\.[a-z]{2,}/i.test(value)&&'联系方式或证件',/(?:医院|醫院|卫生院|衛生院|诊所|診所|门诊部|住院号|病案号|姓名[:：]|住址[:：]|地址[:：])/.test(value)&&'身份、医院或病历线索',/\d{4}[-年/.]\d{1,2}[-月/.]\d{1,2}|\d{1,3}\s*(?:岁|歲)|(?:东经|北纬|经度|纬度|街道|小区|路\d+号)/.test(value)&&'具体日期、年龄或位置',/(?:\d+(?:\.\d+)?|[一二三四五六七八九十半]+)\s*(?:mg|ml|g|克|毫克|毫升|片|粒|丸|錢|钱|两|兩|寸|厘米)|停药|停藥|自行复位|自行復位|针刺深度|針刺深度|正骨步骤|正骨步驟/i.test(value)&&'可照用剂量、停药或危险操作'].filter(v=>typeof v==='string');
 }
 function prepareResearch(id,body){
  const domain=domainFor(id);if(!domain)fail('研习主题不存在',404);
@@ -36,6 +36,6 @@ function prepareResearch(id,body){
  const label=mode==='experience'?'个人经历，未独立核实':mode==='fragment'?'本人自愿人生片段，未独立核实':'知识研习，不是个人诊断';
  const content=[label,...selected.map(k=>`${LABELS[k]}：${fields[k].trim()}`),...(citation?[`依据：${citation.title}，第${citation.paragraph}自然段（古籍原文，未经医学校勘）`]:[])].join('\n');
  const check=validateStudyText(content);if(!check.ok)fail(check.error);
- return {content:check.text,metadata:{domain,mode,fields:Object.fromEntries(selected.map(k=>[k,fields[k].trim()])),citation,archiveConsent:true,consentVersion:topics.consentVersion}};
+ return {content:check.text||'',metadata:{domain,mode,fields:Object.fromEntries(selected.map(k=>[k,fields[k].trim()])),citation,archiveConsent:true,consentVersion:topics.consentVersion}};
 }
 module.exports={topics,evidence,concepts,TARGETS,domainFor,ageCheck,privacyWarnings,prepareResearch,FIELDS,LABELS};

@@ -7,10 +7,12 @@ function createResearchDomain(db,{now=()=>Date.now(),lifeEligible=()=>false,acco
  CREATE TABLE IF NOT EXISTS study_comment_research(comment_id INTEGER PRIMARY KEY,domain TEXT,metadata_json TEXT NOT NULL);
  INSERT OR IGNORE INTO study_comment_settings VALUES ('research:symptom:enabled','false');
  INSERT OR IGNORE INTO study_comment_settings VALUES ('research:life:enabled','false');`);
+ if(!db.prepare('PRAGMA table_info(study_research_consents)').all().some(r=>r.name==='membership_nonce'))db.exec("ALTER TABLE study_research_consents ADD COLUMN membership_nonce TEXT NOT NULL DEFAULT ''");
+ const lifeNonce=me=>{const value=lifeEligible(String(me));return value===true?'active':typeof value==='string'?value:'';};
  const fail=(m,s=403)=>{const e=new Error(m);e.status=s;throw e;};
  const domain=d=>{if(!['symptom','life'].includes(d))fail('研习区域不存在',404);return d;};
  const enabled=d=>db.prepare("SELECT value FROM study_comment_settings WHERE key='enabled'").get()?.value==='true'&&db.prepare('SELECT value FROM study_comment_settings WHERE key=?').get(`research:${domain(d)}:enabled`)?.value==='true';
- const member=(me,d)=>!!me&&accountEligible(String(me))&&!!db.prepare('SELECT 1 FROM study_research_consents WHERE user_id=? AND domain=? AND version=?').get(String(me),d,topics.consentVersion)&&(d!=='life'||lifeEligible(String(me)));
+ const member=(me,d)=>{if(!me||!accountEligible(String(me)))return false;const row=db.prepare('SELECT * FROM study_research_consents WHERE user_id=? AND domain=? AND version=?').get(String(me),d,topics.consentVersion);return !!row&&(d!=='life'||!!lifeNonce(me)&&row.membership_nonce===lifeNonce(me));};
  const assert=(me,d)=>{domain(d);if(!me)fail('登录并主动参加后才能阅读交流，古籍阅读无需参加',401);if(!enabled(d))fail('此研习交流尚未开放；古籍学习、退出和删除仍可用',503);if(!member(me,d))fail(d==='life'?'请先主动加入同辰雅集并单独确认人生片段交流':'请先完成成年核验与健康交流用途确认');};
  const alias=(me,d)=>db.prepare('SELECT public_id FROM study_research_aliases WHERE user_id=? AND domain=?').get(String(me),d)?.public_id;
  function join(me,d,body){
@@ -18,7 +20,7 @@ function createResearchDomain(db,{now=()=>Date.now(),lifeEligible=()=>false,acco
   if(!body||Object.keys(body).some(k=>!['birthDate','adultConsent','inferenceConsent','publicScopeConsent','consentVersion'].includes(k))||body.adultConsent!==true||body.inferenceConsent!==true||body.publicScopeConsent!==true||body.consentVersion!==topics.consentVersion)fail('请分别确认成年、敏感信息推断风险及交流可见范围');
   ageCheck(body.birthDate,now());if(d==='life'&&!lifeEligible(String(me)))fail('请先主动加入同辰雅集，退出后不能继续发表人生片段');
   db.prepare('INSERT OR IGNORE INTO study_research_aliases VALUES (?,?,?)').run(String(me),d,'research-user-'+crypto.randomUUID());
-  db.prepare('INSERT OR REPLACE INTO study_research_consents VALUES (?,?,?,?)').run(String(me),d,topics.consentVersion,now());
+  db.prepare('INSERT OR REPLACE INTO study_research_consents(user_id,domain,version,joined_ms,membership_nonce) VALUES (?,?,?,?,?)').run(String(me),d,topics.consentVersion,now(),d==='life'?lifeNonce(me):'');
   db.prepare('INSERT INTO study_comment_audit(actor,action,target,note,created_ms) VALUES (?,?,?,?,?)').run(String(me),'RESEARCH_JOIN',d,topics.consentVersion,now());
   return {success:true,message:'已按本次用途参加；出生日期不保存，也没有读取私人记录',...state(me,d)};
  }
