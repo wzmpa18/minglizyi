@@ -1,0 +1,156 @@
+{
+  "version": "surface-study-20261021-v1",
+  "importedAt": "2026-10-20T15:46:14.480338+00:00",
+  "use": "Attributed visualization and image reading, not scientific measurement or live telescope imagery",
+  "bodies": [
+    {
+      "id": "moon",
+      "name": "月球",
+      "sourceUrl": "https://svs.gsfc.nasa.gov/4720/",
+      "downloadUrl": "https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/lroc_color_poles_8k.tif",
+      "sourceSha256": "4af8b0cd4d50c30851359d98e7e72040240dd8d03256b58b345b5b76e9edb4ef",
+      "sourceDimensions": [
+        8192,
+        4096
+      ],
+      "credit": "NASA Scientific Visualization Studio / Ernie Wright; LRO LROC/LOLA teams",
+      "license": "Public domain per NASA SVS, retain credits",
+      "licenseUrl": "https://svs.gsfc.nasa.gov/help/",
+      "note": "LRO拼接影像的可视化贴图；极区含较低分辨率填补，科学测量请使用LROC/LOLA源数据。",
+      "processing": "JPEG quality 90; smaller variants downsampled from actual source dimensions; no upscaling, AI enhancement or invented terrain added by Yandao",
+      "maps": [
+        {
+          "width": 2048,
+          "height": 1024,
+          "url": "/assets/astronomy/surfaces/moon-2048.jpg",
+          "bytes": 494619,
+          "sha256": "1338169a238249665e62622d3a127300034a33e5965c5b0ba070ea1c10627b48"
+        },
+        {
+          "width": 4096,
+          "height": 2048,
+          "url": "/assets/astronomy/surfaces/moon-4096.jpg",
+          "bytes": 1873370,
+          "sha256": "70d18ad28c15797cbbd33051ac02fdda7f6d9fe58f09ab8406d722fe6d4f92d9"
+        },
+        {
+          "width": 8192,
+          "height": 4096,
+          "url": "/assets/astronomy/surfaces/moon-8192.jpg",
+          "bytes": 7478867,
+          "sha256": "f003f67641edbb55e34274fe186661ca07cda256d539fba1f5fbef93d8afba25"
+        }
+      ]
+    },
+    {
+      "id": "earth",
+      "name": "地球",
+      "sourceUrl": "https://www.solarsystemscope.com/textures/",
+      "downloadUrl": "https://www.solarsystemscope.com/textures/download/8k_earth_daymap.jpg",
+      "sourceSha256": "88ab060b6e7d241cfc590c69f528fab2b3247b738d40124cb590999a6fe44abc",
+      "sourceDimensions": [
+        8192,
+        4096
+      ],
+      "credit": "Solar System Scope / INOVE; based on NASA imagery",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "note": "季节、色彩经艺术调整的全球贴图，不是实时卫星影像。",
+      "processing": "JPEG quality 90; smaller variants downsampled from actual source dimensions; no upscaling, AI enhancement or invented terrain added by Yandao",
+      "maps": [
+        {
+          "width": 2048,
+          "height": 1024,
+          "url": "/assets/astronomy/surfaces/earth-2048.jpg",
+          "bytes": 298858,
+          "sha256": "f68ae6a2e37616178dbaa7d617c3d4c25a62578f1664c788259c85191ccbd8f5"
+        },
+        {
+          "width": 4096,
+          "height": 2048,
+          "url": "/assets/astronomy/surfaces/earth-4096.jpg",
+          "bytes": 1004147,
+          "sha256": "dff46fefe6152bd906b75d124876492f4b0f4885687734babfd719b2f2fcd28f"
+        },
+        {
+          "width": 8192,
+          "height": 4096,
+          "url": "/assets/astronomy/surfaces/earth-8192.jpg",
+          "bytes": 3340101,
+          "sha256": "f8c878354efdb96554aafbe58cc00c587398da0c890dfbcb49c46cea1ff36c5f"
+        }
+      ]
+    },
+    {
+      "id": "mars",
+      "name": "火星",
+      "sourceUrl": "https://www.solarsystemscope.com/textures/",
+      "downloadUrl": "https://www.solarsystemscope.com/textures/download/8k_mars.jpg",
+      "sourceSha256": "4cc52149924abc6ae507d63032f994e1d42a55cb82c09e002d1a567ff66c23ee",
+      "sourceDimensions": [
+        8192,
+        4096
+      ],
+      "credit": "Solar System Scope / INOVE; based on NASA imagery",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "note": "艺术增强的行星贴图；来源说明部分缺测区有补绘，不能据此进行地形测量。",
+      "processing": "JPEG quality 90; smaller variants downsampled from actual source dimensions; no upscaling, AI enhancement or invented terrain added by Yandao",
+      "maps": [
+        {
+          "width": 2048,
+          "height": 1024,
+          "url": "/assets/astronomy/surfaces/mars-2048.jpg",
+          "bytes": 452950,
+          "sha256": "dd7584396677452ab7ea0ddd66056907c67f5deb31cd38f46ccf0579dd414b29"
+        },
+        {
+          "width": 4096,
+          "height": 2048,
+          "url": "/assets/astronomy/surfaces/mars-4096.jpg",
+          "bytes": 1689086,
+          "sha256": "09f478685e5cbceaa32f90b397e15442c83ddb74a84587d12ffe5d40d4110e34"
+        },
+        {
+          "width": 8192,
+          "height": 4096,
+          "url": "/assets/astronomy/surfaces/mars-8192.jpg",
+          "bytes": 6564741,
+          "sha256": "71d8cf084d26ed260864ca5bfa1786643524f4e756415883b2c02e30d9a1565e"
+        }
+      ]
+    },
+    {
+      "id": "jupiter",
+      "name": "木星",
+      "sourceUrl": "https://www.solarsystemscope.com/textures/",
+      "downloadUrl": "https://www.solarsystemscope.com/textures/download/8k_jupiter.jpg",
+      "sourceSha256": "0bd844bf20822c4e3e80882b077859833c0dac44c7e4e1e0cd63d1b1b6d43085",
+      "sourceDimensions": [
+        4096,
+        2048
+      ],
+      "credit": "Solar System Scope / INOVE; based on NASA imagery",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "note": "艺术增强的云层拼接示意，不代表此刻的大红斑位置或真实云层变化。",
+      "processing": "JPEG quality 90; smaller variants downsampled from actual source dimensions; no upscaling, AI enhancement or invented terrain added by Yandao",
+      "maps": [
+        {
+          "width": 2048,
+          "height": 1024,
+          "url": "/assets/astronomy/surfaces/jupiter-2048.jpg",
+          "bytes": 326193,
+          "sha256": "c311b5a183b2a358c2d125ca39643e6c397355d7feb26726ca0e5c599d2e2593"
+        },
+        {
+          "width": 4096,
+          "height": 2048,
+          "url": "/assets/astronomy/surfaces/jupiter-4096.jpg",
+          "bytes": 1109970,
+          "sha256": "cbfe84a8ae4861008cf35ae193aeb444765a5dad343bdf7209c9f1b91e89e419"
+        }
+      ]
+    }
+  ]
+}

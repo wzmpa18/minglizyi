@@ -53,9 +53,9 @@ export default function StudyStarterPage() {
 
   return (
     <main className="mx-auto min-h-screen max-w-[420px] bg-[#f5f5f5] pb-28">
-      <BrandHeader title="中医学习入门" showBack backUrl="/academy" />
+      <BrandHeader title="言道学习入门" showBack backUrl="/academy" />
       <section className="mx-3 mt-3 rounded-2xl bg-[#267364] p-4 text-white">
-        <h1 className="text-xl font-bold">读一课，练一课</h1>
+        <h1 className="text-xl font-bold">读一课，练一课</h1><p className="mt-2 text-xs leading-6">经典阅读 · 易学基础 · 中医术语 · 天文历法 · 交流记录</p>
         <p className="mt-2 text-xs leading-relaxed">无需登录的入门学习 · 内容随包提供 · 进度保存在本机</p>
         <p className="mt-3 text-sm" aria-live="polite">{ready ? `已读 ${progress.read.length}/${STARTER_LESSONS.length} 课 · 已答 ${answered}/${allQuestions.length} 题 · 答对 ${correct} 题` : "正在读取本机进度…"}</p>
         <progress className="mt-2 h-2 w-full accent-white" max={allQuestions.length} value={correct} aria-label="自测答对题数" />
@@ -72,9 +72,9 @@ export default function StudyStarterPage() {
         <p className="mt-2 text-xs leading-relaxed text-gray-500">保留最近一次作答；答对后移出错题列表。账号题库的错题另存于账号错题本。</p>
         {wrongs.length === 0 ? <p role="status" className="py-6 text-center text-sm text-gray-500">当前没有待复习错题。可回到课程继续学习。</p> : wrongs.map(renderQuestion)}
       </section> : <>
-        <nav aria-label="入门课目录" className="mx-3 mt-3 grid grid-cols-2 gap-2">
+        <details className="mx-3 mt-3 rounded-2xl bg-white p-3"><summary className="cursor-pointer text-sm font-semibold text-gray-800">选择课程（{STARTER_LESSONS.length}课）· {lesson.title}</summary><nav aria-label="入门课目录" className="mx-3 mt-3 grid grid-cols-2 gap-2">
           {STARTER_LESSONS.map((item, index) => <InterfaceButton type="button" disabled={!ready} key={item.id} aria-current={item.id === lesson.id ? "step" : undefined} onClick={() => { save({ ...progress, lessonId: item.id }); setRetrying([]); }} className={`rounded-xl border p-3 text-left text-xs leading-relaxed ${item.id === lesson.id ? "border-[#267364] bg-[#edf7f2] text-[#165546]" : "border-transparent bg-white text-gray-700"}`}><span className="mb-1 block text-[11px]">第 {index + 1} 课 · {progress.read.includes(item.id) ? "已读" : "未读"}</span><strong>{item.title}</strong></InterfaceButton>)}
-        </nav>
+        </nav></details>
         <article className="mx-3 mt-3 rounded-2xl bg-white p-4">
           <h2 className="text-lg font-bold text-gray-800">{lesson.title}</h2>
           <p className="mt-2 text-xs text-[#267364]">{lesson.summary}</p>

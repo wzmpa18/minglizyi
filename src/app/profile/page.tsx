@@ -907,9 +907,7 @@ export default function ProfilePage() {
 
   const userId = loginState.isLoggedIn && loginState.profile?.userId
     ? loginState.profile.userId
-    : (typeof window !== "undefined"
-        ? (localStorage.getItem("yandao_user_id") || "YD000000")
-        : "YD000000");
+    : "";
 
   const PAID_LEVELS = ["premium", "monthly", "quarterly", "yearly", "lifetime"];
   const isMember = loginState.isLoggedIn && PAID_LEVELS.includes(loginState.profile?.memberLevel || "");
@@ -991,7 +989,7 @@ export default function ProfilePage() {
                     🏅 {topTitle}
                   </span>
                 )}
-                <span className="text-[10px] text-white/60 font-mono">ID: {userId}</span>
+                <span className="text-[10px] text-white/60 font-mono">{loginState.isLoggedIn ? `ID: ${userId}` : "登录后查看账号编号"}</span>
               </div>
               <div className="mt-1.5 flex items-center gap-3 text-[11px] text-white/80">
                 <span className="flex items-center gap-1">
@@ -1110,7 +1108,7 @@ export default function ProfilePage() {
           icon={Ic.qr}
           label="我的二维码"
           sub="扫码加好友，同研习国学"
-          onClick={() => setShowQR(true)}
+          onClick={() => loginState.isLoggedIn ? setShowQR(true) : router.push("/login")}
           noBorder
         />
       </Zone>}
@@ -1259,7 +1257,7 @@ export default function ProfilePage() {
       <IcpFooter />
 
       {/* ===== 弹窗 ===== */}
-      {showQR && (
+      {showQR && loginState.isLoggedIn && (
         <QRModal
           onClose={() => setShowQR(false)}
           userId={userId}

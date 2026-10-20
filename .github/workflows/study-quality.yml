@@ -90,6 +90,11 @@ on:
       - 'src/components/GlobalZoomProvider.tsx'
       - 'src/components/InteractivePlanetarium.tsx'
       - 'src/lib/planetariumProjection.ts'
+      - 'src/components/PlanetSurfaceExplorer.tsx'
+      - 'src/data/planetSurfaceSources.ts'
+      - 'backend_deploy/userIdPolicy.js'
+      - 'backend_deploy/register_routes.js'
+      - 'scripts/user-id-policy.test.cjs'
       - 'public/assets/astronomy/**'
       - 'scripts/planetarium-projection.test.ts'
       - 'src/lib/baziRelations.ts'
@@ -269,6 +274,7 @@ jobs:
       - run: npm ci --legacy-peer-deps
       - run: npx tsc --noEmit --incremental false
       - run: npx tsx --test scripts/interface-controls.test.tsx scripts/ziwei-board-layout.test.tsx
+      - run: npx tsx --test scripts/learning-expansion.test.ts
       - run: npx tsx --test scripts/research-learning.test.ts scripts/medical-learning.test.ts
       - run: npx tsx --test scripts/group-cache.test.ts scripts/consult-prototype.test.ts scripts/generated-cache.test.ts
       - run: node --experimental-strip-types --test scripts/life-vault.test.cjs scripts/life-export.test.cjs
@@ -312,6 +318,7 @@ jobs:
       - run: npx tsx --test scripts/planetarium-projection.test.ts
       - run: node --experimental-strip-types --test scripts/offline-versions.test.cjs
       - run: node --experimental-strip-types --test scripts/offline-download-link.test.cjs
+      - run: node --test scripts/user-id-policy.test.cjs
       - run: node --test scripts/learning-cors.test.cjs
       - run: node --test scripts/ios-full-profile.test.cjs
       - run: npx tsx --test scripts/classic-reading.test.ts

@@ -59,7 +59,7 @@ const DB_PATH = process.env.DB_PATH || '/root/backend-auth/data/yandao_users.db'
 const BCRYPT_ROUNDS = 10;
 
 // 用户ID起始值（6位起步）
-const USER_ID_START = 100000;
+const { initializeUserIdPolicy, nextUserId } = require('./userIdPolicy');
 
 // Cookie 配置
 const COOKIE_NAME = 'yd_refresh_token';
@@ -173,37 +173,9 @@ function initDatabase() {
   ensureColumn(dbInstance, 'users', 'last_login_at', 'DATETIME');
 
   // ========================================================================
-  // 5. 设置自增起始值为 100000
+  // 5. 独立账号序列及数据库不可绕过的约束
   // ========================================================================
-  const userCount = dbInstance.prepare('SELECT COUNT(*) as count FROM users').get();
-  if (userCount.count === 0) {
-    // 表为空，设置自增起始值
-    // 注意: sqlite_sequence 是特殊表，INSERT OR REPLACE 会创建重复行
-    // 必须先 DELETE 再 INSERT
-    dbInstance.prepare("DELETE FROM sqlite_sequence WHERE name = 'users'").run();
-    dbInstance.prepare(
-      "INSERT INTO sqlite_sequence(name, seq) VALUES('users', ?)"
-    ).run(USER_ID_START - 1);
-    console.log(`[register_routes] 自增起始值设为 ${USER_ID_START}`);
-  } else {
-    // 表有数据，确保自增值不低于 100000
-    const maxUserId = dbInstance.prepare('SELECT MAX(user_id) as max_id FROM users').get();
-    if (maxUserId.max_id < USER_ID_START) {
-      dbInstance.prepare("DELETE FROM sqlite_sequence WHERE name = 'users'").run();
-      dbInstance.prepare(
-        "INSERT INTO sqlite_sequence(name, seq) VALUES('users', ?)"
-      ).run(USER_ID_START - 1);
-    } else {
-      // 确保自增序列值 >= 当前最大 ID
-      const seq = dbInstance.prepare("SELECT seq FROM sqlite_sequence WHERE name = 'users'").get();
-      if (!seq || seq.seq < maxUserId.max_id) {
-        dbInstance.prepare("DELETE FROM sqlite_sequence WHERE name = 'users'").run();
-        dbInstance.prepare(
-          "INSERT INTO sqlite_sequence(name, seq) VALUES('users', ?)"
-        ).run(maxUserId.max_id);
-      }
-    }
-  }
+  initializeUserIdPolicy(dbInstance);
 
   // ========================================================================
   // 6. 创建 P1 架构加固表
@@ -963,7 +935,7 @@ function reconcileInviteFriendships(db) {
 }
 
 /**
- * 创建新用户（用户ID由数据库自增分配，从100000开始）
+ * 创建新用户（创世纪100000固定锚点，独立连续序列，历史ID不重排）
  * P9-推广中心：邀请归因/防作弊/单层奖励统一走 resolveInviteAttribution + bindInviteAndReward
  * @param {Object} params - { phone, email, password, inviteRef, inviteTs, inviteSig, inviteCode, deviceId, clientIp }
  * @param {Object} opts - { skipAttribution: 跳过邀请归因（内部迁移场景） }
@@ -982,13 +954,15 @@ function createUser(params, opts = {}) {
     ? email.split('@')[0]
     : '国学爱好者';
 
-  // 插入用户（user_id 由数据库自增分配；invited_by 由 bindInviteAndReward 统一写入）
+  const newUserId = db.transaction(() => {
+  // 插入用户（user_id 由创世纪100000独立序列分配；invited_by 由 bindInviteAndReward 统一写入）
+  const allocatedId = nextUserId(db);
   const result = db.prepare(`
-    INSERT INTO users (phone, email, password_hash, nickname, invite_code)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(phone || null, email || null, passwordHash, nickname, userInviteCode);
+    INSERT INTO users (user_id, phone, email, password_hash, nickname, invite_code)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(allocatedId, phone || null, email || null, passwordHash, nickname, userInviteCode);
 
-  const newUserId = result.lastInsertRowid;
+  const newUserId = Number(result.lastInsertRowid);
 
   // 为新用户创建资产记录
   db.prepare(`
@@ -1004,6 +978,9 @@ function createUser(params, opts = {}) {
     db.prepare('INSERT INTO device_registry (device_id, user_id, ip) VALUES (?, ?, ?)')
       .run('unknown', newUserId, clientIp || '');
   }
+
+    return newUserId;
+  }).immediate();
 
   // 邀请归因 + 单层绑定发奖（签名链接 > 邀请码；五类防作弊拦截）
   let inviteResult = { bound: false, reason: 'SKIPPED' };

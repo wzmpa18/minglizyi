@@ -1,3 +1,4 @@
+import { EXPANDED_LESSONS } from "./studyExpansion";
 // Original introductory reading exercises. No diagnosis, prescribing or treatment instruction.
 export interface StarterQuestion {
   id: string;
@@ -87,6 +88,7 @@ export const STARTER_LESSONS: StarterLesson[] = [
       { id: "review-2", stem: "本入门课的进度存在哪里？", options: ["自动同步到所有设备", "直接写入职业资格档案", "本机浏览器或应用存储中"], answer: 2, explanation: "本课使用本机存储，不声称跨设备同步，也不产生执业资格证明。" },
     ],
   },
+  ...EXPANDED_LESSONS,
 ];
 
 export interface StarterProgress {
