@@ -13,6 +13,7 @@
 
 import { getClientUserId } from "./auth";
 import { syncRecordToBackend, canCloudSyncRecords } from "./recordSync";
+import { cloudRecordData, mergeCloudRecords } from "./cloudRecordPrivacy";
 
 // ==================== 类型定义 ====================
 export interface Client {
@@ -258,7 +259,7 @@ export function initCloudSync(): Promise<void> {
         if (localClients.length > 0 || localRecords.length > 0) {
           await apiFetch("/api/sync", {
             method: "POST",
-            body: JSON.stringify({ clients: localClients, records: localRecords }),
+            body: JSON.stringify({ clients: localClients, records: localRecords.map(record => ({ ...record, data: cloudRecordData(record.type, record.data) })) }),
           });
         }
         safeSet(MIGRATION_DONE_KEY, true);
@@ -268,7 +269,7 @@ export function initCloudSync(): Promise<void> {
       const cloudData = await apiFetch<{ clients: Client[]; records: ServiceRecord[] }>("/api/sync");
       if (cloudData) {
         safeSet(CLIENTS_KEY, cloudData.clients || []);
-        safeSet(RECORDS_KEY, cloudData.records || []);
+        safeSet(RECORDS_KEY, mergeCloudRecords(safeGet<ServiceRecord[]>(RECORDS_KEY, []), cloudData.records || []));
       }
 
       // 3. 重放离线操作队列
@@ -617,7 +618,7 @@ if (typeof window !== "undefined") {
       apiFetch<{ clients: Client[]; records: ServiceRecord[] }>("/api/sync").then((data) => {
         if (data) {
           safeSet(CLIENTS_KEY, data.clients || []);
-          safeSet(RECORDS_KEY, data.records || []);
+          safeSet(RECORDS_KEY, mergeCloudRecords(safeGet<ServiceRecord[]>(RECORDS_KEY, []), data.records || []));
           setSyncStatus("synced");
         }
       });

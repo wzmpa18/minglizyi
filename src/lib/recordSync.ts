@@ -10,6 +10,7 @@
 
 import { getUserToken } from "./auth";
 import { getMembershipStatus } from "./membershipStore";
+import { cloudRecordData } from "./cloudRecordPrivacy";
 
 const API_BASE_URL = "https://yandaoguoxue.yandao.vip";
 
@@ -71,7 +72,7 @@ export async function syncRecordToBackend(
       },
       body: JSON.stringify({
         record_type: recordType,
-        record_data: recordData,
+        record_data: cloudRecordData(recordType, recordData),
         note: note || "",
       }),
     });

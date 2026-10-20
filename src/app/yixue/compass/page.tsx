@@ -290,7 +290,7 @@ export default function CompassPage() {
       });
       setSavedCount((c) => c + 1);
       trackToolEvent("compass", "tool_save");
-      showToast("测量记录已保存到客户档案");
+      showToast("读数已保存；位置信息仅留本机，云同步不含经纬度");
     } catch {
       showToast("保存失败，请重试");
     }

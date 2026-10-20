@@ -142,8 +142,9 @@ const RAW_ACUPOINTS: TcmAcupoint[] = [
     literature: '《针灸甲乙经》',
   },
   {
+    // Anatomical term corrected: https://wjw.beijing.gov.cn/xwzx_20031/jcdt/202003/t20200304_1678882.html
     name: '太冲', pinyin: 'Tài Chōng', code: 'LR3', meridian: '肝经',
-    location: '足背侧，第1、2趾骨结合部前方凹陷中',
+    location: '足背，第1、2跖骨间，跖骨底结合部前方凹陷中',
     location_detail: '第1跖骨间隙后方凹陷处',
     function: '平肝熄风，疏肝理气',
     literature: '《针灸甲乙经》',

@@ -650,7 +650,7 @@ function AcupointListPage({ meridianName }: { meridianName: string }) {
       </div>
 
       <div style={{ margin: "12px", background: "white", borderRadius: "16px", padding: "10px", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
-        <div style={{ fontSize: "12px", color: "#666", fontWeight: "bold", margin: "2px 4px 8px" }}>经络穴位动态图</div>
+        <div style={{ fontSize: "12px", color: "#666", fontWeight: "bold", margin: "2px 4px 8px" }}>经络图文学习</div>
         <MeridianChart meridianName={meridian.name} />
       </div>
       <AcupointStudySources meridianName={meridian.name} />
