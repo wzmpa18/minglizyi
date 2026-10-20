@@ -49,10 +49,8 @@ const MERIDIAN_SLUGS: Record<string, string> = {
 
 function meridianChartSources(meridianName: string) {
   const slug = MERIDIAN_SLUGS[meridianName];
-  return slug ? {
-    acupoints: `/assets/meridians/${slug}.webp`,
-    skeleton: `/assets/meridians/skeleton/${slug}.webp`,
-  } : null;
+  return slug ? { acupoints: slug === "lung" ? "/assets/meridians/lung-open-reference.svg" : null,
+    skeleton: "/assets/anatomy/skeleton-front.svg" } : null;
 }
 
 function MeridianChart({ meridianName, compact = false }: { meridianName: string; compact?: boolean }) {
@@ -62,23 +60,24 @@ function MeridianChart({ meridianName, compact = false }: { meridianName: string
   const sources = meridianChartSources(meridianName);
   if (!sources) return null;
   const src = sources[chartMode];
-  const modeLabel = chartMode === "acupoints" ? "人体穴位图" : "骨骼循行图";
+  const modeLabel = chartMode === "acupoints" ? (src ? "开放许可肺经图" : "经络循行示意") : "人体骨骼对照";
+  const codeBySlug: Record<string, string> = { lung: "LU1", "large-intestine": "LI1", stomach: "ST1", spleen: "SP1", heart: "HT1", "small-intestine": "SI1", bladder: "BL1", kidney: "KI1", pericardium: "PC1", "triple-energizer": "TE1", gallbladder: "GB1", liver: "LR1", "governor-vessel": "GV1", "conception-vessel": "CV1" };
 
-  const image = (
+  const image = src ? (
     <img
       src={src}
-      alt={`${meridianName}${modeLabel}动态图`}
+      alt={modeLabel}
       draggable={false}
       style={{ display: "block", width: `${zoom * 100}%`, maxWidth: "none", height: "auto", margin: "0 auto" }}
     />
-  );
+  ) : <div style={{ width: `${zoom * 100}%`, display: "flex", justifyContent: "center" }}><BodyDiagramSVG area="torso" acupointCode={codeBySlug[MERIDIAN_SLUGS[meridianName]]} acupointName={meridianName} /></div>;
 
   return <>
     <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
       {(["acupoints", "skeleton"] as const).map((mode) => (
         <button key={mode} type="button" onClick={() => { setChartMode(mode); setZoom(1); }}
           style={{ flex: 1, border: "1px solid #D7C9E3", borderRadius: 9, padding: "7px 6px", background: chartMode === mode ? BRAND_BG : "#FFF", color: chartMode === mode ? BRAND : "#777", fontWeight: 700, fontSize: 12 }}>
-          {mode === "acupoints" ? "人体穴位图" : "骨骼循行图"}
+          {mode === "acupoints" ? "经络图文对照" : "人体骨骼对照"}
         </button>
       ))}
     </div>
@@ -86,15 +85,16 @@ function MeridianChart({ meridianName, compact = false }: { meridianName: string
       type="button"
       onClick={() => { setZoom(1); setExpanded(true); }}
       style={{ width: "100%", padding: 0, border: "none", borderRadius: "14px", overflow: "hidden", background: "#EEF6F2", cursor: "zoom-in" }}
-      aria-label={`放大查看${meridianName}动态图`}
+      aria-label={`放大查看${meridianName}${modeLabel}`}
     >
-      <img key={src} src={src} alt={`${meridianName}${modeLabel}动态图`} draggable={false} style={{ display: "block", width: "100%", height: compact ? "250px" : "auto", objectFit: "contain" }} />
+      <div style={{ maxHeight: compact ? "300px" : "520px", overflow: "auto" }}>{image}</div>
       <span style={{ display: "block", padding: "7px 10px", fontSize: "11px", color: "#5D6D65", background: "white" }}>点击放大 · {modeLabel} · 可离线查看</span>
     </button>
+    <p style={{ fontSize: 11, color: "#63566D", lineHeight: 1.7 }}>循行示意不标注具体穴位位置；骨骼图不代表本经走向。逐穴定位请核对下方文字与原典。旧动画授权尚未确认，暂不提供。骨骼图：LadyofHats / Mariana Ruiz Villarreal，公有领域；肺经图的作者、许可及穴名对照见下方“图文对照与来源”。</p>
     {expanded && (
       <div
         onClick={() => setExpanded(false)}
-        style={{ position: "fixed", inset: 0, zIndex: 1400, background: "rgba(0,0,0,.88)", display: "flex", flexDirection: "column", padding: "12px" }}
+        style={{ position: "fixed", inset: 0, zIndex: 1400, background: "rgba(0,0,0,.88)", display: "flex", flexDirection: "column", padding: "max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom))" }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", color: "white", paddingBottom: "10px" }}>
           <strong style={{ fontSize: "14px" }}>{meridianName} · {modeLabel}</strong>
