@@ -16,12 +16,17 @@ function validateAcceptanceContract(contract,{count,sectionCount,completionFlag}
  for(const item of cases){const proofs=Array.isArray(item.evidence)?item.evidence:typeof item.evidence==='string'?[item.evidence]:[];if(item.status!=='PASS'||item.blocker||!proofs.length||proofs.some(p=>typeof p!=='string'||p.length<10))throw Error('禁止正式提审：用例未通过或缺验证证据：'+String(item.id));}
  return true;
 }
-function assertFormalReviewReady(){
+function validateOwnerRelease(auth,context){
+ if(auth?.scope!=='owner-channel-specific-authorization'||auth?.doesNotAssertOverallComplete!==true||!auth?.ownerInstruction?.includes('完成苹果的提交')||auth.appId!=='6807592575'||auth.bundleId!=='com.yandaoguoxue.app'||auth.version!=='25.0.115'||!/^\d+$/.test(auth.build)||!/^[a-f0-9]{40}$/.test(auth.candidateSource)||context?.appId!==auth.appId||context?.bundleId!==auth.bundleId||context?.version!==auth.version||String(context?.build)!==auth.build||context?.candidateSource!==auth.candidateSource||!auth.actions?.includes(context?.action)||context?.sameSourceChecksPassed!==true)throw Error('禁止正式提审：专项负责人授权或固定候选核验不匹配');
+ return true;
+}
+function assertFormalReviewReady(context){
  const read=name=>JSON.parse(fs.readFileSync(path.join(root,'docs/requirements',name),'utf8'));
+ if(context?.ownerChannelSpecific===true)return validateOwnerRelease(read('apple-owner-release.json'),context);
  validateReadiness(read('release-readiness.json'));
  validateAcceptanceContract(read('life-records-09.acceptance.json'),{count:44,sectionCount:40,completionFlag:'deliveryComplete'});
  validateAcceptanceContract(read('research-10.acceptance.json'),{count:25,sectionCount:17,completionFlag:'overallComplete'});
  return true;
 }
-function guardAscMutation(method,resource){if(!['GET','HEAD'].includes(String(method).toUpperCase())&&/^\/v1\/(?:reviewSubmissions|reviewSubmissionItems|appStoreVersionSubmissions)(?:[/?]|$)/.test(resource))assertFormalReviewReady();}
-module.exports={assertFormalReviewReady,guardAscMutation,validateReadiness,validateAcceptanceContract,CHECKS};
+function guardAscMutation(method,resource,context){if(!['GET','HEAD'].includes(String(method).toUpperCase())&&/^\/v1\/(?:reviewSubmissions|reviewSubmissionItems|appStoreVersionSubmissions)(?:[/?]|$)/.test(resource))assertFormalReviewReady(context);}
+module.exports={assertFormalReviewReady,guardAscMutation,validateReadiness,validateAcceptanceContract,validateOwnerRelease,CHECKS};

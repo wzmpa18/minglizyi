@@ -40,6 +40,25 @@ with tarfile.open(fileobj=sys.stdin.buffer,mode='r|gz') as archive:
                 output.write(archive.extractfile(entry).read())
         actual={str(p.relative_to(target)):hashlib.sha256(p.read_bytes()).hexdigest() for p in target.rglob('*') if p.is_file()}
         assert actual==expected.pop('hashes')
+        # Public store/deletion URLs must survive an atomic front-end update.
+        # Never carry old APK test downloads or unverified executable content.
+        marketing=old/'marketing'/'20261020'
+        preserved=[]
+        if marketing.exists():
+            assert not marketing.is_symlink()
+            candidates=list(marketing.rglob('*'))
+            assert len(candidates)<200
+            for item in candidates:
+                assert not item.is_symlink() and marketing.resolve() in item.resolve().parents
+                if not item.is_file(): continue
+                assert item.suffix in {'.html','.jpg','.png','.json','.css'}
+                data=item.read_bytes(); assert len(data)<10_000_000
+                relative='marketing/20261020/'+str(item.relative_to(marketing))
+                destination=target/relative; destination.parent.mkdir(parents=True,exist_ok=True)
+                if destination.exists(): assert destination.read_bytes()==data
+                else: destination.write_bytes(data)
+                preserved.append({'path':relative,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()})
+        expected['preservedPublicAssets']=preserved
         pending=link.parent/'.current-next'
         assert not pending.exists() and not pending.is_symlink()
         pending.symlink_to(target)

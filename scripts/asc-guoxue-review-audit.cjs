@@ -22,7 +22,7 @@ const output=process.argv.find(a=>a.startsWith('--output='))?.slice(9);
  const products=(await api('GET','/v1/apps/'+APP+'/inAppPurchasesV2?limit=100')).data;
  proof.iap=products.map(x=>({id:x.id,...x.attributes}));
  const submissions=(await api('GET','/v1/reviewSubmissions?filter[app]='+APP+'&limit=20')).data;
- for(const s of submissions){const items=(await api('GET','/v1/reviewSubmissions/'+s.id+'/items?limit=50&include=appStoreVersion')).data;proof.submissions.push({id:s.id,...s.attributes,items});}
+ for(const s of submissions){const items=(await api('GET','/v1/reviewSubmissions/'+s.id+'/items?limit=50&include=appStoreVersion,inAppPurchaseVersion')).data;proof.submissions.push({id:s.id,...s.attributes,items});}
  if(output)fs.writeFileSync(output,JSON.stringify(proof,null,2)+'\n');
  console.log(JSON.stringify({...proof,localizations:proof.localizations.map(l=>({...l,screenshotSets:l.screenshotSets.map(s=>({...s,shots:s.shots.map(x=>({id:x.id,fileName:x.fileName,state:x.assetDeliveryState?.state}))}))}))}));
 })().catch(e=>{console.error(e.message);if(e.details)console.error(JSON.stringify(e.details));process.exitCode=1;});

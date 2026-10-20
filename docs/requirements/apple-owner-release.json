@@ -1,0 +1,23 @@
+{
+  "scope": "owner-channel-specific-authorization",
+  "date": "2026-10-20",
+  "ownerInstruction": "你完成这些已经可以的商店就可以了，其他的等资质通过再弄，完成苹果的提交啊！",
+  "appId": "6807592575",
+  "bundleId": "com.yandaoguoxue.app",
+  "version": "25.0.115",
+  "build": "30",
+  "candidateSource": "53e4f3608202ce770c3565fb805fb9e83038f340",
+  "actions": [
+    "assemble",
+    "submit"
+  ],
+  "doesNotAssertOverallComplete": true,
+  "conditions": [
+    "Successful same-source quality and signed build",
+    "Unlicensed meridian animations absent from actual bundle",
+    "Truthful IAP, UGC, rights and privacy declarations",
+    "Check existing submissions and re-use the app version; never duplicate active review",
+    "Compass GPS excluded from both incremental and bulk record sync; local copy preserved"
+  ],
+  "report": "交接报告/FINAL_PROJECT_HANDOVER.md#67"
+}
