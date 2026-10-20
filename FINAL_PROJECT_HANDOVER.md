@@ -1598,3 +1598,64 @@ sqlite3 /tmp/yandao_restore_test/social.db "SELECT COUNT(*) FROM friendships; SE
 - 唯一人工CMD仍为C:/Users/ZhuanZ/Documents/Codex/2026-10-17/e-c-users-zhuanz-documents-codex/outputs/guoxue-clean-20261018.cmd，CP936/CRLF，SHA-256为6a88cfeadfde5633494181eb6c256fb7d1b3cd5aee04ca3fe8ca04a6dec8c835。11个精确已核SHA目标共381180186字节，增加2110/2117/2119失败或过时候选及旧Apple7；删除前先核2120国内APK/GoogleAAB和Apple30均存在且准确。仅删匹配旧文件及空目录，无通配递归，合成备份重复件另先核E原件。
 - 保留当前2120、Apple30及前29、仍在商店/回滚决策使用的包、源资料、密钥和有效小体积证据。前2119测试地址曾真实发布，后被53原子部署替代；不误写为未发布。全物理两代轮换仍未完成，历史共享主树97债务和服务器更老发布目录未冒然清除。按负责人要求整批验收后由本人一次清理，本轮CMD未执行、代理实际删除0字节。
 - 本轮维护源码、文档需审查后统一提交推送，保持活动仓空status与上游0/0；产品候选仍53，不因维护提交另打包。所有源码/维护/文档及CMD绝对路径索引、最终测试/提交/镜像四SHA、C空间及残留核对保存E实机整改_20261018/12_本轮修改绝对路径索引.json和12_本轮最终收尾核验.json。唯一源报告同步根目录兼容镜像与E两个固定镜像，制度/入口同步E并逐SHA核对；最终证据在提交后只读生成，避免报告自引用导致新的脏改动。
+
+
+## 68. 2026-10-21 创世纪连续编号、跨板块入门学习与真实高清天体图像
+
+### 68.1 本轮边界、源码及起点
+- 负责人要求新注册ID从创世纪顺序递增，丰富学习内容，并增加可放大观察月球、行星的高清开放素材。只改言道国学；未改言道学外语、数字管家、公司官网或其他产品。开始已读父级/项目AGENTS、唯一制度、交接及主账本；活动仓起点e773b396fe211cd740d1635b4615dc5f120eeb36干净。
+- 活动仓绝对根路径为C:/Users/ZhuanZ/Documents/Codex/2026-09-20/referenced-chatgpt-conversation-this-is-an/tencent-store-compliance，分支codex/tencent-store-compliance。产品源码d93dd21fea680e17ac80bb5610badb054d3687fe；最终同界面候选f541d5dc6dced98272c552b83cad17433a5218d6增加维护脚本及Android2121版本号。全部源码路径在E:/八字命理类文档包括排盘方式电子版/言道国学项目归档/发布包/实机整改_20261018/13_本轮源码绝对路径索引.json，后文E证据路径均相对此实机整改目录。文档收尾提交不作为另一次产品构建。
+
+### 68.2 账号乱号根因与真实生产修复
+- 只读核实正式库/root/backend-auth/data/yandao_users.db：创世纪唯一账号100000，161个现存用户，普通范围最后100075；历史高位账号使users的SQLite自增序列到999999939。历史910xxx/999999xxx中不能假设都是无效测试，不删除、不重排，避免破坏会员、订单、好友等引用。普通范围及相关表引用最高100075已核。
+- 新增backend_deploy/userIdPolicy.js及src/lib/backend/userIdPolicy.js一致镜像，修改两条register_routes.js镜像。手机号、邮箱、微信的createUser统一在IMMEDIATE事务取得编号并写用户/资产/设备；失败整笔回滚。新持久account_number_sequence固定创世纪100000和本次已审计迁移基线100075，account_number_reservations永久保留已用号。8个触发器拒绝自动/随机/时间戳插入、改user_id、重置/删除序列及删除旧号预留，注销不回收号，重启不重置。未来碰到保留旧号冲突须审计处理，不能随机跳过。匿名u_内部标识保留本机用途，src/app/profile/page.tsx游客改显示“登录后查看账号编号”，不再当正式账号展示。
+- 部署前发现生产register_routes.js有源码未收录的手机号/邮箱日志脱敏，已保留并纳入新写入器，未盲覆盖。scripts/deploy_account_number_policy.py固定生产主机82.156.228.87、Guoxue进程及原SHA，默认只核查，显式apply才部署；首次辅助探测缺少base64导入已在任何生产修改前修正。
+- 2026-10-20T15:57:22.854083Z（东京10月21日00:57）完成增量迁移并仅重启yandaoguoxue-backend，健康200。生产161账号未变、重排0、外发联系0。真better-sqlite3隔离完整createUser分配100076/100077、资产2、重复拒绝、下一号100078；生产插入再ROLLBACK探测成功且持久测试用户0。上线后独立只读仍161、8触发器、下一正式新号100076；这是该时刻快照，真实注册后应正常递增，不得把100076永久写死。
+- 部署register_routes.js SHA-256 a244b07af4b542ca5c8c5fa3ba1c869f0abb3f2113a10621ef24345ff6ca29aa，策略54fe08cae87725b820dafb338ee4cd8261e02eb36097ac3fecccfcf8e1e36137。证据13_账号编号策略部署前核对.json、13_账号编号策略真实部署.json、13_账号编号上线后独立读回.json。
+- 唯一一致迁移备份/root/backend-auth/data/yandao_users.db.pre-creator-sequence（权限600）是有效生产恢复证据，不能当垃圾删。旧register_routes.js.previous仍自动取被污染SQLite序列，禁止直接恢复；新策略已激活时必须保留兼容写入器，不能覆盖整库丢新用户/订单。制度新增第十四节，约束后续所有注册/导入/恢复开发。
+
+### 68.3 增加12课、36题，保留原4课与进度
+- 新增src/data/studyExpansion.ts，src/data/studyStarter.ts合并后共16课44题。覆盖历法时间口径、八字干支十神关系、紫微宫位与三模式、六爻梅花动爻、六壬奇门分层、七政四余坐标、天文读图、五运六气、四诊八纲、本草方剂性味归经/配伍、骨关节经络对照、同辰同证与私人记录。每课至少三段原创解释及三道有答案解析的题，连到真实对应板块；五运六气主气使用厥阴风木等完整术语。
+- 修改src/app/academy/start/page.tsx和src/components/LearningEntryPanel.tsx，课程选择折叠，避免16课占满手机首屏；原四课ID和旧进度解析保留。连续听学章节包括新增课，未擅自翻译古籍；没有声称完整古籍、药典、董氏穴位或全医考资料已经补齐授权/医学签审。新增为原创入门教学，不能冒充古籍原文或个体处方。
+
+### 68.4 高清月球与行星：实际像素、来源和研究边界
+- 新增src/components/PlanetSurfaceExplorer.tsx，集成src/app/academy/astronomy/page.tsx。保留原8920恒星、太阳系/近邻空间、日期地点、五运六气与笔记；新增月球、地球、火星、木星球面图像。拖动旋转、按钮/双指/滚轮缩放、复位、全屏、Escape退出；安全区留边、焦点恢复。默认按需4K，提供2K/8K并按GPU最大纹理自动降级；30秒加载超时有明确错误和平面图后备。关闭或离开时取消加载、释放纹理/几何/渲染器，不用永久动画循环占资源。
+- public/assets/astronomy/surfaces/内11张真实JPEG合计24632902字节及manifest.json。月球NASA SVS2019 CGI Moon Kit/LRO LROC-LOLA实际8192×4096；地球/火星Solar System Scope/INOVE NASA衍生实际8K。木星虽然源URL含8k，实际仅4096×2048，已按4K标注，禁止选择8K，不做插值冒充细节。NASA公有领域保留署名，Solar System Scope按CC BY4.0标出处/衍生；艺术增强、缺失区域补绘和月面极区低清填补均在界面说明。
+- scripts/import_planet_surface_assets.py只允许四个已核官方源，在RAM读原图并按实际尺寸生成JPEG和2K/4K衍生，记录源/衍生SHA、尺寸、许可与出处；不会自动覆盖已审manifest，不在C留TIFF/下载缓存。曾因统一假设源图全8K停止导入，核实木星4K后修正，不把失败尝试写成8K成功。
+- 科学来源https://svs.gsfc.nasa.gov/4720/及https://www.solarsystemscope.com/textures/。球面图是均匀照明静态读图，不等于实时月相、云层或月面测量。LROC https://quickmap.lroc.asu.edu/与开源MIT的WorldWide Telescope https://worldwidetelescope.org/webclient/是用户主动点击的外部研究入口；本轮没有嵌入完整WWT引擎或承诺专业天文馆全宇宙功能。测量应使用具有数据说明的原始观测产品。
+
+### 68.5 真实测试、构建与故障记录
+- scripts/user-id-policy.test.cjs五项本地及CI测试通过：高位污染/重启/注销不复用、原始绕过拒绝、失败回滚/重复不消耗、缺基线拒绝、8个独立连接同SQLite并发分配100076—100083且下一100084。测试库仅E临时测试子目录，每次结束删除自身临时文件。scripts/learning-expansion.test.ts验证16课44题、原进度、实际板块路径、逐图片SHA及木星不假8K。
+- d93质量39452488988成功（重复自动39452488000取消）；最终f541全质量与Web39453444062成功，原算法/隐私/资料测试未跳过。Android2121国内签名39453450025、iOS31签名39453455351成功。私钥检查通过，未下载任何密钥到源码或日志。旧28张无授权经络动画的产物过滤继续保留；另在2121 APK/AAB和31 IPA实际ZIP逐个检查，三包均0张旧动画、28条排除证据、开放图仍在，13_原生包经络权利过滤核验.json。
+- RAM预览d93与f541界面代码相同（后者仅版本号及两维护脚本）。实际操作月球8K显示8192×4096、旋转放大、切木星降4K并禁8K、Escape退全屏；390像素视口scrollWidth390，关闭后该视图canvas0。16课44题可见，选天文课程、标读、答错→解析→重答答对→刷新仍1课1题1正确；游客个人页不显示u_随机编号。课程连续听学章节可选，不冒称本轮已完成苹果物理设备音频播放。
+- 浏览器检查发现继承故障：src/lib/clientStore.ts旧initCloudSync把匿名getClientUserId当非空账号，在旧GET /api/sync取得404；与真正会员排盘/api/auth/records/save不是同一接口。该历史批量同步故障本轮没有完成修复，不得用主功能验收盖过。下一位先核实登录/游客/会员及旧迁移行为、真实生产路由再替换，禁止删除本机原始资料或凭空接通未鉴权接口。13_本轮验证与故障记录.json已列OPEN，不宣称无故障。
+- Native包核验最初错误假设iOS也有Android app-native.json，验证中止未上传；核实iOS工作流本来不生成该标记后改用固定CI源码、真实Info.plist/WidgetKit签名门禁、内置11张逐SHA图及渠道脚本核验。不是放过失败校验或编造iOS标记。正式保留包均在E，不在C保存ZIP/解包/依赖树。
+
+### 68.6 发布限制与继承未完项
+- 后端连续编号已经生产生效；Web本轮新部署、安卓公开测试入口、Apple31内部测试及最终平台状态，以本节随后独立读回为准。构建成功不等于可安装/可测/正式发布。苹果30原正式审核任务b574a73e-d8d3-42fb-95d3-0776ccdad897保持WAITING_FOR_REVIEW，本轮不撤、不替换、不重提，不把31内部测试替换成正式受理。
+- Android当前测试候选2121、前可用2120；苹果内部候选31、前30仍有正式审核用途，29及更老候选待统一清理复核。Google组织迁移依旧等待学外语原请求完成，其他资质商店暂停；未改Google拒审申报或重交个人账号包。本轮只建国内2121，不冒称已有同号Google候选。
+- 07/09/10整体仍未全验：真实双成年用户多设备、原生物理通知/组件/功耗、本人苹果到账恢复、完整药典/董氏/医案/图谱/古籍授权及医学专业审校、完整专业天文馆、历史主树97债务、物理两代清理仍缺；另登记上述旧sync404；新天体视图部分按钮仍为简体，新增控件的四语界面接线/原生验收也未冒称完成，正文日英翻译不作为要求。不能将本轮16课或高清贴图宣称这些全部完成。
+
+
+### 68.7 本轮Web真实上线与Apple31内部可测试
+- 最终Web于2026-10-20T16:18:42.655625Z（东京10月21日01:18）切换至/root/yandaoguoxue/releases/v25.0.115-calendar-community-f541d5d；上一可回退53e4f36保留。质量产物12279458384，ZIP SHA-256 ca0e2d2ccc287a3ab09cee21955ce22d04e8212d9ea8e1de824f781620eb3dbb，2312构建文件86031101字节逐文件核验，清单SHA fe8a29c5670f9003b3414fbd06f59adf29712c1a30d7f2ab1a87dd4e52ed936e。另保留14个已核营销/删除公开资料，未让账号注销URL失效。证据13_高清天文正式网页部署.json。
+- 正式浏览器https://yandaoguoxue.yandao.vip/academy/astronomy/#planet-surfaces实际打开月球并加载8192×4096，截图13_账号与高清天文_20261021/正式网站_月球8K实际页面.jpg；正式课程显示16课44题，截图正式网站_16课44题.jpg。课程/天文/个人页/官网说明/注销页/素材manifest六个公开读回200并核SHA，见13_正式网页公开回读.json；不是仅拿接口200代替上述真实控件操作。退出全屏、关闭图像释放资源，正式天文入口保留，三张临时预览标签已关，原公司官网/后台等用户标签未动。
+- 国内Android25.0.115（2121）签名APK78281889字节，SHA-256 5840989037430ea0fe2cb5109ef0b2bc2cf810b9773617f88bed6f9d26e27e54；AAB62292281字节，SHA bdfea4a9e80aa4f9db44449e3371239a48e6a79b948ec46dcdf22faf75f10d46。实际E发布包/Android_25.0.115_2121_tencent/及verified-packages.json。两包Android标记sourceCommit=f541、versionCode2121、storeChannel=tencent，11图逐SHA与源码一致；没有用此国内AAB冒充Google渠道包。官网测试分发最终读回另列，不擅改stable latest.apk/自动升级/各商店审核。
+- Apple25.0.115（31）真实IPA45452742字节，SHA-256 43e0aa08afbc12d34ab25bff1700bfd39ed3842e84d371ef1cc213693abe7bdd，E发布包/Apple_25.0.115_31/YandaoGuoxue_25.0.115_31.ipa及verified-package.json。身份com.yandaoguoxue.app、版本/真实WidgetKit扩展签名门禁通过，内置11图逐SHA一致。只上传已核同一IPA，39455257724成功，未重新打包重用构建号。
+- 2026-10-20T16:16:32.285Z独立Apple API：31 UUID9acb2e6b-43ee-4432-9231-6f1604f1e6a8、VALID、IN_BETA_TESTING，既有内部组言道国学已关联，assignedNow=false；没有新测试者/外部邀请或正式审核。证据13_苹果31内部测试状态.json。正式30/既有任务仍WAITING_FOR_REVIEW，13_苹果正式审核独立核对.json；31内部可测不等于已批准发布。
+- 本轮仍使用国学既有URY888FLWG配套密钥，Issuer ee663add-beb6-40d2-92ad-e09fafec8110，唯一p8为E:/八字命理类文档包括排盘方式电子版/苹果开发者/AuthKey_URY888FLWG.p8。API读取31内部状态和30正式状态、既有CI准确上传均成功；本轮未新建/轮换/撤销密钥，未改任何Secret或其他产品。旧钥是否已撤销本轮未重新核实，不冒称历史泄露已消除；APP Stotr CONNECT API 最新秘钥.txt内旧构建记载不是当前上架状态依据，以上API证据为准。私钥正文/JWT/临时下载签名URL均不入报告、日志或Git。
+
+### 68.8 本轮清理、唯一命令与剩余工作
+- 本轮没有C安装包、ZIP解包、TIFF缓存、node_modules、.next、out、www或一次性脚本落盘。24.6MB图像是已入仓正式来源资产，保留；构建/预览/验证ZIP全部RAM，正式APK/AAB/IPA及有效证据仅E。临时预览Ctrl+C未真正结束子进程，随后按PID18928及脚本/产物ID精确核对后停止；3113已无监听。不得把仅终端退出写成进程已停。
+- 自动审批审查拦截删除E实机整改_20261018/临时测试空目录，返回仅blocked by policy；未绕过，目录无文件且保留。曾将停止进程与目录删除合并的命令整体被拦，拆为更窄、经进程身份核实的停止操作后允许执行；单独空目录删除仍被拦。当前删除字节0，不能宣称全部清干净。证据13_本轮本地残留核对.json。
+- 唯一人工CMD仍为C:/Users/ZhuanZ/Documents/Codex/2026-10-17/e-c-users-zhuanz-documents-codex/outputs/guoxue-clean-20261018.cmd。本轮对原11文件全部重新核SHA，仍共381180186字节，未执行。新增保留2121/31的存在及SHA门槛，原2120国内/Google和正式30保护仍在；只增加上述空目录的rd（无/s，非空不会删除），未扩展到磁盘根、私人资料或其他产品。修正历史CRCRLF为CP936/标准CRLF，最新CMD SHA-256 b2ebc307c21844328586aa0b9290741135dbcd9f2cf136a8786610a461ec2660，13_唯一CMD重新核对.json。按负责人要求整批验收后由本人一次执行；当前/前版及仍在审核包保留，更老包/服务器历史目录/共享97债务未冒称两代物理轮换完成。
+- 下一位先读本节与制度十四，核查生产持久序列，禁止再用高位测试ID污染正式库；处理旧/api/sync真实鉴权和数据迁移故障，继续07/09/10实质缺项、医学授权审校及物理设备验收。当前源码维护提交/上游一致、四报告及制度/入口镜像SHA以E实机整改_20261018/13_本轮最终收尾核验.json提交后只读记录为准，避免自引用修改制造新脏树。
+
+
+### 68.9 安卓测试分发的准确包与传输核验
+- 维护scripts/publish_verified_android_test.py，新增--reuse-previous-proof：只复用已核SHA的上一公开测试APK压缩字节及当前同源11张天体JPEG，原封不动传输其余APK字节（包括新签名块和ZIP结构），服务端逐片SHA后再核完整78281889字节APK的原CI哈希。不重新压缩、不重签名、不修改原安装包；未知片段/越界/错误来源即失败，不生成伪包。目标只为既定Guoxue当前release的testing/2121/，稳定下载、自动升级、商店状态均不改。
+- 本轮普通服务器直取GitHub产物及8路Range试取均过慢，先独立确认目标APK不存在，再核实并停止本任务专属RAM传输进程1470904/1473271，未重复创建审核/安装包。已从维护源码移除这条不合适的临时签名URL/令牌下载方案，未把GitHub令牌、临时URL或ZIP落盘。最后使用精确字节复用，传送APK差异数据5611275字节（另含校验计划元数据），复用前版48037712字节和当前网页24632902字节；完整APK原SHA不变。
+- 服务器已完成原包哈希核验并生成https://yandaoguoxue.yandao.vip/testing/2121/，实际浏览器显示25.0.115（2121）及准确测试APK链接，截图13_账号与高清天文_20261021/安卓2121_实际下载页.jpg；此入口明确是测试候选而不是商店发布。公开完整回读状态以下段最终结果为准。
+
+- 最终公开完整回读已通过：78281889字节，SHA-256 5840989037430ea0fe2cb5109ef0b2bc2cf810b9773617f88bed6f9d26e27e54，与CI/E正式保留包一致；13_安卓2121官网下载实际验证.json记录原子存放2026-10-20T16:38:28.846952Z、复用/传输字节及完整公开SHA。真实公开测试入口已可用，不是仅上传中或草稿。
+- 2026-10-20T16:42:05Z最终Apple只读仍30 WAITING_FOR_REVIEW、31 VALID；16:42:07Z生产最终161用户/下一100076、健康200、Webcurrent=f541。源、发布、内部测试、正式审核和未完成项保持分开。docs/requirements整体完成门禁未篡改为true，未修改价格/权益/佣金或其他产品。
