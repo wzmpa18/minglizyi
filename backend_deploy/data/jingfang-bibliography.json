@@ -1,0 +1,424 @@
+{
+  "schemaVersion": 1,
+  "scope": "截至所列三篇倪海厦本人原始文章可核实的书目及相关医家；不是穷尽其一生所有评价的名单。",
+  "verifiedAt": "2026-10-21T04:27:03.111863+00:00",
+  "sources": [
+    {
+      "id": "goodbook-20100316",
+      "title": "优质的中医书籍",
+      "url": "https://www.hantang.com/chinese/ch_Articles/goodbook.htm",
+      "date": "2010-03-16"
+    },
+    {
+      "id": "jingui-preface-2007",
+      "title": "金匮上课前言",
+      "url": "https://www.hantang.com/chinese/ch_Articles/jian-kwa1.htm",
+      "date": "2007-05-20/2007-06-10"
+    },
+    {
+      "id": "acupuncture-2005",
+      "title": "人纪系列之针灸篇DVD说明",
+      "url": "https://www.hantang.com/chinese/ch_Articles/acupuncdvd.htm",
+      "date": "2005"
+    }
+  ],
+  "profiles": [
+    {
+      "id": "zhang-zhongjing",
+      "name": "张仲景",
+      "aliases": [
+        "张机"
+      ],
+      "bookIds": [
+        "shanghan-original",
+        "jingui-original"
+      ],
+      "evidenceSource": "jingui-preface-2007",
+      "relation": "本人书单或教学说明明确涉及的作者；关联的其他原作属于研读延伸，不代表逐本获得推荐或对本平台背书。"
+    },
+    {
+      "id": "cao-yingfu",
+      "name": "曹颖甫",
+      "aliases": [],
+      "bookIds": [
+        "cao-shanghan-original",
+        "cao-jingui-original"
+      ],
+      "evidenceSource": "goodbook-20100316",
+      "relation": "本人书单或教学说明明确涉及的作者；关联的其他原作属于研读延伸，不代表逐本获得推荐或对本平台背书。"
+    },
+    {
+      "id": "tang-zonghai",
+      "name": "唐宗海",
+      "aliases": [
+        "唐容川"
+      ],
+      "bookIds": [
+        "tang-xuezheng-original",
+        "tang-bencao-wenda-original",
+        "tang-yijing-jingyi-original",
+        "tang-shanghan-buzheng-original"
+      ],
+      "evidenceSource": "jingui-preface-2007",
+      "relation": "本人书单或教学说明明确涉及的作者；关联的其他原作属于研读延伸，不代表逐本获得推荐或对本平台背书。"
+    },
+    {
+      "id": "lu-maoxiu",
+      "name": "陆懋修",
+      "aliases": [
+        "陆九芝"
+      ],
+      "bookIds": [
+        "lu-yunqi-bingshi-original",
+        "lu-yunqi-biao-original"
+      ],
+      "evidenceSource": "jingui-preface-2007",
+      "relation": "本人书单或教学说明明确涉及的作者；关联的其他原作属于研读延伸，不代表逐本获得推荐或对本平台背书。"
+    },
+    {
+      "id": "fu-shan",
+      "name": "傅山",
+      "aliases": [
+        "傅青主"
+      ],
+      "bookIds": [
+        "fu-qingzhu-nvke-original"
+      ],
+      "evidenceSource": "jingui-preface-2007",
+      "relation": "本人书单或教学说明明确涉及的作者；关联的其他原作属于研读延伸，不代表逐本获得推荐或对本平台背书。"
+    },
+    {
+      "id": "dai-tianzhang",
+      "name": "戴天章",
+      "aliases": [],
+      "bookIds": [
+        "dai-guangwenyi-original"
+      ],
+      "evidenceSource": "jingui-preface-2007",
+      "relation": "本人书单或教学说明明确涉及的作者；关联的其他原作属于研读延伸，不代表逐本获得推荐或对本平台背书。"
+    },
+    {
+      "id": "xu-dachun",
+      "name": "徐大椿",
+      "aliases": [
+        "徐灵胎"
+      ],
+      "bookIds": [
+        "xu-nanjing-jingshi-original",
+        "xu-bencao-baizhong-original",
+        "xu-yixue-yuanliu-original",
+        "xu-shanghan-leifang-original",
+        "xu-lantai-guifan-original",
+        "xu-yiguan-bian-original",
+        "xu-shenji-chuyan-original",
+        "xu-huixi-yian-original"
+      ],
+      "evidenceSource": "jingui-preface-2007",
+      "relation": "本人书单或教学说明明确涉及的作者；关联的其他原作属于研读延伸，不代表逐本获得推荐或对本平台背书。"
+    },
+    {
+      "id": "sun-simiao",
+      "name": "孙思邈",
+      "aliases": [],
+      "bookIds": [
+        "sun-qianjin-yaofang-original",
+        "sun-qianjin-yifang-original"
+      ],
+      "evidenceSource": "jingui-preface-2007",
+      "relation": "本人书单或教学说明明确涉及的作者；关联的其他原作属于研读延伸，不代表逐本获得推荐或对本平台背书。"
+    },
+    {
+      "id": "yang-jizhou",
+      "name": "杨继洲",
+      "aliases": [],
+      "bookIds": [
+        "yang-zhenjiu-dacheng-original"
+      ],
+      "evidenceSource": "acupuncture-2005",
+      "relation": "本人书单或教学说明明确涉及的作者；关联的其他原作属于研读延伸，不代表逐本获得推荐或对本平台背书。"
+    },
+    {
+      "id": "huangfu-mi",
+      "name": "皇甫谧",
+      "aliases": [],
+      "bookIds": [
+        "jiayi-original"
+      ],
+      "evidenceSource": "acupuncture-2005",
+      "relation": "本人书单或教学说明明确涉及的作者；关联的其他原作属于研读延伸，不代表逐本获得推荐或对本平台背书。"
+    },
+    {
+      "id": "gao-wu",
+      "name": "高武",
+      "aliases": [],
+      "bookIds": [
+        "gao-zhenjiu-juying-original"
+      ],
+      "evidenceSource": "acupuncture-2005",
+      "relation": "本人书单或教学说明明确涉及的作者；关联的其他原作属于研读延伸，不代表逐本获得推荐或对本平台背书。"
+    },
+    {
+      "id": "yu-wuyan",
+      "name": "余无言",
+      "aliases": [],
+      "bookIds": [],
+      "evidenceSource": "goodbook-20100316",
+      "relation": "本人书单或教学说明明确涉及的作者；关联的其他原作属于研读延伸，不代表逐本获得推荐或对本平台背书。"
+    },
+    {
+      "id": "jiang-zuojing",
+      "name": "姜佐景",
+      "aliases": [],
+      "bookIds": [],
+      "evidenceSource": "goodbook-20100316",
+      "relation": "本人书单或教学说明明确涉及的作者；关联的其他原作属于研读延伸，不代表逐本获得推荐或对本平台背书。"
+    },
+    {
+      "id": "yang-li",
+      "name": "杨力",
+      "aliases": [],
+      "bookIds": [],
+      "evidenceSource": "goodbook-20100316",
+      "relation": "本人书单或教学说明明确涉及的作者；关联的其他原作属于研读延伸，不代表逐本获得推荐或对本平台背书。"
+    },
+    {
+      "id": "liu-lihong",
+      "name": "刘力红",
+      "aliases": [],
+      "bookIds": [],
+      "evidenceSource": "goodbook-20100316",
+      "relation": "本人书单或教学说明明确涉及的作者；关联的其他原作属于研读延伸，不代表逐本获得推荐或对本平台背书。"
+    }
+  ],
+  "entries": [
+    {
+      "title": "黄帝内经",
+      "authors": "历代传本",
+      "bookIds": [
+        "suwen-original",
+        "lingshu-original"
+      ],
+      "evidenceSource": "goodbook-20100316",
+      "status": "可读所列原典版本",
+      "note": ""
+    },
+    {
+      "title": "神农本草经",
+      "authors": "历代传本",
+      "bookIds": [
+        "shennong-original"
+      ],
+      "evidenceSource": "goodbook-20100316",
+      "status": "可读所列原典版本",
+      "note": ""
+    },
+    {
+      "title": "伤寒论",
+      "authors": "张仲景；宋本传校",
+      "bookIds": [
+        "shanghan-original"
+      ],
+      "evidenceSource": "goodbook-20100316",
+      "status": "可读所列原典版本",
+      "note": ""
+    },
+    {
+      "title": "金匮要略",
+      "authors": "张仲景；历代传校",
+      "bookIds": [
+        "jingui-original"
+      ],
+      "evidenceSource": "goodbook-20100316",
+      "status": "可读所列原典版本",
+      "note": ""
+    },
+    {
+      "title": "针灸大成",
+      "authors": "杨继洲",
+      "bookIds": [
+        "yang-zhenjiu-dacheng-original"
+      ],
+      "evidenceSource": "goodbook-20100316",
+      "status": "可读所列原典版本",
+      "note": "录文已收，170处原图未收；不能把图像位置标记当成穴位定位图。"
+    },
+    {
+      "title": "伤寒杂病论",
+      "authors": "张仲景",
+      "bookIds": [
+        "shanghan-original",
+        "jingui-original"
+      ],
+      "evidenceSource": "goodbook-20100316",
+      "status": "关联伤寒与金匮，未另造统一复原本",
+      "note": "书单列有此题名；本应用按明确传本分别呈现，不把合并或现代重编冒称汉代原貌。"
+    },
+    {
+      "title": "备急千金要方",
+      "authors": "孙思邈",
+      "bookIds": [
+        "sun-qianjin-yaofang-original"
+      ],
+      "evidenceSource": "goodbook-20100316",
+      "status": "可读所列原典版本",
+      "note": ""
+    },
+    {
+      "title": "千金翼方",
+      "authors": "孙思邈",
+      "bookIds": [
+        "sun-qianjin-yifang-original"
+      ],
+      "evidenceSource": "goodbook-20100316",
+      "status": "可读所列原典版本",
+      "note": "采用CM039三十卷无插图录文版本，含卷前题署。"
+    },
+    {
+      "title": "中西汇通医书五种",
+      "authors": "唐宗海",
+      "bookIds": [
+        "tang-xuezheng-original",
+        "tang-bencao-wenda-original",
+        "tang-yijing-jingyi-original",
+        "tang-shanghan-buzheng-original"
+      ],
+      "evidenceSource": "goodbook-20100316",
+      "status": "四部正文可读；第五部及合集版本待核",
+      "note": "《金匮要略浅注补正》当前找到的电子底本含秦伯未重校，版本及现代校注权利尚未核清，不先冒充已全套收齐。两部带图书只提供标明的录文版。"
+    },
+    {
+      "title": "伤寒发微",
+      "authors": "曹颖甫",
+      "bookIds": [
+        "cao-shanghan-original"
+      ],
+      "evidenceSource": "goodbook-20100316",
+      "status": "可读所列原典版本",
+      "note": "原作正文与原作者卷前文字；现代合刊编者序跋不在收录范围。"
+    },
+    {
+      "title": "金匮发微",
+      "authors": "曹颖甫",
+      "bookIds": [
+        "cao-jingui-original"
+      ],
+      "evidenceSource": "goodbook-20100316",
+      "status": "可读所列原典版本",
+      "note": "完整原作正文，现代合刊序跋未复制。"
+    },
+    {
+      "title": "伤寒论新义",
+      "authors": "余无言",
+      "bookIds": [],
+      "evidenceSource": "goodbook-20100316",
+      "status": "书目与推荐出处已登记；全文未收录",
+      "note": "现代著作或汇编的权利与具体版次未核清，暂不上传扫描、讲义或转录。"
+    },
+    {
+      "title": "金匮要略新义",
+      "authors": "余无言",
+      "bookIds": [],
+      "evidenceSource": "goodbook-20100316",
+      "status": "书目与推荐出处已登记；全文未收录",
+      "note": "现代著作或汇编的权利与具体版次未核清，暂不上传扫描、讲义或转录。"
+    },
+    {
+      "title": "单穴治病选萃",
+      "authors": "原书单仅列人民卫生出版社，作者及版次待核",
+      "bookIds": [],
+      "evidenceSource": "goodbook-20100316",
+      "status": "书目与推荐出处已登记；全文未收录",
+      "note": "现代著作或汇编的权利与具体版次未核清，暂不上传扫描、讲义或转录。"
+    },
+    {
+      "title": "疾病预测学",
+      "authors": "杨力",
+      "bookIds": [],
+      "evidenceSource": "goodbook-20100316",
+      "status": "书目与推荐出处已登记；全文未收录",
+      "note": "现代著作或汇编的权利与具体版次未核清，暂不上传扫描、讲义或转录。"
+    },
+    {
+      "title": "经方实验录",
+      "authors": "姜佐景",
+      "bookIds": [],
+      "evidenceSource": "goodbook-20100316",
+      "status": "书目与推荐出处已登记；全文未收录",
+      "note": "现代著作或汇编的权利与具体版次未核清，暂不上传扫描、讲义或转录。本人书单署姜佐景；不沿用部分电子资料对曹颖甫的单一署名。"
+    },
+    {
+      "title": "思考中医",
+      "authors": "刘力红",
+      "bookIds": [],
+      "evidenceSource": "goodbook-20100316",
+      "status": "书目与推荐出处已登记；全文未收录",
+      "note": "现代著作或汇编的权利与具体版次未核清，暂不上传扫描、讲义或转录。"
+    },
+    {
+      "title": "世补斋医书全集",
+      "authors": "所引合集中涉及陆九芝、傅青主、戴天章等",
+      "bookIds": [
+        "lu-yunqi-bingshi-original",
+        "lu-yunqi-biao-original",
+        "fu-qingzhu-nvke-original",
+        "dai-guangwenyi-original"
+      ],
+      "evidenceSource": "jingui-preface-2007",
+      "status": "相关单部原作已录；未宣称同一版全集齐备",
+      "note": "采用单部各自注明的古籍底本；不能据合集中列名，把他人著作都署给陆懋修。"
+    },
+    {
+      "title": "徐灵胎医书全集",
+      "authors": "徐大椿",
+      "bookIds": [
+        "xu-nanjing-jingshi-original",
+        "xu-bencao-baizhong-original",
+        "xu-yixue-yuanliu-original",
+        "xu-shanghan-leifang-original",
+        "xu-lantai-guifan-original",
+        "xu-yiguan-bian-original",
+        "xu-shenji-chuyan-original",
+        "xu-huixi-yian-original"
+      ],
+      "evidenceSource": "jingui-preface-2007",
+      "status": "八种原作分别可读；不是现代校注全集复刻",
+      "note": "《难经经释》《神农本草经百种录》《医学源流论》《伤寒论类方》《兰台轨范》《医贯砭》《慎疾刍言》《洄溪医案》，每部独立标版本；部分原图未收。"
+    },
+    {
+      "title": "针灸甲乙经",
+      "authors": "皇甫谧",
+      "bookIds": [
+        "jiayi-original"
+      ],
+      "evidenceSource": "acupuncture-2005",
+      "status": "可读所列原典版本",
+      "note": ""
+    },
+    {
+      "title": "针灸聚英",
+      "authors": "高武",
+      "bookIds": [
+        "gao-zhenjiu-juying-original"
+      ],
+      "evidenceSource": "acupuncture-2005",
+      "status": "可读所列原典版本",
+      "note": "录文与35处原图位置可查，图像未收。"
+    }
+  ],
+  "editorRoles": [
+    {
+      "name": "秦伯未",
+      "role": "原文所提版本编校角色，不据此推断推荐其全部著作"
+    },
+    {
+      "name": "林直清",
+      "role": "原文所提版本编校角色，不据此推断推荐其全部著作"
+    },
+    {
+      "name": "江忍庵",
+      "role": "原文所提版本编校角色，不据此推断推荐其全部著作"
+    }
+  ],
+  "clinicalBoundary": "本人推荐属于历史学术资料，不等于现代医学共识、疗效保证、个体诊断或处方；未转录来源中的绝对疗效或否定现代诊疗主张。",
+  "authorizationBoundary": "本平台独立整理书目与有依据原典，不代表倪海厦或相关作者授权、代言；受保护现代著作未擅自复制。"
+}

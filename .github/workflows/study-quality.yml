@@ -124,6 +124,10 @@ on:
       - 'src/components/TcmEditionProvider.tsx'
       - 'backend_deploy/build_tcm_original_editions_pack.js'
       - 'scripts/tcm-edition-pack.test.cjs'
+      - 'scripts/import_jingfang_originals.py'
+      - 'scripts/jingfang-import.test.py'
+      - 'backend_deploy/data/tcm-jingfang-*.json'
+      - 'backend_deploy/data/jingfang-bibliography.json'
       - 'src/components/BottomNav.tsx'
       - 'src/components/LocalChartNotebook.tsx'
       - 'src/lib/chartNotebook.ts'
@@ -354,6 +358,8 @@ jobs:
       - name: Verify original edition chapter sequence and provenance
         run: |
           python3 scripts/import_tcm_clinical_editions.py
+          python3 scripts/import_jingfang_originals.py
+          python3 scripts/jingfang-import.test.py
           node --input-type=module <<'JS'
           import fs from 'node:fs';
           import assert from 'node:assert/strict';
