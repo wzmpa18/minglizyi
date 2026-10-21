@@ -14,7 +14,7 @@ sha=lambda b:hashlib.sha256(b).hexdigest()
 old=f.read_bytes();before=module.read_bytes();assert not f.is_symlink() and not module.is_symlink()
 assert sha(old)==p['expectedConfig'] and sha(before)==p['expectedModule']
 assert json.loads(old)['latestVersionCode']==p['expectedCode']
-updated=base64.b64decode(p['module']);config=p['config'];data=(json.dumps(config,ensure_ascii=False,indent=2)+'\n').encode()
+updated=base64.b64decode(p['module']);config=p['config'];config['publishedAt']=datetime.datetime.now(datetime.timezone.utc).isoformat();data=(json.dumps(config,ensure_ascii=False,indent=2)+'\n').encode()
 proof={'packageSource':p['packageSource'],'moduleSource':p['moduleSource'],'beforeConfigSha256':sha(old),'beforeModuleSha256':sha(before),'publicApk':p['publicApk'],'forceUpdate':False,'databaseChanged':False,'credentialsChanged':False,'storeSubmission':False}
 pending=module.with_name('appVersionRoutes.release-pending.js');assert not pending.exists()
 try:
