@@ -26,6 +26,12 @@ export interface AIResponse {
   errorCode?: string;
 }
 
+export function requireAIContent(result: AIResponse): string {
+  if (!result.success) { const error = new Error(getAIErrorMessage(result.errorCode || "", result.error)) as Error & {code?: string}; error.code = result.errorCode; throw error; }
+  if (!result.content?.trim()) throw new Error("AI没有返回有效内容，请重试");
+  return result.content;
+}
+
 // ==================== localStorage 缓存 ====================
 const LOCAL_CACHE_PREFIX = "yandao_ai_cache_";
 
@@ -115,10 +121,16 @@ function genRequestId(): string {
 
 export async function callAI(request: AIRequest): Promise<AIResponse> {
   const { systemPrompt, userPrompt, cacheKey, forceRefresh } = request;
-  const key = cacheKey || `${systemPrompt?.slice(0, 50) || ""}_${userPrompt.slice(0, 50)}`;
+  const ownerToken = typeof window !== "undefined" ? getUserToken() : null;
+  if (!ownerToken) return {success:false, content:getAIErrorMessage("AI_AUTH_REQUIRED"),cached:false,errorCode:"AI_AUTH_REQUIRED"};
+  let key = "";
+  try {
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify([ownerToken,cacheKey || "",systemPrompt || "",userPrompt])));
+    key = "request-v2-" + Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2,"0")).join("");
+  } catch { /* No unsafe/truncated cache fallback; send the full request without cache. */ }
 
   // 1. 检查本地缓存
-  if (!forceRefresh) {
+  if (!forceRefresh && key) {
     const localCached = getLocalCache(key);
     if (localCached) {
       return { success: true, content: localCached, cached: true };
@@ -139,7 +151,7 @@ export async function callAI(request: AIRequest): Promise<AIResponse> {
   // 2. 调用本地服务端代理（服务端持有密钥，安全转发到第三方 AI）
   //    v25.0.60 P0-3：服务端已强制鉴权+配额，登录用户携带 Bearer Token 按会员档位计额
   try {
-    const token = typeof window !== "undefined" ? getUserToken() : null;
+    const token = ownerToken;
     const res = await fetch("/api/ai/chat", {
       method: "POST",
       headers: {
@@ -158,8 +170,9 @@ export async function callAI(request: AIRequest): Promise<AIResponse> {
 
     const data = await res.json();
     if (data.success) {
-      setLocalCache(key, data.content);
-      return { success: true, content: data.content, cached: data.cached, usage: data.usage };
+      if (getUserToken() !== ownerToken) return {success:false,content:"账号已切换，请在当前账号重新操作",cached:false,errorCode:"AI_AUTH_REQUIRED"};
+      if (key) setLocalCache(key, data.content);
+      return { success: true, content: data.content, cached: data.cached === true, usage: data.usage };
     }
 
     const e2 = new Error(data.error || "AI返回失败") as Error & { code?: string };
@@ -423,6 +436,7 @@ export async function getPermissionStatusFromServer(): Promise<PermissionStatus 
           paidAccess,
         };
       }
+      return { ...local, isLoggedIn: true, canUseAI: false, needLogin: false, needPayment: true, paidAccess: false, message: "当前账号AI额度已用完，可购买点数或查看会员权益" };
     }
   } catch { /* The request itself still enforces server authentication and quota. */ }
   return { ...local, paidAccess: false };
@@ -583,8 +597,9 @@ ${AI_COMPLIANCE_RULES}`;
     cacheKey: `event_${toolName}_${userQuestion.slice(0, 60)}`,
   });
 
-  incrementAIUsage();
-  return result.content;
+  const content = requireAIContent(result);
+  if (!result.cached) incrementAIUsage();
+  return content;
 }
 
 // ==================== 号码/车牌AI解读 ====================
@@ -610,8 +625,9 @@ ${AI_COMPLIANCE_RULES}`;
     cacheKey: `phone_ai_${phoneNumber}`,
   });
 
-  incrementAIUsage();
-  return result.content;
+  const content = requireAIContent(result);
+  if (!result.cached) incrementAIUsage();
+  return content;
 }
 
 export async function getCarplateAIInterpretation(
@@ -634,8 +650,9 @@ ${AI_COMPLIANCE_RULES}`;
     cacheKey: `carplate_ai_${plateNumber}`,
   });
 
-  incrementAIUsage();
-  return result.content;
+  const content = requireAIContent(result);
+  if (!result.cached) incrementAIUsage();
+  return content;
 }
 
 // ==================== 便捷方法 ====================
@@ -653,7 +670,7 @@ ${AI_COMPLIANCE_RULES}`;
     userPrompt,
     cacheKey: `yixue_${toolName}_${context.slice(0, 60)}`,
   });
-  return result.content;
+  return requireAIContent(result);
 }
 
 export async function getAcupointAIDetail(
@@ -693,7 +710,7 @@ export async function getExamAIExplanation(
     userPrompt,
     cacheKey: `exam_${question.slice(0, 60)}`,
   });
-  return result.content;
+  return requireAIContent(result);
 }
 
 export async function getHerbFormulaAIDetail(
@@ -708,7 +725,7 @@ export async function getHerbFormulaAIDetail(
     userPrompt,
     cacheKey: `zhongyi_${type}_${name}`,
   });
-  return result.content;
+  return requireAIContent(result);
 }
 
 export function clearAllLocalCache(): void {

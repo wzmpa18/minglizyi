@@ -5,10 +5,11 @@
  */
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, type ReactNode } from "react";
 import {
   callAI,
   getUserPermissionLevel,
+  getPermissionStatusFromServer,
   truncateContentForFreeUser,
   isSingleUnlocked,
   generateContentKey,
@@ -23,7 +24,8 @@ import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import { isPaymentsBlocked, PAYMENT_DISABLED_TIP } from "@/lib/platformGate";
-import { IS_GOOGLE_PLAY_BUILD } from "@/lib/releaseFeatures";
+import { IS_GOOGLE_PLAY_BUILD, IS_IOS_FULL_BUILD } from "@/lib/releaseFeatures";
+import { AIAccessLinks } from "@/components/AIAccessLinks";
 import { SafeRichText } from "@/components/SafeRichText";
 
 export interface InterpretationItem {
@@ -43,6 +45,7 @@ export interface InterpretationDrawerProps {
     context: string;
     existingClassic?: string;
   };
+  children?: ReactNode;
   typeColors?: Record<string, { bg: string; fg: string; label: string }>;
 }
 
@@ -56,7 +59,7 @@ const DEFAULT_TYPE_COLORS: Record<string, { bg: string; fg: string; label: strin
 };
 
 export default function InterpretationDrawer({
-  show, title, items, onClose, aiEnhance, typeColors,
+  show, title, items, onClose, aiEnhance, typeColors, children,
 }: InterpretationDrawerProps) {
   const [aiContent, setAiContent] = useState<string | null>(null);
   const [aiFullContent, setAiFullContent] = useState<string | null>(null); // v20.1: 完整AI内容
@@ -98,6 +101,9 @@ export default function InterpretationDrawer({
 
         if (cancelled) return;
 
+        if (!result.success) { setAiError(true); return; }
+        const permission = await getPermissionStatusFromServer();
+        if (cancelled) return;
         const fullText = result.content;
         setAiFullContent(fullText);
 
@@ -105,7 +111,7 @@ export default function InterpretationDrawer({
         const level = getUserPermissionLevel();
         const cKey = generateContentKey(aiEnhance!.toolName, aiEnhance!.context.slice(0, 80));
 
-        if (level === "member" || isSingleUnlocked(cKey)) {
+        if (level === "member" || permission.paidAccess || isSingleUnlocked(cKey)) {
           setAiContent(fullText);
           setAiLocked(false);
         } else {
@@ -197,6 +203,7 @@ export default function InterpretationDrawer({
               </div>
             );
           })}
+          {children}
           {aiEnhance && (
             <div style={{ marginTop: "12px" }}>
               {aiLoading && <div style={{ padding: "16px", borderRadius: "10px", backgroundColor: "#f3e8ff", textAlign: "center", color: "#7B2FBE", fontSize: "13px" }}>AI 正在生成补充解读...</div>}
@@ -217,7 +224,7 @@ export default function InterpretationDrawer({
                         <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                       </svg>
                       <div style={{ fontSize: "11px", color: "#7B2FBE", fontWeight: "bold", marginTop: "4px" }}>后续深度内容已锁定</div>
-                      {paymentsBlocked ? (
+                      {IS_IOS_FULL_BUILD ? <AIAccessLinks /> : paymentsBlocked ? (
                         <div style={{ fontSize: "10px", color: "#999", marginTop: "6px", lineHeight: 1.6 }}>{PAYMENT_DISABLED_TIP}</div>
                       ) : (
                       <div style={{ display: "flex", gap: "6px", marginTop: "8px" }}>
@@ -238,7 +245,7 @@ export default function InterpretationDrawer({
                           单次解锁 ¥{singlePrice}
                         </button>
                         <button
-                          onClick={() => { if (typeof window !== "undefined") window.location.href = "/profile/wallet"; }}
+                          onClick={() => { if (typeof window !== "undefined") window.location.href = "/membership"; }}
                           style={{
                             flex: 1,
                             padding: "7px 4px",

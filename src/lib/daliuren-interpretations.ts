@@ -633,3 +633,11 @@ export function getKeTiInterpretation(keTiName: string): KeTiInterpretation | nu
   }
   return null;
 }
+
+/** Explain the selected displayed cell; never recalculate or substitute another palace. */
+export function getPalaceInterpretation(dipan: string, tianpan: string, tianjiang: string, dungan: string, liuqin: string, kongwang: readonly string[]) {
+  const detail = getSanChuanInterpretation("", tianpan, liuqin, tianjiang, dungan);
+  const items = [{ type: "position", title: `${dipan}宫 · 天地盘对应`, content: `所点地盘为${dipan}，其上所临天盘为${tianpan}，天将为${tianjiang || "未列"}，遁干为${dungan || "未列"}。以下只解释本次已排出的宫位资料，不重新起课。`, source: "当前排盘天地盘对应数据" }, ...detail.items];
+  items.push({type:"position",title:"空亡标记核对",content:`本课空亡为${kongwang.join("、")}。天盘${tianpan}${kongwang.includes(tianpan) ? "在" : "不在"}本课空亡集合；地盘${dipan}${kongwang.includes(dipan) ? "在" : "不在"}集合。地盘位置与天盘标记分别核对，不混为一层。`,source:"当前排盘旬空集合；传统术语学习"});
+  return { title: `${dipan}宫 · 天盘${tianpan}`, items };
+}

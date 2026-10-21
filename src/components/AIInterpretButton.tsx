@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import {
   callAI,
   checkAIQuota,
@@ -23,8 +23,9 @@ import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { SafeRichText } from "@/components/SafeRichText";
 import { IS_GOOGLE_PLAY_BUILD } from "@/lib/releaseFeatures";
 import { PAYMENT_DISABLED_TIP } from "@/lib/platformGate";
+import { AIAccessLinks } from "@/components/AIAccessLinks";
 import { ResourceDiscussion } from "@/components/ResourceDiscussion";
-import { PUBLIC_AI_ENABLED, PUBLIC_SOCIAL_ENABLED } from "@/lib/releaseFeatures";
+import { PUBLIC_AI_ENABLED, PUBLIC_SOCIAL_ENABLED, IS_IOS_FULL_BUILD } from "@/lib/releaseFeatures";
 
 /**
  * v18.9: 通用AI解读按钮组件
@@ -84,6 +85,8 @@ function AIInterpretButtonEnabled({
   discussionTitle,
   discussionEnabled = false,
 }: AIInterpretButtonProps) {
+  const requestPending = useRef(false);
+  const [needsAccess, setNeedsAccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [content, setContent] = useState("");
   const [fullContent, setFullContent] = useState(""); // v20.1: 完整内容
@@ -101,7 +104,9 @@ function AIInterpretButtonEnabled({
   const { requireLogin, showLoginPrompt, setShowLoginPrompt } = useRequireLogin();
 
   const handleInterpret = useCallback(async () => {
-    if (loading) return;
+    if (loading || requestPending.current) return;
+    requestPending.current = true;
+    setNeedsAccess(false);
 
     // v20.1: 三级权限检查
     const perm = await getPermissionStatusFromServer();
@@ -109,11 +114,14 @@ function AIInterpretButtonEnabled({
     // 游客：弹出登录引导
     if (perm.needLogin) {
       setShowLoginPrompt(true);
+      requestPending.current = false;
       return;
     }
 
     // 免费用户额度用完
     if (!perm.canUseAI) {
+      setNeedsAccess(true);
+      requestPending.current = false;
       setShowResult(true);
       setContent(perm.message || "今日AI解读次数已用完，开通会员或购买套餐继续使用" + DISCLAIMER);
       return;
@@ -123,6 +131,7 @@ function AIInterpretButtonEnabled({
     if (typeof navigator !== "undefined" && !navigator.onLine) {
       const offlineMsg = "当前无网络连接：AI智能解读需联网使用。排盘计算、古籍经典查阅、历史记录均可离线使用，请连接网络后重试。";
       setShowResult(true);
+      requestPending.current = false;
       setError(offlineMsg);
       setContent(offlineMsg + DISCLAIMER);
       return;
@@ -183,6 +192,7 @@ function AIInterpretButtonEnabled({
       } else {
         // COMMERCIAL-CLEANUP-03: 统一错误码映射
         const errMsg = getAIErrorMessage(result.errorCode || "", result.error || "AI解读服务暂时不可用");
+        setNeedsAccess(["AI_NOT_ENTITLED", "AI_QUOTA_EXCEEDED"].includes(result.errorCode || ""));
         setError(errMsg);
         setContent(errMsg + DISCLAIMER);
       }
@@ -192,6 +202,7 @@ function AIInterpretButtonEnabled({
       setContent(errMsg + DISCLAIMER);
     } finally {
       setLoading(false);
+      requestPending.current = false;
     }
   }, [loading, toolName, scope, contextData, systemPrompt, cacheKey, setShowLoginPrompt]);
 
@@ -345,6 +356,7 @@ function AIInterpretButtonEnabled({
         </div>
       )}
 
+      {needsAccess && !loading && <AIAccessLinks />}
       {/* v20.1: 免费用户内容锁定遮罩 */}
       {isLocked && !loading && showResult && (
         <div style={{ marginTop: "-16px", position: "relative", zIndex: 10 }}>
@@ -367,7 +379,7 @@ function AIInterpretButtonEnabled({
             <div style={{ fontSize: "12px", color: "#7B2FBE", fontWeight: "bold", marginTop: "4px" }}>
               后续深度内容已锁定
             </div>
-            {IS_GOOGLE_PLAY_BUILD ? (
+            {IS_IOS_FULL_BUILD ? <AIAccessLinks /> : IS_GOOGLE_PLAY_BUILD ? (
               <div style={{ fontSize: "11px", color: "#777", lineHeight: 1.7, marginTop: "10px" }}>{PAYMENT_DISABLED_TIP}</div>
             ) : <div style={{ display: "flex", gap: "6px", marginTop: "10px" }}>
               <button
@@ -389,7 +401,7 @@ function AIInterpretButtonEnabled({
               <button
                 onClick={() => {
                   if (typeof window !== "undefined") {
-                    window.location.href = "/profile/wallet";
+                    window.location.href = "/membership";
                   }
                 }}
                 style={{
@@ -412,7 +424,7 @@ function AIInterpretButtonEnabled({
       )}
 
       {/* v20.1: 单次解锁支付弹窗 */}
-      {showSingleUnlock && !IS_GOOGLE_PLAY_BUILD && (
+      {showSingleUnlock && !IS_GOOGLE_PLAY_BUILD && !IS_IOS_FULL_BUILD && (
         <div
           style={{
             position: "fixed",

@@ -9,7 +9,8 @@ import {
   getEventDivination,
   callAI,
   // v20.1: 三级权限体系
-  getPermissionStatus,
+  getPermissionStatusFromServer,
+  getAIErrorMessage,
   getUserPermissionLevel,
   truncateContentForFreeUser,
   activateSingleUnlock,
@@ -22,9 +23,10 @@ import { useNativePayQR } from "@/components/PayQRCodeModal";
 import { useAiPricing } from "@/lib/pricingStore";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
+import { AIAccessLinks } from "@/components/AIAccessLinks";
 import MasterExchangePanel from "./MasterExchangePanel";
-import { IS_GOOGLE_PLAY_BUILD } from "@/lib/releaseFeatures";
-import { PAYMENT_DISABLED_TIP } from "@/lib/platformGate";
+import { IS_GOOGLE_PLAY_BUILD, IS_IOS_FULL_BUILD } from "@/lib/releaseFeatures";
+import { PAYMENT_DISABLED_TIP, isPaymentsBlocked } from "@/lib/platformGate";
 // v25.0.47_12 深度报告提质：五段式/700-900字/典籍引用/合规语气（共享标准）
 import { buildDeepReportSystemPrompt, buildBaziDeepReportSystemPrompt } from "@/lib/deepReportPrompt";
 import { PUBLIC_AI_ENABLED } from "@/lib/releaseFeatures";
@@ -102,7 +104,7 @@ function EventDivinationPanelEnabled({
 
     if (isPaidTool) {
       // 付费工具：检查会员状态（服务端AI调用时二次鉴权）
-      if (perm.level === "member") {
+      if (perm.canUseAI && (perm.level === "member" || perm.paidAccess)) {
         return true;
       }
       // 免费用户需要付费
@@ -120,18 +122,7 @@ function EventDivinationPanelEnabled({
 
   // v20.1: 处理AI内容 - 根据权限等级决定是否截取
   const paidRequestAccess = useRef(false);
-  const verifyPaidRequestAccess = useCallback(async () => {
-    paidRequestAccess.current = false;
-    try {
-      const token = getUserToken();
-      if (!token) return false;
-      const res = await fetch('/api/ai/quota', { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
-      if (!res.ok) return false;
-      const data = await res.json();
-      paidRequestAccess.current = data?.success === true && data?.data?.paidAccess === true;
-      return paidRequestAccess.current;
-    } catch { return false; }
-  }, []);
+  const requestPending = useRef(false);
   const processContentByPermission = useCallback(
     (rawContent: string) => {
       const level = getUserPermissionLevel();
@@ -169,7 +160,7 @@ function EventDivinationPanelEnabled({
   const [unlockPaying, setUnlockPaying] = useState(false);
   const [unlockMsg, setUnlockMsg] = useState("");
   const handleSingleUnlock = useCallback(async () => {
-    if (IS_GOOGLE_PLAY_BUILD) return;
+    if (IS_GOOGLE_PLAY_BUILD || IS_IOS_FULL_BUILD || isPaymentsBlocked()) return;
     if (unlockPaying) return;
     const cKey = generateContentKey(toolName, chartContext + (activeMode === "event" ? userQuestion : "deep"));
     setUnlockPaying(true);
@@ -205,9 +196,10 @@ function EventDivinationPanelEnabled({
       setError("请输入您要问的事情");
       return;
     }
-    if (loading) return;
+    if (loading || requestPending.current) return;
+    requestPending.current = true;
 
-    if (!(await verifyPaidRequestAccess()) && !checkAccess()) return;
+    if (!(await checkAccess())) { requestPending.current = false; return; }
 
     setLoading(true);
     setError("");
@@ -222,17 +214,20 @@ function EventDivinationPanelEnabled({
       // v20.1: 根据权限等级处理内容展示
       processContentByPermission(text);
     } catch (err: any) {
-      setError(err.message || "AI解读失败，请稍后重试");
+      if (["AI_NOT_ENTITLED", "AI_QUOTA_EXCEEDED"].includes(err.code)) setShowPayment(true);
+      setError(getAIErrorMessage(err.code || "", err.message));
       setContent("AI解读服务暂时不可用，请稍后重试。" + DISCLAIMER);
     } finally {
       setLoading(false);
+      requestPending.current = false;
     }
-  }, [userQuestion, loading, toolName, chartContext, checkAccess, processContentByPermission, verifyPaidRequestAccess]);
+  }, [userQuestion, loading, toolName, chartContext, checkAccess, processContentByPermission]);
 
   // 执行深度解读
   const handleDeepInterpretation = useCallback(async () => {
-    if (loading) return;
-    if (!(await verifyPaidRequestAccess()) && !checkAccess()) return;
+    if (loading || requestPending.current) return;
+    requestPending.current = true;
+    if (!(await checkAccess())) { requestPending.current = false; return; }
 
     setLoading(true);
     setError("");
@@ -259,7 +254,12 @@ function EventDivinationPanelEnabled({
           : `deep_${toolName}_${chartContext.slice(0, 80)}`,
       });
 
-      incrementAIUsage();
+      if (!result.success) {
+        setError(getAIErrorMessage(result.errorCode || "", result.error));
+        if (["AI_NOT_ENTITLED", "AI_QUOTA_EXCEEDED"].includes(result.errorCode || "")) setShowPayment(true);
+        return;
+      }
+      if (!result.cached) incrementAIUsage();
 
       let text = result.content || "";
       if (!text.includes("仅供传统文化学习参考")) {
@@ -272,17 +272,18 @@ function EventDivinationPanelEnabled({
       setContent("AI解读服务暂时不可用，请稍后重试。" + DISCLAIMER);
     } finally {
       setLoading(false);
+      requestPending.current = false;
     }
-  }, [loading, toolName, chartContext, checkAccess, processContentByPermission, verifyPaidRequestAccess]);
+  }, [loading, toolName, chartContext, checkAccess, processContentByPermission]);
 
   // COMMERCIAL-CLEANUP-03: 付费套餐购买——走真实微信支付，AI权限由服务端SSOT决定，不再本地激活
   const [purchasePaying, setPurchasePaying] = useState(false);
   const [purchaseMsg, setPurchaseMsg] = useState("");
   const handlePurchase = useCallback(async (planKey: string) => {
-    if (IS_GOOGLE_PLAY_BUILD) return;
+    if (IS_GOOGLE_PLAY_BUILD || IS_IOS_FULL_BUILD || isPaymentsBlocked()) return;
     if (purchasePaying) return;
     const plan = paidPlans.find((p) => p.key === planKey);
-    if (!plan) return;
+    if (!plan) { setPurchaseMsg("套餐已变更，请刷新价格后重试"); return; }
     setPurchasePaying(true);
     setPurchaseMsg("");
     try {
@@ -303,7 +304,7 @@ function EventDivinationPanelEnabled({
     } finally {
       setPurchasePaying(false);
     }
-  }, [purchasePaying, openQR]);
+  }, [purchasePaying, openQR, paidPlans]);
 
   return (
     <div className="mt-3 rounded-lg overflow-hidden" style={{ border: "1px solid #e0d0f0" }}>
@@ -398,7 +399,7 @@ function EventDivinationPanelEnabled({
             <textarea
               value={userQuestion}
               onChange={(e) => setUserQuestion(e.target.value)}
-              placeholder="请输入您要问的事情，如：今年适合投资吗？近期健康需要注意什么？"
+              placeholder="请输入想了解的盘面术语、结构或典籍问题"
               rows={3}
               style={{
                 width: "100%",
@@ -524,7 +525,7 @@ function EventDivinationPanelEnabled({
                 </div>
               </div>
               {/* 两个解锁按钮 */}
-              {IS_GOOGLE_PLAY_BUILD ? (
+              {IS_IOS_FULL_BUILD ? <AIAccessLinks /> : IS_GOOGLE_PLAY_BUILD ? (
                 <div style={{ fontSize: "11px", color: "#777", lineHeight: 1.7 }}>{PAYMENT_DISABLED_TIP}</div>
               ) : <div style={{ display: "flex", gap: "8px" }}>
                 <button
@@ -609,7 +610,7 @@ function EventDivinationPanelEnabled({
                   {purchaseMsg}
                 </div>
               )}
-              {paidPlans.map((plan) => (
+              {IS_IOS_FULL_BUILD ? <AIAccessLinks /> : paidPlans.length ? paidPlans.map((plan) => (
                 <div
                   key={plan.key}
                   style={{
@@ -655,7 +656,7 @@ function EventDivinationPanelEnabled({
                     </button>
                   </div>
                 </div>
-              ))}
+              )) : <><p role="status">套餐资料暂未加载，可进入会员或AI点数页核对。</p><AIAccessLinks /></>}
 
               {/* 开通会员提示 */}
               <div style={{ marginTop: "8px", padding: "8px", background: "#f0f7ff", borderRadius: "6px", fontSize: "11px", color: "#1976d2", lineHeight: 1.5 }}>
@@ -684,7 +685,7 @@ function EventDivinationPanelEnabled({
       )}
 
       {/* v20.1: 单次解锁支付弹窗 */}
-      {showSingleUnlock && !IS_GOOGLE_PLAY_BUILD && (
+      {showSingleUnlock && !IS_GOOGLE_PLAY_BUILD && !IS_IOS_FULL_BUILD && (
         <div
           style={{
             position: "fixed",

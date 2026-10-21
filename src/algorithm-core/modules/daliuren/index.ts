@@ -208,7 +208,7 @@ export function tianYiGuiRen(dayGan: TianGan, isDaytime: boolean): string {
   return isDaytime ? map[dayGan][0] : map[dayGan][1];
 }
 
-function getLiuQin(dayGan: TianGan, zhi: string): string {
+export function getLiuQin(dayGan: TianGan, zhi: string): string {
   const ganWx = GAN_WUXING[dayGan];
   const zhiWx = ZHI_WUXING[zhi as DiZhi];
   const relation = getWuxingRelation(ganWx, zhiWx);

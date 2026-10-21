@@ -26,9 +26,11 @@ import ClientSelector from "@/components/ClientSelector";
 import { DatePicker } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
-import { getSanChuanInterpretation, getSiKeInterpretation, getKeTiInterpretation } from "@/lib/daliuren-interpretations";
+import { getSanChuanInterpretation, getSiKeInterpretation, getKeTiInterpretation, getPalaceInterpretation } from "@/lib/daliuren-interpretations";
 import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
 import { useToolBack } from "@/lib/useToolBack";
+import InterpretationDrawer from "@/components/shared/InterpretationDrawer";
+import AIInterpretButton from "@/components/AIInterpretButton";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { savePaipanRecord, type PaipanRecord } from "@/lib/nativePaipanStore";
 import { ShareButton } from "@/components/ShareButton";
@@ -36,7 +38,7 @@ import { PostToSquareButton } from "@/components/PostToSquareButton";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 
-import { calculateDaLiuRen, tianYiGuiRen, type DaLiuRenResult, type SanChuanItem, type SiKeItem, type PanMap, type DaLiuRenInputParams } from "@/algorithm-core/modules/daliuren";
+import { calculateDaLiuRen, tianYiGuiRen, getLiuQin, type DaLiuRenResult, type SanChuanItem, type SiKeItem, type PanMap, type DaLiuRenInputParams } from "@/algorithm-core/modules/daliuren";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
 import { LocalStudyNotes } from "@/components/LocalStudyNotes";
 import { LocalChartArchive } from "@/components/LocalChartArchive";
@@ -957,7 +959,14 @@ export default function DaLiuRenPage() {
                   return (
                     <div
                       key={dz}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`查看${dz}宫解析`}
+                      data-testid={`liuren-palace-${dz}`}
+                      onClick={() => setInterpretPanel(getPalaceInterpretation(dz, tpZhi, tianJiang, dunGan, getLiuQin(data.dayGan as TianGan, tpZhi), data.kongwang))}
+                      onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setInterpretPanel(getPalaceInterpretation(dz, tpZhi, tianJiang, dunGan, getLiuQin(data.dayGan as TianGan, tpZhi), data.kongwang)); } }}
                       style={{
+                        cursor: "pointer",
                         gridRow: row,
                         gridColumn: col,
                         display: "flex",
@@ -1056,30 +1065,11 @@ export default function DaLiuRenPage() {
               {data.yuejiangName}加{data.zhanbuTime}时 · {data.isDaytime ? "昼占" : "夜占"} · 空亡:{data.kongwang[0]}{data.kongwang[1]}
             </div>
 
-            {/* ---- 解读面板（引经据典） ---- */}
-            {interpretPanel && (
-              <div className="bg-white rounded-lg overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.08)] mx-1 mt-2" style={{ border: "1px solid #d93025" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "linear-gradient(135deg, #d93025, #e85045)", color: "white" }}>
-                  <div>
-                    <span style={{ fontSize: "16px", fontWeight: "bold" }}>{interpretPanel.title}</span>
-                  </div>
-                  <InterfaceButton onClick={() => setInterpretPanel(null)} style={{ background: "rgba(255,255,255,0.2)", border: "none", color: "white", width: "28px", height: "28px", borderRadius: "50%", cursor: "pointer", fontSize: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>x</InterfaceButton>
-                </div>
-                <div style={{ padding: "10px 12px" }}>
-                  {interpretPanel.items.map((item, idx) => (
-                    <div key={idx} style={{ marginBottom: idx < interpretPanel.items.length - 1 ? "10px" : 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", marginBottom: "4px" }}>
-                        <span style={{ fontSize: "10px", fontWeight: "bold", padding: "1px 6px", borderRadius: "3px", background: item.type === "zhi" ? "#e0e7ff" : item.type === "liuqin" ? "#f3e8ff" : item.type === "shen" ? "#fef3c7" : item.type === "position" ? "#d1fae5" : item.type === "dungan" ? "#fce7f3" : item.type === "shangshen" ? "#e0f2fe" : item.type === "xiashen" ? "#f0fdf4" : item.type === "keti" ? "#fef2f2" : "#f3f4f6", color: item.type === "zhi" ? "#3730a3" : item.type === "liuqin" ? "#6b21a8" : item.type === "shen" ? "#92400e" : item.type === "position" ? "#065f46" : item.type === "dungan" ? "#9d174d" : item.type === "shangshen" ? "#0369a1" : item.type === "xiashen" ? "#166534" : item.type === "keti" ? "#991b1b" : "#374151", marginRight: "8px" }}>{item.type === "zhi" ? "地支" : item.type === "liuqin" ? "六亲" : item.type === "shen" ? "天将" : item.type === "position" ? "位置" : item.type === "dungan" ? "遁干" : item.type === "shangshen" ? "上神" : item.type === "xiashen" ? "下神" : item.type === "keti" ? "课体" : "其他"}</span>
-                        <span style={{ fontSize: "13px", fontWeight: "bold", color: "#333" }}>{item.title}</span>
-                      </div>
-                      <div style={{ fontSize: "12px", color: "#555", lineHeight: "1.6", whiteSpace: "pre-line" }}>{item.content}</div>
-                      <div style={{ fontSize: "10px", color: "#999", marginTop: "4px", fontStyle: "italic" }}>—— {item.source}</div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ padding: "6px 12px", background: "#fafafa", borderTop: "1px solid #eee", fontSize: "10px", color: "#999", textAlign: "center" }}>点击三传/四课/中宫可查看解读 · 引经据典，仅供参考</div>
-              </div>
-            )}
+            {interpretPanel && <InterpretationDrawer show title={interpretPanel.title} onClose={() => setInterpretPanel(null)} items={interpretPanel.items.map(item => ({type:item.type,label:item.title,content:`${item.title}\n${item.content}\n来源：${item.source}`}))}>
+              <AIInterpretButton key={interpretPanel.title} toolName="大六壬" scope={interpretPanel.title+"学习解析"} buttonText="AI解析所选宫位或课传" contextData={JSON.stringify({selected:interpretPanel,chart:data})} systemPrompt="只解释所选宫位、课传及传入的已计算排盘数据；不得重排或换宫，不编造典籍引文。区分古代术语与现实事实，不作疾病、投资或命运预测。" />
+              <p style={{fontSize:12,color:"#666",marginTop:12}}>基础资料在本机显示；AI需登录、联网并按账号额度使用。传统文化学习参考。</p>
+            </InterpretationDrawer>}
+
         </div>
       </div>
 
