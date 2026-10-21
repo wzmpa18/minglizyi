@@ -67,6 +67,10 @@ function resolveClientPlatform(req) {
 
 router.get('/', (req, res) => {
   const release = readReleaseConfig();
+  // Google builds receive updates through Play; never offer a domestic APK.
+  if (String(req.headers['x-store-channel'] || '').toLowerCase() === 'google') {
+    return res.json({success:true,data:{...release,latestVersionCode:0,downloadUrl:'',downloadPage:'https://play.google.com/store/apps/details?id=com.yandao.guoxue',releaseNotes:[],forceUpdate:false,platform:'android',channel:'google'}});
+  }
   if (resolveClientPlatform(req) === 'ios') {
     // iOS releases are delivered only by App Store Connect. Returning the
     // Android versionCode here made the shared checker offer an APK to iOS.

@@ -57,3 +57,12 @@ test('content scan excludes secrets and private health objects',()=>{
  const {localFlags}=require('../backend_deploy/studyCommentSafety');assert.ok(localFlags('煽\u200b动 颠覆国家政权').length);assert.ok(localFlags('保证治愈').length);assert.equal(localFlags('学习古籍，尊重不同观点').length,0);
  const {sanitizeAdminData}=require('../backend_deploy/adminPrivacy');assert.equal(sanitizeAdminData({password:'private'}).password,'[REDACTED]');
 });
+
+test('public Android metadata never offers a sideload APK to Google or iOS',()=>{
+ let handler;const sandbox={module:{exports:{}},__dirname:path.resolve('backend_deploy'),process:{env:{}},console,require:name=>name==='express'?{Router:()=>({get:(_route,h)=>{handler=h}})}:require(name)};
+ require('node:vm').runInNewContext(fs.readFileSync('backend_deploy/appVersionRoutes.js','utf8'),sandbox);
+ const invoke=headers=>{let result;handler({headers,query:{}},{json:value=>{result=value}});return result.data};
+ const google=invoke({'x-store-channel':'google'}),ios=invoke({'x-client-platform':'ios'}),web=invoke({});
+ assert.equal(google.downloadUrl,'');assert.equal(google.latestVersionCode,0);assert.equal(google.forceUpdate,false);assert.ok(google.downloadPage.startsWith('https://play.google.com/'));
+ assert.equal(ios.downloadUrl,'');assert.equal(ios.forceUpdate,false);assert.ok(web.downloadUrl.endsWith('.apk'));
+});
