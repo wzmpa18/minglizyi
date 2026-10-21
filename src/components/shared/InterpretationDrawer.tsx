@@ -111,7 +111,7 @@ export default function InterpretationDrawer({
         const level = getUserPermissionLevel();
         const cKey = generateContentKey(aiEnhance!.toolName, aiEnhance!.context.slice(0, 80));
 
-        if (level === "member" || permission.paidAccess || isSingleUnlocked(cKey)) {
+        if (permission.isMember || permission.paidAccess || isSingleUnlocked(cKey)) {
           setAiContent(fullText);
           setAiLocked(false);
         } else {

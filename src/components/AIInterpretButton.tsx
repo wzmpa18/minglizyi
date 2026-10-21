@@ -167,7 +167,7 @@ function AIInterpretButtonEnabled({
         const level = getUserPermissionLevel();
         const cKey = generateContentKey(toolName, scope + contextData.slice(0, 50));
 
-        if (level === "member" || perm.paidAccess) {
+        if (perm.isMember || perm.paidAccess) {
           // 会员：完整展示
           setFullContent(text);
           setContent(text);

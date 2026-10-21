@@ -94,7 +94,7 @@ function EventDivinationPanelEnabled({
   // v20.1: 三级权限检查（COMMERCIAL-CLEANUP-03: 移除 getPaidPlanStatus——AI权限由服务端SSOT决定）
   const checkAccess = useCallback(async (): Promise<boolean> => {
     const perm = await getPermissionStatusFromServer();
-    paidRequestAccess.current = perm.paidAccess;
+    paidRequestAccess.current = perm.paidAccess || perm.isMember;
     setQuotaMsg(perm.message);
 
     if (perm.needLogin) {

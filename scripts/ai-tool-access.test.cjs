@@ -10,6 +10,7 @@ test('authoritative exhausted quota overrides stale local membership; paid credi
  const c=client();c.values.set('yandao_membership_status',JSON.stringify({level:'lifetime'}));c.setHandler(async()=>new Response(JSON.stringify({success:true,data:{remaining:0,dailyLimit:50,paidAccess:false}})));
  const denied=await c.api.getPermissionStatusFromServer();assert.equal(denied.canUseAI,false);assert.equal(denied.needPayment,true);
  c.setHandler(async()=>new Response(JSON.stringify({success:true,data:{remaining:0,dailyLimit:3,paidAccess:true}})));const allowed=await c.api.getPermissionStatusFromServer();assert.equal(allowed.canUseAI,true);assert.equal(allowed.paidAccess,true);
+ c.values.delete('yandao_membership_status');c.setHandler(async()=>new Response(JSON.stringify({success:true,data:{remaining:49,dailyLimit:50,paidAccess:false,level:'monthly'}})));const renewed=await c.api.getPermissionStatusFromServer();assert.equal(renewed.isMember,true);assert.equal(renewed.level,'member');
  c.setHandler(async()=>new Response('{}',{status:401}));assert.equal((await c.api.getPermissionStatusFromServer()).needLogin,true);
 });
 test('AI cache keys bind full palace/chart content and account; identical requests reuse cache without a second charge',async()=>{

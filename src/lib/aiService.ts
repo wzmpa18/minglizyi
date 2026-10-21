@@ -422,12 +422,16 @@ export async function getPermissionStatusFromServer(): Promise<PermissionStatus 
     const payload = await response.json();
     if (payload?.success === true) {
       const paidAccess = payload?.data?.paidAccess === true;
+      const isMember = ["monthly", "quarterly", "yearly", "lifetime", "premium"].includes(payload?.data?.level);
+      const verifiedLevel: PermissionLevel = isMember ? "member" : "free";
       const remaining = Number(payload?.data?.remaining ?? 0);
       const unlimited = payload?.data?.dailyLimit === null || payload?.data?.dailyLimit === "Infinity";
       const canUseAI = paidAccess || unlimited || remaining > 0;
       if (canUseAI) {
         return {
           ...local,
+          level: verifiedLevel,
+          isMember,
           isLoggedIn: true,
           canUseAI: true,
           needLogin: false,
@@ -436,7 +440,7 @@ export async function getPermissionStatusFromServer(): Promise<PermissionStatus 
           paidAccess,
         };
       }
-      return { ...local, isLoggedIn: true, canUseAI: false, needLogin: false, needPayment: true, paidAccess: false, message: "当前账号AI额度已用完，可购买点数或查看会员权益" };
+      return { ...local, level: verifiedLevel, isMember, isLoggedIn: true, canUseAI: false, needLogin: false, needPayment: true, paidAccess: false, message: "当前账号AI额度已用完，可购买点数或查看会员权益" };
     }
   } catch { /* The request itself still enforces server authentication and quota. */ }
   return { ...local, paidAccess: false };
