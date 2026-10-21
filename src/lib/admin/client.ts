@@ -73,6 +73,7 @@ export function clearAdminKey(): void {
   try {
     localStorage.removeItem(ADMIN_KEY_STORAGE);
     localStorage.removeItem(ADMIN_ROLE_STORAGE);
+    window.dispatchEvent(new Event("yandao-admin-auth-change"));
   } catch {
     /* ignore */
   }

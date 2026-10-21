@@ -458,7 +458,10 @@ export default function AdminClientShell({ children }: { children: ReactNode }) 
   const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
-    setAuthed(isAdminAuthed());
+    const refresh = () => setAuthed(isAdminAuthed());
+    refresh();
+    window.addEventListener("yandao-admin-auth-change", refresh);
+    return () => window.removeEventListener("yandao-admin-auth-change", refresh);
   }, [pathname]);
 
   // v25.0.47_13: 登录/刷新后通过 whoami 拉取真实角色并缓存（菜单渲染依据；服务端仍是权限最终裁决）
@@ -474,6 +477,7 @@ export default function AdminClientShell({ children }: { children: ReactNode }) 
           headers: { Authorization: `Bearer ${getAdminKey() || ""}` },
         });
         const json = await res.json();
+        if (!cancelled && (res.status === 401 || res.status === 403)) clearAdminKey();
         if (!cancelled && res.ok && json.success && json.data?.role) {
           setRole(json.data.role);
           setAdminRole(json.data.role);

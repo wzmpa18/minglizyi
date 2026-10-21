@@ -38,14 +38,14 @@ export default function BusinessIdentityBoundary({ children }: { children: React
     }catch{setMessage("网络暂不可用，请稍后重试");}finally{setBusy(false);}
   }
   if(open || state==="ready") return <>{children}</>;
-  return <main style={{maxWidth:480,margin:"48px auto",padding:24,lineHeight:1.8}}>
-    <h1 style={{fontSize:24,fontWeight:700}}>言道国学</h1>
-    {state==="checking"?<p>正在验证登录状态…</p>:state==="login"?<><h2>请先登录</h2><p>使用学习工具、购买和交流前，需要登录并完成手机号验证码验证。</p><Link href="/login/">登录或注册</Link></>:state==="error"?<><p>暂时无法完成身份校验，请检查网络后重试。</p><button onClick={()=>window.location.reload()}>重新验证</button></>:<>
+  return <main style={{maxWidth:480,margin:"max(32px, env(safe-area-inset-top)) auto 100px",padding:28,lineHeight:1.8,background:"white",borderRadius:20,border:"1px solid #e9dff1",boxShadow:"0 12px 40px #62308a12"}}>
+    <h1 style={{fontSize:24,fontWeight:700,color:"#6b21a8"}}>言道国学</h1>
+    {state==="checking"?<p>正在验证登录状态…</p>:state==="login"?<><h2>请先登录</h2><p>使用学习工具、购买和交流前，需要登录并完成手机号验证码验证。</p><Link className="my-5 block rounded-xl bg-purple-800 px-5 py-3 text-center font-medium text-white" href="/login/">登录或注册</Link></>:state==="error"?<><p>暂时无法完成身份校验，请检查网络后重试。</p><button onClick={()=>window.location.reload()}>重新验证</button></>:<>
       <h2>验证手机号</h2><p>为保护账号与交流安全，请完成短信验证。原账号编号、购买权益和记录保持不变。手机号不会公开展示。</p>
       <label>手机号<input type="tel" autoComplete="tel" value={phone} maxLength={11} onChange={e=>setPhone(e.target.value.replace(/\D/g,""))} style={{display:"block",padding:12,width:"100%",border:"1px solid #aaa",borderRadius:8}}/></label>
-      <button disabled={busy||cooldown>0||!/^1[3-9]\d{9}$/.test(phone)} onClick={()=>submit(true)}>{cooldown?`${cooldown}秒后重发`:"发送验证码"}</button>
+      <button className="my-3 rounded-lg border border-purple-700 px-4 py-2 text-purple-900 disabled:border-stone-300 disabled:text-stone-500" disabled={busy||cooldown>0||!/^1[3-9]\d{9}$/.test(phone)} onClick={()=>submit(true)}>{cooldown?`${cooldown}秒后重发`:"发送验证码"}</button>
       <label style={{display:"block"}}>验证码<input inputMode="numeric" autoComplete="one-time-code" value={code} maxLength={6} onChange={e=>setCode(e.target.value.replace(/\D/g,""))} style={{display:"block",padding:12,width:"100%",border:"1px solid #aaa",borderRadius:8}}/></label>
-      <button disabled={busy||!/^\d{6}$/.test(code)} onClick={()=>submit(false)}>验证并继续</button><p role="status">{message}</p>
+      <button className="mt-4 w-full rounded-xl bg-purple-800 px-4 py-3 text-white disabled:bg-stone-200 disabled:text-stone-600" disabled={busy||!/^\d{6}$/.test(code)} onClick={()=>submit(false)}>验证并继续</button><p role="status">{message}</p>
       <button onClick={()=>{clearLoginState();setState("login");}}>切换账号</button>
       <p><Link href="/profile/feedback/">验证问题反馈</Link> · <Link href="/profile/settings/">账号设置与注销</Link></p>
     </>}
