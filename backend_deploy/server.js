@@ -46,7 +46,9 @@ app.use(express.json({ limit: "10mb", verify: (req, res, buf) => { req.rawBody =
 app.use(express.urlencoded({ extended: true }));
 app.use(require('./publicTextGuard').publicTextGuard);
 app.get('/api/admin/security/events', require('./adminRoles').adminAuth('SUPPORT_ADMIN', 'audit'), (req, res) => {
-  res.json({ success: true, data: { events: securityJournal.list(req.query), policy: securityJournal.status() } });
+  let backup = { status: 'not-yet-verified' };
+  try { const r = JSON.parse(fs.readFileSync('/root/yandao-security-backup/last-result.json','utf8')); backup = { status: r.ok ? 'offsite-restore-verified' : r.code, at: r.at, localRestoreVerified: r.localBackup?.verified === true }; } catch {}
+  res.json({ success: true, data: { events: securityJournal.list(req.query), policy: securityJournal.status(), backup } });
 });
 
 // FINAL-RC-02: 平台功能开关（服务端强制执行 PLATFORM_FEATURE_MATRIX，必须先于所有业务路由）
