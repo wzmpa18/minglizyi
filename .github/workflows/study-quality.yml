@@ -92,6 +92,7 @@ on:
       - 'src/components/shared/InterpretationDrawer.tsx'
       - 'src/components/AIAccessLinks.tsx'
       - 'scripts/ai-tool-access.test.cjs'
+      - 'scripts/ai-purchase-links.test.cjs'
       - 'src/hooks/useStudyCatalog.ts'
       - 'src/components/StarterContentEditor.tsx'
       - 'scripts/study-content.test.cjs'
@@ -307,7 +308,7 @@ jobs:
       - run: node --test scripts/social-visibility.test.cjs
       - run: node --test scripts/social-feature-policy.test.cjs
       - run: node --test scripts/sales-promotion.test.cjs
-      - run: node --test scripts/ai-tool-access.test.cjs
+      - run: node --test scripts/ai-tool-access.test.cjs scripts/ai-purchase-links.test.cjs
       - run: node --test scripts/paid-ai-credits.test.cjs
       - run: node --test scripts/membership-ledger.test.cjs
       - run: node --test scripts/apple-iap-ledger.test.cjs
