@@ -57,11 +57,11 @@ print(json.dumps({**spec,'publishedAt':datetime.datetime.now(datetime.timezone.u
 
 def main():
  p=argparse.ArgumentParser(description=__doc__)
- p.add_argument('--proof',type=Path,required=True);p.add_argument('--source',required=True);p.add_argument('--expect-current',required=True);p.add_argument('--evidence',type=Path,required=True)
+ p.add_argument('--channel',choices=['tencent','internal'],default='tencent');p.add_argument('--proof',type=Path,required=True);p.add_argument('--source',required=True);p.add_argument('--expect-current',required=True);p.add_argument('--evidence',type=Path,required=True)
  p.add_argument('--reuse-previous-proof',type=Path,help='Reuse exact bytes from one SHA-verified previous test APK and the current web textures; never re-sign or recompress the APK')
  a=p.parse_args();assert re.fullmatch(r'[a-f0-9]{40}',a.source)
  assert a.expect_current=='v25.0.115-calendar-community-'+a.source[:7]
- item=next(x for x in json.loads(a.proof.read_text('utf-8')) if x['channel']=='tencent')
+ item=next(x for x in json.loads(a.proof.read_text('utf-8')) if x['channel']==a.channel and x['kind']=='apk')
  assert item['source']==a.source and item['version']=='25.0.115' and isinstance(item['versionCode'],int) and item['versionCode']>0
  def gh(route):return subprocess.check_output(['gh','api','repos/wzmpa18/minglizyi/'+route])
  meta=json.loads(gh('actions/artifacts/'+str(item['artifactId'])))
@@ -72,9 +72,9 @@ def main():
  assert '签名门禁 OK: 8ca0c414573d4b05fc2bd1ba9c6a2a8090c90c58e3815119494607443dc6d5a0' in log
  data=Path(item['path']).read_bytes();assert len(data)==item['bytes'] and hashlib.sha256(data).hexdigest()==item['fileSha256']
  z=zipfile.ZipFile(io.BytesIO(data));marker=json.loads(z.read('assets/public/app-native.json'))
- assert marker['sourceCommit']==a.source and marker['versionCode']==item['versionCode'] and marker['storeChannel']=='tencent'
+ assert marker['sourceCommit']==a.source and marker['versionCode']==item['versionCode'] and marker['storeChannel']==a.channel
  name=f"yandao-guoxue-{item['version']}-{item['versionCode']}-test.apk"
- page=(Path(__file__).parent/'templates/android-test-download.html').read_text('utf-8').replace('{{VERSION}}',item['version']).replace('{{VERSION_CODE}}',str(item['versionCode'])).replace('{{APK_NAME}}',name)
+ page=(Path(__file__).parent/'templates/android-test-download.html').read_text('utf-8').replace('{{VERSION}}',item['version']).replace('{{VERSION_CODE}}',str(item['versionCode'])).replace('{{APK_NAME}}',name).replace('{{CHANNEL_NOTE}}','完整AI功能内部测试包，非商店审核包；AI需登录、联网及有效权益。' if a.channel=='internal' else '国内渠道测试包；各项功能以当前渠道实际开放范围为准。')
  spec={k:item[k] for k in ['source','version','versionCode','fileSha256','bytes']}
  spec.update(expectedCurrent=a.expect_current,apkName=name,page=page)
  payload=data

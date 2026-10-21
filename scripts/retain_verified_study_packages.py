@@ -3,7 +3,7 @@ import argparse,concurrent.futures,hashlib,io,json,plistlib,re,subprocess,zipfil
 from pathlib import Path
 
 def main():
- p=argparse.ArgumentParser(description=__doc__);p.add_argument('--source',required=True);p.add_argument('--android-run',type=int,required=True);p.add_argument('--ios-run',type=int,required=True);p.add_argument('--code',type=int,required=True);p.add_argument('--build',type=int,required=True);p.add_argument('--root',type=Path,required=True);a=p.parse_args()
+ p=argparse.ArgumentParser(description=__doc__);p.add_argument('--source',required=True);p.add_argument('--android-channel',choices=['tencent','internal'],default='tencent');p.add_argument('--android-run',type=int,required=True);p.add_argument('--ios-run',type=int,required=True);p.add_argument('--code',type=int,required=True);p.add_argument('--build',type=int,required=True);p.add_argument('--root',type=Path,required=True);a=p.parse_args()
  assert re.fullmatch('[a-f0-9]{40}',a.source) and str(a.root.resolve()).lower().startswith('e:')
  manifest=json.loads(Path('public/assets/astronomy/surfaces/manifest.json').read_bytes())
  maps=[m for body in manifest['bodies'] for m in body['maps']]
@@ -33,14 +33,14 @@ def main():
   assert b'yandaoguoxue.yandao.vip/api/academy/starter-content' in js
   assert b'bazi-comparison-practice' not in js,'New course accidentally bundled instead of fetched'
   assert b'classics-1' in js,'Original offline lessons missing'
-  proof={'channel':'ios-full-learning' if kind=='ipa' else 'tencent','kind':kind,'source':a.source,'version':'25.0.115','bytes':len(data),'fileSha256':hashlib.sha256(data).hexdigest(),'artifactId':meta['id'],'artifactZipSha256':hashlib.sha256(raw).hexdigest(),'workflowRun':run,'surfaceImagesVerified':len(maps),'unlicensedAnimations':0,'excludedEvidence':28,'remoteReaderBundled':True,'newCoursesRemoteDataOnly':True,'originalOfflineFallback':True,'physicalDeviceAccepted':False}
+  proof={'channel':'ios-full-learning' if kind=='ipa' else a.android_channel,'kind':kind,'source':a.source,'version':'25.0.115','bytes':len(data),'fileSha256':hashlib.sha256(data).hexdigest(),'artifactId':meta['id'],'artifactZipSha256':hashlib.sha256(raw).hexdigest(),'workflowRun':run,'surfaceImagesVerified':len(maps),'unlicensedAnimations':0,'excludedEvidence':28,'remoteReaderBundled':True,'newCoursesRemoteDataOnly':True,'originalOfflineFallback':True,'physicalDeviceAccepted':False}
   if kind=='ipa':
    info=plistlib.loads(package.read('Payload/App.app/Info.plist'));assert info['CFBundleIdentifier']=='com.yandaoguoxue.app' and info['CFBundleShortVersionString']=='25.0.115' and info['CFBundleVersion']==str(a.build)
    proof.update(build=a.build,identityAndWidgetSignatureGate=True,sourceProof='pinned successful CI and real Info.plist; no Android marker expected')
    folder=a.root/f'Apple_25.0.115_{a.build}';filename=f'YandaoGuoxue_25.0.115_{a.build}.ipa'
   else:
-   marker=json.loads(package.read(prefix+'app-native.json'));assert marker['sourceCommit']==a.source and marker['versionCode']==a.code and marker['storeChannel']=='tencent'
-   proof['versionCode']=a.code;folder=a.root/f'Android_25.0.115_{a.code}_tencent';filename=f'YandaoGuoxue_25.0.115_{a.code}.{kind}'
+   marker=json.loads(package.read(prefix+'app-native.json'));assert marker['sourceCommit']==a.source and marker['versionCode']==a.code and marker['storeChannel']==a.android_channel
+   proof['versionCode']=a.code;folder=a.root/f'Android_25.0.115_{a.code}_{a.android_channel}';filename=f'YandaoGuoxue_25.0.115_{a.code}.{kind}'
   folder.mkdir(exist_ok=True);file=folder/filename
   if file.exists():assert hashlib.sha256(file.read_bytes()).hexdigest()==proof['fileSha256']
   else:
