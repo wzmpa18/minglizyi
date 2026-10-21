@@ -48,7 +48,7 @@ function validateStudyReport(content,request) {
   if(text.length<350)return 'REPORT_TOO_SHALLOW';
   if(!/AI归纳|AI辅助/.test(text))return 'REPORT_MISSING_ATTRIBUTION';
   if(!/不足|缺|待核|未提供|不能|限制|并非|不代表/.test(text))return 'REPORT_MISSING_LIMITS';
-  const ids=[...text.matchAll(/\[([A-Z]{2})\]/g)].map(m=>m[1]);
+  const ids=[...text.matchAll(/\[([A-Z][A-Z0-9]{1,9})\]/g)].map(m=>m[1]).filter(id=>id!=='AI');
   if(ids.some(id=>!request?.refs?.some(r=>r.id===id)))return 'REPORT_UNKNOWN_SOURCE';
   if(request?.refs?.length && !citedReferences(text,request).length)return 'REPORT_MISSING_SOURCE';
   if(!request?.refs?.length && !/未核原文|暂无.{0,8}原文|没有.{0,8}已核/.test(text))return 'REPORT_UNVERIFIED_SOURCE';
@@ -59,7 +59,10 @@ function validateStudyReport(content,request) {
  for(const sentence of text.split(/[。！？\n]/)) {
   if(/不能|不可|并非|不是|不代表|不应|切勿|没有依据|禁止/.test(sentence))continue;
   const generates={木:'火',火:'土',土:'金',金:'水',水:'木'},controls={木:'土',土:'水',水:'火',火:'金',金:'木'};
-  for(const m of sentence.matchAll(/([木火土金水])\s*([生克剋])\s*[甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥]?([木火土金水])/g))if((m[2]==='生'?generates:controls)[m[1]]!==m[3])return 'REPORT_ELEMENT_ERROR';
+  for(const m of sentence.matchAll(/([木火土金水])\s*([生克剋])\s*[甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥]?([木火土金水])/g)) {
+   if(/(?:非|不是|不能|勿|错误说法为)[：:\s]*$/.test(sentence.slice(Math.max(0,m.index-8),m.index)))continue;
+   if((m[2]==='生'?generates:controls)[m[1]]!==m[3])return 'REPORT_ELEMENT_ERROR';
+  }
   if(/土[^。\n]{0,8}(?:寅月|卯月|春季)[^。\n]{0,8}(?:处于|为|属)囚/.test(sentence))return 'REPORT_SEASON_SYSTEM_ERROR';
   if(/(?:注定|一定|必定|必然).{0,10}(?:发财|离婚|患病|破财|灾祸|短命|倒霉)|(?:购买|付费).{0,8}(?:化解|消灾|改运)|只有(?:我|我们|本平台).{0,5}懂你/.test(sentence))return 'REPORT_MANIPULATIVE_CLAIM';
  }

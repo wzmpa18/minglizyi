@@ -42,3 +42,11 @@ test('verified full quotations can resolve their source without a fragile marker
  assert.equal(q.validateStudyReport(body+'[BZ] 戊土在寅月处于囚地。',q.applyStudyPolicy(message('八字'))),'REPORT_SEASON_SYSTEM_ERROR');
  assert.equal(q.validateStudyReport(body+'[BZ] 金克亥水。',q.applyStudyPolicy(message('八字'))),'REPORT_ELEMENT_ERROR');
 });
+
+test('refuting an incorrect relationship is not itself a model error; an affirmative error still fails',()=>{
+ const r=q.applyStudyPolicy(message('八字'));
+ assert.equal(q.validateStudyReport(body+'[BZ] 木克土为既定方向，非土生木。',r),null);
+ assert.equal(q.validateStudyReport(body+'[BZ] 变用木生体火，非火生木。',r),null);
+ assert.equal(q.validateStudyReport(body+'[BZ] 火生木。',r),'REPORT_ELEMENT_ERROR');
+ assert.equal(q.validateStudyReport(body+'[FAKE]',r),'REPORT_UNKNOWN_SOURCE');
+});
