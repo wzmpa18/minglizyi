@@ -35,7 +35,7 @@ process.stdin.on('data',c=>chunks.push(c)).on('end',async()=>{
  phase='new-object-preflight';const present=await service.statObject({partition:'learning_content',objectKey:newKey});
  if(present.ok){if(hash(await readObject(newKey))!==p.sha256)throw Error('Existing target differs; no overwrite');}
  else{
-  if(!/NoSuchKey|does not exist|not exist|404/i.test(present.error||''))throw Error('COS target existence unconfirmed; no overwrite');
+  if(!/NoSuchKey|does not exist|not exist|404|^Not Found$/i.test(present.error||''))throw Error('COS target existence unconfirmed; no overwrite');
   phase='stage-original';const handle=fs.openSync(stage,'wx',0o600);stageOwned=true;try{fs.writeFileSync(handle,data);fs.fsyncSync(handle);}finally{fs.closeSync(handle);}
   phase='cos-upload';const uploaded=await service.putObject({partition:'learning_content',objectKey:newKey,filePath:stage,sha256:p.sha256,owner:'system'});if(!uploaded.ok||uploaded.provider!=='COS')throw Error('COS upload not confirmed; current catalogue retained');
  }

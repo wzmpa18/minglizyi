@@ -64,6 +64,16 @@ with tarfile.open(fileobj=sys.stdin.buffer,mode='r|gz') as archive:
                 if destination.exists(): assert destination.read_bytes()==data
                 else: destination.write_bytes(data)
                 preserved.append({'path':relative,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()})
+        # This data-only reading index is published independently of client builds.
+        for relative in ['guide/jingfang/index.html','guide/jingfang/bibliography.json']:
+            item=old/relative
+            if not item.exists():continue
+            assert old in item.resolve().parents and not item.is_symlink() and item.is_file()
+            data=item.read_bytes();assert len(data)<1_000_000
+            destination=target/relative;destination.parent.mkdir(parents=True,exist_ok=True)
+            if destination.exists():assert destination.read_bytes()==data
+            else:destination.write_bytes(data)
+            preserved.append({'path':relative,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()})
         expected['preservedPublicAssets']=preserved
         pending=link.parent/'.current-next'
         assert not pending.exists() and not pending.is_symlink()
