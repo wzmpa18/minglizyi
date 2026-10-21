@@ -20,7 +20,7 @@ const FEATURES: { icon: string; title: string; desc: string }[] = [
   { icon: "📚", title: "系统学习", desc: "典籍题库，学习记录同步" },
   { icon: "🧘", title: "养生功法", desc: "养生功法学习模块" },
   { icon: "👈", title: "手势返回", desc: "右滑手势返回全局生效" },
-  { icon: "🔐", title: "永久登录", desc: "登录态永久持久化" },
+  { icon: "🔐", title: "账号保护", desc: "登录与手机号验证，原账号权益保留" },
 ];
 
 export default function DownloadPage() {
@@ -175,7 +175,7 @@ export default function DownloadPage() {
 
         {/* iOS 说明（v25.0.44：TestFlight 测试阶段状态） */}
         <p className="mt-3 text-center text-xs text-gray-400">
-          iOS 版正在 TestFlight 测试中，即将上线 App Store；可先通过 Safari
+          iOS 版正在 TestFlight 测试，App Store以实际审核结果为准；可先通过 Safari
           添加到主屏幕使用网页版
         </p>
       </div>
@@ -215,7 +215,7 @@ export default function DownloadPage() {
       <div className="mx-3 mt-4 mb-6 rounded-xl bg-gray-50 p-4">
         <p className="text-xs leading-relaxed text-gray-500">
           <span className="font-semibold text-gray-600">免责声明：</span>
-          本应用内容仅供传统文化学习研究参考，不构成医疗诊断、投资建议或人生决策依据。下载及使用本应用即表示您已阅读并同意《用户协议》和《隐私政策》。言道国学不对内容的准确性、完整性作任何保证。
+          本应用内容仅供传统文化学习研究参考，不构成医疗诊断、投资建议或人生决策依据。使用业务功能前需要登录并完成手机号验证；请先阅读《用户协议》和《隐私政策》。古籍原文、学习资料与AI辅助解释分别标注，付费项目以页面说明为准。
         </p>
         <div className="mt-3 pt-3 text-center" style={{ borderTop: "1px solid #e5e5e5" }}>
           <p className="text-xs text-gray-400">© 2026 言道国学</p>
