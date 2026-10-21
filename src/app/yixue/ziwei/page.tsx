@@ -29,7 +29,9 @@ import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/c
 import type { Client } from "@/lib/clientStore";
 import { getPalaceInterpretation, getPalaceAllStarInterpretations } from "@/lib/ziwei-interpretations";
 import { KB_TIANJI_SOURCE, getKbTianjiPalaceNotes } from "@/lib/ziwei-kb-supplement";
-import { callAI, checkAIQuota, incrementAIUsage, getPermissionStatusFromServer } from "@/lib/aiService";
+import InterpretationDrawer from "@/components/shared/InterpretationDrawer";
+import { AIAccessLinks } from "@/components/AIAccessLinks";
+import { callAI, incrementAIUsage, getPermissionStatusFromServer, getAIErrorMessage } from "@/lib/aiService";
 import { buildDeepReportSystemPrompt } from "@/lib/deepReportPrompt";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
@@ -503,6 +505,8 @@ export default function ZiweiPage() {
   // v18.9: AI解读状态
   const [aiInterpreting, setAiInterpreting] = useState(false);
   const [aiContent, setAiContent] = useState("");
+  const [aiNeedsAccess, setAiNeedsAccess] = useState(false);
+  const [aiIsError, setAiIsError] = useState(false);
   const [aiScope, setAiScope] = useState<"overall" | "palace" | "daxian" | "liunian" | "liuyue" | "liuri" | "liushi" | null>(null);
 
   // v25.0.29（P7-5）：命盘等比缩放适配（根治手机端右侧截断）；移除放大/叠宫切换条，恒为适配屏宽
@@ -1097,20 +1101,17 @@ export default function ZiweiPage() {
 
     // v20.1: 三级权限检查 - 未登录弹出登录引导
     if (!requireLogin()) return;
+    setAiNeedsAccess(false);
+    setAiIsError(false);
     const perm = await getPermissionStatusFromServer();
     if (!perm.canUseAI) {
+      setAiNeedsAccess(true);
+      setAiIsError(true);
       setAiContent(perm.message || "今日AI解读次数已用完，开通会员继续使用");
       setAiScope(scope);
       return;
     }
 
-    // v19.6: 配额检查
-    const quota = checkAIQuota();
-    if (!quota.canUse) {
-      setAiContent(quota.message || "今日AI解读次数已用完");
-      setAiScope(scope);
-      return;
-    }
     setAiInterpreting(true);
     setAiScope(scope);
     setAiContent("");
@@ -1153,11 +1154,14 @@ export default function ZiweiPage() {
         }
         setAiContent(text);
         // v19.6: AI调用成功后增加使用次数
-        incrementAIUsage();
+        if (!aiResult.cached) incrementAIUsage();
       } else {
-        setAiContent("AI解读服务暂时不可用，请稍后重试。\n\n本内容收录古代传统文史资料，仅用于国学、历法学术研究，不构成运势预测与人生决策建议。");
+        setAiIsError(true);
+        setAiNeedsAccess(["AI_NOT_ENTITLED", "AI_QUOTA_EXCEEDED"].includes(aiResult.errorCode || ""));
+        setAiContent(getAIErrorMessage(aiResult.errorCode || "", aiResult.error));
       }
     } catch {
+      setAiIsError(true);
       setAiContent("AI解读服务暂时不可用，请稍后重试。\n\n本内容收录古代传统文史资料，仅用于国学、历法学术研究，不构成运势预测与人生决策建议。");
     } finally {
       setAiInterpreting(false);
@@ -2452,6 +2456,10 @@ export default function ZiweiPage() {
       )}
 
       {!result&&!showForm&&<div className="m-3 rounded-lg border bg-white p-3"><ToolDiscussionButton toolId="ziwei" className="w-full py-2 font-semibold text-purple-900"/></div>}
+      {aiScope && (aiInterpreting || aiContent) && <InterpretationDrawer show title={`紫微AI · ${{overall:"整体命盘",palace:"所选宫位",daxian:"大运",liunian:"流年",liuyue:"流月",liuri:"流日",liushi:"流时"}[aiScope]}`} onClose={() => setAiScope(null)} items={aiContent ? [{type:aiIsError?"usage":"ai",label:aiIsError?"服务提示":"AI解读",content:aiContent,isAI:!aiIsError}] : []}>
+        {aiInterpreting && <p role="status">正在生成所选范围的AI解读…</p>}
+        {aiNeedsAccess && <AIAccessLinks />}
+      </InterpretationDrawer>}
       {/* v20.1: 登录提示弹窗 */}
       <LoginPromptModal show={showLoginPrompt} onClose={() => setShowLoginPrompt(false)} />
       {result && !showForm && !interpretPanel && !showLoginPrompt && <nav aria-label="专业紫微盘快捷功能" style={{ position: "fixed", bottom: 0, left: 0, right: 0, margin: "0 auto", maxWidth: 720, zIndex: 60, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 5, padding: "7px 8px", paddingBottom: "calc(7px + env(safe-area-inset-bottom, 0px))", background: "#dedee0", borderTop: "1px solid #bbb" }}>

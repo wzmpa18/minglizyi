@@ -1,5 +1,6 @@
 "use client";
 
+import { AIAccessLinks } from "@/components/AIAccessLinks";
 import { InterfaceButton } from "@/components/InterfaceControls";
 import { useState } from "react";
 import { callAI, getPermissionStatusFromServer } from "@/lib/aiService";
@@ -16,6 +17,7 @@ export default function YixueAIPage() {
   ]);
 
   const [loading, setLoading] = useState(false);
+  const [needsAccess, setNeedsAccess] = useState(false);
 
   // v20.1: 登录守卫
   const { requireLogin, showLoginPrompt, setShowLoginPrompt } = useRequireLogin();
@@ -26,10 +28,11 @@ export default function YixueAIPage() {
     // v20.1: 三级权限检查 - 未登录弹出登录引导
     if (!requireLogin()) return;
     const perm = await getPermissionStatusFromServer();
+    setNeedsAccess(!perm.canUseAI);
     if (!perm.canUseAI) {
       setMessages((prev) => [...prev,
         { role: "user", content: input },
-        { role: "assistant", content: perm.message || "今日AI解读次数已用完，开通会员继续使用" }
+        { role: "status", content: perm.message || "今日AI解读次数已用完，开通会员继续使用" }
       ]);
       setInput("");
       return;
@@ -45,7 +48,8 @@ export default function YixueAIPage() {
         userPrompt: userInput,
         cacheKey: `yixue_ai_${userInput.slice(0, 50)}`,
       });
-      setMessages((prev) => [...prev, { role: "assistant", content: result.content }]);
+      if (["AI_NOT_ENTITLED", "AI_QUOTA_EXCEEDED"].includes(result.errorCode || "")) setNeedsAccess(true);
+      setMessages((prev) => [...prev, { role: result.success ? "assistant" : "status", content: result.content }]);
     } catch {
       setMessages((prev) => [...prev, { role: "assistant", content: "AI服务暂时不可用，请稍后重试。" }]);
     } finally {
@@ -59,12 +63,13 @@ export default function YixueAIPage() {
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
             <div className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
-              {msg.role !== "user" && <div className="mb-1 text-xs font-semibold text-red-600">AI生成（深度合成）内容</div>}
+              {msg.role === "assistant" && <div className="mb-1 text-xs font-semibold text-red-600">AI生成（深度合成）内容</div>}
               {msg.role === "user" ? <span className="break-words">{msg.content}</span> : <SafeRichText content={msg.content} />}
             </div>
           </div>
         ))}
       </div>
+      {needsAccess && <AIAccessLinks />}
       <div className="flex gap-2">
         <input
           type="text"
