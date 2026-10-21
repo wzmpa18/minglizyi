@@ -347,6 +347,7 @@ jobs:
       - run: node --test scripts/user-id-policy.test.cjs
       - run: node --experimental-strip-types --test scripts/study-content.test.cjs
       - run: node --test scripts/learning-cors.test.cjs
+      - run: node --test scripts/security-assessment.test.cjs
       - run: node --test scripts/ios-full-profile.test.cjs
       - run: npx tsx --test scripts/classic-reading.test.ts
       - run: node --experimental-strip-types --test scripts/tcm-edition-pack.test.cjs
@@ -357,8 +358,9 @@ jobs:
       - run: node --test scripts/native-listening.test.cjs
       - name: Verify discussion HTTP authentication and moderation against production dependency versions
         run: |
-          npm install --prefix "$RUNNER_TEMP/study-http-deps" --no-save --package-lock=false express@4.22.2 better-sqlite3@13.0.3 jsonwebtoken@9.0.3
+          npm install --prefix "$RUNNER_TEMP/study-http-deps" --no-save --package-lock=false express@4.22.2 better-sqlite3@13.0.3 jsonwebtoken@9.0.3 bcrypt@6.0.0
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/study-comments-http.test.cjs
+          NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/security-assessment-http.test.cjs
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/live-chart-http.test.cjs
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/governed-groups-http.test.cjs
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/academy-admin-http.test.cjs

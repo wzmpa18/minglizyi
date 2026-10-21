@@ -76,7 +76,7 @@ if (typeof globalThis !== 'undefined') {
  * @returns {string} 6位验证码
  */
 function generateCode() {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  return String(require('node:crypto').randomInt(100000, 1000000));
 }
 
 /**
@@ -172,6 +172,7 @@ function setCode(key, code, ip) {
     expireTime: now + CODE_TTL_MS,
     sendTime: now,
     ip: ip || '',
+    attempts: 0,
   });
 }
 
@@ -195,6 +196,8 @@ function verifyCode(key, code) {
 
   // 验证码不匹配
   if (entry.code !== code) {
+    entry.attempts = (entry.attempts || 0) + 1;
+    if (entry.attempts >= 5) codeStore.delete(key);
     return false;
   }
 

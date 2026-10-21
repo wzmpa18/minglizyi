@@ -8,6 +8,7 @@ import BottomNav from "@/components/BottomNav";
 import SocialModerationConsent from "@/components/SocialModerationConsent";
 import CloudSyncInit from "@/components/CloudSyncInit";
 import AuthRestoreInit from "@/components/AuthRestoreInit";
+import BusinessIdentityBoundary from "@/components/BusinessIdentityBoundary";
 import ApplePurchaseInit from "@/components/ApplePurchaseInit";
 import UserActivityInit from "@/components/UserActivityInit";
 import WechatOaIdentityInit from "@/components/WechatOaIdentityInit";
@@ -94,7 +95,7 @@ export default function RootLayout({
             <OfflineInit />
             <SocialModerationConsent/>
             <GlobalZoomProvider>
-              {children}
+              <BusinessIdentityBoundary>{children}</BusinessIdentityBoundary>
             </GlobalZoomProvider>
           </SwipeBackProvider>
           {/* v25.0.78 P4-全页返回键：原生壳内二级页面悬浮返回（页面自带返回键时自动隐藏） */}

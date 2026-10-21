@@ -37,6 +37,7 @@ const ROLES = {
   OPERATOR_ADMIN: 60,
   CONTENT_ADMIN: 60,
   SUPPORT_ADMIN: 40,
+  SECURITY_AUDITOR: 40,
 };
 
 const ROLE_SCOPES = {
@@ -46,6 +47,7 @@ const ROLE_SCOPES = {
   OPERATOR_ADMIN: ['ops'],
   CONTENT_ADMIN: ['ops'],
   SUPPORT_ADMIN: ['ops'],
+  SECURITY_AUDITOR: ['audit'],
 };
 
 const ROLE_LABELS = {
@@ -55,6 +57,7 @@ const ROLE_LABELS = {
   OPERATOR_ADMIN: '运营管理员',
   CONTENT_ADMIN: '内容管理员',
   SUPPORT_ADMIN: '客服支持',
+  SECURITY_AUDITOR: '安全审计员（只读）',
 };
 
 // ==================== 密钥存储（哈希） ====================
@@ -73,13 +76,14 @@ function sessionSecret() {
 
 /** 账号密码登录成功后签发短期后台会话；浏览器永远拿不到主管理员密钥。 */
 function createAdminSession(admin, ttlSeconds = 8 * 60 * 60) {
+  if (!ROLES[admin.role]) throw new Error('后台角色未配置，拒绝签发会话');
   const secret = sessionSecret();
   if (!secret) throw new Error('后台会话密钥未配置');
   const now = Math.floor(Date.now() / 1000);
   const payload = b64url(JSON.stringify({
     sub: String(admin.username || 'admin').slice(0, 64),
     name: String(admin.name || '超级管理员').slice(0, 24),
-    role: ROLES[admin.role] ? admin.role : 'SUPER_ADMIN',
+    role: admin.role,
     iat: now,
     exp: now + Math.max(300, Math.min(Number(ttlSeconds) || 28800, 86400)),
     nonce: crypto.randomBytes(8).toString('hex'),
@@ -141,15 +145,15 @@ function resolveAdminKey(token) {
   const h = sha256(token);
   const keys = loadKeys();
   const hit = keys[h];
-  if (hit && hit.status !== 'disabled') {
-    return { key: token, role: ROLES[hit.role] ? hit.role : 'ADMIN', name: hit.name || '管理员' };
+  if (hit && hit.status !== 'disabled' && ROLES[hit.role]) {
+    return { key: token, role: hit.role, name: hit.name || '管理员' };
   }
   try {
     const legacy = path.join(DATA_DIR, 'admin-keys.json');
     if (fs.existsSync(legacy)) {
       const j = JSON.parse(fs.readFileSync(legacy, 'utf-8'));
       const f = (j.keys || []).find((k) => k.keyHash === h && k.status !== 'disabled');
-      if (f) return { key: token, role: ROLES[f.role] ? f.role : 'ADMIN', name: f.name || '管理员' };
+      if (f && ROLES[f.role]) return { key: token, role: f.role, name: f.name || '管理员' };
     }
   } catch (e) { /* ignore */ }
   try {
@@ -157,8 +161,8 @@ function resolveAdminKey(token) {
     if (fs.existsSync(old)) {
       const j = JSON.parse(fs.readFileSync(old, 'utf-8'));
       if (j.keys && j.keys[token] && !j.keys[token].disabled) {
-        const r = j.keys[token].role || 'ADMIN';
-        return { key: token, role: ROLES[r] ? r : 'ADMIN', name: j.keys[token].name || '管理员' };
+        const r = j.keys[token].role;
+        if (ROLES[r]) return { key: token, role: r, name: j.keys[token].name || '管理员' };
       }
     }
   } catch (e) { /* ignore */ }
@@ -197,6 +201,11 @@ function adminAuth(minRole, scope) {
 
 function audit(admin, action, target, oldValue, newValue, reason, req) {
   try {
+    require('./securityAudit').getSecurityAudit().append({
+      actor: 'admin.' + ((admin && (admin.username || admin.role)) || 'unknown'),
+      kind: action, method: req && req.method, route: req && req.path, status: 0,
+      ip: req && require('./businessIdentityGate').clientIp(req), requestId: req && req.securityRequestId,
+    });
     const entry = sanitizeAdminData({
       id: Date.now() + '_' + crypto.randomBytes(3).toString('hex'),
       operator: (admin && admin.name) || 'unknown',
@@ -213,7 +222,8 @@ function audit(admin, action, target, oldValue, newValue, reason, req) {
     let logs = [];
     try { logs = JSON.parse(fs.readFileSync(AUDIT_FILE, 'utf-8')); } catch { /* 新文件 */ }
     logs.push(entry);
-    if (logs.length > 1000) logs = logs.slice(-1000);
+    // Legacy detail archive: do not discard by count. Security events are also
+    // retained in the separate append-only journal with real timestamps.
     fs.writeFileSync(AUDIT_FILE, JSON.stringify(logs, null, 1));
   } catch (e) {
     console.error('[AdminRoles] 审计写入失败:', e.message);

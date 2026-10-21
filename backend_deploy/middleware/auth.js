@@ -129,7 +129,7 @@ function verifyToken(authHeader) {
   try {
     const token = authHeader.replace(/^Bearer\s+/i, '');
     const decoded = jwt.verify(token, JWT_SECRET);
-    if (!decoded.userId) return null;
+    if (!decoded.userId || decoded.type === 'refresh') return null;
     return {
       userId: decoded.userId,
       phone: decoded.phone || null,
@@ -146,21 +146,21 @@ function verifyToken(authHeader) {
  * 检查用户账号状态（封禁/注销）— v25.0.61 FINAL-SEAL D19
  * 后台封禁(users.status='banned')与注销(users.deleted_at)原先只在后台显示，
  * 全链路（登录/AI/社交/资料）无一处拦截。此函数供 authMiddleware、AI路由、
- * 登录接口统一调用。DB 异常时放行（不因统计字段故障阻断全站）。
+ * 登录接口统一调用。数据库异常、账号不存在时拒绝，不降级放行。
  * @param {string} userId - 用户ID
  * @returns {object} - { ok, code, msg }
  */
 function getUserActiveStatus(userId) {
   const db = getDB();
-  if (!db) return { ok: true };
+  if (!db) return { ok: false, code: 'AUTH_DATABASE_UNAVAILABLE', msg: '身份校验暂不可用' };
   try {
     const row = db.prepare('SELECT status, deleted_at FROM users WHERE user_id = ?').get(userId);
-    if (!row) return { ok: true };
+    if (!row) return { ok: false, code: 'ACCOUNT_NOT_FOUND', msg: '账号不存在，请重新登录' };
     if (row.deleted_at) return { ok: false, code: 'ACCOUNT_DELETED', msg: '该账号已注销' };
     if (row.status === 'banned') return { ok: false, code: 'ACCOUNT_BANNED', msg: '该账号已被封禁，如有疑问请联系客服' };
     return { ok: true };
   } catch (e) {
-    return { ok: true };
+    return { ok: false, code: 'AUTH_DATABASE_UNAVAILABLE', msg: '身份校验暂不可用' };
   }
 }
 
@@ -433,6 +433,7 @@ module.exports = {
   getUserActiveStatus,
   beijingToday,
   verifyToken,
+  getDB,
   MEMBER_LEVELS,
   AI_DAILY_LIMITS,
   getAIUsageDailyLimit,

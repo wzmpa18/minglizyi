@@ -113,13 +113,9 @@ export default function LoginPage() {
     router.push("/");
   };
 
-  // v25.0.87: 游客模式同样须先勾选隐私协议
+  // Security assessment: legal documents remain readable without a business session.
   const handleGuestBrowse = () => {
-    if (!agreed) {
-      setError("请先阅读并勾选用户协议和隐私政策");
-      return;
-    }
-    router.push("/");
+    router.push("/privacy/");
   };
 
   const handleForgotPassword = () => {
@@ -474,7 +470,7 @@ export default function LoginPage() {
               textDecoration: "underline",
             }}
           >
-            游客模式浏览
+            查看隐私政策
           </button>
         </div>
       </div>

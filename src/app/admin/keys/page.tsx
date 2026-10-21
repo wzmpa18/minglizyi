@@ -31,9 +31,10 @@ const ROLE_LABELS: Record<string, string> = {
   OPERATOR_ADMIN: "运营管理员",
   CONTENT_ADMIN: "内容管理员",
   SUPPORT_ADMIN: "客服支持",
+  SECURITY_AUDITOR: "安全审计员（只读）",
 };
 
-const SUB_KEY_ROLES = ["FINANCE_ADMIN", "OPERATOR_ADMIN", "CONTENT_ADMIN", "SUPPORT_ADMIN"];
+const SUB_KEY_ROLES = ["FINANCE_ADMIN", "OPERATOR_ADMIN", "CONTENT_ADMIN", "SUPPORT_ADMIN", "SECURITY_AUDITOR"];
 
 const ROLE_MATRIX: { role: string; scope: string; allow: string; deny: string; login: string }[] = [
   {

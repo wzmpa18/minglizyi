@@ -76,14 +76,14 @@ with tarfile.open(fileobj=sys.stdin.buffer,mode='r|gz') as archive:
             preserved.append({'path':relative,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()})
         # Keep the current explicitly verified internal download reachable while
         # publishing text/layout changes. Hard links do not duplicate APK bytes.
-        test_dir=old/'testing'/'2123'
+        test_dir=old/'testing'/'2124'
         if test_dir.exists():
-            apk=test_dir/'yandao-guoxue-25.0.115-2123-test.apk'
+            apk=test_dir/'yandao-guoxue-25.0.115-2124-test.apk'
             assert apk.is_file() and not apk.is_symlink()
-            assert hashlib.sha256(apk.read_bytes()).hexdigest()=='f3aee0d5bbc390ccfd13a8de818d3022e0924b9d91b0b53ee4d3904b047471c0'
+            assert hashlib.sha256(apk.read_bytes()).hexdigest()=='6d6d38999097227ccd578e32fd9f554d9f112b34fc613d4f88d3021e466bb26a'
             for item in [test_dir/'index.html',apk]:
                 assert item.is_file() and not item.is_symlink()
-                relative='testing/2123/'+item.name
+                relative='testing/2124/'+item.name
                 destination=target/relative;destination.parent.mkdir(parents=True,exist_ok=True)
                 assert not destination.exists();os.link(item,destination)
                 preserved.append({'path':relative,'bytes':item.stat().st_size,'sha256':hashlib.sha256(item.read_bytes()).hexdigest(),'storage':'verified-hard-link'})

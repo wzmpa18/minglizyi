@@ -53,10 +53,11 @@ interface NavItem {
   label: string;
   icon: ReactNode;
   desc: string;
-  scope: "all" | "finance" | "ops" | "super";
+  scope: "all" | "finance" | "ops" | "super" | "audit";
 }
 
 const NAV_ITEMS: NavItem[] = [
+  { href: "/admin/security", label: "安全审计", icon: <Shield size={18} />, desc: "真实访问记录·鉴权结果·留存策略", scope: "audit" },
   { href: "/admin", label: "总览", icon: <LayoutDashboard size={18} />, desc: "老板驾驶舱·20项核心指标", scope: "all" },
   { href: "/admin/announcements", label: "公告管理", icon: <Bell size={18} />, desc: "官方公告·置顶·升级通知", scope: "ops" },
   { href: "/admin/tongchen", label: "同辰雅集", icon: <MessagesSquare size={18} />, desc: "名称·开关·交流审核", scope: "ops" },
@@ -94,6 +95,7 @@ const ROLE_SCOPES: Record<string, string[]> = {
   OPERATOR_ADMIN: ["ops"],
   CONTENT_ADMIN: ["ops"],
   SUPPORT_ADMIN: ["ops"],
+  SECURITY_AUDITOR: ["audit"],
 };
 
 const ROLE_LABELS: Record<string, string> = {
@@ -103,9 +105,11 @@ const ROLE_LABELS: Record<string, string> = {
   OPERATOR_ADMIN: "运营管理员",
   CONTENT_ADMIN: "内容管理员",
   SUPPORT_ADMIN: "客服支持",
+  SECURITY_AUDITOR: "安全审计员（只读）",
 };
 
 function navVisible(item: NavItem, role: string | null): boolean {
+  if (role === "SECURITY_AUDITOR") return item.scope === "audit";
   const scopes = ROLE_SCOPES[role || ""] || [];
   if (scopes.includes("*")) return true;
   return item.scope === "all" || scopes.includes(item.scope);
@@ -129,10 +133,13 @@ function AdminLogin({ onLogin }: { onLogin: () => void }) {
     // 通过调用统计接口验证密钥是否有效
     try {
       setAdminKey(key.trim());
-      const res = await fetch("/api/admin/stats", {
+      const res = await fetch("/api/admin/unified/whoami", {
         headers: { Authorization: `Bearer ${key.trim()}` },
       });
       if (res.ok) {
+        const identity = await res.json();
+        if (!identity.success || !identity.data?.role) throw new Error("身份返回无效");
+        setAdminRole(identity.data.role);
         onLogin();
       } else {
         clearAdminKey();

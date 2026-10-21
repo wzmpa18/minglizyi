@@ -174,6 +174,10 @@ function initDatabase() {
   ensureColumn(dbInstance, 'users', 'birthday', 'TEXT DEFAULT ""');
   ensureColumn(dbInstance, 'users', 'tags', 'TEXT DEFAULT "[]"');
   ensureColumn(dbInstance, 'users', 'last_login_at', 'DATETIME');
+  // Never infer verification from a stored phone. Only successful SMS OTP sets this.
+  ensureColumn(dbInstance, 'users', 'phone_verified_at', 'TEXT');
+  ensureColumn(dbInstance, 'users', 'status', "TEXT NOT NULL DEFAULT 'active'");
+  ensureColumn(dbInstance, 'users', 'deleted_at', 'TEXT');
 
   // ========================================================================
   // 5. 独立账号序列及数据库不可绕过的约束
@@ -1249,6 +1253,7 @@ function buildUserResponse(user) {
     birthday: user.birthday || '',
     tags,
     phone: user.phone || null,
+    phoneVerified: !!user.phone_verified_at,
     email: user.email || null,
     memberLevel: isPaid ? 'premium' : rawLevel,
     memberTier: rawLevel,
@@ -1283,6 +1288,22 @@ function isPaidMember(user) {
  */
 function createRouter() {
   const router = express.Router();
+
+  // Existing email/third-party accounts keep their ID, purchases and records.
+  // Bind a phone to the same account only after a fresh server-validated SMS OTP.
+  router.post('/verify-phone', authMiddleware, (req, res) => {
+    const { phone, code } = req.body || {};
+    if (!/^1[3-9]\d{9}$/.test(phone || '') || !/^\d{6}$/.test(code || '')) return jsonResponse(res, 400, false, '请输入手机号及6位验证码');
+    try {
+      const db = initDatabase();
+      const owner = findUserByPhone(phone);
+      if (owner && String(owner.user_id) !== String(req.user.userId)) return jsonResponse(res, 409, false, '该手机号已绑定其他账号，请使用原账号登录；不会合并或转移权益');
+      if (!verificationStore.verifyCode(`sms:${phone}`, code)) return jsonResponse(res, 400, false, '验证码错误或已过期');
+      const result = db.prepare('UPDATE users SET phone=?,phone_verified_at=?,updated_at=CURRENT_TIMESTAMP WHERE user_id=?').run(phone, new Date().toISOString(), req.user.userId);
+      if (result.changes !== 1) return jsonResponse(res, 403, false, '账号不存在');
+      return jsonResponse(res, 200, true, '手机号验证完成', { phoneVerified: true });
+    } catch { return jsonResponse(res, 503, false, '手机号验证暂不可用，请稍后重试'); }
+  });
 
   // 确保数据库已初始化
   initDatabase();
@@ -1459,11 +1480,12 @@ function createRouter() {
 
       // 更新最后登录时间
       const db = initDatabase();
+      if (isPhone) db.prepare('UPDATE users SET phone_verified_at=? WHERE user_id=?').run(new Date().toISOString(), user.userId);
       db.prepare('UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE user_id = ?').run(user.userId);
       recordLoginActivity(db, user.userId); // v25.0.71 注册即记活跃
 
       return jsonResponse(res, 200, true, '注册成功', {
-        user: buildUserResponse(user),
+        user: buildUserResponse(findUserByUserId(user.userId)),
         accessToken: tokenPair.accessToken,
         expiresIn: tokenPair.expiresIn,
       });
@@ -1534,7 +1556,7 @@ function createRouter() {
 
       // 验证用户是否存在
       const user = findUserByUserId(decoded.userId);
-      if (!user) {
+      if (!user || user.deleted_at || user.status === 'banned') {
         clearRefreshTokenCookie(res);
         return jsonResponse(res, 401, false, '用户不存在');
       }
@@ -1583,6 +1605,7 @@ function createRouter() {
       if (!verifyPassword(password, user.password_hash)) {
         return jsonResponse(res, 401, false, '密码错误');
       }
+      if (user.deleted_at || user.status === 'banned') return jsonResponse(res, 403, false, '账号已停用，请通过用户反馈联系处理');
 
       // 更新最后登录时间
       const db = initDatabase();
@@ -1908,6 +1931,7 @@ function createRouter() {
       let user;
       let isNewUser = false;
       if (existing) {
+        if (existing.deleted_at || existing.status === 'banned') return jsonResponse(res, 403, false, '账号已停用，请通过用户反馈联系处理');
         user = existing;
         // 首绑优先：老用户从未绑定过邀请人时，登录也补归因（首绑永久生效）
         if (!existing.invited_by && (inviteRef || inviteCode)) {
@@ -1937,10 +1961,13 @@ function createRouter() {
           clientIp: getClientIp(req),
         });
         isNewUser = true;
+        // createUser returns the service DTO (userId), not a raw SQLite row.
+        user = findUserByUserId(user.userId);
         user.isAutoRegistered = true;
       }
 
       db.prepare('UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE user_id = ?').run(user.user_id);
+      if (isPhone) db.prepare('UPDATE users SET phone_verified_at=? WHERE user_id=?').run(new Date().toISOString(), user.user_id);
       recordLoginActivity(db, user.user_id); // v25.0.71 验证码登录活跃埋点
 
       const tokenPair = generateTokenPair({

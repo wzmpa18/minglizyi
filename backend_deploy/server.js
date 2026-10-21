@@ -29,14 +29,24 @@ const app = express();
 const PORT = process.env.API_PORT || 3001;
 
 // 中间件
-app.use(cors({ origin: true, credentials: true }));
-app.use(express.json({ limit: "10mb", verify: (req, res, buf) => { req.rawBody = buf.toString("utf-8"); } })); // v25.0.47_4: rawBody供微信V3回调验签
-app.use(express.urlencoded({ extended: true }));
+app.use(cors({ origin: true, credentials: true, preflightContinue: true }));
 
-// 请求日志
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  next();
+// Durable audit and identity gate run before every business router.
+// Fail closed if security storage is unavailable; callbacks retain signature verification.
+const securityJournal = require('./securityAudit').getSecurityAudit();
+require('./register_routes').initDatabase();
+app.use(require('./businessIdentityGate').createBusinessIdentityGate({
+  verifyToken,
+  getUser: id => require('./middleware/auth').getDB().prepare('SELECT user_id,phone,phone_verified_at,status,deleted_at FROM users WHERE user_id=?').get(id),
+  resolveAdminKey: token => require('./adminRoles').resolveAdminKey(token),
+  journal: securityJournal,
+}));
+app.options('*', (_req, res) => res.sendStatus(204));
+app.use(express.json({ limit: "10mb", verify: (req, res, buf) => { req.rawBody = buf.toString("utf-8"); } }));
+app.use(express.urlencoded({ extended: true }));
+app.use(require('./publicTextGuard').publicTextGuard);
+app.get('/api/admin/security/events', require('./adminRoles').adminAuth('SUPPORT_ADMIN', 'audit'), (req, res) => {
+  res.json({ success: true, data: { events: securityJournal.list(req.query), policy: securityJournal.status() } });
 });
 
 // FINAL-RC-02: 平台功能开关（服务端强制执行 PLATFORM_FEATURE_MATRIX，必须先于所有业务路由）

@@ -58,6 +58,7 @@ function sanitizeAdminData(value, key = '') {
   if (typeof value !== 'string' && typeof value !== 'number') return value;
 
   const normalized = String(key || '').toLowerCase();
+  if (/password|secret|token|authorization|private.?key|refresh.?token|access.?token|sms.?code|verification.?code/.test(normalized)) return '[REDACTED]';
   if (/(^|_)phone$|mobile$|telephone$/.test(normalized)) return maskPhone(value);
   if (/(^|_)email$/.test(normalized)) return maskEmail(value);
   if (normalized === 'contact' || normalized.endsWith('_contact')) return maskContact(value);

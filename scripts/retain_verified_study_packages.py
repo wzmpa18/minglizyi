@@ -3,20 +3,21 @@ import argparse,concurrent.futures,hashlib,io,json,plistlib,re,subprocess,zipfil
 from pathlib import Path
 
 def main():
- p=argparse.ArgumentParser(description=__doc__);p.add_argument('--source',required=True);p.add_argument('--android-channel',choices=['tencent','internal'],default='tencent');p.add_argument('--android-run',type=int,required=True);p.add_argument('--ios-run',type=int,required=True);p.add_argument('--code',type=int,required=True);p.add_argument('--build',type=int,required=True);p.add_argument('--root',type=Path,required=True);a=p.parse_args()
+ p=argparse.ArgumentParser(description=__doc__);p.add_argument('--source',required=True);p.add_argument('--android-channel',choices=['tencent','internal'],default='tencent');p.add_argument('--android-run',type=int,required=True);p.add_argument('--ios-run',type=int);p.add_argument('--code',type=int,required=True);p.add_argument('--build',type=int);p.add_argument('--root',type=Path,required=True);a=p.parse_args()
  assert re.fullmatch('[a-f0-9]{40}',a.source) and str(a.root.resolve()).lower().startswith('e:')
  manifest=json.loads(Path('public/assets/astronomy/surfaces/manifest.json').read_bytes())
  maps=[m for body in manifest['bodies'] for m in body['maps']]
  excluded=json.loads(subprocess.check_output(['node','-e',"console.log(JSON.stringify(require('./scripts/filter-unlicensed-meridians.cjs').excluded))"]))
  tasks=[]
- for run in [a.android_run,a.ios_run]:
+ for run in [n for n in [a.android_run,a.ios_run] if n]:
   info=json.loads(subprocess.check_output(['gh','api',f'repos/wzmpa18/minglizyi/actions/runs/{run}']))
   assert info['head_sha']==a.source and info['conclusion']=='success'
   artifacts=json.loads(subprocess.check_output(['gh','api',f'repos/wzmpa18/minglizyi/actions/runs/{run}/artifacts']))['artifacts']
   for item in artifacts:
    kind={'yandao-guoxue-android-apk':'apk','yandao-guoxue-android-aab':'aab','yandao-guoxue-ios-ipa':'ipa'}.get(item['name'])
    if kind:tasks.append((run,item,kind))
- assert sorted(t[2] for t in tasks)==['aab','apk','ipa']
+ assert sorted(t[2] for t in tasks)==(['aab','apk','ipa'] if a.ios_run else ['aab','apk'])
+ assert not a.ios_run or a.build
  def retain(task):
   run,meta,kind=task;raw=subprocess.check_output(['gh','api',f"repos/wzmpa18/minglizyi/actions/artifacts/{meta['id']}/zip"])
   assert 'sha256:'+hashlib.sha256(raw).hexdigest()==meta['digest'] and not meta['expired']
@@ -48,7 +49,7 @@ def main():
   assert file.stat().st_size==len(data) and hashlib.sha256(file.read_bytes()).hexdigest()==proof['fileSha256']
   proof['path']=str(file);return proof
  with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:proofs=list(pool.map(retain,tasks))
- for kind in ['apk','ipa']:
+ for kind in (['apk','ipa'] if a.ios_run else ['apk']):
   group=[v for v in proofs if (v['kind']=='ipa')==(kind=='ipa')];folder=Path(group[0]['path']).parent
   name='verified-package.json' if kind=='ipa' else 'verified-packages.json';value=group[0] if kind=='ipa' else group
   (folder/name).write_bytes((json.dumps(value,ensure_ascii=False,indent=2)+'\n').encode())
