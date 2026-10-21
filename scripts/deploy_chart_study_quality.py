@@ -16,7 +16,7 @@ for before,after in p['patches']:
  before=before.encode();after=after.encode();assert new.count(before)==1
  new=new.replace(before,after,1)
 assert b"require('./chartStudyQuality')" in new
-original={'server.js':old};updates={'server.js':new}
+original={'server.js':old};updates={} if p['modulesOnly'] else {'server.js':new}
 for name,item in p['files'].items():
  assert name in ['chartStudyQuality.js','toolStudySources.js']
  f=root/name;assert not f.is_symlink();before=f.read_bytes() if f.exists() else None
@@ -57,13 +57,18 @@ finally:
 '''
 
 def main():
- p=argparse.ArgumentParser(description=__doc__);p.add_argument('--source',required=True);p.add_argument('--expected-server',required=True);p.add_argument('--evidence',required=True,type=Path);p.add_argument('--apply',action='store_true');a=p.parse_args()
+ p=argparse.ArgumentParser(description=__doc__);p.add_argument('--source',required=True);p.add_argument('--expected-server',required=True);p.add_argument('--evidence',required=True,type=Path);p.add_argument('--apply',action='store_true');p.add_argument('--modules-only',action='store_true');p.add_argument('--expected-modules',type=Path);a=p.parse_args()
  assert re.fullmatch('[a-f0-9]{40}',a.source) and re.fullmatch('[a-f0-9]{64}',a.expected_server)
+ names=['chartStudyQuality.js','toolStudySources.js']
+ baseline=json.loads(a.expected_modules.read_bytes()) if a.expected_modules else dict.fromkeys(names)
+ assert set(baseline)==set(names)
+ for value in baseline.values():assert value is None or re.fullmatch('[a-f0-9]{64}',value)
+ if a.modules_only:assert a.expected_modules is not None
  files={}
- for name in ['chartStudyQuality.js','toolStudySources.js']:
-  data=subprocess.check_output(['git','show',a.source+':backend_deploy/'+name]);files[name]={'expected':None,'content':base64.b64encode(data).decode(),'sha256':hashlib.sha256(data).hexdigest()}
+ for name in names:
+  data=subprocess.check_output(['git','show',a.source+':backend_deploy/'+name]);files[name]={'expected':baseline[name],'content':base64.b64encode(data).decode(),'sha256':hashlib.sha256(data).hexdigest()}
  patches=[("require('./liurenStudyQuality')","require('./chartStudyQuality')"),('validateStudyReport(content);','validateStudyReport(content, studyRequest);'),('appendSourceNotes(content);','appendSourceNotes(content, studyRequest);')]
- payload={'source':a.source,'expectedServer':a.expected_server,'files':files,'patches':patches,'apply':a.apply}
+ payload={'source':a.source,'expectedServer':a.expected_server,'files':files,'patches':[] if a.modules_only else patches,'apply':a.apply,'modulesOnly':a.modules_only}
  result=subprocess.run(['ssh','-o','BatchMode=yes','root@82.156.228.87','python3 -c '+shlex.quote(REMOTE)],input=json.dumps(payload).encode(),capture_output=True,timeout=90)
  if result.returncode:raise RuntimeError(result.stderr.decode()[-1500:])
  proof=json.loads(result.stdout);a.evidence.write_bytes((json.dumps(proof,ensure_ascii=False,indent=2)+'\n').encode());print(json.dumps(proof))

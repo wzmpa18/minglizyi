@@ -1,5 +1,8 @@
 """Deploy the pinned Liuren policy and two reviewed server hooks; preserve live server differences.
 
+For the initial Liuren-only hook (pre unified chart wrapper). After migration,
+use deploy_chart_study_quality.py to update common rules; do not reapply old hooks.
+
 Runs syntax checks before activation, keeps one .previous, rolls back on failed
 service health. Never copies credentials, databases or a complete local server.
 """
