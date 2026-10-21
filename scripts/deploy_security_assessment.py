@@ -3,14 +3,14 @@ No credentials, user rows or database backups are downloaded to the workstation.
 """
 import argparse,base64,difflib,hashlib,json,re,shlex,subprocess
 from pathlib import Path
-EXISTING=['server.js','middleware/auth.js','register_routes.js','adminRoles.js','adminPrivacy.js','verificationStore.js']
-NEW=['securityAudit.js','businessIdentityGate.js','publicTextGuard.js']
+EXISTING=['server.js','middleware/auth.js','register_routes.js','adminRoles.js','adminPrivacy.js','verificationStore.js','backupEngine.js']
+NEW=['securityAudit.js','businessIdentityGate.js','publicTextGuard.js','securityBackupJob.js']
 REMOTE=r'''
 import sys,json,base64,hashlib,subprocess,sqlite3,datetime,time,urllib.request
 from pathlib import Path
 p=json.load(sys.stdin);root=Path('/www/yandaoguoxue-backend');sha=lambda b:hashlib.sha256(b).hexdigest();updates={};original={}
 for name,item in p['files'].items():
- assert name in ['server.js','middleware/auth.js','register_routes.js','adminRoles.js','adminPrivacy.js','verificationStore.js','securityAudit.js','businessIdentityGate.js','publicTextGuard.js']
+ assert name in ['server.js','middleware/auth.js','register_routes.js','adminRoles.js','adminPrivacy.js','verificationStore.js','backupEngine.js','securityAudit.js','businessIdentityGate.js','publicTextGuard.js','securityBackupJob.js']
  f=root/name;assert not f.is_symlink();old=f.read_bytes() if f.exists() else None
  assert (sha(old) if old is not None else None)==item['expected'],name+' changed since baseline'
  original[name]=old

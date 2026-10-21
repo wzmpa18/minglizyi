@@ -33,7 +33,7 @@ function createBusinessIdentityGate({ verifyToken, getUser, resolveAdminKey, jou
       }
       record('request_started', 0);
       res.once('finish', () => {
-        try { record('request_completed', res.statusCode, req.admin ? 'admin.' + (req.admin.username || req.admin.role) : req.user?.userId); }
+        try { record('request_completed', res.statusCode, req.admin ? 'admin.' + (req.admin.username || req.admin.keyId || req.admin.role) : req.user?.userId); }
         catch { console.error('[security-audit] completion write failed; investigate storage immediately'); }
       });
       if (publicRequest(req.method, route)) return next();

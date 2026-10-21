@@ -363,8 +363,10 @@ function applyRetention(cfg) {
   const c = cfg || getConfig();
   const state = readJson(STATE_FILE, { backups: [] });
   const keep = c.retentionCount;
-  const keepSet = state.backups.slice(0, keep).map((b) => b.backupId);
-  const expired = state.backups.slice(keep);
+  // Failed attempts must never evict the last usable recovery points.
+  const keepSet = [...state.backups.filter(b => b.status === 'OK').slice(0, keep),
+    ...state.backups.filter(b => b.status !== 'OK').slice(0, Math.min(2, keep))].map(b => b.backupId);
+  const expired = state.backups.filter(b => !keepSet.includes(b.backupId));
   const removed = [];
   for (const b of expired) {
     // 远端删除（幂等：不存在即成功）

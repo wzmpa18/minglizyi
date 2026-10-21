@@ -18,7 +18,8 @@ test('journal persists, never truncates at 1000, rejects UPDATE/DELETE and has r
    assert.equal(row.previous_hash,prev);const {id,event_hash,...entry}=row;assert.equal(event_hash,crypto.createHash('sha256').update(JSON.stringify(entry)).digest('hex'));prev=event_hash;
   }
   assert.ok(!JSON.stringify(audit.list()).includes('never-retain'));raw.close();raw=new DatabaseSync(file);
-  assert.equal(createSecurityAudit({db:adapt(raw)}).status().count,1005);
+  const reopened=createSecurityAudit({db:adapt(raw)});assert.equal(reopened.status().count,1005);assert.equal(reopened.verify().valid,true);
+  raw.exec('DROP TRIGGER security_events_no_update');raw.exec("UPDATE security_events SET actor='tampered' WHERE id=1");assert.equal(reopened.verify().valid,false);
  }finally{raw.close();fs.rmSync(dir,{recursive:true,force:true});}
 });
 function fixture(){

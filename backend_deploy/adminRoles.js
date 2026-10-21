@@ -140,20 +140,20 @@ function resolveAdminKey(token) {
   if (session) return session;
   const envKey = process.env.ADMIN_API_KEY;
   if (envKey && token === envKey) {
-    return { key: token, role: 'SUPER_ADMIN', name: '主密钥管理员' };
+    return { key: token, keyId: sha256(token).slice(0, 16), role: 'SUPER_ADMIN', name: '主密钥管理员' };
   }
   const h = sha256(token);
   const keys = loadKeys();
   const hit = keys[h];
   if (hit && hit.status !== 'disabled' && ROLES[hit.role]) {
-    return { key: token, role: hit.role, name: hit.name || '管理员' };
+    return { key: token, keyId: h.slice(0, 16), role: hit.role, name: hit.name || '管理员' };
   }
   try {
     const legacy = path.join(DATA_DIR, 'admin-keys.json');
     if (fs.existsSync(legacy)) {
       const j = JSON.parse(fs.readFileSync(legacy, 'utf-8'));
       const f = (j.keys || []).find((k) => k.keyHash === h && k.status !== 'disabled');
-      if (f && ROLES[f.role]) return { key: token, role: f.role, name: f.name || '管理员' };
+      if (f && ROLES[f.role]) return { key: token, keyId: h.slice(0, 16), role: f.role, name: f.name || '管理员' };
     }
   } catch (e) { /* ignore */ }
   try {
@@ -162,7 +162,7 @@ function resolveAdminKey(token) {
       const j = JSON.parse(fs.readFileSync(old, 'utf-8'));
       if (j.keys && j.keys[token] && !j.keys[token].disabled) {
         const r = j.keys[token].role;
-        if (ROLES[r]) return { key: token, role: r, name: j.keys[token].name || '管理员' };
+        if (ROLES[r]) return { key: token, keyId: h.slice(0, 16), role: r, name: j.keys[token].name || '管理员' };
       }
     }
   } catch (e) { /* ignore */ }
@@ -202,7 +202,7 @@ function adminAuth(minRole, scope) {
 function audit(admin, action, target, oldValue, newValue, reason, req) {
   try {
     require('./securityAudit').getSecurityAudit().append({
-      actor: 'admin.' + ((admin && (admin.username || admin.role)) || 'unknown'),
+      actor: 'admin.' + ((admin && (admin.username || admin.keyId || admin.role)) || 'unknown'),
       kind: action, method: req && req.method, route: req && req.path, status: 0,
       ip: req && require('./businessIdentityGate').clientIp(req), requestId: req && req.securityRequestId,
     });

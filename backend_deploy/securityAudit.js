@@ -40,6 +40,15 @@ function createSecurityAudit({ db, now = () => new Date() }) {
     status() {
       return { ...db.prepare('SELECT COUNT(*) AS count, MIN(time) AS firstEventAt, MAX(time) AS lastEventAt FROM security_events').get(), retention: 'no-automatic-deletion', minimumRetentionMonths: 6, historicalBackfill: false };
     },
+    verify() {
+      let previous = '0'.repeat(64), count = 0;
+      for (const row of db.prepare('SELECT * FROM security_events ORDER BY id').iterate()) {
+        const { id, event_hash, ...entry } = row;
+        if (entry.previous_hash !== previous || crypto.createHash('sha256').update(JSON.stringify(entry)).digest('hex') !== event_hash) return { valid: false, checked: count, failedId: id };
+        previous = event_hash; count++;
+      }
+      return { valid: true, checked: count, head: previous };
+    },
   };
 }
 let singleton;
