@@ -54,7 +54,7 @@ interface EventDivinationPanelProps {
   isPaidTool?: boolean; // 号码/车牌等需要付费的工具
 }
 
-const DISCLAIMER = "\n\n本内容收录古代传统文史资料，仅用于国学、历法学术研究，不构成运势预测与人生决策建议。";
+const DISCLAIMER = "\n\n解析参考传统典籍；正文推演为AI归纳，引用以具体出处为准。仅供学习，不构成现实预测或决策建议。";
 
 // 快捷问题模板（v25.0.79 合规整改：仅学习型问题，不作运势/决策询问）
 const QUICK_QUESTIONS = [
@@ -244,8 +244,8 @@ function EventDivinationPanelEnabled({
         : buildDeepReportSystemPrompt(toolName);
 
       const userPrompt = isBaziTool
-        ? `【八字排盘资料】\n${chartContext}\n\n请严格按照系统要求输出四部分白话精批解读：第一部分格局核心总论、第二部分大运逐段详解（每步大运单独成段不可省略）、第三部分分领域专项解读（婚姻感情/财运事业/学业文昌/健康体质）、第四部分结尾总结+典籍标注。篇幅以讲透为准、不设上限，但每段都要落到本命盘的具体配置，不要模板话。`
-        : `【${toolName}排盘数据】\n${chartContext}\n\n请严格按照系统要求输出五段式深度解读报告（700-900字）。`;
+        ? `【八字排盘资料】\n${chartContext}\n\n请按系统要求核对格局成立条件，逐段比较已提供大运与原局关系，解释分歧、资料缺口及典籍依据；每段落到具体配置，不能生成个人命运预测或健康诊断。`
+        : `【${toolName}排盘数据】\n${chartContext}\n\n请严格按照系统要求输出包含本盘具体推演、不同解释与出处核对的深度研习报告。`;
 
       const result = await callAI({
         systemPrompt,
@@ -473,8 +473,6 @@ function EventDivinationPanelEnabled({
             <div
               style={{
                 padding: "10px 12px",
-                maxHeight: "400px",
-                overflowY: "auto",
                 fontSize: "13px",
                 color: "#333",
                 lineHeight: "1.7",
@@ -485,12 +483,12 @@ function EventDivinationPanelEnabled({
               {loading && !content ? (
                 <span style={{ color: "#999" }}>正在生成解读内容，请稍候...</span>
               ) : (
-                content
+                content.replace(/^#{1,6}\s*/gm, "").replace(/\*\*(.*?)\*\*/g, "$1")
               )}
             </div>
             {content && !loading && (
               <div style={{ padding: "6px 12px", background: "#fafafa", borderTop: "1px solid #eee", fontSize: "10px", color: "#999", textAlign: "center" }}>
-                本内容收录古代传统文史资料，仅用于国学、历法学术研究，不构成运势预测与人生决策建议
+                解析参考传统典籍；正文推演为AI归纳，引用以具体出处为准。仅供学习，不构成现实预测或决策建议
               </div>
             )}
           </div>
@@ -522,7 +520,7 @@ function EventDivinationPanelEnabled({
                   后续深度内容已锁定
                 </div>
                 <div style={{ fontSize: "11px", color: "#999", marginTop: "2px" }}>
-                  包含流月流日、深度详批、专项解读等完整内容
+                  解锁本次报告剩余内容；具体范围以实际生成的报告为准
                 </div>
               </div>
               {/* 两个解锁按钮 */}

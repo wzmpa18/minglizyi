@@ -1175,7 +1175,7 @@ export default function DaLiuRenPage() {
       <div style={{ padding: "0 10px 60px" }}>
         <EventDivinationPanel
           toolName="大六壬"
-          chartContext={`四柱: ${data.siZhu.map(s => s[0]+s[1]).join(" ")}\n日干支: ${data.dayGan}${data.dayZhi}\n月将: ${data.yuejiangName}加${data.zhanbuTime}时\n三传: ${data.sanChuan.map(sc => sc.zhi).join("→")} (${data.sanChuanMethod}法)\n四课: ${data.siKe.map(ke => ke.shangShen+ke.xiaShen).join(" ")}\n课体: ${data.keTi}\n空亡: ${data.kongwang.join("")}\n${data.isDaytime ? "昼占" : "夜占"}\n判断: ${data.keTiDesc}`}
+          chartContext={`起课四柱（非出生四柱）: ${data.siZhu.map(s => s[0]+s[1]).join(" ")}\n日干支: ${data.dayGan}${data.dayZhi}\n月将: ${data.yuejiangName}加${data.zhanbuTime}时\n三传: ${data.sanChuan.map((sc, i) => `${["初传", "中传", "末传"][i]} ${sc.zhi}，遁干${sc.gan}，天将${sc.shen}，六亲${sc.liuqin}`).join("→")} (${data.sanChuanMethod}法)\n四课（第一至第四课，每课标上神/下神）: ${data.siKe.map((ke, i) => `${i+1}课：上${ke.shangShen}/下${ke.xiaShen}，天将${ke.tianJiang}，遁干${ke.dunGan || "未提供"}`).join("；")}\n课体: ${data.keTi}\n日旬空（不是时空）: ${data.kongwang.join("")}\n${data.isDaytime ? "昼占" : "夜占"}\n课体旧说明（传统术语，需核对，不作为结论）: ${data.keTiDesc}`}
           isPaidTool={false}
         />
       </div>

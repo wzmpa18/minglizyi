@@ -300,6 +300,9 @@ app.post('/api/ai/chat', async (req, res) => {
     if (!finalMessages || finalMessages.length === 0) {
       return res.json({ success: false, error: '缺少对话内容' });
     }
+    const studyQuality = require('./liurenStudyQuality');
+    const studyRequest = studyQuality.applyStudyPolicy(finalMessages);
+    finalMessages = studyRequest.messages;
     // ===== v25.0.61 FINAL-SEAL P2-B：输入长度硬限制 =====
     // 防止单请求堆砌超长上下文导致上游成本失控（超长命盘×超长追问场景）。
     // 上限以 AI_USAGE_POLICY 档位 maxInputChars 为唯一事实源（默认 12000 字符），
@@ -408,7 +411,7 @@ app.post('/api/ai/chat', async (req, res) => {
         detail: _lastFailDetail,
       });
     }
-    const content = data.choices?.[0]?.message?.content || '';
+    let content = data.choices?.[0]?.message?.content || '';
     const usage = data.usage || {};
     _meta.inputTokens = Number(usage.prompt_tokens) || 0;
     _meta.outputTokens = Number(usage.completion_tokens) || 0;
@@ -426,6 +429,15 @@ app.post('/api/ai/chat', async (req, res) => {
         code: 'AI_EMPTY_CONTENT',
         finishReason: _finish,
       });
+    }
+    if (studyRequest.applied) {
+      const qualityError = studyQuality.validateStudyReport(content);
+      if (qualityError || data.choices?.[0]?.finish_reason === 'length') {
+        _logCost('error', qualityError || 'REPORT_TRUNCATED');
+        recordAIHealth('fail', Date.now() - _t0, qualityError || 'REPORT_TRUNCATED');
+        return res.status(502).json({ success: false, code: 'AI_REPORT_QUALITY', error: '本次解读未通过完整性与来源核对，未扣解读额度，请重试。' });
+      }
+      content = studyQuality.appendSourceNotes(content);
     }
     // v25.0.60 P0-3/P1-7：生成成功后扣减配额（只对成功调用计费）
     if (_quotaOwner && content) {
