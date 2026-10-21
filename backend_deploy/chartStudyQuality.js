@@ -59,7 +59,9 @@ function validateStudyReport(content,request) {
  for(const sentence of text.split(/[。！？\n]/)) {
   if(/不能|不可|并非|不是|不代表|不应|切勿|没有依据|禁止/.test(sentence))continue;
   const generates={木:'火',火:'土',土:'金',金:'水',水:'木'},controls={木:'土',土:'水',水:'火',火:'金',金:'木'};
+  const comparison=sentence.match(/([木火土金水])生([木火土金水])与\2生\1.{0,10}(?:区分|区别|辨别)/);
   for(const m of sentence.matchAll(/([木火土金水])\s*([生克剋])\s*[甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥]?([木火土金水])/g)) {
+   if(comparison && m.index>=comparison.index && m.index<comparison.index+comparison[0].length)continue;
    if(/(?:非|不是|不能|勿|错误说法为)[：:\s]*$/.test(sentence.slice(Math.max(0,m.index-8),m.index)))continue;
    if((m[2]==='生'?generates:controls)[m[1]]!==m[3])return 'REPORT_ELEMENT_ERROR';
   }

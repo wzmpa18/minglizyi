@@ -50,3 +50,9 @@ test('refuting an incorrect relationship is not itself a model error; an affirma
  assert.equal(q.validateStudyReport(body+'[BZ] 火生木。',r),'REPORT_ELEMENT_ERROR');
  assert.equal(q.validateStudyReport(body+'[FAKE]',r),'REPORT_UNKNOWN_SOURCE');
 });
+
+test('a narrowly phrased direction-comparison question is not an assertion; a wrong-premise question is rejected',()=>{
+ const r=q.applyStudyPolicy(message('五行查询'));
+ assert.equal(q.validateStudyReport(body+'[BZ] 复盘：木生火与火生木在方向上如何区分？',r),null);
+ assert.equal(q.validateStudyReport(body+'[BZ] 火生木如何应用？',r),'REPORT_ELEMENT_ERROR');
+});
