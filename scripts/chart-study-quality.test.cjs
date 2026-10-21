@@ -34,3 +34,11 @@ test('each profile has its own analysis criteria rather than a shared horoscope 
  assert.ok(q.applyStudyPolicy(message('六爻')).messages[0].content.includes('世应'));
  assert.ok(q.applyStudyPolicy(message('七政四余')).messages[0].content.includes('宿度'));
 });
+
+test('verified full quotations can resolve their source without a fragile marker; simplified glyphs preserve provenance',()=>{
+ const qm=q.applyStudyPolicy(message('奇门遁甲'));
+ const exact=body+'《奇門遁甲統宗》卷二已核原文：“左三右七，戴九履一，二四为肩，六八为足，五居中宫”。';
+ assert.equal(q.validateStudyReport(exact,qm),null);assert.ok(q.appendSourceNotes(exact,qm).includes('[QM]'));
+ assert.equal(q.validateStudyReport(body+'[BZ] 戊土在寅月处于囚地。',q.applyStudyPolicy(message('八字'))),'REPORT_SEASON_SYSTEM_ERROR');
+ assert.equal(q.validateStudyReport(body+'[BZ] 金克亥水。',q.applyStudyPolicy(message('八字'))),'REPORT_ELEMENT_ERROR');
+});
