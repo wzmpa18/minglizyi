@@ -120,7 +120,7 @@ function AIInterpretButtonEnabled({
 
     // 免费用户额度用完
     if (!perm.canUseAI) {
-      setNeedsAccess(true);
+      setNeedsAccess(perm.needPayment);
       requestPending.current = false;
       setShowResult(true);
       setContent(perm.message || "今日AI解读次数已用完，开通会员或购买套餐继续使用" + DISCLAIMER);

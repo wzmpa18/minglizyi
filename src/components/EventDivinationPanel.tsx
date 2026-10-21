@@ -103,6 +103,11 @@ function EventDivinationPanelEnabled({
       return false;
     }
 
+    if (!perm.canUseAI && !perm.needPayment) {
+      setError(perm.message);
+      return false;
+    }
+
     if (isPaidTool) {
       // 付费工具：检查会员状态（服务端AI调用时二次鉴权）
       if (perm.canUseAI && (perm.level === "member" || perm.paidAccess)) {

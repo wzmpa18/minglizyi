@@ -33,3 +33,9 @@ test('all twelve palace details use their selected ground/heaven/general/stem an
  const branches=[...'子丑寅卯辰巳午未申酉戌亥'];
  for(let i=0;i<12;i++){const earth=branches[i],heaven=branches[(i+3)%12],d=palace(earth,heaven,'贵','甲','父',['子','丑']);assert.equal(d.title,`${earth}宫 · 天盘${heaven}`);assert.ok(d.items[0].content.includes(`地盘为${earth}`));assert.ok(d.items[0].content.includes(`天盘为${heaven}`));assert.ok(d.items.some(x=>x.title.includes('天乙贵人')));assert.ok(d.items.some(x=>x.title.includes('甲')));assert.ok(d.items.at(-1).content.includes(`地盘${earth}${['子','丑'].includes(earth)?'在':'不在'}`));}
 });
+
+test('phone verification and service failures never become purchase prompts or trust stale membership',async()=>{
+ const c=client();c.values.set('yandao_membership_status',JSON.stringify({level:'lifetime'}));
+ for(const status of [403,500]){c.setHandler(async()=>new Response(JSON.stringify({code:status===403?'PHONE_VERIFICATION_REQUIRED':'UNAVAILABLE'}),{status}));const p=await c.api.getPermissionStatusFromServer();assert.equal(p.canUseAI,false);assert.equal(p.needPayment,false);assert.equal(p.verificationRequired,status===403);assert.ok(p.message.includes('无需重复'));}
+ c.setHandler(async()=>{throw Error('offline')});const p=await c.api.getPermissionStatusFromServer();assert.equal(p.canUseAI,false);assert.equal(p.needPayment,false);
+});

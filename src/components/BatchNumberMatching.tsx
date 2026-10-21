@@ -471,8 +471,8 @@ export default function BatchNumberMatching({ toolType }: BatchNumberMatchingPro
     // v20.1: 权限检查
     if (!requireLogin()) return;
     const perm = await getPermissionStatusFromServer();
-    if (!perm.canUseAI && perm.needPayment) {
-      setToast("今日AI解读次数已用完，请开通会员继续使用");
+    if (!perm.canUseAI) {
+      setToast(perm.message);
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
       toastTimerRef.current = setTimeout(() => setToast(""), 3000);
       return;

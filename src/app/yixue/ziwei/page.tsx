@@ -1105,7 +1105,7 @@ export default function ZiweiPage() {
     setAiIsError(false);
     const perm = await getPermissionStatusFromServer();
     if (!perm.canUseAI) {
-      setAiNeedsAccess(true);
+      setAiNeedsAccess(perm.needPayment);
       setAiIsError(true);
       setAiContent(perm.message || "今日AI解读次数已用完，开通会员继续使用");
       setAiScope(scope);

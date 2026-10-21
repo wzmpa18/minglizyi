@@ -210,6 +210,7 @@ export interface AIQuotaStatus {
   level: "basic" | "monthly" | "quarterly" | "yearly" | "lifetime";
   canUse: boolean;
   needPayment: boolean;
+  verificationRequired?: boolean;
   message: string;
 }
 
@@ -367,6 +368,7 @@ export interface PermissionStatus {
   canUseAI: boolean;
   needLogin: boolean;
   needPayment: boolean;
+  verificationRequired?: boolean;
   message: string;
 }
 
@@ -419,8 +421,12 @@ export async function getPermissionStatusFromServer(): Promise<PermissionStatus 
       signal: AbortSignal.timeout(8000),
     });
     if (response.status === 401) return { ...local, canUseAI: false, needLogin: true, paidAccess: false };
-    if (!response.ok) return { ...local, paidAccess: false };
     const payload = await response.json();
+    if (!response.ok) {
+      const verificationRequired = payload?.code === "PHONE_VERIFICATION_REQUIRED";
+      if (verificationRequired && typeof window.dispatchEvent === "function") window.dispatchEvent(new Event("yandao-auth-change"));
+      return { ...local, canUseAI: false, needPayment: false, paidAccess: false, verificationRequired, message: verificationRequired ? "请先完成账号手机号验证；已有购买权益保留，无需重复付款。" : "暂时无法核对账号权益，请稍后重试；无需重复购买。" };
+    }
     if (payload?.success === true) {
       const paidAccess = payload?.data?.paidAccess === true;
       const isMember = ["monthly", "quarterly", "yearly", "lifetime", "premium"].includes(payload?.data?.level);
@@ -444,7 +450,7 @@ export async function getPermissionStatusFromServer(): Promise<PermissionStatus 
       return { ...local, level: verifiedLevel, isMember, isLoggedIn: true, canUseAI: false, needLogin: false, needPayment: true, paidAccess: false, message: "当前账号AI额度已用完，可购买点数或查看会员权益" };
     }
   } catch { /* The request itself still enforces server authentication and quota. */ }
-  return { ...local, paidAccess: false };
+  return { ...local, canUseAI: false, needPayment: false, paidAccess: false, message: "暂时无法核对账号权益，请检查网络后重试；无需重复购买。" };
 }
 
 export function getPermissionStatus(): PermissionStatus {
@@ -575,7 +581,7 @@ export function generateContentKey(toolName: string, context: string): string {
 const AI_COMPLIANCE_RULES = `【研习解读标准】
 按“本盘核对→具体结构与规则推演→所问主题的不同传统解释→限制和复盘→依据”组织，不能只写术语释义。通常1000—1800字，简单追问按需要回答，不凑字。每个主要解释明确盘面事实、推理过程和不能据此推出的结论。
 古代吉凶、生克、财爻等术语可以客观解释，但不可当成个人现实预测；不得恐吓、承诺改运、指示婚姻投资或推断个人疾病体质。
-只有明确可核的原文才能引用，标明出处；没有原文写“AI归纳，未核对原文”，不能仅列书名便称解析来自经典。
+只有明确可核的原文才能引用，标明出处；无专属原文时标为“AI辅助方法解析”，不能仅列书名便称解析来自经典。
 纯文本编号段落，不输出#或**。末注明：解析参考古籍经典体系，正文推演为AI归纳，仅供传统文化学习与复盘，不构成现实预测、医疗、投资或人生决策建议。`;
 
 export async function getEventDivination(

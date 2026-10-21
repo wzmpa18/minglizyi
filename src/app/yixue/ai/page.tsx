@@ -28,7 +28,7 @@ export default function YixueAIPage() {
     // v20.1: 三级权限检查 - 未登录弹出登录引导
     if (!requireLogin()) return;
     const perm = await getPermissionStatusFromServer();
-    setNeedsAccess(!perm.canUseAI);
+    setNeedsAccess(!perm.canUseAI && perm.needPayment);
     if (!perm.canUseAI) {
       setMessages((prev) => [...prev,
         { role: "user", content: input },
