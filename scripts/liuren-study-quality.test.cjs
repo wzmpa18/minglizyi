@@ -19,7 +19,7 @@ test('quality failures do not become deliverable reports; correct explanation in
 });
 test('server quality gate precedes quota consumption and returns explicit failure',()=>{
  const src=require('node:fs').readFileSync('backend_deploy/server.js','utf8');
- assert.ok(src.indexOf('validateStudyReport(content)')<src.indexOf('if (_quotaOwner && content)'));
+ const quality=src.indexOf('validateStudyReport(content, studyRequest)');assert.ok(quality>=0);assert.ok(quality<src.indexOf('if (_quotaOwner && content)'));
  assert.ok(src.includes("code: 'AI_REPORT_QUALITY'"));assert.ok(src.includes("finish_reason === 'length'"));
 });
 

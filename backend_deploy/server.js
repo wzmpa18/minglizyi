@@ -300,7 +300,7 @@ app.post('/api/ai/chat', async (req, res) => {
     if (!finalMessages || finalMessages.length === 0) {
       return res.json({ success: false, error: '缺少对话内容' });
     }
-    const studyQuality = require('./liurenStudyQuality');
+    const studyQuality = require('./chartStudyQuality');
     const studyRequest = studyQuality.applyStudyPolicy(finalMessages);
     finalMessages = studyRequest.messages;
     // ===== v25.0.61 FINAL-SEAL P2-B：输入长度硬限制 =====
@@ -440,13 +440,13 @@ app.post('/api/ai/chat', async (req, res) => {
       });
     }
     if (studyRequest.applied) {
-      const qualityError = studyQuality.validateStudyReport(content);
+      const qualityError = studyQuality.validateStudyReport(content, studyRequest);
       if (qualityError || data.choices?.[0]?.finish_reason === 'length') {
         _logCost('error', qualityError || 'REPORT_TRUNCATED');
         recordAIHealth('fail', Date.now() - _t0, qualityError || 'REPORT_TRUNCATED');
         return res.status(502).json({ success: false, code: 'AI_REPORT_QUALITY', error: '本次解读未通过完整性与来源核对，未扣解读额度，请重试。' });
       }
-      content = studyQuality.appendSourceNotes(content);
+      content = studyQuality.appendSourceNotes(content, studyRequest);
     }
     // v25.0.60 P0-3/P1-7：生成成功后扣减配额（只对成功调用计费）
     if (_quotaOwner && content) {
