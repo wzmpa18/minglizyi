@@ -557,7 +557,7 @@ function EventDivinationPanelEnabled({
                     cursor: "pointer",
                   }}
                 >
-                  开通会员无限看
+                  查看会员权益
                 </button>
               </div>}
             </div>
@@ -677,7 +677,7 @@ function EventDivinationPanelEnabled({
                   cursor: "pointer",
                 }}
               >
-                暂不开通
+                返回解读
               </button>
             </div>
           </div>

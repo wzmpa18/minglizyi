@@ -11,8 +11,9 @@ export function AIAccessLinks() {
   if (IS_GOOGLE_PLAY_BUILD || (blocked && !IS_IOS_FULL_BUILD)) return <p role="status">{PAYMENT_DISABLED_TIP}</p>;
   return <div data-testid="ai-access-links" style={{padding:12,lineHeight:1.8,fontSize:13}}>
     <p>{IS_IOS_FULL_BUILD ? "通过App Store购买会员或AI点数；已付款可在购买页恢复购买，无需重复付款。" : "会员与AI点数按账号使用，购买后返回本工具重新核对额度。"}</p>
-    <nav aria-label="AI购买与权益" style={{display:"flex",gap:14,flexWrap:"wrap"}}>
-      <Link href="/membership">会员与恢复购买</Link><Link href="/ai-credits">购买AI点数</Link>
+    <nav aria-label="AI购买与权益" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+      <Link href="/membership" style={{padding:"12px 8px",borderRadius:10,background:"#7B2FBE",color:"white",textAlign:"center",fontWeight:700,textDecoration:"none"}}>开通会员</Link><Link href="/ai-credits" style={{padding:"12px 8px",borderRadius:10,border:"1px solid #7B2FBE",color:"#7B2FBE",textAlign:"center",fontWeight:700,textDecoration:"none"}}>购买AI点数</Link>
+      {IS_IOS_FULL_BUILD && <Link href="/membership#restore-purchases">恢复购买</Link>}
       <Link href="/profile/feedback">购买问题反馈</Link>
     </nav>
   </div>;

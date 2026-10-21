@@ -23,7 +23,10 @@ test('real sources and uncertainty are required; fabricated citation and emotion
  assert.equal(q.validateStudyReport(body+'[BZ] 《三命通会》云：“使用这个号码就可以发财”。',b),'REPORT_FABRICATED_QUOTE');
  assert.equal(q.validateStudyReport(body+'[BZ] 你明年一定发财。',b),'REPORT_MANIPULATIVE_CLAIM');
  assert.equal(q.validateStudyReport(body+'[BZ] 购买即可化解。',b),'REPORT_MANIPULATIVE_CLAIM');
- assert.equal(q.validateStudyReport(body,n),'REPORT_UNVERIFIED_SOURCE');
+ assert.equal(q.validateStudyReport(body,n),null);
+ assert.ok(!q.applyStudyPolicy(message('手机号码')).messages[0].content.includes('必须明说'));
+ assert.ok(!q.appendSourceNotes(body,n).includes('本次未核原文'));
+ assert.equal(q.validateStudyReport(body+'《三命通会》云：“使用这个号码就可以发财”。',n),'REPORT_FABRICATED_QUOTE');
  assert.equal(q.validateStudyReport(body+'未核原文，不能把现代号码公式当古籍。',n),null);
  const notes=q.appendSourceNotes(body+'[BZ]',b);assert.ok(notes.includes('三命通会'));assert.ok(!notes.includes('紫微斗数全书'));
 });
