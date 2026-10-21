@@ -16,8 +16,9 @@ old=server.read_bytes();assert sha(old)==p['expectedServer'],'Live server change
 updated=old
 for hook in p['hooks']:
  before=base64.b64decode(hook['before']);after=base64.b64decode(hook['after'])
- assert updated.count(before)==1,'Hook context ambiguous'
+ assert updated.count(before)==1,'Hook context ambiguous: '+str(len(before))+' bytes, count '+str(updated.count(before))
  updated=updated.replace(before,after,1)
+assert b'const order = { tencent: 0, deepseek: 1, zhipu: 2 }' in updated
 policy=base64.b64decode(p['module']);assert sha(policy)==p['moduleSHA']
 proof={'source':p['source'],'previousServerSHA':sha(old),'serverSHA':sha(updated),'policySHA':sha(policy),'credentialsChanged':False,'databaseChanged':False,'mode':'dry-run'}
 if not p['apply']:print(json.dumps(proof));sys.exit()
@@ -62,13 +63,14 @@ def main():
     before1=b"    // ===== v25.0.61 FINAL-SEAL P2-B"
     index=new.index(before1);prefix=b"    const studyQuality = require('./liurenStudyQuality');\n    const studyRequest = studyQuality.applyStudyPolicy(finalMessages);\n    finalMessages = studyRequest.messages;\n"
     assert new[index-len(prefix):index]==prefix
-    before2=b"    // v25.0.60 P0-3/P1-7";end=new.index(before2);start=new.index(b'    if (studyRequest.applied) {',index)
+    before2=b"    // v25.0.60 P0-3/P1-7";end=new.index(before2);start=new.index(b'    if (studyRequest.applied) {\n      const qualityError',index)
     hooks=[(before1,prefix+before1),(b"    const content = data.choices?.[0]?.message?.content || '';",b"    let content = data.choices?.[0]?.message?.content || '';"),(before2,new[start:end]+before2)]
-    provider_start=new.index(b'    if (studyRequest.applied) {',index)
+    provider_start=new.index(b'    if (studyRequest.applied) {\n      // Complex',index)
     provider_end=new.index(b'    _meta.model = _providerChain[0].model;')
     hooks.append((b'    _meta.model = _providerChain[0].model;',new[provider_start:provider_end]+b'    _meta.model = _providerChain[0].model;'))
     enc=lambda b:base64.b64encode(b).decode()
     payload={'source':a.source,'expectedServer':a.expected_server,'module':enc(policy),'moduleSHA':hashlib.sha256(policy).hexdigest(),'hooks':[{'before':enc(x),'after':enc(y)} for x,y in hooks],'apply':a.apply}
-    result=subprocess.run(['ssh','-o','BatchMode=yes','root@82.156.228.87','python3 -c '+shlex.quote(REMOTE)],input=json.dumps(payload).encode(),capture_output=True,check=True,timeout=90)
+    result=subprocess.run(['ssh','-o','BatchMode=yes','root@82.156.228.87','python3 -c '+shlex.quote(REMOTE)],input=json.dumps(payload).encode(),capture_output=True,timeout=90)
+    if result.returncode:raise RuntimeError(result.stderr.decode()[-1200:])
     proof=json.loads(result.stdout);a.evidence.write_bytes((json.dumps(proof,ensure_ascii=False,indent=2)+'\n').encode());print(json.dumps(proof))
 if __name__=='__main__':main()

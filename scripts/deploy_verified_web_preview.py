@@ -74,6 +74,19 @@ with tarfile.open(fileobj=sys.stdin.buffer,mode='r|gz') as archive:
             if destination.exists():assert destination.read_bytes()==data
             else:destination.write_bytes(data)
             preserved.append({'path':relative,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()})
+        # Keep the current explicitly verified internal download reachable while
+        # publishing text/layout changes. Hard links do not duplicate APK bytes.
+        test_dir=old/'testing'/'2123'
+        if test_dir.exists():
+            apk=test_dir/'yandao-guoxue-25.0.115-2123-test.apk'
+            assert apk.is_file() and not apk.is_symlink()
+            assert hashlib.sha256(apk.read_bytes()).hexdigest()=='f3aee0d5bbc390ccfd13a8de818d3022e0924b9d91b0b53ee4d3904b047471c0'
+            for item in [test_dir/'index.html',apk]:
+                assert item.is_file() and not item.is_symlink()
+                relative='testing/2123/'+item.name
+                destination=target/relative;destination.parent.mkdir(parents=True,exist_ok=True)
+                assert not destination.exists();os.link(item,destination)
+                preserved.append({'path':relative,'bytes':item.stat().st_size,'sha256':hashlib.sha256(item.read_bytes()).hexdigest(),'storage':'verified-hard-link'})
         expected['preservedPublicAssets']=preserved
         pending=link.parent/'.current-next'
         assert not pending.exists() and not pending.is_symlink()
