@@ -9,7 +9,7 @@ test('reviewed text-only catalog has 24 lessons/68 questions, preserves existing
 });
 test('publication is reviewed, compare-and-swap, monotonic and persistent, with exactly one previous catalog and no overwritten concurrent edit',()=>{
  const base=path.resolve(process.env.YANDAO_TEST_TMP_DIR||os.tmpdir());fs.mkdirSync(base,{recursive:true});const dir=fs.mkdtempSync(path.join(base,'starter-content-')),file=path.join(dir,'catalog.json');
- try{fs.writeFileSync(file,JSON.stringify(seed));const store=createStudyContentStore(file),next={...structuredClone(seed),revision:2};next.lessons[0].summary+='（本次增加资料核对说明）';
+ try{const original={...structuredClone(seed),revision:1};fs.writeFileSync(file,JSON.stringify(original));const store=createStudyContentStore(file),next={...structuredClone(seed),revision:2};next.lessons[0].summary+='（本次增加资料核对说明）';
   assert.throws(()=>store.publish(next,1,false),e=>e.status===400);assert.equal(store.read().catalog.revision,1);
   assert.equal(store.publish(next,1,true).catalog.revision,2);assert.equal(JSON.parse(fs.readFileSync(file+'.previous')).revision,1);
   assert.throws(()=>store.publish(next,1,true),e=>e.status===409);assert.equal(createStudyContentStore(file).read().catalog.revision,2);

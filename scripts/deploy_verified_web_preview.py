@@ -31,8 +31,14 @@ with tarfile.open(fileobj=sys.stdin.buffer,mode='r|gz') as archive:
     assert target.parent==base and not target.exists()
     target.mkdir()
     try:
+        for relative in expected.get('reuse',[]):
+            source=(old/relative).resolve();destination=(target/relative).resolve()
+            assert old in source.parents and target in destination.parents
+            assert source.is_file() and not (old/relative).is_symlink()
+            assert hashlib.sha256(source.read_bytes()).hexdigest()==expected['hashes'][relative]
+            destination.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(source,destination)
         for entry in entries:
-            assert entry.isfile() and entry.name in expected['hashes']
+            assert entry.isfile() and entry.name in expected['hashes'] and entry.name not in expected.get('reuse',[])
             destination=(target/entry.name).resolve()
             assert target in destination.parents
             destination.parent.mkdir(parents=True,exist_ok=True)
@@ -107,6 +113,22 @@ def main():
     assert re.fullmatch(r'v\d+\.\d+\.\d+(?:_\d+)?',version)
     hashes = {entry.filename: hashlib.sha256(archive.read(entry)).hexdigest() for entry in files}
     proof = {'source':metadata['workflow_run']['head_sha'],'workflow':str(metadata['workflow_run']['id']),'artifactId':args.artifact_id,'artifactZipSha256':args.sha256,'files':len(files),'bytes':sum(entry.file_size for entry in files),'manifestSha256':hashlib.sha256(json.dumps(hashes,sort_keys=True).encode()).hexdigest(),'releaseName':version+'-calendar-community-'+args.source[:7],'expectedCurrent':args.expect_current,'hashes':hashes}
+    # Transfer only changed bytes; verify each reused source again immediately before copying.
+    inventory_code = r'''import sys,json,hashlib
+from pathlib import Path
+p=json.load(sys.stdin);base=Path('/root/yandaoguoxue/releases');old=Path('/root/yandaoguoxue/current').resolve()
+assert old==base/p['expectedCurrent'] and old.is_dir()
+reused=[]
+for relative,expected in p['hashes'].items():
+ f=(old/relative).resolve()
+ assert old in f.parents
+ if f.is_file() and not (old/relative).is_symlink() and hashlib.sha256(f.read_bytes()).hexdigest()==expected:reused.append(relative)
+print(json.dumps(reused))
+'''
+    inventory = subprocess.run(['ssh','-o','BatchMode=yes',args.host,'python3 -c '+shlex.quote(inventory_code)],input=json.dumps({'expectedCurrent':args.expect_current,'hashes':hashes}).encode(),capture_output=True,check=True,timeout=60)
+    reuse=json.loads(inventory.stdout);assert isinstance(reuse,list) and len(set(reuse))==len(reuse) and all(name in hashes for name in reuse)
+    proof['reuse']=reuse;proof['reusedFiles']=len(reuse);proof['transferredFiles']=len(files)-len(reuse)
+    proof['reusedBytes']=sum(e.file_size for e in files if e.filename in reuse)
     payload = io.BytesIO()
     with tarfile.open(fileobj=payload,mode='w:gz') as bundle:
         data = json.dumps(proof).encode()
@@ -114,6 +136,7 @@ def main():
         header.size = len(data)
         bundle.addfile(header,io.BytesIO(data))
         for entry in files:
+            if entry.filename in reuse: continue
             data = archive.read(entry)
             header = tarfile.TarInfo(entry.filename)
             header.size, header.mode = len(data), 0o644
@@ -123,7 +146,7 @@ def main():
     if args.evidence:
         args.evidence.parent.mkdir(parents=True,exist_ok=True)
         args.evidence.write_text(json.dumps(published,ensure_ascii=False,indent=2),encoding='utf8')
-    print(json.dumps(published,ensure_ascii=False))
+    print(json.dumps({k:v for k,v in published.items() if k not in {'reuse','preservedPublicAssets'}},ensure_ascii=False))
 
 
 if __name__ == '__main__':
