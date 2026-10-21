@@ -1756,3 +1756,34 @@ sqlite3 /tmp/yandao_restore_test/social.db "SELECT COUNT(*) FROM friendships; SE
 - 本轮无需重新打包：继续使用Android25.0.115/2122与Apple25.0.115/32；联网课检查revision4，离线包页更新原典1.3.0。未上传新原生包、替换stable或变更商店正式审核。Apple30与Google迁移仅沿用70节最近核对，本轮没有新平台状态证据，不取消或修改学外语迁移。
 - C未安装node_modules、未生成ZIP/解包/原HTML图像缓存；仅维护源码，E保留合法原典包和必要证据。服务器本人发布lock/next/stage逐个核不存在。单一人工清理CMD保持未执行；新包虽浏览器已验，原生与07/09/10整体尚未全验，未自动清理历史用途包/旧COS对象及所有历史债务，不能宣称物理两代轮换或全工作区清理完成。
 - 课程回退用.previous内容按当前revision+1通过受保护接口发布，不能直接降版本；原典回退核1.2.0整包SHA后CAS，不能覆盖数据库；索引按单份previous双文件核验恢复。新现代教材全文、原图授权、医学专业审校、双用户和原生全套测试、历史同步等仍未完成，原07/09/10整体状态保持false。
+
+
+## 73、2026-10-21 大六壬十二宫解析与共用AI购买入口整改
+### 73.1 实际原因及范围
+- 负责人反馈“大六壬宫位点击无解析、AI不能购买，所有工具应可用”。开始HEADfca193f干净，按AGENTS读制度、交接与主账本后核查。已异步询问发生问题的平台和页面提示，截止本轮收尾尚未收到该项回答；未据此停止可独立完成的修复。
+- 大六壬DIPAN_POSITIONS十二格原来只是div，无点击事件；仅三传/四课/中宫有事件且资料嵌在右侧下方。新版十二格绑定本格数据并弹出可关闭抽屉，支持Enter/空格；基础本地资料无需AI或购买。
+- AI共用组件有旧外部支付入口：苹果版已提供StoreKit会员/点数，但局部解锁仍调被平台拦截的微信路径。额度不足时部分界面只留文本，没有可用购买入口；AI失败有被当作成功报告截断/锁定的情况。getPermissionStatusFromServer仅在可用时覆盖本机，明确用完时仍回退旧本机会员；新买会员的服务端level没有同步用于展示。已逐项整改，不改服务器计费权益与基础价。
+- 原AI缓存只保留请求前50—80字，不同宫位/命盘相同前缀可能误用结果且缓存未按账号隔离；改完整请求+账号摘要键。紫微独立AI函数设置aiContent但没有实际渲染结果，另有服务端已允许后又被本地额度否决的重复检查；新增所选范围结果抽屉并移除此重复否决。
+- Android2122为既有tencent渠道，PUBLIC_AI_ENABLED编译关闭，服务器改资料不能恢复。未擅改在审商店渠道：新增明确internal测试渠道，提供AI完整测试能力，原tencent与Google/社交资质开关保持原规则。internal仅测试分发，不充当商店已审版本；Google未接Play Billing的购买仍关闭，不能声称所有渠道已可付款。
+### 73.2 修改路径及行为
+- src/algorithm-core/modules/daliuren/index.ts仅导出现有getLiuQin供同盘解析复用，不改排盘算法。src/lib/daliuren-interpretations.ts新增getPalaceInterpretation，解释所点地盘、对应天盘、天将、遁干、六亲及两层空亡，按已有结果读取不重新排课。src/app/yixue/daliuren/page.tsx给12格加按钮语义/键盘与事件，基础详情复用InterpretationDrawer，AI由用户另点AIInterpretButton，不在点宫位时自动扣额度。
+- 新src/components/AIAccessLinks.tsx统一会员/点数/购买反馈的真实入口；苹果版进入既有App Store商品页和恢复购买，不能走外部支付；Google显示限制不提供违规付款链接。src/components/AIInterpretButton.tsx修额度不足入口、错误状态、重入保护、Apple分流及错误会员链接。src/components/EventDivinationPanel.tsx改服务端权限、点数/会员完整显示、失败不生成/不累加本机成功次数、支付套餐变更不静默、回调读取当前套餐，Apple解锁分流；没有新建苹果单次解锁商品或给已购权益重复收费。
+- src/components/shared/InterpretationDrawer.tsx支持可选children供六壬详情里放显式AI按钮，原调用不受此新增属性影响；服务器确认会员或点数时不再错误遮挡，失败不当成内容。src/app/yixue/ziwei/page.tsx新增AI范围结果抽屉（宫位/大运/流年/月/日/时），失败与生成内容分开，移除旧本机第二次否决。src/app/yixue/ai/page.tsx额度不足有购买入口，服务提示不冒称AI生成。
+- src/lib/aiService.ts先鉴权，WebCrypto SHA256完整systemPrompt/userPrompt/cacheKey与当前账号生成request-v2缓存键，防不同尾部/宫位/账号混读；账号中途切换丢弃返回，不写错账号缓存。没有WebCrypto时不退回危险截断键，直接正常请求且不使用本机缓存。requireAIContent让文字包装器在失败时传播错误；缓存命中不累加本机成功次数。旧单次解锁key与服务端订单未迁移/重排。
+- .github/workflows/android-build.yml增加internal可选测试渠道，android/app/build.gradle递增2123；scripts/retain_verified_study_packages.py、publish_verified_android_test.py接受明确internal，签名/来源/marker仍严格核验；scripts/templates/android-test-download.html标明内部完整AI测试与非商店审核。所有维护源码已提交；绝对路径明细在17_修改文件绝对路径索引.json。
+### 73.3 验证证据及真实边界
+- scripts/ai-tool-access.test.cjs四项：服务器0额度覆盖过时本机会员、已购点数和新购会员不被本机误拒、401、完整相似前缀/不同账号隔离与同请求缓存命中、失败传播和切账号丢弃、12格映射。scripts/ai-purchase-links.test.cjs两项实际React服务端渲染验证Apple进真实会员/点数页无外部付款、Web入口和Google拦截。原paid-ai-credits三项、membership-ledger五项等完整支付回归持续通过；本地Apple客户端测试因无typescript依赖未执行，云端以真实依赖执行通过，未在C盘安装依赖补跑。
+- 最终源码bbc5601207d8b47407d957ba621526025374df8a，质量/默认Web构建39548659692成功；签名Android39548662765和Apple39548665493成功。早期aeca类型检查发现旧getPermissionStatus调用残留，已修正后ef61079及之后全检查通过；较早候选的重复/未完构建取消或自然完成，均未上传TestFlight，未留成本轮正式包。最终只留bbc候选实际包，不以失败候选充交付。
+- 固定CI产物RAM预览：逐点巳午未申辰酉卯戌寅丑子亥12格，均出现正确地盘/天盘标题并能关闭，午宫用Enter；点所选宫AI，游客得到登录提示，取消后盘面仍保留。预览仅GET代理，统计21个GET、0生产写请求、0隐私探针。正式网站亦实际起课→点子宫，出现“子宫·天盘酉”、本格天地盘/天将/遁干与AI按钮。截图/12项结果在17_解析购买整改实际验收_20261021/。
+- 同一源码审查27个含共用/直接AI入口的易学页面，见17_工具解析购买覆盖范围.json；其余历法/尺规/目录等没有共用AI入口，不擅称已有所有AI功能。本轮未逐个27页真实购买，更未验证全应用每种功能。真实账号付款到账、沙盒恢复/取消、原生触摸/重启/音频仍待本人真机验收；历史沙盒账号权限问题需原购买账号证据核对，未扩大为任意账号可领沙盒权益。
+- 05:19:32Z沿服务端现有智谱通道发纯合成连通测试，200且5字非空；没有客户盘面、没有消费客户额度、密钥不落日志。05:20:08Z微信SDK对固定不存在测试单作只读商户查单，成功返回NOT_FOUND，未创建订单/付款；证明签名连通，不代替真实支付与交付。配置Native/JSAPI就绪，公众号appSecret布尔为false，微信OAuth需另核，不能把配置READY当成全部交易成功。17_AI上游实际连通验证.json、17_微信商户只读查单连通.json、17_支付与AI服务只读诊断.json为据。
+### 73.4 网页、安卓及苹果真实发布状态
+- 05:23:15Z以固定产物12322677576、ZIP SHA2a776f81761874a258a5a9f649745030125adabdfdacd1b8cced6bc23cc63866核2312文件86935615字节，Web原子切到/root/yandaoguoxue/releases/v25.0.115-calendar-community-bbc5601，上一bdc4f1f保留。服务器复用699文件56586210字节，仅传变化文件；营销/账号注销和两份独立书目索引保留。课程revision4/31课与归真索引36部622篇卷再次公开核对仍在，没有覆盖后端学习内容或修改公司官网。
+- Android25.0.115/2123 internal APK78355341字节SHA f3aee0d5bbc390ccfd13a8de818d3022e0924b9d91b0b53ee4d3904b047471c0；AAB62365832字节SHA bd51abc7b1dfd9da330c6dcd80863610cdbbce0a6017acc857c04fd3b4f9b3d1。E发布包/Android_25.0.115_2123_internal/及verified-packages.json留真实文件。不是Google或国内商店正式包。源commit/渠道标记、原签名8ca0c414…、11幅已许可高清图、28项未授权旧图排除及远程阅读器门禁核验。
+- https://yandaoguoxue.yandao.vip/testing/2123/明确内部完整AI测试，传输复用旧2122精确字节，只传6614976字节、原签名不变；05:25:03Z服务器完整校验后上线，随后公网读取整包78355341字节同SHA通过（17_安卓2123完整AI测试分发.json）。未改stable latest.apk/升级接口，旧商店渠道不被静默换成internal。
+- Apple25.0.115/33 IPA45482082字节SHA 7da56aff32e75dae665a47f626cc8eb0864b5ef71dcca2f51e5a524c7df58cc7，E发布包/Apple_25.0.115_33/。核真实Info.plist、身份com.yandaoguoxue.app及WidgetKit签名；39549162237只上传已核同一IPA成功，没有重打上传。05:27:26Z ApplebuildUUID4e8bec2b-22f5-4d5e-bdc1-3421c05c9d43为VALID、IN_BETA_TESTING、既有“言道国学”内部组已附，可供本人安装；未新增测试人或发送邀请。
+- 05:29:37Z正式Apple仍25.0.115关联build30、任务b574a73e-d8d3-42fb-95d3-0776ccdad897 WAITING_FOR_REVIEW，未撤换/重提/覆盖审核素材。33为内部测试。Google本轮未再核迁移，仍按保留学外语迁移后再转国学规则，不改变健康声明或其他产品。
+### 73.5 清理、回退与剩余
+- 只在RAM下载/校验云产物，未在C生成node_modules、构建目录、ZIP、解包或日志副本；E留正式包及有效证据。专属RAM预览PID11596确认命令行后停止，3113无监听，临时验收标签关闭；正式修复页与最新版下载页保留作为交付。历史共享清理和物理两代轮换仍未全部完成，不能冒称全盘无垃圾。
+- 单一人工CMD原SHA8cfd9bbacfc12e4a3c1e855b2f83ef208b5ac35b113a6d192b14a578e0733caf，仅加2123internal/Apple33精确文件SHA保护，保留2122/32与所有既有用途保护和11个旧删除目标；新SHA b01bbc25b659daa372f792a7e618673b044912b842f41500249b17ab923bbc11。CP936/准确CRLF；未执行删除。未因测试新版存在就删待审核/Google用途包或未验旧版。
+- 网页可按已留bdc4f1f原子回退；回退不改后端课程/原典COS版本、连续注册序列、订单和权益。测试包可退用已留2122/32（该安卓为AI关闭渠道，必须如实说明），个人数据不自动清除。07/09/10整体false保持，27页源码覆盖、12格操作和模型连通不替代真实付款/原生全量验收。账户对应的真实购买到账仍需后续核对。
