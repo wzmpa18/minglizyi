@@ -19,7 +19,7 @@ function createBusinessIdentityGate({ verifyToken, getUser, resolveAdminKey, jou
     req.securityRequestId = require('node:crypto').randomUUID();
     res.set?.('X-Security-Request-ID', req.securityRequestId);
     const record = (kind, status, actor) => journal.append({kind, status, actor, method:req.method, route, ip:clientIp(req), requestId:req.securityRequestId});
-    const deny = (status, code, error) => { record(code, status, req.user?.userId); return res.status(status).json({success:false, code, error}); };
+    const deny = (status, code, error) => { record(code, status, req.admin ? 'admin.' + (req.admin.username || req.admin.keyId || req.admin.role) : req.user?.userId); return res.status(status).json({success:false, code, error}); };
     try {
       // Brute-force throttling is additional to the SMS provider's own limits.
       if (req.method === 'POST' && AUTH_POST.has(route)) {
@@ -41,8 +41,9 @@ function createBusinessIdentityGate({ verifyToken, getUser, resolveAdminKey, jou
       if (route.startsWith('/api/admin/') || route.includes('/admin/')) {
         const admin = resolveAdminKey(String(req.headers.authorization || '').replace(/^Bearer\s+/i, ''));
         if (!admin) return deny(401, 'ADMIN_AUTH_REQUIRED', '请使用有效管理员身份登录');
+        req.admin = admin;
         if (admin.role === 'SECURITY_AUDITOR' && !(req.method === 'GET' && ['/api/admin/security/events','/api/admin/unified/whoami'].includes(route))) return deny(403, 'AUDITOR_READ_ONLY', '审计员仅可读取安全日志');
-        req.admin = admin; return next(); // Each route must also enforce its role/scope.
+        return next(); // Each route must also enforce its role/scope.
       }
       const user = verifyToken(req.headers.authorization || '');
       if (!user) return deny(401, 'UNAUTHORIZED', '请先登录并验证手机号');
