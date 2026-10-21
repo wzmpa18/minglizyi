@@ -43,7 +43,7 @@ on:
       - 'scripts/fixtures/**'
       - 'src/algorithm-core/modules/shensha/**'
       - 'src/lib/boneWeightCalendar.ts'
-      - 'scripts/shensha-scope.test.ts'
+      - 'scripts/shensha-scope.test.ts scripts/daliuren-course-relations.test.ts'
       - 'src/app/yixue/**'
       - 'src/app/zhongyi/**'
       - 'src/app/discover/live/**'
@@ -321,7 +321,7 @@ jobs:
       - run: npx tsx --test scripts/liuren-calendar.test.ts
       - run: npx tsx --test scripts/chart-corrections.test.ts
       - run: npx tsx --test scripts/chart-time-options.test.ts
-      - run: npx tsx --test scripts/shensha-scope.test.ts
+      - run: npx tsx --test scripts/shensha-scope.test.ts scripts/daliuren-course-relations.test.ts
       - run: npx tsx --test scripts/chart-handoff.test.ts
       - run: npx tsx --test scripts/solar-to-lunar.test.ts
       - run: npx tsx --test scripts/calendar-learning.test.ts

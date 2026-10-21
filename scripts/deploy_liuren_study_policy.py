@@ -64,6 +64,9 @@ def main():
     assert new[index-len(prefix):index]==prefix
     before2=b"    // v25.0.60 P0-3/P1-7";end=new.index(before2);start=new.index(b'    if (studyRequest.applied) {',index)
     hooks=[(before1,prefix+before1),(b"    const content = data.choices?.[0]?.message?.content || '';",b"    let content = data.choices?.[0]?.message?.content || '';"),(before2,new[start:end]+before2)]
+    provider_start=new.index(b'    if (studyRequest.applied) {',index)
+    provider_end=new.index(b'    _meta.model = _providerChain[0].model;')
+    hooks.append((b'    _meta.model = _providerChain[0].model;',new[provider_start:provider_end]+b'    _meta.model = _providerChain[0].model;'))
     enc=lambda b:base64.b64encode(b).decode()
     payload={'source':a.source,'expectedServer':a.expected_server,'module':enc(policy),'moduleSHA':hashlib.sha256(policy).hexdigest(),'hooks':[{'before':enc(x),'after':enc(y)} for x,y in hooks],'apply':a.apply}
     result=subprocess.run(['ssh','-o','BatchMode=yes','root@82.156.228.87','python3 -c '+shlex.quote(REMOTE)],input=json.dumps(payload).encode(),capture_output=True,check=True,timeout=90)

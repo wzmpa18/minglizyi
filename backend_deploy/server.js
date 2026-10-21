@@ -347,6 +347,15 @@ app.post('/api/ai/chat', async (req, res) => {
       return res.json({ success: false, error: 'AI 服务未配置', code: 'AI_SERVICE_UNAVAILABLE' });
     }
 
+    if (studyRequest.applied) {
+      // Complex chart analysis uses the stronger configured model first. The
+      // free model remains a transport fallback, never a way around quality checks.
+      const order = { tencent: 0, deepseek: 1, zhipu: 2 };
+      _providerChain.sort((a, b) => order[a.id] - order[b.id]);
+      for (const provider of _providerChain) {
+        if (provider.id === 'tencent') provider.extra = { ...(provider.extra || {}), thinking: { type: 'disabled' } };
+      }
+    }
     _meta.model = _providerChain[0].model;
     _meta.providerId = _providerChain[0].id;
 

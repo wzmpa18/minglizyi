@@ -28,7 +28,7 @@ test('known screenshot transmission relations and both chart formats are compute
   assert.ok(facts.includes('初传寅木：对戊土为克我，六亲官鬼'));
   assert.ok(facts.includes('中传亥水：对戊土为我克，六亲财'));
   assert.ok(facts.includes('末传申金：对戊土为我生，六亲子孙'));
-  assert.ok(facts.includes('寅木相对亥水为生我'));assert.ok(facts.includes('亥水相对申金为生我'));
+  assert.ok(facts.includes('亥水生寅木'));assert.ok(facts.includes('申金生亥水'));
  }
  assert.equal(q.studyFacts('没有日干和三传'),'');
  assert.equal(q.validateStudyReport(good+'\n申金克亥水。'),'REPORT_ELEMENT_ERROR');

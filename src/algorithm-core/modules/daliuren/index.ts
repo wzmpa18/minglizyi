@@ -436,8 +436,9 @@ export function calculateDaLiuRen(
   const dayGanYy: YinYang = GAN_YIN_YANG[dayGan];
 
   function zhiKe(above: string, below: string): "shangKeXia" | "xiaKeShang" | "none" {
-    const aWx = ZHI_WUXING[above as DiZhi];
-    const bWx = ZHI_WUXING[below as DiZhi];
+    // First course lower deity is the day stem, not an earthly branch.
+    const aWx = ZHI_WUXING[above as DiZhi] || GAN_WUXING[above as TianGan];
+    const bWx = ZHI_WUXING[below as DiZhi] || GAN_WUXING[below as TianGan];
     if (!aWx || !bWx) return "none";
     const r_ab = getWuxingRelation(aWx, bWx);
     const r_ba = getWuxingRelation(bWx, aWx);
