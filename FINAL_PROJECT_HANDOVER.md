@@ -1855,7 +1855,7 @@ sqlite3 /tmp/yandao_restore_test/social.db "SELECT COUNT(*) FROM friendships; SE
 ### 76.3 六个月日志、备份与敏感内容
 - securityAudit.js建立独立SQLite持久审计库，记录请求开始/完成、拒绝、用户/管理员主体、操作和请求编号；同步FULL、0600、append-only触发器与逐事件SHA链。业务接口不能更新删除审计；不自动清理，不收正文、验证码、令牌或查询字符串。首次真实事件2026-10-21T08:43:46.109Z；最终抽查179条链有效。请求开始时尚未识别身份可为anonymous，完成/拒绝记录对应已核主体，不能把开始事件误当鉴权放行。
 - /etc/logrotate.d/yandao-guoxue原14轮改daily rotate200，去maxsize避免一天多轮侵蚀留存；nginx guoxue_log去query/referer，写同一X-Security-Request-ID。nginx -t、logrotate --debug和真实HTTPS请求/实际访问日志逐项匹配通过，未删除旧日志。保留至少六个月是持续运营责任，不能当前只有当天记录就声称已经六个月。
-- securityBackupJob.js与backupEngine.js使用既有AES256GCM加密配置，不下载密钥；每天03:20服务器时区任务，独立目录/root/yandao-security-backup。先快照、加密、隔离解密、SQLite integrity_check与审计链验证，保留当前+一个可恢复前版；失败尝试不淘汰最后成功恢复点。最终178条快照77858字节，SHA60bacf4e7ddbcbf45c76ea2021d0f9ecd0ce5a0e3bedbf2eaa09b0f8a25cba5f。隔离明文临时文件已由维护任务清除。
+- securityBackupJob.js与backupEngine.js使用既有AES256GCM加密配置，不下载密钥；每天03:20服务器时区任务，独立目录/root/yandao-security-backup。先快照、加密、隔离解密、SQLite integrity_check与审计链验证，保留当前+一个可恢复前版；失败尝试不淘汰最后成功恢复点。最终178条快照77858字节，SHA60bacf4e7ddbcbf45c76ea2021d0f9ecd0ce5a0e3bedbf2eaa09b0f8a25cba5f。隔离明文临时文件已由维护任务清除；backup_work另保留两次COS失败尝试的密文与manifest共4个小文件，供故障重传/核查，不冒称该目录已空，COS恢复后按有效备份再轮换。
 - E盘独立密文副本位于归档/.private/安全审计备份/security-audit-current.enc，旧current轮为previous，SHA与服务器一致；目录限制本用户访问。COS既有静态存储身份仍403，最终job明确ok=false/offsite_upload_not_confirmed，不能把控制台已登录、APK上传成功或E副本冒充自动COS备份/云端恢复成功；未扩大IAM或公开私密日志，权限仍待处理。
 - publicTextGuard.js在旧写接口增加本地风险语境筛选和真实留痕，回调原文/私人举报豁免；复用既有studyCommentSafety本地词规则+混元AI审核、用户明确同意、失败/模糊/预算不足hold、举报/屏蔽/处置。实际恶意医疗保证语境写入前422；不能宣称一个敏感词表覆盖所有政治/违法语义或已有正式TMS认证。国内公共社交继续原渠道门禁，未为过审隐藏开放能力、未绕过评估要求。
 ### 76.4 购买提示与有依据的情绪关怀
