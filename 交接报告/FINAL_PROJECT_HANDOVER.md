@@ -1667,3 +1667,41 @@ sqlite3 /tmp/yandao_restore_test/social.db "SELECT COUNT(*) FROM friendships; SE
 - 本次只有只读页面核验与交接/总账更新；本轮临时Google标签已关闭，无新增脚本、包、缓存或解包，无物理删除。既有69以前的代码/网站/Apple状态未在本次变更，历史清理/未验事项保留。结构化最新核验及最终提交/四镜像SHA在E发布包/实机整改_20261018/google-transfer-monitor-latest.json，固定文件持续更新，不另起竞争报告。
 
 - 定期复核2026-10-20T23:25:39.823589+00:00：官方同一转移页仍为com.yandao.xuewaiyu、目标8056957676688740507已接受、Google待处理；国学不在列表，未出现新的办理入口。无实质变化，未改/取消原请求、未动其他产品/健康声明/凭据，继续等待并静默。仅更新本节/主账本和固定最新证据，临时检查标签已关，无本轮临时文件或物理删除。
+
+
+## 70. 2026-10-21 学习课程扩充、远程资料更新、2122/32与Google跟进
+### 70.1 范围、源码及完成边界
+- 本轮按负责人“继续完善学习、尽量服务器修改、给最新包、看Google”的要求，只处理言道国学。开始HEAD b477afc干净。客户端/后端候选源码bdc4f1f6cbfef1719610b01be5ef2e499996922a；后续a501d4279d492548a465ebca30036ba4c847c6bd只更新资料revision2、测试固定夹具及维护工具，没有重新构建同一客户端。绝对文件索引见E发布包/实机整改_20261018/14_本轮源码绝对路径索引.json。
+- 新增8篇本站原创研习练习，联网课程合计24课68题：八字条件复盘、紫微宫位对照、卦爻逐项核验、七政观测记录、《黄帝内经》《难经》篇章研读、医案证据分栏、方剂组成方义、本草名称基原炮制。保留原有课程、工具、原典入口及连续听学。不是把原创练习冒称古籍全文、完整药典或专业医学审校；未擅改排盘算法、价格、权益、佣金或其他产品。
+### 70.2 客户端及管理功能的实际文件
+- 新src/lib/studyCatalog.ts、src/hooks/useStudyCatalog.ts：固定HTTPS公开资料接口，2MB/8秒/格式校验，进入页面检查一次及手动检查，不持续轮询、不调用AI；合格资料存本机，网络失败保留缓存，首次离线无缓存回退原16课44题。只读纯文本数据，不执行下载代码。
+- src/app/academy/start/page.tsx、layout.tsx、src/components/LearningEntryPanel.tsx接动态课程、当前资料状态、手动更新与动态听学目录。src/data/studyStarter.ts增加正文与题目版本对照，旧进度不丢；修改题干/选项/答案仅使相应题重测，正文改变仅该课已读需重读，暂时未显示课程的历史仍保留在本机。
+- backend_deploy/studyContentPolicy.js、studyContentStore.js、academyRoutes.js、data/study-starter-public.json：公开GET /api/academy/starter-content；GET/PUT /api/academy/admin/starter-content沿用既有服务端管理员鉴权。发布需编辑核对、expectedRevision匹配、revision加一、排他锁、原子替换、一次.previous及最多100条无凭据审计。不允许移除原16课、任意链接/HTML/脚本；最多200课1000题。部署只初始化缺失种子，不覆盖以后线上编辑资料。
+- src/components/StarterContentEditor.tsx与src/app/academy/factory/review/page.tsx、src/lib/academyApi.ts提供已授权管理员课程编辑/新增及题目解析编辑界面。入口https://yandaoguoxue.yandao.vip/academy/factory/review/，验证进入后展开“入门课程远程发布”，先读取→编辑→核对→发布；不是用户注册即获授权。未登录/普通/撤销账号的读取和写入均有真实HTTP拒绝测试；本轮真实发布经过同一受保护API，未在聊天、源码或日志输出凭据。
+- src/components/PlanetSurfaceExplorer.tsx及四份src/locales词典接新增高清天体控件的简/繁/日/英，现场切换验证；学术正文/许可保留原文，不冒称全应用历史控件都已经四语。src/lib/clientStore.ts补游客无token不走旧批量/api/sync，防止游客身份触发历史404；已登录旧批量同步路径仍单独待核，未伪造新云接口或删除原始档案。
+### 70.3 后端、资料版本和网页真实上线
+- scripts/deploy_starter_content_backend.py固定Git提交、精确旧SHA、三模块允许列表、语法检查、单份旧模块及PM2健康读回。2026-10-21T03:44:18Z部署到/www/yandaoguoxue-backend；未替换server.js/.env/业务数据库/用户编号。14_远程课程后端部署.json及原始哈希/预检为证。
+- 使用scripts/publish_starter_content.py通过服务器既有管理员凭证、同一管理API把课程revision1更新到2，补八字复盘五栏笔记说明；2026-10-21T03:46:29Z读回24课68题，SHA-256 26cdb6cd9a7d7e882659e0381172cdbd3232f82685dba0cbc20c40cdd5e20497。没有重打安装包。线上.previous为revision1、无残留.lock/.next。后台/工具失败不自动重复提交。
+- 全质量及Web构建39540020814成功；同一源码自动重复39540010478取消。资料/维护工具提交a501全质量39540714647再次成功。Web产物12318977439 ZIP SHA 54804f8e45faa659929eedeffbb649d809b9cf19509d4b1eee9a1be9c85cb7bf；2312文件86055563字节逐SHA核对。scripts/deploy_verified_web_preview.py增加先查旧版SHA并复核后复用文件：490文件56935761字节服务器内复制，仅传变化文件，避免重复传高清图；仍校验全部最终文件。
+- Web于2026-10-21T03:47:45Z原子切换/root/yandaoguoxue/releases/v25.0.115-calendar-community-bdc4f1f，上一f541d5d保留。14个营销/账号注销公开文件保留，未动言道科技官网或产品子站。14_远程课程正式网页部署.json、14_正式网页公开回读.json核对课程/天文/管理登录页/说明/注销/2122测试下载六项200和SHA；不是以200替代操作验收。
+### 70.4 实际操作与安装包
+- RAM固定CI预览及正式站操作：原天文课1课1正确继承；选新增八字复盘→标读→答错出现解析与错题→重答正确→刷新仍保留2课2题2正确；同一客户端点检查更新取revision2，新增正文显示，仅改过正文的八字课已读退回1/24，2题2正确保留。以connect-src none阻断联网后仍显示已下载revision2/24课及答题记录。正式网站24课68题及《内经》《难经》新课正文/自测均可见，连续听学目录24项；不冒称本轮完成苹果物理音频播放。
+- 本地scripts/study-content.test.cjs四项通过：有界数据/非法HTML或URL拒绝、真实文件并发发布与单份旧版、进度迁移、流式下载大小/异常格式；另三项云端记录隐私本地回归通过。scripts/academy-admin-http.test.cjs在完整CI实际Express/SQLite账号夹具测试公开读、游客/普通/禁用拒绝、合法发布、未核对400及冲突409。截图14_远程学习验收_20261021/，问题状态14_浏览器操作与问题核验.json。
+- Android25.0.115（2122）国内签名构建39540024022成功；APK78298809字节、SHA bb49b04ae0728023e1e361aa11bfe75b60b6a94c28240f5c72434f36a588de68；AAB62309323字节、SHA 14e0dec20ac974141250704ef45189baf320f905ce44a50ac18d17d5a2cab00f。E发布包/Android_25.0.115_2122_tencent/保留真实包及verified-packages.json，前版2121仍留；不是Google渠道AAB。
+- Apple25.0.115（32）签名构建39540027219成功；IPA45470094字节、SHA 2a0400875a5178007d18ebb1ba2cc0316ce64ffd509c0d492cdd563c810f2890，E发布包/Apple_25.0.115_32/及verified-package.json。身份com.yandaoguoxue.app、实际Info.plist32及WidgetKit签名门禁核对；只上传同一已核IPA的39540629737于03:49:59Z成功。处理/内测最终状态另列，不等同正式审核。
+- scripts/retain_verified_study_packages.py在RAM下载已固定Git的官方CI产物，核ZIP digest、真实native标记/Info.plist、11图逐SHA、0张未授权旧动画及28条排除证据；新8课标识不在原生JS，远程阅读器及原16课在包。只保留E最终包，没有C本机依赖/ZIP/解包。包中有阅读器不代替真实手机离线/定位/音频测试。
+- 安卓公开测试入口https://yandaoguoxue.yandao.vip/testing/2122/，原签名精确字节复用传输6457922字节替代全包传输，完整公开回读78298809字节及bb49一致（14_安卓2122官网测试分发.json）。仅明确测试分发，未改stable latest.apk/自动升级或各商店审核。下载说明已改为实际远程学习能力及“已适配控件”，无全应用语言完成暗示，14_安卓下载说明更新核验.json。
+### 70.5 Google与正式审核的真实状态
+- 2026-10-21本轮官方个人账号8539674148718133275迁移页仍为言道学外语/com.yandao.xuewaiyu，8056957676688740507已接受、Google待完成（2026-10-20）；列表没有国学/新增入口。14_Google迁移状态.json与固定google-transfer-monitor-latest.json记录。本轮未点击取消、修改、重新提交学外语请求，未改其他产品、国学健康声明或在个人账号重复提交被拒版本。原google定期跟进继续。
+- 03:50:36Z Apple正式25.0.115关联build30/2100a433-90fc-413f-8e87-e9768a182d9a，任务b574a73e-d8d3-42fb-95d3-0776ccdad897仍WAITING_FOR_REVIEW；本轮不撤回、不替换、不重复提审。32只内部TestFlight。正式状态证据14_苹果正式审核独立核对.json；32最终处理状态以14_苹果32内部测试状态.json及下文为准。
+### 70.6 清理、回退及未完成事项
+- 单一人工CMD继续原路径outputs/guoxue-clean-20261018.cmd，未执行。逐个重核11个已登记目标381180186字节；追加2122/32保护，保留2121/31以及实际审核/Google用途2120/30。发现旧文件实际为CRCRLF，虽前次记录写CRLF，本轮以原始bytes复核并修正CP936+准确CRLF，原SHA b2ebc307…、新SHA 8cfd9bbacfc12e4a3c1e855b2f83ef208b5ac35b113a6d192b14a578e0733caf。禁止复制旧删除清单立即运行；仍待07/09/10和真实设备验收后负责人一次执行。14_唯一CMD重新核对.json列原/新SHA和全部目标。
+- 本轮仅最终包、维护源码、审计证据留存；测试仅创建并移除自身E合成子目录，旧空临时测试父目录仍保留，未绕过早先自动审核拒绝删除（原因仅blocked by policy）。历史共享主树97项及旧物理候选/服务器release债务未全部消除，不宣称已完成物理两代轮换或所有垃圾清理。
+- 网页回退可切回已留f541d5d；新课程是独立后端数据，回退页面不覆盖它。资料内容回退把.previous内容按当前revision+1通过受保护发布；不能直接降版本。新后端模块可按精确模块.previous恢复，但不得恢复旧register_routes.js或整库覆盖，连续账号策略不变。正式安装包未自动推送，测试包可退用已留2121/31，保留本机数据。
+- 整体07/09/10仍未全验：真实双成年用户、多设备定位/音频/组件/通知/功耗、本人苹果权益到账恢复、完整药典/董氏/医案/图谱/古籍权利及医学专业审校、完整专业天文馆、全应用历史导航语言、已登录旧/api/sync等仍需完成。docs/requirements/release-readiness.json的overallComplete保持false，不能用24课/高清图/接口或安装包替代全量验收。用户本轮允许真机后测，因此未反复请求安装确认。
+- 03:55:09Z独立只读生产：161用户、创世纪100000/lastIssued100075/下一100076（当时快照）、注册模块SHA a244b07a…及编号策略54fe08ca…均与前轮相同；健康200、course2/SHA26cdb6…、单份previous1，无.lock/.next。14_最终生产独立核对.json。最终提交/四镜像和本轮RAM预览关闭另列，不以计划代替事实。
+
+### 70.7 最终Apple32内测、报告同步及本轮临时物收尾
+- 2026-10-21T03:59:42.340Z Apple独立API：build32 UUIDfe7e0647-b68b-4fa8-aa95-1b54ee1a7a6f、VALID、IN_BETA_TESTING，既有内部组“言道国学”已附，assignedNow=false；没有新测试者、外部邀请或正式提审。04:00:24.682Z再次只读确认正式30任务仍WAITING_FOR_REVIEW；32是内部可测版本，不是商店已批准发布。
+- 本轮两个专属RAM预览进程21372/16516分别确认命令行后停止，3113无监听；活动仓无本轮node_modules/.next/out/scripts/__pycache__，合成测试子目录已自行清理，旧空父目录仍在。预览第一次在监听就绪前打开产生本地连接拒绝，确认监听后重开成功并完成验收，未把它当成生产故障或绕过安全页面。临时课程/Google/正式验收标签已关闭，仅保留最新版下载页为交付；原公司官网及既有用户标签保留。
+- 唯一制度新增第十五节写明远程内容边界、旧客户端不自动支持、管理员审核/版本并发与单份回退、后端种子不覆盖线上、正式审核分离。唯一报告、兼容根镜像和E两镜像、制度/入口及E原有主账本镜像同步并逐SHA核对；14_镜像同步核对.json记录。最终源码提交、上游一致和干净状态以14_本轮最终收尾核验.json为准，该外部证据在最后提交后写入，避免报告写入自身commit产生脏循环。未完成项仍按70.6，不以本轮收尾宣布07/09/10全完成。
