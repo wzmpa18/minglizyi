@@ -61,7 +61,7 @@ function courseFacts(text) {
 function applyStudyPolicy(messages) {
   const userText = messages.filter(m => m && m.role === 'user' && typeof m.content === 'string').map(m => m.content).join('\n');
   // Require a chart-scoped label, not a casual mention in an unrelated medical/chat request.
-  if (!/【大六壬[^】]*(?:排盘|课式)|【大六壬排盘数据】/.test(userText)) return { messages, applied: false };
+  if (!/【大六壬[^】]*(?:排盘|课式)|请对以下大六壬排盘数据/.test(userText)) return { messages, applied: false };
   return { messages: [{ role: 'system', content: POLICY + studyFacts(userText) }, ...messages.filter(m => m && ['user', 'assistant'].includes(m.role))], applied: true };
 }
 

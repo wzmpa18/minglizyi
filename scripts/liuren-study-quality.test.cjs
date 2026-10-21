@@ -3,6 +3,7 @@ const q=require('../backend_deploy/liurenStudyQuality');
 test('installed glossary clients receive server-owned chart study policy; unrelated requests remain unchanged',()=>{
  const old=[{role:'system',content:'只作名词释义，禁止财运等词'},{role:'user',content:'【大六壬排盘数据】日干支：戊辰；三传：寅→亥→申\n【用户提问】本盘求财如何研习'}];
  const x=q.applyStudyPolicy(old);assert.equal(x.applied,true);assert.ok(x.messages[0].content.startsWith(q.POLICY));assert.equal(x.messages[1],old[1]);assert.equal(x.messages.length,2);
+ assert.equal(q.applyStudyPolicy([{role:'user',content:'请对以下大六壬排盘数据进行宫位解释：地盘子'}]).applied,true);
  const unrelated=[{role:'user',content:'中医文化中提到大六壬是什么？'}];assert.equal(q.applyStudyPolicy(unrelated).messages,unrelated);
 });
 const good='大六壬课式研习 · AI辅助分析\n'+('本课戊辰日，以戊土为日干，亥水在传统六亲分类为财。寅木为官鬼，申金为子孙。金生水、水生木，不能把传序当连续相克，未提供天将与遁干不足以复核取传，需核对四课。此为AI归纳，不是现实财富预测。').repeat(7)+'\n[R2]四課陰陽既具，須求三傳以為發用。';

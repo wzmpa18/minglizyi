@@ -23,7 +23,7 @@ policy=base64.b64decode(p['module']);assert sha(policy)==p['moduleSHA']
 proof={'source':p['source'],'previousServerSHA':sha(old),'serverSHA':sha(updated),'policySHA':sha(policy),'credentialsChanged':False,'databaseChanged':False,'mode':'dry-run'}
 if not p['apply']:print(json.dumps(proof));sys.exit()
 oldmodule=module.read_bytes() if module.exists() else None
-stages=[(server,updated),(module,policy)]
+stages=[(module,policy)] if p['policyOnly'] else [(server,updated),(module,policy)]
 try:
  for target,data in stages:
   pending=target.with_name(target.name+'.next.js');assert not pending.exists();pending.write_bytes(data)
@@ -35,7 +35,7 @@ try:
  healthy=False
  for _ in range(20):
   try:
-   with urllib.request.urlopen('http://127.0.0.1:3001/health',timeout=3) as r: healthy=r.status==200
+   with urllib.request.urlopen('http://127.0.0.1:3001/api/health',timeout=3) as r: healthy=r.status==200
   except Exception:pass
   if healthy:break
   time.sleep(1)
@@ -55,7 +55,7 @@ finally:
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--source',required=True);p.add_argument('--expected-server',required=True)
-    p.add_argument('--evidence',required=True,type=Path);p.add_argument('--apply',action='store_true');a=p.parse_args()
+    p.add_argument('--evidence',required=True,type=Path);p.add_argument('--apply',action='store_true');p.add_argument('--policy-only',action='store_true');a=p.parse_args()
     import re
     assert re.fullmatch('[a-f0-9]{40}',a.source) and re.fullmatch('[a-f0-9]{64}',a.expected_server)
     git=lambda path:subprocess.check_output(['git','show',a.source+':'+path])
@@ -69,7 +69,7 @@ def main():
     provider_end=new.index(b'    _meta.model = _providerChain[0].model;')
     hooks.append((b'    _meta.model = _providerChain[0].model;',new[provider_start:provider_end]+b'    _meta.model = _providerChain[0].model;'))
     enc=lambda b:base64.b64encode(b).decode()
-    payload={'source':a.source,'expectedServer':a.expected_server,'module':enc(policy),'moduleSHA':hashlib.sha256(policy).hexdigest(),'hooks':[{'before':enc(x),'after':enc(y)} for x,y in hooks],'apply':a.apply}
+    payload={'source':a.source,'expectedServer':a.expected_server,'module':enc(policy),'moduleSHA':hashlib.sha256(policy).hexdigest(),'hooks':[] if a.policy_only else [{'before':enc(x),'after':enc(y)} for x,y in hooks],'apply':a.apply,'policyOnly':a.policy_only}
     result=subprocess.run(['ssh','-o','BatchMode=yes','root@82.156.228.87','python3 -c '+shlex.quote(REMOTE)],input=json.dumps(payload).encode(),capture_output=True,timeout=90)
     if result.returncode:raise RuntimeError(result.stderr.decode()[-1200:])
     proof=json.loads(result.stdout);a.evidence.write_bytes((json.dumps(proof,ensure_ascii=False,indent=2)+'\n').encode());print(json.dumps(proof))
