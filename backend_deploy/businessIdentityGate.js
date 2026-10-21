@@ -17,6 +17,7 @@ function createBusinessIdentityGate({ verifyToken, getUser, resolveAdminKey, jou
     const route = String(req.path || req.url.split('?')[0]);
     if (!route.startsWith('/api/')) return next();
     req.securityRequestId = require('node:crypto').randomUUID();
+    res.set?.('X-Security-Request-ID', req.securityRequestId);
     const record = (kind, status, actor) => journal.append({kind, status, actor, method:req.method, route, ip:clientIp(req), requestId:req.securityRequestId});
     const deny = (status, code, error) => { record(code, status, req.user?.userId); return res.status(status).json({success:false, code, error}); };
     try {
