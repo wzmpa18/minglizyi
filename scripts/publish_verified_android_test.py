@@ -79,7 +79,7 @@ def main():
  spec.update(expectedCurrent=a.expect_current,apkName=name,page=page)
  payload=data
  if a.reuse_previous_proof:
-  previous=next(x for x in json.loads(a.reuse_previous_proof.read_text('utf-8')) if x['channel']=='tencent' and str(x['path']).endswith('.apk'))
+  previous=next(x for x in json.loads(a.reuse_previous_proof.read_text('utf-8')) if x['channel'] in ('tencent','internal') and str(x['path']).endswith('.apk'))
   assert previous['version']=='25.0.115' and isinstance(previous['versionCode'],int) and 0<previous['versionCode']<item['versionCode'] and re.fullmatch(r'[a-f0-9]{40}',previous['source'])
   old=Path(previous['path']).read_bytes();assert hashlib.sha256(old).hexdigest()==previous['fileSha256']
   def members(raw):
