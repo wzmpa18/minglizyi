@@ -96,23 +96,46 @@ export interface StarterProgress {
   lessonId: string;
   read: string[];
   answers: Record<string, number>;
+  questionVersions?: Record<string,string>;
+  lessonVersions?: Record<string,string>;
 }
 
 export const STARTER_STORAGE_KEY = "yandao_study_starter_v1";
 export const emptyStarterProgress = (): StarterProgress => ({ version: 1, lessonId: STARTER_LESSONS[0].id, read: [], answers: {} });
 
 // Discard malformed or obsolete values rather than displaying fabricated completion.
-export function parseStarterProgress(raw: string | null): StarterProgress {
-  const result = emptyStarterProgress();
+export const starterQuestionVersion=(q:StarterQuestion)=>JSON.stringify([q.stem,q.options,q.answer]);
+export const starterLessonVersion=(l:StarterLesson)=>JSON.stringify([l.title,l.summary,l.paragraphs]);
+export function parseStarterProgress(raw: string | null,lessons:StarterLesson[]=STARTER_LESSONS): StarterProgress {
+  const result = {...emptyStarterProgress(),lessonId:lessons[0]?.id||STARTER_LESSONS[0].id};
   try {
     const value = JSON.parse(raw || "null");
     if (!value || value.version !== 1) return result;
-    if (STARTER_LESSONS.some((lesson) => lesson.id === value.lessonId)) result.lessonId = value.lessonId;
-    result.read = STARTER_LESSONS.filter((lesson) => Array.isArray(value.read) && value.read.includes(lesson.id)).map((lesson) => lesson.id);
-    for (const question of STARTER_LESSONS.flatMap((lesson) => lesson.questions)) {
+    if (lessons.some((lesson) => lesson.id === value.lessonId)) result.lessonId = value.lessonId;
+    result.read = lessons.filter((lesson) => {
+      const baseline=STARTER_LESSONS.find(item=>item.id===lesson.id);
+      const previous=value.lessonVersions?.[lesson.id]??(baseline?starterLessonVersion(baseline):null);
+      return Array.isArray(value.read)&&value.read.includes(lesson.id)&&previous===starterLessonVersion(lesson);
+    }).map((lesson) => lesson.id);
+    for (const question of lessons.flatMap((lesson) => lesson.questions)) {
       const answer = value.answers?.[question.id];
-      if (Number.isInteger(answer) && answer >= 0 && answer < question.options.length) result.answers[question.id] = answer;
+      const baseline=STARTER_LESSONS.flatMap(item=>item.questions).find(item=>item.id===question.id);
+      const previous=value.questionVersions?.[question.id]??(baseline?starterQuestionVersion(baseline):null);
+      if (previous===starterQuestionVersion(question)&&Number.isInteger(answer) && answer >= 0 && answer < question.options.length) result.answers[question.id] = answer;
     }
   } catch { /* Broken local storage is treated as a new session. */ }
   return result;
+}
+
+// Keep unavailable courses in the saved document so a temporary remote removal
+// does not erase their history. Only active, unchanged content counts in the UI.
+export function mergeStarterProgress(raw:string|null,next:StarterProgress,lessons:StarterLesson[]):string{
+ let previous:Partial<StarterProgress>={};try{const value=JSON.parse(raw||"null");if(value?.version===1)previous=value;}catch{}
+ const validId=(id:string)=>/^[a-z][a-z0-9-]{0,79}$/.test(id),activeLessons=new Set(lessons.map(l=>l.id)),activeQuestions=new Set(lessons.flatMap(l=>l.questions.map(q=>q.id)));
+ const answers:Record<string,number>={},questionVersions:Record<string,string>={},lessonVersions:Record<string,string>={};
+ for(const [id,value] of Object.entries(previous.answers||{}).slice(0,5000))if(validId(id)&&!activeQuestions.has(id)&&Number.isInteger(value)&&value>=0&&value<6){answers[id]=value;if(typeof previous.questionVersions?.[id]==="string")questionVersions[id]=previous.questionVersions[id];}
+ const read=Array.isArray(previous.read)?previous.read.filter(id=>typeof id==="string"&&validId(id)&&!activeLessons.has(id)).slice(0,5000):[];
+ for(const id of read)if(typeof previous.lessonVersions?.[id]==="string")lessonVersions[id]=previous.lessonVersions[id];
+ for(const lesson of lessons){if(next.read.includes(lesson.id)){read.push(lesson.id);lessonVersions[lesson.id]=starterLessonVersion(lesson);}for(const q of lesson.questions){const answer=next.answers[q.id];if(Number.isInteger(answer)&&answer>=0&&answer<q.options.length){answers[q.id]=answer;questionVersions[q.id]=starterQuestionVersion(q);}}}
+ return JSON.stringify({version:1,lessonId:next.lessonId,read:[...new Set(read)],answers,questionVersions,lessonVersions});
 }

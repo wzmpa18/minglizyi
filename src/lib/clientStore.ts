@@ -11,7 +11,7 @@
  * - 保持原有同步API签名，现有调用无需修改
  */
 
-import { getClientUserId } from "./auth";
+import { getClientUserId,getUserToken } from "./auth";
 import { syncRecordToBackend, canCloudSyncRecords } from "./recordSync";
 import { cloudRecordData, mergeCloudRecords } from "./cloudRecordPrivacy";
 
@@ -241,6 +241,9 @@ let initPromise: Promise<void> | null = null;
  * - 重放离线队列
  */
 export function initCloudSync(): Promise<void> {
+  // A visitor identifier is not an authenticated account. Do not transmit guest
+  // archives or cache a no-op that prevents initialization after actual login.
+  if(typeof window==="undefined"||!getUserToken())return Promise.resolve();
   if (initPromise) return initPromise;
 
   initPromise = (async () => {
@@ -614,6 +617,7 @@ export function maskPhone(phone: string): string {
 // ==================== 网络状态监听：联网时自动同步 ====================
 if (typeof window !== "undefined") {
   window.addEventListener("online", () => {
+    if(!getUserToken())return;
     replayPendingOps().then(() => {
       apiFetch<{ clients: Client[]; records: ServiceRecord[] }>("/api/sync").then((data) => {
         if (data) {

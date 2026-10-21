@@ -9,6 +9,7 @@
 import { getUserToken,getUserProfile } from "./auth";
 import { offlineAcademyResponse, prepareOfflineLearning } from "./offlineLearning";
 import { saveLearningCheckin, fetchLearningProgress } from "./offlineLearningProgress";
+import type {StudyCatalog} from "./studyCatalog";
 
 const API_BASE = typeof window !== "undefined" ? window.location.origin : "";
 
@@ -59,6 +60,9 @@ async function adminApi<T = any>(path: string, init?: RequestInit): Promise<T> {
   });
   return res.json();
 }
+
+export const fetchStarterCatalogForAdmin=()=>adminApi<{success:boolean;catalog?:StudyCatalog;error?:string}>("/api/academy/admin/starter-content");
+export const publishStarterCatalog=(catalog:StudyCatalog,expectedRevision:number,reviewed:boolean)=>adminApi<{success:boolean;catalog?:StudyCatalog;error?:string}>("/api/academy/admin/starter-content",{method:"PUT",body:JSON.stringify({catalog,expectedRevision,reviewed})});
 
 // v25.0.20：三大板块（中医/易学/国学），板块下类目由 categories 接口管理
 // v25.0.28（P6-补04）：追加医考 track（唯一题库引擎分类标签，不进 /tracks 三大板块概览）

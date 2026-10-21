@@ -17,7 +17,7 @@ export default function LearningEntryPanel() {
     <section aria-label="中医与经典学习" className="mx-3 mt-3 rounded-2xl bg-white p-4 shadow-sm">
       <p className="text-xs font-semibold text-[#267364]">读经典 · 查知识 · 做练习</p>
       <h2 className="mt-1 text-lg font-bold text-gray-800">从一节经典学习课开始</h2>
-      <p className="mt-2 text-xs leading-relaxed text-gray-500">16节原创入门讲解、44道自测，覆盖易学、中医与天文历法。查看解析、错题重练，也可连续听学；无需登录，内容随应用提供。</p>
+      <p className="mt-2 text-xs leading-relaxed text-gray-500">原创入门课与自测覆盖易学、中医与天文历法。支持解析、错题重练与连续听学；内置备用课程，联网可获取更多资料，已下载内容可离线复习。</p>
       <Link href="/academy/start" className="mt-3 block rounded-xl bg-[#267364] px-3 py-3 text-center text-sm font-bold text-white">{ui("开始入门学习")}</Link>
       <div className="mt-3 grid grid-cols-2 gap-2">
         {ENTRIES.map((entry) => <Link key={entry.href} href={entry.href} className="rounded-xl bg-[#f1f7f4] p-3"><span className="block text-sm font-semibold text-gray-800">{ui(entry.label)}</span><span className="mt-1 block text-[11px] text-gray-500">{entry.detail}</span></Link>)}

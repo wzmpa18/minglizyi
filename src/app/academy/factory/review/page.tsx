@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import StarterContentEditor from "@/components/StarterContentEditor";
 import { BrandHeader } from "@/components/shared";
 import {
   fetchMaterials,
@@ -265,6 +266,7 @@ function ReviewWorkbenchAccount() {
 
       <div className="px-3 py-3 pb-24">
         <AcademyReviewerApplications/>
+        <StarterContentEditor/>
         {/* 类目管理（仅题目页显示） */}
         {tab === "questions" && (
           <div className="mb-3 rounded-2xl bg-white p-4 shadow-sm">
