@@ -92,8 +92,9 @@ function EventDivinationPanelEnabled({
   const { requireLogin, showLoginPrompt, setShowLoginPrompt } = useRequireLogin();
 
   // v20.1: 三级权限检查（COMMERCIAL-CLEANUP-03: 移除 getPaidPlanStatus——AI权限由服务端SSOT决定）
-  const checkAccess = useCallback((): boolean => {
-    const perm = getPermissionStatus();
+  const checkAccess = useCallback(async (): Promise<boolean> => {
+    const perm = await getPermissionStatusFromServer();
+    paidRequestAccess.current = perm.paidAccess;
     setQuotaMsg(perm.message);
 
     if (perm.needLogin) {
@@ -566,6 +567,7 @@ function EventDivinationPanelEnabled({
         )}
       </div>
 
+      {showPayment && IS_GOOGLE_PLAY_BUILD && <AIAccessLinks />}
       {/* 付费弹窗 */}
       {showPayment && !IS_GOOGLE_PLAY_BUILD && (
         <div
@@ -660,7 +662,7 @@ function EventDivinationPanelEnabled({
 
               {/* 开通会员提示 */}
               <div style={{ marginTop: "8px", padding: "8px", background: "#f0f7ff", borderRadius: "6px", fontSize: "11px", color: "#1976d2", lineHeight: 1.5 }}>
-                💡 AI时卡仅为本工具AI解读权益，与平台会员相互独立；月度及以上会员已含AI解读额度，无需重复购买。年度/终身会员无限畅享更划算！
+                权益与点数以账号内实际可用额度为准；已有权益无需重复购买。苹果购买请使用上方App Store入口。
               </div>
 
               <button
