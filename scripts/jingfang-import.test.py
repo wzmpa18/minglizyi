@@ -33,4 +33,44 @@ class ImportTests(unittest.TestCase):
         chapters,_=parse_source(raw,s);self.assertEqual(len(chapters),1);self.assertNotIn('此段不属于',chapters[0]['content'])
         with self.assertRaisesRegex(AssertionError,'hash changed'):parse_source(raw+b'altered',s)
 
+
+class ContinuingStudyTests(unittest.TestCase):
+    def test_existing_courses_and_books_are_unchanged(self):
+        import json,hashlib
+        from pathlib import Path
+        c=json.loads(Path('backend_deploy/data/study-starter-public.json').read_bytes())
+        b=json.loads(Path('backend_deploy/data/tcm-jingfang-originals.json').read_bytes())
+        digest=lambda value:hashlib.sha256(json.dumps(value,ensure_ascii=False,separators=(',',':')).encode()).hexdigest()
+        self.assertEqual(digest(c['lessons'][:25]),'2c7eb5b136e7df5b01bfc0addd9514cb0771406e993c7a568e167c0c219bec18')
+        self.assertEqual(digest(b[:22]),'05c47872b6d360fce981e53578a5c41108b8c855763a7249d07d76f84b188fb7')
+        self.assertEqual(len(b[-4:]),4)
+        self.assertEqual(sum(len(x['chapters']) for x in b[-4:]),32)
+
+    def test_modern_teacher_resources_are_metadata_not_copied_lessons(self):
+        import json
+        from pathlib import Path
+        m=json.loads(Path('backend_deploy/data/jingfang-continuing-study.json').read_bytes())
+        self.assertEqual(len(m['courses']),3)
+        self.assertEqual([x['listedEpisodes'] for x in m['courses']],[61,14,2])
+        self.assertIn('未获转载',m['rights'])
+        self.assertIn('未核实',m['identity']['status'])
+        for item in m['courses']:self.assertEqual(set(item),{'id','title','url','listedEpisodes','lastListedUpdate','note'})
+
+    def test_guide_preserves_attribution_escapes_text_and_refuses_unreviewed_links(self):
+        import json,copy
+        from pathlib import Path
+        from publish_jingfang_guide import render
+        read=lambda name:json.loads(Path(name).read_bytes())
+        m=read('backend_deploy/data/jingfang-continuing-study.json');bib=read('backend_deploy/data/jingfang-bibliography.json')
+        books=[*read('src/data/tcmOriginalEditions.json'),read('src/data/nanjingOriginal.json'),*read('src/data/tcmClinicalOriginalEditions.json'),*read('backend_deploy/data/tcm-jingfang-originals.json')]
+        page=render(bib,books,m)
+        self.assertIn('归真医学 · 公开课程研读索引',page)
+        self.assertIn('36部622篇卷',page)
+        for item in m['courses']:self.assertIn(item['url'],page)
+        for item in m['originalBooks']:self.assertIn('?book='+item['id'],page)
+        injected=copy.deepcopy(m);injected['courses'][0]['title']='<script>bad</script>'
+        self.assertIn('&lt;script&gt;bad&lt;/script&gt;',render(bib,books,injected))
+        injected['courses'][0]['url']='javascript:alert(1)'
+        with self.assertRaises(AssertionError):render(bib,books,injected)
+
 if __name__=='__main__':unittest.main()

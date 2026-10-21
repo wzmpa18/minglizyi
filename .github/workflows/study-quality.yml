@@ -128,6 +128,8 @@ on:
       - 'scripts/jingfang-import.test.py'
       - 'backend_deploy/data/tcm-jingfang-*.json'
       - 'backend_deploy/data/jingfang-bibliography.json'
+      - 'backend_deploy/data/jingfang-continuing-study.json'
+      - 'scripts/publish_jingfang_guide.py'
       - 'src/components/BottomNav.tsx'
       - 'src/components/LocalChartNotebook.tsx'
       - 'src/lib/chartNotebook.ts'

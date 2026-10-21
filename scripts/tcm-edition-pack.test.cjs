@@ -6,8 +6,8 @@ const { isCompatibleTcmEditionPack, mergeTcmEditionPack } = require('../src/lib/
 
 test('expanded text editions validate, retain old study links and accept a corrected paragraph', () => {
   const pack = buildPack();
-  assert.equal(pack.books.length, 32);
-  assert.equal(pack.books.reduce((sum, book) => sum + book.chapters.length, 0), 590);
+  assert.equal(pack.books.length, 36);
+  assert.equal(pack.books.reduce((sum, book) => sum + book.chapters.length, 0), 622);
   const legacy = { ...pack.books[0], id: 'suwen-notes', sourceUrl: undefined };
   const baseline = [...pack.books, legacy];
   assert.equal(isCompatibleTcmEditionPack(pack, baseline), true);
@@ -15,7 +15,7 @@ test('expanded text editions validate, retain old study links and accept a corre
   updated.books[0].chapters[0].content += '\n校勘补充说明';
   assert.equal(isCompatibleTcmEditionPack(updated, baseline), true);
   const merged = mergeTcmEditionPack(baseline, updated);
-  assert.equal(merged.length, 33);
+  assert.equal(merged.length, 37);
   assert.equal(merged.at(-1), legacy);
   assert.equal(merged[0], updated.books[0]);
 });

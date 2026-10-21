@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-10-21",
+  "identity": {
+    "displayName": "归真医学（公开账号所用名称）",
+    "url": "https://www.qtfm.cn/podcasters/a5ed899d3b0a43319d4888b93934ea61/",
+    "status": "账号主页与三张专辑相互链接；未核实讲者实名、执业资格或教材出版信息，不与其他同名人士合并。"
+  },
+  "rights": "仅整理公开标题、出处和学习索引，未获转载讲义、音频、视频或教材全文的适用授权；无音频代理、转录或转载。",
+  "courses": [
+    {
+      "id": "guizhen-basics",
+      "title": "归真医学基础篇",
+      "url": "https://www.qtfm.cn/channels/465154/",
+      "listedEpisodes": 61,
+      "lastListedUpdate": "2023-12-29",
+      "note": "基础主题的原发布入口。单条观点须与原典、现代规范及原节目上下文分别核对；目录数量为核查当日页面快照。"
+    },
+    {
+      "id": "guizhen-shanghan",
+      "title": "归真医学-伤寒篇",
+      "url": "https://www.qtfm.cn/channels/469224/",
+      "listedEpisodes": 14,
+      "lastListedUpdate": "2025-06-03",
+      "note": "原页有伤寒总论、传经及条文相关节目，并列“归真老师注解-伤寒教材一”；标题不等于已经确认整套教材及授权。"
+    },
+    {
+      "id": "guizhen-recitation",
+      "title": "归真医学经典诵读",
+      "url": "https://www.qtfm.cn/channels/468823/",
+      "listedEpisodes": 2,
+      "lastListedUpdate": "2023-08-28",
+      "note": "含伤寒条文诵读及“医学三字经（择要）”节目。原发布节目本身为择要，不将其标成典籍全文。"
+    }
+  ],
+  "originalBooks": [
+    {
+      "id": "you-guanzhu-original",
+      "author": "尤怡（尤在泾）",
+      "title": "伤寒贯珠集",
+      "study": "对照原六经条文和注家的治法分组，记录条次对应而非仅背方名。"
+    },
+    {
+      "id": "you-jingui-xindian-original",
+      "author": "尤怡（尤在泾）",
+      "title": "金匮要略心典",
+      "study": "阅读原文、注释和前后文，分清经文与注家补充解释。"
+    },
+    {
+      "id": "cheng-mingli-original",
+      "author": "成无己",
+      "title": "伤寒明理论",
+      "study": "比较同名症候在不同条文中的语境，连读明理与药方论。"
+    },
+    {
+      "id": "cheng-zhu-shanghan-original",
+      "author": "张机著；王叔和撰次；成无己注",
+      "title": "注解伤寒论",
+      "study": "十卷传本及卷前序文完整保留，逐条分开仲景原文、成氏注与版本异文。"
+    }
+  ],
+  "boundaries": [
+    "四部古籍与归真节目并列作为独立学习资源，不声称归真讲者推荐、编写或授权这些版本。",
+    "不导入网盘资料包、付费课镜像或来源不明的听写教材。",
+    "未采用《伤寒寻源》作为完整教材：所见序文明确中卷尚有未备；《伤寒来苏集》所见四卷文本与合集范围须另核。",
+    "文本结构完整核对不等于医学专业审校，不提供个体诊断、处方或针刺操作指导。"
+  ]
+}

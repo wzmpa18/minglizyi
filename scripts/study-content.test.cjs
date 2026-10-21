@@ -2,8 +2,8 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('fs'),os=require('os'),path=require('path'),{pathToFileURL}=require('url');
 const {validateStudyCatalog}=require('../backend_deploy/studyContentPolicy'),{createStudyContentStore}=require('../backend_deploy/studyContentStore'),{starterModule}=require('./build-starter-catalog.cjs');
 const seed=JSON.parse(fs.readFileSync(path.join(__dirname,'../backend_deploy/data/study-starter-public.json'),'utf8'));
-test('reviewed text-only catalog has 25 lessons/71 questions, preserves existing routes, and rejects executable/unknown/duplicate/invalid changes',()=>{
- assert.equal(seed.lessons.length,25);assert.equal(seed.lessons.flatMap(l=>l.questions).length,71);assert.equal(validateStudyCatalog(seed).ok,true);
+test('reviewed text-only catalog has 31 lessons/89 questions, preserves existing routes, and rejects executable/unknown/duplicate/invalid changes',()=>{
+ assert.equal(seed.lessons.length,31);assert.equal(seed.lessons.flatMap(l=>l.questions).length,89);assert.equal(validateStudyCatalog(seed).ok,true);
  for(const change of [v=>v.lessons[0].href='javascript:alert(1)',v=>v.lessons[0].paragraphs[0]='<script>this is not a learning paragraph</script>',v=>v.lessons[0].questions[0].answer=99,v=>v.lessons[0].questions[0].options=['same','same'],v=>v.lessons.pop()&&v.lessons.shift(),v=>v.script='download new logic',v=>v.readerVersion=2,v=>v.lessons[1].id=v.lessons[0].id]){const v=structuredClone(seed);change(v);assert.equal(validateStudyCatalog(v).ok,false);}
  for(const lesson of seed.lessons)assert.ok(fs.existsSync(path.join(__dirname,'../src/app',lesson.href,'page.tsx')),lesson.href);
 });
