@@ -61,7 +61,7 @@
     }
   ],
   "ownerInstruction": "2026-10-19: 全部完成才能提交审核；全部完成后一次清理",
-  "checkpointReport": "交接报告/FINAL_PROJECT_HANDOVER.md#67",
+  "checkpointReport": "交接报告/FINAL_PROJECT_HANDOVER.md#77",
   "ownerScopeClarification": {
     "date": "2026-10-19",
     "localization": "Navigation, buttons and operation UI only. Classical texts, lesson bodies, medical sources and user content stay original; no Japanese/English body translation requirement.",
@@ -75,5 +75,18 @@
     "doesNotAssertOverallComplete": true,
     "otherFormalChannelsUnchanged": true
   },
-  "appleChannelSpecificOwnerAuthorization": "apple-owner-release.json"
+  "appleChannelSpecificOwnerAuthorization": "apple-owner-release.json",
+  "currentHandoverCheckpoint": {
+    "report": "交接报告/FINAL_PROJECT_HANDOVER.md#77",
+    "checkedAtTokyo": "2026-10-21T19:13:22.230111+09:00",
+    "latestNativeSource": "9daff6306a45b81b849c32a8879a4ce1be1238d3",
+    "androidVersionCode": 2127,
+    "internalAppleBuild": 35,
+    "formalAppleBuild": 30,
+    "formalAppleState": "WAITING_FOR_REVIEW",
+    "webSource": "f7a5926910c4548e14579875534c5d391e751718",
+    "acceptanceStatusesNotPromoted": true,
+    "note": "Earlier section statuses and evidence are historical checkpoints, not a current all-features PASS. See77 for latest deployment/store facts and unresolved acceptance."
+  },
+  "candidateSourceScope": "Original Apple30 formal-review source; latest internal binaries have a different source, not authorized by changing this metadata."
 }

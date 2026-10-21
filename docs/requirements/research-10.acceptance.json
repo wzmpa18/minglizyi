@@ -245,5 +245,17 @@
     "iosTestFlightSource": "152346da1a287c2d994b26f46c4b8e3196d35d66",
     "webSource": "072db69eb84ac2051df5163002c168d78e4f25b4"
   },
-  "formalSubmissionAllowed": false
+  "formalSubmissionAllowed": false,
+  "currentHandoverCheckpoint": {
+    "report": "交接报告/FINAL_PROJECT_HANDOVER.md#77",
+    "checkedAtTokyo": "2026-10-21T19:13:22.230111+09:00",
+    "latestNativeSource": "9daff6306a45b81b849c32a8879a4ce1be1238d3",
+    "androidVersionCode": 2127,
+    "internalAppleBuild": 35,
+    "formalAppleBuild": 30,
+    "formalAppleState": "WAITING_FOR_REVIEW",
+    "webSource": "f7a5926910c4548e14579875534c5d391e751718",
+    "acceptanceStatusesNotPromoted": true,
+    "note": "Earlier section statuses and evidence are historical checkpoints, not a current all-features PASS. See77 for latest deployment/store facts and unresolved acceptance."
+  }
 }
