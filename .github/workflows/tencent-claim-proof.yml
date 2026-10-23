@@ -1,0 +1,68 @@
+name: Guoxue Tencent ownership signature proof
+on:
+  workflow_dispatch:
+    inputs:
+      challenge_base64:
+        description: Official Tencent unsigned ownership challenge, under 32KB base64
+        required: true
+        type: string
+      challenge_sha256:
+        description: Exact SHA256 of the official downloaded challenge
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  sign-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Verify and sign official challenge without executing it
+        env:
+          CHALLENGE_B64: ${{ inputs.challenge_base64 }}
+          CHALLENGE_SHA256: ${{ inputs.challenge_sha256 }}
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+        run: |
+          python3 - <<'PY'
+          import os,re,base64,hashlib,subprocess,json,zipfile
+          from pathlib import Path
+          raw=base64.b64decode(os.environ['CHALLENGE_B64'],validate=True)
+          assert 1000<len(raw)<24000 and hashlib.sha256(raw).hexdigest()==os.environ['CHALLENGE_SHA256']
+          work=Path(os.environ['RUNNER_TEMP'])/'guoxue-claim';work.mkdir(mode=0o700)
+          source=work/'tap_unsign.apk';source.write_bytes(raw)
+          z=zipfile.ZipFile(source);assert 'AndroidManifest.xml' in z.namelist() and len(z.namelist())<100
+          assert sum(i.file_size for i in z.infolist())<1000000
+          key=work/'signing.keystore';key.write_bytes(base64.b64decode(os.environ['KEYSTORE_B64'],validate=True));key.chmod(0o600)
+          cfg=Path('android/app/build.gradle').read_text();cfg=cfg[cfg.index('signingConfigs'):]
+          v={k:re.search(k+r'''\s+['"]([^'"]+)['"]''',cfg).group(1) for k in ['storePassword','keyPassword','keyAlias']}
+          env=dict(os.environ,CLAIM_STORE_PASS=v['storePassword'],CLAIM_KEY_PASS=v['keyPassword'])
+          dest=work/'guoxue-tencent-claim-signed.apk'
+          try:
+            cmd=['jarsigner','-keystore',str(key),'-storepass:env','CLAIM_STORE_PASS','-keypass:env','CLAIM_KEY_PASS','-signedjar',str(dest),str(source),v['keyAlias']]
+            assert subprocess.run(cmd,env=env,capture_output=True).returncode==0,'Signing failed; credentials not logged'
+            assert subprocess.run(['jarsigner','-verify',str(dest)],capture_output=True).returncode==0
+            cert=subprocess.run(['keytool','-list','-v','-keystore',str(key),'-storepass:env','CLAIM_STORE_PASS','-alias',v['keyAlias']],env=env,capture_output=True,check=True).stdout.decode()
+            md5=re.search(r'MD5:\s*([A-Fa-f0-9:]+)',cert)
+            if md5: assert md5.group(1).replace(':','').lower()=='3726b77289a1a6771ccacca47afd22d9'
+            sha=re.search(r'SHA256:\s*([A-Fa-f0-9:]+)',cert);assert sha and sha.group(1).replace(':','').lower()=='8ca0c414573d4b05fc2bd1ba9c6a2a8090c90c58e3815119494607443dc6d5a0'
+            proof={'package':'com.yandao.guoxue','challengeSha256':hashlib.sha256(raw).hexdigest(),'signedSha256':hashlib.sha256(dest.read_bytes()).hexdigest(),'bytes':dest.stat().st_size,'certificateSha256':sha.group(1).replace(':','').lower(),'installed':False,'ownershipSubmitted':False}
+            (work/'proof.json').write_text(json.dumps(proof,indent=2))
+            print(json.dumps(proof))
+          finally:
+            key.unlink(missing_ok=True);source.unlink(missing_ok=True)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: guoxue-tencent-claim-proof
+          path: |
+            ${{ runner.temp }}/guoxue-claim/guoxue-tencent-claim-signed.apk
+            ${{ runner.temp }}/guoxue-claim/proof.json
+          retention-days: 3
+      - name: Clear protected runtime inputs
+        if: always()
+        run: rm -f "$RUNNER_TEMP/guoxue-claim/signing.keystore" "$RUNNER_TEMP/guoxue-claim/tap_unsign.apk"

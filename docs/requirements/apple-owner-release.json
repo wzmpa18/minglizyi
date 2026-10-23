@@ -1,12 +1,12 @@
 {
   "scope": "owner-channel-specific-authorization",
-  "date": "2026-10-20",
-  "ownerInstruction": "你完成这些已经可以的商店就可以了，其他的等资质通过再弄，完成苹果的提交啊！",
+  "date": "2026-10-24",
+  "ownerInstruction": "你完成这些已经可以的商店就可以了，其他的等资质通过再弄，完成苹果的提交啊！2026-10-23追加：安全评估通过，把所有应用商店重新上传，需要恢复所有功能；各商店核对退回并解决。",
   "appId": "6807592575",
   "bundleId": "com.yandaoguoxue.app",
   "version": "25.0.115",
-  "build": "30",
-  "candidateSource": "53e4f3608202ce770c3565fb805fb9e83038f340",
+  "build": "36",
+  "candidateSource": "a5361d7a6a035c56ab2ac22531d9850ac144c754",
   "actions": [
     "assemble",
     "submit"
@@ -19,5 +19,5 @@
     "Check existing submissions and re-use the app version; never duplicate active review",
     "Compass GPS excluded from both incremental and bulk record sync; local copy preserved"
   ],
-  "report": "交接报告/FINAL_PROJECT_HANDOVER.md#67"
+  "report": "交接报告/FINAL_PROJECT_HANDOVER.md#78.1"
 }
