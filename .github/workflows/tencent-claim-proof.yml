@@ -1,5 +1,16 @@
 name: Guoxue Tencent ownership signature proof
 on:
+  workflow_call:
+    inputs:
+      challenge_base64:
+        required: true
+        type: string
+      challenge_sha256:
+        required: true
+        type: string
+    secrets:
+      ANDROID_KEYSTORE_B64:
+        required: true
   workflow_dispatch:
     inputs:
       challenge_base64:

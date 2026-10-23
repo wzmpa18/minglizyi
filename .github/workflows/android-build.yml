@@ -17,9 +17,28 @@ on:
           - tencent
           - google
           - internal
+      challenge_base64:
+        description: Optional official Tencent ownership challenge; sign only, no app rebuild
+        required: false
+        default: ''
+        type: string
+      challenge_sha256:
+        description: SHA256 required with ownership challenge
+        required: false
+        default: ''
+        type: string
 
 jobs:
+  claim-proof:
+    if: ${{ inputs.challenge_base64 != '' }}
+    uses: ./.github/workflows/tencent-claim-proof.yml
+    with:
+      challenge_base64: ${{ inputs.challenge_base64 }}
+      challenge_sha256: ${{ inputs.challenge_sha256 }}
+    secrets:
+      ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
   build:
+    if: ${{ inputs.challenge_base64 == '' }}
     name: Assemble Release
     runs-on: ubuntu-latest
     timeout-minutes: 45
