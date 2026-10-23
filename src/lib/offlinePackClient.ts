@@ -172,7 +172,7 @@ async function readResponseWithProgress(
  * 下载 pack。带断点续传：OFFLINE_PACK 分区中已有 .part 时用 Range 从断点继续。
  * SHA256 校验失败：清理 .part 残片并返回 error（绝不启用，第六十章）。
  */
-export async function downloadPack(pack: ManifestPack, onProgress?: DownloadProgress): Promise<DownloadResult> {
+export async function downloadPack(pack: ManifestPack, onProgress?: DownloadProgress, validateBeforeActivation?: (bytes:ArrayBuffer)=>Promise<void>): Promise<DownloadResult> {
   const pKey = partKey(pack.packId, pack.version);
   const existingPart = await get<ArrayBuffer>("OFFLINE_PACK", pKey);
   const startByte = existingPart ? existingPart.byteLength : 0;
@@ -230,6 +230,8 @@ export async function downloadPack(pack: ManifestPack, onProgress?: DownloadProg
       return { ok: false, packId: pack.packId, version: pack.version, error: "SHA256 校验失败，包已废弃" };
     }
 
+    // Validate data protocol and inner assets before replacing the active index.
+    await validateBeforeActivation?.(full);
     // 原子启用（第六十一章）：写正式键 → 更新索引 → 清 .part
     await put("OFFLINE_PACK", finalKey(pack.packId, pack.version), full, { version: pack.version });
     const idx = await getInstalledIndex();

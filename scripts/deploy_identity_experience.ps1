@@ -34,7 +34,7 @@ try:
   time.sleep(1)
  assert healthy,'Health verification failed'
  assert sha(p.read_bytes())==sha(new)
- print(json.dumps({'source':d['source'],'before':sha(old),'after':sha(new),'healthy':True,'deployedAt':datetime.datetime.now(datetime.timezone.utc).isoformat(),'databaseModified':False,'socialIdentityRequired':True,'privateAccountServicesRequireLogin':True,'backup':str(backup)}))
+ print(json.dumps({'source':d['source'],'before':sha(old),'after':sha(new),'healthy':True,'deployedAt':datetime.datetime.now(datetime.timezone.utc).isoformat(),'databaseModified':False,'socialPublishingIdentityRequired':True,'accountReadsRequirePhone':False,'privateAccountServicesRequireLogin':True,'backup':str(backup)}))
 except Exception:
  p.write_bytes(old)
  subprocess.run(['pm2','restart','yandaoguoxue-backend'],capture_output=True)

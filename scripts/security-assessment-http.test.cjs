@@ -25,8 +25,9 @@ test('real HTTP: access identity, OTP binding, admin role, moderation and journa
  async function req(url,credential,method='GET',body){const r=await fetch(base+url,{method,headers:{'Content-Type':'application/json',...(credential?{Authorization:'Bearer '+credential}:{})},body:body?JSON.stringify(body):undefined});return {status:r.status,data:await r.json()};}
  try{
   assert.equal((await req('/api/business')).status,401);
-  assert.equal((await req('/api/business',token(100001))).data.code,'PHONE_VERIFICATION_REQUIRED');
-  assert.equal((await req('/api/business',token(100002))).status,403);
+  assert.equal((await req('/api/business',token(100001))).status,200);
+  assert.equal((await req('/api/social/posts',token(100001),'POST',{content:'test'})).data.code,'PHONE_VERIFICATION_REQUIRED');
+  assert.equal((await req('/api/business',token(100002))).status,200);
   assert.equal((await req('/api/business',token(999999))).status,403);
   assert.equal((await req('/api/business',jwt.sign({userId:100000,type:'refresh'},process.env.JWT_SECRET))).status,401);
   assert.equal((await req('/api/business',token(100000))).status,200);

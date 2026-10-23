@@ -6,6 +6,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { BrandHeader } from "@/components/shared";
+import AtlasViewer from "@/components/anatomy-atlas/AtlasViewer";
 import {
   ANATOMY_3D_PACK_ID,
   copyUint8ArrayBuffer,
@@ -70,6 +71,10 @@ function disposeObject(root: THREE.Object3D) {
 }
 
 export default function Anatomy3DPage() {
+  const [legacy,setLegacy]=useState(false);
+  return <><div className="mx-auto flex max-w-7xl gap-2 px-4 pt-4"><button className="rounded-lg border px-3 py-2" aria-pressed={!legacy} onClick={()=>setLegacy(false)}>分层解剖与经络</button><button className="rounded-lg border px-3 py-2" aria-pressed={legacy} onClick={()=>setLegacy(true)}>原四层离线图谱</button></div>{legacy?<LegacyAnatomy3DPage/>:<AtlasViewer/>}</>;
+}
+function LegacyAnatomy3DPage() {
   const mountRef = useRef<HTMLDivElement>(null);
   const runtimeRef = useRef<{
     scene: THREE.Scene;

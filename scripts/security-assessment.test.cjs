@@ -31,15 +31,16 @@ function fixture(){
  }
  return {invoke,events};
 }
-test('anonymous and unavailable accounts are rejected; public interaction and unknown services require verified phone',()=>{
+test('anonymous and unavailable accounts are rejected; account reads avoid repeated enrolment; publication retains verified identity',()=>{
  const {invoke}=fixture();for(const route of ['/api/social/posts','/api/study-comments/target/test','/api/auth/records/list','/api/academy/starter-content','/api/new-future-feature']){
   assert.equal(invoke(route).res.statusCode,401);assert.equal(invoke(route,'missing').res.statusCode,403);
-  assert.equal(invoke(route,'email').res.body.code,'PHONE_VERIFICATION_REQUIRED');assert.equal(invoke(route,'stored').res.body.code,'PHONE_VERIFICATION_REQUIRED');
+  assert.equal(invoke(route,'email').next,true);assert.equal(invoke(route,'stored').next,true);
+  assert.equal(invoke(route,'email','POST').res.body.code,'PHONE_VERIFICATION_REQUIRED');
   assert.equal(invoke(route,'banned').res.body.code,'ACCOUNT_UNAVAILABLE');assert.equal(invoke(route,'verified').next,true);
  }
 });
 test('private AI and own-account purchase/restore do not require a second phone enrolment, but still require a valid account',()=>{
- const {invoke}=fixture();for(const route of ['/api/ai/chat','/api/payment/create','/api/apple-iap/verify','/api/apple-iap/restore']){
+ const {invoke}=fixture();for(const route of ['/api/ai/chat','/api/payment/create','/api/apple-iap/verify','/api/apple-iap/restore','/api/offline/packs/tcm-anatomy-atlas-v3/download','/api/offline/sync']){
   assert.equal(invoke(route).res.statusCode,401);
   assert.equal(invoke(route,'missing').res.body.code,'ACCOUNT_UNAVAILABLE');
   assert.equal(invoke(route,'banned').res.body.code,'ACCOUNT_UNAVAILABLE');
@@ -53,6 +54,7 @@ test('admin identity is separate; nested admin paths cannot be used by users',()
 });
 test('exceptions are exact and method bound; callbacks are not broad auth bypasses',()=>{
  assert.equal(publicRequest('POST','/api/payment/callback/wechat'),true);
+ assert.equal(publicRequest('GET','/api/offline/manifest'),true);assert.equal(publicRequest('POST','/api/offline/manifest'),false);assert.equal(publicRequest('GET','/api/offline/manifest/private'),false);
  for(const p of ['/api/payment/callback/wechat/other','/api/auth/profile/update','/api/public/unknown'])assert.equal(publicRequest('POST',p),false);
  assert.equal(publicRequest('GET','/api/payment/callback/wechat'),false);
  const {invoke}=fixture();assert.equal(invoke('/api/auth/profile','stored').next,true);assert.equal(invoke('/api/auth/verify-phone','stored','POST').next,true);
