@@ -4,6 +4,10 @@ const PUBLIC_GET = new Set(['/api/health', '/api/public/pricing', '/api/public/f
 const AUTH_POST = new Set(['/api/auth/send-code', '/api/auth/verify-code', '/api/auth/register', '/api/auth/login', '/api/auth/login-code', '/api/auth/refresh-token', '/api/auth/logout', '/api/auth/check-duplicate']);
 const CALLBACK_POST = new Set(['/api/apple-iap/notifications', '/api/payment/callback/wechat', '/api/payment/callback/alipay', '/api/payment/callback/transfer', '/api/wechat/official/callback']);
 const SELF = new Set(['/api/auth/profile', '/api/auth/verify-phone', '/api/account/delete', '/api/feedback']);
+// These private account services do not publish user content. An existing valid
+// account may buy/restore its own entitlements or request a private AI analysis
+// without a second SMS enrolment step. Unknown and social namespaces stay gated.
+const PRIVATE_ACCOUNT_SERVICES = /^\/api\/(?:payment|apple-iap|ai)(?:\/|$)/;
 function clientIp(req) {
   const remote = req.socket?.remoteAddress || '';
   return ['127.0.0.1','::1','::ffff:127.0.0.1'].includes(remote) ? String(req.headers['x-forwarded-for'] || remote).split(',').at(-1).trim() : remote;
@@ -50,7 +54,7 @@ function createBusinessIdentityGate({ verifyToken, getUser, resolveAdminKey, jou
       const row = getUser(user.userId);
       if (!row || row.deleted_at || row.status === 'banned') return deny(403, 'ACCOUNT_UNAVAILABLE', '账号不存在或已停用');
       req.user = user;
-      if (!SELF.has(route) && (!/^1[3-9]\d{9}$/.test(row.phone || '') || !row.phone_verified_at)) return deny(403, 'PHONE_VERIFICATION_REQUIRED', '请先完成手机号验证码验证');
+      if (!SELF.has(route) && !PRIVATE_ACCOUNT_SERVICES.test(route) && (!/^1[3-9]\d{9}$/.test(row.phone || '') || !row.phone_verified_at)) return deny(403, 'PHONE_VERIFICATION_REQUIRED', '首次使用交流等受保护服务，请完成手机号验证；已验证账号无需重复验证');
       record('identity_accepted', 200, user.userId);
       next();
     } catch {

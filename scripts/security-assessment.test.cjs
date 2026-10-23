@@ -31,12 +31,22 @@ function fixture(){
  }
  return {invoke,events};
 }
-test('anonymous, missing accounts and unverified stored phone cannot access every business namespace',()=>{
- const {invoke}=fixture();for(const route of ['/api/ai/chat','/api/social/posts','/api/study-comments/target/test','/api/auth/records/list','/api/payment/create','/api/academy/starter-content','/api/new-future-feature']){
+test('anonymous and unavailable accounts are rejected; public interaction and unknown services require verified phone',()=>{
+ const {invoke}=fixture();for(const route of ['/api/social/posts','/api/study-comments/target/test','/api/auth/records/list','/api/academy/starter-content','/api/new-future-feature']){
   assert.equal(invoke(route).res.statusCode,401);assert.equal(invoke(route,'missing').res.statusCode,403);
   assert.equal(invoke(route,'email').res.body.code,'PHONE_VERIFICATION_REQUIRED');assert.equal(invoke(route,'stored').res.body.code,'PHONE_VERIFICATION_REQUIRED');
   assert.equal(invoke(route,'banned').res.body.code,'ACCOUNT_UNAVAILABLE');assert.equal(invoke(route,'verified').next,true);
  }
+});
+test('private AI and own-account purchase/restore do not require a second phone enrolment, but still require a valid account',()=>{
+ const {invoke}=fixture();for(const route of ['/api/ai/chat','/api/payment/create','/api/apple-iap/verify','/api/apple-iap/restore']){
+  assert.equal(invoke(route).res.statusCode,401);
+  assert.equal(invoke(route,'missing').res.body.code,'ACCOUNT_UNAVAILABLE');
+  assert.equal(invoke(route,'banned').res.body.code,'ACCOUNT_UNAVAILABLE');
+  assert.equal(invoke(route,'email','POST').next,true);
+  assert.equal(invoke(route,'stored','POST').next,true);
+ }
+ for(const route of ['/api/payment-public/posts','/api/ai-social/posts','/api/social/posts'])assert.equal(invoke(route,'email','POST').res.body.code,'PHONE_VERIFICATION_REQUIRED');
 });
 test('admin identity is separate; nested admin paths cannot be used by users',()=>{
  const {invoke}=fixture();for(const route of ['/api/admin/security/events','/api/social/admin/review']){assert.equal(invoke(route,'verified').res.statusCode,401);assert.equal(invoke(route,'admin').next,true);}
