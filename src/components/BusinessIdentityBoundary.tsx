@@ -6,12 +6,15 @@ import { getUserToken, clearLoginState } from "@/lib/auth";
 import { fetchWithAuth } from "@/lib/authInterceptor";
 const API = "https://yandaoguoxue.yandao.vip";
 const OPEN = /^\/(?:login|register|forgot-password|reset-password|privacy|agreement|membership-agreement|guide|admin|testing|download|account-delete|profile\/(?:settings|feedback))(?:\/|$)/;
+// Local reading and chart calculation must not be blocked by account enrolment.
+// Authenticated API requests continue to enforce identity on the server.
+const ACCOUNT_PAGES = /^\/(?:friends?|contacts|messages|groups|chat|tongchen)(?:\/|$)/;
 export default function BusinessIdentityBoundary({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [state,setState] = useState<"checking"|"login"|"phone"|"ready"|"error">("checking");
   const [phone,setPhone] = useState(""); const [code,setCode] = useState("");
   const [message,setMessage] = useState(""); const [busy,setBusy] = useState(false); const [cooldown,setCooldown] = useState(0);
-  const open = OPEN.test(pathname);
+  const open = OPEN.test(pathname) || !ACCOUNT_PAGES.test(pathname);
   useEffect(() => {
     if(open) return;
     let active = true;
@@ -40,8 +43,8 @@ export default function BusinessIdentityBoundary({ children }: { children: React
   if(open || state==="ready") return <>{children}</>;
   return <main style={{maxWidth:480,margin:"max(32px, env(safe-area-inset-top)) auto 100px",padding:28,lineHeight:1.8,background:"white",borderRadius:20,border:"1px solid #e9dff1",boxShadow:"0 12px 40px #62308a12"}}>
     <h1 style={{fontSize:24,fontWeight:700,color:"#6b21a8"}}>言道国学</h1>
-    {state==="checking"?<p>正在验证登录状态…</p>:state==="login"?<><h2>请先登录</h2><p>使用学习工具、购买和交流前，需要登录并完成手机号验证码验证。</p><Link className="my-5 block rounded-xl bg-purple-800 px-5 py-3 text-center font-medium text-white" href="/login/">登录或注册</Link></>:state==="error"?<><p>暂时无法完成身份校验，请检查网络后重试。</p><button onClick={()=>window.location.reload()}>重新验证</button></>:<>
-      <h2>验证手机号</h2><p>为保护账号与交流安全，请完成短信验证。原账号编号、购买权益和记录保持不变。手机号不会公开展示。</p>
+    {state==="checking"?<p>正在读取账号状态…</p>:state==="login"?<><h2>登录后参与交流</h2><p>学习阅读和本地排盘可以直接使用。登录后可使用好友与交流服务。</p><Link className="my-5 block rounded-xl bg-purple-800 px-5 py-3 text-center font-medium text-white" href="/login/">登录或注册</Link></>:state==="error"?<><p>暂时无法读取账号状态，请检查网络后重试。</p><button onClick={()=>window.location.reload()}>重试</button></>:<>
+      <h2>完善交流账号</h2><p>首次参与交流需要完成手机号验证，已验证账号无需重复操作。也可以返回登录页使用手机验证码登录。原账号编号、购买权益和记录保持不变，手机号不会公开展示。</p>
       <label>手机号<input type="tel" autoComplete="tel" value={phone} maxLength={11} onChange={e=>setPhone(e.target.value.replace(/\D/g,""))} style={{display:"block",padding:12,width:"100%",border:"1px solid #aaa",borderRadius:8}}/></label>
       <button className="my-3 rounded-lg border border-purple-700 px-4 py-2 text-purple-900 disabled:border-stone-300 disabled:text-stone-500" disabled={busy||cooldown>0||!/^1[3-9]\d{9}$/.test(phone)} onClick={()=>submit(true)}>{cooldown?`${cooldown}秒后重发`:"发送验证码"}</button>
       <label style={{display:"block"}}>验证码<input inputMode="numeric" autoComplete="one-time-code" value={code} maxLength={6} onChange={e=>setCode(e.target.value.replace(/\D/g,""))} style={{display:"block",padding:12,width:"100%",border:"1px solid #aaa",borderRadius:8}}/></label>
