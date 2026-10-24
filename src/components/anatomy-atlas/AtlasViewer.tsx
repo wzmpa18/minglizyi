@@ -102,7 +102,7 @@ export default function AtlasViewer({previewData}:{previewData?:Dataset}){
     {view.points&&!point&&<span className="atlas-hint">经络分色 · 穴名随放大展开 · 点名称或圆点查看介绍</span>}
     {snapshot.isolation&&<button className="atlas-status" onClick={()=>commit(leaveIsolation(current.current))}>退出只看</button>}
     {view.continuous&&<span className="atlas-hint" style={{bottom:42}}>连剥已开启 · 松手停止</span>}
-    {hint&&ready&&!unit&&!point&&<span className="atlas-hint">轻点识别 · 长按半秒剥离 · 双指缩放</span>}
+    {hint&&ready&&!unit&&!point&&!view.points&&<span className="atlas-hint">轻点识别 · 长按半秒剥离 · 双指缩放</span>}
     {hold&&<div className="atlas-hold" style={{left:Math.max(5,Math.min(hold.x+12,window.innerWidth-190)),top:Math.max(125,hold.y-45)}}><span className="atlas-progress" style={{background:`conic-gradient(#7837a8 ${hold.progress*360}deg,#e5e0d9 0deg)`}}/><span>长按隐藏：{index?.byId.get(index.unitId(hold.id||""))?label(index.byId.get(index.unitId(hold.id||""))!):hold.name}</span></div>}
    </div>
   </div>}
