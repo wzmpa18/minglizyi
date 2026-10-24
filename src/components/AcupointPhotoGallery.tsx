@@ -4,9 +4,9 @@ import {BUNDLED_PHOTOS,loadPhotoManifest,PHOTO_ORIGIN,PHOTO_PREFIX,type Acupoint
 import {useBodyScrollLock} from "@/hooks/useBodyScrollLock";
 import {usePopupBackHandler} from "@/hooks/usePopupBackHandler";
 
-export function AcupointPhotoGallery({code}:{code?:string}){
+export function AcupointPhotoGallery({code,nested=false}:{code?:string;nested?:boolean}){
  const [manifest,setManifest]=useState(BUNDLED_PHOTOS),[expanded,setExpanded]=useState<AcupointPhoto|null>(null),[failed,setFailed]=useState<Record<string,boolean>>({});
- useBodyScrollLock(!!expanded);usePopupBackHandler(()=>setExpanded(null),!!expanded);
+ useBodyScrollLock(!!expanded);usePopupBackHandler(()=>setExpanded(null),!!expanded&&!nested);
  useEffect(()=>{let live=true;loadPhotoManifest().then(m=>{if(live)setManifest(m);});return()=>{live=false;};},[]);
  const records=manifest.records.filter(p=>code&&p.codes.includes(code));
  if(!records.length)return null;

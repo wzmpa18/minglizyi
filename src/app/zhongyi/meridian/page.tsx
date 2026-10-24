@@ -325,7 +325,7 @@ function PositioningModal({
           </button>
         </div>
 
-        <AcupointPhotoGallery code={acupointCode} />
+        <AcupointPhotoGallery code={acupointCode} nested />
 
         {/* Body diagram */}
         <div style={{ padding: "16px", display: "flex", flexDirection: "column", alignItems: "center" }}>
