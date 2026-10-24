@@ -904,7 +904,7 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
       <AcupointStudyDiscussion targetId={`standard:${acupoint.code}`} title={`${acupoint.name}学习讨论`} />
 
       <div style={{ padding: "12px" }}>
-        <button onClick={() => router.push(getMeridianByName(acupoint.meridian) ? `/zhongyi/meridian?meridian=${encodeURIComponent(getMeridianByName(acupoint.meridian)!.name)}` : "/zhongyi/meridian/")}
+        <button onClick={() => router.push(getMeridianByName(acupoint.meridian) ? `/zhongyi/meridian?meridian=${encodeURIComponent(getMeridianByName(acupoint.meridian)!.name)}` : "/zhongyi/meridian?view=standard")}
           style={{ width: "100%", padding: "12px", borderRadius: "12px", border: "none", fontSize: "14px", cursor: "pointer", backgroundColor: BRAND_BG, color: BRAND, fontWeight: "500", marginBottom: "8px" }}>
           返回{getMeridianByName(acupoint.meridian)?.name || "经络"}穴位列表
         </button>

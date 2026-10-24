@@ -3,13 +3,14 @@ import argparse, hashlib, json, subprocess, zipfile
 from pathlib import Path
 
 def main():
- p=argparse.ArgumentParser(description=__doc__);p.add_argument('--pack',type=Path,required=True);p.add_argument('--evidence',type=Path,required=True);a=p.parse_args()
+ p=argparse.ArgumentParser(description=__doc__);p.add_argument('--reuse-staged',action='store_true');p.add_argument('--pack',type=Path,required=True);p.add_argument('--evidence',type=Path,required=True);a=p.parse_args()
  proof=json.loads(Path(str(a.pack)+'.json').read_bytes());parsed=json.loads(Path(str(a.pack)+'.gltf-verified.json').read_bytes())
  digest=hashlib.sha256(a.pack.read_bytes()).hexdigest();assert digest==proof['sha256'] and proof['packId']=='tcm-anatomy-3d-v2' and proof['version']=='2.1.0' and parsed['actualGLTFLoaderDecoded']
  with zipfile.ZipFile(a.pack) as z:
   m=json.loads(z.read('manifest.json'));assert {l['id'] for l in m['layers']}=={'skin','muscular','skeletal','visceral'}
   for l in m['layers']:assert hashlib.sha256(z.read(l['file'])).hexdigest()==l['sha256']
- remote='/tmp/yandao-four-layer-'+digest[:16]+'.pack';subprocess.run(['scp','-o','BatchMode=yes',str(a.pack),'root@82.156.228.87:'+remote],check=True)
+ remote='/tmp/yandao-four-layer-'+digest[:16]+'.pack'
+ if not a.reuse_staged:subprocess.run(['scp','-o','BatchMode=yes',str(a.pack),'root@82.156.228.87:'+remote],check=True)
  code="""const base='/www/yandaoguoxue-backend';process.chdir(base);require(base+'/node_modules/dotenv').config({path:base+'/.env',quiet:true});
 const e=require(base+'/offlinePackEngine'),fs=require('fs'),crypto=require('crypto');
 (async()=>{const file=FILE,sha=SHA;if(crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')!==sha)throw Error('Staging checksum mismatch');
