@@ -16,7 +16,7 @@ export default function Page() {
         <div className="rounded-2xl bg-white p-4 shadow-sm">
           <h2 className="mb-1.5 text-[15px] font-bold text-gray-800">言道国学——在线工具与学习中心导航</h2>
           <p className="mb-3 text-[11.5px] leading-relaxed text-gray-500">
-            言道国学提供八字、紫微斗数、奇门遁甲、六爻、七政四余、玄空飞星等免费在线排盘工具，附万年历、老黄历、择日、罗盘等历法风水查询；中医板块含智能问诊、体质测评、中药库、方剂库、经络穴位查询与医考题库；学习中心提供章节化知识点、章节练习与错题复习，全部基础功能免费使用。
+            言道国学提供八字、紫微斗数、奇门遁甲、六爻、七政四余、玄空飞星等免费在线排盘工具，附万年历、老黄历、择日、罗盘等历法风水查询；中医板块含文献助学、体质测评、中药库、方剂库、经络穴位查询与医考题库；学习中心提供章节化知识点、章节练习与错题复习，全部基础功能免费使用。
           </p>
 
           <h3 className="mb-1.5 text-[13px] font-bold text-gray-700">易学排盘工具</h3>

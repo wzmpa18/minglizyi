@@ -446,16 +446,9 @@ const VIDEO_BLOCK_KEYWORDS = [
 ];
 
 // --- 平台域名白名单 ---
-const BILIBILI_PATTERNS = [
-  /bilibili\.com\/video\/(BV[\w]+)/i,
-  /b23\.tv\/([\w]+)/i,
-  /bilibili\.com\/video\/av(\d+)/i,
-];
-
-const IXIGUA_PATTERNS = [
-  /ixigua\.com\/(\d+)/i,
-  /toutiao\.com\/.*?video\/(\d+)/i,
-];
+const BILIBILI_HOSTS = new Set(['bilibili.com', 'www.bilibili.com', 'm.bilibili.com']);
+const IXIGUA_HOSTS = new Set(['ixigua.com', 'www.ixigua.com', 'm.ixigua.com']);
+const TOUTIAO_HOSTS = new Set(['toutiao.com', 'www.toutiao.com', 'm.toutiao.com']);
 
 export interface VideoParseResult {
   valid: boolean;
@@ -476,9 +469,14 @@ export function parseVideoLink(url: string): VideoParseResult {
     return { valid: false, error: '请输入视频链接' };
   }
 
-  // 检查是否为http(s)链接
-  if (!/^https?:\/\//i.test(trimmed)) {
+  let parsed: URL;
+  try { parsed = new URL(trimmed); }
+  catch { return { valid: false, error: '请输入有效的视频网址' }; }
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
     return { valid: false, error: '链接需以 http:// 或 https:// 开头' };
+  }
+  if (parsed.username || parsed.password || parsed.port || /[\u0000-\u0020\u007f\\]/.test(trimmed)) {
+    return { valid: false, error: '请使用不含账号、特殊端口或空白的视频公开链接' };
   }
 
   // 检查非法关键词
@@ -488,18 +486,14 @@ export function parseVideoLink(url: string): VideoParseResult {
     }
   }
 
-  // 匹配B站
-  for (const pattern of BILIBILI_PATTERNS) {
-    const match = trimmed.match(pattern);
+  if (parsed.hostname === 'b23.tv') {
+    return { valid: false, error: 'b23.tv短链无法直接嵌入，请使用B站完整视频链接（含BV号）' };
+  }
+  // Validate the actual host and pathname; text in a query is not a platform URL.
+  if (BILIBILI_HOSTS.has(parsed.hostname)) {
+    const match = parsed.pathname.match(/^\/video\/(BV[A-Za-z0-9]+|av\d+)\/?$/i);
     if (match) {
       const vid = match[1];
-      // b23.tv 短链接无法直接解析出BV号，提示用户使用完整链接
-      if (trimmed.includes('b23.tv')) {
-        return {
-          valid: false,
-          error: 'b23.tv短链无法直接嵌入，请使用B站完整视频链接（含BV号）',
-        };
-      }
       // av号转aid
       const isAv = /^av/i.test(vid);
       const embedUrl = isAv
@@ -515,9 +509,10 @@ export function parseVideoLink(url: string): VideoParseResult {
     }
   }
 
-  // 匹配西瓜视频
-  for (const pattern of IXIGUA_PATTERNS) {
-    const match = trimmed.match(pattern);
+  if (IXIGUA_HOSTS.has(parsed.hostname) || TOUTIAO_HOSTS.has(parsed.hostname)) {
+    const match = IXIGUA_HOSTS.has(parsed.hostname)
+      ? parsed.pathname.match(/^\/(\d+)\/?$/)
+      : parsed.pathname.match(/^\/(?:[^/]+\/)*video\/(\d+)\/?$/);
     if (match) {
       const vid = match[1];
       const embedUrl = `https://www.ixigua.com/iframe/${vid}`;

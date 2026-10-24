@@ -2,6 +2,8 @@
 
 import { useState, useCallback, useRef } from "react";
 import Link from "next/link";
+import { SafeRichText } from "@/components/SafeRichText";
+import { AIAccessLinks } from "@/components/AIAccessLinks";
 import {localMedicalWorksheet,localMedicalConcepts} from "@/lib/medicalLearning";
 import {ResearchLearningDrawers} from "@/components/ResearchLearningDrawers";
 import { useRouter } from "next/navigation";
@@ -14,7 +16,7 @@ import { useNativePayQR } from "@/components/PayQRCodeModal";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { useToolBack } from "@/lib/useToolBack";
-import { IS_GOOGLE_PLAY_BUILD } from "@/lib/releaseFeatures";
+import { IS_GOOGLE_PLAY_BUILD, IS_IOS_FULL_BUILD } from "@/lib/releaseFeatures";
 import { PAYMENT_DISABLED_TIP } from "@/lib/platformGate";
 
 const BRAND = "#7B2FBE";
@@ -186,7 +188,7 @@ export default function WenzhenPage() {
   const [unlockPaying, setUnlockPaying] = useState(false);
   const [unlockMsg, setUnlockMsg] = useState("");
   const handleSingleUnlock = useCallback(async () => {
-    if (IS_GOOGLE_PLAY_BUILD) return;
+    if (IS_GOOGLE_PLAY_BUILD || IS_IOS_FULL_BUILD) return;
     if (unlockPaying) return;
     const cKey = contentKeyRef.current;
     if (!cKey) return;
@@ -593,10 +595,9 @@ export default function WenzhenPage() {
                 fontSize: "14px",
                 color: "#333",
                 lineHeight: 1.8,
-                whiteSpace: "pre-wrap",
               }}
             >
-              {aiResult}
+              <SafeRichText content={aiResult} />
             </div>
 
             {/* 锁定提示 */}
@@ -617,7 +618,7 @@ export default function WenzhenPage() {
                 </div>
                 {IS_GOOGLE_PLAY_BUILD ? (
                   <div style={{ fontSize: "12px", color: "#777", lineHeight: 1.7 }}>{PAYMENT_DISABLED_TIP}</div>
-                ) : <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+                ) : IS_IOS_FULL_BUILD ? <AIAccessLinks /> : <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
                   <button
                     onClick={() => setShowPayment(true)}
                     style={{
@@ -682,7 +683,7 @@ export default function WenzhenPage() {
       )}
 
       {/* 付费弹窗 */}
-      {showPayment && !IS_GOOGLE_PLAY_BUILD && (
+      {showPayment && !IS_GOOGLE_PLAY_BUILD && !IS_IOS_FULL_BUILD && (
         <div
           style={{
             position: "fixed",

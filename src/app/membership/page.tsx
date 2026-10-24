@@ -483,7 +483,7 @@ function StandardMembershipPage() {
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={status.level === "basic" ? "#ccc" : "#27ae60"} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                 <polyline points="20 6 9 17 4 12" />
               </svg>
-              <span style={{ fontSize: "12.5px", color: status.level === "basic" ? "#bbb" : "#666" }}>智能问诊（月度及以上会员）</span>
+              <span style={{ fontSize: "12.5px", color: status.level === "basic" ? "#bbb" : "#666" }}>中医文献助学（月度及以上会员）</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={status.level === "yearly" || status.level === "lifetime" ? "#27ae60" : "#ccc"} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>

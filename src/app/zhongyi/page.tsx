@@ -147,7 +147,7 @@ const ENTRIES = [
   {
     key: "bianzheng",
     title: "辨证学",
-    desc: "八纲·脏腑·六经·智能问诊",
+    desc: "八纲·脏腑·六经·文献研习",
     href: "/zhongyi/bianzheng",
     color: "#E65100",
     bgColor: "#FFF3E0",

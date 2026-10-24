@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { SafeRichText } from "@/components/SafeRichText";
 import { AcupointPhotoGallery } from "@/components/AcupointPhotoGallery";
 import animationManifest from "../../../../public/assets/meridians/ANIMATION-MANIFEST.json";
 
@@ -395,8 +396,8 @@ function PositioningModal({
                   刷新
                 </button>
               </div>
-              <div style={{ fontSize: "13px", color: "#333", lineHeight: 1.8, padding: "10px 12px", backgroundColor: "#F8F4FC", borderRadius: "8px", borderLeft: `3px solid ${BRAND}`, whiteSpace: "pre-wrap" }}>
-                {aiResult}
+              <div style={{ fontSize: "13px", color: "#333", lineHeight: 1.8, padding: "10px 12px", backgroundColor: "#F8F4FC", borderRadius: "8px", borderLeft: `3px solid ${BRAND}` }}>
+                <SafeRichText content={aiResult} />
               </div>
             </div>
           )}

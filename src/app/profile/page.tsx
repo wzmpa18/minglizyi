@@ -502,7 +502,7 @@ function AboutUsModal({ onClose, version }: { onClose: () => void; version?: str
               </li>
               <li className="flex items-start gap-2">
                 <span style={{ color: BRAND }}>•</span>
-                <span>中医知识库与智能问诊</span>
+                <span>中医知识库与文献助学</span>
               </li>
               <li className="flex items-start gap-2">
                 <span style={{ color: BRAND }}>•</span>

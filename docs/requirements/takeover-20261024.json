@@ -153,5 +153,26 @@
     "threadId": "01a148d6-7a25-7721-ad85-9bb16a336b58",
     "recentHistoryRead": true,
     "newMessageSent": false
+  },
+  "firstCloudQuality": {
+    "commit": "14824516994f59b9bea462323016bf52f934d6e4",
+    "run": 40094234368,
+    "conclusion": "success"
+  },
+  "followupRepairs": {
+    "videoLinkTestsPassed": 3,
+    "safeRichTextTestsPassed": 2,
+    "purchaseNavigationAndIosProfileTestsPassed": 6,
+    "videoServicePersistenceComplete": false,
+    "medicalUiAlignedToExistingLiteratureBehavior": true,
+    "iosWenzhenExternalCheckoutReplacedWithExistingStoreLinks": true,
+    "latestCloudQuality": "pending"
+  },
+  "androidReadback": {
+    "versionName": "25.0.115",
+    "versionCode": 2143,
+    "deviceConnected": true,
+    "appInteractionPerformed": false,
+    "reason": "手机前台为其他应用，只读核对已安装版本；未切换、未卸载、未清数据。"
   }
 }
