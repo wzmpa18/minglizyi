@@ -98,6 +98,7 @@ jobs:
       - name: Build web bundle (native assets)
         run: |
           npm run build
+          node scripts/verify-static-cache-boundary.cjs
           test -f out/index.html || { echo "FATAL: 静态导出产物缺失 out/index.html"; exit 1; }
           grep -q '__nativeApiPatchInstalled' out/index.html || { echo "FATAL: 原生 API 改写脚本未内联进 HTML（layout 注入缺失）"; exit 1; }
           grep -q 'var STORE_CHANNEL = "ios-full-learning"' out/index.html || { echo "FATAL: full learning release profile not embedded"; exit 1; }

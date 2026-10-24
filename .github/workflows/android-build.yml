@@ -69,6 +69,7 @@ jobs:
       - name: Build web bundle (native assets)
         run: |
           npm run build
+          node scripts/verify-static-cache-boundary.cjs
           test -f out/index.html || { echo "FATAL: 静态导出产物缺失 out/index.html"; exit 1; }
           test -f out/academy/start/index.html || { echo "FATAL: 入门学习页面未导出"; exit 1; }
           grep -R -q '错题重练' out/_next/static/chunks || { echo "FATAL: 入门课练习功能未进入构建"; exit 1; }

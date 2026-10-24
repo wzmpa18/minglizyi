@@ -26,9 +26,6 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   generateBuildId: () => BUILD_ID,
-  // A same-day rebuild can retain chunk names. Distinguish deployments so a
-  // browser cannot silently reuse a previous client's long-lived asset cache.
-  deploymentId: process.env.GITHUB_SHA || BUILD_ID,
   // 本机构建内存受限（可用 ~3GB），静态页生成并发过高会 Zone OOM
   experimental: {
     // Windows 打包机内存紧张时，多 worker 会在静态页生成阶段被系统直接终止。

@@ -409,7 +409,9 @@ jobs:
         if: inputs.preview == true
         env:
           NEXT_PUBLIC_STORE_CHANNEL: ${{ inputs.store_channel || 'tencent' }}
-        run: npm run build
+        run: |
+          npm run build
+          node scripts/verify-static-cache-boundary.cjs
       - name: Upload review preview
         if: inputs.preview == true
         uses: actions/upload-artifact@v4
