@@ -16,7 +16,7 @@
 // ============================================================================
 
 import { get, put, remove, listMeta } from "./storageManager";
-import { getUserToken } from "./auth";
+import { fetchWithAuth } from "./authInterceptor";
 import { validateOfflineDownloadLink } from "./offlineDownloadLink";
 import { compareVersion, meetsMinAppVersion } from "./offlineVersions";
 export { compareVersion, meetsMinAppVersion } from "./offlineVersions";
@@ -137,6 +137,7 @@ export interface DownloadResult {
   packId: string;
   version: string;
   error?: string;
+  accessAction?: "login" | "membership";
   sha256Verified?: boolean;
   resumedFrom?: number;
 }
@@ -185,15 +186,19 @@ export async function downloadPack(pack: ManifestPack, onProgress?: DownloadProg
   try {
     const headers: Record<string, string> = {};
     if (startByte > 0 && startByte < pack.size) headers["Range"] = `bytes=${startByte}-`;
-    const token = getUserToken();
-    const appHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
-    const resolution = await fetch(`${API_BASE}${pack.downloadUrl}?resolve=1`, { headers: appHeaders, cache: 'no-store' });
-    if (!resolution.ok) return { ok: false, packId: pack.packId, version: pack.version, error: `下载权限或地址未取得（HTTP ${resolution.status}），已安装资料保留` };
+    const resolution = await fetchWithAuth(`${API_BASE}${pack.downloadUrl}?resolve=1`, { cache: 'no-store' });
+    if (!resolution.ok) return {
+      ok: false, packId: pack.packId, version: pack.version,
+      accessAction: resolution.status === 401 ? 'login' : resolution.status === 403 ? 'membership' : undefined,
+      error: resolution.status === 401 ? '登录后即可继续检查图谱下载资格，已有资料仍保留。'
+        : resolution.status === 403 ? '暂未取得图谱下载权限，请查看会员权益；已购买可恢复购买，无需重复付款。'
+        : '图谱下载暂时不可用，请稍后重试，已有资料仍保留。',
+    };
     const link = validateOfflineDownloadLink(await resolution.json(), pack);
-    const res = await fetch(link.applicationAuth ? `${API_BASE}${link.url}` : link.url, {
-      headers: link.applicationAuth ? { ...headers, ...appHeaders } : headers,
-      credentials: link.applicationAuth ? 'same-origin' : 'omit',
-    });
+    // Application credentials must never be sent to the signed object-storage URL.
+    const res = link.applicationAuth
+      ? await fetchWithAuth(`${API_BASE}${link.url}`, { headers, credentials: 'same-origin' })
+      : await fetch(link.url, { headers, credentials: 'omit' });
 
     if (!(res.status === 200 || res.status === 206)) {
       return { ok: false, packId: pack.packId, version: pack.version, error: `下载失败 HTTP ${res.status}` };

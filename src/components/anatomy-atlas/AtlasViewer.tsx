@@ -4,18 +4,19 @@ import Link from "next/link";
 import {useBodyScrollLock} from "@/hooks/useBodyScrollLock";
 import {usePopupBackHandler} from "@/hooks/usePopupBackHandler";
 import AtlasScene,{type ViewState} from "./AtlasScene";
-import {openAtlas,installAtlas,chineseName,selectionParts,SYSTEMS,type Dataset} from "./atlasPack";
+import {openAtlas,installAtlas,AtlasAccessError,chineseName,selectionParts,SYSTEMS,type Dataset} from "./atlasPack";
 const INITIAL:ViewState={visible:["integumentary"],hidden:[],selected:null,isolate:false,opacity:1,view:"front",reset:0,points:true,meridian:"",point:null,side:1,section:null,explode:0};
 export default function AtlasViewer({previewData}:{previewData?:Dataset}){
  const [data,setData]=useState<Dataset|null>(previewData||null),[state,setState]=useState(INITIAL),[busy,setBusy]=useState(false),[message,setMessage]=useState(""),[query,setQuery]=useState(""),[tab,setTab]=useState("layers"),[ready,setReady]=useState(false);
  useEffect(()=>{if(previewData)return;let live=true;openAtlas().then(d=>{if(live)setData(d);}).catch(e=>{if(live)setMessage(e.message);});return()=>{live=false;};},[previewData]);
+ const [accessAction,setAccessAction]=useState<"login"|"membership"|undefined>();
  const [drawer,setDrawer]=useState(false),[immersive,setImmersive]=useState(false);const drawerRef=useRef<HTMLDivElement>(null);
  useBodyScrollLock(drawer||immersive);
  usePopupBackHandler(()=>{setDrawer(false);setImmersive(false);},drawer||immersive);
  useEffect(()=>{if(!drawer)return;const previous=document.activeElement as HTMLElement|null;drawerRef.current?.focus();return()=>{previous?.focus?.();};},[drawer]);
  useEffect(()=>{const escape=(e:KeyboardEvent)=>{if(e.key==='Escape'){if(drawer)setDrawer(false);else setImmersive(false);}};window.addEventListener('keydown',escape);return()=>window.removeEventListener('keydown',escape);},[drawer]);
  const change=(patch:Partial<ViewState>)=>setState(s=>({...s,...patch}));
- async function install(){setBusy(true);setMessage("正在检查图谱版本…");try{await installAtlas((n,total)=>setMessage(`正在下载 ${Math.round(n/total*100)}%`));const next=await openAtlas();setReady(false);setData(next);setMessage("资源已校验并启用；可断网再次打开。");}catch(e){setMessage((e as Error).message);}finally{setBusy(false);}}
+ async function install(){setAccessAction(undefined);setBusy(true);setMessage("正在检查图谱版本…");try{await installAtlas((n,total)=>setMessage(`正在下载 ${Math.round(n/total*100)}%`));const next=await openAtlas();setReady(false);setData(next);setMessage("资源已校验并启用；可断网再次打开。");}catch(e){setMessage((e as Error).message);if(e instanceof AtlasAccessError)setAccessAction(e.action);}finally{setBusy(false);}}
  const selectedParts=data?selectionParts(data.atlas,state.selected):[];
  const selectedConcept=data?.atlas.concepts.find(c=>c.id===state.selected);
  const firstPart=selectedParts[0];const part=firstPart?{...firstPart,id:state.selected!,conceptId:selectedConcept?.id||firstPart.conceptId,name:selectedConcept?.name||firstPart.name,zhName:selectedConcept?selectedConcept.zhName:firstPart.zhName,learningDescription:selectedConcept?selectedConcept.learningDescription:firstPart.learningDescription,learningSource:selectedConcept?selectedConcept.learningSource:firstPart.learningSource}:undefined,point=data?.points.find(p=>p.code===state.point);
@@ -24,9 +25,10 @@ export default function AtlasViewer({previewData}:{previewData?:Dataset}){
  const selectStructure=(id:string)=>{if(!data)return;const selected=selectionParts(data.atlas,id);const ids=new Set(selected.map(p=>p.id));change({selected:id,point:null,visible:Array.from(new Set([...state.visible,...selected.map(p=>p.system)])),hidden:state.hidden.filter(id=>!ids.has(id)),isolate:true,reset:state.reset+1,opacity:1,section:null,explode:0});setDrawer(false);setImmersive(true);};
  const selectPoint=(code:string,side:1|-1=1)=>{change({point:code,side,selected:null,isolate:false,points:true,explode:0,section:null});setDrawer(false);setImmersive(true);};
  const button="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm disabled:opacity-40";
- return <section className="mx-auto max-w-7xl p-3 text-stone-800" style={immersive?{position:"fixed",inset:0,zIndex:100000,padding:0,maxWidth:"none",background:"#f7f4ef"}:undefined}>
+ return <section className="mx-auto max-w-7xl p-3 text-stone-800" style={immersive?{position:"fixed",inset:0,zIndex:100000,padding:0,maxWidth:"none",background:"#f7f4ef",color:"#292524"}:{background:"#faf8f4",color:"#292524"}}>
   <div className="mb-3 flex flex-wrap items-center justify-between gap-2" style={immersive?{display:"none"}:undefined}><div><h2 className="text-xl font-semibold">三维解剖与经络图谱</h2><p className="text-xs text-stone-600">成人男性参考体 · 分层观察 · 穴位学习示意</p></div><button className={button} disabled={busy} onClick={()=>void install()}>{busy?"处理中…":data?"检查资源更新":"下载图谱资源"}</button></div>
   {message&&!immersive&&<p role="status" className="mb-3 rounded-lg bg-purple-50 p-3 text-sm">{message}</p>}
+  {accessAction&&!immersive&&<div className="mb-3 flex gap-3 text-sm">{accessAction==="login"?<Link className={button} href="/login/" onClick={()=>sessionStorage.setItem("yandao_login_redirect",window.location.pathname+window.location.search)}>登录后继续下载</Link>:<><Link className={button} href="/membership/">查看会员权益与恢复购买</Link><Link className={button} href="/profile/feedback/">联系支持</Link></>}</div>}
   {!data?<div className="rounded-xl border bg-stone-50 p-8"><p>首次使用需下载图谱数据，校验后保存在本机。原有四层图谱仍保留在下方切换入口。</p><p className="mt-3 text-sm">资源包含15个系统、2234个来源网格；实际显示会隐藏独立毛发并简化体表私密区域。模型不代表所有性别、年龄与解剖变异。</p></div>:<>
    <div className="relative">
     <div className="relative overflow-hidden rounded-2xl border border-stone-200 bg-[#f7f4ef]" style={{height:immersive?"100dvh":"min(78dvh,900px)",minHeight:390}}>

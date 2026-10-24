@@ -29,10 +29,11 @@ export async function decodeAtlas(bytes:ArrayBuffer):Promise<Dataset> {
   for(const c of atlas.chunks)if(!files[c.url]||files[c.url].length!==c.bytes)throw new Error("人体网格不完整");
   return {atlas,points:json<Point[]>("points.json"),surface:json<Surface>("surface.json"),files,version:manifest.version};
 }
+export class AtlasAccessError extends Error { constructor(message:string, public action?:"login"|"membership"){super(message);this.name="AtlasAccessError";} }
 export async function installAtlas(progress?:DownloadProgress) {
   const catalogue=await fetchManifest();const pack=catalogue?.packs.find(p=>p.packId===PACK_ID);
   if(!pack)throw new Error("新版图谱资源尚未发布；原四层图谱仍可使用");
-  const result=await downloadPack(pack,progress,async bytes=>{await decodeAtlas(bytes);});if(!result.ok)throw new Error(result.error||"资源下载失败");
+  const result=await downloadPack(pack,progress,async bytes=>{await decodeAtlas(bytes);});if(!result.ok)throw new AtlasAccessError(result.error||"资源下载失败",result.accessAction);
 }
 export const SYSTEMS:[string,string,string,string][]=[
  ["integumentary","体表","#cda78e","体表为观察方位的参考，参与屏障保护、感觉和体温调节。"],
