@@ -17,7 +17,7 @@ async function worker(root){
   const hash=value=>crypto.createHash('sha256').update(value).digest('hex');
   fs.writeFileSync(path.join(root,'admin_keys_v13.json'),JSON.stringify({keys:{[hash(support)]:{role:'SUPPORT_ADMIN',name:'test-support'},[hash(finance)]:{role:'FINANCE_ADMIN',name:'test-finance'}}}));
   const accounts=new Database(accountFile);
-  accounts.exec("CREATE TABLE users(user_id TEXT PRIMARY KEY,nickname TEXT,status TEXT,deleted_at TEXT,phone TEXT); INSERT INTO users VALUES ('alice','学习甲','active',NULL,'13800000001'),('bob','学习乙','active',NULL,'13800000002'),('banned','禁言账号','banned',NULL,'13800000003'),('deleted','已注销','active','2026-01-01','13800000004'),('email-only','合成邮箱账号','active',NULL,NULL);");
+  accounts.exec("CREATE TABLE users(user_id TEXT PRIMARY KEY,nickname TEXT,status TEXT,deleted_at TEXT,phone TEXT); INSERT INTO users VALUES ('alice','学习甲','active',NULL,'13800000001'),('bob','学习乙','active',NULL,'13800000002'),('banned','禁言账号','banned',NULL,'13800000003'),('deleted','已注销','active','2026-01-01','13800000004'),('email-only','合成邮箱账号','active',NULL,NULL),('email-google','合成海外邮箱账号','active',NULL,NULL);");
   const app=express();app.use(express.json({limit:'100kb',verify:(req,_res,buffer)=>{req.rawBody=buffer.toString('utf8');}}));
   app.use('/api/study-comments',require('../backend_deploy/studyCommentsRoutes').createRouter());
   const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));});
@@ -25,8 +25,8 @@ async function worker(root){
   const token=id=>jwt.sign({userId:id},process.env.JWT_SECRET,{expiresIn:'5m'});
   const alice=token('alice'),bob=token('bob'),admin=process.env.ADMIN_API_KEY;
   const target='/target/standard%3ALU1';
-  async function request(route,method='GET',credential='',body,origin){
-    const response=await fetch(base+route,{method,headers:{'Content-Type':'application/json',...(credential?{Authorization:'Bearer '+credential}:{}),...(origin?{Origin:origin}:{})},body:body===undefined?undefined:JSON.stringify(body)});
+  async function request(route,method='GET',credential='',body,origin,channelHeaders={}){
+    const response=await fetch(base+route,{method,headers:{'Content-Type':'application/json',...(credential?{Authorization:'Bearer '+credential}:{}),...(origin?{Origin:origin}:{}),...channelHeaders},body:body===undefined?undefined:JSON.stringify(body)});
     return {status:response.status,body:await response.json()};
   }
   try{
@@ -49,6 +49,16 @@ async function worker(root){
     assert.equal((await request(target,'POST',alice,{...submitBody,content:'学'.repeat(501)})).status,400);
     assert.equal((await request(target,'POST',alice,{...submitBody,content:'x'.repeat(75000)})).status,413);
     assert.equal((await request(target,'POST',token('email-only'),submitBody)).status,403);
+    for(const headers of [{'X-Client-Platform':'ios','X-Store-Channel':'ios-full-learning'},{'X-Client-Platform':'android','X-Store-Channel':'google'}]){
+      const overseasId=headers['X-Store-Channel']==='google'?'email-google':'email-only';
+      const overseas=await request(target,'POST',token(overseasId),{content:'对照典籍原文学习术语',requestId:crypto.randomUUID()},undefined,headers);
+      assert.equal(overseas.status,200);assert.equal(overseas.body.pendingReview,true);
+      const anonymous=await request(target,'POST','',{content:'对照原文',requestId:crypto.randomUUID()},undefined,headers);assert.equal(anonymous.status,401);
+      const banned=await request(target,'POST',token('banned'),{content:'对照原文',requestId:crypto.randomUUID()},undefined,headers);assert.equal(banned.status,403);
+      const filtered=await request(target,'POST',token(overseasId),{content:'加我13800000009包治保证治愈',requestId:crypto.randomUUID()},undefined,headers);
+      assert.equal(filtered.status,400,'overseas text policy remains effective before rate limiting');
+    }
+
     const submitted=await request(target,'POST',alice,submitBody,'capacitor://localhost');
     assert.equal(submitted.status,200);assert.equal(submitted.body.pendingReview,true);
     const id=submitted.body.id;

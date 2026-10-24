@@ -254,6 +254,8 @@ on:
       - 'scripts/apple-iap-*.test.cjs'
       - 'scripts/membership-ledger.test.cjs'
       - 'scripts/paid-ai-credits.test.cjs'
+      - 'backend_deploy/businessIdentityGate.js'
+      - 'backend_deploy/channelIdentityPolicy.js'
       - 'backend_deploy/middleware/auth.js'
       - 'backend_deploy/middleware/activeAccount.js'
       - 'backend_deploy/feedbackRoutes.js'

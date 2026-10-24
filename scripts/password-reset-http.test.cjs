@@ -53,6 +53,20 @@ test('real password recovery uses one-time ownership proof, preserves both accou
   assert.equal((await post('login',{account:'Synthetic@example.test',password:'Emailpass123'})).status,200);
   assert.equal(db.prepare('SELECT phone_verified_at FROM users WHERE user_id=100002').get().phone_verified_at,null);
   assert.equal(db.prepare('SELECT COUNT(*) n FROM users').get().n,4);
+  // Overseas channels retain real account authentication but do not require a
+  // Chinese phone number. The SAME email account remains restricted domestically.
+  const emailLogin=await post('login',{account:'Synthetic@example.test',password:'Emailpass123'});
+  const emailAccess=emailLogin.body.data.accessToken;
+  for(const [platform,channel,status] of [['ios','ios-full-learning',200],['ios','default',200],['android','google',200],['android','tencent',403],['android','internal',403],['web','google',403],['web','default',403]]){
+   const action=await fetch(origin+'/api/test/verified-action',{method:'POST',headers:{Authorization:'Bearer '+emailAccess,'Content-Type':'application/json','X-Client-Platform':platform,'X-Store-Channel':channel},body:'{}'});
+   assert.equal(action.status,status,platform+'/'+channel);
+  }
+  const noLogin=await fetch(origin+'/api/test/verified-action',{method:'POST',headers:{'X-Client-Platform':'ios','X-Store-Channel':'ios-full-learning'}});assert.equal(noLogin.status,401);
+  db.prepare("UPDATE users SET status='banned' WHERE user_id=100002").run();
+  const bannedOverseas=await fetch(origin+'/api/test/verified-action',{method:'POST',headers:{Authorization:'Bearer '+emailAccess,'X-Client-Platform':'ios','X-Store-Channel':'ios-full-learning'}});assert.equal(bannedOverseas.status,403);
+  db.prepare("UPDATE users SET status='active' WHERE user_id=100002").run();
+  assert.equal(db.prepare('SELECT phone_verified_at FROM users WHERE user_id=100002').get().phone_verified_at,null);
+
   assert.equal((await post('reset-password',{account:'missing@example.test',emailCode:'765432',newPassword:'Emailpass123'})).status,400);
   codes.setCode('sms:13800000001','123456','127.0.0.1');
   for(let n=0;n<5;n++)assert.equal((await post('reset-password',{account:'13800000001',smsCode:'000000',newPassword:'Againpass123'})).status,400);
