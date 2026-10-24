@@ -1,5 +1,7 @@
 "use client";
 
+import { compareVersion } from "./offlineVersions";
+
 // ============================================================================
 // StorageManager — 唯一统一本地存储管理器（FINAL-MASTER-05 第六十六~六十七章）
 //
@@ -90,6 +92,48 @@ function tx<T>(store: string, mode: IDBTransactionMode, fn: (s: IDBObjectStore) 
 }
 
 function sk(zone: StorageZone, key: string) { return `${zone}:${key}`; }
+
+/** Commit the verified bytes, installed index and metadata together. A failed
+ * transaction keeps the previous active pack; concurrent downloads cannot lose
+ * another pack's index entry or activate an older version after a newer one. */
+export async function activateOfflinePack(packId: string, version: string, sha256: string, bytes: ArrayBuffer): Promise<void> {
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const t = db.transaction([STORE_DATA, STORE_META], "readwrite");
+    let failure: Error | undefined;
+    t.oncomplete = () => resolve();
+    t.onabort = () => reject(failure || t.error || new Error("资料未保存，原有效包仍保留"));
+    t.onerror = () => { /* onabort reports the final transaction result */ };
+    const data = t.objectStore(STORE_DATA), meta = t.objectStore(STORE_META);
+    const indexKey = sk("SYSTEM_DATA", "installed_packs_index");
+    const query = data.get(indexKey);
+    query.onsuccess = () => {
+      try {
+        const index = query.result || {};
+        const previous = index[packId];
+        if (previous && (compareVersion(version, previous.version) < 0 ||
+          (compareVersion(version, previous.version) === 0 && previous.sha256 !== sha256))) {
+          throw new Error("资料版本已变化，请刷新列表；原有效包仍保留");
+        }
+        const now = Date.now(), key = `${packId}@${version}`;
+        index[packId] = { packId, version, sha256, installedAt: now };
+        data.put(bytes, sk("OFFLINE_PACK", key));
+        data.put(index, indexKey);
+        for (const [zone, entryKey, value] of [
+          ["OFFLINE_PACK", key, bytes], ["SYSTEM_DATA", "installed_packs_index", index],
+        ] as const) {
+          meta.put({ zone, key: entryKey, size: sizeOf(value), createdAt: now,
+            lastAccessedAt: now, protectedFromAutoClean: true, ...(zone === "OFFLINE_PACK" ? { version } : {}) }, sk(zone, entryKey));
+        }
+        data.delete(sk("OFFLINE_PACK", `${key}.part`));
+        meta.delete(sk("OFFLINE_PACK", `${key}.part`));
+      } catch (error) {
+        failure = error instanceof Error ? error : new Error(String(error));
+        t.abort();
+      }
+    };
+  });
+}
 
 /** Durable private writes resolve on transaction completion, never on request success.
  * Vault ciphertext belongs to USER_PRIVATE_DATA and is excluded from every cache collector. */

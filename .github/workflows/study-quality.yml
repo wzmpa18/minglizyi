@@ -207,6 +207,9 @@ on:
       - 'scripts/offline-versions.test.cjs'
       - 'src/lib/offlineDownloadLink.ts'
       - 'scripts/offline-download-link.test.cjs'
+      - 'scripts/offline-pack-client.test.cjs'
+      - 'src/lib/storageManager.ts'
+      - 'src/lib/offlinePackClient.ts'
       - 'scripts/offline-download-http.test.cjs'
       - 'backend_deploy/offlinePackRoutes.js'
       - 'backend_deploy/configure_learning_cos.js'
@@ -361,7 +364,8 @@ jobs:
       - run: node --test scripts/native-listening.test.cjs
       - name: Verify discussion HTTP authentication and moderation against production dependency versions
         run: |
-          npm install --prefix "$RUNNER_TEMP/study-http-deps" --no-save --package-lock=false express@4.22.2 better-sqlite3@13.0.3 jsonwebtoken@9.0.3 bcrypt@6.0.0
+          npm install --prefix "$RUNNER_TEMP/study-http-deps" --no-save --package-lock=false express@4.22.2 better-sqlite3@13.0.3 jsonwebtoken@9.0.3 bcrypt@6.0.0 fake-indexeddb@6.2.4
+          NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/offline-pack-client.test.cjs
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/study-comments-http.test.cjs
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/security-assessment-http.test.cjs
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/live-chart-http.test.cjs

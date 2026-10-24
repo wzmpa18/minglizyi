@@ -15,7 +15,7 @@
 // 红线：校验失败的包绝不启用；已启用包只有新版本校验通过后才被替换。
 // ============================================================================
 
-import { get, put, remove, listMeta } from "./storageManager";
+import { get, put, remove, listMeta, activateOfflinePack } from "./storageManager";
 import { fetchWithAuth } from "./authInterceptor";
 import { validateOfflineDownloadLink } from "./offlineDownloadLink";
 import { compareVersion, meetsMinAppVersion } from "./offlineVersions";
@@ -147,26 +147,38 @@ async function readResponseWithProgress(
   startByte: number,
   expectedTotal: number,
   onProgress?: DownloadProgress,
+  onInterrupted?: (bytes: ArrayBuffer) => Promise<void>,
 ): Promise<ArrayBuffer> {
-  if (!res.body || !onProgress) return res.arrayBuffer();
+  if (!res.body) return res.arrayBuffer();
   const reader = res.body.getReader();
   const chunks: Uint8Array[] = [];
   let received = 0;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (!value?.byteLength) continue;
-    chunks.push(value);
-    received += value.byteLength;
-    onProgress(Math.min(startByte + received, expectedTotal), expectedTotal);
+  const merge = () => {
+    const merged = new Uint8Array(received);
+    let offset = 0;
+    for (const chunk of chunks) { merged.set(chunk, offset); offset += chunk.byteLength; }
+    return merged.buffer;
+  };
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value?.byteLength) continue;
+      if (startByte + received + value.byteLength > expectedTotal) {
+        await reader.cancel();
+        throw new Error("资料大小超过清单，下载已中止");
+      }
+      chunks.push(value);
+      received += value.byteLength;
+      onProgress?.(startByte + received, expectedTotal);
+    }
+    return merge();
+  } catch (error) {
+    if (received > 0) await onInterrupted?.(merge());
+    throw error;
+  } finally {
+    reader.releaseLock();
   }
-  const merged = new Uint8Array(received);
-  let offset = 0;
-  for (const chunk of chunks) {
-    merged.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return merged.buffer;
 }
 
 /**
@@ -175,15 +187,14 @@ async function readResponseWithProgress(
  */
 export async function downloadPack(pack: ManifestPack, onProgress?: DownloadProgress, validateBeforeActivation?: (bytes:ArrayBuffer)=>Promise<void>): Promise<DownloadResult> {
   const pKey = partKey(pack.packId, pack.version);
-  const existingPart = await get<ArrayBuffer>("OFFLINE_PACK", pKey);
-  const startByte = existingPart ? existingPart.byteLength : 0;
-
-  if (startByte >= pack.size) {
-    // 已收满但未启用（上次校验失败或中断）：丢弃重来，避免坏字节死循环
-    await remove("OFFLINE_PACK", pKey);
-  }
-
   try {
+    let existingPart = await get<ArrayBuffer>("OFFLINE_PACK", pKey);
+    let startByte = existingPart ? existingPart.byteLength : 0;
+    if (startByte >= pack.size) {
+      await remove("OFFLINE_PACK", pKey);
+      existingPart = null;
+      startByte = 0;
+    }
     const headers: Record<string, string> = {};
     if (startByte > 0 && startByte < pack.size) headers["Range"] = `bytes=${startByte}-`;
     const resolution = await fetchWithAuth(`${API_BASE}${pack.downloadUrl}?resolve=1`, { cache: 'no-store' });
@@ -204,6 +215,15 @@ export async function downloadPack(pack: ManifestPack, onProgress?: DownloadProg
       return { ok: false, packId: pack.packId, version: pack.version, error: `下载失败 HTTP ${res.status}` };
     }
 
+    // Do not combine bytes from a server that ignored or misread the range.
+    if (res.status === 206) {
+      const range = /^bytes (\d+)-(\d+)\/(\d+)$/.exec(res.headers.get("Content-Range") || "");
+      if (!range || Number(range[1]) !== startByte || Number(range[2]) !== pack.size - 1 || Number(range[3]) !== pack.size) {
+        await res.body?.cancel();
+        return { ok: false, packId: pack.packId, version: pack.version, error: "下载断点信息不匹配，原有效包仍保留" };
+      }
+    }
+
     // 服务端 sha256 头核对（第六十章：双重校验）
     const serverSha = res.headers.get("X-Pack-Sha256");
     if (serverSha && serverSha !== pack.sha256) {
@@ -211,21 +231,25 @@ export async function downloadPack(pack: ManifestPack, onProgress?: DownloadProg
     }
 
     const responseStart = res.status === 206 ? startByte : 0;
-    const chunk = await readResponseWithProgress(res, responseStart, pack.size, onProgress);
+    const combine = (chunk: ArrayBuffer): ArrayBuffer => {
+      if (responseStart > 0 && existingPart) {
+        const full = new Uint8Array(responseStart + chunk.byteLength);
+        full.set(new Uint8Array(existingPart));
+        full.set(new Uint8Array(chunk), responseStart);
+        return full.buffer;
+      }
+      return chunk;
+    };
+    const chunk = await readResponseWithProgress(res, responseStart, pack.size, onProgress, async partial => {
+      await put("OFFLINE_PACK", pKey, combine(partial), { version: pack.version });
+    });
     // 拼接断点（206 场景）
-    let full: ArrayBuffer;
-    if (res.status === 206 && existingPart && startByte > 0) {
-      full = new ArrayBuffer(startByte + chunk.byteLength);
-      new Uint8Array(full).set(new Uint8Array(existingPart), 0);
-      new Uint8Array(full).set(new Uint8Array(chunk), startByte);
-    } else {
-      full = chunk;
-    }
+    const full = combine(chunk);
 
     if (full.byteLength !== pack.size) {
-      // 尺寸不符：保留 .part 供续传，返回失败
-      await put("OFFLINE_PACK", pKey, full, { version: pack.version });
-      return { ok: false, packId: pack.packId, version: pack.version, error: `尺寸不符（期望 ${pack.size} 实收 ${full.byteLength}），已保留断点` };
+      if (full.byteLength < pack.size) await put("OFFLINE_PACK", pKey, full, { version: pack.version });
+      else await remove("OFFLINE_PACK", pKey);
+      return { ok: false, packId: pack.packId, version: pack.version, error: `尺寸不符（期望 ${pack.size} 实收 ${full.byteLength}），原有效包仍保留` };
     }
 
     // SHA256 校验（第六十章：失败不能启用）
@@ -237,17 +261,12 @@ export async function downloadPack(pack: ManifestPack, onProgress?: DownloadProg
 
     // Validate data protocol and inner assets before replacing the active index.
     await validateBeforeActivation?.(full);
-    // 原子启用（第六十一章）：写正式键 → 更新索引 → 清 .part
-    await put("OFFLINE_PACK", finalKey(pack.packId, pack.version), full, { version: pack.version });
-    const idx = await getInstalledIndex();
-    idx[pack.packId] = { packId: pack.packId, version: pack.version, sha256: sha, installedAt: Date.now() };
-    await put("SYSTEM_DATA", INSTALLED_INDEX_KEY, idx);
-    await remove("OFFLINE_PACK", pKey);
+    await activateOfflinePack(pack.packId, pack.version, sha, full);
     onProgress?.(pack.size, pack.size);
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("offline-pack-installed", { detail: { packId: pack.packId, version: pack.version } }));
     }
-    return { ok: true, packId: pack.packId, version: pack.version, sha256Verified: true, resumedFrom: startByte };
+    return { ok: true, packId: pack.packId, version: pack.version, sha256Verified: true, resumedFrom: responseStart };
   } catch (e) {
     return { ok: false, packId: pack.packId, version: pack.version, error: (e as Error).message };
   }

@@ -1,0 +1,157 @@
+{
+  "checkedAtTokyo": "2026-10-24T21:29:37.306230+09:00",
+  "baseline": "1c38d42547d7d90633036034359adc3a6c0640c7",
+  "clientPackageSource": "7c0cf3038da0a17cb7a1673826860cfcd2607e74",
+  "sourceZipSha256": "a02be9596db0d233f0a5b09064e06b160d0d70fc470cc9f0652b1c77cd5be672",
+  "sourceZipEntries": 2448,
+  "currentBackup": "D:\\言道国学项目备份\\20261024_接管前恢复点",
+  "gitBundleRestoreAndFsckPassed": true,
+  "backupManifest": "D:\\言道国学项目备份\\20261024_接管前恢复点\\backup-files-sha256.json",
+  "sharedResources": [
+    {
+      "source": "E:\\言道国学3D评估_12A\\发布资源\\tcm-anatomy-3d-v2_2.0.0.pack",
+      "backup": "D:\\言道国学项目备份\\20261024_接管前恢复点\\共享学习资料保全\\tcm-anatomy-3d-v2_2.0.0.pack",
+      "bytes": 41550977,
+      "sha256": "719b2c62d55bb062a49680b1a92c69419d84b1271a38f6a2d86c804fcb3cd126"
+    },
+    {
+      "source": "E:\\言道国学3D评估_12A\\发布资源\\tcm-anatomy-3d-v2_2.1.0.pack",
+      "backup": "D:\\言道国学项目备份\\20261024_接管前恢复点\\共享学习资料保全\\tcm-anatomy-3d-v2_2.1.0.pack",
+      "bytes": 41748876,
+      "sha256": "feadf6c3b5db170c338b2d72559a56b8d7bae95ae8cd01a7a155301a95ef5cbb"
+    },
+    {
+      "source": "E:\\言道国学3D评估_12A\\发布资源\\tcm-anatomy-atlas-v3_3.0.0.pack",
+      "backup": "D:\\言道国学项目备份\\20261024_接管前恢复点\\共享学习资料保全\\tcm-anatomy-atlas-v3_3.0.0.pack",
+      "bytes": 33799696,
+      "sha256": "b1c9a4826551cb54152141e104f405f89dcf497434c6bd3ca7987683b40d2f4b"
+    },
+    {
+      "source": "E:\\言道国学3D评估_12A\\发布资源\\学习图片COS归档_2026102401\\system-study-media_2026102401.zip",
+      "backup": "D:\\言道国学项目备份\\20261024_接管前恢复点\\共享学习资料保全\\system-study-media_2026102401.zip",
+      "bytes": 93914248,
+      "sha256": "ef581102ec1fb05283d9be5fa23c3070d801b042d3d62590278d9a5801761a08"
+    }
+  ],
+  "historyCandidates": [
+    {
+      "directory": "Android_25.0.115_2123_internal",
+      "file": "YandaoGuoxue_25.0.115_2123.aab",
+      "source": "bbc5601207d8b47407d957ba621526025374df8a",
+      "sha256": "bd51abc7b1dfd9da330c6dcd80863610cdbbce0a6017acc857c04fd3b4f9b3d1",
+      "bytes": 62365832
+    },
+    {
+      "directory": "Android_25.0.115_2123_internal",
+      "file": "YandaoGuoxue_25.0.115_2123.apk",
+      "source": "bbc5601207d8b47407d957ba621526025374df8a",
+      "sha256": "f3aee0d5bbc390ccfd13a8de818d3022e0924b9d91b0b53ee4d3904b047471c0",
+      "bytes": 78355341
+    },
+    {
+      "directory": "Android_25.0.115_2124_internal",
+      "file": "YandaoGuoxue_25.0.115_2124.apk",
+      "source": "a269fca4d99c7564010145d7384623f11116121c",
+      "sha256": "6d6d38999097227ccd578e32fd9f554d9f112b34fc613d4f88d3021e466bb26a",
+      "bytes": 78338605
+    },
+    {
+      "directory": "Android_25.0.115_2124_internal",
+      "file": "YandaoGuoxue_25.0.115_2124.aab",
+      "source": "a269fca4d99c7564010145d7384623f11116121c",
+      "sha256": "7c60f08dd6493955df65515ec7b0af754f8580b84389053013e740fee3d7902f",
+      "bytes": 62349086
+    },
+    {
+      "directory": "Android_25.0.115_2127_internal",
+      "file": "YandaoGuoxue_25.0.115_2127.aab",
+      "source": "9daff6306a45b81b849c32a8879a4ce1be1238d3",
+      "sha256": "b13defa31ed09d74bc07cada0a0cf32fed3c5049b6462bfea91a75e1fbf1092c",
+      "bytes": 62391401
+    },
+    {
+      "directory": "Android_25.0.115_2127_internal",
+      "file": "YandaoGuoxue_25.0.115_2127.apk",
+      "source": "9daff6306a45b81b849c32a8879a4ce1be1238d3",
+      "sha256": "7272ce622299918b2709d3e74c65cc0c377d1b1bf608536dd07a3fd8d6fa36a0",
+      "bytes": 78379963
+    },
+    {
+      "directory": "Android_25.0.115_2127_tencent",
+      "file": "YandaoGuoxue_25.0.115_2127.aab",
+      "source": "9daff6306a45b81b849c32a8879a4ce1be1238d3",
+      "sha256": "d2909e514d60a466d75822a36b3ff27a8eb544c0f97de64cf7ece7dc34fee4ef",
+      "bytes": 62344758
+    },
+    {
+      "directory": "Android_25.0.115_2127_tencent",
+      "file": "YandaoGuoxue_25.0.115_2127.apk",
+      "source": "9daff6306a45b81b849c32a8879a4ce1be1238d3",
+      "sha256": "3efda290c7820546c36bf555a15c9f2e2e4d17ec74b680b2033da7a370afec7f",
+      "bytes": 78333319
+    },
+    {
+      "directory": "Apple_25.0.115_33",
+      "file": "YandaoGuoxue_25.0.115_33.ipa",
+      "source": "bbc5601207d8b47407d957ba621526025374df8a",
+      "sha256": "7da56aff32e75dae665a47f626cc8eb0864b5ef71dcca2f51e5a524c7df58cc7",
+      "bytes": 45482082
+    },
+    {
+      "directory": "Apple_25.0.115_34",
+      "file": "YandaoGuoxue_25.0.115_34.ipa",
+      "source": "a269fca4d99c7564010145d7384623f11116121c",
+      "sha256": "2fced9915bce2a0978e362ee43ba37394e458226d4869372d02514ed17439e10",
+      "bytes": 45467159
+    },
+    {
+      "directory": "Apple_25.0.115_35",
+      "file": "YandaoGuoxue_25.0.115_35.ipa",
+      "source": "9daff6306a45b81b849c32a8879a4ce1be1238d3",
+      "sha256": "c79226a07f7ba5110875f82827740912c77d8f665db9d2aa78e417486249b92e",
+      "bytes": 45504132
+    }
+  ],
+  "historySelection": "用户本轮澄清：2026-10-24东京零点以前已上传商店的最近三个版本；今天不计入。Apple33/34/35及同源Android2123/2124/2127先保全，平台回执和各渠道上传时间仍需独立核对，不能把internal安卓称为正式上架。",
+  "historyCompleteRestorable": false,
+  "historyGaps": [
+    "逐版内容包、后端配置和数据库兼容依赖仍待离线恢复核验",
+    "各渠道正式上传记录及东京日期边界需独立核实"
+  ],
+  "targetedTests": {
+    "passed": 17,
+    "failed": 0,
+    "baselineInterruptedStreamRegressionFails": true
+  },
+  "broaderRegression": {
+    "tests": 106,
+    "passed": 105,
+    "failed": 1,
+    "failure": "既有security-assessment-http.test.cjs末尾未关闭SQLite单例，Windows删除临时测试目录EPERM；不得写106项全部通过。"
+  },
+  "cleanup": {
+    "projectSourceFilesDeleted": 0,
+    "historicalPackagesDeleted": 0,
+    "oldCmdDisabled": true,
+    "disabledCmdSha256": "c6eafe0dfc69c346e00bf56fa2d112ebf668da02eeb4368d450b5d891ae79c9a"
+  },
+  "readOnlyMirrorUnmodified": true,
+  "mirrorBaselineSha256": "d6fa71178732b5881f3d9f20a69ad13e11d750e91d1ceac9b468fab354d86571",
+  "physicalDevicesAccepted": false,
+  "newPackageBuilt": false,
+  "newStoreSubmission": false,
+  "overallComplete": false,
+  "openWork": [
+    "完整社交服务端/双账号/第三无授权账号验收、视频本机存储迁移",
+    "真实iPhone购买原订单到账和恢复、安卓/iPhone离线验收",
+    "药材方剂逐穴资料远程化",
+    "原局部照片追查、内容完整性版权和专业审校",
+    "最终真实截图宣传图和渠道材料",
+    "三个历史版本完整依赖恢复及清理清单重建"
+  ],
+  "relatedChat": {
+    "threadId": "01a148d6-7a25-7721-ad85-9bb16a336b58",
+    "recentHistoryRead": true,
+    "newMessageSent": false
+  }
+}

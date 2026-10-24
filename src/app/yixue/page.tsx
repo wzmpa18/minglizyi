@@ -369,7 +369,7 @@ export default function YixueHome() {
       {/* 对标 jishiyu Banner 通知栏 */}
       <div className="overflow-hidden bg-[#f5f5f5] px-4 py-1.5">
         <p className="text-center text-xs text-gray-500">
-          一卦知天命，数理定乾坤
+          研习易学资料，理解传统历法与术数文化
         </p>
       </div>
 
