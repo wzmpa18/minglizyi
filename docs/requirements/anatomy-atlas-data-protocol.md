@@ -39,3 +39,5 @@
 - https://www.elsevier.support/complete-anatomy/answer/dissect-and-annotate
 
 这批新交互是客户端代码变化，旧2131/38和仅有登录修复的2132/39不能靠3.0.0资源获得；完成后按新候选内部测试，不以数据包绕过审核。
+
+手机避让修正：默认全身镜头距离3.35、目标高度0.90，预留工具条空间；atlas.json可选viewerPreferences.overviewDistance仅接受3.3~5、overviewTargetY仅接受0.80~1.05的有限数值。无字段或非法字段回退默认，不执行代码，不修改权限。此能力随新客户端提供，旧包不会因资料新增字段自动支持。操作帮助默认折叠，长按后先看到实际操作而非大段提示。

@@ -6,7 +6,7 @@ export const PACK_ID = "tcm-anatomy-atlas-v3";
 export interface LearningMetadata {zhName?:string;learningDescription?:string;learningSource?:string}
 export interface Part extends LearningMetadata { id:string; name:string; conceptId:string; system:string; chunk:number; positions:number; normals:number; indices:number; vertexCount:number; indexCount:number; bounds:[number[],number[]] }
 export interface Point { code:string; name:string; pinyin:string; meridianId:string; meridian:string; reviewed:boolean; surfaceUnavailable?:boolean; midline:boolean; source:string; positionProvenance:string }
-export interface Atlas { parts:Part[]; chunks:{url:string;bytes:number}[]; concepts:({id:string;name:string;elements:string[]}&LearningMetadata)[]; version:string }
+export interface Atlas { viewerPreferences?:{overviewDistance?:number;overviewTargetY?:number}; parts:Part[]; chunks:{url:string;bytes:number}[]; concepts:({id:string;name:string;elements:string[]}&LearningMetadata)[]; version:string }
 export interface Surface { points:{key:string;target:{position:number[];normal:number[];meshId:string;faceIndex:number}}[]; paths:{meridianId?:string;id?:string;positions?:number[];[key:string]:unknown}[] }
 export interface Dataset { atlas:Atlas; points:Point[]; surface:Surface; files:Record<string,Uint8Array>; version:string }
 export interface AssetManifest { format:string; version:string; viewerProtocol:number; files:{path:string;size:number;sha256:string}[] }

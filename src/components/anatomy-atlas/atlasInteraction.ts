@@ -41,3 +41,9 @@ export class AtlasGestureTracker {
  this.last={key,time};return "tap";
  }
 }
+
+export function viewPreferences(input:unknown):{overviewDistance:number;overviewTargetY:number}{
+ const row=input&&typeof input==="object"?input as Record<string,unknown>:{};
+ const bounded=(key:string,fallback:number,min:number,max:number)=>typeof row[key]==="number"&&Number.isFinite(row[key])?Math.max(min,Math.min(max,row[key] as number)):fallback;
+ return {overviewDistance:bounded("overviewDistance",3.35,3.3,5),overviewTargetY:bounded("overviewTargetY",.90,.80,1.05)};
+}

@@ -6,7 +6,7 @@ import * as T from "three";
 import {OrbitControls} from "three/examples/jsm/controls/OrbitControls.js";
 import {mergeGeometries} from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {softenPelvicSurface} from "./teaching-skin";
-import {AtlasGestureTracker,BODY_REGIONS,boundsOverlap,insideRegion,type AtlasGesture,type Position3} from "./atlasInteraction";
+import {AtlasGestureTracker,viewPreferences,BODY_REGIONS,boundsOverlap,insideRegion,type AtlasGesture,type Position3} from "./atlasInteraction";
 import {SYSTEMS,selectionParts,type Dataset} from "./atlasPack";
 export interface ViewState {visible:string[];hidden:string[];selected:string|null;isolate:boolean;opacity:number;view:string;reset:number;points:boolean;meridian:string;point:string|null;side:1|-1;section:number|null;explode:number;region?:string|null}
 interface Props {data:Dataset;state:ViewState;onSelect:(id:string,gesture?:AtlasGesture,position?:Position3)=>void;onPoint:(code:string,side:1|-1)=>void;onReady:()=>void;onError:(message:string)=>void}
@@ -14,7 +14,7 @@ export default function AtlasScene({data,state,onSelect,onPoint,onReady,onError}
  const host=useRef<HTMLDivElement>(null),latest=useRef(state),callbacks=useRef({onSelect,onPoint,onReady,onError});
  latest.current=state;callbacks.current={onSelect,onPoint,onReady,onError};
  useEffect(()=>{
-  const el=host.current;if(!el)return;let dead=false,frame=0;
+  const el=host.current;if(!el)return;const preferences=viewPreferences(data.atlas.viewerPreferences);let dead=false,frame=0;
   const geometries:T.BufferGeometry[]=[],materials:T.Material[]=[];
   let renderer:T.WebGLRenderer;
   try{renderer=new T.WebGLRenderer({antialias:true,alpha:false});}catch{callbacks.current.onError("设备暂不支持3D显示，可继续使用原图谱与文字学习。");return;}
@@ -67,7 +67,7 @@ export default function AtlasScene({data,state,onSelect,onPoint,onReady,onError}
   let previous:ViewState|null=null,needsFit=true;
   const resize=()=>{const w=Math.max(1,el.clientWidth),h=Math.max(1,el.clientHeight);renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();dirty=true;needsFit=true;};
   const observer=new ResizeObserver(resize);observer.observe(el);resize();
-  const fit=()=>{const s=latest.current;const direction=s.view==="back"?new T.Vector3(0,0,-1):s.view==="side"?new T.Vector3(1,0,0):new T.Vector3(0,0,1);let center=new T.Vector3(0,.85,0),distance=Math.max(3,1.05/camera.aspect);
+  const fit=()=>{const s=latest.current;const direction=s.view==="back"?new T.Vector3(0,0,-1):s.view==="side"?new T.Vector3(1,0,0):new T.Vector3(0,0,1);let center=new T.Vector3(0,preferences.overviewTargetY,0),distance=Math.max(preferences.overviewDistance,1.05/camera.aspect);
    const region=BODY_REGIONS.find(r=>r.id===s.region);if(region&&!s.isolate){const box=new T.Box3(new T.Vector3().fromArray(region.min),new T.Vector3().fromArray(region.max));center=box.getCenter(new T.Vector3());const size=box.getSize(new T.Vector3());distance=Math.max(size.y,size.x/camera.aspect)/(2*Math.tan(T.MathUtils.degToRad(17)))*1.2+size.z/2;}
    const parts=selectionParts(data.atlas,s.selected);if(s.isolate&&parts.length){const box=new T.Box3();parts.forEach(p=>box.union(new T.Box3(new T.Vector3().fromArray(p.bounds[0]),new T.Vector3().fromArray(p.bounds[1]))));center=box.getCenter(new T.Vector3());const size=box.getSize(new T.Vector3());distance=Math.max(.12,Math.max(size.y,size.x/camera.aspect,size.z)/(2*Math.tan(T.MathUtils.degToRad(17)))*1.4);}
    if(s.point&&!s.isolate){const target=data.surface.points.find(p=>p.key===`${s.point}:${s.side}`)?.target;if(target){center=new T.Vector3().fromArray(target.position);direction.fromArray(target.normal).normalize();distance=.55;}}
