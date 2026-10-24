@@ -7,7 +7,7 @@ def main():
  assert re.fullmatch('[a-f0-9]{40}',a.source) and str(a.root.resolve()).lower().startswith('e:')
  manifest=json.loads(Path('public/assets/astronomy/surfaces/manifest.json').read_bytes())
  maps=[m for body in manifest['bodies'] for m in body['maps']]
- excluded=json.loads(subprocess.check_output(['node','-e',"console.log(JSON.stringify(require('./scripts/filter-unlicensed-meridians.cjs').excluded))"]))
+ meridian_media=json.loads(Path('public/assets/meridians/ANIMATION-MANIFEST.json').read_bytes())
  tasks=[]
  for run in [n for n in ([a.ios_run] if a.ios_only else [a.android_run,a.ios_run]) if n]:
   info=json.loads(subprocess.check_output(['gh','api',f'repos/wzmpa18/minglizyi/actions/runs/{run}']))
@@ -28,17 +28,15 @@ def main():
   assert prefix+'index.html' in names
   for image in maps:
    b=package.read(prefix+image['url'].lstrip('/'));assert len(b)==image['bytes'] and hashlib.sha256(b).hexdigest()==image['sha256']
-  assert not any(prefix+name in names for name in excluded)
-  assert len(json.loads(package.read(prefix+'meridian-publication.json'))['excluded'])==28
+  delivery=json.loads(package.read(prefix+'meridian-publication.json'));assert len(delivery['included'])==28 and not delivery['excluded']
+  for animation in meridian_media['records']:
+   b=package.read(prefix+animation['asset'].lstrip('/'));assert len(b)==animation['bytes'] and hashlib.sha256(b).hexdigest()==animation['sha256']
   assert prefix+'assets/meridians/lung-open-reference.svg' in names
-  for chart in json.loads(Path('src/data/meridianHistoricalCharts.json').read_bytes())['images']:
-   b=package.read(prefix+chart['asset'].lstrip('/'));assert len(b)==chart['bytes'] and hashlib.sha256(b).hexdigest()==chart['sha256']
-  assert prefix+'licenses/meridian-historical/ATTRIBUTION.json' in names
   js=b'\n'.join(package.read(name) for name in names if name.startswith(prefix+'_next/') and name.endswith('.js'))
   assert b'yandaoguoxue.yandao.vip/api/academy/starter-content' in js
   assert b'bazi-comparison-practice' not in js,'New course accidentally bundled instead of fetched'
   assert b'classics-1' in js,'Original offline lessons missing'
-  proof={'channel':'ios-full-learning' if kind=='ipa' else a.android_channel,'kind':kind,'source':a.source,'version':'25.0.115','bytes':len(data),'fileSha256':hashlib.sha256(data).hexdigest(),'artifactId':meta['id'],'artifactZipSha256':hashlib.sha256(raw).hexdigest(),'workflowRun':run,'surfaceImagesVerified':len(maps),'historicalMeridianChartsVerified':14,'unlicensedAnimations':0,'excludedEvidence':28,'remoteReaderBundled':True,'newCoursesRemoteDataOnly':True,'originalOfflineFallback':True,'physicalDeviceAccepted':False}
+  proof={'channel':'ios-full-learning' if kind=='ipa' else a.android_channel,'kind':kind,'source':a.source,'version':'25.0.115','bytes':len(data),'fileSha256':hashlib.sha256(data).hexdigest(),'artifactId':meta['id'],'artifactZipSha256':hashlib.sha256(raw).hexdigest(),'workflowRun':run,'surfaceImagesVerified':len(maps),'animatedMeridianChartsVerified':28,'ownerOriginalsFullResolution':11,'clinicalPositionReviewed':False,'remoteReaderBundled':True,'newCoursesRemoteDataOnly':True,'originalOfflineFallback':True,'physicalDeviceAccepted':False}
   if kind=='ipa':
    info=plistlib.loads(package.read('Payload/App.app/Info.plist'));assert info['CFBundleIdentifier']=='com.yandaoguoxue.app' and info['CFBundleShortVersionString']=='25.0.115' and info['CFBundleVersion']==str(a.build)
    proof.update(build=a.build,identityAndWidgetSignatureGate=True,sourceProof='pinned successful CI and real Info.plist; no Android marker expected')

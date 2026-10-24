@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import historicalCharts from "@/data/meridianHistoricalCharts.json";
+import animationManifest from "../../../../public/assets/meridians/ANIMATION-MANIFEST.json";
 
 import { SectionGate } from "@/components/SectionGate";
 
@@ -52,69 +52,50 @@ const MERIDIAN_SLUGS: Record<string, string> = {
 
 function meridianChartSources(meridianName: string) {
   const slug = MERIDIAN_SLUGS[meridianName];
-  return slug ? { acupoints: slug === "lung" ? "/assets/meridians/lung-open-reference.svg" : null, historical: historicalCharts.images.find(i=>i.slug===slug)?.asset||null,
-    skeleton: "/assets/anatomy/skeleton-front.svg" } : null;
+  return slug ? { acupoints: `/assets/meridians/${slug}.webp`, skeleton: `/assets/meridians/skeleton/${slug}.webp` } : null;
 }
 
 function MeridianChart({ meridianName, compact = false }: { meridianName: string; compact?: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const [zoom, setZoom] = useState(1);
-  const [chartMode, setChartMode] = useState<"acupoints" | "historical" | "skeleton">(MERIDIAN_SLUGS[meridianName]==="lung"?"acupoints":"historical");
+  const [chartMode, setChartMode] = useState<"acupoints" | "skeleton">("acupoints");
+  const [failed, setFailed] = useState(false);
+  const [retry, setRetry] = useState(0);
+  useBodyScrollLock(expanded);
+  usePopupBackHandler(() => setExpanded(false), expanded);
   const sources = meridianChartSources(meridianName);
   if (!sources) return null;
-  const src = sources[chartMode];
-  const historic=historicalCharts.images.find(i=>i.slug===MERIDIAN_SLUGS[meridianName]);
-  const modeLabel = chartMode === "historical" ? "高清经络原典图" : chartMode === "acupoints" ? (src ? "开放许可肺经图" : "经络循行示意") : "人体骨骼对照";
-  const codeBySlug: Record<string, string> = { lung: "LU1", "large-intestine": "LI1", stomach: "ST1", spleen: "SP1", heart: "HT1", "small-intestine": "SI1", bladder: "BL1", kidney: "KI1", pericardium: "PC1", "triple-energizer": "TE1", gallbladder: "GB1", liver: "LR1", "governor-vessel": "GV1", "conception-vessel": "CV1" };
-
-  const image = src ? (
-    <img
-      src={src}
-      alt={modeLabel}
-      draggable={false}
-      style={{ display: "block", width: `${zoom * 100}%`, maxWidth: "none", height: "auto", margin: "0 auto" }}
-    />
-  ) : <div style={{ width: `${zoom * 100}%`, display: "flex", justifyContent: "center" }}><BodyDiagramSVG area="torso" acupointCode={codeBySlug[MERIDIAN_SLUGS[meridianName]]} acupointName={meridianName} /></div>;
-
+  const src = `${sources[chartMode]}?v=${animationManifest.revision}-${retry}`;
+  const modeLabel = chartMode === "acupoints" ? "人体穴位动图" : "骨骼循行动图";
+  const image = <img key={src} src={src} alt={`${meridianName}${modeLabel}`} draggable={false}
+    onLoad={() => setFailed(false)} onError={() => setFailed(true)}
+    style={{ display: "block", width: `${zoom * 100}%`, maxWidth: "none", height: "auto", margin: "0 auto" }} />;
   return <>
     <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-      {([...(sources.acupoints?["acupoints" as const]:[]),"historical","skeleton"] as const).map((mode) => (
-        <button key={mode} type="button" onClick={() => { setChartMode(mode); setZoom(1); }}
-          style={{ flex: 1, border: "1px solid #D7C9E3", borderRadius: 9, padding: "7px 6px", background: chartMode === mode ? BRAND_BG : "#FFF", color: chartMode === mode ? BRAND : "#777", fontWeight: 700, fontSize: 12 }}>
-          {mode === "acupoints" ? "穴位对照图" : mode==="historical"?"高清原典图":"骨骼对照"}
-        </button>
-      ))}
+      {(["acupoints", "skeleton"] as const).map(mode => <button key={mode} type="button"
+        onClick={() => { setChartMode(mode); setZoom(1); setFailed(false); }}
+        style={{ flex: 1, minHeight: 44, border: "1px solid #D7C9E3", borderRadius: 9, padding: "7px 6px", background: chartMode === mode ? BRAND_BG : "#FFF", color: chartMode === mode ? BRAND : "#555", fontWeight: 700, fontSize: 12 }}>
+        {mode === "acupoints" ? "人体穴位动图" : "骨骼循行动图"}
+      </button>)}
     </div>
-    <button
-      type="button"
-      onClick={() => { setZoom(1); setExpanded(true); }}
-      style={{ width: "100%", padding: 0, border: "none", borderRadius: "14px", overflow: "hidden", background: "#EEF6F2", cursor: "zoom-in" }}
-      aria-label={`放大查看${meridianName}${modeLabel}`}
-    >
-      <div style={{ maxHeight: compact ? "380px" : "620px", overflow: "auto" }}>{image}</div>
-      <span style={{ display: "block", padding: "7px 10px", fontSize: "11px", color: "#5D6D65", background: "white" }}>点击放大 · {modeLabel} · 可离线查看</span>
+    {failed && <div role="status" style={{ padding: 12, background: "#FFF4E5", marginBottom: 8 }}>动图加载失败。<button type="button" onClick={() => { setFailed(false); setRetry(n => n + 1); }}>重新加载动图</button></div>}
+    <button type="button" onClick={() => { setZoom(1); setExpanded(true); }} aria-label={`放大查看${meridianName}${modeLabel}`}
+      style={{ width: "100%", padding: 0, border: "none", borderRadius: 14, overflow: "hidden", background: "#EEF6F2", cursor: "zoom-in" }}>
+      <div style={{ maxHeight: compact ? 380 : undefined, overflow: "auto" }}>{image}</div>
+      <span style={{ display: "block", padding: "7px 10px", fontSize: 11, color: "#42584C", background: "white" }}>点击放大 · {modeLabel} · 自动循环播放 · 可离线查看</span>
     </button>
-    {historic&&<p style={{fontSize:11,lineHeight:1.7,color:"#63566D"}}>原典图 {historic.width}×{historic.height} · {historic.author} · <a href={historic.source} target="_blank" rel="noopener noreferrer">来源</a> · <a href={historic.licenseUrl} target="_blank" rel="noopener noreferrer">{historic.license}</a>。原图未重绘，供历史文献对照，不替代现代标准定位。</p>}
-    <Link href={`/zhongyi/anatomy3d/?meridian=${codeBySlug[MERIDIAN_SLUGS[meridianName]]?.replace(/[0-9]+$/,"")||""}`} style={{display:"block",padding:10,borderRadius:8,background:BRAND_BG,color:BRAND,fontSize:13,fontWeight:700}}>在3D人体中查看本经与穴位 →</Link>
-    <p style={{ fontSize: 11, color: "#63566D", lineHeight: 1.7 }}>循行示意不标注具体穴位位置；骨骼图不代表本经走向。逐穴定位请核对下方文字与原典。逐穴名称、文字、原典与交流入口均保留。骨骼图：LadyofHats / Mariana Ruiz Villarreal，公有领域；肺经图的作者、许可及穴名对照见下方“图文对照与来源”。</p>
-    {expanded && (
-      <div
-        onClick={() => setExpanded(false)}
-        style={{ position: "fixed", inset: 0, zIndex: 1400, background: "rgba(0,0,0,.88)", display: "flex", flexDirection: "column", padding: "max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom))" }}
-      >
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", color: "white", paddingBottom: "10px" }}>
-          <strong style={{ fontSize: "14px" }}>{meridianName} · {modeLabel}</strong>
-          <div style={{ display: "flex", gap: "8px" }}>
-            <button type="button" onClick={(e) => { e.stopPropagation(); setZoom(v => Math.max(1, v - .5)); }} style={{ width: "38px", height: "34px", border: 0, borderRadius: "17px", fontSize: "20px" }}>−</button>
-            <button type="button" onClick={(e) => { e.stopPropagation(); setZoom(v => Math.min(3, v + .5)); }} style={{ width: "38px", height: "34px", border: 0, borderRadius: "17px", fontSize: "20px" }}>＋</button>
-            <button type="button" onClick={() => setExpanded(false)} style={{ height: "34px", padding: "0 14px", border: 0, borderRadius: "17px" }}>关闭</button>
-          </div>
-        </div>
-        <div onClick={(e) => e.stopPropagation()} style={{ flex: 1, overflow: "auto", borderRadius: "12px", background: "#EEF6F2", touchAction: "pan-x pan-y pinch-zoom" }}>
-          {image}
+    {expanded && <div role="dialog" aria-label={`${meridianName}动图放大`} aria-modal="true" onClick={() => setExpanded(false)}
+      style={{ position: "fixed", inset: 0, zIndex: 1400, background: "rgba(0,0,0,.92)", display: "flex", flexDirection: "column", padding: "calc(env(safe-area-inset-top, 0px) + 12px) 12px calc(env(safe-area-inset-bottom, 0px) + 12px)" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6, color: "white", paddingBottom: 10 }}>
+        <strong style={{ fontSize: 14 }}>{meridianName} · {modeLabel}</strong>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button type="button" aria-label="缩小动图" onClick={e => { e.stopPropagation(); setZoom(v => Math.max(1, v - .5)); }} style={{ minWidth: 44, height: 44, fontSize: 20 }}>−</button>
+          <button type="button" aria-label="放大动图" onClick={e => { e.stopPropagation(); setZoom(v => Math.min(3, v + .5)); }} style={{ minWidth: 44, height: 44, fontSize: 20 }}>＋</button>
+          <button type="button" onClick={() => setExpanded(false)} style={{ minWidth: 44, height: 44 }}>关闭</button>
         </div>
       </div>
-    )}
+      <div onClick={e => e.stopPropagation()} style={{ flex: 1, overflow: "auto", borderRadius: 12, background: "#EEF6F2", touchAction: "pan-x pan-y pinch-zoom" }}>{image}</div>
+    </div>}
   </>;
 }
 

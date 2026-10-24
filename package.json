@@ -6,7 +6,7 @@
     "dev": "node scripts/gen-version.js && next dev",
     "prebuild": "node scripts/gen-version.js",
     "build": "next build",
-    "postbuild": "node scripts/seo-fix/inject-canonical.js && node scripts/filter-unlicensed-meridians.cjs",
+    "postbuild": "node scripts/seo-fix/inject-canonical.js && node scripts/verify-meridian-media.cjs",
     "start": "next start",
     "lint": "eslint"
   },
