@@ -1,7 +1,7 @@
 {
   "version": "25.0.115",
-  "androidCode": 2142,
-  "source": "f9432fd646b57a60984b1b6d1d58571fdbf8b89b",
+  "androidCode": 2143,
+  "source": "7c0cf3038da0a17cb7a1673826860cfcd2607e74",
   "locales": {
     "zh-CN": {
       "title": "言道国学",
@@ -36,6 +36,6 @@
     "newPhotographPointCoverage": 7,
     "allPointPhotographsAvailable": false
   },
-  "iosBuild": 51,
-  "status": "candidate; final internal acceptance in handover 78.11; no formal listing submission"
+  "iosBuild": 52,
+  "status": "latest consolidated internal packages; not submitted to new stores; screenshot catalogue is website material, not iPhone capture"
 }

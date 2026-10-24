@@ -1,0 +1,73 @@
+{
+  "checkedOn": "2026-10-24",
+  "clientSource": "7c0cf3038da0a17cb7a1673826860cfcd2607e74",
+  "android": 2143,
+  "ios": 52,
+  "policy": "已有阅读能力内的纯数据更新优先走服务端；不得远程下载脚本或隐藏新功能绕审核。不是所有当前文字都已完成远程化。",
+  "supported": [
+    {
+      "area": "入门课程正文、自测、解析",
+      "reader": "src/lib/studyCatalog.ts",
+      "publisher": "/api/academy/admin/starter-content",
+      "scope": "schemaVersion1/readerVersion1受控纯文本；原16课保留；版本比较、原子发布及离线备用"
+    },
+    {
+      "area": "学堂知识点、题库、章节",
+      "reader": "src/lib/academyApi.ts",
+      "scope": "使用现有学堂接口与受保护管理员入口；发布前内容审核，不直接修改客户端"
+    },
+    {
+      "area": "中医原典版本",
+      "reader": "src/components/TcmEditionProvider.tsx",
+      "scope": "既有tcm-original-editions-approved离线包，经兼容性校验后进入已有读书听学界面"
+    },
+    {
+      "area": "3D模型、既有组织资料与受支持坐标数据",
+      "reader": "src/components/anatomy-atlas/atlasPack.ts",
+      "scope": "既有包格式内版本、校验、缓存与切换；新手势/新原生引擎不属于资料更新"
+    },
+    {
+      "area": "真人穴位照片与来源元数据",
+      "reader": "src/lib/acupointPhotos.ts",
+      "publisher": "/assets/acupoint-photos/MANIFEST.json",
+      "scope": "固定自有域/目录、字段及格式限制；图片原件保全、CC许可与临床核校分开"
+    },
+    {
+      "area": "AI解析质量规则与可核引文",
+      "reader": "backend_deploy",
+      "scope": "已有服务端质量规则与资料维护；不改客户端支付、扣点或算法能力"
+    }
+  ],
+  "stillBundledOrLocal": [
+    {
+      "area": "药材与方剂基础参考字典",
+      "files": [
+        "src/algorithm-core/modules/tcm/herbs.ts",
+        "src/algorithm-core/modules/tcm/formulas.ts"
+      ],
+      "reason": "当前loadFull函数返回构建时import数组，没有已验收的远程替换入口；不得宣传可全部后台改"
+    },
+    {
+      "area": "逐穴静态详细文字及部分经络动图地址",
+      "files": [
+        "src/lib/tcmScraper.ts",
+        "public/assets/meridians/ANIMATION-MANIFEST.json"
+      ],
+      "reason": "静态字典与内置资源不等于远程资料包；未来迁移前必须保留原件、旧ID与专业核校边界"
+    },
+    {
+      "area": "部分工具展示开关",
+      "files": [
+        "src/lib/toolConfigStore.ts"
+      ],
+      "reason": "当前存在localStorage配置，不得仅凭后台样式就称为跨设备服务端控制"
+    }
+  ],
+  "requiresNormalClientRelease": [
+    "原生权限/支付/组件/导航/新增交互或数据格式",
+    "算法修复、原生库与安全更新",
+    "未接入远程读者的内置文字迁移"
+  ],
+  "overallAllContentServerEditable": false,
+  "futureChangeRule": "先查本清单；支持项不打包；不支持项记录具体能力缺口，集中开发验收一次后正常合并发布，不为每次文案重复打包。"
+}
