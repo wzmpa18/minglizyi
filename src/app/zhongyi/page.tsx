@@ -623,6 +623,7 @@ export default function ZhongyiHome() {
 
       {/* 四大入口卡片（v12: 按后台开放程度渲染——关闭隐藏/维护置灰/会员专享加锁） */}
       <div style={{ padding: "16px 12px" }}>
+        <Link href="/zhongyi/anatomy3d/" style={{display:"block",marginBottom:12,padding:18,borderRadius:16,background:"#F3EDF7",border:"1px solid #D9C7EB",color:"#56217D",textDecoration:"none"}}><strong style={{fontSize:20}}>{ui("三维人体与经络图谱")}</strong><span style={{display:"block",marginTop:6,fontSize:13}}>{ui("分层观察 · 点选部位 · 全屏学习")} →</span></Link>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
           {ENTRIES.map((e) => {
             const gate = gateOf("zhongyi_" + e.key);
