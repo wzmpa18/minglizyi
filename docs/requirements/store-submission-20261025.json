@@ -1,0 +1,105 @@
+{
+  "checkedAt": "2026-10-24T15:50:33.612142+00:00",
+  "androidBuild": 2144,
+  "appleBuild": 53,
+  "overallComplete": false,
+  "stores": {
+    "Apple": "53正式WAITING_FOR_REVIEW，10张真实iPhone/iPad模拟器截图全部COMPLETE，中文学习介绍及关键词已读回。",
+    "Huawei": "2144正式提交成功且显示正在审核；简体、英文、香港繁体、台湾繁体介绍及每种3张真实宣传图已保存。",
+    "OPPO": "2144正式提交成功，3张新版实拍宣传图、学习介绍及审核账号已保存；vivo及荣耀同步已勾选。",
+    "Vivo": "负责人确认通过OPPO同步，协议已在操作时确认并勾选；未另注册账号，尚无独立受理回执。",
+    "Honor": "随OPPO保留同步请求，独立受理及通过尚未确认。",
+    "Xiaomi": "2144正式提交成功、后台审核中；5张2144真实宣传图、8个学习关键词及10页既有评估证明PDF已提交，资质意见仍待商店复核。",
+    "Tencent": "应用认领正在审核中，更新入口未开放；2144腾讯渠道包已校验保全，未冒称正式提交。",
+    "Google": "国学仍属个人账号，须组织账号分发的政策拒绝已查明；旧2118等12项尚未送审，未撤销其他应用迁移。来源和目标均已创建新人工支持工单，ID待定；公司迁入及2144生产提审未完成。"
+  },
+  "webDownload": {
+    "source": "fb8a7a948e8d374c00df9fc56d007dedc08f358d",
+    "version": "25.0.115",
+    "versionCode": 2144,
+    "downloadUrl": "https://yandaoguoxue.yandao.vip/downloads/2144/YandaoGuoxue_25.0.115_2144.apk",
+    "sha256": "ab9b4895f437de38e47d50498a9acd62c6c50c77fc781c04a685c0a45abb296c",
+    "bytes": 90625299,
+    "publicFullReadbackLocation": "deployment server through public HTTPS",
+    "aliases": [
+      {
+        "url": "https://yandaoguoxue.yandao.vip/app-download/latest.apk",
+        "finalUrl": "https://yandaoguoxue.yandao.vip/downloads/2144/YandaoGuoxue_25.0.115_2144.apk",
+        "bytes": 90625299
+      },
+      {
+        "url": "https://yandaoguoxue.yandao.vip/latest.apk",
+        "finalUrl": "https://yandaoguoxue.yandao.vip/downloads/2144/YandaoGuoxue_25.0.115_2144.apk",
+        "bytes": 90625299
+      },
+      {
+        "url": "https://yandao.vip/app-download/latest.apk",
+        "finalUrl": "https://yandaoguoxue.yandao.vip/downloads/2144/YandaoGuoxue_25.0.115_2144.apk",
+        "bytes": 90625299
+      },
+      {
+        "url": "https://yandao.vip/latest.apk",
+        "finalUrl": "https://yandaoguoxue.yandao.vip/downloads/2144/YandaoGuoxue_25.0.115_2144.apk",
+        "bytes": 90625299
+      }
+    ],
+    "forceUpdate": false,
+    "newVerificationSteps": false,
+    "cosLegacyPublish": "BLOCKED_AccessDenied; no permissions changed and old COS objects preserved",
+    "legacyWwwCosAliasUpdated": false,
+    "backup": "/www/yandaoguoxue-backend/data/android2144-direct-download-rollback",
+    "configSha256": "9b710078430d1db2f36b782da375b97fc90d0a5427e43bb76d41834c4e37d968",
+    "nginxFiles": [
+      {
+        "file": "/www/server/panel/vhost/nginx/yandaoguoxue.vip.conf",
+        "beforeSha256": "dcf376684304751f9da2da5fb4c976204ff8b38dc641e397f1c539819b34db44",
+        "afterSha256": "cacb48dfe50c2b6c9af758d6c51ab9ab9644eed4025960c67692d4867047faa8"
+      },
+      {
+        "file": "/www/server/panel/vhost/nginx/yandao.vip.conf",
+        "beforeSha256": "9a78ab3c003da5cc30f9bcd2282be9bce0f2ecac8920b77a87d50f155982c13e",
+        "afterSha256": "ae784ae82781896fcffdf8743af26ad7bd954c8d932bd20c9f80111337a7fd81"
+      }
+    ],
+    "checks": {
+      "web": {
+        "latestVersion": "25.0.115",
+        "latestVersionCode": 2144,
+        "downloadUrl": "https://yandaoguoxue.yandao.vip/downloads/2144/YandaoGuoxue_25.0.115_2144.apk",
+        "downloadPage": "https://yandaoguoxue.yandao.vip/download/",
+        "releaseNotes": [
+          "改进原典阅读、连续听学、章节练习与学习交流",
+          "改进离线下载、断点恢复及资料校验，保留原有效资料和学习记录",
+          "修复文献结果排版、视频链接与密码找回；不增加注册或身份核验步骤"
+        ],
+        "forceUpdate": false,
+        "publishedAt": "2026-10-24T15:46:42.658248+00:00",
+        "platform": "android"
+      },
+      "ios": {
+        "latestVersion": "25.0.77",
+        "latestVersionCode": 4,
+        "downloadUrl": "",
+        "downloadPage": "",
+        "releaseNotes": [],
+        "forceUpdate": false,
+        "publishedAt": "2026-10-24T15:46:42.658248+00:00",
+        "platform": "ios"
+      },
+      "google": {
+        "latestVersion": "25.0.115",
+        "latestVersionCode": 0,
+        "downloadUrl": "",
+        "downloadPage": "https://play.google.com/store/apps/details?id=com.yandao.guoxue",
+        "releaseNotes": [],
+        "forceUpdate": false,
+        "publishedAt": "2026-10-24T15:46:42.658248+00:00",
+        "platform": "android",
+        "channel": "google"
+      }
+    },
+    "finishedAt": "2026-10-24T15:49:57.691973+00:00"
+  },
+  "desktopControlStopped": true,
+  "computerControlToolsMustRemainOffUntilUserReauthorizes": true
+}
