@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "revision": "2026102401",
+  "bucket": "yandao-guoxue-1300262413",
+  "region": "ap-beijing",
+  "partition": "learning_content",
+  "visibility": "PRIVATE",
+  "cosPrefix": "learning-content/system-media/2026102401/",
+  "inventoryKey": "learning-content/system-media/2026102401/MEDIA-INVENTORY.json",
+  "archiveKey": "learning-content/system-media/2026102401/system-study-media.zip",
+  "archiveBytes": 93914248,
+  "archiveSha256": "ef581102ec1fb05283d9be5fa23c3070d801b042d3d62590278d9a5801761a08",
+  "verifiedAt": "2026-10-24T05:47:43.030Z",
+  "objectsFullyReadBack": 57,
+  "runtimeImagesIndividuallyArchived": 42,
+  "svgImagesInsideArchive": 2,
+  "ownerOriginalGifFiles": 11,
+  "meridianAnimations": 28,
+  "manifest": "public/assets/meridians/ANIMATION-MANIFEST.json",
+  "evidenceDirectory": "E:\\言道国学3D评估_12A\\发布资源\\学习图片COS归档_2026102401",
+  "regionalAcupointPhotos": {
+    "status": "OPEN_NOT_LOCATED",
+    "replacementWithSchematicAllowed": false
+  },
+  "protectedSourceReadOnly": true,
+  "publicReaderChanged": false,
+  "clinicalReviewCompleted": false,
+  "allStoresPublished": false
+}
