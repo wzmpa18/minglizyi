@@ -112,7 +112,7 @@
       "bytes": 45504132
     }
   ],
-  "historySelection": "用户本轮澄清：2026-10-24东京零点以前已上传商店的最近三个版本；今天不计入。Apple33/34/35及同源Android2123/2124/2127先保全，平台回执和各渠道上传时间仍需独立核对，不能把internal安卓称为正式上架。",
+  "historySelection": "Apple官方上传日期：东京2026-10-24以前最近三个为36、35、34；对应36/2128已补存，不删除33等保全候选。完整依赖恢复仍未完成。",
   "historyCompleteRestorable": false,
   "historyGaps": [
     "逐版内容包、后端配置和数据库兼容依赖仍待离线恢复核验",
@@ -138,8 +138,8 @@
   "readOnlyMirrorUnmodified": true,
   "mirrorBaselineSha256": "d6fa71178732b5881f3d9f20a69ad13e11d750e91d1ceac9b468fab354d86571",
   "physicalDevicesAccepted": false,
-  "newPackageBuilt": false,
-  "newStoreSubmission": false,
+  "newPackageBuilt": true,
+  "newStoreSubmission": true,
   "overallComplete": false,
   "openWork": [
     "完整社交服务端/双账号/第三无授权账号验收、视频本机存储迁移",
@@ -166,7 +166,7 @@
     "videoServicePersistenceComplete": false,
     "medicalUiAlignedToExistingLiteratureBehavior": true,
     "iosWenzhenExternalCheckoutReplacedWithExistingStoreLinks": true,
-    "latestCloudQuality": "pending"
+    "latestCloudQuality": "40094664966 success; recovery 40098083986 success"
   },
   "androidReadback": {
     "versionName": "25.0.115",
@@ -174,5 +174,27 @@
     "deviceConnected": true,
     "appInteractionPerformed": false,
     "reason": "手机前台为其他应用，只读核对已安装版本；未切换、未卸载、未清数据。"
+  },
+  "apple53": {
+    "source": "b9c4c4a198bd825f94d6dc4f2439f1b1173344cf",
+    "buildRun": 40094969156,
+    "simulatorRun": 40095020666,
+    "submissionId": "5af19faf-5237-4059-9551-a14dc3513361",
+    "state": "WAITING_FOR_REVIEW",
+    "submittedDate": "2026-10-24T13:36:36.285Z",
+    "realScreenshotsComplete": 10,
+    "reviewAccountRealPhoneVerified": true,
+    "old36Withdrawn": true,
+    "approved": false
+  },
+  "passwordRecovery": {
+    "source": "33b165e9d3ae3437eb5565169204a77f02e9725d",
+    "deployed": true,
+    "healthPassed": true,
+    "existingUserPasswordsChangedByAgent": false,
+    "accountMergePerformed": false,
+    "sameSourceCloudQuality": 40098083986,
+    "singleRegistrationVerificationHttpRegressionPassed": true,
+    "emailOnboardingPhoneGapStillOpen": true
   }
 }

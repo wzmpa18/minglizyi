@@ -1,13 +1,14 @@
 {
   "scope": "owner-channel-specific-authorization",
   "date": "2026-10-24",
-  "ownerInstruction": "你完成这些已经可以的商店就可以了，其他的等资质通过再弄，完成苹果的提交啊！2026-10-23追加：安全评估通过，把所有应用商店重新上传，需要恢复所有功能；各商店核对退回并解决。",
+  "ownerInstruction": "你完成这些已经可以的商店就可以了，其他的等资质通过再弄，完成苹果的提交啊！2026-10-23追加：安全评估通过，把所有应用商店重新上传，需要恢复所有功能；各商店核对退回并解决。 2026-10-24最新直接要求：全部重新上传最新的，等待审核就撤回！重新上传资料，布局最新的营销资料信息和介绍！之前的旧版就需要作废！",
   "appId": "6807592575",
   "bundleId": "com.yandaoguoxue.app",
   "version": "25.0.115",
-  "build": "36",
-  "candidateSource": "a5361d7a6a035c56ab2ac22531d9850ac144c754",
+  "build": "53",
+  "candidateSource": "b9c4c4a198bd825f94d6dc4f2439f1b1173344cf",
   "actions": [
+    "withdraw-existing",
     "assemble",
     "submit"
   ],
@@ -19,5 +20,5 @@
     "Check existing submissions and re-use the app version; never duplicate active review",
     "Compass GPS excluded from both incremental and bulk record sync; local copy preserved"
   ],
-  "report": "交接报告/FINAL_PROJECT_HANDOVER.md#78.1"
+  "report": "交接报告/FINAL_PROJECT_HANDOVER.md#7817"
 }

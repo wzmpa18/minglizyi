@@ -21,6 +21,7 @@ test('real password recovery uses one-time ownership proof, preserves both accou
  const app=express();app.use(express.json());app.use(createBusinessIdentityGate({verifyToken:auth.verifyToken,
   getUser:id=>db.prepare('SELECT user_id,phone,phone_verified_at,status,deleted_at,auth_version FROM users WHERE user_id=?').get(id),resolveAdminKey:()=>null,journal:{append:()=>{}}}));
  app.use('/api/auth',registration.createRouter());
+ app.post('/api/test/verified-action',(req,res)=>res.json({success:true}));
  const server=await new Promise(resolve=>{const s=app.listen(0,'127.0.0.1',()=>resolve(s));});
  const origin=`http://127.0.0.1:${server.address().port}`;
  const post=async(route,body)=>{const r=await fetch(origin+'/api/auth/'+route,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});return {status:r.status,body:await r.json(),cookie:r.headers.get('set-cookie')};};
@@ -57,6 +58,24 @@ test('real password recovery uses one-time ownership proof, preserves both accou
   for(let n=0;n<5;n++)assert.equal((await post('reset-password',{account:'13800000001',smsCode:'000000',newPassword:'Againpass123'})).status,400);
   assert.equal((await post('reset-password',{account:'13800000001',smsCode:'123456',newPassword:'Againpass123'})).status,400);
   assert.equal(db.prepare('SELECT auth_version FROM users WHERE user_id=100001').get().auth_version,1);
+  // Register with one real SMS proof in the isolated store, then use password
+  // login, a refreshed session and repeated governed actions without another code.
+  codes.setCode('sms:13800000003','246810','127.0.0.1');
+  const registered=await post('register',{phone:'13800000003',code:'246810',password:'Register123'});
+  assert.equal(registered.status,200);assert.equal(registered.body.data.user.phoneVerified,true);
+  assert.equal(codes.getRemainingTTL('sms:13800000003'),0);
+  const registeredId=registered.body.data.user.userId;
+  const verifiedAt=db.prepare('SELECT phone_verified_at FROM users WHERE user_id=?').get(registeredId).phone_verified_at;
+  const later=await post('login',{account:'13800000003',password:'Register123'});
+  assert.equal(later.status,200);assert.equal(later.body.data.user.phoneVerified,true);
+  const refresh=decodeURIComponent(/yd_refresh_token=([^;]+)/.exec(later.cookie)[1]);
+  const renewed=await post('refresh-token',{refreshToken:refresh});assert.equal(renewed.status,200);
+  for(const token of [registered.body.data.accessToken,later.body.data.accessToken,renewed.body.data.accessToken]){
+   const action=await fetch(origin+'/api/test/verified-action',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:'{}'});
+   assert.equal(action.status,200);
+  }
+  assert.equal(db.prepare('SELECT phone_verified_at FROM users WHERE user_id=?').get(registeredId).phone_verified_at,verifiedAt);
+
  }finally{
   server.closeAllConnections();await new Promise(resolve=>server.close(resolve));
   db.close();auth.getDB()?.close();fs.rmSync(root,{recursive:true,force:true});
