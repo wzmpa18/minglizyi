@@ -183,6 +183,13 @@ export function getUserToken(): string | null {
   return safeGetItem(USER_TOKEN_KEY) || safeGetSessionItem(USER_TOKEN_KEY);
 }
 
+/** Rotate only the credential, preserving the account, entitlements and session-only choice. */
+export function replaceUserToken(token: string): void {
+  if (!isBrowser()) return;
+  if (safeGetSessionItem(USER_TOKEN_KEY) && !safeGetItem(USER_TOKEN_KEY)) safeSetSessionItem(USER_TOKEN_KEY, token);
+  else safeSetItem(USER_TOKEN_KEY, token);
+}
+
 export function getUserProfile(): UserProfile | null {
   let profileStr = safeGetItem(USER_PROFILE_KEY);
   if (!profileStr) profileStr = safeGetSessionItem(USER_PROFILE_KEY);

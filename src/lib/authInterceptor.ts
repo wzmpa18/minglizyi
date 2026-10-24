@@ -14,7 +14,7 @@
  *   const res = await fetchWithAuth("/api/some-endpoint", { method: "POST", ... });
  */
 
-import { getLoginState, clearLoginState, getUserToken } from "./auth";
+import { getLoginState, clearLoginState, getUserToken, replaceUserToken } from "./auth";
 import { clientPlatformHeaders } from "./platformGate";
 
 // ==================== Token 存储键名 ====================
@@ -152,46 +152,44 @@ async function clearIndexedDB(): Promise<void> {
 // ==================== 401 自动续期 ====================
 
 let isRefreshing = false;
-let refreshPromise: Promise<boolean> | null = null;
+let refreshPromise: Promise<RefreshOutcome> | null = null;
 
 /**
  * 静默刷新 token
  * 调用后端 /api/auth/refresh-token 接口，用 refresh_token 换取新的 access_token
- * @returns true=刷新成功, false=刷新失败（需重新登录）
+ * @returns 区分续期成功、凭据明确拒绝和临时故障
  */
-async function refreshAccessToken(): Promise<boolean> {
+type RefreshOutcome = "refreshed" | "rejected" | "temporary";
+async function refreshAccessToken(): Promise<RefreshOutcome> {
   if (isRefreshing && refreshPromise) {
     return refreshPromise;
   }
 
   isRefreshing = true;
-  refreshPromise = (async () => {
+  const originalToken = getUserToken();
+  refreshPromise = (async (): Promise<RefreshOutcome> => {
     try {
       const refreshToken = await getRefreshToken();
-      if (!refreshToken) return false;
-
-      const isValid = await isRefreshTokenValid();
-      if (!isValid) return false;
-
+      // Production refresh credentials are httpOnly cookies; an empty JS token is normal.
       const res = await fetch("/api/auth/refresh-token", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refreshToken }),
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json", ...clientPlatformHeaders() },
+        body: JSON.stringify(refreshToken ? { refreshToken } : {}),
       });
-
-      if (!res.ok) return false;
-
+      if ([400, 401, 403].includes(res.status)) return "rejected";
+      if (!res.ok) return "temporary";
       const data = await res.json();
-      if (data.success && data.accessToken && data.refreshToken) {
-        // 更新本地存储的 token
-        saveTokenPair(data.accessToken, data.refreshToken);
-        return true;
+      const payload = data.data || data;
+      if (data.success && typeof payload.accessToken === "string" && payload.accessToken) {
+        if (getUserToken() !== originalToken) return "temporary";
+        replaceUserToken(payload.accessToken);
+        saveTokenPair(payload.accessToken, typeof payload.refreshToken === "string" ? payload.refreshToken : "");
+        return "refreshed";
       }
-
-      return false;
+      return "temporary";
     } catch {
-      // 网络异常时 token 不失效，恢复网络后自动续期
-      return false;
+      // Timeouts, malformed responses and service outages never mean explicit logout.
+      return "temporary";
     } finally {
       isRefreshing = false;
     }
@@ -239,14 +237,16 @@ export async function fetchWithAuth(
   if (response.status === 401 && token) {
     const refreshed = await refreshAccessToken();
 
-    if (refreshed) {
+    if (refreshed === "refreshed") {
       // 续期成功，重发原请求
       const newToken = getUserToken();
       if (newToken) {
         headers.set("Authorization", `Bearer ${newToken}`);
       }
       response = await fetch(url, { ...options, headers });
-    } else {
+    } else if (refreshed === "temporary") {
+      throw new Error("登录状态暂时无法续期，请检查网络后重试；当前登录资料仍保留。");
+    } else if (refreshed === "rejected") {
       // refresh token 也过期，清除登录态，引导重新登录
       clearLoginState();
       clearAllTokens();
@@ -284,19 +284,10 @@ export async function restoreLoginState(): Promise<void> {
     return;
   }
 
-  // localStorage 无登录态，尝试从 IndexedDB 恢复
-  const refreshToken = await getRefreshToken();
-  if (refreshToken) {
-    const isValid = await isRefreshTokenValid();
-    if (isValid) {
-      // 尝试续期获取新的 access token
-      const refreshed = await refreshAccessToken();
-      if (!refreshed) {
-        // 续期失败，清除残留数据
-        clearAllTokens();
-      }
-    } else {
-      clearAllTokens();
-    }
+  // A missing JS refresh token does not mean a missing httpOnly cookie.
+  // Do not recreate an explicitly logged-out or session-only account without its profile.
+  if (state.profile) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed === "rejected") { clearLoginState(); clearAllTokens(); }
   }
 }
