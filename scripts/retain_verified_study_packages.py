@@ -30,6 +30,9 @@ def main():
   assert not any(prefix+name in names for name in excluded)
   assert len(json.loads(package.read(prefix+'meridian-publication.json'))['excluded'])==28
   assert prefix+'assets/meridians/lung-open-reference.svg' in names
+  for chart in json.loads(Path('src/data/meridianHistoricalCharts.json').read_bytes())['images']:
+   b=package.read(prefix+chart['asset'].lstrip('/'));assert len(b)==chart['bytes'] and hashlib.sha256(b).hexdigest()==chart['sha256']
+  assert prefix+'licenses/meridian-historical/ATTRIBUTION.json' in names
   js=b'\n'.join(package.read(name) for name in names if name.startswith(prefix+'_next/') and name.endswith('.js'))
   assert b'yandaoguoxue.yandao.vip/api/academy/starter-content' in js
   assert b'bazi-comparison-practice' not in js,'New course accidentally bundled instead of fetched'

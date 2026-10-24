@@ -89,7 +89,7 @@ export default function AtlasScene({data,state,onSelect,onPoint,onPose,onPeel,on
    progress=setInterval(()=>{if(active)callbacks.current.onHold({x:e.clientX-rect.left,y:e.clientY-rect.top,name,id:hit.key,progress:Math.min(1,(performance.now()-active.time)/500)});},40);hold=setTimeout(peel,500);
   };
   const move=(e:PointerEvent)=>{gesture.move(e.pointerId,e.clientX,e.clientY);if(active&&Math.hypot(e.clientX-active.x,e.clientY-active.y)>8){active=null;clearHold();gesture.cancel();}};
-  const end=(e:PointerEvent)=>{clearHold();pointers.delete(e.pointerId);active=null;if(held){held=false;gesture.cancel();return;}const hit=pick(e.clientX,e.clientY),kind=gesture.finish(e.pointerId,e.clientX,e.clientY,performance.now(),hit?.key||"");if(kind&&kind!=="long")dispatch(hit,kind);};
+  const end=(e:PointerEvent)=>{clearHold();pointers.delete(e.pointerId);active=null;if(held){held=false;gesture.cancel();return;}const hit=pick(e.clientX,e.clientY),kind=gesture.finish(e.pointerId,e.clientX,e.clientY,performance.now(),hit?.key||"");if(kind&&kind!=="long"){if(latest.current.continuous&&hit&&"position" in hit)callbacks.current.onPeel(hit.key,hit.position!);else dispatch(hit,kind);}};
   const cancel=(e:PointerEvent)=>{clearHold();pointers.delete(e.pointerId);active=null;held=false;gesture.cancel();};renderer.domElement.addEventListener("pointerdown",start);renderer.domElement.addEventListener("pointermove",move);renderer.domElement.addEventListener("pointerup",end);renderer.domElement.addEventListener("pointercancel",cancel);
 
   const stopHold=()=>{clearHold();active=null;held=false;pointers.clear();gesture.cancel();};
@@ -98,7 +98,7 @@ export default function AtlasScene({data,state,onSelect,onPoint,onPose,onPeel,on
   const animate=()=>{if(dead)return;frame=requestAnimationFrame(animate);const s=latest.current;
    if(previous!==s||needsFit){dirty=true;
     const region=BODY_REGIONS.find(r=>r.id===s.region);regionPlanes.forEach((p,i)=>{p.constant=region?(i%2===0?-region.min[Math.floor(i/2)]:region.max[Math.floor(i/2)]):100;});
-    const visible=new Set(s.visible),hidden=new Set(s.hidden),faded=new Set(s.faded),selected=new Set((s.selected?.startsWith("@system:")?data.atlas.parts.filter(p=>p.system===s.selected!.slice(8)):selectionParts(data.atlas,s.selected)).map(p=>p.id));
+    const visible=new Set(s.visible),hidden=new Set(s.hidden),faded=new Set(s.faded),selected=new Set((s.selected?.startsWith("@system:")?[]:selectionParts(data.atlas,s.selected)).map(p=>p.id));
     data.atlas.parts.forEach((p,i)=>{const shown=(!region||boundsOverlap(p.bounds[0],p.bounds[1],region))&&!hidden.has(p.id)&&(s.isolate?(s.isolateIds?s.isolateIds.includes(p.id):selected.has(p.id)):visible.has(p.system));const group=SYSTEMS.findIndex(a=>a[0]===p.system),angle=group/SYSTEMS.length*Math.PI*2;const dx=Math.sin(angle)*s.explode*.35,dz=Math.cos(angle)*s.explode*.35;
      mask.set([dx,0,dz,shown?(selected.has(p.id)?2:1)*(faded.has(p.id)?-1:1):0],i*4);
     });picks.forEach(m=>{const i=m.userData.index;m.position.set(mask[i*4],0,mask[i*4+2]);m.updateMatrixWorld();});

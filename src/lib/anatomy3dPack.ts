@@ -50,21 +50,30 @@ function decodeManifest(bytes: Uint8Array): AnatomyPackManifest {
 export async function openInstalledAnatomyPack(): Promise<OpenedAnatomyPack | null> {
   const packed = await loadPackContent(ANATOMY_3D_PACK_ID);
   if (!packed) return null;
+  return decodeAnatomyPack(packed);
+}
+
+export async function decodeAnatomyPack(packed: ArrayBuffer): Promise<OpenedAnatomyPack> {
   const files = unzipSync(new Uint8Array(packed));
   const manifestBytes = files["manifest.json"];
   if (!manifestBytes) throw new Error("3D 解剖包缺少清单");
   const manifest = decodeManifest(manifestBytes);
   for (const layer of manifest.layers) {
-    if (!files[layer.file]) throw new Error(`3D 解剖包缺少${layer.name}模型`);
+    const bytes=files[layer.file];
+    if (!bytes || bytes.byteLength!==layer.size) throw new Error(`3D 解剖包缺少或损坏${layer.name}模型`);
+    const hash=await crypto.subtle.digest("SHA-256",new Uint8Array(bytes).buffer);
+    const actual=Array.from(new Uint8Array(hash),b=>b.toString(16).padStart(2,"0")).join("");
+    if(actual!==layer.sha256)throw new Error(`3D 解剖包${layer.name}校验失败，原有资料保留`);
   }
   return { manifest, files };
 }
 
 export async function downloadAnatomyPack(onProgress?: DownloadProgress): Promise<void> {
   const manifest = await fetchManifest();
+  if(!manifest)throw new Error("暂时无法读取离线资料清单，请检查网络后重试；已有图谱仍保留");
   const pack = manifest?.packs.find((item) => item.packId === ANATOMY_3D_PACK_ID);
   if (!pack) throw new Error("3D 解剖离线包尚未发布，请稍后再试");
-  const result = await downloadPack(pack, onProgress);
+  const result = await downloadPack(pack, onProgress, async bytes=>{await decodeAnatomyPack(bytes);});
   if (!result.ok) throw new Error(result.error || "3D 解剖包下载失败");
 }
 

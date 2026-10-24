@@ -190,6 +190,10 @@ function LegacyAnatomy3DPage() {
     scene.background = new THREE.Color(0xf1f5f4);
     const camera = new THREE.PerspectiveCamera(32, 1, 0.01, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
+    // The drawing buffer includes devicePixelRatio; its CSS size must still fit the viewport.
+    renderer.domElement.style.width = "100%";
+    renderer.domElement.style.height = "100%";
+    renderer.domElement.style.display = "block";
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     mount.appendChild(renderer.domElement);
@@ -329,7 +333,7 @@ function LegacyAnatomy3DPage() {
           <div style={{ fontSize: 38, textAlign: "center", marginBottom: 8 }}>🫀</div>
           <h1 style={{ margin: "0 0 8px", textAlign: "center", fontSize: 18, color: "#342C29" }}>下载3D人体解剖离线包</h1>
           <p style={{ margin: "0 0 16px", fontSize: 13, lineHeight: 1.75, color: "#716762" }}>
-            约13MB，含皮肤、肌肉、脏腑、骨骼四层。下载并校验后永久保存在手机，断网和关机重启后仍可使用。该离线包为会员学习权益。
+            含体表、肌肉、脏腑血管神经、骨骼四组模型，实际下载大小以资料清单为准。下载并校验后保存在手机，断网和关机重启后仍可使用；清除应用数据或卸载会移除本机资料。该离线包为会员学习权益。
           </p>
           <button onClick={handleDownload} disabled={downloading} style={{ width: "100%", border: 0, borderRadius: 12, padding: "12px 16px", color: "#fff", background: downloading ? "#AAA" : BRAND, fontSize: 15, fontWeight: 700 }}>
             {downloading ? `正在下载并校验 ${progress}%` : "下载到手机"}
@@ -373,7 +377,7 @@ function LegacyAnatomy3DPage() {
       <section style={{ margin: "0 12px 18px", padding: "10px 12px", borderRadius: 12, background: "#FFF7E6", color: "#795548", fontSize: 11, lineHeight: 1.65 }}>
         人体结构与经络定位学习参考。当前版本不提供进针角度、深度或自行操作指导；针灸等医疗操作须由具备资质的专业人员实施。离线包编号：{ANATOMY_3D_PACK_ID}。
         <div style={{ marginTop: 5, color: "#8D6E63" }}>
-          模型来源：Z-Anatomy / BodyParts3D 派生开放数据；依原授权采用 CC BY-SA，完整授权与署名文件随离线包保存。
+          模型来源：{pack?.manifest.source || "已收录开放参考数据"}。授权：{pack?.manifest.license || "以包内许可为准"}，完整署名文件随离线包保存。
         </div>
       </section>
     </main>

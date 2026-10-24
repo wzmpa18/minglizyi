@@ -1,5 +1,8 @@
 "use client";
 
+import Link from "next/link";
+import historicalCharts from "@/data/meridianHistoricalCharts.json";
+
 import { SectionGate } from "@/components/SectionGate";
 
 import { useState, useEffect, useMemo, Suspense, useCallback } from "react";
@@ -49,18 +52,19 @@ const MERIDIAN_SLUGS: Record<string, string> = {
 
 function meridianChartSources(meridianName: string) {
   const slug = MERIDIAN_SLUGS[meridianName];
-  return slug ? { acupoints: slug === "lung" ? "/assets/meridians/lung-open-reference.svg" : null,
+  return slug ? { acupoints: slug === "lung" ? "/assets/meridians/lung-open-reference.svg" : null, historical: historicalCharts.images.find(i=>i.slug===slug)?.asset||null,
     skeleton: "/assets/anatomy/skeleton-front.svg" } : null;
 }
 
 function MeridianChart({ meridianName, compact = false }: { meridianName: string; compact?: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const [zoom, setZoom] = useState(1);
-  const [chartMode, setChartMode] = useState<"acupoints" | "skeleton">("acupoints");
+  const [chartMode, setChartMode] = useState<"acupoints" | "historical" | "skeleton">(MERIDIAN_SLUGS[meridianName]==="lung"?"acupoints":"historical");
   const sources = meridianChartSources(meridianName);
   if (!sources) return null;
   const src = sources[chartMode];
-  const modeLabel = chartMode === "acupoints" ? (src ? "开放许可肺经图" : "经络循行示意") : "人体骨骼对照";
+  const historic=historicalCharts.images.find(i=>i.slug===MERIDIAN_SLUGS[meridianName]);
+  const modeLabel = chartMode === "historical" ? "高清经络原典图" : chartMode === "acupoints" ? (src ? "开放许可肺经图" : "经络循行示意") : "人体骨骼对照";
   const codeBySlug: Record<string, string> = { lung: "LU1", "large-intestine": "LI1", stomach: "ST1", spleen: "SP1", heart: "HT1", "small-intestine": "SI1", bladder: "BL1", kidney: "KI1", pericardium: "PC1", "triple-energizer": "TE1", gallbladder: "GB1", liver: "LR1", "governor-vessel": "GV1", "conception-vessel": "CV1" };
 
   const image = src ? (
@@ -74,10 +78,10 @@ function MeridianChart({ meridianName, compact = false }: { meridianName: string
 
   return <>
     <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-      {(["acupoints", "skeleton"] as const).map((mode) => (
+      {([...(sources.acupoints?["acupoints" as const]:[]),"historical","skeleton"] as const).map((mode) => (
         <button key={mode} type="button" onClick={() => { setChartMode(mode); setZoom(1); }}
           style={{ flex: 1, border: "1px solid #D7C9E3", borderRadius: 9, padding: "7px 6px", background: chartMode === mode ? BRAND_BG : "#FFF", color: chartMode === mode ? BRAND : "#777", fontWeight: 700, fontSize: 12 }}>
-          {mode === "acupoints" ? "经络图文对照" : "人体骨骼对照"}
+          {mode === "acupoints" ? "穴位对照图" : mode==="historical"?"高清原典图":"骨骼对照"}
         </button>
       ))}
     </div>
@@ -87,10 +91,12 @@ function MeridianChart({ meridianName, compact = false }: { meridianName: string
       style={{ width: "100%", padding: 0, border: "none", borderRadius: "14px", overflow: "hidden", background: "#EEF6F2", cursor: "zoom-in" }}
       aria-label={`放大查看${meridianName}${modeLabel}`}
     >
-      <div style={{ maxHeight: compact ? "300px" : "520px", overflow: "auto" }}>{image}</div>
+      <div style={{ maxHeight: compact ? "380px" : "620px", overflow: "auto" }}>{image}</div>
       <span style={{ display: "block", padding: "7px 10px", fontSize: "11px", color: "#5D6D65", background: "white" }}>点击放大 · {modeLabel} · 可离线查看</span>
     </button>
-    <p style={{ fontSize: 11, color: "#63566D", lineHeight: 1.7 }}>循行示意不标注具体穴位位置；骨骼图不代表本经走向。逐穴定位请核对下方文字与原典。旧动画授权尚未确认，暂不提供。骨骼图：LadyofHats / Mariana Ruiz Villarreal，公有领域；肺经图的作者、许可及穴名对照见下方“图文对照与来源”。</p>
+    {historic&&<p style={{fontSize:11,lineHeight:1.7,color:"#63566D"}}>原典图 {historic.width}×{historic.height} · {historic.author} · <a href={historic.source} target="_blank" rel="noopener noreferrer">来源</a> · <a href={historic.licenseUrl} target="_blank" rel="noopener noreferrer">{historic.license}</a>。原图未重绘，供历史文献对照，不替代现代标准定位。</p>}
+    <Link href={`/zhongyi/anatomy3d/?meridian=${codeBySlug[MERIDIAN_SLUGS[meridianName]]?.replace(/[0-9]+$/,"")||""}`} style={{display:"block",padding:10,borderRadius:8,background:BRAND_BG,color:BRAND,fontSize:13,fontWeight:700}}>在3D人体中查看本经与穴位 →</Link>
+    <p style={{ fontSize: 11, color: "#63566D", lineHeight: 1.7 }}>循行示意不标注具体穴位位置；骨骼图不代表本经走向。逐穴定位请核对下方文字与原典。逐穴名称、文字、原典与交流入口均保留。骨骼图：LadyofHats / Mariana Ruiz Villarreal，公有领域；肺经图的作者、许可及穴名对照见下方“图文对照与来源”。</p>
     {expanded && (
       <div
         onClick={() => setExpanded(false)}
@@ -814,6 +820,7 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
       </div>
 
       <AcupointStudySources meridianName={acupoint.meridian} selectedCode={acupoint.code} />
+      <Link href={`/zhongyi/anatomy3d/?pointName=${encodeURIComponent(acupoint.name)}`} style={{display:"block",margin:12,padding:12,borderRadius:10,color:BRAND,background:BRAND_BG,fontWeight:700}}>在3D参考人体中对照{acupoint.name} →</Link>
 
       {/* 既有静态整理资料，尚未逐条与现行标准校对。 */}
       <div style={{ margin: "12px", background: "white", borderRadius: "16px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
