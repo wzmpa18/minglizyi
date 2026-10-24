@@ -157,10 +157,11 @@ function LegacyAnatomy3DPage() {
         const source = Array.isArray(node.material) ? node.material[0] : node.material;
         const material = source.clone() as THREE.MeshStandardMaterial;
         if (layer === "skin") {
-          material.color.set(0xd8a08a);
+          const surfaceName = node.name.toLowerCase();
+          material.color.set(/hair|eyebrow/.test(surfaceName) ? 0x332923 : surfaceName === "lip" ? 0xa95558 : 0xd8a08a);
           material.roughness = 0.9;
-          material.transparent = true;
-          material.opacity = 0.93;
+          material.transparent = false;
+          material.opacity = 1;
         } else if (layer === "muscular") {
           const suffix = node.name.includes(".") ? node.name.split(".").pop() || "" : "";
           if (suffix && !["l", "r"].includes(suffix)) node.visible = false;
