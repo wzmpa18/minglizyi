@@ -327,7 +327,7 @@ export function getMeridianById(id: string): TcmMeridian | undefined {
  * 根据名称获取经络详情
  */
 export function getMeridianByName(name: string): TcmMeridian | undefined {
-  return MERIDIANS_DB.find((m) => m.name === name);
+  return MERIDIANS_DB.find((m) => m.name === name || name.endsWith(m.name));
 }
 
 // ============================================================================

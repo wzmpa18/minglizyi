@@ -13,5 +13,7 @@ test('all 362 actual model identities resolve to existing study pages, including
  vm.runInNewContext(code,{exports,require:n=>{if(n==='./data/meridians.json')return require('../src/algorithm-core/modules/tcm/data/meridians.json');throw Error(n);},console});
  const fixture=require('./fixtures/atlas-point-identities.json');assert.equal(fixture.points.length,362);for(const p of fixture.points){const actual=exports.getAcupointByCode(p.code)||exports.getAcupointByName(p.name);assert.ok(actual,p.code+' '+p.name);assert.equal(exports.getAcupointByName(actual.name).code,actual.code);}
  assert.equal(exports.getAcupointByCode('GV24+').code,'EX-HN3');assert.equal(exports.getAcupointByCode('GV24+').meridian,'经外奇穴');assert.equal(exports.getAcupointByName('瘛脉').code,'TE18');
+ for(const point of exports.ACUPOINTS_DB){const meridian=exports.getMeridianByName(point.meridian);assert.ok(meridian,point.code+' must have a real return list');assert.ok(exports.getAcupointsByMeridian(meridian.name).some(p=>p.code===point.code));}
+ assert.equal(exports.getMeridianByName('手少阴心经').name,'心经');assert.equal(exports.getMeridianByName('经外奇穴'),undefined);
  assert.equal(exports.ACUPOINTS_DB.length,361);
 });

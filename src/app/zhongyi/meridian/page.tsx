@@ -9,7 +9,7 @@ import { useState, useEffect, useMemo, Suspense, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   MERIDIANS_DB, ACUPOINTS_DB,
-  searchAcupoints, getAcupointByName, getAcupointsByMeridian,
+  searchAcupoints, getAcupointByName, getAcupointsByMeridian, getMeridianByName,
   loadFullMeridiansDatabase
 } from "@/algorithm-core/modules/tcm/meridians";
 import {
@@ -608,7 +608,7 @@ function AcupointListPage({ meridianName }: { meridianName: string }) {
     loadFullMeridiansDatabase().then(() => setDbLoaded(true));
   }, []);
 
-  const meridian = MERIDIANS_DB.find(m => m.name === meridianName);
+  const meridian = getMeridianByName(meridianName);
   const acupoints = getAcupointsByMeridian(meridianName);
   const cc = meridian ? getCatColor(meridian.category) : getCatColor("其他");
 
@@ -757,7 +757,7 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
     { label: "定位", content: acupoint.location === `${acupoint.name}穴` ? "定位资料待补充核实" : acupoint.location },
     { label: "详细定位", content: acupoint.location_detail === `${acupoint.name}穴` ? undefined : acupoint.location_detail },
     { label: "功效", content: acupoint.function },
-    { label: "典籍出处", content: acupoint.literature },
+    { label: acupoint.code === "EX-HN3" ? "资料出处" : "典籍出处", content: acupoint.literature },
   ];
 
   return (
@@ -904,9 +904,9 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
       <AcupointStudyDiscussion targetId={`standard:${acupoint.code}`} title={`${acupoint.name}学习讨论`} />
 
       <div style={{ padding: "12px" }}>
-        <button onClick={() => router.push(`/zhongyi/meridian?meridian=${encodeURIComponent(acupoint.meridian)}`)}
+        <button onClick={() => router.push(getMeridianByName(acupoint.meridian) ? `/zhongyi/meridian?meridian=${encodeURIComponent(getMeridianByName(acupoint.meridian)!.name)}` : "/zhongyi/meridian/")}
           style={{ width: "100%", padding: "12px", borderRadius: "12px", border: "none", fontSize: "14px", cursor: "pointer", backgroundColor: BRAND_BG, color: BRAND, fontWeight: "500", marginBottom: "8px" }}>
-          返回{acupoint.meridian}穴位列表
+          返回{getMeridianByName(acupoint.meridian)?.name || "经络"}穴位列表
         </button>
       </div>
 
