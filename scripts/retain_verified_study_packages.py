@@ -32,11 +32,21 @@ def main():
   for animation in meridian_media['records']:
    b=package.read(prefix+animation['asset'].lstrip('/'));assert len(b)==animation['bytes'] and hashlib.sha256(b).hexdigest()==animation['sha256']
   assert prefix+'assets/meridians/lung-open-reference.svg' in names
+  photos_verified = 0
+  if (kind == 'ipa' and a.build >= 48) or (kind != 'ipa' and a.code >= 2140):
+   photos = json.loads(package.read(prefix+'assets/acupoint-photos/MANIFEST.json'))
+   expected_photos = json.loads(Path('public/assets/acupoint-photos/MANIFEST.json').read_bytes())
+   assert photos == expected_photos
+   for photo in photos['records']:
+    b = package.read(prefix+'assets/acupoint-photos/'+photo['file'])
+    assert len(b) == photo['bytes'] and hashlib.sha256(b).hexdigest() == photo['sha256']
+    photos_verified += 1
   js=b'\n'.join(package.read(name) for name in names if name.startswith(prefix+'_next/') and name.endswith('.js'))
   assert b'yandaoguoxue.yandao.vip/api/academy/starter-content' in js
   assert b'bazi-comparison-practice' not in js,'New course accidentally bundled instead of fetched'
   assert b'classics-1' in js,'Original offline lessons missing'
   proof={'channel':'ios-full-learning' if kind=='ipa' else a.android_channel,'kind':kind,'source':a.source,'version':'25.0.115','bytes':len(data),'fileSha256':hashlib.sha256(data).hexdigest(),'artifactId':meta['id'],'artifactZipSha256':hashlib.sha256(raw).hexdigest(),'workflowRun':run,'surfaceImagesVerified':len(maps),'animatedMeridianChartsVerified':28,'ownerOriginalsFullResolution':11,'clinicalPositionReviewed':False,'remoteReaderBundled':True,'newCoursesRemoteDataOnly':True,'originalOfflineFallback':True,'physicalDeviceAccepted':False}
+  proof['sourcedOriginalPhotosVerified'] = photos_verified
   if kind=='ipa':
    info=plistlib.loads(package.read('Payload/App.app/Info.plist'));assert info['CFBundleIdentifier']=='com.yandaoguoxue.app' and info['CFBundleShortVersionString']=='25.0.115' and info['CFBundleVersion']==str(a.build)
    proof.update(build=a.build,identityAndWidgetSignatureGate=True,sourceProof='pinned successful CI and real Info.plist; no Android marker expected')

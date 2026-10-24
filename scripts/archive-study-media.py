@@ -5,6 +5,7 @@ No user uploads, credentials, or protected source-folder writes are included.
 import argparse
 import hashlib
 import json
+import re
 import subprocess
 import zipfile
 from pathlib import Path
@@ -19,10 +20,14 @@ def main():
     p.add_argument('--originals', type=Path, required=True)
     p.add_argument('--output', type=Path, required=True)
     p.add_argument('--photo-only', action='store_true', help='Archive only the separately inventoried real-photo increment')
+    p.add_argument('--archive-revision', help='Separate immutable archive revision, for a corrected preservation attempt')
     a = p.parse_args()
     root = Path(__file__).resolve().parents[1]
     animation = json.loads((root / 'public/assets/meridians/ANIMATION-MANIFEST.json').read_bytes())
     revision = str(json.loads((root / 'public/assets/acupoint-photos/MANIFEST.json').read_bytes())['revision'] if a.photo_only else animation['revision'])
+    if a.archive_revision:
+        assert a.photo_only and re.fullmatch(r'[0-9]{10,14}', a.archive_revision), 'Invalid incremental archive revision'
+        revision = a.archive_revision
     files = {}
     media_root = root / ('public/assets/acupoint-photos' if a.photo_only else 'public/assets')
     for f in sorted(media_root.rglob('*')):
@@ -37,7 +42,7 @@ def main():
         f = root / 'public/assets/meridians' / name
         files[f.relative_to(root).as_posix()] = f
     records = [{'path': k, 'bytes': f.stat().st_size, 'sha256': sha(f.read_bytes()),
-                'individualObject': f.suffix.lower() != '.svg'} for k, f in files.items()]
+                'individualObject': f.suffix.lower() not in {'.svg', '.txt'}} for k, f in files.items()]
     prefix = 'system-media/' + revision + '/'
     manifest = {'schemaVersion': 1, 'revision': revision, 'partition': 'learning_content',
                 'cosPrefix': 'learning-content/' + prefix, 'records': records,

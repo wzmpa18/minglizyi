@@ -25,5 +25,24 @@
   "protectedSourceReadOnly": true,
   "publicReaderChanged": false,
   "clinicalReviewCompleted": false,
-  "allStoresPublished": false
+  "allStoresPublished": false,
+  "coreAssetsDoNotDelete": true,
+  "newRealAcupointPhotoIncrement": {
+    "archiveRevision": "2026102403",
+    "manifestRevision": 2026102402,
+    "localOriginalDirectory": "E:\\言道国学3D评估_12A\\核心学习资料_禁止删除\\真人穴位照片",
+    "manifest": "public/assets/acupoint-photos/MANIFEST.json",
+    "newOriginalPhotos": 2,
+    "mappedStandardPoints": 7,
+    "allPointsCovered": false,
+    "recoveredOldPhotos": false,
+    "cosPrefix": "learning-content/system-media/2026102403/",
+    "originalFilesUnchanged": true,
+    "clinicalReviewCompleted": false,
+    "objectsFullyReadBack": 5,
+    "verifiedAt": "2026-10-24T07:50:38.190Z",
+    "archiveSha256": "247d4d4fe5e02e4c1edc3b3503d7b12cadb821e47aebbff26748975920c5c1dc",
+    "archiveBytes": 623751,
+    "doNotDelete": true
+  }
 }
