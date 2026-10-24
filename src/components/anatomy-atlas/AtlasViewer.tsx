@@ -54,7 +54,7 @@ export default function AtlasViewer({previewData}:{previewData?:Dataset}){
       <button className={button} aria-expanded={drawer} aria-controls="atlas-tools" onClick={()=>{setTab("layers");setDrawer(true);}}>图谱工具</button>
       <button className={button} style={state.selected||state.region||state.hidden.length?undefined:{display:"none"}} onClick={restore}>恢复全身</button>
       <button className={button} aria-pressed={immersive} onClick={()=>{setImmersive(!immersive);setDrawer(false);}}>{immersive?"退出全屏":"全屏观察"}</button>
-      
+
      </div>
      <AtlasScene data={data} state={state} onSelect={modelSelect} onPoint={selectPoint} onReady={()=>setReady(true)} onError={setMessage}/>
      {!ready&&<p className="absolute left-3 top-3 rounded bg-white/90 p-2 text-sm">正在准备三维结构…</p>}
