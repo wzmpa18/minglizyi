@@ -158,6 +158,7 @@ function LegacyAnatomy3DPage() {
         const material = source.clone() as THREE.MeshStandardMaterial;
         if (layer === "skin") {
           const surfaceName = node.name.toLowerCase();
+          if (node.userData.sourceStructureId === "FJ2815" || /pubic.*hair/.test(surfaceName)) node.visible = false;
           material.color.set(/hair|eyebrow/.test(surfaceName) ? 0x332923 : surfaceName === "lip" ? 0xa95558 : 0xd8a08a);
           material.roughness = 0.9;
           material.transparent = false;

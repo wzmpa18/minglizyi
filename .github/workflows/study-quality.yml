@@ -300,7 +300,7 @@ jobs:
       - run: npx tsc --noEmit --incremental false
       - run: node --test scripts/auth-session-refresh.test.cjs
       - run: node --experimental-strip-types --test scripts/atlas-interaction.test.cjs
-      - run: node --experimental-strip-types --test scripts/atlas-sidebar.test.cjs scripts/atlas-point-labels.test.cjs
+      - run: node --experimental-strip-types --test scripts/atlas-sidebar.test.cjs scripts/atlas-point-labels.test.cjs scripts/acupoint-photos.test.cjs
       - run: npx tsx --test scripts/interface-controls.test.tsx scripts/ziwei-board-layout.test.tsx
       - run: npx tsx --test scripts/learning-expansion.test.ts
       - run: npx tsx --test scripts/research-learning.test.ts scripts/medical-learning.test.ts

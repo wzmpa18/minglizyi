@@ -18,20 +18,22 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--originals', type=Path, required=True)
     p.add_argument('--output', type=Path, required=True)
+    p.add_argument('--photo-only', action='store_true', help='Archive only the separately inventoried real-photo increment')
     a = p.parse_args()
     root = Path(__file__).resolve().parents[1]
     animation = json.loads((root / 'public/assets/meridians/ANIMATION-MANIFEST.json').read_bytes())
-    revision = str(animation['revision'])
+    revision = str(json.loads((root / 'public/assets/acupoint-photos/MANIFEST.json').read_bytes())['revision'] if a.photo_only else animation['revision'])
     files = {}
-    for f in sorted((root / 'public/assets').rglob('*')):
-        if f.is_file() and f.suffix.lower() in {'.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg'}:
+    media_root = root / ('public/assets/acupoint-photos' if a.photo_only else 'public/assets')
+    for f in sorted(media_root.rglob('*')):
+        if f.is_file() and (a.photo_only or f.suffix.lower() in {'.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg'}):
             files[f.relative_to(root).as_posix()] = f
-    for r in animation['records']:
+    for r in ([] if a.photo_only else animation['records']):
         if r.get('originalFile'):
             f = a.originals / r['originalFile']
             assert sha(f.read_bytes()) == r['sourceSha256'], 'Original changed; stop'
             files['originals/meridians/' + f.name] = f
-    for name in ['ANIMATION-MANIFEST.json', 'SOURCE-MANIFEST.json']:
+    for name in ([] if a.photo_only else ['ANIMATION-MANIFEST.json', 'SOURCE-MANIFEST.json']):
         f = root / 'public/assets/meridians' / name
         files[f.relative_to(root).as_posix()] = f
     records = [{'path': k, 'bytes': f.stat().st_size, 'sha256': sha(f.read_bytes()),
@@ -41,6 +43,8 @@ def main():
                 'cosPrefix': 'learning-content/' + prefix, 'records': records,
                 'regionalAcupointPhotosRecovered': False,
                 'note': 'Private preservation archive, not a claim of new public delivery, copyright permission or clinical review.'}
+    if a.photo_only:
+        manifest.update(newLicensedRealPhotos=True, doNotDelete=True)
     a.output.mkdir(parents=True, exist_ok=True)
     archive = a.output / ('system-study-media_' + revision + '.zip')
     if archive.exists():

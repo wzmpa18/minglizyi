@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { AcupointPhotoGallery } from "@/components/AcupointPhotoGallery";
 import animationManifest from "../../../../public/assets/meridians/ANIMATION-MANIFEST.json";
 
 import { SectionGate } from "@/components/SectionGate";
@@ -323,6 +324,8 @@ function PositioningModal({
             ✕
           </button>
         </div>
+
+        <AcupointPhotoGallery code={acupointCode} />
 
         {/* Body diagram */}
         <div style={{ padding: "16px", display: "flex", flexDirection: "column", alignItems: "center" }}>
@@ -900,6 +903,8 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
           本库整理资料尚待逐条复核，不可作为个人针刺操作依据；针灸操作应由具备相应资质的专业医师执行。
         </p>
       </div>
+
+      <AcupointPhotoGallery code={acupoint.code} />
 
       <AcupointStudyDiscussion targetId={`standard:${acupoint.code}`} title={`${acupoint.name}学习讨论`} />
 

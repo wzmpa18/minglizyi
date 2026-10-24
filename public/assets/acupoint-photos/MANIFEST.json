@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "revision": 2026102402,
+  "records": [
+    {
+      "id": "hegu-li4-mk2010",
+      "codes": [
+        "LI4"
+      ],
+      "title": "合谷 · 真人手部照片",
+      "file": "hegu-li4-mk2010.jpg",
+      "author": "Mk2010",
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "sourceUrl": "https://commons.wikimedia.org/w/index.php?title=File:Acupuncture_point_Hegu_(LI_4).jpg&oldid=781836430",
+      "caption": "作者标明为合谷（LI4）的真人手部原始照片；保留原图，不新增或移动标点。",
+      "kind": "real-photo",
+      "changes": "未修改原始照片",
+      "clinicalReviewed": false,
+      "bytes": 380682,
+      "sha256": "30389ea5805cb868ae8e70c80a4bd1b31c2030b7a0c050c7b140966122d33dbb"
+    },
+    {
+      "id": "sun-2026-regional",
+      "codes": [
+        "PC6",
+        "LU5",
+        "GV26",
+        "SP6",
+        "CV23",
+        "BL40"
+      ],
+      "title": "真人局部穴位对照 · 论文原图",
+      "file": "regional-sun-2026-fig3.webp",
+      "author": "Sun、Tao、Jiang、Lin等，2026，Frontiers in Neurology，图3",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "sourceUrl": "https://www.frontiersin.org/journals/neurology/articles/10.3389/fneur.2026.1876482/full",
+      "caption": "保留论文原图：红点是文中研究穴位；蓝色Sham是研究对照位置，不能作为穴位。Lower HT1为论文中的下极泉，不能直接当作HT1极泉。本页仅对应PC6内关、LU5尺泽、GV26水沟、SP6三阴交、CV23廉泉、BL40委中；不把研究方案当作个人操作指南。",
+      "kind": "real-photo",
+      "changes": "原图未改；中文图注为本应用整理",
+      "clinicalReviewed": false,
+      "bytes": 246338,
+      "sha256": "6e212a43ee3ec82a479b4b0797e3c971b979e07f0da6d5566c99ad208063e3d3"
+    }
+  ],
+  "protected": true,
+  "noAutomaticDeletion": true,
+  "allPointsCovered": false
+}

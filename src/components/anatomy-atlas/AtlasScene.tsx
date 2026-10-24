@@ -109,7 +109,7 @@ export default function AtlasScene({data,state,onSelect,onPoint,onPose,onPeel,on
    if(previous!==s||needsFit){dirty=true;
     const region=BODY_REGIONS.find(r=>r.id===s.region);regionPlanes.forEach((p,i)=>{p.constant=region?(i%2===0?-region.min[Math.floor(i/2)]:region.max[Math.floor(i/2)]):100;});
     const visible=new Set(s.visible),hidden=new Set(s.hidden),faded=new Set(s.faded),selected=new Set((s.selected?.startsWith("@system:")?[]:selectionParts(data.atlas,s.selected)).map(p=>p.id));
-    data.atlas.parts.forEach((p,i)=>{const shown=(!region||boundsOverlap(p.bounds[0],p.bounds[1],region))&&!hidden.has(p.id)&&(s.isolate?(s.isolateIds?s.isolateIds.includes(p.id):selected.has(p.id)):visible.has(p.system));const group=SYSTEMS.findIndex(a=>a[0]===p.system),angle=group/SYSTEMS.length*Math.PI*2;const dx=Math.sin(angle)*s.explode*.35,dz=Math.cos(angle)*s.explode*.35;
+    data.atlas.parts.forEach((p,i)=>{const shown=p.id!=="FJ2815"&&(!region||boundsOverlap(p.bounds[0],p.bounds[1],region))&&!hidden.has(p.id)&&(s.isolate?(s.isolateIds?s.isolateIds.includes(p.id):selected.has(p.id)):visible.has(p.system));const group=SYSTEMS.findIndex(a=>a[0]===p.system),angle=group/SYSTEMS.length*Math.PI*2;const dx=Math.sin(angle)*s.explode*.35,dz=Math.cos(angle)*s.explode*.35;
      mask.set([dx,0,dz,shown?(selected.has(p.id)?2:1)*(faded.has(p.id)?-1:1):0],i*4);
     });picks.forEach(m=>{const i=m.userData.index;m.position.set(mask[i*4],0,mask[i*4+2]);m.updateMatrixWorld();});
     batches.forEach(b=>{b.mesh.visible=b.ids.some(i=>Math.abs(mask[i*4+3])>.5);});texture.needsUpdate=true;
