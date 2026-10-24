@@ -28,15 +28,17 @@ export const OBSERVATION_LAYERS=[
 ];
 /** Drag, multi-touch and cancellation never become a tap or a held selection. */
 export class AtlasGestureTracker {
+ private holdMs:number; constructor(holdMs=500){this.holdMs=holdMs;}
+ get activePointer(){return this.active;}
  private active:{id:number;x:number;y:number;time:number}|null=null;
  private last:{key:string;time:number}|null=null;
  start(id:number,x:number,y:number,time:number,count:number){this.active=count===1?{id,x,y,time}:null;if(count!==1)this.last=null;}
  move(id:number,x:number,y:number){if(this.active?.id===id&&Math.hypot(x-this.active.x,y-this.active.y)>8)this.cancel();}
  cancel(){this.active=null;this.last=null;}
- held(time:number){return !!this.active&&time-this.active.time>=3000;}
+ held(time:number){return !!this.active&&time-this.active.time>=this.holdMs;}
  finish(id:number,x:number,y:number,time:number,key:string):AtlasGesture|null{
  const a=this.active;this.active=null;if(!a||a.id!==id||Math.hypot(x-a.x,y-a.y)>8)return null;
- if(time-a.time>=3000){this.last=null;return "long";}
+ if(time-a.time>=this.holdMs){this.last=null;return "long";}
  if(this.last?.key===key&&time-this.last.time<350){this.last=null;return "double";}
  this.last={key,time};return "tap";
  }

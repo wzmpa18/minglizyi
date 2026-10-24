@@ -53,7 +53,13 @@ export const SYSTEMS:[string,string,string,string][]=[
  ["sensory","感觉器官","#b0c8ce","视觉、听觉和平衡相关结构将刺激转化为神经信号。"],
 ];
 const NAMES:Record<string,string>={heart:"心脏",liver:"肝脏",brain:"脑",stomach:"胃",spleen:"脾脏",pancreas:"胰腺",trachea:"气管",diaphragm:"膈肌",gallbladder:"胆囊","urinary bladder":"膀胱",duodenum:"十二指肠",jejunum:"空肠",ileum:"回肠",rectum:"直肠",prostate:"前列腺",skin:"皮肤",aorta:"主动脉","left kidney":"左肾","right kidney":"右肾","left lung":"左肺","right lung":"右肺",sacrum:"骶骨",mandible:"下颌骨",sternum:"胸骨","ascending colon":"升结肠","transverse colon":"横结肠","descending colon":"降结肠","sigmoid colon":"乙状结肠"};
-export const chineseName=(part:Pick<Part,"name">&LearningMetadata)=>typeof part.zhName==="string"&&part.zhName.trim()?part.zhName.slice(0,120):NAMES[part.name.toLowerCase()]||"中文名待校对";
+const BONES:Record<string,string>={humerus:"肱骨",ulna:"尺骨",radius:"桡骨",femur:"股骨",tibia:"胫骨",fibula:"腓骨",clavicle:"锁骨",scapula:"肩胛骨",patella:"髌骨",talus:"距骨",calcaneus:"跟骨",sternum:"胸骨",skull:"颅骨",sacrum:"骶骨",mandible:"下颌骨"};
+export const chineseName=(part:Pick<Part,"name">&LearningMetadata)=>{
+ if(typeof part.zhName==="string"&&part.zhName.trim())return part.zhName.slice(0,120);
+ const raw=part.name.toLowerCase();if(NAMES[raw]||BONES[raw])return NAMES[raw]||BONES[raw];
+ const side=raw.startsWith("left ")?"左":raw.startsWith("right ")?"右":"";const base=side?raw.slice(raw.indexOf(" ")+1):raw;
+ return side&&(NAMES[base]||BONES[base])?side+(NAMES[base]||BONES[base]):"中文名待校对";
+};
 export function selectionParts(atlas:Atlas,id:string|null):Part[]{
  if(!id)return [];const concept=atlas.concepts.find(c=>c.id===id);const ids=new Set(concept?.elements||[id]);return atlas.parts.filter(p=>ids.has(p.id));
 }
