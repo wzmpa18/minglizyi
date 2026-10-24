@@ -4,6 +4,8 @@ import React from "react";
 import { useRouter } from "next/navigation";
 import { BrandHeader } from "@/components/shared";
 
+import { BUNDLED_PHOTOS } from "@/lib/acupointPhotos";
+
 const BRAND = "#7B2FBE";
 
 /** 协议条款区块 */
@@ -138,6 +140,7 @@ export function PrivacyPolicyDocument({ onBack }: { onBack?: () => void } = {}) 
           <P>界面语言和主题偏好存于本机，不改变排算规则。文化学习内容与私人日程分开，不根据出生资料自动诊断、开药或发送灾祸提醒。您可在发现→同辰雅集退出，在各讨论区删除留言，在日历→记事提醒管理本机数据，或通过我的→用户反馈联系我们。</P>
         </Section>
 
+        <section id="acupoint-photo-credits" style={{marginBottom:24,padding:16,border:'1px solid #ddd',borderRadius:12,fontSize:14,lineHeight:1.8,color:'#444'}}><h2 style={{fontWeight:700}}>穴位图片：开源与资料来源</h2><P>本页集中列明图片作者、原始出处、开放许可与修改情况。图片权利独立于本应用；许可不代表作者认可本应用，照片仅用于学习对照。</P>{BUNDLED_PHOTOS.records.map(p=><article key={p.id} style={{marginTop:16}}><h3 id={p.id} style={{fontWeight:700}}>{p.title}</h3><p>作者／资料：{p.author}</p><p>对应穴位：{p.codes.join('、')}</p><p><a href={p.sourceUrl} target="_blank" rel="noopener noreferrer">原始出处与作品</a> · <a href={p.licenseUrl} target="_blank" rel="noopener noreferrer">{p.license}完整许可</a></p><p>{p.changes}。</p><p>{p.caption}</p></article>)}</section>
         <section id="third-party-astronomy" style={{marginBottom:24,padding:16,border:'1px solid #ddd',borderRadius:12,fontSize:14,lineHeight:1.8,color:'#444'}}><h2 style={{fontWeight:700}}>天文馆数据来源与开源许可</h2><P>天文馆采用Astronomy Engine 2.1.19（MIT许可）计算日月行星；恒星目录由David Nash / Astronexus及HYG贡献者提供，本应用使用HYG v4.1亮于6.5等的8920颗子集，经过筛选与格式转换，按CC BY-SA 4.0提供。恒星目录的岁差转换没有外推自行，远古和未来星图只作学习示意。</P><P><a href="https://yandaoguoxue.yandao.vip/guide/astronomy/">官网天文馆使用与坐标说明</a>；<a href="https://github.com/cosinekitty/astronomy/tree/v2.1.19/source/js" target="_blank" rel="noopener noreferrer">Astronomy Engine固定版本与MIT许可</a>；<a href="https://github.com/astronexus/HYG-Database/tree/c7f7f883fe678cc7680169a50ccd7dcc49b060ce" target="_blank" rel="noopener noreferrer">HYG原始来源</a>；<a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0许可</a>。上述来源链接供核对权利与技术说明，不需要前往代码仓库才能使用天文馆。</P></section>
         <section style={{marginBottom:24,padding:16,border:'1px solid #ddd',borderRadius:12,fontSize:14,lineHeight:1.8,color:'#444'}}><h2 style={{fontWeight:700}}>人生记录、活盘副本与离线识字</h2><P>人生记录中的日记、健康原件、外部点评、OCR核对版和搜索索引默认属于本机私人档案，不自动上传平台、不进入找人库、公共审核、广告或模型训练。每个独立档案使用本人保管的密码和恢复密钥；退出社交账号或会员到期不删除原件，不收取读取、删除和导出自己的本地资料的费用。浏览器清站点数据、系统回收、卸载或设备故障可能丢失本机资料，必须自行维护有效备份。</P><P>Android使用随包提供的Tesseract离线中文模型，iOS使用系统Apple Vision；Web当前没有已验证的离线识字路径，会明确提示手动核对，不回退平台识字或云AI。识字仅为草稿，不保证医生手写、小数点、药名、否定词或左右侧准确；未核对内容不自动创建用药计划。私人档案的端侧大模型与安全供应商直连能力未配置时明确标为不支持，不发送平台AI代理。</P><P>本人主动分享活盘时，只向指定且同意交流的接收人发送预览确认的独立副本。共享服务保存获准副本、权限和交流文字，不接收人生原库；共享副本和私信可按治理要求处理，HTTPS不等于端到端加密。姓名、日期和地点的移除不保证无法从星位或四柱推断身份。留档、导出、再转发和外部AI处理分别授权；撤销停止后续访问，无法收回他人已获准保存的副本或截图。</P><P>同校仅使用成年人本人主动填写并单独同意的学校标签，属于自填信息，不代表学籍或官方认证；不从健康原件获取医院，不开放病种、病房、住院日期或同就诊找人。好友、同辰匹配不自动取得读取人生记录、健康资料或全部排盘的权限。</P><P>备份包由本人设置独立密码，选择保存到文件、自己的云盘或电脑。平台不自动代存私有原库，不承诺所有云盘支持后台同步；系统保存请求不等于云端备份或换机恢复成功。恢复先核验并进入独立档案，旧提醒需重新确认。主动选择其他平台服务或第三方阅读器时，以当次告知与本人选择为准。</P><a href="/legal/life-ocr/sources.json">离线识字引擎与模型来源、许可索引</a></section>
         <Section index={1} title="信息收集范围">
