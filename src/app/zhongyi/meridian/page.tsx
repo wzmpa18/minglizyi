@@ -690,6 +690,8 @@ function AcupointListPage({ meridianName }: { meridianName: string }) {
 // ==================== 穴位详情页（标准经络） ====================
 function AcupointDetailPage({ acupointName }: { acupointName: string }) {
   const router = useRouter();
+  const pointSearch = useSearchParams();
+  const pointSide = pointSearch.get("side") === "-1" ? -1 : 1;
   const [dbLoaded, setDbLoaded] = useState(false);
   const [aiData, setAiData] = useState<any>(null);
   const [scraping, setScraping] = useState(false);
@@ -801,7 +803,7 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
       </div>
 
       <AcupointStudySources meridianName={acupoint.meridian} selectedCode={acupoint.code} />
-      <Link href={`/zhongyi/anatomy3d/?pointName=${encodeURIComponent(acupoint.name)}`} style={{display:"block",margin:12,padding:12,borderRadius:10,color:BRAND,background:BRAND_BG,fontWeight:700}}>在3D参考人体中对照{acupoint.name} →</Link>
+      <Link href={`/zhongyi/anatomy3d/?pointName=${encodeURIComponent(acupoint.name)}&side=${pointSide}`} style={{display:"block",margin:12,padding:12,borderRadius:10,color:BRAND,background:BRAND_BG,fontWeight:700}}>在3D参考人体中对照{acupoint.name} →</Link>
 
       {/* 既有静态整理资料，尚未逐条与现行标准校对。 */}
       <div style={{ margin: "12px", background: "white", borderRadius: "16px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>

@@ -5,7 +5,7 @@ import {useEffect,useRef} from "react";
 import * as T from "three";
 import {OrbitControls} from "three/examples/jsm/controls/OrbitControls.js";
 import {mergeGeometries} from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import {softenPelvicSurface} from "./teaching-skin";
+import {arrangePointLabels,meridianColor,displayPointCode,displayPointName,type LabelCandidate} from "./atlasPointLabels";
 import {AtlasGestureTracker,viewPreferences,BODY_REGIONS,boundsOverlap,insideRegion,type AtlasGesture,type Position3} from "./atlasInteraction";
 import {SYSTEMS,selectionParts,type Dataset} from "./atlasPack";
 import type {ViewState,HoldFeedback,CameraPose} from "./atlasState";
@@ -19,17 +19,18 @@ export default function AtlasScene({data,state,onSelect,onPoint,onPose,onPeel,on
   const geometries:T.BufferGeometry[]=[],materials:T.Material[]=[];
   let renderer:T.WebGLRenderer;
   try{renderer=new T.WebGLRenderer({antialias:true,alpha:false});}catch{callbacks.current.onError("设备暂不支持3D显示，可继续使用原图谱与文字学习。");return;}
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.5));renderer.localClippingEnabled=true;renderer.setClearColor(0xf7f4ef);el.appendChild(renderer.domElement);renderer.domElement.style.userSelect="none";renderer.domElement.style.setProperty("-webkit-touch-callout","none");
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.5));renderer.localClippingEnabled=true;renderer.setClearColor(0xf7f4ef);renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1;el.appendChild(renderer.domElement);renderer.domElement.style.userSelect="none";renderer.domElement.style.setProperty("-webkit-touch-callout","none");
+  const names=document.createElement("div");names.setAttribute("aria-label","当前可见穴位名称");Object.assign(names.style,{position:"absolute",inset:"0",pointerEvents:"none",overflow:"hidden"});el.appendChild(names);
   const preventMenu=(e:Event)=>e.preventDefault();renderer.domElement.addEventListener("contextmenu",preventMenu);
   renderer.domElement.setAttribute("aria-label","三维人体：拖动旋转，双指或滚轮缩放，点击结构或穴位");
   const scene=new T.Scene(),camera=new T.PerspectiveCamera(34,1,.005,100),controls=new OrbitControls(camera,renderer.domElement);let dirty=true;const invalidate=()=>{dirty=true;callbacks.current.onPose({position:camera.position.toArray() as Position3,target:controls.target.toArray() as Position3});};controls.addEventListener("change",invalidate);
   controls.enableDamping=true;controls.minDistance=.08;controls.maxDistance=8;controls.target.set(0,.85,0);camera.position.set(.8,1,3.5);
-  scene.add(new T.HemisphereLight(0xffffff,0x8c8279,2.7));const light=new T.DirectionalLight(0xffffff,3);light.position.set(2,3,4);scene.add(light);
-  const backlight=new T.DirectionalLight(0xe1ecff,1.8);backlight.position.set(-2,1,-2);scene.add(backlight);
+  scene.add(new T.HemisphereLight(0xffffff,0x8c8279,1.6));const light=new T.DirectionalLight(0xffffff,2.1);light.position.set(2,3,4);scene.add(light);
+  const backlight=new T.DirectionalLight(0xe1ecff,.9);backlight.position.set(-2,1,-2);scene.add(backlight);
   const width=T.MathUtils.ceilPowerOfTwo(data.atlas.parts.length),mask=new Float32Array(width*4),texture=new T.DataTexture(mask,width,1,T.RGBAFormat,T.FloatType);texture.needsUpdate=true;
   const plane=new T.Plane(new T.Vector3(0,-1,0),1.7),regionPlanes=[new T.Plane(new T.Vector3(1,0,0),100),new T.Plane(new T.Vector3(-1,0,0),100),new T.Plane(new T.Vector3(0,1,0),100),new T.Plane(new T.Vector3(0,-1,0),100),new T.Plane(new T.Vector3(0,0,1),100),new T.Plane(new T.Vector3(0,0,-1),100)],clipPlanes=[plane,...regionPlanes],picks:T.Mesh[]=[],batches:{mesh:T.Mesh;ids:number[]}[]=[];
   const mats=new Map(SYSTEMS.map(([id,,color])=>{
-   const m=new T.MeshStandardMaterial({color,roughness:.65,side:T.DoubleSide,clippingPlanes:clipPlanes});materials.push(m);
+   const m=new T.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:.65,side:T.DoubleSide,clippingPlanes:clipPlanes});materials.push(m);
    m.onBeforeCompile=shader=>{
     shader.uniforms.partMask={value:texture};shader.uniforms.maskWidth={value:width};
     shader.vertexShader="attribute float partIndex;uniform sampler2D partMask;uniform float maskWidth;varying float shown;varying float chosen;varying float faded;\n"+shader.vertexShader;
@@ -40,29 +41,38 @@ export default function AtlasScene({data,state,onSelect,onPoint,onPose,onPeel,on
    };return [id,m] as const;
   }));
   const dotGeometry=new T.SphereGeometry(.0035,6,5);geometries.push(dotGeometry);
-  const dotMaterial=new T.MeshBasicMaterial({color:0x8a3262,clippingPlanes:clipPlanes});materials.push(dotMaterial);
+  const pointByCode=new Map(data.points.map(p=>[p.code,p]));
+  const dotMaterials=new Map(Array.from(new Set(data.points.map(p=>p.meridianId))).map(id=>{const m=new T.MeshBasicMaterial({color:meridianColor(id),clippingPlanes:clipPlanes});materials.push(m);return[id,m] as const;}));
   const dots=new T.Group(),lines=new T.Group();scene.add(dots,lines);
+  const pointNames:{dot:T.Mesh;normal:T.Vector3;button:HTMLButtonElement;key:string;code:string;side:1|-1;name:string}[]=[];
   for(const point of data.surface.points){
-   const dot=new T.Mesh(dotGeometry,dotMaterial),[code,side]=point.key.split(":");
+   const [code,side]=point.key.split(":"),entry=pointByCode.get(code);if(!entry)continue;
+   const dot=new T.Mesh(dotGeometry,dotMaterials.get(entry.meridianId));
    dot.position.fromArray(point.target.position).addScaledVector(new T.Vector3().fromArray(point.target.normal),.0015);
    dot.userData={code,side:Number(side)};dots.add(dot);
+   const pointName=displayPointName(entry.name),button=document.createElement("button");button.type="button";button.textContent=pointName;button.setAttribute("aria-label",`${pointName} ${displayPointCode(code)} ${entry.midline?"正中":Number(side)===1?"左侧":"右侧"}穴位资料`);button.title=`${pointName} ${displayPointCode(code)} · ${code==="GV24+"?"经外奇穴":entry.meridian}`;
+   Object.assign(button.style,{display:"none",position:"absolute",pointerEvents:"auto",border:`1px solid ${meridianColor(entry.meridianId)}`,borderLeftWidth:"3px",borderRadius:"5px",background:"#fffffff0",color:"#292524",font:"12px system-ui",padding:"4px 6px",height:"26px",whiteSpace:"nowrap",lineHeight:"16px",boxShadow:"0 1px 3px #0002",touchAction:"manipulation"});
+   button.addEventListener("pointerdown",e=>e.stopPropagation());button.addEventListener("click",e=>{e.stopPropagation();callbacks.current.onPoint(code,Number(side) as 1|-1);});names.appendChild(button);pointNames.push({dot,normal:new T.Vector3().fromArray(point.target.normal),button,key:point.key,code,side:Number(side) as 1|-1,name:pointName});
   }
   for(const path of data.surface.paths){const values=path.vertices;if(!Array.isArray(values))continue;
    const g=new T.BufferGeometry();g.setAttribute("position",new T.Float32BufferAttribute(values as number[],3));geometries.push(g);
-   const material=new T.LineBasicMaterial({color:0x87639e,clippingPlanes:clipPlanes});materials.push(material);const line=new T.LineSegments(g,material);line.userData.id=path.id;lines.add(line);
+   const material=new T.LineBasicMaterial({color:meridianColor(String(path.id||path.meridianId||"")),clippingPlanes:clipPlanes});materials.push(material);const line=new T.LineSegments(g,material);line.userData.id=path.id||path.meridianId;lines.add(line);
   }
   try{
    data.atlas.chunks.forEach((chunk,ci)=>{
     const raw=data.files[chunk.url];const buffer=new Uint8Array(raw).buffer;const groups=new Map<string,T.BufferGeometry[]>();
     data.atlas.parts.forEach((p,i)=>{
-     if(p.chunk!==ci||p.id==="FJ2815"||p.id==="FJ2813")return;
+     if(p.chunk!==ci)return;
      const g=new T.BufferGeometry();g.setAttribute("position",new T.BufferAttribute(new Float32Array(buffer,p.positions,p.vertexCount*3),3));
      g.setAttribute("normal",new T.BufferAttribute(new Int16Array(buffer,p.normals,p.vertexCount*3),3,true));g.setIndex(new T.BufferAttribute(new Uint32Array(buffer,p.indices,p.indexCount),1));
-     if(p.id==="FJ2810")softenPelvicSurface(g);else if(p.system==="integumentary"){g.deleteAttribute("normal");g.computeVertexNormals();}
+     // Preserve source anatomy, including the original skin and hair geometry.
+     let tint=SYSTEMS.find(s=>s[0]===p.system)?.[2]||"#cda78e";const name=p.name.toLowerCase();
+     if(name.includes("hair")||name.includes("eyebrow"))tint="#332923";else if(name==="lip")tint="#a95558";else if(name.includes("iris")||name.includes("choroid"))tint="#513d29";else if(name.includes("sclera")||name.includes("cornea"))tint="#eee7d7";
+     const colour=new T.Color(tint),colours=new Float32Array(p.vertexCount*3);for(let v=0;v<p.vertexCount;v++)colours.set([colour.r,colour.g,colour.b],v*3);g.setAttribute("color",new T.BufferAttribute(colours,3));
      g.computeBoundingBox();g.computeBoundingSphere();geometries.push(g);const mesh=new T.Mesh(g);mesh.userData.index=i;picks.push(mesh);
-     g.setAttribute("partIndex",new T.BufferAttribute(new Float32Array(g.getAttribute("position").count).fill(i),1));const list=groups.get(p.system)||[];list.push(g);groups.set(p.system,list);
+     g.setAttribute("partIndex",new T.BufferAttribute(new Float32Array(g.getAttribute("position").count).fill(i),1));const transparentMedia=p.system==="sensory"&&/cornea|lens|chamber|vitreous/.test(name),groupKey=p.system+(transparentMedia?":clear":"");if(transparentMedia&&!mats.has(groupKey)){const original=mats.get(p.system)!;const clear=original.clone();clear.onBeforeCompile=original.onBeforeCompile;clear.userData.clearMedia=true;clear.opacity=.12;clear.transparent=true;clear.depthWrite=false;materials.push(clear);mats.set(groupKey,clear);}const list=groups.get(groupKey)||[];list.push(g);groups.set(groupKey,list);
     });
-    groups.forEach((gs,id)=>{const g=mergeGeometries(gs);if(!g)throw Error("网格无法合并");geometries.push(g);const mesh=new T.Mesh(g,mats.get(id));mesh.frustumCulled=false;scene.add(mesh);batches.push({mesh,ids:data.atlas.parts.flatMap((p,i)=>p.chunk===ci&&p.system===id?[i]:[])});});
+    groups.forEach((gs,id)=>{const g=mergeGeometries(gs);if(!g)throw Error("网格无法合并");geometries.push(g);const mesh=new T.Mesh(g,mats.get(id));mesh.frustumCulled=false;scene.add(mesh);batches.push({mesh,ids:data.atlas.parts.flatMap((p,i)=>p.chunk===ci&&p.system===id.split(":")[0]?[i]:[])});});
    });callbacks.current.onReady();
   }catch{callbacks.current.onError("模型数据无法显示，请恢复旧图谱或重新下载资源。");}
   let previous:ViewState|null=null,needsFit=true,previousAspect=0;
@@ -78,7 +88,7 @@ export default function AtlasScene({data,state,onSelect,onPoint,onPose,onPeel,on
   const pick=(x:number,y:number,meshOnly=false)=>{
    const rect=renderer.domElement.getBoundingClientRect();mouse.set((x-rect.left)/rect.width*2-1,-(y-rect.top)/rect.height*2+1);ray.setFromCamera(mouse,camera);const s=latest.current,region=BODY_REGIONS.find(r=>r.id===s.region);
    const allowed=(p:T.Vector3)=>(s.section===null||p.y<=s.section)&&(!region||insideRegion(p.toArray() as Position3,region));
-   if(!meshOnly&&s.points&&dots.visible){const hit=ray.intersectObjects(dots.children.filter(d=>d.visible)).find(h=>allowed(h.point));if(hit)return {key:"point:"+hit.object.userData.code,code:hit.object.userData.code as string,side:hit.object.userData.side as 1|-1};}
+   if(!meshOnly&&s.points&&dots.visible){const rect=renderer.domElement.getBoundingClientRect(),candidate=pointNames.filter(p=>p.dot.visible).map(p=>{const screen=p.dot.position.clone().project(camera),toCamera=camera.position.clone().sub(p.dot.position).normalize();return{p,z:screen.z,facing:p.normal.dot(toCamera),distance:Math.hypot((screen.x+1)*rect.width/2-(x-rect.left),(-screen.y+1)*rect.height/2-(y-rect.top))};}).filter(p=>p.z>-1&&p.z<1&&p.facing>0&&p.distance<=16).sort((a,b)=>a.distance-b.distance)[0];if(candidate)return {key:"point:"+candidate.p.code,code:candidate.p.code,side:candidate.p.side};}
    const hit=ray.intersectObjects(picks.filter(m=>Math.abs(mask[m.userData.index*4+3])>.5)).find(h=>allowed(h.point));
    return hit?{key:data.atlas.parts[hit.object.userData.index].id,position:hit.point.toArray() as Position3}:null;
   };
@@ -103,14 +113,19 @@ export default function AtlasScene({data,state,onSelect,onPoint,onPose,onPeel,on
      mask.set([dx,0,dz,shown?(selected.has(p.id)?2:1)*(faded.has(p.id)?-1:1):0],i*4);
     });picks.forEach(m=>{const i=m.userData.index;m.position.set(mask[i*4],0,mask[i*4+2]);m.updateMatrixWorld();});
     batches.forEach(b=>{b.mesh.visible=b.ids.some(i=>Math.abs(mask[i*4+3])>.5);});texture.needsUpdate=true;
-    mats.forEach(m=>{m.opacity=s.opacity;m.transparent=s.opacity<1||s.faded.length>0;m.depthWrite=s.opacity>=1&&!s.faded.length;});plane.constant=s.section??100;
+    mats.forEach(m=>{m.opacity=s.opacity*(m.userData.clearMedia ? .12 : 1);m.transparent=!!m.userData.clearMedia||s.opacity<1||s.faded.length>0;m.depthWrite=!m.userData.clearMedia&&s.opacity>=1&&!s.faded.length;});plane.constant=s.section??100;
     dots.visible=s.points&&s.explode===0&&!s.isolate;lines.visible=dots.visible;
     dots.children.forEach(d=>{const p=data.points.find(p=>p.code===d.userData.code);d.visible=(!region||insideRegion(d.position.toArray() as Position3,region))&&(!s.meridian||p?.meridianId===s.meridian);d.scale.setScalar(s.point===d.userData.code&&s.side===d.userData.side?1.8:1);});
     lines.children.forEach(l=>{l.visible=!s.meridian||l.userData.id===s.meridian;});
     if(!previous||previous.reset!==s.reset||previous.view!==s.view||previous.focus!==s.focus||previous.point!==s.point||previous.side!==s.side||previous.region!==s.region||needsFit)fit();needsFit=false;previous=s;
-   }controls.update();if(dirty){renderer.render(scene,camera);dirty=false;}
+   }controls.update();if(dirty){
+    const candidates:(LabelCandidate&{button:HTMLButtonElement})[]=[];
+    for(const p of pointNames){p.button.style.display="none";if(!dots.visible||!p.dot.visible)continue;const projected=p.dot.position.clone().project(camera),toCamera=camera.position.clone().sub(p.dot.position).normalize();if(projected.z< -1||projected.z>1||p.normal.dot(toCamera)<=.06)continue;const w=Math.max(38,p.name.length*13+17),anchorX=(projected.x+1)*el.clientWidth/2,anchorY=(-projected.y+1)*el.clientHeight/2;const x=anchorX+w+12<el.clientWidth?anchorX+9:anchorX-w-9;candidates.push({key:p.key,x,y:anchorY-13,width:w,height:26,selected:s.point===p.code&&s.side===p.side,button:p.button});}
+    const canvasRect=el.getBoundingClientRect(),blocked=Array.from(el.closest(".atlas-viewer")?.querySelectorAll(".atlas-nav,.atlas-actions,.atlas-label,[data-atlas-point-summary]")||[]).map(node=>{const r=node.getBoundingClientRect();return{x:r.left-canvasRect.left,y:r.top-canvasRect.top,width:r.width,height:r.height};});
+    for(const p of arrangePointLabels(candidates,el.clientWidth,el.clientHeight,Math.min(42,Math.max(16,Math.floor(el.clientWidth/18))),blocked)){Object.assign(p.button.style,{display:"block",left:p.x+"px",top:p.y+"px",fontWeight:p.selected?"700":"400",outline:p.selected?"2px solid #7b2fbe":"none"});}
+    renderer.render(scene,camera);dirty=false;}
   };animate();
-  return()=>{dead=true;window.removeEventListener("blur",stopHold);document.removeEventListener("visibilitychange",visibility);clearHold();cancelAnimationFrame(frame);observer.disconnect();controls.dispose();renderer.domElement.removeEventListener("pointerdown",start);renderer.domElement.removeEventListener("pointermove",move);renderer.domElement.removeEventListener("contextmenu",preventMenu);renderer.domElement.removeEventListener("pointerup",end);renderer.domElement.removeEventListener("pointercancel",cancel);renderer.domElement.removeEventListener("webglcontextlost",lost);geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());texture.dispose();renderer.dispose();renderer.domElement.remove();};
+  return()=>{dead=true;window.removeEventListener("blur",stopHold);document.removeEventListener("visibilitychange",visibility);clearHold();cancelAnimationFrame(frame);observer.disconnect();controls.dispose();renderer.domElement.removeEventListener("pointerdown",start);renderer.domElement.removeEventListener("pointermove",move);renderer.domElement.removeEventListener("contextmenu",preventMenu);renderer.domElement.removeEventListener("pointerup",end);renderer.domElement.removeEventListener("pointercancel",cancel);renderer.domElement.removeEventListener("webglcontextlost",lost);geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());texture.dispose();renderer.dispose();renderer.domElement.remove();names.remove();};
  },[data]);
  return <div ref={host} style={{width:"100%",height:"100%",touchAction:"none"}}/>;
 }

@@ -344,7 +344,7 @@ export function searchAcupoints(keyword: string): TcmAcupoint[] {
     return ACUPOINTS_DB;
   }
   const kw = keyword.toLowerCase();
-  return ACUPOINTS_DB.filter(
+  return [...ACUPOINTS_DB,...EXTRA_POINT_STUDIES].filter(
     (pt) =>
       pt.name.includes(kw) ||
       pt.pinyin.toLowerCase().includes(kw) ||
@@ -359,15 +359,20 @@ export function searchAcupoints(keyword: string): TcmAcupoint[] {
  * 根据编码获取穴位详情
  */
 export function getAcupointByCode(code: string): TcmAcupoint | undefined {
-  return ACUPOINTS_DB.find((pt) => pt.code === code);
+  return ACUPOINTS_DB.find((pt) => pt.code === code) || EXTRA_POINT_STUDIES.find(pt=>pt.code===(code==="GV24+"?"EX-HN3":code));
 }
 
 /**
  * 根据名称获取穴位详情
  */
 export function getAcupointByName(name: string): TcmAcupoint | undefined {
-  return ACUPOINTS_DB.find((pt) => pt.name === name);
+  const canonical=name==="瘛脉"?"瘈脉":name;
+  return ACUPOINTS_DB.find((pt) => pt.name === canonical) || EXTRA_POINT_STUDIES.find(pt=>pt.name===canonical);
 }
+
+// Separate from the unchanged 361 channel points. The source model's GV24+
+// identifier is only an internal key, not the standard code or a Governor point.
+const EXTRA_POINT_STUDIES:TcmAcupoint[]=[{name:"印堂",pinyin:"yin tang",code:"EX-HN3",meridian:"经外奇穴",location:"额部两眉之间",location_detail:"在额部，两眉内侧端之间的中点。",function:"学习辨认额部及眉间的体表标志；不提供自行针刺指导。",literature:"新加坡中医管理委员会《STRE 2019考试大纲》第46页，印堂EX-HN3定位条目：https://www.healthprofessionals.gov.sg/docs/librariesprovider12/default-document-library/stre-2019-examination-syllabus.pdf"}];
 
 /**
  * 获取指定经络的所有穴位
