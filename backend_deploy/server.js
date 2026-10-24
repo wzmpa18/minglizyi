@@ -37,7 +37,7 @@ const securityJournal = require('./securityAudit').getSecurityAudit();
 require('./register_routes').initDatabase();
 app.use(require('./businessIdentityGate').createBusinessIdentityGate({
   verifyToken,
-  getUser: id => require('./middleware/auth').getDB().prepare('SELECT user_id,phone,phone_verified_at,status,deleted_at FROM users WHERE user_id=?').get(id),
+  getUser: id => require('./middleware/auth').getDB().prepare('SELECT user_id,phone,phone_verified_at,status,deleted_at,auth_version FROM users WHERE user_id=?').get(id),
   resolveAdminKey: token => require('./adminRoles').resolveAdminKey(token),
   journal: securityJournal,
 }));

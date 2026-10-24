@@ -178,6 +178,7 @@ function initDatabase() {
   ensureColumn(dbInstance, 'users', 'phone_verified_at', 'TEXT');
   ensureColumn(dbInstance, 'users', 'status', "TEXT NOT NULL DEFAULT 'active'");
   ensureColumn(dbInstance, 'users', 'deleted_at', 'TEXT');
+  ensureColumn(dbInstance, 'users', 'auth_version', 'INTEGER NOT NULL DEFAULT 0');
 
   // ========================================================================
   // 5. 独立账号序列及数据库不可绕过的约束
@@ -1120,6 +1121,9 @@ function logOperation(db, userId, action, detail, ip) {
  * @returns {{ accessToken: string, refreshToken: string, expiresIn: number }}
  */
 function generateTokenPair(payload) {
+  const user = findUserByUserId(payload.userId);
+  if (!user) throw new Error('用户不存在');
+  payload = { ...payload, authVersion: Number(user.auth_version || 0) };
   const accessToken = jwt.sign(payload, JWT_SECRET, {
     expiresIn: JWT_ACCESS_EXPIRES,
   });
@@ -1163,6 +1167,9 @@ function authMiddleware(req, res, next) {
     const user = findUserByUserId(decoded.userId);
     if (!user) {
       return jsonResponse(res, 401, false, '用户不存在或已被删除');
+    }
+    if (Number(decoded.authVersion || 0) !== Number(user.auth_version || 0)) {
+      return jsonResponse(res, 401, false, '密码已更新，请重新登录');
     }
 
     req.user = {
@@ -1560,6 +1567,10 @@ function createRouter() {
         clearRefreshTokenCookie(res);
         return jsonResponse(res, 401, false, '用户不存在');
       }
+      if (Number(decoded.authVersion || 0) !== Number(user.auth_version || 0)) {
+        clearRefreshTokenCookie(res);
+        return jsonResponse(res, 401, false, '密码已更新，请重新登录');
+      }
 
       const tokenPair = generateTokenPair({
         userId: decoded.userId,
@@ -1585,6 +1596,45 @@ function createRouter() {
   // 走 SQLite + bcrypt 校验，不再依赖 localStorage
   // 登录成功后设置 httpOnly cookie + 返回 access token
   // ------------------------------------------------------------------
+  // Existing clients already call this recovery endpoint. Only a real one-time
+  // code authorizes changes; it never creates or merges accounts or their data.
+  router.post('/reset-password', (req, res) => {
+    try {
+      const body = req.body || {};
+      const account = typeof body.account === 'string' ? body.account.trim() : '';
+      const phone = account.replace(/\s/g, '');
+      const isPhone = /^1[3-9]\d{9}$/.test(phone);
+      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(account);
+      if (!isPhone && !isEmail) return jsonResponse(res, 400, false, '请输入正确的手机号或邮箱');
+      const code = isPhone ? body.smsCode : body.emailCode;
+      const password = body.newPassword;
+      if (typeof code !== 'string' || !/^\d{6}$/.test(code)) return jsonResponse(res, 400, false, '请输入6位验证码');
+      if (typeof password !== 'string' || password.length < 8 || password.length > 16 || !/[a-zA-Z]/.test(password) || !/\d/.test(password)) {
+        return jsonResponse(res, 400, false, '密码需为8-16位，包含字母和数字');
+      }
+      const db = initDatabase();
+      const users = isPhone ? db.prepare('SELECT * FROM users WHERE phone=?').all(phone)
+        : db.prepare('SELECT * FROM users WHERE lower(email)=lower(?)').all(account);
+      if (users.length !== 1 || users[0].deleted_at || users[0].status === 'banned') {
+        return jsonResponse(res, 400, false, '账号未注册或已停用，请核对账号或联系反馈支持');
+      }
+      if (!verificationStore.verifyCode(isPhone ? `sms:${phone}` : `email:${account}`, code)) {
+        return jsonResponse(res, 400, false, '验证码错误或已过期，请重新获取');
+      }
+      const user = users[0], hash = bcrypt.hashSync(password, BCRYPT_ROUNDS);
+      db.transaction(() => {
+        db.prepare(`UPDATE users SET password_hash=?,auth_version=auth_version+1,
+          phone_verified_at=CASE WHEN ? THEN ? ELSE phone_verified_at END WHERE user_id=?`)
+          .run(hash, isPhone ? 1 : 0, new Date().toISOString(), user.user_id);
+        logOperation(db, user.user_id, 'password_reset', isPhone ? '手机号验证码重置密码' : '邮箱验证码重置密码', getClientIp(req));
+      })();
+      clearRefreshTokenCookie(res);
+      return jsonResponse(res, 200, true, '密码重置成功，请使用新密码重新登录');
+    } catch {
+      return jsonResponse(res, 503, false, '密码尚未重置，请稍后重新获取验证码再试');
+    }
+  });
+
   router.post('/login', (req, res) => {
     try {
       const { phone, email, password, account } = req.body;

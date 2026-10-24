@@ -112,6 +112,7 @@ function ensureTables() {
       db.exec('ALTER TABLE users ADD COLUMN membership_expiry TEXT');
       console.log('[middleware/auth] 已添加 membership_expiry 字段');
     }
+    if (!colNames.includes('auth_version')) db.exec('ALTER TABLE users ADD COLUMN auth_version INTEGER NOT NULL DEFAULT 0');
   } catch (e) {
     console.warn('[middleware/auth] 表结构检查:', e.message);
   }
@@ -134,6 +135,7 @@ function verifyToken(authHeader) {
       userId: decoded.userId,
       phone: decoded.phone || null,
       email: decoded.email || null,
+      authVersion: Number(decoded.authVersion || 0),
     };
   } catch (e) {
     return null;
@@ -150,14 +152,15 @@ function verifyToken(authHeader) {
  * @param {string} userId - 用户ID
  * @returns {object} - { ok, code, msg }
  */
-function getUserActiveStatus(userId) {
+function getUserActiveStatus(userId, authVersion) {
   const db = getDB();
   if (!db) return { ok: false, code: 'AUTH_DATABASE_UNAVAILABLE', msg: '身份校验暂不可用' };
   try {
-    const row = db.prepare('SELECT status, deleted_at FROM users WHERE user_id = ?').get(userId);
+    const row = db.prepare('SELECT * FROM users WHERE user_id = ?').get(userId);
     if (!row) return { ok: false, code: 'ACCOUNT_NOT_FOUND', msg: '账号不存在，请重新登录' };
     if (row.deleted_at) return { ok: false, code: 'ACCOUNT_DELETED', msg: '该账号已注销' };
     if (row.status === 'banned') return { ok: false, code: 'ACCOUNT_BANNED', msg: '该账号已被封禁，如有疑问请联系客服' };
+    if (authVersion !== undefined && Number(authVersion) !== Number(row.auth_version || 0)) return { ok: false, code: 'SESSION_REVOKED', msg: '密码已更新，请重新登录' };
     return { ok: true };
   } catch (e) {
     return { ok: false, code: 'AUTH_DATABASE_UNAVAILABLE', msg: '身份校验暂不可用' };
@@ -178,9 +181,9 @@ function authMiddleware(req, res, next) {
     });
   }
   // v25.0.61 D19：封禁/注销账号全链路拦截（含已发token的存量会话）
-  const status = getUserActiveStatus(user.userId);
+  const status = getUserActiveStatus(user.userId, user.authVersion);
   if (!status.ok) {
-    return res.status(403).json({
+    return res.status(status.code === 'SESSION_REVOKED' ? 401 : 403).json({
       success: false,
       error: status.msg,
       code: status.code,
