@@ -1,8 +1,8 @@
 const fs=require('fs'),vm=require('vm'),ts=require('typescript'),crypto=require('crypto'),path=require('path');
-const dir=process.argv[2],out=process.argv[3];
+const dir=process.argv[2],out=process.argv[3],candidate=process.argv[4]||'medical-study-library-full-1.0.0.pack';
 function load(file,deps){const exports={};const js=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText;vm.runInNewContext(js,{exports,require:n=>{if(n in deps)return deps[n];throw Error(n)},URL,crypto:crypto.webcrypto,TextEncoder,TextDecoder,Uint8Array,ArrayBuffer,AbortSignal,atob,btoa});return exports;}
 const lib=load('src/lib/medicalStudyLibrary.ts',{'./offlinePackClient':{},'./durableOfflineStore':{},'./releaseFeatures':{CLIENT_VERSION:'25.0.115'}});
-const bytes=fs.readFileSync(path.join(dir,'medical-study-library-full-1.0.0.pack')),pack=lib.validateMedicalLibrary(JSON.parse(bytes));
+const bytes=fs.readFileSync(path.join(dir,candidate)),pack=lib.validateMedicalLibrary(JSON.parse(bytes));
 const manifest=JSON.parse(fs.readFileSync(path.join(dir,'tcm-study-media.json'),'utf8'));let images=0,references=0,maxNativeSubjectBytes=0;
 for(const p of Object.values(pack.passages)){if(crypto.createHash('sha256').update(p.text).digest('hex')!==p.sha256)throw Error('Passage digest');references++;}
 const media=new Map(manifest.records.map(r=>[r.path,r]));

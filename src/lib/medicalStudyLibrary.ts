@@ -4,7 +4,7 @@ import { readOfflineFile, writeOfflineFile } from './durableOfflineStore';
 import { CLIENT_VERSION } from './releaseFeatures';
 
 export interface MedicalSource {title:string;author:string;kind:'LECTURE_TRANSCRIPT'|'CLASSIC_ORIGINAL'|'COMMUNITY_COURSE_NOTES'|'STUDY_REFERENCE';sha256:string;url?:string;localOriginalName?:string;license?:string;inAppBook?:boolean}
-export interface MedicalPassage {source:string;chapter:string;chapterTitle:string;text:string;lineStart:number;lineEnd:number;sha256:string;mappingNote?:string;topic?:'combination_context'|'caution_context'|'indication_context'|'related'}
+export interface MedicalPassage {source:string;chapter:string;chapterTitle:string;text:string;lineStart:number;lineEnd:number;sha256:string;mappingNote?:string;presentation?:'EDITORIAL_SUMMARY';topic?:'combination_context'|'caution_context'|'indication_context'|'related'}
 export interface MedicalIllustration {path:string;title:string;source:string;caption:string}
 export interface MedicalSubject {name:string;kind:string;references:string[];illustrations?:MedicalIllustration[];catalogueVisible?:boolean;region?:string}
 export interface MedicalLibrary {schema:'yandao.medical.study-library.v1';version:string;sources:Record<string,MedicalSource>;passages:Record<string,MedicalPassage>;subjects:Record<string,MedicalSubject>}
@@ -20,13 +20,14 @@ function validSource(source:MedicalSource){
   if(source?.license!==undefined&&!plain(source.license,2000))return false;
   if(source?.localOriginalName!==undefined&&!plain(source.localOriginalName,300))return false;
   if(!source||!plain(source.title,300)||!source.title||!plain(source.author,300)||!source.author||!['LECTURE_TRANSCRIPT','CLASSIC_ORIGINAL','COMMUNITY_COURSE_NOTES','STUDY_REFERENCE'].includes(source.kind)||!/^[a-f0-9]{64}$/.test(source.sha256))return false;
-  if(source.url){try{const url=new URL(source.url);const community=url.hostname==='github.com'&&/^\/Shanemen\/hantang-nihaixia\/blob\/[a-f0-9]{40}\//.test(url.pathname);const edition=url.hostname==='gitlab.com'&&/^\/jicheng\/jc\.data\/-\/blob\/[a-f0-9]{40}\/pages\/book\//.test(url.pathname);if(url.protocol!=='https:'||(!['zh.wikisource.org','www.shidianguji.com'].includes(url.hostname)&&!community&&!edition)||url.username||url.password)return false;}catch{return false;}}
+  if(source.url){try{const url=new URL(source.url);const community=url.hostname==='github.com'&&/^\/Shanemen\/hantang-nihaixia\/blob\/[a-f0-9]{40}\//.test(url.pathname);const institutional=(url.hostname==='herbaltcm.sn.polyu.edu.hk'&&/^\/tc\/herbal\/[a-z-]+$/.test(url.pathname))||(url.hostname==='mpa.hunan.gov.cn'&&url.pathname==='/mpa/xhtml/img/zyyp2010.pdf')||(url.hostname==='www.cmro.gov.hk'&&url.pathname==='/html/gb/useful_information/public_health/publication/Interesting_Chinese_Herbs.html')||(url.hostname==='www.sioc.ac.cn'&&url.pathname==='/science/kpzy/qtzy/tryw/202306/t20230630_6800203.html')||(url.hostname==='gdcmm.gzucm.edu.cn'&&url.pathname==='/info/1010/5037.htm')||(url.hostname==='www.dh.gov.hk'&&url.pathname==='/textonly/chs/press/2004/040424.html');const edition=url.hostname==='gitlab.com'&&/^\/jicheng\/jc\.data\/-\/blob\/[a-f0-9]{40}\/pages\/book\//.test(url.pathname);if(url.protocol!=='https:'||(!['zh.wikisource.org','www.shidianguji.com'].includes(url.hostname)&&!community&&!edition&&!institutional)||url.username||url.password)return false;}catch{return false;}}
   return true;
 }
 async function validReading(reading:SubjectReading){
   if(!reading||!plain(reading.name,100)||!/^\d+\.\d+\.\d+$/.test(reading.version)||!Array.isArray(reading.passages)||reading.passages.length>100)return false;
   if(reading.region!==undefined&&!plain(reading.region,40))return false;
   for(const entry of reading.passages){
+    if(entry.presentation!==undefined&&entry.presentation!=='EDITORIAL_SUMMARY')return false;
     if(entry?.mappingNote!==undefined&&!plain(entry.mappingNote,500))return false;
     if(!entry||!validSource(entry.sourceInfo)||!plain(entry.text,2500)||!plain(entry.chapter,200)||!plain(entry.chapterTitle,500)||!Number.isInteger(entry.lineStart)||entry.lineStart<1||!Number.isInteger(entry.lineEnd)||entry.lineEnd<entry.lineStart)return false;
     const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(entry.text)))).map(v=>v.toString(16).padStart(2,'0')).join('');if(digest!==entry.sha256)return false;
@@ -43,6 +44,7 @@ export function validateMedicalLibrary(raw:unknown):MedicalLibrary {
     if(!/^[a-z0-9_-]{2,120}$/.test(id)||!validSource(source))throw Error('文献缺少出处或来源链接不受支持');
   }
   for(const [id,passage] of Object.entries(value.passages)){
+    if(passage.presentation!==undefined&&passage.presentation!=='EDITORIAL_SUMMARY')throw Error('文献呈现类型无效');
     if(passage?.mappingNote!==undefined&&!plain(passage.mappingNote,500))throw Error('异名对照说明无效');
     if(!/^[a-f0-9]{24}$/.test(id)||!passage||!Object.hasOwn(value.sources,passage.source)||!plain(passage.text,2500)||!plain(passage.chapter,200)||!plain(passage.chapterTitle,500)||
       !Number.isInteger(passage.lineStart)||passage.lineStart<1||!Number.isInteger(passage.lineEnd)||passage.lineEnd<passage.lineStart||!/^[a-f0-9]{64}$/.test(passage.sha256))throw Error('原文段落无效');

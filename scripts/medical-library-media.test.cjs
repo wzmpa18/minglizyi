@@ -12,6 +12,9 @@ test('CI offline injection blocks services and image fetch while preserving bund
  const local=new Xhr();local.open('GET','/offline/index.html');local.send();
  const remote=new Xhr();remote.open('GET','https://example.org');assert.throws(()=>remote.send());
  await timers[0]();assert.deepEqual(proof,[{fetchBlocked:true,xhrBlocked:true,imageFetchBlocked:true,bundledRouteAllowed:true}]);assert.equal(allowed.length,3);
+ // Native bridge setup may replace browser functions after document-start.
+ window.fetch=async()=>({ok:true});Xhr.prototype.open=function(){};Xhr.prototype.send=function(){};
+ await timers[0]();await assert.rejects(window.fetch('/api/health'));const later=new Xhr();later.open('GET','https://example.org');assert.throws(()=>later.send());assert.equal(proof.length,2);
 });
 test('full original books survive IndexedDB loss; corrupted native copies and partial replacements are rejected',async()=>{
  const store=disk(),edition=load('src/lib/tcmEditionPack.ts',{});
@@ -75,4 +78,15 @@ test('cloud catalogue cannot drop retained originals or point at external execut
  const removed=copy(api.bundledStudyMedia);removed.records.pop();assert.throws(()=>api.validateStudyMedia(removed));
  const injected=copy(api.bundledStudyMedia);injected.records[0].path='https://other.invalid/code.js';assert.throws(()=>api.validateStudyMedia(injected));
  await assert.rejects(()=>api.retainedStudyImage(api.bundledStudyMedia.records[0].path));assert.equal([...store.files.keys()].filter(key=>key.startsWith('study-image-')).length,0);
+});
+
+
+test('attributed editorial summaries retain their explicit type after an offline restart',async()=>{
+ const pack=fixture(),id='a'.repeat(24),source=pack.sources['test-source'];
+ source.kind='STUDY_REFERENCE';source.url='https://herbaltcm.sn.polyu.edu.hk/tc/herbal/senna-leaf';
+ pack.passages[id].presentation='EDITORIAL_SUMMARY';
+ const store=disk();await library(pack,store).medicalSubject('point:DU20');
+ const offline=await library(null,store).medicalSubject('point:GV20');assert.equal(offline.passages[0].presentation,'EDITORIAL_SUMMARY');
+ const wrong=copy(pack);wrong.passages[id].presentation='EXPERT_VERIFIED';assert.throws(()=>library(null,disk()).validateMedicalLibrary(wrong));
+ const external=copy(pack);external.sources['test-source'].url='https://herbaltcm.sn.polyu.edu.hk.attacker.example/tc/herbal/senna-leaf';assert.throws(()=>library(null,disk()).validateMedicalLibrary(external));
 });

@@ -225,6 +225,14 @@
           "sourceUrl": "https://zh.wikisource.org/w/index.php?oldid=2490492",
           "sourceQuote": "水斳　味甘平。主治女子赤沃，止血，養精，保血脈，益氣，令人肥健嗜食。一名水英。生池澤。",
           "sourceQuoteSha256": "583a8ea5995da6038ac26a9bad26e2f6b3fa1a7f2d3e2dbabbc6a37a642ddb26"
+        },
+        {
+          "id": "h145",
+          "previousMisreadName": "麻贲",
+          "correctedName": "麻蕡",
+          "scope": "Name only; ancient flower/fruit disagreements preserved; no modern botanical-part, dose or indication inference",
+          "source": "本草綱目·大麻·正誤",
+          "sourceRevision": "https://gitlab.com/jicheng/jc.data/-/blob/fce547b73db49408b34a4144d12e09f09eebafd3/pages/book/本草綱目/index.html"
         }
       ],
       "evidence": [
@@ -2619,8 +2627,8 @@
     },
     {
       "id": "h145",
-      "name": "麻贲",
-      "pinyin": "麻贲",
+      "name": "麻蕡",
+      "pinyin": "",
       "alias": [],
       "nature": "辛，平",
       "meridian": "待考",
