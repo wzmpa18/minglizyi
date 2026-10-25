@@ -46,7 +46,7 @@ export interface YangshengCategory {
 
 export const YANGSHENG_CATEGORIES: YangshengCategory[] = [
   { id: "all", name: "全部", desc: "所有功法", icon: "📋", color: "#7B2FBE" },
-  { id: "qigong", name: "气功导引", desc: "调气导引类养生功法", icon: "🌀", color: "#2E7D32" },
+  { id: "qigong", name: "导引养生法", desc: "传统导引养生文献与动作识读", icon: "🌀", color: "#2E7D32" },
   { id: "neidan", name: "内丹功法", desc: "炼精化气类静功", icon: "🔮", color: "#6A1B9A" },
   { id: "huxi", name: "呼吸吐纳", desc: "调息服气类方法", icon: "💨", color: "#1565C0" },
   { id: "daoyin", name: "导引按跷", desc: "导引按摩类", icon: "👐", color: "#E65100" },

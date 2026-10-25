@@ -1,0 +1,30 @@
+[
+  {
+    "id": "classics-reading",
+    "file": "classics-reading.mp4",
+    "bytes": 182479,
+    "sha256": "5d85705a89ca6978aea13e02087d166ed174141f4c81cf5150a177daba2a1d98",
+    "seconds": 48,
+    "width": 720,
+    "height": 1280,
+    "codec": "H264/yuv420p",
+    "audio": false,
+    "source": "本项目原创学习方法字幕，非古籍原文、非真人名师授课",
+    "thirdPartyVideoDownloaded": false,
+    "fontFileDistributed": false
+  },
+  {
+    "id": "atlas-source-reading",
+    "file": "atlas-source-reading.mp4",
+    "bytes": 197548,
+    "sha256": "298c1d51d8118816a7eab2aa6cc9a035cba7074345a042781d9b6c99acc165ae",
+    "seconds": 48,
+    "width": 720,
+    "height": 1280,
+    "codec": "H264/yuv420p",
+    "audio": false,
+    "source": "本项目原创学习方法字幕，非古籍原文、非真人名师授课",
+    "thirdPartyVideoDownloaded": false,
+    "fontFileDistributed": false
+  }
+]

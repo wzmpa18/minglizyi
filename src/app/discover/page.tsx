@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { StudyCommunityHome } from "@/components/StudyCommunityHome";
+import { BuiltInLearningVideos } from "@/components/BuiltInLearningVideos";
 import { TongchenEntry } from "@/components/TongchenEntry";
 import { PUBLIC_SOCIAL_ENABLED } from "@/lib/releaseFeatures";
 import Link from "next/link";
@@ -386,8 +387,7 @@ function VideoCard({
         ) : (
           <button
             onClick={() => {
-              if (video.platform === "bilibili") openExternalLink(video.url);
-              else setPlaying(true);
+              setPlaying(true);
             }}
             className="flex h-full w-full items-center justify-center"
             style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)" }}
@@ -1505,12 +1505,13 @@ function FullDiscoverPage() {
       {/* ==================== Tab 3: 学习视频 ==================== */}
       {activeTab === "video" && (
         <>
+          <div className="m-3"><BuiltInLearningVideos /></div>
           {/* 合规提示 */}
           <div
             className="mx-3 mt-3 rounded-lg px-4 py-2.5 text-xs leading-relaxed"
             style={{ backgroundColor: "#FFF8E1", color: "#8D6E63" }}
           >
-            视频内容版权归原平台及作者所有，本应用仅做链接聚合展示，不存储任何视频内容。如发现侵权内容，请点击「侵权举报」。
+            上方为本平台原创学习方法微课。下方为外部参考视频，其版权归原平台及作者所有；本应用不存储第三方原视频。点击「去原平台观看」才会打开外站，发现侵权可举报。
           </div>
 
           {/* P9-首发裁剪：提交学习视频入口隐藏 */}
@@ -1558,8 +1559,8 @@ function FullDiscoverPage() {
                   <polygon points="23 7 16 12 23 17 23 7" />
                   <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
                 </svg>
-                <p className="text-sm text-gray-400">还没有学习视频</p>
-                <p className="mt-1 text-xs text-gray-400">学习资源持续扩充中</p>
+                <p className="text-sm text-gray-400">暂无外部参考视频</p>
+                <p className="mt-1 text-xs text-gray-400">上方应用内微课可直接播放和练习</p>
               </div>
             )}
           </div>
