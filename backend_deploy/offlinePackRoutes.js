@@ -55,6 +55,7 @@ function createRouter() {
   }
 
   function canDownload(req, row) {
+    if (['tcm-learning-complete','yixue-classics-library'].includes(row.pack_id) && (!req.user || !req.user.userId)) return { ok:false,status:401,error:'登录后即可下载学习资料' };
     if ((row.access_level || 'PUBLIC') === 'PUBLIC') return { ok: true };
     if (!req.user || !req.user.userId) return { ok: false, status: 401, error: '请先登录会员账号' };
     const membership = getMembershipFromDB(req.user.userId);

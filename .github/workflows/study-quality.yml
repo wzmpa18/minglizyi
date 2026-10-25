@@ -213,6 +213,8 @@ on:
       - 'scripts/offline-download-link.test.cjs'
       - 'scripts/offline-pack-client.test.cjs'
       - 'scripts/learning-bundle.test.cjs'
+      - 'scripts/offline-public-learning-access.test.cjs'
+      - 'backend_deploy/offlinePackRoutes.js'
       - 'src/lib/learningBundleCodec.ts'
       - 'src/lib/completeTcmLearning.ts'
       - 'src/lib/tcmStructuredContent.ts'
@@ -380,6 +382,7 @@ jobs:
       - run: node --test scripts/meridian-publication.test.cjs scripts/meridian-animation.test.cjs scripts/anatomy-download-compat.test.cjs
       - run: node --experimental-strip-types --test scripts/cloud-record-privacy.test.cjs
       - run: node --test scripts/native-listening.test.cjs
+      - run: node --test scripts/offline-public-learning-access.test.cjs
       - name: Verify discussion HTTP authentication and moderation against production dependency versions
         run: |
           npm install --prefix "$RUNNER_TEMP/study-http-deps" --no-save --package-lock=false express@4.22.2 better-sqlite3@13.0.3 jsonwebtoken@9.0.3 bcrypt@6.0.0 fake-indexeddb@6.2.4
