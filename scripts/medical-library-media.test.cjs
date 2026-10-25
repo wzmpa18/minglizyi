@@ -5,7 +5,7 @@ const copy=value=>value===undefined?undefined:JSON.parse(JSON.stringify(value));
 test('CI offline injection blocks services and image fetch while preserving bundled navigation and the native bridge',async()=>{
  const allowed=[],proof=[],timers=[];
  class Xhr{open(){}send(){allowed.push('xhr');}}
- const window={location:{href:'capacitor://localhost/',protocol:'capacitor:',host:'localhost'},fetch:async input=>{allowed.push(String(input));return {ok:true};},Capacitor:{nativePromise:async(_plugin,_method,value)=>proof.push(JSON.parse(value.value))}};
+ const window={location:{href:'capacitor://localhost/',protocol:'capacitor:',host:'localhost'},fetch:async input=>{allowed.push(String(input));return {ok:true};},webkit:{messageHandlers:{qaOfflineNetworkProof:{postMessage:value=>proof.push(copy(value))}}}};
  vm.runInNewContext(fs.readFileSync('scripts/ios-learning-network-fault.js','utf8'),{window,XMLHttpRequest:Xhr,URL,WeakMap,setInterval:fn=>{timers.push(fn);return 1;},clearInterval:()=>{}});
  await window.fetch('/offline/index.html');await window.fetch('/zhongyi/meridian/?_rsc=local');
  for(const path of ['https://yandaoguoxue.yandao.vip/api/health','/api/health','/assets/acupoint-photos/hegu-li4-mk2010.jpg','/assets/meridians/large-intestine.webp'])await assert.rejects(window.fetch(path));

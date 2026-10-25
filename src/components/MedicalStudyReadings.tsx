@@ -6,14 +6,21 @@ import {medicalSubject,type SubjectReading} from '@/lib/medicalStudyLibrary';
 export function MedicalStudyReadings({subject}:{subject:string}){
   const [reading,setReading]=useState<SubjectReading|null>(null);
   const [filter,setFilter]=useState('all');
-  useEffect(()=>{let live=true;const load=()=>{void medicalSubject(subject).then(value=>{if(live)setReading(value);}).catch(()=>{});};load();window.addEventListener('medical-study-ready',load);return()=>{live=false;window.removeEventListener('medical-study-ready',load);};},[subject]);
+  const [imagePage,setImagePage]=useState(0);
+  useEffect(()=>{let live=true;setReading(null);setFilter('all');setImagePage(0);const load=()=>{void medicalSubject(subject).then(value=>{if(live)setReading(value);}).catch(()=>{});};load();window.addEventListener('medical-study-ready',load);return()=>{live=false;window.removeEventListener('medical-study-ready',load);};},[subject]);
   return <section aria-label="倪师课件与各家文献对照" style={{margin:12,padding:14,borderRadius:14,background:'white',color:'#333',fontSize:13,lineHeight:1.8}}>
     <h2 style={{fontSize:16,color:'#7B2FBE'}}>倪师课件与各家文献对照</h2>
     {!reading?<p>可在<Link href="/offline/">离线中心准备文献与图片</Link>，保存后无需联网即可阅读。</p>:<>
       {reading.persisted===false&&<p>本页资料可读，但手机暂未保存成功，请在离线中心重试。</p>}
       {reading.retainedPreviousVersion&&<p>更新资料尚未通过校验，当前继续显示已保存的原资料。</p>}
+      {reading.region&&<p style={{fontSize:12}}>原书部位：{reading.region}。同名异位条目按部位分开。</p>}
       <p style={{color:'#666',fontSize:12}}>原典、课程整理分别标明。以下为包含本条名称的相关段落；不把同段出现的药穴自动推断为配伍或治疗方案。</p>
-      {reading.illustrations?.map(image=><StudyIllustration key={image.path} {...image} credit={image.sourceInfo.author+' · 《'+image.sourceInfo.title+'》'+(image.sourceInfo.license?' · '+image.sourceInfo.license:'')}/>)}
+      {reading.illustrations?.slice(imagePage*4,imagePage*4+4).map(image=><StudyIllustration key={image.path} {...image} credit={image.sourceInfo.author+' · 《'+image.sourceInfo.title+'》'+(image.sourceInfo.license?' · '+image.sourceInfo.license:'')}/>)}
+      {(reading.illustrations?.length||0)>4&&<div style={{display:'flex',gap:8,alignItems:'center',fontSize:12}}>
+        <button disabled={!imagePage} onClick={()=>setImagePage(page=>Math.max(0,page-1))}>上一组原页</button>
+        <span>{imagePage*4+1}–{Math.min(imagePage*4+4,reading.illustrations!.length)} / {reading.illustrations!.length}页</span>
+        <button disabled={(imagePage+1)*4>=reading.illustrations!.length} onClick={()=>setImagePage(page=>page+1)}>下一组原页</button>
+      </div>}
       {!!reading.passages.length&&<div style={{display:'flex',gap:6,flexWrap:'wrap'}}>{[['all','全部出处'],['ni','倪师课程'],['combination_context','配伍与配穴相关'],['caution_context','禁忌相关']].map(([value,label])=><button key={value} onClick={()=>setFilter(value)} aria-pressed={filter===value} style={{padding:'6px 8px',border:'1px solid #ddd',borderRadius:7,background:filter===value?'#eee3fa':'white'}}>{label}</button>)}</div>}
       {!reading.passages.length&&<p>{reading.illustrations?.length?'已收录对应文献原页，主治、配穴及版本差异请放大对照原文；未将未核对的识别稿冒充已审校文字。':'目前收录来源未核得本条对应段落，未移用其他药穴的见解。'}</p>}
       {reading.passages.filter(entry=>filter==='all'||(filter==='ni'?entry.source.startsWith('ni-')||entry.sourceInfo.author.includes('倪海厦'):entry.topic===filter)).map((entry,index)=><details key={entry.sha256+index} open={index===0} style={{borderTop:'1px solid #eee',padding:'8px 0'}}>

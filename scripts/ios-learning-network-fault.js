@@ -26,8 +26,8 @@
       try { await window.fetch('/api/health'); } catch { f=true; }
       try { const q=new XMLHttpRequest(); q.open('GET','https://yandaoguoxue.yandao.vip/api/health'); q.send(); } catch { x=true; }
       try { await window.fetch('/assets/acupoint-photos/hegu-li4-mk2010.jpg'); } catch { image=true; }
-      if(f && x && image && window.Capacitor?.nativePromise) {
-        await window.Capacitor.nativePromise('OfflineFiles','write',{key:'qa-offline-network-proof',value:JSON.stringify({fetchBlocked:f,xhrBlocked:x,imageFetchBlocked:image,bundledRouteAllowed:!blocked('/offline/index.html')})});
+      if(f && x && image && window.webkit?.messageHandlers?.qaOfflineNetworkProof) {
+        window.webkit.messageHandlers.qaOfflineNetworkProof.postMessage({fetchBlocked:f,xhrBlocked:x,imageFetchBlocked:image,bundledRouteAllowed:!blocked('/offline/index.html')});
         clearInterval(timer);
       }
     } catch { /* Wait for the actual native bridge, never inject fixture data. */ }

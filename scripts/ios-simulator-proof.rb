@@ -7,14 +7,32 @@ fault=File.read('scripts/ios-learning-network-fault.js')
 tts_path='ios/App/App/LocalTtsPlugin.swift'
 tts=File.read(tts_path)
 raise 'Offline failure-injection anchor missing' unless tts.scan('override func capacitorDidLoad() {').length==1
-tts=tts.sub('import Foundation',"import Foundation\nimport WebKit")
+tts=tts.sub('import Foundation',"import Foundation\nimport WebKit\nimport CryptoKit")
 tts=tts.sub('override func capacitorDidLoad() {', <<~SWIFT)
 override func capacitorDidLoad() {
     if ProcessInfo.processInfo.arguments.contains("--qa-learning-offline") {
+        bridge?.webView?.configuration.userContentController.add(GuoxueOfflineFaultProof(),name:"qaOfflineNetworkProof")
         let blocked=String(data:Data(base64Encoded:"#{Base64.strict_encode64(fault)}")!,encoding:.utf8)!
         bridge?.webView?.configuration.userContentController.addUserScript(WKUserScript(source:blocked,injectionTime:.atDocumentStart,forMainFrameOnly:false))
         bridge?.webView?.evaluateJavaScript(blocked,completionHandler:nil)
     }
+SWIFT
+tts += <<~SWIFT
+
+// CI-only collection of the actual fetch/XHR fault results. Does not supply app data.
+final class GuoxueOfflineFaultProof: NSObject, WKScriptMessageHandler {
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard message.frameInfo.isMainFrame, let result=message.body as? [String:Bool],
+              Set(result.keys)==Set(["fetchBlocked","xhrBlocked","imageFetchBlocked","bundledRouteAllowed"]),
+              result.values.allSatisfy({$0}), let bytes=try? JSONSerialization.data(withJSONObject:result) else {return}
+        do {
+            let root=try FileManager.default.url(for:.applicationSupportDirectory,in:.userDomainMask,appropriateFor:nil,create:true).appendingPathComponent("OfflineLearning",isDirectory:true)
+            try FileManager.default.createDirectory(at:root,withIntermediateDirectories:true)
+            let name=SHA256.hash(data:Data("qa-offline-network-proof".utf8)).map{String(format:"%02x",$0)}.joined()+".json"
+            try bytes.write(to:root.appendingPathComponent(name),options:.atomic)
+        } catch { NSLog("QA offline fault evidence was not saved") }
+    }
+}
 SWIFT
 File.write(tts_path,tts)
 project_path = 'ios/App/App.xcodeproj'
