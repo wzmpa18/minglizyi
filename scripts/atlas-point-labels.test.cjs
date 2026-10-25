@@ -10,7 +10,9 @@ test('fourteen meridians have distinct bounded colours and more labels fit after
 });
 test('all 362 actual model identities resolve to existing study pages, including the name variant and extra point',()=>{
  const exports={},source=fs.readFileSync('src/algorithm-core/modules/tcm/meridians.ts','utf8'),code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,esModuleInterop:true}}).outputText;
- vm.runInNewContext(code,{exports,require:n=>{if(n==='./data/meridians.json')return require('../src/algorithm-core/modules/tcm/data/meridians.json');throw Error(n);},console});
+ const studyExports={},studyCode=ts.transpileModule(fs.readFileSync('src/algorithm-core/modules/tcm/point-study.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,esModuleInterop:true}}).outputText;
+ vm.runInNewContext(studyCode,{exports:studyExports,URL,require:n=>{if(n==='../../../data/acupointClassicStudy.json')return require('../src/data/acupointClassicStudy.json');throw Error(n);}});
+ vm.runInNewContext(code,{exports,require:n=>{if(n==='./point-study')return studyExports;if(n==='./data/meridians.json')return require('../src/algorithm-core/modules/tcm/data/meridians.json');throw Error(n);},console});
  const fixture=require('./fixtures/atlas-point-identities.json');assert.equal(fixture.points.length,362);for(const p of fixture.points){const actual=exports.getAcupointByCode(p.code)||exports.getAcupointByName(p.name);assert.ok(actual,p.code+' '+p.name);assert.equal(exports.getAcupointByName(actual.name).code,actual.code);}
  assert.equal(exports.getAcupointByCode('GV24+').code,'EX-HN3');assert.equal(exports.getAcupointByCode('GV24+').meridian,'经外奇穴');assert.equal(exports.getAcupointByName('瘛脉').code,'TE18');
  for(const point of exports.ACUPOINTS_DB){const meridian=exports.getMeridianByName(point.meridian);assert.ok(meridian,point.code+' must have a real return list');assert.ok(exports.getAcupointsByMeridian(meridian.name).some(p=>p.code===point.code));}
