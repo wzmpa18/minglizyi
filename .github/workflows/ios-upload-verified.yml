@@ -78,7 +78,7 @@ jobs:
             assert len(plists)==1
             info=plistlib.loads(z.read(plists[0]))
             assert info['CFBundleIdentifier']=='com.yandaoguoxue.app'
-            assert info['CFBundleShortVersionString']=='25.0.115'
+            assert info['CFBundleShortVersionString']=='25.0.116'
             assert info['CFBundleVersion']==os.environ['EXPECTED_BUILD']
             if int(info['CFBundleVersion']) >= 16:
               widgets=[p for p in z.namelist() if p.endswith('.appex/Info.plist') and '/PlugIns/' in p]

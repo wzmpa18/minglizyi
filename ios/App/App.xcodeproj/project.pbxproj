@@ -1,4 +1,4 @@
-﻿// !$*UTF8*$!
+// !$*UTF8*$!
 {
 	archiveVersion = 1;
 	classes = {
@@ -24,8 +24,8 @@
         C11920261019000100000010 /* CalendarWidget.appex in Embed App Extensions */ = {isa=PBXBuildFile;fileRef=C11920261019000100000002;settings={ATTRIBUTES=(RemoveHeadersOnCopy,);};};
         C11920261019000100000011 /* Localizable.xcstrings */ = {isa=PBXFileReference;lastKnownFileType=text.json.xcstrings;path=Localizable.xcstrings;sourceTree="<group>";};
         C11920261019000100000012 /* Localizable.xcstrings in Resources */ = {isa=PBXBuildFile;fileRef=C11920261019000100000011;};
-        C1192026101900010000000B /* Widget Debug */ = {isa=XCBuildConfiguration;buildSettings={APPLICATION_EXTENSION_API_ONLY=YES;CODE_SIGN_ENTITLEMENTS=App/CalendarShared.entitlements;CODE_SIGN_STYLE=Automatic;CURRENT_PROJECT_VERSION=16;DEVELOPMENT_TEAM=WM586465ZD;GENERATE_INFOPLIST_FILE=NO;INFOPLIST_FILE=CalendarWidget/Info.plist;IPHONEOS_DEPLOYMENT_TARGET=17.0;LD_RUNPATH_SEARCH_PATHS=("$(inherited)","@executable_path/Frameworks","@executable_path/../../Frameworks",);MARKETING_VERSION=25.0.115;PRODUCT_BUNDLE_IDENTIFIER=com.yandaoguoxue.app.CalendarWidget;PRODUCT_NAME="$(TARGET_NAME)";SDKROOT=iphoneos;SKIP_INSTALL=YES;SWIFT_VERSION=5.0;TARGETED_DEVICE_FAMILY="1,2";};name=Debug;};
-        C1192026101900010000000C /* Widget Release */ = {isa=XCBuildConfiguration;buildSettings={APPLICATION_EXTENSION_API_ONLY=YES;CODE_SIGN_ENTITLEMENTS=App/CalendarShared.entitlements;CODE_SIGN_STYLE=Automatic;CURRENT_PROJECT_VERSION=16;DEVELOPMENT_TEAM=WM586465ZD;GENERATE_INFOPLIST_FILE=NO;INFOPLIST_FILE=CalendarWidget/Info.plist;IPHONEOS_DEPLOYMENT_TARGET=17.0;LD_RUNPATH_SEARCH_PATHS=("$(inherited)","@executable_path/Frameworks","@executable_path/../../Frameworks",);MARKETING_VERSION=25.0.115;PRODUCT_BUNDLE_IDENTIFIER=com.yandaoguoxue.app.CalendarWidget;PRODUCT_NAME="$(TARGET_NAME)";SDKROOT=iphoneos;SKIP_INSTALL=YES;SWIFT_VERSION=5.0;TARGETED_DEVICE_FAMILY="1,2";};name=Release;};
+        C1192026101900010000000B /* Widget Debug */ = {isa=XCBuildConfiguration;buildSettings={APPLICATION_EXTENSION_API_ONLY=YES;CODE_SIGN_ENTITLEMENTS=App/CalendarShared.entitlements;CODE_SIGN_STYLE=Automatic;CURRENT_PROJECT_VERSION=16;DEVELOPMENT_TEAM=WM586465ZD;GENERATE_INFOPLIST_FILE=NO;INFOPLIST_FILE=CalendarWidget/Info.plist;IPHONEOS_DEPLOYMENT_TARGET=17.0;LD_RUNPATH_SEARCH_PATHS=("$(inherited)","@executable_path/Frameworks","@executable_path/../../Frameworks",);MARKETING_VERSION=25.0.116;PRODUCT_BUNDLE_IDENTIFIER=com.yandaoguoxue.app.CalendarWidget;PRODUCT_NAME="$(TARGET_NAME)";SDKROOT=iphoneos;SKIP_INSTALL=YES;SWIFT_VERSION=5.0;TARGETED_DEVICE_FAMILY="1,2";};name=Debug;};
+        C1192026101900010000000C /* Widget Release */ = {isa=XCBuildConfiguration;buildSettings={APPLICATION_EXTENSION_API_ONLY=YES;CODE_SIGN_ENTITLEMENTS=App/CalendarShared.entitlements;CODE_SIGN_STYLE=Automatic;CURRENT_PROJECT_VERSION=16;DEVELOPMENT_TEAM=WM586465ZD;GENERATE_INFOPLIST_FILE=NO;INFOPLIST_FILE=CalendarWidget/Info.plist;IPHONEOS_DEPLOYMENT_TARGET=17.0;LD_RUNPATH_SEARCH_PATHS=("$(inherited)","@executable_path/Frameworks","@executable_path/../../Frameworks",);MARKETING_VERSION=25.0.116;PRODUCT_BUNDLE_IDENTIFIER=com.yandaoguoxue.app.CalendarWidget;PRODUCT_NAME="$(TARGET_NAME)";SDKROOT=iphoneos;SKIP_INSTALL=YES;SWIFT_VERSION=5.0;TARGETED_DEVICE_FAMILY="1,2";};name=Release;};
 
 /* Begin PBXBuildFile section */
         A12520261025001000000002 /* OfflineFilesPlugin.swift in Sources */ = {isa=PBXBuildFile;fileRef=A12520261025001000000001;};
@@ -367,7 +367,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 25.0.115;
+				MARKETING_VERSION = 25.0.116;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = com.yandaoguoxue.app;
                 CODE_SIGN_ENTITLEMENTS = App/CalendarShared.entitlements;
@@ -390,7 +390,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 25.0.115;
+				MARKETING_VERSION = 25.0.116;
 				PRODUCT_BUNDLE_IDENTIFIER = com.yandaoguoxue.app;
                 CODE_SIGN_ENTITLEMENTS = App/CalendarShared.entitlements;
 				PRODUCT_NAME = "$(TARGET_NAME)";
