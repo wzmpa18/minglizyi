@@ -5,16 +5,16 @@ const copy=value=>value===undefined?undefined:JSON.parse(JSON.stringify(value));
 test('CI offline injection blocks services and image fetch while preserving bundled navigation and the native bridge',async()=>{
  const allowed=[],proof=[],timers=[];
  class Xhr{open(){}send(){allowed.push('xhr');}}
- const window={location:{href:'capacitor://localhost/',protocol:'capacitor:',host:'localhost'},fetch:async input=>{allowed.push(String(input));return {ok:true};},webkit:{messageHandlers:{qaOfflineNetworkProof:{postMessage:value=>proof.push(copy(value))}}}};
+ const window={XMLHttpRequest:Xhr,location:{href:'capacitor://localhost/',protocol:'capacitor:',host:'localhost'},fetch:async input=>{allowed.push(String(input));return {ok:true};},webkit:{messageHandlers:{qaOfflineNetworkProof:{postMessage:value=>proof.push(copy(value))}}}};
  vm.runInNewContext(fs.readFileSync('scripts/ios-learning-network-fault.js','utf8'),{window,XMLHttpRequest:Xhr,URL,WeakMap,setInterval:fn=>{timers.push(fn);return 1;},clearInterval:()=>{}});
  await window.fetch('/offline/index.html');await window.fetch('/zhongyi/meridian/?_rsc=local');
  for(const path of ['https://yandaoguoxue.yandao.vip/api/health','/api/health','/assets/acupoint-photos/hegu-li4-mk2010.jpg','/assets/meridians/large-intestine.webp'])await assert.rejects(window.fetch(path));
- const local=new Xhr();local.open('GET','/offline/index.html');local.send();
- const remote=new Xhr();remote.open('GET','https://example.org');assert.throws(()=>remote.send());
+ const local=new window.XMLHttpRequest();local.open('GET','/offline/index.html');local.send();
+ const remote=new window.XMLHttpRequest();remote.open('GET','https://example.org');assert.throws(()=>remote.send());
  await timers[0]();assert.deepEqual(proof,[{fetchBlocked:true,xhrBlocked:true,imageFetchBlocked:true,bundledRouteAllowed:true}]);assert.equal(allowed.length,3);
  // Native bridge setup may replace browser functions after document-start.
- window.fetch=async()=>({ok:true});Xhr.prototype.open=function(){};Xhr.prototype.send=function(){};
- await timers[0]();await assert.rejects(window.fetch('/api/health'));const later=new Xhr();later.open('GET','https://example.org');assert.throws(()=>later.send());assert.equal(proof.length,2);
+ window.fetch=async()=>({ok:true});window.XMLHttpRequest=class NativeXHR {constructor(){this.open=function(){};this.send=function(){};}};
+ await timers[0]();await assert.rejects(window.fetch('/api/health'));const later=new window.XMLHttpRequest();later.open('GET','https://example.org');assert.throws(()=>later.send());assert.equal(proof.length,2);
 });
 test('full original books survive IndexedDB loss; corrupted native copies and partial replacements are rejected',async()=>{
  const store=disk(),edition=load('src/lib/tcmEditionPack.ts',{});

@@ -11,8 +11,7 @@
   };
   // Capacitor can install its fetch/XHR bridge after document-start scripts.
   // Reapply only when that changes the actual functions under test.
-  let wrappedFetch, wrappedOpen, wrappedSend;
-  const targets = new WeakMap();
+  let wrappedFetch, wrappedXHR;
   const install = () => {
     if (window.fetch !== wrappedFetch) {
       const originalFetch = window.fetch.bind(window);
@@ -20,14 +19,23 @@
         ? Promise.reject(new TypeError('QA offline network or learning-image block')) : originalFetch(input, init);
       window.fetch = wrappedFetch;
     }
-    if (XMLHttpRequest.prototype.open !== wrappedOpen || XMLHttpRequest.prototype.send !== wrappedSend) {
-      const open = XMLHttpRequest.prototype.open, send = XMLHttpRequest.prototype.send;
-      wrappedOpen = function(method, url, ...args) { targets.set(this, url); return open.call(this, method, url, ...args); };
-      wrappedSend = function(...args) {
-        if (blocked(targets.get(this))) throw new Error('QA offline network or learning-image block');
-        return send.apply(this, args);
+    if (window.XMLHttpRequest !== wrappedXHR) {
+      const OriginalXHR = window.XMLHttpRequest;
+      wrappedXHR = function(...constructorArgs) {
+        // Capacitor's XMLHttpRequest constructor supplies instance methods, so
+        // prototype-only interception does not block its native HTTP transport.
+        const request = new OriginalXHR(...constructorArgs);
+        const open = request.open, send = request.send;
+        let target;
+        request.open = function(method, url, ...args) { target=url; return open.call(this, method, url, ...args); };
+        request.send = function(...args) {
+          if (blocked(target)) throw new Error('QA offline network or learning-image block');
+          return send.apply(this, args);
+        };
+        return request;
       };
-      XMLHttpRequest.prototype.open = wrappedOpen; XMLHttpRequest.prototype.send = wrappedSend;
+      Object.setPrototypeOf(wrappedXHR, OriginalXHR); wrappedXHR.prototype = OriginalXHR.prototype;
+      window.XMLHttpRequest = wrappedXHR;
     }
   };
   install();
@@ -38,7 +46,7 @@
     try {
       let f=false, x=false, image=false;
       try { await window.fetch('/api/health'); } catch { f=true; }
-      try { const q=new XMLHttpRequest(); q.open('GET','https://yandaoguoxue.yandao.vip/api/health'); q.send(); } catch { x=true; }
+      try { const q=new window.XMLHttpRequest(); q.open('GET','https://yandaoguoxue.yandao.vip/api/health'); q.send(); } catch { x=true; }
       try { await window.fetch('/assets/acupoint-photos/hegu-li4-mk2010.jpg'); } catch { image=true; }
       if(window.webkit?.messageHandlers?.qaOfflineNetworkProof) {
         window.webkit.messageHandlers.qaOfflineNetworkProof.postMessage({fetchBlocked:f,xhrBlocked:x,imageFetchBlocked:image,bundledRouteAllowed:!blocked('/offline/index.html')});
