@@ -26,9 +26,11 @@ final class GuoxueStudyScreenshots: XCTestCase {
         continueAfterFailure=false
         let app=XCUIApplication();app.launchArguments += ["-AppleLanguages","(zh-Hans)","-AppleLocale","zh_CN"];app.launch()
         awaitHome(app)
-        tapVisible(app.links,"我的",app);tapVisible(app.buttons,"离线内容",app)
+        tapVisible(app.links,"我的",app)
+        if !app.buttons.matching(NSPredicate(format:"label CONTAINS %@","离线内容")).firstMatch.exists {tapVisible(app.buttons,"系统中心",app)}
+        tapVisible(app.buttons,"离线内容",app)
         XCTAssertTrue(app.staticTexts["完整三维学习资料"].waitForExistence(timeout:45),"The published anatomy resources must be grouped into one download entry")
-        XCTAssertEqual(app.buttons["一次下载完整资料"].count,1)
+        XCTAssertEqual(app.buttons.matching(identifier:"一次下载完整资料").count,1)
         XCTAssertFalse(app.staticTexts["三维人体四层观察包"].exists)
         XCTAssertFalse(app.staticTexts["三维解剖与经络学习图谱"].exists)
         shot("07_真实应用_三维资料一次下载",app)
