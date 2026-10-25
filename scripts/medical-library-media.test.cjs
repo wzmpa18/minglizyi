@@ -90,3 +90,14 @@ test('attributed editorial summaries retain their explicit type after an offline
  const wrong=copy(pack);wrong.passages[id].presentation='EXPERT_VERIFIED';assert.throws(()=>library(null,disk()).validateMedicalLibrary(wrong));
  const external=copy(pack);external.sources['test-source'].url='https://herbaltcm.sn.polyu.edu.hk.attacker.example/tc/herbal/senna-leaf';assert.throws(()=>library(null,disk()).validateMedicalLibrary(external));
 });
+
+
+test('a cloud catalogue cannot replace protected original bytes under the same path',()=>{
+ const api=media(disk());const changed=copy(api.bundledStudyMedia);changed.records[0].sha256='0'.repeat(64);assert.throws(()=>api.validateStudyMedia(changed));
+});
+
+
+test('a storage write that silently loses data is never reported as saved',async()=>{
+ const store=disk();store.api.writeOfflineFile=async()=>{};
+ const result=await library(fixture(),store).medicalSubject('point:DU20');assert.equal(result.persisted,false);assert.equal(result.passages[0].text,text);
+});

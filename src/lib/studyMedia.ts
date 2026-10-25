@@ -24,7 +24,7 @@ export function validateStudyMedia(raw: unknown): StudyMediaManifest {
     paths.add(r.path);
   }
   // Remote updates cannot quietly remove retained original animations/photos.
-  if (bundledStudyMedia.records.some(r => !paths.has(r.path))) throw Error('图片目录缺少原有资料');
+  if (bundledStudyMedia.records.some(original => {const current=m.records.find(r=>r.path===original.path);return !current||current.sha256!==original.sha256||current.bytes!==original.bytes||current.mime!==original.mime;})) throw Error('图片目录缺少原有资料或改动了受保护原件');
   return m;
 }
 export function studyMediaManifest(): Promise<StudyMediaManifest> {

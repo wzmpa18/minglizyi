@@ -74,7 +74,7 @@ export async function medicalSubject(key:string):Promise<SubjectReading|null>{
   if(pack&&target){
     const subject=pack.subjects[target];
     const result:SubjectReading={name:subject.name,region:subject.region,version:pack.version,persisted:true,passages:subject.references.map(id=>({...pack.passages[id],sourceInfo:{...pack.sources[pack.passages[id].source]}})),illustrations:subject.illustrations?.map(image=>({...image,sourceInfo:{...pack.sources[image.source]}}))};
-    if(await validReading(result)){try{await writeOfflineFile(await subjectKey(key),result);}catch{result.persisted=false;}return result;}
+    if(await validReading(result)){try{const diskKey=await subjectKey(key);await writeOfflineFile(diskKey,result);if(JSON.stringify(await readOfflineFile(diskKey))!==JSON.stringify(result))throw Error('文献写入后读回不一致');}catch{result.persisted=false;}return result;}
     rejected=true;
   }
   for(const candidate of new Set(aliases(key))){
