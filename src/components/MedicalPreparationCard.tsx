@@ -1,5 +1,6 @@
 'use client';
 import {useEffect,useState} from 'react';
+import Link from 'next/link';
 import {prepareMedicalLibrary} from '@/lib/medicalStudyLibrary';
 import {prepareStudyImages} from '@/lib/studyMedia';
 import {readOfflineFile} from '@/lib/durableOfflineStore';
@@ -25,7 +26,7 @@ export function MedicalPreparationCard(){
   <strong>药材、穴位文献与原图</strong><p style={{fontSize:13}}>保存已收录的倪师课件、各家原典相关段落，以及28幅经络动图和现有局部照片。课程与原典分别标明出处。</p>
   {disk==='ready'&&<p role="status" style={{fontSize:12,color:'#347546'}}>本机离线保存正常</p>}
   {disk==='error'&&<p role="status" style={{fontSize:12}}>手机存储暂不可写，在线阅读仍可继续。</p>}
-  <p><a href="/zhongyi/meridian/?acupoint=%E5%90%88%E8%B0%B7">查看动图与图片示例 · 合谷</a></p>
+  <p><Link href="/zhongyi/meridian/?acupoint=%E5%90%88%E8%B0%B7">查看动图与图片示例 · 合谷</Link></p>
   <button disabled={busy} onClick={()=>void prepare()} style={{padding:'10px 14px',border:0,borderRadius:8,background:'#7B2FBE',color:'white'}}>{busy?'正在保存…':ready?'检查并补齐学习资料':'一次保存文献与图片'}</button>
   {message&&<p role="status" style={{fontSize:13}}>{message}</p>}
  </section>;

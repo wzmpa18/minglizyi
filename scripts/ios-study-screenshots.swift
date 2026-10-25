@@ -46,11 +46,12 @@ final class GuoxueStudyScreenshots: XCTestCase {
             tapVisible(app.buttons,"离线内容",app)
             XCTAssertTrue(app.staticTexts["本机离线保存正常"].waitForExistence(timeout:30))
             tapVisible(app.links,"查看动图与图片示例",app)
+            guard app.staticTexts["合谷"].firstMatch.waitForExistence(timeout:30) else{shot("08_合谷详情实际导航失败",app);XCTFail("The actual client route must open the requested point, not reload the home page");return}
         }
         app.launchArguments += ["-AppleLanguages","(zh-Hans)","-AppleLocale","zh_CN"]
         app.launch();openOffline()
         let saved=app.staticTexts["合谷图片已保存，可离线查看"],animation=app.staticTexts["本经动图已保存，可离线查看"]
-        XCTAssertTrue(saved.waitForExistence(timeout:60),"An original image must be SHA verified and saved through the real native bridge")
+        guard saved.waitForExistence(timeout:60) else{shot("08_合谷原图实际保存失败",app);XCTFail("An original image must be SHA verified and saved through the real native bridge");return}
         XCTAssertTrue(animation.waitForExistence(timeout:30))
         shot("08_真实应用_原图与动图原生保存",app)
         app.terminate()

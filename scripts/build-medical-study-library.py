@@ -68,11 +68,14 @@ def build(lectures, output, audit, public_notes=None, materia_catalogue=None):
     for term,key in [('禾髎','point:LI19'),('和髎','point:TE22')]:
         names[term].append(key)
     for item in herbs:
-        variants={'黄芪':['黄耆'],'肉苁蓉':['肉苁容','肉松容'],'厚朴':['厚樸'],'藁本':['藳本']}.get(item['name'],[])
+        variants={'黄芪':['黄耆'],'肉苁蓉':['肉苁容','肉松容'],'厚朴':['厚樸'],'藁本':['藳本'],
+                  '扁蓄':['萹蓄'],'螌蝥':['斑蝥'],'蟅虫':['䗪虫'],'水斳':['水芹']}.get(item['name'],[])
         for term in variants:names[term].append('herb:'+item['id'])
     # These two are distinguished by the cited anatomical context, never by a
     # blind global substitution of the shared historical name 阳关.
     names['阳关'].extend(['point:GB33','point:GV3'])
+    names['五里'].extend(['point:LI13','point:LR10'])
+    names['通谷'].extend(['point:BL66','point:KI20'])
     matcher = re.compile('|'.join(map(re.escape, sorted(names, key=len, reverse=True))))
 
     def ingest(source, chapter, title, lines, forced_keys=(), line_offset=0):
@@ -93,6 +96,9 @@ def build(lectures, output, audit, public_notes=None, materia_catalogue=None):
             for term in terms:
                 keys.update(names[term])
             for key in keys:
+                    shared_context={'point:LI13':r'肘|臂|大肠经','point:LR10':r'曲骨|气冲|阴廉|肝经',
+                                    'point:BL66':r'膀胱经|束骨|至阴|脚趾','point:KI20':r'肾经|上脘|幽门|阴都'}
+                    if key in shared_context and subjects[key]['name'] not in search and not re.search(shared_context[key],search):continue
                     if key in ['point:GB33','point:GV3'] and subjects[key]['name'] not in search:
                         if key=='point:GB33' and not re.search('膝|胆经|膽經|阳陵泉|陽陵泉',search):continue
                         if key=='point:GV3' and not re.search('腰|督脉|督脈|十六椎',search):continue

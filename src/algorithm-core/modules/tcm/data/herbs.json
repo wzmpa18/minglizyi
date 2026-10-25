@@ -65,6 +65,166 @@
           "previousMisreadName": "浓朴",
           "correctedName": "厚朴",
           "scope": "Name/reading only; efficacy, dosage, contraindications and IDs unchanged"
+        },
+        {
+          "id": "h032",
+          "previousMisreadName": "太乙余食",
+          "correctedName": "太一禹余粮",
+          "scope": "原典条目名称恢复；不据此认定现代基原、炮制或剂量",
+          "chapter": "shennong-original-2",
+          "sourceUrl": "https://zh.wikisource.org/w/index.php?oldid=2490492",
+          "sourceQuote": "太一禹余糧　味甘平。主治咳逆上氣、癥瘕、血閉、漏下，除邪氣。久服耐寒暑不饑，輕身飛行千里神仙。一名石腦。生山谷。",
+          "sourceQuoteSha256": "587ea8ca646f5e10c7b16769a6ebdb46b8e57f55561e61e60a2a70260c79fbf6"
+        },
+        {
+          "id": "h102",
+          "previousMisreadName": "青",
+          "correctedName": "青蘘",
+          "scope": "原典条目名称恢复；不据此认定现代基原、炮制或剂量",
+          "chapter": "materia-benjing-shuzheng-section-2",
+          "sourceUrl": "https://gitlab.com/jicheng/jc.data/-/blob/fce547b73db49408b34a4144d12e09f09eebafd3/pages/book/%E6%9C%AC%E7%B6%93%E7%96%8F%E8%AD%89/index.html",
+          "sourceQuote": "胡麻：味甘，平，無毒。主傷中虛羸，補五內，益氣力，長肌肉，填髓腦，堅筋骨，療金瘡，止痛及傷寒，溫瘧，大吐後虛熱羸困。久服，輕身，不老，明耳目，耐飢渴，延年。以作油，微寒，利大腸，胞衣不落。生者，摩瘡腫，生禿髮。一名巨勝，一名狗蝨，一名方莖，一名鴻藏。葉名青蘘。生上黨川澤。青蘘：味甘、苦，無毒。主五藏邪氣，風寒溼痹，益氣，補腦髓，堅筋骨。久服，耳目聰明，不飢，不老，增壽。巨勝苗也。生中原川谷。",
+          "sourceQuoteSha256": "fecf69a8c593798603ce58e9fc9a7c7a8a454dfc6a7d4866258a628b508129a4"
+        },
+        {
+          "id": "h142",
+          "previousMisreadName": "蓬",
+          "correctedName": "蓬蘽",
+          "scope": "原典条目名称恢复；不据此认定现代基原、炮制或剂量",
+          "chapter": "materia-benjing-shuzheng-section-2",
+          "sourceUrl": "https://gitlab.com/jicheng/jc.data/-/blob/fce547b73db49408b34a4144d12e09f09eebafd3/pages/book/%E6%9C%AC%E7%B6%93%E7%96%8F%E8%AD%89/index.html",
+          "sourceQuote": "蓬蘽",
+          "sourceQuoteSha256": "c38741251e29e4f42f468db6e520898a93603cd470826828fe13a90ef4910e0d"
+        },
+        {
+          "id": "h213",
+          "previousMisreadName": "秦菽",
+          "correctedName": "秦椒",
+          "scope": "原典条目名称恢复；不据此认定现代基原、炮制或剂量",
+          "chapter": "shennong-original-10",
+          "sourceUrl": "https://zh.wikisource.org/w/index.php?oldid=2490492",
+          "sourceQuote": "秦椒　味辛溫。主治風邪氣，溫中，除寒痹，堅齒長髮，明目。久服輕身好顏色，耐老增年通神。生川谷。",
+          "sourceQuoteSha256": "1a4ee5066c81bbedfbd8a08865ec0c0c14c50b4650176fd5ffd1028d9f67f5b0"
+        },
+        {
+          "id": "h234",
+          "previousMisreadName": "柞蝉",
+          "correctedName": "蚱蝉",
+          "scope": "原典条目名称恢复；不据此认定现代基原、炮制或剂量",
+          "chapter": "materia-bencao-beiyao-section-13",
+          "sourceUrl": "https://gitlab.com/jicheng/jc.data/-/blob/fce547b73db49408b34a4144d12e09f09eebafd3/pages/book/%E6%9C%AC%E8%8D%89%E5%82%99%E8%A6%81/index.html",
+          "sourceQuote": "蚱蟬，治小兒驚癇夜啼，殺疳去熱，出胎下胞（時珍曰：治皮膚瘡瘍風熱，當用蟬蛻；治臟腑經絡，當用蟬身。各從其類也）。",
+          "sourceQuoteSha256": "935a3f5702a8e6877b6ef1173401dc9d766a5c50684d5b5a93c7b40b3da2bf0c"
+        },
+        {
+          "id": "h244",
+          "previousMisreadName": "虫",
+          "correctedName": "蟅虫",
+          "scope": "原典条目名称恢复；不据此认定现代基原、炮制或剂量",
+          "chapter": "shennong-original-19",
+          "sourceUrl": "https://zh.wikisource.org/w/index.php?oldid=2490492",
+          "sourceQuote": "蟅蟲　味鹹寒。主治心腹寒熱洗洗，血積癥瘕，破堅，下血閉，生子大良。一名地鱉。生川澤。",
+          "sourceQuoteSha256": "1293e9b3efd6fdefbed3b43b6745b3fb0cb1921e10dc7da42b5b60887893c345"
+        },
+        {
+          "id": "h247",
+          "previousMisreadName": "大黄豆卷",
+          "correctedName": "大豆黄卷",
+          "scope": "原典条目名称恢复；不据此认定现代基原、炮制或剂量",
+          "chapter": "shennong-original-12",
+          "sourceUrl": "https://zh.wikisource.org/w/index.php?oldid=2490492",
+          "sourceQuote": "大豆黃卷　味甘平無毒。主治濕痹筋攣膝痛。生大豆，塗癰腫。煮汁飲，殺鬼毒，止痛。赤小豆，主下水，排癰腫膿血。生平澤。",
+          "sourceQuoteSha256": "55403485cdf008083765dd4a390d82cd160a7121b720273b224c635ccea052a8"
+        },
+        {
+          "id": "h252",
+          "previousMisreadName": "KT",
+          "correctedName": "薤",
+          "scope": "原典条目名称恢复；不据此认定现代基原、炮制或剂量",
+          "chapter": "shennong-original-11",
+          "sourceUrl": "https://zh.wikisource.org/w/index.php?oldid=2490492",
+          "sourceQuote": "蔥實　味辛溫。主明目、補中不足。其莖，可作湯，主治傷寒寒熱，出汗，中風面目腫。薤，味辛，主治金創創敗。輕身不饑耐老。生平澤。",
+          "sourceQuoteSha256": "b9694227494b17814f9d12da06a8419a93b6d3e5b713ed8e641152df4c046490"
+        },
+        {
+          "id": "h254",
+          "previousMisreadName": "石",
+          "correctedName": "礜石",
+          "scope": "原典条目名称恢复；不据此认定现代基原、炮制或剂量",
+          "chapter": "shennong-original-14",
+          "sourceUrl": "https://zh.wikisource.org/w/index.php?oldid=2490492",
+          "sourceQuote": "礜石　味辛有毒。主治寒熱鼠瘺，蝕瘡、死肌、風痹，腹中堅，邪氣，除熱。一名青分石，一名立制石，一名固羊石。生山谷。",
+          "sourceQuoteSha256": "cd4605d02ab1ca55a4daaaa72d617b15df1744fdb73c63ae0fc87552b5f8bc4e"
+        },
+        {
+          "id": "h280",
+          "previousMisreadName": "菌",
+          "correctedName": "雚菌",
+          "scope": "原典条目名称恢复；不据此认定现代基原、炮制或剂量",
+          "chapter": "shennong-original-15",
+          "sourceUrl": "https://zh.wikisource.org/w/index.php?oldid=2490492",
+          "sourceQuote": "雚菌　味鹹平。主治心痛，溫中，去長蟲、白徙*、蟯蟲，蛇螫毒，癥瘕諸蟲。一名雚蘆。生池澤。",
+          "sourceQuoteSha256": "c1add9f2ec5964f52e717de8a848af998de4378fea17f5c352c2f16d7cbbc401"
+        },
+        {
+          "id": "h291",
+          "previousMisreadName": "蓄",
+          "correctedName": "扁蓄",
+          "scope": "原典条目名称恢复；不据此认定现代基原、炮制或剂量",
+          "chapter": "shennong-original-15",
+          "sourceUrl": "https://zh.wikisource.org/w/index.php?oldid=2490492",
+          "sourceQuote": "扁蓄　味苦平。主治浸淫疥瘙疽痔，殺三蟲。生山谷。",
+          "sourceQuoteSha256": "9bd42e2f527e9783221e9f8cd1b9c18374747a5020feff28547b49312727ed6f"
+        },
+        {
+          "id": "h292",
+          "previousMisreadName": "野狼毒",
+          "correctedName": "狼毒",
+          "scope": "原典条目名称恢复；不据此认定现代基原、炮制或剂量",
+          "chapter": "shennong-original-15",
+          "sourceUrl": "https://zh.wikisource.org/w/index.php?oldid=2490492",
+          "sourceQuote": "狼毒　味辛平。主治咳逆上氣，破積聚飲食，寒熱水氣，惡瘡鼠瘺疽蝕，鬼精蠱毒，殺飛鳥走獸。一名續毒。生山谷。",
+          "sourceQuoteSha256": "419469c1f97e1cbb910851b7f54df2b3426d66d90734b08f9009c748da7f94ae"
+        },
+        {
+          "id": "h298",
+          "previousMisreadName": "兰茹",
+          "correctedName": "䕡茹",
+          "scope": "原典条目名称恢复；不据此认定现代基原、炮制或剂量",
+          "chapter": "materia-bencao-beiyao-section-7",
+          "sourceUrl": "https://gitlab.com/jicheng/jc.data/-/blob/fce547b73db49408b34a4144d12e09f09eebafd3/pages/book/%E6%9C%AC%E8%8D%89%E5%82%99%E8%A6%81/index.html",
+          "sourceQuote": "䕡茹",
+          "sourceQuoteSha256": "a640a7f4a28f163dabd49c4fe67f272564820104bdf728264a2a600367ab3c3b"
+        },
+        {
+          "id": "h307",
+          "previousMisreadName": "蜀菽",
+          "correctedName": "蜀椒",
+          "scope": "原典条目名称恢复；不据此认定现代基原、炮制或剂量",
+          "chapter": "shennong-original-16",
+          "sourceUrl": "https://zh.wikisource.org/w/index.php?oldid=2490492",
+          "sourceQuote": "蜀椒　味辛溫。主治邪氣咳逆，溫中，逐骨節皮膚死肌，寒濕痹痛，下氣。久服之頭不白，輕身增年。生川谷。",
+          "sourceQuoteSha256": "ab43fc66b5da394fbfd3a60b4bb0b43c890e5b33432b841cfb5dbaec0af87971"
+        },
+        {
+          "id": "h331",
+          "previousMisreadName": "班苗",
+          "correctedName": "螌蝥",
+          "scope": "原典条目名称恢复；不据此认定现代基原、炮制或剂量",
+          "chapter": "shennong-original-19",
+          "sourceUrl": "https://zh.wikisource.org/w/index.php?oldid=2490492",
+          "sourceQuote": "螌蝥　味辛寒。主治寒熱鬼註蠱毒，鼠瘺，惡瘡，疽蝕，死肌，破石癃。一名龍尾。生川谷。",
+          "sourceQuoteSha256": "67e208c711d73ef972ccf30619173ca7f03f3b5157bac85ad25dd54ce3e44602"
+        },
+        {
+          "id": "h346",
+          "previousMisreadName": "水靳",
+          "correctedName": "水斳",
+          "scope": "原典条目名称恢复；不据此认定现代基原、炮制或剂量",
+          "chapter": "shennong-original-17",
+          "sourceUrl": "https://zh.wikisource.org/w/index.php?oldid=2490492",
+          "sourceQuote": "水斳　味甘平。主治女子赤沃，止血，養精，保血脈，益氣，令人肥健嗜食。一名水英。生池澤。",
+          "sourceQuoteSha256": "583a8ea5995da6038ac26a9bad26e2f6b3fa1a7f2d3e2dbabbc6a37a642ddb26"
         }
       ],
       "evidence": [
@@ -651,8 +811,8 @@
     },
     {
       "id": "h032",
-      "name": "太乙余食",
-      "pinyin": "太乙余食",
+      "name": "太一禹余粮",
+      "pinyin": "",
       "alias": [],
       "nature": "甘，平",
       "meridian": "待考",
@@ -1771,8 +1931,8 @@
     },
     {
       "id": "h102",
-      "name": "青",
-      "pinyin": "青",
+      "name": "青蘘",
+      "pinyin": "",
       "alias": [],
       "nature": "甘，寒",
       "meridian": "待考",
@@ -2411,8 +2571,8 @@
     },
     {
       "id": "h142",
-      "name": "蓬",
-      "pinyin": "蓬",
+      "name": "蓬蘽",
+      "pinyin": "",
       "alias": [],
       "nature": "酸，平",
       "meridian": "待考",
@@ -3547,8 +3707,8 @@
     },
     {
       "id": "h213",
-      "name": "秦菽",
-      "pinyin": "秦菽",
+      "name": "秦椒",
+      "pinyin": "",
       "alias": [],
       "nature": "辛，温",
       "meridian": "待考",
@@ -3883,8 +4043,8 @@
     },
     {
       "id": "h234",
-      "name": "柞蝉",
-      "pinyin": "柞蝉",
+      "name": "蚱蝉",
+      "pinyin": "",
       "alias": [],
       "nature": "咸，寒",
       "meridian": "待考",
@@ -4043,8 +4203,8 @@
     },
     {
       "id": "h244",
-      "name": "虫",
-      "pinyin": "虫",
+      "name": "蟅虫",
+      "pinyin": "",
       "alias": [],
       "nature": "咸，寒",
       "meridian": "待考",
@@ -4091,8 +4251,8 @@
     },
     {
       "id": "h247",
-      "name": "大黄豆卷",
-      "pinyin": "大黄豆卷",
+      "name": "大豆黄卷",
+      "pinyin": "",
       "alias": [],
       "nature": "甘，平",
       "meridian": "待考",
@@ -4171,8 +4331,8 @@
     },
     {
       "id": "h252",
-      "name": "KT",
-      "pinyin": "KT",
+      "name": "薤",
+      "pinyin": "",
       "alias": [],
       "nature": "辛，温",
       "meridian": "待考",
@@ -4203,8 +4363,8 @@
     },
     {
       "id": "h254",
-      "name": "石",
-      "pinyin": "石",
+      "name": "礜石",
+      "pinyin": "",
       "alias": [],
       "nature": "辛，大热",
       "meridian": "待考",
@@ -4619,8 +4779,8 @@
     },
     {
       "id": "h280",
-      "name": "菌",
-      "pinyin": "菌",
+      "name": "雚菌",
+      "pinyin": "",
       "alias": [],
       "nature": "咸，平",
       "meridian": "待考",
@@ -4795,8 +4955,8 @@
     },
     {
       "id": "h291",
-      "name": "蓄",
-      "pinyin": "蓄",
+      "name": "扁蓄",
+      "pinyin": "",
       "alias": [],
       "nature": "辛，平",
       "meridian": "待考",
@@ -4811,8 +4971,8 @@
     },
     {
       "id": "h292",
-      "name": "野狼毒",
-      "pinyin": "野狼毒",
+      "name": "狼毒",
+      "pinyin": "",
       "alias": [],
       "nature": "辛，平",
       "meridian": "待考",
@@ -4907,8 +5067,8 @@
     },
     {
       "id": "h298",
-      "name": "兰茹",
-      "pinyin": "兰茹",
+      "name": "䕡茹",
+      "pinyin": "",
       "alias": [],
       "nature": "辛，寒",
       "meridian": "待考",
@@ -5051,8 +5211,8 @@
     },
     {
       "id": "h307",
-      "name": "蜀菽",
-      "pinyin": "蜀菽",
+      "name": "蜀椒",
+      "pinyin": "",
       "alias": [],
       "nature": "辛，温",
       "meridian": "待考",
@@ -5435,8 +5595,8 @@
     },
     {
       "id": "h331",
-      "name": "班苗",
-      "pinyin": "班苗",
+      "name": "螌蝥",
+      "pinyin": "",
       "alias": [],
       "nature": "辛，寒",
       "meridian": "待考",
@@ -5675,8 +5835,8 @@
     },
     {
       "id": "h346",
-      "name": "水靳",
-      "pinyin": "水靳",
+      "name": "水斳",
+      "pinyin": "",
       "alias": [],
       "nature": "甘，平",
       "meridian": "待考",
