@@ -13,7 +13,7 @@ import { BrandHeader } from "@/components/shared";
 import { detectNativeShell } from "@/lib/nativeDetect";
 import {
   fetchManifest, checkUpdates, downloadPack, getInstalledPacks,
-  needsUserConfirmation, type ManifestPack, type PackUpdatePlan,
+  needsUserConfirmation, type ManifestPack, type PackUpdatePlan, type DownloadResult,
 } from "@/lib/offlinePackClient";
 import { deactivateOfflinePacks } from "@/lib/storageManager";
 import { ANATOMY_BUNDLE_ID, ANATOMY_BUNDLE_MEMBERS, ANATOMY_LEGACY_ID, anatomyBundlePlan, downloadCompleteAnatomy } from "@/lib/anatomyLearningBundle";
@@ -121,8 +121,8 @@ export default function OfflinePage() {
     setProgress(null);
     setMessage(null);
     const updateProgress = (received: number, total: number) => setProgress({ received, total });
-    const r = completeAnatomy
-      ? await downloadCompleteAnatomy(updateProgress).then(() => ({ok:true,version:""}), error => ({ok:false,version:"",error:(error as Error).message}))
+    const r: DownloadResult = completeAnatomy
+      ? await downloadCompleteAnatomy(updateProgress).then(() => ({ok:true,packId:plan.packId,version:""}), error => ({ok:false,packId:plan.packId,version:"",error:(error as Error).message}))
       : await downloadPack(plan.manifestPack, updateProgress);
     setDownloading(null);
     setProgress(null);
@@ -130,7 +130,7 @@ export default function OfflinePage() {
       setMessage({ text: completeAnatomy ? "完整三维学习资料已准备好，人体模型与经络图谱均可离线打开。" : `已下载并校验通过（v${r.version}），断网可用`, ok: true });
       await load();
     } else {
-      setMessage({ text: ("error" in r ? r.error : undefined) || "下载失败", ok: false });
+      setMessage({ text: r.error || "下载失败", ok: false });
       await load();
     }
   };
