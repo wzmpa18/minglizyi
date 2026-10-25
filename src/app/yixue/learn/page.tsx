@@ -19,6 +19,7 @@ const CLASSIC_GUIDE: Record<string, string[]> = {
 const ORIGINAL_LINKS:Record<string,string>={
  '三命通会':'kr3g0042','星学大成':'kr3g0041','六壬大全':'kr3g0031',
  '皇极经世':'kr3g0005','协纪辨方书':'kr3g0051',
+ '周易本义':'kr1a0031',
 };
 
 export default function YixueLearnPage() {

@@ -63,7 +63,16 @@ test('a damaged incoming passage never overwrites a usable native record; storag
  const failed=disk();failed.api.writeOfflineFile=async()=>{throw Error('disk full');};const reading=await library(fixture(),failed).medicalSubject('point:DU20');assert.equal(reading.persisted,false);assert.equal(reading.passages[0].text,text);
 });
 
-function media(store,fetch){return load('src/lib/studyMedia.ts',{'../../public/assets/meridians/ANIMATION-MANIFEST.json':require('../public/assets/meridians/ANIMATION-MANIFEST.json'),'../../public/assets/acupoint-photos/MANIFEST.json':require('../public/assets/acupoint-photos/MANIFEST.json'),'./durableOfflineStore':store.api},{fetch});}
+function media(store,fetch,deps={}){return load('src/lib/studyMedia.ts',{'../../public/assets/meridians/ANIMATION-MANIFEST.json':require('../public/assets/meridians/ANIMATION-MANIFEST.json'),'../../public/assets/acupoint-photos/MANIFEST.json':require('../public/assets/acupoint-photos/MANIFEST.json'),'./durableOfflineStore':store.api,...deps},{fetch,process:{env:{}}});}
+
+test('new original pages use account-authorized short links; object requests contain no application credentials',async()=>{
+ const store=disk(),raw=fs.readFileSync('public/assets/acupoint-photos/hegu-li4-mk2010.jpg'),record={path:'/assets/acupoint-photos/atlas-lan-synthetic-p0010.jpg',bytes:raw.length,sha256:createHash('sha256').update(raw).digest('hex'),mime:'image/jpeg'};
+ let lookups=0,objects=0,badHost=false;
+ const api=media(store,async(url,options)=>{if(url.endsWith('tcm-study-media.json'))throw Error('use retained directory');objects++;assert.equal(options.credentials,'omit');assert.equal(options.headers,undefined);return{ok:true,arrayBuffer:async()=>raw.buffer.slice(raw.byteOffset,raw.byteOffset+raw.byteLength)};},{'./offlinePackClient':{loadPackContent:async()=>null},'./authInterceptor':{fetchWithAuth:async url=>{lookups++;assert.ok(url.includes(encodeURIComponent(record.path)));return{ok:true,json:async()=>({success:true,...record,downloadUrl:(badHost?'https://attacker.invalid':'https://learning-123.cos.ap-shanghai.myqcloud.com')+'/learning-content/study-media/'+record.sha256+'.jpg?synthetic=test'})};}}});
+ store.files.set('study-media-manifest',{...copy(api.bundledStudyMedia),version:2026102601,records:[...copy(api.bundledStudyMedia.records),record]});
+ assert.match(await api.retainedStudyImage(record.path),/^data:image\/jpeg;base64,/);assert.equal(lookups,1);assert.equal(objects,1);
+ store.files.delete('study-image-'+record.sha256);badHost=true;await assert.rejects(api.retainedStudyImage(record.path));assert.equal(objects,1);
+});
 test('original learning media save with full SHA verification and remain readable without the network after restart',async()=>{
  const store=disk();let catalog;const api=media(store,async url=>{
   if(url.endsWith('/data/tcm-study-media.json'))return {ok:true,text:async()=>JSON.stringify(catalog)};

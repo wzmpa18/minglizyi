@@ -78,6 +78,7 @@ function createRouter() {
   };
 
   // ==================== 用户端 ====================
+  router.get('/study-image-link',authRequired,guardAsync(require('./studyMediaAccess').createStudyMediaAccess(objectStorage.ObjectStorageService)));
 
   // 第五十九章：Pack Manifest（公开只读——元数据不含隐私；登录可选以携带平台信息）
   router.get('/manifest', guard((req, res) => {

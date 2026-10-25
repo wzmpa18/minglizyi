@@ -14,6 +14,13 @@ export const bundledStudyMedia: StudyMediaManifest = {
 const active = new Map<string, Promise<string>>();
 type AssetReader=(path:string)=>Promise<Uint8Array>;
 let archiveReader:AssetReader|undefined;
+let installedArchive:Promise<ArrayBuffer|null>|undefined;
+async function recoverArchiveImage(path:string):Promise<Uint8Array|null>{
+  const {loadPackContent}=await import('./offlinePackClient');
+  if(!installedArchive)installedArchive=loadPackContent('tcm-learning-complete');
+  const request=installedArchive;
+  try{const bytes=await request;return bytes?await(await import('./learningBundleCodec')).readLearningBundleFile(bytes,path.replace(/^\//,'')):null;}finally{if(installedArchive===request)installedArchive=undefined;}
+}
 export function releaseStudyMediaReader(){archiveReader=undefined;}
 export async function installStudyMediaCatalogue(raw:unknown,reader:AssetReader){
   const next=validateStudyMedia(raw);
@@ -65,15 +72,26 @@ export async function retainedStudyImage(path: string): Promise<string> {
     const key='study-image-'+record.sha256;
     const saved = await readOfflineFile<{data:string}> (key).catch(()=>null);
     if (saved?.data) { try { const bytes=decode(saved.data); if(bytes.length===record.bytes && await hash(bytes)===record.sha256)return 'data:'+record.mime+';base64,'+saved.data; } catch { /* retry a valid source */ } }
-    if(archiveReader){
-      const bytes=await archiveReader(path);
+    const isBundled=bundledStudyMedia.records.some(r=>r.path===path&&r.sha256===record.sha256);
+    const archived=archiveReader?await archiveReader(path):!isBundled?await recoverArchiveImage(path).catch(()=>null):null;
+    if(archived){
+      const bytes=archived;
       if(bytes.length!==record.bytes||await hash(bytes)!==record.sha256)throw Error('资料包中的图片校验失败');
       const data=encode(bytes);await writeOfflineFile(key,{data,sha256:record.sha256,mime:record.mime});
       if((await readOfflineFile<{data:string}>(key))?.data!==data)throw Error('图片保存读回失败');
       return 'data:'+record.mime+';base64,'+data;
     }
-    const isBundled=bundledStudyMedia.records.some(r=>r.path===path&&r.sha256===record.sha256);
-    for(const url of isBundled?[path,ORIGIN+path]:[ORIGIN+path]) {
+    const urls=isBundled?[path,ORIGIN+path]:[];
+    if(!isBundled){
+      const {fetchWithAuth}=await import('./authInterceptor');
+      const response=await fetchWithAuth((process.env.NEXT_PUBLIC_API_BASE||'')+'/api/offline/study-image-link?path='+encodeURIComponent(path),{cache:'no-store'});
+      if(!response.ok)throw Error('登录后可加载原图，已保存图片仍可离线查看');
+      const info=await response.json(),url=new URL(info.downloadUrl);
+      const extension=record.mime==='image/jpeg'?'jpg':record.mime==='image/png'?'png':'webp';
+      if(info.success!==true||info.path!==path||info.sha256!==record.sha256||info.bytes!==record.bytes||info.mime!==record.mime||url.protocol!=='https:'||url.username||url.password||url.port||url.hash||!/^[a-z0-9-]+-\d+\.cos\.[a-z0-9-]+\.myqcloud\.com$/i.test(url.hostname)||url.pathname!=='/learning-content/study-media/'+record.sha256+'.'+extension)throw Error('原图下载地址校验未通过');
+      urls.push(url.href);
+    }
+    for(const url of urls) {
       try {
         const response=await fetch(url,{credentials:'omit',cache:'no-cache',signal:AbortSignal.timeout(20000)});
         if(!response.ok)continue; const bytes=new Uint8Array(await response.arrayBuffer());
