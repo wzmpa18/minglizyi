@@ -39,6 +39,12 @@ fs.writeFileSync(target, html);
 if (process.argv.includes('--patch-export')) {
   const exported = path.join(root, 'out/privacy/index.html');
   if (!fs.existsSync(exported)) throw new Error('Expected exported privacy route is missing');
-  fs.writeFileSync(exported, html);
+  // Preserve the app's router, back button, hydration and navigation for JS users.
+  // Crawlers and users without JS receive the same policy as a noscript fallback.
+  let original = fs.readFileSync(exported, 'utf8');
+  original = original.replace(/<noscript id="privacy-static-fallback">[\s\S]*?<\/noscript>/g, '');
+  if (!original.includes('</body>')) throw new Error('Exported privacy document has no body');
+  const fallback = '<noscript id="privacy-static-fallback"><main><h1>言道国学隐私政策</h1>' + body + '</main></noscript>';
+  fs.writeFileSync(exported, original.replace('</body>', fallback + '</body>'));
 }
 console.log(`Static policy exported from in-app source: ${Buffer.byteLength(html)} bytes`);
