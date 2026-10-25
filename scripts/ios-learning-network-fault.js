@@ -9,18 +9,32 @@
     return target.protocol !== local.protocol || target.host !== local.host ||
       target.pathname.startsWith('/api/') || /^\/assets\/(?:meridians|acupoint-photos)\//.test(target.pathname);
   };
-  const originalFetch = window.fetch.bind(window);
-  window.fetch = (input, init) => blocked(input)
-    ? Promise.reject(new TypeError('QA offline network or learning-image block')) : originalFetch(input, init);
-  const targets = new WeakMap(), open = XMLHttpRequest.prototype.open, send = XMLHttpRequest.prototype.send;
-  XMLHttpRequest.prototype.open = function(method, url, ...args) { targets.set(this, url); return open.call(this, method, url, ...args); };
-  XMLHttpRequest.prototype.send = function(...args) {
-    if (blocked(targets.get(this))) throw new Error('QA offline network or learning-image block');
-    return send.apply(this, args);
+  // Capacitor can install its fetch/XHR bridge after document-start scripts.
+  // Reapply only when that changes the actual functions under test.
+  let wrappedFetch, wrappedOpen, wrappedSend;
+  const targets = new WeakMap();
+  const install = () => {
+    if (window.fetch !== wrappedFetch) {
+      const originalFetch = window.fetch.bind(window);
+      wrappedFetch = (input, init) => blocked(input)
+        ? Promise.reject(new TypeError('QA offline network or learning-image block')) : originalFetch(input, init);
+      window.fetch = wrappedFetch;
+    }
+    if (XMLHttpRequest.prototype.open !== wrappedOpen || XMLHttpRequest.prototype.send !== wrappedSend) {
+      const open = XMLHttpRequest.prototype.open, send = XMLHttpRequest.prototype.send;
+      wrappedOpen = function(method, url, ...args) { targets.set(this, url); return open.call(this, method, url, ...args); };
+      wrappedSend = function(...args) {
+        if (blocked(targets.get(this))) throw new Error('QA offline network or learning-image block');
+        return send.apply(this, args);
+      };
+      XMLHttpRequest.prototype.open = wrappedOpen; XMLHttpRequest.prototype.send = wrappedSend;
+    }
   };
+  install();
   let attempts = 0;
   const timer = setInterval(async () => {
     attempts++;
+    install();
     try {
       let f=false, x=false, image=false;
       try { await window.fetch('/api/health'); } catch { f=true; }

@@ -17,6 +17,8 @@ if(typeof window!=='undefined')window.addEventListener('offline-pack-installed',
 const plain=(value:unknown,max:number)=>typeof value==='string'&&value.length<=max&&!/[\u0000]/.test(value);
 function validSource(source:MedicalSource){
   if(source?.inAppBook!==undefined&&typeof source.inAppBook!=='boolean')return false;
+  if(source?.license!==undefined&&!plain(source.license,2000))return false;
+  if(source?.localOriginalName!==undefined&&!plain(source.localOriginalName,300))return false;
   if(!source||!plain(source.title,300)||!source.title||!plain(source.author,300)||!source.author||!['LECTURE_TRANSCRIPT','CLASSIC_ORIGINAL','COMMUNITY_COURSE_NOTES','STUDY_REFERENCE'].includes(source.kind)||!/^[a-f0-9]{64}$/.test(source.sha256))return false;
   if(source.url){try{const url=new URL(source.url);const community=url.hostname==='github.com'&&/^\/Shanemen\/hantang-nihaixia\/blob\/[a-f0-9]{40}\//.test(url.pathname);const edition=url.hostname==='gitlab.com'&&/^\/jicheng\/jc\.data\/-\/blob\/[a-f0-9]{40}\/pages\/book\//.test(url.pathname);if(url.protocol!=='https:'||(!['zh.wikisource.org','www.shidianguji.com'].includes(url.hostname)&&!community&&!edition)||url.username||url.password)return false;}catch{return false;}}
   return true;

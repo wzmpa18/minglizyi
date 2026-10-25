@@ -333,6 +333,7 @@ function PositioningModal({
         </div>
 
         <AcupointPhotoGallery code={acupointCode} nested />
+        {acupointCode&&<MedicalStudyReadings subject={acupointCode.startsWith('DT.')?'dong:'+acupointName:'point:'+acupointCode} />}
 
         {/* Body diagram */}
         <div style={{ padding: "16px", display: "flex", flexDirection: "column", alignItems: "center" }}>
