@@ -1,0 +1,186 @@
+{
+  "schema": "yandao.study-media.v1",
+  "version": 2026102501,
+  "records": [
+    {
+      "path": "/assets/meridians/lung.webp",
+      "bytes": 171570,
+      "sha256": "e4f90d4aaf96ef1c37606a82f0b78f81dd5030cda0d1bf89b4b5c210c6a7b1cc",
+      "mime": "image/webp"
+    },
+    {
+      "path": "/assets/meridians/skeleton/lung.webp",
+      "bytes": 440502,
+      "sha256": "86352117d8b6334ccd277180b78d66cfb9b4568078d864d451e3e3213f520113",
+      "mime": "image/webp"
+    },
+    {
+      "path": "/assets/meridians/large-intestine.webp",
+      "bytes": 452044,
+      "sha256": "a5315ea189c2ef863a814c115250552f08fd9fc6966b77905d5a0b5e2e67baf6",
+      "mime": "image/webp"
+    },
+    {
+      "path": "/assets/meridians/skeleton/large-intestine.webp",
+      "bytes": 336998,
+      "sha256": "f8ce45756ad3a39096e2f6dd244fcc48ca23fdf46ac986ab535fbc4e3367b1e1",
+      "mime": "image/webp"
+    },
+    {
+      "path": "/assets/meridians/stomach.webp",
+      "bytes": 781588,
+      "sha256": "e140e3ef267443651413589e21d4a2875993b44d66a536019c37ea9300c0afc4",
+      "mime": "image/webp"
+    },
+    {
+      "path": "/assets/meridians/skeleton/stomach.webp",
+      "bytes": 427568,
+      "sha256": "02deed7548172c1ff5ef290d267f0539f891a29e1502a3094175d1170e65caac",
+      "mime": "image/webp"
+    },
+    {
+      "path": "/assets/meridians/spleen.webp",
+      "bytes": 472158,
+      "sha256": "1e5f02e11b5cfece94a315d41bfeabbce038f3d43b6f27fff33b2b5641373675",
+      "mime": "image/webp"
+    },
+    {
+      "path": "/assets/meridians/skeleton/spleen.webp",
+      "bytes": 403762,
+      "sha256": "5abf69d17606e50455ba2f4080a7ad36776421d175202c24afd666ec708c9546",
+      "mime": "image/webp"
+    },
+    {
+      "path": "/assets/meridians/heart.webp",
+      "bytes": 119952,
+      "sha256": "ef73c3626783fc89054b5e4a2c6ee516d7156c56c65464cb314b75c39f154c49",
+      "mime": "image/webp"
+    },
+    {
+      "path": "/assets/meridians/skeleton/heart.webp",
+      "bytes": 280094,
+      "sha256": "060fb31ed83f7c58059a4b3cf0b0aba1453da67947ae258abd4126b1d41e12fa",
+      "mime": "image/webp"
+    },
+    {
+      "path": "/assets/meridians/small-intestine.webp",
+      "bytes": 405282,
+      "sha256": "de8cc9f0a43323860d5aa905c34afe42ffd89ad41446591e870cae038c51e849",
+      "mime": "image/webp"
+    },
+    {
+      "path": "/assets/meridians/skeleton/small-intestine.webp",
+      "bytes": 256066,
+      "sha256": "70757164af1907c8c6d4ff70d478755d4a50e5450c9270f681ed2df48b7a4c82",
+      "mime": "image/webp"
+    },
+    {
+      "path": "/assets/meridians/bladder.webp",
+      "bytes": 860668,
+      "sha256": "c29156aaf22480ee62b989a8abbd72aa3535f62b2071445929b65964373e8813",
+      "mime": "image/webp"
+    },
+    {
+      "path": "/assets/meridians/skeleton/bladder.webp",
+      "bytes": 456166,
+      "sha256": "478b99a4f62d978441bdc5b02c2461c377b0bf2fc03fd3992b83811a0d74c91b",
+      "mime": "image/webp"
+    },
+    {
+      "path": "/assets/meridians/kidney.webp",
+      "bytes": 466984,
+      "sha256": "38ea4dcbe4fe5cd97078ba81d62fea529383dd872abb8617994aec4fbdc9b004",
+      "mime": "image/webp"
+    },
+    {
+      "path": "/assets/meridians/skeleton/kidney.webp",
+      "bytes": 447812,
+      "sha256": "fff5894e499584fe5f41fbb6a17d3be1479af939863c30e32b01f623c7caad5e",
+      "mime": "image/webp"
+    },
+    {
+      "path": "/assets/meridians/pericardium.webp",
+      "bytes": 124954,
+      "sha256": "a7a0b9e0499c7d25c92cc24e3542f6b3e57175a1ea1f1113376df9d14691701b",
+      "mime": "image/webp"
+    },
+    {
+      "path": "/assets/meridians/skeleton/pericardium.webp",
+      "bytes": 331914,
+      "sha256": "9cf04564b8255f3c5a977546f9012f47a6bec0ffaedd49e500499e369ae8000d",
+      "mime": "image/webp"
+    },
+    {
+      "path": "/assets/meridians/triple-energizer.webp",
+      "bytes": 459342,
+      "sha256": "3b0c7da893cc23b7b354bcc2c325623198f90a0774db77ba6cb55423881bd83d",
+      "mime": "image/webp"
+    },
+    {
+      "path": "/assets/meridians/skeleton/triple-energizer.webp",
+      "bytes": 438156,
+      "sha256": "992742c26f0eac6de1bc25f2b5ad26c3a370a5c1b45853efe28fa58b60c565e9",
+      "mime": "image/webp"
+    },
+    {
+      "path": "/assets/meridians/gallbladder.webp",
+      "bytes": 769488,
+      "sha256": "3027bbe64e9d86f508f38a050892a0f7f7534632e91ff1510380b2a6ceb03582",
+      "mime": "image/webp"
+    },
+    {
+      "path": "/assets/meridians/skeleton/gallbladder.webp",
+      "bytes": 552640,
+      "sha256": "45bafb81be204d58dcd33ea215724a49895da19d8e38e61b30bb1f807393c9e2",
+      "mime": "image/webp"
+    },
+    {
+      "path": "/assets/meridians/liver.webp",
+      "bytes": 458954,
+      "sha256": "ecb591f4b4fc6d6561a1d50de5141b0112935346508c94b1868123aee48ed511",
+      "mime": "image/webp"
+    },
+    {
+      "path": "/assets/meridians/skeleton/liver.webp",
+      "bytes": 472004,
+      "sha256": "03fbbb04618e4578b9d55069cf41669e04a533934b8f7ba94cf46256adeea8a7",
+      "mime": "image/webp"
+    },
+    {
+      "path": "/assets/meridians/governor-vessel.webp",
+      "bytes": 451724,
+      "sha256": "c691ffa34a4b29565025f0e4814d56a9c60a9025f43273897d0071443da8b901",
+      "mime": "image/webp"
+    },
+    {
+      "path": "/assets/meridians/skeleton/governor-vessel.webp",
+      "bytes": 251124,
+      "sha256": "41b4bdea8e6cbf32ef006ad2bfb4fd441f3cf62069a79550a23d6568f587254d",
+      "mime": "image/webp"
+    },
+    {
+      "path": "/assets/meridians/conception-vessel.webp",
+      "bytes": 289358,
+      "sha256": "2891777b06828dde143d57e72fc661afde403d879eebfec439ec34236e53a025",
+      "mime": "image/webp"
+    },
+    {
+      "path": "/assets/meridians/skeleton/conception-vessel.webp",
+      "bytes": 165138,
+      "sha256": "a9c355abddedfb6b8585b36ca6ac25bcfb38839f846ac12cd39bc1b7dac6d5ca",
+      "mime": "image/webp"
+    },
+    {
+      "path": "/assets/acupoint-photos/hegu-li4-mk2010.jpg",
+      "bytes": 380682,
+      "sha256": "30389ea5805cb868ae8e70c80a4bd1b31c2030b7a0c050c7b140966122d33dbb",
+      "mime": "image/jpeg"
+    },
+    {
+      "path": "/assets/acupoint-photos/regional-sun-2026-fig3.webp",
+      "bytes": 246338,
+      "sha256": "6e212a43ee3ec82a479b4b0797e3c971b979e07f0da6d5566c99ad208063e3d3",
+      "mime": "image/webp"
+    }
+  ]
+}

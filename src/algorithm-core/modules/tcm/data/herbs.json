@@ -9,7 +9,73 @@
     "extraction_date": "2026-07-26",
     "total_herbs": 550,
     "disclaimer": "本数据中“主治”“适应证”“治疗”等字段均为典籍原文记载，不构成医疗建议",
-    "note": "数据中如有“主治”“治疗”“处方”等字段，保留但标注“此为典籍原文记载，非医疗建议”"
+    "note": "数据中如有“主治”“治疗”“处方”等字段，保留但标注“此为典籍原文记载，非医疗建议”",
+    "nameCorrections20261025": {
+      "records": [
+        {
+          "id": "h021",
+          "previousMisreadName": "丹沙",
+          "correctedName": "丹砂",
+          "scope": "Name/reading only; efficacy, dosage, contraindications and IDs unchanged"
+        },
+        {
+          "id": "h061",
+          "previousMisreadName": "析子",
+          "correctedName": "析蓂子",
+          "scope": "Name/reading only; efficacy, dosage, contraindications and IDs unchanged"
+        },
+        {
+          "id": "h070",
+          "previousMisreadName": "芎",
+          "correctedName": "芎藭",
+          "scope": "Name/reading only; efficacy, dosage, contraindications and IDs unchanged"
+        },
+        {
+          "id": "h074",
+          "previousMisreadName": "黄",
+          "correctedName": "黄芪",
+          "scope": "Name/reading only; efficacy, dosage, contraindications and IDs unchanged"
+        },
+        {
+          "id": "h075",
+          "previousMisreadName": "肉松蓉",
+          "correctedName": "肉苁蓉",
+          "scope": "Name/reading only; efficacy, dosage, contraindications and IDs unchanged"
+        },
+        {
+          "id": "h187",
+          "previousMisreadName": "本",
+          "correctedName": "藁本",
+          "scope": "Name/reading only; efficacy, dosage, contraindications and IDs unchanged"
+        },
+        {
+          "id": "h189",
+          "previousMisreadName": "萆",
+          "correctedName": "萆薢",
+          "scope": "Name/reading only; efficacy, dosage, contraindications and IDs unchanged"
+        },
+        {
+          "id": "h208",
+          "previousMisreadName": "卮子",
+          "correctedName": "栀子",
+          "scope": "Name/reading only; efficacy, dosage, contraindications and IDs unchanged"
+        },
+        {
+          "id": "h211",
+          "previousMisreadName": "浓朴",
+          "correctedName": "厚朴",
+          "scope": "Name/reading only; efficacy, dosage, contraindications and IDs unchanged"
+        }
+      ],
+      "evidence": [
+        "Project retained shennong-original edition: title plus matching original indication clause",
+        "https://www.nricm.edu.tw/htcm/catalog/tcm_herbal_detailse930.html?id=1197",
+        "https://szyyj.gd.gov.cn/zyyfw/ysbj/content/post_4266498.html",
+        "https://www.shidianguji.com/book/NA06195/chapter/1knvj2xldcq3s",
+        "https://www.forestry.gov.cn/c/www/smcqzt/45936.jhtml"
+      ],
+      "notice": "Other single-character historical names remain pending identity verification; no blanket modern-species substitution."
+    }
   },
   "_field_schema": {
     "id": "唯一标识符 (h001~h347)",
@@ -409,7 +475,7 @@
     },
     {
       "id": "h021",
-      "name": "丹沙",
+      "name": "丹砂",
       "pinyin": "dansha",
       "alias": [],
       "nature": "甘，微寒",
@@ -1049,8 +1115,8 @@
     },
     {
       "id": "h061",
-      "name": "析子",
-      "pinyin": "析子",
+      "name": "析蓂子",
+      "pinyin": "ximingzi",
       "alias": [],
       "nature": "辛，微温",
       "meridian": "待考",
@@ -1193,8 +1259,8 @@
     },
     {
       "id": "h070",
-      "name": "芎",
-      "pinyin": "芎",
+      "name": "芎藭",
+      "pinyin": "",
       "alias": [],
       "nature": "辛，温",
       "meridian": "待考",
@@ -1257,8 +1323,8 @@
     },
     {
       "id": "h074",
-      "name": "黄",
-      "pinyin": "黄",
+      "name": "黄芪",
+      "pinyin": "huangqi",
       "alias": [],
       "nature": "甘，微温",
       "meridian": "待考",
@@ -1273,8 +1339,8 @@
     },
     {
       "id": "h075",
-      "name": "肉松蓉",
-      "pinyin": "肉松蓉",
+      "name": "肉苁蓉",
+      "pinyin": "roucongrong",
       "alias": [],
       "nature": "甘，微温",
       "meridian": "待考",
@@ -3065,8 +3131,8 @@
     },
     {
       "id": "h187",
-      "name": "本",
-      "pinyin": "本",
+      "name": "藁本",
+      "pinyin": "gaoben",
       "alias": [],
       "nature": "辛，温",
       "meridian": "待考",
@@ -3097,8 +3163,8 @@
     },
     {
       "id": "h189",
-      "name": "萆",
-      "pinyin": "萆",
+      "name": "萆薢",
+      "pinyin": "bixie",
       "alias": [],
       "nature": "苦，平",
       "meridian": "待考",
@@ -3401,8 +3467,8 @@
     },
     {
       "id": "h208",
-      "name": "卮子",
-      "pinyin": "卮子",
+      "name": "栀子",
+      "pinyin": "zhizi",
       "alias": [],
       "nature": "苦，寒",
       "meridian": "待考",
@@ -3449,8 +3515,8 @@
     },
     {
       "id": "h211",
-      "name": "浓朴",
-      "pinyin": "浓朴",
+      "name": "厚朴",
+      "pinyin": "houpo",
       "alias": [],
       "nature": "苦，温",
       "meridian": "待考",

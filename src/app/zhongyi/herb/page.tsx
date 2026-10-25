@@ -1,5 +1,6 @@
 "use client";
 
+import { MedicalStudyReadings } from "@/components/MedicalStudyReadings";
 import { SectionGate } from "@/components/SectionGate";
 
 import { useState, useEffect, useMemo, Suspense } from "react";
@@ -291,6 +292,7 @@ function HerbDetailPage({ herbId }: { herbId: string }) {
         </div>
       )}
 
+      <MedicalStudyReadings subject={"herb:"+herb.id} />
       {/* 药材信息卡片 */}
       <div style={{ margin: "12px", background: "white", borderRadius: "16px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
         {/* 头部 */}

@@ -28,6 +28,7 @@
         C1192026101900010000000C /* Widget Release */ = {isa=XCBuildConfiguration;buildSettings={APPLICATION_EXTENSION_API_ONLY=YES;CODE_SIGN_ENTITLEMENTS=App/CalendarShared.entitlements;CODE_SIGN_STYLE=Automatic;CURRENT_PROJECT_VERSION=16;DEVELOPMENT_TEAM=WM586465ZD;GENERATE_INFOPLIST_FILE=NO;INFOPLIST_FILE=CalendarWidget/Info.plist;IPHONEOS_DEPLOYMENT_TARGET=17.0;LD_RUNPATH_SEARCH_PATHS=("$(inherited)","@executable_path/Frameworks","@executable_path/../../Frameworks",);MARKETING_VERSION=25.0.115;PRODUCT_BUNDLE_IDENTIFIER=com.yandaoguoxue.app.CalendarWidget;PRODUCT_NAME="$(TARGET_NAME)";SDKROOT=iphoneos;SKIP_INSTALL=YES;SWIFT_VERSION=5.0;TARGETED_DEVICE_FAMILY="1,2";};name=Release;};
 
 /* Begin PBXBuildFile section */
+        A12520261025001000000002 /* OfflineFilesPlugin.swift in Sources */ = {isa=PBXBuildFile;fileRef=A12520261025001000000001;};
         A11920261019000900000002 /* LifeVaultPlugin.swift in Sources */ = {isa=PBXBuildFile;fileRef=A11920261019000900000001;};
 		A11820261018000100000002 /* LocalTtsPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11820261018000100000001 /* LocalTtsPlugin.swift */; };
 		A11820261018000200000002 /* AppleLearningStorePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11820261018000200000001 /* AppleLearningStorePlugin.swift */; };
@@ -46,6 +47,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+        A12520261025001000000001 /* OfflineFilesPlugin.swift */ = {isa=PBXFileReference;lastKnownFileType=sourcecode.swift;path=OfflineFilesPlugin.swift;sourceTree="<group>";};
         A11920261019000900000001 /* LifeVaultPlugin.swift */ = {isa=PBXFileReference;lastKnownFileType=sourcecode.swift;path=LifeVaultPlugin.swift;sourceTree="<group>";};
 		A11820261018000100000001 /* LocalTtsPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalTtsPlugin.swift; sourceTree = "<group>"; };
 		A11820261018000200000001 /* AppleLearningStorePlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleLearningStorePlugin.swift; sourceTree = "<group>"; };
@@ -104,6 +106,7 @@
 				A11820261018000300000001 /* LocalSkyLocationPlugin.swift */,
 				A11820261019000100000001 /* LocalCalendarPlugin.swift */,
                 A11920261019000900000001 /* LifeVaultPlugin.swift */,
+                A12520261025001000000001 /* OfflineFilesPlugin.swift */,
 				9582B6822FE993A50072D4E8 /* SceneDelegate.swift */,
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
@@ -211,6 +214,7 @@
 				A11820261018000300000002 /* LocalSkyLocationPlugin.swift in Sources */,
 				A11820261019000100000002 /* LocalCalendarPlugin.swift in Sources */,
                 A11920261019000900000002 /* LifeVaultPlugin.swift in Sources */,
+                A12520261025001000000002 /* OfflineFilesPlugin.swift in Sources */,
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */,
 			);

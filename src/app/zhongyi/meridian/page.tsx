@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { SafeRichText } from "@/components/SafeRichText";
+import { StudyImage } from "@/components/StudyImage";
 import { AcupointPhotoGallery } from "@/components/AcupointPhotoGallery";
 import animationManifest from "../../../../public/assets/meridians/ANIMATION-MANIFEST.json";
 
@@ -28,6 +29,7 @@ import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import { AcupointStudyDiscussion } from "@/components/AcupointStudyDiscussion";
 import { AcupointStudySources } from "@/components/AcupointStudySources";
+import { MedicalStudyReadings } from "@/components/MedicalStudyReadings";
 import { AcupointClassicStudy } from "@/components/AcupointClassicStudy";
 
 const BRAND = "#7B2FBE";
@@ -64,13 +66,14 @@ function MeridianChart({ meridianName, compact = false }: { meridianName: string
   const [chartMode, setChartMode] = useState<"acupoints" | "skeleton">("acupoints");
   const [failed, setFailed] = useState(false);
   const [retry, setRetry] = useState(0);
+  const [retainedChart,setRetainedChart]=useState("");
   useBodyScrollLock(expanded);
   usePopupBackHandler(() => setExpanded(false), expanded);
   const sources = meridianChartSources(meridianName);
   if (!sources) return null;
   const src = `${sources[chartMode]}?v=${animationManifest.revision}-${retry}`;
   const modeLabel = chartMode === "acupoints" ? "人体穴位动图" : "骨骼循行动图";
-  const image = <img key={src} src={src} alt={`${meridianName}${modeLabel}`} draggable={false}
+  const image = <StudyImage key={src} src={src} onRetained={()=>setRetainedChart(src)} alt={`${meridianName}${modeLabel}`} draggable={false}
     onLoad={() => setFailed(false)} onError={() => setFailed(true)}
     style={{ display: "block", width: `${zoom * 100}%`, maxWidth: "none", height: "auto", margin: "0 auto" }} />;
   return <>
@@ -81,6 +84,7 @@ function MeridianChart({ meridianName, compact = false }: { meridianName: string
         {mode === "acupoints" ? "人体穴位动图" : "骨骼循行动图"}
       </button>)}
     </div>
+    {retainedChart===src&&<p role="status" style={{fontSize:11,color:"#347546"}}>本经动图已保存，可离线查看</p>}
     {failed && <div role="status" style={{ padding: 12, background: "#FFF4E5", marginBottom: 8 }}>动图加载失败。<button type="button" onClick={() => { setFailed(false); setRetry(n => n + 1); }}>重新加载动图</button></div>}
     <button type="button" onClick={() => { setZoom(1); setExpanded(true); }} aria-label={`放大查看${meridianName}${modeLabel}`}
       style={{ width: "100%", padding: 0, border: "none", borderRadius: 14, overflow: "hidden", background: "#EEF6F2", cursor: "zoom-in" }}>
@@ -779,6 +783,8 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
         <p style={{ margin: 0, fontSize: "12px", color: "#C62828", fontWeight: "bold", textAlign: "center" }}>{PROFESSIONAL_WARNING}</p>
       </div>
 
+      <AcupointPhotoGallery code={acupoint.code.replace(/^DU/, "GV").replace(/^RN/, "CV")} />
+      {getMeridianByName(acupoint.meridian) && <section aria-label="本穴所在经络动图" style={{margin:12}}><p style={{fontSize:12,color:"#666"}}>{acupoint.name}所在经络 · 保留原始循行动图，非单穴真人照片</p><MeridianChart meridianName={acupoint.meridian} compact /></section>}
       {/* 穴位信息卡片 */}
       <div style={{ margin: "12px", background: "white", borderRadius: "16px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
         <div style={{ padding: "16px", background: "linear-gradient(135deg, #E3F2FD 0%, white 100%)", borderBottom: "1px solid #f0f0f0" }}>
@@ -809,6 +815,7 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
 
       <AcupointStudySources meridianName={acupoint.meridian} selectedCode={acupoint.code} />
       <AcupointClassicStudy code={acupoint.code} />
+      <MedicalStudyReadings subject={"point:"+acupoint.code} />
       <Link href={`/zhongyi/anatomy3d/?pointName=${encodeURIComponent(acupoint.name)}&side=${pointSide}`} style={{display:"block",margin:12,padding:12,borderRadius:10,color:BRAND,background:BRAND_BG,fontWeight:700}}>在3D参考人体中对照{acupoint.name} →</Link>
 
       {/* 既有静态整理资料，尚未逐条与现行标准校对。 */}
@@ -907,7 +914,7 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
         </p>
       </div>
 
-      <AcupointPhotoGallery code={acupoint.code} />
+
 
       <AcupointStudyDiscussion targetId={`standard:${acupoint.code}`} title={`${acupoint.name}学习讨论`} />
 
@@ -1025,6 +1032,7 @@ function DongAcupointDetailPage({ acupointName }: { acupointName: string }) {
       </div>
 
       <p style={{padding:"12px",background:"#fff7e6",color:"#6b4e1d",fontSize:12,lineHeight:1.7}}>董氏奇穴学习整理：当前收录{DONG_ACUPOINTS_DB.length}项，并非董氏体系全集。DT编号为本应用内部索引，定位与针法尚未完成专业逐项校核，不能据此自行针刺；不同传承版本需对照来源。</p>
+      <MedicalStudyReadings subject={"dong:"+acupoint.name} />
       {/* 穴位信息卡片 */}
       <div style={{ margin: "12px", background: "white", borderRadius: "16px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
         <div style={{ padding: "16px", background: "linear-gradient(135deg, #FFF8E1 0%, white 100%)", borderBottom: "1px solid #f0f0f0" }}>

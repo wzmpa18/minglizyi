@@ -1,0 +1,49 @@
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
+const {webcrypto,createHash}=require('node:crypto');
+function load(file,deps,extra={}){const exports={};const code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText;vm.runInNewContext(code,{exports,URL,crypto:webcrypto,TextEncoder,TextDecoder,Uint8Array,ArrayBuffer,AbortSignal,atob,btoa,console,...extra,require:name=>{if(name in deps)return deps[name];throw Error(name);}});return exports;}
+const copy=value=>value===undefined?undefined:JSON.parse(JSON.stringify(value));
+function disk(){const files=new Map();return {files,api:{readOfflineFile:async key=>copy(files.get(key)||null),writeOfflineFile:async(key,value)=>{files.set(key,copy(value));}}};}
+const text='百会的来源测试段落。';
+function fixture(){const id='a'.repeat(24);return {schema:'yandao.medical.study-library.v1',version:'1.0.0',sources:{'test-source':{title:'测试原典',author:'测试作者',kind:'CLASSIC_ORIGINAL',sha256:'b'.repeat(64),url:'https://zh.wikisource.org/w/index.php?oldid=1'}},passages:{[id]:{source:'test-source',chapter:'test-chapter',chapterTitle:'测试篇章',text,lineStart:1,lineEnd:2,sha256:createHash('sha256').update(text).digest('hex')}},subjects:{'point:DU20':{name:'百会',kind:'point',references:[id]},'herb:h001':{name:'桂枝',kind:'herb',references:[]}}};}
+function library(raw,store){return load('src/lib/medicalStudyLibrary.ts',{'./offlinePackClient':{loadJsonPack:async()=>copy(raw)},'./durableOfflineStore':store.api,'./releaseFeatures':{CLIENT_VERSION:'25.0.115'}});}
+
+test('source-linked drug and point data reject dangling sources, malformed references and unsafe links',()=>{
+ const api=library(null,disk());assert.ok(api.validateMedicalLibrary(fixture()));
+ for(const change of [
+  x=>x.passages['a'.repeat(24)].source='__proto__',
+  x=>x.sources['test-source'].url='javascript:alert(1)',
+  x=>x.subjects['herb:h001'].references=['missing'],
+  x=>x.passages['a'.repeat(24)].lineEnd=0,
+  x=>x.sources['test-source'].kind='UNVERIFIED_GENERATION',
+ ]){const bad=fixture();change(bad);assert.throws(()=>api.validateMedicalLibrary(bad));}
+});
+
+test('phone-file persistence survives a fresh session with no IndexedDB pack and resolves legacy point codes',async()=>{
+ const store=disk();const first=library(fixture(),store);const saved=await first.medicalSubject('point:DU20');assert.equal(saved.persisted,true);assert.equal(saved.passages[0].text,text);
+ const restarted=library(null,store);const offline=await restarted.medicalSubject('point:GV20');assert.equal(offline.passages[0].text,text);assert.equal(offline.persisted,true);
+ const name=[...store.files.keys()][0];store.files.get(name).passages[0].text='Corrupted local text';
+ assert.equal(await library(null,store).medicalSubject('point:DU20'),null);
+});
+
+test('a damaged incoming passage never overwrites a usable native record; storage failure does not hide online reading',async()=>{
+ const store=disk();await library(fixture(),store).medicalSubject('point:DU20');const before=JSON.stringify([...store.files]);
+ const bad=fixture();bad.passages['a'.repeat(24)].text='wrong digest';await assert.rejects(()=>library(bad,store).medicalSubject('point:DU20'));assert.equal(JSON.stringify([...store.files]),before);
+ const failed=disk();failed.api.writeOfflineFile=async()=>{throw Error('disk full');};const reading=await library(fixture(),failed).medicalSubject('point:DU20');assert.equal(reading.persisted,false);assert.equal(reading.passages[0].text,text);
+});
+
+function media(store,fetch){return load('src/lib/studyMedia.ts',{'../../public/assets/meridians/ANIMATION-MANIFEST.json':require('../public/assets/meridians/ANIMATION-MANIFEST.json'),'../../public/assets/acupoint-photos/MANIFEST.json':require('../public/assets/acupoint-photos/MANIFEST.json'),'./durableOfflineStore':store.api},{fetch});}
+test('original learning media save with full SHA verification and remain readable without the network after restart',async()=>{
+ const store=disk();let catalog;const api=media(store,async url=>{
+  if(url.endsWith('/data/tcm-study-media.json'))return {ok:true,text:async()=>JSON.stringify(catalog)};
+  const path=new URL(url,'https://yandaoguoxue.yandao.vip').pathname;const bytes=fs.readFileSync('public'+path);return {ok:true,arrayBuffer:async()=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)};
+ });catalog=api.bundledStudyMedia;const path=catalog.records[0].path;
+ const value=await api.retainedStudyImage(path);assert.match(value,/^data:image\/webp;base64,/);assert.ok([...store.files.keys()].some(key=>key.startsWith('study-image-')));
+ let assetFetches=0;const restarted=media(store,async url=>{if(!url.endsWith('tcm-study-media.json'))assetFetches++;throw Error('offline');});assert.equal(await restarted.retainedStudyImage(path),value);assert.equal(assetFetches,0);
+});
+
+test('cloud catalogue cannot drop retained originals or point at external executables; bad bytes are not saved',async()=>{
+ const store=disk();const api=media(store,async()=>({ok:true,text:async()=>JSON.stringify(api.bundledStudyMedia),arrayBuffer:async()=>new ArrayBuffer(16)}));
+ const removed=copy(api.bundledStudyMedia);removed.records.pop();assert.throws(()=>api.validateStudyMedia(removed));
+ const injected=copy(api.bundledStudyMedia);injected.records[0].path='https://other.invalid/code.js';assert.throws(()=>api.validateStudyMedia(injected));
+ await assert.rejects(()=>api.retainedStudyImage(api.bundledStudyMedia.records[0].path));assert.equal([...store.files.keys()].filter(key=>key.startsWith('study-image-')).length,0);
+});

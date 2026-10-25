@@ -35,6 +35,29 @@ final class GuoxueStudyScreenshots: XCTestCase {
         XCTAssertFalse(app.staticTexts["三维解剖与经络学习图谱"].exists)
         shot("07_真实应用_三维资料一次下载",app)
     }
+    func testNativeLearningImagesSurviveRestart() throws {
+        continueAfterFailure=false
+        let app=XCUIApplication()
+        func openOffline(){
+            awaitHome(app);tapVisible(app.links,"我的",app)
+            if !app.buttons.matching(NSPredicate(format:"label CONTAINS %@","离线内容")).firstMatch.exists{tapVisible(app.buttons,"系统中心",app)}
+            tapVisible(app.buttons,"离线内容",app)
+            XCTAssertTrue(app.staticTexts["本机离线保存正常"].waitForExistence(timeout:30))
+            tapVisible(app.links,"查看动图与图片示例",app)
+        }
+        app.launchArguments += ["-AppleLanguages","(zh-Hans)","-AppleLocale","zh_CN"]
+        app.launch();openOffline()
+        let saved=app.staticTexts["合谷图片已保存，可离线查看"],animation=app.staticTexts["本经动图已保存，可离线查看"]
+        XCTAssertTrue(saved.waitForExistence(timeout:60),"An original image must be SHA verified and saved through the real native bridge")
+        XCTAssertTrue(animation.waitForExistence(timeout:30))
+        shot("08_真实应用_原图与动图原生保存",app)
+        app.terminate()
+        app.launchArguments += ["--qa-learning-offline"]
+        app.launch();openOffline()
+        XCTAssertTrue(saved.waitForExistence(timeout:30),"Retained images must resolve while CI blocks fetch/XHR after restart")
+        XCTAssertTrue(animation.waitForExistence(timeout:30))
+        shot("09_真实应用_重启并阻断网络后读回原图",app)
+    }
     func testLifePrivateNativeStorage() throws {
         continueAfterFailure=false
         let app=XCUIApplication();app.launchArguments += ["-AppleLanguages","(zh-Hans)","-AppleLocale","zh_CN"];app.launch()

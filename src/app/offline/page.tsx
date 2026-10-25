@@ -20,6 +20,7 @@ import { ANATOMY_BUNDLE_ID, ANATOMY_BUNDLE_MEMBERS, ANATOMY_LEGACY_ID, anatomyBu
 import Link from "next/link";
 import { queueSize, flushQueue } from "@/lib/offlineSyncClient";
 import { storageUsageOverview } from "@/lib/appAutoClean";
+import { MedicalPreparationCard } from "@/components/MedicalPreparationCard";
 import OfflinePreparationCard from "@/components/OfflinePreparationCard";
 import { localLearningProgress, flushLearningProgress } from "@/lib/offlineLearningProgress";
 
@@ -168,6 +169,7 @@ export default function OfflinePage() {
 
       <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
         <OfflinePreparationCard />
+        <MedicalPreparationCard />
         {/* 离线同步队列 */}
         <div style={{ background: "#fff", borderRadius: "16px", padding: "16px", marginBottom: "12px" }}>
           <div style={{ fontSize: "15px", fontWeight: "bold", color: "#333", marginBottom: "8px" }}>离线学习记录</div>

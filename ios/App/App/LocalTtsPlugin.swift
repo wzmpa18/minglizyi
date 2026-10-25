@@ -123,6 +123,7 @@ class GuoxueBridgeViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(LocalTtsPlugin())
         bridge?.registerPluginInstance(LifeVaultPlugin())
+        bridge?.registerPluginInstance(OfflineFilesPlugin())
         bridge?.registerPluginInstance(AppleLearningStorePlugin())
         bridge?.registerPluginInstance(LocalSkyLocationPlugin())
         bridge?.registerPluginInstance(LocalCalendarPlugin())
