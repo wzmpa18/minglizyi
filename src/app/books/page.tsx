@@ -10,6 +10,7 @@ import AIInterpretButton from "@/components/AIInterpretButton";
 import classicsData from "@/data/guoxueClassics.json";
 import { loadJsonPack } from "@/lib/offlinePackClient";
 import { classicReadingBlocks, isCompatibleGuoxuePack } from "@/lib/classicReading";
+import {retainedGuoxueClassics} from '@/lib/retainedGuoxueClassics';
 
 const BRAND = "#7B2FBE";
 
@@ -34,17 +35,20 @@ function BooksContent() {
   useEffect(() => {
     let active = true;
     const reload = async () => {
-      const pack = await loadJsonPack<GuoxueClassicsPack>("guoxue-classics-approved");
-      if (!active || !pack) return;
+      const pack = await retainedGuoxueClassics("guoxue-classics-approved");
+      const yixue = await retainedGuoxueClassics('yixue-classics-library');
+      if (!active) return;
       const fullTextPack = isCompatibleGuoxuePack(pack);
       if (active && pack?.schema === "yandao.guoxue.classics.v1" && fullTextPack) {
-        setCatalogue({ books: pack.books, notice: pack.notice || classicsData.notice, version: pack.version });
+        setCatalogue({ books: [...pack.books,...(yixue?.books||[])], notice: pack.notice || classicsData.notice, version: pack.version });
+      } else if(yixue){
+        setCatalogue({books:[...classicsData.books,...yixue.books],notice:yixue.notice,version:yixue.version});
       }
     };
     void reload().catch(() => { /* Keep the bundled catalogue when an optional pack is unavailable. */ });
     const onInstalled = (event: Event) => {
       const detail = (event as CustomEvent<{ packId?: string }>).detail;
-      if (detail?.packId === "guoxue-classics-approved") void reload().catch(() => {});
+      if (["guoxue-classics-approved","yixue-classics-library"].includes(detail?.packId||'')) void reload().catch(() => {});
     };
     window.addEventListener("offline-pack-installed", onInstalled);
     return () => { active = false; window.removeEventListener("offline-pack-installed", onInstalled); };

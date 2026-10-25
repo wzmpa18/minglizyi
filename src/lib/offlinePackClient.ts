@@ -311,7 +311,7 @@ export async function backgroundUpdateContentPacks(appVersion: string, force = f
   const normalizedVersion = String(appVersion || '0.0.0').replace(/^v/i, '').split('_')[0];
   const plans = await checkUpdates(normalizedVersion, manifest);
   const pending = plans.filter((plan) =>
-    (plan.action === 'INSTALL' || plan.action === 'UPDATE') && !needsUserConfirmation(plan.manifestPack)
+      (plan.action === 'INSTALL' || plan.action === 'UPDATE') && !plan.packId.endsWith('-learning-complete') && !needsUserConfirmation(plan.manifestPack)
   );
   const results: DownloadResult[] = [];
   for (const plan of pending) {

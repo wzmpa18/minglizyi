@@ -583,6 +583,11 @@ async function fetchWithRetry(
  * 加载状态可通过 getHerbsLoadingState() 同步获取
  */
 export async function loadFullHerbsDatabase(): Promise<TcmHerb[]> {
+  try {
+    const {retainedTcmStructuredPack}=await import('../../../lib/tcmStructuredContent');
+    const pack=await retainedTcmStructuredPack('tcm-herbs',HERBS_DB.map(row=>row.id));
+    if(pack)HERBS_DB.splice(0,HERBS_DB.length,...pack.records as unknown as TcmHerb[]);
+  } catch { /* Keep the usable built-in or previously retained learning data. */ }
   // JSON 数据已在构建时通过 import 加载，直接返回
   fullHerbsDB = HERBS_DB;
   fullHerbsLoaded = true;

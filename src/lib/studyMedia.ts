@@ -12,6 +12,15 @@ export const bundledStudyMedia: StudyMediaManifest = {
     ...photos.records.map(r => ({path:'/assets/acupoint-photos/'+r.file,bytes:r.bytes,sha256:r.sha256,mime:r.file.endsWith('.jpg')?'image/jpeg':'image/webp'}))],
 };
 const active = new Map<string, Promise<string>>();
+type AssetReader=(path:string)=>Promise<Uint8Array>;
+let archiveReader:AssetReader|undefined;
+export function releaseStudyMediaReader(){archiveReader=undefined;}
+export async function installStudyMediaCatalogue(raw:unknown,reader:AssetReader){
+  const next=validateStudyMedia(raw);
+  await writeOfflineFile('study-media-manifest',next);
+  if(JSON.stringify(await readOfflineFile('study-media-manifest'))!==JSON.stringify(next))throw Error('图片目录保存未完成');
+  archiveReader=reader;manifest=Promise.resolve(next);
+}
 let manifest: Promise<StudyMediaManifest> | undefined;
 export function validateStudyMedia(raw: unknown): StudyMediaManifest {
   const m = raw as StudyMediaManifest;
@@ -56,6 +65,13 @@ export async function retainedStudyImage(path: string): Promise<string> {
     const key='study-image-'+record.sha256;
     const saved = await readOfflineFile<{data:string}> (key).catch(()=>null);
     if (saved?.data) { try { const bytes=decode(saved.data); if(bytes.length===record.bytes && await hash(bytes)===record.sha256)return 'data:'+record.mime+';base64,'+saved.data; } catch { /* retry a valid source */ } }
+    if(archiveReader){
+      const bytes=await archiveReader(path);
+      if(bytes.length!==record.bytes||await hash(bytes)!==record.sha256)throw Error('资料包中的图片校验失败');
+      const data=encode(bytes);await writeOfflineFile(key,{data,sha256:record.sha256,mime:record.mime});
+      if((await readOfflineFile<{data:string}>(key))?.data!==data)throw Error('图片保存读回失败');
+      return 'data:'+record.mime+';base64,'+data;
+    }
     const isBundled=bundledStudyMedia.records.some(r=>r.path===path&&r.sha256===record.sha256);
     for(const url of isBundled?[path,ORIGIN+path]:[ORIGIN+path]) {
       try {

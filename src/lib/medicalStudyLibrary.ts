@@ -92,6 +92,9 @@ export async function prepareMedicalLibrary(progress?:(done:number,total:number)
     const result=await downloadPack(plan.manifestPack,undefined,async bytes=>{validateMedicalLibrary(JSON.parse(new TextDecoder().decode(bytes)));});
     if(!result.ok)throw Error(result.error||'资料下载尚未完成');
   }
+  return retainInstalledMedicalLibrary(progress);
+}
+export async function retainInstalledMedicalLibrary(progress?:(done:number,total:number)=>void){
   cached=undefined;const pack=await library();if(!pack)throw Error('文献资料未启用');
   const keys=Object.keys(pack.subjects);let done=0;
   for(const key of keys){const saved=await medicalSubject(key);if(!saved?.persisted||saved.retainedPreviousVersion)throw Error('资料尚未全部通过保存与内容校验；可用原资料保留');progress?.(++done,keys.length);}

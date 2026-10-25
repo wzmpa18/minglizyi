@@ -580,6 +580,11 @@ async function fetchWithRetry(
  * 加载状态可通过 getFormulasLoadingState() 同步获取
  */
 export async function loadFullFormulasDatabase(): Promise<TcmFormula[]> {
+  try {
+    const {retainedTcmStructuredPack}=await import('../../../lib/tcmStructuredContent');
+    const pack=await retainedTcmStructuredPack('tcm-formulas',FORMULAS_DB.map(row=>row.id));
+    if(pack)FORMULAS_DB.splice(0,FORMULAS_DB.length,...pack.records as unknown as TcmFormula[]);
+  } catch { /* Keep the usable built-in or previously retained learning data. */ }
   // JSON 数据已在构建时通过 import 加载，直接返回
   fullFormulasDB = FORMULAS_DB;
   fullFormulasLoaded = true;
