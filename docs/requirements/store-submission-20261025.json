@@ -1,17 +1,17 @@
 {
-  "checkedAt": "2026-10-24T15:50:33.612142+00:00",
+  "checkedAt": "2026-10-25T01:30:00Z",
   "androidBuild": 2144,
   "appleBuild": 53,
   "overallComplete": false,
   "stores": {
     "Apple": "53正式WAITING_FOR_REVIEW，10张真实iPhone/iPad模拟器截图全部COMPLETE，中文学习介绍及关键词已读回。",
-    "Huawei": "2144正式提交成功且显示正在审核；简体、英文、香港繁体、台湾繁体介绍及每种3张真实宣传图已保存。",
-    "OPPO": "2144正式提交成功，3张新版实拍宣传图、学习介绍及审核账号已保存；vivo及荣耀同步已勾选。",
+    "Huawei": "最新2144仍正在审核；打开的5问题报告提交2026-10-10、生成2026-10-15，属于历史报告，不能当作本次新退回。",
+    "OPPO": "2144因隐私政策网址自动检测退回；静态中文HTML修复、原包重新上传后再次正式提交成功。OPPO列表显示审核中，界面时间2026-10-25 09:27:02（后台显示时间），vivo/荣耀同步保持。",
     "Vivo": "负责人确认通过OPPO同步，协议已在操作时确认并勾选；未另注册账号，尚无独立受理回执。",
     "Honor": "随OPPO保留同步请求，独立受理及通过尚未确认。",
-    "Xiaomi": "2144正式提交成功、后台审核中；5张2144真实宣传图、8个学习关键词及10页既有评估证明PDF已提交，资质意见仍待商店复核。",
-    "Tencent": "应用认领正在审核中，更新入口未开放；2144腾讯渠道包已校验保全，未冒称正式提交。",
-    "Google": "国学仍属个人账号，须组织账号分发的政策拒绝已查明；旧2118等12项尚未送审，未撤销其他应用迁移。来源和目标均已创建新人工支持工单，ID待定；公司迁入及2144生产提审未完成。"
+    "Xiaomi": "2144人工审核中；概览读回25.0.115/2144、新学习介绍和五张宣传图，尚未批准上架。",
+    "Tencent": "本轮已退出登录，负责人选择自行完成QQ登录；尚未读到新的认领状态，不能沿用旧登录或宣称已提交更新。",
+    "Google": "公司工单6-0755000042443，个人国学工单1-9537000042322，均未解决；旧9-9452000041462仍未知应用。本轮未修改其他应用转移；迁入与2144生产提审尚未完成。"
   },
   "webDownload": {
     "source": "fb8a7a948e8d374c00df9fc56d007dedc08f358d",
@@ -73,7 +73,7 @@
           "修复文献结果排版、视频链接与密码找回；不增加注册或身份核验步骤"
         ],
         "forceUpdate": false,
-        "publishedAt": "2026-10-24T15:46:42.658248+00:00",
+        "publishedAt": "2026-10-25T00:46:42.658248+09:00",
         "platform": "android"
       },
       "ios": {
@@ -83,7 +83,7 @@
         "downloadPage": "",
         "releaseNotes": [],
         "forceUpdate": false,
-        "publishedAt": "2026-10-24T15:46:42.658248+00:00",
+        "publishedAt": "2026-10-25T00:46:42.658248+09:00",
         "platform": "ios"
       },
       "google": {
@@ -93,13 +93,20 @@
         "downloadPage": "https://play.google.com/store/apps/details?id=com.yandao.guoxue",
         "releaseNotes": [],
         "forceUpdate": false,
-        "publishedAt": "2026-10-24T15:46:42.658248+00:00",
+        "publishedAt": "2026-10-25T00:46:42.658248+09:00",
         "platform": "android",
         "channel": "google"
       }
     },
-    "finishedAt": "2026-10-24T15:49:57.691973+00:00"
+    "finishedAt": "2026-10-25T00:49:57.691973+09:00"
   },
   "desktopControlStopped": true,
-  "computerControlToolsMustRemainOffUntilUserReauthorizes": true
+  "computerControlToolsMustRemainOffUntilUserReauthorizes": true,
+  "privacyRemediation": {
+    "sameAsInAppPolicyBody": true,
+    "originalPrivacyNavigationPreserved": true,
+    "url": "https://yandaoguoxue.yandao.vip/legal/privacy-zh-cn.html",
+    "proof": "D:/言道国学项目资料总库/04_应用商店/OPPO/2144隐私整改后重新提交成功.jpg",
+    "staticSourceSha256": "934a10d79e90e83d318c2addb5c4fabd5ea0ff2eaff60a5d9f80d41561ea0d8f"
+  }
 }

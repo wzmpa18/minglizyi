@@ -1,0 +1,72 @@
+{
+  "publishedAt": "2026-10-25T01:17:45.455074+00:00",
+  "sha256": "934a10d79e90e83d318c2addb5c4fabd5ea0ff2eaff60a5d9f80d41561ea0d8f",
+  "publicSha256": "9805829d8640242981cd7255dbee836c25f51938ffd98881881a323d32be1c3c",
+  "existingMainSiteLinkPreserved": true,
+  "bodyTextSha256": "ac8ba63259f33dee5963bbd01dcbb83e39b9f3ed56dfdeb9ef624ee1900651f9",
+  "sameAsCurrentInAppBody": true,
+  "backup": "/www/yandaoguoxue-backend/data/privacy-static-rollback-20261025-v2",
+  "before": [
+    {
+      "path": "/root/yandaoguoxue/releases/v25.0.115-calendar-community-fb8a7a9/privacy/index.html",
+      "existed": true,
+      "sha256": "2d7e7556722c7e214fa155eb3db5e1227b8297460018dde1115091563c308b45"
+    },
+    {
+      "path": "/root/yandaoguoxue/releases/v25.0.115-calendar-community-fb8a7a9/legal/privacy-zh-cn.html",
+      "existed": false,
+      "sha256": null
+    }
+  ],
+  "checks": [
+    {
+      "url": "https://yandaoguoxue.yandao.vip/privacy",
+      "userAgent": "Mozilla/5.0",
+      "status": 200,
+      "bytes": 38890,
+      "sha256": "9805829d8640242981cd7255dbee836c25f51938ffd98881881a323d32be1c3c",
+      "redirects": 0
+    },
+    {
+      "url": "https://yandaoguoxue.yandao.vip/privacy",
+      "userAgent": "OPPO-Privacy-Check",
+      "status": 200,
+      "bytes": 38890,
+      "sha256": "9805829d8640242981cd7255dbee836c25f51938ffd98881881a323d32be1c3c",
+      "redirects": 0
+    },
+    {
+      "url": "https://yandaoguoxue.yandao.vip/privacy/",
+      "userAgent": "Mozilla/5.0",
+      "status": 200,
+      "bytes": 38890,
+      "sha256": "9805829d8640242981cd7255dbee836c25f51938ffd98881881a323d32be1c3c",
+      "redirects": 0
+    },
+    {
+      "url": "https://yandaoguoxue.yandao.vip/privacy/",
+      "userAgent": "OPPO-Privacy-Check",
+      "status": 200,
+      "bytes": 38890,
+      "sha256": "9805829d8640242981cd7255dbee836c25f51938ffd98881881a323d32be1c3c",
+      "redirects": 0
+    },
+    {
+      "url": "https://yandaoguoxue.yandao.vip/legal/privacy-zh-cn.html",
+      "userAgent": "Mozilla/5.0",
+      "status": 200,
+      "bytes": 38890,
+      "sha256": "9805829d8640242981cd7255dbee836c25f51938ffd98881881a323d32be1c3c",
+      "redirects": 0
+    },
+    {
+      "url": "https://yandaoguoxue.yandao.vip/legal/privacy-zh-cn.html",
+      "userAgent": "OPPO-Privacy-Check",
+      "status": 200,
+      "bytes": 38890,
+      "sha256": "9805829d8640242981cd7255dbee836c25f51938ffd98881881a323d32be1c3c",
+      "redirects": 0
+    }
+  ],
+  "newVerificationSteps": false
+}

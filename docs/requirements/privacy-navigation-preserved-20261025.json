@@ -1,0 +1,25 @@
+{
+  "at": "2026-10-25T01:27:19.228353+00:00",
+  "routeSha256": "83d9aa4bf3714b53e02c82299673594e7e8cb7bf0da4fdb71fdbf7048f1f82e9",
+  "sameInAppBody": true,
+  "originalAppRouterAndScriptsPreserved": true,
+  "noscriptFallback": true,
+  "standaloneHtmlUnchanged": "934a10d79e90e83d318c2addb5c4fabd5ea0ff2eaff60a5d9f80d41561ea0d8f",
+  "backup": "/www/yandaoguoxue-backend/data/privacy-static-rollback-20261025-v3",
+  "checks": [
+    {
+      "url": "https://yandaoguoxue.yandao.vip/privacy",
+      "status": 200,
+      "sha256": "015321609873f75da4e1126d1f10cc71a5feb0cd9873702da7e0b10086df28a8",
+      "bytes": 71662,
+      "redirects": 0
+    },
+    {
+      "url": "https://yandaoguoxue.yandao.vip/privacy/",
+      "status": 200,
+      "sha256": "015321609873f75da4e1126d1f10cc71a5feb0cd9873702da7e0b10086df28a8",
+      "bytes": 71662,
+      "redirects": 0
+    }
+  ]
+}

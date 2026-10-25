@@ -1,0 +1,12 @@
+{
+  "run": 40150752513,
+  "commit": "ffb3f827d649d374a3f7728129d800840d1bd370",
+  "conclusion": "success",
+  "artifactId": 12582354795,
+  "artifactZipSha256": "4d4ff09088dda2af77c58ae3a9fc0e7b5c6ba0b7c20b546374d7aa61c05661c2",
+  "artifactCRC": "all entries passed",
+  "staticHtmlSha256": "934a10d79e90e83d318c2addb5c4fabd5ea0ff2eaff60a5d9f80d41561ea0d8f",
+  "routeRetainsJSAndSingleFallback": true,
+  "productionStaticSameAsCI": true,
+  "archiveRetained": false
+}
