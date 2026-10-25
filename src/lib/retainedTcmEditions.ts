@@ -22,7 +22,9 @@ export async function retainedEditionPack(id:string,baseline:ClassicBook[]=[],st
     }
     if(!saved||await digest(JSON.stringify(saved.book))!==record.sha256)throw Error('原典保存读回未通过，原有目录保留');
    }
-   await writeOfflineFile('tcm-books-head-'+id,{version:pack.version,books:pack.books.map(b=>b.id)});
+   const head={version:pack.version,books:pack.books.map(b=>b.id)};
+   await writeOfflineFile('tcm-books-head-'+id,head);
+   if(JSON.stringify(await readOfflineFile('tcm-books-head-'+id))!==JSON.stringify(head))throw Error('原典目录保存读回未通过');
   }catch(error){if(strict)throw error;}
   return pack;
  }

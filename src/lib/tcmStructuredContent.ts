@@ -22,7 +22,16 @@ export async function retainedTcmStructuredPack(id:'tcm-herbs'|'tcm-formulas',re
  if(!cache.has(id))cache.set(id,(async()=>{
   async function previous(){try{const head=await readOfflineFile<{key:string;sha256:string}>('tcm-dataset-head-'+id);if(!head||!new RegExp('^tcm-dataset-'+id+'-[a-f0-9]{64}$').test(head.key))return null;const body=await readOfflineFile<TcmStructuredPack>(head.key);if(!body||await hash(JSON.stringify(body))!==head.sha256)return null;return validateTcmStructuredPack(body,id,requiredIds);}catch{return null;}}
   const incoming=await loadJsonPack<unknown>(id).catch(()=>null);
-  if(incoming){try{const valid=validateTcmStructuredPack(incoming,id,requiredIds),sha256=await hash(JSON.stringify(valid)),key='tcm-dataset-'+id+'-'+sha256;const old=await readOfflineFile<{sha256:string}>('tcm-dataset-head-'+id).catch(()=>null);if(old?.sha256!==sha256){await writeOfflineFile(key,valid);if(JSON.stringify(await readOfflineFile(key))!==JSON.stringify(valid))throw Error('中医资料读回不一致');await writeOfflineFile('tcm-dataset-head-'+id,{key,sha256,version:valid.version});}return valid;}catch{return previous();}}
+  if(incoming){try{
+   const valid=validateTcmStructuredPack(incoming,id,requiredIds),sha256=await hash(JSON.stringify(valid)),key='tcm-dataset-'+id+'-'+sha256;
+   const old=await readOfflineFile<{key:string;sha256:string}>('tcm-dataset-head-'+id).catch(()=>null),stored=await readOfflineFile<TcmStructuredPack>(key).catch(()=>null);
+   if(old?.key!==key||old?.sha256!==sha256||!stored||await hash(JSON.stringify(stored))!==sha256){
+    await writeOfflineFile(key,valid);if(JSON.stringify(await readOfflineFile(key))!==JSON.stringify(valid))throw Error('中医资料读回不一致');
+    await writeOfflineFile('tcm-dataset-head-'+id,{key,sha256,version:valid.version});
+    const head=await readOfflineFile<{key:string;sha256:string}>('tcm-dataset-head-'+id);if(head?.key!==key||head?.sha256!==sha256)throw Error('中医资料目录读回不一致');
+   }
+   return valid;
+  }catch{return previous();}}
   return previous();
  })());return cache.get(id)!;
 }

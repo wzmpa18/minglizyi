@@ -111,7 +111,7 @@ jobs:
       - name: Verify version gate
         run: |
           node scripts/verify-android-identity.js
-          grep -q 'versionName "25.0.115"' android/app/build.gradle || { echo "FATAL: versionName 非 25.0.115"; exit 1; }
+          grep -Fq "versionName \"$APP_VERSION_NAME\"" android/app/build.gradle || { echo "FATAL: versionName 与已验证版本不一致"; exit 1; }
           echo "版本门禁 OK: versionCode $APP_VERSION_CODE / versionName $APP_VERSION_NAME"
 
       - name: Build release APK and AAB
@@ -159,5 +159,5 @@ jobs:
           echo "### Android 构建结果" >> $GITHUB_STEP_SUMMARY
           echo "- Bundle: $BUNDLE_ID (versionCode $APP_VERSION_CODE / versionName $APP_VERSION_NAME)" >> $GITHUB_STEP_SUMMARY
           echo "- 渠道: $NEXT_PUBLIC_STORE_CHANNEL（Google 渠道关闭外部数字内容购买入口）" >> $GITHUB_STEP_SUMMARY
-          echo "- 模式: 原生内置资源 (v25.0.115, API 指向 https://yandaoguoxue.yandao.vip)" >> $GITHUB_STEP_SUMMARY
+          echo "- 模式: 原生内置资源 (v$APP_VERSION_NAME, API 指向 https://yandaoguoxue.yandao.vip)" >> $GITHUB_STEP_SUMMARY
           echo "- 产物: signed release APK + Google Play AAB" >> $GITHUB_STEP_SUMMARY

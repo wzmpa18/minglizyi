@@ -12,7 +12,10 @@ export async function retainedGuoxueClassics(id:'guoxue-classics-approved'|'yixu
   try{
    const records=[];
    for(const book of incoming.books){const digest=await sha(book),key='reading-book-'+id+'-'+digest;let saved=await readOfflineFile<ReadingBook>(key).catch(()=>null);if(!saved||await sha(saved)!==digest){await writeOfflineFile(key,book);saved=await readOfflineFile<ReadingBook>(key);}if(!saved||await sha(saved)!==digest)throw Error('典籍正文保存读回未通过');records.push({key,digest});}
-   await writeOfflineFile('reading-books-head-'+id,{version:incoming.version,notice:incoming.notice,records});return incoming;
+   const head={version:incoming.version,notice:incoming.notice,records};
+   await writeOfflineFile('reading-books-head-'+id,head);
+   if(JSON.stringify(await readOfflineFile('reading-books-head-'+id))!==JSON.stringify(head))throw Error('典籍目录保存读回未通过');
+   return incoming;
   }catch(error){if(strict)throw error;}
  }
  const head=await readOfflineFile<{version:string;notice:string;records:Array<{key:string;digest:string}>}>('reading-books-head-'+id).catch(()=>null);

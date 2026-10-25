@@ -25,6 +25,8 @@ test('full original books survive IndexedDB loss; corrupted native copies and pa
  assert.equal((await api(null).retainedEditionPack('tcm-materia-originals')).books[0].chapters[0].content,book.chapters[0].content);
  const partial=copy(pack);partial.books[0].chapters[0].content='短文';assert.equal((await api(partial).retainedEditionPack('tcm-materia-originals',[book])).books[0].chapters[0].content,book.chapters[0].content);
  const key=[...store.files.keys()].find(k=>k.startsWith('tcm-book-'));store.files.get(key).book.chapters[0].content='损坏';assert.equal(await api(null).retainedEditionPack('tcm-materia-originals'),null);
+ const write=store.api.writeOfflineFile;store.api.writeOfflineFile=async(key,value)=>{if(!key.startsWith('tcm-books-head-'))await write(key,value);};
+ await assert.rejects(api({...pack,version:'2.0.0'}).retainedEditionPack('tcm-materia-originals',[],true));
 });
 function disk(){const files=new Map();return {files,api:{readOfflineFile:async key=>copy(files.get(key)||null),writeOfflineFile:async(key,value)=>{files.set(key,copy(value));}}};}
 const text='百会的来源测试段落。';
