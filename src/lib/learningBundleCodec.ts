@@ -23,3 +23,8 @@ export async function readLearningBundleFile(bytes:ArrayBuffer,path:string,expec
 export async function validateLearningBundle(bytes:ArrayBuffer,expectedId:string,version:string):Promise<LearningBundleManifest>{
  const manifest=learningBundleManifest(bytes);if(manifest.packId!==expectedId||manifest.version!==version)throw Error('资料包版本对应错误');for(const record of manifest.files)await readLearningBundleFile(bytes,record.path,record);return manifest;
 }
+export function validateLearningBundleMedia(manifest:LearningBundleManifest,records:readonly {path:string;bytes:number;sha256:string;mime:string}[],referencedPaths:readonly string[]):void{
+ const files=new Map(manifest.files.map(file=>[file.path,file])),paths=new Set<string>();
+ for(const record of records){const file=files.get(record.path.replace(/^\//,''));if(paths.has(record.path)||!file||file.bytes!==record.bytes||file.sha256!==record.sha256||file.mime!==record.mime)throw Error('图片目录与完整资料包不一致，原有资料保留');paths.add(record.path);}
+ if(referencedPaths.some(path=>!paths.has(path)))throw Error('文献引用的图片未完整收录，原有资料保留');
+}

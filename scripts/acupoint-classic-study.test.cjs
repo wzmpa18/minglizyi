@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const ts = require('typescript');
+process.chdir(require('node:path').resolve(__dirname,'..'));
 const data = require('../src/data/acupointClassicStudy.json');
 const base = require('../src/algorithm-core/modules/tcm/data/meridians.json');
 function load(file, dependencies) {
@@ -81,6 +82,11 @@ test('baseline empty functions no longer reject a valid downloaded study pack; f
   assert.ok(pack.acupoints.some(point => point.function === ''));
   assert.equal(api.installAcupointContentPack(pack), true);
   const before = JSON.stringify(api.ACUPOINTS_DB);
+  const preview=structuredClone(pack);preview.acupoints[0].name='fixture preview';
+  assert.equal(api.installAcupointContentPack(preview,false),true);
+  assert.equal(JSON.stringify(api.ACUPOINTS_DB),before);
+  const omitted=structuredClone(pack);omitted.acupoints[360].code='ZZ999';
+  assert.equal(api.installAcupointContentPack(omitted,false),false);
   const corrupt = structuredClone(pack); corrupt.acupoints[360].code = corrupt.acupoints[0].code;
   assert.equal(api.installAcupointContentPack(corrupt), false);
   assert.equal(JSON.stringify(api.ACUPOINTS_DB), before);
@@ -89,6 +95,11 @@ test('baseline empty functions no longer reject a valid downloaded study pack; f
   assert.equal(JSON.stringify(api.ACUPOINTS_DB), before);
   const legacy = structuredClone(pack); delete legacy.pointStudy;
   assert.equal(api.installAcupointContentPack(legacy), true);
+});
+test('actual complete-pack point data passes validation without altering the active catalogue',{skip:!process.env.TCM_ACUPOINT_CANDIDATE},()=>{
+ const api=load('src/algorithm-core/modules/tcm/meridians.ts',{'./data/meridians.json':structuredClone(base),'./point-study':fresh(),'./dong-acupoints':freshDong()});
+ const before=JSON.stringify(api.ACUPOINTS_DB),pack=JSON.parse(fs.readFileSync(process.env.TCM_ACUPOINT_CANDIDATE,'utf8'));
+ assert.equal(api.installAcupointContentPack(pack,false),true);assert.equal(JSON.stringify(api.ACUPOINTS_DB),before);
 });
 
 test('Dong content requires individual page provenance and rejects partial or unreviewed replacements', () => {

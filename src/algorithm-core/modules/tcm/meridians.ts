@@ -271,7 +271,7 @@ interface TcmAcupointContentPack {
 }
 
 /** 安装已通过离线包 SHA256 校验的穴位数据；验证失败时继续使用内置 361 穴。 */
-export function installAcupointContentPack(pack: TcmAcupointContentPack): boolean {
+export function installAcupointContentPack(pack: TcmAcupointContentPack,activate=true): boolean {
   if (!pack || pack.schema !== 'yandao.tcm.acupoints.v1' || pack.reviewState !== 'APPROVED_EXISTING_BASELINE') return false;
   if (!Array.isArray(pack.acupoints) || pack.acupoints.length < 361) return false;
   const study = pack.pointStudy === undefined ? undefined : validatePointStudyIndex(pack.pointStudy);
@@ -300,9 +300,12 @@ export function installAcupointContentPack(pack: TcmAcupointContentPack): boolea
       literature: String(point.literature || '').slice(0, 120),
     });
   }
-  ACUPOINTS_DB = safe;
-  if (study) installPointStudyIndex(study);
-  if (dongStudy) installDongStudyCatalog(dongStudy);
+  if(FULL_ACUPOINTS.some(point=>!seen.has(String(point.code).trim().toUpperCase())))return false;
+  if(activate){
+    ACUPOINTS_DB = safe;
+    if (study) installPointStudyIndex(study);
+    if (dongStudy) installDongStudyCatalog(dongStudy);
+  }
   return true;
 }
 
