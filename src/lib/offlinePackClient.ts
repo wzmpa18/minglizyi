@@ -15,7 +15,7 @@
 // 红线：校验失败的包绝不启用；已启用包只有新版本校验通过后才被替换。
 // ============================================================================
 
-import { get, put, remove, listMeta, activateOfflinePack } from "./storageManager";
+import { get, put, remove, listMeta, activateOfflinePack, hasStoredValue } from "./storageManager";
 import { fetchWithAuth } from "./authInterceptor";
 import { validateOfflineDownloadLink } from "./offlineDownloadLink";
 import { compareVersion, meetsMinAppVersion } from "./offlineVersions";
@@ -73,7 +73,9 @@ async function getInstalledIndex(): Promise<Record<string, InstalledPackRecord>>
 }
 
 export async function getInstalledPacks(): Promise<InstalledPackRecord[]> {
-  return Object.values(await getInstalledIndex());
+  const records = Object.values(await getInstalledIndex());
+  const present = await Promise.all(records.map(record => hasStoredValue("OFFLINE_PACK", finalKey(record.packId, record.version))));
+  return records.filter((_, i) => present[i]);
 }
 
 export interface PackUpdatePlan {
@@ -84,7 +86,7 @@ export interface PackUpdatePlan {
 }
 
 export async function checkUpdates(appVersion: string, manifest: OfflineManifest): Promise<PackUpdatePlan[]> {
-  const installed = await getInstalledIndex();
+  const installed = Object.fromEntries((await getInstalledPacks()).map(record => [record.packId, record]));
   return manifest.packs.map(p => {
     const rec = installed[p.packId];
     if (!meetsMinAppVersion(p.minAppVersion, appVersion)) {

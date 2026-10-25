@@ -93,6 +93,41 @@ function tx<T>(store: string, mode: IDBTransactionMode, fn: (s: IDBObjectStore) 
 
 function sk(zone: StorageZone, key: string) { return `${zone}:${key}`; }
 
+/** Check presence without cloning large model buffers into memory. */
+export async function hasStoredValue(zone: StorageZone, key: string): Promise<boolean> {
+  return (await tx<number>(STORE_DATA, "readonly", store => store.count(sk(zone, key)))) > 0;
+}
+
+/** Explicit user removal commits package bytes and their installed index together. */
+export async function deactivateOfflinePacks(packIds: readonly string[]): Promise<void> {
+  if (!packIds.length || packIds.some(id => !/^[a-zA-Z0-9_-]+$/.test(id))) throw new Error("资料编号无效");
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const t = db.transaction([STORE_DATA, STORE_META], "readwrite");
+    let failure: Error | undefined;
+    t.oncomplete = () => resolve();
+    t.onabort = () => reject(failure || t.error || new Error("资料未移除，原内容仍保留"));
+    t.onerror = () => {};
+    const data = t.objectStore(STORE_DATA), meta = t.objectStore(STORE_META);
+    const indexKey = sk("SYSTEM_DATA", "installed_packs_index"), query = data.get(indexKey);
+    query.onsuccess = () => {
+      try {
+        const index = query.result || {};
+        for (const id of new Set(packIds)) {
+          const record = index[id];
+          if (!record) continue;
+          const key = sk("OFFLINE_PACK", `${id}@${record.version}`);
+          data.delete(key); meta.delete(key); delete index[id];
+        }
+        const now = Date.now();
+        data.put(index, indexKey);
+        meta.put({zone:"SYSTEM_DATA",key:"installed_packs_index",size:sizeOf(index),createdAt:now,
+          lastAccessedAt:now,protectedFromAutoClean:true}, indexKey);
+      } catch (error) { failure = error instanceof Error ? error : new Error(String(error)); t.abort(); }
+    };
+  });
+}
+
 /** Commit the verified bytes, installed index and metadata together. A failed
  * transaction keeps the previous active pack; concurrent downloads cannot lose
  * another pack's index entry or activate an older version after a newer one. */

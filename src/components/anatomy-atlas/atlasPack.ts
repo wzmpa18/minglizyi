@@ -1,6 +1,6 @@
 "use client";
 import { unzipSync } from "fflate";
-import { downloadPack, fetchManifest, loadPackContent, type DownloadProgress } from "@/lib/offlinePackClient";
+import { loadPackContent, type DownloadProgress } from "@/lib/offlinePackClient";
 
 export const PACK_ID = "tcm-anatomy-atlas-v3";
 export interface LearningMetadata {zhName?:string;learningDescription?:string;learningSource?:string}
@@ -31,9 +31,8 @@ export async function decodeAtlas(bytes:ArrayBuffer):Promise<Dataset> {
 }
 export class AtlasAccessError extends Error { constructor(message:string, public action?:"login"|"membership"){super(message);this.name="AtlasAccessError";} }
 export async function installAtlas(progress?:DownloadProgress) {
-  const catalogue=await fetchManifest();if(!catalogue)throw new Error("暂时无法读取图谱资料清单，请检查网络后重试；已有图谱仍保留");const pack=catalogue.packs.find(p=>p.packId===PACK_ID);
-  if(!pack)throw new Error("新版图谱资源尚未发布；原四层图谱仍可使用");
-  const result=await downloadPack(pack,progress,async bytes=>{await decodeAtlas(bytes);});if(!result.ok)throw new AtlasAccessError(result.error||"资源下载失败",result.accessAction);
+  try { await (await import("@/lib/anatomyLearningBundle")).downloadCompleteAnatomy(progress); }
+  catch(error) { const e=error as Error&{action?:"login"|"membership"};throw new AtlasAccessError(e.message,e.action); }
 }
 export const SYSTEMS:[string,string,string,string][]=[
  ["integumentary","体表","#cda78e","体表为观察方位的参考，参与屏障保护、感觉和体温调节。"],

@@ -107,3 +107,29 @@ test('a full stale fragment restarts at zero, and oversized responses never acti
   assert.equal((await g.api.downloadPack(g.pack)).ok, false);
   assert.equal(await g.api.loadPackContent('book'), null);
 });
+
+test('explicit combined removal updates both contents and index, preserving other packs and private learning data', async () => {
+  const f = fixture();
+  for (const id of ['book', 'atlas', 'other']) await f.storage.activateOfflinePack(id, '1.0.0', id, f.bytes);
+  await f.storage.put('USER_PRIVATE_DATA', 'learning-note', 'keep');
+  await f.storage.deactivateOfflinePacks(['book', 'atlas']);
+  assert.deepEqual(Array.from(await f.api.getInstalledPacks(), x => x.packId), ['other']);
+  assert.equal(await f.api.loadPackContent('book'), null);
+  assert.equal(await f.api.loadPackContent('atlas'), null);
+  assert.equal(await f.storage.get('USER_PRIVATE_DATA', 'learning-note'), 'keep');
+});
+
+test('failed combined removal rolls back every package and an old dangling index is not shown as installed', async () => {
+  const f = fixture();
+  for (const id of ['book', 'atlas']) await f.storage.activateOfflinePack(id, '1.0.0', id, f.bytes);
+  const original = IDBObjectStore.prototype.put;
+  IDBObjectStore.prototype.put = function(value, key) {
+    if (this.name === 'zone_data' && key === 'SYSTEM_DATA:installed_packs_index') throw Error('storage unavailable');
+    return original.call(this, value, key);
+  };
+  try { await assert.rejects(f.storage.deactivateOfflinePacks(['book', 'atlas']), /storage unavailable/); }
+  finally { IDBObjectStore.prototype.put = original; }
+  assert.equal((await f.api.getInstalledPacks()).length, 2);
+  await f.storage.remove('OFFLINE_PACK', 'book@1.0.0');
+  assert.equal((await f.api.getInstalledPacks()).some(row => row.packId === 'book'), false);
+});

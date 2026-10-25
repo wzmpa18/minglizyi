@@ -333,12 +333,12 @@ function LegacyAnatomy3DPage() {
       ) : !pack ? (
         <section style={{ margin: 12, padding: 20, borderRadius: 18, background: "#fff", boxShadow: "0 5px 20px #0000000b" }}>
           <div style={{ fontSize: 38, textAlign: "center", marginBottom: 8 }}>🫀</div>
-          <h1 style={{ margin: "0 0 8px", textAlign: "center", fontSize: 18, color: "#342C29" }}>下载3D人体解剖离线包</h1>
+          <h1 style={{ margin: "0 0 8px", textAlign: "center", fontSize: 18, color: "#342C29" }}>准备完整三维学习资料</h1>
           <p style={{ margin: "0 0 16px", fontSize: 13, lineHeight: 1.75, color: "#716762" }}>
-            含体表、肌肉、脏腑血管神经、骨骼四组模型，实际下载大小以资料清单为准。下载并校验后保存在手机，断网和关机重启后仍可使用；清除应用数据或卸载会移除本机资料。该离线包为会员学习权益。
+            一次准备四层人体模型、分系统与经络图谱，两个三维入口均可离线使用。已下载好的资料不会重下；中断后重试只补齐未完成部分。资料保存在手机，原有会员学习权益保持不变。
           </p>
           <button onClick={handleDownload} disabled={downloading} style={{ width: "100%", border: 0, borderRadius: 12, padding: "12px 16px", color: "#fff", background: downloading ? "#AAA" : BRAND, fontSize: 15, fontWeight: 700 }}>
-            {downloading ? `正在下载并校验 ${progress}%` : "下载到手机"}
+            {downloading ? `正在准备完整资料 ${progress}%` : "一次下载完整三维资料"}
           </button>
           <div style={{ height: 5, borderRadius: 4, background: "#EEE", overflow: "hidden", marginTop: 10 }}>
             <div style={{ height: "100%", width: `${progress}%`, background: BRAND, transition: "width .2s" }} />

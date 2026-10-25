@@ -2,8 +2,6 @@
 
 import { unzipSync } from "fflate";
 import {
-  downloadPack,
-  fetchManifest,
   loadPackContent,
   type DownloadProgress,
 } from "./offlinePackClient";
@@ -69,12 +67,7 @@ export async function decodeAnatomyPack(packed: ArrayBuffer): Promise<OpenedAnat
 }
 
 export async function downloadAnatomyPack(onProgress?: DownloadProgress): Promise<void> {
-  const manifest = await fetchManifest();
-  if(!manifest)throw new Error("暂时无法读取离线资料清单，请检查网络后重试；已有图谱仍保留");
-  const pack = manifest?.packs.find((item) => item.packId === ANATOMY_3D_PACK_ID);
-  if (!pack) throw new Error("3D 解剖离线包尚未发布，请稍后再试");
-  const result = await downloadPack(pack, onProgress, async bytes=>{await decodeAnatomyPack(bytes);});
-  if (!result.ok) throw new Error(result.error || "3D 解剖包下载失败");
+  await (await import("./anatomyLearningBundle")).downloadCompleteAnatomy(onProgress);
 }
 
 export function copyUint8ArrayBuffer(bytes: Uint8Array): ArrayBuffer {

@@ -15,7 +15,9 @@ import {
   fetchManifest, checkUpdates, downloadPack, getInstalledPacks,
   needsUserConfirmation, type ManifestPack, type PackUpdatePlan,
 } from "@/lib/offlinePackClient";
-import { remove } from "@/lib/storageManager";
+import { deactivateOfflinePacks } from "@/lib/storageManager";
+import { ANATOMY_BUNDLE_ID, ANATOMY_BUNDLE_MEMBERS, ANATOMY_LEGACY_ID, anatomyBundlePlan, downloadCompleteAnatomy } from "@/lib/anatomyLearningBundle";
+import Link from "next/link";
 import { queueSize, flushQueue } from "@/lib/offlineSyncClient";
 import { storageUsageOverview } from "@/lib/appAutoClean";
 import OfflinePreparationCard from "@/components/OfflinePreparationCard";
@@ -48,6 +50,11 @@ export default function OfflinePage() {
   const [queueN, setQueueN] = useState(0);
   const [flushing, setFlushing] = useState(false);
   const plansRef = useRef<Map<string, ManifestPack>>(new Map());
+  const [anatomyAvailableOffline, setAnatomyAvailableOffline] = useState(false);
+  const combinedAnatomy = anatomyBundlePlan(plans);
+  const visiblePlans = combinedAnatomy
+    ? [combinedAnatomy, ...plans.filter(p => ![...ANATOMY_BUNDLE_MEMBERS, ANATOMY_LEGACY_ID].some(id => id === p.packId))]
+    : plans;
 
   const reloadLocal = useCallback(async () => {
     const [u, q, installed] = await Promise.all([
@@ -56,6 +63,7 @@ export default function OfflinePage() {
       getInstalledPacks().catch(() => [] as { packId: string; version: string }[]),
     ]);
     setUsage(u);
+    setAnatomyAvailableOffline(ANATOMY_BUNDLE_MEMBERS.every(id => installed.some(record => record.packId === id)));
     const learning = await localLearningProgress().catch(() => []);
     setQueueN(q + learning.filter(r => r.pending).length);
     // 删除后重新判定「已是最新」
@@ -102,7 +110,8 @@ export default function OfflinePage() {
       setMessage({ text: "当前APP版本低于该包要求，请先升级APP", ok: false });
       return;
     }
-    if (needsUserConfirmation(plan.manifestPack)) {
+    const completeAnatomy = plan.packId === ANATOMY_BUNDLE_ID;
+    if (!completeAnatomy && needsUserConfirmation(plan.manifestPack)) {
       const ok = window.confirm(
         `「${plan.manifestPack.name}」约 ${fmtSize(plan.manifestPack.size)}，当前使用移动网络，是否继续下载？`
       );
@@ -111,15 +120,18 @@ export default function OfflinePage() {
     setDownloading(plan.packId);
     setProgress(null);
     setMessage(null);
-    const r = await downloadPack(plan.manifestPack, (received, total) => setProgress({ received, total }));
+    const updateProgress = (received: number, total: number) => setProgress({ received, total });
+    const r = completeAnatomy
+      ? await downloadCompleteAnatomy(updateProgress).then(() => ({ok:true,version:""}), error => ({ok:false,version:"",error:(error as Error).message}))
+      : await downloadPack(plan.manifestPack, updateProgress);
     setDownloading(null);
     setProgress(null);
     if (r.ok) {
-      setMessage({ text: `已下载并校验通过（v${r.version}），断网可用`, ok: true });
+      setMessage({ text: completeAnatomy ? "完整三维学习资料已准备好，人体模型与经络图谱均可离线打开。" : `已下载并校验通过（v${r.version}），断网可用`, ok: true });
       await load();
     } else {
-      setMessage({ text: r.error || "下载失败", ok: false });
-      await reloadLocal();
+      setMessage({ text: ("error" in r ? r.error : undefined) || "下载失败", ok: false });
+      await load();
     }
   };
 
@@ -127,9 +139,9 @@ export default function OfflinePage() {
     if (downloading) return;
     const rec = plan.installed;
     if (!rec) return;
-    const ok = window.confirm(`确认删除离线包「${plan.manifestPack.name}」v${rec.version}？删除后需重新下载。`);
+    const ok = window.confirm(`确认移除「${plan.manifestPack.name}」？学习记录保留，资料需重新下载。`);
     if (!ok) return;
-    await remove("OFFLINE_PACK", `${plan.packId}@${rec.version}`);
+    await deactivateOfflinePacks(plan.packId === ANATOMY_BUNDLE_ID ? ANATOMY_BUNDLE_MEMBERS : [plan.packId]);
     setMessage({ text: "已删除", ok: true });
     await load();
   };
@@ -184,7 +196,7 @@ export default function OfflinePage() {
         <div style={{ background: "#fff", borderRadius: "16px", padding: "16px", marginBottom: "12px" }}>
           <div style={{ fontSize: "15px", fontWeight: "bold", color: "#333", marginBottom: "4px" }}>内容包（当前APP v{appVersion}）</div>
           <div style={{ fontSize: "12px", color: "#999", marginBottom: "12px" }}>
-            下载后断网可学习；包完整性经 SHA256 校验，校验失败绝不启用
+            下载并校验后可离线学习，已下载好的资料会保留，无需重复准备。
           </div>
 
           {loading && <div style={{ textAlign: "center", padding: "24px 0", color: "#999", fontSize: "14px" }}>加载中...</div>}
@@ -192,6 +204,7 @@ export default function OfflinePage() {
           {!loading && manifestErr && (
             <div style={{ padding: "16px 0", color: "#999", fontSize: "14px", textAlign: "center", lineHeight: 1.6 }}>
               暂时无法获取内容包清单（可能离线）。<br />
+              {anatomyAvailableOffline && <p>已下载的完整三维学习资料仍可使用。<Link href="/zhongyi/anatomy3d/">打开人体模型与经络图谱</Link></p>}
               <button onClick={() => void load()} style={{ marginTop: "8px", padding: "6px 16px", borderRadius: "8px", border: "1px solid " + BRAND, color: BRAND, backgroundColor: "#fff", cursor: "pointer" }}>重试</button>
             </div>
           )}
@@ -202,7 +215,7 @@ export default function OfflinePage() {
             </div>
           )}
 
-          {plans.map((p) => {
+          {visiblePlans.map((p) => {
             const isDownloading = downloading === p.packId;
             return (
               <div key={p.packId} style={{ borderTop: "1px solid #f0f0f0", padding: "14px 0" }}>
@@ -215,11 +228,12 @@ export default function OfflinePage() {
                       )}
                     </div>
                     <div style={{ fontSize: "12px", color: "#999", marginTop: "4px" }}>
-                      v{p.manifestPack.version} · {fmtSize(p.manifestPack.size)}
+                      {p.packId === ANATOMY_BUNDLE_ID ? "人体模型与经络图谱" : `v${p.manifestPack.version}`} · {fmtSize(p.manifestPack.size)}
                     </div>
                     {p.manifestPack.description && (
                       <div style={{ fontSize: "12px", color: "#666", marginTop: "6px", lineHeight: 1.5 }}>{p.manifestPack.description}</div>
                     )}
+                    {p.packId === ANATOMY_BUNDLE_ID && p.action === "UP_TO_DATE" && <Link href="/zhongyi/anatomy3d/" style={{fontSize:13,color:BRAND}}>打开三维学习</Link>}
                   </div>
                   <div style={{ flexShrink: 0, textAlign: "right" }}>
                     <div style={{ fontSize: "12px", color: p.action === "UP_TO_DATE" ? "#27ae60" : p.action === "INCOMPATIBLE" ? "#e67e22" : BRAND, marginBottom: "6px" }}>
@@ -242,7 +256,7 @@ export default function OfflinePage() {
                           disabled={!!downloading}
                           style={btnStyle(downloading ? "#e0e0e0" : BRAND, downloading ? "#999" : "#fff")}
                         >
-                          {isDownloading ? "下载中" : p.action === "UPDATE" ? "更新" : "下载"}
+                          {isDownloading ? "准备中" : p.packId === ANATOMY_BUNDLE_ID ? p.action === "UPDATE" ? "补齐或更新资料" : "一次下载完整资料" : p.action === "UPDATE" ? "更新" : "下载"}
                         </button>
                       </div>
                     )}
