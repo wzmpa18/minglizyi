@@ -53,9 +53,10 @@ export default function OfflinePage() {
   const plansRef = useRef<Map<string, ManifestPack>>(new Map());
   const [anatomyAvailableOffline, setAnatomyAvailableOffline] = useState(false);
   const combinedAnatomy = anatomyBundlePlan(plans);
-  const visiblePlans = combinedAnatomy
+  const publicTcmParts=['tcm-learning-complete','medical-study-library','tcm-materia-originals','tcm-original-editions-approved','tcm-acupoints'];
+  const visiblePlans = (combinedAnatomy
     ? [combinedAnatomy, ...plans.filter(p => ![...ANATOMY_BUNDLE_MEMBERS, ANATOMY_LEGACY_ID].some(id => id === p.packId))]
-    : plans;
+    : plans).filter(p=>!publicTcmParts.includes(p.packId));
 
   const reloadLocal = useCallback(async () => {
     const [u, q, installed] = await Promise.all([
@@ -124,10 +125,20 @@ export default function OfflinePage() {
     const updateProgress = (received: number, total: number) => setProgress({ received, total });
     const r: DownloadResult = completeAnatomy
       ? await downloadCompleteAnatomy(updateProgress).then(() => ({ok:true,packId:plan.packId,version:""}), error => ({ok:false,packId:plan.packId,version:"",error:(error as Error).message}))
-      : await downloadPack(plan.manifestPack, updateProgress);
+      : await downloadPack(plan.manifestPack, updateProgress,async bytes=>{
+        if(['guoxue-classics-approved','yixue-classics-library'].includes(plan.packId)){
+          const {isCompatibleGuoxuePack}=await import('@/lib/classicReading');
+          if(!isCompatibleGuoxuePack(JSON.parse(new TextDecoder().decode(bytes))))throw Error('典籍格式或完整性检查未通过，原文保留');
+        }
+      });
     setDownloading(null);
     setProgress(null);
     if (r.ok) {
+      if(plan.packId==='guoxue-classics-approved'||plan.packId==='yixue-classics-library'){
+        try{await(await import('@/lib/retainedGuoxueClassics')).retainedGuoxueClassics(plan.packId,true);}catch{
+          setMessage({text:'典籍已下载，本机正文保存尚未完成；可重试补齐，原有内容保留。',ok:false});await load();return;
+        }
+      }
       setMessage({ text: completeAnatomy ? "完整三维学习资料已准备好，人体模型与经络图谱均可离线打开。" : `已下载并校验通过（v${r.version}），断网可用`, ok: true });
       await load();
     } else {

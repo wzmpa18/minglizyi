@@ -6,7 +6,7 @@ import {readOfflineFile} from '@/lib/durableOfflineStore';
 export function MedicalPreparationCard(){
  const [busy,setBusy]=useState(false),[message,setMessage]=useState(''),[ready,setReady]=useState(false);
  const [disk,setDisk]=useState('checking');
- useEffect(()=>{void Promise.all([readOfflineFile('medical-library-ready'),readOfflineFile('study-media-ready'),readOfflineFile('tcm-books-head-tcm-materia-originals'),readOfflineFile('tcm-books-head-tcm-original-editions-approved')]).then(rows=>setReady(rows.every(Boolean))).catch(()=>{});},[]);
+ useEffect(()=>{void readOfflineFile('tcm-complete-ready').then(value=>setReady(Boolean(value))).catch(()=>{});},[]);
  useEffect(()=>{let live=true;void(async()=>{try{
   const key='learning-storage-readback-check',expected={schema:1,synthetic:true,content:'offline-learning-storage-check'};
   const previous=await readOfflineFile<typeof expected>(key);

@@ -1,6 +1,7 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('fs'),path=require('path'),vm=require('vm'),ts=require('typescript'),{zipSync,strToU8}=require('fflate'),{webcrypto,createHash}=require('crypto'),{IDBFactory}=require('fake-indexeddb');
 const hash=b=>createHash('sha256').update(b).digest('hex');
+process.chdir(path.resolve(__dirname,'..'));
 test('complete production candidate verifies every inner file and activates its shared data indexes',{skip:!process.env.TCM_COMPLETE_CANDIDATE},async()=>{
  const f=fixture(),raw=fs.readFileSync(process.env.TCM_COMPLETE_CANDIDATE),bytes=raw.buffer.slice(raw.byteOffset,raw.byteOffset+raw.byteLength);
  const m=await f.codec.validateLearningBundle(bytes,'tcm-learning-complete','1.0.0');

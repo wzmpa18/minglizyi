@@ -8,19 +8,12 @@ import { LocalListenButton } from "@/components/LocalListenButton";
 import { ContinuousListenPlayer } from "@/components/ContinuousListenPlayer";
 import AIInterpretButton from "@/components/AIInterpretButton";
 import classicsData from "@/data/guoxueClassics.json";
-import { loadJsonPack } from "@/lib/offlinePackClient";
 import { classicReadingBlocks, isCompatibleGuoxuePack } from "@/lib/classicReading";
 import {retainedGuoxueClassics} from '@/lib/retainedGuoxueClassics';
 
 const BRAND = "#7B2FBE";
 
 type GuoxueBook = (typeof classicsData.books)[number];
-interface GuoxueClassicsPack {
-  schema: "yandao.guoxue.classics.v1";
-  version: string;
-  notice: string;
-  books: GuoxueBook[];
-}
 
 function BooksContent() {
   const [selectedId, setSelectedId] = useState("");

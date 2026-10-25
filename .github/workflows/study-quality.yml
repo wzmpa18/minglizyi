@@ -212,6 +212,11 @@ on:
       - 'src/lib/offlineDownloadLink.ts'
       - 'scripts/offline-download-link.test.cjs'
       - 'scripts/offline-pack-client.test.cjs'
+      - 'scripts/learning-bundle.test.cjs'
+      - 'src/lib/learningBundleCodec.ts'
+      - 'src/lib/completeTcmLearning.ts'
+      - 'src/lib/tcmStructuredContent.ts'
+      - 'src/lib/retainedGuoxueClassics.ts'
       - 'scripts/anatomy-learning-bundle.test.cjs'
       - 'src/lib/anatomyLearningBundle.ts'
       - 'scripts/discover-video-link.test.cjs'
@@ -378,7 +383,7 @@ jobs:
       - name: Verify discussion HTTP authentication and moderation against production dependency versions
         run: |
           npm install --prefix "$RUNNER_TEMP/study-http-deps" --no-save --package-lock=false express@4.22.2 better-sqlite3@13.0.3 jsonwebtoken@9.0.3 bcrypt@6.0.0 fake-indexeddb@6.2.4
-          NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/offline-pack-client.test.cjs scripts/anatomy-learning-bundle.test.cjs scripts/acupoint-classic-study.test.cjs scripts/medical-library-media.test.cjs
+          NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/offline-pack-client.test.cjs scripts/anatomy-learning-bundle.test.cjs scripts/acupoint-classic-study.test.cjs scripts/medical-library-media.test.cjs scripts/learning-bundle.test.cjs
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/password-reset-http.test.cjs
           node --test scripts/discover-video-link.test.cjs
           node --test scripts/safe-rich-text.test.cjs
