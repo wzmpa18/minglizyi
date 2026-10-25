@@ -24,8 +24,8 @@ export const DONG_ZONES: Record<string, string> = {
   "zone_12": "前胸部位",
 };
 
-/** 董氏奇穴完整数据库 */
-export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
+/** 既有董氏条目，尚非全量；新增条目须附逐页出处。 */
+export let DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
   // ============ 一一部位（手指） ============
   {
     name: "木穴",
@@ -38,7 +38,7 @@ export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
     needling_method: "直刺1-2分，或点刺出血。",
     depth: "1-2分",
     duration: "15-20分钟",
-    contraindications: "无特殊禁忌。",
+    contraindications: "本条禁忌尚缺已核对的文献依据，不能据此判断为无禁忌。",
     literature: "《董氏针灸正经奇穴学》",
   },
   {
@@ -52,7 +52,7 @@ export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
     needling_method: "直刺1-2分。",
     depth: "1-2分",
     duration: "15-20分钟",
-    contraindications: "无特殊禁忌。",
+    contraindications: "本条禁忌尚缺已核对的文献依据，不能据此判断为无禁忌。",
     literature: "《董氏针灸正经奇穴学》",
   },
   {
@@ -66,7 +66,7 @@ export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
     needling_method: "直刺1-2分。",
     depth: "1-2分",
     duration: "15-20分钟",
-    contraindications: "无特殊禁忌。",
+    contraindications: "本条禁忌尚缺已核对的文献依据，不能据此判断为无禁忌。",
     literature: "《董氏针灸正经奇穴学》",
   },
   {
@@ -80,7 +80,7 @@ export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
     needling_method: "直刺1-2分。",
     depth: "1-2分",
     duration: "15-20分钟",
-    contraindications: "无特殊禁忌。",
+    contraindications: "本条禁忌尚缺已核对的文献依据，不能据此判断为无禁忌。",
     literature: "《董氏针灸正经奇穴学》",
   },
   {
@@ -94,7 +94,7 @@ export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
     needling_method: "直刺1-2分，或点刺出血。",
     depth: "1-2分",
     duration: "15-20分钟",
-    contraindications: "无特殊禁忌。",
+    contraindications: "本条禁忌尚缺已核对的文献依据，不能据此判断为无禁忌。",
     literature: "《董氏针灸正经奇穴学》",
   },
 
@@ -110,7 +110,7 @@ export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
     needling_method: "直刺3-5分。",
     depth: "3-5分",
     duration: "20-30分钟",
-    contraindications: "无特殊禁忌。",
+    contraindications: "本条禁忌尚缺已核对的文献依据，不能据此判断为无禁忌。",
     literature: "《董氏针灸正经奇穴学》",
   },
   {
@@ -124,7 +124,7 @@ export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
     needling_method: "直刺3-5分。",
     depth: "3-5分",
     duration: "20-30分钟",
-    contraindications: "无特殊禁忌。",
+    contraindications: "本条禁忌尚缺已核对的文献依据，不能据此判断为无禁忌。",
     literature: "《董氏针灸正经奇穴学》",
   },
   {
@@ -152,7 +152,7 @@ export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
     needling_method: "直刺0.5-1寸。",
     depth: "0.5-1寸",
     duration: "15-20分钟",
-    contraindications: "无特殊禁忌。",
+    contraindications: "本条禁忌尚缺已核对的文献依据，不能据此判断为无禁忌。",
     literature: "《董氏针灸正经奇穴学》",
   },
 
@@ -168,7 +168,7 @@ export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
     needling_method: "直刺0.5-1寸。",
     depth: "0.5-1寸",
     duration: "20-30分钟",
-    contraindications: "无特殊禁忌。",
+    contraindications: "本条禁忌尚缺已核对的文献依据，不能据此判断为无禁忌。",
     literature: "《董氏针灸正经奇穴学》",
   },
   {
@@ -182,7 +182,7 @@ export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
     needling_method: "直刺0.5-1寸。",
     depth: "0.5-1寸",
     duration: "20-30分钟",
-    contraindications: "无特殊禁忌。",
+    contraindications: "本条禁忌尚缺已核对的文献依据，不能据此判断为无禁忌。",
     literature: "《董氏针灸正经奇穴学》",
   },
   {
@@ -196,7 +196,7 @@ export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
     needling_method: "直刺0.5-1寸。",
     depth: "0.5-1寸",
     duration: "20-30分钟",
-    contraindications: "无特殊禁忌。",
+    contraindications: "本条禁忌尚缺已核对的文献依据，不能据此判断为无禁忌。",
     literature: "《董氏针灸正经奇穴学》",
   },
   {
@@ -210,7 +210,7 @@ export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
     needling_method: "直刺0.5-1寸。",
     depth: "0.5-1寸",
     duration: "15-20分钟",
-    contraindications: "无特殊禁忌。",
+    contraindications: "本条禁忌尚缺已核对的文献依据，不能据此判断为无禁忌。",
     literature: "《董氏针灸正经奇穴学》",
   },
   {
@@ -224,7 +224,7 @@ export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
     needling_method: "直刺0.5-1寸。",
     depth: "0.5-1寸",
     duration: "15-20分钟",
-    contraindications: "无特殊禁忌。",
+    contraindications: "本条禁忌尚缺已核对的文献依据，不能据此判断为无禁忌。",
     literature: "《董氏针灸正经奇穴学》",
   },
 
@@ -240,7 +240,7 @@ export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
     needling_method: "直刺1-1.5寸。",
     depth: "1-1.5寸",
     duration: "20-30分钟",
-    contraindications: "无特殊禁忌。",
+    contraindications: "本条禁忌尚缺已核对的文献依据，不能据此判断为无禁忌。",
     literature: "《董氏针灸正经奇穴学》",
   },
   {
@@ -254,7 +254,7 @@ export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
     needling_method: "直刺1-1.5寸。",
     depth: "1-1.5寸",
     duration: "20-30分钟",
-    contraindications: "无特殊禁忌。",
+    contraindications: "本条禁忌尚缺已核对的文献依据，不能据此判断为无禁忌。",
     literature: "《董氏针灸正经奇穴学》",
   },
 
@@ -270,7 +270,7 @@ export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
     needling_method: "直刺1分，或点刺出血。",
     depth: "1分",
     duration: "15-20分钟",
-    contraindications: "无特殊禁忌。",
+    contraindications: "本条禁忌尚缺已核对的文献依据，不能据此判断为无禁忌。",
     literature: "《董氏针灸正经奇穴学》",
   },
   {
@@ -314,7 +314,7 @@ export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
     needling_method: "直刺0.5-1寸。",
     depth: "0.5-1寸",
     duration: "20-30分钟",
-    contraindications: "无特殊禁忌。",
+    contraindications: "本条禁忌尚缺已核对的文献依据，不能据此判断为无禁忌。",
     literature: "《董氏针灸正经奇穴学》",
   },
   {
@@ -328,7 +328,7 @@ export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
     needling_method: "直刺0.5-1寸。",
     depth: "0.5-1寸",
     duration: "20-30分钟",
-    contraindications: "无特殊禁忌。",
+    contraindications: "本条禁忌尚缺已核对的文献依据，不能据此判断为无禁忌。",
     literature: "《董氏针灸正经奇穴学》",
   },
   {
@@ -342,7 +342,7 @@ export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
     needling_method: "直刺1-1.5寸。",
     depth: "1-1.5寸",
     duration: "20-30分钟",
-    contraindications: "无特殊禁忌。",
+    contraindications: "本条禁忌尚缺已核对的文献依据，不能据此判断为无禁忌。",
     literature: "《董氏针灸正经奇穴学》",
   },
   {
@@ -356,7 +356,7 @@ export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
     needling_method: "直刺1-1.5寸。",
     depth: "1-1.5寸",
     duration: "20-30分钟",
-    contraindications: "无特殊禁忌。",
+    contraindications: "本条禁忌尚缺已核对的文献依据，不能据此判断为无禁忌。",
     literature: "《董氏针灸正经奇穴学》",
   },
   {
@@ -370,7 +370,7 @@ export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
     needling_method: "直刺1-1.5寸。",
     depth: "1-1.5寸",
     duration: "20-30分钟",
-    contraindications: "无特殊禁忌。",
+    contraindications: "本条禁忌尚缺已核对的文献依据，不能据此判断为无禁忌。",
     literature: "《董氏针灸正经奇穴学》",
   },
 
@@ -386,7 +386,7 @@ export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
     needling_method: "直刺1-2寸。",
     depth: "1-2寸",
     duration: "20-30分钟",
-    contraindications: "无特殊禁忌。",
+    contraindications: "本条禁忌尚缺已核对的文献依据，不能据此判断为无禁忌。",
     literature: "《董氏针灸正经奇穴学》",
   },
   {
@@ -400,7 +400,7 @@ export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
     needling_method: "直刺1-2寸。",
     depth: "1-2寸",
     duration: "20-30分钟",
-    contraindications: "无特殊禁忌。",
+    contraindications: "本条禁忌尚缺已核对的文献依据，不能据此判断为无禁忌。",
     literature: "《董氏针灸正经奇穴学》",
   },
   {
@@ -414,7 +414,7 @@ export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
     needling_method: "直刺1-2寸。",
     depth: "1-2寸",
     duration: "20-30分钟",
-    contraindications: "无特殊禁忌。",
+    contraindications: "本条禁忌尚缺已核对的文献依据，不能据此判断为无禁忌。",
     literature: "《董氏针灸正经奇穴学》",
   },
   {
@@ -516,7 +516,7 @@ export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
     needling_method: "平刺0.5-1寸。",
     depth: "0.5-1寸",
     duration: "20-30分钟",
-    contraindications: "无特殊禁忌。",
+    contraindications: "本条禁忌尚缺已核对的文献依据，不能据此判断为无禁忌。",
     literature: "《董氏针灸正经奇穴学》",
   },
   {
@@ -530,7 +530,7 @@ export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
     needling_method: "直刺1-2分。",
     depth: "1-2分",
     duration: "15-20分钟",
-    contraindications: "无特殊禁忌。",
+    contraindications: "本条禁忌尚缺已核对的文献依据，不能据此判断为无禁忌。",
     literature: "《董氏针灸正经奇穴学》",
   },
   {
@@ -544,7 +544,7 @@ export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
     needling_method: "直刺1-2分。",
     depth: "1-2分",
     duration: "15-20分钟",
-    contraindications: "无特殊禁忌。",
+    contraindications: "本条禁忌尚缺已核对的文献依据，不能据此判断为无禁忌。",
     literature: "《董氏针灸正经奇穴学》",
   },
 
@@ -596,6 +596,50 @@ export const DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
 ];
 
 /** 按部位获取董氏奇穴 */
+export interface DongStudyCatalog {
+  schema: 'yandao.tcm.dong-catalog.v1';
+  version: string;
+  reviewState: 'SOURCE_REFERENCED';
+  points: TcmDongAcupoint[];
+}
+
+/** Declarative, source-referenced content only; never executable updates. */
+export function validateDongStudyCatalog(raw: unknown): DongStudyCatalog | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const catalog = raw as DongStudyCatalog;
+  if (catalog.schema !== 'yandao.tcm.dong-catalog.v1' || catalog.reviewState !== 'SOURCE_REFERENCED' ||
+      typeof catalog.version !== 'string' || catalog.version.length > 40 || !Array.isArray(catalog.points) ||
+      catalog.points.length < 39 || catalog.points.length > 2000) return null;
+  const codes = new Set<string>(), names = new Set<string>();
+  const text = (value: unknown, max: number) => typeof value === 'string' && value.length <= max && !/[<>\u0000]/.test(value);
+  for (const point of catalog.points) {
+    if (!point || !text(point.name, 40) || !point.name || !text(point.code, 30) ||
+        !/^(?:DT\.[0-9]{1,4}|[0-9]{2}\.[0-9]{1,3})$/.test(point.code) ||
+        codes.has(point.code) || names.has(point.name.replace(/穴$/, '')) ||
+        !Object.values(DONG_ZONES).includes(point.zone) || !text(point.location, 1500) || !point.location ||
+        !text(point.function, 2500) || !point.function || !text(point.pinyin, 100) ||
+        !text(point.location_detail, 2500) || !text(point.literature, 500) ||
+        !text(point.needling_method, 1500) || !text(point.depth, 100) || !text(point.duration, 100) ||
+        !text(point.contraindications, 1500) || !Array.isArray(point.study_sources) ||
+        point.study_sources.length < 1 || point.study_sources.length > 20) return null;
+    for (const source of point.study_sources) {
+      if (!source || !text(source.title, 200) || !source.title || !text(source.edition, 300) || !source.edition ||
+          !Number.isInteger(source.page) || source.page < 1 || source.page > 10000 ||
+          !/^[a-f0-9]{64}$/.test(source.sourceSha256)) return null;
+    }
+    if (point.image_url && !/^\/tcm\/[a-zA-Z0-9_./-]+\.(?:png|jpg|webp)$/.test(point.image_url)) return null;
+    codes.add(point.code); names.add(point.name.replace(/穴$/, ''));
+  }
+  return JSON.parse(JSON.stringify(catalog)) as DongStudyCatalog;
+}
+
+export function installDongStudyCatalog(raw: unknown): boolean {
+  const catalog = validateDongStudyCatalog(raw);
+  if (!catalog) return false;
+  DONG_ACUPOINTS_DB = catalog.points;
+  return true;
+}
+
 export function getDongAcupointsByZone(zoneCode: string): TcmDongAcupoint[] {
   const zoneName = DONG_ZONES[zoneCode] || "";
   return DONG_ACUPOINTS_DB.filter((a) => a.zone === zoneName);

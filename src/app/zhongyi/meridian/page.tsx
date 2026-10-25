@@ -1005,6 +1005,7 @@ function DongAcupointDetailPage({ acupointName }: { acupointName: string }) {
     { label: "留针时间", content: acupoint.duration },
     { label: "禁忌", content: acupoint.contraindications },
     { label: "文献出处", content: acupoint.literature },
+    { label: "逐页出处", content: acupoint.study_sources?.map(source => `《${source.title}》${source.edition}，第${source.page}页`).join("；") },
   ];
 
   return (

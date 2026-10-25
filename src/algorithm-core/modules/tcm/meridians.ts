@@ -19,6 +19,7 @@ import type { TcmMeridian, TcmAcupoint } from '../../types/tcm';
 // 直接 import JSON 数据，确保静态导出时数据完整（14经络361穴位）
 import meridiansJson from './data/meridians.json';
 import { installPointStudyIndex, validatePointStudyIndex, type PointStudyIndex } from './point-study';
+import { installDongStudyCatalog, validateDongStudyCatalog, type DongStudyCatalog } from './dong-acupoints';
 
 // ============================================================================
 // 经络分类映射
@@ -266,6 +267,7 @@ interface TcmAcupointContentPack {
   reviewState: 'APPROVED_EXISTING_BASELINE';
   acupoints: TcmAcupoint[];
   pointStudy?: PointStudyIndex;
+  dongStudy?: DongStudyCatalog;
 }
 
 /** 安装已通过离线包 SHA256 校验的穴位数据；验证失败时继续使用内置 361 穴。 */
@@ -274,6 +276,8 @@ export function installAcupointContentPack(pack: TcmAcupointContentPack): boolea
   if (!Array.isArray(pack.acupoints) || pack.acupoints.length < 361) return false;
   const study = pack.pointStudy === undefined ? undefined : validatePointStudyIndex(pack.pointStudy);
   if (study === null) return false;
+  const dongStudy = pack.dongStudy === undefined ? undefined : validateDongStudyCatalog(pack.dongStudy);
+  if (dongStudy === null) return false;
   const seen = new Set<string>();
   const safe: TcmAcupoint[] = [];
   for (const raw of pack.acupoints) {
@@ -298,6 +302,7 @@ export function installAcupointContentPack(pack: TcmAcupointContentPack): boolea
   }
   ACUPOINTS_DB = safe;
   if (study) installPointStudyIndex(study);
+  if (dongStudy) installDongStudyCatalog(dongStudy);
   return true;
 }
 

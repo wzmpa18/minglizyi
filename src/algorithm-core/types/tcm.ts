@@ -86,6 +86,7 @@ export interface TcmDongAcupoint {
   contraindications: string;
   literature: string;
   image_url?: string;
+  study_sources?: Array<{ title: string; edition: string; page: number; sourceSha256: string }>;
 }
 
 /** AI抓取缓存记录 */

@@ -17,6 +17,7 @@ function load(file, dependencies) {
   }});
   return exports;
 }
+const freshDong = () => load('src/algorithm-core/modules/tcm/dong-acupoints.ts', {});
 const fresh = () => load('src/algorithm-core/modules/tcm/point-study.ts', {
   '../../../data/acupointClassicStudy.json': structuredClone(data),
 });
@@ -73,7 +74,7 @@ test('malformed or unsafe source updates leave the usable installed content inta
 test('baseline empty functions no longer reject a valid downloaded study pack; failed packs are atomic', () => {
   const study = fresh();
   const api = load('src/algorithm-core/modules/tcm/meridians.ts', {
-    './data/meridians.json': structuredClone(base), './point-study': study,
+    './data/meridians.json': structuredClone(base), './point-study': study, './dong-acupoints': freshDong(),
   });
   const pack = {schema:'yandao.tcm.acupoints.v1',version:'1.1.0',reviewState:'APPROVED_EXISTING_BASELINE',
     acupoints: structuredClone(base.acupoints), pointStudy: structuredClone(data)};
@@ -88,4 +89,31 @@ test('baseline empty functions no longer reject a valid downloaded study pack; f
   assert.equal(JSON.stringify(api.ACUPOINTS_DB), before);
   const legacy = structuredClone(pack); delete legacy.pointStudy;
   assert.equal(api.installAcupointContentPack(legacy), true);
+});
+
+test('Dong content requires individual page provenance and rejects partial or unreviewed replacements', () => {
+  const api = freshDong();
+  const previous = JSON.stringify(api.DONG_ACUPOINTS_DB);
+  assert.equal(api.DONG_ACUPOINTS_DB.length, 39);
+  assert.ok(api.DONG_ACUPOINTS_DB.every(point => point.contraindications !== '无特殊禁忌。'));
+  const catalog = {schema:'yandao.tcm.dong-catalog.v1',version:'fixture',reviewState:'SOURCE_REFERENCED',
+    points: JSON.parse(previous).map(point => ({...point,study_sources:[{
+      title:'fixture source',edition:'fixture edition',page:1,sourceSha256:'a'.repeat(64),
+    }]}))};
+  assert.equal(api.installDongStudyCatalog(catalog), true);
+  const installed = JSON.stringify(api.DONG_ACUPOINTS_DB);
+  for (const change of [
+    value => { value.points[0].study_sources = []; },
+    value => { value.points[0].study_sources[0].page = 0; },
+    value => { value.reviewState = 'OCR_UNREVIEWED'; },
+    value => { value.points[0].code = value.points[1].code; },
+    value => { value.points[0].image_url = 'https://untrusted.invalid/image.jpg'; },
+    value => { value.points.pop(); },
+  ]) {
+    const invalid = structuredClone(catalog); change(invalid);
+    assert.equal(api.installDongStudyCatalog(invalid), false);
+    assert.equal(JSON.stringify(api.DONG_ACUPOINTS_DB), installed);
+  }
+  catalog.points[0].function = 'caller mutation';
+  assert.equal(JSON.stringify(api.DONG_ACUPOINTS_DB), installed);
 });
