@@ -3,11 +3,12 @@ import { loadJsonPack, fetchManifest, checkUpdates, downloadPack, needsUserConfi
 import { readOfflineFile, writeOfflineFile } from './durableOfflineStore';
 import { CLIENT_VERSION } from './releaseFeatures';
 
-export interface MedicalSource {title:string;author:string;kind:'LECTURE_TRANSCRIPT'|'CLASSIC_ORIGINAL'|'COMMUNITY_COURSE_NOTES';sha256:string;url?:string;localOriginalName?:string;license?:string;inAppBook?:boolean}
+export interface MedicalSource {title:string;author:string;kind:'LECTURE_TRANSCRIPT'|'CLASSIC_ORIGINAL'|'COMMUNITY_COURSE_NOTES'|'STUDY_REFERENCE';sha256:string;url?:string;localOriginalName?:string;license?:string;inAppBook?:boolean}
 export interface MedicalPassage {source:string;chapter:string;chapterTitle:string;text:string;lineStart:number;lineEnd:number;sha256:string;topic?:'combination_context'|'caution_context'|'indication_context'|'related'}
-export interface MedicalSubject {name:string;kind:string;references:string[]}
+export interface MedicalIllustration {path:string;title:string;source:string;caption:string}
+export interface MedicalSubject {name:string;kind:string;references:string[];illustrations?:MedicalIllustration[]}
 export interface MedicalLibrary {schema:'yandao.medical.study-library.v1';version:string;sources:Record<string,MedicalSource>;passages:Record<string,MedicalPassage>;subjects:Record<string,MedicalSubject>}
-export interface SubjectReading {name:string;version:string;persisted?:boolean;passages:Array<MedicalPassage&{sourceInfo:MedicalSource}>}
+export interface SubjectReading {name:string;version:string;persisted?:boolean;passages:Array<MedicalPassage&{sourceInfo:MedicalSource}>;illustrations?:Array<MedicalIllustration&{sourceInfo:MedicalSource}>}
 const PACK='medical-study-library';
 let cached:Promise<MedicalLibrary|null>|undefined;
 if(typeof window!=='undefined')window.addEventListener('offline-pack-installed',event=>{
@@ -16,7 +17,7 @@ if(typeof window!=='undefined')window.addEventListener('offline-pack-installed',
 const plain=(value:unknown,max:number)=>typeof value==='string'&&value.length<=max&&!/[\u0000]/.test(value);
 function validSource(source:MedicalSource){
   if(source?.inAppBook!==undefined&&typeof source.inAppBook!=='boolean')return false;
-  if(!source||!plain(source.title,300)||!source.title||!plain(source.author,300)||!source.author||!['LECTURE_TRANSCRIPT','CLASSIC_ORIGINAL','COMMUNITY_COURSE_NOTES'].includes(source.kind)||!/^[a-f0-9]{64}$/.test(source.sha256))return false;
+  if(!source||!plain(source.title,300)||!source.title||!plain(source.author,300)||!source.author||!['LECTURE_TRANSCRIPT','CLASSIC_ORIGINAL','COMMUNITY_COURSE_NOTES','STUDY_REFERENCE'].includes(source.kind)||!/^[a-f0-9]{64}$/.test(source.sha256))return false;
   if(source.url){try{const url=new URL(source.url);const community=url.hostname==='github.com'&&/^\/Shanemen\/hantang-nihaixia\/blob\/[a-f0-9]{40}\//.test(url.pathname);const edition=url.hostname==='gitlab.com'&&/^\/jicheng\/jc\.data\/-\/blob\/[a-f0-9]{40}\/pages\/book\//.test(url.pathname);if(url.protocol!=='https:'||(!['zh.wikisource.org','www.shidianguji.com'].includes(url.hostname)&&!community&&!edition)||url.username||url.password)return false;}catch{return false;}}
   return true;
 }
@@ -26,8 +27,10 @@ async function validReading(reading:SubjectReading){
     if(!entry||!validSource(entry.sourceInfo)||!plain(entry.text,2500)||!plain(entry.chapter,200)||!plain(entry.chapterTitle,500)||!Number.isInteger(entry.lineStart)||entry.lineStart<1||!Number.isInteger(entry.lineEnd)||entry.lineEnd<entry.lineStart)return false;
     const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(entry.text)))).map(v=>v.toString(16).padStart(2,'0')).join('');if(digest!==entry.sha256)return false;
   }
+  if(reading.illustrations!==undefined&&(!Array.isArray(reading.illustrations)||reading.illustrations.length>16||reading.illustrations.some(image=>!validIllustration(image)||!validSource(image.sourceInfo))))return false;
   return true;
 }
+function validIllustration(value:MedicalIllustration){return !!value&&/^\/assets\/acupoint-photos\/[a-z0-9-]+\.(?:webp|jpg|png)$/.test(value.path)&&plain(value.title,300)&&!!value.title&&plain(value.caption,2000)&&plain(value.source,120);}
 export function validateMedicalLibrary(raw:unknown):MedicalLibrary {
   const value=raw as MedicalLibrary;
   if(!value||value.schema!=='yandao.medical.study-library.v1'||!/^\d+\.\d+\.\d+$/.test(value.version)||!value.sources||!value.passages||!value.subjects)throw Error('文献资料协议不匹配');
@@ -42,6 +45,7 @@ export function validateMedicalLibrary(raw:unknown):MedicalLibrary {
   for(const [key,subject] of Object.entries(value.subjects)){
     if(!/^(?:point:[A-Z]{1,4}\d{1,3}|herb:h\d{3,5}|dong:[^<>\u0000/:]{1,40})$/.test(key)||!subject||!plain(subject.name,100)||!Array.isArray(subject.references)||subject.references.length>100||
       subject.references.some(id=>!Object.hasOwn(value.passages,id))||new Set(subject.references).size!==subject.references.length)throw Error('药穴关联无效');
+    if(subject.illustrations!==undefined&&(!Array.isArray(subject.illustrations)||subject.illustrations.length>16||subject.illustrations.some(image=>!validIllustration(image)||!Object.hasOwn(value.sources,image.source))))throw Error('图谱出处或路径无效');
   }
   return value;
 }
@@ -50,7 +54,7 @@ async function subjectKey(subject:string){const bytes=await crypto.subtle.digest
 function aliases(key:string){return [key,key.replace(/^point:DU/,'point:GV').replace(/^point:RN/,'point:CV'),key.replace(/^point:GV/,'point:DU').replace(/^point:CV/,'point:RN')];}
 export async function medicalSubject(key:string):Promise<SubjectReading|null>{
   const pack=await library();const target=pack&&aliases(key).find(id=>pack.subjects[id]);
-  if(pack&&target){const subject=pack.subjects[target];const result:SubjectReading={name:subject.name,version:pack.version,persisted:true,passages:subject.references.map(id=>({...pack.passages[id],sourceInfo:{...pack.sources[pack.passages[id].source]}}))};if(!await validReading(result))throw Error('文献内容摘要不一致，原资料保留');try{await writeOfflineFile(await subjectKey(key),result);}catch{result.persisted=false;}return result;}
+  if(pack&&target){const subject=pack.subjects[target];const result:SubjectReading={name:subject.name,version:pack.version,persisted:true,passages:subject.references.map(id=>({...pack.passages[id],sourceInfo:{...pack.sources[pack.passages[id].source]}})),illustrations:subject.illustrations?.map(image=>({...image,sourceInfo:{...pack.sources[image.source]}}))};if(!await validReading(result))throw Error('文献内容摘要不一致，原资料保留');try{await writeOfflineFile(await subjectKey(key),result);}catch{result.persisted=false;}return result;}
   for(const candidate of new Set(aliases(key))){
     const saved=await readOfflineFile<SubjectReading>(await subjectKey(candidate)).catch(()=>null);
     if(saved&&await validReading(saved))return {...saved,persisted:true};

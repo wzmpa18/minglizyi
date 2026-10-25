@@ -186,7 +186,8 @@ def build(lectures, output, audit, public_notes=None, materia_catalogue=None):
             references.append(max(hits[key][source], key=lambda hit:hit[0])[1])
         item['references']=references[:24]; selected.update(item['references'])
         coverage.append({'key':key,'name':item['name'],'references':len(item['references']),
-                         'niLecture':any(passages[p]['source'].startswith('ni-') for p in item['references']), 'authors':len(authors)})
+                         'niLecture':any(passages[p]['source'].startswith('ni-') for p in item['references']),
+                         'authors':len({sources[passages[p]['source']]['author'] for p in item['references']}),'availableAuthors':len(authors)})
         coverage[-1]['niLecture']=any(sources[passages[p]['source']]['kind']=='LECTURE_TRANSCRIPT' for p in item['references'])
         coverage[-1]['niCourseNotes']=any(sources[passages[p]['source']]['kind']=='COMMUNITY_COURSE_NOTES' for p in item['references'])
     payload={'schema':'yandao.medical.study-library.v1','version':'1.0.0',

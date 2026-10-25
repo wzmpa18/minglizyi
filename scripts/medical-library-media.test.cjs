@@ -2,6 +2,17 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const {webcrypto,createHash}=require('node:crypto');
 function load(file,deps,extra={}){const exports={};const code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText;vm.runInNewContext(code,{exports,URL,crypto:webcrypto,TextEncoder,TextDecoder,Uint8Array,ArrayBuffer,AbortSignal,atob,btoa,console,...extra,require:name=>{if(name in deps)return deps[name];throw Error(name);}});return exports;}
 const copy=value=>value===undefined?undefined:JSON.parse(JSON.stringify(value));
+test('CI offline injection blocks services and image fetch while preserving bundled navigation and the native bridge',async()=>{
+ const allowed=[],proof=[],timers=[];
+ class Xhr{open(){}send(){allowed.push('xhr');}}
+ const window={location:{href:'capacitor://localhost/',protocol:'capacitor:',host:'localhost'},fetch:async input=>{allowed.push(String(input));return {ok:true};},Capacitor:{nativePromise:async(_plugin,_method,value)=>proof.push(JSON.parse(value.value))}};
+ vm.runInNewContext(fs.readFileSync('scripts/ios-learning-network-fault.js','utf8'),{window,XMLHttpRequest:Xhr,URL,WeakMap,setInterval:fn=>{timers.push(fn);return 1;},clearInterval:()=>{}});
+ await window.fetch('/offline/index.html');await window.fetch('/zhongyi/meridian/?_rsc=local');
+ for(const path of ['https://yandaoguoxue.yandao.vip/api/health','/api/health','/assets/acupoint-photos/hegu-li4-mk2010.jpg','/assets/meridians/large-intestine.webp'])await assert.rejects(window.fetch(path));
+ const local=new Xhr();local.open('GET','/offline/index.html');local.send();
+ const remote=new Xhr();remote.open('GET','https://example.org');assert.throws(()=>remote.send());
+ await timers[0]();assert.deepEqual(proof,[{fetchBlocked:true,xhrBlocked:true,imageFetchBlocked:true,bundledRouteAllowed:true}]);assert.equal(allowed.length,3);
+});
 test('full original books survive IndexedDB loss; corrupted native copies and partial replacements are rejected',async()=>{
  const store=disk(),edition=load('src/lib/tcmEditionPack.ts',{});
  const book={id:'original-test',name:'原典',author:'原作者',dynasty:'古代',pinyin:'original',description:'原文',sourceName:'测试底本',license:'古代原文',verification:'提取核对',sourceUrl:'https://example.org/source',sourceRevisionUrl:'https://example.org/revision',chapters:[{id:'original-chapter',title:'原篇',content:'完整原文。'.repeat(20)}]};
@@ -25,6 +36,8 @@ test('source-linked drug and point data reject dangling sources, malformed refer
   x=>x.subjects['herb:h001'].references=['missing'],
   x=>x.passages['a'.repeat(24)].lineEnd=0,
   x=>x.sources['test-source'].kind='UNVERIFIED_GENERATION',
+  x=>x.subjects['herb:h001'].illustrations=[{path:'javascript:alert(1)',title:'图',caption:'说明',source:'test-source'}],
+  x=>x.subjects['herb:h001'].illustrations=[{path:'/assets/acupoint-photos/example.webp',title:'图',caption:'说明',source:'missing-source'}],
  ]){const bad=fixture();change(bad);assert.throws(()=>api.validateMedicalLibrary(bad));}
 });
 

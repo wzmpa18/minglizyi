@@ -5,6 +5,12 @@ on:
       - '.github/workflows/ios-simulator-proof.yml'
       - 'scripts/ios-simulator-proof.rb'
       - 'scripts/ios-study-screenshots.swift'
+      - 'scripts/ios-learning-network-fault.js'
+      - 'scripts/verify-ios-learning-files.py'
+      - 'ios/App/App/OfflineFilesPlugin.swift'
+      - 'src/lib/retainedTcmEditions.ts'
+      - 'src/lib/studyMedia.ts'
+      - 'src/components/MedicalPreparationCard.tsx'
   workflow_dispatch:
     inputs:
       private_only:

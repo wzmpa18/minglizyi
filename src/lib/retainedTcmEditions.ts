@@ -16,8 +16,10 @@ export async function retainedEditionPack(id:string,baseline:ClassicBook[]=[],st
   try{
    for(const book of pack.books){
     const record={book,sha256:await digest(JSON.stringify(book))},key='tcm-book-'+id+'-'+pack.version+'-'+book.id;
-    await writeOfflineFile(key,record);
-    const saved=await readOfflineFile<RetainedBook>(key);
+    let saved=await readOfflineFile<RetainedBook>(key).catch(()=>null);
+    if(!saved||await digest(JSON.stringify(saved.book))!==record.sha256){
+     await writeOfflineFile(key,record);saved=await readOfflineFile<RetainedBook>(key);
+    }
     if(!saved||await digest(JSON.stringify(saved.book))!==record.sha256)throw Error('原典保存读回未通过，原有目录保留');
    }
    await writeOfflineFile('tcm-books-head-'+id,{version:pack.version,books:pack.books.map(b=>b.id)});

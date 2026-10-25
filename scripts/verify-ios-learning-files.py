@@ -18,7 +18,7 @@ def read(key):
 
 
 assert read('learning-storage-readback-check')['content'] == 'offline-learning-storage-check'
-assert read('qa-offline-network-proof') == {'fetchBlocked': True, 'xhrBlocked': True}
+assert read('qa-offline-network-proof') == {'fetchBlocked': True, 'xhrBlocked': True,'imageFetchBlocked':True,'bundledRouteAllowed':True}
 records = json.loads(Path('public/data/tcm-study-media.json').read_text())['records']
 verified = []
 for path in ['/assets/acupoint-photos/hegu-li4-mk2010.jpg', '/assets/meridians/large-intestine.webp']:
@@ -28,7 +28,8 @@ for path in ['/assets/acupoint-photos/hegu-li4-mk2010.jpg', '/assets/meridians/l
     assert len(data) == record['bytes'] and hashlib.sha256(data).hexdigest() == record['sha256']
     verified.append({'path': path, 'sha256': record['sha256'], 'bytes': len(data)})
 proof = {'nativeApplicationSupport': True, 'webkitCacheRequired': False,
-         'restartUiTestPassed': True, 'ciFetchAndXhrBlockedOnSecondLaunch': True,
+         'restartUiTestPassed': True, 'ciRemoteApiAndImageFetchBlockedOnSecondLaunch': True,
+         'bundledApplicationRoutesRemainAvailable':True,
          'retainedOriginalImagesVerified': verified, 'physicalDevice': False}
 output.write_text(json.dumps(proof, ensure_ascii=False, indent=2), encoding='utf-8')
 print(json.dumps({'nativeImagesVerified': len(verified), 'restartAndCiOfflineInjection': True}))

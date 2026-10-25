@@ -1,7 +1,9 @@
 # CI-only test target. Does not modify shipped app sources or bypass any app feature.
 require 'xcodeproj'
+require 'json'
 # CI-only failure injection. No fixture content, identity bypass, or production
-# source change: the second launch rejects fetch/XHR while native files remain.
+# source change: block services and image fetch; allow bundled UI routes.
+fault=File.read('scripts/ios-learning-network-fault.js')
 tts_path='ios/App/App/LocalTtsPlugin.swift'
 tts=File.read(tts_path)
 raise 'Offline failure-injection anchor missing' unless tts.scan('override func capacitorDidLoad() {').length==1
@@ -9,7 +11,7 @@ tts=tts.sub('import Foundation',"import Foundation\nimport WebKit")
 tts=tts.sub('override func capacitorDidLoad() {', <<~SWIFT)
 override func capacitorDidLoad() {
     if ProcessInfo.processInfo.arguments.contains("--qa-learning-offline") {
-        let blocked="window.fetch=function(){return Promise.reject(new TypeError('QA offline network block'));};XMLHttpRequest.prototype.send=function(){throw new Error('QA offline network block');};let attempts=0;const proof=setInterval(async function(){attempts++;try{let f=false,x=false;try{await window.fetch('/api/health');}catch(e){f=true;}try{const q=new XMLHttpRequest();q.open('GET','https://yandaoguoxue.yandao.vip/api/health');q.send();}catch(e){x=true;}if(f&&x&&window.Capacitor&&window.Capacitor.nativePromise){await window.Capacitor.nativePromise('OfflineFiles','write',{key:'qa-offline-network-proof',value:JSON.stringify({fetchBlocked:f,xhrBlocked:x})});clearInterval(proof);}}catch(e){}if(attempts>60)clearInterval(proof);},250);"
+        let blocked=#{fault.to_json}
         bridge?.webView?.configuration.userContentController.addUserScript(WKUserScript(source:blocked,injectionTime:.atDocumentStart,forMainFrameOnly:false))
         bridge?.webView?.evaluateJavaScript(blocked,completionHandler:nil)
     }
