@@ -18,6 +18,7 @@
 import type { TcmMeridian, TcmAcupoint } from '../../types/tcm';
 // 直接 import JSON 数据，确保静态导出时数据完整（14经络361穴位）
 import meridiansJson from './data/meridians.json';
+import { installPointStudyIndex, validatePointStudyIndex, type PointStudyIndex } from './point-study';
 
 // ============================================================================
 // 经络分类映射
@@ -264,17 +265,23 @@ interface TcmAcupointContentPack {
   version: string;
   reviewState: 'APPROVED_EXISTING_BASELINE';
   acupoints: TcmAcupoint[];
+  pointStudy?: PointStudyIndex;
 }
 
 /** 安装已通过离线包 SHA256 校验的穴位数据；验证失败时继续使用内置 361 穴。 */
 export function installAcupointContentPack(pack: TcmAcupointContentPack): boolean {
   if (!pack || pack.schema !== 'yandao.tcm.acupoints.v1' || pack.reviewState !== 'APPROVED_EXISTING_BASELINE') return false;
   if (!Array.isArray(pack.acupoints) || pack.acupoints.length < 361) return false;
+  const study = pack.pointStudy === undefined ? undefined : validatePointStudyIndex(pack.pointStudy);
+  if (study === null) return false;
   const seen = new Set<string>();
   const safe: TcmAcupoint[] = [];
   for (const raw of pack.acupoints) {
     const point = raw as TcmAcupoint;
-    if (!point || !point.name || !point.code || !point.meridian || !point.location || !point.function) return false;
+    // The preserved baseline has 341 empty function fields. Empty is honest;
+    // rejecting the entire content pack prevented those points receiving study
+    // updates. Never invent a function to satisfy this validation.
+    if (!point || !point.name || !point.code || !point.meridian || !point.location || typeof point.function !== 'string') return false;
     const code = String(point.code).trim().toUpperCase();
     if (seen.has(code)) return false;
     seen.add(code);
@@ -290,6 +297,7 @@ export function installAcupointContentPack(pack: TcmAcupointContentPack): boolea
     });
   }
   ACUPOINTS_DB = safe;
+  if (study) installPointStudyIndex(study);
   return true;
 }
 

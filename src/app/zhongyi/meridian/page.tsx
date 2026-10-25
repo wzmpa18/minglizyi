@@ -28,6 +28,7 @@ import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import { AcupointStudyDiscussion } from "@/components/AcupointStudyDiscussion";
 import { AcupointStudySources } from "@/components/AcupointStudySources";
+import { AcupointClassicStudy } from "@/components/AcupointClassicStudy";
 
 const BRAND = "#7B2FBE";
 const BRAND_LIGHT = "#9B5ECF";
@@ -807,6 +808,7 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
       </div>
 
       <AcupointStudySources meridianName={acupoint.meridian} selectedCode={acupoint.code} />
+      <AcupointClassicStudy code={acupoint.code} />
       <Link href={`/zhongyi/anatomy3d/?pointName=${encodeURIComponent(acupoint.name)}&side=${pointSide}`} style={{display:"block",margin:12,padding:12,borderRadius:10,color:BRAND,background:BRAND_BG,fontWeight:700}}>在3D参考人体中对照{acupoint.name} →</Link>
 
       {/* 既有静态整理资料，尚未逐条与现行标准校对。 */}
