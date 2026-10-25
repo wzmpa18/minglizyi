@@ -113,7 +113,9 @@ export async function deactivateOfflinePacks(packIds: readonly string[]): Promis
     query.onsuccess = () => {
       try {
         const index = query.result || {};
-        for (const id of new Set(packIds)) {
+        const targets=new Set(packIds);
+        for(const [id,record] of Object.entries(index) as [string,{parentPackId?:string}][])if(record.parentPackId&&targets.has(record.parentPackId))targets.add(id);
+        for (const id of targets) {
           const record = index[id];
           if (!record) continue;
           const key = sk("OFFLINE_PACK", `${id}@${record.version}`);
@@ -131,7 +133,8 @@ export async function deactivateOfflinePacks(packIds: readonly string[]): Promis
 /** Commit the verified bytes, installed index and metadata together. A failed
  * transaction keeps the previous active pack; concurrent downloads cannot lose
  * another pack's index entry or activate an older version after a newer one. */
-export async function activateOfflinePack(packId: string, version: string, sha256: string, bytes: ArrayBuffer): Promise<void> {
+export interface OfflineBundleMember {packId:string;version:string;sha256:string;bytes:number;entryPath:string}
+export async function activateOfflinePack(packId: string, version: string, sha256: string, bytes: ArrayBuffer, members?:readonly OfflineBundleMember[]): Promise<void> {
   const db = await openDb();
   await new Promise<void>((resolve, reject) => {
     const t = db.transaction([STORE_DATA, STORE_META], "readwrite");
@@ -152,6 +155,12 @@ export async function activateOfflinePack(packId: string, version: string, sha25
         }
         const now = Date.now(), key = `${packId}@${version}`;
         index[packId] = { packId, version, sha256, installedAt: now };
+        const memberIds=new Set<string>();
+        for(const member of members||[]){
+          if(!/^[a-z0-9-]{2,80}$/.test(member.packId)||member.packId===packId||memberIds.has(member.packId)||!/^\d+\.\d+\.\d+$/.test(member.version)||!/^data\/[a-z0-9-]+\.(json|pack)$/.test(member.entryPath)||!/^[a-f0-9]{64}$/.test(member.sha256)||!Number.isSafeInteger(member.bytes)||member.bytes<1)throw new Error("资料板块目录无效");
+          const current=index[member.packId];if(current&&(compareVersion(member.version,current.version)<0||(compareVersion(member.version,current.version)===0&&current.sha256!==member.sha256)))throw new Error("已有更新的资料，保留原版，请刷新目录");
+          memberIds.add(member.packId);index[member.packId]={packId:member.packId,version:member.version,sha256:member.sha256,installedAt:now,parentPackId:packId,parentVersion:version,entryPath:member.entryPath,size:member.bytes};
+        }
         data.put(bytes, sk("OFFLINE_PACK", key));
         data.put(index, indexKey);
         for (const [zone, entryKey, value] of [

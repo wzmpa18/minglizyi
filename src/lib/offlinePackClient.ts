@@ -15,7 +15,7 @@
 // 红线：校验失败的包绝不启用；已启用包只有新版本校验通过后才被替换。
 // ============================================================================
 
-import { get, put, remove, listMeta, activateOfflinePack, hasStoredValue } from "./storageManager";
+import { get, put, remove, listMeta, activateOfflinePack, hasStoredValue, type OfflineBundleMember } from "./storageManager";
 import { fetchWithAuth } from "./authInterceptor";
 import { validateOfflineDownloadLink } from "./offlineDownloadLink";
 import { compareVersion, meetsMinAppVersion } from "./offlineVersions";
@@ -49,6 +49,7 @@ const LAST_BACKGROUND_CHECK_KEY = "offline_pack_background_check";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "";
 
 interface InstalledPackRecord {
+  parentPackId?:string;parentVersion?:string;entryPath?:string;size?:number;
   packId: string;
   version: string;
   sha256: string;
@@ -74,7 +75,7 @@ async function getInstalledIndex(): Promise<Record<string, InstalledPackRecord>>
 
 export async function getInstalledPacks(): Promise<InstalledPackRecord[]> {
   const records = Object.values(await getInstalledIndex());
-  const present = await Promise.all(records.map(record => hasStoredValue("OFFLINE_PACK", finalKey(record.packId, record.version))));
+  const present = await Promise.all(records.map(record => hasStoredValue("OFFLINE_PACK", finalKey(record.parentPackId||record.packId, record.parentVersion||record.version))));
   return records.filter((_, i) => present[i]);
 }
 
@@ -187,7 +188,7 @@ async function readResponseWithProgress(
  * 下载 pack。带断点续传：OFFLINE_PACK 分区中已有 .part 时用 Range 从断点继续。
  * SHA256 校验失败：清理 .part 残片并返回 error（绝不启用，第六十章）。
  */
-export async function downloadPack(pack: ManifestPack, onProgress?: DownloadProgress, validateBeforeActivation?: (bytes:ArrayBuffer)=>Promise<void>): Promise<DownloadResult> {
+export async function downloadPack(pack: ManifestPack, onProgress?: DownloadProgress, validateBeforeActivation?: (bytes:ArrayBuffer)=>Promise<void|readonly OfflineBundleMember[]>): Promise<DownloadResult> {
   const pKey = partKey(pack.packId, pack.version);
   try {
     let existingPart = await get<ArrayBuffer>("OFFLINE_PACK", pKey);
@@ -262,8 +263,8 @@ export async function downloadPack(pack: ManifestPack, onProgress?: DownloadProg
     }
 
     // Validate data protocol and inner assets before replacing the active index.
-    await validateBeforeActivation?.(full);
-    await activateOfflinePack(pack.packId, pack.version, sha, full);
+    const members=await validateBeforeActivation?.(full);
+    await activateOfflinePack(pack.packId, pack.version, sha, full, members||undefined);
     onProgress?.(pack.size, pack.size);
     if (typeof window !== "undefined") {
       window.dispatchEvent(new CustomEvent("offline-pack-installed", { detail: { packId: pack.packId, version: pack.version } }));
@@ -279,6 +280,10 @@ export async function loadPackContent(packId: string): Promise<ArrayBuffer | nul
   const idx = await getInstalledIndex();
   const rec = idx[packId];
   if (!rec) return null;
+  if(rec.parentPackId&&rec.parentVersion&&rec.entryPath&&rec.size){
+    const parent=await get<ArrayBuffer>("OFFLINE_PACK",finalKey(rec.parentPackId,rec.parentVersion));if(!parent)return null;
+    try{const {readLearningBundleFile}=await import('./learningBundleCodec');const raw=await readLearningBundleFile(parent,rec.entryPath,{sha256:rec.sha256,bytes:rec.size});return raw.slice().buffer;}catch{return null;}
+  }
   return get<ArrayBuffer>("OFFLINE_PACK", finalKey(packId, rec.version));
 }
 
