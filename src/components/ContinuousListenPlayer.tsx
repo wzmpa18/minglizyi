@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getLocalTtsStatus, speakLocalText, stopLocalTts, type LocalTtsStatus } from "@/lib/localTts";
+import { getLocalTtsStatus, listLocalTtsVoices, speakLocalText, stopLocalTts, type LocalTtsVoice, type LocalTtsStyle, type LocalTtsStatus } from "@/lib/localTts";
 import { restoreListeningPosition, splitListeningText, type ListeningItem } from "@/lib/listeningQueue";
 
 /** Chapter queue for local speech. Never downloads recordings or auto-starts on restore. */
@@ -13,6 +13,10 @@ export function ContinuousListenPlayer({ collectionId, items, title = "连续听
   const [ready, setReady] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [rate, setRate] = useState(0.8);
+  const [voiceName,setVoiceName]=useState("");
+  const [voices,setVoices]=useState<LocalTtsVoice[]>([]);
+  const [style,setStyle]=useState<LocalTtsStyle>("warmNatural");
+  const previewCleanup=useRef<undefined|(()=>void)>(undefined);
   const [status, setStatus] = useState<LocalTtsStatus | null>(null);
   const [message, setMessage] = useState("");
   const [storageWarning, setStorageWarning] = useState(false);
@@ -27,6 +31,12 @@ export function ContinuousListenPlayer({ collectionId, items, title = "连续听
       const saved = restoreListeningPosition(window.localStorage.getItem(storageKey), items);
       setIndex(saved.index); setChunk(saved.chunk);
     } catch { setStorageWarning(true); }
+    try {
+      const preference=window.localStorage.getItem("local_tts_voice")||"";setVoiceName(preference);
+      const savedRate=Number(window.localStorage.getItem("local_tts_rate"));if([.7,.8,.92].includes(savedRate))setRate(savedRate);
+      const savedStyle=window.localStorage.getItem("local_tts_style");if(["warmMale","warmNatural","softFemale"].includes(savedStyle||""))setStyle(savedStyle as LocalTtsStyle);
+    } catch { /* Stored audio preferences are optional. */ }
+    void listLocalTtsVoices().then(rows=>{if(active){setVoices(rows);setVoiceName(current=>rows.some(v=>v.name===current)?current:"");}}).catch(()=>{});
     setReady(true);
     void getLocalTtsStatus().then(value => { if (active) setStatus(value); }).catch(() => {
       if (active) setMessage("本机语音服务不可用，请检查系统中文语音包。");
@@ -52,7 +62,7 @@ export function ContinuousListenPlayer({ collectionId, items, title = "连续听
       if (!active) return;
       await stopLocalTts();
       if (!active) return;
-      const cleanup = await speakLocalText(`${chunk === 0 ? `${item.title}。` : ""}${chunks[chunk]}`, rate, "warmNatural", undefined, event => {
+      const cleanup = await speakLocalText(`${chunk === 0 ? `${item.title}。` : ""}${chunks[chunk]}`, rate, style, voiceName || undefined, event => {
         if (!active) return;
         if (event.state === "finished") {
           if (chunk + 1 < chunks.length) setChunk(chunk + 1);
@@ -68,7 +78,7 @@ export function ContinuousListenPlayer({ collectionId, items, title = "连续听
       if (active) { setPlaying(false); setMessage(error instanceof Error ? error.message : "无法开始朗读。"); }
     });
     return () => { active = false; dispose?.(); };
-  }, [playing, ready, item?.id, item?.title, item?.text, index, chunk, chunks, rate, items.length]);
+  }, [playing, ready, item?.id, item?.title, item?.text, index, chunk, chunks, rate, style, voiceName, items.length]);
 
   useEffect(() => {
     const stop = () => { setPlaying(false); void stopLocalTts(); };
@@ -76,6 +86,9 @@ export function ContinuousListenPlayer({ collectionId, items, title = "连续听
     return () => { window.removeEventListener("pagehide", stop); };
   }, []);
 
+  useEffect(()=>{if(!ready)return;try{window.localStorage.setItem("local_tts_rate",String(rate));window.localStorage.setItem("local_tts_style",style);if(voiceName)window.localStorage.setItem("local_tts_voice",voiceName);else window.localStorage.removeItem("local_tts_voice");}catch{/* Playback does not require preference storage. */}},[ready,rate,style,voiceName]);
+  useEffect(()=>()=>{previewCleanup.current?.();},[]);
+  async function preview(){setPlaying(false);setMessage("");previewCleanup.current?.();try{await stopLocalTts();previewCleanup.current=await speakLocalText("学而时习之，不亦说乎。有朋自远方来，不亦乐乎。",rate,style,voiceName||undefined,event=>{if(event.state==='error')setMessage(event.message||"试听暂不可用");});}catch(error){setMessage(error instanceof Error?error.message:"试听暂不可用");}}
   if (!items.length) return null;
   const select = (next: number) => { setIndex(next); setChunk(0); setMessage(""); };
   return <section aria-label={title} className="my-3 rounded-xl border border-purple-200 bg-purple-50 p-3 text-gray-800">
@@ -89,6 +102,12 @@ export function ContinuousListenPlayer({ collectionId, items, title = "连续听
       <select aria-label="连续听学语速" value={rate} onChange={event => { setPlaying(false); setRate(Number(event.target.value)); }} className="rounded border bg-white p-1 text-xs">
         <option value={0.7}>慢速</option><option value={0.8}>适中</option><option value={0.92}>较快</option>
       </select>
+    </div>
+    <div className="mt-2 flex flex-wrap items-center gap-2">
+      <label className="text-xs">朗读音色 <select aria-label="连续听学音色" value={voiceName} onChange={event=>{setPlaying(false);previewCleanup.current?.();setVoiceName(event.target.value);}} className="max-w-[220px] rounded border bg-white p-2 text-xs">
+        <option value="">自动选择清晰中文音色</option>{voices.map(voice=><option key={voice.name} value={voice.name}>{voice.label} · {voice.locale}</option>)}
+      </select></label>
+      <button type="button" disabled={!status?.available} onClick={()=>void preview()} className="rounded border bg-white px-3 py-2 text-xs">试听声音</button>
     </div>
     <select aria-label="选择听学章节" value={index} onChange={event => { setPlaying(false); select(Number(event.target.value)); }} className="mt-2 w-full rounded border bg-white p-2 text-xs">
       {items.map((entry, position) => <option key={entry.id} value={position}>{position + 1}. {entry.title}</option>)}

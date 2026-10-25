@@ -32,7 +32,9 @@ public class LocalTtsPlugin: CAPPlugin, CAPBridgedPlugin, AVSpeechSynthesizerDel
         AVSpeechSynthesisVoice.speechVoices().filter { $0.language.lowercased().hasPrefix("zh") }.sorted {
             let left = $0.language.lowercased().hasPrefix("zh-cn") ? 0 : 1
             let right = $1.language.lowercased().hasPrefix("zh-cn") ? 0 : 1
-            return left == right ? $0.identifier < $1.identifier : left < right
+            if left != right { return left < right }
+            if $0.quality.rawValue != $1.quality.rawValue { return $0.quality.rawValue > $1.quality.rawValue }
+            return $0.identifier < $1.identifier
         }
     }
     @objc func getStatus(_ call: CAPPluginCall) {
@@ -46,7 +48,7 @@ public class LocalTtsPlugin: CAPPlugin, CAPBridgedPlugin, AVSpeechSynthesizerDel
     @objc func listVoices(_ call: CAPPluginCall) {
         DispatchQueue.main.async {
             let items: [[String: Any]] = self.voices().map { voice in
-                ["name": voice.identifier, "label": voice.name, "locale": voice.language,
+                ["name": voice.identifier, "label": voice.name + (voice.quality == .default ? "" : "（高清）"), "locale": voice.language,
                  "likelyGender": voice.gender == .male ? "male" : voice.gender == .female ? "female" : "unknown"]
             }
             call.resolve(["voices": items])
