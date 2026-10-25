@@ -11,10 +11,17 @@ tts=tts.sub('import Foundation',"import Foundation\nimport WebKit\nimport Crypto
 tts=tts.sub('override func capacitorDidLoad() {', <<~SWIFT)
 override func capacitorDidLoad() {
     if ProcessInfo.processInfo.arguments.contains("--qa-learning-offline") {
-        bridge?.webView?.configuration.userContentController.add(GuoxueOfflineFaultProof(),name:"qaOfflineNetworkProof")
+        let proof=GuoxueOfflineFaultProof()
+        proof.save(["nativeLaunchArgumentObserved":true],key:"qa-offline-installation-proof")
+        bridge?.webView?.configuration.userContentController.add(proof,name:"qaOfflineNetworkProof")
         let blocked=String(data:Data(base64Encoded:"#{Base64.strict_encode64(fault)}")!,encoding:.utf8)!
         bridge?.webView?.configuration.userContentController.addUserScript(WKUserScript(source:blocked,injectionTime:.atDocumentStart,forMainFrameOnly:false))
         bridge?.webView?.evaluateJavaScript(blocked,completionHandler:nil)
+        DispatchQueue.main.asyncAfter(deadline:.now()+3) { [weak self] in
+            self?.bridge?.webView?.evaluateJavaScript("JSON.stringify({active:!!window.__qaLearningOffline,handler:!!window.webkit?.messageHandlers?.qaOfflineNetworkProof,protocol:location.protocol})") { value,error in
+                proof.save(["actualJavaScriptState":value as? String ?? "absent","evaluationFailed":error != nil],key:"qa-offline-js-state")
+            }
+        }
     }
 SWIFT
 tts += <<~SWIFT
@@ -22,13 +29,15 @@ tts += <<~SWIFT
 // CI-only collection of the actual fetch/XHR fault results. Does not supply app data.
 final class GuoxueOfflineFaultProof: NSObject, WKScriptMessageHandler {
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-        guard message.frameInfo.isMainFrame, let result=message.body as? [String:Bool],
-              Set(result.keys)==Set(["fetchBlocked","xhrBlocked","imageFetchBlocked","bundledRouteAllowed"]),
-              result.values.allSatisfy({$0}), let bytes=try? JSONSerialization.data(withJSONObject:result) else {return}
+        guard message.frameInfo.isMainFrame, let result=message.body as? [String:Any] else{return}
+        save(result,key:"qa-offline-network-proof")
+    }
+    func save(_ result:[String:Any],key:String) {
+        guard let bytes=try? JSONSerialization.data(withJSONObject:result) else{return}
         do {
             let root=try FileManager.default.url(for:.applicationSupportDirectory,in:.userDomainMask,appropriateFor:nil,create:true).appendingPathComponent("OfflineLearning",isDirectory:true)
             try FileManager.default.createDirectory(at:root,withIntermediateDirectories:true)
-            let name=SHA256.hash(data:Data("qa-offline-network-proof".utf8)).map{String(format:"%02x",$0)}.joined()+".json"
+            let name=SHA256.hash(data:Data(key.utf8)).map{String(format:"%02x",$0)}.joined()+".json"
             try bytes.write(to:root.appendingPathComponent(name),options:.atomic)
         } catch { NSLog("QA offline fault evidence was not saved") }
     }

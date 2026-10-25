@@ -203,7 +203,7 @@ function HerbListPage() {
                 <p style={{ fontSize: "12px", color: "#666", margin: 0, lineHeight: 1.6, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                   {herb.efficacy}
                 </p>
-                <p style={{fontSize:"11px",color:"#665477",margin:"4px 0 0"}}>典籍出处：{herb.source || "待核实"}</p>
+                <p style={{fontSize:"11px",color:"#665477",margin:"4px 0 0"}}>资料来源：{herb.source || "待核实"}</p>
               </button>
             );
           })
@@ -268,7 +268,7 @@ function HerbDetailPage({ herbId }: { herbId: string }) {
     { label: "归经", content: herb.meridian },
     { label: "功效", content: herb.efficacy, highlight: true },
     { label: "典籍记载", content: herb.indications ? `典籍记载：${herb.indications}` : undefined },
-    { label: "典籍出处", content: herb.source },
+    { label: "资料来源", content: herb.source },
     { label: "用法用量", content: herb.dosage },
     { label: "使用禁忌", content: herb.contraindications },
   ];
@@ -292,7 +292,7 @@ function HerbDetailPage({ herbId }: { herbId: string }) {
         </div>
       )}
 
-      <MedicalStudyReadings subject={"herb:"+herb.id} />
+      {herb.id==='h483'&&<p style={{padding:12,lineHeight:1.8,fontSize:13}}>关木通保留作历史品种辨析。<a href="https://www.dh.gov.hk/textonly/chs/press/2004/040424.html" target="_blank" rel="noopener noreferrer">核对香港卫生署原公告（2004年4月24日）↗</a></p>}<MedicalStudyReadings subject={"herb:"+herb.id} />
       {/* 药材信息卡片 */}
       <div style={{ margin: "12px", background: "white", borderRadius: "16px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
         {/* 头部 */}

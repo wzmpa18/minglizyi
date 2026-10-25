@@ -98,13 +98,13 @@ function mapRawHerbToTcm(entry: RawHerbEntry): TcmHerb {
     meridian: entry.meridian || '',
     efficacy: entry.efficacy,
     indications: entry.indications,
-    source: entry.source || '中国药典',
+    source: entry.id === 'h483' ? '历史导入资料，非现行药典条目；品种与风险须分别核对' : entry.source === '中国药典' ? '中国药典（原导入来源，版次及篇章待核）' : entry.source || '原导入来源待核',
     // The imported 本经 rows share a modern gram template without a page or
     // edition citation. Keep the import intact; do not present it as a quote.
-    dosage: entry.source === '神农本草经' && /^3\s*[-–—]\s*9\s*g$/i.test(entry.dosage.trim())
+    dosage: entry.id === 'h483' ? '仅保留历史品种辨析，不展示使用剂量。' : entry.source === '神农本草经' && /^3\s*[-–—]\s*9\s*g$/i.test(entry.dosage.trim())
       ? '原导入用量缺少可核对的篇章出处；请对照各家原文，尚不展示为典籍用量。'
       : entry.dosage,
-    contraindications: entry.contraindications || '',
+    contraindications: entry.id === 'h483' ? '关木通涉及马兜铃酸风险。香港卫生署2004年公告将其列为停止进口及销售的含马兜铃酸药材；不可把历史用法当作现行使用建议，也不可与木通、川木通混同。' : entry.contraindications || '',
     toxic: isToxic,
   };
 }
