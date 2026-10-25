@@ -1,6 +1,6 @@
 # CI-only test target. Does not modify shipped app sources or bypass any app feature.
 require 'xcodeproj'
-require 'json'
+require 'base64'
 # CI-only failure injection. No fixture content, identity bypass, or production
 # source change: block services and image fetch; allow bundled UI routes.
 fault=File.read('scripts/ios-learning-network-fault.js')
@@ -11,7 +11,7 @@ tts=tts.sub('import Foundation',"import Foundation\nimport WebKit")
 tts=tts.sub('override func capacitorDidLoad() {', <<~SWIFT)
 override func capacitorDidLoad() {
     if ProcessInfo.processInfo.arguments.contains("--qa-learning-offline") {
-        let blocked=#{fault.to_json}
+        let blocked=String(data:Data(base64Encoded:"#{Base64.strict_encode64(fault)}")!,encoding:.utf8)!
         bridge?.webView?.configuration.userContentController.addUserScript(WKUserScript(source:blocked,injectionTime:.atDocumentStart,forMainFrameOnly:false))
         bridge?.webView?.evaluateJavaScript(blocked,completionHandler:nil)
     }

@@ -30,6 +30,7 @@ import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import { AcupointStudyDiscussion } from "@/components/AcupointStudyDiscussion";
 import { AcupointStudySources } from "@/components/AcupointStudySources";
 import { MedicalStudyReadings } from "@/components/MedicalStudyReadings";
+import { DongSourceIndex, DongSourceDetail } from "@/components/DongSourceIndex";
 import { AcupointClassicStudy } from "@/components/AcupointClassicStudy";
 
 const BRAND = "#7B2FBE";
@@ -553,6 +554,7 @@ function MeridianListPage() {
       </div>
 
       <div style={{ padding: "12px" }}>
+        {activeTab === "dong" && <DongSourceIndex query={searchQuery} />}
         {activeTab === "standard" && !searchQuery && Object.entries(groupedMeridians).map(([cat, meridians]) => {
             const cc = getCatColor(cat);
             return (
@@ -993,14 +995,7 @@ function DongAcupointDetailPage({ acupointName }: { acupointName: string }) {
     alert("已标记为需要重新加载，请再次点击刷新按钮");
   }, [acupoint]);
 
-  if (!acupoint) {
-    return (
-      <div style={{ maxWidth: "420px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f8f5fc", padding: "80px 20px", textAlign: "center" }}>
-        <p style={{ color: "#999", marginBottom: "20px" }}>未找到该董氏奇穴</p>
-        <button onClick={() => router.back()} style={{ padding: "8px 20px", borderRadius: "20px", backgroundColor: BRAND, color: "white", border: "none", cursor: "pointer" }}>返回列表</button>
-      </div>
-    );
-  }
+  if (!acupoint) return <DongSourceDetail name={acupointName} />;
 
   const sections: { label: string; content: string | undefined }[] = [
     { label: "所属部位", content: acupoint.zone },

@@ -76,6 +76,9 @@ def build(lectures, output, audit, public_notes=None, materia_catalogue=None):
     names['阳关'].extend(['point:GB33','point:GV3'])
     names['五里'].extend(['point:LI13','point:LR10'])
     names['通谷'].extend(['point:BL66','point:KI20'])
+    names['渊液'].append('point:GB22')
+    names['阳刚'].append('point:BL48')
+    names['气海'].append('point:BL24')
     matcher = re.compile('|'.join(map(re.escape, sorted(names, key=len, reverse=True))))
 
     def ingest(source, chapter, title, lines, forced_keys=(), line_offset=0):
@@ -95,10 +98,19 @@ def build(lectures, output, audit, public_notes=None, materia_catalogue=None):
             keys=set(forced_keys)
             for term in terms:
                 keys.update(names[term])
-            for key in keys:
+            for key in sorted(keys):
                     shared_context={'point:LI13':r'肘|臂|大肠经','point:LR10':r'曲骨|气冲|阴廉|肝经',
-                                    'point:BL66':r'膀胱经|束骨|至阴|脚趾','point:KI20':r'肾经|上脘|幽门|阴都'}
+                                    'point:BL66':r'膀胱经|束骨|至阴|脚趾','point:KI20':r'肾经|上脘|幽门|阴都',
+                                    'point:GB22':r'极泉|胆经|辄筋|腋','point:BL48':r'第十椎|胆俞',
+                                    'point:BL24':r'第十五椎|十五椎下'}
                     if key in shared_context and subjects[key]['name'] not in search and not re.search(shared_context[key],search):continue
+                    if key=='point:CV6' and re.search(r'第十五椎|十五椎下',search) and not re.search(r'肚脐|脐下|关元|任脉',search):continue
+                    note=None
+                    if source.startswith('ni-'):
+                        if key=='point:GB22' and '渊液' in search:note='课件作“渊液”，按极泉、胆经等上下文与渊腋对照；原文照录。'
+                        if key=='point:BL48' and '阳刚' in search:note='课件作“阳刚”，按第十椎及胆俞外侧的上下文与阳纲对照；原文照录。'
+                        if key=='point:BL24' and '气海俞' not in search:note='课件此处简称“气海”，仅在明确第十五椎背部位置时关联气海俞，未与腹部气海混同。'
+                    if note:record['mappingNote']=' / '.join(filter(None,[record.get('mappingNote'),note]))
                     if key in ['point:GB33','point:GV3'] and subjects[key]['name'] not in search:
                         if key=='point:GB33' and not re.search('膝|胆经|膽經|阳陵泉|陽陵泉',search):continue
                         if key=='point:GV3' and not re.search('腰|督脉|督脈|十六椎',search):continue

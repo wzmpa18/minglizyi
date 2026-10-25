@@ -48,9 +48,15 @@ test('phone-file persistence survives a fresh session with no IndexedDB pack and
  assert.equal(await library(null,store).medicalSubject('point:DU20'),null);
 });
 
+test('the retained source index remains navigable without IndexedDB and refuses malformed directory entries',async()=>{
+ const store=disk();await store.api.writeOfflineFile('medical-subject-catalogue',{items:[{key:'dong:大间',name:'大间',kind:'dong'}]});
+ const rows=await library(null,store).medicalSubjectList('dong');assert.equal(rows.length,1);assert.equal(rows[0].key,'dong:大间');
+ await store.api.writeOfflineFile('medical-subject-catalogue',{items:[{key:'dong:../../outside',name:'坏目录',kind:'dong'}]});assert.equal((await library(null,store).medicalSubjectList('dong')).length,0);
+});
+
 test('a damaged incoming passage never overwrites a usable native record; storage failure does not hide online reading',async()=>{
  const store=disk();await library(fixture(),store).medicalSubject('point:DU20');const before=JSON.stringify([...store.files]);
- const bad=fixture();bad.passages['a'.repeat(24)].text='wrong digest';await assert.rejects(()=>library(bad,store).medicalSubject('point:DU20'));assert.equal(JSON.stringify([...store.files]),before);
+ const bad=fixture();bad.passages['a'.repeat(24)].text='wrong digest';const old=await library(bad,store).medicalSubject('point:DU20');assert.equal(old.passages[0].text,text);assert.equal(old.retainedPreviousVersion,true);assert.equal(JSON.stringify([...store.files]),before);
  const failed=disk();failed.api.writeOfflineFile=async()=>{throw Error('disk full');};const reading=await library(fixture(),failed).medicalSubject('point:DU20');assert.equal(reading.persisted,false);assert.equal(reading.passages[0].text,text);
 });
 
