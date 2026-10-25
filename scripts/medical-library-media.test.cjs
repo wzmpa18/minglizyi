@@ -2,6 +2,16 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const {webcrypto,createHash}=require('node:crypto');
 function load(file,deps,extra={}){const exports={};const code=ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText;vm.runInNewContext(code,{exports,URL,crypto:webcrypto,TextEncoder,TextDecoder,Uint8Array,ArrayBuffer,AbortSignal,atob,btoa,console,...extra,require:name=>{if(name in deps)return deps[name];throw Error(name);}});return exports;}
 const copy=value=>value===undefined?undefined:JSON.parse(JSON.stringify(value));
+test('full original books survive IndexedDB loss; corrupted native copies and partial replacements are rejected',async()=>{
+ const store=disk(),edition=load('src/lib/tcmEditionPack.ts',{});
+ const book={id:'original-test',name:'原典',author:'原作者',dynasty:'古代',pinyin:'original',description:'原文',sourceName:'测试底本',license:'古代原文',verification:'提取核对',sourceUrl:'https://example.org/source',sourceRevisionUrl:'https://example.org/revision',chapters:[{id:'original-chapter',title:'原篇',content:'完整原文。'.repeat(20)}]};
+ const pack={schema:'yandao.tcm.original-editions.v1',version:'1.0.0',books:[book]};
+ const api=raw=>load('src/lib/retainedTcmEditions.ts',{'@/algorithm-core/modules/tcm/classics':{getAllBooks:()=>[]},'./offlinePackClient':{loadJsonPack:async()=>copy(raw)},'./durableOfflineStore':store.api,'./tcmEditionPack':edition,'./releaseFeatures':{CLIENT_VERSION:'25.0.115'}});
+ assert.equal((await api(pack).retainedEditionPack('tcm-materia-originals',[],true)).books.length,1);
+ assert.equal((await api(null).retainedEditionPack('tcm-materia-originals')).books[0].chapters[0].content,book.chapters[0].content);
+ const partial=copy(pack);partial.books[0].chapters[0].content='短文';assert.equal((await api(partial).retainedEditionPack('tcm-materia-originals',[book])).books[0].chapters[0].content,book.chapters[0].content);
+ const key=[...store.files.keys()].find(k=>k.startsWith('tcm-book-'));store.files.get(key).book.chapters[0].content='损坏';assert.equal(await api(null).retainedEditionPack('tcm-materia-originals'),null);
+});
 function disk(){const files=new Map();return {files,api:{readOfflineFile:async key=>copy(files.get(key)||null),writeOfflineFile:async(key,value)=>{files.set(key,copy(value));}}};}
 const text='百会的来源测试段落。';
 function fixture(){const id='a'.repeat(24);return {schema:'yandao.medical.study-library.v1',version:'1.0.0',sources:{'test-source':{title:'测试原典',author:'测试作者',kind:'CLASSIC_ORIGINAL',sha256:'b'.repeat(64),url:'https://zh.wikisource.org/w/index.php?oldid=1'}},passages:{[id]:{source:'test-source',chapter:'test-chapter',chapterTitle:'测试篇章',text,lineStart:1,lineEnd:2,sha256:createHash('sha256').update(text).digest('hex')}},subjects:{'point:DU20':{name:'百会',kind:'point',references:[id]},'herb:h001':{name:'桂枝',kind:'herb',references:[]}}};}

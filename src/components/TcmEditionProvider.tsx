@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { getAllBooks } from '@/algorithm-core/modules/tcm/classics';
-import { loadJsonPack } from '@/lib/offlinePackClient';
+import { retainedEditionPack, EDITION_PACKS } from '@/lib/retainedTcmEditions';
 import { isCompatibleTcmEditionPack, mergeTcmEditionPack } from '@/lib/tcmEditionPack';
 
 const bundled = getAllBooks();
@@ -15,11 +15,15 @@ export function TcmEditionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let active = true;
     const reload = async () => {
-      const pack = await loadJsonPack<unknown>('tcm-original-editions-approved');
-      if (active && isCompatibleTcmEditionPack(pack, bundled)) setCatalogue({ books: mergeTcmEditionPack(bundled, pack), version: pack.version });
+      let books=bundled,version='内置';
+      for(const id of EDITION_PACKS){
+        const pack=await retainedEditionPack(id,id==='tcm-original-editions-approved'?bundled:[]);
+        if(pack&&isCompatibleTcmEditionPack(pack,id==='tcm-original-editions-approved'?bundled:[])){books=mergeTcmEditionPack(books,pack);version=pack.version;}
+      }
+      if(active)setCatalogue({books,version});
     };
     const onInstalled = (event: Event) => {
-      if ((event as CustomEvent<{ packId?: string }>).detail?.packId === 'tcm-original-editions-approved') void reload().catch(() => {});
+      if (EDITION_PACKS.includes((event as CustomEvent<{ packId?: string }>).detail?.packId||'')) void reload().catch(() => {});
     };
     // Direct chapter links must select the installed edition before the reader
     // freezes its paragraph/listening text. Later updates do not interrupt it.

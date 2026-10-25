@@ -99,7 +99,11 @@ function mapRawHerbToTcm(entry: RawHerbEntry): TcmHerb {
     efficacy: entry.efficacy,
     indications: entry.indications,
     source: entry.source || '中国药典',
-    dosage: entry.dosage,
+    // The imported 本经 rows share a modern gram template without a page or
+    // edition citation. Keep the import intact; do not present it as a quote.
+    dosage: entry.source === '神农本草经' && /^3\s*[-–—]\s*9\s*g$/i.test(entry.dosage.trim())
+      ? '原导入用量缺少可核对的篇章出处；请对照各家原文，尚不展示为典籍用量。'
+      : entry.dosage,
     contraindications: entry.contraindications || '',
     toxic: isToxic,
   };

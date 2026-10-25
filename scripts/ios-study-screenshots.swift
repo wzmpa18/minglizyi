@@ -40,7 +40,9 @@ final class GuoxueStudyScreenshots: XCTestCase {
         let app=XCUIApplication()
         func openOffline(){
             awaitHome(app);tapVisible(app.links,"我的",app)
-            if !app.buttons.matching(NSPredicate(format:"label CONTAINS %@","离线内容")).firstMatch.exists{tapVisible(app.buttons,"系统中心",app)}
+            // Wait for the persisted drawer state to hydrate before toggling it.
+            // Otherwise a fast relaunch can close an already restored drawer.
+            if !app.buttons.matching(NSPredicate(format:"label CONTAINS %@","离线内容")).firstMatch.waitForExistence(timeout:5){tapVisible(app.buttons,"系统中心",app)}
             tapVisible(app.buttons,"离线内容",app)
             XCTAssertTrue(app.staticTexts["本机离线保存正常"].waitForExistence(timeout:30))
             tapVisible(app.links,"查看动图与图片示例",app)

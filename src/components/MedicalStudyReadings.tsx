@@ -16,7 +16,7 @@ export function MedicalStudyReadings({subject}:{subject:string}){
         <summary>{entry.sourceInfo.author} · 《{entry.sourceInfo.title}》</summary>
         <p style={{fontSize:12,color:'#666'}}>{entry.sourceInfo.kind==='LECTURE_TRANSCRIPT'?'课程文字整理':entry.sourceInfo.kind==='COMMUNITY_COURSE_NOTES'?'公开课程学习笔记，非倪师著作逐字原文':'原典录文'} · {entry.chapterTitle} · 第{entry.lineStart}–{entry.lineEnd}行</p>
         <blockquote style={{margin:'8px 0',whiteSpace:'pre-wrap'}}>{entry.text.replace(/^#{1,6}\s*/gm,'')}</blockquote>
-        {entry.sourceInfo.kind==='CLASSIC_ORIGINAL'&&<a href={'/zhongyi/classic?book='+encodeURIComponent(entry.source)+'&chapter='+encodeURIComponent(entry.chapter)}>阅读已收录篇章 →</a>}
+        {entry.sourceInfo.kind==='CLASSIC_ORIGINAL'&&entry.sourceInfo.inAppBook!==false&&<a href={'/zhongyi/classic?book='+encodeURIComponent(entry.source)+'&chapter='+encodeURIComponent(entry.chapter)}>阅读已收录篇章 →</a>}
         {entry.sourceInfo.url&&<p><a href={entry.sourceInfo.url} target="_blank" rel="noopener noreferrer">核对来源版本 ↗</a></p>}
         {entry.sourceInfo.license&&typeof entry.sourceInfo.license==='string'&&<p style={{fontSize:11,color:'#777'}}>资料许可：{entry.sourceInfo.license}{entry.sourceInfo.kind==='COMMUNITY_COURSE_NOTES'&&<> · <a href="/legal/medical-study-notes-license.txt">查看完整许可</a></>}</p>}
       </details>)}

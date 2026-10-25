@@ -3,7 +3,7 @@ import { loadJsonPack, fetchManifest, checkUpdates, downloadPack, needsUserConfi
 import { readOfflineFile, writeOfflineFile } from './durableOfflineStore';
 import { CLIENT_VERSION } from './releaseFeatures';
 
-export interface MedicalSource {title:string;author:string;kind:'LECTURE_TRANSCRIPT'|'CLASSIC_ORIGINAL'|'COMMUNITY_COURSE_NOTES';sha256:string;url?:string;localOriginalName?:string;license?:string}
+export interface MedicalSource {title:string;author:string;kind:'LECTURE_TRANSCRIPT'|'CLASSIC_ORIGINAL'|'COMMUNITY_COURSE_NOTES';sha256:string;url?:string;localOriginalName?:string;license?:string;inAppBook?:boolean}
 export interface MedicalPassage {source:string;chapter:string;chapterTitle:string;text:string;lineStart:number;lineEnd:number;sha256:string;topic?:'combination_context'|'caution_context'|'indication_context'|'related'}
 export interface MedicalSubject {name:string;kind:string;references:string[]}
 export interface MedicalLibrary {schema:'yandao.medical.study-library.v1';version:string;sources:Record<string,MedicalSource>;passages:Record<string,MedicalPassage>;subjects:Record<string,MedicalSubject>}
@@ -15,6 +15,7 @@ if(typeof window!=='undefined')window.addEventListener('offline-pack-installed',
 });
 const plain=(value:unknown,max:number)=>typeof value==='string'&&value.length<=max&&!/[\u0000]/.test(value);
 function validSource(source:MedicalSource){
+  if(source?.inAppBook!==undefined&&typeof source.inAppBook!=='boolean')return false;
   if(!source||!plain(source.title,300)||!source.title||!plain(source.author,300)||!source.author||!['LECTURE_TRANSCRIPT','CLASSIC_ORIGINAL','COMMUNITY_COURSE_NOTES'].includes(source.kind)||!/^[a-f0-9]{64}$/.test(source.sha256))return false;
   if(source.url){try{const url=new URL(source.url);const community=url.hostname==='github.com'&&/^\/Shanemen\/hantang-nihaixia\/blob\/[a-f0-9]{40}\//.test(url.pathname);const edition=url.hostname==='gitlab.com'&&/^\/jicheng\/jc\.data\/-\/blob\/[a-f0-9]{40}\/pages\/book\//.test(url.pathname);if(url.protocol!=='https:'||(!['zh.wikisource.org','www.shidianguji.com'].includes(url.hostname)&&!community&&!edition)||url.username||url.password)return false;}catch{return false;}}
   return true;

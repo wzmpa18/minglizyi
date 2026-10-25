@@ -3,10 +3,11 @@ import {useEffect,useState} from 'react';
 import {prepareMedicalLibrary} from '@/lib/medicalStudyLibrary';
 import {prepareStudyImages} from '@/lib/studyMedia';
 import {readOfflineFile} from '@/lib/durableOfflineStore';
+import {prepareOriginalEditions} from '@/lib/retainedTcmEditions';
 export function MedicalPreparationCard(){
  const [busy,setBusy]=useState(false),[message,setMessage]=useState(''),[ready,setReady]=useState(false);
  const [disk,setDisk]=useState('checking');
- useEffect(()=>{void Promise.all([readOfflineFile('medical-library-ready'),readOfflineFile('study-media-ready')]).then(([a,b])=>setReady(!!a&&!!b)).catch(()=>{});},[]);
+ useEffect(()=>{void Promise.all([readOfflineFile('medical-library-ready'),readOfflineFile('study-media-ready'),readOfflineFile('tcm-books-head-tcm-materia-originals'),readOfflineFile('tcm-books-head-tcm-original-editions-approved')]).then(rows=>setReady(rows.every(Boolean))).catch(()=>{});},[]);
  useEffect(()=>{let live=true;void(async()=>{try{
   const key='learning-storage-readback-check',expected={schema:1,synthetic:true,content:'offline-learning-storage-check'};
   const previous=await readOfflineFile<typeof expected>(key);
@@ -15,6 +16,7 @@ export function MedicalPreparationCard(){
   if(live)setDisk('ready');
  }catch{if(live)setDisk('error');}})();return()=>{live=false;};},[]);
  async function prepare(){if(busy)return;setBusy(true);setMessage('正在准备文献资料…');try{
+  await prepareOriginalEditions((done,total)=>setMessage(`正在保存整本原典 ${done}/${total}`));
   await prepareMedicalLibrary((done,total)=>setMessage(`正在保存药穴文献 ${done}/${total}`));
   await prepareStudyImages((done,total)=>setMessage(`正在保存原动图与照片 ${done}/${total}`));
   setReady(true);setMessage('文献与已收录原图已保存，可断网查看。未收录的单穴照片不会冒充已下载。');

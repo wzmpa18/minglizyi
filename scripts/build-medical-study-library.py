@@ -51,7 +51,7 @@ def chunks(lines):
         yield start, len(lines), '\n'.join(current)
 
 
-def build(lectures, output, audit, public_notes=None):
+def build(lectures, output, audit, public_notes=None, materia_catalogue=None):
     root = Path(__file__).resolve().parents[1]
     points = json.loads((root/'src/algorithm-core/modules/tcm/data/meridians.json').read_text(encoding='utf-8'))['acupoints']
     herbs = json.loads((root/'src/algorithm-core/modules/tcm/data/herbs.json').read_text(encoding='utf-8'))['herbs']
@@ -121,6 +121,35 @@ def build(lectures, output, audit, public_notes=None):
             'sha256':book['contentSha256'],'url':book['sourceRevisionUrl'],'license':book['license']}
         for chapter in book['chapters']:
             ingest(source,chapter['id'],chapter['title'],chapter['content'].splitlines())
+    if materia_catalogue:
+        import importlib.util
+        spec=importlib.util.spec_from_file_location('materia_source',root/'scripts/collect-classic-materia.py')
+        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        MateriaParser=module.MateriaParser
+        catalogue=json.loads(materia_catalogue.read_text(encoding='utf-8'))
+        herb_headings=collections.defaultdict(list)
+        for key,item in subjects.items():
+            if item['kind']=='herb':herb_headings[item['name']].append(key)
+        for book in catalogue['books']:
+            if book['status']!='FETCHED_FOR_SOURCE_REVIEW':continue
+            raw=Path(book['rawFile']).read_bytes()
+            if hashlib.sha256(raw).hexdigest()!=book['sha256']:raise RuntimeError('Original source changed')
+            parser=MateriaParser();parser.feed(raw.decode('utf-8'))
+            import html
+            body=re.sub(r'<header\b.*?</header>','',raw.decode('utf-8'),flags=re.S|re.I)
+            body=re.sub(r'<!--.*?-->','',body,flags=re.S)
+            expected=re.sub(r'\s+','',html.unescape(re.sub(r'<[^>]+>','',body)))
+            actual=re.sub(r'\s+','',''.join(token['text'] for token in parser.tokens))
+            if expected!=actual:raise RuntimeError('Original edition body was not fully preserved')
+            source='materia-'+book['id']
+            author=next(spec[2] for spec in module.BOOKS if spec[0]==book['id'])
+            sources[source]={'title':book['title'],'author':author,'kind':'CLASSIC_ORIGINAL',
+                             'sha256':book['sha256'],'url':book['url'],'license':'古代原文录文；不包含现代译注','inAppBook':True}
+            for record in parser.records:
+                heading=simple(record['heading'])
+                forced=herb_headings.get(re.sub(r'[（(].*[）)]$','',heading),[])
+                ingest(source,source+'-section-'+str(record['section']),record['heading'] or book['title'],
+                       [record['text']],forced,record['paragraph']-1)
     license_texts={}
     if public_notes:
         notes=json.loads(public_notes.read_text(encoding='utf-8'))
@@ -169,4 +198,5 @@ def build(lectures, output, audit, public_notes=None):
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser();parser.add_argument('--lectures',type=Path,required=True);parser.add_argument('--output',type=Path,required=True);parser.add_argument('--audit',type=Path,required=True);parser.add_argument('--public-ni-notes',type=Path)
-    args=parser.parse_args();build(args.lectures,args.output,args.audit,args.public_ni_notes)
+    parser.add_argument('--materia-catalogue',type=Path)
+    args=parser.parse_args();build(args.lectures,args.output,args.audit,args.public_ni_notes,args.materia_catalogue)
