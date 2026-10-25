@@ -40,7 +40,7 @@ export function prepareCompleteTcm(progress?:(message:string)=>void):Promise<voi
    const result=await downloadPack(plan.manifestPack,(done,total)=>progress?.(`正在下载中医资料 ${Math.min(100,Math.round(done/Math.max(total,1)*100))}%`),async bytes=>(await validate(bytes,plan.manifestPack.version)).members);
    if(!result.ok)throw Error(result.error||'资料下载尚未完成');
   }
-  const bytes=await loadPackContent(COMPLETE_TCM_ID);if(!bytes)throw Error('完整资料未保存成功');
+  let bytes:ArrayBuffer|undefined=(await loadPackContent(COMPLETE_TCM_ID))||undefined;if(!bytes)throw Error('完整资料未保存成功');
   const catalogue=await validate(bytes,plan.manifestPack.version);
   // Also repairs an archive installed by an older downloader without virtual child indexes.
   await activateOfflinePack(COMPLETE_TCM_ID,plan.manifestPack.version,plan.manifestPack.sha256,bytes,catalogue.members);
@@ -48,8 +48,8 @@ export function prepareCompleteTcm(progress?:(message:string)=>void):Promise<voi
   for(const id of EDITION_PACKS){progress?.('正在保存整本原典');if(!await retainedEditionPack(id,[],true))throw Error('原典保存尚未完成');}
   await retainInstalledMedicalLibrary((done,total)=>progress?.(`正在保存药穴出处 ${done}/${total}`));
   for(const id of ['tcm-herbs','tcm-formulas'] as const){const source=await loadJsonPack(id),saved=await retainedTcmStructuredPack(id,[]);if(!saved||JSON.stringify(source)!==JSON.stringify(saved))throw Error('药材或方剂保存尚未完成');}
-  await installStudyMediaCatalogue(await loadJsonPack('tcm-study-media'),path=>readLearningBundleFile(bytes,path.replace(/^\//,'')));
-  try{await prepareStudyImages((done,total)=>progress?.(`正在保存原图 ${done}/${total}`));}finally{releaseStudyMediaReader();}
+  await installStudyMediaCatalogue(await loadJsonPack('tcm-study-media'),path=>readLearningBundleFile(bytes!,path.replace(/^\//,'')));
+  try{await prepareStudyImages((done,total)=>progress?.(`正在保存原图 ${done}/${total}`));}finally{releaseStudyMediaReader();bytes=undefined;}
   for(const model of models){
    if(!model||model.action==='UP_TO_DATE')continue;
    const validateModel=model.packId===ANATOMY_BUNDLE_MEMBERS[0]?async(raw:ArrayBuffer)=>{await(await import('./anatomy3dPack')).decodeAnatomyPack(raw);}:async(raw:ArrayBuffer)=>{await(await import('../components/anatomy-atlas/atlasPack')).decodeAtlas(raw);};
