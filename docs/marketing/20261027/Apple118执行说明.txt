@@ -1,3 +1,5 @@
+【当前实际状态：2026-10-27 02:59:34 JST已正式提交118(60)，WAITING_FOR_REVIEW，审核ID bee69018-5b8d-4b49-9674-6514b14fcc50；未批准/未正式上架。下列步骤为已执行维护记录，禁止对当前等待审核重复撤回/提交。】
+
 Apple118正式替换执行说明（固定言道国学，不适用其他App）
 
 候选：App6807592575 / com.yandaoguoxue.app / 25.0.118(60)，产品源码ac13a433cfb5f5e8f2c2e3e0946f7181339fc079。
@@ -33,3 +35,5 @@ Apple118正式替换执行说明（固定言道国学，不适用其他App）
 2026-10-27补充：已只读核67/iPad129各5张且全COMPLETE，65槽实际0张（仅槽存在，不能说它正在展示旧图）。最终每设备新5张对应五类即可；validate-local和replace在撤旧前按实时已存在60_SHA文件名去重后核旧+新增不超过10，超限保留旧审核。上传中断的本候选新资产按实际GET刷新uploadOperations恢复PUT/PATCH；只有相同60_SHA名的FAILED/过期上传引用可最多删除重建一次，所有旧53引用保持到全部新图COMPLETE。故障恢复及容量等13项测试实际通过。
 
 当前最终准备（2026-10-27）：Apple118_最终准备_只读全门禁与实时容量通过_20261027.json状态LOCAL_PREPARATION_VERIFIED_NOT_CANCELED，SHA256=f7aa6bf158b6d2b53be91046e57f2256848d7528baf7a164b2db37e7ed046232。四CI全部成功，截图run40363346235 attempt2/QA35ceb780/Appac13/manifestSHAee73dcaa严格固定；14项维护测试通过。60实时VALID/IN_BETA_TESTING并已关联原内部组；旧53与8IAP仍WAITING。最终中文slot5旧+5新=10、英文新slot0+5=5，容量通过。尚未向Apple发送任何本轮正式替换写操作；须根任务抽图并发全部准备就绪信号，再按第5步执行。
+
+最终执行结果：同一草稿bee69018复用，恰好1应用+原8IAP版本，阶段09实际受理后独立GET核118/60、WAITING_FOR_REVIEW及8原ID不变；20新图全部COMPLETE后才清旧引用。Apple自动生成AppInfo英文条目导致重复POST已改为刷新复用；AssociatedErrors所指英文supportUrl缺项已只按同App已核固定HTTPS链接补齐，privacy原已齐全未改。所有阶段回执与失败诊断均保留，商品/价格/订单/其他App未改，overall未改；目前17项维护测试通过。当前正式状态以D04/Apple/Apple118正式提审回执.json和实际Apple读回为准，不以历史准备文字为准。

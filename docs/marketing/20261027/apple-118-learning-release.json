@@ -5,7 +5,7 @@
   "version": "25.0.118",
   "build": "60",
   "candidateSource": "ac13a433cfb5f5e8f2c2e3e0946f7181339fc079",
-  "status": "PREPARED_NOT_SUBMITTED",
+  "status": "OFFICIALLY_SUBMITTED_WAITING_FOR_REVIEW_NOT_APPROVED",
   "doesNotAssertOverallComplete": true,
   "locales": {
     "zh-Hans": {
@@ -32,5 +32,12 @@
     "https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications/",
     "https://developer.apple.com/documentation/appstoreconnectapi/appstoreversionupdaterequest/data-data.dictionary/attributes-data.dictionary"
   ],
-  "readiness": "Wait for successful source-pinned simulator evidence, verified complete screenshots, VALID build60 and root all-preparations-ready before any cancellation."
+  "readiness": "Exact candidate and twenty actual iPhone/iPad screenshot references verified; officially submitted once with original eight IAP versions. Awaiting Apple review; no overall acceptance or store approval asserted.",
+  "submission": {
+    "id": "bee69018-5b8d-4b49-9674-6514b14fcc50",
+    "state": "WAITING_FOR_REVIEW",
+    "submittedDate": "2026-10-26T17:59:34.859Z",
+    "appVersion": "25.0.118",
+    "build": "60"
+  }
 }

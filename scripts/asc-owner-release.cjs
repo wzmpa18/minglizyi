@@ -7,6 +7,7 @@ const arg=n=>process.argv.find(a=>a.startsWith('--'+n+'='))?.slice(n.length+3),s
 if(!['inspect','validate-local','replace-metadata','assemble','submit'].includes(stage)||!output||fs.existsSync(output))throw Error('Explicit supported stage and new evidence output required');
 const read=p=>JSON.parse(fs.readFileSync(p,'utf8')),material=prep.validateMarketing(read(path.join(__dirname,'../docs/marketing/20261027/apple-118-learning-release.json')),auth);
 const proof={appId:auth.appId,bundleId:auth.bundleId,version:auth.version,build:auth.build,candidateSource:auth.candidateSource,checkedAt:new Date().toISOString(),stage,operations:[],doesNotAssertOverallComplete:true};
+let privateReviewValues=[];
 const save=()=>{fs.mkdirSync(path.dirname(output),{recursive:true});fs.writeFileSync(output,JSON.stringify(proof,null,2)+'\n');};
 function verifyCI(){
  const paths={quality:'.github/workflows/study-quality.yml',native:'.github/workflows/ios-build.yml',upload:'.github/workflows/ios-build.yml',screenshots:auth.screenshotWorkflowPath||'.github/workflows/ios-simulator-proof.yml'};
@@ -35,16 +36,20 @@ async function inspect(){
  const target=versions.find(v=>v.attributes.versionString===auth.version),old=pending?versions.find(v=>v.id===pending.versionId):versions.find(v=>v.attributes.versionString===auth.previousPendingCandidate.version);
  const version=target||old;if(!version)throw Error('No existing Guoxue version to safely update');
  const detail=(await api('GET','/v1/appStoreVersions/'+version.id+'/appStoreReviewDetail')).data;if(!detail?.attributes?.demoAccountName||!detail.attributes.demoAccountPassword)throw Error('Existing private reviewer fields missing');scope.add('appStoreReviewDetails',detail.id);
+ privateReviewValues=[detail.attributes.demoAccountName,detail.attributes.demoAccountPassword];
  const localizations=(await api('GET','/v1/appStoreVersions/'+version.id+'/appStoreVersionLocalizations?limit=50')).data;for(const l of localizations)scope.add('appStoreVersionLocalizations',l.id);
  const infos=(await api('GET','/v1/apps/'+auth.appId+'/appInfos?limit=50')).data;for(const i of infos)scope.add('appInfos',i.id);
+ const infoLocalizations=[];for(const info of infos){const rows=(await api('GET','/v1/appInfos/'+info.id+'/appInfoLocalizations?limit=50')).data;infoLocalizations.push({appInfoId:info.id,locales:rows.map(l=>({id:l.id,locale:l.attributes.locale,name:l.attributes.name,subtitle:l.attributes.subtitle,privacyPolicyUrl:l.attributes.privacyPolicyUrl||null}))});}
  const screenshotSlots=[];for(const locale of localizations){const sets=(await api('GET','/v1/appStoreVersionLocalizations/'+locale.id+'/appScreenshotSets?limit=50')).data,rows=[];for(const s of sets){const shots=(await api('GET','/v1/appScreenshotSets/'+s.id+'/appScreenshots?limit=50')).data;rows.push({id:s.id,displayType:s.attributes.screenshotDisplayType,screenshots:shots.map(x=>({id:x.id,fileName:x.attributes.fileName,state:x.attributes.assetDeliveryState?.state}))});}screenshotSlots.push({locale:locale.attributes.locale,sets:rows});}
  const betaDetail=(builds.included||[]).find(v=>v.type==='buildBetaDetails'&&v.id===build.relationships.buildBetaDetail?.data?.id),groups=(builds.included||[]).filter(v=>v.type==='betaGroups'&&build.relationships.betaGroups?.data?.some(g=>g.id===v.id));
- return {versions,build,productVersions,submissions,pending,version,detail,localizations,infos,screenshotSlots,testFlight:{internalBuildState:betaDetail?.attributes.internalBuildState,externalBuildState:betaDetail?.attributes.externalBuildState,existingInternalGroups:groups.filter(g=>g.attributes.isInternalGroup===true).map(g=>({id:g.id,name:g.attributes.name}))}};
+ return {versions,build,productVersions,submissions,pending,version,detail,localizations,infos,infoLocalizations,screenshotSlots,testFlight:{internalBuildState:betaDetail?.attributes.internalBuildState,externalBuildState:betaDetail?.attributes.externalBuildState,existingInternalGroups:groups.filter(g=>g.attributes.isInternalGroup===true).map(g=>({id:g.id,name:g.attributes.name}))}};
 }
 function recordSnapshot(live){
  proof.buildRecord={id:live.build.id,build:live.build.attributes.version,processingState:live.build.attributes.processingState};proof.versionRecord={id:live.version.id,version:live.version.attributes.versionString,state:live.version.attributes.appStoreState};proof.previousPending=live.pending;proof.productVersions=live.productVersions;proof.privateReviewFieldsPresent=true;proof.existingLocaleNames=live.localizations.map(l=>l.attributes.locale);proof.historicalIapMutations=0;proof.otherAppMutations=0;
  proof.appInfoRecords=live.infos.map(i=>({id:i.id,state:i.attributes.appStoreState}));proof.existingScreenshotSlots=live.screenshotSlots;
  proof.testFlight=live.testFlight;
+ proof.existingAppInfoLocalizations=live.infoLocalizations;
+ proof.versionLocaleUrls=live.localizations.map(l=>({id:l.id,locale:l.attributes.locale,supportUrl:l.attributes.supportUrl||null,marketingUrl:l.attributes.marketingUrl||null}));
 }
 async function replace(live,ready,snapshot){
  if(!process.argv.includes('--root-all-preparations-ready'))throw Error('Root has not confirmed all preparations ready; old review retained');
@@ -64,18 +69,17 @@ async function replace(live,ready,snapshot){
  const editable=freshInfos.filter(i=>live.infos.some(old=>old.id===i.id)&&['PREPARE_FOR_SUBMISSION','DEVELOPER_REJECTED','REJECTED','METADATA_REJECTED'].includes(i.attributes.appStoreState));if(editable.length!==1)throw Error('Exactly one existing editable Guoxue App Info required');const info=editable[0];scope.add('appInfos',info.id);
  await write('PATCH','/v1/appStoreVersions/'+version.id,{data:{type:'appStoreVersions',id:version.id,attributes:{versionString:auth.version},relationships:{build:{data:{type:'builds',id:live.build.id}}}}});proof.operations.push('Linked only exact VALID118(60) and updated the existing editable version string');
  const published=live.versions.some(v=>['READY_FOR_SALE','READY_FOR_DISTRIBUTION'].includes(v.attributes.appStoreState));
- const infoLocales=(await api('GET','/v1/appInfos/'+info.id+'/appInfoLocalizations?limit=50')).data;for(const l of infoLocales)scope.add('appInfoLocalizations',l.id);
  for(const [locale,fields] of Object.entries(material.locales)){
-  let loc=live.localizations.find(l=>l.attributes.locale===locale);if(!loc)loc=(await write('POST','/v1/appStoreVersionLocalizations',{data:{type:'appStoreVersionLocalizations',attributes:{locale,description:fields.description,keywords:fields.keywords,promotionalText:fields.promotionalText,...(published?{whatsNew:fields.whatsNew}:{})},relationships:{appStoreVersion:{data:{type:'appStoreVersions',id:version.id}}}}})).data;
-  else await write('PATCH','/v1/appStoreVersionLocalizations/'+loc.id,{data:{type:'appStoreVersionLocalizations',id:loc.id,attributes:{description:fields.description,keywords:fields.keywords,promotionalText:fields.promotionalText,...(published?{whatsNew:fields.whatsNew}:{})}}});
-  const il=infoLocales.find(l=>l.attributes.locale===locale);if(il)await write('PATCH','/v1/appInfoLocalizations/'+il.id,{data:{type:'appInfoLocalizations',id:il.id,attributes:{name:fields.name,subtitle:fields.subtitle}}});else{const privacy=infoLocales.find(l=>l.attributes.privacyPolicyUrl)?.attributes.privacyPolicyUrl;if(!privacy?.startsWith('https://'))throw Error('Existing privacy URL missing');await write('POST','/v1/appInfoLocalizations',{data:{type:'appInfoLocalizations',attributes:{locale,name:fields.name,subtitle:fields.subtitle,privacyPolicyUrl:privacy},relationships:{appInfo:{data:{type:'appInfos',id:info.id}}}}});}
+  let loc=live.localizations.find(l=>l.attributes.locale===locale);if(!loc)loc=(await write('POST','/v1/appStoreVersionLocalizations',{data:{type:'appStoreVersionLocalizations',attributes:{locale,description:fields.description,keywords:fields.keywords,promotionalText:fields.promotionalText,supportUrl:auth.publicMetadataUrls?.supportUrl,...(published?{whatsNew:fields.whatsNew}:{})},relationships:{appStoreVersion:{data:{type:'appStoreVersions',id:version.id}}}}})).data;
+  else await write('PATCH','/v1/appStoreVersionLocalizations/'+loc.id,{data:{type:'appStoreVersionLocalizations',id:loc.id,attributes:{description:fields.description,keywords:fields.keywords,promotionalText:fields.promotionalText,...(!loc.attributes.supportUrl?{supportUrl:auth.publicMetadataUrls?.supportUrl}:{}),...(published?{whatsNew:fields.whatsNew}:{})}}});
+  await prep.upsertAppInfoLocale({api,write,infoId:info.id,locale,fields,register:id=>scope.add('appInfoLocalizations',id)});
  }
  await write('PATCH','/v1/appStoreReviewDetails/'+live.detail.id,{data:{type:'appStoreReviewDetails',id:live.detail.id,attributes:{notes:material.reviewNotes}}});
  const privateRead=(await api('GET','/v1/appStoreReviewDetails/'+live.detail.id)).data.attributes;if(privateRead.demoAccountName!==live.detail.attributes.demoAccountName||privateRead.demoAccountPassword!==live.detail.attributes.demoAccountPassword||privateRead.notes!==material.reviewNotes)throw Error('Existing private review fields or new notes readback mismatch');proof.privateReviewFieldsPreserved=true;
  proof.initialReleaseWhatsNewOmitted=!published;
  const locales=(await api('GET','/v1/appStoreVersions/'+version.id+'/appStoreVersionLocalizations?limit=50')).data;const complete=[],previous=[],legacySets=[];
  for(const locale of Object.keys(material.locales)){
-  const loc=locales.find(l=>l.attributes.locale===locale);scope.add('appStoreVersionLocalizations',loc.id);const f=material.locales[locale];if(['description','keywords','promotionalText'].some(k=>loc.attributes[k]!==f[k]))throw Error('Learning metadata readback mismatch');
+  const loc=locales.find(l=>l.attributes.locale===locale);scope.add('appStoreVersionLocalizations',loc.id);const f=material.locales[locale];if(['description','keywords','promotionalText'].some(k=>loc.attributes[k]!==f[k])||loc.attributes.supportUrl!==auth.publicMetadataUrls?.supportUrl)throw Error('Learning metadata or verified support URL readback mismatch');
   let sets=(await api('GET','/v1/appStoreVersionLocalizations/'+loc.id+'/appScreenshotSets?limit=50')).data;
   // Old explicit 6.5-inch screenshots otherwise override scaling of the new
   // large-display set. Retain their references until *all* new sets complete.
@@ -103,7 +107,7 @@ async function assemble(live,snapshot,submit){
  const metadataProof=read(arg('metadata-proof')||'');prep.exactCandidate(metadataProof,auth);if(metadataProof.state!=='CURRENT118_METADATA_AND_SCREENSHOTS_VERIFIED'||metadataProof.versionId!==live.version.id||metadataProof.privateReviewFieldsPreserved!==true)throw Error('118 metadata/screenshots proof missing');
  const linked=(await api('GET','/v1/appStoreVersions/'+live.version.id+'/build')).data;if(linked.id!==live.build.id)throw Error('118 build link changed');
  for(const [locale,fields] of Object.entries(material.locales)){
-  const loc=live.localizations.find(l=>l.attributes.locale===locale);if(!loc||['description','keywords','promotionalText'].some(k=>loc.attributes[k]!==fields[k]))throw Error('Current learning metadata changed after preparation');
+  const loc=live.localizations.find(l=>l.attributes.locale===locale);if(!loc||['description','keywords','promotionalText'].some(k=>loc.attributes[k]!==fields[k]))throw Error('Current learning metadata changed after preparation');if(!loc.attributes.supportUrl?.startsWith('https://'))throw Error('Required localized supportUrl is missing; do not add an incomplete app to review');
   const sets=(await api('GET','/v1/appStoreVersionLocalizations/'+loc.id+'/appScreenshotSets?limit=50')).data;
   for(const expectedSet of metadataProof.screenshotSets.filter(s=>s.locale===locale)){
    if(!sets.some(s=>s.id===expectedSet.setId))throw Error('Prepared screenshot set no longer belongs to the locale');
@@ -117,6 +121,7 @@ async function assemble(live,snapshot,submit){
  if(pending.some(id=>!['PREPARE_FOR_SUBMISSION','READY_FOR_REVIEW','DEVELOPER_REJECTED','READY_TO_SUBMIT'].includes(live.productVersions.find(v=>v.id===id).state)))throw Error('Existing IAP state not editable; products and old links preserved');
  const drafts=live.submissions.filter(s=>s.attributes.state==='READY_FOR_REVIEW');if(drafts.length>1)throw Error('Multiple draft reviews; do not select arbitrarily');let target=drafts[0];
  if(!target)target=(await write('POST','/v1/reviewSubmissions',{data:{type:'reviewSubmissions',attributes:{platform:'IOS'},relationships:{app:{data:{type:'apps',id:auth.appId}}}}})).data;else if(target.attributes.platform===null)await write('PATCH','/v1/reviewSubmissions/'+target.id,{data:{type:'reviewSubmissions',id:target.id,attributes:{platform:'IOS'}}});else if(target.attributes.platform!=='IOS')throw Error('Existing draft has another platform');
+ proof.submissionId=target.id;proof.operations.push('Selected the single owned review draft; no duplicate created');save();
  const itemsUrl='/v1/reviewSubmissions/'+target.id+'/items?limit=50&include=appStoreVersion,inAppPurchaseVersion';let items=alive((await api('GET',itemsUrl)).data);
  if(items.some(i=>i.relationships.appStoreVersion?.data&&i.relationships.appStoreVersion.data.id!==live.version.id||i.relationships.inAppPurchaseVersion?.data&&!pending.includes(i.relationships.inAppPurchaseVersion.data.id)))throw Error('Unrelated existing draft items; not removed');
  if(!items.some(i=>i.relationships.appStoreVersion?.data?.id===live.version.id))await write('POST','/v1/reviewSubmissionItems',{data:{type:'reviewSubmissionItems',relationships:{reviewSubmission:{data:{type:'reviewSubmissions',id:target.id}},appStoreVersion:{data:{type:'appStoreVersions',id:live.version.id}}}}});
@@ -130,4 +135,4 @@ async function assemble(live,snapshot,submit){
  const live=await inspect();recordSnapshot(live);if(stage==='inspect'){proof.state='READ_ONLY_CURRENT_APP_SNAPSHOT';return;}
  const ready=localReady(),snapshot=read(arg('snapshot')||'');prep.exactCandidate(snapshot,auth);if(snapshot.state!=='READ_ONLY_CURRENT_APP_SNAPSHOT')throw Error('Fresh initial Apple inspect snapshot required');proof.ci=ready.ci;
  if(stage==='replace-metadata')await replace(live,ready,snapshot);else await assemble(live,snapshot,stage==='submit');
-})().catch(e=>{proof.error=e.message;proof.appleErrors=(e.details||[]).map(x=>({code:x.code,title:x.title}));process.exitCode=1;}).finally(()=>{save();console.log(JSON.stringify({appId:proof.appId,version:proof.version,build:proof.build,stage,state:proof.state,error:proof.error,output}));});
+})().catch(e=>{proof.error=prep.redactAppleErrors(e.message,privateReviewValues);proof.appleErrors=prep.redactAppleErrors(e.details||[],privateReviewValues);process.exitCode=1;}).finally(()=>{save();console.log(JSON.stringify({appId:proof.appId,version:proof.version,build:proof.build,stage,state:proof.state,error:proof.error,output}));});

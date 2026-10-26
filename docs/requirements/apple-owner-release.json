@@ -43,5 +43,10 @@
   "screenshotReusableWorkflowPath": ".github/workflows/ios-learning-marketing.yml",
   "screenshotRunAttempt": 2,
   "screenshotArtifactId": 12670049535,
-  "screenshotManifestSha256": "ee73dcaa2328f4fc94c00ce562ef5475054ce62785b035429b6309a485a2933d"
+  "screenshotManifestSha256": "ee73dcaa2328f4fc94c00ce562ef5475054ce62785b035429b6309a485a2933d",
+  "publicMetadataUrls": {
+    "supportUrl": "https://yandaoguoxue.yandao.vip/profile/feedback/",
+    "source": "Existing zh-Hans supportUrl read from the same App Store version; live HTTP200 verified 2026-10-26T17:54:45Z",
+    "evidence": "D:/言道国学项目资料总库/04_应用商店/Apple/Apple118_同App现有支持与隐私链接实际HTTP核验_20261027.json"
+  }
 }

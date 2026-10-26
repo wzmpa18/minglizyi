@@ -14,16 +14,18 @@ def main():
     p.add_argument('--bytes', type=int, required=True)
     p.add_argument('--sha256', required=True)
     p.add_argument('--parallel-ranges', type=int, choices=[1, 4], default=1)
+    p.add_argument('--get-only', action='store_true', help='Independent full installer GET probe; does not claim page or HEAD acceptance')
     p.add_argument('--output', type=Path, required=True)
     a = p.parse_args()
     assert re.fullmatch(r'\d+\.\d+\.\d+', a.version) and re.fullmatch(r'[a-f0-9]{64}', a.sha256)
     assert 0 < a.build < 2**31 and 0 < a.bytes < 134217728
     assert not a.output.exists()
     proof = {'checkedAt': datetime.datetime.now(datetime.timezone.utc).isoformat(), 'scope': 'independent-public-HTTPS-client', 'version': a.version, 'build': a.build, 'pages': [], 'state': 'READING'}
+    proof.update(getOnly=a.get_only, headAcceptanceChecked=False)
     save = lambda: a.output.write_text(json.dumps(proof, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
     save()
     try:
-        for page in ['/', '/download/', '/zhongyi/', '/zhongyi/anatomy3d/', '/zhongyi/meridian/', '/zhongyi/ni-study/', '/agreements/', '/share-code/', '/discover/', '/groups/', '/privacy/']:
+        for page in ([] if a.get_only else ['/', '/download/', '/zhongyi/', '/zhongyi/anatomy3d/', '/zhongyi/meridian/', '/zhongyi/ni-study/', '/agreements/', '/share-code/', '/discover/', '/groups/', '/privacy/']):
             with urlopen(ORIGIN + page, timeout=30) as response:
                 raw = response.read(2_000_000)
                 assert response.status == 200 and raw and response.headers.get_content_type() == 'text/html'
@@ -36,16 +38,17 @@ def main():
         resolver = ORIGIN + '/api/public/app-version/android-installer/' + str(a.build) + '.apk'
         entrypoint = data['downloadUrl']
         assert data['latestVersion'] == a.version and data['latestVersionCode'] == a.build and data['forceUpdate'] is False and entrypoint in (target, resolver)
-        if entrypoint == resolver:
+        if entrypoint == resolver and not a.get_only:
             with urlopen(Request(resolver, method='HEAD'), timeout=30) as response:
                 assert response.url == target and int(response.headers['Content-Length']) == a.bytes
         proof['versionApi'] = {'version': data['latestVersion'], 'build': data['latestVersionCode'], 'forceUpdate': data['forceUpdate'], 'downloadUrl': entrypoint}
         proof['downloadEntrances'] = []
-        for route in ['/latest.apk', '/app-download/latest.apk', '/app-download/guoxue-chuancheng.apk', '/app-download/guoxue-chuancheng-v1.0-release.apk']:
+        for route in ([] if a.get_only else ['/latest.apk', '/app-download/latest.apk', '/app-download/guoxue-chuancheng.apk', '/app-download/guoxue-chuancheng-v1.0-release.apk']):
             with urlopen(Request(ORIGIN + route, method='HEAD'), timeout=30) as response:
                 assert response.status == 200 and response.url == target and int(response.headers['Content-Length']) == a.bytes
                 proof['downloadEntrances'].append({'path': route, 'status': response.status, 'target': response.url, 'bytes': int(response.headers['Content-Length'])})
         save()
+        proof['headAcceptanceChecked'] = not a.get_only
         h, size, started = hashlib.sha256(), 0, time.monotonic()
         if a.parallel_ranges == 4:
             def part(index):
@@ -72,6 +75,9 @@ def main():
         else:
             with urlopen(entrypoint, timeout=40) as response:
                 assert response.status == 200 and int(response.headers['Content-Length']) == a.bytes
+                from urllib.parse import urlsplit
+                final = urlsplit(response.url)
+                proof['transport'] = {'host': final.hostname, 'path': final.path, 'temporaryQueryLogged': False}
                 for chunk in iter(lambda: response.read(1024 * 1024), b''):
                     size += len(chunk)
                     assert size <= a.bytes and time.monotonic() - started < 900

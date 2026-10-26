@@ -25,6 +25,15 @@ function validateScreenshots(value,auth,folder){
 }
 function pendingIapIds(items){const alive=items.filter(i=>i.attributes?.state!=='REMOVED'),apps=alive.filter(i=>i.relationships?.appStoreVersion?.data),iap=alive.filter(i=>i.relationships?.inAppPurchaseVersion?.data);if(apps.length!==1||iap.length!==8||alive.length!==9||new Set(iap.map(i=>i.relationships.inAppPurchaseVersion.data.id)).size!==8)throw Error('Existing review is not the expected one app and eight IAP versions');return {versionId:apps[0].relationships.appStoreVersion.data.id,iapVersionIds:iap.map(i=>i.relationships.inAppPurchaseVersion.data.id).sort()};}
 function sameIapIds(a,b){if(JSON.stringify([...a].sort())!==JSON.stringify([...b].sort()))throw Error('Existing pending IAP version identities changed');return true;}
+function redactAppleErrors(value,secrets=[]){if(typeof value==='string'){let safe=value;for(const secret of secrets.filter(Boolean))safe=safe.split(String(secret)).join('[private-review-field]');return safe.replace(/\b1[3-9]\d{9}\b/g,'[phone]').replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,'[email]');}if(Array.isArray(value))return value.map(v=>redactAppleErrors(v,secrets));if(value&&typeof value==='object')return Object.fromEntries(Object.entries(value).map(([k,v])=>[k,/password|authorization|token/i.test(k)?'[private]':redactAppleErrors(v,secrets)]));return value;}
+async function upsertAppInfoLocale({api,write,infoId,locale,fields,register}){
+ const current=async()=>{const rows=(await api('GET','/v1/appInfos/'+infoId+'/appInfoLocalizations?limit=50')).data;for(const row of rows)register(row.id);return rows;};
+ const update=row=>write('PATCH','/v1/appInfoLocalizations/'+row.id,{data:{type:'appInfoLocalizations',id:row.id,attributes:{name:fields.name,subtitle:fields.subtitle}}});
+ let rows=await current(),found=rows.find(l=>l.attributes.locale===locale);if(found)return update(found);
+ const privacy=rows.find(l=>l.attributes.privacyPolicyUrl)?.attributes.privacyPolicyUrl;if(!privacy?.startsWith('https://'))throw Error('Existing privacy URL missing');
+ try{return await write('POST','/v1/appInfoLocalizations',{data:{type:'appInfoLocalizations',attributes:{locale,name:fields.name,subtitle:fields.subtitle,privacyPolicyUrl:privacy},relationships:{appInfo:{data:{type:'appInfos',id:infoId}}}}});}
+ catch(error){if(!error.details?.some(e=>e.code==='ENTITY_ERROR.ATTRIBUTE.INVALID.DUPLICATE'))throw error;rows=await current();found=rows.find(l=>l.attributes.locale===locale);if(!found)throw error;return update(found);}
+}
 function screenshotName(build,device,index,sha){return build+'_'+device+'_'+index+'_'+sha.slice(0,12)+'.png';}
 function planScreenshotCapacity(slots,groups,locales,build){
  const plan=[];for(const locale of locales)for(const group of groups){const sets=(slots.find(s=>s.locale===locale)?.sets||[]).filter(s=>s.displayType===group.displayType);if(sets.length>1)throw Error('Duplicate existing screenshot display slots');const shots=sets[0]?.screenshots||[],names=group.files.map((f,i)=>screenshotName(build,group.device,i,f.sha256));if(new Set(names).size!==names.length)throw Error('Duplicate candidate screenshot names');const additions=names.filter(name=>!shots.some(s=>s.fileName===name)).length,total=shots.length+additions;plan.push({locale,device:group.device,displayType:group.displayType,existing:shots.length,additional:additions,maximumDuringUpload:total});if(total>10)throw Error('Screenshot capacity exceeds10 before cancellation: '+locale+'/'+group.device+' existing='+shots.length+' additional='+additions);}return plan;
@@ -54,11 +63,12 @@ async function recoverableScreenshotUpload({api,write,setId,existing,raw,build,d
 }
 function mutationScope(auth){
  const owned=new Map(),add=(type,id)=>{if(!owned.has(type))owned.set(type,new Set());owned.get(type).add(id);},has=(type,id)=>owned.get(type)?.has(id)===true;
- const allowed={appStoreVersions:['versionString'],appStoreVersionLocalizations:['description','keywords','promotionalText','whatsNew'],appInfoLocalizations:['name','subtitle','locale','privacyPolicyUrl'],appStoreReviewDetails:['notes'],appScreenshots:['uploaded','sourceFileChecksum'],reviewSubmissions:['canceled','submitted','platform']};
+ const allowed={appStoreVersions:['versionString'],appStoreVersionLocalizations:['description','keywords','promotionalText','whatsNew','supportUrl'],appInfoLocalizations:['name','subtitle','locale','privacyPolicyUrl'],appStoreReviewDetails:['notes'],appScreenshots:['uploaded','sourceFileChecksum'],reviewSubmissions:['canceled','submitted','platform']};
  function assert(method,resource,body){
   const m=resource.match(/^\/v1\/([A-Za-z]+)(?:\/([a-f0-9-]{36}))?$/);if(!m||!['POST','PATCH','DELETE'].includes(method))throw Error('Mutation outside Guoxue release scope');const [,type,id]=m,data=body?.data;
   if(method==='DELETE'){if(type!=='appScreenshots'||!has(type,id))throw Error('Only owned screenshot references may be removed');return;}
   if(data?.type!==type||id&&data.id!==id)throw Error('Mutation body identity mismatch');
+  if(Object.hasOwn(data.attributes||{},'supportUrl')&&(type!=='appStoreVersionLocalizations'||typeof auth.publicMetadataUrls?.supportUrl!=='string'||data.attributes.supportUrl!==auth.publicMetadataUrls.supportUrl))throw Error('Support URL is not the verified existing Guoxue URL');
   if(method==='PATCH'){
    if(!has(type,id)||!allowed[type]||Object.keys(data.attributes||{}).some(k=>!allowed[type].includes(k)))throw Error('Mutation outside owned metadata/review fields');
    const rel=data.relationships||{};if(Object.keys(rel).length&&(type!=='appStoreVersions'||Object.keys(rel).some(k=>k!=='build')||rel.build?.data?.id!==auth.buildId||rel.build.data.type!=='builds'))throw Error('Unexpected relationship mutation');return;
@@ -74,4 +84,4 @@ function mutationScope(auth){
  }
  return {add,has,assert};
 }
-module.exports={hash,readScreenshotManifest,exactCandidate,validateMarketing,validateAccess,pngInfo,validateScreenshots,pendingIapIds,sameIapIds,screenshotName,planScreenshotCapacity,recoverableScreenshotUpload,mutationScope};
+module.exports={hash,readScreenshotManifest,exactCandidate,validateMarketing,validateAccess,pngInfo,validateScreenshots,pendingIapIds,sameIapIds,redactAppleErrors,upsertAppInfoLocale,screenshotName,planScreenshotCapacity,recoverableScreenshotUpload,mutationScope};
