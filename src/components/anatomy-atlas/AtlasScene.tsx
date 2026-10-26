@@ -29,7 +29,7 @@ export default function AtlasScene({data,state,onSelect,onPoint,onPose,onPeel,on
   const backlight=new T.DirectionalLight(0xe1ecff,.9);backlight.position.set(-2,1,-2);scene.add(backlight);
   const width=T.MathUtils.ceilPowerOfTwo(data.atlas.parts.length),mask=new Float32Array(width*4),texture=new T.DataTexture(mask,width,1,T.RGBAFormat,T.FloatType);texture.needsUpdate=true;
   const plane=new T.Plane(new T.Vector3(0,-1,0),1.7),regionPlanes=[new T.Plane(new T.Vector3(1,0,0),100),new T.Plane(new T.Vector3(-1,0,0),100),new T.Plane(new T.Vector3(0,1,0),100),new T.Plane(new T.Vector3(0,-1,0),100),new T.Plane(new T.Vector3(0,0,1),100),new T.Plane(new T.Vector3(0,0,-1),100)],clipPlanes=[plane,...regionPlanes],picks:T.Mesh[]=[],batches:{mesh:T.Mesh;ids:number[]}[]=[];
-  const underwearUniform={value:latest.current.underwear===false?0:1};
+  const underwearUniform={value:latest.current.underwear===false?0:1},flowTime={value:0},flowActive={value:0};let flowTick=performance.now();
   const mats=new Map(SYSTEMS.map(([id,,color])=>{
    const m=new T.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:.65,side:T.DoubleSide,clippingPlanes:clipPlanes});materials.push(m);
    m.onBeforeCompile=shader=>{
@@ -58,7 +58,9 @@ export default function AtlasScene({data,state,onSelect,onPoint,onPose,onPeel,on
   }
   for(const path of data.surface.paths){const values=path.vertices;if(!Array.isArray(values))continue;
    const g=new T.BufferGeometry();g.setAttribute("position",new T.Float32BufferAttribute(values as number[],3));geometries.push(g);
-   const material=new T.LineBasicMaterial({color:meridianColor(String(path.id||path.meridianId||"")),clippingPlanes:clipPlanes});materials.push(material);const line=new T.LineSegments(g,material);line.userData.id=path.id||path.meridianId;lines.add(line);
+   const material=new T.LineBasicMaterial({color:meridianColor(String(path.id||path.meridianId||"")),clippingPlanes:clipPlanes});
+   material.onBeforeCompile=shader=>{shader.uniforms.flowTime=flowTime;shader.uniforms.flowActive=flowActive;shader.vertexShader="attribute float lineDistance;varying float travelDistance;\n"+shader.vertexShader;shader.vertexShader=shader.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\ntravelDistance=lineDistance;");shader.fragmentShader="uniform float flowTime;uniform float flowActive;varying float travelDistance;\n"+shader.fragmentShader;shader.fragmentShader=shader.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nfloat pulse=smoothstep(0.72,0.96,fract(travelDistance*3.0-flowTime))*flowActive;diffuseColor.rgb=mix(diffuseColor.rgb,vec3(1.0,0.9,0.4),pulse);");};
+   materials.push(material);const line=new T.LineSegments(g,material);line.computeLineDistances();line.userData.id=path.id||path.meridianId;lines.add(line);
   }
   try{
    data.atlas.chunks.forEach((chunk,ci)=>{
@@ -107,7 +109,7 @@ export default function AtlasScene({data,state,onSelect,onPoint,onPose,onPeel,on
   const stopHold=()=>{clearHold();active=null;held=false;pointers.clear();gesture.cancel();};
   const visibility=()=>{if(document.hidden)stopHold();};window.addEventListener("blur",stopHold);document.addEventListener("visibilitychange",visibility);
   const lost=(e:Event)=>{e.preventDefault();callbacks.current.onError("设备暂停了3D显示，请重新打开图谱。");};renderer.domElement.addEventListener("webglcontextlost",lost);
-  const animate=()=>{if(dead)return;frame=requestAnimationFrame(animate);const s=latest.current;underwearUniform.value=s.underwear===false?0:1;
+  const animate=()=>{if(dead)return;frame=requestAnimationFrame(animate);const s=latest.current;underwearUniform.value=s.underwear===false?0:1;const now=performance.now(),elapsed=Math.min(100,Math.max(0,now-flowTick));flowTick=now;flowActive.value=s.flow?1:0;if(s.flow&&s.points&&!document.hidden){flowTime.value+=elapsed/1000*.35*Math.max(.25,Math.min(2,s.flowSpeed??1));dirty=true;}
    if(previous!==s||needsFit){dirty=true;
     const region=BODY_REGIONS.find(r=>r.id===s.region);regionPlanes.forEach((p,i)=>{p.constant=region?(i%2===0?-region.min[Math.floor(i/2)]:region.max[Math.floor(i/2)]):100;});
     const visible=new Set(s.visible),hidden=new Set(s.hidden),faded=new Set(s.faded),selected=new Set((s.selected?.startsWith("@system:")?[]:selectionParts(data.atlas,s.selected)).map(p=>p.id));
