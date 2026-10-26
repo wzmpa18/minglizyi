@@ -488,7 +488,7 @@ function MeridianListPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={activeTab === "dong" ? "搜索董氏奇穴..." : activeTab === "others" ? "更多流派整理中..." : "搜索穴位名称..."}
-              style={{ flex: 1, border: "none", outline: "none", fontSize: "14px", background: "transparent" }}
+              style={{ flex: 1, minWidth: 0, border: "none", outline: "none", fontSize: "14px", background: "transparent", color: "#333", caretColor: "#333" }}
             />
             {searchQuery && (
               <button onClick={() => setSearchQuery("")} style={{ background: "none", border: "none", color: "#999", cursor: "pointer" }}>✕</button>
