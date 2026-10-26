@@ -790,8 +790,6 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
       </div>
 
       <StudyDetailNav items={[["point-overview","定位与主治"],["point-more","操作资料"],["point-readings","经典与倪师"]]}/>
-      <AcupointPhotoGallery code={acupoint.code.replace(/^DU/, "GV").replace(/^RN/, "CV")} />
-      {getMeridianByName(acupoint.meridian) && <section aria-label="本穴所在经络动图" style={{margin:12}}><p style={{fontSize:12,color:"#666"}}>{acupoint.name}所在经络 · 保留原始循行动图，非单穴真人照片</p><MeridianChart meridianName={acupoint.meridian} compact /></section>}
       {/* 穴位信息卡片 */}
       <div id="point-overview" style={{ margin: "12px", background: "white", borderRadius: "16px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
         <div style={{ padding: "16px", background: "linear-gradient(135deg, #E3F2FD 0%, white 100%)", borderBottom: "1px solid #f0f0f0" }}>
@@ -819,6 +817,9 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
           );
         })}
       </div>
+
+      <AcupointPhotoGallery code={acupoint.code.replace(/^DU/, "GV").replace(/^RN/, "CV")} />
+      {getMeridianByName(acupoint.meridian) && <section aria-label="本穴所在经络动图" style={{margin:12}}><p style={{fontSize:12,color:"#666"}}>{acupoint.name}所在经络 · 保留原始循行动图，非单穴真人照片</p><MeridianChart meridianName={acupoint.meridian} compact /></section>}
 
       <Link href={`/zhongyi/anatomy3d/?pointName=${encodeURIComponent(acupoint.name)}&side=${pointSide}`} style={{display:"block",margin:12,padding:12,borderRadius:10,color:BRAND,background:BRAND_BG,fontWeight:700}}>在3D参考人体中对照{acupoint.name} →</Link>
 

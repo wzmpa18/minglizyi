@@ -1,7 +1,7 @@
 import type {Position3} from "./atlasInteraction";
 export interface CameraPose {position:Position3;target:Position3}
 export interface ViewState {flow?:boolean;flowSpeed?:number;underwear?:boolean;cameraRestore?:CameraPose;isolateIds?:string[];visible:string[];hidden:string[];faded:string[];selected:string|null;isolate:boolean;opacity:number;view:string;reset:number;focus:number;points:boolean;meridian:string;point:string|null;side:1|-1;section:number|null;explode:number;region?:string|null;continuous:boolean}
-export const initialView=():ViewState=>({flow:false,flowSpeed:1,underwear:true,visible:["integumentary","sensory"],hidden:[],faded:[],selected:null,isolate:false,opacity:1,view:"front",reset:0,focus:0,points:true,meridian:"",point:null,side:1,section:null,explode:0,region:null,continuous:false});
+export const initialView=():ViewState=>({flow:false,flowSpeed:1,underwear:true,visible:["integumentary","sensory"],hidden:[],faded:[],selected:null,isolate:false,opacity:1,view:"front",reset:0,focus:0,points:false,meridian:"",point:null,side:1,section:null,explode:0,region:null,continuous:false});
 export interface Snapshot {view:ViewState;isolation:ViewState|null}
 export const copyView=(s:ViewState):ViewState=>({...s,visible:[...s.visible],hidden:[...s.hidden],faded:[...s.faded],isolateIds:s.isolateIds?[...s.isolateIds]:undefined});
 export const copySnapshot=(s:Snapshot):Snapshot=>({view:copyView(s.view),isolation:s.isolation?copyView(s.isolation):null});
