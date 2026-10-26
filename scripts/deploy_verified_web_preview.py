@@ -88,6 +88,24 @@ with tarfile.open(fileobj=sys.stdin.buffer,mode='r|gz') as archive:
                 assert not destination.exists();os.link(item,destination)
                 preserved.append({'path':relative,'bytes':item.stat().st_size,'sha256':hashlib.sha256(item.read_bytes()).hexdigest(),'storage':'verified-hard-link'})
         expected['preservedPublicAssets']=preserved
+        # Already-open pages may still request the preceding release's hashed
+        # chunks. Keep those immutable files reachable across an atomic switch.
+        old_static=old/'_next/static'
+        kept_chunks=0
+        if old_static.is_dir():
+            candidates=[p for p in old_static.rglob('*') if p.is_file()]
+            assert len(candidates)<3000
+            for item in candidates:
+                assert not item.is_symlink() and old in item.resolve().parents
+                relative=item.relative_to(old)
+                destination=target/relative
+                if destination.exists():continue
+                assert item.stat().st_size<15_000_000
+                destination.parent.mkdir(parents=True,exist_ok=True)
+                os.link(item,destination)
+                assert hashlib.sha256(destination.read_bytes()).digest()==hashlib.sha256(item.read_bytes()).digest()
+                kept_chunks+=1
+        expected['preservedPreviousStaticChunks']=kept_chunks
         pending=link.parent/'.current-next'
         assert not pending.exists() and not pending.is_symlink()
         pending.symlink_to(target)

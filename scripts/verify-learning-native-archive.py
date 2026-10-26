@@ -12,9 +12,10 @@ def verify(a):
  photos=json.loads((a.repository/'public/assets/acupoint-photos/MANIFEST.json').read_text(encoding='utf-8'))
  expected.extend({'path':r['asset'],'bytes':r['bytes'],'sha256':r['sha256']}for r in animations['records'])
  expected.extend({'path':'/assets/acupoint-photos/'+r['file'],'bytes':r['bytes'],'sha256':r['sha256']}for r in photos['records'])
- markers={text:False for text in ['tcm-learning-complete','study-image-link','tcm-dataset-head-','reading-books-head-','local_tts_voice']}
+ markers={text:False for text in ['tcm-learning-complete','study-image-link','tcm-dataset-head-','reading-books-head-','local_tts_voice','ni-course-collection-head']}
  with zipfile.ZipFile(a.archive)as z:
   names=z.namelist();versions=[n for n in names if n.endswith('/public/version.json')];assert len(versions)==1
+  assert not any('/public/data/ni-study/'in name for name in names),'Course texts must remain in authenticated learning storage'
   web=json.loads(z.read(versions[0]));assert web['version']=='v'+a.version
   native=None
   if a.kind=='ios':
