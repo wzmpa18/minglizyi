@@ -223,7 +223,7 @@ function loadCosSdk() {
   return cosSdkModule;
 }
 
-function getCosClient() {
+function getCosClient(options = {}) {
   const v = validateCosConfig();
   if (!v.valid) return { blocked: v };
   const Sdk = loadCosSdk();
@@ -237,7 +237,7 @@ function getCosClient() {
     };
   }
   const cfg = getConfig().cos;
-  const client = new Sdk(cosCredentials.createClientOptions());
+  const client = new Sdk({ ...cosCredentials.createClientOptions(), ...options });
   return { client, bucket: cfg.bucket, region: cfg.region };
 }
 
@@ -342,6 +342,30 @@ function getProvider(name) {
 }
 
 const ObjectStorageService = {
+  /** Maintenance-only single PUT for one fresh, persisted installer namespace.
+   * No public ACL, generic extension change, automatic retry, overwrite or DB
+   * catalogue publication. A timeout is uncertain, never permission to retry.
+   */
+  async stagePinnedPrivateInstaller({ filePath, objectKey }) {
+    const { PIN, isInstallerObjectKey } = require('./publicAndroidInstallerRelease');
+    if (!isInstallerObjectKey(objectKey) || filePath !== PIN.originPath || fs.realpathSync(filePath) !== PIN.originPath) return { ok: false, error: 'INSTALLER_STAGE_IDENTITY_INVALID' };
+    const stat = fs.statSync(filePath), config = getConfig();
+    if (!stat.isFile() || stat.size !== PIN.bytes || sha256File(filePath) !== PIN.sha256 || config.provider !== 'COS' || config.cos.bucket !== PIN.bucket || config.cos.region !== PIN.region) return { ok: false, error: 'INSTALLER_STAGE_SOURCE_INVALID' };
+    const c = getCosClient({ MaxRetryTimes: 0, Timeout: 120000 });
+    if (c.blocked) return { ok: false, error: 'INSTALLER_STAGE_STORAGE_UNAVAILABLE' };
+    const Key = PARTITIONS.learning_content.cosPrefix + objectKey;
+    const absence = await new Promise(resolve => c.client.headObject({ Bucket: c.bucket, Region: c.region, Key }, (error) => resolve(error?.statusCode === 404 ? 'ABSENT' : error ? 'UNCONFIRMED' : 'EXISTS')));
+    if (absence !== 'ABSENT') return { ok: false, error: 'INSTALLER_STAGE_TARGET_' + absence, putAttempted: false };
+    return new Promise(resolve => {
+      const body = fs.createReadStream(filePath);
+      body.on('error', () => resolve({ ok: false, error: 'INSTALLER_STAGE_UPLOAD_UNCERTAIN', putAttempted: true }));
+      c.client.putObject({ Bucket: c.bucket, Region: c.region, Key, Body: body, ContentLength: PIN.bytes,
+        ACL: 'private', CacheControl: 'private, no-store', ContentType: 'application/vnd.android.package-archive',
+        ContentDisposition: 'attachment; filename="YandaoGuoxue_25.0.118_2151.apk"',
+        Headers: { 'x-cos-forbid-overwrite': 'true', 'x-cos-meta-sha256': PIN.sha256 },
+      }, (error) => { body.destroy(); resolve(error ? { ok: false, error: 'INSTALLER_STAGE_UPLOAD_UNCERTAIN', putAttempted: true } : { ok: true, provider: 'COS', objectKey, bytes: PIN.bytes, putAttempted: true }); });
+    });
+  },
   /** 上传对象（分区强制；PRIVATE 分区必须带 owner） */
   async putObject({ partition, objectKey, filePath, sha256, owner }) {
     const p = PARTITIONS[partition];

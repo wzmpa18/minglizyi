@@ -9,8 +9,10 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const publicInstaller = require('./publicAndroidInstallerRoutes');
 
 const router = express.Router();
+router.use(publicInstaller.createRouter());
 const DATA_DIR = path.join(__dirname, 'data');
 
 // 兜底默认值：配置文件缺失/损坏时返回（保持接口永不 500）
@@ -55,6 +57,8 @@ function readReleaseConfig() {
 }
 
 function resolveClientPlatform(req) {
+  const storeChannel = String(req.headers['x-store-channel'] || '').toLowerCase();
+  if (['ios', 'ios-full-learning', 'apple', 'appstore'].includes(storeChannel)) return 'ios';
   const queryPlatform = String(req.query.platform || '').toLowerCase();
   if (queryPlatform === 'ios' || queryPlatform === 'android') return queryPlatform;
   const headerPlatform = String(req.headers['x-client-platform'] || '').toLowerCase();
@@ -68,7 +72,7 @@ function resolveClientPlatform(req) {
 router.get('/', (req, res) => {
   const release = readReleaseConfig();
   // Google builds receive updates through Play; never offer a domestic APK.
-  if (String(req.headers['x-store-channel'] || '').toLowerCase() === 'google') {
+  if ([req.headers['x-store-channel'], req.headers['x-client-platform'], req.query.platform].some(value => String(value || '').toLowerCase() === 'google')) {
     return res.json({success:true,data:{...release,latestVersionCode:0,downloadUrl:'',downloadPage:'https://play.google.com/store/apps/details?id=com.yandao.guoxue',releaseNotes:[],forceUpdate:false,platform:'android',channel:'google'}});
   }
   if (resolveClientPlatform(req) === 'ios') {
@@ -88,7 +92,7 @@ router.get('/', (req, res) => {
       },
     });
   }
-  return res.json({ success: true, data: { ...release, platform: 'android' } });
+  return res.json({ success: true, data: { ...publicInstaller.decoratePublicRelease(release), platform: 'android' } });
 });
 
 module.exports = { router, DEFAULT_RELEASE, resolveClientPlatform };

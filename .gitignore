@@ -126,3 +126,7 @@ work-verify/
 !scripts/import-acupuncture-three-originals.py
 !scripts/import-acupuncture-three-originals.test.py
 !scripts/build-complete-tcm-notes.test.py
+!scripts/fetch-verified-release-artifact.py
+!scripts/activate-verified-android-release.py
+!scripts/test_activate_verified_android_release.py
+!scripts/verify-public-learning-release.py
