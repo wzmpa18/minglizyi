@@ -156,7 +156,7 @@ function BookReader({ book, onBack }: { book: GuoxueBook; onBack: () => void }) 
           </div>
         </div></details>
         <article aria-label="典籍原文" className="rounded-2xl border border-[#e8e1d2] bg-[#fffdf7] px-5 py-6 text-[#273c33] shadow-sm" style={{ fontSize, lineHeight: 2.05, fontFamily: '"Noto Serif SC", "Songti SC", SimSun, serif' }}>{blocks.map(block => block.heading ? <h3 key={block.id} id={block.id} className="mb-4 mt-7 scroll-mt-24 border-l-2 border-[#b2975a] pl-3 text-lg font-bold">{block.text}</h3> : <p key={block.id} id={block.id} className="mb-5 scroll-mt-24 whitespace-pre-line text-justify">{block.text}</p>)}</article>
-        <p className="my-4 text-center text-[10px] leading-5 text-gray-500">原文来源：<a href={book.sourceUrl} target="_blank" rel="noopener noreferrer" className="underline">{book.sourceName}</a> · {book.license}<br />来源记录 {book.sectionCount} 个文本区块，尚未逐字校勘。</p>
+        <p className="my-4 text-center text-[10px] leading-5 text-gray-500">原文来源：<span>{book.sourceName}</span> · {book.license}<br />来源记录 {book.sectionCount} 个文本区块，尚未逐字校勘。</p>
       </main>
     </div>
   );

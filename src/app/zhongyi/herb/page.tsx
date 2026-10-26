@@ -262,13 +262,10 @@ function HerbDetailPage({ herbId }: { herbId: string }) {
 
   // 字段模块渲染（缺失则隐藏）
   const sections: { label: string; content: string | string[] | undefined; highlight?: boolean }[] = [
-    { label: "正名", content: herb.name },
-    { label: "别名", content: herb.alias.length > 0 ? herb.alias.join("、") : undefined },
     { label: "性味", content: herb.taste && herb.nature ? `${herb.taste}，${herb.nature}` : (herb.nature || herb.taste) },
     { label: "归经", content: herb.meridian },
     { label: "功效", content: herb.efficacy, highlight: true },
     { label: "典籍记载", content: herb.indications ? `典籍记载：${herb.indications}` : undefined },
-    { label: "资料来源", content: herb.source },
     { label: "用法用量", content: herb.dosage },
     { label: "使用禁忌", content: herb.contraindications },
   ];
@@ -316,6 +313,8 @@ function HerbDetailPage({ herbId }: { herbId: string }) {
           </div>
         ))}
       </div>
+
+      {herb.source&&<p style={{margin:"0 16px",fontSize:11,color:"#777"}}>来源：{herb.source}</p>}
 
       {/* 包含此药的方剂 */}
       {relatedFormulas.length > 0 && (

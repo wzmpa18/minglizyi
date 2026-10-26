@@ -769,6 +769,8 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
     { label: "定位", content: acupoint.location === `${acupoint.name}穴` ? "定位资料待补充核实" : acupoint.location },
     { label: "详细定位", content: acupoint.location_detail === `${acupoint.name}穴` ? undefined : acupoint.location_detail },
     { label: "功效", content: acupoint.function },
+    { label: "文献主治", content: aiData?.indications },
+    { label: "配穴参考", content: aiData?.combinations },
     { label: acupoint.code === "EX-HN3" ? "资料出处" : "典籍出处", content: acupoint.literature },
   ];
 

@@ -45,7 +45,7 @@ final class GuoxueStudyScreenshots: XCTestCase {
             if !app.buttons.matching(NSPredicate(format:"label CONTAINS %@","离线内容")).firstMatch.waitForExistence(timeout:5){tapVisible(app.buttons,"系统中心",app)}
             tapVisible(app.buttons,"离线内容",app)
             XCTAssertTrue(app.staticTexts["本机离线保存正常"].waitForExistence(timeout:30))
-            tapVisible(app.links,"查看动图与图片示例",app)
+            tapVisible(app.links,"查看图片 · 合谷",app)
             guard app.staticTexts["合谷"].firstMatch.waitForExistence(timeout:30) else{shot("08_合谷详情实际导航失败",app);XCTFail("The actual client route must open the requested point, not reload the home page");return}
         }
         app.launchArguments += ["-AppleLanguages","(zh-Hans)","-AppleLocale","zh_CN"]
