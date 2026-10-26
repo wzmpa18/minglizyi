@@ -816,11 +816,9 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
         })}
       </div>
 
-      <AcupointStudySources meridianName={acupoint.meridian} selectedCode={acupoint.code} />
-      <AcupointClassicStudy code={acupoint.code} />
-      <MedicalStudyReadings subject={"point:"+acupoint.code} />
       <Link href={`/zhongyi/anatomy3d/?pointName=${encodeURIComponent(acupoint.name)}&side=${pointSide}`} style={{display:"block",margin:12,padding:12,borderRadius:10,color:BRAND,background:BRAND_BG,fontWeight:700}}>在3D参考人体中对照{acupoint.name} →</Link>
 
+      <details style={{margin:12}}><summary style={{padding:12,borderRadius:12,background:"white",color:BRAND,cursor:"pointer"}}>更多定位、操作与本库整理资料</summary>
       {/* 既有静态整理资料，尚未逐条与现行标准校对。 */}
       <div style={{ margin: "12px", background: "white", borderRadius: "16px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
         <div style={{ padding: "12px 16px", borderBottom: "1px solid #f0f0f0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -918,6 +916,12 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
       </div>
 
 
+
+      </details>
+
+      <AcupointStudySources meridianName={acupoint.meridian} selectedCode={acupoint.code} />
+      <AcupointClassicStudy code={acupoint.code} />
+      <MedicalStudyReadings subject={"point:"+acupoint.code} />
 
       <AcupointStudyDiscussion targetId={`standard:${acupoint.code}`} title={`${acupoint.name}学习讨论`} />
 
@@ -1028,7 +1032,7 @@ function DongAcupointDetailPage({ acupointName }: { acupointName: string }) {
       </div>
 
       <p style={{padding:"12px",background:"#fff7e6",color:"#6b4e1d",fontSize:12,lineHeight:1.7}}>董氏奇穴学习整理：当前收录{DONG_ACUPOINTS_DB.length}项，并非董氏体系全集。DT编号为本应用内部索引，定位与针法尚未完成专业逐项校核，不能据此自行针刺；不同传承版本需对照来源。</p>
-      <MedicalStudyReadings subject={"dong:"+acupoint.name} />
+
       {/* 穴位信息卡片 */}
       <div style={{ margin: "12px", background: "white", borderRadius: "16px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
         <div style={{ padding: "16px", background: "linear-gradient(135deg, #FFF8E1 0%, white 100%)", borderBottom: "1px solid #f0f0f0" }}>
@@ -1138,6 +1142,8 @@ function DongAcupointDetailPage({ acupointName }: { acupointName: string }) {
           </div>
         )}
       </div>
+
+      <MedicalStudyReadings subject={"dong:"+acupoint.name} />
 
       <AcupointStudyDiscussion targetId={`dong:${acupoint.code}`} title={`${acupoint.name}学习讨论`} />
 

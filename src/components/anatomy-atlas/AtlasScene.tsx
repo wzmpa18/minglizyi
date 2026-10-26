@@ -29,10 +29,12 @@ export default function AtlasScene({data,state,onSelect,onPoint,onPose,onPeel,on
   const backlight=new T.DirectionalLight(0xe1ecff,.9);backlight.position.set(-2,1,-2);scene.add(backlight);
   const width=T.MathUtils.ceilPowerOfTwo(data.atlas.parts.length),mask=new Float32Array(width*4),texture=new T.DataTexture(mask,width,1,T.RGBAFormat,T.FloatType);texture.needsUpdate=true;
   const plane=new T.Plane(new T.Vector3(0,-1,0),1.7),regionPlanes=[new T.Plane(new T.Vector3(1,0,0),100),new T.Plane(new T.Vector3(-1,0,0),100),new T.Plane(new T.Vector3(0,1,0),100),new T.Plane(new T.Vector3(0,-1,0),100),new T.Plane(new T.Vector3(0,0,1),100),new T.Plane(new T.Vector3(0,0,-1),100)],clipPlanes=[plane,...regionPlanes],picks:T.Mesh[]=[],batches:{mesh:T.Mesh;ids:number[]}[]=[];
+  const underwearUniform={value:latest.current.underwear===false?0:1};
   const mats=new Map(SYSTEMS.map(([id,,color])=>{
    const m=new T.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:.65,side:T.DoubleSide,clippingPlanes:clipPlanes});materials.push(m);
    m.onBeforeCompile=shader=>{
     shader.uniforms.partMask={value:texture};shader.uniforms.maskWidth={value:width};
+    if(id==="integumentary"){shader.uniforms.underwear=underwearUniform;shader.vertexShader="varying vec3 clothingPosition;\n"+shader.vertexShader;shader.vertexShader=shader.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nclothingPosition=position;");shader.fragmentShader="uniform float underwear;varying vec3 clothingPosition;\n"+shader.fragmentShader;shader.fragmentShader=shader.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nfloat legOpening=0.84+0.30*abs(clothingPosition.x);float cloth=step(legOpening,clothingPosition.y)*step(clothingPosition.y,1.025)*step(abs(clothingPosition.x),0.205)*underwear;diffuseColor.rgb=mix(diffuseColor.rgb,vec3(0.11,0.15,0.23),cloth);");}
     shader.vertexShader="attribute float partIndex;uniform sampler2D partMask;uniform float maskWidth;varying float shown;varying float chosen;varying float faded;\n"+shader.vertexShader;
     shader.vertexShader=shader.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nvec4 state=texture2D(partMask,vec2((partIndex+0.5)/maskWidth,0.5));transformed+=state.xyz;shown=abs(state.w);chosen=step(1.5,abs(state.w));faded=step(state.w,-0.5);");
     shader.fragmentShader="varying float shown;varying float chosen;varying float faded;\n"+shader.fragmentShader;
@@ -105,7 +107,7 @@ export default function AtlasScene({data,state,onSelect,onPoint,onPose,onPeel,on
   const stopHold=()=>{clearHold();active=null;held=false;pointers.clear();gesture.cancel();};
   const visibility=()=>{if(document.hidden)stopHold();};window.addEventListener("blur",stopHold);document.addEventListener("visibilitychange",visibility);
   const lost=(e:Event)=>{e.preventDefault();callbacks.current.onError("设备暂停了3D显示，请重新打开图谱。");};renderer.domElement.addEventListener("webglcontextlost",lost);
-  const animate=()=>{if(dead)return;frame=requestAnimationFrame(animate);const s=latest.current;
+  const animate=()=>{if(dead)return;frame=requestAnimationFrame(animate);const s=latest.current;underwearUniform.value=s.underwear===false?0:1;
    if(previous!==s||needsFit){dirty=true;
     const region=BODY_REGIONS.find(r=>r.id===s.region);regionPlanes.forEach((p,i)=>{p.constant=region?(i%2===0?-region.min[Math.floor(i/2)]:region.max[Math.floor(i/2)]):100;});
     const visible=new Set(s.visible),hidden=new Set(s.hidden),faded=new Set(s.faded),selected=new Set((s.selected?.startsWith("@system:")?[]:selectionParts(data.atlas,s.selected)).map(p=>p.id));

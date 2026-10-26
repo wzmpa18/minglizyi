@@ -39,8 +39,7 @@ function ClassicSourceNotice({ book }: { book: ClassicBook }) {
   if (book.sourceUrl) return <details style={{ margin: '12px 0 18px', padding: '12px', border: '1px solid #d5dfd2', borderRadius: 12, background: '#f0f4ea', color: '#304b3e', fontSize: 12, lineHeight: 1.8 }}>
     <summary style={{ cursor: 'pointer', fontWeight: 600 }}>原文版本与来源 · {book.sourceName}</summary>
     <div style={{ marginTop: 10 }}><p>{book.verification}</p><p>{book.license}</p>
-      <a href={book.sourceRevisionUrl || book.sourceUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>查看本次收录的来源版本</a>
-      {book.sourcePages && <details style={{ marginTop: 6 }}><summary>查看全部 {book.sourcePages.length} 卷来源版本</summary>{book.sourcePages.map((page, index) => <a key={page.revisionUrl} href={page.revisionUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'block', textDecoration: 'underline' }}>来源卷 {index + 1}</a>)}</details>}
+      <p>来源：{book.sourceName}。正文在本应用内阅读。{book.sourcePages?.length ? ` 所据卷册：${book.sourcePages.length}卷。` : ''}</p>
       <p>仅供文献学习，不作为个人诊断、处方或操作依据。</p>
     </div>
   </details>;

@@ -29,7 +29,7 @@ export function MedicalStudyReadings({subject}:{subject:string}){
         {entry.presentation==='EDITORIAL_SUMMARY'?<p style={{whiteSpace:'pre-wrap'}}>{entry.text}</p>:<blockquote style={{margin:'8px 0',whiteSpace:'pre-wrap'}}>{entry.text.replace(/^#{1,6}\s*/gm,'')}</blockquote>}
         {entry.mappingNote&&<p style={{fontSize:12,color:'#666'}}>{entry.mappingNote}</p>}
         {entry.sourceInfo.kind==='CLASSIC_ORIGINAL'&&entry.sourceInfo.inAppBook!==false&&<Link href={'/zhongyi/classic?book='+encodeURIComponent(entry.source)+'&chapter='+encodeURIComponent(entry.chapter)}>阅读已收录篇章 →</Link>}
-        {entry.sourceInfo.url&&<p><a href={entry.sourceInfo.url} target="_blank" rel="noopener noreferrer">核对来源版本 ↗</a></p>}
+        {entry.sourceInfo.url&&<p style={{fontSize:11,color:'#777'}}>来源版本：{entry.sourceInfo.title} · {entry.sourceInfo.author}</p>}
         {entry.sourceInfo.license&&typeof entry.sourceInfo.license==='string'&&<p style={{fontSize:11,color:'#777'}}>{entry.sourceInfo.kind==='STUDY_REFERENCE'?'来源说明':'资料许可'}：{entry.sourceInfo.license}{entry.sourceInfo.kind==='COMMUNITY_COURSE_NOTES'&&<> · <a href="/legal/medical-study-notes-license.txt">查看完整许可</a></>}</p>}
       </details>)}
     </>}

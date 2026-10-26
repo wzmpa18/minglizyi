@@ -12,7 +12,7 @@ export function AcupointClassicStudy({ code }: { code: string }) {
       <strong>{record.kind === 'CLASSIC_PAIRING_QUOTE' ? '经典配穴原句' : '主治原文'}</strong>
       <blockquote style={{ margin: '6px 0', whiteSpace: 'pre-wrap' }}>{record.text}</blockquote>
       <p style={{ fontSize: 12, color: '#666', margin: 0 }}>《{record.source?.title}》{record.chapterTitle || '考正穴法'} · 原文第{record.paragraph}段</p>
-      <a href={record.url} target="_blank" rel="noopener noreferrer" style={{ color: '#7B2FBE', fontSize: 12 }}>查看对应篇章原文 ↗</a>
+      <span style={{ color: '#777', fontSize: 11 }}>原文与出处已在本页列出</span>
     </div>)}
   </section>;
 }
