@@ -44,7 +44,7 @@ export default function AtlasScene({data,state,onSelect,onPoint,onPose,onPeel,on
    };return [id,m] as const;
   }));
   // A separate removable garment covers the surface silhouette; never reshape source anatomy.
-  const shortsOutline=new T.Shape();shortsOutline.moveTo(-.145,1.02);shortsOutline.lineTo(.145,1.02);shortsOutline.lineTo(.18,.94);shortsOutline.lineTo(.17,.82);shortsOutline.lineTo(.025,.82);shortsOutline.lineTo(0,.89);shortsOutline.lineTo(-.025,.82);shortsOutline.lineTo(-.17,.82);shortsOutline.lineTo(-.18,.94);shortsOutline.closePath();
+  const shortsOutline=new T.Shape();shortsOutline.moveTo(-.145,1.02);shortsOutline.lineTo(.145,1.02);shortsOutline.lineTo(.18,.94);shortsOutline.lineTo(.17,.72);shortsOutline.lineTo(.025,.72);shortsOutline.lineTo(0,.765);shortsOutline.lineTo(-.025,.72);shortsOutline.lineTo(-.17,.72);shortsOutline.lineTo(-.18,.94);shortsOutline.closePath();
   const shortsGeometry=new T.ExtrudeGeometry(shortsOutline,{depth:.275,bevelEnabled:true,bevelThickness:.012,bevelSize:.008,bevelSegments:3,steps:1});shortsGeometry.translate(0,0,-.15);geometries.push(shortsGeometry);
   const shortsMaterial=new T.MeshStandardMaterial({color:0x293b57,roughness:.95,side:T.DoubleSide,clippingPlanes:clipPlanes});materials.push(shortsMaterial);const shorts=new T.Mesh(shortsGeometry,shortsMaterial);scene.add(shorts);
   const dotGeometry=new T.SphereGeometry(.0035,6,5);geometries.push(dotGeometry);
