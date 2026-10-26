@@ -31,6 +31,7 @@ import { AcupointStudyDiscussion } from "@/components/AcupointStudyDiscussion";
 import { AcupointStudySources } from "@/components/AcupointStudySources";
 import { MedicalStudyReadings } from "@/components/MedicalStudyReadings";
 import { DongSourceIndex, DongSourceDetail } from "@/components/DongSourceIndex";
+import { StudyDetailNav } from "@/components/StudyDetailNav";
 import { AcupointClassicStudy } from "@/components/AcupointClassicStudy";
 
 const BRAND = "#7B2FBE";
@@ -788,10 +789,11 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
         <p style={{ margin: 0, fontSize: "12px", color: "#C62828", fontWeight: "bold", textAlign: "center" }}>{PROFESSIONAL_WARNING}</p>
       </div>
 
+      <StudyDetailNav items={[["point-overview","定位与主治"],["point-more","操作资料"],["point-readings","经典与倪师"]]}/>
       <AcupointPhotoGallery code={acupoint.code.replace(/^DU/, "GV").replace(/^RN/, "CV")} />
       {getMeridianByName(acupoint.meridian) && <section aria-label="本穴所在经络动图" style={{margin:12}}><p style={{fontSize:12,color:"#666"}}>{acupoint.name}所在经络 · 保留原始循行动图，非单穴真人照片</p><MeridianChart meridianName={acupoint.meridian} compact /></section>}
       {/* 穴位信息卡片 */}
-      <div style={{ margin: "12px", background: "white", borderRadius: "16px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+      <div id="point-overview" style={{ margin: "12px", background: "white", borderRadius: "16px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
         <div style={{ padding: "16px", background: "linear-gradient(135deg, #E3F2FD 0%, white 100%)", borderBottom: "1px solid #f0f0f0" }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: "10px" }}>
             <span style={{ fontSize: "24px", fontWeight: "bold", color: "#333" }}>{acupoint.name}</span>
@@ -820,7 +822,7 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
 
       <Link href={`/zhongyi/anatomy3d/?pointName=${encodeURIComponent(acupoint.name)}&side=${pointSide}`} style={{display:"block",margin:12,padding:12,borderRadius:10,color:BRAND,background:BRAND_BG,fontWeight:700}}>在3D参考人体中对照{acupoint.name} →</Link>
 
-      <details style={{margin:12}}><summary style={{padding:12,borderRadius:12,background:"white",color:BRAND,cursor:"pointer"}}>更多定位、操作与本库整理资料</summary>
+      <details id="point-more" style={{margin:12,scrollMarginTop:100}}><summary style={{padding:12,borderRadius:12,background:"white",color:BRAND,cursor:"pointer"}}>更多定位、操作与本库整理资料</summary>
       {/* 既有静态整理资料，尚未逐条与现行标准校对。 */}
       <div style={{ margin: "12px", background: "white", borderRadius: "16px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
         <div style={{ padding: "12px 16px", borderBottom: "1px solid #f0f0f0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -921,7 +923,7 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
 
       </details>
 
-      <AcupointStudySources meridianName={acupoint.meridian} selectedCode={acupoint.code} />
+      <div id="point-readings" style={{scrollMarginTop:100}}><AcupointStudySources meridianName={acupoint.meridian} selectedCode={acupoint.code} /></div>
       <AcupointClassicStudy code={acupoint.code} />
       <MedicalStudyReadings subject={"point:"+acupoint.code} />
 

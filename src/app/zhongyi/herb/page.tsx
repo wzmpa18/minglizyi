@@ -1,5 +1,7 @@
 "use client";
 
+import { StudyDetailNav } from "@/components/StudyDetailNav";
+import { LocalListenButton } from "@/components/LocalListenButton";
 import { MedicalStudyReadings } from "@/components/MedicalStudyReadings";
 import { SectionGate } from "@/components/SectionGate";
 
@@ -124,7 +126,7 @@ function HerbListPage() {
         </div>
       </div>
 
-      <section className="m-3 rounded-xl bg-white p-3 text-sm text-gray-700"><h2 className="font-semibold">本草性味归经</h2><p className="my-2 leading-6">四气五味与归经分别记录药性、味和作用趋向。古籍三品分类与现代功效分类、药典标准应分别阅读，不能把后世归经术语都当成《本草经》原文。条目包含古籍药名与现代常用中药，请按典籍出处区分时代与标准；古籍矿石、毒性药物的历史记述仅作文献学习。</p><div className="grid grid-cols-3 gap-2">
+      <section className="m-3 rounded-xl bg-white p-3 text-sm text-gray-700"><h2 className="font-semibold">按药性筛选</h2><details className="text-xs"><summary>本草分类与版本说明</summary><p className="my-2 leading-6">四气五味与归经分别记录药性、味和作用趋向。古籍三品分类与现代功效分类、药典标准应分别阅读，不能把后世归经术语都当成《本草经》原文。条目包含古籍药名与现代常用中药，请按典籍出处区分时代与标准；古籍矿石、毒性药物的历史记述仅作文献学习。</p></details><div className="grid grid-cols-3 gap-2">
         <label>药性<select aria-label="按药性筛选" value={natureFilter} onChange={e=>setNatureFilter(e.target.value)} className="w-full border rounded p-1"><option value="">全部</option>{["寒","凉","平","温","热"].map(n=><option key={n}>{n}</option>)}</select></label>
         <label>药味<select aria-label="按药味筛选" value={tasteFilter} onChange={e=>setTasteFilter(e.target.value)} className="w-full border rounded p-1"><option value="">全部</option>{["辛","甘","酸","苦","咸","淡","涩"].map(n=><option key={n}>{n}</option>)}</select></label>
         <label>归经<select aria-label="按归经筛选" value={meridianFilter} onChange={e=>setMeridianFilter(e.target.value)} className="w-full border rounded p-1"><option value="">全部</option>{["心","肝","脾","肺","肾","胃","胆","大肠","小肠","膀胱","三焦","心包"].map(n=><option key={n}>{n}</option>)}</select></label>
@@ -281,6 +283,8 @@ function HerbDetailPage({ herbId }: { herbId: string }) {
         </div>
       </div>
 
+      <StudyDetailNav items={[["herb-overview","药性与功效"],["herb-formulas","配伍方剂"],["herb-readings","经典与倪师"]]}/>
+      <div style={{margin:"8px 12px"}}><LocalListenButton compact contentId={"herb:"+herb.id} text={[herb.name,...sections.filter(section=>section.content).map(section=>section.label+"。"+(Array.isArray(section.content)?section.content.join("、"):section.content))].join("。")}/></div>
       <p style={{ margin: "12px", fontSize: "11px", color: "#666", lineHeight: 1.7 }}>性、味、归经依本条资料分栏展示；古籍记载与现代标准分别标识。未显示风险标签不代表安全或适合个人使用，请勿据此自行用药。</p>
       {/* 原资料明确标注的风险，不从禁忌中的任意“毒”字推断 */}
       {herb.toxic && (
@@ -291,7 +295,7 @@ function HerbDetailPage({ herbId }: { herbId: string }) {
 
       {herb.id==='h483'&&<p style={{padding:12,lineHeight:1.8,fontSize:13}}>关木通保留作历史品种辨析。<a href="https://www.dh.gov.hk/textonly/chs/press/2004/040424.html" target="_blank" rel="noopener noreferrer">核对香港卫生署原公告（2004年4月24日）↗</a></p>}
       {/* 药材信息卡片 */}
-      <div style={{ margin: "12px", background: "white", borderRadius: "16px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+      <div id="herb-overview" style={{ margin: "12px", background: "white", borderRadius: "16px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
         {/* 头部 */}
         <div style={{ padding: "16px", background: `linear-gradient(135deg, ${cc.bg} 0%, white 100%)`, borderBottom: "1px solid #f0f0f0" }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: "10px" }}>
@@ -318,7 +322,7 @@ function HerbDetailPage({ herbId }: { herbId: string }) {
 
       {/* 包含此药的方剂 */}
       {relatedFormulas.length > 0 && (
-        <div style={{ margin: "12px" }}>
+        <div id="herb-formulas" style={{ margin: "12px",scrollMarginTop:100 }}>
           <h3 style={{ fontSize: "14px", fontWeight: "bold", color: "#333", marginBottom: "8px" }}>包含此药的方剂</h3>
           {relatedFormulas.map((formula) => (
             <button
@@ -340,7 +344,7 @@ function HerbDetailPage({ herbId }: { herbId: string }) {
         </div>
       )}
 
-      <MedicalStudyReadings subject={"herb:"+herb.id} />
+      <div id="herb-readings" style={{scrollMarginTop:100}}><MedicalStudyReadings subject={"herb:"+herb.id} /></div>
 
       {/* 返回按钮 */}
       <div style={{ padding: "0 12px" }}>
