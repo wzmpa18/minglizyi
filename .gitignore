@@ -112,3 +112,12 @@ work-verify/
 # Maintained pinned candidate and authentic-UI store gallery publishers.
 !scripts/publish_verified_android_test.py
 !scripts/publish_store_gallery.py
+
+# Owner course texts are distributed through authenticated learning packs only.
+# Generated public scratch copies were denied deletion; never publish them.
+/public/data/ni-study/
+!scripts/import-ni-teacher-courses.py
+!scripts/import-ni-teacher-courses.test.py
+!scripts/build-acupoint-overviews.py
+!scripts/enrich-ni-subject-links.py
+!scripts/build-complete-tcm-notes.py

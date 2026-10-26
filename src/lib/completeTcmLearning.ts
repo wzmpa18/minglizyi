@@ -14,6 +14,7 @@ import {FORMULAS_DB} from '@/algorithm-core/modules/tcm/formulas';
 import {getMembershipStatus} from './membershipStore';
 import {ANATOMY_BUNDLE_MEMBERS} from './anatomyLearningBundle';
 import {installAcupointContentPack} from '@/algorithm-core/modules/tcm/meridians';
+import {validateApprovedNiCollection,installApprovedNiCollection} from './niTeacherCourses';
 export const COMPLETE_TCM_ID='tcm-learning-complete';
 let active:Promise<void>|undefined;
 async function validate(bytes:ArrayBuffer,version:string){
@@ -26,6 +27,7 @@ async function validate(bytes:ArrayBuffer,version:string){
  for(const id of EDITION_PACKS)if(!isCompatibleTcmEditionPack(await json(id),[]))throw Error('原典内容格式无效');
  validateTcmStructuredPack(await json('tcm-herbs'),'tcm-herbs',HERBS_DB.map(row=>row.id));
  validateTcmStructuredPack(await json('tcm-formulas'),'tcm-formulas',FORMULAS_DB.map(row=>row.id));
+ if(m.members.some(row=>row.packId==='ni-teacher-courses'))await validateApprovedNiCollection(await json('ni-teacher-courses'));
  return m;
 }
 /** A single public archive; paid 3D resources remain separate entitlement-controlled objects. */
@@ -49,6 +51,7 @@ export function prepareCompleteTcm(progress?:(message:string)=>void):Promise<voi
   // Also repairs an archive installed by an older downloader without virtual child indexes.
   await activateOfflinePack(COMPLETE_TCM_ID,plan.manifestPack.version,plan.manifestPack.sha256,bytes,catalogue.members);
   for(const child of catalogue.members)window.dispatchEvent(new CustomEvent('offline-pack-installed',{detail:{packId:child.packId}}));
+  if(catalogue.members.some(row=>row.packId==='ni-teacher-courses')){progress?.('正在保存课程与学习笔记资料');await installApprovedNiCollection(await loadJsonPack('ni-teacher-courses'));}
   for(const id of EDITION_PACKS){progress?.('正在保存整本原典');if(!await retainedEditionPack(id,[],true))throw Error('原典保存尚未完成');}
   await retainInstalledMedicalLibrary((done,total)=>progress?.(`正在保存药穴出处 ${done}/${total}`));
   for(const id of ['tcm-herbs','tcm-formulas'] as const){const source=await loadJsonPack(id),saved=await retainedTcmStructuredPack(id,[]);if(!saved||JSON.stringify(source)!==JSON.stringify(saved))throw Error('药材或方剂保存尚未完成');}

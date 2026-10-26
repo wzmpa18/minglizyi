@@ -4,6 +4,10 @@ export interface ViewState {flow?:boolean;flowSpeed?:number;underwear?:boolean;c
 export const initialView=():ViewState=>({flow:false,flowSpeed:1,underwear:true,visible:["integumentary","sensory"],hidden:[],faded:[],selected:null,isolate:false,opacity:1,view:"front",reset:0,focus:0,points:false,meridian:"",point:null,side:1,section:null,explode:0,region:null,continuous:false});
 export interface Snapshot {view:ViewState;isolation:ViewState|null}
 export const copyView=(s:ViewState):ViewState=>({...s,visible:[...s.visible],hidden:[...s.hidden],faded:[...s.faded],isolateIds:s.isolateIds?[...s.isolateIds]:undefined});
+/** Selecting a meridian or point is a deliberate return to intact surface study. */
+export function surfaceStudyView(view:ViewState,changes:Partial<ViewState>={}):ViewState {
+ return {...copyView(view),visible:["integumentary","sensory"],hidden:view.hidden.filter(id=>id==="FJ2813"),faded:[],selected:null,isolate:false,isolateIds:undefined,cameraRestore:undefined,opacity:1,section:null,explode:0,region:null,continuous:false,...changes};
+}
 export const copySnapshot=(s:Snapshot):Snapshot=>({view:copyView(s.view),isolation:s.isolation?copyView(s.isolation):null});
 export function isolateView(s:Snapshot,ids:string[],systems:string[],selected:string):Snapshot {
  const base=s.isolation||s.view;

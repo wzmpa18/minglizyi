@@ -10,16 +10,21 @@ Object.defineProperty(globalThis, "localStorage", { configurable: true, value: {
   setItem: (key: string, value: string) => storage.set(key, value),
 } });
 
-test("an unfilled point does not inherit a generic needling depth or therapeutic claim", () => {
+test("an exact sourced point replaces empty notices without inventing a needling depth", () => {
   storage.clear();
   const point = triggerScrape("LU2", "云门", "手太阴肺经")!;
-  assert.match(point.detail, /尚无可核对/);
+  assert.match(point.detail, /巨骨|气户/);
   assert.doesNotMatch(point.needling_method, /0\.5|1寸|直刺|斜刺/);
-  assert.match(point.indications, /暂无/);
-  assert.match(point.combinations, /暂无/);
-  assert.match(point.source, /非国标原文/);
+  assert.match(point.indications, /主/);
+  assert.doesNotMatch(point.indications + point.combinations, /暂无|待补充/);
+  assert.match(point.source, /针灸大成/);
   // Existing specifically recorded learning text is retained.
   assert.match(triggerScrape("LU5", "尺泽", "手太阴肺经")!.detail, /肘/);
+  const unknown = triggerScrape('UNKNOWN', '不存在的穴位测试', '测试经络')!;
+  assert.equal(unknown.detail, '');
+  assert.equal(unknown.indications, '');
+  assert.equal(unknown.combinations, '');
+  assert.equal(unknown.needling_method, '');
 });
 
 test("old cached defaults are discarded and corrupt cache shapes are tolerated", () => {

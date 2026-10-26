@@ -33,6 +33,9 @@ import { MedicalStudyReadings } from "@/components/MedicalStudyReadings";
 import { DongSourceIndex, DongSourceDetail } from "@/components/DongSourceIndex";
 import { StudyDetailNav } from "@/components/StudyDetailNav";
 import { AcupointClassicStudy } from "@/components/AcupointClassicStudy";
+import {AcupointOverviewCard} from "@/components/AcupointOverviewCard";
+import {useMedicalSubjectReading} from "@/hooks/useMedicalSubjectReading";
+import {resolveAcupointOverview} from "@/lib/acupointOverview";
 
 const BRAND = "#7B2FBE";
 const BRAND_LIGHT = "#9B5ECF";
@@ -716,6 +719,7 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
   }, []);
 
   const acupoint = getAcupointByName(acupointName);
+  const {reading,loading:readingLoading}=useMedicalSubjectReading(acupoint?"point:"+acupoint.code:"");
 
   useEffect(() => {
     if (acupoint) {
@@ -765,16 +769,7 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
     );
   }
 
-  const sections: { label: string; content: string | undefined }[] = [
-    { label: "归经", content: acupoint.meridian },
-    { label: "定位", content: acupoint.location === `${acupoint.name}穴` ? "定位资料待补充核实" : acupoint.location },
-    { label: "详细定位", content: acupoint.location_detail === `${acupoint.name}穴` ? undefined : acupoint.location_detail },
-    { label: "功效", content: acupoint.function },
-    { label: "文献主治", content: aiData?.indications },
-    { label: "配穴参考", content: aiData?.combinations },
-    { label: acupoint.code === "EX-HN3" ? "资料出处" : "典籍出处", content: acupoint.literature },
-  ];
-
+  const overview=resolveAcupointOverview(acupoint,reading || undefined);
   return (
     <div style={{ maxWidth: "720px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f8f5fc", paddingBottom: "120px" }}>
       <div style={{ position: "sticky", top: 0, zIndex: 100, background: `linear-gradient(135deg, ${BRAND} 0%, ${BRAND_LIGHT} 100%)`, padding: "12px 16px", color: "white" }}>
@@ -785,41 +780,12 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
         </div>
       </div>
 
-      <div style={{ margin: "12px", padding: "10px 14px", backgroundColor: "#FFEBEE", borderRadius: "10px", border: "1px solid #FFCDD2" }}>
-        <p style={{ margin: 0, fontSize: "12px", color: "#C62828", fontWeight: "bold", textAlign: "center" }}>{PROFESSIONAL_WARNING}</p>
-      </div>
-
-      <StudyDetailNav items={[["point-overview","定位与主治"],["point-more","操作资料"],["point-readings","经典与倪师"]]}/>
-      {/* 穴位信息卡片 */}
-      <div id="point-overview" style={{ margin: "12px", background: "white", borderRadius: "16px", overflow: "hidden", boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
-        <div style={{ padding: "16px", background: "linear-gradient(135deg, #E3F2FD 0%, white 100%)", borderBottom: "1px solid #f0f0f0" }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: "10px" }}>
-            <span style={{ fontSize: "24px", fontWeight: "bold", color: "#333" }}>{acupoint.name}</span>
-            {acupoint.pinyin && <span style={{ fontSize: "12px", color: "#999" }}>{acupoint.pinyin}</span>}
-          </div>
-          <div style={{ fontSize: "12px", color: "#1565C0", marginTop: "4px" }}>{acupoint.meridian} · {acupoint.code}</div>
-        </div>
-        {sections.filter(s => s.content).map((section, i, arr) => {
-          const isLocation = section.label === "定位" || section.label === "详细定位";
-          return (
-          <div key={section.label} style={{ padding: "12px 16px", borderBottom: i < arr.length - 1 ? "1px solid #f5f5f5" : "none" }}>
-            <div style={{ fontSize: "12px", color: "#999", marginBottom: "4px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              {section.label}
-              {isLocation && (
-                <button onClick={() => setShowPositionModal(true)} style={{ background: "none", border: "none", color: BRAND, fontSize: "11px", cursor: "pointer", padding: 0 }}>📍 查看图文资料</button>
-              )}
-            </div>
-            <div style={{ fontSize: "14px", color: "#333", lineHeight: 1.7, cursor: isLocation ? "pointer" : "default" }}
-                 onClick={isLocation ? () => setShowPositionModal(true) : undefined}>
-              {section.content}
-            </div>
-          </div>
-          );
-        })}
-      </div>
+      <StudyDetailNav items={[["point-overview","定位与主治"],["point-pictures","定位图文"],["point-more","操作资料"],["point-readings","经典与倪师"]]}/>
+      <AcupointOverviewCard point={acupoint} reading={reading} onIllustration={()=>document.getElementById("point-pictures")?.scrollIntoView({behavior:"smooth",block:"start"})}/>
+      <div id="point-pictures" style={{scrollMarginTop:64}}><MedicalStudyReadings subject={"point:"+acupoint.code} reading={reading} mode="illustrations" loading={readingLoading}/></div>
 
       <AcupointPhotoGallery code={acupoint.code.replace(/^DU/, "GV").replace(/^RN/, "CV")} />
-      {getMeridianByName(acupoint.meridian) && <section aria-label="本穴所在经络动图" style={{margin:12}}><p style={{fontSize:12,color:"#666"}}>{acupoint.name}所在经络 · 保留原始循行动图，非单穴真人照片</p><MeridianChart meridianName={acupoint.meridian} compact /></section>}
+      {getMeridianByName(acupoint.meridian) && <section aria-label="本穴所在经络动图" style={{margin:12}}><p style={{fontSize:12,color:"#666"}}>{acupoint.meridian} · 循行对照</p><MeridianChart meridianName={acupoint.meridian} compact /></section>}
 
       <Link href={`/zhongyi/anatomy3d/?pointName=${encodeURIComponent(acupoint.name)}&side=${pointSide}`} style={{display:"block",margin:12,padding:12,borderRadius:10,color:BRAND,background:BRAND_BG,fontWeight:700}}>在3D参考人体中对照{acupoint.name} →</Link>
 
@@ -848,10 +814,10 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
         {aiData ? (
           <>
             {/* 定位 */}
-            <div style={{ padding: "12px 16px", borderBottom: "1px solid #f5f5f5" }}>
+            {aiData.detail && <div style={{ padding: "12px 16px", borderBottom: "1px solid #f5f5f5" }}>
               <div style={{ fontSize: "12px", color: "#999", marginBottom: "4px" }}>📍 定位</div>
               <div style={{ fontSize: "14px", color: "#333", lineHeight: 1.7 }}>{aiData.detail}</div>
-            </div>
+            </div>}
             {/* 主治 */}
             {aiData.indications && (
               <div style={{ padding: "12px 16px", borderBottom: "1px solid #f5f5f5" }}>
@@ -926,7 +892,7 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
 
       <div id="point-readings" style={{scrollMarginTop:100}}><AcupointStudySources meridianName={acupoint.meridian} selectedCode={acupoint.code} /></div>
       <AcupointClassicStudy code={acupoint.code} />
-      <MedicalStudyReadings subject={"point:"+acupoint.code} />
+      <MedicalStudyReadings subject={"point:"+acupoint.code} reading={reading} mode="text" />
 
       <AcupointStudyDiscussion targetId={`standard:${acupoint.code}`} title={`${acupoint.name}学习讨论`} />
 
@@ -946,9 +912,7 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
           acupointName={acupoint.name}
           acupointCode={acupoint.code}
           meridianName={acupoint.meridian}
-          locationText={acupoint.location_detail && acupoint.location_detail !== acupoint.location
-            ? acupoint.location + " " + acupoint.location_detail
-            : acupoint.location}
+          locationText={overview.location?.text || ""}
           onClose={() => setShowPositionModal(false)}
         />
       )}
@@ -1186,8 +1150,8 @@ function MeridianPageInner() {
   const acupointName = searchParams.get("acupoint");
   const dongName = searchParams.get("dong");
 
-  if (dongName) return <DongAcupointDetailPage acupointName={dongName} />;
-  if (acupointName) return <AcupointDetailPage acupointName={acupointName} />;
+  if (dongName) return <DongAcupointDetailPage key={dongName} acupointName={dongName} />;
+  if (acupointName) return <AcupointDetailPage key={acupointName} acupointName={acupointName} />;
   if (meridianName) return <AcupointListPage meridianName={meridianName} />;
   return <MeridianListPage />;
 }

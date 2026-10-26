@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import {useSearchParams} from "next/navigation";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
@@ -71,7 +72,11 @@ function disposeObject(root: THREE.Object3D) {
 }
 
 export default function Anatomy3DPage() {
-  const [legacy,setLegacy]=useState(false);
+  return <Suspense fallback={<p style={{padding:20}}>正在打开人体图谱…</p>}><AnatomyViewSelector/></Suspense>;
+}
+function AnatomyViewSelector(){
+  const params=useSearchParams();
+  const [legacy,setLegacy]=useState(params.get("view")==="original");
   return <><div className="mx-auto flex max-w-7xl gap-2 px-4 pt-4"><button className="rounded-lg border px-3 py-2" aria-pressed={!legacy} onClick={()=>setLegacy(false)}>分层解剖与经络</button><button className="rounded-lg border px-3 py-2" aria-pressed={legacy} onClick={()=>setLegacy(true)}>原四层离线图谱</button></div>{legacy?<LegacyAnatomy3DPage/>:<AtlasViewer/>}</>;
 }
 function LegacyAnatomy3DPage() {

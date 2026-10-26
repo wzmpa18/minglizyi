@@ -8,7 +8,7 @@
 export const STORE_CHANNEL = process.env.NEXT_PUBLIC_STORE_CHANNEL || "default";
 export const IS_GOOGLE_PLAY_BUILD = STORE_CHANNEL === "google";
 export const IS_IOS_FULL_BUILD = STORE_CHANNEL === "ios-full-learning";
-export const CLIENT_VERSION = "25.0.116";
+export const CLIENT_VERSION = "25.0.117";
 export const PUBLIC_SOCIAL_ENABLED = true;
 // All declared learning channels retain the existing AI entry points. Account
 // entitlement, provider availability and server safety checks still apply.

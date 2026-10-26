@@ -624,6 +624,7 @@ export default function ZhongyiHome() {
       {/* 四大入口卡片（v12: 按后台开放程度渲染——关闭隐藏/维护置灰/会员专享加锁） */}
       <div style={{ padding: "16px 12px" }}>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}><Link href="/academy/?track=zhongyi" style={{display:"block",padding:"12px",borderRadius:12,background:"#E8F5E9",border:"1px solid #C8E6C9",color:"#225C3D",textDecoration:"none"}}><strong style={{fontSize:16}}>{ui("言道学堂")}</strong><span style={{display:"block",marginTop:4,fontSize:12}}>{ui("知识点 · 章节题库")} →</span></Link><Link href="/zhongyi/anatomy3d/" style={{display:"block",padding:"12px",borderRadius:12,background:"#F3EDF7",border:"1px solid #D9C7EB",color:"#56217D",textDecoration:"none"}}><strong style={{fontSize:16}}>{ui("三维人体图谱")}</strong><span style={{display:"block",marginTop:4,fontSize:12}}>{ui("分层观察 · 全屏学习")} →</span></Link></div>
+        <Link href="/zhongyi/ni-study/" style={{display:"block",padding:16,marginBottom:12,borderRadius:12,background:"#fffdf4",border:"1px solid #e6dcc4",color:"#694d27",textDecoration:"none"}}><strong style={{fontSize:17}}>倪师自学专区</strong><span style={{display:"block",marginTop:6,fontSize:13}}>按章研读 · 课程与原文对照 · 我的学习笔记 →</span></Link>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
           {ENTRIES.map((e) => {
             const gate = gateOf("zhongyi_" + e.key);

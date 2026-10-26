@@ -44,13 +44,13 @@ export default function AtlasScene({data,state,onSelect,onPoint,onPose,onPeel,on
    };return [id,m] as const;
   }));
   // A separate removable garment covers the surface silhouette; never reshape source anatomy.
-  const shortsOutline=new T.Shape();shortsOutline.moveTo(-.145,1.02);shortsOutline.lineTo(.145,1.02);shortsOutline.lineTo(.18,.94);shortsOutline.lineTo(.17,.72);shortsOutline.lineTo(.025,.72);shortsOutline.lineTo(0,.765);shortsOutline.lineTo(-.025,.72);shortsOutline.lineTo(-.17,.72);shortsOutline.lineTo(-.18,.94);shortsOutline.closePath();
+  const shortsOutline=new T.Shape();shortsOutline.moveTo(-.145,1.02);shortsOutline.quadraticCurveTo(0,1.035,.145,1.02);shortsOutline.quadraticCurveTo(.185,.94,.17,.72);shortsOutline.lineTo(.025,.72);shortsOutline.quadraticCurveTo(0,.81,-.025,.72);shortsOutline.lineTo(-.17,.72);shortsOutline.quadraticCurveTo(-.185,.94,-.145,1.02);shortsOutline.closePath();
   const shortsGeometry=new T.ExtrudeGeometry(shortsOutline,{depth:.275,bevelEnabled:true,bevelThickness:.012,bevelSize:.008,bevelSegments:3,steps:1});shortsGeometry.translate(0,0,-.15);geometries.push(shortsGeometry);
   const shortsMaterial=new T.MeshStandardMaterial({color:0x293b57,roughness:.95,side:T.DoubleSide,clippingPlanes:clipPlanes});materials.push(shortsMaterial);const shorts=new T.Mesh(shortsGeometry,shortsMaterial);scene.add(shorts);
-  const dotGeometry=new T.SphereGeometry(.0035,6,5);geometries.push(dotGeometry);
+  const dotGeometry=new T.SphereGeometry(.004,8,6);geometries.push(dotGeometry);
   const pointByCode=new Map(data.points.map(p=>[p.code,p]));
   const dotMaterials=new Map(Array.from(new Set(data.points.map(p=>p.meridianId))).map(id=>{const m=new T.MeshBasicMaterial({color:meridianColor(id),clippingPlanes:clipPlanes});materials.push(m);return[id,m] as const;}));
-  const dots=new T.Group(),lines=new T.Group();scene.add(dots,lines);
+  const chosenDotMaterial=new T.MeshBasicMaterial({color:0xff71c7,clippingPlanes:clipPlanes});materials.push(chosenDotMaterial);const dots=new T.Group(),lines=new T.Group();scene.add(dots,lines);
   const pointNames:{dot:T.Mesh;normal:T.Vector3;button:HTMLButtonElement;key:string;code:string;side:1|-1;name:string}[]=[];
   for(const point of data.surface.points){
    const [code,side]=point.key.split(":"),entry=pointByCode.get(code);if(!entry)continue;
@@ -58,7 +58,7 @@ export default function AtlasScene({data,state,onSelect,onPoint,onPose,onPeel,on
    dot.position.fromArray(point.target.position).addScaledVector(new T.Vector3().fromArray(point.target.normal),.0015);
    dot.userData={code,side:Number(side)};dots.add(dot);
    const pointName=displayPointName(entry.name),button=document.createElement("button");button.type="button";button.textContent=pointName;button.setAttribute("aria-label",`${pointName} ${displayPointCode(code)} ${entry.midline?"正中":Number(side)===1?"左侧":"右侧"}穴位资料`);button.title=`${pointName} ${displayPointCode(code)} · ${code==="GV24+"?"经外奇穴":entry.meridian}`;
-   Object.assign(button.style,{display:"none",position:"absolute",pointerEvents:"auto",border:`1px solid ${meridianColor(entry.meridianId)}`,borderLeftWidth:"3px",borderRadius:"5px",background:"#fffffff0",color:"#292524",font:"12px system-ui",padding:"4px 6px",height:"26px",whiteSpace:"nowrap",lineHeight:"16px",boxShadow:"0 1px 3px #0002",touchAction:"manipulation"});
+   Object.assign(button.style,{display:"none",position:"absolute",pointerEvents:"auto",border:"0",borderRadius:"2px",background:"transparent",color:"#fff",font:"12px system-ui",padding:"3px 2px",height:"24px",whiteSpace:"nowrap",lineHeight:"18px",textShadow:"0 1px 3px #000,1px 0 2px #000,-1px 0 2px #000",touchAction:"manipulation"});
    button.addEventListener("pointerdown",e=>e.stopPropagation());button.addEventListener("click",e=>{e.stopPropagation();callbacks.current.onPoint(code,Number(side) as 1|-1);});names.appendChild(button);pointNames.push({dot,normal:new T.Vector3().fromArray(point.target.normal),button,key:point.key,code,side:Number(side) as 1|-1,name:pointName});
   }
   for(const path of data.surface.paths){const values=path.vertices;if(!Array.isArray(values))continue;
@@ -102,8 +102,10 @@ export default function AtlasScene({data,state,onSelect,onPoint,onPose,onPeel,on
    return hit?{key:data.atlas.parts[hit.object.userData.index].id,position:hit.point.toArray() as Position3}:null;
   };
   const dispatch=(hit:ReturnType<typeof pick>,kind:AtlasGesture)=>{if(!hit)return;if("code" in hit)callbacks.current.onPoint(hit.code!,hit.side!);else callbacks.current.onSelect(hit.key,kind,hit.position);};
-  const peel=()=>{if(progress!==undefined)clearInterval(progress);progress=undefined;if(!active||pointers.size!==1)return;const hit=pick(active.x,active.y,true);if(!hit||!("position" in hit)){clearHold();active=null;return;}held=true;gesture.cancel();callbacks.current.onPeel(hit.key,hit.position!);callbacks.current.onHold(null);if(latest.current.continuous)hold=setTimeout(peel,650);};
+  const peel=()=>{if(!latest.current.continuous){clearHold();return;}if(progress!==undefined)clearInterval(progress);progress=undefined;if(!active||pointers.size!==1)return;const hit=pick(active.x,active.y,true);if(!hit||!("position" in hit)){clearHold();active=null;return;}held=true;gesture.cancel();callbacks.current.onPeel(hit.key,hit.position!);callbacks.current.onHold(null);if(latest.current.continuous)hold=setTimeout(peel,650);};
   const start=(e:PointerEvent)=>{clearHold();pointers.add(e.pointerId);held=false;gesture.start(e.pointerId,e.clientX,e.clientY,performance.now(),pointers.size);if(pointers.size!==1){active=null;gesture.cancel();return;}active={id:e.pointerId,x:e.clientX,y:e.clientY,time:performance.now()};
+   // Ordinary study gestures never peel, including a stationary long touch.
+   if(!latest.current.continuous)return;
    const hit=pick(e.clientX,e.clientY,true);if(!hit||!("position" in hit))return;const rect=renderer.domElement.getBoundingClientRect(),name=data.atlas.parts.find(p=>p.id===hit.key)?.name||hit.key;
    progress=setInterval(()=>{if(active)callbacks.current.onHold({x:e.clientX-rect.left,y:e.clientY-rect.top,name,id:hit.key,progress:Math.min(1,(performance.now()-active.time)/500)});},40);hold=setTimeout(peel,500);
   };
@@ -124,15 +126,15 @@ export default function AtlasScene({data,state,onSelect,onPoint,onPose,onPeel,on
     batches.forEach(b=>{b.mesh.visible=b.ids.some(i=>Math.abs(mask[i*4+3])>.5);});texture.needsUpdate=true;
     mats.forEach(m=>{m.opacity=s.opacity*(m.userData.clearMedia ? .12 : 1);m.transparent=!!m.userData.clearMedia||s.opacity<1||s.faded.length>0;m.depthWrite=!m.userData.clearMedia&&s.opacity>=1&&!s.faded.length;});plane.constant=s.section??100;
     dots.visible=s.points&&s.explode===0&&!s.isolate;lines.visible=dots.visible;
-    dots.children.forEach(d=>{const p=data.points.find(p=>p.code===d.userData.code);d.visible=(!region||insideRegion(d.position.toArray() as Position3,region))&&(!s.meridian||p?.meridianId===s.meridian);d.scale.setScalar(s.point===d.userData.code&&s.side===d.userData.side?1.8:1);});
+    dots.children.forEach(d=>{const p=data.points.find(p=>p.code===d.userData.code);d.visible=(!region||insideRegion(d.position.toArray() as Position3,region))&&(!s.meridian||p?.meridianId===s.meridian);const chosen=s.point===d.userData.code&&s.side===d.userData.side;(d as T.Mesh).material=chosen?chosenDotMaterial:dotMaterials.get(p?.meridianId||"")!;d.scale.setScalar(chosen?1.8:1);});
     lines.children.forEach(l=>{l.visible=!s.meridian||l.userData.id===s.meridian;});
     if(!previous||previous.reset!==s.reset||previous.view!==s.view||previous.focus!==s.focus||previous.point!==s.point||previous.side!==s.side||previous.region!==s.region||needsFit)fit();needsFit=false;previous=s;
    }controls.update();if(dirty){
     const candidates:(LabelCandidate&{button:HTMLButtonElement})[]=[];
     const head=BODY_REGIONS.find(r=>r.id==="head")!,focused=data.surface.points.find(p=>p.key===`${s.point}:${s.side}`)?.target.position;const headFocus=!!focused&&insideRegion(focused as Position3,head);
-    for(const p of pointNames){p.button.style.display="none";if(!dots.visible||!p.dot.visible||(headFocus&&!insideRegion(p.dot.position.toArray() as Position3,head)))continue;const projected=p.dot.position.clone().project(camera),toCamera=camera.position.clone().sub(p.dot.position).normalize();if(projected.z< -1||projected.z>1||p.normal.dot(toCamera)<=.06)continue;const w=Math.max(38,p.name.length*13+17),anchorX=(projected.x+1)*el.clientWidth/2,anchorY=(-projected.y+1)*el.clientHeight/2;const x=anchorX+w+12<el.clientWidth?anchorX+9:anchorX-w-9;candidates.push({key:p.key,x,y:anchorY-13,width:w,height:26,selected:s.point===p.code&&s.side===p.side,button:p.button});}
-    const canvasRect=el.getBoundingClientRect(),blocked=Array.from(el.closest(".atlas-viewer")?.querySelectorAll(".atlas-nav,.atlas-actions,.atlas-label,[data-atlas-point-summary]")||[]).map(node=>{const r=node.getBoundingClientRect();return{x:r.left-canvasRect.left,y:r.top-canvasRect.top,width:r.width,height:r.height};});
-    for(const p of arrangePointLabels(candidates,el.clientWidth,el.clientHeight,Math.min(42,Math.max(16,Math.floor(el.clientWidth/18))),blocked)){Object.assign(p.button.style,{display:"block",left:p.x+"px",top:p.y+"px",fontWeight:p.selected?"700":"400",outline:p.selected?"2px solid #7b2fbe":"none"});}
+    for(const p of pointNames){p.button.style.display="none";if(!dots.visible||!p.dot.visible||(headFocus&&!insideRegion(p.dot.position.toArray() as Position3,head)))continue;const projected=p.dot.position.clone().project(camera),toCamera=camera.position.clone().sub(p.dot.position).normalize();if(projected.z< -1||projected.z>1||p.normal.dot(toCamera)<=.06)continue;const w=Math.max(28,p.name.length*12+6),anchorX=(projected.x+1)*el.clientWidth/2,anchorY=(-projected.y+1)*el.clientHeight/2;const x=anchorX+w+10<el.clientWidth?anchorX+7:anchorX-w-7;candidates.push({key:p.key,x,y:anchorY-12,width:w,height:24,selected:s.point===p.code&&s.side===p.side,button:p.button});}
+    const canvasRect=el.getBoundingClientRect(),blocked=Array.from(el.closest(".atlas-viewer")?.querySelectorAll(".atlas-titlebar,.atlas-nav,.atlas-actions,.atlas-label,.atlas-quick-list,.atlas-side:not([hidden]),[data-atlas-point-summary]")||[]).map(node=>{const r=node.getBoundingClientRect();return{x:r.left-canvasRect.left,y:r.top-canvasRect.top,width:r.width,height:r.height};});
+    for(const p of arrangePointLabels(candidates,el.clientWidth,el.clientHeight,s.meridian?Math.min(22,Math.max(8,Math.floor(el.clientWidth/35))):8,blocked)){Object.assign(p.button.style,{display:"block",left:p.x+"px",top:p.y+"px",fontWeight:p.selected?"700":"400",color:p.selected?"#ffb0df":"#fff",outline:"none"});}
     renderer.render(scene,camera);dirty=false;}
   };animate();
   return()=>{dead=true;window.removeEventListener("blur",stopHold);document.removeEventListener("visibilitychange",visibility);clearHold();cancelAnimationFrame(frame);observer.disconnect();controls.dispose();renderer.domElement.removeEventListener("pointerdown",start);renderer.domElement.removeEventListener("pointermove",move);renderer.domElement.removeEventListener("contextmenu",preventMenu);renderer.domElement.removeEventListener("pointerup",end);renderer.domElement.removeEventListener("pointercancel",cancel);renderer.domElement.removeEventListener("webglcontextlost",lost);geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());texture.dispose();renderer.dispose();renderer.domElement.remove();names.remove();};

@@ -5,6 +5,8 @@
  * v19.0: 新增主治/配伍/操作禁忌字段，移除手绘图片依赖，增强缓存TTL机制
  */
 "use client";
+import { getAcupointByName } from '@/algorithm-core/modules/tcm/meridians';
+import { resolveAcupointOverview } from './acupointOverview';
 
 // ==================== 类型 ====================
 interface ScrapeResult {
@@ -303,13 +305,15 @@ function setLocalCacheEntry(id: string, data: ScrapeResult): void {
 
 // ==================== 静态数据获取 ====================
 
-function buildResult(name: string, meridian: string): ScrapeResult {
-  const detail = ACUPOINT_DETAILS[name] || `${name}归属${meridian}；本库尚无可核对的详细定位资料。请查阅GB/T 12346-2021《经穴名称与定位》等可靠资料。`;
-  const indications = INDICATIONS[name] || "本库暂无已整理的主治资料。";
-  const combinations = COMBINATIONS[name] || "本库暂无已整理的配伍资料。";
-  const contraindications = CONTRAINDICATIONS[name] || `请在专业医师指导下确定进针角度、深度和手法。注意孕妇、体质虚弱者及有出血倾向者慎用。`;
+function buildResult(name: string, meridian: string, type: 'acupoint'|'dong'): ScrapeResult {
+  const point = type === 'acupoint' ? getAcupointByName(name) : undefined;
+  const overview = point ? resolveAcupointOverview(point) : undefined;
+  const detail = overview?.location?.text || ACUPOINT_DETAILS[name] || '';
+  const indications = overview?.indications?.text || INDICATIONS[name] || '';
+  const combinations = overview?.combinations?.text || COMBINATIONS[name] || '';
+  const contraindications = CONTRAINDICATIONS[name] || '';
   const image_url = ""; // 不再使用外部图片，改为纯文字描述
-  const needling_method = NEEDLING_METHODS[name] || "本库暂无该穴的操作资料，不能推断针刺方向或深度。";
+  const needling_method = NEEDLING_METHODS[name] || '';
   return {
     detail,
     indications,
@@ -318,9 +322,9 @@ function buildResult(name: string, meridian: string): ScrapeResult {
     needling_method,
     image_url,
     fetched_at: new Date().toISOString(),
-    source: "本库静态整理资料；尚未逐条核对来源及现行标准，非国标原文",
+    source: overview?.sourceTitles.length ? overview.sourceTitles.join('；') + '；操作与补充字段为既有整理，非国标原文' : "本库既有整理资料，非国标原文",
     needs_refetch: false,
-    data_revision: 2,
+    data_revision: 3,
   };
 }
 
@@ -333,7 +337,7 @@ export function getCachedAcupointInfo(
   const entry = local[id];
   if (!entry) return null;
   // 检查缓存是否过期
-  if (entry.data?.data_revision !== 2 || !Number.isFinite(entry.cachedAt) || Date.now() - entry.cachedAt > CACHE_TTL_MS) {
+  if (entry.data?.data_revision !== 3 || !Number.isFinite(entry.cachedAt) || Date.now() - entry.cachedAt > CACHE_TTL_MS) {
     // 缓存已过期，清除并返回null
     delete local[id];
     try {
@@ -355,7 +359,7 @@ export function triggerScrape(
   const cached = getCachedAcupointInfo(id, type);
   if (cached) return cached;
   // 缓存未命中或已过期，重新生成并缓存
-  const result = buildResult(name, meridian);
+  const result = buildResult(name, meridian, type);
   setLocalCacheEntry(id, result);
   return result;
 }
