@@ -1,6 +1,8 @@
 {
   "source": "https://github.com/creativecommons/cc-legal-tools-data/blob/main/legacy/legalcode/by_4.0.txt",
   "gitBlobSha": "da6ab6cc8f333d7e89a99812866df8f24374d47c",
-  "sha256": "9ba9550ad48438d0836ddab3da480b3b69ffa0aac7b7878b5a0039e7ab429411",
-  "retrieved": "2026-10-26"
+  "retrieved": "2026-10-26",
+  "originalSha256": "9ba9550ad48438d0836ddab3da480b3b69ffa0aac7b7878b5a0039e7ab429411",
+  "sha256": "9e5f1b3c610b9c2da5c313bf81d577a7d1acec686bdb0384edefa6df0f90cd94",
+  "formatting": "Removed trailing blank lines only; legal text retained"
 }
