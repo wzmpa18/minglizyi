@@ -13,6 +13,11 @@ on:
       - 'backend_deploy/promotionPolicy.js'
       - 'backend_deploy/nonAiInviteCampaign.js'
       - 'backend_deploy/companyDownloadRoutes.js'
+      - 'backend_deploy/publicAndroidInstaller*.js'
+      - 'backend_deploy/appVersionRoutes.js'
+      - 'backend_deploy/objectStorageEngine.js'
+      - 'backend_deploy/businessIdentityGate.js'
+      - 'scripts/public-android-installer.test.cjs'
       - 'src/app/calendar/**'
       - 'src/app/discover/tongchen/**'
       - 'src/app/admin/tongchen/**'
@@ -393,7 +398,6 @@ jobs:
       - run: node --test scripts/user-id-policy.test.cjs
       - run: node --experimental-strip-types --test scripts/study-content.test.cjs
       - run: node --test scripts/learning-cors.test.cjs
-      - run: node --test scripts/security-assessment.test.cjs
       - run: node --test scripts/ios-full-profile.test.cjs
       - run: npx tsx --test scripts/classic-reading.test.ts
       - run: node --experimental-strip-types --test scripts/tcm-edition-pack.test.cjs
@@ -414,6 +418,7 @@ jobs:
       - name: Verify discussion HTTP authentication and moderation against production dependency versions
         run: |
           npm install --prefix "$RUNNER_TEMP/study-http-deps" --no-save --package-lock=false express@4.22.2 better-sqlite3@13.0.3 jsonwebtoken@9.0.3 bcrypt@6.0.0 fake-indexeddb@6.2.4
+          NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/security-assessment.test.cjs scripts/public-android-installer.test.cjs
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/offline-pack-client.test.cjs scripts/anatomy-learning-bundle.test.cjs scripts/acupoint-classic-study.test.cjs scripts/medical-library-media.test.cjs scripts/study-media-recovery.test.cjs scripts/learning-bundle.test.cjs
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/password-reset-http.test.cjs
           node --test scripts/discover-video-link.test.cjs
