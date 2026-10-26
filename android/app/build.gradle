@@ -8,7 +8,7 @@ android {
         applicationId "com.yandao.guoxue"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2147
+        versionCode 2148
         versionName "25.0.116"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
