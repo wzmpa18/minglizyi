@@ -15,18 +15,39 @@ const active = new Map<string, Promise<string>>();
 type AssetReader=(path:string)=>Promise<Uint8Array>;
 let archiveReader:AssetReader|undefined;
 let installedArchive:Promise<ArrayBuffer|null>|undefined;
-async function recoverArchiveImage(path:string):Promise<Uint8Array|null>{
+async function fromInstalledArchive<T>(read:(bytes:ArrayBuffer)=>Promise<T>):Promise<T|null>{
   const {loadPackContent}=await import('./offlinePackClient');
   if(!installedArchive)installedArchive=loadPackContent('tcm-learning-complete');
   const request=installedArchive;
-  try{const bytes=await request;return bytes?await(await import('./learningBundleCodec')).readLearningBundleFile(bytes,path.replace(/^\//,'')):null;}finally{if(installedArchive===request)installedArchive=undefined;}
+  try{const bytes=await request;return bytes?await read(bytes):null;}finally{if(installedArchive===request)installedArchive=undefined;}
+}
+async function recoverArchiveImage(path:string):Promise<Uint8Array|null>{
+  return fromInstalledArchive(async bytes=>(await import('./learningBundleCodec')).readLearningBundleFile(bytes,path.replace(/^\//,'')));
+}
+async function recoverArchiveCatalogue():Promise<StudyMediaManifest|null>{
+  return fromInstalledArchive(async bytes=>{
+    const codec=await import('./learningBundleCodec');
+    const raw=await codec.readLearningBundleFile(bytes,'data/tcm-study-media.json');
+    const next=validateStudyMedia(JSON.parse(new TextDecoder().decode(raw)));
+    codec.validateLearningBundleMedia(codec.learningBundleManifest(bytes),next.records,[]);
+    return next;
+  });
+}
+async function saveCatalogue(next:StudyMediaManifest){
+  await writeOfflineFile('study-media-manifest',next);
+  if(JSON.stringify(await readOfflineFile('study-media-manifest'))!==JSON.stringify(next))throw Error('图片目录保存未完成');
+}
+async function retainedCatalogue(){
+  const previous=await readOfflineFile<StudyMediaManifest>('study-media-manifest').catch(()=>null);
+  try{if(previous&&validateStudyMedia(previous).version>=bundledStudyMedia.version)return previous;}catch{/* preserve bundled originals */}
+  return bundledStudyMedia;
 }
 export function releaseStudyMediaReader(){archiveReader=undefined;}
 export async function installStudyMediaCatalogue(raw:unknown,reader:AssetReader){
   const next=validateStudyMedia(raw);
-  await writeOfflineFile('study-media-manifest',next);
-  if(JSON.stringify(await readOfflineFile('study-media-manifest'))!==JSON.stringify(next))throw Error('图片目录保存未完成');
-  archiveReader=reader;manifest=Promise.resolve(next);
+  const previous=await retainedCatalogue(),selected=previous.version>next.version?previous:next;
+  if(selected===next)await saveCatalogue(next);
+  archiveReader=reader;manifest=Promise.resolve(selected);
 }
 let manifest: Promise<StudyMediaManifest> | undefined;
 export function validateStudyMedia(raw: unknown): StudyMediaManifest {
@@ -45,27 +66,47 @@ export function validateStudyMedia(raw: unknown): StudyMediaManifest {
 }
 export function studyMediaManifest(): Promise<StudyMediaManifest> {
   if (!manifest) manifest = (async () => {
-    const previous = await readOfflineFile<StudyMediaManifest>('study-media-manifest').catch(()=>null);
-    let retained = bundledStudyMedia;
-    try { if (previous && validateStudyMedia(previous).version >= retained.version) retained = previous; } catch { /* bundled originals */ }
+    let retained=await retainedCatalogue();
+    try{
+      const archived=await recoverArchiveCatalogue();
+      if(archived){
+        if(archived.version>=retained.version){
+          // The verified local archive remains a usable source even if a
+          // separate metadata write was interrupted or cannot be read back.
+          retained=archived;
+          try{await saveCatalogue(archived);}catch{/* retry recovery next session; no data download */}
+        }
+        return retained;
+      }
+    }catch{/* a damaged archive never replaces a usable retained catalogue */}
     try {
       const response = await fetch(ORIGIN+'/data/tcm-study-media.json',{cache:'no-cache',credentials:'omit',signal:AbortSignal.timeout(5000)});
       if (!response.ok) throw Error('offline');
       const text = await response.text(); if (text.length > 1_000_000) throw Error('oversize');
       const next = validateStudyMedia(JSON.parse(text));
-      if (next.version >= retained.version) { await writeOfflineFile('study-media-manifest',next); retained = next; }
+      if (next.version >= retained.version) { await saveCatalogue(next); retained = next; }
     } catch { /* durable or bundled catalogue remains available */ }
     return retained;
   })();
   return manifest;
 }
+if(typeof window!=='undefined')window.addEventListener('offline-pack-installed',event=>{
+  const packId=(event as CustomEvent<{packId:string}>).detail?.packId;
+  if(packId==='tcm-learning-complete'||packId==='tcm-study-media'){manifest=undefined;installedArchive=undefined;}
+});
 async function hash(bytes: Uint8Array) {
   return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes.slice().buffer))).map(x=>x.toString(16).padStart(2,'0')).join('');
 }
 function encode(bytes: Uint8Array) { let value=''; for(let i=0;i<bytes.length;i+=8192)value+=String.fromCharCode(...bytes.subarray(i,i+8192));return btoa(value); }
 function decode(value: string) { return Uint8Array.from(atob(value),c=>c.charCodeAt(0)); }
 export async function retainedStudyImage(path: string): Promise<string> {
-  const catalog = await studyMediaManifest(); const record = catalog.records.find(r=>r.path===path);
+  let catalog=await studyMediaManifest(),selected=catalog.records.find(r=>r.path===path);
+  if(!selected){
+    // A page may have cached the 30 bundled records before a complete archive
+    // was installed. Repair that catalogue without downloading the archive.
+    try{const archived=await recoverArchiveCatalogue();if(archived&&archived.version>=catalog.version){catalog=archived;selected=catalog.records.find(r=>r.path===path);manifest=Promise.resolve(archived);try{await saveCatalogue(archived);}catch{/* verified local data remains readable */}}}catch{/* normal missing-record error below */}
+  }
+  const record=selected;
   if (!record) throw Error('此图片尚未列入已核对目录');
   if (active.has(record.sha256)) return active.get(record.sha256)!;
   const task = (async () => {
@@ -73,7 +114,7 @@ export async function retainedStudyImage(path: string): Promise<string> {
     const saved = await readOfflineFile<{data:string}> (key).catch(()=>null);
     if (saved?.data) { try { const bytes=decode(saved.data); if(bytes.length===record.bytes && await hash(bytes)===record.sha256)return 'data:'+record.mime+';base64,'+saved.data; } catch { /* retry a valid source */ } }
     const isBundled=bundledStudyMedia.records.some(r=>r.path===path&&r.sha256===record.sha256);
-    const archived=archiveReader?await archiveReader(path):!isBundled?await recoverArchiveImage(path).catch(()=>null):null;
+    const archived=archiveReader?await archiveReader(path).catch(()=>null):await recoverArchiveImage(path).catch(()=>null);
     if(archived){
       const bytes=archived;
       if(bytes.length!==record.bytes||await hash(bytes)!==record.sha256)throw Error('资料包中的图片校验失败');
