@@ -71,7 +71,8 @@ test('content scan excludes secrets and private health objects',()=>{
 });
 
 test('public Android metadata never offers a sideload APK to Google or iOS',()=>{
- let handler;const sandbox={module:{exports:{}},__dirname:path.resolve('backend_deploy'),process:{env:{}},console,require:name=>name==='express'?{Router:()=>({get:(_route,h)=>{handler=h}})}:require(name)};
+ const backendRequire=require('node:module').createRequire(path.resolve('backend_deploy/appVersionRoutes.js'));
+ let handler;const sandbox={module:{exports:{}},__dirname:path.resolve('backend_deploy'),process:{env:{}},console,require:name=>name==='express'?{Router:()=>({use(){},get:(_route,h)=>{handler=h}})}:backendRequire(name)};
  require('node:vm').runInNewContext(fs.readFileSync('backend_deploy/appVersionRoutes.js','utf8'),sandbox);
  const invoke=headers=>{let result;handler({headers,query:{}},{json:value=>{result=value}});return result.data};
  const google=invoke({'x-store-channel':'google'}),ios=invoke({'x-client-platform':'ios'}),web=invoke({});

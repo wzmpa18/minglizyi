@@ -15,6 +15,9 @@ function clientIp(req) {
   return ['127.0.0.1','::1','::ffff:127.0.0.1'].includes(remote) ? String(req.headers['x-forwarded-for'] || remote).split(',').at(-1).trim() : remote;
 }
 function publicRequest(method, route) {
+  // Only the published, fixed installer resolver is anonymous. Do not exempt
+  // its parent router, arbitrary object paths, POST, or private learning files.
+  if ((method === 'GET' || method === 'HEAD') && route === '/api/public/app-version/android-installer/2151.apk') return true;
   return method === 'OPTIONS' || method === 'GET' && PUBLIC_GET.has(route) || method === 'POST' && (AUTH_POST.has(route) || CALLBACK_POST.has(route));
 }
 function createBusinessIdentityGate({ verifyToken, getUser, resolveAdminKey, journal, now = Date.now }) {

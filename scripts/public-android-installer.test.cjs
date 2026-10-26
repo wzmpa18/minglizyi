@@ -138,3 +138,20 @@ test('real public version router decorates Android only and leaves Google/iOS ch
     }
   } finally { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); delete require.cache[versionPath]; delete require.cache[installerPath]; }
 });
+test('the production identity gate permits only anonymous GET/HEAD to the exact resolver while private packs/POST stay authenticated', async () => {
+  const { createBusinessIdentityGate, publicRequest } = require('../backend_deploy/businessIdentityGate');
+  const full = '/api/public/app-version' + PIN.routePath, events = [];
+  const app = express(); app.use(createBusinessIdentityGate({ verifyToken: () => null, getUser: () => assert.fail('public installer must not load a user'), resolveAdminKey: () => null, journal: { append: value => events.push(value) } }));
+  app.use('/api/public/app-version', createRouter({ storage: { statObject: async () => ({ ok: true, size: PIN.bytes }), temporaryDownloadUrl: async () => ({ ok: true, provider: 'COS', url: signed() }) }, readActivation: activation, readPublication: publication, now: () => clock }));
+  const server = http.createServer(app); await new Promise(resolve => server.listen(0, '127.0.0.1', resolve)); const base = 'http://127.0.0.1:' + server.address().port;
+  try {
+    const r = await fetch(base + full, { redirect: 'manual' }); assert.equal(r.status, 302); assert.equal(r.headers.get('location'), signed());
+    fallback(await fetch(base + full, { method: 'HEAD', redirect: 'manual' }));
+    assert.equal((await fetch(base + full + '?key=offline-packs/test.pack')).status, 400);
+    for (const [method, route] of [['POST', full], ['GET', full + '/other'], ['GET', '/api/public/app-version/android-installer/2150.apk'], ['GET', '/api/offline/packs/private/download']]) {
+      assert.equal(publicRequest(method, route), false); assert.equal((await fetch(base + route, { method, redirect: 'manual' })).status, 401);
+    }
+    assert.ok(events.some(row => row.route === full && row.kind === 'request_completed' && row.status === 302));
+    assert.ok(events.every(row => !JSON.stringify(row).includes('q-signature')));
+  } finally { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
+});

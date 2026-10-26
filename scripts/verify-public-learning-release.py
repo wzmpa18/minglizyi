@@ -33,8 +33,13 @@ def main():
         with urlopen(ORIGIN + '/api/public/app-version?platform=android', timeout=30) as response:
             data = json.load(response)['data']
         target = ORIGIN + '/downloads/' + str(a.build) + '/YandaoGuoxue_' + a.version + '_' + str(a.build) + '.apk'
-        assert data['latestVersion'] == a.version and data['latestVersionCode'] == a.build and data['forceUpdate'] is False and data['downloadUrl'] == target
-        proof['versionApi'] = {'version': data['latestVersion'], 'build': data['latestVersionCode'], 'forceUpdate': data['forceUpdate'], 'downloadUrl': target}
+        resolver = ORIGIN + '/api/public/app-version/android-installer/' + str(a.build) + '.apk'
+        entrypoint = data['downloadUrl']
+        assert data['latestVersion'] == a.version and data['latestVersionCode'] == a.build and data['forceUpdate'] is False and entrypoint in (target, resolver)
+        if entrypoint == resolver:
+            with urlopen(Request(resolver, method='HEAD'), timeout=30) as response:
+                assert response.url == target and int(response.headers['Content-Length']) == a.bytes
+        proof['versionApi'] = {'version': data['latestVersion'], 'build': data['latestVersionCode'], 'forceUpdate': data['forceUpdate'], 'downloadUrl': entrypoint}
         proof['downloadEntrances'] = []
         for route in ['/latest.apk', '/app-download/latest.apk', '/app-download/guoxue-chuancheng.apk', '/app-download/guoxue-chuancheng-v1.0-release.apk']:
             with urlopen(Request(ORIGIN + route, method='HEAD'), timeout=30) as response:
@@ -45,7 +50,7 @@ def main():
         if a.parallel_ranges == 4:
             def part(index):
                 start, end = index * a.bytes // 4, (index + 1) * a.bytes // 4 - 1
-                request = Request(target, headers={'Range': f'bytes={start}-{end}', 'Accept-Encoding': 'identity'})
+                request = Request(entrypoint, headers={'Range': f'bytes={start}-{end}', 'Accept-Encoding': 'identity'})
                 with urlopen(request, timeout=40) as response:
                     assert response.status == 206 and response.headers['Content-Range'] == f'bytes {start}-{end}/{a.bytes}'
                     assert int(response.headers['Content-Length']) == end - start + 1
@@ -65,7 +70,7 @@ def main():
                 proof['ranges'].append(row)
             del parts
         else:
-            with urlopen(target, timeout=40) as response:
+            with urlopen(entrypoint, timeout=40) as response:
                 assert response.status == 200 and int(response.headers['Content-Length']) == a.bytes
                 for chunk in iter(lambda: response.read(1024 * 1024), b''):
                     size += len(chunk)

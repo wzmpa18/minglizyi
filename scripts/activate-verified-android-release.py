@@ -247,16 +247,26 @@ def converged_redirects(version, build, max_sweeps=10, timeout_seconds=20, inter
     raise RedirectConvergenceError("Stable redirect readback mismatch after bounded convergence: " + detail, history)
 
 
+def verify_download_entry(entry, version, build):
+    origin = apk_url(version, build)
+    resolver = 'https://' + DOMAIN + '/api/public/app-version/android-installer/' + str(build) + '.apk'
+    require(entry in (origin, resolver), 'Unexpected public installer entry')
+    if entry == resolver:
+        require(origin_request(resolver, headers_only=True) == {'status': 302, 'location': origin}, 'Installer resolver HEAD no longer preserves the exact static fallback')
+    return entry
+
+
 def verify_live(spec, old=False):
     version, build = (spec["oldVersion"], spec["oldBuild"]) if old else (spec["version"], spec["build"])
     url = apk_url(version, build)
     convergence = converged_redirects(version, build)
     with urllib.request.urlopen("http://127.0.0.1:3001/api/public/app-version?platform=android", timeout=10) as response:
         data = json.load(response)["data"]
-    require(data["latestVersion"] == version and data["latestVersionCode"] == build and data["downloadUrl"] == url and data["forceUpdate"] is False, "App version API readback mismatch")
+    require(data["latestVersion"] == version and data["latestVersionCode"] == build and data["forceUpdate"] is False, "App version API readback mismatch")
+    entry = verify_download_entry(data["downloadUrl"], version, build)
     actual = origin_request(url)
     require(actual["bytes"] == spec["oldSize" if old else "size"] and actual["sha256"] == spec["oldSha256" if old else "sha256"], "Origin APK full readback mismatch")
-    return {**convergence, "versionApiVerified": True, "apk": actual}
+    return {**convergence, "versionApiVerified": True, "publicInstallerEntry": entry, "apk": actual}
 
 
 class ReleaseActivationError(RuntimeError):

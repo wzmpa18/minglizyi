@@ -157,6 +157,27 @@ class WorkerConvergenceTests(unittest.TestCase):
         self.assertEqual(len(error.exception.history[0]["rows"]), 2)
 
 
+class DownloadEntryTests(unittest.TestCase):
+    def test_static_fallback_needs_no_unrelated_network_request(self):
+        with patch.object(release, 'origin_request') as request:
+            self.assertEqual(release.verify_download_entry(release.apk_url('25.0.118', 2151), '25.0.118', 2151), release.apk_url('25.0.118', 2151))
+            request.assert_not_called()
+
+    def test_current_public_resolver_must_head_to_the_exact_static_signed_artifact(self):
+        entry = 'https://' + release.DOMAIN + '/api/public/app-version/android-installer/2151.apk'
+        with patch.object(release, 'origin_request', return_value={'status': 302, 'location': release.apk_url('25.0.118', 2151)}):
+            self.assertEqual(release.verify_download_entry(entry, '25.0.118', 2151), entry)
+        for bad in [{'status': 302, 'location': release.apk_url('25.0.117', 2150)}, {'status': 200, 'location': None}]:
+            with patch.object(release, 'origin_request', return_value=bad):
+                with self.assertRaises(ValueError): release.verify_download_entry(entry, '25.0.118', 2151)
+
+    def test_external_or_another_release_resolver_is_refused_without_request(self):
+        with patch.object(release, 'origin_request') as request:
+            for entry in ['https://outside.example/2151.apk', 'https://' + release.DOMAIN + '/api/public/app-version/android-installer/2150.apk']:
+                with self.assertRaises(ValueError): release.verify_download_entry(entry, '25.0.118', 2151)
+            request.assert_not_called()
+
+
 class MemoryFile:
     def __init__(self, data):
         self.data = data
