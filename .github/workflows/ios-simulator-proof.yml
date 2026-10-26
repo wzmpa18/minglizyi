@@ -13,6 +13,10 @@ on:
       - 'src/components/MedicalPreparationCard.tsx'
   workflow_dispatch:
     inputs:
+      marketing_only:
+        description: Capture the pinned 118 public learning marketing pages only
+        type: boolean
+        default: false
       private_only:
         description: Verify private vault and real native database only
         type: boolean
@@ -20,7 +24,12 @@ on:
 permissions:
   contents: read
 jobs:
+  latest-marketing:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.marketing_only }}
+    uses: ./.github/workflows/ios-learning-marketing.yml
+    secrets: inherit
   screenshots:
+    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.marketing_only) && !(github.event_name == 'push' && contains(github.event.head_commit.message, '[ios-marketing-qa]')) }}
     runs-on: macos-15
     timeout-minutes: 40
     env:

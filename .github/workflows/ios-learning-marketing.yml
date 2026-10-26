@@ -1,0 +1,97 @@
+name: Pinned 118 actual iOS learning marketing screenshots
+on:
+  workflow_dispatch:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  marketing:
+    runs-on: macos-15
+    timeout-minutes: 45
+    env:
+      PINNED_APPLICATION_SOURCE: ac13a433cfb5f5e8f2c2e3e0946f7181339fc079
+      QA_SOURCE: ${{ github.sha }}
+      NEXT_PUBLIC_STORE_CHANNEL: ios-full-learning
+      GEM_HOME: /tmp/guoxue-marketing-gems
+    defaults:
+      run:
+        working-directory: app-source
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: qa-source
+      - uses: actions/checkout@v4
+        with:
+          ref: ac13a433cfb5f5e8f2c2e3e0946f7181339fc079
+          path: app-source
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app-source/package-lock.json
+      - name: Check pinned application tree and overlay test files only
+        run: |
+          test "$(git rev-parse HEAD)" = "$PINNED_APPLICATION_SOURCE"
+          git diff --exit-code "$PINNED_APPLICATION_SOURCE" -- src public ios
+          for name in ios-marketing-session.cjs ios-marketing-proof.rb ios-marketing-screenshots.swift export-ios-marketing-attachments.py; do
+            cp "../qa-source/scripts/$name" "scripts/$name"
+          done
+          mkdir -p "$RUNNER_TEMP/guoxue-marketing-proof"
+          python3 - <<'PY'
+          import os,json,subprocess,pathlib
+          run=lambda *args:subprocess.check_output(args,text=True).strip()
+          pinned=os.environ['PINNED_APPLICATION_SOURCE']
+          proof={'source':pinned,'pinnedApplicationSource':pinned,'qaSource':os.environ['QA_SOURCE'],'actualSimulator':True,'physicalDevice':False,'syntheticInterface':False,'authMethod':'normal backend login with the existing review account; server entitlements unchanged','srcTree':run('git','rev-parse',pinned+':src'),'publicTree':run('git','rev-parse',pinned+':public'),'originalNativeTree':run('git','rev-parse',pinned+':ios'),'productSourceTreeUnchangedBeforeQAOverlay':True,'ciOnlyNativeInstrumentation':'WK startup writes only the real authenticated API session using existing auth storage keys; no password, mock content or entitlement override'}
+          pathlib.Path(os.environ['RUNNER_TEMP'],'guoxue-marketing-proof','source.json').write_text(json.dumps(proof,indent=2))
+          PY
+      - run: sudo xcode-select -s /Applications/Xcode_26.3.app
+      - run: npm ci
+      - name: Verify ordinary account access without logging private inputs
+        env:
+          GUOXUE_REVIEW_ACCOUNT: ${{ secrets.GUOXUE_REVIEW_ACCOUNT }}
+          GUOXUE_REVIEW_PASSWORD: ${{ secrets.GUOXUE_REVIEW_PASSWORD }}
+        run: node scripts/ios-marketing-session.cjs
+      - name: Build pinned web assets and isolated simulator test target
+        run: |
+          export GITHUB_SHA="$PINNED_APPLICATION_SOURCE"
+          npm run build
+          mkdir -p www
+          cp -R out/. www/
+          node scripts/write-native-marker.js
+          npx cap sync ios
+          gem install xcodeproj -v 1.28.1 --no-document
+          ruby scripts/ios-marketing-proof.rb
+          python3 - <<'PY'
+          import os,json,pathlib,hashlib
+          base=pathlib.Path('out');rows=[]
+          for p in sorted(base.rglob('*')):
+            if p.is_file() and p.suffix in ['.js','.css']:rows.append({'path':p.relative_to(base).as_posix(),'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()})
+          payload={'pinnedApplicationSource':os.environ['PINNED_APPLICATION_SOURCE'],'qaSource':os.environ['QA_SOURCE'],'files':rows,'treeSha256':hashlib.sha256(json.dumps(rows,sort_keys=True).encode()).hexdigest()}
+          pathlib.Path(os.environ['RUNNER_TEMP'],'guoxue-marketing-proof','compiled-ui-assets.json').write_text(json.dumps(payload,indent=2))
+          PY
+      - name: Capture five real learning feature categories on iPhone and iPad
+        run: |
+          set -e
+          for kind in iphone ipad; do
+            MODEL=$(xcrun simctl list devices available -j | python3 -c "import json,sys; d=[x for rows in json.load(sys.stdin)['devices'].values() for x in rows]; p=[x for x in d if ('iPhone' in x['name'] and 'Pro Max' in x['name'])] if '$kind'=='iphone' else [x for x in d if 'iPad Pro' in x['name'] and '13-inch' in x['name']]; print(p[0]['udid'] if p else '')")
+            test -n "$MODEL"
+            xcrun simctl boot "$MODEL" || true
+            xcrun simctl bootstatus "$MODEL" -b
+            xcrun simctl status_bar "$MODEL" override --time 09:41 --dataNetwork wifi --wifiMode active --wifiBars 3 --batteryState charged --batteryLevel 100
+            printf '%s' '学习笔记：先核对原文出处，再整理自己的理解。' | xcrun simctl pbcopy "$MODEL"
+            set +e
+            xcodebuild test -only-testing:GuoxueStudyUITests/GuoxueStudyMarketing/testLatestLearningMarketing -project ios/App/App.xcodeproj -scheme GuoxueScreenshots -configuration Debug -destination "id=$MODEL" -parallel-testing-enabled NO -derivedDataPath "$RUNNER_TEMP/guoxue-marketing-build" -resultBundlePath "$RUNNER_TEMP/marketing-$kind.xcresult" CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO
+            STATUS=$?
+            set -e
+            xcrun xcresulttool export attachments --path "$RUNNER_TEMP/marketing-$kind.xcresult" --output-path "$RUNNER_TEMP/marketing-raw-$kind"
+            python3 scripts/export-ios-marketing-attachments.py "$RUNNER_TEMP/marketing-raw-$kind" "$RUNNER_TEMP/guoxue-marketing-proof/$kind"
+            test "$STATUS" -eq 0
+            xcrun simctl shutdown "$MODEL"
+          done
+      - name: Preserve only explicitly named public screenshots and non-secret proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-ios-latest-learning-marketing
+          path: ${{ runner.temp }}/guoxue-marketing-proof/
+          retention-days: 2
