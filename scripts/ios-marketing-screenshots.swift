@@ -9,12 +9,20 @@ final class GuoxueStudyMarketing: XCTestCase {
         attachment.lifetime = .keepAlways
         add(attachment)
     }
+    private func insideContent(_ box:CGRect,_ screen:CGRect)->Bool{
+        return !box.isEmpty && box.minY>=screen.minY+65 && box.maxY<=screen.maxY-100
+    }
+    private func fixedTab(_ label:String,_ type:XCUIElement.ElementType)->Bool{
+        return type == .link && Set(["首页","发现","言道学堂","聊天","我的"]).contains(label)
+    }
     private func visible(_ element:XCUIElement,_ app:XCUIApplication)->Bool{
-        let box=element.frame,screen=app.frame
-        return element.exists && element.isHittable && !box.isEmpty && box.minY>=screen.minY+65 && box.maxY<=screen.maxY-100
+        return element.exists && element.isHittable && insideContent(element.frame,app.frame)
     }
     private func reveal(_ element:XCUIElement,_ app:XCUIApplication){
         XCTAssertTrue(element.waitForExistence(timeout:45),"The requested public learning control must exist")
+        guard !fixedTab(element.label,element.elementType) else{
+            XCTFail("Fixed bottom navigation must use tab(), never document scrolling");return
+        }
         for _ in 0..<40{
             if visible(element,app){return}
             let box=element.frame
@@ -40,6 +48,16 @@ final class GuoxueStudyMarketing: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for:[enabled],timeout:20),.completed,"Learning action must be enabled")
         target.tap()
     }
+    private func tab(_ name:String,_ app:XCUIApplication){
+        // Fixed bottom navigation is intentionally below the document viewport.
+        // Scrolling the document cannot move it into reveal()'s content bounds.
+        let target=app.links[name].firstMatch
+        let ready=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in
+            target.exists && target.isHittable && target.isEnabled && target.frame.intersects(app.frame)
+        },object:target)
+        XCTAssertEqual(XCTWaiter.wait(for:[ready],timeout:30),.completed,"The real bottom navigation must be visible and tappable")
+        target.tap()
+    }
     private func home(_ app:XCUIApplication){
         let consent=app.buttons["同意并继续"]
         let home=app.links["首页"].firstMatch
@@ -47,7 +65,7 @@ final class GuoxueStudyMarketing: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for:[ready],timeout:60),.completed,"The real application must finish mounting")
         if consent.exists && consent.isHittable{consent.tap()}
         XCTAssertTrue(home.waitForExistence(timeout:30))
-        home.tap()
+        tab("首页",app)
         XCTAssertTrue(app.links.matching(NSPredicate(format:"label CONTAINS %@","中医学习")).firstMatch.waitForExistence(timeout:30))
     }
     private func medical(_ app:XCUIApplication){
@@ -64,6 +82,16 @@ final class GuoxueStudyMarketing: XCTestCase {
         else{field.typeText("Study note: verify the source before summarizing.")}
         let done=app.toolbars.buttons["完成"].firstMatch
         if done.exists && done.isHittable{done.tap()}
+    }
+    func testFixedBottomNavigationLayoutGuard(){
+        let screen=CGRect(x:0,y:0,width:440,height:956)
+        let footer=CGRect(x:360,y:900,width:60,height:40)
+        XCTAssertFalse(insideContent(footer,screen))
+        XCTAssertTrue(footer.intersects(screen))
+        XCTAssertTrue(fixedTab("我的",.link))
+        XCTAssertTrue(fixedTab("首页",.link))
+        XCTAssertFalse(fixedTab("我的学习笔记",.staticText))
+        XCTAssertTrue(insideContent(CGRect(x:20,y:120,width:400,height:80),screen))
     }
     func testLatestLearningMarketing() throws{
         continueAfterFailure=false
@@ -84,8 +112,9 @@ final class GuoxueStudyMarketing: XCTestCase {
         reveal(lecture,app);lecture.tap()
         let annotation=app.buttons["摘录并批注"].firstMatch
         XCTAssertTrue(annotation.waitForExistence(timeout:60),"The installed real course must expose its original excerpts")
-        reveal(annotation,app)
+        reveal(app.staticTexts["人纪·针灸教程"].firstMatch,app)
         shot("ni-study","课程原课摘记",app)
+        reveal(annotation,app)
         annotation.tap()
         let comment=app.textViews["原文批注"].firstMatch
         XCTAssertTrue(comment.waitForExistence(timeout:30))
@@ -96,6 +125,7 @@ final class GuoxueStudyMarketing: XCTestCase {
         let publicNote=app.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","先核对原文出处")).firstMatch
         let fallbackNote=app.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","Study note: verify the source")).firstMatch
         if publicNote.exists{reveal(publicNote,app)}else{reveal(fallbackNote,app)}
+        reveal(app.staticTexts["我的学习笔记"].firstMatch,app)
         shot("ni-study","原文批注与个人笔记_公开演示文字",app)
 
         medical(app)
@@ -120,7 +150,7 @@ final class GuoxueStudyMarketing: XCTestCase {
         XCTAssertTrue(app.buttons["展开章节目录"].waitForExistence(timeout:30))
         shot("original-texts","古籍原文应用内阅读",app)
 
-        home(app);tap("我的",app)
+        home(app);tab("我的",app)
         let share=app.buttons.matching(NSPredicate(format:"label CONTAINS %@","学习分享码")).firstMatch
         if !share.waitForExistence(timeout:5){tap("学习分享",app)}
         reveal(share,app);share.tap()

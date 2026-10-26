@@ -80,7 +80,7 @@ jobs:
             xcrun simctl status_bar "$MODEL" override --time 09:41 --dataNetwork wifi --wifiMode active --wifiBars 3 --batteryState charged --batteryLevel 100
             printf '%s' '学习笔记：先核对原文出处，再整理自己的理解。' | xcrun simctl pbcopy "$MODEL"
             set +e
-            xcodebuild test -only-testing:GuoxueStudyUITests/GuoxueStudyMarketing/testLatestLearningMarketing -project ios/App/App.xcodeproj -scheme GuoxueScreenshots -configuration Debug -destination "id=$MODEL" -parallel-testing-enabled NO -derivedDataPath "$RUNNER_TEMP/guoxue-marketing-build" -resultBundlePath "$RUNNER_TEMP/marketing-$kind.xcresult" CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO
+            xcodebuild test -only-testing:GuoxueStudyUITests/GuoxueStudyMarketing/testFixedBottomNavigationLayoutGuard -only-testing:GuoxueStudyUITests/GuoxueStudyMarketing/testLatestLearningMarketing -project ios/App/App.xcodeproj -scheme GuoxueScreenshots -configuration Debug -destination "id=$MODEL" -parallel-testing-enabled NO -derivedDataPath "$RUNNER_TEMP/guoxue-marketing-build" -resultBundlePath "$RUNNER_TEMP/marketing-$kind.xcresult" CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO
             STATUS=$?
             set -e
             xcrun xcresulttool export attachments --path "$RUNNER_TEMP/marketing-$kind.xcresult" --output-path "$RUNNER_TEMP/marketing-raw-$kind"
