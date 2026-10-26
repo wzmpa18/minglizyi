@@ -1,6 +1,6 @@
 "use client";
 import { Capacitor, registerPlugin } from "@capacitor/core";
-import { get, put, remove } from "./storageManager";
+import { get, getStrict, put, remove } from "./storageManager";
 const Files=registerPlugin<{
  read(o:{key:string}):Promise<{value:string|null}>;
  write(o:{key:string;value:string}):Promise<{saved:boolean;bytes:number}>;
@@ -17,6 +17,11 @@ export async function writeOfflineFile(key:string,value:unknown):Promise<void> {
   await Files.write({key,value:JSON.stringify(value)});return;
  }
  await put("OFFLINE_PACK",`durable:${key}`,value);
+}
+/** Personal notes cannot treat a storage error as an empty document. */
+export async function readOfflineFileStrict<T>(key:string):Promise<T|null>{
+ if(Capacitor.isPluginAvailable("OfflineFiles"))return readOfflineFile<T>(key);
+ return getStrict<T>("OFFLINE_PACK",`durable:${key}`);
 }
 export async function removeOfflineFile(key:string):Promise<void> {
  if(Capacitor.isPluginAvailable("OfflineFiles")){await Files.remove({key});return;}

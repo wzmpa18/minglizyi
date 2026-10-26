@@ -2,7 +2,7 @@
 import {useEffect,useRef,useState} from "react";
 import Link from "next/link";
 import {listNiCourses,loadNiCourse,importNiCourse,importNiCourseCollection,NI_COURSE_IMPORT_MAX_BYTES,type NiCourse,type NiCourseSummary} from "@/lib/niTeacherCourses";
-import {readOfflineFile,writeOfflineFile} from "@/lib/durableOfflineStore";
+import {readOfflineFile,readOfflineFileStrict,writeOfflineFile} from "@/lib/durableOfflineStore";
 import {useAccountScope} from "@/lib/useAccountScope";
 import {LocalListenButton} from "@/components/LocalListenButton";
 import {prepareCompleteTcm} from "@/lib/completeTcmLearning";
@@ -54,10 +54,10 @@ function CourseReader({course,selected,select,scope}:{course:NiCourse;selected:s
  </>;
 }
 function PrivateChapterNotes({scope,chapterId}:{scope:string;chapterId:string}){
- const [text,setText]=useState(""),[ready,setReady]=useState(false),[message,setMessage]=useState(""),[saving,setSaving]=useState(false);
+ const [text,setText]=useState(""),[ready,setReady]=useState(false),[message,setMessage]=useState(""),[saving,setSaving]=useState(false),[readAttempt,setReadAttempt]=useState(0);
  const revision=useRef(0),pending=useRef(false),live=useRef(true);
  const key=`ni-note-${scope}-${chapterId}`;
- useEffect(()=>{let active=true;live.current=true;void readOfflineFile<{text:string}>(key).then(row=>{if(active){setText(typeof row?.text==="string"?row.text:"");setReady(true);}}).catch(()=>{if(active){setMessage("暂时无法读取本机笔记");setReady(true);}});return()=>{active=false;live.current=false;};},[key]);
- const save=async()=>{if(pending.current)return;const snapshot=text,atRevision=revision.current;pending.current=true;setSaving(true);try{const row={text:snapshot,updatedAt:Date.now()};await writeOfflineFile(key,row);const saved=await readOfflineFile<{text:string}>(key);if(saved?.text!==snapshot)throw Error();if(live.current)setMessage(revision.current===atRevision?"笔记已保存本机":"新修改尚未保存");}catch{if(live.current)setMessage("本次保存未完成，请保留输入后重试");}finally{pending.current=false;if(live.current)setSaving(false);}};
- return <section aria-label="我的学习笔记" style={{padding:16,borderRadius:12,background:"#fffdf4",border:"1px solid #ece4cd",marginTop:12}}><h3 style={{fontSize:16,margin:"0 0 10px"}}>我的学习笔记</h3><textarea aria-label="个人学习笔记" disabled={!ready} maxLength={20000} value={text} onChange={e=>{revision.current++;setText(e.target.value);setMessage("尚未保存");}} placeholder="记录这节的要点、疑问和原文对照…" style={{...input,minHeight:120,lineHeight:1.8,resize:"vertical"}}/><div style={{display:"flex",gap:10,alignItems:"center",marginTop:8}}><button style={button} disabled={!ready||saving} onClick={()=>void save()}>{saving?"正在保存…":"保存笔记"}</button><span role="status" style={{fontSize:12,color:"#827986"}}>{message}</span></div></section>;
+ useEffect(()=>{let active=true;live.current=true;setReady(false);void readOfflineFileStrict<{text:string}>(key).then(row=>{if(row!==null&&typeof row.text!=="string")throw Error("笔记格式无效");if(active){setText(row?.text||"");setReady(true);setMessage("");}}).catch(()=>{if(active){setMessage("暂时无法读取本机笔记，原笔记保留");setReady(false);}});return()=>{active=false;live.current=false;};},[key,readAttempt]);
+ const save=async()=>{if(!ready||pending.current)return;const snapshot=text,atRevision=revision.current;pending.current=true;setSaving(true);try{const row={text:snapshot,updatedAt:Date.now()};await writeOfflineFile(key,row);const saved=await readOfflineFileStrict<{text:string}>(key);if(saved?.text!==snapshot)throw Error();if(live.current)setMessage(revision.current===atRevision?"笔记已保存本机":"新修改尚未保存");}catch{if(live.current)setMessage("本次保存未完成，请保留输入后重试");}finally{pending.current=false;if(live.current)setSaving(false);}};
+ return <section aria-label="我的学习笔记" style={{padding:16,borderRadius:12,background:"#fffdf4",border:"1px solid #ece4cd",marginTop:12}}><h3 style={{fontSize:16,margin:"0 0 10px"}}>我的学习笔记</h3><textarea aria-label="个人学习笔记" disabled={!ready} maxLength={20000} value={text} onChange={e=>{revision.current++;setText(e.target.value);setMessage("尚未保存");}} placeholder="记录这节的要点、疑问和原文对照…" style={{...input,minHeight:120,lineHeight:1.8,resize:"vertical"}}/><div style={{display:"flex",gap:10,alignItems:"center",marginTop:8}}><button style={button} disabled={!ready||saving} onClick={()=>void save()}>{saving?"正在保存…":"保存笔记"}</button>{!ready&&message&&<button type="button" style={button} onClick={()=>setReadAttempt(value=>value+1)}>重新读取</button>}<span role="status" style={{fontSize:12,color:"#827986"}}>{message}</span></div></section>;
 }

@@ -244,6 +244,12 @@ export async function get<T = unknown>(zone: StorageZone, key: string): Promise<
   }
 }
 
+/** Editable drafts must distinguish an absent value from a failed read. */
+export async function getStrict<T>(zone:StorageZone,key:string):Promise<T|null>{
+  const value=await tx<T|undefined>(STORE_DATA,"readonly",store=>store.get(sk(zone,key)) as IDBRequest<T|undefined>);
+  return value??null;
+}
+
 export async function remove(zone: StorageZone, key: string): Promise<void> {
   await tx(STORE_DATA, "readwrite", s => s.delete(sk(zone, key)) as unknown as IDBRequest<undefined>);
   await tx(STORE_META, "readwrite", s => s.delete(sk(zone, key)) as unknown as IDBRequest<undefined>);
