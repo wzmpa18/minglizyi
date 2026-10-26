@@ -17,7 +17,7 @@ function validateAcceptanceContract(contract,{count,sectionCount,completionFlag}
  return true;
 }
 function validateOwnerRelease(auth,context){
- if(auth?.scope!=='owner-channel-specific-authorization'||auth?.doesNotAssertOverallComplete!==true||!auth?.ownerInstruction?.includes('完成苹果的提交')||auth.appId!=='6807592575'||auth.bundleId!=='com.yandaoguoxue.app'||auth.version!=='25.0.115'||!/^\d+$/.test(auth.build)||!/^[a-f0-9]{40}$/.test(auth.candidateSource)||context?.appId!==auth.appId||context?.bundleId!==auth.bundleId||context?.version!==auth.version||String(context?.build)!==auth.build||context?.candidateSource!==auth.candidateSource||!auth.actions?.includes(context?.action)||context?.sameSourceChecksPassed!==true)throw Error('禁止正式提审：专项负责人授权或固定候选核验不匹配');
+ if(auth?.scope!=='owner-channel-specific-authorization'||auth?.doesNotAssertOverallComplete!==true||!auth?.ownerInstruction?.includes('完成苹果的提交')||auth.appId!=='6807592575'||auth.bundleId!=='com.yandaoguoxue.app'||!/^\d+\.\d+\.\d+$/.test(auth.version)||!/^\d+$/.test(auth.build)||!/^[a-f0-9]{40}$/.test(auth.candidateSource)||context?.appId!==auth.appId||context?.bundleId!==auth.bundleId||context?.version!==auth.version||String(context?.build)!==auth.build||context?.candidateSource!==auth.candidateSource||!auth.actions?.includes(context?.action)||context?.sameSourceChecksPassed!==true)throw Error('禁止正式提审：专项负责人授权或固定候选核验不匹配');
  return true;
 }
 function assertFormalReviewReady(context){
