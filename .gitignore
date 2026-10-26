@@ -121,3 +121,8 @@ work-verify/
 !scripts/build-acupoint-overviews.py
 !scripts/enrich-ni-subject-links.py
 !scripts/build-complete-tcm-notes.py
+
+# Maintained, source-pinned acupuncture import and lossless bundle rebuild checks.
+!scripts/import-acupuncture-three-originals.py
+!scripts/import-acupuncture-three-originals.test.py
+!scripts/build-complete-tcm-notes.test.py

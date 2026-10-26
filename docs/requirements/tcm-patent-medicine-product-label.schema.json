@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:yandao:tcm:patent-medicine-product-label:v1",
+  "title": "中成药具体产品与说明书版本登记契约",
+  "description": "独立于药材和古方。产品按地区、批准文号、持有人、剂型规格区分；说明书按产品与修订版本独立保存。此契约不包含已核产品，不把结构校验当作药品身份或医学核验。生产导入器还须核验外键、来源原件SHA和审核权限。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "version", "products", "labels", "sources"],
+  "properties": {
+    "schema": {"const": "yandao.tcm.patent-product-label.v1"},
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "products": {"type": "array", "items": {"$ref": "#/$defs/product"}},
+    "labels": {"type": "array", "items": {"$ref": "#/$defs/label"}},
+    "sources": {"type": "array", "items": {"$ref": "#/$defs/source"}}
+  },
+  "$defs": {
+    "text": {"type": "string", "minLength": 1, "maxLength": 20000},
+    "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{1,119}$"},
+    "sha": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "review": {
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "reviewedAt", "reviewer"],
+      "properties": {
+        "status": {"enum": ["UNVERIFIED", "SOURCE_CHECKED", "PROFESSIONALLY_REVIEWED"]},
+        "reviewedAt": {"type": ["string", "null"], "format": "date-time"},
+        "reviewer": {"type": ["string", "null"]}
+      },
+      "allOf": [{"if": {"properties": {"status": {"const": "UNVERIFIED"}}}, "then": {"properties": {"reviewedAt": {"type": "null"}, "reviewer": {"type": "null"}}}, "else": {"properties": {"reviewedAt": {"type": "string", "format": "date-time"}, "reviewer": {"$ref": "#/$defs/text"}}}}]
+    },
+    "field": {
+      "description": "保留具体说明书原句；未核验不能填成无风险。说明书原写尚不明确与尚未取得资料分开。",
+      "type": "object", "additionalProperties": false,
+      "required": ["status", "value", "sourceId"],
+      "properties": {
+        "status": {"enum": ["VERIFIED_LABEL_TEXT", "LABEL_STATES_UNKNOWN", "NOT_VERIFIED"]},
+        "value": {"type": ["string", "null"], "maxLength": 20000},
+        "sourceId": {"type": ["string", "null"]}
+      },
+      "allOf": [
+        {"if": {"properties": {"status": {"const": "NOT_VERIFIED"}}}, "then": {"properties": {"value": {"type": "null"}, "sourceId": {"type": "null"}}}, "else": {"properties": {"value": {"$ref": "#/$defs/text"}, "sourceId": {"$ref": "#/$defs/id"}}}},
+        {"if": {"properties": {"status": {"const": "LABEL_STATES_UNKNOWN"}}}, "then": {"properties": {"value": {"type": "string", "pattern": "尚不明[确確]"}}}}
+      ]
+    },
+    "product": {
+      "type": "object", "additionalProperties": false,
+      "required": ["productId", "jurisdiction", "approvalNo", "genericName", "brandName", "mah", "manufacturer", "dosageForm", "strength", "approvalStatus", "identitySourceId", "identityReview"],
+      "properties": {
+        "productId": {"$ref": "#/$defs/id"}, "jurisdiction": {"enum": ["CN", "TW", "HK", "MO", "OTHER"]},
+        "approvalNo": {"$ref": "#/$defs/text"}, "genericName": {"$ref": "#/$defs/text"},
+        "brandName": {"type": ["string", "null"]}, "mah": {"$ref": "#/$defs/text"}, "manufacturer": {"$ref": "#/$defs/text"},
+        "dosageForm": {"$ref": "#/$defs/text"}, "strength": {"$ref": "#/$defs/text"},
+        "approvalStatus": {"enum": ["APPROVED", "WITHDRAWN", "SUSPENDED", "NOT_VERIFIED"]},
+        "identitySourceId": {"$ref": "#/$defs/id"}, "identityReview": {"$ref": "#/$defs/review"}
+      }
+    },
+    "label": {
+      "type": "object", "additionalProperties": false,
+      "required": ["labelId", "productId", "labelRevision", "labelSourceId", "labelOriginalSha256", "sections", "review", "publicationStatus"],
+      "properties": {
+        "labelId": {"$ref": "#/$defs/id"}, "productId": {"$ref": "#/$defs/id"}, "labelRevision": {"$ref": "#/$defs/text"},
+        "labelSourceId": {"$ref": "#/$defs/id"}, "labelOriginalSha256": {"$ref": "#/$defs/sha"},
+        "publicationStatus": {"enum": ["DRAFT", "REVIEWED_REFERENCE", "PUBLISHED"]}, "review": {"$ref": "#/$defs/review"},
+        "sections": {
+          "type": "object", "additionalProperties": false,
+          "required": ["ingredients", "excipients", "indications", "dosage", "contraindications", "precautions", "adverseReactions", "interactions", "specialPopulations", "storage", "shelfLife", "prescriptionStatus"],
+          "properties": {
+            "ingredients": {"$ref": "#/$defs/field"}, "excipients": {"$ref": "#/$defs/field"}, "indications": {"$ref": "#/$defs/field"}, "dosage": {"$ref": "#/$defs/field"},
+            "contraindications": {"$ref": "#/$defs/field"}, "precautions": {"$ref": "#/$defs/field"}, "adverseReactions": {"$ref": "#/$defs/field"}, "interactions": {"$ref": "#/$defs/field"},
+            "specialPopulations": {"$ref": "#/$defs/field"}, "storage": {"$ref": "#/$defs/field"}, "shelfLife": {"$ref": "#/$defs/field"}, "prescriptionStatus": {"$ref": "#/$defs/field"}
+          }
+        }
+      }
+    },
+    "source": {
+      "type": "object", "additionalProperties": false,
+      "required": ["sourceId", "kind", "url", "sha256", "retrievedAt", "rightsStatus"],
+      "properties": {
+        "sourceId": {"$ref": "#/$defs/id"}, "kind": {"enum": ["NMPA_REGISTRY", "MAH_OFFICIAL_LABEL", "NMPA_LABEL_REVISION", "OTHER_JURISDICTION_REGISTRY"]},
+        "url": {"type": "string", "format": "uri", "pattern": "^https://"}, "sha256": {"$ref": "#/$defs/sha"}, "retrievedAt": {"type": "string", "format": "date-time"},
+        "rightsStatus": {"enum": ["REFERENCE_ONLY", "APPROVED_FOR_DISTRIBUTION", "PUBLIC_DOMAIN_OR_OPEN_LICENSE", "PENDING_REVIEW"]}
+      }
+    }
+  }
+}

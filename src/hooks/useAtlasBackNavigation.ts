@@ -1,13 +1,8 @@
 "use client";
 import {useCallback,useEffect,useRef} from "react";
 
-const MARKER="__yandaoAtlasScene",SCOPE="__yandaoStudyScope";
-const normalizeScope=(value:string):string|null=>{
- if(!value.startsWith("/")||value.startsWith("//"))return null;
- const clean=value.split("#",1)[0],index=clean.indexOf("?"),path=(index<0?clean:clean.slice(0,index)).replace(/\/+$/,"")||"/",query=new URLSearchParams(index<0?"":clean.slice(index+1)).toString();
- return path+(query?"?"+query:"");
-};
-const currentScope=()=>normalizeScope(window.location.pathname+window.location.search);
+import {STUDY_MARKER as MARKER,STUDY_SCOPE as SCOPE,STUDY_INDEX as INDEX,normalizedStudyScope,ownedStudyEntry,isAtlasModelScope,clearAtlasDetailNavigation,consumeAtlasDetailStamp,atlasDetailBaseState} from "@/lib/studyNavigationProof";
+const currentScope=()=>normalizedStudyScope(window.location.pathname+window.location.search);
 /** One reversible scene entry; nested image dialogs keep their own back step. */
 export function useAtlasBackNavigation(stepBack:()=>boolean,scope?:string){
  const step=useRef(stepBack),armed=useRef(false),waiting=useRef(false),owner=useRef(""),ownerScope=useRef<string|null>(null),activeScope=useRef<string|null>(null);step.current=stepBack;
@@ -21,14 +16,22 @@ export function useAtlasBackNavigation(stepBack:()=>boolean,scope?:string){
  useEffect(()=>{
   // An owner per hook instance distinguishes our scene entry from an older
   // scene and from child popups which copy the current history state.
-  const here=currentScope(),expected=scope===undefined?(window.location.pathname.replace(/\/+$/,"")==="/zhongyi/anatomy3d"?here:null):normalizeScope(scope);
+  const here=currentScope(),expected=scope===undefined?(window.location.pathname.replace(/\/+$/,"")==="/zhongyi/anatomy3d"?here:null):normalizedStudyScope(scope);
   activeScope.current=expected;
   if(ownerScope.current!==expected||!owner.current){owner.current=Date.now().toString(36)+"-"+Math.random().toString(36).slice(2);ownerScope.current=expected;}
   const matches=()=>!!expected&&currentScope()===expected;
+  if(expected&&matches())try{
+   if(isAtlasModelScope(expected))clearAtlasDetailNavigation(window.sessionStorage);
+   else{const proof=consumeAtlasDetailStamp(window.sessionStorage,expected,window.history.length);if(proof)window.history.replaceState(atlasDetailBaseState(window.history.state,proof),"");}
+  }catch{/* A normal controlled parent remains available without private storage. */}
   const arm=()=>{
    if(!matches()){armed.current=false;waiting.current=false;return;}
-   try{if(window.history.state?.[MARKER]!==owner.current||window.history.state?.[SCOPE]!==expected)window.history.pushState({...window.history.state,[MARKER]:owner.current,[SCOPE]:expected},"");armed.current=true;}
-   catch{armed.current=false;}
+   try{
+    const existing=ownedStudyEntry(window.history.state,expected!,window.history.length);
+    if(existing&&window.history.length>1){window.history.replaceState({...window.history.state,[MARKER]:owner.current,[SCOPE]:expected,[INDEX]:existing.index},"");}
+    else{window.history.pushState({...window.history.state,[MARKER]:owner.current,[SCOPE]:expected,[INDEX]:0},"");window.history.replaceState({...window.history.state,[INDEX]:window.history.length-1},"");}
+    armed.current=true;
+   }catch{armed.current=false;}
    waiting.current=false;
   };
   arm();

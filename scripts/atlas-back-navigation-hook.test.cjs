@@ -1,16 +1,18 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
+const proofModule={exports:{}};vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/studyNavigationProof.ts','utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,{exports:proofModule.exports,URLSearchParams,crypto:require('node:crypto').webcrypto,Uint8Array,Date});const proof=proofModule.exports;
 
 function browser({state={__NA:true,tree:{route:'atlas'}},url="/zhongyi/anatomy3d/",throwPush=false,throwBack=false}={}){
- const events=new Map(),rows=[{state,url}],pending=[];let at=0;
+ const events=new Map(),rows=[{state,url}],pending=[],storage=new Map();let at=0;
  const window={location:{pathname:'/zhongyi/anatomy3d/',search:''},addEventListener:(name,fn)=>{const list=events.get(name)||new Set();list.add(fn);events.set(name,list);},removeEventListener:(name,fn)=>events.get(name)?.delete(fn),dispatchEvent:event=>{for(const fn of [...events.get(event.type)||[]])fn(event);return true;}};
- const navigate=row=>{const url=new URL(row.url,'https://qa.invalid');window.location.pathname=url.pathname;window.location.search=url.search;};
+ window.sessionStorage={getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,String(value)),removeItem:key=>storage.delete(key)};
+  const navigate=row=>{const url=new URL(row.url,'https://qa.invalid');window.location.pathname=url.pathname;window.location.search=url.search;};
  window.history={get state(){return rows[at].state;},get length(){return rows.length;},pushState(state,_title,url){if(throwPush)throw Error('history unavailable');rows.splice(at+1);rows.push({state:structuredClone(state),url:url||rows[at].url});at++;navigate(rows[at]);},replaceState(state,_title,url){rows[at]={state:structuredClone(state),url:url||rows[at].url};navigate(rows[at]);},back(){if(throwBack)throw Error('back unavailable');if(!at)return;pending.push(()=>{at--;navigate(rows[at]);window.dispatchEvent({type:'popstate',state:rows[at].state});});}};
  navigate(rows[at]);
- return {window,rows,flush(){while(pending.length)pending.shift()();},get pending(){return pending.length;},listeners:name=>events.get(name)?.size||0};
+ return {window,rows,get index(){return at;},flush(){while(pending.length)pending.shift()();},get pending(){return pending.length;},listeners:name=>events.get(name)?.size||0};
 }
 function mounted(env,step,scope){const refs=[],callbacks=[];let index=0,effect,cleanup,currentScope=scope;
  const react={useRef:value=>{const id=index++;return refs[id]||(refs[id]={current:value});},useEffect:fn=>{effect=fn;},useCallback:fn=>fn};
- const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/hooks/useAtlasBackNavigation.ts','utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,{exports,window:env.window,require:name=>{if(name==='react')return react;throw Error(name);},Math,Date,URLSearchParams});
+ const exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/hooks/useAtlasBackNavigation.ts','utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,{exports,window:env.window,require:name=>{if(name==='react')return react;if(name==='@/lib/studyNavigationProof')return proof;throw Error(name);},Math,Date,URLSearchParams});
  const render=next=>{index=0;callbacks.push(exports.useAtlasBackNavigation(next,currentScope));return callbacks.at(-1);};let back=render(step);cleanup=effect();return{get back(){return back;},rerender(next,nextScope=currentScope){if(nextScope!==currentScope){cleanup();currentScope=nextScope;back=render(next);cleanup=effect();}else back=render(next);},strictRemount(){cleanup();cleanup=effect();},unmount(){cleanup();}};
 }
 
@@ -55,4 +57,29 @@ test('explicit reader scope protects a direct detail link and never handles a di
 test('default anatomy scope includes its actual return query and nested reader popups retain the reader',()=>{
  const model=browser({url:'/zhongyi/anatomy3d/?atlasReturn=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'});let modelSteps=0;const modelHook=mounted(model,()=>{modelSteps++;return false;});modelHook.back();model.flush();assert.equal(modelSteps,1);modelHook.unmount();
  const detail=browser({url:'/zhongyi/meridian/?acupoint=SP14'});let readerSteps=0;const detailHook=mounted(detail,()=>{readerSteps++;return false;},'/zhongyi/meridian/?acupoint=SP14');detail.window.history.pushState({...detail.window.history.state,__popup:'1'},'');detail.window.history.back();detail.flush();assert.equal(readerSteps,0);detailHook.back();detail.flush();assert.equal(readerSteps,1);detailHook.unmount();
+});
+
+
+test('three real hook detail trips reuse the model entry and consume a proven detail base once',()=>{
+ const env=browser(),modelScope='/zhongyi/anatomy3d/',token='a'.repeat(32),detailScope='/zhongyi/meridian/?acupoint=中府&side=-1&atlasReturn='+token;
+ let exited=0,hook=mounted(env,()=>{exited++;return false;});
+ for(let round=0;round<3;round++){
+  env.window.history.replaceState({...env.window.history.state,[proof.ATLAS_MODEL_TOKEN]:token},'');
+  assert.equal(proof.stampAtlasDetail(env.window.sessionStorage,{token,detailHref:detailScope,modelScope,state:env.window.history.state,historyLength:env.window.history.length}),true);
+  hook.unmount();env.window.history.pushState({__NA:true,tree:{route:'detail'}},'',detailScope);
+  let fallback=0;const reader=mounted(env,()=>{const p=proof.takeAtlasDetailReturn(env.window.sessionStorage,env.window.history.state,detailScope,env.window.history.length);env.window.history.replaceState(proof.withoutStudyNavigation(env.window.history.state),'');if(p)env.window.history.back();else fallback++;return false;},detailScope);
+  assert.equal(env.index,3);assert.equal(env.window.history.length,4);assert.ok(env.window.history.state[proof.DETAIL_PROOF]);
+  // The image popup has its own hop and must not consume the reader proof.
+  env.window.history.pushState({...env.window.history.state,__popup:'1'},'');env.window.history.back();env.flush();assert.equal(env.index,3);assert.equal(fallback,0);
+  reader.back();env.flush();assert.equal(env.index,1);assert.equal(fallback,0);reader.unmount();
+  assert.equal(proof.atlasModelTokenFromState(env.window.history.state,modelScope,env.window.history.length),token);
+  hook=mounted(env,()=>{exited++;return false;});assert.equal(env.index,1);assert.ok(env.window.history.length<=5);assert.equal(exited,0);
+ }
+ hook.back();env.flush();assert.equal(exited,1);assert.equal(env.index,0);hook.unmount();
+});
+
+test('an unproven direct reader back stays on its own base for a controlled parent replace',()=>{
+ const env=browser({url:'/zhongyi/meridian/?acupoint=中府&atlasReturn='+'b'.repeat(32)});let fallback=0;
+ const hook=mounted(env,()=>{assert.equal(proof.takeAtlasDetailReturn(env.window.sessionStorage,env.window.history.state,env.window.location.pathname+env.window.location.search,env.window.history.length),null);fallback++;return false;},env.window.location.pathname+env.window.location.search);
+ hook.back();env.flush();assert.equal(env.index,0);assert.equal(fallback,1);hook.unmount();
 });

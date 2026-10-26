@@ -337,7 +337,7 @@ jobs:
       - run: node --test scripts/auth-session-refresh.test.cjs
       - run: node --test scripts/static-privacy.test.cjs scripts/builtin-learning-videos.test.cjs
       - run: node --experimental-strip-types --test scripts/atlas-interaction.test.cjs
-      - run: node --experimental-strip-types --test scripts/atlas-clothing.test.cjs scripts/atlas-scene-gestures.test.cjs scripts/atlas-navigation.test.cjs scripts/atlas-back-navigation-hook.test.cjs
+      - run: node --experimental-strip-types --test scripts/atlas-clothing.test.cjs scripts/atlas-scene-gestures.test.cjs scripts/atlas-navigation.test.cjs scripts/atlas-back-navigation-hook.test.cjs scripts/study-navigation-proof.test.cjs
       - run: node --test scripts/promotion-policy.test.cjs scripts/company-download.test.cjs
       - run: node --experimental-strip-types --test scripts/atlas-sidebar.test.cjs scripts/atlas-point-labels.test.cjs scripts/acupoint-photos.test.cjs
       - run: npx tsx --test scripts/interface-controls.test.tsx scripts/ziwei-board-layout.test.tsx
@@ -405,6 +405,8 @@ jobs:
       - run: node --test scripts/acupoint-overview.test.cjs scripts/atlas-surface-study.test.cjs scripts/ni-teacher-courses.test.cjs scripts/private-learning-note-read.test.cjs
       - run: node --test scripts/ni-lesson-study.test.cjs scripts/dong-source-audit.test.cjs scripts/learning-share.test.cjs
       - run: python scripts/import-ni-teacher-courses.test.py
+      - run: python scripts/import-acupuncture-three-originals.test.py
+      - run: python scripts/build-complete-tcm-notes.test.py
       - name: Verify discussion HTTP authentication and moderation against production dependency versions
         run: |
           npm install --prefix "$RUNNER_TEMP/study-http-deps" --no-save --package-lock=false express@4.22.2 better-sqlite3@13.0.3 jsonwebtoken@9.0.3 bcrypt@6.0.0 fake-indexeddb@6.2.4

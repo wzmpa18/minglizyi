@@ -24,6 +24,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { maskEmail, maskContact } = require('./adminPrivacy');
 
 const DATA_DIR = path.join(__dirname, 'data');
 const CONFIG_FILE = path.join(DATA_DIR, 'partner_config.json');
@@ -952,8 +953,8 @@ function adminPartnerList(opts) {
     const commission = db.prepare("SELECT COALESCE(SUM(commission_cents),0) s FROM commission_records WHERE inviter_user_id = ? AND record_type IN ('PARTNER_COMMISSION','PARTNER_NURTURE') AND status != 'REVERSED'").get(p.user_id).s;
     const u = db.prepare('SELECT phone, email, created_at FROM users WHERE user_id = ?').get(p.user_id);
     return {
-      userId: String(p.user_id), nickname: p.nickname || '', realName: p.real_name, contact: p.contact,
-      phone: u ? u.phone : '', email: u ? u.email : '',
+      userId: String(p.user_id), nickname: p.nickname || '', realName: p.real_name, contact: maskContact(p.contact),
+      phone: maskPhone(u ? u.phone : ''), email: maskEmail(u ? u.email : ''),
       level: p.level, status: p.status,
       referrerUserId: p.referrer_partner_id ? String(p.referrer_partner_id) : '',
       referrerName: p.ref_name || '',
@@ -1072,7 +1073,7 @@ function adminUserTree(userId) {
     });
   };
   return {
-    user: { userId: String(user.user_id), nickname: user.nickname || '', phone: user.phone || '', createdAt: user.created_at },
+    user: { userId: String(user.user_id), nickname: user.nickname || '', phone: maskPhone(user.phone), createdAt: user.created_at },
     upline: upline.reverse(),
     downline: buildDown(uid, 0),
   };
@@ -1147,7 +1148,7 @@ function adminPartnerUsers(partnerId, opts) {
   return {
     total, page, size,
     users: rows.map(r => ({
-      userId: String(r.user_id), nickname: r.nickname || '', phone: r.phone || '', email: r.email || '',
+      userId: String(r.user_id), nickname: r.nickname || '', phone: maskPhone(r.phone), email: maskEmail(r.email),
       registeredAt: r.created_at, lastLoginAt: r.last_login_at || '',
       isPaid: Number(r.consume) > 0, consumeYuan: (Number(r.consume) || 0).toFixed(2),
     })),

@@ -8,7 +8,7 @@ import animationManifest from "../../../../public/assets/meridians/ANIMATION-MAN
 
 import { SectionGate } from "@/components/SectionGate";
 
-import { useState, useEffect, useMemo, Suspense, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef, Suspense, useCallback, type MouseEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   MERIDIANS_DB, ACUPOINTS_DB,
@@ -28,6 +28,7 @@ import { useToolBack } from "@/lib/useToolBack";
 import {atlasReturnHref,validAtlasToken} from "@/components/anatomy-atlas/atlasNavigation";
 import {useAtlasBackNavigation} from "@/hooks/useAtlasBackNavigation";
 import {studyParentHref} from "@/lib/studyParentNavigation";
+import {takeAtlasDetailReturn,withoutStudyNavigation,clearAtlasDetailNavigation} from "@/lib/studyNavigationProof";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import { AcupointStudyDiscussion } from "@/components/AcupointStudyDiscussion";
@@ -707,11 +708,12 @@ function AcupointListPage({ meridianName }: { meridianName: string }) {
 }
 
 // ==================== 穴位详情页（标准经络） ====================
-function AcupointDetailPage({ acupointName }: { acupointName: string }) {
+function AcupointDetailPage({ acupointName,onBack }: { acupointName: string;onBack:()=>void }) {
   const router = useRouter();
   const pointSearch = useSearchParams();
   const pointSide = pointSearch.get("side") === "-1" ? -1 : 1;
   const modelToken=pointSearch.get("atlasReturn");
+  const returnToStudy=(event:MouseEvent<HTMLAnchorElement>)=>{if(event.button===0&&!event.metaKey&&!event.ctrlKey&&!event.shiftKey&&!event.altKey){event.preventDefault();onBack();}};
   const [dbLoaded, setDbLoaded] = useState(false);
   const [aiData, setAiData] = useState<any>(null);
   const [scraping, setScraping] = useState(false);
@@ -768,7 +770,7 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
     return (
       <div style={{ maxWidth: "720px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f8f5fc", padding: "80px 20px", textAlign: "center" }}>
         <p style={{ color: "#999", marginBottom: "20px" }}>未找到该穴位</p>
-        <Link href={validAtlasToken(modelToken)?atlasReturnHref(modelToken):"/zhongyi/meridian/"} style={{ padding: "8px 20px", borderRadius: "20px", backgroundColor: BRAND, color: "white" }}>{validAtlasToken(modelToken)?"返回人体":"返回列表"}</Link>
+        <Link data-page-back="1" onClick={returnToStudy} href={validAtlasToken(modelToken)?atlasReturnHref(modelToken):"/zhongyi/meridian/"} style={{ padding: "8px 20px", borderRadius: "20px", backgroundColor: BRAND, color: "white" }}>{validAtlasToken(modelToken)?"返回人体":"返回列表"}</Link>
       </div>
     );
   }
@@ -780,7 +782,7 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           
           <h1 style={{ fontSize: "16px", fontWeight: "bold", margin: 0, flex: 1 }}>{acupoint.name}</h1>
-          <Link data-page-back="1" href={validAtlasToken(modelToken)?atlasReturnHref(modelToken,acupoint.name,pointSide):`/zhongyi/meridian/?meridian=${encodeURIComponent(acupoint.meridian)}`} replace style={{color:"white",fontSize:13,padding:"8px 4px"}}>{validAtlasToken(modelToken)?"‹ 返回人体":"‹ 返回经络"}</Link>
+          <Link data-page-back="1" onClick={returnToStudy} href={validAtlasToken(modelToken)?atlasReturnHref(modelToken,acupoint.name,pointSide):`/zhongyi/meridian/?meridian=${encodeURIComponent(acupoint.meridian)}`} replace style={{color:"white",fontSize:13,padding:"8px 4px"}}>{validAtlasToken(modelToken)?"‹ 返回人体":"‹ 返回经络"}</Link>
           <span style={{ fontSize: "11px", padding: "3px 8px", borderRadius: "4px", backgroundColor: "rgba(255,255,255,0.2)" }}>{acupoint.code}</span>
         </div>
       </div>
@@ -792,7 +794,7 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
       <AcupointPhotoGallery code={acupoint.code.replace(/^DU/, "GV").replace(/^RN/, "CV")} />
       {getMeridianByName(acupoint.meridian) && <section aria-label="本穴所在经络动图" style={{margin:12}}><p style={{fontSize:12,color:"#666"}}>{acupoint.meridian} · 循行对照</p><MeridianChart meridianName={acupoint.meridian} compact /></section>}
 
-      <Link href={atlasReturnHref(modelToken,acupoint.name,pointSide)} replace={validAtlasToken(modelToken)} style={{display:"block",margin:12,padding:12,borderRadius:10,color:BRAND,background:BRAND_BG,fontWeight:700}}>{validAtlasToken(modelToken)?"返回人体，继续观察":"在3D参考人体中对照"}{validAtlasToken(modelToken)?"":acupoint.name} →</Link>
+      <Link onClick={validAtlasToken(modelToken)?returnToStudy:undefined} href={atlasReturnHref(modelToken,acupoint.name,pointSide)} replace={validAtlasToken(modelToken)} style={{display:"block",margin:12,padding:12,borderRadius:10,color:BRAND,background:BRAND_BG,fontWeight:700}}>{validAtlasToken(modelToken)?"返回人体，继续观察":"在3D参考人体中对照"}{validAtlasToken(modelToken)?"":acupoint.name} →</Link>
 
       <details id="point-more" style={{margin:12,scrollMarginTop:100}}><summary style={{padding:12,borderRadius:12,background:"white",color:BRAND,cursor:"pointer"}}>更多定位、操作与本库整理资料</summary>
       {/* 既有静态整理资料，尚未逐条与现行标准校对。 */}
@@ -1151,14 +1153,20 @@ function DongAcupointDetailPage({ acupointName }: { acupointName: string }) {
 // ==================== 主组件 ====================
 function MeridianPageInner() {
   const searchParams = useSearchParams();
-  const router=useRouter(),scopeSearch=searchParams.toString();
-  useAtlasBackNavigation(()=>{router.replace(studyParentHref("/zhongyi/meridian/",scopeSearch));return false;},"/zhongyi/meridian/"+(scopeSearch?"?"+scopeSearch:""));
+  const router=useRouter(),scopeSearch=searchParams.toString(),returning=useRef(false);
+  const scope="/zhongyi/meridian/"+(scopeSearch?"?"+scopeSearch:"");
+  useEffect(()=>{returning.current=false;},[scope]);
+  const back=useAtlasBackNavigation(()=>{
+    if(returning.current)return false;returning.current=true;
+    try{const proof=takeAtlasDetailReturn(sessionStorage,window.history.state,scope,window.history.length);window.history.replaceState(withoutStudyNavigation(window.history.state),"");if(proof){window.history.back();return false;}clearAtlasDetailNavigation(sessionStorage);}catch{/* Unknown or unavailable history uses the controlled study parent. */}
+    router.replace(studyParentHref("/zhongyi/meridian/",scopeSearch));return false;
+  },scope);
   const meridianName = searchParams.get("meridian");
   const acupointName = searchParams.get("acupoint");
   const dongName = searchParams.get("dong");
 
   if (dongName) return <DongAcupointDetailPage key={dongName} acupointName={dongName} />;
-  if (acupointName) return <AcupointDetailPage key={acupointName} acupointName={acupointName} />;
+  if (acupointName) return <AcupointDetailPage key={acupointName} acupointName={acupointName} onBack={back} />;
   if (meridianName) return <AcupointListPage meridianName={meridianName} />;
   return <MeridianListPage />;
 }
