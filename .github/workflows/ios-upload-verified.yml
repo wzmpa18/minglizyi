@@ -69,7 +69,11 @@ jobs:
       - name: Verify exact signed package
         run: |
           python3 <<'PY'
-          import os,pathlib,plistlib,zipfile,hashlib
+          import os,pathlib,plistlib,zipfile,hashlib,json,base64,subprocess,re
+          run=json.loads((pathlib.Path(os.environ['RUNNER_TEMP'])/'source-run.json').read_text())
+          metadata=json.loads(subprocess.check_output(['gh','api','repos/'+os.environ['GITHUB_REPOSITORY']+'/contents/package.json?ref='+run['head_sha']]))
+          expected_version=json.loads(base64.b64decode(metadata['content']))['version'].removeprefix('v')
+          assert re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+',expected_version)
           files=list((pathlib.Path(os.environ['RUNNER_TEMP'])/'verified-ipa').glob('*.ipa'))
           assert len(files)==1
           ipa=files[0]; assert hashlib.sha256(ipa.read_bytes()).hexdigest()==os.environ['EXPECTED_SHA']
@@ -78,14 +82,17 @@ jobs:
             assert len(plists)==1
             info=plistlib.loads(z.read(plists[0]))
             assert info['CFBundleIdentifier']=='com.yandaoguoxue.app'
-            assert info['CFBundleShortVersionString']=='25.0.116'
+            assert info['CFBundleShortVersionString']==expected_version
             assert info['CFBundleVersion']==os.environ['EXPECTED_BUILD']
+            web=[name for name in z.namelist() if name.endswith('/public/version.json')]
+            assert len(web)==1 and json.loads(z.read(web[0]))['version']=='v'+expected_version
             if int(info['CFBundleVersion']) >= 16:
               widgets=[p for p in z.namelist() if p.endswith('.appex/Info.plist') and '/PlugIns/' in p]
               assert len(widgets)==1, 'Missing WidgetKit extension'
               widget=plistlib.loads(z.read(widgets[0]))
               assert widget['CFBundleIdentifier']=='com.yandaoguoxue.app.CalendarWidget'
               assert widget['CFBundleVersion']==info['CFBundleVersion']
+              assert widget['CFBundleShortVersionString']==expected_version
 
             assert info.get('SKIncludeConsumableInAppPurchaseHistory') is True
           print('Verified package identity, build and SHA-256')
