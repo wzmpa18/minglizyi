@@ -468,7 +468,7 @@ function MeridianListPage() {
   };
 
   return (
-    <div style={{ maxWidth: "420px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f8f5fc", paddingBottom: "80px" }}>
+    <div style={{ maxWidth: "720px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f8f5fc", paddingBottom: "80px" }}>
       <div style={{ position: "sticky", top: 0, zIndex: 100, background: `linear-gradient(135deg, ${BRAND} 0%, ${BRAND_LIGHT} 100%)`, padding: "12px 16px", color: "white" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
           
@@ -626,7 +626,7 @@ function AcupointListPage({ meridianName }: { meridianName: string }) {
 
   if (!meridian) {
     return (
-      <div style={{ maxWidth: "420px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f8f5fc", padding: "80px 20px", textAlign: "center" }}>
+      <div style={{ maxWidth: "720px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f8f5fc", padding: "80px 20px", textAlign: "center" }}>
         <p style={{ color: "#999", marginBottom: "20px" }}>未找到该经络</p>
         <button onClick={() => router.back()} style={{ padding: "8px 20px", borderRadius: "20px", backgroundColor: BRAND, color: "white", border: "none", cursor: "pointer" }}>返回经络列表</button>
       </div>
@@ -639,7 +639,7 @@ function AcupointListPage({ meridianName }: { meridianName: string }) {
   };
 
   return (
-    <div style={{ maxWidth: "420px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f8f5fc", paddingBottom: "80px" }}>
+    <div style={{ maxWidth: "720px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f8f5fc", paddingBottom: "80px" }}>
       <div style={{ position: "sticky", top: 0, zIndex: 100, background: `linear-gradient(135deg, ${BRAND} 0%, ${BRAND_LIGHT} 100%)`, padding: "12px 16px", color: "white" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           
@@ -757,7 +757,7 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
 
   if (!acupoint) {
     return (
-      <div style={{ maxWidth: "420px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f8f5fc", padding: "80px 20px", textAlign: "center" }}>
+      <div style={{ maxWidth: "720px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f8f5fc", padding: "80px 20px", textAlign: "center" }}>
         <p style={{ color: "#999", marginBottom: "20px" }}>未找到该穴位</p>
         <button onClick={() => router.back()} style={{ padding: "8px 20px", borderRadius: "20px", backgroundColor: BRAND, color: "white", border: "none", cursor: "pointer" }}>返回列表</button>
       </div>
@@ -775,7 +775,7 @@ function AcupointDetailPage({ acupointName }: { acupointName: string }) {
   ];
 
   return (
-    <div style={{ maxWidth: "420px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f8f5fc", paddingBottom: "120px" }}>
+    <div style={{ maxWidth: "720px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f8f5fc", paddingBottom: "120px" }}>
       <div style={{ position: "sticky", top: 0, zIndex: 100, background: `linear-gradient(135deg, ${BRAND} 0%, ${BRAND_LIGHT} 100%)`, padding: "12px 16px", color: "white" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           
@@ -1018,7 +1018,7 @@ function DongAcupointDetailPage({ acupointName }: { acupointName: string }) {
   ];
 
   return (
-    <div style={{ maxWidth: "420px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f8f5fc", paddingBottom: "120px" }}>
+    <div style={{ maxWidth: "720px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f8f5fc", paddingBottom: "120px" }}>
       <div style={{ position: "sticky", top: 0, zIndex: 100, background: "linear-gradient(135deg, #E65100 0%, #FF8F00 100%)", padding: "12px 16px", color: "white" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
           

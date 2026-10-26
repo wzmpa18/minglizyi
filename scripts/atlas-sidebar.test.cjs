@@ -12,3 +12,14 @@ test('source cross-system assemblies report partial visibility instead of preten
 test('restored source hair remains selectable, hideable and reversible rather than a painted non-interactive overlay',()=>{for(const id of ['FJ2813']){const unit=index.byId.get(index.unitId(id));assert.ok(unit);const s={view:initialView(),isolation:null};assert.equal(unitStatus(unit,s.view),'visible');const hidden=hideStructures(s,unit.meshIds,[]);assert.equal(unitStatus(unit,hidden.view),'hidden');const h=new AtlasHistory();h.record(s);assert.equal(unitStatus(unit,h.undo(hidden).view),'visible');}});
 
 test("pubic hair source is preserved in the fixture but excluded from the display directory",()=>{assert.ok(source.parts.some(p=>p.id==="FJ2815"));assert.ok(!index.parts.some(p=>p.id==="FJ2815"));});
+
+
+test('clothing toggle is reversible through isolate and history without changing structure visibility',()=>{
+ const original={view:initialView(),isolation:null};assert.equal(original.view.underwear,true);
+ const unclothed={view:{...original.view,underwear:false},isolation:null},h=new AtlasHistory();h.record(original);
+ const isolated=isolateView(unclothed,['bone'],['skeletal'],'bone');
+ assert.equal(isolated.view.underwear,false);assert.equal(leaveIsolation(isolated).view.underwear,false);
+ const restored=h.undo(unclothed);assert.equal(restored.view.underwear,true);
+ same(restored.view.visible,original.view.visible);same(restored.view.hidden,original.view.hidden);
+ assert.equal(h.redo(restored).view.underwear,false);
+});
