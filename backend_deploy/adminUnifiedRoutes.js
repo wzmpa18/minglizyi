@@ -934,9 +934,36 @@ router.put('/commission/config', adminAuthUnified('SUPER_ADMIN'), (req, res) => 
     ratios: { ...oldCfg.ratios, ...(patch.ratios || {}) },
     riskControl: { ...oldCfg.riskControl, ...(patch.riskControl || {}) },
   };
-  commissionEngine.saveConfig(cfg);
+  try { commissionEngine.saveConfig(cfg); }
+  catch(error) { return res.status(400).json({success:false,error:error.message}); }
   audit(req.admin, 'COMMISSION_CONFIG_UPDATE', 'commission_config', oldCfg, cfg, patch.__reason || '更新分佣配置', req);
   res.json({ success: true, data: cfg });
+});
+
+// Source verification is an audited company operation, never a registration
+// checkbox. The reference must identify actual download/store evidence.
+router.put('/commission/distribution/:userId', adminAuthUnified('SUPER_ADMIN'), (req,res)=>{
+  try{
+    const policy=require('./promotionPolicy'),db=require('./commissionEngine').getDb();
+    const result=policy.recordDistributionEvidence(db,Number(req.params.userId),req.body||{},String(req.admin.name||req.admin.id||'SUPER_ADMIN'));
+    return res.status(result.ok?200:409).json({success:result.ok,data:result});
+  }catch(error){return res.status(400).json({success:false,error:error.message});}
+});
+router.put('/commission/promoters/:userId', adminAuthUnified('SUPER_ADMIN'), (req,res)=>{
+  try{
+    const policy=require('./promotionPolicy'),db=require('./commissionEngine').getDb();
+    const result=policy.approvePromoter(db,Number(req.params.userId),req.body?.contractRef,String(req.admin.name||req.admin.id||'SUPER_ADMIN'),req.body?.status||'APPROVED');
+    return res.json({success:true,data:result});
+  }catch(error){return res.status(400).json({success:false,error:error.message});}
+});
+router.get('/commission/policy-review',adminAuthUnified('FINANCE_ADMIN','finance'),(req,res)=>{
+  try{const db=require('./commissionEngine').getDb();require('./promotionPolicy').ensureTables(db);return res.json({success:true,data:db.prepare("SELECT order_no,policy_version,decision,payer_user_id,inviter_user_id,base_cents,created_at FROM promotion_order_policy_snapshots WHERE decision!='ELIGIBLE_COMPANY_DIRECT' ORDER BY created_at DESC LIMIT 200").all()});}
+  catch(error){return res.status(503).json({success:false,error:'待核对订单暂时无法读取'});}
+});
+router.get('/commission/non-ai-campaign',adminAuthUnified('SUPER_ADMIN'),(_req,res)=>res.json({success:true,data:require('./nonAiInviteCampaign').getConfig()}));
+router.put('/commission/non-ai-campaign',adminAuthUnified('SUPER_ADMIN'),(req,res)=>{
+  try{const data=require('./nonAiInviteCampaign').saveConfig(req.body||{});audit(req.admin,'NON_AI_INVITE_CAMPAIGN_CONFIG','non_ai_full_v1',null,data,'保存渠道规则及活动条款',req);return res.json({success:true,data});}
+  catch(error){return res.status(400).json({success:false,error:error.message});}
 });
 
 router.get('/commission/records', adminAuthUnified('FINANCE_ADMIN', 'finance'), (req, res) => {

@@ -417,12 +417,16 @@ function grantPartnerCommission(order) {
 
   const existed = db.prepare("SELECT id FROM commission_records WHERE order_no = ? AND record_type IN ('PARTNER_COMMISSION','PARTNER_NURTURE')").get(orderNo);
   if (existed) return { granted: false, reason: 'DUPLICATE' };
+  const policy = require('./promotionPolicy');
+  const eligibility = policy.evaluateCashOrder(db,order,require('./commissionEngine').getConfig());
+  if(!eligibility.ok)return {granted:false,reason:eligibility.reason};
 
   const partnerId = findChannelPartner(order.userId);
   if (!partnerId) return { granted: false, reason: 'NO_CHANNEL_PARTNER' };
   if (String(partnerId) === String(order.userId)) return { granted: false, reason: 'SELF_PURCHASE' };
+  if(eligibility.policyVersion===policy.POLICY_VERSION)return {granted:false,reason:'NEW_POLICY_PARTNER_CONTRACT_REVIEW_REQUIRED'};
 
-  const baseCents = yuanToCents(order.amount);
+  const baseCents = eligibility.baseCents;
   if (baseCents <= 0) return { granted: false, reason: 'ZERO_AMOUNT' };
 
   // 该订单实际产生的普通两级分销佣金（实发口径，作为成本先行扣除）
@@ -435,17 +439,17 @@ function grantPartnerCommission(order) {
   const netCents = baseCents - feeCostCents - aiCostCents - normalCents;
   if (netCents <= 0) return { granted: false, reason: 'NET_NOT_POSITIVE' };
 
-  const commissionCents = Math.floor(netCents * Number(cfg.commissionPercent) / 100);
+  const commissionCents = policy.commissionCents(netCents,policy.percent(cfg.commissionPercent,50,'partner'));
 
   // 直属培养奖励：上级合伙人（仅直属一级；平台承担，不扣本合伙人）
-  const me = getPartner(partnerId);
   let nurtureInviterId = null;
   let nurtureCents = 0;
-  if (me && me.referrer_partner_id && isApprovedPartner(me.referrer_partner_id)) {
-    const rp = getPartner(me.referrer_partner_id);
-    if (rp && String(rp.user_id) !== String(order.userId)) {
-      nurtureInviterId = rp.user_id;
-      nurtureCents = Math.floor(netCents * Number(cfg.nurturePercent) / 100);
+  const me=getPartner(partnerId);
+  if(me&&me.referrer_partner_id&&isApprovedPartner(me.referrer_partner_id)){
+    const rp=getPartner(me.referrer_partner_id);
+    if(rp&&String(rp.user_id)!==String(order.userId)){
+      nurtureInviterId=rp.user_id;
+      nurtureCents=policy.commissionCents(netCents,policy.percent(cfg.nurturePercent,5,'nurture'));
     }
   }
 

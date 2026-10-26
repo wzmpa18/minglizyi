@@ -17,6 +17,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const promotionPolicy = require('./promotionPolicy');
 
 const DATA_DIR = path.join(__dirname, 'data');
 const CONFIG_FILE = path.join(DATA_DIR, 'commission_config.json');
@@ -41,7 +42,7 @@ const DEFAULT_CONFIG = {
   // v25.0.47_12 两级分佣：一级15%、二级5%（按用户实付金额计算，全局统一）
   ratios: {
     level1: 15,                  // 一级推荐人佣金比例（百分比）
-    level2: 5,                   // 二级推荐人佣金比例（百分比）
+    level2: 0,                   // 负责人2026-10-26确认新单15/0；历史账不重算
   },
   riskControl: {
     dailyEarningsAlertYuan: 1000,  // 单日收益超阈值冻结提现待人工审核
@@ -53,16 +54,7 @@ const DEFAULT_CONFIG = {
 
 /** v25.0.47_12: 解析一级/二级比例（兼容旧版按订单类型的 ratios 结构） */
 function resolveRatios(cfg, orderType) {
-  const r = cfg.ratios || {};
-  let level1 = parseInt(r.level1, 10);
-  let level2 = parseInt(r.level2, 10);
-  if (isNaN(level1)) {
-    // 旧结构按类型取值，无 level1 字段：退化为一档比例（二级为0）
-    const legacy = parseInt(r[orderType] != null ? r[orderType] : 0, 10);
-    level1 = isNaN(legacy) ? 0 : legacy;
-  }
-  if (isNaN(level2)) level2 = 0;
-  return { level1, level2 };
+  return promotionPolicy.referralRates(cfg);
 }
 
 function getConfig() {
@@ -75,8 +67,8 @@ function getConfig() {
       cfg = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
     }
   } catch (e) {
-    console.error('[Commission] 配置读取失败，用默认值:', e.message);
-    cfg = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+    console.error('[Commission] 配置读取失败，暂停新增分佣:', e.message);
+    cfg = {...JSON.parse(JSON.stringify(DEFAULT_CONFIG)),enabled:false};
   }
   // v25.0.47_13: .env 初始化（仅当文件配置未显式保存过对应字段时生效）
   if (process.env.WITHDRAW_MIN_AMOUNT) {
@@ -87,10 +79,16 @@ function getConfig() {
     const v = parseFloat(process.env.WITHDRAW_FREE_PASS_AMOUNT);
     if (!isNaN(v) && v >= 0 && cfg.freePassAmountYuan === DEFAULT_CONFIG.freePassAmountYuan) cfg.freePassAmountYuan = v;
   }
+  cfg.policyVersion = promotionPolicy.POLICY_VERSION;
+  cfg.policyConfirmation=promotionPolicy.POLICY_CONFIRMATION;
+  cfg.ratios = resolveRatios(cfg);
   return cfg;
 }
 
 function saveConfig(cfg) {
+  if (cfg.ratios?.level2 !== undefined && promotionPolicy.percent(cfg.ratios.level2,0,'level2')!==0) throw Error('NEW_POLICY_LEVEL2_MUST_BE_ZERO');
+  cfg.ratios=resolveRatios(cfg);
+  cfg.policyVersion=promotionPolicy.POLICY_VERSION;
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   cfg.updatedAt = new Date().toISOString();
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2));
@@ -266,8 +264,11 @@ function grantCommission(order) {
   const existedL1 = db.prepare("SELECT id FROM commission_records WHERE order_no = ? AND record_type = 'COMMISSION'").get(orderNo);
   if (existedL1) return { granted: false, reason: 'DUPLICATE' };
 
+  const evidence = promotionPolicy.evaluateCashOrder(db, order, cfg);
+  if (!evidence.ok) return {granted:false, reason:evidence.reason, policyVersion:evidence.policyVersion};
+
   // 一级推荐人
-  const inviterId = getDirectInviter(db, order.userId);
+  const inviterId = evidence.inviterId;
   const eligible = inviterEligible(db, inviterId, order.userId);
   if (!eligible.ok) {
     // 记为待审核（后台人工处理），仍是唯一一条，保持幂等
@@ -282,17 +283,17 @@ function grantCommission(order) {
   }
 
   // 二级推荐人（一级推荐人的推荐人；不得与下单人/一级相同）
-  const level2InviterId = getDirectInviter(db, inviterId);
+  const level2InviterId = null;
   const l2Valid = level2InviterId && String(level2InviterId) !== String(order.userId) && String(level2InviterId) !== String(inviterId);
   const l2Eligible = l2Valid ? inviterEligible(db, level2InviterId, order.userId) : { ok: false };
 
   // 分佣计算（整数分）
-  const baseCents = yuanToCents(order.amount);
+  const baseCents = evidence.baseCents;
   if (baseCents <= 0) return { granted: false, reason: 'ZERO_AMOUNT' };
-  const { level1: ratioL1, level2: ratioL2 } = resolveRatios(cfg, order.type);
+  const { level1: ratioL1, level2: ratioL2 } = evidence.rates;
   if (!ratioL1) return { granted: false, reason: 'NO_RATIO_FOR_TYPE:' + order.type };
-  const commissionCents = Math.floor(baseCents * ratioL1 / 100);
-  const level2CommissionCents = (l2Eligible.ok && ratioL2 > 0) ? Math.floor(baseCents * ratioL2 / 100) : 0;
+  const commissionCents = promotionPolicy.commissionCents(baseCents,ratioL1);
+  const level2CommissionCents = (l2Eligible.ok && ratioL2 > 0) ? promotionPolicy.commissionCents(baseCents,ratioL2) : 0;
 
   // 结算时间：v12 月度结算（每月30号统一结算）；关闭月度模式则回退 unfreezeDays
   const monthlyMode = cfg.monthlySettleEnabled !== false;
@@ -358,16 +359,19 @@ function grantCommission(order) {
  */
 function reverseCommission(orderNo, refundYuan) {
   const db = getDb();
-  const rec = db.prepare("SELECT * FROM commission_records WHERE order_no = ? AND record_type = 'COMMISSION'").get(String(orderNo));
-  if (!rec) return { reversed: false, reason: 'NO_RECORD' };
-  if (rec.status === 'REVERSED') return { reversed: false, reason: 'ALREADY_REVERSED' };
-
-  const refundCents = refundYuan != null ? yuanToCents(refundYuan) : rec.base_amount_cents;
-  const proportion = Math.min(1, refundCents / rec.base_amount_cents);
-  const reverseCents = Math.round(rec.commission_cents * proportion);
-  if (reverseCents <= 0) return { reversed: false, reason: 'ZERO_REVERSE' };
-
+  // A real refund reverses both recorded levels, including historical L2.
+  // No ledger is recomputed or scanned without this order's refund event.
+  const records=db.prepare("SELECT * FROM commission_records WHERE order_no=? AND record_type IN ('COMMISSION','COMMISSION_L2')").all(String(orderNo));
+  if(!records.length)return {reversed:false,reason:'NO_RECORD'};
+  if(records.every(rec=>rec.status==='REVERSED'))return {reversed:false,reason:'ALREADY_REVERSED'};
+  let totalReverseCents=0,level1ReverseCents=0,level2ReverseCents=0;
   const tx = db.transaction(() => {
+    for(const rec of records){
+    if(rec.status==='REVERSED'||rec.base_amount_cents<=0)continue;
+    const refundCents=refundYuan!=null?yuanToCents(refundYuan):rec.base_amount_cents;
+    const proportion=Math.min(1,refundCents/rec.base_amount_cents);
+    const reverseCents=Math.round(rec.commission_cents*proportion);
+    if(reverseCents<=0)continue;
     db.prepare("UPDATE commission_records SET status = 'REVERSED', note = COALESCE(note,'') || ? WHERE id = ?")
       .run(` | 已冲正${reverseCents}分(${Math.round(proportion * 100)}%)`, rec.id);
     ensureAccount(db, rec.inviter_user_id);
@@ -382,10 +386,13 @@ function reverseCommission(orderNo, refundYuan) {
     if (remaining > 0) toNegative = remaining;
     db.prepare('UPDATE commission_accounts SET frozen_cents = frozen_cents - ?, withdrawable_cents = withdrawable_cents - ?, negative_cents = negative_cents + ?, updated_at = ? WHERE user_id = ?')
       .run(fromFrozen, fromWithdrawable, toNegative, nowIso(), rec.inviter_user_id);
+    totalReverseCents+=reverseCents;
+    if(rec.record_type==='COMMISSION_L2')level2ReverseCents+=reverseCents;else level1ReverseCents+=reverseCents;
+    }
   });
   tx();
-  console.log(`[Commission] 退佣冲正 order=${orderNo} reverse=${reverseCents}分 (${Math.round(proportion * 100)}%)`);
-  return { reversed: true, reverseCents, proportion };
+  console.log(`[Commission] 退佣冲正 order=${orderNo} reverse=${totalReverseCents}分 L1=${level1ReverseCents} L2=${level2ReverseCents}`);
+  return totalReverseCents?{reversed:true,reverseCents:totalReverseCents,level1ReverseCents,level2ReverseCents}:{reversed:false,reason:'ZERO_REVERSE'};
 }
 
 // ==================== 解冻（定时扫描） ====================

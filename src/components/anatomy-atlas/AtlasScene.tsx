@@ -9,6 +9,8 @@ import {arrangePointLabels,meridianColor,displayPointCode,displayPointName,type 
 import {AtlasGestureTracker,viewPreferences,BODY_REGIONS,boundsOverlap,insideRegion,type AtlasGesture,type Position3} from "./atlasInteraction";
 import {SYSTEMS,selectionParts,type Dataset} from "./atlasPack";
 import type {ViewState,HoldFeedback,CameraPose} from "./atlasState";
+import {buildSurfaceShorts,surfaceClothingVisible} from "./atlasClothing";
+import {AtlasSceneGestures,type SceneGestureHit} from "./atlasSceneGestures";
 export type {ViewState} from "./atlasState";
 interface Props {data:Dataset;state:ViewState;onSelect:(id:string,gesture?:AtlasGesture,position?:Position3)=>void;onPoint:(code:string,side:1|-1)=>void;onPose:(pose:CameraPose)=>void;onPeel:(id:string,position:Position3)=>void;onHold:(feedback:HoldFeedback|null)=>void;onReady:()=>void;onError:(message:string)=>void}
 export default function AtlasScene({data,state,onSelect,onPoint,onPose,onPeel,onHold,onReady,onError}:Props){
@@ -29,13 +31,13 @@ export default function AtlasScene({data,state,onSelect,onPoint,onPose,onPeel,on
   const backlight=new T.DirectionalLight(0xe1ecff,.9);backlight.position.set(-2,1,-2);scene.add(backlight);
   const width=T.MathUtils.ceilPowerOfTwo(data.atlas.parts.length),mask=new Float32Array(width*4),texture=new T.DataTexture(mask,width,1,T.RGBAFormat,T.FloatType);texture.needsUpdate=true;
   const plane=new T.Plane(new T.Vector3(0,-1,0),1.7),regionPlanes=[new T.Plane(new T.Vector3(1,0,0),100),new T.Plane(new T.Vector3(-1,0,0),100),new T.Plane(new T.Vector3(0,1,0),100),new T.Plane(new T.Vector3(0,-1,0),100),new T.Plane(new T.Vector3(0,0,1),100),new T.Plane(new T.Vector3(0,0,-1),100)],clipPlanes=[plane,...regionPlanes],picks:T.Mesh[]=[],batches:{mesh:T.Mesh;ids:number[]}[]=[];
-  const underwearUniform={value:latest.current.underwear===false?0:1},flowTime={value:0},flowActive={value:0};let flowTick=performance.now();
+  const flowTime={value:0},flowActive={value:0};let flowTick=performance.now();
   const mats=new Map(SYSTEMS.map(([id,,color])=>{
    const m=new T.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:.65,side:T.DoubleSide,clippingPlanes:clipPlanes});materials.push(m);
-   m.customProgramCacheKey=()=>id==="integumentary"?"atlas-part-clothing-v1":"atlas-part-v1";
+   m.customProgramCacheKey=()=>"atlas-part-v1";
    m.onBeforeCompile=shader=>{
     shader.uniforms.partMask={value:texture};shader.uniforms.maskWidth={value:width};
-    if(id==="integumentary"){shader.uniforms.underwear=underwearUniform;shader.vertexShader="varying vec3 clothingPosition;\n"+shader.vertexShader;shader.vertexShader=shader.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nclothingPosition=position;");shader.fragmentShader="uniform float underwear;varying vec3 clothingPosition;\n"+shader.fragmentShader;shader.fragmentShader=shader.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\nfloat legOpening=0.84+0.30*abs(clothingPosition.x);float cloth=step(legOpening,clothingPosition.y)*step(clothingPosition.y,1.025)*step(abs(clothingPosition.x),0.205)*underwear;diffuseColor.rgb=mix(diffuseColor.rgb,vec3(0.11,0.15,0.23),cloth);");}
+
     shader.vertexShader="attribute float partIndex;uniform sampler2D partMask;uniform float maskWidth;varying float shown;varying float chosen;varying float faded;\n"+shader.vertexShader;
     shader.vertexShader=shader.vertexShader.replace("#include <begin_vertex>","#include <begin_vertex>\nvec4 state=texture2D(partMask,vec2((partIndex+0.5)/maskWidth,0.5));transformed+=state.xyz;shown=abs(state.w);chosen=step(1.5,abs(state.w));faded=step(state.w,-0.5);");
     shader.fragmentShader="varying float shown;varying float chosen;varying float faded;\n"+shader.fragmentShader;
@@ -43,10 +45,13 @@ export default function AtlasScene({data,state,onSelect,onPoint,onPose,onPeel,on
     shader.fragmentShader=shader.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\ndiffuseColor.rgb=mix(diffuseColor.rgb,vec3(0.35,0.74,0.66),chosen*0.7);diffuseColor.a*=mix(1.0,0.22,faded);");
    };return [id,m] as const;
   }));
-  // A separate removable garment covers the surface silhouette; never reshape source anatomy.
-  const shortsOutline=new T.Shape();shortsOutline.moveTo(-.145,1.02);shortsOutline.quadraticCurveTo(0,1.035,.145,1.02);shortsOutline.quadraticCurveTo(.185,.94,.17,.72);shortsOutline.lineTo(.025,.72);shortsOutline.quadraticCurveTo(0,.81,-.025,.72);shortsOutline.lineTo(-.17,.72);shortsOutline.quadraticCurveTo(-.185,.94,-.145,1.02);shortsOutline.closePath();
-  const shortsGeometry=new T.ExtrudeGeometry(shortsOutline,{depth:.275,bevelEnabled:true,bevelThickness:.012,bevelSize:.008,bevelSegments:3,steps:1});shortsGeometry.translate(0,0,-.15);geometries.push(shortsGeometry);
-  const shortsMaterial=new T.MeshStandardMaterial({color:0x293b57,roughness:.95,side:T.DoubleSide,clippingPlanes:clipPlanes});materials.push(shortsMaterial);const shorts=new T.Mesh(shortsGeometry,shortsMaterial);scene.add(shorts);
+  // Fit a removable fabric surface to the original skin; no flat extrusion,
+  // skin paint, anatomy reshaping or changes to point coordinates.
+  const skinPart=data.atlas.parts.find(part=>part.id==="FJ2810")!;
+  const skinBuffer=new Uint8Array(data.files[data.atlas.chunks[skinPart.chunk].url]).buffer;
+  const fabric=buildSurfaceShorts({positions:new Float32Array(skinBuffer,skinPart.positions,skinPart.vertexCount*3),indices:new Uint32Array(skinBuffer,skinPart.indices,skinPart.indexCount)});
+  const shortsGeometry=new T.BufferGeometry();shortsGeometry.setAttribute("position",new T.BufferAttribute(fabric.positions,3));shortsGeometry.setAttribute("color",new T.BufferAttribute(fabric.colors,3));shortsGeometry.setAttribute("uv",new T.BufferAttribute(fabric.uvs,2));shortsGeometry.setIndex(new T.BufferAttribute(fabric.indices,1));shortsGeometry.computeVertexNormals();geometries.push(shortsGeometry);
+  const shortsMaterial=new T.MeshStandardMaterial({color:0xffffff,vertexColors:true,roughness:.94,metalness:0,side:T.DoubleSide,clippingPlanes:clipPlanes});materials.push(shortsMaterial);const shorts=new T.Mesh(shortsGeometry,shortsMaterial);shorts.name="surface-fitted-blue-shorts";scene.add(shorts);
   const dotGeometry=new T.SphereGeometry(.004,8,6);geometries.push(dotGeometry);
   const pointByCode=new Map(data.points.map(p=>[p.code,p]));
   const dotMaterials=new Map(Array.from(new Set(data.points.map(p=>p.meridianId))).map(id=>{const m=new T.MeshBasicMaterial({color:meridianColor(id),clippingPlanes:clipPlanes});materials.push(m);return[id,m] as const;}));
@@ -92,8 +97,7 @@ export default function AtlasScene({data,state,onSelect,onPoint,onPose,onPeel,on
    const parts=s.isolate&&s.isolateIds?data.atlas.parts.filter(p=>s.isolateIds!.includes(p.id)):s.selected?.startsWith("@system:")?data.atlas.parts.filter(p=>p.system===s.selected!.slice(8)):selectionParts(data.atlas,s.selected);if((s.isolate||s.selected)&&parts.length){const box=new T.Box3();parts.forEach(p=>box.union(new T.Box3(new T.Vector3().fromArray(p.bounds[0]),new T.Vector3().fromArray(p.bounds[1]))));center=box.getCenter(new T.Vector3());const size=box.getSize(new T.Vector3());distance=Math.max(.12,Math.max(size.y,size.x/camera.aspect,size.z)/(2*Math.tan(T.MathUtils.degToRad(17)))*1.4);}
    if(s.point&&!s.isolate){const target=data.surface.points.find(p=>p.key===`${s.point}:${s.side}`)?.target;if(target){center=new T.Vector3().fromArray(target.position);direction.fromArray(target.normal).normalize();distance=(center.y>1.5?.55:center.y>1.15?.8:.6)/Math.min(1,camera.aspect);}}
    controls.target.copy(center);camera.position.copy(center).addScaledVector(direction,distance);controls.update();};
-  const ray=new T.Raycaster(),mouse=new T.Vector2(),pointers=new Set<number>(),gesture=new AtlasGestureTracker(500);let hold:ReturnType<typeof setTimeout>|undefined,progress:ReturnType<typeof setInterval>|undefined,active:{id:number;x:number;y:number;time:number}|null=null,held=false;
-  const clearHold=()=>{if(hold!==undefined)clearTimeout(hold);if(progress!==undefined)clearInterval(progress);hold=undefined;progress=undefined;callbacks.current.onHold(null);};
+  const ray=new T.Raycaster(),mouse=new T.Vector2();
   const pick=(x:number,y:number,meshOnly=false)=>{
    const rect=renderer.domElement.getBoundingClientRect();mouse.set((x-rect.left)/rect.width*2-1,-(y-rect.top)/rect.height*2+1);ray.setFromCamera(mouse,camera);const s=latest.current,region=BODY_REGIONS.find(r=>r.id===s.region);
    const allowed=(p:T.Vector3)=>(s.section===null||p.y<=s.section)&&(!region||insideRegion(p.toArray() as Position3,region));
@@ -101,22 +105,15 @@ export default function AtlasScene({data,state,onSelect,onPoint,onPose,onPeel,on
    const hit=ray.intersectObjects(picks.filter(m=>Math.abs(mask[m.userData.index*4+3])>.5)).find(h=>allowed(h.point));
    return hit?{key:data.atlas.parts[hit.object.userData.index].id,position:hit.point.toArray() as Position3}:null;
   };
-  const dispatch=(hit:ReturnType<typeof pick>,kind:AtlasGesture)=>{if(!hit)return;if("code" in hit)callbacks.current.onPoint(hit.code!,hit.side!);else callbacks.current.onSelect(hit.key,kind,hit.position);};
-  const peel=()=>{if(!latest.current.continuous){clearHold();return;}if(progress!==undefined)clearInterval(progress);progress=undefined;if(!active||pointers.size!==1)return;const hit=pick(active.x,active.y,true);if(!hit||!("position" in hit)){clearHold();active=null;return;}held=true;gesture.cancel();callbacks.current.onPeel(hit.key,hit.position!);callbacks.current.onHold(null);if(latest.current.continuous)hold=setTimeout(peel,650);};
-  const start=(e:PointerEvent)=>{clearHold();pointers.add(e.pointerId);held=false;gesture.start(e.pointerId,e.clientX,e.clientY,performance.now(),pointers.size);if(pointers.size!==1){active=null;gesture.cancel();return;}active={id:e.pointerId,x:e.clientX,y:e.clientY,time:performance.now()};
-   // Ordinary study gestures never peel, including a stationary long touch.
-   if(!latest.current.continuous)return;
-   const hit=pick(e.clientX,e.clientY,true);if(!hit||!("position" in hit))return;const rect=renderer.domElement.getBoundingClientRect(),name=data.atlas.parts.find(p=>p.id===hit.key)?.name||hit.key;
-   progress=setInterval(()=>{if(active)callbacks.current.onHold({x:e.clientX-rect.left,y:e.clientY-rect.top,name,id:hit.key,progress:Math.min(1,(performance.now()-active.time)/500)});},40);hold=setTimeout(peel,500);
-  };
-  const move=(e:PointerEvent)=>{gesture.move(e.pointerId,e.clientX,e.clientY);if(active&&Math.hypot(e.clientX-active.x,e.clientY-active.y)>8){active=null;clearHold();gesture.cancel();}};
-  const end=(e:PointerEvent)=>{clearHold();pointers.delete(e.pointerId);active=null;if(held){held=false;gesture.cancel();return;}const hit=pick(e.clientX,e.clientY),kind=gesture.finish(e.pointerId,e.clientX,e.clientY,performance.now(),hit?.key||"");if(kind&&kind!=="long"){if(latest.current.continuous&&hit&&"position" in hit)callbacks.current.onPeel(hit.key,hit.position!);else dispatch(hit,kind);}};
-  const cancel=(e:PointerEvent)=>{clearHold();pointers.delete(e.pointerId);active=null;held=false;gesture.cancel();};renderer.domElement.addEventListener("pointerdown",start);renderer.domElement.addEventListener("pointermove",move);renderer.domElement.addEventListener("pointerup",end);renderer.domElement.addEventListener("pointercancel",cancel);
-
-  const stopHold=()=>{clearHold();active=null;held=false;pointers.clear();gesture.cancel();};
-  const visibility=()=>{if(document.hidden)stopHold();};window.addEventListener("blur",stopHold);document.addEventListener("visibilitychange",visibility);
-  const lost=(e:Event)=>{e.preventDefault();callbacks.current.onError("设备暂停了3D显示，请重新打开图谱。");};renderer.domElement.addEventListener("webglcontextlost",lost);
-  const animate=()=>{if(dead)return;frame=requestAnimationFrame(animate);const s=latest.current;underwearUniform.value=s.underwear===false?0:1;shorts.visible=s.underwear!==false&&s.visible.includes("integumentary")&&!s.hidden.includes("FJ2810")&&!s.isolate&&s.explode===0&&s.opacity>=.99;const now=performance.now(),elapsed=Math.min(100,Math.max(0,now-flowTick));flowTick=now;flowActive.value=s.flow?1:0;if(s.flow&&s.points&&!document.hidden){flowTime.value+=elapsed/1000*.35*Math.max(.25,Math.min(2,s.flowSpeed??1));dirty=true;}
+  const dispatch=(hit:SceneGestureHit,kind:"tap"|"double")=>{if(hit.code)callbacks.current.onPoint(hit.code,hit.side!);else callbacks.current.onSelect(hit.key,kind,hit.position);};
+  const interaction=new AtlasSceneGestures({tracker:new AtlasGestureTracker(1000),pick,peelOnTap:()=>latest.current.continuous,onPeel:hit=>callbacks.current.onPeel(hit.key,hit.position!),onSelect:dispatch,onHold:feedback=>{if(!feedback){callbacks.current.onHold(null);return;}const rect=renderer.domElement.getBoundingClientRect();callbacks.current.onHold({x:feedback.x-rect.left,y:feedback.y-rect.top,id:feedback.hit.key,name:data.atlas.parts.find(part=>part.id===feedback.hit.key)?.name||feedback.hit.key,progress:feedback.progress});}});
+  const start=(event:PointerEvent)=>interaction.pointerDown(event,event.target===renderer.domElement),move=(event:PointerEvent)=>interaction.pointerMove(event),end=(event:PointerEvent)=>interaction.pointerUp(event,event.target===renderer.domElement),cancel=(event:PointerEvent)=>interaction.pointerCancel(event);
+  // Capture across this document so a second finger on an overlay or a release
+  // outside the canvas cancels the same pending peel gesture.
+  window.addEventListener("pointerdown",start,true);window.addEventListener("pointermove",move,true);window.addEventListener("pointerup",end,true);window.addEventListener("pointercancel",cancel,true);
+  const stopHold=()=>interaction.stop(),visibility=()=>{if(document.hidden)stopHold();};window.addEventListener("blur",stopHold);document.addEventListener("visibilitychange",visibility);
+  const lost=(e:Event)=>{e.preventDefault();interaction.stop();callbacks.current.onError("设备暂停了3D显示，请重新打开图谱。");};renderer.domElement.addEventListener("webglcontextlost",lost);
+  const animate=()=>{if(dead)return;frame=requestAnimationFrame(animate);const s=latest.current;shorts.visible=surfaceClothingVisible(s);const now=performance.now(),elapsed=Math.min(100,Math.max(0,now-flowTick));flowTick=now;flowActive.value=s.flow?1:0;if(s.flow&&s.points&&!document.hidden){flowTime.value+=elapsed/1000*.35*Math.max(.25,Math.min(2,s.flowSpeed??1));dirty=true;}
    if(previous!==s||needsFit){dirty=true;
     const region=BODY_REGIONS.find(r=>r.id===s.region);regionPlanes.forEach((p,i)=>{p.constant=region?(i%2===0?-region.min[Math.floor(i/2)]:region.max[Math.floor(i/2)]):100;});
     const visible=new Set(s.visible),hidden=new Set(s.hidden),faded=new Set(s.faded),selected=new Set((s.selected?.startsWith("@system:")?[]:selectionParts(data.atlas,s.selected)).map(p=>p.id));
@@ -137,7 +134,7 @@ export default function AtlasScene({data,state,onSelect,onPoint,onPose,onPeel,on
     for(const p of arrangePointLabels(candidates,el.clientWidth,el.clientHeight,s.meridian?Math.min(22,Math.max(8,Math.floor(el.clientWidth/35))):8,blocked)){Object.assign(p.button.style,{display:"block",left:p.x+"px",top:p.y+"px",fontWeight:p.selected?"700":"400",color:p.selected?"#ffb0df":"#fff",outline:"none"});}
     renderer.render(scene,camera);dirty=false;}
   };animate();
-  return()=>{dead=true;window.removeEventListener("blur",stopHold);document.removeEventListener("visibilitychange",visibility);clearHold();cancelAnimationFrame(frame);observer.disconnect();controls.dispose();renderer.domElement.removeEventListener("pointerdown",start);renderer.domElement.removeEventListener("pointermove",move);renderer.domElement.removeEventListener("contextmenu",preventMenu);renderer.domElement.removeEventListener("pointerup",end);renderer.domElement.removeEventListener("pointercancel",cancel);renderer.domElement.removeEventListener("webglcontextlost",lost);geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());texture.dispose();renderer.dispose();renderer.domElement.remove();names.remove();};
+  return()=>{dead=true;window.removeEventListener("blur",stopHold);document.removeEventListener("visibilitychange",visibility);interaction.stop();cancelAnimationFrame(frame);observer.disconnect();controls.dispose();window.removeEventListener("pointerdown",start,true);window.removeEventListener("pointermove",move,true);renderer.domElement.removeEventListener("contextmenu",preventMenu);window.removeEventListener("pointerup",end,true);window.removeEventListener("pointercancel",cancel,true);renderer.domElement.removeEventListener("webglcontextlost",lost);geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());texture.dispose();renderer.dispose();renderer.domElement.remove();names.remove();};
  },[data]);
  return <div ref={host} style={{width:"100%",height:"100%",touchAction:"none"}}/>;
 }

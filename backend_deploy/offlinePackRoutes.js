@@ -61,7 +61,13 @@ function createRouter() {
     const membership = getMembershipFromDB(req.user.userId);
     const paid = ['monthly', 'quarterly', 'yearly', 'lifetime', 'premium'].includes(membership.level) ||
       (MEMBER_LEVELS[membership.level] || 0) >= (MEMBER_LEVELS.monthly || 1);
-    return paid ? { ok: true } : { ok: false, status: 403, error: '离线学习包为会员权益，请开通会员后下载' };
+    if(paid)return {ok:true};
+    if(['tcm-anatomy-3d-v1','tcm-anatomy-3d-v2','tcm-anatomy-atlas-v3'].includes(row.pack_id)){
+      const db=require('./register_routes').initDatabase();
+      const access=require('./nonAiInviteCampaign').accessForUser(db,req.user.userId,req.headers['x-store-channel']||'UNKNOWN');
+      if(access.active&&access.features.includes('anatomy3d'))return {ok:true};
+    }
+    return { ok: false, status: 403, error: '离线学习包为会员或已授予学习权益，请查看权益后下载' };
   }
 
   const guard = fn => (req, res) => {

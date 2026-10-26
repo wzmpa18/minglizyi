@@ -5,13 +5,7 @@ import {useInterfaceLocale} from "@/lib/interfaceLocale";
 import Link from "next/link";
 import { useCallback, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
-
-// 中医分类详情页路径（需要逐级返回的页面）
-const DETAIL_PATHS = [
-  "/zhongyi/meridian", "/zhongyi/formula", "/zhongyi/herb",
-  "/zhongyi/classic", "/zhongyi/bianzheng", "/zhongyi/shanghan",
-  "/zhongyi/exam", "/zhongyi/constitution",
-];
+import {studyParentHref} from "@/lib/studyParentNavigation";
 
 const topNavLinks = [
   { label: "首页", href: "/zhongyi" },
@@ -26,31 +20,34 @@ export default function ZhongyiClientShell({ children }: { children: React.React
   const {ui}=useInterfaceLocale();
   const pathname = usePathname();
   const router = useRouter();
+  const backPending=useRef(false);
   // v25.0.16: trailingSlash:true 下 pathname 带尾斜杠("/zhongyi/")，需规范化后再比较
   const normPathname = pathname !== "/" && pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
   const isHome = normPathname === "/zhongyi";
-  const isDetailPage = DETAIL_PATHS.some(p => normPathname.startsWith(p) && normPathname !== p);
-
-  // 返回处理：详情页先派发事件让子页面处理，其他用 router.back()
+  // Local readers may close their current level before following the fixed parent.
   const handleBack = useCallback(() => {
     if (isHome) {
       router.push("/");
       return;
     }
-    if (isDetailPage) {
+    {
+      if(backPending.current)return;
+      backPending.current=true;
+      const start=window.location.pathname+window.location.search;
       window.__zhongyiBackHandled = false;
       window.dispatchEvent(new CustomEvent("zhongyi-back"));
       setTimeout(() => {
+        backPending.current=false;
+        if(window.location.pathname+window.location.search!==start)return;
         if (window.__zhongyiBackHandled) {
           window.__zhongyiBackHandled = false;
         } else {
-          router.back();
+          router.replace(studyParentHref(window.location.pathname,window.location.search));
         }
       }, 50);
       return;
     }
-    router.back();
-  }, [isHome, isDetailPage, router]);
+  }, [isHome, router]);
 
   // 右滑手势返回
   const touchStartX = useRef(0);
@@ -88,6 +85,8 @@ export default function ZhongyiClientShell({ children }: { children: React.React
             className="flex h-9 w-9 items-center justify-center rounded-full mr-1 flex-shrink-0"
             style={{ backgroundColor: "rgba(255,255,255,0.1)" }}
             title="返回"
+            aria-label="返回上一级"
+            data-page-back="1"
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e8edf0" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 18l-6-6 6-6" />

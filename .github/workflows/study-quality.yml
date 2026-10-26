@@ -3,6 +3,16 @@ on:
   push:
     paths:
       - '.github/workflows/study-quality.yml'
+      - 'src/app/agreements/**'
+      - 'src/app/share-code/**'
+      - 'src/components/anatomy-atlas/**'
+      - 'src/hooks/useAtlasBackNavigation.ts'
+      - 'src/lib/niLessonStudy.ts'
+      - 'src/lib/niStudyNotebook.ts'
+      - 'src/lib/studyParentNavigation.ts'
+      - 'backend_deploy/promotionPolicy.js'
+      - 'backend_deploy/nonAiInviteCampaign.js'
+      - 'backend_deploy/companyDownloadRoutes.js'
       - 'src/app/calendar/**'
       - 'src/app/discover/tongchen/**'
       - 'src/app/admin/tongchen/**'
@@ -327,6 +337,8 @@ jobs:
       - run: node --test scripts/auth-session-refresh.test.cjs
       - run: node --test scripts/static-privacy.test.cjs scripts/builtin-learning-videos.test.cjs
       - run: node --experimental-strip-types --test scripts/atlas-interaction.test.cjs
+      - run: node --experimental-strip-types --test scripts/atlas-clothing.test.cjs scripts/atlas-scene-gestures.test.cjs scripts/atlas-navigation.test.cjs scripts/atlas-back-navigation-hook.test.cjs
+      - run: node --test scripts/promotion-policy.test.cjs scripts/company-download.test.cjs
       - run: node --experimental-strip-types --test scripts/atlas-sidebar.test.cjs scripts/atlas-point-labels.test.cjs scripts/acupoint-photos.test.cjs
       - run: npx tsx --test scripts/interface-controls.test.tsx scripts/ziwei-board-layout.test.tsx
       - run: npx tsx --test scripts/learning-expansion.test.ts
@@ -391,6 +403,7 @@ jobs:
       - run: node --test scripts/retained-guoxue-classics.test.cjs
       - run: node --test scripts/tcm-structured-content.test.cjs
       - run: node --test scripts/acupoint-overview.test.cjs scripts/atlas-surface-study.test.cjs scripts/ni-teacher-courses.test.cjs scripts/private-learning-note-read.test.cjs
+      - run: node --test scripts/ni-lesson-study.test.cjs scripts/dong-source-audit.test.cjs scripts/learning-share.test.cjs
       - run: python scripts/import-ni-teacher-courses.test.py
       - name: Verify discussion HTTP authentication and moderation against production dependency versions
         run: |

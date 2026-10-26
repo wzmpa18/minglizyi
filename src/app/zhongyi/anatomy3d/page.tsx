@@ -77,7 +77,8 @@ export default function Anatomy3DPage() {
 function AnatomyViewSelector(){
   const params=useSearchParams();
   const [legacy,setLegacy]=useState(params.get("view")==="original");
-  return <><div className="mx-auto flex max-w-7xl gap-2 px-4 pt-4"><button className="rounded-lg border px-3 py-2" aria-pressed={!legacy} onClick={()=>setLegacy(false)}>分层解剖与经络</button><button className="rounded-lg border px-3 py-2" aria-pressed={legacy} onClick={()=>setLegacy(true)}>原四层离线图谱</button></div>{legacy?<LegacyAnatomy3DPage/>:<AtlasViewer/>}</>;
+  useEffect(()=>{if(params.get("atlasReturn")||params.get("pointName")||params.get("meridian"))setLegacy(false);else if(params.get("view")==="original")setLegacy(true);},[params]);
+  return <><div className="mx-auto flex max-w-7xl gap-2 px-4 pt-4"><button className="rounded-lg border px-3 py-2" aria-pressed={!legacy} onClick={()=>setLegacy(false)}>分层解剖与经络</button><button className="rounded-lg border px-3 py-2" aria-pressed={legacy} onClick={()=>setLegacy(true)}>原四层离线图谱</button></div>{legacy?<LegacyAnatomy3DPage/>:<AtlasViewer key={params.toString()||"default"}/>}</>;
 }
 function LegacyAnatomy3DPage() {
   const mountRef = useRef<HTMLDivElement>(null);

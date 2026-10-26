@@ -5,6 +5,8 @@ import { BrandHeader } from "@/components/shared";
 import { makeQrDataUrl } from "@/lib/qrLocal";
 import { isNativeShellSync, buildAndroidIntentUrl } from "@/lib/nativeDetect";
 import { useIOSNativeShell } from "@/lib/iosNativeGate";
+import {getUserToken} from '@/lib/auth';
+import {STORE_CHANNEL} from '@/lib/releaseFeatures';
 
 const BRAND = "#7B2FBE";
 const DOWNLOAD_URL = "https://yandaoguoxue.yandao.vip/friend";
@@ -20,7 +22,7 @@ const FEATURES: { icon: string; title: string; desc: string }[] = [
   { icon: "📚", title: "系统学习", desc: "典籍题库，学习记录同步" },
   { icon: "🧘", title: "养生功法", desc: "养生功法学习模块" },
   { icon: "👈", title: "手势返回", desc: "右滑手势返回全局生效" },
-  { icon: "🔐", title: "账号保护", desc: "登录与手机号验证，原账号权益保留" },
+  { icon: "🔐", title: "账号保护", desc: "正常账号登录，已有权益保留" },
 ];
 
 export default function DownloadPage() {
@@ -32,6 +34,7 @@ export default function DownloadPage() {
   // v25.0.47_19：版本号/发布日期动态化（从版本接口读取，服务器发新包后此页零改动）
   const [latestVersion, setLatestVersion] = useState("");
   const [publishedAt, setPublishedAt] = useState("");
+  const [downloadBusy,setDownloadBusy]=useState(false),[downloadMessage,setDownloadMessage]=useState('');
 
   // 运行时拉取最新 APK 下载地址（SSOT：服务器发布新包只需更新 app-release-config.json）
   useEffect(() => {
@@ -58,7 +61,21 @@ export default function DownloadPage() {
       .catch(() => {});
   }, [apkUrl]);
 
-  const handleDownloadAPK = () => {
+  const handleDownloadAPK = async () => {
+    if(downloadBusy)return;
+    const token=getUserToken();
+    if(token&&!isNativeShellSync()&&['default','internal'].includes(STORE_CHANNEL)&&['yandaoguoxue.yandao.vip','www.yandao.vip'].includes(window.location.hostname)){
+      setDownloadBusy(true);
+      try{
+        const response=await fetch('/api/auth/company-download/ticket',{method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:'{}'});
+        const result=await response.json(),data=result.data;
+        if(response.ok&&result.success&&data?.action==='/api/auth/company-download/file'&&/^[a-zA-Z0-9_-]{43}$/.test(data.ticket||'')){
+          const form=document.createElement('form');form.method='POST';form.action=data.action;form.style.display='none';const input=document.createElement('input');input.name='ticket';input.value=data.ticket;form.appendChild(input);document.body.appendChild(form);form.submit();form.remove();setDownloadMessage('完整下载后记录官网下载事实；中断或普通下载不登记，不代表已安装。');return;
+        }
+      }catch{/* Existing anonymous download remains available. */}
+      finally{setDownloadBusy(false);}
+      setDownloadMessage('本次使用普通下载，未登记账号下载来源。');
+    }
     // v25.0.47_29: 壳内 WebView 无法直接下载文件，intent:// 拉起系统浏览器完成下载
     window.location.href = isNativeShellSync() ? buildAndroidIntentUrl(apkUrl) : apkUrl;
   };
@@ -150,6 +167,7 @@ export default function DownloadPage() {
       <div className="mx-3 mt-4">
         <button
           onClick={handleDownloadAPK}
+          disabled={downloadBusy}
           className="w-full rounded-xl py-3.5 text-sm font-bold text-white active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
           style={{ backgroundColor: BRAND }}
         >
@@ -167,11 +185,12 @@ export default function DownloadPage() {
             <polyline points="7 10 12 15 17 10" />
             <line x1="12" y1="15" x2="12" y2="3" />
           </svg>
-          下载安卓APK
+          {downloadBusy?'正在准备下载…':'下载安卓APK'}
         </button>
         <p className="mt-2 text-center text-xs text-gray-400">
           支持 Android 8.0 及以上系统
         </p>
+        {downloadMessage&&<p role="status" className="mt-2 text-center text-xs text-gray-500">{downloadMessage}</p>}
 
         {/* iOS 说明（v25.0.44：TestFlight 测试阶段状态） */}
         <p className="mt-3 text-center text-xs text-gray-400">
@@ -215,7 +234,7 @@ export default function DownloadPage() {
       <div className="mx-3 mt-4 mb-6 rounded-xl bg-gray-50 p-4">
         <p className="text-xs leading-relaxed text-gray-500">
           <span className="font-semibold text-gray-600">免责声明：</span>
-          本应用内容仅供传统文化学习研究参考，不构成医疗诊断、投资建议或人生决策依据。使用业务功能前需要登录并完成手机号验证；请先阅读《用户协议》和《隐私政策》。古籍原文、学习资料与AI辅助解释分别标注，付费项目以页面说明为准。
+          本应用内容仅供传统文化学习研究参考，不构成医疗诊断、投资建议或人生决策依据。使用账号功能请正常登录，已有权益保留；请先阅读《用户协议》和《隐私政策》。古籍原文、学习资料与AI辅助解释分别标注，付费项目以页面说明为准。
         </p>
         <div className="mt-3 pt-3 text-center" style={{ borderTop: "1px solid #e5e5e5" }}>
           <p className="text-xs text-gray-400">© 2026 言道国学</p>

@@ -17,6 +17,7 @@
 
 import { get, put, remove, listMeta, activateOfflinePack, hasStoredValue, type OfflineBundleMember } from "./storageManager";
 import { fetchWithAuth } from "./authInterceptor";
+import {STORE_CHANNEL} from './releaseFeatures';
 import { validateOfflineDownloadLink } from "./offlineDownloadLink";
 import { compareVersion, meetsMinAppVersion } from "./offlineVersions";
 export { compareVersion, meetsMinAppVersion } from "./offlineVersions";
@@ -200,7 +201,7 @@ export async function downloadPack(pack: ManifestPack, onProgress?: DownloadProg
     }
     const headers: Record<string, string> = {};
     if (startByte > 0 && startByte < pack.size) headers["Range"] = `bytes=${startByte}-`;
-    const resolution = await fetchWithAuth(`${API_BASE}${pack.downloadUrl}?resolve=1`, { cache: 'no-store' });
+    const resolution = await fetchWithAuth(`${API_BASE}${pack.downloadUrl}?resolve=1`, { cache: 'no-store',headers:{'X-Store-Channel':STORE_CHANNEL} });
     if (!resolution.ok) return {
       ok: false, packId: pack.packId, version: pack.version,
       accessAction: resolution.status === 401 ? 'login' : resolution.status === 403 ? 'membership' : undefined,
@@ -211,7 +212,7 @@ export async function downloadPack(pack: ManifestPack, onProgress?: DownloadProg
     const link = validateOfflineDownloadLink(await resolution.json(), pack);
     // Application credentials must never be sent to the signed object-storage URL.
     const res = link.applicationAuth
-      ? await fetchWithAuth(`${API_BASE}${link.url}`, { headers, credentials: 'same-origin' })
+      ? await fetchWithAuth(`${API_BASE}${link.url}`, { headers:{...headers,'X-Store-Channel':STORE_CHANNEL}, credentials: 'same-origin' })
       : await fetch(link.url, { headers, credentials: 'omit' });
 
     if (!(res.status === 200 || res.status === 206)) {

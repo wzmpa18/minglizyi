@@ -1142,6 +1142,9 @@ export default function ProfilePage() {
       </Zone>
 
       {/* ===== 第五区：推广中心 ===== */}
+      <Zone title="学习分享" storageKey="yandao_zone_learning_share">
+        <ZoneItem icon={Ic.inviteCode} label="学习分享码" sub="分享学习入口 · 邀请来源记录" onClick={()=>router.push('/share-code')} noBorder />
+      </Zone>
       {PUBLIC_PROMOTION_ENABLED && <Zone title="推广中心" storageKey="yandao_zone_promo">
         <ZoneItem
           icon={Ic.profit}
@@ -1168,7 +1171,7 @@ export default function ProfilePage() {
         <ZoneItem
           icon={Ic.profit}
           label="合伙人工作台"
-          sub="渠道佣金 · 培养奖励 · 推广物料"
+          sub="合作合同审核 · 来源记录 · 推广物料"
           onClick={() => router.push("/profile/partner")}
         />
         <ZoneItem

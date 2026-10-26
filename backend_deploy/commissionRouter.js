@@ -24,6 +24,7 @@ const path = require('path');
 
 const commissionEngine = require('./commissionEngine');
 const partnerEngine = require('./partnerEngine');
+const promotionPolicy = require('./promotionPolicy');
 
 const DATA_DIR = process.env.COMMISSION_ROUTER_DIR || path.join(__dirname, 'data');
 const CONFIG_FILE = process.env.COMMISSION_ROUTER_FILE || path.join(DATA_DIR, 'commission_router_config.json');
@@ -149,24 +150,24 @@ function ensureSchema() {
 
 /** 费率快照（第十二章 rateSnapshot）：入账时点各比例留档，防事后改率争议 */
 function buildRateSnapshot() {
-  const rates = { referralL1Percent: 15, referralL2Percent: 5, partnerPercent: 50, nurturePercent: 5 };
+  const rates = { referralL1Percent: 15, referralL2Percent: 0, partnerPercent: 50, nurturePercent: 0, policyVersion: promotionPolicy.POLICY_VERSION };
   try {
     const cc = commissionEngine.getConfig && commissionEngine.getConfig();
     if (cc && cc.ratios) {
-      rates.referralL1Percent = parseInt(cc.ratios.level1, 10) || 15;
-      rates.referralL2Percent = parseInt(cc.ratios.level2, 10) || 5;
+      rates.referralL1Percent = promotionPolicy.percent(cc.ratios.level1,15,'level1');
+      rates.referralL2Percent = 0;
     }
-  } catch (e) { /* 用默认值 */ }
+  } catch (e) { throw new Error('INVALID_REFERRAL_CONFIG:'+e.message); }
   try {
     const pc = partnerEngine.getConfig && partnerEngine.getConfig();
     if (pc) {
-      rates.partnerPercent = Number(pc.commissionPercent) || 50;
-      rates.nurturePercent = Number(pc.nurturePercent) || 5;
-      rates.paymentFeePercent = Number(pc.feePercent) || 0;
-      rates.storePercent = Number(pc.storePercent) || 0;
-      rates.aiCostPercent = Number(pc.aiCostPercent) || 0;
+      rates.partnerPercent = promotionPolicy.percent(pc.commissionPercent,50,'partner');
+      rates.nurturePercent = 0;
+      rates.paymentFeePercent = promotionPolicy.percent(pc.feePercent,0,'fee');
+      rates.storePercent = promotionPolicy.percent(pc.storePercent,0,'store');
+      rates.aiCostPercent = promotionPolicy.percent(pc.aiCostPercent,0,'aiCost');
     }
-  } catch (e) { /* 用默认值 */ }
+  } catch (e) { throw new Error('INVALID_PARTNER_CONFIG:'+e.message); }
   return JSON.stringify(rates);
 }
 
@@ -220,12 +221,14 @@ function buildSnapshot(db, order, ids, results) {
   const refundCents = 0;
   const platformRevenueCents = grossCents - paymentFeeCents - referralL1Cents - referralL2Cents
     - aiCostCents - partnerRevenueCents - nurtureRevenueCents - refundCents;
+  const rates=JSON.parse(buildRateSnapshot());
+  if(results.policyEvidence){rates.referralL1Percent=results.policyEvidence.rates.level1;rates.referralL2Percent=results.policyEvidence.rates.level2;rates.policyVersion=results.policyEvidence.policyVersion;}
 
   return {
     order_no: orderNo,
     payer_user_id: parseInt(order.userId, 10) || 0,
     formula_version: getConfig().formulaVersion,
-    rate_snapshot: buildRateSnapshot(),
+    rate_snapshot: JSON.stringify(rates),
     direct_referrer_id: ids.directReferrerId,
     level2_referrer_id: ids.level2ReferrerId,
     partner_attribution_id: ids.partnerAttributionId,
@@ -294,6 +297,14 @@ function processPaidOrder(order) {
     if (existed) return { ok: false, reason: 'DUPLICATE', snapshotId: existed.id, existingStatus: existed.status };
   }
 
+  const eligibility=promotionPolicy.evaluateCashOrder(db,order,commissionEngine.getConfig());
+  if(!eligibility.ok){
+    return {ok:true,status:'NO_COMMISSION',policyVersion:eligibility.policyVersion,
+      referral:{granted:false,reason:eligibility.reason},partner:{granted:false,reason:eligibility.reason},
+      reviewRequired:!eligibility.reason.startsWith('STORE_')};
+  }
+  order={...order,userId:String(eligibility.payerId),amount:eligibility.baseCents/100};
+
   const ids = resolveIdentities(order);
   const policy = ids.doubleIdentity ? cfg.doubleIdentityPolicy : null;
   const campaignCommissionPolicy = order.extra && order.extra.growthCampaign && order.extra.growthCampaign.commissionPolicy;
@@ -331,10 +342,13 @@ function processPaidOrder(order) {
     callReferral();
   }
 
-  const snap = buildSnapshot(db, order, ids, { referral, partner });
+  const snap = buildSnapshot(db, order, ids, { referral, partner, policyEvidence:eligibility });
 
   let status, note;
-  if (partnerOnly) {
+  if (partner.reason==='NEW_POLICY_PARTNER_CONTRACT_REVIEW_REQUIRED') {
+    status=SETTLEMENT_STATUS.REVIEW_REQUIRED;
+    note='新15/0政策：既有Partner合同的新增渠道计提需单独核对，未自动发放上级渠道或培养佣金；历史账保留';
+  } else if (partnerOnly) {
     status = SETTLEMENT_STATUS.SETTLED;
     note = '助力优惠订单：普通邀请佣金不叠加，Partner 渠道合同按实付金额保留';
   } else if (ids.doubleIdentity && policy === DOUBLE_IDENTITY_POLICIES.REVIEW_REQUIRED) {

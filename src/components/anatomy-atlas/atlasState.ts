@@ -22,6 +22,8 @@ export class AtlasHistory {
  private past:Snapshot[]=[];private future:Snapshot[]=[];
  private limit:number; constructor(limit=30){this.limit=limit;}
  get undoCount(){return this.past.length;}get redoCount(){return this.future.length;}
+ capture(){return {past:this.past.map(copySnapshot),future:this.future.map(copySnapshot)};}
+ restore(saved:{past:Snapshot[];future:Snapshot[]}){this.past=saved.past.slice(-this.limit).map(copySnapshot);this.future=saved.future.slice(-this.limit).map(copySnapshot);}
  record(current:Snapshot){this.past=[...this.past.slice(-(this.limit-1)),copySnapshot(current)];this.future=[];}
  undo(current:Snapshot){const prior=this.past.pop();if(!prior)return null;this.future.push(copySnapshot(current));return copySnapshot(prior);}
  redo(current:Snapshot){const next=this.future.pop();if(!next)return null;this.past.push(copySnapshot(current));return copySnapshot(next);}

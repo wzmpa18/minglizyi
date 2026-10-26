@@ -87,6 +87,8 @@ export interface TcmDongAcupoint {
   literature: string;
   image_url?: string;
   study_sources?: Array<{ title: string; edition: string; page: number; sourceSha256: string }>;
+  /** Field-level legacy status is separate from the availability of a source image. */
+  study_review?: {status:'UNVERIFIED_LEGACY';unverifiedFields:string[];note:string};
 }
 
 /** AI抓取缓存记录 */

@@ -6,7 +6,8 @@
 // 后端：register_routes.js（/api/auth/invite/*、/api/auth/points/transactions、/api/auth/login-code）
 // ============================================================================
 
-import { getUserToken } from "./auth";
+import { getUserToken, getUserProfile } from "./auth";
+import { learningShareLink } from './learningShare';
 
 const API_BASE = typeof window !== "undefined" ? window.location.origin : "";
 
@@ -45,6 +46,14 @@ export interface InviteOverview {
     coupon: { id: number; code: string; status: "AVAILABLE" | "RESERVED" | "CONSUMED" | "EXPIRED"; expiresAt: string } | null;
     rules: string[];
   } | null;
+}
+
+export interface NonAiInviteStatus {
+  enabled:boolean;policyVersion:string;campaignId:string;name:string;effectiveInvites:number;pendingInvites:number;targetInvites:number;granted:boolean;channelPolicy:'CONFIRMED'|'PENDING';scope:string[];excluded:string[];
+  invites:Array<{inviteeId:number;state:'EFFECTIVE'|'PENDING'|'INELIGIBLE';reason:string}>;
+}
+export async function getNonAiInviteStatus():Promise<NonAiInviteStatus|null>{
+  try{const response=await authGet<{success:boolean;data?:NonAiInviteStatus}>('/api/auth/invite/non-ai-status');return response.success&&response.data?response.data:null;}catch{return null;}
 }
 
 export interface PointsTransactions {
@@ -155,12 +164,16 @@ const LINK_CACHE_TTL = 24 * 60 * 60 * 1000; // 签名永久有效，缓存1天�
 
 export async function getInviteLink(forceRefresh = false): Promise<InviteLinkData | null> {
   if (typeof window === "undefined") return null;
+  const token=getUserToken(),account=String(getUserProfile()?.userId||'');
+  if(!token||!account)return null;
+  const scopedKey=LINK_CACHE_KEY+':'+account;
+  const valid=(value:InviteLinkData)=>!!value&&String(value.userId)===account&&!!learningShareLink(value.inviteLink)&&new URL(value.inviteLink).searchParams.get('ref')===account;
   if (!forceRefresh) {
     try {
-      const raw = localStorage.getItem(LINK_CACHE_KEY);
+      const raw = localStorage.getItem(scopedKey);
       if (raw) {
         const c = JSON.parse(raw);
-        if (c && c.data && Date.now() - c.at < LINK_CACHE_TTL) return c.data as InviteLinkData;
+        if (c && c.data && valid(c.data) && Date.now() - c.at < LINK_CACHE_TTL) return c.data as InviteLinkData;
       }
     } catch {}
   }
@@ -170,9 +183,9 @@ export async function getInviteLink(forceRefresh = false): Promise<InviteLinkDat
     });
     if (!res.ok) return null;
     const data = await res.json();
-    if (!data || !data.success || !data.data || !data.data.inviteLink) return null;
+    if (!data || !data.success || !data.data || !valid(data.data)||getUserToken()!==token||String(getUserProfile()?.userId||'')!==account) return null;
     try {
-      localStorage.setItem(LINK_CACHE_KEY, JSON.stringify({ at: Date.now(), data: data.data }));
+      localStorage.setItem(scopedKey, JSON.stringify({ at: Date.now(), data: data.data }));
     } catch {}
     return data.data as InviteLinkData;
   } catch {

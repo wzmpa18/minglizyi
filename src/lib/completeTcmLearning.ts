@@ -12,6 +12,7 @@ import {writeOfflineFile} from './durableOfflineStore';
 import {HERBS_DB} from '@/algorithm-core/modules/tcm/herbs';
 import {FORMULAS_DB} from '@/algorithm-core/modules/tcm/formulas';
 import {getMembershipStatus} from './membershipStore';
+import {canUseNonAiLearning} from './nonAiLearningAccess';
 import {ANATOMY_BUNDLE_MEMBERS} from './anatomyLearningBundle';
 import {installAcupointContentPack} from '@/algorithm-core/modules/tcm/meridians';
 import {validateApprovedNiCollection,installApprovedNiCollection} from './niTeacherCourses';
@@ -38,7 +39,8 @@ export function prepareCompleteTcm(progress?:(message:string)=>void):Promise<voi
   const plans=await checkUpdates(CLIENT_VERSION,manifest),plan=plans.find(x=>x.packId===COMPLETE_TCM_ID);
   if(!plan||plan.action==='INCOMPATIBLE')throw Error('完整中医资料包尚未就绪，原有资料保留');
   const member=getMembershipStatus();
-  const models=member.isActive&&member.level!=='basic'?ANATOMY_BUNDLE_MEMBERS.map(id=>plans.find(x=>x.packId===id)):[];
+  const modelAccess=(member.isActive&&member.level!=='basic')||await canUseNonAiLearning('anatomy3d');
+  const models=modelAccess?ANATOMY_BUNDLE_MEMBERS.map(id=>plans.find(x=>x.packId===id)):[];
   if(models.some(x=>!x||x.action==='INCOMPATIBLE'))throw Error('会员三维资料暂未全部就绪，已保存内容保留');
   const pending=[plan,...models.filter((x):x is NonNullable<typeof x>=>Boolean(x))].filter(x=>x.action!=='UP_TO_DATE');
   if(pending.some(x=>needsUserConfirmation(x.manifestPack))&&!window.confirm(`本次中医学习资料约 ${(pending.reduce((n,x)=>n+x.manifestPack.size,0)/1048576).toFixed(1)} MB，是否使用当前网络下载？`))throw Error('已取消，原资料保留');

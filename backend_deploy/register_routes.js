@@ -694,7 +694,7 @@ function resolveInviteAttribution(db, { inviteRef, inviteTs, inviteSig, inviteCo
   if (clientIp) {
     const ipCount = db.prepare("SELECT COUNT(*) c FROM device_registry WHERE ip = ? AND created_at >= datetime('now','-1 day')").get(clientIp);
     if (ipCount.c >= 5) {
-      return { inviterId: null, source: picked.source, ok: false, reason: 'IP_BATCH_REGISTER' };
+      logInviteAudit(db,null,picked.inviterId,picked.source,'risk_signal','SHARED_IP_REVIEW_ONLY',clientIp,deviceId);
     }
   }
 
@@ -725,8 +725,18 @@ function bindInviteAndReward(db, inviteeId, attribution, clientIp, deviceId) {
   }
 
   // 写绑定（单层）
-  db.prepare('UPDATE users SET invited_by = ? WHERE user_id = ?').run(inviterId, inviteeId);
-  db.prepare('INSERT INTO user_invite_relation (inviter_id, invitee_id, level) VALUES (?, ?, 1)').run(inviterId, inviteeId);
+  try {
+    db.transaction(()=>{
+      const check=require('./promotionPolicy').canBindInvitation(db,inviteeId,inviterId);
+      if(!check.ok)throw Error(check.reason);
+      const changed=db.prepare('UPDATE users SET invited_by = ? WHERE user_id = ? AND (invited_by IS NULL OR invited_by=0)').run(inviterId,inviteeId);
+      if(changed.changes!==1)throw Error('ALREADY_BOUND');
+      db.prepare('INSERT INTO user_invite_relation (inviter_id, invitee_id, level) VALUES (?, ?, 1)').run(inviterId, inviteeId);
+    }).immediate();
+  } catch(error) {
+    logInviteAudit(db,inviteeId,inviterId,source,'rejected',error.message,clientIp,deviceId);
+    return {bound:false,reason:error.message};
+  }
 
   // 发放注册奖励（幂等：invite_rewards 唯一约束）
   let rewarded = 0;
@@ -1488,6 +1498,7 @@ function createRouter() {
       // 更新最后登录时间
       const db = initDatabase();
       if (isPhone) db.prepare('UPDATE users SET phone_verified_at=? WHERE user_id=?').run(new Date().toISOString(), user.userId);
+      try { require('./nonAiInviteCampaign').markVerifiedRegistration(db,user.userId,isPhone?'SMS':'EMAIL'); } catch(error) { console.error('[InviteCampaign] 注册验证事实记录失败:',error.message); }
       db.prepare('UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE user_id = ?').run(user.userId);
       recordLoginActivity(db, user.userId); // v25.0.71 注册即记活跃
 
@@ -2018,6 +2029,7 @@ function createRouter() {
 
       db.prepare('UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE user_id = ?').run(user.user_id);
       if (isPhone) db.prepare('UPDATE users SET phone_verified_at=? WHERE user_id=?').run(new Date().toISOString(), user.user_id);
+      if(isNewUser){try{require('./nonAiInviteCampaign').markVerifiedRegistration(db,user.user_id,isPhone?'SMS':'EMAIL');}catch(error){console.error('[InviteCampaign] 验证码注册事实记录失败:',error.message);}}
       recordLoginActivity(db, user.user_id); // v25.0.71 验证码登录活跃埋点
 
       const tokenPair = generateTokenPair({
@@ -2209,6 +2221,11 @@ function createRouter() {
     }
   });
 
+  router.get('/invite/non-ai-status',authMiddleware,(req,res)=>{
+    try{return jsonResponse(res,200,true,'ok',require('./nonAiInviteCampaign').syncUser(initDatabase(),req.user.userId));}
+    catch(error){console.error('[InviteCampaign]',error.message);return jsonResponse(res,503,false,'邀请学习权益暂时无法核对，已有权益保留');}
+  });
+
   // ------------------------------------------------------------------
   // GET /api/auth/points/transactions — 积分明细（JWT鉴权）
   // P9-推广中心：奖励明细可查（与积分流水同源）
@@ -2305,6 +2322,11 @@ function createRouter() {
     }
   });
 
+  router.get('/non-ai-learning-access',authMiddleware,(req,res)=>{
+    try{return jsonResponse(res,200,true,'ok',require('./nonAiInviteCampaign').accessForUser(initDatabase(),req.user.userId,req.headers['x-store-channel']||'UNKNOWN'));}
+    catch{return jsonResponse(res,503,false,'学习权益暂时无法核对，原有会员权益保留');}
+  });
+  router.use('/company-download',require('./companyDownloadRoutes').createRouter({authRequired:authMiddleware,getDb:initDatabase}));
   return router;
 }
 

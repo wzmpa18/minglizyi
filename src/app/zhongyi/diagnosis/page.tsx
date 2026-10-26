@@ -9,6 +9,7 @@ import {ResearchLearningDrawers} from "@/components/ResearchLearningDrawers";
 import {getUserProfile,getUserToken} from "@/lib/auth";
 import {stageLifeImport} from "@/lib/lifeImport";
 import {localMedicalConcepts} from "@/lib/medicalLearning";
+import {useNonAiLearningAccess} from '@/lib/useNonAiLearningAccess';
 
 // ==================== 品牌色 / 常量 ====================
 const BRAND = "#7B2FBE";
@@ -782,9 +783,8 @@ export default function DiagnosisPage() {
 
   useEffect(()=>{const clear=()=>{if(account.current!==(getUserToken()||'')){setHistory([]);setResult(null);setSelected([]);setPainNatureIds([]);setSearch('');setStep(1);setSaveConsent(false);setSaveError('账号已改变，旧学习内容已收起');}};window.addEventListener('storage',clear);window.addEventListener('yandao-auth-change',clear);return()=>{window.removeEventListener('storage',clear);window.removeEventListener('yandao-auth-change',clear);};},[]);
   // 会员等级判断：basic 为免费用户，monthly/yearly/lifetime 为付费会员
-  const isPremium = membershipStatus
-    ? membershipStatus.level !== "basic" && membershipStatus.isActive
-    : false;
+  const nonAiAccess=useNonAiLearningAccess('local-diagnosis-study');
+  const isPremium = nonAiAccess||(membershipStatus?membershipStatus.level !== "basic" && membershipStatus.isActive:false);
 
   const visibleCategories = useMemo(
     () => SYMPTOM_CATEGORIES.filter((c) => !c.femaleOnly || gender === "female"),

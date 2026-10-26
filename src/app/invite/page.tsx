@@ -11,6 +11,8 @@ import {
   type InviteLinkData,
   type InviteOverview,
   type PointsTransactions,
+  getNonAiInviteStatus,
+  type NonAiInviteStatus,
 } from "@/lib/inviteApi";
 import {
   VIRAL_TEMPLATES,
@@ -53,6 +55,7 @@ export default function InvitePage() {
   const [link, setLink] = useState<InviteLinkData | null>(null);
   const [overview, setOverview] = useState<InviteOverview | null>(null);
   const [points, setPoints] = useState<PointsTransactions | null>(null);
+  const [nonAi,setNonAi]=useState<NonAiInviteStatus|null>(null);
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"invitees" | "rewards" | "points">("invitees");
@@ -107,6 +110,7 @@ export default function InvitePage() {
       const [ov, pt] = await Promise.all([getInviteOverview(), getPointsTransactions(30)]);
       setOverview(ov);
       setPoints(pt);
+      setNonAi(await getNonAiInviteStatus());
     } catch (e) {
       console.error("加载推广数据失败:", e);
     } finally {
@@ -378,6 +382,12 @@ export default function InvitePage() {
       <BrandHeader title="推广中心" showBack />
 
       <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 8px" }}>
+        <p style={{fontSize:12,color:'#666',lineHeight:1.7,margin:'0 0 14px'}}>分享码只记录邀请来源。现金佣金按公司已确认合同，只统计已核验为官网下载并通过官网支付的合格订单；商店下载和商店订单不计佣。</p>
+        {nonAi?.enabled&&nonAi.channelPolicy==='CONFIRMED'&&<section style={{padding:16,background:'white',borderRadius:12,marginBottom:12}}>
+          <h2 style={{fontSize:17}}>{nonAi.name}</h2><p>已生效 {nonAi.effectiveInvites}/{nonAi.targetInvites} · 审核中 {nonAi.pendingInvites}</p>
+          <p>{nonAi.granted?'非AI学习权益已发放，无到期日。':'真实新用户完成注册验证与学习笔记，并经过48小时复核后计入；不要求付费。'}</p>
+          <p style={{fontSize:12,color:'#666'}}>范围：{nonAi.scope.join('、')}。不含{nonAi.excluded.join('、')}。</p>
+        </section>}
         {overview?.growthCampaign?.enabled && (
           <div style={{ marginBottom: "12px", padding: "16px", borderRadius: "14px", background: "linear-gradient(135deg,#fff3d6,#fff)", border: "1px solid #f0c15b" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", alignItems: "center" }}>
@@ -392,7 +402,7 @@ export default function InvitePage() {
                 ? `会员优惠券已到账（立减${overview.growthCampaign.discountPercent}%），有效期至 ${new Date(overview.growthCampaign.coupon.expiresAt).toLocaleDateString("zh-CN")}。可到会员中心使用。`
                 : overview.growthCampaign.coupon?.status === "CONSUMED"
                 ? "本期八折券已使用。"
-                : `再邀请 ${overview.growthCampaign.remainingInvites} 位新用户完成手机号注册，即可获得一张会员优惠券。`}
+                : `再邀请 ${overview.growthCampaign.remainingInvites} 位符合活动规则的新用户，即可获得一张会员优惠券。`}
             </div>
             <div style={{ marginTop: "7px", fontSize: "10px", color: "#a0835e" }}>每人一次；月度、季度、年度会员可用；不与其他优惠或邀请佣金叠加。异常注册不计入。</div>
             <button
@@ -914,7 +924,7 @@ export default function InvitePage() {
           <div>
             <div style={{ fontSize: "15px", fontWeight: 800 }}>申请成为渠道合伙人</div>
             <div style={{ fontSize: "11px", opacity: 0.92, marginTop: "5px", lineHeight: 1.6 }}>
-              渠道净收入50%佣金 · 直属培养奖励5%<br />专属邀请码 · 月度结算 · 统一提现
+              公司审核签约 · 官网合格直接成交15% · 二级0<br />来源记录与合同核对 · 历史收益记录保留
             </div>
           </div>
           <div style={{ fontSize: "22px", opacity: 0.9 }}>›</div>

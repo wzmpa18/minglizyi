@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { isNativeShellSync } from "@/lib/nativeDetect";
+import {studyParentHref} from "@/lib/studyParentNavigation";
 
 /**
  * 全局悬浮返回键（v25.0.78 P4-全页返回键）
@@ -13,14 +13,14 @@ import { isNativeShellSync } from "@/lib/nativeDetect";
  * 工具页（/yixue/*、/zhongyi/*、/ai 等）由不同批次开发，均未带返回键。
  *
  * 策略（一处生效，全站兜底）：
- * 1. 仅原生壳内显示（浏览器/微信内有宿主自带返回）；
+ * 1. 原生壳与网页均提供可见的上级入口；
  * 2. 白名单页面不显示：首页 + 5 个一级 tab（BottomNav 常驻）+ 外部直达落地页 + 管理后台；
  * 3. 页面自带返回键（BrandHeader showBack / 页内 aria-label="返回" 按钮）时自动隐藏
  *    ——通过 DOM 轮询检测（页面渐进渲染，250ms × 12 次兜底 3 秒内判定）；
  * 4. z-40：低于全屏弹窗层（z-50），弹窗打开时被遮罩覆盖防误触；
  * 5. 刘海屏避让：top 叠加 env(safe-area-inset-top)。
  *
- * 点击行为与 BrandHeader 一致：优先 history.back()，无历史回首页。
+ * 返回应用内确定的父页面，外部直达与空历史不会把用户带离应用。
  * 注意：本组件必须挂在 SwipeBackProvider 之外——滑动动画期间的 transform
  * 会为 fixed 后代创建包含块（见 SwipeBackProvider 注释 P0-1 事故）。
  */
@@ -46,18 +46,16 @@ function isHiddenRoute(pathname: string): boolean {
 export default function GlobalBackButton() {
   const pathname = usePathname();
   const router = useRouter();
-  const [native, setNative] = useState(false);
   const [hasOwnBack, setHasOwnBack] = useState(false);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    setNative(isNativeShellSync());
     setReady(true);
   }, []);
 
   useEffect(() => {
     setHasOwnBack(false);
-    const SEL = '[aria-label="返回"], [data-page-back="1"]';
+    const SEL = '[aria-label="返回"]:not([data-global-back]), [data-page-back="1"]';
     if (document.querySelector(SEL)) {
       setHasOwnBack(true);
       return;
@@ -75,15 +73,11 @@ export default function GlobalBackButton() {
     return () => clearInterval(timer);
   }, [pathname]);
 
-  if (!ready || !native || hasOwnBack) return null;
+  if (!ready || hasOwnBack) return null;
   if (isHiddenRoute(pathname)) return null;
 
   const handleBack = () => {
-    if (typeof window !== "undefined" && window.history.length > 1) {
-      router.back();
-    } else {
-      router.push("/");
-    }
+    router.replace(studyParentHref(window.location.pathname,window.location.search));
   };
 
   return (

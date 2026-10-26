@@ -1,9 +1,9 @@
 /**
  * 董氏奇穴数据
- * 原始来源：自研整理，MIT License
- * 基于董景昌《董氏针灸正经奇穴学》整理
+ * 既有39条兼容整理，所称文献为《董氏针灸正经奇穴学》，尚缺字段级版本页码核对。
+ * 代码的MIT许可不代表书籍、图片或医学内容已取得相同许可。
  * 修改记录：2026-08-05 初始版本
- * 当前协议：MIT
+ * DT编号为本应用内部索引；不得用这39条覆盖有原页出处的267条目录。
  */
 
 import type { TcmDongAcupoint } from "@/algorithm-core/types/tcm";
@@ -595,6 +595,14 @@ export let DONG_ACUPOINTS_DB: TcmDongAcupoint[] = [
   },
 ];
 
+// Preserve the old values for traceability; none of their medical numbers or
+// caution statements becomes source-verified merely by being attached to a page.
+DONG_ACUPOINTS_DB=DONG_ACUPOINTS_DB.map(point=>({...point,study_review:{
+ status:'UNVERIFIED_LEGACY' as const,
+ unverifiedFields:['location','location_detail','function','needling_method','depth','duration','contraindications'],
+ note:'旧整理尚缺逐字段版本、页码及专业核对；原页关联不等于这些数值已核准。',
+}}));
+
 /** 按部位获取董氏奇穴 */
 export interface DongStudyCatalog {
   schema: 'yandao.tcm.dong-catalog.v1';
@@ -613,6 +621,7 @@ export function validateDongStudyCatalog(raw: unknown): DongStudyCatalog | null 
   const codes = new Set<string>(), names = new Set<string>();
   const text = (value: unknown, max: number) => typeof value === 'string' && value.length <= max && !/[<>\u0000]/.test(value);
   for (const point of catalog.points) {
+    if(point.study_review&&(point.study_review.status!=='UNVERIFIED_LEGACY'||!Array.isArray(point.study_review.unverifiedFields)||point.study_review.unverifiedFields.some(field=>!['location','location_detail','function','needling_method','depth','duration','contraindications'].includes(field))||!text(point.study_review.note,1500)))return null;
     if (!point || !text(point.name, 40) || !point.name || !text(point.code, 30) ||
         !/^(?:DT\.[0-9]{1,4}|[0-9]{2}\.[0-9]{1,3})$/.test(point.code) ||
         codes.has(point.code) || names.has(point.name.replace(/穴$/, '')) ||

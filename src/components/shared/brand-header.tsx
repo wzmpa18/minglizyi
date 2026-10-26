@@ -5,6 +5,7 @@ import { interfaceText as ui, useInterfaceLocale } from "@/lib/interfaceLocale";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { PUBLIC_PROMOTION_ENABLED } from "@/lib/releaseFeatures";
+import {studyParentHref} from "@/lib/studyParentNavigation";
 
 interface BrandHeaderProps {
   title?: string;
@@ -24,12 +25,10 @@ export function BrandHeader({ title = "言道排盘", showBack = false, backUrl,
   const handleBack = () => {
     if (onBack) {
       onBack();
-    } else if (typeof window !== "undefined" && window.history.length > 1) {
-      router.back();
-    } else if (backUrl) {
-      router.push(backUrl);
+    } else if (backUrl&&backUrl.startsWith("/")&&!backUrl.startsWith("//")) {
+      router.replace(backUrl);
     } else {
-      router.push("/");
+      router.replace(studyParentHref(window.location.pathname,window.location.search));
     }
   };
 

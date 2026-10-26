@@ -16,6 +16,7 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import {studyParentHref} from "@/lib/studyParentNavigation";
 
 // ==================== 常量配置 ====================
 
@@ -353,6 +354,7 @@ export function useSwipeBack(
 
     /** 完成返回动画（滑动距离足够时） */
     function completeSwipe(): void {
+      const startingRoute=window.location.pathname+window.location.search;
       const content = contentRef.current;
       const s = stateRef.current;
       const dir = s.edge === "right" ? -1 : 1;
@@ -364,7 +366,12 @@ export function useSwipeBack(
 
       window.setTimeout(() => {
         // 执行返回导航
-        routerRef.current.back();
+        if(window.location.pathname+window.location.search===startingRoute){
+          if(window.location.pathname.startsWith("/zhongyi/")&&window.history.state?.__popup!=="1"){
+            const control=document.querySelector<HTMLElement>('.atlas-titlebar [data-page-back="1"]')||document.querySelector<HTMLElement>('[data-page-back="1"]');
+            if(control)control.click();else routerRef.current.replace(studyParentHref(window.location.pathname,window.location.search));
+          }else routerRef.current.back();
+        }
 
         // 重置位移：先隐藏可见性避免跳变，下一帧恢复
         const c = contentRef.current;
@@ -513,7 +520,7 @@ export function useSwipeBack(
       ) {
         // 满足返回条件（屏幕宽度 1/3）→ 检查防抖和历史记录
         const now = Date.now();
-        if (now - s.lastTrigger > DEBOUNCE_MS && window.history.length > 1) {
+        if (now - s.lastTrigger > DEBOUNCE_MS && (window.history.length > 1||window.location.pathname.startsWith("/zhongyi/"))) {
           s.lastTrigger = now;
           completeSwipe();
         } else {

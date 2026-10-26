@@ -42,6 +42,11 @@ router.get('/config', (_req, res) => {
     success: true,
     data: {
       enabled: !!cfg.enabled,
+      policyVersion: require('./promotionPolicy').POLICY_VERSION,
+      policyConfirmation: require('./promotionPolicy').POLICY_CONFIRMATION,
+      cashCommissionRule: '现金佣金按公司已确认合同，只统计来源已核验的公司官网下载及官网支付合格订单；商店来源及商店订单不计佣，分享码仅作归因。',
+      referralLevel1Percent: cfg.ratios.level1,
+      referralLevel2Percent: cfg.ratios.level2,
       withdrawEnabled: commissionEngine.withdrawAvailable(cfg), // v25.0.47_13: env主开关 && 后台开关
       minWithdrawYuan: cfg.minWithdrawYuan,
       dailyWithdrawLimit: cfg.dailyWithdrawLimit,

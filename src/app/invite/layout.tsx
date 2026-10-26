@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import StoreFeatureUnavailable from "@/components/StoreFeatureUnavailable";
+import LearningShareRedirect from '@/components/LearningShareRedirect';
 import { PUBLIC_PROMOTION_ENABLED } from "@/lib/releaseFeatures";
 
 export const metadata: Metadata = {
@@ -9,5 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function InviteLayout({ children }: { children: React.ReactNode }) {
-  return PUBLIC_PROMOTION_ENABLED ? children : <StoreFeatureUnavailable />;
+  return PUBLIC_PROMOTION_ENABLED ? children : <LearningShareRedirect />;
 }
