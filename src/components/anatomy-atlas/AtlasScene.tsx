@@ -43,6 +43,10 @@ export default function AtlasScene({data,state,onSelect,onPoint,onPose,onPeel,on
     shader.fragmentShader=shader.fragmentShader.replace("#include <color_fragment>","#include <color_fragment>\ndiffuseColor.rgb=mix(diffuseColor.rgb,vec3(0.35,0.74,0.66),chosen*0.7);diffuseColor.a*=mix(1.0,0.22,faded);");
    };return [id,m] as const;
   }));
+  // A separate removable garment covers the surface silhouette; never reshape source anatomy.
+  const shortsOutline=new T.Shape();shortsOutline.moveTo(-.145,1.02);shortsOutline.lineTo(.145,1.02);shortsOutline.lineTo(.18,.94);shortsOutline.lineTo(.17,.82);shortsOutline.lineTo(.025,.82);shortsOutline.lineTo(0,.89);shortsOutline.lineTo(-.025,.82);shortsOutline.lineTo(-.17,.82);shortsOutline.lineTo(-.18,.94);shortsOutline.closePath();
+  const shortsGeometry=new T.ExtrudeGeometry(shortsOutline,{depth:.275,bevelEnabled:true,bevelThickness:.012,bevelSize:.008,bevelSegments:3,steps:1});shortsGeometry.translate(0,0,-.15);geometries.push(shortsGeometry);
+  const shortsMaterial=new T.MeshStandardMaterial({color:0x293b57,roughness:.95,side:T.DoubleSide,clippingPlanes:clipPlanes});materials.push(shortsMaterial);const shorts=new T.Mesh(shortsGeometry,shortsMaterial);scene.add(shorts);
   const dotGeometry=new T.SphereGeometry(.0035,6,5);geometries.push(dotGeometry);
   const pointByCode=new Map(data.points.map(p=>[p.code,p]));
   const dotMaterials=new Map(Array.from(new Set(data.points.map(p=>p.meridianId))).map(id=>{const m=new T.MeshBasicMaterial({color:meridianColor(id),clippingPlanes:clipPlanes});materials.push(m);return[id,m] as const;}));
@@ -110,7 +114,7 @@ export default function AtlasScene({data,state,onSelect,onPoint,onPose,onPeel,on
   const stopHold=()=>{clearHold();active=null;held=false;pointers.clear();gesture.cancel();};
   const visibility=()=>{if(document.hidden)stopHold();};window.addEventListener("blur",stopHold);document.addEventListener("visibilitychange",visibility);
   const lost=(e:Event)=>{e.preventDefault();callbacks.current.onError("设备暂停了3D显示，请重新打开图谱。");};renderer.domElement.addEventListener("webglcontextlost",lost);
-  const animate=()=>{if(dead)return;frame=requestAnimationFrame(animate);const s=latest.current;underwearUniform.value=s.underwear===false?0:1;const now=performance.now(),elapsed=Math.min(100,Math.max(0,now-flowTick));flowTick=now;flowActive.value=s.flow?1:0;if(s.flow&&s.points&&!document.hidden){flowTime.value+=elapsed/1000*.35*Math.max(.25,Math.min(2,s.flowSpeed??1));dirty=true;}
+  const animate=()=>{if(dead)return;frame=requestAnimationFrame(animate);const s=latest.current;underwearUniform.value=s.underwear===false?0:1;shorts.visible=s.underwear!==false&&s.visible.includes("integumentary")&&!s.hidden.includes("FJ2810")&&!s.isolate&&s.explode===0&&s.opacity>=.99;const now=performance.now(),elapsed=Math.min(100,Math.max(0,now-flowTick));flowTick=now;flowActive.value=s.flow?1:0;if(s.flow&&s.points&&!document.hidden){flowTime.value+=elapsed/1000*.35*Math.max(.25,Math.min(2,s.flowSpeed??1));dirty=true;}
    if(previous!==s||needsFit){dirty=true;
     const region=BODY_REGIONS.find(r=>r.id===s.region);regionPlanes.forEach((p,i)=>{p.constant=region?(i%2===0?-region.min[Math.floor(i/2)]:region.max[Math.floor(i/2)]):100;});
     const visible=new Set(s.visible),hidden=new Set(s.hidden),faded=new Set(s.faded),selected=new Set((s.selected?.startsWith("@system:")?[]:selectionParts(data.atlas,s.selected)).map(p=>p.id));
