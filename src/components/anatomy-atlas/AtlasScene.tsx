@@ -19,7 +19,7 @@ export default function AtlasScene({data,state,onSelect,onPoint,onPose,onPeel,on
   const geometries:T.BufferGeometry[]=[],materials:T.Material[]=[];
   let renderer:T.WebGLRenderer;
   try{renderer=new T.WebGLRenderer({antialias:true,alpha:false});}catch{callbacks.current.onError("设备暂不支持3D显示，可继续使用原图谱与文字学习。");return;}
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.5));renderer.localClippingEnabled=true;renderer.setClearColor(0xf7f4ef);renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1;el.appendChild(renderer.domElement);renderer.domElement.style.userSelect="none";renderer.domElement.style.setProperty("-webkit-touch-callout","none");
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.5));renderer.localClippingEnabled=true;renderer.setClearColor(0x101417);renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1;el.appendChild(renderer.domElement);renderer.domElement.style.userSelect="none";renderer.domElement.style.setProperty("-webkit-touch-callout","none");
   const names=document.createElement("div");names.setAttribute("aria-label","当前可见穴位名称");Object.assign(names.style,{position:"absolute",inset:"0",pointerEvents:"none",overflow:"hidden"});el.appendChild(names);
   const preventMenu=(e:Event)=>e.preventDefault();renderer.domElement.addEventListener("contextmenu",preventMenu);
   renderer.domElement.setAttribute("aria-label","三维人体：拖动旋转，双指或滚轮缩放，点击结构或穴位");
