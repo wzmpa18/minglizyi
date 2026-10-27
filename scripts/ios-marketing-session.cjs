@@ -15,7 +15,9 @@ async function prepare(){
  if(process.env.GITHUB_ACTIONS!=='true'||!process.env.GITHUB_ENV)throw Error('This session bootstrap is restricted to the isolated screenshot runner');
  const account=process.env.GUOXUE_REVIEW_ACCOUNT,password=process.env.GUOXUE_REVIEW_PASSWORD;
  if(!account||!password)throw Error('Encrypted review-account inputs are missing');
- const headers={'Content-Type':'application/json','X-Client-Platform':'ios','X-Store-Channel':'ios-full-learning','X-Client-Version':'25.0.118'};
+ const version=String(require('../package.json').version||'').replace(/^v/,'');
+ if(!/^\d+\.\d+\.\d+$/.test(version))throw Error('Canonical client version is invalid');
+ const headers={'Content-Type':'application/json','X-Client-Platform':'ios','X-Store-Channel':'ios-full-learning','X-Client-Version':version};
  const response=await fetch('https://yandaoguoxue.yandao.vip/api/auth/login',{method:'POST',headers,body:JSON.stringify({account,password}),signal:AbortSignal.timeout(30000)});
  if(!response.ok)throw Error('Normal review login HTTP '+response.status);
  const login=await response.json(),storage=authStorage(login),token=storage.yandao_user_token;

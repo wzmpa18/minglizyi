@@ -7,6 +7,7 @@ import { isNativeShellSync, buildAndroidIntentUrl } from "@/lib/nativeDetect";
 import { useIOSNativeShell } from "@/lib/iosNativeGate";
 import {getUserToken} from '@/lib/auth';
 import {STORE_CHANNEL} from '@/lib/releaseFeatures';
+import {usesCompanyAppDistribution,STORE_UPDATE_MESSAGE} from '@/lib/appUpdatePolicy';
 
 const BRAND = "#7B2FBE";
 const DOWNLOAD_URL = "https://yandaoguoxue.yandao.vip/friend";
@@ -38,6 +39,7 @@ export default function DownloadPage() {
 
   // 运行时拉取最新 APK 下载地址（SSOT：服务器发布新包只需更新 app-release-config.json）
   useEffect(() => {
+    if (!usesCompanyAppDistribution(STORE_CHANNEL)) return;
     let stopped = false;
     (async () => {
       try {
@@ -55,13 +57,14 @@ export default function DownloadPage() {
 
   // 二维码内容跟随最新下载地址
   useEffect(() => {
-    if (!apkUrl) return;
+    if (!usesCompanyAppDistribution(STORE_CHANNEL) || !apkUrl) return;
     makeQrDataUrl(apkUrl, { width: 240, dark: "#7B2FBE" })
       .then(setDownloadQrUrl)
       .catch(() => {});
   }, [apkUrl]);
 
   const handleDownloadAPK = async () => {
+    if (!usesCompanyAppDistribution(STORE_CHANNEL)) { setDownloadMessage(STORE_UPDATE_MESSAGE); return; }
     if(downloadBusy)return;
     const token=getUserToken();
     if(token&&!isNativeShellSync()&&['default','internal'].includes(STORE_CHANNEL)&&['yandaoguoxue.yandao.vip','www.yandao.vip'].includes(window.location.hostname)){
@@ -80,7 +83,7 @@ export default function DownloadPage() {
     window.location.href = isNativeShellSync() ? buildAndroidIntentUrl(apkUrl) : apkUrl;
   };
 
-  if (iosNative) {
+  if (iosNative || !usesCompanyAppDistribution(STORE_CHANNEL)) {
     return (
       <div
         className="min-h-screen"
@@ -99,7 +102,7 @@ export default function DownloadPage() {
           </div>
           <h1 className="text-xl font-bold text-gray-800">您已在言道国学 App 内</h1>
           <p className="mt-3 text-sm leading-relaxed text-gray-500">
-            当前无需下载安装包，直接返回即可继续使用全部功能。
+            {STORE_UPDATE_MESSAGE} 返回即可继续学习。
           </p>
         </div>
         <div className="page-bottom-nav-safe" aria-hidden="true" />

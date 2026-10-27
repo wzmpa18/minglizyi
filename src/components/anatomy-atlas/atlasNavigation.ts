@@ -2,7 +2,7 @@ import type {Snapshot,CameraPose} from "./atlasState";
 export interface AtlasReturnContext {
  schema:1; at:number; snapshot:Snapshot; pose:CameraPose|null;
  past:Snapshot[]; future:Snapshot[]; quickList:"meridians"|"points"|"closed";
- page:"tree"|"points"|"info"|"settings"; panel:boolean; pinned:boolean;
+ page:"tree"|"points"|"info"|"settings"|"tools"; panel:boolean; pinned:boolean;
  treeScroll:number; quickScroll:number; anatomy?:Snapshot|null;
  expanded?:string[]; limits?:Record<string,number>; query?:string; pointQuery?:string;
 }
@@ -14,7 +14,7 @@ export function atlasReturnHref(token:string|null,pointName?:string,side=1):stri
  if(pointName)q.set("pointName",pointName);if(side===-1)q.set("side","-1");
  return "/zhongyi/anatomy3d/"+(q.size?"?"+q.toString():"");
 }
-const poseValid=(p:unknown)=>p===null||!!p&&typeof p==="object"&&["position","target"].every(key=>{
+const poseValid=(p:unknown)=>p===null||!!p&&typeof p==="object"&&((p as CameraPose).aspect===undefined||typeof (p as CameraPose).aspect==="number"&&Number.isFinite((p as CameraPose).aspect)&&(p as CameraPose).aspect!>=.05&&(p as CameraPose).aspect!<=20)&&["position","target"].every(key=>{
  const values=(p as Record<string,unknown>)[key];return Array.isArray(values)&&values.length===3&&values.every(n=>typeof n==="number"&&Number.isFinite(n)&&Math.abs(n)<100);
 });
 const idsValid=(value:unknown)=>Array.isArray(value)&&value.length<5000&&value.every(x=>typeof x==="string"&&x.length<120);
@@ -31,7 +31,7 @@ const viewValid=(v:any):boolean=>!!v&&["visible","hidden","faded"].every(key=>id
 const snapshotValid=(s:any):boolean=>!!s&&viewValid(s.view)&&(s.isolation===null||viewValid(s.isolation));
 export function readAtlasContext(storage:Pick<Storage,"getItem">,token:string|null,now=Date.now()):AtlasReturnContext|null {
  try {if(!validAtlasToken(token))return null;const raw=storage.getItem(PREFIX+token);if(!raw||raw.length>MAX_BYTES)return null;
-  const c=JSON.parse(raw);if(c.schema!==1||!Number.isFinite(c.at)||now-c.at>TTL||c.at>now+60000||!snapshotValid(c.snapshot)||!poseValid(c.pose)||![c.past,c.future].every(a=>Array.isArray(a)&&a.length<=30&&a.every(snapshotValid))||!["meridians","points","closed"].includes(c.quickList)||!["tree","points","info","settings"].includes(c.page)||![c.treeScroll,c.quickScroll].every(n=>Number.isFinite(n)&&n>=0&&n<1e7)||typeof c.panel!=="boolean"||typeof c.pinned!=="boolean")return null;
+  const c=JSON.parse(raw);if(c.schema!==1||!Number.isFinite(c.at)||now-c.at>TTL||c.at>now+60000||!snapshotValid(c.snapshot)||!poseValid(c.pose)||![c.past,c.future].every(a=>Array.isArray(a)&&a.length<=30&&a.every(snapshotValid))||!["meridians","points","closed"].includes(c.quickList)||!["tree","points","info","settings","tools"].includes(c.page)||![c.treeScroll,c.quickScroll].every(n=>Number.isFinite(n)&&n>=0&&n<1e7)||typeof c.panel!=="boolean"||typeof c.pinned!=="boolean")return null;
   if(c.anatomy!==undefined&&c.anatomy!==null&&!snapshotValid(c.anatomy))return null;
   if(c.expanded!==undefined&&(!Array.isArray(c.expanded)||c.expanded.length>5000||c.expanded.some((id:unknown)=>typeof id!=="string"||id.length>120)))return null;
   if(c.limits!==undefined&&(!c.limits||typeof c.limits!=="object"||Array.isArray(c.limits)||Object.keys(c.limits).length>5000||Object.values(c.limits).some(n=>!Number.isInteger(n)||Number(n)<0||Number(n)>100000)))return null;

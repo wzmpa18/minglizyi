@@ -8,7 +8,7 @@ export interface Part extends LearningMetadata { id:string; name:string; concept
 export interface Point { code:string; name:string; pinyin:string; meridianId:string; meridian:string; reviewed:boolean; surfaceUnavailable?:boolean; midline:boolean; source:string; positionProvenance:string }
 export interface Atlas { viewerPreferences?:{overviewDistance?:number;overviewTargetY?:number}; parts:Part[]; chunks:{url:string;bytes:number}[]; concepts:({id:string;name:string;elements:string[]}&LearningMetadata)[]; version:string }
 export interface Surface { points:{key:string;target:{position:number[];normal:number[];meshId:string;faceIndex:number}}[]; paths:{meridianId?:string;id?:string;positions?:number[];[key:string]:unknown}[] }
-export interface Dataset { atlas:Atlas; points:Point[]; surface:Surface; files:Record<string,Uint8Array>; version:string }
+export interface Dataset { atlas:Atlas; points:Point[]; surface:Surface; files:Record<string,Uint8Array>; version:string;verifiedFiles?:Record<string,string>;routeDerivation?:unknown }
 export interface AssetManifest { format:string; version:string; viewerProtocol:number; files:{path:string;size:number;sha256:string}[] }
 export async function verifyBytes(bytes:Uint8Array, expected:string) {
   const digest=await crypto.subtle.digest("SHA-256",new Uint8Array(bytes).buffer);
@@ -27,7 +27,13 @@ export async function decodeAtlas(bytes:ArrayBuffer):Promise<Dataset> {
   for(const entry of manifest.files){const b=files[entry.path];if(!b||b.byteLength!==entry.size)throw new Error("图谱文件不完整");await verifyBytes(b,entry.sha256);}
   const atlas=json<Atlas>("atlas.json");
   for(const c of atlas.chunks)if(!files[c.url]||files[c.url].length!==c.bytes)throw new Error("人体网格不完整");
-  return {atlas,points:json<Point[]>("points.json"),surface:json<Surface>("surface.json"),files,version:manifest.version};
+  const verifiedFiles=Object.fromEntries(manifest.files.map(entry=>[entry.path,entry.sha256]));
+  // Optional pure data can update with an authenticated, verified atlas pack.
+  // Unlisted members never become a trusted override. Bad optional JSON does
+  // not make the original anatomy unavailable; the viewer retains its fallback.
+  const derived="classical-surface-routes.json";let routeDerivation:unknown;
+  if(verifiedFiles[derived]&&files[derived]?.byteLength<=4_000_000){try{routeDerivation=json<unknown>(derived);}catch{}}
+  return {atlas,points:json<Point[]>("points.json"),surface:json<Surface>("surface.json"),files,version:manifest.version,verifiedFiles,routeDerivation};
 }
 export class AtlasAccessError extends Error { constructor(message:string, public action?:"login"|"membership"){super(message);this.name="AtlasAccessError";} }
 export async function installAtlas(progress?:DownloadProgress) {

@@ -405,50 +405,8 @@ export function listFrozenRewards(filter?: { userId?: string; status?: FrozenRew
 }
 
 /** 发放一笔冻结奖励（观察期满或申诉通过时调用），返回发放的积分数 */
-function releaseFrozenReward(rec: FrozenReward): number {
-  rec.status = "released";
-  rec.releasedAt = new Date().toISOString();
-  const list = safeGet<FrozenReward[]>(FROZEN_KEY, []);
-  const idx = list.findIndex((r) => r.id === rec.id);
-  if (idx >= 0) {
-    list[idx] = rec;
-    safeSet(FROZEN_KEY, list);
-  }
-  try {
-    const { earnPoints } = require("./pointsStore");
-    earnPoints("invite", `冻结奖励解冻发放：邀请 ${rec.inviteeName || rec.inviteeId}`);
-  } catch (e) {
-    console.error("[antiCheat] 解冻发放失败:", e);
-  }
-  return rec.amount;
-}
-
-/** 扫描并释放观察期满的冻结奖励（页面加载时调用），返回释放笔数 */
-export function releaseDueFrozenRewards(userId?: string): number {
-  const now = Date.now();
-  let released = 0;
-  const list = safeGet<FrozenReward[]>(FROZEN_KEY, []);
-  for (const rec of list) {
-    if (rec.status !== "frozen") continue;
-    if (userId && rec.userId !== userId) continue;
-    if (new Date(rec.releaseAt).getTime() <= now) {
-      releaseFrozenReward(rec);
-      // 同步标记邀请关系已发放
-      try {
-        const relations = JSON.parse(localStorage.getItem("yandao_invite_relations") || "[]") as Array<{ id: string; rewardClaimed: boolean }>;
-        const rel = relations.find((r) => r.id === rec.relationId);
-        if (rel) {
-          rel.rewardClaimed = true;
-          localStorage.setItem("yandao_invite_relations", JSON.stringify(relations));
-        }
-      } catch {
-        /* ignore */
-      }
-      released += 1;
-    }
-  }
-  return released;
-}
+// Preserve historical frozen records without client-side settlement.
+export function releaseDueFrozenRewards(_userId?: string): number { return 0; }
 
 /** 撤销冻结奖励（确认作弊），返回是否成功 */
 export function revokeFrozenReward(id: string, note: string): boolean {
@@ -470,13 +428,7 @@ export function revokeFrozenReward(id: string, note: string): boolean {
 }
 
 /** 管理端强制解冻（申诉通过等场景） */
-export function forceReleaseFrozenReward(id: string): boolean {
-  const list = safeGet<FrozenReward[]>(FROZEN_KEY, []);
-  const rec = list.find((r) => r.id === id);
-  if (!rec || rec.status === "released" || rec.status === "revoked") return false;
-  releaseFrozenReward(rec);
-  return true;
-}
+export function forceReleaseFrozenReward(_id: string): boolean { return false; }
 
 // ==================== 撤销异常邀请关系 ====================
 
@@ -578,8 +530,7 @@ export function processAppeal(id: string, approved: boolean, adminNote: string):
   let message: string;
   if (rec.targetType === "reward_freeze") {
     if (approved) {
-      forceReleaseFrozenReward(rec.targetId);
-      message = "申诉通过，冻结奖励已发放";
+      message = "申诉已记录，历史奖励须由服务端核对；本机未发放";
     } else {
       revokeFrozenReward(rec.targetId, `申诉驳回：${adminNote}`);
       message = "申诉驳回，冻结奖励已撤销";

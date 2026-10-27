@@ -1,7 +1,17 @@
-name: Pinned 118 actual iOS learning marketing screenshots
+name: Pinned actual iOS learning marketing screenshots
 on:
   workflow_dispatch:
+    inputs:
+      application_source:
+        description: Exact verified application commit; empty uses this workflow commit
+        type: string
+        default: ''
   workflow_call:
+    inputs:
+      application_source:
+        description: Exact verified application commit; empty uses this workflow commit
+        type: string
+        default: ''
 permissions:
   contents: read
 jobs:
@@ -9,7 +19,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 45
     env:
-      PINNED_APPLICATION_SOURCE: ac13a433cfb5f5e8f2c2e3e0946f7181339fc079
+      PINNED_APPLICATION_SOURCE: ${{ inputs.application_source || github.sha }}
       QA_SOURCE: ${{ github.sha }}
       NEXT_PUBLIC_STORE_CHANNEL: ios-full-learning
       GEM_HOME: /tmp/guoxue-marketing-gems
@@ -22,7 +32,7 @@ jobs:
           path: qa-source
       - uses: actions/checkout@v4
         with:
-          ref: ac13a433cfb5f5e8f2c2e3e0946f7181339fc079
+          ref: ${{ inputs.application_source || github.sha }}
           path: app-source
       - uses: actions/setup-node@v4
         with:
@@ -31,6 +41,7 @@ jobs:
           cache-dependency-path: app-source/package-lock.json
       - name: Check pinned application tree and overlay test files only
         run: |
+          [[ "$PINNED_APPLICATION_SOURCE" =~ ^[a-f0-9]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$PINNED_APPLICATION_SOURCE"
           git diff --exit-code "$PINNED_APPLICATION_SOURCE" -- src public ios
           for name in ios-marketing-session.cjs ios-marketing-proof.rb ios-marketing-screenshots.swift export-ios-marketing-attachments.py; do

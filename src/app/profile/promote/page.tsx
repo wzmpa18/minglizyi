@@ -1,5 +1,9 @@
 "use client";
 
+import {isSignedInviteLinkShape} from "@/lib/marketing/qrSelfTest";
+import {PromotionPageGate} from "@/components/PromotionPageGate";
+import {DIRECT_PROMOTION_RULE, DIRECT_PROMOTION_SOURCE} from "@/lib/promotionCopy";
+
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { BrandHeader } from "@/components/shared";
@@ -10,7 +14,6 @@ import { captureAndSavePoster } from "@/lib/posterCapture";
 import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import { listFrozenRewards, listAppeals, submitAppeal, type FrozenReward, type AppealRecord } from "@/lib/antiCheatStore";
-import { releaseMaturedFrozenRewards } from "@/lib/inviteStore";
 import { useIOSNativeShell } from "@/lib/iosNativeGate";
 
 const BRAND = "#7B2FBE";
@@ -33,6 +36,10 @@ function formatTime(iso: string): string {
 
 // ==================== 主页面 ====================
 export default function PromotePage() {
+  return <PromotionPageGate><PromotePageContent/></PromotionPageGate>;
+}
+
+function PromotePageContent() {
   // v25.0.77: iOS 壳内下载文案切换（Guideline 2.5.2——不引导安装安卓包）
   const iosNative = useIOSNativeShell();
   const router = useRouter();
@@ -94,11 +101,7 @@ export default function PromotePage() {
       }
     } catch {}
 
-    // P6-TOOL-04 §5.2：解冻观察期满的奖励并加载冻结台账与申诉记录
-    try {
-      const released = releaseMaturedFrozenRewards(uid);
-      if (released > 0) showToast(`${released} 笔冻结奖励已过观察期，自动发放`);
-    } catch { /* ignore */ }
+    // Historical frozen entries and appeals remain readable; clients do not settle.
     try {
       setFrozenList(listFrozenRewards({ userId: uid }));
       setAppealList(listAppeals({ userId: uid }));
@@ -110,7 +113,7 @@ export default function PromotePage() {
   }, [loadData]);
 
   // 邀请链接（P9-推广中心：优先服务端签名邀请链接，降级旧 ref 链接）
-  const [inviteLink, setInviteLink] = useState(`https://yandaoguoxue.yandao.vip/friend?ref=${userId}`);
+  const [inviteLink, setInviteLink] = useState('');
   // 海报二维码（本地生成，不依赖境外服务）
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
 
@@ -122,7 +125,7 @@ export default function PromotePage() {
       try {
         const { getInviteLink } = await import("@/lib/inviteApi");
         const linkData = await getInviteLink();
-        if (linkData?.inviteLink) setInviteLink(linkData.inviteLink);
+        if (linkData?.inviteLink && isSignedInviteLinkShape(linkData.inviteLink)) setInviteLink(linkData.inviteLink);
       } catch { /* 降级旧链接 */ }
     })();
   }, []);
@@ -257,7 +260,7 @@ export default function PromotePage() {
           </div>
           <div style={{ fontSize: 12, opacity: 0.8, marginTop: 10, lineHeight: 1.6 }}>
             好友通过你的邀请码注册，即建立邀请关系<br />
-            好友消费你享 15% 佣金，二级好友消费享 5% 分成
+            {DIRECT_PROMOTION_RULE}
           </div>
         </div>
 
@@ -265,8 +268,8 @@ export default function PromotePage() {
         <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
           {[
             { label: "累计邀请", value: stats?.totalInvites ?? 0, color: BRAND },
-            { label: "一级好友", value: stats?.level1Count ?? 0, color: "#3498DB" },
-            { label: "二级好友", value: stats?.level2Count ?? 0, color: "#2ECC71" },
+            { label: "直接关系", value: stats?.level1Count ?? 0, color: "#3498DB" },
+            { label: "历史间接关系", value: stats?.level2Count ?? 0, color: "#2ECC71" },
           ].map((item) => (
             <div
               key={item.label}
@@ -415,7 +418,7 @@ export default function PromotePage() {
                         flexShrink: 0,
                       }}
                     >
-                      {r.level === 1 ? "一级" : "二级"}
+                      {r.level === 1 ? "直接关系" : "历史间接关系"}
                     </span>
                   </div>
                   <div style={{ fontSize: 12, color: "#bbb", marginTop: 3 }}>注册时间 {formatTime(r.invite_time)}</div>
@@ -451,7 +454,7 @@ export default function PromotePage() {
                 <div key={f.id} style={{ padding: "12px 16px", borderBottom: "1px solid #f5f5f5" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                     <div style={{ fontSize: 13, color: "#333" }}>
-                      邀请 {f.inviteeName || "新用户"}（{f.level === 1 ? "一级" : "二级"}）+{f.amount} 积分
+                      邀请 {f.inviteeName || "新用户"}（{f.level === 1 ? "直接关系" : "历史间接关系"}）+{f.amount} 积分
                     </div>
                     <span style={{ fontSize: 11, color: meta.color, fontWeight: 600 }}>{meta.label}</span>
                   </div>
@@ -490,8 +493,8 @@ export default function PromotePage() {
               );
             })}
             <div style={{ padding: "10px 16px", fontSize: 11, color: "#bbb", lineHeight: 1.6 }}>
-              为防止刷奖励等异常行为，触发风控规则的奖励将进入冻结观察期，
-              观察期满自动发放；如有疑问可发起申诉，平台将在1-3个工作日内处理。
+              历史冻结记录与申诉继续保留，是否可结算以服务端核对为准，
+              本机不会自动发放；如有疑问可发起申诉并查看处理结果。
             </div>
           </div>
         )}
@@ -513,14 +516,14 @@ export default function PromotePage() {
           <div>
             <div style={{ fontSize: 15, fontWeight: 800 }}>申请成为渠道合伙人</div>
             <div style={{ fontSize: 11, opacity: 0.92, marginTop: 5, lineHeight: 1.6 }}>
-              渠道净收入50%佣金 · 直属培养奖励5%<br />专属邀请码 · 月度结算 · 统一提现
+              仅本人合格直接成交15%，无间接奖励<br />原合同与历史账目按原记录核对
             </div>
           </div>
           <div style={{ fontSize: 22, opacity: 0.9 }}>›</div>
         </div>
 
         <p style={{ fontSize: 11, color: "#bbb", textAlign: "center", marginTop: 16, lineHeight: 1.7 }}>
-          邀请奖励自动发放至积分账户<br />佣金收益可前往「我的钱包」查看与提现
+          分享本身不发放奖励；历史积分与收益仍可查看<br />新推广须由公司核对来源、交易与合同
         </p>
       </div>
 
@@ -581,20 +584,20 @@ export default function PromotePage() {
             🎁 新人福利
           </div>
           <div style={{ fontSize: 12, color: "#795548", lineHeight: 1.5 }}>
-            免费解锁全部基础排盘 + 5部易学典籍电子版
+            阅读原典、了解学习功能，按现有账号权益使用
           </div>
         </div>
 
         {/* 裂变利益点 */}
         <div style={{ margin: "8px 24px", padding: "12px 16px", backgroundColor: "#F3E5F5", borderRadius: 10, border: `1px solid ${BRAND}33` }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: BRAND, marginBottom: 4 }}>
-            💰 邀请赚佣金
+            官网直接成交合作
           </div>
           <div style={{ fontSize: 12, color: "#555", lineHeight: 1.5 }}>
-            邀请好友开通会员，享一级 <b style={{ color: BRAND }}>15%</b>、二级 <b style={{ color: BRAND }}>5%</b> 分销收益
+            {DIRECT_PROMOTION_RULE}
           </div>
           <div style={{ fontSize: 11, color: "#999", marginTop: 4 }}>
-            多邀多得上不封顶
+            {DIRECT_PROMOTION_SOURCE}
           </div>
         </div>
 
@@ -678,14 +681,14 @@ export default function PromotePage() {
               <div style={{ margin: "4px 20px 6px", padding: "10px 12px", backgroundColor: "#FFF8E1", borderRadius: 8, border: "1px solid #FFE082" }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "#E65100" }}>🎁 新人福利</div>
                 <div style={{ fontSize: 11, color: "#795548", marginTop: 2 }}>
-                  免费解锁全部基础排盘 + 5部易学典籍电子版
+                  阅读原典、了解学习功能，按现有账号权益使用
                 </div>
               </div>
 
               <div style={{ margin: "4px 20px 6px", padding: "10px 12px", backgroundColor: "#F3E5F5", borderRadius: 8, border: `1px solid ${BRAND}33` }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: BRAND }}>💰 邀请赚佣金</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: BRAND }}>官网直接成交合作</div>
                 <div style={{ fontSize: 11, color: "#555", marginTop: 2 }}>
-                  一级 <b style={{ color: BRAND }}>15%</b>、二级 <b style={{ color: BRAND }}>5%</b>，多邀多得上不封顶
+                  {DIRECT_PROMOTION_RULE}
                 </div>
               </div>
 

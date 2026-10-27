@@ -32,7 +32,7 @@ export default function ShareCodePage(){
         <p style={{wordBreak:'break-all',fontSize:12,userSelect:'text'}}>{link()}</p>
         {canShare&&<button disabled={!link()} onClick={()=>{const url=link();if(url)void navigator.share({title:'言道国学·一起学习',text:'原典、图谱与课程笔记，一起对照学习。',url}).catch(()=>{});}}>分享给朋友</button>}</>}
       <p role="status">{message}</p>
-      <p style={{fontSize:12,color:'#777'}}>分享码用于记录邀请来源，不改变安装来源或支付渠道。商店下载及商店订单不计现金佣金。</p>
+      <p style={{fontSize:12,color:'#777'}}>分享码用于记录学习邀请来源，分享本身不产生奖励，也不改变现有账号权益。</p>
     </section>
   </main></>;
 }

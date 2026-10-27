@@ -7,7 +7,7 @@ const clamp=(value:number,min=0,max=1)=>Math.max(min,Math.min(max,value));
 const blend=(a:number,b:number,t:number)=>a+(b-a)*t;
 const smooth=(value:number)=>{const t=clamp(value);return t*t*(3-2*t);};
 const softMaximum=(a:number,b:number,radius=.004)=>(a+b+Math.sqrt((a-b)*(a-b)+radius*radius))/2;
-const TOP=1.025,HEM=.725,CLEARANCE=.003;
+const TOP=1.025,HEM=.715,CLEARANCE=.0016;
 
 /** A separate fabric surface fitted to source skin, never a modification of anatomy. */
 export function buildSurfaceShorts(skin:SkinGeometry):SurfaceShorts {
@@ -40,26 +40,36 @@ export function buildSurfaceShorts(skin:SkinGeometry):SurfaceShorts {
   }
   return Number.isFinite(front)?{front,back}:null;
  };
+ const underside=(x:number,z:number,floor:number)=>{let closest=Infinity;
+  for(const t of triangles){if(x<t.minX||x>t.maxX||z<Math.min(t.z0,t.z1,t.z2)||z>Math.max(t.z0,t.z1,t.z2))continue;
+   const den=(t.z1-t.z2)*(t.x0-t.x2)+(t.x2-t.x1)*(t.z0-t.z2);if(den<1e-12)continue;
+   const a=((t.z1-t.z2)*(x-t.x2)+(t.x2-t.x1)*(z-t.z2))/den,b=((t.z2-t.z0)*(x-t.x2)+(t.x0-t.x2)*(z-t.z2))/den,c=1-a-b;if(Math.min(a,b,c)<-.0001)continue;
+   const y=a*t.y0+b*t.y1+c*t.y2;if(y>=floor&&y<.86)closest=Math.min(closest,y);
+  }return Number.isFinite(closest)?closest-CLEARANCE:null;
+ };
  const positions:number[]=[],indices:number[]=[],colors:number[]=[],uvs:number[]=[],columns=64,rows=32,stride=columns+1,panelSize=stride*(rows+1);
  const color=(u:number,v:number,y:number,front:boolean)=>{
-  const band=y>1.005?1:0,hem=smooth((v-.955)/.045),seam=front?Math.exp(-Math.pow(u/.018,2))*.025:0;
+  const band=smooth((y-1.002)/.007),hem=smooth((v-.955)/.045),seam=front?Math.exp(-Math.pow(u/.018,2))*.025:0;
   const shade=1-.24*band-.12*hem-seam;
   return [.075*shade,.155*shade,.265*shade]; // linear RGB; muted woven blue
  };
  for(let panel=0;panel<2;panel++)for(let row=0;row<=rows;row++)for(let column=0;column<=columns;column++){
   const u=column/columns*2-1,v=row/rows,front=panel===0;
-  const crotch=Math.exp(-Math.pow(u/.18,2)),hem=HEM+(front?.04:.06)*crotch,y=blend(TOP,hem,v),bodyX=u*widthAt(y)*.995;
+  // A high-cut, triangular brief: the narrow gusset stays below the centre,
+  // while both leg openings rise towards the hip. The original skin is read only.
+  const centre=front?.752:.775,hip=.972;
+  const hem=blend(centre,hip,smooth((Math.abs(u)-.16)/.84)),y=blend(TOP,hem,v),bodyX=u*widthAt(y)*.995;
   const hit=sample(bodyX,y)||sample(bodyX*.98,y)||sample(bodyX*.94,y);
   let z=hit?(front?hit.front:hit.back):(front?.075:-.085);
   if(front&&Math.abs(bodyX)<.12&&y<.95){
    // A round, varying-depth fabric envelope bridges the crotch instead of
    // tracing genital skin or creating a constant-depth rectangular pouch.
-   const peak=.078+.04*Math.exp(-Math.pow((y-.825)/.08,2));
+   const peak=.073+.039*Math.exp(-Math.pow((y-.825)/.075,2));
    const envelope=peak*Math.sqrt(Math.max(0,1-Math.pow(bodyX/.12,2)));
    z=blend(z,softMaximum(z,envelope),smooth((.95-y)/.045));
   }else if(!front){
    // Fabric spans the gluteal cleft; it is not a skin-coloured anatomical cast.
-   const peak=.09+.057*Math.exp(-Math.pow((y-.91)/.10,2));
+   const peak=.084+.054*Math.exp(-Math.pow((y-.91)/.10,2));
    const envelope=peak*Math.sqrt(Math.max(0,1-Math.pow(bodyX/.18,2)));
    z=-softMaximum(-z,envelope);
   }
@@ -76,13 +86,13 @@ export function buildSurfaceShorts(skin:SkinGeometry):SurfaceShorts {
   if(column===0)indices.push(a,c,b,b,c,d);else indices.push(a,b,c,b,d,c);
  }
  // A curved narrow gusset joins the two panels and leaves two real leg openings.
- const first=29,last=35,gussetRows=8,gusset:number[][]=[];
+ const first=23,last=41,gussetRows=12,gusset:number[][]=[];
  for(let row=0;row<=gussetRows;row++){
   const line:number[]=[],t=row/gussetRows;
   for(let column=first;column<=last;column++){
    const a=rows*stride+column,b=a+panelSize;
    if(row===0){line.push(a);continue;}if(row===gussetRows){line.push(b);continue;}
-   const index=positions.length/3,x=blend(positions[a*3],positions[b*3],t),y=blend(positions[a*3+1],positions[b*3+1],t)-.004*Math.sin(t*Math.PI),z=blend(positions[a*3+2],positions[b*3+2],t);
+   const index=positions.length/3,x=blend(positions[a*3],positions[b*3],t),baseY=blend(positions[a*3+1],positions[b*3+1],t),z=blend(positions[a*3+2],positions[b*3+2],t),fitted=underside(x,z,baseY),y=blend(baseY,fitted??baseY,Math.sin(t*Math.PI));
    positions.push(x,y,z);colors.push(.064,.132,.226);uvs.push(column/columns,1+t*.12);line.push(index);
   }
   gusset.push(line);

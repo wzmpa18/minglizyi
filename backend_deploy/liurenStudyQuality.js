@@ -65,7 +65,7 @@ function applyStudyPolicy(messages) {
   return { messages: [{ role: 'system', content: POLICY + studyFacts(userText) }, ...messages.filter(m => m && ['user', 'assistant'].includes(m.role))], applied: true };
 }
 
-function validateStudyReport(content) {
+function validateStudyReport(content,options={}) {
   const text = String(content || '');
   if (text.length < 500) return 'REPORT_TOO_SHALLOW';
   if (!/\[R[1234]\]/.test(text)) return 'REPORT_MISSING_SOURCE';
@@ -78,7 +78,7 @@ function validateStudyReport(content) {
     }
   }
   if (/\[R(?:[5-9]|\d{2,})\]/.test(text)) return 'REPORT_UNKNOWN_SOURCE';
-  if (/(?:一定|必定|必然|注定).{0,8}(?:发财|破财|患病|离婚|死亡)/.test(text)) return 'REPORT_DETERMINISTIC_CLAIM';
+  if (!options.skipPredictionGuard&&/(?:一定|必定|必然|注定).{0,8}(?:发财|破财|患病|离婚|死亡)/.test(text)) return 'REPORT_DETERMINISTIC_CLAIM';
   return null;
 }
 

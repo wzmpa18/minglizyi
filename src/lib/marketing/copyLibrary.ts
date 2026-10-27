@@ -14,7 +14,7 @@ export const DISCLAIMERS: Record<DisclaimerKind, string> = {
 };
 
 /** 活动权益统一表述（第十五/四十九条），禁止“多推多得”类表述 */
-export const CAMPAIGN_RULES_COPY = "邀请朋友一起使用，符合活动规则可获得平台活动权益。";
+export const CAMPAIGN_RULES_COPY = "分享学习入口本身不发放奖励，不改变已有账号权益。";
 
 function copy(
   id: string,

@@ -1,5 +1,8 @@
 "use client";
 
+import {PromotionPageGate} from "@/components/PromotionPageGate";
+import {DIRECT_PROMOTION_RULE, DIRECT_PROMOTION_SOURCE} from "@/lib/promotionCopy";
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { BrandHeader } from "@/components/shared";
@@ -50,6 +53,10 @@ function formatTime(timeStr: string): string {
 }
 
 export default function InvitePage() {
+  return <PromotionPageGate><InvitePageContent/></PromotionPageGate>;
+}
+
+function InvitePageContent() {
   const router = useRouter();
 
   const [link, setLink] = useState<InviteLinkData | null>(null);
@@ -388,10 +395,10 @@ export default function InvitePage() {
           <p>{nonAi.granted?'非AI学习权益已发放，无到期日。':'真实新用户完成注册验证与学习笔记，并经过48小时复核后计入；不要求付费。'}</p>
           <p style={{fontSize:12,color:'#666'}}>范围：{nonAi.scope.join('、')}。不含{nonAi.excluded.join('、')}。</p>
         </section>}
-        {overview?.growthCampaign?.enabled && (
+        {overview?.growthCampaign?.coupon && (
           <div style={{ marginBottom: "12px", padding: "16px", borderRadius: "14px", background: "linear-gradient(135deg,#fff3d6,#fff)", border: "1px solid #f0c15b" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: "10px", alignItems: "center" }}>
-              <div style={{ fontSize: "16px", fontWeight: 800, color: "#7a4b0b" }}>{overview.growthCampaign.name}</div>
+              <div style={{ fontSize: "16px", fontWeight: 800, color: "#7a4b0b" }}>历史活动权益记录</div>
               <div style={{ fontSize: "12px", color: "#9a651e", whiteSpace: "nowrap" }}>{overview.growthCampaign.qualifiedInvites}/{overview.growthCampaign.targetInvites}</div>
             </div>
             <div style={{ marginTop: "10px", height: "8px", borderRadius: "5px", backgroundColor: "#f1e2c5", overflow: "hidden" }}>
@@ -402,19 +409,10 @@ export default function InvitePage() {
                 ? `会员优惠券已到账（立减${overview.growthCampaign.discountPercent}%），有效期至 ${new Date(overview.growthCampaign.coupon.expiresAt).toLocaleDateString("zh-CN")}。可到会员中心使用。`
                 : overview.growthCampaign.coupon?.status === "CONSUMED"
                 ? "本期八折券已使用。"
-                : `再邀请 ${overview.growthCampaign.remainingInvites} 位符合活动规则的新用户，即可获得一张会员优惠券。`}
+                : "历史活动记录保留，当前不因分享发放新奖励。"}
             </div>
             <div style={{ marginTop: "7px", fontSize: "10px", color: "#a0835e" }}>每人一次；月度、季度、年度会员可用；不与其他优惠或邀请佣金叠加。异常注册不计入。</div>
-            <button
-              type="button"
-              onClick={() => {
-                switchToTemplate("VIRAL_BARGAIN");
-                window.setTimeout(() => document.getElementById("invite-poster-card")?.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
-              }}
-              style={{ marginTop: "10px", width: "100%", border: "none", borderRadius: "10px", padding: "10px 12px", backgroundColor: "#c85a24", color: "#fff", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}
-            >
-              生成我的十人助力海报
-            </button>
+
           </div>
         )}
         {/* ===== AI推广助手入口（P7-MKT-POSTER-02） ===== */}
@@ -665,7 +663,7 @@ export default function InvitePage() {
                 二维码内含签名加密邀请链接，好友扫码注册即永久绑定邀请关系
               </div>
               <div style={{ fontSize: "11px", marginTop: "6px", opacity: 0.9 }}>
-                邀请注册 +{link?.rewardRules?.register ?? 50} 积分 / 首次付费 +{link?.rewardRules?.firstPay ?? 200} 积分
+                分享本身不发放奖励，已有历史积分记录保留
               </div>
             </div>
           </div>
@@ -853,7 +851,7 @@ export default function InvitePage() {
             <div>
               {(overview?.rewards.length ?? 0) === 0 ? (
                 <div style={{ textAlign: "center", color: "#999", padding: "20px 0", fontSize: "14px" }}>
-                  暂无奖励记录；好友注册或首次付费后自动发放
+                  暂无历史奖励记录；学习分享本身不发放奖励
                 </div>
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -898,12 +896,12 @@ export default function InvitePage() {
 
         {/* 规则说明 */}
         <div style={{ backgroundColor: "#fff", borderRadius: "12px", padding: "14px 16px", marginTop: "12px" }}>
-          <div style={{ fontSize: "13px", fontWeight: 600, color: "#333", marginBottom: "8px" }}>奖励规则（单层）</div>
+          <div style={{ fontSize: "13px", fontWeight: 600, color: "#333", marginBottom: "8px" }}>学习分享与新推广规则</div>
           <div style={{ fontSize: "12px", color: "#777", lineHeight: 1.8 }}>
-            · 好友通过你的二维码或链接注册，你立即获得 +{link?.rewardRules?.register ?? 50} 积分<br />
-            · 好友在平台首次有效付费，你再获得 +{link?.rewardRules?.firstPay ?? 200} 积分<br />
+            · 分享码只记录学习邀请来源<br />
+            · 本人合格直接成交须由服务端核对官网下载来源、交易与合同<br />
             · 邀请关系首次绑定后永久生效，仅统计直接邀请<br />
-            · 奖励自动发放至积分账户，明细上方可查
+            · 分享本身不发放奖励，历史积分流水继续保留
           </div>
         </div>
 
@@ -924,7 +922,7 @@ export default function InvitePage() {
           <div>
             <div style={{ fontSize: "15px", fontWeight: 800 }}>申请成为渠道合伙人</div>
             <div style={{ fontSize: "11px", opacity: 0.92, marginTop: "5px", lineHeight: 1.6 }}>
-              公司审核签约 · 官网合格直接成交15% · 二级0<br />来源记录与合同核对 · 历史收益记录保留
+              仅本人合格直接成交15%，无间接奖励<br />来源记录与合同核对 · 历史收益记录保留
             </div>
           </div>
           <div style={{ fontSize: "22px", opacity: 0.9 }}>›</div>

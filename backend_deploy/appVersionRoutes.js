@@ -57,8 +57,8 @@ function readReleaseConfig() {
 }
 
 function resolveClientPlatform(req) {
-  const storeChannel = String(req.headers['x-store-channel'] || '').toLowerCase();
-  if (['ios', 'ios-full-learning', 'apple', 'appstore'].includes(storeChannel)) return 'ios';
+  const declared = [req.headers['x-store-channel'],req.headers['x-client-platform'],req.query.platform].map(value=>String(value||'').toLowerCase());
+  if (declared.some(value=>['ios', 'ios-full-learning', 'apple', 'appstore'].includes(value))) return 'ios';
   const queryPlatform = String(req.query.platform || '').toLowerCase();
   if (queryPlatform === 'ios' || queryPlatform === 'android') return queryPlatform;
   const headerPlatform = String(req.headers['x-client-platform'] || '').toLowerCase();
@@ -92,7 +92,16 @@ router.get('/', (req, res) => {
       },
     });
   }
-  return res.json({ success: true, data: { ...publicInstaller.decoratePublicRelease(release), platform: 'android' } });
+  const domesticStores = ['oppo','vivo','honor','huawei','tencent','xiaomi','samsung','lenovo'];
+  const storeChannel = [req.headers['x-store-channel'],req.headers['x-client-platform'],req.query.platform]
+    .map(value=>String(value||'').toLowerCase()).find(value=>domesticStores.includes(value));
+  if (storeChannel) {
+    // Old signed store packages may still call the shared checker. An explicit
+    // store signal suppresses company APK delivery; no source is guessed from
+    // an account or a reviewer. Public website/internal downloads remain separate.
+    return res.json({success:true,data:{...release,latestVersionCode:0,downloadUrl:'',downloadPage:'',releaseNotes:[],forceUpdate:false,platform:'android',channel:storeChannel}});
+  }
+  return res.json({ success: true, data: { ...publicInstaller.decoratePublicRelease(release), forceUpdate:false, platform: 'android' } });
 });
 
 module.exports = { router, DEFAULT_RELEASE, resolveClientPlatform };

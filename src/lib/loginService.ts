@@ -13,6 +13,12 @@ import { saveTokenPair, clearAllTokens } from './authInterceptor';
 
 // v20.2: 后端 API 基础地址（ai-proxy-server.js）
 const API_BASE_URL = "https://yandaoguoxue.yandao.vip";
+let pendingLogout:Promise<void>|null=null;
+function sameLoginSession(owner:ReturnType<typeof getLoginState>):boolean {
+  const current=getLoginState();
+  return current.isLoggedIn&&current.token===owner.token&&String(current.profile?.userId)===String(owner.profile?.userId)&&current.profile?.loginTime===owner.profile?.loginTime;
+}
+
 
 // --- 类型 ---
 export interface SmsSendResult {
@@ -427,6 +433,7 @@ export async function registerToServer(phone?: string, email?: string): Promise<
 // ============================================================================
 
 export async function registerWithPhone(params: RegisterParams): Promise<LoginResult> {
+  if(pendingLogout)await pendingLogout;
   const { phone, smsCode, password, inviteCode, referrer_id } = params;
 
   // P9-推广中心：统一读取邀请上下文（签名链接 ref/ts/sig 优先，邀请码次之）+ 设备指纹
@@ -515,6 +522,7 @@ export async function registerWithPhone(params: RegisterParams): Promise<LoginRe
 // ============================================================================
 
 export async function loginWithPhone(phone: string, code: string, inviteCode?: string): Promise<LoginResult> {
+  if(pendingLogout)await pendingLogout;
   try {
     const { loginWithCodeServer } = await import('./inviteApi');
     const result = await loginWithCodeServer({ phone, code });
@@ -552,6 +560,7 @@ export async function loginWithPhone(phone: string, code: string, inviteCode?: s
 // ============================================================================
 
 export async function loginWithPassword(account: string, password: string): Promise<LoginResult> {
+  if(pendingLogout)await pendingLogout;
   const trimmed = account.trim();
   if (!trimmed) {
     return { success: false, message: '请输入账号' };
@@ -628,6 +637,7 @@ export async function loginWithPassword(account: string, password: string): Prom
 // ============================================================================
 
 export async function loginWithEmail(email: string, code: string): Promise<LoginResult> {
+  if(pendingLogout)await pendingLogout;
   try {
     const { loginWithCodeServer } = await import('./inviteApi');
     const result = await loginWithCodeServer({ email, code });
@@ -649,6 +659,7 @@ export async function loginWithEmail(email: string, code: string): Promise<Login
 // ============================================================================
 
 export async function registerWithEmail(params: RegisterEmailParams): Promise<LoginResult> {
+  if(pendingLogout)await pendingLogout;
   const { email, emailCode, password, inviteCode, referrer_id } = params;
 
   // P7-社交修复-01：邮箱注册与手机注册同口径——统一读取邀请上下文（签名链接 ref/ts/sig 优先）
@@ -827,16 +838,26 @@ export async function guestToLogin(phone: string, code: string): Promise<LoginRe
 // 退出登录
 // ============================================================================
 
-export function logout(): void {
+export function logout(options:{redirect?:boolean}={}):Promise<void> {
+  const owner=getLoginState();
   clearLoginState();
-  // v20.1: 清除所有 token 数据（access + refresh + IndexedDB备份）
   clearAllTokens();
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('yanduo_privacy_search');
-    localStorage.removeItem('yanduo_privacy_nearby');
-    localStorage.removeItem('yanduo_notify_enabled');
+  if(typeof window!=='undefined'){
+    for(const key of ['profile_userid','yandao_privacy_search','yandao_privacy_nearby','yandao_notify_enabled','yanduo_privacy_search','yanduo_privacy_nearby','yanduo_notify_enabled','privacy_search','privacy_nearby','notify_enabled']){
+      try{localStorage.removeItem(key);}catch{}
+    }
   }
-  window.location.href = '/';
+  // Local exit is immediate. New login requests wait for this bounded cookie
+  // clear, so an old logout response cannot clear a newly issued refresh cookie.
+  const previousLogout=pendingLogout;
+  const request=(async()=>{
+    try{await fetch(`${API_BASE_URL}/api/auth/logout`,{method:'POST',credentials:'include',headers:{'Content-Type':'application/json',...(owner.token?{Authorization:`Bearer ${owner.token}`}:{})},body:'{}',keepalive:true,signal:AbortSignal.timeout(8000)});}catch{/* Offline exit still succeeds locally. */}
+  })();
+  const task=previousLogout?Promise.all([previousLogout,request]).then(()=>{}):request;
+  pendingLogout=task;
+  void task.then(()=>{if(pendingLogout===task)pendingLogout=null;});
+  if(typeof window!=='undefined'&&options.redirect!==false)window.location.href='/';
+  return task;
 }
 
 // ============================================================================
@@ -982,6 +1003,7 @@ export async function restoreEntitlementsFromServer(): Promise<void> {
     });
     if (!res.ok) return;
     const data = await res.json();
+    if(!sameLoginSession(state))return;
     const list = data?.data?.entitlements as
       Array<{ key: string; expireAt: string | null; permanent: boolean }> | undefined;
     if (!Array.isArray(list)) return;
@@ -1037,9 +1059,11 @@ export async function fetchProfileFromServer(): Promise<{ success: boolean; user
       credentials: 'include',
     });
     const data = await res.json();
+    if(!sameLoginSession(state))return {success:false,message:'账号状态已改变，忽略先前资料响应'};
 
     if (data.success && data.data) {
       const backendUser = data.data;
+      if(String(backendUser.userId)!==String(state.profile?.userId))return {success:false,message:'账号资料不匹配，请重试'};
       const user: UserProfile = {
         userId: String(backendUser.userId),
         nickname: backendUser.nickname || '',

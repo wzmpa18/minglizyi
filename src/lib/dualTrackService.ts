@@ -115,34 +115,6 @@ export const POINTS_EARN_RULES: Array<{
   note: string;
 }> = [
   {
-    action: "invite_register",
-    amount: 0.5,
-    desc: "邀请好友注册成功",
-    perInviteeLimit: 2,
-    note: "同一位被邀请人最多为邀请人贡献2分",
-  },
-  {
-    action: "invite_paid",
-    amount: 0.5,
-    desc: "邀请好友首次付费≥1元",
-    perInviteeLimit: 2,
-    note: "同上，单人累计不超2分上限",
-  },
-  {
-    action: "invite_review",
-    amount: 0.5,
-    desc: "邀请好友首次发布≥50字有效评价",
-    perInviteeLimit: 2,
-    note: "同上",
-  },
-  {
-    action: "invite_active_7d",
-    amount: 0.5,
-    desc: "邀请好友连续活跃7天",
-    perInviteeLimit: 2,
-    note: "同上，单人4项合计最高2分",
-  },
-  {
     action: "daily_login",
     amount: 0.5,
     desc: "每日登录打卡",
@@ -246,7 +218,7 @@ export const POINTS_EXPLANATION = {
   title: "积分规则说明",
   body: `积分是平台对用户活跃贡献的奖励，所有注册用户均可获取，永久有效、不设上限。
 
-可通过邀请好友、每日打卡、群内互动、发布优质内容等方式获取。
+可通过每日打卡、群内互动、发布优质内容等方式获取；学习分享本身不发放积分。
 
 收到差评、发布违规内容会扣除对应积分，情节严重追加账号处罚。
 

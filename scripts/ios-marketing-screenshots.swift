@@ -135,10 +135,28 @@ final class GuoxueStudyMarketing: XCTestCase {
         let ready=app.staticTexts.matching(NSPredicate(format:"label BEGINSWITH %@","拖动旋转")).firstMatch
         XCTAssertTrue(ready.waitForExistence(timeout:120),"Actual model meshes must finish preparing")
         reset.tap()
+        // Exercise the real WKWebView/system text-menu path, not just CSS in a
+        // desktop browser. The current model gesture may inspect a layer; reset
+        // below before capturing the product's default appearance.
+        app.coordinate(withNormalizedOffset:CGVector(dx:0.5,dy:0.43)).press(forDuration:1.3)
+        for label in ["拷贝","复制","查询","搜索网页","Copy","Look Up","Search Web"] {
+            XCTAssertFalse(app.menuItems[label].exists,"Model gestures must not open a native text menu")
+            let action=app.buttons[label].firstMatch
+            XCTAssertFalse(action.exists && action.isHittable,"Model gestures must not expose native text actions")
+        }
+        reset.tap()
         // The renderer is real WKWebView/WebGL. Allow it to settle after the
         // user's reset; do not replace its canvas with any generated bitmap.
         Thread.sleep(forTimeInterval:2)
         shot("anatomy","默认体表与蓝色内裤",app)
+        app.buttons["打开模型显示设置"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["关闭目录"].firstMatch.waitForExistence(timeout:10))
+        shot("anatomy","独立设置侧栏与模型",app)
+        app.coordinate(withNormalizedOffset:CGVector(dx:0.78,dy:0.42)).tap()
+        let closeDirectory=app.buttons["关闭目录"].firstMatch
+        let collapsed=XCTNSPredicateExpectation(predicate:NSPredicate{_,_ in !closeDirectory.exists || !closeDirectory.isHittable},object:closeDirectory)
+        XCTAssertEqual(XCTWaiter.wait(for:[collapsed],timeout:10),.completed,"Model interaction must collapse the settings panel")
+        reset.tap()
         app.buttons["返回中医"].firstMatch.tap()
         XCTAssertTrue(app.links.matching(NSPredicate(format:"label CONTAINS %@","倪师自学专区")).firstMatch.waitForExistence(timeout:30))
 

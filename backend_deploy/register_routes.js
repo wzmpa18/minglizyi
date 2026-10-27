@@ -623,9 +623,10 @@ function verifyInviteSig(userId, ts, sig) {
 }
 
 // 奖励额度（env 可覆盖，默认与前端宣传一致）
-function inviteRewardPoints(type) {
-  if (type === 'first_pay') return Number(process.env.INVITE_REWARD_FIRST_PAY) || 200;
-  return Number(process.env.INVITE_REWARD_REGISTER) || 50;
+function inviteRewardPoints(_type) {
+  // Sharing binds attribution only. The confirmed 15/0 cash policy is settled
+  // separately on trusted paid orders; no legacy signup/first-pay points.
+  return 0;
 }
 
 // 服务端积分发放：更新余额 + 写流水（幂等由调用方保证）
@@ -742,15 +743,17 @@ function bindInviteAndReward(db, inviteeId, attribution, clientIp, deviceId) {
   let rewarded = 0;
   try {
     const pts = inviteRewardPoints('register');
-    db.prepare('INSERT INTO invite_rewards (invitee_id, inviter_id, reward_type, points, status) VALUES (?, ?, ?, ?, ?)')
-      .run(inviteeId, inviterId, 'register', pts, 'granted');
-    grantPointsTx(db, inviterId, 'invite_register', pts, inviteeId, `邀请新用户注册奖励(单层)`);
-    rewarded = pts;
+    if (pts > 0) {
+      db.prepare('INSERT INTO invite_rewards (invitee_id, inviter_id, reward_type, points, status) VALUES (?, ?, ?, ?, ?)')
+        .run(inviteeId, inviterId, 'register', pts, 'granted');
+      grantPointsTx(db, inviterId, 'invite_register', pts, inviteeId, `邀请新用户注册奖励(单层)`);
+      rewarded = pts;
+    }
   } catch (e) {
     // 唯一约束冲突 = 已发过，幂等跳过
   }
 
-  logInviteAudit(db, inviteeId, inviterId, source, 'bound', rewarded ? `REWARDED_${rewarded}` : 'REWARD_IDEMPOTENT_SKIP', clientIp, deviceId);
+  logInviteAudit(db, inviteeId, inviterId, source, 'bound', rewarded ? `REWARDED_${rewarded}` : 'ATTRIBUTION_ONLY_NO_REWARD', clientIp, deviceId);
 
   // v25.0.41 邀请绑定最终一致性：InviteBound → 幂等任务PENDING → autoFriend → DONE
   // 失败保留PENDING进RETRY队列（后续注册/每日reconcile重试），attempts超阈值ALERT审计留痕
@@ -776,6 +779,7 @@ function grantFirstPayReward(inviteeUserId, orderNo) {
 
   try {
     const pts = inviteRewardPoints('first_pay');
+    if (pts <= 0) return { granted: false, reason: 'LEGACY_INVITE_REWARDS_NOT_ACTIVE', points: 0 };
     db.prepare('INSERT INTO invite_rewards (invitee_id, inviter_id, reward_type, points, status) VALUES (?, ?, ?, ?, ?)')
       .run(inviteeId, invitee.invited_by, 'first_pay', pts, 'granted');
     grantPointsTx(db, invitee.invited_by, 'invite_first_pay', pts, inviteeId, `被邀请人首次有效付费奖励(单层)${orderNo ? ' 订单:' + orderNo : ''}`);
@@ -839,32 +843,9 @@ function grantConsumptionRebate(consumerUserId, orderNo, amount, product) {
   const existing = db.prepare('SELECT id FROM consumption_rebates WHERE order_no = ?').get(orderKey);
   if (existing) return { granted: false, reason: 'ALREADY_GRANTED' };
 
-  const inviterA = consumer.invited_by;
-  if (inviterA === consumerId) return { granted: false, reason: 'SELF_INVITE' };
-
-  const level1Points = Math.round(amt * rebateRate(1));
-  const rowA = db.prepare('SELECT invited_by FROM users WHERE user_id = ?').get(inviterA);
-  const inviterB = rowA && rowA.invited_by && rowA.invited_by !== consumerId ? rowA.invited_by : null;
-  const level2Points = inviterB ? Math.round(amt * rebateRate(2)) : 0;
-
-  const tx = db.transaction(() => {
-    db.prepare(`INSERT INTO consumption_rebates
-      (order_no, consumer_id, amount, product, level1_inviter_id, level1_points, level2_inviter_id, level2_points)
-      VALUES (?,?,?,?,?,?,?,?)`)
-      .run(orderKey, consumerId, amt, String(product || '').slice(0, 100),
-        level1Points > 0 ? inviterA : null, level1Points,
-        inviterB && level2Points > 0 ? inviterB : null, level2Points);
-    if (level1Points > 0) {
-      grantPointsTx(db, inviterA, 'rebate_level1', level1Points, orderKey, `消费返佣(一级${Math.round(rebateRate(1) * 100)}%)·${product || '会员消费'}·订单:${orderKey}`);
-    }
-    if (inviterB && level2Points > 0) {
-      grantPointsTx(db, inviterB, 'rebate_level2', level2Points, orderKey, `消费分成(二级${Math.round(rebateRate(2) * 100)}%)·${product || '会员消费'}·订单:${orderKey}`);
-    }
-  });
-  tx();
-
-  logInviteAudit(db, consumerId, inviterA, 'payment', 'consumption_rebate', `L1_${level1Points}_L2_${level2Points}_AMT_${amt}_ORDER_${orderKey}`, '', '');
-  return { granted: true, level1Points, level2Points, level1InviterId: inviterA, level2InviterId: inviterB || null };
+  // Legacy point rebates are not the confirmed direct cash commission.
+  // Preserve old rows/refund reversals; no client report may mint new rewards.
+  return { granted: false, reason: 'LEGACY_CONSUMPTION_REWARDS_NOT_ACTIVE', level1Points: 0, level2Points: 0 };
 }
 
 /**

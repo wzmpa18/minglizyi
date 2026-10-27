@@ -179,6 +179,10 @@ export type AnnouncementLevel = "info" | "important" | "urgent";
 
 /** 单条公告（后台管理用） */
 export interface AnnouncementAdminItem {
+  schema?: string; revision?: number; kind?: 'learning' | 'service'; channels?: string[]; platforms?: string[];
+  minVersion?: string; maxVersion?: string; popup?: boolean;
+  review?: {status:string;reference:string;revision:number;approvedAt:string|null;scope:string};
+  reviewApproved?: boolean; reviewReference?: string;
   id: string;
   title: string;
   content: string;

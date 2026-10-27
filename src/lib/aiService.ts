@@ -127,7 +127,7 @@ export async function callAI(request: AIRequest): Promise<AIResponse> {
   let key = "";
   try {
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(JSON.stringify([ownerToken,cacheKey || "",systemPrompt || "",userPrompt])));
-    key = "request-v2-" + Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2,"0")).join("");
+    key = "request-v3-study-20261027-" + Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2,"0")).join("");
   } catch { /* No unsafe/truncated cache fallback; send the full request without cache. */ }
 
   // 1. 检查本地缓存

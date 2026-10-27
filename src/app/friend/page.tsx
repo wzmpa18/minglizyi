@@ -9,6 +9,8 @@ import { getUserById, findUserById } from "@/lib/userStore";
 import { recordInviteLanding } from "@/lib/antiCheatStore";
 import { isNativeShellSync, buildAndroidIntentUrl } from "@/lib/nativeDetect";
 import { useIOSNativeShell } from "@/lib/iosNativeGate";
+import {STORE_CHANNEL} from '@/lib/releaseFeatures';
+import {usesCompanyAppDistribution,STORE_UPDATE_MESSAGE} from '@/lib/appUpdatePolicy';
 
 const BRAND = "#7B2FBE";
 // APK 直链兜底值：实际下载地址运行时从 /api/public/app-version 动态获取（SSOT，
@@ -52,6 +54,7 @@ function FriendContent() {
 
   // 运行时拉取最新 APK 下载地址（SSOT：服务器发布新包只需更新 app-release-config.json）
   useEffect(() => {
+    if (!usesCompanyAppDistribution(STORE_CHANNEL)) return;
     let stopped = false;
     (async () => {
       try {
@@ -104,7 +107,7 @@ function FriendContent() {
       }
     } else {
       // 场景A：未登录 → 直接触发下载（非微信/QQ环境）
-      if (!inApp) {
+      if (!inApp && usesCompanyAppDistribution(STORE_CHANNEL)) {
         setTimeout(() => {
           triggerDownload();
         }, 500);
@@ -116,6 +119,7 @@ function FriendContent() {
   // 静默吞掉（Toast「正在下载」永远不动即此因），改用 intent:// 拉起系统浏览器下载；
   // 浏览器环境保持原 location.href 直下。壳判定用同步实时检测，避免自动触发闭包过期）
   const triggerDownload = () => {
+    if (!usesCompanyAppDistribution(STORE_CHANNEL)) { setToast(STORE_UPDATE_MESSAGE); return; }
     setDownloadTriggered(true);
     if (isNativeShellSync()) {
       setToast("正在打开系统浏览器下载，请稍候…");
@@ -137,6 +141,7 @@ function FriendContent() {
 
   // 复制直链兜底（壳内 intent 拉起失败时，用户可复制链接到任意浏览器打开）
   const handleCopyLink = async () => {
+    if (!usesCompanyAppDistribution(STORE_CHANNEL)) { setToast(STORE_UPDATE_MESSAGE); return; }
     try {
       await navigator.clipboard.writeText(apkUrl);
     } catch {
@@ -198,6 +203,18 @@ function FriendContent() {
   const handleViewFriends = () => {
     router.push("/friends");
   };
+
+  if (!usesCompanyAppDistribution(STORE_CHANNEL)) return (
+    <main style={{maxWidth:420,margin:'0 auto',padding:24,lineHeight:1.8}}>
+      <h1 style={{fontSize:22,fontWeight:700}}>言道国学 · 学习交流</h1>
+      <p>{STORE_UPDATE_MESSAGE}</p>
+      {referrerId && <p>{friendAdded ? '好友申请已处理，可到好友列表查看。' : isLoggedIn ? '正在处理学习好友邀请，请留意提示。' : '登录后可以处理这位学习好友的邀请。'}</p>}
+      {toast && <p role="status">{toast}</p>}
+      <button onClick={handleViewFriends} style={{minHeight:44,marginRight:12}}>查看好友</button>
+      {!isLoggedIn && <button onClick={()=>router.push('/login')} style={{minHeight:44}}>登录</button>}
+      <button onClick={()=>router.push('/zhongyi')} style={{minHeight:44,marginLeft:12}}>继续学习</button>
+    </main>
+  );
 
   return (
     <div style={{ maxWidth: "420px", margin: "0 auto", minHeight: "100vh", backgroundColor: "#f5f5f5" }}>
@@ -515,7 +532,7 @@ function FriendContent() {
             { icon: "🔮", title: "14款排盘工具", desc: "基础功能永久免费" },
             { icon: "📚", title: "中医典籍全库", desc: "随时查阅研习" },
             { icon: "🤝", title: "同道交流社区", desc: "同好互动学习" },
-            { icon: "💰", title: "邀请赚佣金", desc: "一级15% 二级5%" },
+            { icon: "📚", title: "学习分享", desc: "和同好一起学习交流" },
           ].map((item, i) => (
             <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 6, padding: 6, backgroundColor: "#f9f5fc", borderRadius: 8 }}>
               <span style={{ fontSize: 16 }}>{item.icon}</span>
@@ -593,7 +610,7 @@ function FriendContent() {
 export default function FriendPage() {
   // v25.0.77: iOS 壳内不展示安卓 APK 下载落地内容（Guideline 2.5.2）
   const iosNative = useIOSNativeShell();
-  if (iosNative) {
+  if (iosNative && usesCompanyAppDistribution(STORE_CHANNEL)) {
     return (
       <div
         style={{

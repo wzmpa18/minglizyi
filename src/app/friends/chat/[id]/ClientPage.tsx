@@ -774,7 +774,7 @@ function FriendChatAccount({routeId}:{routeId?:string}){
       )}
 
       <div className="py-3 text-center">
-        <p className="text-[11px] text-gray-400">yandao.vip 分享下载有礼</p>
+        <p className="text-[11px] text-gray-400">原典研读 · 同好交流</p>
       </div>
 
       {/* v20.1: 单条消息操作菜单（长按触发） */}

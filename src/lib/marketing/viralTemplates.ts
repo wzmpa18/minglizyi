@@ -50,19 +50,19 @@ export const SHARE_COPY_LIBRARY: ShareCopyItem[] = [
     id: "SC-MOMENTS",
     title: "朋友圈种草文案",
     scene: "长文案，有代入感",
-    text: "最近挖到一个很良心的传统文化工具，没有乱七八糟的广告和套路。\n紫微八字这些排盘都很专业，还有完整的中医典籍库可以查，平时既能当趣味工具玩玩，也能静下心学点东西。\n分享给你们，扫码就能免费体验👇",
+    text: "最近在用言道国学读原典、看经络图谱，也能和学习同好交流。\n把学习入口分享给你，已收录的资料可以在应用内查阅。",
   },
   {
     id: "SC-GROUP",
     title: "社群引流文案",
     scene: "短平快，讲功能",
-    text: "推荐一个免费的国学工具平台，14款排盘工具+中医典籍查询+智能问诊参考，功能挺全的，扫码直接用，不用下载APP。\n（附海报）",
+    text: "分享一个传统文化学习平台：原典阅读、经络图谱、方药学习与同好交流。\n扫码查看学习入口，具体内容以当前版本为准。",
   },
   {
     id: "SC-FRIEND",
     title: "私聊好友文案",
-    scene: "信任感强，带福利",
-    text: "我最近在用这个国学工具，排盘挺准的，还有中医学习的内容，没事看看挺有意思的。\n你扫码注册试试，咱们都有免费解析次数奖励。",
+    scene: "好友间分享学习入口",
+    text: "我最近在言道国学学习原典和中医文献，也能做笔记、交流心得。\n把学习入口分享给你，有空一起学习。",
   },
 ];
 
@@ -152,7 +152,7 @@ const MOMENTS_COPY: CopySet = {
   subtitle: "命理排盘 · 中医养生 · 典籍查询\n手机里就能用的传统文化百宝箱",
   sellingPoints: [
     "14款专业排盘工具，新手也能一眼看懂",
-    "中医智能问诊+千年典籍库，随身参考",
+    "中医方药学习+千年典籍库，随身参考",
     "无冗余广告，纯工具纯内容，干净省心",
     "不用下载APP，扫码直接免费使用",
   ],
@@ -179,7 +179,7 @@ const GROUP_COPY: CopySet = {
     "手机号/车牌/姓名 深度解析",
     "批量解读，支持导出完整报告",
     "历代典籍全文检索，注解齐全",
-    "智能问诊参考，名家医案对照",
+    "方药学习参考，已收录医案对照",
     "题库模拟考试，备考学习利器",
   ],
   pointGroups: [
@@ -195,7 +195,7 @@ const GROUP_COPY: CopySet = {
       title: "中医学习",
       items: [
         "历代典籍全文检索，注解齐全",
-        "智能问诊参考，名家医案对照",
+        "方药学习参考，已收录医案对照",
         "题库模拟考试，备考学习利器",
       ],
     },
@@ -222,7 +222,7 @@ const LEARN_COPY: CopySet = {
     "📚 历代中医典籍全文检索，注解齐全",
     "🎯 专业排盘工具，支持多维度深度解读",
     "📝 配套题库模拟考，学习效果实时检验",
-    "💡 名家医案拆解，拆解辨证逻辑思路",
+    "💡 已收录医案拆解，拆解辨证逻辑思路",
   ],
   cta: "扫码开启系统化学习",
   qrNote: "适合爱好者/从业者/学生党",
@@ -233,6 +233,7 @@ const LEARN_COPY: CopySet = {
   status: "ACTIVE",
 };
 
+// Retained solely as legacy template metadata; absent from every current selector.
 const BARGAIN_COPY: CopySet = {
   copyId: "VC-BARGAIN-01",
   version: "v25.0.99",
@@ -254,7 +255,7 @@ const BARGAIN_COPY: CopySet = {
   groupCopy: "言道国学十人助力活动：扫码完成手机号注册即可帮我增加1次助力，满10人可领会员八折券，感谢支持。",
   privateCopies: [{ tone: "好友助力", text: "麻烦帮我扫一下海报二维码注册言道国学，给我的会员八折活动增加1次助力，谢谢！" }],
   disclaimer: "general",
-  status: "ACTIVE",
+  status: "DRAFT",
 };
 
 export const VIRAL_TEMPLATES: ViralTemplate[] = [
@@ -282,14 +283,7 @@ export const VIRAL_TEMPLATES: ViralTemplate[] = [
     variant: LEARN_VARIANT,
     copy: LEARN_COPY,
   },
-  {
-    id: "VIRAL_BARGAIN",
-    name: "十人助力八折版",
-    shortName: "助力八折",
-    desc: "活动专用海报 · 使用当前用户的签名专属二维码，好友注册后自动计入助力进度",
-    variant: BARGAIN_VARIANT,
-    copy: BARGAIN_COPY,
-  },
+
 ];
 
 export function getViralTemplate(id: ViralTemplateId): ViralTemplate {

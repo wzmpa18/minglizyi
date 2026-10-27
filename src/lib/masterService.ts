@@ -485,7 +485,7 @@ export interface RankingItem {
 
 /** 积分规则 */
 export const POINTS_RULES_DESC = [
-  { action: "直邀有效注册下级", points: "+2分/人", note: "仅一级直邀计分" },
+  { action: "学习分享", points: "不发放积分", note: "已有历史记录保留" },
   { action: "付费服务好评(≥4星)", points: "+2分/条", note: "含文字评价默认生效" },
   { action: "免费好评(≥4星+≥50字)", points: "+1.5分/条", note: "文字需与服务内容相关" },
   { action: "免费好评(纯星级/不足50字)", points: "+0.5分/条", note: "无实质内容的纯星级" },
@@ -573,14 +573,5 @@ export async function addInvitePoints(
   userId: string,
   invitedUserId: string
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    const res = await fetch("/api/master/points/invite", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, invitedUserId }),
-    });
-    return await res.json();
-  } catch {
-    return { success: false, error: "网络异常" };
-  }
+  return { success: false, error: "学习分享只记录来源，不发放邀请积分" };
 }

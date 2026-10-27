@@ -85,9 +85,7 @@ export async function isRefreshTokenValid(): Promise<boolean> {
  */
 export function clearAllTokens(): void {
   if (typeof window === "undefined") return;
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
-  localStorage.removeItem(TOKEN_EXPIRY_KEY);
-  localStorage.removeItem(REFRESH_EXPIRY_KEY);
+  for(const key of [REFRESH_TOKEN_KEY,TOKEN_EXPIRY_KEY,REFRESH_EXPIRY_KEY]){try{localStorage.removeItem(key);}catch{}}
   clearIndexedDB();
 }
 
@@ -176,6 +174,7 @@ async function refreshAccessToken(): Promise<RefreshOutcome> {
         headers: { "Content-Type": "application/json", ...clientPlatformHeaders() },
         body: JSON.stringify(refreshToken ? { refreshToken } : {}),
       });
+      if(getUserToken()!==originalToken)return "temporary";
       if ([400, 401, 403].includes(res.status)) return "rejected";
       if (!res.ok) return "temporary";
       const data = await res.json();
@@ -234,7 +233,7 @@ export async function fetchWithAuth(
   let response = await fetch(url, { ...options, headers });
 
   // 401 自动续期
-  if (response.status === 401 && token) {
+  if (response.status === 401 && token && getUserToken()===token) {
     const refreshed = await refreshAccessToken();
 
     if (refreshed === "refreshed") {
@@ -247,6 +246,7 @@ export async function fetchWithAuth(
     } else if (refreshed === "temporary") {
       throw new Error("登录状态暂时无法续期，请检查网络后重试；当前登录资料仍保留。");
     } else if (refreshed === "rejected") {
+      if(getUserToken()!==token)return response;
       // refresh token 也过期，清除登录态，引导重新登录
       clearLoginState();
       clearAllTokens();
@@ -288,6 +288,6 @@ export async function restoreLoginState(): Promise<void> {
   // Do not recreate an explicitly logged-out or session-only account without its profile.
   if (state.profile) {
     const refreshed = await refreshAccessToken();
-    if (refreshed === "rejected") { clearLoginState(); clearAllTokens(); }
+    if (refreshed === "rejected" && getUserToken()===state.token) { clearLoginState(); clearAllTokens(); }
   }
 }

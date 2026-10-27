@@ -1,5 +1,8 @@
 "use client";
 
+import {PromotionPageGate} from "@/components/PromotionPageGate";
+import {DIRECT_PROMOTION_RULE, DIRECT_PROMOTION_SOURCE} from "@/lib/promotionCopy";
+
 import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { BrandHeader } from "@/components/shared";
@@ -83,6 +86,10 @@ function formatTime(iso: string): string {
 
 // ==================== 主页面 ====================
 export default function TeamPage() {
+  return <PromotionPageGate><TeamPageContent/></PromotionPageGate>;
+}
+
+function TeamPageContent() {
   const router = useRouter();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [tab, setTab] = useState<"level1" | "level2">("level1");
@@ -117,10 +124,8 @@ export default function TeamPage() {
     const level1 = members.filter((m) => m.level === 1);
     const level2 = members.filter((m) => m.level === 2);
     const totalConsumption = members.reduce((sum, m) => sum + m.totalConsumption, 0);
-    // 累计收益 = 一级消费的15% + 二级消费的8%（与分销比例一致）
-    const income =
-      level1.reduce((s, m) => s + m.totalConsumption, 0) * 0.15 +
-      level2.reduce((s, m) => s + m.totalConsumption, 0) * 0.08;
+    // Historical amounts are displayed only from the server ledger, never local consumption multipliers.
+    const income = 0;
     return {
       total: members.length,
       level1Count: level1.length,
@@ -150,9 +155,9 @@ export default function TeamPage() {
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
             <div>
-              <div style={{ fontSize: 12, opacity: 0.85 }}>累计收益（元）</div>
+              <div style={{ fontSize: 12, opacity: 0.85 }}>累计收益以服务端账单为准</div>
               <div style={{ fontSize: 28, fontWeight: 700, marginTop: 2 }}>
-                {overview.income.toFixed(2)}
+                —
               </div>
             </div>
             <div style={{ textAlign: "right" }}>
@@ -169,11 +174,11 @@ export default function TeamPage() {
             </div>
             <div style={{ flex: 1, textAlign: "center", borderLeft: "1px solid rgba(255,255,255,0.2)", borderRight: "1px solid rgba(255,255,255,0.2)" }}>
               <div style={{ fontSize: 22, fontWeight: 700 }}>{overview.level1Count}</div>
-              <div style={{ fontSize: 11, opacity: 0.85, marginTop: 2 }}>一级成员</div>
+              <div style={{ fontSize: 11, opacity: 0.85, marginTop: 2 }}>直接关系</div>
             </div>
             <div style={{ flex: 1, textAlign: "center" }}>
               <div style={{ fontSize: 22, fontWeight: 700 }}>{overview.level2Count}</div>
-              <div style={{ fontSize: 11, opacity: 0.85, marginTop: 2 }}>二级成员</div>
+              <div style={{ fontSize: 11, opacity: 0.85, marginTop: 2 }}>历史间接关系</div>
             </div>
           </div>
         </div>
@@ -190,8 +195,8 @@ export default function TeamPage() {
           {/* Tab 切换 */}
           <div style={{ display: "flex", borderBottom: "1px solid #f0f0f0" }}>
             {[
-              { key: "level1" as const, label: `一级成员（${overview.level1Count}）` },
-              { key: "level2" as const, label: `二级成员（${overview.level2Count}）` },
+              { key: "level1" as const, label: `直接关系（${overview.level1Count}）` },
+              { key: "level2" as const, label: `历史间接关系（${overview.level2Count}）` },
             ].map((t) => (
               <button
                 key={t.key}
@@ -222,7 +227,7 @@ export default function TeamPage() {
                 <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
                 <path d="M16 3.13a4 4 0 0 1 0 7.75" />
               </svg>
-              <div style={{ fontSize: 14 }}>暂无{tab === "level1" ? "一级" : "二级"}成员</div>
+              <div style={{ fontSize: 14 }}>暂无{tab === "level1" ? "直接关系" : "历史间接关系"}成员</div>
               <div style={{ fontSize: 12, marginTop: 4 }}>去推广中心邀请好友加入吧</div>
               <button
                 onClick={() => router.push("/profile/promote")}
@@ -287,7 +292,7 @@ export default function TeamPage() {
                         flexShrink: 0,
                       }}
                     >
-                      {m.level === 1 ? "一级" : "二级"}
+                      {m.level === 1 ? "直接关系" : "历史间接关系"}
                     </span>
                   </div>
                   <div style={{ fontSize: 12, color: "#999", marginTop: 3, display: "flex", gap: 10 }}>
@@ -311,7 +316,7 @@ export default function TeamPage() {
         <div style={{ marginTop: 12, padding: "12px 14px", borderRadius: 10, backgroundColor: "#fff", boxShadow: "0 1px 3px rgba(0,0,0,0.04)" }}>
           <p style={{ fontSize: 12, color: "#999", lineHeight: 1.7, margin: 0 }}>
             <span style={{ fontWeight: 600, color: "#666" }}>收益说明：</span>
-            一级成员消费可获 15% 佣金，二级成员消费可获 8% 分成。收益将自动计入您的钱包余额。
+            {DIRECT_PROMOTION_RULE}。{DIRECT_PROMOTION_SOURCE}
           </p>
         </div>
       </div>

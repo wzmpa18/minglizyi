@@ -5,8 +5,8 @@ import {useInterfaceLocale} from "@/lib/interfaceLocale";
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { clearLoginState, getLoginState, type LoginState } from "@/lib/auth";
-import { clearAllTokens } from "@/lib/authInterceptor";
+import { getLoginState, type LoginState } from "@/lib/auth";
+import { logout } from "@/lib/loginService";
 import { captureAndSavePoster, preloadImageAsDataUrl } from "@/lib/posterCapture";
 import { getPointsBalance } from "@/lib/pointsStore";
 import { getAIQuotaInfo } from "@/lib/aiQuotaService";
@@ -20,6 +20,9 @@ import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import IcpFooter from "@/components/IcpFooter";
 import { useIOSNativeShell } from "@/lib/iosNativeGate";
 import { PUBLIC_AI_ENABLED, PUBLIC_PROMOTION_ENABLED, PUBLIC_SOCIAL_ENABLED } from "@/lib/releaseFeatures";
+import {learningShareLink} from '@/lib/learningShare';
+import {STORE_CHANNEL} from '@/lib/releaseFeatures';
+import {usesCompanyAppDistribution,STORE_UPDATE_MESSAGE} from '@/lib/appUpdatePolicy';
 
 const BRAND = "#7B2FBE";
 
@@ -149,7 +152,8 @@ function Zone({
 // ==================== 二维码弹窗（完整海报版） ====================
 function QRModal({ onClose, userId, nickname, avatar }: { onClose: () => void; userId: string; nickname?: string; avatar?: string }) {
   // P9-推广中心：优先签名邀请链接，本地生成二维码
-  const [shareUrl, setShareUrl] = useState(`https://yandaoguoxue.yandao.vip/friend?ref=${userId}`);
+  const [shareUrl, setShareUrl] = useState('');
+  const [shareCode, setShareCode] = useState('');
 
   const posterRef = useRef<HTMLDivElement>(null);
   const [qrSaving, setQrSaving] = useState(false);
@@ -161,16 +165,22 @@ function QRModal({ onClose, userId, nickname, avatar }: { onClose: () => void; u
   usePopupBackHandler(onClose, true);
 
   useEffect(() => {
+    let live = true;
+    setShareUrl(''); setShareCode(''); setQrDataUrl('');
     (async () => {
       try {
         const { getInviteLink } = await import("@/lib/inviteApi");
-        const linkData = await getInviteLink();
-        if (linkData?.inviteLink) setShareUrl(linkData.inviteLink);
-      } catch { /* 降级旧链接 */ }
+        const linkData = await getInviteLink(true);
+        const safe = learningShareLink(linkData?.inviteLink || '');
+        if (live && safe) { setShareUrl(safe); setShareCode(linkData?.inviteCode || ''); }
+        else if (live) setSaveMsg('学习分享码暂不可用，请稍后重试');
+      } catch { if (live) setSaveMsg('学习分享码暂不可用，请稍后重试'); }
     })();
-  }, []);
+    return () => { live = false; };
+  }, [userId]);
 
   useEffect(() => {
+    if (!shareUrl) return;
     import("@/lib/qrLocal")
       .then(({ makeQrDataUrl }) => makeQrDataUrl(shareUrl, { width: 300, dark: "#7B2FBE" }))
       .then(setQrDataUrl)
@@ -184,7 +194,7 @@ function QRModal({ onClose, userId, nickname, avatar }: { onClose: () => void; u
   }, [avatar]);
 
   const handleDownload = async () => {
-    if (!posterRef.current) return;
+    if (!posterRef.current || !shareUrl || !qrDataUrl) { setSaveMsg('学习分享码尚未准备好'); return; }
     setQrSaving(true);
     setSaveMsg("正在生成海报...");
     try {
@@ -204,8 +214,9 @@ function QRModal({ onClose, userId, nickname, avatar }: { onClose: () => void; u
   };
 
   const handleCopyLink = () => {
+    if (!shareUrl) { setSaveMsg('学习分享码尚未准备好'); return; }
     navigator.clipboard.writeText(shareUrl).then(() => {
-      alert("链接已复制到剪贴板！分享给好友即可添加");
+      alert("学习链接已复制，可以分享给好友");
     }).catch(() => {
       prompt("复制此链接分享给好友：", shareUrl);
     });
@@ -265,7 +276,7 @@ function QRModal({ onClose, userId, nickname, avatar }: { onClose: () => void; u
 
         <div style={{ padding: "0 24px 16px", textAlign: "center" }}>
           <div style={{ fontSize: 17, fontWeight: 700, color: "#333", lineHeight: 1.5 }}>
-            扫码加我为好友
+            扫码一起学习
           </div>
           <div style={{ fontSize: 15, color: "#555", marginTop: 4, lineHeight: 1.5 }}>
             同研习国学文化
@@ -275,14 +286,14 @@ function QRModal({ onClose, userId, nickname, avatar }: { onClose: () => void; u
             padding: "8px 16px", backgroundColor: "#f5f0fa", borderRadius: 8,
             display: "inline-block",
           }}>
-            邀请好友开通会员，享两级分销佣金
+            分享学习入口，与同好交流
           </div>
-          <div style={{ marginTop: 14, fontSize: 13, color: "#999" }}>专属邀请码</div>
+          <div style={{ marginTop: 14, fontSize: 13, color: "#999" }}>学习分享码</div>
           <div style={{
             fontSize: 22, fontWeight: 700, color: BRAND,
             fontFamily: "monospace", letterSpacing: 2, marginTop: 4,
           }}>
-            {userId}
+            {shareCode || "准备中…"}
           </div>
         </div>
 
@@ -351,13 +362,13 @@ function QRModal({ onClose, userId, nickname, avatar }: { onClose: () => void; u
                 />
               </div>
               <div style={{ fontSize: 14, fontWeight: 600, color: "#333", marginTop: 10 }}>
-                扫码加我为好友，同研习国学文化
+                扫码一起学习，同研习国学文化
               </div>
               <div style={{ fontSize: 12, color: BRAND, marginTop: 6 }}>
-                邀请好友开通会员，享两级分销佣金
+                分享学习入口，与同好交流
               </div>
               <div style={{ fontSize: 12, color: "#999", marginTop: 8 }}>
-                专属邀请码：<span style={{ color: BRAND, fontWeight: 700, fontFamily: "monospace" }}>{userId}</span>
+                学习分享码：<span style={{ color: BRAND, fontWeight: 700, fontFamily: "monospace" }}>{shareCode || "准备中…"}</span>
               </div>
             </div>
 
@@ -412,17 +423,7 @@ function LogoutConfirmModal({ onClose }: { onClose: () => void }) {
   usePopupBackHandler(onClose, true);
 
   const handleConfirmLogout = () => {
-    clearLoginState();
-    clearAllTokens();
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("profile_userid");
-      localStorage.removeItem("yandao_privacy_search");
-      localStorage.removeItem("yandao_privacy_nearby");
-      localStorage.removeItem("yandao_notify_enabled");
-      localStorage.removeItem("privacy_search");
-      localStorage.removeItem("privacy_nearby");
-      localStorage.removeItem("notify_enabled");
-    }
+    void logout({redirect:false});
     onClose();
     router.push("/");
   };
@@ -754,6 +755,10 @@ export default function ProfilePage() {
   //   直接判定有新版 → Toast+跳转下载页覆盖安装，一步转正为内置资源壳。
   // ③ 浏览器：对比服务器 version.json 与当前构建 ID，有新版 → 清缓存刷新一步完成更新。
   const handleCheckUpdate = async () => {
+    if (!usesCompanyAppDistribution(STORE_CHANNEL)) {
+      showToast(STORE_UPDATE_MESSAGE, 'success');
+      return;
+    }
     setUpdateCheck({ checking: true, result: null });
     const shell = await detectNativeShell();
     // ①② 原生壳（含老壳）检测
@@ -1155,7 +1160,7 @@ export default function ProfilePage() {
         <ZoneItem
           icon={Ic.inviteCode}
           label="我的推广"
-          sub="邀请码 · 拉新奖励"
+          sub="官网来源核对 · 本人合格直接成交15%"
           onClick={() => router.push("/invite")}
         />
         <ZoneItem
@@ -1211,8 +1216,8 @@ export default function ProfilePage() {
           {/* v25.0.49: 检查更新——手动拉取服务器 version.json 对比当前构建，发现新版一键更新 */}
           <ZoneItem
             icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={BRAND} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36" /><polyline points="21 3 21 9 15 9" /><path d="M12 7v5l3 3" /></svg>}
-            label="检查更新"
-            sub={updateCheck.checking
+            label={usesCompanyAppDistribution(STORE_CHANNEL) ? "检查更新" : "应用商店更新"}
+            sub={!usesCompanyAppDistribution(STORE_CHANNEL) ? STORE_UPDATE_MESSAGE : updateCheck.checking
               ? "正在检查新版本..."
               : updateCheck.result
                 ? (updateCheck.result.latest ? `当前已是最新版本${updateCheck.result.version ? ` ${updateCheck.result.version}` : ""}` : `发现新版本 ${updateCheck.result.version}，点击立即更新`)
@@ -1268,7 +1273,7 @@ export default function ProfilePage() {
           avatar={loginState.isLoggedIn && loginState.profile ? loginState.profile.avatar : undefined}
         />
       )}
-      {showLogoutConfirm && <LogoutConfirmModal onClose={() => setShowLogoutConfirm(false)} />}
+      {showLogoutConfirm && <LogoutConfirmModal onClose={() => {setShowLogoutConfirm(false);setLoginStateLocal(getLoginState());}} />}
       {showAbout && <AboutUsModal onClose={() => setShowAbout(false)} version={appVersion || undefined} />}
     </div>
   );

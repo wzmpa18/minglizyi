@@ -16,6 +16,11 @@ on:
         options:
           - tencent
           - google
+          - huawei
+          - oppo
+          - vivo
+          - honor
+          - xiaomi
           - internal
       challenge_base64:
         description: Optional official Tencent ownership challenge; sign only, no app rebuild

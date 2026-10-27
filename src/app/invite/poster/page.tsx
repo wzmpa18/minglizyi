@@ -7,6 +7,7 @@
 // ============================================================================
 
 import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { PromotionPageGate } from "@/components/PromotionPageGate";
 import { BrandHeader } from "@/components/shared";
 import { PageLoginGuard } from "@/components/PageLoginGuard";
 import { useToolBack } from "@/lib/useToolBack";
@@ -49,6 +50,10 @@ interface ToastMsg {
 const STEP_LABELS = ["推广内容", "分享对象", "分享渠道", "生成海报"];
 
 export default function PosterAssistantPage() {
+  return <PromotionPageGate><PosterAssistantContent /></PromotionPageGate>;
+}
+
+function PosterAssistantContent() {
   const { goBack } = useToolBack();
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
@@ -818,7 +823,7 @@ export default function PosterAssistantPage() {
                     ))}
                   </div>
                   <div style={{ fontSize: "10px", color: "#bbb", marginTop: "10px" }}>
-                    邀请奖励以平台活动规则为准：邀请朋友一起使用，符合活动规则可获得平台活动权益。
+                    分享本身不发放奖励，不改变现有账号权益。
                   </div>
                 </div>
 

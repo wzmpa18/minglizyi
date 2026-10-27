@@ -1,5 +1,8 @@
 "use client";
 
+import {PromotionPageGate} from "@/components/PromotionPageGate";
+import {DIRECT_PROMOTION_RULE, DIRECT_PROMOTION_SOURCE} from "@/lib/promotionCopy";
+
 /**
  * 渠道合伙人工作台（DEV-V22-PARTNER-V2）
  * 六大模块：数据概览 / 我的用户(脱敏) / 我的合伙人 / 佣金明细 / 推广物料 / 权益说明
@@ -23,6 +26,10 @@ const BRAND = "#6C3EF5";
 type TabKey = "overview" | "users" | "subs" | "records" | "materials" | "benefits";
 
 export default function PartnerPortalPage() {
+  return <PromotionPageGate><PartnerPortalPageContent/></PromotionPageGate>;
+}
+
+function PartnerPortalPageContent() {
   const router = useRouter();
   const [status, setStatus] = useState<string>("LOADING");
   const [level, setLevel] = useState("NORMAL");
@@ -141,9 +148,9 @@ export default function PartnerPortalPage() {
   // ==================== 海报变体定义 ====================
   const POSTERS = [
     { name: "经典国风", theme: `linear-gradient(135deg, ${BRAND} 0%, #9B59B6 100%)`, tagline: "排盘・习医・会同道", sub: "一站式传统文化学习平台", qr: () => qrInvite, qrTitle: "扫码加入我的渠道" },
-    { name: "中医学习", theme: "linear-gradient(135deg, #2E7D32 0%, #66BB6A 100%)", tagline: "中医典籍全库研习", sub: "名师课程 · 同道社区 · 边学边赚", qr: () => qrInvite, qrTitle: "扫码加入我的渠道" },
+    { name: "中医学习", theme: "linear-gradient(135deg, #2E7D32 0%, #66BB6A 100%)", tagline: "中医典籍全库研习", sub: "课程研习 · 同道社区 · 学习交流", qr: () => qrInvite, qrTitle: "扫码加入我的渠道" },
     { name: "极简功能", theme: "linear-gradient(135deg, #263238 0%, #546E7A 100%)", tagline: "14款专业排盘工具", sub: "基础功能永久免费", qr: () => qrInvite, qrTitle: "扫码加入我的渠道" },
-    { name: "招募合伙人", theme: "linear-gradient(135deg, #B8860B 0%, #DAA520 100%)", tagline: "招募渠道合伙人", sub: "渠道净收入50%佣金 · 培养奖励5%", qr: () => qrRecruit, qrTitle: "扫码申请成为我的下级合伙人" },
+    { name: "招募合伙人", theme: "linear-gradient(135deg, #B8860B 0%, #DAA520 100%)", tagline: "招募渠道合伙人", sub: "本人合格直接成交15% · 无间接奖励 · 审核签约", qr: () => qrRecruit, qrTitle: "扫码了解合作申请" },
   ];
 
   // ==================== 通用小组件 ====================
@@ -223,7 +230,7 @@ export default function PartnerPortalPage() {
                 ? "平台将在1-3个工作日内完成审核"
                 : status === "DISABLED"
                   ? "如有疑问请联系平台客服"
-                  : "申请开通后可获得专属邀请码、50%渠道佣金与培养奖励"}
+                  : "合作须公司审核签约，仅本人合格直接成交15%，无间接奖励"}
             </div>
             {(status === "NONE" || status === "REJECTED") && (
               <button
@@ -280,7 +287,7 @@ export default function PartnerPortalPage() {
               <StatCard label="累计实付总额" value={overview ? `¥${overview.channelGrossYuan}` : "-"} />
               <StatCard label="直属下级合伙人" value={overview ? String(overview.subPartnerCount) : "-"} />
               <StatCard label="累计基础佣金" value={overview ? `¥${overview.baseCommissionYuan}` : "-"} accent />
-              <StatCard label="累计培养奖励" value={overview ? `¥${overview.nurtureTotalYuan}` : "-"} accent />
+              <StatCard label="历史培养收益" value={overview ? `¥${overview.nurtureTotalYuan}` : "-"} accent />
               <StatCard label="已结算金额" value={overview ? `¥${overview.settledTotalYuan}` : "-"} />
               <StatCard label="待结算金额" value={overview ? `¥${overview.pendingSettleYuan}` : "-"} />
             </div>
@@ -360,7 +367,7 @@ export default function PartnerPortalPage() {
 
         {/* ========== 我的合伙人 ========== */}
         {tab === "subs" && (
-          <SectionCard title={`直属下级合伙人（${subs ? subs.length : 0}）· 仅一级有效`}>
+          <SectionCard title={`历史合作关系（${subs ? subs.length : 0}）`}>
             {!subs ? <EmptyRow text="加载中..." /> : subs.length === 0 ? (
               <div style={{ textAlign: "center", padding: "16px 0" }}>
                 <EmptyRow text="暂无直属下级合伙人" />
@@ -385,7 +392,7 @@ export default function PartnerPortalPage() {
                 </div>
               </div>
             ))}
-            <div style={{ fontSize: 10, color: "#ccc", textAlign: "center", marginTop: 10 }}>培养奖励 = 下级渠道每笔净收入 × 5%，平台全额承担</div>
+            <div style={{ fontSize: 10, color: "#ccc", textAlign: "center", marginTop: 10 }}>原合同历史奖励只读保留；新推广无间接奖励</div>
           </SectionCard>
         )}
 
@@ -393,7 +400,7 @@ export default function PartnerPortalPage() {
         {tab === "records" && (
           <>
             <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-              {[{ v: "base", t: "基础佣金" }, { v: "nurture", t: "培养奖励" }, { v: "withdrawal", t: "提现记录" }].map((f) => (
+              {[{ v: "base", t: "基础佣金" }, { v: "nurture", t: "历史培养收益" }, { v: "withdrawal", t: "提现记录" }].map((f) => (
                 <button key={f.t} onClick={() => setRecordType(f.v as "base" | "nurture" | "withdrawal")}
                   style={{
                     padding: "5px 14px", borderRadius: 14, border: `1px solid ${recordType === f.v ? BRAND : "#e5e0f5"}`,
@@ -401,7 +408,7 @@ export default function PartnerPortalPage() {
                   }}>{f.t}</button>
               ))}
             </div>
-            <SectionCard title={recordType === "base" ? "基础佣金明细（渠道净收入×50%）" : recordType === "nurture" ? "培养奖励明细（下级净收入×5%）" : "提现记录"}>
+            <SectionCard title={recordType === "base" ? "原合同基础佣金明细" : recordType === "nurture" ? "原合同历史奖励明细" : "提现记录"}>
               {!records ? <EmptyRow text="加载中..." /> : records.length === 0 ? <EmptyRow text="暂无记录" /> : records.map((r, i) => (
                 <div key={i} style={{ padding: "10px 0", borderBottom: i < records.length - 1 ? "1px solid #f5f2fb" : "none" }}>
                   {recordType === "withdrawal" ? (
@@ -476,7 +483,7 @@ export default function PartnerPortalPage() {
                   <div style={{ fontSize: 15, fontWeight: 700, marginTop: 8 }}>{cur.sub}</div>
                   {posterVariant === 3 && (
                     <div style={{ fontSize: 12, opacity: 0.92, marginTop: 10, lineHeight: 1.8 }}>
-                      基础佣金：渠道净收入×50%<br />培养奖励：直属下级净收入×5%<br />平台承担奖励 · 月度统一结算
+                      仅本人合格直接成交15%<br />无间接奖励 · 合作须审核签约<br />原合同与历史账目按原记录核对
                     </div>
                   )}
                 </div>
@@ -522,16 +529,16 @@ export default function PartnerPortalPage() {
                 </div>
                 <div>
                   <div style={{ fontSize: 15, fontWeight: 800, color: "#333" }}>{level === "CORE" ? "核心合伙人" : "渠道合伙人"}</div>
-                  <div style={{ fontSize: 11, color: "#999", marginTop: 3 }}>基础分成比例 {overview ? overview.ratios.commissionPercent : 50}% · 培养奖励 {overview ? overview.ratios.nurturePercent : 5}%</div>
+                  <div style={{ fontSize: 11, color: "#999", marginTop: 3 }}>{overview ? `原合同基础比例 ${overview.ratios.commissionPercent}% · 历史培养比例 ${overview.ratios.nurturePercent}%` : "原合同数据读取中"}</div>
                 </div>
               </div>
             </SectionCard>
-            <SectionCard title="结算规则（唯一口径）">
+            <SectionCard title="新推广规则与原合同记录">
               {[
-                ["渠道净收入", "用户实付总额 − 支付手续费 − AI调用成本 − 该订单普通两级分销佣金(15%+5%)"],
-                ["基础佣金", "渠道净收入 × 50%"],
-                ["培养奖励", "直属一级下级合伙人每笔渠道净收入 × 5%（平台全额承担，不影响下级收益）"],
-                ["层级限制", "培养奖励仅直属一级有效，隔代不绑定、不奖励"],
+                ["渠道净收入", "原合同账单保留原始净收入与扣项，以逐单记录核对"],
+                ["基础佣金", "新推广按已确认官网合格直接成交15%；原独立合同按已签合同核对"],
+                ["培养奖励", "仅展示原合同历史记录，不作为新招募或新奖励承诺"],
+                ["直接成交", "无间接奖励，不因邀请其他合作者增加佣金"],
                 ["结算周期", "每月1日自动生成上月结算单，审核通过转入可提现"],
                 ["提现窗口", "每月16日-月末，微信商家转账至零钱，1-3个工作日到账"],
               ].map(([t, d], i) => (

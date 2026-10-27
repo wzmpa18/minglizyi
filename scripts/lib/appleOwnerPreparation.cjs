@@ -1,6 +1,7 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const hash=raw=>crypto.createHash('sha256').update(raw).digest('hex');
+function marketingFile(auth){const file=auth.marketingFile||'docs/marketing/20261027/apple-118-learning-release.json';if(!/^docs\/marketing\/\d{8}\/apple-\d+-learning-release\.json$/.test(file))throw Error('Apple marketing path must remain in the owned release documents');return file;}
 function readScreenshotManifest(raw,auth){if(!/^[a-f0-9]{64}$/.test(auth.screenshotManifestSha256||'')||hash(raw)!==auth.screenshotManifestSha256)throw Error('Visually reviewed screenshot manifest bytes changed');return JSON.parse(Buffer.from(raw).toString('utf8'));}
 function exactCandidate(value,auth){if(value?.appId!==auth.appId||value?.bundleId!==auth.bundleId||value?.version!==auth.version||String(value?.build)!==auth.build||value?.candidateSource!==auth.candidateSource)throw Error('Apple candidate identity mismatch');return true;}
 function validateMarketing(value,auth){
@@ -84,4 +85,4 @@ function mutationScope(auth){
  }
  return {add,has,assert};
 }
-module.exports={hash,readScreenshotManifest,exactCandidate,validateMarketing,validateAccess,pngInfo,validateScreenshots,pendingIapIds,sameIapIds,redactAppleErrors,upsertAppInfoLocale,screenshotName,planScreenshotCapacity,recoverableScreenshotUpload,mutationScope};
+module.exports={hash,marketingFile,readScreenshotManifest,exactCandidate,validateMarketing,validateAccess,pngInfo,validateScreenshots,pendingIapIds,sameIapIds,redactAppleErrors,upsertAppInfoLocale,screenshotName,planScreenshotCapacity,recoverableScreenshotUpload,mutationScope};

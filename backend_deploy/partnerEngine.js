@@ -418,6 +418,9 @@ function grantPartnerCommission(order) {
 
   const existed = db.prepare("SELECT id FROM commission_records WHERE order_no = ? AND record_type IN ('PARTNER_COMMISSION','PARTNER_NURTURE')").get(orderNo);
   if (existed) return { granted: false, reason: 'DUPLICATE' };
+  // Existing per-order ledgers are immutable, including historical zero records.
+  const logged = db.prepare('SELECT id FROM partner_order_log WHERE order_no = ?').get(orderNo);
+  if (logged) return { granted: false, reason: 'DUPLICATE' };
   const policy = require('./promotionPolicy');
   const eligibility = policy.evaluateCashOrder(db,order,require('./commissionEngine').getConfig());
   if(!eligibility.ok)return {granted:false,reason:eligibility.reason};
@@ -427,68 +430,11 @@ function grantPartnerCommission(order) {
   if (String(partnerId) === String(order.userId)) return { granted: false, reason: 'SELF_PURCHASE' };
   if(eligibility.policyVersion===policy.POLICY_VERSION)return {granted:false,reason:'NEW_POLICY_PARTNER_CONTRACT_REVIEW_REQUIRED'};
 
-  const baseCents = eligibility.baseCents;
-  if (baseCents <= 0) return { granted: false, reason: 'ZERO_AMOUNT' };
-
-  // 该订单实际产生的普通两级分销佣金（实发口径，作为成本先行扣除）
-  const normalRow = db.prepare("SELECT COALESCE(SUM(commission_cents),0) s FROM commission_records WHERE order_no = ? AND record_type IN ('COMMISSION','COMMISSION_L2') AND status != 'REVERSED'").get(orderNo);
-  const normalCents = normalRow ? normalRow.s : 0;
-
-  const costRate = (Number(cfg.feePercent) || 0) + (Number(cfg.storePercent) || 0) + (Number(cfg.aiCostPercent) || 0);
-  const feeCostCents = Math.floor(baseCents * (Number(cfg.feePercent) + Number(cfg.storePercent)) / 100);
-  const aiCostCents = Math.floor(baseCents * Number(cfg.aiCostPercent) / 100);
-  const netCents = baseCents - feeCostCents - aiCostCents - normalCents;
-  if (netCents <= 0) return { granted: false, reason: 'NET_NOT_POSITIVE' };
-
-  const commissionCents = policy.commissionCents(netCents,policy.percent(cfg.commissionPercent,50,'partner'));
-
-  // 直属培养奖励：上级合伙人（仅直属一级；平台承担，不扣本合伙人）
-  let nurtureInviterId = null;
-  let nurtureCents = 0;
-  const me=getPartner(partnerId);
-  if(me&&me.referrer_partner_id&&isApprovedPartner(me.referrer_partner_id)){
-    const rp=getPartner(me.referrer_partner_id);
-    if(rp&&String(rp.user_id)!==String(order.userId)){
-      nurtureInviterId=rp.user_id;
-      nurtureCents=policy.commissionCents(netCents,policy.percent(cfg.nurturePercent,5,'nurture'));
-    }
-  }
-
-  const now = nowIso();
-  const note = `合伙人渠道单 实付${baseCents}分 手续费${feeCostCents}分 AI成本${aiCostCents}分 普通佣金成本${normalCents}分 净收入${netCents}分`;
-  const tx = db.transaction(() => {
-    db.prepare(`INSERT INTO commission_records (order_no, record_type, payer_user_id, inviter_user_id, ratio_percent, base_amount_cents, commission_cents, status, created_at, unfreeze_at, note)
-      VALUES (?, 'PARTNER_COMMISSION', ?, ?, ?, ?, ?, 'FROZEN', ?, NULL, ?)`)
-      .run(orderNo, parseInt(order.userId, 10) || 0, partnerId, Number(cfg.commissionPercent), netCents, commissionCents, now, (order.title || '') + ' ' + note);
-    creditPartnerFrozen(db, partnerId, commissionCents);
-
-    if (nurtureInviterId && nurtureCents > 0) {
-      try {
-        db.prepare(`INSERT INTO commission_records (order_no, record_type, payer_user_id, inviter_user_id, ratio_percent, base_amount_cents, commission_cents, status, created_at, unfreeze_at, note)
-          VALUES (?, 'PARTNER_NURTURE', ?, ?, ?, ?, ?, 'FROZEN', ?, NULL, ?)`)
-          .run(orderNo, parseInt(order.userId, 10) || 0, nurtureInviterId, Number(cfg.nurturePercent), netCents, nurtureCents, now,
-            `培养奖励 sub=${partnerId} order=${orderNo} ${(order.title || '')}`.slice(0, 200));
-        creditPartnerFrozen(db, nurtureInviterId, nurtureCents);
-      } catch (e) {
-        if (!/UNIQUE/.test(e.message)) throw e;
-      }
-    }
-
-    // 逐单精确成本留痕（结算单成本明细唯一数据源，禁止按费率反推）
-    db.prepare(`INSERT INTO partner_order_log (order_no, partner_id, payer_user_id, gross_cents, fee_cost_cents, ai_cost_cents, normal_commission_cents, net_cents, base_commission_cents, nurture_partner_id, nurture_cents, status, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?)`)
-      .run(orderNo, partnerId, parseInt(order.userId, 10) || 0, baseCents, feeCostCents, aiCostCents, normalCents, netCents, commissionCents,
-        nurtureInviterId || null, nurtureCents, now);
-  });
-  try {
-    tx();
-  } catch (e) {
-    if (/UNIQUE/.test(e.message)) return { granted: false, reason: 'DUPLICATE' };
-    console.error('[Partner] 分佣失败:', e.message);
-    return { granted: false, reason: 'ERROR:' + e.message };
-  }
-  console.log(`[Partner] 渠道分佣入账 order=${orderNo} partner=${partnerId} net=${netCents}分 佣金=${commissionCents}分${nurtureInviterId ? ` 培养奖励=${nurtureCents}分→${nurtureInviterId}` : ''}`);
-  return { granted: true, partnerId, netCents, commissionCents, nurtureInviterId, nurtureCents };
+  // No immutable, per-order independent partner-contract snapshot protocol exists
+  // in this schema. A current ACTIVE contract cannot establish past terms. Keep
+  // legacy orders and all existing payables intact; new legacy settlements need
+  // contract reconciliation instead of falling back to configurable 50/5 rates.
+  return { granted: false, reason: 'LEGACY_PARTNER_CONTRACT_SNAPSHOT_REQUIRED', reviewRequired: true };
 }
 
 /**

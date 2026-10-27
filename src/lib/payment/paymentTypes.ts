@@ -221,13 +221,13 @@ export function getComplianceDescription(type: OrderType): string {
 
 /**
  * 分销返佣配置
- * 一级返佣 15%，二级返佣 8%
+ * 现行官网合格直接成交15%，二级0；结算仅由服务端裁决
  */
 export const DISTRIBUTION_CONFIG = {
   /** 一级返佣比例（邀请人） */
   LEVEL1_RATE: 0.15,
   /** 二级返佣比例（邀请人的邀请人） */
-  LEVEL2_RATE: 0.08,
+  LEVEL2_RATE: 0,
 } as const;
 
 // ==================== 会员时长配置 ====================

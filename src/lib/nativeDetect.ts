@@ -1,4 +1,6 @@
 "use client";
+import {STORE_CHANNEL} from './releaseFeatures';
+import {usesCompanyAppDistribution,STORE_UPDATE_MESSAGE} from './appUpdatePolicy';
 
 /**
  * 原生壳统一探测（v25.0.47_28 FIX-V28-LEGACY-SHELL-RESCUE）
@@ -43,6 +45,7 @@ export function isNativeShellSync(): boolean {
  * shouldOverrideUrlLoading 交给系统按 ACTION_VIEW 解析，拉起系统浏览器完成下载。
  */
 export function buildAndroidIntentUrl(httpsUrl: string): string {
+  if (!usesCompanyAppDistribution(STORE_CHANNEL)) throw new Error(STORE_UPDATE_MESSAGE);
   try {
     const u = new URL(httpsUrl);
     return `intent://${u.host}${u.pathname}${u.search}#Intent;scheme=https;action=android.intent.action.VIEW;end`;
@@ -101,6 +104,7 @@ function versionParts(value: string | null | undefined): number[] | null {
 
 /** 统一版本判断：精确 code 优先，内置 version.json 次之，只有真老壳才用 2047 上限。 */
 export function isNativeShellOutdated(shell: NativeShellInfo, release: AppReleaseInfo): boolean {
+  if (!usesCompanyAppDistribution(STORE_CHANNEL)) return false;
   if (shell.versionCode !== null) return release.latestVersionCode > shell.versionCode;
   const current = versionParts(shell.versionName);
   const latest = versionParts(release.latestVersion);
@@ -128,8 +132,9 @@ export interface AppReleaseInfo {
 
 /** 拉取服务器最新 APP 版本（原生壳内经 native-api-patch 自动改写到线上） */
 export async function fetchLatestRelease(): Promise<AppReleaseInfo | null> {
+  if (!usesCompanyAppDistribution(STORE_CHANNEL)) return null;
   const res = await fetch(`/api/public/app-version?t=${Date.now()}`, { cache: "no-store" });
   if (!res.ok) return null;
   const json = await res.json();
-  return json && json.data && typeof json.data.latestVersionCode === "number" ? (json.data as AppReleaseInfo) : null;
+  return json && json.data && typeof json.data.latestVersionCode === "number" ? {...json.data,forceUpdate:false} as AppReleaseInfo : null;
 }

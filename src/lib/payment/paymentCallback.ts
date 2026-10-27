@@ -1,7 +1,7 @@
 // ============================================================================
 // 支付回调与权益发放 - v20.4
 // 验签通过后更新订单状态为 PAID，根据订单类型自动发放权益
-// 分销返佣自动结算：一级返佣 15%、二级返佣 8%
+// 现金结算仅由后端核对订单、来源与合同；客户端不发放佣金
 // 所有操作使用事务确保原子性
 // ============================================================================
 
@@ -389,68 +389,17 @@ async function deliverPointsRecharge(order: Order): Promise<void> {
 
 // ==================== 分销返佣结算 ====================
 
-/**
- * 分销返佣自动结算
- *
- * 链路：消费用户 C → 一级邀请人 A → 二级邀请人 B
- *  - 一级返佣：给 A 发放消费金额 15%
- *  - 二级返佣：给 B 发放消费金额 8%
- *  - 返佣金额记入邀请人钱包余额
- *  - 记录返佣流水
- *
- * @param order 已支付订单
- * @returns 返佣结算结果
- */
+/** Compatibility result only. Financial settlement is authoritative on the server. */
 export async function settleDistributionRebate(order: Order): Promise<{
   level1Rebate: number;
   level2Rebate: number;
   level1InviterId: string | null;
   level2InviterId: string | null;
 }> {
-  let level1Rebate = 0;
-  let level2Rebate = 0;
-  let level1InviterId: string | null = null;
-  let level2InviterId: string | null = null;
-
-  if (!order.userId || order.amount <= 0) {
-    return { level1Rebate, level2Rebate, level1InviterId, level2InviterId };
-  }
-
-  // === 一级返佣 ===
-  level1InviterId = await distributionAdapter.getLevel1InviterId(order.userId);
-  if (level1InviterId) {
-    level1Rebate = Math.round(order.amount * DISTRIBUTION_CONFIG.LEVEL1_RATE * 100) / 100;
-    if (level1Rebate > 0) {
-      await distributionAdapter.addWalletBalance(level1InviterId, level1Rebate);
-      await distributionAdapter.recordRebateFlow({
-        receiverId: level1InviterId,
-        consumerId: order.userId,
-        orderId: order.orderId,
-        amount: order.amount,
-        rebateAmount: level1Rebate,
-        level: 1,
-      });
-    }
-  }
-
-  // === 二级返佣 ===
-  level2InviterId = await distributionAdapter.getLevel2InviterId(order.userId);
-  if (level2InviterId) {
-    level2Rebate = Math.round(order.amount * DISTRIBUTION_CONFIG.LEVEL2_RATE * 100) / 100;
-    if (level2Rebate > 0) {
-      await distributionAdapter.addWalletBalance(level2InviterId, level2Rebate);
-      await distributionAdapter.recordRebateFlow({
-        receiverId: level2InviterId,
-        consumerId: order.userId,
-        orderId: order.orderId,
-        amount: order.amount,
-        rebateAmount: level2Rebate,
-        level: 2,
-      });
-    }
-  }
-
-  return { level1Rebate, level2Rebate, level1InviterId, level2InviterId };
+  // Only backend promotionPolicy can settle a verified paid order and its
+  // trusted distribution source. Legacy/local adapters must never mint cash.
+  void order;
+  return {level1Rebate:0,level2Rebate:0,level1InviterId:null,level2InviterId:null};
 }
 
 // ==================== 导出 ====================

@@ -345,9 +345,11 @@ function processPaidOrder(order) {
   const snap = buildSnapshot(db, order, ids, { referral, partner, policyEvidence:eligibility });
 
   let status, note;
-  if (partner.reason==='NEW_POLICY_PARTNER_CONTRACT_REVIEW_REQUIRED') {
+  if (['NEW_POLICY_PARTNER_CONTRACT_REVIEW_REQUIRED','LEGACY_PARTNER_CONTRACT_SNAPSHOT_REQUIRED'].includes(partner.reason)) {
     status=SETTLEMENT_STATUS.REVIEW_REQUIRED;
-    note='新15/0政策：既有Partner合同的新增渠道计提需单独核对，未自动发放上级渠道或培养佣金；历史账保留';
+    note=partner.reason==='LEGACY_PARTNER_CONTRACT_SNAPSHOT_REQUIRED'
+      ? '旧策略订单缺少可验证的逐单独立合同快照，新增Partner计提待合同核对；未按当前默认比例补发，原订单、合同与历史账保留'
+      : '新15/0政策：既有Partner合同的新增渠道计提需单独核对，未自动发放上级渠道或培养佣金；历史账保留';
   } else if (partnerOnly) {
     status = SETTLEMENT_STATUS.SETTLED;
     note = '助力优惠订单：普通邀请佣金不叠加，Partner 渠道合同按实付金额保留';

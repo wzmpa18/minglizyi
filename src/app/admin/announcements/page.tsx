@@ -9,6 +9,7 @@
 // ============================================================================
 
 import { useCallback, useEffect, useState } from "react";
+import {CLIENT_VERSION} from "@/lib/releaseFeatures";
 import { Bell, Plus, Pencil, Trash2, RefreshCw, Pin, PinOff, Lock } from "lucide-react";
 import { THEME, styles, AdminCard, StatCard, Badge, LoadingSpinner, useMounted, useToast, ConfirmDialog } from "../_shared";
 import {
@@ -35,6 +36,13 @@ interface FormState {
   publishAt: string;
   expiresAt: string;
   link: string;
+  kind:'learning'|'service'; channels:string; minVersion:string; maxVersion:string;
+  popup:boolean; reviewApproved:boolean; reviewReference:string;
+}
+
+function localDateTime(value: string | number = Date.now()): string {
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0,16) : "";
 }
 
 const EMPTY_FORM: FormState = {
@@ -43,10 +51,11 @@ const EMPTY_FORM: FormState = {
   level: "info",
   platform: "all",
   pinned: false,
-  published: true,
-  publishAt: new Date().toISOString().slice(0, 16),
-  expiresAt: "",
-  link: "",
+  published: false,
+  publishAt: localDateTime(),
+  expiresAt: localDateTime(Date.now()+30*86400000),
+  link: "", kind:'service',channels:'default,internal',minVersion:CLIENT_VERSION,maxVersion:CLIENT_VERSION,
+  popup:false,reviewApproved:false,reviewReference:'',
 };
 
 const PLATFORM_LABELS: Record<string, string> = {
@@ -66,17 +75,20 @@ function toFormState(item: AnnouncementAdminItem): FormState {
     title: item.title,
     content: item.content,
     level: item.level,
-    platform: item.platform || "all",
+    platform: item.platforms?.join(",") || item.platform || "all",
     pinned: item.pinned,
     published: item.published,
-    publishAt: item.publishAt.slice(0, 16),
-    expiresAt: item.expiresAt ? item.expiresAt.slice(0, 16) : "",
-    link: item.link || "",
+    publishAt: localDateTime(item.publishAt),
+    expiresAt: item.expiresAt ? localDateTime(item.expiresAt) : "",
+    link: item.link || "",kind:item.kind||'service',channels:item.channels?.join(',')||'',
+    minVersion:item.minVersion||CLIENT_VERSION,maxVersion:item.maxVersion||CLIENT_VERSION,
+    popup:item.popup===true,reviewApproved:false,reviewReference:item.review?.reference||'',
   };
 }
 
 function statusOf(item: AnnouncementAdminItem): { label: string; badge: "success" | "warning" | "error" } {
   const now = Date.now();
+  if(item.schema!=="yandao.notice.v1")return {label:"待核对元数据",badge:"warning"};
   if (item.published === false) return { label: "未发布", badge: "warning" };
   if (item.publishAt && new Date(item.publishAt).getTime() > now) return { label: "定时待发", badge: "warning" };
   if (item.expiresAt && new Date(item.expiresAt).getTime() <= now) return { label: "已过期", badge: "error" };
@@ -124,7 +136,7 @@ export default function AdminAnnouncementsPage() {
 
   const openCreate = () => {
     setEditingId(null);
-    setForm(EMPTY_FORM);
+    setForm({...EMPTY_FORM,publishAt:localDateTime(),expiresAt:localDateTime(Date.now()+30*86400000)});
     setFormOpen(true);
   };
 
@@ -139,8 +151,8 @@ export default function AdminAnnouncementsPage() {
       show("标题和内容均为必填", "error");
       return;
     }
-    if (form.link && !/^https?:\/\//.test(form.link.trim())) {
-      show("跳转链接必须以 http(s):// 开头", "error");
+    if (!form.platform || !form.channels.trim() || !Number.isFinite(Date.parse(form.publishAt)) || !Number.isFinite(Date.parse(form.expiresAt)) || Date.parse(form.expiresAt) <= Date.parse(form.publishAt)) {
+      show("请选择明确的平台、渠道及有效起止时间", "error");
       return;
     }
     setSaving(true);
@@ -153,14 +165,17 @@ export default function AdminAnnouncementsPage() {
       published: form.published,
       publishAt: new Date(form.publishAt).toISOString(),
       expiresAt: form.expiresAt ? new Date(form.expiresAt).toISOString() : null,
-      link: form.link.trim() || null,
+      link: null,kind:form.kind,channels:form.channels.split(',').map(x=>x.trim()).filter(Boolean),
+      platforms:form.platform==='all'?['web','android','ios']:form.platform.split(',').filter(Boolean),
+      minVersion:form.minVersion,maxVersion:form.maxVersion,popup:form.popup,
+      reviewApproved:form.reviewApproved,reviewReference:form.reviewReference.trim(),
     };
     const res = editingId
       ? await updateAnnouncement(editingId, payload)
       : await createAnnouncement(payload);
     setSaving(false);
     if (res.ok) {
-      show(editingId ? "公告更新成功" : "公告发布成功", "success");
+      show(form.published ? "纯文本通知已发布" : "通知草稿已保存", "success");
       setFormOpen(false);
       void refresh();
     } else {
@@ -172,10 +187,10 @@ export default function AdminAnnouncementsPage() {
     if (!deleteTarget) return;
     const res = await deleteAnnouncement(deleteTarget.id);
     if (res.ok) {
-      show(`已删除公告：${deleteTarget.title.slice(0, 20)}`, "success");
+      show(`已归档公告：${deleteTarget.title.slice(0, 20)}`, "success");
       void refresh();
     } else {
-      show(res.error || "删除失败", "error");
+      show(res.error || "归档失败", "error");
     }
     setDeleteTarget(null);
   };
@@ -282,7 +297,7 @@ export default function AdminAnnouncementsPage() {
                         style={{ ...styles.btnDanger, display: "flex", alignItems: "center", gap: 3 }}
                         onClick={() => setDeleteTarget(item)}
                       >
-                        <Trash2 size={12} /> 删除
+                        <Trash2 size={12} /> 归档
                       </button>
                     </div>
                   </div>
@@ -387,7 +402,7 @@ export default function AdminAnnouncementsPage() {
                       onChange={e => {
                         const current = form.platform === "all" ? ["ios", "android", "web"] : form.platform.split(",").filter(Boolean);
                         const next = e.target.checked ? Array.from(new Set([...current, p])) : current.filter(x => x !== p);
-                        setForm({ ...form, platform: next.length >= 3 ? "all" : (next.length === 0 ? "all" : next.join(",")) });
+                        setForm({ ...form, platform: next.length >= 3 ? "all" : next.join(",") });
                       }}
                     />
                     {PLATFORM_LABELS[p]}
@@ -400,7 +415,7 @@ export default function AdminAnnouncementsPage() {
             </div>
 
             <div style={{ marginBottom: 12 }}>
-              <label style={styles.label}>过期时间（留空 = 永不过期）</label>
+              <label style={styles.label}>过期时间（必填，须晚于发布时间）</label>
               <input
                 type="datetime-local"
                 style={inputStyle}
@@ -409,15 +424,16 @@ export default function AdminAnnouncementsPage() {
               />
             </div>
 
-            <div style={{ marginBottom: 12 }}>
-              <label style={styles.label}>跳转链接（选填，如升级引导页）</label>
-              <input
-                style={inputStyle}
-                value={form.link}
-                onChange={e => setForm({ ...form, link: e.target.value })}
-                placeholder="https://..."
-              />
+            <div style={{marginBottom:12,fontSize:12,color:THEME.textHint}}>公告只显示学习或服务纯文本，不设置跳转、支付、强迫分享或远程功能开关。旧公告原件保留，补齐元数据并审核后才展示。</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
+              <label style={styles.label}>通知类型<select style={inputStyle} value={form.kind} onChange={e=>setForm({...form,kind:e.target.value as 'learning'|'service'})}><option value="service">服务通知</option><option value="learning">学习通知</option></select></label>
+              <label style={styles.label}>固定渠道（逗号分隔）<input style={inputStyle} value={form.channels} onChange={e=>setForm({...form,channels:e.target.value})} placeholder="google,ios-full-learning,tencent"/></label>
+              <label style={styles.label}>最低客户端版本<input style={inputStyle} value={form.minVersion} onChange={e=>setForm({...form,minVersion:e.target.value})}/></label>
+              <label style={styles.label}>最高客户端版本<input style={inputStyle} value={form.maxVersion} onChange={e=>setForm({...form,maxVersion:e.target.value})}/></label>
             </div>
+            <label style={{display:'flex',gap:8,alignItems:'center',minHeight:44,fontSize:13}}><input type="checkbox" checked={form.popup} onChange={e=>setForm({...form,popup:e.target.checked})}/>首页可关闭提示（默认关闭；同修订记住，最多每日一次）</label>
+            <label style={styles.label}>本公司审核记录编号<input style={inputStyle} value={form.reviewReference} onChange={e=>setForm({...form,reviewReference:e.target.value})} placeholder="正文、来源、适用渠道/版本/时窗核对记录"/></label>
+            <label style={{display:'flex',gap:8,alignItems:'center',minHeight:44,fontSize:13}}><input type="checkbox" checked={form.reviewApproved} onChange={e=>setForm({...form,reviewApproved:e.target.checked})}/>已核对上述正文与适用范围（仅公司内容审核，不代表应用商店批准）</label>
 
             <div style={{ display: "flex", gap: 20, marginBottom: 20, flexWrap: "wrap" }}>
               <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, color: THEME.textMain, cursor: "pointer" }}>
@@ -453,9 +469,9 @@ export default function AdminAnnouncementsPage() {
       {/* 删除确认 */}
       <ConfirmDialog
         open={!!deleteTarget}
-        title="删除公告"
-        message={`确定删除「${deleteTarget?.title.slice(0, 30) || ""}」吗？删除后首页立即不再展示，不可恢复。`}
-        confirmText="确认删除"
+        title="归档公告"
+        message={`确定归档「${deleteTarget?.title.slice(0, 30) || ""}」吗？首页将不再展示，原文与历史修订保留。`}
+        confirmText="确认归档"
         danger
         onConfirm={() => void handleDelete()}
         onCancel={() => setDeleteTarget(null)}

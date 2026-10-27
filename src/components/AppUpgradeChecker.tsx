@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {STORE_CHANNEL} from '@/lib/releaseFeatures';
+import {usesCompanyAppDistribution} from '@/lib/appUpdatePolicy';
 import {
   detectNativeShell,
   fetchLatestRelease,
@@ -27,7 +29,7 @@ import {
  * 3. 服务器 versionCode > 本地 versionCode（老壳用 LEGACY_SHELL_MAX_CODE 判定）→ 弹升级提示。
  *    - 「立即升级」→ 直达 APK 下载落地页（/friend，单一分发源 latest.apk）
  *    - 「稍后再说」→ 本次会话不再提醒（sessionStorage）
- *    - forceUpdate 时无「稍后」按钮（强制更新）
+ *    - 公司渠道始终保留「稍后」；商店渠道不请求或展示公司升级。
  */
 
 const DISMISS_KEY = "yandao_upgrade_dismissed_for";
@@ -38,6 +40,7 @@ export default function AppUpgradeChecker() {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
+    if (!usesCompanyAppDistribution(STORE_CHANNEL)) return;
     let stopped = false;
 
     const check = async () => {
@@ -82,7 +85,7 @@ export default function AppUpgradeChecker() {
     { isShell: true, versionCode: native.versionCode, versionName: native.versionName, source: "asset" },
     release,
   );
-  if (!needsUpgrade || dismissed) return null;
+  if (!usesCompanyAppDistribution(STORE_CHANNEL) || !needsUpgrade || dismissed) return null;
 
   const handleUpgrade = () => {
     try {
@@ -121,7 +124,7 @@ export default function AppUpgradeChecker() {
         padding: "24px",
       }}
       onClick={(e) => {
-        if (!release!.forceUpdate && e.target === e.currentTarget) handleLater();
+        if (e.target === e.currentTarget) handleLater();
       }}
     >
       <div
@@ -202,7 +205,7 @@ export default function AppUpgradeChecker() {
           立即升级
         </button>
 
-        {!release!.forceUpdate && (
+        {(
           <button
             onClick={handleLater}
             style={{

@@ -14,6 +14,8 @@ function readBuildId(): string {
 }
 
 const BUILD_ID = readBuildId();
+const CLIENT_VERSION = String(JSON.parse(fs.readFileSync(path.join(process.cwd(), "package.json"), "utf8")).version || "").replace(/^v/, "");
+if (!/^\d+\.\d+\.\d+$/.test(CLIENT_VERSION)) throw new Error("Invalid canonical client version");
 
 const nextConfig: NextConfig = {
   output: "export",
@@ -35,6 +37,7 @@ const nextConfig: NextConfig = {
   },
   env: {
     NEXT_PUBLIC_BUILD_ID: BUILD_ID,
+    NEXT_PUBLIC_CLIENT_VERSION: CLIENT_VERSION,
   },
 };
 

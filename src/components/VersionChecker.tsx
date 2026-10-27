@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { reloadWithCachePurge } from "@/lib/cachePurge";
+import {STORE_CHANNEL} from '@/lib/releaseFeatures';
+import {mayRefreshWebBuild} from '@/lib/appUpdatePolicy';
+import {isNativeShellSync} from '@/lib/nativeDetect';
 
 // v25.0.47_21 缓存机制升级：
 //   · 每 30 秒轮询 version.json（另加页面重新可见时立即检查）
@@ -18,6 +21,7 @@ export default function VersionChecker() {
   const [updatedTo, setUpdatedTo] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!mayRefreshWebBuild(STORE_CHANNEL,isNativeShellSync())) return;
     try {
       const v = sessionStorage.getItem(UPDATED_TO_KEY);
       if (v) {
@@ -28,16 +32,17 @@ export default function VersionChecker() {
   }, []);
 
   useEffect(() => {
-    if (!updatedTo) return;
+    if (!mayRefreshWebBuild(STORE_CHANNEL,isNativeShellSync()) || !updatedTo) return;
     const t = setTimeout(() => setUpdatedTo(null), 4000);
     return () => clearTimeout(t);
   }, [updatedTo]);
 
   useEffect(() => {
+    if (!mayRefreshWebBuild(STORE_CHANNEL,isNativeShellSync())) return;
     let stopped = false;
 
     const check = async () => {
-      if (stopped) return;
+      if (stopped || !mayRefreshWebBuild(STORE_CHANNEL,isNativeShellSync())) return;
       try {
         const res = await fetch(`/version.json?t=${Date.now()}`, { cache: "no-store" });
         if (!res.ok) return;
@@ -69,6 +74,7 @@ export default function VersionChecker() {
     };
   }, []);
 
+  if (!mayRefreshWebBuild(STORE_CHANNEL,isNativeShellSync())) return null;
   if (!newVersion) {
     return updatedTo ? <UpdatedToast version={updatedTo} /> : null;
   }

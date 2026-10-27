@@ -48,7 +48,7 @@ const FORBIDDEN_WORDS: ForbiddenEntry[] = [
   { word: "固本延年", category: "医疗功效", hint: "删除功效表述" },
   { word: "调和气血", category: "医疗功效", hint: "删除功效表述" },
   { word: "治病", category: "医疗功效", hint: "删除治疗表述" },
-  { word: "多推多得", category: "层级营销", hint: "改为「符合活动规则可获得平台活动权益」" },
+  { word: "多推多得", category: "层级营销", hint: "改为学习分享，不承诺奖励" },
   { word: "发展下线", category: "层级营销", hint: "删除层级表述" },
   { word: "团队赚钱", category: "层级营销", hint: "删除层级收益表述" },
   { word: "拉人赚钱", category: "层级营销", hint: "删除层级收益表述" },
@@ -66,6 +66,7 @@ const FORBIDDEN_WORDS: ForbiddenEntry[] = [
 
 /** 第二十五条：语义风险模式（即使无禁用词，命中模式仍不合规） */
 const SEMANTIC_PATTERNS: { pattern: RegExp; category: string; hint: string }[] = [
+  { pattern: /返佣|佣金|分销|邀请.{0,20}(奖励|积分|解锁|返现)|注册.{0,12}(奖励|送.{0,4}解析)/, category: "学习分享", hint: "学习海报不承诺邀请奖励或现金收益" },
   { pattern: /(保证|确保).{0,8}(财运|事业运|婚姻|感情|健康)/, category: "迷信高风险", hint: "删除运势保证类语义" },
   { pattern: /(财运|运势|桃花).{0,6}(提升|变好|好转|暴富)/, category: "迷信高风险", hint: "删除运势效果暗示" },
   { pattern: /(根治|治愈|治好).{0,6}(疾病|病症|病)/, category: "医疗功效", hint: "删除治疗效果暗示" },

@@ -59,3 +59,21 @@ test('a narrowly phrased direction-comparison question is not an assertion; a wr
  assert.equal(q.validateStudyReport(body+'[BZ] 复盘：木生火与火生木在方向上如何区分？',r),null);
  assert.equal(q.validateStudyReport(body+'[BZ] 火生木如何应用？',r),'REPORT_ELEMENT_ERROR');
 });
+
+
+test('individual future claims are blocked despite a separate reassuring negation',()=>{
+ const request=q.applyStudyPolicy(message('八字'));
+ for(const claim of ['你明年会离婚，应当立即分手。','你明年一定升职并财源滚滚。','你一定会破财，但不能过度担心。','你不是穷人，一定发财。'])assert.equal(q.validateStudyReport(body+'[BZ] '+claim,request),'REPORT_MANIPULATIVE_CLAIM',claim);
+ for(const explanation of ['不能断言你一定发财。','你不会因为这个符号而注定发财。','古籍中的吉凶不能代表你明年一定发财。','“你一定发财”这种说法没有依据。','古代吉凶属于文本分类，不代表现实命运。'])assert.equal(q.validateStudyReport(body+'[BZ] '+explanation,request),null,explanation);
+});
+test('unlabelled personal fortune questions enter the same server-owned study policy',()=>{
+ for(const question of ['我的八字代表我将来会富贵吗？','我的财运怎么样？','请给我算命，未来能结婚吗？']){const request=q.applyStudyPolicy([{role:'system',content:'你是传统文化研究者。'},{role:'user',content:question}]);assert.equal(request.applied,true,question);assert.ok(request.messages[0].content.includes('不构成现实预测'));}
+ assert.equal(q.applyStudyPolicy([{role:'user',content:'请解释经络穴位术语，输出JSON'}]).applied,false);
+});
+
+test('general learning answers stay concise while actual chart reports keep their depth gate',()=>{
+ const general=q.applyStudyPolicy([{role:'system',content:'你是专业易学助手'},{role:'user',content:'六爻中的元神是什么意思？'}]);assert.equal(general.conceptOnly,true);assert.equal(q.validateStudyReport('AI辅助释义：元神是六爻资料对生扶用神之爻的传统称谓，这里仅作术语学习。',general),null);
+ const forecast=q.applyStudyPolicy([{role:'user',content:'我的八字代表我会富贵吗？'}]);assert.equal(q.validateStudyReport('AI辅助说明：八字是传统分类方法，可用于规则与文献学习，不能由此判断现实财富。',forecast),null);
+ assert.equal(q.validateStudyReport('AI辅助解释：你明年会离婚。这只是传统学习。',general),'REPORT_MANIPULATIVE_CLAIM');
+ assert.equal(q.validateStudyReport('AI辅助释义：仅作术语学习，不代表现实结果。',q.applyStudyPolicy(message('八字'))),'REPORT_TOO_SHALLOW');
+});

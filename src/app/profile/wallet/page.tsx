@@ -542,7 +542,7 @@ export default function WalletPage() {
         </div>
 
         <p style={{ fontSize: 11, color: "#bbb", textAlign: "center", marginTop: 16, lineHeight: 1.7 }}>
-          收益来源于邀请好友消费返佣，详见团队页<br />提现最低金额 100 元，T+1 工作日到账
+          历史账目按原始记录展示，处理状态以服务端回执为准
         </p>
 
         {/* 合规提示 */}

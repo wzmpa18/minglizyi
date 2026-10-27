@@ -1,0 +1,43 @@
+name: Independent public website and installer readback
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact published application version
+        type: string
+        required: true
+      build:
+        description: Exact Android version code
+        type: string
+        required: true
+      bytes:
+        description: Verified signed installer size
+        type: string
+        required: true
+      sha256:
+        description: Verified signed installer SHA-256
+        type: string
+        required: true
+permissions:
+  contents: read
+jobs:
+  readback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read public pages and the complete published signed APK
+        env:
+          VERIFY_VERSION: ${{ inputs.version }}
+          VERIFY_BUILD: ${{ inputs.build }}
+          VERIFY_BYTES: ${{ inputs.bytes }}
+          VERIFY_SHA256: ${{ inputs.sha256 }}
+        run: |
+          python3 scripts/verify-public-learning-release.py --version "$VERIFY_VERSION" --build "$VERIFY_BUILD" --bytes "$VERIFY_BYTES" --sha256 "$VERIFY_SHA256" --output "$RUNNER_TEMP/public-release-proof.json"
+      - name: Preserve readback evidence without another APK copy
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-learning-release-readback
+          path: ${{ runner.temp }}/public-release-proof.json
+          retention-days: 2

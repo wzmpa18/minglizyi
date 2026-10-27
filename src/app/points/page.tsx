@@ -134,7 +134,7 @@ export default function PointsPage() {
             获取积分
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {Object.entries(POINTS_RULES).map(([key, rule]) => (
+            {Object.entries(POINTS_RULES).filter(([key]) => !key.startsWith("invite")).map(([key, rule]) => (
               <div key={key} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 <div
                   style={{

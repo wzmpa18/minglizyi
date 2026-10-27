@@ -821,6 +821,7 @@ function StandardMembershipPage() {
             《会员服务协议》
           </Link>
         </label>
+        <p style={{ margin: "0 0 8px", fontSize: 12, color: "#555", lineHeight: 1.7 }}>购买、到账或退款问题：客服邮箱 <a href="mailto:support@yandao.vip" style={{ color: BRAND }}>support@yandao.vip</a> · <Link href="/profile/feedback" style={{ color: BRAND }}>帮助与反馈</Link></p>
         <button
           onClick={() => void handlePay()}
           disabled={paying || !acceptedMembershipTerms}

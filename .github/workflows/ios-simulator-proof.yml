@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
     inputs:
       marketing_only:
-        description: Capture the pinned 118 public learning marketing pages only
+        description: Capture this exact application's public learning marketing pages only
         type: boolean
         default: false
       private_only:
@@ -27,6 +27,8 @@ jobs:
   latest-marketing:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.marketing_only }}
     uses: ./.github/workflows/ios-learning-marketing.yml
+    with:
+      application_source: ${{ github.sha }}
     secrets: inherit
   screenshots:
     if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.marketing_only) && !(github.event_name == 'push' && contains(github.event.head_commit.message, '[ios-marketing-qa]')) }}

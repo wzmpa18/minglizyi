@@ -493,7 +493,7 @@ export default function FriendProfilePage({ routeId }: { routeId?: string }) {
       </div>
 
       <div className="py-3 text-center">
-        <p className="text-[11px] text-gray-400">yandao.vip 分享下载有礼</p>
+        <p className="text-[11px] text-gray-400">原典研读 · 同好交流</p>
       </div>
 
       <div className="page-bottom-nav-safe" aria-hidden="true" />

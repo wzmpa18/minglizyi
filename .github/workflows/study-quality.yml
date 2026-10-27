@@ -6,6 +6,21 @@ on:
       - 'src/app/agreements/**'
       - 'src/app/share-code/**'
       - 'src/components/anatomy-atlas/**'
+      - 'src/data/atlasClassicalRoutes.json'
+      - 'src/components/AnnouncementBar.tsx'
+      - 'src/components/PromotionPageGate.tsx'
+      - 'src/lib/noticeDisplay.ts'
+      - 'src/lib/promotionCopy.ts'
+      - 'backend_deploy/announcement*.js'
+      - 'scripts/announcement-policy.test.cjs'
+      - 'scripts/legacy-promotion-rewards.test.cjs'
+      - 'scripts/promotion-surface.test.cjs'
+      - 'scripts/atlas-*.test.cjs'
+      - 'scripts/client-version.test.cjs'
+      - 'scripts/store-update-policy.test.cjs'
+      - 'scripts/auth-logout-lifecycle.test.cjs'
+      - 'scripts/huawei-learning-content.test.cjs'
+      - 'src/lib/appUpdatePolicy.ts'
       - 'src/hooks/useAtlasBackNavigation.ts'
       - 'src/lib/niLessonStudy.ts'
       - 'src/lib/niStudyNotebook.ts'
@@ -343,10 +358,13 @@ jobs:
           cache: npm
       - run: npm ci --legacy-peer-deps
       - run: npx tsc --noEmit --incremental false
-      - run: node --test scripts/auth-session-refresh.test.cjs
+      - run: node --test scripts/client-version.test.cjs scripts/ios-marketing-session.test.cjs scripts/apple-owner-preparation.test.cjs scripts/huawei-learning-content.test.cjs
+      - run: node --test scripts/auth-session-refresh.test.cjs scripts/auth-logout-lifecycle.test.cjs
       - run: node --test scripts/static-privacy.test.cjs scripts/builtin-learning-videos.test.cjs
       - run: node --experimental-strip-types --test scripts/atlas-interaction.test.cjs
       - run: node --experimental-strip-types --test scripts/atlas-clothing.test.cjs scripts/atlas-scene-gestures.test.cjs scripts/atlas-navigation.test.cjs scripts/atlas-back-navigation-hook.test.cjs scripts/study-navigation-proof.test.cjs
+      - run: node --experimental-strip-types --test scripts/atlas-viewer-panels.test.cjs scripts/atlas-meridian-routes.test.cjs scripts/atlas-clothing-source.test.cjs scripts/atlas-scene-completion.test.cjs
+      - run: python scripts/deploy-reviewed-notices-rewards.test.py
       - run: node --test scripts/promotion-policy.test.cjs scripts/company-download.test.cjs
       - run: node --experimental-strip-types --test scripts/atlas-sidebar.test.cjs scripts/atlas-point-labels.test.cjs scripts/acupoint-photos.test.cjs
       - run: npx tsx --test scripts/interface-controls.test.tsx scripts/ziwei-board-layout.test.tsx
@@ -418,6 +436,7 @@ jobs:
       - name: Verify discussion HTTP authentication and moderation against production dependency versions
         run: |
           npm install --prefix "$RUNNER_TEMP/study-http-deps" --no-save --package-lock=false express@4.22.2 better-sqlite3@13.0.3 jsonwebtoken@9.0.3 bcrypt@6.0.0 fake-indexeddb@6.2.4
+          NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/announcement-policy.test.cjs scripts/legacy-promotion-rewards.test.cjs scripts/promotion-surface.test.cjs scripts/store-update-policy.test.cjs
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/security-assessment.test.cjs scripts/public-android-installer.test.cjs
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/offline-pack-client.test.cjs scripts/anatomy-learning-bundle.test.cjs scripts/acupoint-classic-study.test.cjs scripts/medical-library-media.test.cjs scripts/study-media-recovery.test.cjs scripts/learning-bundle.test.cjs
           NODE_PATH="$RUNNER_TEMP/study-http-deps/node_modules" node --test scripts/password-reset-http.test.cjs

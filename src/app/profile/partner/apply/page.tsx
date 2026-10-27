@@ -1,5 +1,8 @@
 "use client";
 
+import {PromotionPageGate} from "@/components/PromotionPageGate";
+import {DIRECT_PROMOTION_RULE, DIRECT_PROMOTION_SOURCE} from "@/lib/promotionCopy";
+
 /**
  * 合伙人申请页（DEV-V22-PARTNER-V2）
  * - 入口：邀请落地页底部、推广中心底部「申请成为渠道合伙人」
@@ -18,6 +21,10 @@ import { getUserToken } from "@/lib/auth";
 const BRAND = "#6C3EF5";
 
 export default function PartnerApplyPage() {
+  return <PromotionPageGate><PartnerApplyPageContent/></PromotionPageGate>;
+}
+
+function PartnerApplyPageContent() {
   const router = useRouter();
   const { requireLogin, showLoginPrompt, setShowLoginPrompt } = useRequireLogin();
   const [status, setStatus] = useState<string>("LOADING");
@@ -91,9 +98,8 @@ export default function PartnerApplyPage() {
         }}>
           <div style={{ fontSize: 18, fontWeight: 800 }}>渠道合伙人计划</div>
           <div style={{ fontSize: 12, opacity: 0.9, marginTop: 8, lineHeight: 1.8 }}>
-            通过专属邀请码发展的用户永久归属您的渠道，渠道净收入 50% 作为基础佣金；
-            推荐直属合伙人还可获得其渠道净收入 5% 的培养奖励（平台承担，不影响其收益）。
-            每月统一结算、统一提现。
+            {DIRECT_PROMOTION_RULE}。{DIRECT_PROMOTION_SOURCE}
+            合作须公司审核签约；原有独立合同与历史账单保留。
           </div>
         </div>
 

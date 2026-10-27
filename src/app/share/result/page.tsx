@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useNativeShell } from "@/lib/nativeShellGate";
+import {STORE_CHANNEL} from '@/lib/releaseFeatures';
+import {usesCompanyAppDistribution} from '@/lib/appUpdatePolicy';
 
 const BRAND = "#7B2FBE";
 const BRAND_DARK = "#2D1A3E";
@@ -116,6 +118,7 @@ export default function ShareResultPage() {
   }, [data]);
 
   const openApp = useCallback(() => {
+    if (!usesCompanyAppDistribution(STORE_CHANNEL)) return;
     // Android：intent拉起APP（未安装回落下载页）；iOS：App未上架暂不拉起
     if (device === "android") {
       const fallback = encodeURIComponent(data?.landing?.downloadPage || "/download");
@@ -127,6 +130,7 @@ export default function ShareResultPage() {
   }, [device, token, data]);
 
   const recordDownload = useCallback(() => {
+    if (!usesCompanyAppDistribution(STORE_CHANNEL)) return;
     try {
       const inv = data?.invite;
       fetch("/api/share/download", {
@@ -224,7 +228,7 @@ export default function ShareResultPage() {
         <p className="mb-3 text-sm font-semibold text-gray-800">开始使用</p>
 
         {/* Android：下载APP（原生壳内隐藏，用户已装APP） */}
-        {device === "android" && !nativeShell && landing?.androidDownloadEnabled !== false && (
+        {usesCompanyAppDistribution(STORE_CHANNEL) && device === "android" && !nativeShell && landing?.androidDownloadEnabled !== false && (
           <a
             href={landing?.androidUrl || "/download"}
             onClick={recordDownload}
@@ -236,7 +240,7 @@ export default function ShareResultPage() {
         )}
 
         {/* iPhone：上架前网页版继续，上架后App Store（原生壳内隐藏，用户已装APP） */}
-        {device === "ios" && !nativeShell && (
+        {usesCompanyAppDistribution(STORE_CHANNEL) && device === "ios" && !nativeShell && (
           landing?.iosStoreEnabled ? (
             <a
               href={landing.iosStoreUrl || landing?.downloadPage || "/download"}
@@ -269,7 +273,7 @@ export default function ShareResultPage() {
         )}
 
         <div className="flex gap-2">
-          {!nativeShell && (
+          {usesCompanyAppDistribution(STORE_CHANNEL) && !nativeShell && (
             <button
               onClick={openApp}
               className="flex-1 rounded-xl border py-3 text-sm font-medium"
@@ -287,7 +291,7 @@ export default function ShareResultPage() {
           </a>
         </div>
 
-        {(device === "windows" || device === "mac") && landing?.androidDownloadEnabled !== false && (
+        {usesCompanyAppDistribution(STORE_CHANNEL) && (device === "windows" || device === "mac") && landing?.androidDownloadEnabled !== false && (
           <p className="mt-3 text-center text-[11px] text-gray-400">手机扫码访问本页可直接下载APP</p>
         )}
       </section>

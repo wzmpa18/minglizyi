@@ -56,10 +56,10 @@ export interface EarnRule {
 }
 
 export const POINTS_RULES: Record<string, EarnRule> = {
-  invite_register: { amount: 0.5, dailyLimit: Infinity, desc: "邀请好友注册成功", perPersonLimit: 2 },
-  invite_pay: { amount: 0.5, dailyLimit: Infinity, desc: "邀请好友首次付费", perPersonLimit: 2 },
-  invite_review: { amount: 0.5, dailyLimit: Infinity, desc: "邀请好友发布有效评价", perPersonLimit: 2 },
-  invite_active_7d: { amount: 0.5, dailyLimit: Infinity, desc: "邀请好友连续活跃7天", perPersonLimit: 2 },
+  invite_register: { amount: 0, dailyLimit: 0, desc: "历史邀请好友注册成功", perPersonLimit: 2 },
+  invite_pay: { amount: 0, dailyLimit: 0, desc: "历史邀请好友首次付费", perPersonLimit: 2 },
+  invite_review: { amount: 0, dailyLimit: 0, desc: "历史邀请好友发布有效评价", perPersonLimit: 2 },
+  invite_active_7d: { amount: 0, dailyLimit: 0, desc: "历史邀请好友连续活跃7天", perPersonLimit: 2 },
   daily_signin: { amount: 0.5, dailyLimit: 1, desc: "每日登录打卡" },
   daily_group_active: { amount: 0.5, dailyLimit: 1, desc: "每日3群发言活跃" },
   content_featured: { amount: 5, dailyLimit: Infinity, desc: "内容被平台加精" },
@@ -326,6 +326,7 @@ export function earnPoints(
   description: string,
   inviteeId?: string
 ): { success: boolean; amount: number; message: string } {
+  if (String(source).startsWith('invite')) return {success:false,amount:0,message:'邀请来源由服务端记录，本机不发放邀请奖励'};
   const rule = POINTS_RULES[source];
   if (!rule) {
     return { success: false, amount: 0, message: "未知积分来源" };
