@@ -1,0 +1,43 @@
+{
+  "schema": "yandao.apple-owner-learning-release.v1",
+  "appId": "6807592575",
+  "bundleId": "com.yandaoguoxue.app",
+  "version": "25.0.122",
+  "build": "65",
+  "candidateSource": "c4ff5272f7d8f727ae780dfcfb1b262ed07309c1",
+  "status": "PREPARED_NOT_SUBMITTED",
+  "doesNotAssertOverallComplete": true,
+  "locales": {
+    "zh-Hans": {
+      "name": "言道国学",
+      "subtitle": "三维人体·古籍课程·学习交流",
+      "keywords": "中医学习,经络穴位,人体解剖,古籍阅读,原典,黄帝内经,伤寒论,本草,针灸,课程笔记,听书,离线,同辰,历法,天文,学习交流,三维人体,中药,方剂,医考题库,节气",
+      "description": "言道国学——把原典、图谱与学习同好连在一起。\n\n【转动人体，看懂结构】\n旋转、缩放和分层观察三维参考人体，按经络查看穴位名称、图文与循行动画；在资料页与模型之间返回对照。三维人体按现有会员权益开放，原四层学习图谱继续保留。模型与点位示意用于学习观察。\n\n【读原典，留下自己的理解】\n查阅已收录国学古籍、中医文献、药材、方剂及经络资料，按书名、篇章与关键词查找。原典、课程观点和编者学习整理分别标明来源；原文在应用内阅读，支持听学、收藏、批注和个人笔记。\n\n【跟着课程，边学边复习】\n倪海厦相关自学资料专区提供课程章节、原课摘记、原句定位和个人学习记录；结合章节练习、解析与错题复习整理知识。课程与典籍的收录范围以实际页面为准。\n\n【同辰同好，自愿交流】\n成年人可按同公历或农历月日、同年同月同日，或同年同月同日且同时辰等条件寻找学习同好。用户自主加入，双方同意后交流，可退出或屏蔽。出生条件相同不代表人生相同，也不作为婚恋、健康或命运预测。\n\n【动态、私信与学习群】\n通过动态、评论、好友消息和学习群讨论课程与经典；携盘交流和活盘链接支持分享前预览、选择内容与接收对象。支持内容管理、举报、拉黑、退出及账号删除，私人档案按授权访问。\n\n【工具与原理一起学】\n结合已有易学排盘工具、传统日历、节气与天文馆，对照经典了解术语、传统规则与文化背景，记录学习过程。古代观点不作为现实预测或决策依据。\n\n【一次准备，离线学习】\n完整中医学习资料统一准备已收录正文与图谱，全部账号可下载正文和图谱资料；会员可在同一次准备操作中补齐现有三维资源。已保存资料可离线查看。手机听学支持可用中文音色选择、试听、语速调整及连续播放。\n\nAI辅助内容会明确标识，请对照原文和可靠资料。本平台提供知识学习与交流，不提供个人医疗咨询、诊断、处方或药品销售。古籍、课程观点、图谱和用户经历不能直接作为个人诊疗、用药或操作依据。涉及医疗决定，请咨询合资格医务人员。\n\niOS数字会员与AI点数通过App Store购买，会员页提供恢复购买。消耗型点数已交付记录及余额以原账号账本为准。",
+      "whatsNew": "25.0.122：完善三维人体操作、经络显示和返回导航；优化课程章节、原文摘记、个人笔记与复习入口；完善离线资料准备、传统日历和天文学习；保留动态评论、好友私信、学习群、同辰交流与授权携盘分享；优化内容提示及稳定性。",
+      "promotionalText": "转动三维人体看经络，读原典、听课程、记笔记。按同年同月同日及同时辰等条件，自愿寻找成年学习同好；配合章节练习、离线资料与授权分享，把阅读、观察和交流连在一起。"
+    },
+    "en-US": {
+      "name": "言道国学",
+      "subtitle": "Classics, Anatomy & Study",
+      "keywords": "classics,Chinese medicine,meridians,acupoints,anatomy,calendar,notes,offline,study",
+      "promotionalText": "Read Chinese classics, explore anatomy and meridian references, and study with source-linked extracts, review questions, personal notes and a learning community.",
+      "description": "Yandao Guoxue connects Chinese classical texts, illustrated references, cultural study tools and a learning community.\n\nRead and revisit: Browse the included books by title, chapter and keyword. Original editions, lecture transcripts and editorial material are identified separately. Use supported on-device Chinese voices, playback controls and study notes to revisit what you read. Interface navigation supports multiple languages; the classical texts and lecture materials retain their original language.\n\nExplore structure: Rotate, zoom and view layers of the anatomy model, follow meridian references and open related acupoint text, original pages and circulation animations. The existing four-layer viewer remains available. These are educational illustrations, not professionally validated clinical location or treatment tools.\n\nStudy courses: The teacher and supplementary-study area offers chapter reading, source-linked extracts, terminology in context, reading review questions with explanations, bookmarks, annotations and personal-note export. Each extract can return to its source. Public course updates do not replace your personal notes. Materials by other authors and students retain their own attribution.\n\nPrepare once for offline reading: The complete Chinese-medicine learning pack groups included original texts, medicine/acupoint references and images. Text and illustration downloads are available to all signed-in accounts. Three-dimensional anatomy resources retain their existing membership requirements. Saved material remains available offline; account services and community features require a connection.\n\nStudy culture and calendars: Explore traditional calculation methods, terminology, seasonal calendars and astronomy as cultural learning tools. Historical views and AI explanations are not factual predictions of destiny, relationships, financial results or health.\n\nDiscuss with others: Use moderated posts, comments, friend messages and study groups. Voluntary adult Tongchen participation and chart sharing remain available with audience selection. Private records do not become public automatically. Reporting, blocking, withdrawal and account deletion remain available.\n\nOptional digital membership and AI credits on iOS use App Store In-App Purchase. Restore Purchases is available in the membership area. Consumable-credit balances follow the original application account ledger; restoring does not recreate spent credits. Availability and entitlements are explained in the app.\n\nAI-assisted content is marked and may be inaccurate. Check the original material and reliable sources. This is a learning platform, not a medical institution or a medical device. It does not provide individual medical consultation, diagnosis, treatment, prescriptions or drug sales. Historical medical texts, diagrams and user experiences are not personal medical or medication advice. Consult a qualified healthcare professional for medical decisions.",
+      "whatsNew": "25.0.122 improves 3D anatomy controls, meridian display and back navigation, course chapters and personal notes, offline learning materials, traditional calendars and study community access."
+    }
+  },
+  "reviewNotes": "言道国学25.0.122（65）为传统文化、国学原典与中医文献学习交流平台。应用保留易学工具、三维人体及完整学习社交；不提供个人医疗咨询、诊断、处方或药品销售。易学内容用于经典与传统规则研习，不承诺命运、婚恋、财富或健康预测。\n\n审核路径：\n1. 首页→三维人体：旋转、缩放、经络与穴位、设置侧栏、组织分层及返回；原四层图谱仍可访问。\n2. 中医→典籍/经络穴位/药材：查看已收录原文、图谱与来源；中医→倪师自学专区：课程章节、原课摘记、来源定位、听学、批注和个人笔记。\n3. 我的→系统中心→离线内容：完整中医学习资料，一次准备正文与图谱；三维资料遵循既有会员权益。\n4. 发现/聊天：动态与评论、好友消息、学习群、同辰自愿加入与授权携盘分享。提供内容审核、举报、拉黑、退出和删除账号入口。海外iOS不强制绑定中国手机号。\n5. 我的→会员中心/AI点数：使用App Store内购；会员支持恢复购买。消耗型点数按原应用账号账本显示余额，恢复购买不重建已消费点数。\n\n课程摘记用于原文对照，来源以页面标注为准；模型与穴位图谱未宣称临床定位精度。iOS普通学习分享码不授予现金返佣资格，不以评分或刷量解锁功能。审核账号保留在私密登录字段。\n\nEnglish review summary: Version 25.0.122 (65) is a Chinese-classics and structured-learning platform with reference anatomy/meridians, source-linked course study, offline study materials, cultural calendar tools and an existing learning community. It does not offer individual medical consultation, diagnosis, prescriptions or drug sales, and does not promise factual destiny or health predictions. Existing IAP and Restore Purchases remain available; consumable balances use the original app-account ledger. Overseas iOS does not require mainland-China phone binding. Community access uses normal authorization, moderation, reporting and blocking. The review paths above expose the real features; study-sharing codes do not grant cash referral eligibility on iOS.",
+  "credentials": "Preserve the existing Apple private reviewer fields. Never publish or log them.",
+  "referenceUrls": [
+    "https://developer.apple.com/help/app-store-connect/manage-submissions-to-app-review/remove-a-submission-from-review/",
+    "https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications/",
+    "https://developer.apple.com/documentation/appstoreconnectapi/appstoreversionupdaterequest/data-data.dictionary/attributes-data.dictionary"
+  ],
+  "readiness": "Exact candidate and twenty actual iPhone/iPad screenshot references verified; officially submitted once with original eight IAP versions. Awaiting Apple review; no overall acceptance or store approval asserted.",
+  "submission": {
+    "id": "bee69018-5b8d-4b49-9674-6514b14fcc50",
+    "state": "WAITING_FOR_REVIEW",
+    "submittedDate": "2026-10-26T17:59:34.859Z",
+    "appVersion": "25.0.118",
+    "build": "60"
+  }
+}

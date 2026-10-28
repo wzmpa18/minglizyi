@@ -30,7 +30,7 @@ test('source-pinned screenshots reject alpha, stale source, altered bytes, wrong
 });
 test('the visually reviewed manifest is pinned by its full bytes, not only editable source labels',()=>{const raw=Buffer.from('{"synthetic":"manifest-only fixture"}'),a={...auth,screenshotManifestSha256:prep.hash(raw)};assert.equal(prep.readScreenshotManifest(raw,a).synthetic,'manifest-only fixture');assert.throws(()=>prep.readScreenshotManifest(Buffer.concat([raw,Buffer.from(' ')]),a));});
 
-async function simulateReplacement({rootReady=false,badScreenshotsCI=false,badAccess=false,alreadyCurrent=false,capacityOverflow=false}={}){
+async function simulateReplacement({rootReady=false,badScreenshotsCI=false,badQualityTree=false,badAccess=false,alreadyCurrent=false,capacityOverflow=false}={}){
  const a=copy(auth),material=copy(require('../'+prep.marketingFile(auth))),version='22222222-2222-4222-8222-222222222222',review='33333333-3333-4333-8333-333333333333',build='11111111-1111-4111-8111-111111111111',detail='55555555-5555-4555-8555-555555555555',ids=Array.from({length:8},(_,i)=>'66666666-6666-4666-8666-66666666666'+i),writes=[],receipts=[];
  a.screenshotManifestSha256=prep.hash(Buffer.from('{}'));
  const access={...identity(),checkedAt:new Date().toISOString(),loginSucceeded:!badAccess,sandboxAllowed:true,atlasDownloadAuthorized:true,completeLearningDownloadAuthorized:true,privateAppleReviewFieldsVerified:true,noAdditionalIdentityChallenge:true,noCredentialsPrinted:true};
@@ -56,7 +56,7 @@ async function simulateReplacement({rootReady=false,badScreenshotsCI=false,badAc
  const proc={argv:['node','release','--stage=replace-metadata','--output=receipt.json','--snapshot=snapshot.json','--screenshots=screens.json','--access=access.json',...(rootReady?['--root-all-preparations-ready']:[])],exitCode:0};
  const paths={quality:'.github/workflows/study-quality.yml',native:'.github/workflows/ios-build.yml',upload:'.github/workflows/ios-build.yml',screenshots:a.screenshotWorkflowPath||'.github/workflows/ios-simulator-proof.yml'};
  await vm.runInNewContext(fs.readFileSync('scripts/asc-owner-release.cjs','utf8'),{__dirname:path.resolve('scripts'),process:proc,console:{log(){}},require:id=>{
-  if(id==='node:fs')return fakeFS;if(id==='node:child_process')return {execFileSync:(_,args)=>{const number=Number(args[1].split('/').at(-1)),kind=Object.keys(a.ci).find(k=>a.ci[k]===number);return JSON.stringify({head_sha:kind==='screenshots'?(a.screenshotWorkflowSource||a.candidateSource):a.candidateSource,run_attempt:kind==='screenshots'?(a.screenshotRunAttempt||1):1,status:badScreenshotsCI&&kind==='screenshots'?'in_progress':'completed',conclusion:'success',repository:{full_name:'wzmpa18/minglizyi'},path:paths[kind]});}};
+  if(id==='node:fs')return fakeFS;if(id==='node:child_process')return {execFileSync:(command,args)=>{if(command==='git'){if(badQualityTree)throw Error('Application tree changed');return '';}const number=Number(args[1].split('/').at(-1)),kind=Object.keys(a.ci).find(k=>a.ci[k]===number);return JSON.stringify({head_sha:kind==='screenshots'?(a.screenshotWorkflowSource||a.candidateSource):kind==='quality'?(a.qualityWorkflowSource||a.candidateSource):a.candidateSource,run_attempt:kind==='screenshots'?(a.screenshotRunAttempt||1):1,status:badScreenshotsCI&&kind==='screenshots'?'in_progress':'completed',conclusion:'success',repository:{full_name:'wzmpa18/minglizyi'},path:paths[kind]});}};
   if(id==='../docs/requirements/apple-owner-release.json')return a;if(id==='./lib/guoxueAscClient.cjs')return {createClient:()=>({api})};if(id==='./lib/appleOwnerPreparation.cjs')return {...prep,validateScreenshots:()=>({sets:capacityOverflow?[{device:'iphone',displayType:'APP_IPHONE_67',files:Array.from({length:5},(_,i)=>({sha256:String(i).repeat(64)}))}]:[]})};if(id.startsWith('node:'))return require(id);throw Error(id);
  },TextDecoder,URL,AbortSignal,fetch:()=>{throw Error('No real requests in mutation test');},Buffer});
  // The material file is the first read, while test-specific JSON inputs use fakeFS.
@@ -64,7 +64,7 @@ async function simulateReplacement({rootReady=false,badScreenshotsCI=false,badAc
 }
 test('replacement never cancels with missing root readiness, unfinished screenshot CI, failed reviewer access or an already-current review',async()=>{
  // Supply the actual current marketing object while retaining in-memory receipts.
- for(const option of [{},{rootReady:true,badScreenshotsCI:true},{rootReady:true,badAccess:true},{rootReady:true,alreadyCurrent:true},{rootReady:true,capacityOverflow:true}]){
+ for(const option of [{},{rootReady:true,badQualityTree:true},{rootReady:true,badScreenshotsCI:true},{rootReady:true,badAccess:true},{rootReady:true,alreadyCurrent:true},{rootReady:true,capacityOverflow:true}]){
   const result=await simulateReplacement(option);assert.equal(result.writes.length,0);assert.ok(result.receipts.at(-1).error);
  }
 });

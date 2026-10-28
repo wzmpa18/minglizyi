@@ -11,7 +11,8 @@ let privateReviewValues=[];
 const save=()=>{fs.mkdirSync(path.dirname(output),{recursive:true});fs.writeFileSync(output,JSON.stringify(proof,null,2)+'\n');};
 function verifyCI(){
  const paths={quality:'.github/workflows/study-quality.yml',native:'.github/workflows/ios-build.yml',upload:'.github/workflows/ios-build.yml',screenshots:auth.screenshotWorkflowPath||'.github/workflows/ios-simulator-proof.yml'};
- const runs={};for(const [kind,id] of Object.entries(auth.ci)){const row=JSON.parse(execFileSync('gh',['api','repos/wzmpa18/minglizyi/actions/runs/'+id],{encoding:'utf8',maxBuffer:2000000})),expectedSource=kind==='screenshots'?(auth.screenshotWorkflowSource||auth.candidateSource):auth.candidateSource;if(row.head_sha!==expectedSource||row.status!=='completed'||row.conclusion!=='success'||row.repository?.full_name!=='wzmpa18/minglizyi'||row.path!==paths[kind]||kind==='screenshots'&&auth.screenshotRunAttempt&&row.run_attempt!==auth.screenshotRunAttempt)throw Error('Pinned '+kind+' evidence not successful at exact approved source');runs[kind]={id,source:row.head_sha,appSource:auth.candidateSource,runAttempt:row.run_attempt,status:row.status,conclusion:row.conclusion,path:row.path};}return runs;
+ if(auth.qualityWorkflowSource)execFileSync('git',['diff','--exit-code',auth.candidateSource,auth.qualityWorkflowSource,'--','src','public','ios','android'],{stdio:'pipe'});
+ const runs={};for(const [kind,id] of Object.entries(auth.ci)){const row=JSON.parse(execFileSync('gh',['api','repos/wzmpa18/minglizyi/actions/runs/'+id],{encoding:'utf8',maxBuffer:2000000})),expectedSource=kind==='screenshots'?(auth.screenshotWorkflowSource||auth.candidateSource):kind==='quality'?(auth.qualityWorkflowSource||auth.candidateSource):auth.candidateSource;if(row.head_sha!==expectedSource||row.status!=='completed'||row.conclusion!=='success'||row.repository?.full_name!=='wzmpa18/minglizyi'||row.path!==paths[kind]||kind==='screenshots'&&auth.screenshotRunAttempt&&row.run_attempt!==auth.screenshotRunAttempt)throw Error('Pinned '+kind+' evidence not successful at exact approved source');runs[kind]={id,source:row.head_sha,appSource:auth.candidateSource,runAttempt:row.run_attempt,status:row.status,conclusion:row.conclusion,path:row.path};}return runs;
 }
 function localReady(){
  const file=arg('screenshots'),access=arg('access');if(!file||!access)throw Error('Verified actual screenshots and fresh existing-reviewer proof required');
@@ -116,7 +117,18 @@ async function assemble(live,snapshot,submit){
   }
  }
  const notes=(await api('GET','/v1/appStoreReviewDetails/'+live.detail.id)).data.attributes;if(notes.notes!==material.reviewNotes||!notes.demoAccountName||!notes.demoAccountPassword)throw Error('Current review paths or retained private fields missing');
- const expected=snapshot.previousPending?.iapVersionIds;if(!Array.isArray(expected)||expected.length!==8||expected.some(id=>!live.productVersions.some(v=>v.id===id)))throw Error('Original eight pending IAP identities missing');
+ let preserved=snapshot.previousPending;
+ if(!preserved&&arg('previous-review')){
+  const prior=read(arg('previous-review'));
+  if(prior.appId!==auth.appId||prior.bundleId!==auth.bundleId||prior.version!==auth.previousPendingCandidate.version||String(prior.build)!==auth.previousPendingCandidate.build||prior.previousPending?.submissionId!==auth.previousPendingCandidate.lastKnownSubmissionId)throw Error('Historical review preservation evidence is not the authorized previous candidate');
+  const previous=(await api('GET','/v1/reviewSubmissions/'+prior.previousPending.submissionId)).data;
+  if(!['CANCELED','COMPLETE'].includes(previous.attributes.state))throw Error('Previous review is not confirmed canceled');
+  const originalItems=(await api('GET','/v1/reviewSubmissions/'+previous.id+'/items?limit=50&include=appStoreVersion,inAppPurchaseVersion')).data;
+  const originalIds=originalItems.filter(i=>i.relationships?.inAppPurchaseVersion?.data).map(i=>i.relationships.inAppPurchaseVersion.data.id);
+  prep.sameIapIds(originalIds,prior.previousPending.iapVersionIds);
+  preserved=prior.previousPending;proof.previousReviewPreservation={submissionId:previous.id,state:previous.attributes.state,evidence:arg('previous-review'),verifiedAgainstApple:true};
+ }
+ const expected=preserved?.iapVersionIds;if(!Array.isArray(expected)||expected.length!==8||expected.some(id=>!live.productVersions.some(v=>v.id===id)))throw Error('Original eight pending IAP identities missing');
  const pending=expected.filter(id=>live.productVersions.find(v=>v.id===id).state!=='APPROVED');
  if(pending.some(id=>!['PREPARE_FOR_SUBMISSION','READY_FOR_REVIEW','DEVELOPER_REJECTED','READY_TO_SUBMIT'].includes(live.productVersions.find(v=>v.id===id).state)))throw Error('Existing IAP state not editable; products and old links preserved');
  const drafts=live.submissions.filter(s=>s.attributes.state==='READY_FOR_REVIEW');if(drafts.length>1)throw Error('Multiple draft reviews; do not select arbitrarily');let target=drafts[0];

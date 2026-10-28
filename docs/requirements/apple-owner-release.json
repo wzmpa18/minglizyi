@@ -1,24 +1,24 @@
 {
   "scope": "owner-channel-specific-authorization",
-  "date": "2026-10-27",
+  "date": "2026-10-28",
   "ownerInstruction": "你完成这些已经可以的商店就可以了，其他的等资质通过再弄，完成苹果的提交啊！2026-10-23追加：安全评估通过，把所有应用商店重新上传，需要恢复所有功能；各商店核对退回并解决。 2026-10-24最新直接要求：全部重新上传最新的，等待审核就撤回！重新上传资料，布局最新的营销资料信息和介绍！之前的旧版就需要作废！",
   "appId": "6807592575",
   "bundleId": "com.yandaoguoxue.app",
-  "version": "25.0.118",
-  "build": "60",
-  "candidateSource": "ac13a433cfb5f5e8f2c2e3e0946f7181339fc079",
-  "authorizationBasis": "本轮用户既有持续授权：所有商店重新上传最新版本，等待审核的撤回并更新营销资料；本次仅固定118实际候选，不重新索取授权，不宣称整体验收完成。",
+  "version": "25.0.122",
+  "build": "65",
+  "candidateSource": "c4ff5272f7d8f727ae780dfcfb1b262ed07309c1",
+  "authorizationBasis": "负责人持续明确要求完成苹果的提交，所有待审旧版撤回，使用最新版本与一致的营销资料；本次固定已验证122/65，不宣称整体验收完成。",
   "ci": {
-    "quality": 40349892381,
-    "native": 40349935638,
-    "upload": 40351096382,
-    "screenshots": 40363346235
+    "quality": 40669427157,
+    "native": 40669142200,
+    "upload": 40669142200,
+    "screenshots": 40670758036
   },
   "previousPendingCandidate": {
-    "version": "25.0.115",
-    "build": "53",
-    "source": "b9c4c4a198bd825f94d6dc4f2439f1b1173344cf",
-    "lastKnownSubmissionId": "5af19faf-5237-4059-9551-a14dc3513361",
+    "version": "25.0.118",
+    "build": "60",
+    "source": "ac13a433cfb5f5e8f2c2e3e0946f7181339fc079",
+    "lastKnownSubmissionId": "bee69018-5b8d-4b49-9674-6514b14fcc50",
     "stateMustBeReadAgain": true,
     "preserveExistingPendingIapVersions": true
   },
@@ -38,15 +38,17 @@
     "Keep existing eight Guoxue product identities and pending IAP version relationships; no product, price, order, tester or other-app changes"
   ],
   "report": "交接报告/FINAL_PROJECT_HANDOVER.md#7817",
-  "screenshotWorkflowSource": "35ceb780469196247dc3ee9c3ea9cafcaf497549",
-  "screenshotWorkflowPath": ".github/workflows/ios-simulator-proof.yml",
+  "screenshotWorkflowSource": "1cf66fab447c284317ec3b4ebafbe786e3e21bfb",
+  "screenshotWorkflowPath": ".github/workflows/ios-learning-marketing.yml",
   "screenshotReusableWorkflowPath": ".github/workflows/ios-learning-marketing.yml",
-  "screenshotRunAttempt": 2,
-  "screenshotArtifactId": 12670049535,
-  "screenshotManifestSha256": "ee73dcaa2328f4fc94c00ce562ef5475054ce62785b035429b6309a485a2933d",
+  "screenshotRunAttempt": 1,
+  "screenshotArtifactId": 12809855830,
+  "screenshotManifestSha256": "37a48d93867fb307d93cf2c0463159a997b6f473a45f8dd8a1548db7fd88e1b9",
   "publicMetadataUrls": {
     "supportUrl": "https://yandaoguoxue.yandao.vip/profile/feedback/",
     "source": "Existing zh-Hans supportUrl read from the same App Store version; live HTTP200 verified 2026-10-26T17:54:45Z",
     "evidence": "D:/言道国学项目资料总库/04_应用商店/Apple/Apple118_同App现有支持与隐私链接实际HTTP核验_20261027.json"
-  }
+  },
+  "qualityWorkflowSource": "f16a0ab054341299e5513d09411d7ef0a69f5bc6",
+  "marketingFile": "docs/marketing/20261028/apple-122-learning-release.json"
 }
