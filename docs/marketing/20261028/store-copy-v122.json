@@ -2,8 +2,8 @@
   "version": "25.0.122",
   "androidVersionCode": 2155,
   "iosBuild": 65,
-  "state": "CANDIDATE_BUILD_PENDING",
-  "sourceCommit": null,
+  "state": "CANDIDATE_BUILDS_IN_PROGRESS",
+  "sourceCommit": "c4ff5272f7d8f727ae780dfcfb1b262ed07309c1",
   "productSourceCommit": "8f6064890c73fbb01c0497e23aee978db40ee107",
   "evidence": "D:\\言道国学项目资料总库\\03_源码与版本恢复\\候选25.0.122_2155_候选待验收_20261028\\package-verification.json",
   "apple": {
@@ -53,7 +53,7 @@
   "featureLaunchGate": {
     "tongchen": "Admin readback 2026-10-28 shows the production service OPEN. Source default false is only the fresh-database fail-closed value. Before submitting this copy, verify adult opt-in, matching, mutual-consent exchange, exit and block in the exact target package with two accounts.",
     "sameConditionStudy": "Admin readback 2026-10-28 shows the production service OPEN and moderation rules plus Hunyuan review queue active; one item awaits manual review. Before submitting this copy, verify the exact package voluntary topic workflow, safety disclosure, reporting, block and exit with two accounts.",
-    "realScreenshots": "Pending: capture and visually review the built 25.0.122 candidate on iPhone and iPad before any store use.",
+    "realScreenshots": "Workflow 40669214220 is capturing real iPhone/iPad screens from f16a0ab; its app source, src/public/ios trees match the candidate build source c4ff527. Await visual review before store use.",
     "modelAccuracy": "Only show model paths and point locations verified in the current candidate. Do not claim full/clinically precise meridian coverage; keep original model and member entitlement."
   },
   "submissionGates": [
