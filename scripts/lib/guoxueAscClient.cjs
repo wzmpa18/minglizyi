@@ -8,10 +8,15 @@ function createClient({mutations=false,reviewContext}={}){
  async function api(method,path,body){
   if(!/^\/v[12]\//.test(path))throw Error('Expected an official ASC resource path');
   if(!['GET','HEAD'].includes(method)){if(!mutations)throw Error('Read-only Apple client');require('./formalReviewGate.cjs').guardAscMutation(method,path,reviewContext);}
-  const response=await fetch('https://api.appstoreconnect.apple.com'+path,{method,headers:{Authorization:'Bearer '+jwt(),...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(30000)});
-  const data=await response.json().catch(()=>({}));
-  if(!response.ok){const e=Error('Apple '+method+' '+path.split('?')[0]+' HTTP '+response.status);e.details=(data.errors||[]).map(x=>({code:x.code,title:x.title,detail:x.detail,source:x.source,associatedErrors:x.meta?.associatedErrors}));throw e;}
-  return data;
+  const attempts=['GET','HEAD'].includes(method)?3:1;
+  for(let attempt=0;attempt<attempts;attempt++){
+   let response;
+   try{response=await fetch('https://api.appstoreconnect.apple.com'+path,{method,headers:{Authorization:'Bearer '+jwt(),...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(30000)});}
+   catch(error){if(attempt+1>=attempts)throw error;await new Promise(resolve=>setTimeout(resolve,1000*(attempt+1)));continue;}
+   const data=await response.json().catch(()=>({}));
+   if(!response.ok){if([500,502,503,504].includes(response.status)&&attempt+1<attempts){await new Promise(resolve=>setTimeout(resolve,1000*(attempt+1)));continue;}const e=Error('Apple '+method+' '+path.split('?')[0]+' HTTP '+response.status);e.details=(data.errors||[]).map(x=>({code:x.code,title:x.title,detail:x.detail,source:x.source,associatedErrors:x.meta?.associatedErrors}));throw e;}
+   return data;
+  }
  }
  return {api};
 }
