@@ -5,20 +5,20 @@
   "appId": "6807592575",
   "bundleId": "com.yandaoguoxue.app",
   "version": "25.0.122",
-  "build": "65",
-  "candidateSource": "c4ff5272f7d8f727ae780dfcfb1b262ed07309c1",
-  "authorizationBasis": "负责人持续明确要求完成苹果的提交，所有待审旧版撤回，使用最新版本与一致的营销资料；本次固定已验证122/65，不宣称整体验收完成。",
+  "build": "66",
+  "candidateSource": "4ec14f6b22d222f05c4a6cdac854ca606a64a9e9",
+  "authorizationBasis": "负责人持续要求待审旧版撤回并用最新一致资料提交；实机发现旧目录升级缺陷后固定122/66修正版，保留原资料及八项内购，不宣称整体验收完成。",
   "ci": {
-    "quality": 40669427157,
-    "native": 40669142200,
-    "upload": 40669142200,
-    "screenshots": 40670758036
+    "quality": 40705501506,
+    "native": 40705602671,
+    "upload": 40705602671,
+    "screenshots": 40705501504
   },
   "previousPendingCandidate": {
-    "version": "25.0.118",
-    "build": "60",
-    "source": "ac13a433cfb5f5e8f2c2e3e0946f7181339fc079",
-    "lastKnownSubmissionId": "bee69018-5b8d-4b49-9674-6514b14fcc50",
+    "version": "25.0.122",
+    "build": "65",
+    "source": "c4ff5272f7d8f727ae780dfcfb1b262ed07309c1",
+    "lastKnownSubmissionId": "158bc851-d363-488b-bdf4-eda4e82a1fae",
     "stateMustBeReadAgain": true,
     "preserveExistingPendingIapVersions": true
   },
@@ -38,17 +38,17 @@
     "Keep existing eight Guoxue product identities and pending IAP version relationships; no product, price, order, tester or other-app changes"
   ],
   "report": "交接报告/FINAL_PROJECT_HANDOVER.md#7817",
-  "screenshotWorkflowSource": "1cf66fab447c284317ec3b4ebafbe786e3e21bfb",
+  "screenshotWorkflowSource": "4ec14f6b22d222f05c4a6cdac854ca606a64a9e9",
   "screenshotWorkflowPath": ".github/workflows/ios-learning-marketing.yml",
   "screenshotReusableWorkflowPath": ".github/workflows/ios-learning-marketing.yml",
   "screenshotRunAttempt": 1,
-  "screenshotArtifactId": 12809855830,
-  "screenshotManifestSha256": "37a48d93867fb307d93cf2c0463159a997b6f473a45f8dd8a1548db7fd88e1b9",
+  "screenshotArtifactId": 12825918146,
+  "screenshotManifestSha256": "2074eddb6a249472d7ab874a5567d26274c3d9fdc74ef6657a001716911f375d",
   "publicMetadataUrls": {
     "supportUrl": "https://yandaoguoxue.yandao.vip/profile/feedback/",
     "source": "Existing zh-Hans supportUrl read from the same App Store version; live HTTP200 verified 2026-10-26T17:54:45Z",
     "evidence": "D:/言道国学项目资料总库/04_应用商店/Apple/Apple118_同App现有支持与隐私链接实际HTTP核验_20261027.json"
   },
-  "qualityWorkflowSource": "f16a0ab054341299e5513d09411d7ef0a69f5bc6",
+  "qualityWorkflowSource": "4ec14f6b22d222f05c4a6cdac854ca606a64a9e9",
   "marketingFile": "docs/marketing/20261028/apple-122-learning-release.json"
 }
