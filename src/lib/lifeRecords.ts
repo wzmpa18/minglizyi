@@ -1,4 +1,4 @@
-import traditionalCharacters from "../data/lifeSearchTraditional.json";
+import traditionalCharacters from "../data/lifeSearchTraditional.json" with {type:"json"};
 /** Private domain: no authentication, analytics, fetch, cloud client or AI dependency. */
 export const LIFE_SCHEMA=1;
 export const LIFE_CATEGORIES=["生活随记","健康记录","梦境","排盘点评","工作","人际往来","学习"];
