@@ -46,7 +46,10 @@ function record(course: NiCourse) { return { schema: course.schema, version: cou
 
 async function activeDirectory() {
   const head = await readOfflineFile<Head>('ni-course-collection-head').catch(() => null);
-  if (head && versionPattern.test(head.version || '') && hex.test(head.catalogueSha256 || '') && hex.test(head.collectionSha256 || '') && compareVersions(head.version, baselineRelease.version) >= 0) {
+  // A newer app baseline must not invalidate the intact directory installed by
+  // an older app. Validate its full hash, retain it for offline reading, and let
+  // installApprovedNiCollection enforce forward-only replacement.
+  if (head && versionPattern.test(head.version || '') && hex.test(head.catalogueSha256 || '') && hex.test(head.collectionSha256 || '')) {
     const directory = await readOfflineFile<Directory>(directoryKey(head)).catch(() => null);
     if (directory?.schema === 'yandao.ni-course-catalogue.v1' && directory.version === head.version && validRows(directory.entries) && await digest(JSON.stringify(directory)) === head.catalogueSha256)
       return { head, entries: directory.entries, valid: true };

@@ -4,7 +4,7 @@ adb shell wm size 1080x1920
 adb shell wm density 420
 adb shell settings put system system_locales zh-CN
 cd "${GITHUB_WORKSPACE:?}/app-source/android"
-./gradlew installDebug installDebugAndroidTest --no-daemon
+./gradlew :app:installDebug :app:installDebugAndroidTest --no-daemon
 # Invoke instrumentation directly so Gradle does not uninstall the target and
 # erase capture evidence before adb can retrieve it.
 test_log="$RUNNER_TEMP/android-marketing-instrumentation.txt"

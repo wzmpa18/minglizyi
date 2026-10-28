@@ -13,10 +13,10 @@ const courseData=pinnedCatalogue.map(row=>{
 });
 const catalogue=pinnedCatalogue.map((row,index)=>({...copy(row),chapterCount:courseData[index].chapters.length,characters:courseData[index].chapters.reduce((n,c)=>n+c.content.length,0),contentSha256:courseData[index].contentSha256,recordSha256:hash(courseData[index])}));
 const baselineRelease={version:pinnedRelease.version,collectionSha256:hash({schema:'yandao.ni-course-collection.v1',version:pinnedRelease.version,catalogue,courses:courseData})};
-function api(disk=new Map(),unusedFetch,write,pack=null){
+function api(disk=new Map(),unusedFetch,write,pack=null,release=baselineRelease,summaries=catalogue){
  const source=fs.readFileSync('src/lib/niTeacherCourses.ts','utf8').replace(/^import .*;\r?\n/gm,'');
  const code=stripTypeScriptTypes(source).replace(/^export /gm,'');
- const context={catalogueData:catalogue,baselineRelease,crypto:webcrypto,TextEncoder,process:{env:{}},fetch:()=>{throw Error('anonymous content fetch forbidden');},loadJsonPack:async id=>id==='ni-teacher-courses'?copy(pack):null,window:{dispatchEvent(){},addEventListener(){}},Event:class{},readOfflineFile:async key=>copy(disk.get(key)||null),writeOfflineFile:write||(async(key,value)=>disk.set(key,copy(value)))};
+ const context={catalogueData:summaries,baselineRelease:release,crypto:webcrypto,TextEncoder,process:{env:{}},fetch:()=>{throw Error('anonymous content fetch forbidden');},loadJsonPack:async id=>id==='ni-teacher-courses'?copy(pack):null,window:{dispatchEvent(){},addEventListener(){}},Event:class{},readOfflineFile:async key=>copy(disk.get(key)||null),writeOfflineFile:write||(async(key,value)=>disk.set(key,copy(value)))};
  vm.createContext(context);vm.runInContext(code+'\nthis.result={validateNiCourse,listNiCourses,loadNiCourse,importNiCourse,importNiCourseCollection,validateApprovedNiCollection,installApprovedNiCollection};',context);
  return {api:context.result,disk};
 }
@@ -58,6 +58,21 @@ test('a failed body readback never creates a completed directory entry',async()=
  await assert.rejects(reader.api.importNiCourse(JSON.parse(file(catalogue[0].id))));assert.equal(disk.size,0);
 });
 const collection=()=>({schema:'yandao.ni-course-collection.v1',version:baselineRelease.version,catalogue:copy(catalogue),courses:catalogue.map(row=>JSON.parse(file(row.id)))});
+test('an application upgrade retains a valid older installed catalogue and advances it without touching private notes',async()=>{
+ const old=collection();old.version='1.0.0';
+ for(let i=0;i<old.courses.length;i++){old.courses[i].version=old.catalogue[i].version='1.0.0';old.catalogue[i].recordSha256=hash(old.courses[i]);}
+ const legacy=api(new Map(),undefined,undefined,null,{version:old.version,collectionSha256:hash(old)},old.catalogue);
+ await legacy.api.installApprovedNiCollection(old);
+ legacy.disk.set('ni-note-accountA-kept',{text:'保留本人的学习笔记',revision:3});
+ const oldHead=copy(legacy.disk.get('ni-course-collection-head')),oldBodyKeys=[...legacy.disk.keys()].filter(k=>k.startsWith('ni-course-')&&!k.includes('head'));
+ const upgraded=api(legacy.disk);assert.equal((await upgraded.api.loadNiCourse(old.courses[0].id)).version,'1.0.0');
+ await upgraded.api.installApprovedNiCollection(collection());
+ assert.equal((await api(legacy.disk).api.loadNiCourse(catalogue[0].id)).version,courseData[0].version);
+ assert.deepEqual(legacy.disk.get('ni-note-accountA-kept'),{text:'保留本人的学习笔记',revision:3});
+ for(const key of oldBodyKeys)assert.ok(legacy.disk.has(key),'old body and directory retained');
+ const damaged=new Map(legacy.disk);damaged.set('ni-course-collection-head',oldHead);damaged.get('ni-course-catalogue-'+oldHead.version+'-'+oldHead.catalogueSha256).entries[0].title+=' corrupted';
+ const before=JSON.stringify([...damaged]);await assert.rejects(api(damaged).api.installApprovedNiCollection(collection()),/目录需要恢复/);assert.equal(JSON.stringify([...damaged]),before);
+});
 function nextEdition(){
  const bundle=collection();bundle.version='1.2.0';const course=bundle.courses[0],row=bundle.catalogue[0];
  course.version=row.version='1.2.0';course.chapters[0].content+='\n新增学习整理文字。';course.chapters[0].sha256=hash(course.chapters[0].content);course.contentSha256=row.contentSha256=hash(course.chapters);

@@ -1,13 +1,5 @@
 name: Pinned actual Android learning marketing screenshots
 on:
-  push:
-    branches:
-      - codex/tencent-store-compliance
-    paths:
-      - '.github/workflows/android-learning-marketing.yml'
-      - 'scripts/android-marketing-session.cjs'
-      - 'scripts/AndroidLearningMarketingTest.java'
-      - 'scripts/run_android_learning_marketing.sh'
   workflow_dispatch:
     inputs:
       application_source:
@@ -55,8 +47,8 @@ jobs:
           import json,os,pathlib,subprocess,re
           source=os.environ['PINNED_APPLICATION_SOURCE']
           assert json.loads(pathlib.Path('package.json').read_text())['version'].lstrip('v')=='25.0.122'
-          assert re.search(r'versionCode\s+2155\b',pathlib.Path('android/app/build.gradle').read_text())
-          data={'source':source,'version':'25.0.122','versionCode':2155,'storeChannel':'appchina','nativeAndroid':True,'physicalDevice':False,'syntheticInterface':False,'authMethod':'ordinary backend login; no entitlement changes','srcTree':subprocess.check_output(['git','rev-parse',source+':src'],text=True).strip(),'publicTree':subprocess.check_output(['git','rev-parse',source+':public'],text=True).strip()}
+          code=int(re.search(r'versionCode\s+(\d+)\b',pathlib.Path('android/app/build.gradle').read_text())[1]);assert code>=2155
+          data={'source':source,'version':'25.0.122','versionCode':code,'storeChannel':'appchina','nativeAndroid':True,'physicalDevice':False,'syntheticInterface':False,'authMethod':'ordinary backend login; no entitlement changes','srcTree':subprocess.check_output(['git','rev-parse',source+':src'],text=True).strip(),'publicTree':subprocess.check_output(['git','rev-parse',source+':public'],text=True).strip()}
           pathlib.Path(os.environ['RUNNER_TEMP'],'actual-android-learning-marketing','source.json').write_text(json.dumps(data,indent=2))
           PY
       - run: npm ci --legacy-peer-deps

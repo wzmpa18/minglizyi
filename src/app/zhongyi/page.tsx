@@ -459,6 +459,7 @@ export default function ZhongyiHome() {
 
   return (
     <div
+      className="medical-literature-study"
       style={{
         maxWidth: "420px",
         margin: "0 auto",
