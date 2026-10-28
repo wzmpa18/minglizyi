@@ -176,6 +176,7 @@ final class GuoxueStudyMarketing: XCTestCase {
         XCTAssertTrue(tongchen.waitForExistence(timeout:45),"The actual learning community entry must be visible")
         XCTAssertTrue(chart.waitForExistence(timeout:30),"The actual chart-learning entry must be visible")
         reveal(tongchen,app)
+        XCTAssertTrue(visible(tongchen,app) && visible(chart,app),"The captured frame must show both public community entry points")
         shot("learning-community","同辰雅集与携盘交流入口_不含用户内容",app)
     }
 }
