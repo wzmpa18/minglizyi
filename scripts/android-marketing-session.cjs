@@ -6,7 +6,7 @@ const {authStorage}=require('./ios-marketing-session.cjs');
  if(process.env.GITHUB_ACTIONS!=='true')throw Error('CI runner required');
  const account=process.env.GUOXUE_REVIEW_ACCOUNT,password=process.env.GUOXUE_REVIEW_PASSWORD;
  if(!account||!password)throw Error('Protected account inputs missing');
- const headers={'Content-Type':'application/json','X-Client-Platform':'android','X-Store-Channel':'appchina','X-Client-Version':require('../package.json').version};
+ const headers={'Content-Type':'application/json','X-Client-Platform':'android','X-Store-Channel':'appchina','X-Client-Version':require('../package.json').version.replace(/^v/,'')};
  const response=await fetch('https://yandaoguoxue.yandao.vip/api/auth/login',{method:'POST',headers,body:JSON.stringify({account,password}),signal:AbortSignal.timeout(30000)});
  if(!response.ok)throw Error('Normal login unavailable');
  const storage=authStorage(await response.json()),token=storage.yandao_user_token;

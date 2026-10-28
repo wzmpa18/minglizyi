@@ -7,6 +7,7 @@ on:
       - '.github/workflows/android-learning-marketing.yml'
       - 'scripts/android-marketing-session.cjs'
       - 'scripts/AndroidLearningMarketingTest.java'
+      - 'scripts/run_android_learning_marketing.sh'
   workflow_dispatch:
     inputs:
       application_source:
@@ -53,7 +54,7 @@ jobs:
           python3 - <<'PY'
           import json,os,pathlib,subprocess,re
           source=os.environ['PINNED_APPLICATION_SOURCE']
-          assert json.loads(pathlib.Path('package.json').read_text())['version']=='25.0.122'
+          assert json.loads(pathlib.Path('package.json').read_text())['version'].lstrip('v')=='25.0.122'
           assert re.search(r'versionCode\s+2155\b',pathlib.Path('android/app/build.gradle').read_text())
           data={'source':source,'version':'25.0.122','versionCode':2155,'storeChannel':'appchina','nativeAndroid':True,'physicalDevice':False,'syntheticInterface':False,'authMethod':'ordinary backend login; no entitlement changes','srcTree':subprocess.check_output(['git','rev-parse',source+':src'],text=True).strip(),'publicTree':subprocess.check_output(['git','rev-parse',source+':public'],text=True).strip()}
           pathlib.Path(os.environ['RUNNER_TEMP'],'actual-android-learning-marketing','source.json').write_text(json.dumps(data,indent=2))
@@ -88,13 +89,7 @@ jobs:
           heap-size: 1024M
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: |
-            adb shell wm size 1080x1920
-            adb shell wm density 420
-            adb shell settings put system system_locales zh-CN
-            cd app-source/android
-            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.yandao.guoxue.AndroidLearningMarketingTest --no-daemon
-            adb pull /sdcard/Android/data/com.yandao.guoxue/files/learning-marketing "$RUNNER_TEMP/actual-android-learning-marketing/images"
+          script: bash "${{ github.workspace }}/qa-source/scripts/run_android_learning_marketing.sh"
       - name: Keep only public screenshot proof
         if: always()
         run: |

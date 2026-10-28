@@ -32,6 +32,11 @@ public class AndroidLearningMarketingTest {
  private void route(String route,String ready,int seconds)throws Exception{
   js("window.location.href="+JSONObject.quote(route));waitText(ready,seconds);
  }
+ private void waitCondition(String expression,int seconds,String label)throws Exception{
+  long end=System.currentTimeMillis()+seconds*1000L;
+  do{if("true".equals(js(expression)))return;Thread.sleep(500);}while(System.currentTimeMillis()<end);
+  fail(label);
+ }
  private void click(String text)throws Exception{
   String result=js("(()=>{const e=[...document.querySelectorAll('button,a')].find(e=>e.innerText.trim().includes("+JSONObject.quote(text)+"));if(!e||e.disabled)return 'MISSING';e.scrollIntoView({block:'center'});e.click();return 'CLICKED'})()");
   assertEquals("Actual public control: "+text,"CLICKED",result);
@@ -63,6 +68,16 @@ public class AndroidLearningMarketingTest {
    route("/zhongyi/","典籍原文",90);click("典籍原文");waitText("黄帝内经·素问原文",90);click("黄帝内经·素问原文");waitText("上古天真",90);click("上古天真");waitText("展开章节目录",90);shot("04_经典原文_Android实际界面");
    route("/discover/","同辰雅集",90);waitText("携盘交流",90);
    js("(()=>{const e=[...document.querySelectorAll('a,button,p,h2,h3,span')].find(e=>e.innerText.trim()==='同辰雅集');if(e)e.scrollIntoView({block:'center'});return true})()");shot("05_同辰交流_Android实际界面");
+   route("/zhongyi/ai/","如何阅读《黄帝内经》的篇章结构？",90);click("如何阅读《黄帝内经》的篇章结构？");click("发送");
+   waitCondition("document.querySelectorAll('div.bg-muted').length>=2&&[...document.querySelectorAll('button')].some(e=>e.innerText.trim()==='发送'&&!e.disabled)",120,"The normal account must receive an actual AI learning response");
+   String answer=js("[...document.querySelectorAll('div.bg-muted')].at(-1).innerText");
+   assertTrue("Actual AI learning content",answer.length()>120);assertFalse(answer.contains("暂时无法核对账号权益"));assertFalse(answer.contains("AI服务暂时不可用"));
+   js("[...document.querySelectorAll('div.bg-muted')].at(-1).scrollIntoView({block:'start'})");shot("06_AI显式标识_公开文献学习题_实际响应");
+   route("/profile/","退出登录",90);click("退出登录");waitText("确认退出登录？",30);
+   assertEquals("CLICKED",js("(()=>{const e=[...document.querySelectorAll('button')].find(e=>e.innerText.trim()==='退出');if(!e)return 'MISSING';e.click();return 'CLICKED'})()"));
+   waitCondition("!localStorage.getItem('yandao_user_token')&&!localStorage.getItem('yandao_user_profile')",30,"Ordinary logout must clear the local session immediately");
+   File dir=new File(InstrumentationRegistry.getInstrumentation().getTargetContext().getExternalFilesDir(null),"learning-marketing");
+   try(OutputStream out=new FileOutputStream(new File(dir,"native-checks.json"))){out.write("{\"normalAccountAiResponse\":true,\"logoutClearedLocalSession\":true,\"physicalDevice\":false,\"syntheticInterface\":false}".getBytes(StandardCharsets.UTF_8));}
   }
  }
 }
