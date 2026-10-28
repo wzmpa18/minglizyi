@@ -1,5 +1,16 @@
 name: Pinned actual iOS learning marketing screenshots
 on:
+  push:
+    branches:
+      - codex/tencent-store-compliance
+    paths:
+      - '.github/workflows/ios-learning-marketing.yml'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'ios/App/App.xcodeproj/project.pbxproj'
+      - 'src/app/zhongyi/**'
+      - 'src/components/**'
+      - 'src/lib/**'
   workflow_dispatch:
     inputs:
       application_source:
