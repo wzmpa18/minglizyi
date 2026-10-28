@@ -263,7 +263,9 @@ def heading(line, mode):
         return False
     chinese = "一二三四五六七八九十百千万〇零壹贰叁肆伍陆柒捌玖拾佰"
     if mode == "acupuncture":
-        return bool(re.match("^(?:第[" + chinese + "]+章|[" + chinese + "0-9]+[、．])", line) and re.search(r"[（(]\d+-\d\d:\d\d:\d\d[）)]$", line))
+        # The timestamp's leading number is the original lecture recording.
+        # Keep every timestamped heading from that recording inside one lesson.
+        return bool(re.search(r"[（(]\d+-\d\d:\d\d:\d\d[）)]$", line))
     if mode == "materia":
         return bool((re.match("^[" + chinese + "]+[、．][^，。；：]{1,25}$", line) and "──" not in line) or re.match("^第[" + chinese + "]+章", line) or re.match("^[壹贰叁]、[上中下]经$", line))
     if mode == "shanghan":
@@ -282,6 +284,20 @@ def heading(line, mode):
 def make_chapters(text, course_id, mode):
     lines = text.splitlines(keepends=True)
     boundaries = [(i, line.strip()) for i, line in enumerate(lines) if heading(line.strip(), mode)]
+    if mode == "acupuncture":
+        # Multiple chapter/topic headings can belong to one long recording.
+        # Make one reader lesson per source recording, not one lesson per
+        # subheading and not arbitrary 14k-character fragments.
+        lectures = []
+        for position, title in boundaries:
+            match = re.search(r"[（(](\d+)-\d\d:\d\d:\d\d[）)]$", title)
+            if not match:
+                continue
+            number = int(match.group(1))
+            if not lectures or lectures[-1][2] != number:
+                clean_title = re.sub(r"\s*[（(]\d+-\d\d:\d\d:\d\d[）)]$", "", title).strip()
+                lectures.append([position, f"第{number}讲 · {clean_title}", number])
+        boundaries = [(position, title) for position, title, _ in lectures]
     if mode == "jingui":
         starts = [i for i, line in enumerate(lines) if line.strip() == "续伤寒霍乱篇"]
         if len(starts) > 1:
@@ -291,21 +307,27 @@ def make_chapters(text, course_id, mode):
     result = []
     for b, (start, title) in enumerate(boundaries):
         end = boundaries[b + 1][0] if b + 1 < len(boundaries) else len(lines)
-        cursor, parts = start, []
-        while cursor < end:
-            next_line, size = cursor, 0
-            while next_line < end and (size < 14000 or next_line == cursor):
-                size += len(lines[next_line])
-                next_line += 1
-            parts.append((cursor, next_line))
-            cursor = next_line
-        for part, (first, last) in enumerate(parts, 1):
-            content = "".join(lines[first:last])
-            if not content.strip():
-                continue
-            chapter_title = title if len(parts) == 1 else title + f" · 阅读分段 {part}"
-            result.append({"id": f"{course_id}-{len(result) + 1:04d}", "title": chapter_title,
-                           "content": content, "lineStart": first + 1, "lineEnd": last,
+        content = "".join(lines[start:end])
+        if not content.strip():
+            continue
+        # A few reference compilations have no structural headings at all.
+        # Preserve their old paragraph-based reader pages, while real course
+        # lessons keep their original lecture boundaries intact.
+        if mode == "segments" and len(content) > 90000:
+            first = start
+            part = 1
+            while first < end:
+                last, size = first, 0
+                while last < end and (size < 14000 or last == first):
+                    size += len(lines[last]); last += 1
+                chunk = "".join(lines[first:last])
+                result.append({"id": f"{course_id}-{len(result) + 1:04d}", "title": title + f" · 阅读分段 {part}",
+                               "content": chunk, "lineStart": first + 1, "lineEnd": last,
+                               "sha256": sha(chunk.encode("utf-8"))})
+                first, part = last, part + 1
+        else:
+            result.append({"id": f"{course_id}-{len(result) + 1:04d}", "title": title,
+                           "content": content, "lineStart": start + 1, "lineEnd": end,
                            "sha256": sha(content.encode("utf-8"))})
     if "".join(chapter["content"] for chapter in result) != text:
         raise ValueError("Chapter splitting omitted or reordered source text")

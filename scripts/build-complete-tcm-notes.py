@@ -123,10 +123,13 @@ if __name__ == "__main__":
     parser.add_argument("source", type=Path)
     parser.add_argument("inputs", type=Path, nargs="+", help="Legacy: medical courses output; editions-only: output --editions file")
     parser.add_argument("--editions", type=Path, help="Replace only the original-editions member, preserving all prior book objects")
+    parser.add_argument("--courses-only", action="store_true", help="Replace only the course member, preserving all other verified archive entries")
     parser.add_argument("--version", required=True)
     args = parser.parse_args()
     if len(args.inputs) == 3:
         medical, courses, output = args.inputs
+    elif len(args.inputs) == 2 and args.courses_only:
+        medical, courses, output = None, args.inputs[0], args.inputs[1]
     elif len(args.inputs) == 1 and args.editions is not None:
         medical = courses = None
         output = args.inputs[0]

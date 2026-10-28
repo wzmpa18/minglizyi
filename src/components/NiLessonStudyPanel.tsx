@@ -1,12 +1,11 @@
 'use client';
-import {useMemo,useState} from 'react';
+import {useMemo} from 'react';
 import type {NiCourse,NiCourseChapter} from '@/lib/niTeacherCourses';
-import {buildNiLessonStudy,type NiSourceAnchor} from '@/lib/niLessonStudy';
+import {buildNiLessonStudy,redactNiPrivateContacts,type NiSourceAnchor} from '@/lib/niLessonStudy';
 
 const action={border:'1px solid #ded3e7',borderRadius:8,padding:'7px 10px',background:'white',color:'#66368b',fontSize:13,cursor:'pointer'} as const;
 export function NiLessonStudyPanel({course,chapter,onSource,onAnnotate}:{course:NiCourse;chapter:NiCourseChapter;onSource:(anchor:NiSourceAnchor)=>void;onAnnotate:(anchor:NiSourceAnchor)=>void}){
  const study=useMemo(()=>buildNiLessonStudy(course,chapter),[course,chapter]);
- const [answers,setAnswers]=useState<Record<string,number>>({}),[revealed,setRevealed]=useState<Record<string,boolean>>({});
  return <section aria-label="原课摘记与复习" style={{marginTop:18}}>
   <p style={{fontSize:12,color:'#827486',lineHeight:1.8}}>原课摘记 · 保留原句与出处；下列阅读提问不新增诊疗结论。</p>
   <details style={{margin:'14px 0',lineHeight:1.9,fontSize:14}}><summary style={{cursor:'pointer',fontWeight:600}}>本课目标与阅读准备</summary><ul>{study.goals.map(text=><li key={text}>{text}</li>)}</ul><strong>阅读准备</strong><ul>{study.prerequisites.map(text=><li key={text}>{text}</li>)}</ul></details>
@@ -17,8 +16,8 @@ export function NiLessonStudyPanel({course,chapter,onSource,onAnnotate}:{course:
   {!!study.terms.length&&<details style={{margin:'18px 0',fontSize:14,lineHeight:1.9}}><summary style={{cursor:'pointer',fontWeight:600}}>原文用语与语境</summary><dl>{study.terms.map(item=><div key={item.term} style={{margin:'14px 0'}}><dt><strong>{item.term}</strong></dt><dd style={{margin:'4px 0',color:'#6d6071'}}>{item.explanation}</dd><dd style={{margin:'4px 0'}}>{item.context.quote}<br/><button type="button" style={action} onClick={()=>onSource(item.context)}>回到原句</button></dd></div>)}</dl></details>}
   {!!study.examples.length&&<details style={{margin:'18px 0',fontSize:14,lineHeight:1.9}}><summary style={{cursor:'pointer',fontWeight:600}}>原课举例</summary>{study.examples.map((item,index)=><blockquote key={index} style={{margin:'12px 0'}}>{item.quote}<br/><button type="button" style={action} onClick={()=>onSource(item)}>查看例子的上下文</button></blockquote>)}</details>}
   <details style={{margin:'18px 0',fontSize:14,lineHeight:1.9}}><summary style={{cursor:'pointer',fontWeight:600}}>一页复习摘记</summary><ol>{study.reviewSummary.map((item,index)=><li key={index} style={{marginBottom:12}}>{item.quote}<br/><button type="button" style={action} onClick={()=>onSource(item)}>核对出处</button></li>)}</ol></details>
-  <h3 style={{fontSize:18,margin:'22px 0 12px'}}>复习题与解析</h3>
-  <p style={{fontSize:12,color:'#827486'}}>练习原文辨认、来源定位和阅读语境；无AI调用。</p>
-  {study.questions.map((question,index)=><fieldset key={question.id} style={{border:'1px solid #e5ddeb',borderRadius:10,padding:12,margin:'12px 0'}}><legend style={{fontSize:15,lineHeight:1.8,padding:'0 4px'}}>{index+1}. {question.prompt}</legend>{question.options.map((option,choice)=><button key={choice} type="button" aria-pressed={answers[question.id]===choice} onClick={()=>{setAnswers(value=>({...value,[question.id]:choice}));setRevealed(value=>({...value,[question.id]:false}));}} style={{display:'block',width:'100%',textAlign:'left',padding:'10px 12px',margin:'6px 0',border:'1px solid #ded3e7',borderRadius:8,fontSize:14,lineHeight:1.8,color:'#443647',background:answers[question.id]===choice?'#eee3f6':'white'}}>{String.fromCharCode(65+choice)}. {option}</button>)}<button type="button" disabled={answers[question.id]===undefined} style={{...action,marginTop:8,opacity:answers[question.id]===undefined?.5:1}} onClick={()=>setRevealed(value=>({...value,[question.id]:true}))}>查看解析</button>{revealed[question.id]&&<div role="status" style={{fontSize:14,lineHeight:1.9,marginTop:12,padding:10,background:'#f6f1f8',borderRadius:8}}><strong>{answers[question.id]===question.answer?'回答正确':'再对照一下原文'} · 答案 {String.fromCharCode(65+question.answer)}</strong><p>{question.explanation}</p>{question.anchor&&<button type="button" style={action} onClick={()=>onSource(question.anchor!)}>定位依据原句</button>}</div>}</fieldset>)}
+  <h3 style={{fontSize:18,margin:'22px 0 12px'}}>本节知识点自测</h3>
+  <p style={{fontSize:12,color:'#827486',lineHeight:1.8}}>根据课件原有讲次或篇目提出复述题；参考内容直接取自本课原文，不生成未经核实的选择题答案。先自己整理，再展开课件核对，并可摘录到学习笔记。</p>
+  {study.knowledgePrompts.map((item,index)=><details key={item.id} style={{border:'1px solid #e5ddeb',borderRadius:10,padding:12,margin:'12px 0'}}><summary style={{cursor:'pointer',fontSize:15,lineHeight:1.8,fontWeight:600}}>{index+1}. {item.prompt}</summary><blockquote style={{fontSize:15,lineHeight:1.9,margin:'10px 0',whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{redactNiPrivateContacts(item.answer.quote)}</blockquote><div style={{display:'flex',gap:8}}><button type="button" style={action} onClick={()=>onSource(item.answer)}>核对完整原文</button><button type="button" style={action} onClick={()=>onAnnotate(item.answer)}>摘录并写学习笔记</button></div></details>)}
  </section>;
 }

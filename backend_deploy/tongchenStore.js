@@ -12,6 +12,8 @@ function createTongchenStore(db,{Solar,key,userInfo,now=()=>Date.now()}){
  CREATE TABLE IF NOT EXISTS tongchen_settings(key TEXT PRIMARY KEY,value TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS tongchen_limits(user_id TEXT,kind TEXT,at_ms INTEGER);
  CREATE INDEX IF NOT EXISTS tongchen_rate ON tongchen_limits(user_id,kind,at_ms);
+ -- Safe initial value for a fresh database only. INSERT OR IGNORE preserves
+ -- an administrator's existing live switch; this is not a store-policy ban.
  INSERT OR IGNORE INTO tongchen_settings VALUES ('enabled','false');
  INSERT OR IGNORE INTO tongchen_settings VALUES ('name','同辰雅集');`);
  // Reuse the established relationship database. No second friends/messages store.

@@ -5,6 +5,8 @@ function createResearchDomain(db,{now=()=>Date.now(),lifeEligible=()=>false,acco
  db.exec(`CREATE TABLE IF NOT EXISTS study_research_consents(user_id TEXT,domain TEXT,version TEXT,joined_ms INTEGER,PRIMARY KEY(user_id,domain));
  CREATE TABLE IF NOT EXISTS study_research_aliases(user_id TEXT,domain TEXT,public_id TEXT UNIQUE,PRIMARY KEY(user_id,domain));
  CREATE TABLE IF NOT EXISTS study_comment_research(comment_id INTEGER PRIMARY KEY,domain TEXT,metadata_json TEXT NOT NULL);
+ -- Fail closed only on a new/unconfigured instance. Existing admin decisions
+ -- survive restart; opening requires moderation, disclosure, and audit note.
  INSERT OR IGNORE INTO study_comment_settings VALUES ('research:symptom:enabled','false');
  INSERT OR IGNORE INTO study_comment_settings VALUES ('research:life:enabled','false');`);
  if(!db.prepare('PRAGMA table_info(study_research_consents)').all().some(r=>r.name==='membership_nonce'))db.exec("ALTER TABLE study_research_consents ADD COLUMN membership_nonce TEXT NOT NULL DEFAULT ''");

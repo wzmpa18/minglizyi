@@ -16,7 +16,7 @@ const LAST_CONTENT_KEY = "local_tts_last_content";
 const STYLE_KEY = "local_tts_style";
 const VOICE_KEY = "local_tts_voice";
 
-export function LocalListenButton({ text, contentId, compact = false }: { text: string; contentId: string; compact?: boolean }) {
+export function LocalListenButton({ text, contentId, compact = false, autoStart = false, onAutoStartHandled, onFinished }: { text: string; contentId: string; compact?: boolean; autoStart?: boolean; onAutoStartHandled?: () => void; onFinished?: () => void }) {
   const [status, setStatus] = useState<LocalTtsStatus | null>(null);
   const [state, setState] = useState<"idle" | "speaking" | "error">("idle");
   const [message, setMessage] = useState("");
@@ -26,6 +26,8 @@ export function LocalListenButton({ text, contentId, compact = false }: { text: 
   const [voiceName, setVoiceName] = useState("");
   const cleanupRef = useRef<null | (() => void)>(null);
   const playbackTurn = useRef(0);
+  const autoStarted = useRef(false);
+  const playRef = useRef<() => void>(() => {});
 
   const stop = useCallback(() => {
     playbackTurn.current++;
@@ -72,7 +74,7 @@ export function LocalListenButton({ text, contentId, compact = false }: { text: 
       const dispose = await speakLocalText(text, rate, style, voiceName || undefined, (event) => {
         if (turn !== playbackTurn.current) return;
         if (event.state === "speaking") setState("speaking");
-        if (event.state === "finished" || event.state === "stopped") { playbackTurn.current++; setState("idle"); cleanupRef.current = null; }
+        if (event.state === "finished" || event.state === "stopped") { playbackTurn.current++; setState("idle"); cleanupRef.current = null; if(event.state === "finished") onFinished?.(); }
         if (event.state === "error") { playbackTurn.current++; setState("error"); setMessage(event.message || "朗读失败"); }
       });
       if (turn !== playbackTurn.current) { dispose(); return; }
@@ -83,6 +85,13 @@ export function LocalListenButton({ text, contentId, compact = false }: { text: 
       setState("error"); setMessage(error instanceof Error ? error.message : "本机语音服务暂不可用");
     }
   };
+  playRef.current = () => { void play(); };
+  useEffect(() => {
+    if (!autoStart || !status?.ready || autoStarted.current) return;
+    autoStarted.current = true;
+    if (status.available) playRef.current();
+    onAutoStartHandled?.();
+  }, [autoStart, status, onAutoStartHandled]);
 
   if (status && !status.available) {
     return <p className="text-[11px] text-amber-700">

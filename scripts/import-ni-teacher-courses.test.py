@@ -55,12 +55,15 @@ class ExtractionTests(unittest.TestCase):
         self.assertEqual(text, "中文\n中文AB")
         self.assertEqual(info["format"], "RTF")
 
-    def test_chapter_pagination_keeps_every_source_character_in_order(self):
-        text = "说明\n" + "甲" * 15000 + "\n第一章 开始（1-00:00:01）\n课程正文\n一、主题（1-00:00:02）\n末尾。"
+    def test_lecture_grouping_keeps_all_timed_topics_inside_the_original_lesson(self):
+        text = "说明\n" + "甲" * 15000 + "\n第一章 开始（1-00:00:01）\n课程正文\n一、主题（1-00:00:02）\n第二讲开头（2-00:00:01）\n末尾。"
         chapters = module.make_chapters(text, "course", "acupuncture")
         self.assertEqual("".join(chapter["content"] for chapter in chapters), text)
         self.assertTrue(all(module.sha(chapter["content"].encode()) == chapter["sha256"] for chapter in chapters))
-        self.assertEqual(chapters[-1]["title"], "一、主题（1-00:00:02）")
+        self.assertEqual(len(chapters), 3)
+        self.assertEqual(chapters[1]["title"], "第1讲 · 第一章 开始")
+        self.assertIn("一、主题（1-00:00:02）", chapters[1]["content"])
+        self.assertEqual(chapters[2]["title"], "第2讲 · 第二讲开头")
 
 
 if __name__ == "__main__":

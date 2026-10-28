@@ -28,7 +28,7 @@ export default function StudyCommentAdmin(){
     <AdminCard title="运营开关与审核依据">
       <p>内容安全：{data?.safetyCapability?.automatic?`规则＋混元机器审核，每日最多${data.safetyCapability.dailyLimit}次；不扣用户点数`:"自动审核尚未配置，不会自动公开"}</p>
       <p>全局状态：{data?data.enabled?'已开放':'关闭':'读取中'}；超过24小时待审：{data?.overdue??'—'}条</p>
-      <div className="my-3 rounded border p-3"><strong>10号研习域（默认关闭，使用同一待审队列）</strong>{(['symptom','life'] as const).map(d=><p key={d}>{d==='symptom'?'同证研习':'同辰人生'}：{data?.research?.[d]?.enabled?'已开放':'关闭'} <button disabled={busy||note.trim().length<8} onClick={()=>setResearchOpening(d)}>确认自动审核/披露后开放</button> <button disabled={busy} onClick={()=>void action(`/research/${d}`,{enabled:false,note})}>暂停</button></p>)}</div>
+      <div className="my-3 rounded border p-3"><strong>10号研习域（新实例安全初值为关闭；线上状态以本次配置读回为准，使用同一待审队列）</strong>{(['symptom','life'] as const).map(d=><p key={d}>{d==='symptom'?'同证研习':'同辰人生'}：{data?.research?.[d]?.enabled?'已开放':'关闭'} <button disabled={busy||note.trim().length<8} onClick={()=>setResearchOpening(d)}>确认自动审核/披露后开放</button> <button disabled={busy} onClick={()=>void action(`/research/${d}`,{enabled:false,note})}>暂停</button></p>)}</div>
       <label style={styles.label}>审核/撤回/禁言依据<textarea value={note} onChange={e=>setNote(e.target.value)} style={styles.input}/></label>
       <label style={styles.label}>置顶解答的来源链接<input value={evidence} onChange={e=>setEvidence(e.target.value)} placeholder="https://…" style={styles.input}/></label>
       <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:10}}>

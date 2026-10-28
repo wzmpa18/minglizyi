@@ -7,7 +7,9 @@ const clamp=(value:number,min=0,max=1)=>Math.max(min,Math.min(max,value));
 const blend=(a:number,b:number,t:number)=>a+(b-a)*t;
 const smooth=(value:number)=>{const t=clamp(value);return t*t*(3-2*t);};
 const softMaximum=(a:number,b:number,radius=.004)=>(a+b+Math.sqrt((a-b)*(a-b)+radius*radius))/2;
-const TOP=1.025,HEM=.715,CLEARANCE=.0016;
+// Lower-rise everyday triangular briefs: the waistband sits below the navel,
+// while the leg openings follow the groin crease and still cover the pelvis.
+const TOP=.91,HEM=.67,CLEARANCE=.0016;
 
 /** A separate fabric surface fitted to source skin, never a modification of anatomy. */
 export function buildSurfaceShorts(skin:SkinGeometry):SurfaceShorts {
@@ -49,15 +51,14 @@ export function buildSurfaceShorts(skin:SkinGeometry):SurfaceShorts {
  };
  const positions:number[]=[],indices:number[]=[],colors:number[]=[],uvs:number[]=[],columns=64,rows=32,stride=columns+1,panelSize=stride*(rows+1);
  const color=(u:number,v:number,y:number,front:boolean)=>{
-  const band=smooth((y-1.002)/.007),hem=smooth((v-.955)/.045),seam=front?Math.exp(-Math.pow(u/.018,2))*.025:0;
+  const band=smooth((y-.89)/.007),hem=smooth((v-.955)/.045),seam=front?Math.exp(-Math.pow(u/.018,2))*.025:0;
   const shade=1-.24*band-.12*hem-seam;
   return [.075*shade,.155*shade,.265*shade]; // linear RGB; muted woven blue
  };
  for(let panel=0;panel<2;panel++)for(let row=0;row<=rows;row++)for(let column=0;column<=columns;column++){
   const u=column/columns*2-1,v=row/rows,front=panel===0;
-  // A high-cut, triangular brief: the narrow gusset stays below the centre,
-  // while both leg openings rise towards the hip. The original skin is read only.
-  const centre=front?.752:.775,hip=.972;
+  // Low-rise triangular brief with a comfortable leg line. The original skin is read only.
+  const centre=front?.70:.71,hip=.875;
   const hem=blend(centre,hip,smooth((Math.abs(u)-.16)/.84)),y=blend(TOP,hem,v),bodyX=u*widthAt(y)*.995;
   const hit=sample(bodyX,y)||sample(bodyX*.98,y)||sample(bodyX*.94,y);
   let z=hit?(front?hit.front:hit.back):(front?.075:-.085);

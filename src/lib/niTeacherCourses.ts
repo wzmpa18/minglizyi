@@ -60,11 +60,11 @@ async function validateCourseAgainst(raw: unknown, expected: NiCourseSummary): P
   if (course.id !== expected.id || course.schema !== 'yandao.ni-course.v1' || course.version !== expected.version || course.title !== expected.title || course.author !== expected.author || course.group !== expected.group ||
     course.description !== expected.description || course.contentSha256 !== expected.contentSha256 || !course.source || course.source.filename !== expected.sourceFilename || course.source.sha256 !== expected.sourceSha256 ||
     !['LECTURE_TRANSCRIPT', 'COMMUNITY_COURSE_NOTES', 'STUDY_REFERENCE'].includes(course.source.kind) || !safeText(course.source.licenseNote, 2000) || !safeText(course.source.qualityNote, 2000) ||
-    !Array.isArray(course.chapters) || course.chapters.length !== expected.chapterCount)
+      !Array.isArray(course.chapters) || course.chapters.length !== expected.chapterCount)
     throw Error('课程版本或出处与目录不符，请选择对应的课程文件');
   const ids = new Set<string>(); let characters = 0;
   for (const chapter of course.chapters) {
-    if (!chapter || !/^[a-z0-9-]{1,120}$/.test(chapter.id) || !chapter.id.startsWith(course.id + '-') || ids.has(chapter.id) || !safeText(chapter.title, 200) || !safeText(chapter.content, 100000) || !hex.test(chapter.sha256 || '') ||
+    if (!chapter || !/^[a-z0-9-]{1,120}$/.test(chapter.id) || !chapter.id.startsWith(course.id + '-') || ids.has(chapter.id) || !safeText(chapter.title, 200) || !safeText(chapter.content, 200000) || !hex.test(chapter.sha256 || '') ||
       !Number.isInteger(chapter.lineStart) || chapter.lineStart < 1 || !Number.isInteger(chapter.lineEnd) || chapter.lineEnd < chapter.lineStart)
       throw Error('课程章节结构不完整，原有课程保留');
     if (await digest(chapter.content) !== chapter.sha256) throw Error('课程正文校验未通过，原有课程保留');
