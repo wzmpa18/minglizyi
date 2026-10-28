@@ -27,10 +27,13 @@ public class AndroidLearningMarketingTest {
  private void waitText(String text,int seconds)throws Exception{
   long end=System.currentTimeMillis()+seconds*1000L;
   do{if("true".equals(js("document.body.innerText.includes("+JSONObject.quote(text)+")")))return;Thread.sleep(500);}while(System.currentTimeMillis()<end);
+  shot("FAILED_"+text.replaceAll("[^\\p{L}\\p{N}]","_"));
   fail("Actual page did not show required learning control: "+text);
  }
  private void route(String route,String ready,int seconds)throws Exception{
-  js("window.location.href="+JSONObject.quote(route));waitText(ready,seconds);
+  String navigated=js("(()=>{const target="+JSONObject.quote(route)+".replace(/\\/$/,'');const e=[...document.querySelectorAll('a[href]')].find(e=>new URL(e.href,location.href).pathname.replace(/\\/$/,'')===target);if(e){e.click();return 'LINK'}return 'MISSING'})()");
+  if(!"LINK".equals(navigated))js("window.location.href="+JSONObject.quote(route));
+  waitText(ready,seconds);
  }
  private void waitCondition(String expression,int seconds,String label)throws Exception{
   long end=System.currentTimeMillis()+seconds*1000L;
