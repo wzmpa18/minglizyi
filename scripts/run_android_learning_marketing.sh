@@ -9,4 +9,5 @@ set +e
 test_status=$?
 set -e
 adb pull /sdcard/Android/data/com.yandao.guoxue/files/learning-marketing "$RUNNER_TEMP/actual-android-learning-marketing/images" || true
+adb pull /sdcard/Download/yandao-learning-marketing "$RUNNER_TEMP/actual-android-learning-marketing/images" || true
 exit "$test_status"

@@ -34,7 +34,7 @@ public class AndroidLearningMarketingTest {
  }
  private void route(String route,String ready,int seconds)throws Exception{
   String navigated=js("(()=>{const target="+JSONObject.quote(route)+".replace(/\\/$/,'');const e=[...document.querySelectorAll('a[href]')].find(e=>new URL(e.href,location.href).pathname.replace(/\\/$/,'')===target);if(e){e.click();return 'LINK'}return 'MISSING'})()");
-  if(!"LINK".equals(navigated))js("window.location.href="+JSONObject.quote(route));
+  if(!"LINK".equals(navigated))js("setTimeout(()=>{window.location.href="+JSONObject.quote(route)+"},100);true");
   waitText(ready,seconds);
  }
  private void waitCondition(String expression,int seconds,String label)throws Exception{
@@ -53,6 +53,11 @@ public class AndroidLearningMarketingTest {
   File dir=new File(InstrumentationRegistry.getInstrumentation().getTargetContext().getExternalFilesDir(null),"learning-marketing");assertTrue(dir.isDirectory()||dir.mkdirs());
   try(OutputStream out=new FileOutputStream(new File(dir,name+".png"))){assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG,100,out));}
   bitmap.recycle();
+  // Gradle uninstalls test applications on exit; preserve only public PNGs in
+  // a shell-owned shared directory before that cleanup removes app files.
+  try(android.os.ParcelFileDescriptor fd=InstrumentationRegistry.getInstrumentation().getUiAutomation().executeShellCommand("mkdir -p /sdcard/Download/yandao-learning-marketing; cp '"+new File(dir,name+".png").getAbsolutePath()+"' '/sdcard/Download/yandao-learning-marketing/"+name+".png'")){
+   try(InputStream in=new android.os.ParcelFileDescriptor.AutoCloseInputStream(fd)){while(in.read()!=-1){}}
+  }
  }
  @Test public void captureActualLatestLearningFeatures()throws Exception{
   byte[] raw;try(InputStream in=InstrumentationRegistry.getInstrumentation().getContext().getAssets().open("marketing-session.json");ByteArrayOutputStream out=new ByteArrayOutputStream()){
@@ -62,7 +67,7 @@ public class AndroidLearningMarketingTest {
   try(ActivityScenario<MainActivity> activity=ActivityScenario.launch(MainActivity.class)){
    scenario=activity;long until=System.currentTimeMillis()+90000;
    while(System.currentTimeMillis()<until){try{if("true".equals(js("!!document.body&&document.body.innerText.length>20")))break;}catch(Exception ignored){}Thread.sleep(500);}
-   js("(()=>{const s="+storage+";for(const k of Object.keys(s))localStorage.setItem(k,s[k]);location.reload();return true})()");
+   js("(()=>{const s="+storage+";for(const k of Object.keys(s))localStorage.setItem(k,s[k]);setTimeout(()=>location.reload(),100);return true})()");
    // The real first-launch privacy gate intentionally mounts before navigation.
    // Accept its visible control rather than assuming the home navigation exists.
    long consentUntil=System.currentTimeMillis()+90000;
