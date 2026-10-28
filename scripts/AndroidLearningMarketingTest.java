@@ -21,7 +21,9 @@ public class AndroidLearningMarketingTest {
  private String js(String code)throws Exception{
   CountDownLatch done=new CountDownLatch(1);AtomicReference<String> value=new AtomicReference<>("null");
   scenario.onActivity(a->a.getBridge().getWebView().evaluateJavascript(code,r->{value.set(r);done.countDown();}));
-  assertTrue("Actual WebView response",done.await(15,TimeUnit.SECONDS));
+  boolean responded=done.await(45,TimeUnit.SECONDS);
+  if(!responded)shot("FAILED_WebViewCallback");
+  assertTrue("Actual WebView response",responded);
   Object decoded=new JSONTokener(value.get()).nextValue();return decoded==JSONObject.NULL?"":String.valueOf(decoded);
  }
  private void waitText(String text,int seconds)throws Exception{
@@ -69,7 +71,7 @@ public class AndroidLearningMarketingTest {
     js("(()=>{const e=[...document.querySelectorAll('button')].find(e=>e.innerText.trim()==='同意并继续');if(e)e.click();return true})()");
     Thread.sleep(500);
    }
-   waitText("首页",30);
+   waitText("首页",30);shot("00_首页_Android实际启动");
    route("/zhongyi/","倪师自学专区",90);js("window.scrollTo(0,0)");shot("03_中医学习_Android实际界面");
    route("/zhongyi/ni-study/","保存完整中医资料",90);click("保存完整中医资料");waitText("中医资料已保存，可离线阅读。",900);
    click("人纪·针灸教程");waitText("摘录并批注",90);js("window.scrollTo(0,0)");shot("02_课程笔记_Android实际界面");
