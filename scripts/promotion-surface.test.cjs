@@ -12,7 +12,7 @@ test('every live marketing selector excludes the unconfirmed ten-person discount
  for(const item of templates.VIRAL_TEMPLATES){const copy=item.copy;assert.equal(compliance.validateCopySet([copy.title,copy.subtitle,...copy.sellingPoints,copy.benefitLine,copy.momentsCopy,copy.groupCopy]).passed,true,item.id);}
 });
 test('all six cash and poster routes render only learning share on store builds before cash hooks can execute',()=>{
- const jsx=(type,props)=>({type,props}),runtime={jsx,jsxs:jsx},ShareCode=()=>({learning:true});
+ const jsx=(type,props)=>({type,props}),Fragment=Symbol.for('react.fragment'),runtime={jsx,jsxs:jsx,Fragment},ShareCode=()=>({learning:true});
  const paths=['src/app/invite/page.tsx','src/app/invite/poster/page.tsx','src/app/profile/promote/page.tsx','src/app/profile/team/page.tsx','src/app/profile/partner/page.tsx','src/app/profile/partner/apply/page.tsx'];
  for(const enabled of [false,true]){
   const Gate=load('src/components/PromotionPageGate.tsx',{'react/jsx-runtime':runtime,'@/lib/releaseFeatures':{PUBLIC_PROMOTION_ENABLED:enabled},'@/app/share-code/page':{default:ShareCode,__esModule:true}}).PromotionPageGate;
@@ -23,7 +23,13 @@ test('all six cash and poster routes render only learning share on store builds 
    const exports={};let cashHooks=0;const Cash=()=>{cashHooks++;return {cash:true};};
    const code=ts.transpileModule(fn.getText(source),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.ReactJSX}}).outputText;
    vm.runInNewContext(code,{exports,PromotionPageGate:Gate,[inner[1]]:Cash,require:name=>{assert.equal(name,'react/jsx-runtime');return runtime;}});
-   const outer=exports.default(),selected=outer.type(outer.props),rendered=selected.type(selected.props);
+   const outer=exports.default(),selected=outer.type(outer.props);
+   const render=element=>{
+    if(element?.type===Fragment)return render(element.props?.children);
+    if(typeof element?.type==='function')return render(element.type(element.props));
+    return element;
+   };
+   const rendered=render(selected);
    assert.equal(cashHooks,enabled?1:0,file);assert.equal(enabled?rendered.cash:rendered.learning,true,file);
   }
  }
