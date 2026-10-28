@@ -58,8 +58,15 @@ public class AndroidLearningMarketingTest {
    scenario=activity;long until=System.currentTimeMillis()+90000;
    while(System.currentTimeMillis()<until){try{if("true".equals(js("!!document.body&&document.body.innerText.length>20")))break;}catch(Exception ignored){}Thread.sleep(500);}
    js("(()=>{const s="+storage+";for(const k of Object.keys(s))localStorage.setItem(k,s[k]);location.reload();return true})()");
-   waitText("首页",90);
-   js("(()=>{const e=[...document.querySelectorAll('button')].find(e=>e.innerText.trim()==='同意并继续');if(e)e.click();return true})()");
+   // The real first-launch privacy gate intentionally mounts before navigation.
+   // Accept its visible control rather than assuming the home navigation exists.
+   long consentUntil=System.currentTimeMillis()+90000;
+   while(System.currentTimeMillis()<consentUntil){
+    if("true".equals(js("document.body.innerText.includes('首页')")))break;
+    js("(()=>{const e=[...document.querySelectorAll('button')].find(e=>e.innerText.trim()==='同意并继续');if(e)e.click();return true})()");
+    Thread.sleep(500);
+   }
+   waitText("首页",30);
    route("/zhongyi/","倪师自学专区",90);js("window.scrollTo(0,0)");shot("03_中医学习_Android实际界面");
    route("/zhongyi/ni-study/","保存完整中医资料",90);click("保存完整中医资料");waitText("中医资料已保存，可离线阅读。",900);
    click("人纪·针灸教程");waitText("摘录并批注",90);js("window.scrollTo(0,0)");shot("02_课程笔记_Android实际界面");
