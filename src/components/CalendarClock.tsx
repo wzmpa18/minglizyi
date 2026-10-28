@@ -2,11 +2,13 @@
 import { InterfaceButton } from "@/components/InterfaceControls";
 import {useEffect,useRef,useState} from "react";
 import {calendarAt,type CalendarObservation} from "@/lib/calendarSnapshot";
+type ScreenWakeLock={release:()=>Promise<void>;addEventListener:(type:"release",listener:()=>void)=>void};
+type WakeLockNavigator=Navigator&{wakeLock?:{request:(type:"screen")=>Promise<ScreenWakeLock>}};
 export function CalendarClock({observation,onClose}:{observation:CalendarObservation;onClose:()=>void}){
  const [now,setNow]=useState(Date.now()),[awake,setAwake]=useState(false),[message,setMessage]=useState("");
- const lock=useRef<WakeLockSentinel|null>(null);
+ const lock=useRef<ScreenWakeLock|null>(null);
  useEffect(()=>{const timer=setInterval(()=>setNow(Date.now()),1000);const release=()=>{void lock.current?.release();lock.current=null;setAwake(false);};document.addEventListener("visibilitychange",release);return()=>{clearInterval(timer);release();document.removeEventListener("visibilitychange",release);};},[]);
- async function toggle(){if(awake){await lock.current?.release();lock.current=null;setAwake(false);return;}try{lock.current=await navigator.wakeLock.request("screen");setAwake(true);lock.current.addEventListener("release",()=>setAwake(false));}catch{setMessage("设备未允许保持亮屏，可按系统自动息屏设置使用。");}}
+ async function toggle(){if(awake){await lock.current?.release();lock.current=null;setAwake(false);return;}try{const wakeLock=(navigator as WakeLockNavigator).wakeLock;if(!wakeLock)throw Error("Screen wake lock is not supported");lock.current=await wakeLock.request("screen");setAwake(true);lock.current.addEventListener("release",()=>setAwake(false));}catch{setMessage("设备未允许保持亮屏，可按系统自动息屏设置使用。");}}
  const data=calendarAt(now,observation),shift=Math.floor(now/60000)%5-2;
  return <div role="dialog" aria-label="全屏国风时钟" className="fixed inset-0 z-[110000] flex flex-col items-center justify-center" style={{background:"#111820",color:"#C6B79F",padding:"calc(env(safe-area-inset-top,0px) + 24px) 20px"}}>
   <InterfaceButton onClick={onClose} className="absolute right-5 rounded border px-4 py-2" style={{top:"calc(env(safe-area-inset-top,0px) + 22px)"}}>退出时钟</InterfaceButton>

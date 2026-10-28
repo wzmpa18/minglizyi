@@ -24,9 +24,6 @@ const nextConfig: NextConfig = {
   },
   trailingSlash: true,
   assetPrefix: "/",
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   generateBuildId: () => BUILD_ID,
   // 本机构建内存受限（可用 ~3GB），静态页生成并发过高会 Zone OOM
   experimental: {

@@ -7,17 +7,16 @@ function fixture(id='course-test-1',content='【本经原文】\n这是所提供
  const chapter={id,title:'本课主题',content,lineStart:1,lineEnd:8,sha256:hash(content)},course={schema:'yandao.ni-course.v1',version:'1.0.0',id:'course-test',title:'原课程',author:'所据作者',group:'人纪课程',description:'测试课程',source:{filename:'原件.doc',sha256:'a'.repeat(64),kind:'LECTURE_TRANSCRIPT',licenseNote:'测试资料',qualityNote:'测试'},chapters:[chapter],contentSha256:'b'.repeat(64)};return {course,chapter};
 }
 test('study points, terms, examples and review sources are exact anchored extracts',()=>{
- const {course,chapter}=fixture(),result=study.buildNiLessonStudy(course,chapter);assert.equal(result.professionallyReviewed,false);assert.ok(result.points.length>=3&&result.points.length<=7);assert.ok(result.questions.length>=3&&result.questions.length<=5);
- for(const anchor of [...result.points.map(p=>p.anchor),...result.terms.map(p=>p.context),...result.examples,...result.reviewSummary,...result.questions.flatMap(q=>q.anchor?[q.anchor]:[])])assert.ok(study.verifyNiSourceAnchor(anchor,course,chapter));
+ const {course,chapter}=fixture(),result=study.buildNiLessonStudy(course,chapter);assert.equal(result.professionallyReviewed,false);assert.ok(result.points.length>=3&&result.points.length<=7);assert.ok(result.knowledgePrompts.length>=1&&result.knowledgePrompts.length<=12);
+ for(const anchor of [...result.points.map(p=>p.anchor),...result.terms.map(p=>p.context),...result.examples,...result.reviewSummary,...result.knowledgePrompts.map(q=>q.answer)])assert.ok(study.verifyNiSourceAnchor(anchor,course,chapter));
  assert.equal(result.method,'DETERMINISTIC_SOURCE_EXTRACT');assert.ok(result.points.every(p=>chapter.content.includes(p.anchor.quote)));
 });
-test('source quiz answers remain correct after deterministic choice rotation and are not always A',()=>{
- const answers=new Set();for(let i=0;i<30;i++){const {course,chapter}=fixture('course-test-'+i),a=study.buildNiLessonStudy(course,chapter),b=study.buildNiLessonStudy(course,chapter);assert.deepEqual(a.questions,b.questions);
- for(const q of a.questions){assert.ok(q.answer>=0&&q.answer<q.options.length);assert.equal(new Set(q.options).size,q.options.length);answers.add(q.answer);if(q.id.endsWith('-q-source'))assert.equal(q.options[q.answer],course.title);if(q.id.endsWith('-q-context'))assert.equal(q.options[q.answer],q.anchor.quote.slice(0,120));}}
- assert.ok(answers.size>=3);
+test('review prompts are deterministic, tied to the actual lesson and do not invent multiple-choice answers',()=>{
+ for(let i=0;i<30;i++){const {course,chapter}=fixture('course-test-'+i),a=study.buildNiLessonStudy(course,chapter),b=study.buildNiLessonStudy(course,chapter);assert.deepEqual(a.knowledgePrompts,b.knowledgePrompts);
+  assert.ok(a.knowledgePrompts.length>=1&&a.knowledgePrompts.length<=12);for(const prompt of a.knowledgePrompts){assert.ok(prompt.prompt.includes(prompt.topic));assert.ok(study.verifyNiSourceAnchor(prompt.answer,course,chapter));assert.equal('options' in prompt,false);}}
 });
 test('short originals are not padded with invented facts; contacts are hidden without shifting source offsets',()=>{
- const {course,chapter}=fixture('course-short','只有这一段可核对的原课文字。'),short=study.buildNiLessonStudy(course,chapter);assert.ok(short.points.length<3);assert.ok(short.questions.length>=3);
+ const {course,chapter}=fixture('course-short','只有这一段可核对的原课文字。'),short=study.buildNiLessonStudy(course,chapter);assert.ok(short.points.length<3);assert.equal(short.knowledgePrompts.length,1);assert.ok(study.verifyNiSourceAnchor(short.knowledgePrompts[0].answer,course,chapter));
  const privateText='邮箱 test.person@example.test，电话13900000000。正文仍在。',redacted=study.redactNiPrivateContacts(privateText);assert.equal(redacted.length,privateText.length);assert.ok(!redacted.includes('@'));assert.ok(!redacted.includes('13900000000'));
  assert.equal(study.redactNiPrivateContacts('原稿100-200，年代2004-2005，时长15-20分钟。'),'原稿100-200，年代2004-2005，时长15-20分钟。');
  const p=fixture('course-private','例如请发邮件到 test.person@example.test，或电话13900000000。\n这里是一段可以公开展示的原课学习语境，保留完整的实际文字。');
@@ -41,11 +40,11 @@ test('bookmarks, annotations and export retain sources without touching another 
  await assert.rejects(book.api.addNiAnnotation('accountA',course,chapter,{...anchor,quote:'伪造原句'},'不能保存'));assert.equal(JSON.stringify(course),original);
  const exported=book.api.exportNiPersonalStudy(course,chapter,null,marks);assert.equal(exported.annotations[0].comment,'我的疑问');assert.equal(exported.course.sourceSha256,course.source.sha256);assert.ok(!JSON.stringify(exported).includes('accountA'));
 });
-test('every actual installed course chapter yields source-checked notes and 3–5 review questions',{skip:!process.env.NI_STUDY_COLLECTION},()=>{
- const collection=JSON.parse(fs.readFileSync(process.env.NI_STUDY_COLLECTION,'utf8'));let chapters=0,points=0,short=0,examples=0;const answers=new Set();
- for(const course of collection.courses)for(const chapter of course.chapters){const note=study.buildNiLessonStudy(course,chapter);chapters++;points+=note.points.length;examples+=note.examples.length;if(note.points.length<3)short++;assert.ok(note.questions.length>=3&&note.questions.length<=5);
+test('every actual installed course chapter yields source-checked notes and review prompts',{skip:!process.env.NI_STUDY_COLLECTION},()=>{
+ const collection=JSON.parse(fs.readFileSync(process.env.NI_STUDY_COLLECTION,'utf8'));let chapters=0,points=0,short=0,examples=0,prompts=0;
+ for(const course of collection.courses)for(const chapter of course.chapters){const note=study.buildNiLessonStudy(course,chapter);chapters++;points+=note.points.length;examples+=note.examples.length;if(note.points.length<3)short++;assert.ok(note.knowledgePrompts.length>=1&&note.knowledgePrompts.length<=12);
  for(const item of note.points){assert.ok(study.verifyNiSourceAnchor(item.anchor,course,chapter));assert.ok(!study.containsNiPrivateContact(item.anchor.quote));}
- for(const q of note.questions){answers.add(q.answer);assert.ok(q.answer>=0&&q.answer<q.options.length);if(q.anchor)assert.ok(study.verifyNiSourceAnchor(q.anchor,course,chapter));}
+ for(const prompt of note.knowledgePrompts){prompts++;assert.ok(study.verifyNiSourceAnchor(prompt.answer,course,chapter));assert.ok(!study.containsNiPrivateContact(prompt.answer.quote));}
  }
- assert.equal(chapters,1141);assert.ok(answers.size>=3);console.log(JSON.stringify({actualCourses:collection.courses.length,chapters,sourceAnchoredPoints:points,shortOriginalsBelow3Points:short,sourceExamples:examples,answers:[...answers].sort()}));
+ assert.equal(chapters,collection.courses.reduce((n,course)=>n+course.chapters.length,0));console.log(JSON.stringify({actualCourses:collection.courses.length,chapters,sourceAnchoredPoints:points,shortOriginalsBelow3Points:short,sourceExamples:examples,sourceAnchoredPrompts:prompts}));
 });

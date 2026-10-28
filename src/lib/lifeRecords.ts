@@ -1,4 +1,4 @@
-import traditionalCharacters from "../data/lifeSearchTraditional.json" with {type:"json"};
+import traditionalCharacters from "../data/lifeSearchTraditional.json";
 /** Private domain: no authentication, analytics, fetch, cloud client or AI dependency. */
 export const LIFE_SCHEMA=1;
 export const LIFE_CATEGORIES=["生活随记","健康记录","梦境","排盘点评","工作","人际往来","学习"];
@@ -34,7 +34,7 @@ class LifePosting {
  private addBit(id:number){const block=Math.floor(id/8192),offset=id%8192;let bits=this.blocks.get(block);if(!bits){bits=new Uint32Array(256);this.blocks.set(block,bits);}bits[offset>>>5]|=1<<(offset&31);}
  has(id:number){if(this.small)return this.small.has(id);const bits=this.blocks.get(Math.floor(id/8192));return !!bits&&!!(bits[(id%8192)>>>5]&(1<<(id&31)));}
  remove(id:number){if(!this.has(id))return;this.count--;if(this.small)this.small.delete(id);else{const bits=this.blocks.get(Math.floor(id/8192))!;bits[(id%8192)>>>5]&=~(1<<(id&31));}}
- *values():Generator<number>{if(this.small){yield* this.small;return;}for(const [block,words] of this.blocks)for(let word=0;word<words.length;word++){let mask=words[word]>>>0;while(mask){const bit=31-Math.clz32(mask&-mask);yield block*8192+word*32+bit;mask=(mask&(mask-1))>>>0;}}}
+ *values():Generator<number,void,undefined>{if(this.small){for(const value of this.small)yield value;return;}for(const [block,words] of this.blocks)for(let word=0;word<words.length;word++){let mask=words[word]>>>0;while(mask){const bit=31-Math.clz32(mask&-mask);yield block*8192+word*32+bit;mask=(mask&(mask-1))>>>0;}}}
  bytes(){return this.small?this.small.size*8:[...this.blocks.values()].reduce((n,x)=>n+x.byteLength,0);}
 }
 export class LifeSearchIndex {
