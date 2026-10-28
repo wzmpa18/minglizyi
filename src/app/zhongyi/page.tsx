@@ -488,7 +488,7 @@ export default function ZhongyiHome() {
           </div>
           <div>
             <h1 style={{ fontSize: "18px", fontWeight: "bold", margin: 0 }}>中医学习</h1>
-            <p style={{ fontSize: "11px", opacity: 0.8, margin: 0 }}>传承岐黄，精研医术</p>
+            <p style={{ fontSize: "11px", opacity: 0.8, margin: 0 }}>典籍研读，经络学习</p>
           </div>
         </div>
 

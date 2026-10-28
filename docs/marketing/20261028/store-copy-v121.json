@@ -1,11 +1,11 @@
 {
   "version": "25.0.121",
   "androidVersionCode": 2154,
-  "iosBuild": 63,
+  "iosBuild": 64,
   "state": "CANDIDATE_NOT_SUBMITTED_TO_PUBLIC_STORES",
-  "sourceCommit": "23782391c342d13b610674d5b8ff0edfdf78de3f",
+  "sourceCommit": "bd964716a8d9564fd9f326533a164ca455c2839a",
   "productSourceCommit": "8f6064890c73fbb01c0497e23aee978db40ee107",
-  "evidence": "D:\\言道国学项目资料总库\\03_源码与版本恢复\\候选25.0.120_2153_待审核_20261028\\package-verification.json",
+  "evidence": "D:\\言道国学项目资料总库\\03_源码与版本恢复\\候选25.0.121_2154_候选待验收_20261028\\package-verification.json",
   "apple": {
     "name": "言道国学",
     "subtitle": "三维人体·经典·同辰",
@@ -53,11 +53,11 @@
   "featureLaunchGate": {
     "tongchen": "Admin readback 2026-10-28 shows the production service OPEN. Source default false is only the fresh-database fail-closed value. Before submitting this copy, verify adult opt-in, matching, mutual-consent exchange, exit and block in the exact target package with two accounts.",
     "sameConditionStudy": "Admin readback 2026-10-28 shows the production service OPEN and moderation rules plus Hunyuan review queue active; one item awaits manual review. Before submitting this copy, verify the exact package voluntary topic workflow, safety disclosure, reporting, block and exit with two accounts.",
-    "realScreenshots": "Workflow 40608056759 failed while downloading the complete study pack and member model. No public-facing screenshots have been approved.",
+    "realScreenshots": "Workflow 40664927276 succeeded; artifact 12806239068 (sha256 7e2d807a839045645b13e253708f8077f49bc20f2658e5616823dd4568665cbd) was reviewed. Real iPhone/iPad captures are genuine, but the Chinese-medicine banner and acupuncture lesson counter need correction; these images are not approved for store submission.",
     "modelAccuracy": "Only show model paths and point locations verified in the current candidate. Do not claim full/clinically precise meridian coverage; keep original model and member entitlement."
   },
   "submissionGates": [
-    "真实模拟器截图工作流40608056759失败：审核测试账号未完成完整资料包与会员模型下载；现有单张画面仅作内部证据，不是可提交宣传图。需修复下载验收并重新采集全套真实截图。",
+    "Workflow 40664927276 produced and artifact 12806239068 was visually reviewed. It exposes two defects: the Chinese-medicine banner reads as medical-practice promotion, and acupuncture course 1 is labeled 2/11. Rebuild and recapture after correcting both; do not submit the v25.0.121 images.",
     "2026-10-28运营后台管理员读回：同辰人生开放；同证研习开放；内容规则与混元机器审核已启用，队列有1条待人工复核。源码中的 false 是新数据库安全初值，不覆盖现有管理员设置。双账号端到端验收尚未完成，因此本候选文案不能作为目标商店包已完整验收的证明。",
     "在双账号目标版本实测加入、匹配、双方同意后交流、退出、屏蔽、举报及异常内容隔离前，不提交把这些流程标为已验收的宣传截图或体验声明。",
     "各商店分别核对包、列表字段、资质、最新退回意见和应用审核路径；状态未核实即标为待核，不重复点击提交。",
