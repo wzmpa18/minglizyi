@@ -21,6 +21,6 @@ for group in manifest:
   rows.append({**public,'feature':name[len('MARKETING_'):].split('_',1)[0],'bytes':target.stat().st_size,'sha256':hashlib.sha256(target.read_bytes()).hexdigest(),'width':width,'height':height,'mode':'RGB','hasAlphaChannel':False})
 assert rows,'No explicit public marketing captures were exported'
 (a.output/'manifest.json').write_text(json.dumps(rows,ensure_ascii=False,indent=2),encoding='utf8')
-required={'anatomy','ni-study','study-sharing','medical-home','original-texts'}
+required={'anatomy','ni-study','learning-community','medical-home','original-texts'}
 assert required.issubset({r['feature'] for r in rows}),'Actual captures do not cover all requested learning features'
 print(json.dumps({'publicMarketingScreenshots':len(rows),'features':sorted({r['feature'] for r in rows}),'credentialsOrSessionExported':False}))

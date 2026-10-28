@@ -168,15 +168,14 @@ final class GuoxueStudyMarketing: XCTestCase {
         XCTAssertTrue(app.buttons["展开章节目录"].waitForExistence(timeout:30))
         shot("original-texts","古籍原文应用内阅读",app)
 
-        home(app);tab("我的",app)
-        let share=app.buttons.matching(NSPredicate(format:"label CONTAINS %@","学习分享码")).firstMatch
-        if !share.waitForExistence(timeout:5){tap("学习分享",app)}
-        reveal(share,app);share.tap()
-        let copy=app.buttons["复制学习链接"].firstMatch
-        XCTAssertTrue(copy.waitForExistence(timeout:45),"The ordinary server response must return the real learning share code")
-        let enabled=XCTNSPredicateExpectation(predicate:NSPredicate(format:"enabled == true"),object:copy)
-        XCTAssertEqual(XCTWaiter.wait(for:[enabled],timeout:20),.completed)
-        reveal(copy,app)
-        shot("study-sharing","学习分享码_未发起外部分享",app)
+        // Public marketing may show community entry points, never an account's
+        // live invite/share code, signed URL, private post, or chat content.
+        home(app);tab("发现",app)
+        let tongchen=app.staticTexts.matching(NSPredicate(format:"label CONTAINS %@","同辰雅集")).firstMatch
+        let chart=app.links.matching(NSPredicate(format:"label CONTAINS %@","携盘交流")).firstMatch
+        XCTAssertTrue(tongchen.waitForExistence(timeout:45),"The actual learning community entry must be visible")
+        XCTAssertTrue(chart.waitForExistence(timeout:30),"The actual chart-learning entry must be visible")
+        reveal(tongchen,app)
+        shot("learning-community","同辰雅集与携盘交流入口_不含用户内容",app)
     }
 }
