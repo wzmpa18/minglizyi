@@ -13,6 +13,10 @@ on:
       - 'src/components/MedicalPreparationCard.tsx'
   workflow_dispatch:
     inputs:
+      application_source:
+        description: Exact existing application commit for marketing-only QA; defaults to this run
+        type: string
+        default: ''
       marketing_only:
         description: Capture this exact application's public learning marketing pages only
         type: boolean
@@ -28,7 +32,7 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.marketing_only }}
     uses: ./.github/workflows/ios-learning-marketing.yml
     with:
-      application_source: ${{ github.sha }}
+      application_source: ${{ inputs.application_source || github.sha }}
     secrets: inherit
   screenshots:
     if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.marketing_only) && !(github.event_name == 'push' && contains(github.event.head_commit.message, '[ios-marketing-qa]')) }}

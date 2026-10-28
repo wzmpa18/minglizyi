@@ -18,6 +18,15 @@ def verify(a):
   assert not any('/public/data/ni-study/'in name for name in names),'Course texts must remain in authenticated learning storage'
   web=json.loads(z.read(versions[0]));assert web['version']=='v'+a.version
   native=None
+  marker=None
+  if a.android_channel:
+   assert a.kind=='android','An Android channel cannot label an iOS archive'
+   entries=[n for n in names if n.endswith('/public/app-native.json')];assert len(entries)==1,'Native provenance marker missing or ambiguous'
+   marker=json.loads(z.read(entries[0]))
+   assert marker.get('isNativeApp') is True and marker.get('sourceCommit')==a.source,'Archive source provenance mismatch'
+   assert marker.get('versionName')==a.version and marker.get('versionCode')==int(a.build),'Native version marker mismatch'
+   assert marker.get('storeChannel')==a.android_channel,'Wrong distribution channel; never substitute a company APK for a store APK'
+   native={key:marker[key] for key in ('sourceCommit','storeChannel','versionName','versionCode','isNativeApp')}
   if a.kind=='ios':
    infos=[n for n in names if n.startswith('Payload/')and n.count('/')==2 and n.endswith('.app/Info.plist')];assert len(infos)==1
    info=plistlib.loads(z.read(infos[0]));assert info['CFBundleIdentifier']=='com.yandaoguoxue.app'and info['CFBundleShortVersionString']==a.version and info['CFBundleVersion']==a.build
@@ -44,4 +53,4 @@ def verify(a):
  proof={'kind':a.kind,'archive':str(a.archive),'bytes':a.archive.stat().st_size,'sha256':digest(a.archive),'source':a.source,'version':a.version,'build':a.build,'nativeMetadata':native,'bundledWebVersion':web['version'],'originalMediaFilesFullyVerified':len(expected),'protocolMarkers':markers,'remoteAppUrlAbsent':True,'physicalPhoneAcceptance':False}
  a.output.write_text(json.dumps(proof,ensure_ascii=False,indent=2),encoding='utf-8');print(json.dumps(proof,ensure_ascii=False))
 if __name__=='__main__':
- p=argparse.ArgumentParser();p.add_argument('--archive',type=Path,required=True);p.add_argument('--repository',type=Path,required=True);p.add_argument('--kind',choices=['ios','android'],required=True);p.add_argument('--version',required=True);p.add_argument('--build',required=True);p.add_argument('--source',required=True);p.add_argument('--output',type=Path,required=True);verify(p.parse_args())
+ p=argparse.ArgumentParser();p.add_argument('--archive',type=Path,required=True);p.add_argument('--repository',type=Path,required=True);p.add_argument('--kind',choices=['ios','android'],required=True);p.add_argument('--version',required=True);p.add_argument('--build',required=True);p.add_argument('--source',required=True);p.add_argument('--android-channel',choices=['internal','default','tencent','google','huawei','oppo','vivo','honor','xiaomi']);p.add_argument('--output',type=Path,required=True);verify(p.parse_args())
