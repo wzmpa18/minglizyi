@@ -1,0 +1,113 @@
+name: Pinned actual Android learning marketing screenshots
+on:
+  push:
+    branches:
+      - codex/tencent-store-compliance
+    paths:
+      - '.github/workflows/android-learning-marketing.yml'
+      - 'scripts/android-marketing-session.cjs'
+      - 'scripts/AndroidLearningMarketingTest.java'
+  workflow_dispatch:
+    inputs:
+      application_source:
+        description: Exact verified application commit
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  marketing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PINNED_APPLICATION_SOURCE: ${{ inputs.application_source || 'c4ff5272f7d8f727ae780dfcfb1b262ed07309c1' }}
+      NEXT_PUBLIC_STORE_CHANNEL: appchina
+    defaults:
+      run:
+        working-directory: app-source
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: qa-source
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.application_source || 'c4ff5272f7d8f727ae780dfcfb1b262ed07309c1' }}
+          path: app-source
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app-source/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Verify pinned source and overlay isolated test only
+        run: |
+          [[ "$PINNED_APPLICATION_SOURCE" =~ ^[a-f0-9]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$PINNED_APPLICATION_SOURCE"
+          mkdir -p android/app/src/androidTest/java/com/yandao/guoxue
+          cp ../qa-source/scripts/AndroidLearningMarketingTest.java android/app/src/androidTest/java/com/yandao/guoxue/
+          cp ../qa-source/scripts/android-marketing-session.cjs scripts/
+          mkdir -p "$RUNNER_TEMP/actual-android-learning-marketing"
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess,re
+          source=os.environ['PINNED_APPLICATION_SOURCE']
+          assert json.loads(pathlib.Path('package.json').read_text())['version']=='25.0.122'
+          assert re.search(r'versionCode\s+2155\b',pathlib.Path('android/app/build.gradle').read_text())
+          data={'source':source,'version':'25.0.122','versionCode':2155,'storeChannel':'appchina','nativeAndroid':True,'physicalDevice':False,'syntheticInterface':False,'authMethod':'ordinary backend login; no entitlement changes','srcTree':subprocess.check_output(['git','rev-parse',source+':src'],text=True).strip(),'publicTree':subprocess.check_output(['git','rev-parse',source+':public'],text=True).strip()}
+          pathlib.Path(os.environ['RUNNER_TEMP'],'actual-android-learning-marketing','source.json').write_text(json.dumps(data,indent=2))
+          PY
+      - run: npm ci --legacy-peer-deps
+      - name: Build unchanged application UI and pinned native dependencies
+        run: |
+          export GITHUB_SHA="$PINNED_APPLICATION_SOURCE"
+          npm run build
+          mkdir -p www
+          cp -R out/. www/
+          node scripts/write-native-marker.js
+          python3 scripts/prepare_life_ocr_models.py
+          npx cap sync android
+          chmod +x android/gradlew
+      - name: Prepare ordinary account without public credentials
+        env:
+          GUOXUE_REVIEW_ACCOUNT: ${{ secrets.GUOXUE_REVIEW_ACCOUNT }}
+          GUOXUE_REVIEW_PASSWORD: ${{ secrets.GUOXUE_REVIEW_PASSWORD }}
+        run: node scripts/android-marketing-session.cjs
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          ram-size: 4096M
+          heap-size: 1024M
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: |
+            adb shell wm size 1080x1920
+            adb shell wm density 420
+            adb shell settings put system system_locales zh-CN
+            cd app-source/android
+            ./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.yandao.guoxue.AndroidLearningMarketingTest --no-daemon
+            adb pull /sdcard/Android/data/com.yandao.guoxue/files/learning-marketing "$RUNNER_TEMP/actual-android-learning-marketing/images"
+      - name: Keep only public screenshot proof
+        if: always()
+        run: |
+          rm -f android/app/src/androidTest/assets/marketing-session.json
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib
+          base=pathlib.Path(os.environ['RUNNER_TEMP'],'actual-android-learning-marketing')
+          rows=[{'file':p.relative_to(base).as_posix(),'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()} for p in sorted(base.rglob('*.png'))]
+          (base/'manifest.json').write_text(json.dumps({'files':rows,'source':os.environ['PINNED_APPLICATION_SOURCE']},ensure_ascii=False,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: real-android-latest-learning-marketing
+          path: ${{ runner.temp }}/actual-android-learning-marketing/
+          retention-days: 2

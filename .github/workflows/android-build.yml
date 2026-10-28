@@ -21,6 +21,7 @@ on:
           - vivo
           - honor
           - xiaomi
+          - appchina
           - internal
       challenge_base64:
         description: Optional official Tencent ownership challenge; sign only, no app rebuild
