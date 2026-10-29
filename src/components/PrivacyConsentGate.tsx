@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { PrivacyPolicyDocument } from "@/app/privacy/page";
 
 const CONSENT_KEY = "yandao_privacy_consent_v1";
@@ -11,6 +12,7 @@ export default function PrivacyConsentGate({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
   const [choice, setChoice] = useState<
     "loading" | "pending" | "accepted" | "rejected"
   >("loading");
@@ -39,6 +41,9 @@ export default function PrivacyConsentGate({
     setChoice("accepted");
   };
 
+  // The policy must be readable before agreement, without mounting app services.
+  if (pathname?.replace(/\/+$/, "") === "/privacy")
+    return <PrivacyPolicyDocument />;
   if (choice === "accepted") return <>{children}</>;
   if (choice === "loading")
     return <div style={{ minHeight: "100dvh", background: "#fff" }} />;
