@@ -473,7 +473,14 @@ app.post('/api/ai/chat', async (req, res) => {
     // v25.0.47_10: AI健康埋点（成功，含延迟分位数统计）
     recordAIHealth('success', Date.now() - _t0);
     _logCost('success');
-    res.json({ success: true, content, usage, cached: false, data: { content, usage } });
+    const labelled = require('./aiContentLabel').labelAIResponse(
+      { success: true, content, usage, cached: false, data: { content, usage } },
+      { requestId: _meta.requestId, provider: _meta.providerId, model: _meta.model });
+    res.setHeader('X-AI-Generated', '1');
+    res.setHeader('X-AI-Content-Id', labelled.AIGC.ProduceID);
+    console.log('[AI content identity]', JSON.stringify({id: labelled.AIGC.ProduceID,
+      requestDigest: JSON.parse(labelled.AIGC.ReservedCode1).requestDigest, provider: _meta.providerId}));
+    res.json(labelled);
   } catch (err) {
     console.error('[AI] 代理错误:', err);
     _logCost('error', 'AI_SERVICE_UNAVAILABLE');

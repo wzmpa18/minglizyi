@@ -28,6 +28,15 @@ test('rejected AI responses are errors, not successful/truncated reports, and us
  c.setHandler(async()=>{c.setToken('user-b');return new Response(JSON.stringify({success:true,content:'属于原账号的结果'}))});
  assert.equal((await c.api.callAI({userPrompt:'新问题'})).success,false);
 });
+test('AI provenance survives normal response and account-scoped offline cache without relabelling old entries',async()=>{
+ const c=client(), AIGC={Label:'1',ContentProducer:'东莞言道科技有限公司',ProduceID:'review-generated-id',ReservedCode1:'{}',ContentPropagator:'东莞言道科技有限公司',PropagateID:'review-generated-id',ReservedCode2:''};
+ c.setHandler(async()=>new Response(JSON.stringify({success:true,content:'可对照的生成学习内容',AIGC})));
+ const request={userPrompt:'节气的学习顺序',cacheKey:'metadata-check'};
+ assert.deepEqual((await c.api.callAI(request)).AIGC,AIGC);
+ const cached=await c.api.callAI(request);assert.equal(cached.cached,true);assert.deepEqual(cached.AIGC,AIGC);assert.equal(c.calls(),1);
+ for(const [key,value] of c.values)if(key.startsWith('yandao_ai_cache_')){const old=JSON.parse(value);delete old.AIGC;c.values.set(key,JSON.stringify(old));}
+ const old=await c.api.callAI(request);assert.equal(old.cached,true);assert.equal(old.AIGC,undefined);assert.equal(c.calls(),1);
+});
 const library=stripTypeScriptTypes(fs.readFileSync('src/lib/daliuren-interpretations.ts','utf8')).replace(/^export /gm,'');const palace=Function(library+';return getPalaceInterpretation')();
 test('all twelve palace details use their selected ground/heaven/general/stem and distinct empty markers',()=>{
  const branches=[...'子丑寅卯辰巳午未申酉戌亥'];

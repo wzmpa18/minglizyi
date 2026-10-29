@@ -17,7 +17,13 @@ export interface AIRequest {
   forceRefresh?: boolean;
 }
 
+export interface AIContentMetadata {
+  Label: string; ContentProducer: string; ProduceID: string; ReservedCode1: string;
+  ContentPropagator: string; PropagateID: string; ReservedCode2: string;
+}
+
 export interface AIResponse {
+  AIGC?: AIContentMetadata;
   success: boolean;
   content: string;
   cached: boolean;
@@ -39,7 +45,7 @@ function getLocalCacheKey(key: string): string {
   return LOCAL_CACHE_PREFIX + key.replace(/[^a-zA-Z0-9\u4e00-\u9fff_-]/g, "_").slice(0, 80);
 }
 
-function getLocalCache(key: string): string | null {
+function getLocalCache(key: string): {content: string; AIGC?: AIContentMetadata} | null {
   try {
     const fullKey = getLocalCacheKey(key);
     const raw = localStorage.getItem(fullKey);
@@ -49,16 +55,17 @@ function getLocalCache(key: string): string | null {
       localStorage.removeItem(fullKey);
       return null;
     }
-    return entry.content;
+    if (typeof entry.content !== "string") return null;
+    return {content: entry.content, AIGC: entry.AIGC};
   } catch {
     return null;
   }
 }
 
-function setLocalCache(key: string, content: string): void {
+function setLocalCache(key: string, content: string, AIGC?: AIContentMetadata): void {
   try {
     const fullKey = getLocalCacheKey(key);
-    const entry = { content, timestamp: Date.now() };
+    const entry = { content, AIGC, timestamp: Date.now() };
     localStorage.setItem(fullKey, JSON.stringify(entry));
     const keys = Object.keys(localStorage).filter(k => k.startsWith(LOCAL_CACHE_PREFIX));
     if (keys.length > 100) {
@@ -134,7 +141,7 @@ export async function callAI(request: AIRequest): Promise<AIResponse> {
   if (!forceRefresh && key) {
     const localCached = getLocalCache(key);
     if (localCached) {
-      return { success: true, content: localCached, cached: true };
+      return { success: true, content: localCached.content, cached: true, AIGC: localCached.AIGC };
     }
   }
 
@@ -172,8 +179,8 @@ export async function callAI(request: AIRequest): Promise<AIResponse> {
     const data = await res.json();
     if (data.success) {
       if (getUserToken() !== ownerToken) return {success:false,content:"账号已切换，请在当前账号重新操作",cached:false,errorCode:"AI_AUTH_REQUIRED"};
-      if (key) setLocalCache(key, data.content);
-      return { success: true, content: data.content, cached: data.cached === true, usage: data.usage };
+      if (key) setLocalCache(key, data.content, data.AIGC);
+      return { success: true, content: data.content, cached: data.cached === true, usage: data.usage, AIGC: data.AIGC };
     }
 
     const e2 = new Error(data.error || "AI返回失败") as Error & { code?: string };
