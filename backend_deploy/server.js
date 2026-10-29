@@ -5,6 +5,7 @@
 // ============================================================================
 
 require("dotenv").config();
+require('./aiProviderPolicy').activateHunyuanOnly();
 
 const express = require("express");
 const cors = require("cors");

@@ -13,6 +13,7 @@
 // ============================================================================
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
+require('./aiProviderPolicy').activateHunyuanOnly();
 const { getDb } = require('./wechatOaDb');
 const contentEngine = require('./wechatContentEngine');
 

@@ -23,6 +23,7 @@
 const path = require('path');
 const fs = require('fs');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
+require('./aiProviderPolicy').activateHunyuanOnly();
 
 const DATA_DIR = path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'news_items.json');
