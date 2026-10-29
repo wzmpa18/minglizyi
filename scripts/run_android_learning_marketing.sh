@@ -7,6 +7,12 @@ cd "${GITHUB_WORKSPACE:?}/app-source/android"
 ./gradlew :app:installDebug :app:installDebugAndroidTest --no-daemon
 # Invoke instrumentation directly so Gradle does not uninstall the target and
 # erase capture evidence before adb can retrieve it.
+if [ -f app/src/androidTest/java/com/yandao/guoxue/CalendarReminderConsentTest.java ]; then
+  privacy_log="$RUNNER_TEMP/actual-android-learning-marketing/calendar-consent-instrumentation.txt"
+  adb shell am instrument -w -r -e class com.yandao.guoxue.CalendarReminderConsentTest com.yandao.guoxue.test/androidx.test.runner.AndroidJUnitRunner > "$privacy_log" 2>&1
+  grep -E 'AssertionError|CalendarReminderConsentTest.java:|FAILURES|OK \(' "$privacy_log" || true
+  grep -q '^OK (6 tests)' "$privacy_log" || exit 1
+fi
 test_log="$RUNNER_TEMP/android-marketing-instrumentation.txt"
 adb shell am instrument -w -r -e class com.yandao.guoxue.AndroidLearningMarketingTest com.yandao.guoxue.test/androidx.test.runner.AndroidJUnitRunner > "$test_log" 2>&1
 test_status=1
