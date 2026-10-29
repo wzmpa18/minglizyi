@@ -2,8 +2,8 @@
 import {Capacitor,registerPlugin} from "@capacitor/core";
 import {makeCalendarSnapshot,type CalendarObservation} from "./calendarSnapshot";
 import {getUpcomingEvents,getPendingReminderOccurrences,getOccurrenceReminders} from "./calendarEventsStore";
-export interface NativeCalendarStatus {native:boolean;platform:string;widgets:boolean;notifications:boolean;exactAlarms?:boolean;scheduled?:number;expiresAt?:number;queueBudget?:number;plannedThrough?:number;deferred?:number;registrationFailed?:number;}
-export const LocalCalendar=registerPlugin<{status:()=>Promise<NativeCalendarStatus>;requestAuthorization:()=>Promise<NativeCalendarStatus>;sync:(arg:{payload:string})=>Promise<NativeCalendarStatus>;addWidget:(arg:{kind:string})=>Promise<{requested:boolean;added:boolean}>;openExactSettings:()=>Promise<NativeCalendarStatus>;openDreamSettings:()=>Promise<void>}>("LocalCalendar");
+export interface NativeCalendarStatus {native:boolean;platform:string;widgets:boolean;notifications:boolean;backgroundReminders?:boolean;exactAlarms?:boolean;scheduled?:number;expiresAt?:number;queueBudget?:number;plannedThrough?:number;deferred?:number;registrationFailed?:number;}
+export const LocalCalendar=registerPlugin<{status:()=>Promise<NativeCalendarStatus>;requestAuthorization:()=>Promise<NativeCalendarStatus>;disableReminders:()=>Promise<NativeCalendarStatus>;sync:(arg:{payload:string})=>Promise<NativeCalendarStatus>;addWidget:(arg:{kind:string})=>Promise<{requested:boolean;added:boolean}>;openExactSettings:()=>Promise<NativeCalendarStatus>;openDreamSettings:()=>Promise<void>}>("LocalCalendar");
 export const hasNativeCalendar=()=>Capacitor.isNativePlatform();
 let sequence=0;
 function idFor(text:string){let hash=2166136261;for(const ch of text){hash^=ch.charCodeAt(0);hash=Math.imul(hash,16777619);}return (hash>>>0)%2147483646+1;}

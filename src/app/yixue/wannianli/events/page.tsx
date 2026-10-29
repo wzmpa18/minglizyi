@@ -347,7 +347,7 @@ export default function CalendarEventsPage() {
     <div className="flex min-h-screen flex-col bg-[#ededed]" style={{ maxWidth: "500px", margin: "0 auto", paddingBottom: "calc(72px + env(safe-area-inset-bottom))" }}>
       <BrandHeader title="记事提醒" showBack backUrl="/yixue/wannianli" />
 
-      <p className="m-3 rounded-lg bg-white p-3 text-xs leading-6 text-gray-600">本机离线记事。网页站内提醒需要应用保持打开；系统通知需授权。强行停止、关机或系统限制会影响送达，不能保证所有状态准点。锁屏默认仅显示“有一项安排”。</p>
+      <p className="m-3 rounded-lg bg-white p-3 text-xs leading-6 text-gray-600">本机离线记事。网页提醒需保持打开。系统提醒默认关闭，主动开启后，仅为已设置的待办在退出后唤醒，并在开机、更新或校时后恢复；没有待办时不接收恢复广播，不启动其他应用。可在“桌面组件与提醒”关闭。强行停止、关机或系统限制可能影响送达。锁屏仅显示“有一项安排”。</p>
       <ConfirmDialog open={deleting!==null} title={deleting==="all"?"删除全部本机记事":"删除记事"} message={deleting==="all"?"彻底删除当前账号／游客空间的全部记事和提醒历史，同步取消相应系统提醒；不可恢复。":"删除这条记事，并取消相应系统提醒。"} onCancel={()=>setDeleting(null)} onConfirm={confirmDeletion}/>
       {unassigned&&<section className="m-3 rounded-xl border bg-white p-4 text-sm text-gray-800"><p>检测到旧版或游客本机记事，归属尚未确认，未自动导入当前空间。请先确认是本人资料再认领。原记录仍保留。</p><InterfaceButton className="mt-2 rounded border p-2" onClick={()=>setClaiming(true)}>本人核对后认领本机记事</InterfaceButton></section>}
       <ConfirmDialog open={claiming} title="确认本机记事归属" message="仅在确认这些旧版或游客记录都属于你本人时，才迁移到当前账号／游客空间。保存核对成功后移除旧存储入口；不会上传到同辰库。" onCancel={()=>setClaiming(false)} onConfirm={()=>{setClaiming(false);const result=claimUnassignedCalendar(true);showTip(result.success?"已迁移本人本机记事":result.error||"未迁移");refresh();}}/>

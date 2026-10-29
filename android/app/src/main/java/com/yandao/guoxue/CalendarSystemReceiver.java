@@ -2,12 +2,33 @@ package com.yandao.guoxue;
 
 import android.app.*;
 import android.content.*;
+import android.content.pm.PackageManager;
 import android.os.Build;
 import org.json.*;
 
 /** Only system-scheduled local reminders. No network, wake loop or private text. */
 public class CalendarSystemReceiver extends BroadcastReceiver {
     public static final String PREFS="yandao_calendar_system_v1",ACTION="com.yandao.guoxue.CALENDAR_REMINDER";
+    public static boolean hasConsent(Context context) {
+        return context.getSharedPreferences(PREFS,0).getBoolean("backgroundReminderConsent",false);
+    }
+    private static void setReceiverEnabled(Context context,boolean enabled) {
+        context.getPackageManager().setComponentEnabledSetting(new ComponentName(context,CalendarSystemReceiver.class),
+            enabled?PackageManager.COMPONENT_ENABLED_STATE_ENABLED:PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+            PackageManager.DONT_KILL_APP);
+    }
+    public static synchronized void setConsent(Context context,boolean enabled) {
+        context.getSharedPreferences(PREFS,0).edit().putBoolean("backgroundReminderConsent",enabled).commit();
+        if(!enabled){
+            AlarmManager manager=(AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
+            JSONArray rows=read(context).optJSONArray("reminders");
+            if(manager!=null&&rows!=null)for(int i=0;i<rows.length();i++){
+                JSONObject row=rows.optJSONObject(i);if(row!=null)manager.cancel(alarmIntent(context,row.optInt("id")));
+            }
+            setReceiverEnabled(context,false);
+            context.getSharedPreferences(PREFS,0).edit().putInt("registeredCount",0).apply();
+        }
+    }
     public static JSONObject read(Context context) {
         try{return new JSONObject(context.getSharedPreferences(PREFS,0).getString("payload","{}"));}catch(Exception error){return new JSONObject();}
     }
@@ -29,8 +50,14 @@ public class CalendarSystemReceiver extends BroadcastReceiver {
         return schedule(context);
     }
     public static synchronized int schedule(Context context) {
+        if(!hasConsent(context)){setReceiverEnabled(context,false);return 0;}
         AlarmManager manager=(AlarmManager)context.getSystemService(Context.ALARM_SERVICE);if(manager==null)return 0;
-        JSONArray reminders=read(context).optJSONArray("reminders");if(reminders==null)return 0;int registered=0,failed=0;
+        JSONArray reminders=read(context).optJSONArray("reminders");
+        boolean future=false;
+        if(reminders!=null)for(int i=0;i<reminders.length();i++){JSONObject row=reminders.optJSONObject(i);if(row!=null&&row.optLong("at")>System.currentTimeMillis()){future=true;break;}}
+        setReceiverEnabled(context,future);
+        if(!future){context.getSharedPreferences(PREFS,0).edit().putInt("registeredCount",0).apply();return 0;}
+        int registered=0,failed=0;
         for(int i=0;i<reminders.length();i++)try{
             JSONObject item=reminders.getJSONObject(i);long at=item.getLong("at");if(at<=System.currentTimeMillis())continue;
             PendingIntent intent=alarmIntent(context,item.getInt("id"));
@@ -38,15 +65,18 @@ public class CalendarSystemReceiver extends BroadcastReceiver {
             else manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,at,intent);
             registered++;
         }catch(Exception ignored){failed++;}
+        if(registered==0)setReceiverEnabled(context,false);
         context.getSharedPreferences(PREFS,0).edit().putInt("registeredCount",registered).putInt("registrationFailed",failed).putLong("lastScheduleAt",System.currentTimeMillis()).apply();return registered;
     }
     @Override public void onReceive(Context context,Intent intent) {
+        if(intent==null||!hasConsent(context)){setReceiverEnabled(context,false);return;}
         if(!ACTION.equals(intent.getAction())){schedule(context);HuangliWidgetProvider.updateAll(context);return;}
         synchronized(CalendarSystemReceiver.class){
         int id=intent.getIntExtra("id",0);JSONObject payload=read(context);JSONArray rows=payload.optJSONArray("reminders"),remaining=new JSONArray();boolean due=false;
         if(rows==null)return;
         for(int i=0;i<rows.length();i++)try{JSONObject row=rows.getJSONObject(i);if(row.getInt("id")==id){long delta=System.currentTimeMillis()-row.getLong("at");due=delta>=0&&delta<1800000;}else remaining.put(row);}catch(Exception ignored){}
         try{payload.put("reminders",remaining);context.getSharedPreferences(PREFS,0).edit().putString("payload",payload.toString()).commit();}catch(Exception ignored){}
+        schedule(context);
         if(!due)return;
         NotificationManager manager=(NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);if(manager==null)return;
         if(Build.VERSION.SDK_INT>=26)manager.createNotificationChannel(new NotificationChannel("yandao-calendar","言道日历",NotificationManager.IMPORTANCE_DEFAULT));

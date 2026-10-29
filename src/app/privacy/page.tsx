@@ -368,7 +368,7 @@ export function PrivacyPolicyDocument({ onBack }: { onBack?: () => void } = {}) 
             <Li><strong>定位（ACCESS_COARSE_LOCATION / ACCESS_FINE_LOCATION）：</strong>只在您主动定位天文馆、罗盘等工具时使用，允许近似位置或手动选点，不申请后台定位。</Li>
             <Li><strong>通知（POST_NOTIFICATIONS）：</strong>仅在您主动启用生日、日程提醒时申请；拒绝不影响本机记事。</Li>
             <Li><strong>精确闹钟（SCHEDULE_EXACT_ALARM）：</strong>仅在您确需准点日程时进入系统设置主动授权。无权限使用可能延迟的系统调度，不要求关闭设备安全措施。</Li>
-            <Li><strong>开机完成（RECEIVE_BOOT_COMPLETED）：</strong>用于恢复已由您创建的本机提醒与组件刷新，不在开机时启动网页常驻轮询。</Li>
+            <Li><strong>本机系统提醒与自启动：</strong>默认关闭。您主动开启系统提醒并设置待办后，系统会在提醒到时唤醒本应用；开机完成（RECEIVE_BOOT_COMPLETED）、应用更新、校时或时区变化时，仅恢复已设置的提醒。没有待办提醒或关闭系统提醒后，不接收这些恢复广播，不关联启动其他应用。可在“日历—桌面组件与提醒”关闭，关闭不影响阅读与本机记事。桌面组件仅在您添加后按系统调度刷新，不使用网页常驻轮询。</Li>
             <Li><strong>存储：</strong>本应用不申请读取整个共享存储、通讯录或系统全部日历；离线内容与日历快照使用应用私有目录。导出或设置壁纸须由您主动操作系统流程。</Li>
           </ul>
           <P>

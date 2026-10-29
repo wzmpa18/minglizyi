@@ -28,6 +28,7 @@ public class LocalCalendarPlugin extends Plugin {
         JSObject result=new JSObject();
         JSONObject payload=CalendarSystemReceiver.read(getContext());android.content.SharedPreferences prefs=getContext().getSharedPreferences(CalendarSystemReceiver.PREFS,0);result.put("queueBudget",128);result.put("scheduled",prefs.getInt("registeredCount",0));result.put("registrationFailed",prefs.getInt("registrationFailed",0));result.put("plannedThrough",payload.optLong("plannedThrough",0));result.put("deferred",payload.optInt("deferred",0));
         result.put("native",true);result.put("widgets",true);result.put("platform","android");
+        result.put("backgroundReminders",CalendarSystemReceiver.hasConsent(getContext()));
         android.app.NotificationManager notifications=(android.app.NotificationManager)getContext().getSystemService(android.content.Context.NOTIFICATION_SERVICE);
         result.put("notifications",(Build.VERSION.SDK_INT<33||getPermissionState("notifications")==PermissionState.GRANTED)&&(Build.VERSION.SDK_INT<24||notifications==null||notifications.areNotificationsEnabled()));
         AlarmManager alarms=(AlarmManager)getContext().getSystemService(android.content.Context.ALARM_SERVICE);
@@ -36,9 +37,10 @@ public class LocalCalendarPlugin extends Plugin {
     }
     @PluginMethod public void requestAuthorization(PluginCall call) {
         if(Build.VERSION.SDK_INT>=33&&getPermissionState("notifications")!=PermissionState.GRANTED)requestPermissionForAlias("notifications",call,"afterPermission");
-        else call.resolve(state());
+        else {CalendarSystemReceiver.setConsent(getContext(),state().optBoolean("notifications",false));call.resolve(state());}
     }
-    @PermissionCallback private void afterPermission(PluginCall call) { call.resolve(state()); }
+    @PermissionCallback private void afterPermission(PluginCall call) { CalendarSystemReceiver.setConsent(getContext(),state().optBoolean("notifications",false));call.resolve(state()); }
+    @PluginMethod public void disableReminders(PluginCall call) { CalendarSystemReceiver.setConsent(getContext(),false);call.resolve(state()); }
     @PluginMethod public void sync(PluginCall call) {
         try {
             String raw=call.getString("payload","");

@@ -50,13 +50,20 @@ public class HuangliWidgetProvider extends AppWidgetProvider {
     }
     public static void updateAll(Context context){
         AppWidgetManager manager=AppWidgetManager.getInstance(context);
+        boolean hasWidgets=false;
         HuangliWidgetProvider[] providers={new HuangliWidgetProvider(),new HuangliWidgetProviderLarge(),new CalendarAgendaWidgetProvider()};
-        for(HuangliWidgetProvider provider:providers){int[] ids=manager.getAppWidgetIds(new ComponentName(context,provider.getClass()));if(ids.length>0)manager.updateAppWidget(ids,provider.views(context));}
+        for(HuangliWidgetProvider provider:providers){int[] ids=manager.getAppWidgetIds(new ComponentName(context,provider.getClass()));if(ids.length>0){hasWidgets=true;manager.updateAppWidget(ids,provider.views(context));}}
+        if(!hasWidgets){
+            AlarmManager alarms=(AlarmManager)context.getSystemService(Context.ALARM_SERVICE);
+            PendingIntent old=PendingIntent.getBroadcast(context,6101,new Intent(context,HuangliWidgetProvider.class).setAction(UPDATE),PendingIntent.FLAG_NO_CREATE|PendingIntent.FLAG_IMMUTABLE);
+            if(alarms!=null&&old!=null){alarms.cancel(old);old.cancel();}return;
+        }
         JSONObject row=current(context);if(row==null)return;
         AlarmManager alarms=(AlarmManager)context.getSystemService(Context.ALARM_SERVICE);if(alarms==null)return;
         PendingIntent next=PendingIntent.getBroadcast(context,6101,new Intent(context,HuangliWidgetProvider.class).setAction(UPDATE),PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
         alarms.set(AlarmManager.RTC,row.optLong("until"),next);
     }
     @Override public void onUpdate(Context context,AppWidgetManager manager,int[] ids){updateAll(context);}
+    @Override public void onDeleted(Context context,int[] ids){updateAll(context);}
     @Override public void onReceive(Context context,Intent intent){super.onReceive(context,intent);if(UPDATE.equals(intent.getAction()))updateAll(context);}
 }
