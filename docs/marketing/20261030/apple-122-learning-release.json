@@ -5,7 +5,7 @@
   "version": "25.0.122",
   "build": "67",
   "candidateSource": "57ef82526af0b5869237e7a1befd97595de50d41",
-  "status": "PREPARING_NOT_SUBMITTED",
+  "status": "WAITING_FOR_REVIEW",
   "doesNotAssertOverallComplete": true,
   "locales": {
     "zh-Hans": {
@@ -43,5 +43,8 @@
     },
     "currentSubmissionEvidence": "D:/言道国学项目资料总库/04_应用商店/Apple/Apple122_66_20261029_13正式提审回执.json",
     "independentReadbackEvidence": "D:/言道国学项目资料总库/04_应用商店/Apple/Apple122_66_20261029_14正式提交后独立读回.json"
-  }
+  },
+  "submittedDate": "2026-10-30T04:23:19.408Z",
+  "currentReviewSubmissionId": "66b2073b-ddea-424a-b835-ac1a3358fd6d",
+  "independentReadbackEvidence": "D:\\言道国学项目资料总库\\04_应用商店\\20261030_2160全渠道统一更新\\Apple67_11独立审核状态.json"
 }
