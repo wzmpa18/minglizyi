@@ -1,24 +1,24 @@
 {
   "scope": "owner-channel-specific-authorization",
-  "date": "2026-10-28",
-  "ownerInstruction": "你完成这些已经可以的商店就可以了，其他的等资质通过再弄，完成苹果的提交啊！2026-10-23追加：安全评估通过，把所有应用商店重新上传，需要恢复所有功能；各商店核对退回并解决。 2026-10-24最新直接要求：全部重新上传最新的，等待审核就撤回！重新上传资料，布局最新的营销资料信息和介绍！之前的旧版就需要作废！",
+  "date": "2026-10-30",
+  "ownerInstruction": "你完成这些已经可以的商店就可以了，其他的等资质通过再弄，完成苹果的提交啊！2026-10-23追加：安全评估通过，把所有应用商店重新上传，需要恢复所有功能；各商店核对退回并解决。 2026-10-24最新直接要求：全部重新上传最新的，等待审核就撤回！重新上传资料，布局最新的营销资料信息和介绍！之前的旧版就需要作废！ 2026-10-30负责人再次明确：全部最新在审，可撤回的撤回提交最新，介绍备注完整说明学习和医药文献范围，继续完成苹果的提交。",
   "appId": "6807592575",
   "bundleId": "com.yandaoguoxue.app",
   "version": "25.0.122",
-  "build": "66",
-  "candidateSource": "4ec14f6b22d222f05c4a6cdac854ca606a64a9e9",
-  "authorizationBasis": "负责人持续要求待审旧版撤回并用最新一致资料提交；实机发现旧目录升级缺陷后固定122/66修正版，保留原资料及八项内购，不宣称整体验收完成。",
+  "build": "67",
+  "candidateSource": "57ef82526af0b5869237e7a1befd97595de50d41",
+  "authorizationBasis": "2026-10-30负责人明确撤回旧候选，统一最新隐私与AI标识包及完整学习介绍，保留原八项内购；实际验证后才替换，不冒称全部验收。",
   "ci": {
-    "quality": 40705501506,
-    "native": 40705602671,
-    "upload": 40705602671,
-    "screenshots": 40705501504
+    "quality": 40997859674,
+    "native": 40997856916,
+    "upload": 40997856916,
+    "screenshots": 40998027967
   },
   "previousPendingCandidate": {
     "version": "25.0.122",
-    "build": "65",
-    "source": "c4ff5272f7d8f727ae780dfcfb1b262ed07309c1",
-    "lastKnownSubmissionId": "158bc851-d363-488b-bdf4-eda4e82a1fae",
+    "build": "66",
+    "source": "4ec14f6b22d222f05c4a6cdac854ca606a64a9e9",
+    "lastKnownSubmissionId": "3b89c788-d4fc-4fc7-bb76-1797dbf3e90e",
     "stateMustBeReadAgain": true,
     "preserveExistingPendingIapVersions": true
   },
@@ -38,17 +38,18 @@
     "Keep existing eight Guoxue product identities and pending IAP version relationships; no product, price, order, tester or other-app changes"
   ],
   "report": "交接报告/FINAL_PROJECT_HANDOVER.md#7817",
-  "screenshotWorkflowSource": "4ec14f6b22d222f05c4a6cdac854ca606a64a9e9",
+  "screenshotWorkflowSource": "57ef82526af0b5869237e7a1befd97595de50d41",
   "screenshotWorkflowPath": ".github/workflows/ios-learning-marketing.yml",
   "screenshotReusableWorkflowPath": ".github/workflows/ios-learning-marketing.yml",
   "screenshotRunAttempt": 1,
-  "screenshotArtifactId": 12825918146,
-  "screenshotManifestSha256": "2074eddb6a249472d7ab874a5567d26274c3d9fdc74ef6657a001716911f375d",
   "publicMetadataUrls": {
     "supportUrl": "https://yandaoguoxue.yandao.vip/profile/feedback/",
     "source": "Existing zh-Hans supportUrl read from the same App Store version; live HTTP200 verified 2026-10-26T17:54:45Z",
     "evidence": "D:/言道国学项目资料总库/04_应用商店/Apple/Apple118_同App现有支持与隐私链接实际HTTP核验_20261027.json"
   },
-  "qualityWorkflowSource": "4ec14f6b22d222f05c4a6cdac854ca606a64a9e9",
-  "marketingFile": "docs/marketing/20261028/apple-122-learning-release.json"
+  "qualityWorkflowSource": "57ef82526af0b5869237e7a1befd97595de50d41",
+  "marketingFile": "docs/marketing/20261030/apple-122-learning-release.json",
+  "screenshotArtifactId": 12953715176,
+  "screenshotManifestSha256": "0db60c1746ce4d6778ff7c7cfd4a3127e45320a7a92c9d0dfafd94efa1c3a3eb",
+  "buildId": "4ffca402-b40f-4f20-ad2d-f93022115deb"
 }
