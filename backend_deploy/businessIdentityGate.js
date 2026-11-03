@@ -1,7 +1,7 @@
 'use strict';
 const { requiresDomesticPhoneVerification } = require('./channelIdentityPolicy');
 // Public exceptions are method+exact-path pairs; never exempt a whole router.
-const PUBLIC_GET = new Set(['/api/announcements/public', '/api/health', '/api/offline/manifest', '/api/public/pricing', '/api/public/feature-flags', '/api/public/tool-matrix', '/api/public/app-version', '/api/payment/pricing', '/api/version', '/api/wechat/official/callback', '/api/wechat/official/oauth/callback']);
+const PUBLIC_GET = new Set(['/api/announcements/public', '/api/news/public', '/api/health', '/api/offline/manifest', '/api/public/pricing', '/api/public/feature-flags', '/api/public/tool-matrix', '/api/public/app-version', '/api/payment/pricing', '/api/version', '/api/wechat/official/callback', '/api/wechat/official/oauth/callback']);
 const AUTH_POST = new Set(['/api/auth/send-code', '/api/auth/verify-code', '/api/auth/register', '/api/auth/login', '/api/auth/login-code', '/api/auth/reset-password', '/api/auth/refresh-token', '/api/auth/logout', '/api/auth/check-duplicate']);
 const CALLBACK_POST = new Set(['/api/apple-iap/notifications', '/api/payment/callback/wechat', '/api/payment/callback/alipay', '/api/payment/callback/transfer', '/api/wechat/official/callback']);
 const SELF = new Set(['/api/auth/profile', '/api/auth/verify-phone', '/api/account/delete', '/api/feedback']);
