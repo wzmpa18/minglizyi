@@ -891,9 +891,7 @@ export default function RegisterPage() {
         {nativeShell ? null : (<>
           {/* v25.0.47_14: 下载APP入口（新用户扫码落地必见，全浏览器兼容：普通/系统/微信内置浏览器均可点击） */}
           <a
-            href="https://yandaoguoxue.yandao.vip/friend"
-            target="_blank"
-            rel="noopener noreferrer"
+            href="https://yandaoguoxue.yandao.vip/app-download/latest.apk"
             style={{
               display: "flex",
               alignItems: "center",
