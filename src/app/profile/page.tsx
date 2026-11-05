@@ -19,7 +19,7 @@ import { useBodyScrollLock } from "@/hooks/useBodyScrollLock";
 import { usePopupBackHandler } from "@/hooks/usePopupBackHandler";
 import IcpFooter from "@/components/IcpFooter";
 import { useIOSNativeShell } from "@/lib/iosNativeGate";
-import { PUBLIC_AI_ENABLED, PUBLIC_PROMOTION_ENABLED, PUBLIC_SOCIAL_ENABLED } from "@/lib/releaseFeatures";
+import { PUBLIC_AI_ENABLED, PUBLIC_CHART_AI_ENABLED, PUBLIC_PROMOTION_ENABLED, PUBLIC_SOCIAL_ENABLED } from "@/lib/releaseFeatures";
 import {learningShareLink} from '@/lib/learningShare';
 import {STORE_CHANNEL} from '@/lib/releaseFeatures';
 import {usesCompanyAppDistribution,STORE_UPDATE_MESSAGE} from '@/lib/appUpdatePolicy';
@@ -499,7 +499,7 @@ function AboutUsModal({ onClose, version }: { onClose: () => void; version?: str
             <ul className="space-y-1.5 text-xs text-gray-500">
               <li className="flex items-start gap-2">
                 <span style={{ color: BRAND }}>•</span>
-                <span>{iosNative ? "易学系统学习（课程·题库·典籍）" : "易学排盘与AI解读"}</span>
+                <span>{iosNative ? "易学系统学习（课程·题库·典籍）" : PUBLIC_CHART_AI_ENABLED ? "易学排盘与AI解读" : "易学排盘与古籍研习"}</span>
               </li>
               <li className="flex items-start gap-2">
                 <span style={{ color: BRAND }}>•</span>

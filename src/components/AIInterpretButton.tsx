@@ -25,7 +25,7 @@ import { IS_GOOGLE_PLAY_BUILD } from "@/lib/releaseFeatures";
 import { PAYMENT_DISABLED_TIP } from "@/lib/platformGate";
 import { AIAccessLinks } from "@/components/AIAccessLinks";
 import { ResourceDiscussion } from "@/components/ResourceDiscussion";
-import { PUBLIC_AI_ENABLED, PUBLIC_SOCIAL_ENABLED, IS_IOS_FULL_BUILD } from "@/lib/releaseFeatures";
+import { PUBLIC_AI_ENABLED, PUBLIC_CHART_AI_ENABLED, PUBLIC_SOCIAL_ENABLED, IS_IOS_FULL_BUILD } from "@/lib/releaseFeatures";
 
 /**
  * v18.9: 通用AI解读按钮组件
@@ -519,5 +519,6 @@ function AIInterpretButtonEnabled({
 
 export default function AIInterpretButton(props: AIInterpretButtonProps) {
   if (!PUBLIC_AI_ENABLED) return null;
+  if (!PUBLIC_CHART_AI_ENABLED && (props.discussionType ?? "yixue") === "yixue") return null;
   return <AIInterpretButtonEnabled {...props} />;
 }

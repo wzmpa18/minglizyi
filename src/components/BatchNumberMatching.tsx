@@ -24,7 +24,7 @@ import { reportConsumptionRebate } from "@/lib/inviteApi";
 import { ShareButton } from "@/components/ShareButton";
 import { payBatchInterpretAndWait } from "@/lib/paymentService";
 import { useNativePayQR } from "@/components/PayQRCodeModal";
-import { IS_GOOGLE_PLAY_BUILD } from "@/lib/releaseFeatures";
+import { IS_GOOGLE_PLAY_BUILD, PUBLIC_CHART_AI_ENABLED } from "@/lib/releaseFeatures";
 import { PAYMENT_DISABLED_TIP } from "@/lib/platformGate";
 import {
   getMembershipStatus,
@@ -138,7 +138,7 @@ function scoreColor(score: number): string {
 
 // ==================== 主组件 ====================
 
-export default function BatchNumberMatching({ toolType }: BatchNumberMatchingProps) {
+function BatchNumberMatchingEnabled({ toolType }: BatchNumberMatchingProps) {
   // ---- 步骤 ----
   const [step, setStep] = useState<Step>("import");
 
@@ -1671,4 +1671,9 @@ function readFileAsDataURL(file: File): Promise<string> {
     reader.onerror = () => reject(new Error("文件读取失败"));
     reader.readAsDataURL(file);
   });
+}
+
+export default function BatchNumberMatching(props: BatchNumberMatchingProps) {
+  if (!PUBLIC_CHART_AI_ENABLED) return null;
+  return <BatchNumberMatchingEnabled {...props} />;
 }

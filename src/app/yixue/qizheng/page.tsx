@@ -26,6 +26,7 @@ import ClientSelector from "@/components/ClientSelector";
 import { ShareButton } from "@/components/ShareButton";
 import { trackToolEvent } from "@/lib/toolAnalytics";
 import AIInterpretButton from "@/components/AIInterpretButton";
+import { PUBLIC_CHART_AI_ENABLED } from "@/lib/releaseFeatures";
 import { DatePicker } from "@/components/shared";
 import { saveRecord, getPrefillData, clearPrefillData } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
@@ -1738,7 +1739,7 @@ export default function QizhengPage() {
       )}
 
       {/* AI 解读 */}
-      <div className="mt-2 bg-white px-3 py-3">
+      {PUBLIC_CHART_AI_ENABLED && <div className="mt-2 bg-white px-3 py-3">
         <AIInterpretButton
           discussionEnabled
           toolName="七政四余"
@@ -1746,7 +1747,7 @@ export default function QizhengPage() {
           contextData={aiContext}
           buttonText="AI 解读星盘"
         />
-      </div>
+      </div>}
 
       {/* 客户记录 */}
       <div className="mt-2 bg-white px-3 py-3">

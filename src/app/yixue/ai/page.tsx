@@ -8,6 +8,7 @@ import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
 import { SafeRichText } from "@/components/SafeRichText";
+import { PUBLIC_CHART_AI_ENABLED } from "@/lib/releaseFeatures";
 
 export default function YixueAIPage() {
   useIOSLearningRedirect("ai"); // IOS-4.3B：iOS 壳内旧排盘深链接 → 易学学习中心
@@ -21,6 +22,10 @@ export default function YixueAIPage() {
 
   // v20.1: 登录守卫
   const { requireLogin, showLoginPrompt, setShowLoginPrompt } = useRequireLogin();
+
+  if (!PUBLIC_CHART_AI_ENABLED) {
+    return <div className="mx-auto max-w-lg px-4 py-8 text-sm text-gray-700">本版本提供排盘规则、术语与古籍资料学习；不提供个人盘面 AI 解读或相关付费服务。</div>;
+  }
 
   const handleSend = async () => {
     if (!input.trim() || loading) return;

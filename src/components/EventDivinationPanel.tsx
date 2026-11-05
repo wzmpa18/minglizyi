@@ -29,7 +29,7 @@ import { IS_GOOGLE_PLAY_BUILD, IS_IOS_FULL_BUILD } from "@/lib/releaseFeatures";
 import { PAYMENT_DISABLED_TIP, isPaymentsBlocked } from "@/lib/platformGate";
 // v25.0.47_12 深度报告提质：五段式/700-900字/典籍引用/合规语气（共享标准）
 import { buildDeepReportSystemPrompt, buildBaziDeepReportSystemPrompt } from "@/lib/deepReportPrompt";
-import { PUBLIC_AI_ENABLED } from "@/lib/releaseFeatures";
+import { PUBLIC_AI_ENABLED, PUBLIC_CHART_AI_ENABLED } from "@/lib/releaseFeatures";
 
 /**
  * v19.6: 事情断法 + AI深度解读 组件
@@ -813,5 +813,6 @@ function EventDivinationPanelEnabled({
 
 export default function EventDivinationPanel(props: EventDivinationPanelProps) {
   if (!PUBLIC_AI_ENABLED) return null;
+  if (!PUBLIC_CHART_AI_ENABLED) return null;
   return <EventDivinationPanelEnabled {...props} />;
 }

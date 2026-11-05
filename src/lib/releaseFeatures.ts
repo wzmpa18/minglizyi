@@ -8,6 +8,9 @@
 export const STORE_CHANNEL = process.env.NEXT_PUBLIC_STORE_CHANNEL || "default";
 export const IS_GOOGLE_PLAY_BUILD = STORE_CHANNEL === "google";
 export const IS_IOS_FULL_BUILD = STORE_CHANNEL === "ios-full-learning";
+// Huawei's 2026-11-05 review classifies paid, personalized chart AI readings
+// as fortune-telling. The Huawei edition does not offer chart AI to any user.
+export const PUBLIC_CHART_AI_ENABLED = STORE_CHANNEL !== "huawei";
 // Next injects the canonical package version into the bundled API headers.
 export const CLIENT_VERSION = process.env.NEXT_PUBLIC_CLIENT_VERSION || "25.0.119";
 export const PUBLIC_SOCIAL_ENABLED = true;

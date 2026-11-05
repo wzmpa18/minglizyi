@@ -31,6 +31,7 @@ import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipan
 import { useToolBack } from "@/lib/useToolBack";
 import InterpretationDrawer from "@/components/shared/InterpretationDrawer";
 import AIInterpretButton from "@/components/AIInterpretButton";
+import { PUBLIC_CHART_AI_ENABLED } from "@/lib/releaseFeatures";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
 import { savePaipanRecord, type PaipanRecord } from "@/lib/nativePaipanStore";
 import { ShareButton } from "@/components/ShareButton";
@@ -1067,7 +1068,7 @@ export default function DaLiuRenPage() {
 
             {interpretPanel && <InterpretationDrawer show title={interpretPanel.title} onClose={() => setInterpretPanel(null)} items={interpretPanel.items.map(item => ({type:item.type,label:item.title,content:`${item.title}\n${item.content}\n来源：${item.source}`}))}>
               <AIInterpretButton key={interpretPanel.title} toolName="大六壬" scope={interpretPanel.title+"学习解析"} buttonText="AI解析所选宫位或课传" contextData={JSON.stringify({selected:interpretPanel,chart:data})} systemPrompt="只解释所选宫位、课传及传入的已计算排盘数据；不得重排或换宫，不编造典籍引文。区分古代术语与现实事实，不作疾病、投资或命运预测。" />
-              <p style={{fontSize:12,color:"#666",marginTop:12}}>基础资料在本机显示；AI需登录、联网并按账号额度使用。传统文化学习参考。</p>
+              {PUBLIC_CHART_AI_ENABLED && <p style={{fontSize:12,color:"#666",marginTop:12}}>基础资料在本机显示；AI需登录、联网并按账号额度使用。传统文化学习参考。</p>}
             </InterpretationDrawer>}
 
         </div>

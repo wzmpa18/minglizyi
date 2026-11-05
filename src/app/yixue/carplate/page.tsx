@@ -11,6 +11,7 @@ import { analyzeCarplate, PROVINCE_PREFIXES, LETTER_WUXING, CARPLATE_WUXING_COLO
 import type { CarplateResult } from "@/algorithm-core";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
 import BatchNumberMatching from "@/components/BatchNumberMatching";
+import { PUBLIC_CHART_AI_ENABLED } from "@/lib/releaseFeatures";
 import { ShareButton } from "@/components/ShareButton";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
 import { PaipanHistoryButton } from "@/components/PaipanHistoryButton";
@@ -104,7 +105,7 @@ export default function CarplatePage() {
   return (
     <div className="mx-auto w-full bg-[#ededed]" style={{ maxWidth: "420px", minHeight: "100vh" }}>
       {/* v19.7: 双档位Tab切换 */}
-      <div className="bg-white px-3 pt-3">
+      {PUBLIC_CHART_AI_ENABLED && <div className="bg-white px-3 pt-3">
         <div className="flex rounded-full bg-gray-100 p-1">
           <InterfaceButton
             onClick={() => setActiveTab("single")}
@@ -127,15 +128,15 @@ export default function CarplatePage() {
             批量合号选号 ¥198
           </InterfaceButton>
         </div>
-      </div>
+      </div>}
 
       {/* 批量合号选号模式 */}
-      {activeTab === "batch" && (
+      {PUBLIC_CHART_AI_ENABLED && activeTab === "batch" && (
         <BatchNumberMatching toolType="carplate" />
       )}
 
       {/* 单车牌分析模式 */}
-      {activeTab === "single" && (
+      {(!PUBLIC_CHART_AI_ENABLED || activeTab === "single") && (
         <>
       {/* 输入表单 */}
       {!hasResult && (

@@ -15,6 +15,7 @@ import { getToolConfig } from "@/lib/toolConfigStore";
 import { listReadings, saveReading, deleteReading, type SavedReading } from "@/lib/tarotStore";
 import { useToolBack } from "@/lib/useToolBack";
 import AIInterpretButton from "@/components/AIInterpretButton";
+import { PUBLIC_CHART_AI_ENABLED } from "@/lib/releaseFeatures";
 import { buildDeepReportSystemPrompt } from "@/lib/deepReportPrompt";
 import { ShareButton } from "@/components/ShareButton";
 import { useIOSLearningRedirect } from "@/components/IOSLearningRedirect";
@@ -379,7 +380,7 @@ export default function TarotPage() {
                 }}
               />
 
-              {tarotCfg.aiDeepEnabled && (
+              {PUBLIC_CHART_AI_ENABLED && tarotCfg.aiDeepEnabled && (
                 <div className="rounded-xl border border-gray-100 bg-white p-3">
                   <div className="text-xs font-bold text-gray-700">AI 深度牌阵解读</div>
                   <div className="mt-1 text-[10px] text-gray-400">

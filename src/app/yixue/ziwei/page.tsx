@@ -36,6 +36,7 @@ import { buildDeepReportSystemPrompt } from "@/lib/deepReportPrompt";
 import { useRequireLogin } from "@/lib/useRequireLogin";
 import { LoginPromptModal } from "@/components/LoginPromptModal";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
+import { PUBLIC_CHART_AI_ENABLED } from "@/lib/releaseFeatures";
 import { savePaipanState, loadPaipanState } from "@/lib/paipanPersistence";
 import { useToolBack } from "@/lib/useToolBack";
 import { ShareButton } from "@/components/ShareButton";
@@ -472,7 +473,7 @@ export default function ZiweiPage() {
   const [showBaziConfirm,setShowBaziConfirm]=useState(false);
   const {tools: toolMatrix} = useToolMatrix();
   const ziweiControls = toolMatrix.ziwei;
-  const aiVisible = ziweiControls?.aiEnabled !== false;
+  const aiVisible = PUBLIC_CHART_AI_ENABLED && ziweiControls?.aiEnabled !== false;
   const shareVisible = ziweiControls?.shareEnabled !== false;
 
   // ---- 三方四正高亮宫位（地支索引 0-11，null 表示无高亮） ----
@@ -1097,6 +1098,7 @@ export default function ZiweiPage() {
 
   // v18.9: AI解读请求函数（流式输出）
   const handleAIInterpret = async (scope: "overall" | "palace" | "daxian" | "liunian" | "liuyue" | "liuri" | "liushi", contextData?: string) => {
+    if (!PUBLIC_CHART_AI_ENABLED) return;
     if (aiInterpreting) return;
 
     // v20.1: 三级权限检查 - 未登录弹出登录引导

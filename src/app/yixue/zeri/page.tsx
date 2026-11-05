@@ -16,6 +16,7 @@ import type { AuspiciousDay } from "@/algorithm-core";
 import { getToolConfig } from "@/lib/toolConfigStore";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
 import AIInterpretButton from "@/components/AIInterpretButton";
+import { PUBLIC_CHART_AI_ENABLED } from "@/lib/releaseFeatures";
 import { buildDeepReportSystemPrompt } from "@/lib/deepReportPrompt";
 
 import { ShareButton } from "@/components/ShareButton";
@@ -492,7 +493,7 @@ export default function ZeriPage() {
           )}
 
           {/* P6-TOOL-04 §3.2：AI 深度择日分析（增值服务，复用统一 Paywall/AI网关/缓存幂等链路） */}
-          {zeriCfg.aiDeepEnabled && results.length > 0 && (
+          {PUBLIC_CHART_AI_ENABLED && zeriCfg.aiDeepEnabled && results.length > 0 && (
             <div className="mt-3 rounded-lg border border-purple-200 bg-purple-50/40 p-2.5">
               <div className="flex items-center justify-between">
                 <div className="text-xs font-bold" style={{ color: BRAND }}>AI 深度择日分析</div>

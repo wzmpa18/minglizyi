@@ -7,6 +7,7 @@ import { useToolBack } from "@/lib/useToolBack";
 import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
 import ClientSelector from "@/components/ClientSelector";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
+import { PUBLIC_CHART_AI_ENABLED } from "@/lib/releaseFeatures";
 import { saveRecord, getPrefillData, clearPrefillData, getClient } from "@/lib/clientStore";
 import type { Client } from "@/lib/clientStore";
 import {
@@ -977,7 +978,7 @@ export default function NameAnalysisPage() {
               <span>● 五行平衡分析</span>
               <span>● 生肖喜用字查询</span>
               <span>● 综合评分评级</span>
-              <span>● AI深度解读</span>
+              {PUBLIC_CHART_AI_ENABLED && <span>● AI深度解读</span>}
             </div>
           </div>
 
@@ -1215,13 +1216,13 @@ export default function NameAnalysisPage() {
           )}
 
           {/* ==================== AI深度解读入口（沉底放置） ==================== */}
-          <div className="rounded-xl bg-white p-3">
+          {PUBLIC_CHART_AI_ENABLED && <div className="rounded-xl bg-white p-3">
             <EventDivinationPanel
               toolName="姓名解析"
               chartContext={aiContext}
               isPaidTool={false}
             />
-          </div>
+          </div>}
 
           <div className="px-3 py-2">
             <ShareButton

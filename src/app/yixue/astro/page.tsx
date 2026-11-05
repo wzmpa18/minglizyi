@@ -11,6 +11,7 @@ import { listCharts, saveChart, deleteChart, deleteAllCharts, buildShareSnapshot
 import type { SavedChart } from "@/lib/astroStore";
 import { savePaipanState, loadPaipanState, clearPaipanState } from "@/lib/paipanPersistence";
 import AIInterpretButton from "@/components/AIInterpretButton";
+import { PUBLIC_CHART_AI_ENABLED } from "@/lib/releaseFeatures";
 import { buildDeepReportSystemPrompt } from "@/lib/deepReportPrompt";
 import { ShareButton } from "@/components/ShareButton";
 
@@ -341,7 +342,7 @@ export default function AstroPage() {
           )}
 
           {/* AI 深度解读（增值服务，统一 Paywall 链路） */}
-          {astroCfg.aiDeepEnabled && (
+          {PUBLIC_CHART_AI_ENABLED && astroCfg.aiDeepEnabled && (
             <div className="mb-3 rounded-lg border border-purple-200 bg-purple-50/40 p-2.5">
               <div className="flex items-center justify-between">
                 <div className="text-xs font-bold" style={{ color: BRAND }}>AI 星盘深度解读</div>

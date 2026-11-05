@@ -6,6 +6,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useToolBack } from "@/lib/useToolBack";
 import { savePaipanState, loadPaipanState } from "@/lib/paipanPersistence";
 import EventDivinationPanel from "@/components/EventDivinationPanel";
+import { PUBLIC_CHART_AI_ENABLED } from "@/lib/releaseFeatures";
 import { solarToBazi } from "@/algorithm-core";
 import type { Gender } from "@/algorithm-core";
 import {
@@ -1496,7 +1497,7 @@ export default function QimingPage() {
           )}
 
           {/* AI入口 */}
-          <div className="rounded-xl bg-white p-3">
+          {PUBLIC_CHART_AI_ENABLED && <div className="rounded-xl bg-white p-3">
 
             {/* v20.1: AI 定制起名入口（单次付费） */}
             <div
@@ -1536,7 +1537,7 @@ export default function QimingPage() {
                 isPaidTool={false}
               />
             </div>
-          </div>
+          </div>}
 
           <div className="px-3 py-2">
             <ShareButton
