@@ -3192,3 +3192,5 @@ D650168的10月30日19:09人工回复要求备案截图完整展示主体、类�
 官方网页构建 `42041087035` 成功，工件 `13421121672` 的 ZIP SHA256 为 `723bb9d41c7f842e0c7398d4209b5a4031ab81f74ee4391cf5126ad2c633c3ce`，以Git已提交版部署工具逐文件核验后原子切至 `/root/yandaoguoxue/releases/v25.0.122-calendar-community-e560eaa`，前版 `v25.0.122-calendar-community-2ad677d` 保留回退；部署证明见 `D:/言道国学项目资料总库/03_官网/20261105_分享下载网页部署.json`。上线读回：原二维码完整URL仍返回200且未重定向；公网注册页实际加载的按钮JS块包含 `app-download/latest.apk`，不再包含原 `/friend` 按钮目标；固定APK地址302转到既有 `/downloads/2156/YandaoGuoxue_25.0.122_2156.apk`，返回APK MIME、长度91,744,544字节，首四字节Range实测206；`/friend`、`/download` 与两个历史APK别名仍为200。官网安装包仍是原内部渠道2156，不将商店2160包混入官网下载。尚未以真实手机浏览器确认系统下载界面；公网HTTP与已发布按钮代码已独立核对。
 
 本轮未改正式Android/iOS安装包、商店审核状态、用户注册/权益、服务器数据库或旧下载别名。继承的 `scripts/deploy_verified_web_preview.py` 脏改和 `android/app/src/main/assets/life-ocr/` 仍保留且未提交；部署使用Git已提交工具版本。指定E只读交接镜像不写，本权威报告按固定四个可写实体镜像同步核SHA，核验记录见D99本日记录。
+
+补充公网传输验收：Windows客户端沿固定别名跟随302，完整接收91,744,544字节，最终HTTP 200且MIME为 `application/vnd.android.package-archive`；首轮120秒超时只接收54,329,005字节，延长为300秒后完成。公网传输速度存在地区与网络差异，但下载链路已证实可传完整文件。
