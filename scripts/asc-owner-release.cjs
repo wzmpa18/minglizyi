@@ -51,6 +51,7 @@ function recordSnapshot(live){
  proof.testFlight=live.testFlight;
  proof.existingAppInfoLocalizations=live.infoLocalizations;
  proof.versionLocaleUrls=live.localizations.map(l=>({id:l.id,locale:l.attributes.locale,supportUrl:l.attributes.supportUrl||null,marketingUrl:l.attributes.marketingUrl||null}));
+ proof.versionLocaleMarketing=live.localizations.map(l=>({locale:l.attributes.locale,keywords:l.attributes.keywords||'',promotionalText:l.attributes.promotionalText||'',descriptionLength:[...(l.attributes.description||'')].length}));
 }
 async function replace(live,ready,snapshot){
  if(!process.argv.includes('--root-all-preparations-ready'))throw Error('Root has not confirmed all preparations ready; old review retained');
