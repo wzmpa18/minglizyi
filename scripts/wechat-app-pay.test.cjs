@@ -73,4 +73,14 @@ test('APP payment stays unavailable without a mobile application AppID', async (
   }
 });
 
+test('APP payment cannot reuse the public-account AppID', () => {
+  const mobileAppId = process.env.WECHAT_OPEN_APP_ID;
+  process.env.WECHAT_OPEN_APP_ID = process.env.WECHAT_APPID;
+  try {
+    assert.equal(wx.isReadyForAppPay(), false);
+  } finally {
+    process.env.WECHAT_OPEN_APP_ID = mobileAppId;
+  }
+});
+
 process.on('exit', () => fs.rmSync(directory, { recursive: true, force: true }));

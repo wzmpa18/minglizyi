@@ -69,7 +69,8 @@ function isReadyForJsapi() {
 }
 
 function isReadyForAppPay() {
-  return isConfigured() && /^wx[0-9a-z]{16}$/i.test(config().mobileAppId);
+  const c = config();
+  return isConfigured() && /^wx[0-9a-z]{16}$/i.test(c.mobileAppId) && c.mobileAppId !== c.appId;
 }
 
 /** 配置自检（只返回布尔状态，绝不返回任何密钥值；供后台状态页使用） */

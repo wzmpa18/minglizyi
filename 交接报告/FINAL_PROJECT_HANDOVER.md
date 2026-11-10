@@ -3227,3 +3227,23 @@ Apple中国大陆公司账号对应应用6807592575、bundle com.yandaoguoxue.ap
 发布概览初次自动检查提示“应用级交易者身份声明未完成”，未忽略问题。专页显示公司开发者账号已声明交易者，言道国学默认选择“是，交易者身份适用于此应用”。负责人在本会话明确授权保持“是”并保存，保存后发布概览显示“交易者状态：已完成应用级交易者身份声明”。审核清单恰为本轮三语言自定义页、50%受众比例及该声明共5项；正式点击“提交5项更改以供审核”并在确认框点击“将更改内容送审”。后台回执“已将5项更改送审”，对应5项移动至“正在审核中的更改”；快速检查仍进行中、平台提示最多14分钟，送审不等于审核已通过或新页面已展示。原2160生产正式版保持已上架，不随本营销资料送审撤回。
 
 最新证据和准确限制记入D04/`20261107_商店上架与免费曝光台账.md`以及`现行商店营销资料.json`的`freeMarketing20261107`。本节未上传新图片、未改APK/内购、未操作其他Google应用或开启付费广告。下一步依平台审核通知核对定向页是否真正生效；因当前访问样本少，后续A/B实验需要可测的真实素材与访问量。
+
+## 78.76 2026-11-10 华为退回、腾讯工单、两店截图与微信 APP 支付候选
+
+负责人要求读取华为和腾讯最新回复、提供两家已上架商店的介绍截图，并为 Android 应用接入微信 APP 支付。华为公司后台应用 `119286157` 的 `25.0.123/2161` 最新审核报告（2026-11-09 10:56:58）状态“待修改”，仅 1 项：算法备案截图主体与开发者主体不一致；须真实双方合作/授权证明，注明合作内容、期限、签章、日期及算法名称/备案号。学习用途说明不能替代主体证明。腾讯云正式工单 `202611074449` 一度因等待补充资料变为“待确认结单”；本轮于 2026-11-10 19:00:22 JST 回复订单 `QC2529809346F`、Android 包名 `com.yandao.guoxue`、公司主体及两家腾讯主体正式签署证明要求，后台读回“处理中”；截图 `C:/Users/ZhuanZ/Documents/Codex/2026-11-03/new-chat/outputs/store-status-2026-11-10/tencent-ticket-reopened.jpg`。尚无正式盖章文件，华为尚未重新提交或发布。
+
+腾讯应用宝公开页 `https://sj.qq.com/appdetail/com.yandao.guoxue` 读回 `25.0.122`、东莞言道科技有限公司、五张界面图、详细介绍及扫码下载，截图 `C:/Users/ZhuanZ/Documents/Codex/2026-11-03/new-chat/outputs/store-status-2026-11-10/tencent-mystore-listed-introduction.jpg`。小米开发者后台读回 `25.0.122/2160`“版本审核通过，现已上架”、11-02 16:49 上架、11-09 安装 2 次，介绍和截图已填；证据同目录 `xiaomi-published-introduction-full.jpg` 与 `xiaomi-listed-introduction-detail.jpg`。小米公开 PC 页下载区域当次显示“维护中”，不把 PC 网页下载写为可用。D04 `20261107_商店上架与免费曝光台账.md` 已追加本轮增量，其他已上架店保持既有基线。
+
+源码提交 `f2df1634a60e2ed9c07a23ad74751dc45db3364a` 已推送 `codex/tencent-store-compliance`，仅包含本次 10 个文件：`backend_deploy/wechatPayV3.js` 新增微信 APIv3 APP 下单和服务端签名，`backend_deploy/paymentRoutes.js` 按服务器价格创建 APP 订单并在回调/查单核对商户号、金额和移动 AppID；`src/lib/paymentService.ts` 在直装 Android 调用原生 OpenSDK 并以服务端查单确认权益；Android Gradle/Manifest/MainActivity 及新 `WeChatAppPayPlugin.java`、`WXPayEntryActivity.java` 只让 `default/internal` 包含 APP 支付 SDK，华为、Google、iOS及其他商店包不包含本原生插件；另新增 `docs/payment/wechat-app-pay.md` 与 `scripts/wechat-app-pay.test.cjs`。原微信浏览器 JSAPI 和网页二维码流程保持。生产服务端只读布尔核查：现有商户号、公众号 AppID、APIv3 密钥和证书路径存在，`WECHAT_OPEN_APP_ID` 缺失；未输出密钥值。
+
+验证：5 项下单/签名/缺移动 AppID 拒绝/不得复用公众号 AppID 测试、TypeScript 与 Next 内部渠道构建通过，28 幅原经络动图保留，Android 内部/华为渠道 Java 编译均通过且华为包源集没有微信 APP 支付插件。`npx cap sync android` 同步内置网页资源。本机正式 APK 第一次在 R8 阶段因 Java 本机内存不足崩溃；限制工作线程后 R8 通过，但本机既存 keystore 与仓库旧口令不匹配，签名打包未通过，未交付该包。原受控 GitHub Actions 对 `internal` 渠道已发起运行 `42808945296`（`https://github.com/wzmpa18/minglizyi/actions/runs/42808945296`），撰写时待最终回执，不预报成功。
+
+微信支付官方接入指引确认：已有商户号仍须独立申请 APP 支付权限；移动 AppID 仅能来自微信开放平台已认证“移动应用”；申请上传真实 App 首页、售卖服务页、尾页以及应用市场上架页/链接，审核后商户号与移动 AppID 双向确认授权。项目正式腾讯2160与华为2161 APK 签名证书 MD5 独立读回一致：`3726B77289A1A6771CCACCA47AFD22D9`；包名 `com.yandao.guoxue`，应用宝上架页和截图已备。负责人表示商户配置未完成；本轮浏览器安全审核分别拒绝 `pay.weixin.qq.com` 与 `open.weixin.qq.com` 的页面访问并禁止换入口/浏览器绕过，故未代其提交申请、接受协议或做真实付款。下一步由负责人在自己的浏览器打开微信开放平台“管理中心 → 移动应用”，提供列表截图或移动 AppID，再完成官方平台的登录、申请协议和商户号授权；审核通过后填生产 `WECHAT_OPEN_APP_ID`、在正式包中验证小额实付/退款和服务端权益，最后才能发布直装更新。支付状态为“代码候选已提交，商户权限及实付未验证，未上线”。
+
+清理和边界：本轮生成的 Java 崩溃日志已删，未删除用户原始材料、旧正式 APK、核心学习资料或 E 指定只读镜像。继承脏项 `scripts/deploy_verified_web_preview.py` 与 `android/app/src/main/assets/life-ocr/` 不动；本轮忽略目录 `out/`、`www/` 和 Android 构建缓存暂留用于云包核验。云包回执、报告五镜像最终 SHA 和 Git 收尾状态将在本节后续读回登记；整个项目尚未完成。
+
+78.76 云包追加核验：GitHub Actions 运行 `42808945296` 以 `f2df1634a60e2ed9c07a23ad74751dc45db3364a` 为源码成功完成正式签名 APK/AAB、签名指纹门禁与原资源门禁。下载的内部渠道 QA APK 在 `C:/Users/ZhuanZ/Documents/Codex/2026-11-03/new-chat/outputs/wechat-app-pay-qa-2026-11-10/app-release.apk`，大小 91,785,251 字节，SHA-256 `DBC9C70013A62CB088A5E37191BBE4FECFD8D6EBDC8C81BFF4F3A71A1F2591CA`；独立 `aapt`/`apksigner` 读回包名 `com.yandao.guoxue`、`25.0.123/2161`、证书 SHA-256 `8ca0c414573d4b05fc2bd1ba9c6a2a8090c90c58e3815119494607443dc6d5a0`、MD5 `3726b77289a1a6771ccacca47afd22d9`，APK dex 中有 `WeChatAppPayPlugin`、`WXPayEntryActivity` 和 OpenSDK `PayReq`，Manifest 的回调 Activity 已启用且可导出，内置 `app-native.json` 标明 `internal` 与相同源码提交。该文件仅为待商户权限的 QA 候选，未上线、未替换原下载链接、未做真实支付测试。商户 AppID 未核实时不能把构建成功当作收款成功。
+
+源码随后补一项安全约束：移动应用 AppID 不能等于现有公众号 AppID；对应第 5 项测试通过。`www/` 为本轮从 `out/` 生成的 2431 文件临时同步目录，删除命令在启动前被自动审批以 `blocked by policy` 拒绝，未删除且未通过其他方式重试；现留在活动仓忽略目录中，`out/` 和 Android 构建缓存亦保留。原始资料、正式下载包和当前 QA APK 均未删除。整体项目和商户开通仍未完成。
+
+本节报告五个可写镜像的路径与相同 SHA-256、最终 Git 提交及上游差异核验，记录在 `D:/言道国学项目资料总库/99_整理清单/20261110_交接78.76镜像核验.json`；`E:/言道国学3D评估_12A/交接报告镜像_只读` 仍按负责人指定不写。
