@@ -9,7 +9,17 @@
 // ============================================================================
 
 import { getUserProfile, getUserToken } from "./auth";
-import { isPaymentsBlocked, PAYMENT_DISABLED_TIP, clientPlatformHeaders } from "./platformGate";
+import { Capacitor, registerPlugin } from "@capacitor/core";
+import { isPaymentsBlocked, PAYMENT_DISABLED_TIP, clientPlatformHeaders, getRuntimePlatform } from "./platformGate";
+import { STORE_CHANNEL } from "./releaseFeatures";
+
+type AppPayParams = { appId: string; partnerId: string; prepayId: string; packageValue: string; nonceStr: string; timeStamp: string; sign: string };
+const WeChatAppPay = registerPlugin<{ pay(options: AppPayParams): Promise<{ launched: boolean }> }>("WeChatAppPay");
+
+function useWechatAppPay(): boolean {
+  return typeof window !== "undefined" && Capacitor.isNativePlatform() &&
+    getRuntimePlatform() === "android" && ["default", "internal"].includes(STORE_CHANNEL);
+}
 
 // ==================== 类型定义 ====================
 
@@ -75,8 +85,9 @@ export interface CallPaymentResult {
   payUrl?: string;
   prepayId?: string;
   jsapiParams?: Record<string, string>;
+  appPayParams?: AppPayParams;
   /** 支付模式：JSAPI(微信内免扫码) / NATIVE(扫码支付，全场景兜底) / FREE(免费放行，v12 批量解读终身会员) */
-  payMode?: "JSAPI" | "NATIVE" | "FREE";
+  payMode?: "JSAPI" | "NATIVE" | "APP" | "FREE";
   /** Native扫码支付：微信付款二维码内容(weixin://wxpay/bizpayurl?...) */
   codeUrl?: string;
   /** v25.0.47_12: 免费放行标记（如终身会员批量解读） */
@@ -281,6 +292,7 @@ export async function callPayment(
   }
 
   const { type, amount, title, channel, extra: extraIn } = params;
+  const wantsAppPay = useWechatAppPay() && (!channel || channel === "wechat");
 
   // 参数校验
   if (!type) {
@@ -310,6 +322,7 @@ export async function callPayment(
         amount,
         title: title || COMPLIANCE_TITLES[type],
         channel,
+        payMode: wantsAppPay ? "APP" : undefined,
         extra,
       }),
     });
@@ -359,6 +372,16 @@ export async function callPayment(
         codeUrl: data.codeUrl,
         message: "订单创建成功（扫码支付）",
       };
+    }
+    if (resultChannel === "wechat" && data.payMode === "APP") {
+      if (!wantsAppPay || !data.appPayParams) return { success: false, orderId: data.orderId, error: "微信APP支付参数无效，请稍后重试" };
+      try {
+        const launched = await WeChatAppPay.pay(data.appPayParams as AppPayParams);
+        if (!launched.launched) throw new Error("未能打开微信支付");
+      } catch (error) {
+        return { success: false, orderId: data.orderId, error: error instanceof Error ? error.message : "微信支付未能启动" };
+      }
+      return { success: true, orderId: data.orderId, amount: data.amount, channel: "wechat", payMode: "APP", message: "已打开微信支付，返回后将核实订单" };
     }
     if (resultChannel === "wechat" && data.jsapiParams) {
       // 调起微信 JSAPI 支付

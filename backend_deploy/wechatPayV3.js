@@ -34,6 +34,7 @@ function config() {
   return {
     mchId: process.env.WECHAT_MCH_ID || '',
     appId: process.env.WECHAT_APPID || '',
+    mobileAppId: process.env.WECHAT_OPEN_APP_ID || '',
     appSecret: process.env.WECHAT_APP_SECRET || '',
     apiV3Key: process.env.WECHAT_API_V3_KEY || '',
     certPath: process.env.WECHAT_API_CERT_PATH || '',
@@ -67,6 +68,10 @@ function isReadyForJsapi() {
   return isConfigured() && !!config().appId;
 }
 
+function isReadyForAppPay() {
+  return isConfigured() && /^wx[0-9a-z]{16}$/i.test(config().mobileAppId);
+}
+
 /** 配置自检（只返回布尔状态，绝不返回任何密钥值；供后台状态页使用） */
 function getConfigStatus() {
   const c = config();
@@ -75,6 +80,7 @@ function getConfigStatus() {
   return {
     mchId: !!c.mchId,
     appId: !!c.appId,
+    mobileAppId: !!c.mobileAppId,
     appSecret: !!c.appSecret,
     apiV3Key: !!c.apiV3Key,
     merchantPrivateKeyFile: certFileOk,
@@ -85,6 +91,7 @@ function getConfigStatus() {
     nativeReady: isConfigured(),
     // JSAPI就绪（Native就绪 + 公众号AppID）
     jsapiReady: isReadyForJsapi(),
+    appPayReady: isReadyForAppPay(),
     // 整体状态：NOT_CONFIGURED(未配置) / PARTIAL(部分) / READY(齐备可开启)
     overall: isConfigured() ? 'READY' : (c.mchId || certFileOk) ? 'PARTIAL' : 'NOT_CONFIGURED',
   };
@@ -223,6 +230,38 @@ function buildJsapiParams(prepayId) {
     signType: 'RSA',
     paySign,
   };
+}
+
+/** Mobile APP payment uses a distinct Open Platform AppID, never the JSAPI AppID. */
+async function createAppOrder(params) {
+  if (!isReadyForAppPay()) return { success: false, error: '微信APP支付尚未配置移动应用AppID' };
+  const { outTradeNo, description, amountYuan } = params;
+  const totalFen = Math.round(Number(amountYuan) * 100);
+  if (!/^[0-9A-Za-z_\-|*]{6,32}$/.test(String(outTradeNo || '')) || !description || !Number.isSafeInteger(totalFen) || totalFen <= 0) {
+    return { success: false, error: '微信APP支付订单参数无效' };
+  }
+  const c = config();
+  const r = await wxApiRequest('POST', '/v3/pay/transactions/app', {
+    appid: c.mobileAppId,
+    mchid: c.mchId,
+    description: String(description).slice(0, 127),
+    out_trade_no: outTradeNo,
+    notify_url: params.notifyUrl || `${c.baseUrl}/api/payment/callback/wechat`,
+    amount: { total: totalFen, currency: 'CNY' },
+  });
+  if (r.ok && r.data && r.data.prepay_id) return { success: true, prepayId: r.data.prepay_id };
+  console.error('[wechatPayV3] createAppOrder失败:', JSON.stringify(r.data).slice(0, 300));
+  return { success: false, error: (r.data && (r.data.message || r.data.code)) || `微信APP下单失败(HTTP ${r.status})` };
+}
+
+function buildAppPayParams(prepayId) {
+  if (!isReadyForAppPay() || !prepayId) throw new Error('微信APP支付参数不完整');
+  const c = config();
+  const timeStamp = Math.floor(Date.now() / 1000).toString();
+  const nonceStr = crypto.randomBytes(16).toString('hex');
+  // 微信支付 APIv3: appId, seconds, nonce, prepayId, each followed by LF.
+  const sign = rsaSha256Sign(`${c.mobileAppId}\n${timeStamp}\n${nonceStr}\n${prepayId}\n`, getMerchantPrivateKey());
+  return { appId: c.mobileAppId, partnerId: c.mchId, prepayId, packageValue: 'Sign=WXPay', nonceStr, timeStamp, sign };
 }
 
 // ============================================================================
@@ -438,6 +477,9 @@ async function queryOrderByOutTradeNo(outTradeNo) {
       success: true,
       tradeState: r.data.trade_state,
       transactionId: r.data.transaction_id,
+      mchId: r.data.mchid,
+      appId: r.data.appid,
+      total: r.data.amount && r.data.amount.total,
       payerTotal: r.data.amount && r.data.amount.payer_total,
       successTime: r.data.success_time,
     };
@@ -494,11 +536,14 @@ module.exports = {
   isConfigured,
   isOauthConfigured,
   isReadyForJsapi,
+  isReadyForAppPay,
   getConfigStatus,
   config,
   createJsapiOrder,
+  createAppOrder,
   createNativeOrder,
   buildJsapiParams,
+  buildAppPayParams,
   verifyCallbackSignature,
   decryptCallbackResource,
   queryOrderByOutTradeNo,

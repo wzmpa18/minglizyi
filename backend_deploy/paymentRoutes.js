@@ -888,11 +888,12 @@ router.get('/ai-credits', require('./register_routes').authMiddleware, (req, res
 // ============================================================================
 router.post('/create', require('./register_routes').authMiddleware, async (req, res) => {
   try {
-    const { type, amount, title, channel, extra } = req.body;
+    const { type, amount, title, channel, extra, payMode } = req.body;
     const effectiveExtra = extra && typeof extra === 'object' ? { ...extra } : {};
     delete effectiveExtra.growthCampaign;
     delete effectiveExtra.salesPromotion;
     delete effectiveExtra.aiPackage;
+    delete effectiveExtra.wechatAppPay;
     const userId = String(req.user.userId);
     if (req.body.userId != null && String(req.body.userId) !== userId) {
       return jsonResponse(res, 403, false, '登录账号与付款账号不一致，请重新登录');
@@ -972,6 +973,17 @@ router.post('/create', require('./register_routes').authMiddleware, async (req, 
     if (channel && !validChannels.includes(channel)) {
       return jsonResponse(res, 400, false, `支付渠道无效，支持: ${validChannels.join(', ')}`);
     }
+    const wantsAppPay = payMode === 'APP';
+    if (payMode && !wantsAppPay) return jsonResponse(res, 400, false, '支付方式无效');
+    if (wantsAppPay) {
+      const platform = String(req.headers['x-client-platform'] || '').toLowerCase();
+      const storeChannel = String(req.headers['x-store-channel'] || '').toLowerCase();
+      if (platform !== 'android' || !['default', 'internal'].includes(storeChannel) || (channel && channel !== 'wechat')) {
+        return jsonResponse(res, 403, false, '此安装渠道不支持微信APP支付');
+      }
+      if (!wechatPayV3.isReadyForAppPay()) return jsonResponse(res, 503, false, '微信APP支付尚未开通或移动应用AppID未配置');
+      effectiveExtra.wechatAppPay = true;
+    }
 
     // 检查支付通道是否已启用
     if (!isPaymentEnabled()) {
@@ -1011,6 +1023,27 @@ router.post('/create', require('./register_routes').authMiddleware, async (req, 
     const payChannel = channel || 'wechat';
 
     if (payChannel === 'wechat' && wechatPayV3.isConfigured()) {
+      if (wantsAppPay) {
+        const appResult = await wechatPayV3.createAppOrder({
+          outTradeNo: order.orderId,
+          description: order.title,
+          amountYuan: order.amount,
+        });
+        if (!appResult.success) {
+          updateOrderRecord(order.orderId, ORDER_STATUS.CLOSED, 'wechat');
+          return jsonResponse(res, 502, false, appResult.error || '微信APP下单失败');
+        }
+        order.channel = 'wechat';
+        order.payMode = 'APP';
+        if (!persistOrder(order)) return jsonResponse(res, 503, false, '订单保存失败，请勿付款');
+        return jsonResponse(res, 200, true, '微信APP订单创建成功', {
+          orderId: order.orderId,
+          amount: order.amount,
+          channel: 'wechat',
+          payMode: 'APP',
+          appPayParams: wechatPayV3.buildAppPayParams(appResult.prepayId),
+        });
+      }
       // ===== FIX-PAY-UNBIND-WECHAT-APPID 通道选择 =====
       // JSAPI（免扫码，需公众号AppID+openid）；缺任一参数自动降级 Native 扫码支付，
       // 不报错、不阻断流程；微信内环境同样展示二维码（长按识别支付）。
@@ -1125,7 +1158,12 @@ router.post('/query', async (req, res) => {
     if ([ORDER_STATUS.PENDING, ORDER_STATUS.PAID, 'REFUND_PENDING'].includes(order.status) && order.channel === 'wechat' && wechatPayV3.isConfigured()) {
       try {
         const qr = await wechatPayV3.queryOrderByOutTradeNo(orderId);
-        if (qr.success && qr.tradeState === 'SUCCESS' && order.status === ORDER_STATUS.PENDING) {
+        const validWxOrder = qr.success && qr.mchId === wechatPayV3.config().mchId &&
+          qr.total === Math.round(Number(order.amount) * 100) &&
+          (!order.extra?.wechatAppPay || qr.appId === wechatPayV3.config().mobileAppId);
+        if (qr.success && qr.tradeState === 'SUCCESS' && !validWxOrder) {
+          console.error(`[payment/query] 微信订单主体或金额不匹配 orderId=${orderId}`);
+        } else if (validWxOrder && qr.tradeState === 'SUCCESS' && order.status === ORDER_STATUS.PENDING) {
           updateOrderRecord(orderId, ORDER_STATUS.PAID, 'wechat');
           console.log(`[payment/query] 对账发现已支付，本地状态已更新 orderId=${orderId}`);
         } else if (qr.success && qr.tradeState === 'REFUND') {
@@ -1275,6 +1313,15 @@ router.post('/callback/wechat', async (req, res) => {
       // 本地无此订单（进程重启内存丢失等）：应答成功防重试风暴，留日志人工核对
       console.warn(`[payment/callback/wechat] 本地订单不存在 out_trade_no=${detail.out_trade_no} trade_state=${detail.trade_state}`);
       return res.status(200).json({ code: 'SUCCESS', message: '成功' });
+    }
+
+    if (detail.trade_state === 'SUCCESS' && (
+      detail.mchid !== wechatPayV3.config().mchId ||
+      Number(detail.amount?.total) !== Math.round(Number(order.amount) * 100) ||
+      (order.extra?.wechatAppPay && detail.appid !== wechatPayV3.config().mobileAppId)
+    )) {
+      console.error(`[payment/callback/wechat] 商户、AppID或金额不匹配 orderId=${order.orderId}`);
+      return res.status(200).json({ code: 'FAIL', message: '订单信息不匹配' });
     }
 
     if (detail.trade_state === 'SUCCESS') {

@@ -1,5 +1,8 @@
 apply plugin: 'com.android.application'
 
+// Only the company direct-download build contains the WeChat APP payment SDK.
+def withWechatAppPay = ['default', 'internal'].contains(System.getenv('NEXT_PUBLIC_STORE_CHANNEL') ?: 'default')
+
 android {
     namespace = "com.yandao.guoxue"
     testBuildType System.getProperty("testBuildType", "debug")
@@ -10,12 +13,16 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 2161
         versionName "25.0.123"
+        manifestPlaceholders = [wechatAppPayEnabled: withWechatAppPay.toString()]
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
+    }
+    if (withWechatAppPay) {
+        sourceSets.main.java.srcDirs += 'src/wechatAppPay/java'
     }
     signingConfigs {
         release {
@@ -42,6 +49,7 @@ repositories {
 }
 
 dependencies {
+    if (withWechatAppPay) implementation 'com.tencent.mm.opensdk:wechat-sdk-android:6.8.40'
     implementation files('libs/life-ocr-tesseract4android-4.9.0.aar')
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"

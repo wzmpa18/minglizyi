@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <queries>
+        <package android:name="com.tencent.mm" />
         <package android:name="com.iflytek.speechsuite" />
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE" />
@@ -16,6 +17,12 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+
+        <activity android:name=".wxapi.WXPayEntryActivity"
+            android:enabled="${wechatAppPayEnabled}"
+            android:exported="${wechatAppPayEnabled}"
+            android:taskAffinity="com.yandao.guoxue"
+            android:launchMode="singleTask" />
 
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"

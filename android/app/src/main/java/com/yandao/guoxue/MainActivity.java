@@ -15,6 +15,7 @@ import android.widget.Toast;
 import androidx.activity.OnBackPressedCallback;
 
 import com.getcapacitor.BridgeActivity;
+import com.getcapacitor.Plugin;
 import com.yandao.guoxue.plugins.PaipanStorePlugin;
 import com.yandao.guoxue.plugins.OfflineFilesPlugin;
 import com.yandao.guoxue.plugins.LocalTtsPlugin;
@@ -50,6 +51,13 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(LocalTtsPlugin.class);
         registerPlugin(LocalSkyLocationPlugin.class);
         registerPlugin(com.yandao.guoxue.plugins.LocalCalendarPlugin.class);
+        // The class exists only in direct-download builds; store builds omit the SDK.
+        try {
+            @SuppressWarnings("unchecked")
+            Class<? extends Plugin> appPay = (Class<? extends Plugin>) Class.forName("com.yandao.guoxue.plugins.WeChatAppPayPlugin");
+            registerPlugin(appPay);
+        } catch (ClassNotFoundException ignored) {
+        }
         super.onCreate(savedInstanceState);
         if(getIntent().getBooleanExtra("open_calendar",false))getBridge().getWebView().post(()->getBridge().getWebView().loadUrl("https://localhost/calendar/"));
 
