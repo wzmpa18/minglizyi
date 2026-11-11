@@ -11,6 +11,7 @@ import {usesCompanyAppDistribution,STORE_UPDATE_MESSAGE} from '@/lib/appUpdatePo
 
 const BRAND = "#7B2FBE";
 const DOWNLOAD_URL = "https://yandaoguoxue.yandao.vip/friend";
+const IOS_APP_STORE_URL = "https://apps.apple.com/cn/app/id6807592575";
 // APK 直链兜底值：实际地址运行时从 /api/public/app-version 动态获取（SSOT，
 // 服务器发布新 APK 后仅更新 app-release-config.json，前端零改动）
 // v25.0.47_19：兜底地址统一为永久固定名 latest.apk（与 friend 落地页同一处，永不过期）
@@ -195,18 +196,20 @@ export default function DownloadPage() {
         </p>
         {downloadMessage&&<p role="status" className="mt-2 text-center text-xs text-gray-500">{downloadMessage}</p>}
 
-        {/* iOS 说明（v25.0.44：TestFlight 测试阶段状态） */}
-        <p className="mt-3 text-center text-xs text-gray-400">
-          iOS 版正在 TestFlight 测试，App Store以实际审核结果为准；可先通过 Safari
-          添加到主屏幕使用网页版
-        </p>
+        <a
+          href={IOS_APP_STORE_URL}
+          className="mt-3 block w-full rounded-xl border py-3.5 text-center text-sm font-bold"
+          style={{ borderColor: BRAND, color: BRAND, backgroundColor: "#fff" }}
+        >
+          App Store 下载 iPhone 版
+        </a>
       </div>
 
       {/* ===== 扫码下载区域 ===== */}
       <div className="mx-3 mt-4 rounded-xl bg-white shadow-sm overflow-hidden">
         <div className="px-4 pt-4 pb-2">
           <p className="text-sm font-semibold text-gray-800 text-center">
-            扫码下载
+            扫码下载安卓版
           </p>
         </div>
         <div className="flex flex-col items-center px-4 pb-5">
@@ -225,7 +228,7 @@ export default function DownloadPage() {
             )}
           </div>
           <p className="mt-3 text-sm font-medium" style={{ color: BRAND }}>
-            扫码下载言道国学APP
+            扫码下载言道国学安卓版
           </p>
           <p className="mt-1 text-xs text-gray-400">
             使用手机浏览器或微信扫一扫

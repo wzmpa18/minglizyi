@@ -52,10 +52,11 @@ const DEFAULT_CONFIG = {
     urls: {
         android: "https://yandaoguoxue.yandao.vip/app-download/latest.apk",
         downloadPage: "https://yandaoguoxue.yandao.vip/friend",
-        register: "https://yandaoguoxue.yandao.vip/register"
+        register: "https://yandaoguoxue.yandao.vip/register",
+        iosStore: "https://apps.apple.com/cn/app/id6807592575"
     },
     // iOS 发布状态
-    iosStatus: "pending", // pending | available
+    iosStatus: "available", // pending | available
     // 海报尺寸对应关系
     posterSizes: {
         wechat_friend: "vertical",

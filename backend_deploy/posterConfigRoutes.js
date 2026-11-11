@@ -51,7 +51,7 @@ const DEFAULT_CONFIG = {
     // 行动指令
     callToAction: "长按识别二维码，立即下载安卓版",
     // iOS 提示
-    iosText: "iOS 版本・敬请期待",
+    iosText: "iPhone 版已上架 App Store",
     // 官方标识
     officialBadge: "官方正版・安全下载",
     // 底部合规声明
@@ -64,7 +64,7 @@ const DEFAULT_CONFIG = {
         downloadPage: "https://yandaoguoxue.yandao.vip/friend"
     },
     // iOS 发布状态（pending | available）
-    iosStatus: "pending",
+    iosStatus: "available",
     // 版本信息
     version: "v1.1.0",
     versionCode: 201,
