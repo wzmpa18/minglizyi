@@ -40,6 +40,7 @@ export default function DownloadPage() {
   const [downloadBusy,setDownloadBusy]=useState(false),[downloadMessage,setDownloadMessage]=useState('');
 
   useEffect(() => {
+    if (typeof navigator === "undefined") return;
     setIsIOSWeb(/iPhone|iPad|iPod/i.test(navigator.userAgent) ||
       (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
   }, []);

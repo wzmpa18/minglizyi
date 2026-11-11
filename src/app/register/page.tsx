@@ -36,6 +36,7 @@ export default function RegisterPage() {
   const router = useRouter();
   const [isIOSWeb, setIsIOSWeb] = useState(false);
   React.useEffect(() => {
+    if (typeof navigator === "undefined") return;
     setIsIOSWeb(/iPhone|iPad|iPod/i.test(navigator.userAgent) ||
       (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
   }, []);
