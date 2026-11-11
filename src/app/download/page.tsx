@@ -32,11 +32,17 @@ export default function DownloadPage() {
   const iosNative = useIOSNativeShell();
   // P9：本地生成 APK 下载二维码，不依赖境外 qrserver 服务
   const [downloadQrUrl, setDownloadQrUrl] = useState("");
+  const [isIOSWeb, setIsIOSWeb] = useState(false);
   const [apkUrl, setApkUrl] = useState(APK_URL_FALLBACK);
   // v25.0.47_19：版本号/发布日期动态化（从版本接口读取，服务器发新包后此页零改动）
   const [latestVersion, setLatestVersion] = useState("");
   const [publishedAt, setPublishedAt] = useState("");
   const [downloadBusy,setDownloadBusy]=useState(false),[downloadMessage,setDownloadMessage]=useState('');
+
+  useEffect(() => {
+    setIsIOSWeb(/iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
+  }, []);
 
   // 运行时拉取最新 APK 下载地址（SSOT：服务器发布新包只需更新 app-release-config.json）
   useEffect(() => {
@@ -66,6 +72,7 @@ export default function DownloadPage() {
 
   const handleDownloadAPK = async () => {
     if (!usesCompanyAppDistribution(STORE_CHANNEL)) { setDownloadMessage(STORE_UPDATE_MESSAGE); return; }
+    if (isIOSWeb) { window.location.href = IOS_APP_STORE_URL; return; }
     if(downloadBusy)return;
     const token=getUserToken();
     if(token&&!isNativeShellSync()&&['default','internal'].includes(STORE_CHANNEL)&&['yandaoguoxue.yandao.vip','www.yandao.vip'].includes(window.location.hostname)){
@@ -189,10 +196,10 @@ export default function DownloadPage() {
             <polyline points="7 10 12 15 17 10" />
             <line x1="12" y1="15" x2="12" y2="3" />
           </svg>
-          {downloadBusy?'正在准备下载…':'下载安卓APK'}
+          {isIOSWeb ? 'App Store 下载 iPhone 版' : downloadBusy?'正在准备下载…':'下载安卓APK'}
         </button>
         <p className="mt-2 text-center text-xs text-gray-400">
-          支持 Android 8.0 及以上系统
+          {isIOSWeb ? '前往中国大陆 App Store 官方页面' : '支持 Android 8.0 及以上系统'}
         </p>
         {downloadMessage&&<p role="status" className="mt-2 text-center text-xs text-gray-500">{downloadMessage}</p>}
 
