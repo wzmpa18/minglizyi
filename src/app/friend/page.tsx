@@ -18,6 +18,13 @@ const BRAND = "#7B2FBE";
 // v25.0.47_19：兜底地址统一为永久固定名 latest.apk——服务器每次发新包都会同步覆盖该别名，
 // 兜底地址永不过期；全站所有 APK 直链（公司网站/分享海报/落地页）统一指向这一处
 const APK_URL_FALLBACK = "https://yandaoguoxue.yandao.vip/app-download/latest.apk";
+const IOS_APP_STORE_URL = "https://apps.apple.com/cn/app/id6807592575";
+
+function isIOSWebBrowser(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
 
 // ==================== 检测微信/QQ内置浏览器 ====================
 function isInAppBrowser(): boolean {
@@ -41,6 +48,7 @@ function FriendContent() {
   const [toast, setToast] = useState("");
   const [friendAdded, setFriendAdded] = useState(false);
   const [isInApp, setIsInApp] = useState(false);
+  const [isIOSWeb, setIsIOSWeb] = useState(false);
   const [downloadTriggered, setDownloadTriggered] = useState(false);
   const [apkUrl, setApkUrl] = useState(APK_URL_FALLBACK);
   const autoActionTriggered = useRef(false);
@@ -50,6 +58,7 @@ function FriendContent() {
 
   useEffect(() => {
     setShellMode(isNativeShellSync());
+    setIsIOSWeb(isIOSWebBrowser());
   }, []);
 
   // 运行时拉取最新 APK 下载地址（SSOT：服务器发布新包只需更新 app-release-config.json）
@@ -107,7 +116,7 @@ function FriendContent() {
       }
     } else {
       // 场景A：未登录 → 直接触发下载（非微信/QQ环境）
-      if (!inApp && usesCompanyAppDistribution(STORE_CHANNEL)) {
+      if (!inApp && !isIOSWebBrowser() && usesCompanyAppDistribution(STORE_CHANNEL)) {
         setTimeout(() => {
           triggerDownload();
         }, 500);
@@ -120,6 +129,10 @@ function FriendContent() {
   // 浏览器环境保持原 location.href 直下。壳判定用同步实时检测，避免自动触发闭包过期）
   const triggerDownload = () => {
     if (!usesCompanyAppDistribution(STORE_CHANNEL)) { setToast(STORE_UPDATE_MESSAGE); return; }
+    if (isIOSWebBrowser()) {
+      window.location.href = IOS_APP_STORE_URL;
+      return;
+    }
     setDownloadTriggered(true);
     if (isNativeShellSync()) {
       setToast("正在打开系统浏览器下载，请稍候…");
@@ -305,7 +318,7 @@ function FriendContent() {
           <div style={{ fontSize: 12, color: "#856404", lineHeight: 1.6 }}>
             请点击右上角「···」按钮<br />
             选择「在浏览器中打开」<br />
-            即可自动下载APP
+            {isIOSWeb ? "然后点击本页按钮前往 App Store" : "即可自动下载安卓版APP"}
           </div>
           <button
             onClick={handleManualDownload}
@@ -321,7 +334,7 @@ function FriendContent() {
               cursor: "pointer",
             }}
           >
-            尝试下载
+            {isIOSWeb ? "前往 App Store" : "尝试下载"}
           </button>
         </div>
       )}
@@ -409,7 +422,7 @@ function FriendContent() {
                 cursor: "pointer",
               }}
             >
-              下载APP
+              {isIOSWeb ? "App Store 下载" : "下载APP"}
             </button>
           </div>
         </div>
@@ -461,7 +474,7 @@ function FriendContent() {
               marginBottom: 12,
             }}
           >
-            {downloadTriggered ? "重新下载" : "立即下载APP"}
+            {isIOSWeb ? "App Store 下载 iPhone 版" : downloadTriggered ? "重新下载" : "立即下载APP"}
           </button>
 
           {/* 壳内兜底：复制直链（浏览器拉起失败时仍可手动粘贴打开） */}
