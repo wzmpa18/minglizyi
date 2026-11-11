@@ -34,6 +34,11 @@ export default function RegisterPage() {
   // v25.0.88: 原生壳内隐藏安卓下载引导（APP端冗余入口）
   const nativeShell = useNativeShell();
   const router = useRouter();
+  const [isIOSWeb, setIsIOSWeb] = useState(false);
+  React.useEffect(() => {
+    setIsIOSWeb(/iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1));
+  }, []);
 
   const [registerMode, setRegisterMode] = useState<RegisterMode>("phone");
 
@@ -891,7 +896,7 @@ export default function RegisterPage() {
         {nativeShell ? null : (<>
           {/* v25.0.47_14: 下载APP入口（新用户扫码落地必见，全浏览器兼容：普通/系统/微信内置浏览器均可点击） */}
           <a
-            href="https://yandaoguoxue.yandao.vip/app-download/latest.apk"
+            href={isIOSWeb ? "https://apps.apple.com/cn/app/id6807592575" : "https://yandaoguoxue.yandao.vip/app-download/latest.apk"}
             style={{
               display: "flex",
               alignItems: "center",
@@ -916,10 +921,10 @@ export default function RegisterPage() {
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
-            下载言道国学APP
+            {isIOSWeb ? "前往 App Store 下载言道国学" : "下载言道国学安卓版APP"}
           </a>
           <div style={{ textAlign: "center", fontSize: 11, color: "#aaa", marginBottom: 16 }}>
-            安卓安装包 · 手机浏览器打开即可下载 · 网页版功能完全一致
+            {isIOSWeb ? "iPhone 版已在 App Store 上架；微信内如无法跳转，请用浏览器打开" : "安卓安装包 · 手机浏览器打开即可下载 · 网页版功能完全一致"}
           </div>
           </>) }
 
