@@ -1,15 +1,18 @@
 'use strict';
 
 const crypto = require('crypto');
-const { authMiddleware, getMembershipFromDB, getAIQuotaFromDB, consumeAIQuotaInDB, beijingToday } = require('./middleware/auth');
 
 const pending = new Map();
 const DAILY_READ_LIMIT = Math.max(1, Math.min(100, Number(process.env.STUDY_EXPLANATION_DAILY_LIMIT) || 20));
 const DAILY_GENERATION_LIMIT = Math.max(1, Math.min(500, Number(process.env.STUDY_EXPLANATION_GENERATION_LIMIT) || 100));
 
 function mountQuestionStudyExplanationRoutes(router, { getDb, callAI, canReadQuestion }) {
-  router.post('/questions/:id/study-explanation', authMiddleware, async (req, res) => {
+  // The main academy router is also loaded by isolated review tools. Keep the
+  // auth database's schema initialization out of that router's startup path.
+  const authenticate = (req, res, next) => require('./middleware/auth').authMiddleware(req, res, next);
+  router.post('/questions/:id/study-explanation', authenticate, async (req, res) => {
     try {
+    const { getMembershipFromDB, getAIQuotaFromDB, consumeAIQuotaInDB, beijingToday } = require('./middleware/auth');
     const questionId = Number(req.params.id);
     if (!Number.isSafeInteger(questionId) || questionId <= 0) return res.status(400).json({ success: false, error: '题目编号无效' });
     const membership = getMembershipFromDB(String(req.user.userId));
