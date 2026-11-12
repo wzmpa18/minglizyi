@@ -1,6 +1,7 @@
 "use client";
 
 import { InterfaceButton } from "@/components/InterfaceControls";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ResourceDiscussion } from "@/components/ResourceDiscussion";
 import { YIXUE_SUBJECTS } from "@/lib/yixueSubjects";
@@ -55,12 +56,12 @@ export default function YixueLearnPage() {
                   </div>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-1.5">
-                  {classics.map((name) => ORIGINAL_LINKS[name]?<a key={name} href={`/books?book=kanripo-${ORIGINAL_LINKS[name]}`} className="rounded-full bg-amber-50 px-2 py-1 text-[10px] text-amber-800 underline">《{name}》原文</a>:<span key={name} className="rounded-full bg-amber-50 px-2 py-1 text-[10px] text-amber-800">《{name}》</span>)}
+                  {classics.map((name) => ORIGINAL_LINKS[name]?<Link key={name} href={`/books?book=kanripo-${ORIGINAL_LINKS[name]}`} className="rounded-full bg-amber-50 px-2 py-1 text-[10px] text-amber-800 underline">《{name}》原文</Link>:<span key={name} className="rounded-full bg-amber-50 px-2 py-1 text-[10px] text-amber-800">《{name}》</span>)}
                 </div>
-                {subject.key === "yixue_basic" && <a href="/books?book=yijing" className="mt-3 block rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-center text-xs font-semibold text-amber-900">阅读与听学《易经》原文</a>}
+                {subject.key === "yixue_basic" && <Link href="/books?book=yijing" className="mt-3 block rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-center text-xs font-semibold text-amber-900">阅读与听学《易经》原文</Link>}
                 <div className="mt-3 grid grid-cols-2 gap-2">
-                  <a href={`/academy/learn?track=yixue&category=${encodeURIComponent(category)}`}
-                    className="rounded-lg bg-purple-700 px-3 py-2 text-center text-xs font-semibold text-white">进入学习</a>
+                  <Link href={`/academy/learn?track=yixue&category=${encodeURIComponent(category)}`}
+                    className="rounded-lg bg-purple-700 px-3 py-2 text-center text-xs font-semibold text-white">进入学习</Link>
                   <InterfaceButton type="button" onClick={() => setDiscussionKey(discussionOpen ? "" : subject.key)}
                     className="rounded-lg border border-purple-700 bg-white px-3 py-2 text-xs font-semibold text-purple-800">💬 学派交流</InterfaceButton>
                 </div>

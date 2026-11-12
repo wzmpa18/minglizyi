@@ -1125,6 +1125,8 @@ function gradeAnswer(q, myAnswer) {
 function createRouter() {
   const router = express.Router();
   router.use(express.json({ limit: '12mb' }));
+  require('./studyFileLibraryRoutes').mountStudyFileLibraryRoutes(router);
+  require('./questionStudyExplanationRoutes').mountQuestionStudyExplanationRoutes(router, { getDb, callAI, canReadQuestion });
   const failedKeys=new Map();router.use((req,res,next)=>{if(!req.headers['x-admin-key']||isAdmin(req))return next();const now=Date.now(),ip=String(req.ip||req.socket.remoteAddress||'unknown'),state=failedKeys.get(ip);if(state&&state.until>now&&state.count>=10)return res.status(429).set('Retry-After','60').json({success:false,error:'验证尝试过多，请稍后重试'});if(failedKeys.size>=10000)for(const [key,value] of failedKeys){if(value.until<=now)failedKeys.delete(key);}if(failedKeys.size>=10000)failedKeys.delete(failedKeys.keys().next().value);failedKeys.set(ip,state&&state.until>now?{...state,count:state.count+1}:{until:now+60000,count:1});next();});
   // The review UI must obtain this server verdict before reading pending data.
   router.get('/admin/session',adminRequired,(_req,res)=>res.set('Cache-Control','no-store').json({success:true,authorized:true}));

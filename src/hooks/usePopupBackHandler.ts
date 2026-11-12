@@ -31,6 +31,7 @@ export function usePopupBackHandler(onClose: (reason?: "back") => void, isOpen: 
   const pushedRef = useRef(false);
   const backHandledRef = useRef(false);
   const onCloseRef = useRef(onClose);
+  const openedPathRef = useRef("");
   onCloseRef.current = onClose;
 
   useEffect(() => {
@@ -44,11 +45,12 @@ export function usePopupBackHandler(onClose: (reason?: "back") => void, isOpen: 
       // Next.js 用递增 idx 判断返回方向；复用原 idx 会导致右滑时跨页或循环。
       if (typeof current.idx === "number") popupState.idx = current.idx + 1;
       window.history.pushState(popupState, "");
+      openedPathRef.current = window.location.pathname + window.location.search;
       pushedRef.current = true;
       backHandledRef.current = false;
     } else if (!isOpen && pushedRef.current && !backHandledRef.current) {
       pushedRef.current = false;
-      if (!window.__skipPopupCleanup) {
+      if (!window.__skipPopupCleanup && openedPathRef.current === window.location.pathname + window.location.search) {
         window.history.back();
       } else {
         window.__skipPopupCleanup = false;
@@ -73,7 +75,7 @@ export function usePopupBackHandler(onClose: (reason?: "back") => void, isOpen: 
       if (pushedRef.current) {
         pushedRef.current = false;
         backHandledRef.current = true;
-        if (!window.__skipPopupCleanup) {
+        if (!window.__skipPopupCleanup && openedPathRef.current === window.location.pathname + window.location.search) {
           window.history.back();
         } else {
           window.__skipPopupCleanup = false;

@@ -67,6 +67,7 @@ const ZONES: ZoneDef[] = [
     desc: "中医基础知识 · 刷题 / 模拟练习 / 文库一体化",
     entries: [
       { key: "yikao", label: "🎓 医考学习专区", url: "/academy/yikao" },
+      { key: "files", label: "📄 云端学习资料库", url: "/academy/resources" },
       { key: "community", label: "💬 交流社区", url: "/academy/community?zone=yikao" },
     ],
   },

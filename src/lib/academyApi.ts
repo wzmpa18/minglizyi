@@ -171,6 +171,14 @@ export async function fetchKnowledge(opts?: { track?: string; category?: string;
   return (opts?.status&&opts.status!=="approved"?adminApi:api)<{ success: boolean; points?: KnowledgeVo[];error?:string }>(`/api/academy/knowledge?${q.toString()}`);
 }
 
+export async function fetchKnowledgeById(id: string) {
+  return api<{ success: boolean; point?: KnowledgeVo; error?: string }>(`/api/academy/knowledge/${encodeURIComponent(id)}`);
+}
+
+export async function fetchQuestionStudyExplanation(id: string) {
+  return api<{ success: boolean; content?: string; cached?: boolean; remaining?: number; code?: string; error?: string }>(`/api/academy/questions/${encodeURIComponent(id)}/study-explanation`, { method: "POST" });
+}
+
 export async function reviewKnowledge(id: string, action: "approve" | "reject", patch?: { title?: string; content?: string }) {
   return adminApi<{ success: boolean }>(`/api/academy/knowledge/${id}/review`, {
     method: "POST",

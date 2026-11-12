@@ -10,6 +10,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { PageLoginGuard } from "@/components/PageLoginGuard";
 import { SelectorDialog, BottomSheet, PaymentDialog } from "@/components/ui";
@@ -31,6 +32,7 @@ import { isSingleUnlocked, activateSingleUnlock } from "@/lib/aiService";
 import { recordAnswer, getMastery, isAnswerCorrect } from "@/lib/yikaoStudyStore";
 import { addNote, toggleFavorite, isFavorited, addComment } from "@/lib/academyStudyStore";
 import { learningDifficultyLabel } from "@/lib/learningDisplay";
+import { QuestionStudyHelp } from "@/components/QuestionStudyHelp";
 
 // 医考专区独立视觉体系（对标行业医考产品：青绿主色 + 朱红印章 + 米色纸感）
 const GREEN = "#2FAE9E";
@@ -383,6 +385,7 @@ export default function YikaoPage() {
                       {my && <p className="mb-1.5 text-[11px] text-gray-500">我的作答：<span className="font-medium text-gray-700">{my || "（未作答）"}</span></p>}
                       <p className="text-[11px] text-gray-500">参考答案：<span className="font-semibold" style={{ color: "#27ae60" }}>{q.answer}</span></p>
                       {q.analysis && <p className="mt-2 whitespace-pre-wrap rounded-lg bg-white p-2 text-[11px] leading-relaxed text-gray-600">{q.analysis}</p>}
+                      <QuestionStudyHelp question={q} />
                       <div className="mt-2 flex gap-2">
                         <button
                           onClick={() => addNote({ title: q.stem.slice(0, 30), content: `题干：${q.stem}\n参考答案：${q.answer}\n解析：${q.analysis || "（无）"}`, track: "yikao", category: q.category || "", questionId: q.id })}
@@ -593,6 +596,9 @@ export default function YikaoPage() {
       <div className="border-b border-emerald-100 bg-emerald-50 px-4 py-2 text-[10px] leading-4 text-emerald-800">
         依据中医类别医师资格考试大纲（2025年版，2026年继续使用）组织科目。题库为原创模拟练习，医学综合考试官方题型包括 A1、A2、A3/A4、B1；不冒充历年真题。
       </div>
+      <Link href="/academy/resources?group=clinical-physician" className="mx-3 mt-3 block rounded-xl border border-emerald-200 bg-white px-4 py-3 text-sm font-semibold text-emerald-800">
+        临床执业医师 / 助理医师 · 历年真题与解析 ›
+      </Link>
 
       {topTab === "bank" ? (
         <>

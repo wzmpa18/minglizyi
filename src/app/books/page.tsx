@@ -1,5 +1,6 @@
 "use client";
 import {InterfaceButton} from "@/components/InterfaceControls";
+import Link from "next/link";
 import { SectionGate } from "@/components/SectionGate";
 
 import { useEffect, useMemo, useState } from "react";
@@ -72,8 +73,8 @@ function BooksContent() {
             当前收录 {catalogue.books.length} 部典籍资料，可离线阅读和连续听学。各书来源与收录范围见阅读页；篇章检查不等于逐字校勘。
           </p>
           <div className="mt-3 grid grid-cols-2 gap-2">
-            <a href="/zhongyi/classic" className="rounded-xl border border-purple-100 bg-purple-50 p-3 text-center text-xs font-semibold text-purple-800">中医典籍库</a>
-            <a href="/yixue/learn" className="rounded-xl border border-purple-100 bg-purple-50 p-3 text-center text-xs font-semibold text-purple-800">易学典籍库</a>
+            <Link href="/zhongyi/classic" className="rounded-xl border border-purple-100 bg-purple-50 p-3 text-center text-xs font-semibold text-purple-800">中医典籍库</Link>
+            <Link href="/yixue/learn" className="rounded-xl border border-purple-100 bg-purple-50 p-3 text-center text-xs font-semibold text-purple-800">易学典籍库</Link>
           </div>
         </section>
 
