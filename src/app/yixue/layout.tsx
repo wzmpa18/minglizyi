@@ -6,7 +6,7 @@ import { YIXUE_TOOLS } from "@/lib/toolNavData";
 
 export const metadata: Metadata = {
   title: "易学排盘工具大全——八字紫微奇门六爻在线排盘",
-  description: "言道国学易学工具中心：一站式提供八字排盘、紫微斗数、奇门遁甲、六爻起卦、梅花易数、大六壬、七政四余、玄空飞星等传统易学在线排盘工具，附万年历、老黄历、择日、罗盘等历法风水查询，功能免费使用，基于传统典籍整理，适合易学爱好者学习参考。",
+  description: "言道国学易学工具中心：一站式提供八字排盘、紫微斗数、奇门遁甲、六爻起卦、梅花易数、大六壬、七政四余、玄空飞星等传统易学在线排盘工具，附万年历、老黄历、择日、罗盘等历法风水查询。基础工具可免费体验，AI讲解等按会员权益开放，适合传统文化学习参考。",
 };
 
 export default function YixueLayout({ children }: { children: React.ReactNode }) {
@@ -21,7 +21,7 @@ export default function YixueLayout({ children }: { children: React.ReactNode })
         <div className="rounded-2xl bg-white p-4 shadow-sm">
           <h2 className="mb-1.5 text-[15px] font-bold text-gray-800">全部易学工具导航</h2>
           <p className="mb-3 text-[11.5px] leading-relaxed text-gray-500">
-            言道国学易学工具中心：一站式提供八字排盘、紫微斗数、奇门遁甲、六爻起卦、梅花易数、大六壬、七政四余、玄空飞星等传统易学在线排盘工具，附万年历、老黄历、择日、罗盘等历法风水查询，全部免费使用。
+            言道国学易学工具中心：一站式提供八字排盘、紫微斗数、奇门遁甲、六爻起卦、梅花易数、大六壬、七政四余、玄空飞星等传统易学在线排盘工具，附万年历、老黄历、择日、罗盘等历法风水查询。基础工具可免费体验；AI讲解等按会员权益和额度使用。
           </p>
           <div className="grid grid-cols-2 gap-1.5">
             {YIXUE_TOOLS.map((t) => (
