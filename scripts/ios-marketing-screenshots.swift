@@ -100,6 +100,13 @@ final class GuoxueStudyMarketing: XCTestCase {
         app.launchArguments += ["-AppleLanguages","(zh-Hans)","-AppleLocale","zh_CN","--qa-marketing-auth"]
         app.launchEnvironment["GUOXUE_QA_SESSION_B64"]=session
         app.launch()
+        home(app)
+        tap("易学排盘",app)
+        let bazi=app.links.matching(NSPredicate(format:"label CONTAINS %@","八字排盘")).firstMatch
+        let ziwei=app.links.matching(NSPredicate(format:"label CONTAINS %@","紫微斗数")).firstMatch
+        XCTAssertTrue(bazi.waitForExistence(timeout:30) && ziwei.waitForExistence(timeout:30),"The actual iOS build must expose the yixue chart tools")
+        reveal(ziwei,app)
+        shot("yixue-tools","易学排盘工具总览",app)
         medical(app)
         reveal(app.links.matching(NSPredicate(format:"label CONTAINS %@","倪师自学专区")).firstMatch,app)
         shot("medical-home","中医学习首页",app)
