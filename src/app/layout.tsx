@@ -30,10 +30,10 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://yandaoguoxue.yandao.vip"),
   alternates: { canonical: "./" },
   title: {
-    default: "言道国学——八字紫微奇门六爻免费在线排盘与国学学习平台",
+    default: "言道国学｜免费医考学习、中医古籍与八字紫微奇门排盘",
     template: "%s｜言道国学",
   },
-  description: "言道国学提供八字、紫微斗数、奇门遁甲、六爻、七政四余、玄空飞星等免费在线排盘工具，附万年历、老黄历、中医典籍与学习题库，基于传统典籍整理，适合国学爱好者学习参考。",
+  description: "免费阅读临床执业医师与助理医师2020—2025年真题及解析，学习黄帝内经、伤寒论、中药方剂与经络穴位；体验八字、紫微斗数、奇门遁甲、六爻和七政四余等传统排盘。会员AI讲解按每日额度使用。",
 };
 
 // v25.0.47 原生内置资源模式：构建时读取 API 改写脚本源码（单一事实源 public/native-api-patch.js）
