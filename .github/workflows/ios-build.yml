@@ -18,6 +18,11 @@ name: iOS Build (ipa)
 # 流程：未签名归档（CODE_SIGNING_ALLOWED=NO）→ 导入 keychain+profile →
 #   exportArchive manual signing（provisioningProfiles 指定）→ 可选 altool 上传 TestFlight
 on:
+  push:
+    branches:
+      - codex/ios-store-25-0-124
+    paths:
+      - '.github/workflows/ios-build.yml'
   workflow_dispatch:
     inputs:
       verify_credentials_only:
@@ -47,7 +52,7 @@ permissions:
 
 jobs:
   upload-verified:
-    if: ${{ !inputs.verify_credentials_only && inputs.upload_existing_run != '' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && !inputs.verify_credentials_only && inputs.upload_existing_run != '' }}
     uses: ./.github/workflows/ios-upload-verified.yml
     with:
       build_run_id: ${{ inputs.upload_existing_run }}
@@ -59,7 +64,7 @@ jobs:
     uses: ./.github/workflows/ios-api-credential-check.yml
     secrets: inherit
   build:
-    if: ${{ !inputs.verify_credentials_only && inputs.upload_existing_run == '' }}
+    if: ${{ github.event_name == 'push' || (!inputs.verify_credentials_only && inputs.upload_existing_run == '') }}
     name: Archive & Export
     runs-on: macos-15
     timeout-minutes: 60
@@ -69,7 +74,7 @@ jobs:
       TEAM_ID: WM586465ZD
       APP_NAME: 言道国学
       BUNDLE_ID: com.yandaoguoxue.app
-      RELEASE_BUILD: ${{ inputs.release_build || '8' }}
+      RELEASE_BUILD: ${{ inputs.release_build || (github.event_name == 'push' && '70') || '8' }}
       PROFILE_NAME: yandao guoxue Calendar Full 20261019
 
     steps:
@@ -140,7 +145,7 @@ jobs:
 
       # TestFlight 上传需要 ASC API 密钥（altool 从 ~/private_keys/ 读取）
       - name: Write API key
-        if: inputs.upload_testflight
+        if: github.event_name == 'push' || inputs.upload_testflight
         env:
           ASC_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
           ASC_ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
@@ -284,7 +289,7 @@ jobs:
           retention-days: 14
 
       - name: Upload to TestFlight
-        if: steps.creds.outputs.mode == 'signed' && steps.export.outcome == 'success' && inputs.upload_testflight
+        if: steps.creds.outputs.mode == 'signed' && steps.export.outcome == 'success' && (github.event_name == 'push' || inputs.upload_testflight)
         run: |
           IPA=$(ls "$RUNNER_TEMP/export/"*.ipa | head -1)
           # Xcode 16 altool 参数为驼峰格式：--apiKey / --apiIssuer（--api-issuer 会被当作未知项忽略）
@@ -312,7 +317,7 @@ jobs:
           echo "- Bundle: $BUNDLE_ID" >> $GITHUB_STEP_SUMMARY
           echo "- 资源: 原生内置 (API 改写到 https://yandaoguoxue.yandao.vip)" >> $GITHUB_STEP_SUMMARY
           if [ "${{ steps.creds.outputs.mode }}" = "signed" ] && [ "${{ steps.export.outcome }}" = "success" ]; then
-            echo "- 产物: 签名 ipa（manual 签名；TestFlight 上传: ${{ inputs.upload_testflight }}）" >> $GITHUB_STEP_SUMMARY
+            echo "- 产物: 签名 ipa（manual 签名；TestFlight 上传: ${{ github.event_name == 'push' || inputs.upload_testflight }}）" >> $GITHUB_STEP_SUMMARY
           elif [ "${{ steps.creds.outputs.mode }}" = "signed" ]; then
             echo "- 产物: 未签名 xcarchive（exportArchive 失败已降级，见 Export ipa 步骤日志）" >> $GITHUB_STEP_SUMMARY
             echo "- 常见根因：profile 与 Bundle ID 不匹配 / .p12 密码错误 / 证书过期" >> $GITHUB_STEP_SUMMARY
