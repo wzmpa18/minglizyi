@@ -82,7 +82,7 @@ jobs:
           npm run build
           mkdir -p www
           cp -R out/. www/
-          node scripts/write-native-marker.js
+          node scripts/verify-static-cache-boundary.cjs
           npx cap sync ios
           gem install xcodeproj -v 1.28.1 --no-document
           ruby scripts/ios-marketing-proof.rb
