@@ -12,7 +12,7 @@ const context = {
   sameSourceChecksPassed: true,
   action: 'assemble'
 };
-if (process.env.GITHUB_ACTIONS !== 'true' || process.env.GITHUB_REF_NAME !== 'codex/ios-store-25-0-124') throw Error('Expected the release job after navigation regression');
+if (process.env.GITHUB_ACTIONS !== 'true' || process.env.GITHUB_REF_NAME !== 'codex/ios-chart-navigation-fix-71') throw Error('Expected the release job after navigation regression');
 const { api } = createClient({ mutations: true, reviewContext: context });
 const relation = (type, id) => ({ data: { type, id } });
 const get = async url => (await api('GET', url)).data;
@@ -43,6 +43,22 @@ async function verifiedReviewer(versionPath, versions) {
   else await write('POST', '/v1/appStoreReviewDetails', { type: 'appStoreReviewDetails', attributes, relationships: { appStoreVersion: relation('appStoreVersions', id) } });
 }
 
+async function validUploadedBuild() {
+  const sleep = seconds => new Promise(resolve => setTimeout(resolve, seconds * 1000));
+  const endpoint = '/v1/builds?filter[app]=' + info.appId + '&filter[version]=' + info.build + '&include=preReleaseVersion&limit=50';
+  for (let attempt = 0; attempt < 56; attempt++) {
+    const result = await api('GET', endpoint);
+    const versions = (result.included || []).filter(v => v.type === 'preReleaseVersions' && v.attributes.platform === 'IOS' && v.attributes.version === info.version);
+    const builds = result.data.filter(b => versions.some(v => v.id === b.relationships.preReleaseVersion?.data?.id));
+    if (builds.length > 1) throw Error('Multiple builds match the verified candidate');
+    const build = builds[0];
+    if (build?.attributes.expired || ['FAILED', 'INVALID'].includes(build?.attributes.processingState)) throw Error('Apple could not process the corrected build');
+    if (build?.attributes.processingState === 'VALID') return build;
+    await sleep(30);
+  }
+  throw Error('Apple has not finished processing corrected build ' + info.build);
+}
+
 async function submit() {
   const app = await get('/v1/apps/' + info.appId);
   if (app.attributes.bundleId !== info.bundleId) throw Error('Wrong application');
@@ -55,8 +71,7 @@ async function submit() {
     return;
   }
   if (!editable.includes(version.attributes.appStoreState)) throw Error('Version not editable: ' + version.attributes.appStoreState);
-  const linked = await get(versionPath + '/build');
-  if (linked.attributes.version !== info.build || linked.attributes.processingState !== 'VALID' || linked.attributes.expired) throw Error('Linked build failed verification');
+  const verified = await validUploadedBuild();
   const locales = await get(versionPath + '/appStoreVersionLocalizations?limit=50');
   for (const locale of ['zh-Hans', 'en-US']) {
     const loc = locales.find(l => l.attributes.locale === locale);
@@ -76,6 +91,10 @@ async function submit() {
   let review = drafts[0];
   const reviewItems = async () => (await get('/v1/reviewSubmissions/' + review.id + '/items?limit=50')).filter(i => i.attributes?.state !== 'REMOVED');
   if (review && (await reviewItems()).some(i => i.relationships.appStoreVersion?.data?.id !== id)) throw Error('The existing draft contains a different item');
+  const linkedPath = versionPath + '/relationships/build';
+  const linked = await get(linkedPath);
+  if (linked?.id !== verified.id) await write('PATCH', linkedPath, { type: 'builds', id: verified.id });
+  if ((await get(linkedPath))?.id !== verified.id) throw Error('Apple did not link the new build');
   await verifiedReviewer(versionPath, versions);
   if (!review) review = await write('POST', '/v1/reviewSubmissions', { type: 'reviewSubmissions', attributes: { platform: 'IOS' }, relationships: { app: relation('apps', info.appId) } });
   if (!(await reviewItems()).some(i => i.relationships.appStoreVersion?.data?.id === id)) {
