@@ -5,6 +5,7 @@ on:
       - codex/baidu-store-2161
     paths:
       - '.github/workflows/android-learning-marketing.yml'
+      - 'scripts/AndroidLearningMarketingTest.java'
   workflow_dispatch:
     inputs:
       application_source:

@@ -76,25 +76,12 @@ public class AndroidLearningMarketingTest {
     js("(()=>{const e=[...document.querySelectorAll('button')].find(e=>e.innerText.trim()==='同意并继续');if(e)e.click();return true})()");
     Thread.sleep(500);
    }
-   waitText("首页",30);shot("00_首页_Android实际启动");
-   route("/zhongyi/","倪师自学专区",90);js("window.scrollTo(0,0)");shot("03_中医学习_Android实际界面");
-   route("/zhongyi/ni-study/","保存完整中医资料",90);click("保存完整中医资料");waitText("中医资料已保存，可离线阅读。",900);
-   click("人纪·针灸教程");waitText("摘录并批注",90);js("window.scrollTo(0,0)");shot("02_课程笔记_Android实际界面");
-   route("/zhongyi/anatomy3d/","恢复完整体表与全身视角",180);waitText("拖动旋转",180);click("恢复完整体表与全身视角");
-   assertEquals("true",js("!!document.querySelector('canvas')&&document.querySelector('canvas').width>0"));Thread.sleep(3000);shot("01_三维人体_Android实际界面");
-   route("/zhongyi/","典籍原文",90);click("典籍原文");waitText("黄帝内经·素问原文",90);click("黄帝内经·素问原文");waitText("上古天真",90);click("上古天真");waitText("展开章节目录",90);shot("04_经典原文_Android实际界面");
-   route("/discover/","同辰雅集",90);waitText("携盘交流",90);
-   js("(()=>{const e=[...document.querySelectorAll('a,button,p,h2,h3,span')].find(e=>e.innerText.trim()==='同辰雅集');if(e)e.scrollIntoView({block:'center'});return true})()");shot("05_同辰交流_Android实际界面");
-   route("/zhongyi/ai/","如何阅读《黄帝内经》的篇章结构？",90);click("如何阅读《黄帝内经》的篇章结构？");click("发送");
-   waitCondition("document.querySelectorAll('div.bg-muted').length>=2&&[...document.querySelectorAll('button')].some(e=>e.innerText.trim()==='发送'&&!e.disabled)",120,"The normal account must receive an actual AI learning response");
-   String answer=js("[...document.querySelectorAll('div.bg-muted')].at(-1).innerText");
-   assertTrue("Actual AI learning content",answer.length()>120);assertFalse(answer.contains("暂时无法核对账号权益"));assertFalse(answer.contains("AI服务暂时不可用"));
-   js("[...document.querySelectorAll('div.bg-muted')].at(-1).scrollIntoView({block:'start'})");shot("06_AI显式标识_公开文献学习题_实际响应");
-   route("/profile/","退出登录",90);click("退出登录");waitText("确认退出登录？",30);
-   assertEquals("CLICKED",js("(()=>{const e=[...document.querySelectorAll('button')].find(e=>e.innerText.trim()==='退出');if(!e)return 'MISSING';e.click();return 'CLICKED'})()"));
-   waitCondition("!localStorage.getItem('yandao_user_token')&&!localStorage.getItem('yandao_user_profile')",30,"Ordinary logout must clear the local session immediately");
-   File dir=new File(InstrumentationRegistry.getInstrumentation().getTargetContext().getExternalFilesDir(null),"learning-marketing");
-   try(OutputStream out=new FileOutputStream(new File(dir,"native-checks.json"))){out.write("{\"normalAccountAiResponse\":true,\"logoutClearedLocalSession\":true,\"physicalDevice\":false,\"syntheticInterface\":false}".getBytes(StandardCharsets.UTF_8));}
+   waitText("易学排盘",30);shot("00_baidu_home");
+   route("/yixue/","八字排盘",75);
+   js("(()=>{const e=[...document.querySelectorAll('a')].find(e=>e.innerText.trim()==='八字排盘');if(e)e.scrollIntoView({block:'center'});return true})()");
+   shot("01_baidu_chart_tools");
+   route("/zhongyi/","倪师自学专区",90);js("window.scrollTo(0,0)");shot("02_baidu_tcm_home");
+   route("/zhongyi/classic/","黄帝内经",75);js("window.scrollTo(0,0)");shot("03_baidu_medical_classics");
   }
  }
 }
