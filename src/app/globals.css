@@ -573,6 +573,10 @@ body.modal-open.nav-hide #app-bottom-nav {
   #app-bottom-nav {
     display: none !important;
   }
+
+  .chart-date-picker-overlay {
+    bottom: 0;
+  }
 }
 
 /* P1-REOPEN: 规范关闭按钮32px视觉 + 44px点击热区（不可见扩展） */
