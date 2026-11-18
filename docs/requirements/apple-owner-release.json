@@ -5,8 +5,8 @@
   "appId": "6807592575",
   "bundleId": "com.yandaoguoxue.app",
   "version": "25.0.124",
-  "build": "70",
-  "candidateSource": "a792b112492747bc7c3db6bc062328311769bb15",
+  "build": "71",
+  "candidateSource": "6b441dec47aeec105115eba161128c6f2fd3187f",
   "authorizationBasis": "2026-10-30负责人明确撤回旧候选，统一最新隐私与AI标识包及完整学习介绍，保留原八项内购；实际验证后才替换，不冒称全部验收。",
   "ci": {
     "quality": 40997859674,
