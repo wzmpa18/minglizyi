@@ -23,6 +23,17 @@ on:
       - codex/ios-store-25-0-124
     paths:
       - '.github/workflows/ios-build.yml'
+  workflow_call:
+    inputs:
+      release_build:
+        type: string
+        required: true
+      upload_testflight:
+        type: boolean
+        required: true
+      application_source:
+        type: string
+        required: true
   workflow_dispatch:
     inputs:
       verify_credentials_only:
@@ -80,6 +91,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.application_source || github.sha }}
 
       - name: Read canonical release version
         run: |
