@@ -1,0 +1,32 @@
+name: Resume App Store review for verified Guoxue build 71
+on:
+  push:
+    branches: [codex/ios-chart-navigation-fix-71]
+    paths:
+      - '.github/workflows/ios-guoxue-resume-71.yml'
+      - 'scripts/asc-submit-guoxue-124.cjs'
+permissions:
+  contents: read
+  actions: read
+concurrency: guoxue-ios-25-0-124-app-review
+jobs:
+  resume-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify the completed iPhone, iPad and signed upload checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/44318400002/jobs?per_page=50" | jq -e '
+            any(.jobs[]; .id == 134850526055 and .conclusion == "success") and
+            any(.jobs[]; .id == 134862070405 and .conclusion == "success" and
+              any(.steps[]; .name == "Verify signed IPA identity and version" and .conclusion == "success") and
+              any(.steps[]; .name == "Upload to TestFlight" and .conclusion == "success"))'
+      - name: Resume Apple review without rebuilding or uploading
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+        run: node scripts/asc-submit-guoxue-124.cjs
