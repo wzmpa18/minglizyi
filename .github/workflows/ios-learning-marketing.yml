@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - codex/tencent-store-compliance
-      - codex/ios-store-25-0-124
+      - codex/ios-chart-navigation-fix-71
     paths:
       - '.github/workflows/ios-learning-marketing.yml'
       - 'scripts/ios-marketing-screenshots.swift'
@@ -27,12 +27,13 @@ on:
         default: ''
 permissions:
   contents: read
+  actions: read
 jobs:
   marketing:
     runs-on: macos-15
     timeout-minutes: 45
     env:
-      PINNED_APPLICATION_SOURCE: ${{ inputs.application_source || (github.ref_name == 'codex/ios-store-25-0-124' && '7a3d0d6e8b4a2c76cb8ad7835cf6bd6a11fa6f4c') || github.sha }}
+      PINNED_APPLICATION_SOURCE: ${{ inputs.application_source || (github.ref_name == 'codex/ios-chart-navigation-fix-71' && '6b441dec47aeec105115eba161128c6f2fd3187f') || github.sha }}
       QA_SOURCE: ${{ github.sha }}
       NEXT_PUBLIC_STORE_CHANNEL: ios-full-learning
       GEM_HOME: /tmp/guoxue-marketing-gems
@@ -45,7 +46,7 @@ jobs:
           path: qa-source
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.application_source || (github.ref_name == 'codex/ios-store-25-0-124' && '7a3d0d6e8b4a2c76cb8ad7835cf6bd6a11fa6f4c') || github.sha }}
+          ref: ${{ inputs.application_source || (github.ref_name == 'codex/ios-chart-navigation-fix-71' && '6b441dec47aeec105115eba161128c6f2fd3187f') || github.sha }}
           path: app-source
       - uses: actions/setup-node@v4
         with:
@@ -104,15 +105,24 @@ jobs:
             xcodebuild test -only-testing:GuoxueStudyUITests/GuoxueStudyMarketing/testReopenChartsAfterReturningHome -project ios/App/App.xcodeproj -scheme GuoxueScreenshots -configuration Debug -destination "id=$MODEL" -parallel-testing-enabled NO -derivedDataPath "$RUNNER_TEMP/guoxue-marketing-build" -resultBundlePath "$RUNNER_TEMP/chart-navigation-$kind.xcresult" CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO
             xcrun simctl shutdown "$MODEL"
           done
-  submit-guoxue-update:
-    if: github.event_name == 'push' && github.ref_name == 'codex/ios-store-25-0-124'
+  build-guoxue-update:
+    if: github.event_name == 'push' && github.ref_name == 'codex/ios-chart-navigation-fix-71'
     needs: marketing
+    uses: ./.github/workflows/ios-build.yml
+    with:
+      release_build: '71'
+      upload_testflight: true
+      application_source: '6b441dec47aeec105115eba161128c6f2fd3187f'
+    secrets: inherit
+  submit-guoxue-update:
+    if: github.event_name == 'push' && github.ref_name == 'codex/ios-chart-navigation-fix-71'
+    needs: build-guoxue-update
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 35
     concurrency: guoxue-ios-25-0-124-app-review
     steps:
       - uses: actions/checkout@v4
-      - name: Submit the verified, linked build 70 once and read back Apple's receipt
+      - name: Submit the verified, corrected build 71 once and read back Apple's receipt
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
