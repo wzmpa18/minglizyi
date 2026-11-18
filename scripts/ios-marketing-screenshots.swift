@@ -102,8 +102,14 @@ final class GuoxueStudyMarketing: XCTestCase {
         app.launch()
         home(app)
         for tool in ["八字排盘", "紫微斗数", "八字排盘", "紫微斗数"] {
-            tap("易学排盘", app)
-            tap(tool, app)
+            let chartBar = app.links.matching(NSPredicate(format: "label == %@", "易学排盘")).firstMatch
+            XCTAssertTrue(chartBar.waitForExistence(timeout: 45), "The home chart entry must return after leaving the form")
+            reveal(chartBar, app)
+            chartBar.tap()
+            let chart = app.links.matching(NSPredicate(format: "label CONTAINS %@", tool)).firstMatch
+            XCTAssertTrue(chart.waitForExistence(timeout: 45), "The requested chart link must be reachable")
+            reveal(chart, app)
+            chart.tap()
             let input = app.buttons["排盘"].firstMatch
             XCTAssertTrue(input.waitForExistence(timeout: 30), "The chart form must open on every visit")
             tab("首页", app)
