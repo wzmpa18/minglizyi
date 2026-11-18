@@ -96,7 +96,9 @@ final class GuoxueStudyMarketing: XCTestCase {
     func testReopenChartsAfterReturningHome() {
         continueAfterFailure = false
         let app = XCUIApplication()
-        app.launchArguments += ["-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
+        guard let session = ProcessInfo.processInfo.environment["GUOXUE_QA_SESSION_B64"], !session.isEmpty else { XCTFail("Existing QA session unavailable"); return }
+        app.launchArguments += ["-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN", "--qa-marketing-auth"]
+        app.launchEnvironment["GUOXUE_QA_SESSION_B64"] = session
         app.launch()
         home(app)
         for tool in ["八字排盘", "紫微斗数", "八字排盘", "紫微斗数"] {

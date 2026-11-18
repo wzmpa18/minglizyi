@@ -1,0 +1,31 @@
+name: Prepare Guoxue App Store 25.0.124 metadata
+on:
+  push:
+    branches:
+      - codex/ios-store-25-0-124
+    paths:
+      - '.github/workflows/guoxue-store-25-0-124.yml'
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: guoxue-store-25-0-124
+  cancel-in-progress: false
+jobs:
+  prepare:
+    timeout-minutes: 12
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: real-ios-latest-learning-marketing
+          path: store-proof
+          run-id: '44275328267'
+          github-token: ${{ github.token }}
+      - name: Upload real device-size screenshots and store copy to the editable draft
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+        run: node scripts/asc-guoxue-124-draft.cjs
