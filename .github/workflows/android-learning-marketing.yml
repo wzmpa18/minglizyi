@@ -51,9 +51,9 @@ jobs:
           python3 - <<'PY'
           import json,os,pathlib,subprocess,re
           source=os.environ['PINNED_APPLICATION_SOURCE']
-          assert json.loads(pathlib.Path('package.json').read_text())['version'].lstrip('v')=='25.0.122'
-          code=int(re.search(r'versionCode\s+(\d+)\b',pathlib.Path('android/app/build.gradle').read_text())[1]);assert code>=2155
-          data={'source':source,'version':'25.0.122','versionCode':code,'storeChannel':'appchina','nativeAndroid':True,'physicalDevice':False,'syntheticInterface':False,'authMethod':'ordinary backend login; no entitlement changes','srcTree':subprocess.check_output(['git','rev-parse',source+':src'],text=True).strip(),'publicTree':subprocess.check_output(['git','rev-parse',source+':public'],text=True).strip()}
+          version=json.loads(pathlib.Path('package.json').read_text())['version'].lstrip('v'); channel=os.environ['NEXT_PUBLIC_STORE_CHANNEL']; assert version==('25.0.123' if channel=='baidu' else '25.0.122')
+          code=int(re.search(r'versionCode\s+(\d+)\b',pathlib.Path('android/app/build.gradle').read_text())[1]);assert (code==2161 if channel=='baidu' else code>=2155)
+          data={'source':source,'version':version,'versionCode':code,'storeChannel':channel,'nativeAndroid':True,'physicalDevice':False,'syntheticInterface':False,'authMethod':'ordinary backend login; no entitlement changes','srcTree':subprocess.check_output(['git','rev-parse',source+':src'],text=True).strip(),'publicTree':subprocess.check_output(['git','rev-parse',source+':public'],text=True).strip()}
           pathlib.Path(os.environ['RUNNER_TEMP'],'actual-android-learning-marketing','source.json').write_text(json.dumps(data,indent=2))
           PY
       - run: npm ci --legacy-peer-deps
