@@ -120,6 +120,15 @@ async function submit() {
 
 submit().catch(error => {
   console.error(error.message);
-  if (error.details) console.error(JSON.stringify(error.details.map(d => ({ code: d.code, title: d.title, pointer: d.source?.pointer }))));
+  if (error.details) {
+    const sanitize = e => ({ code: e.code, title: e.title, pointer: e.source?.pointer });
+    console.error(JSON.stringify(error.details.map(d => ({
+      ...sanitize(d),
+      associatedErrors: Object.entries(d.associatedErrors || {}).map(([resource, errors]) => ({
+        resourceType: resource.split('/').filter(Boolean)[1],
+        errors: Array.isArray(errors) ? errors.map(sanitize) : []
+      }))
+    }))));
+  }
   process.exitCode = 1;
 });
