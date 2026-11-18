@@ -369,8 +369,8 @@ export default function DatePicker({
   const handleSubmit=()=>performSubmit(false);
 
   // P1-6: 统一滚动锁 + P1-7: 弹窗返回拦截
-  // P1-REOPEN: 排盘弹窗保留底部导航栏（hideNav:false）+ 弹窗整体上移 56px 避让，
-  // 弹窗不再遮挡导航栏，导航栏保持可见可点击
+  // Keep the entire overlay above the bottom navigation so it can receive taps.
+  // The navigation hides in short viewports while the software keyboard is open.
   useBodyScrollLock(show, { hideNav: false });
   usePopupBackHandler(onClose, show);
 
@@ -414,8 +414,8 @@ export default function DatePicker({
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex justify-center"
-      style={{ paddingTop: "max(44px, env(safe-area-inset-top))", paddingBottom: "56px", alignItems: "flex-start" }}
+      className="chart-date-picker-overlay bottom-action-clear-nav fixed inset-x-0 top-0 z-[9999] flex items-start justify-center"
+      style={{ paddingTop: "max(44px, env(safe-area-inset-top))" }}
     >
       {/* 遮罩层 - 独立div确保点击可关闭 */}
       <div
@@ -425,7 +425,7 @@ export default function DatePicker({
       {/* v25.0.30（P8-1 弹窗规范）：屏幕居中偏上 + 80vh 上限 + 内容内滚（原底部形态改居中偏上口径） */}
       <div
         className="relative w-[calc(100%-16px)] max-w-[390px] rounded-2xl bg-white shadow-2xl"
-        style={{ maxHeight: "calc(100dvh - 108px)", overflowY: "auto" }}
+        style={{ maxHeight: "100%", overflowY: "auto" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* 标题栏 - 右上角×关闭按钮（对标吉时雨 closeBtn: 1） */}
