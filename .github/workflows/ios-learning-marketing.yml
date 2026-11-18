@@ -6,6 +6,7 @@ on:
       - codex/ios-store-25-0-124
     paths:
       - '.github/workflows/ios-learning-marketing.yml'
+      - 'scripts/ios-marketing-screenshots.swift'
       - 'package.json'
       - 'package-lock.json'
       - 'ios/App/App.xcodeproj/project.pbxproj'
@@ -103,3 +104,17 @@ jobs:
             xcodebuild test -only-testing:GuoxueStudyUITests/GuoxueStudyMarketing/testReopenChartsAfterReturningHome -project ios/App/App.xcodeproj -scheme GuoxueScreenshots -configuration Debug -destination "id=$MODEL" -parallel-testing-enabled NO -derivedDataPath "$RUNNER_TEMP/guoxue-marketing-build" -resultBundlePath "$RUNNER_TEMP/chart-navigation-$kind.xcresult" CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO
             xcrun simctl shutdown "$MODEL"
           done
+  submit-guoxue-update:
+    if: github.event_name == 'push' && github.ref_name == 'codex/ios-store-25-0-124'
+    needs: marketing
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    concurrency: guoxue-ios-25-0-124-app-review
+    steps:
+      - uses: actions/checkout@v4
+      - name: Submit the verified, linked build 70 once and read back Apple's receipt
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+        run: node scripts/asc-submit-guoxue-124.cjs

@@ -1,12 +1,12 @@
 {
   "scope": "owner-channel-specific-authorization",
   "date": "2026-10-30",
-  "ownerInstruction": "你完成这些已经可以的商店就可以了，其他的等资质通过再弄，完成苹果的提交啊！2026-10-23追加：安全评估通过，把所有应用商店重新上传，需要恢复所有功能；各商店核对退回并解决。 2026-10-24最新直接要求：全部重新上传最新的，等待审核就撤回！重新上传资料，布局最新的营销资料信息和介绍！之前的旧版就需要作废！ 2026-10-30负责人再次明确：全部最新在审，可撤回的撤回提交最新，介绍备注完整说明学习和医药文献范围，继续完成苹果的提交。",
+  "ownerInstruction": "完成苹果的提交。用户原话：你上传了就需要送审啊",
   "appId": "6807592575",
   "bundleId": "com.yandaoguoxue.app",
-  "version": "25.0.122",
-  "build": "67",
-  "candidateSource": "57ef82526af0b5869237e7a1befd97595de50d41",
+  "version": "25.0.124",
+  "build": "70",
+  "candidateSource": "a792b112492747bc7c3db6bc062328311769bb15",
   "authorizationBasis": "2026-10-30负责人明确撤回旧候选，统一最新隐私与AI标识包及完整学习介绍，保留原八项内购；实际验证后才替换，不冒称全部验收。",
   "ci": {
     "quality": 40997859674,
@@ -23,7 +23,6 @@
     "preserveExistingPendingIapVersions": true
   },
   "actions": [
-    "withdraw-existing",
     "assemble",
     "submit"
   ],
@@ -50,6 +49,5 @@
   "qualityWorkflowSource": "57ef82526af0b5869237e7a1befd97595de50d41",
   "marketingFile": "docs/marketing/20261030/apple-122-learning-release.json",
   "screenshotArtifactId": 12953715176,
-  "screenshotManifestSha256": "0db60c1746ce4d6778ff7c7cfd4a3127e45320a7a92c9d0dfafd94efa1c3a3eb",
-  "buildId": "4ffca402-b40f-4f20-ad2d-f93022115deb"
+  "screenshotManifestSha256": "0db60c1746ce4d6778ff7c7cfd4a3127e45320a7a92c9d0dfafd94efa1c3a3eb"
 }
