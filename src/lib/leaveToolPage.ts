@@ -1,52 +1,29 @@
 "use client";
 
-/**
- * 工具页统一离页导航（P1-REOPEN）
- *
- * 背景：工具页返回若一律 router.push("/yixue")，历史栈会累积重复条目，
- * 用户在列表页再按返回会重新落回工具页弹窗，形成"列表↔工具"ping-pong，
- * 永远退不出去（违反"无循环跳转"审计项）。
- *
- * 策略：Next.js App Router 会在 history.state.idx 记录当前条目序号。
- *   - idx > 0：说明列表页在历史栈下方，router.back() 一次即干净回到列表，栈不留重复
- *   - idx 缺失或为 0：说明工具页是直接进入（分享链接/PWA 直达），栈下没有列表，
- *     此时才 router.push("/yixue") 兜底
- */
-import { useRouter } from "next/navigation";
+import type { useRouter } from "next/navigation";
 
-export function leaveToolPage(router: ReturnType<typeof useRouter>) {
+type ToolRouter = Pick<ReturnType<typeof useRouter>, "replace">;
+
+export function leaveToolPage(router: ToolRouter) {
   if (typeof window === "undefined") return;
-  const state = window.history.state as { idx?: number } | null;
-  if (state && typeof state.idx === "number" && state.idx > 0) {
-    router.back();
-  } else {
-    router.push("/yixue");
-  }
+  const path = window.location.pathname.replace(/\/$/, "");
+  if (!path.startsWith("/yixue/")) return;
+
+  // App Router does not expose the previous entry or a reliable history index.
+  router.replace("/yixue/");
 }
 
-/**
- * 关闭“首次进入工具即打开”的输入弹窗。
- * 系统返回/右滑已经弹掉了 popup 垫层，此时再退一级即可回到真实上一页；
- * 点击遮罩或关闭按钮时 popup 垫层仍在，需要一次跨过 popup 与工具页。
- */
-export function closeInitialToolPopup(
-  router: ReturnType<typeof useRouter>,
-  reason?: "back",
-) {
+export function closeInitialToolPopup(router: ToolRouter, reason?: "back") {
   if (typeof window === "undefined") return;
-  if (reason === "back") {
-    leaveToolPage(router);
-    return;
+  const path = window.location.pathname.replace(/\/$/, "");
+  if (!path.startsWith("/yixue/")) return;
+
+  // On popstate the popup entry has already been removed. An explicit close
+  // leaves through the router, so popup cleanup must not queue another back.
+  if (reason !== "back" && window.history.state?.__popup === "1") {
+    window.__skipPopupCleanup = true;
   }
-  const state = window.history.state as { idx?: number; __popup?: string } | null;
-  window.__skipPopupCleanup = true;
-  if (state?.__popup === "1" && typeof state.idx === "number" && state.idx > 0) {
-    window.history.go(-2);
-  } else if (state && typeof state.idx === "number" && state.idx > 0) {
-    router.back();
-  } else {
-    router.replace("/yixue");
-  }
+  leaveToolPage(router);
 }
 
 /**

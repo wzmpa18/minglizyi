@@ -93,6 +93,24 @@ final class GuoxueStudyMarketing: XCTestCase {
         XCTAssertFalse(fixedTab("我的学习笔记",.staticText))
         XCTAssertTrue(insideContent(CGRect(x:20,y:120,width:400,height:80),screen))
     }
+    func testReopenChartsAfterReturningHome() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchArguments += ["-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
+        app.launch()
+        home(app)
+        for tool in ["八字排盘", "紫微斗数", "八字排盘", "紫微斗数"] {
+            tap("易学排盘", app)
+            tap(tool, app)
+            let input = app.buttons["排盘"].firstMatch
+            XCTAssertTrue(input.waitForExistence(timeout: 30), "The chart form must open on every visit")
+            tab("首页", app)
+            let closed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in !input.exists }, object: app)
+            XCTAssertEqual(XCTWaiter.wait(for: [closed], timeout: 15), .completed)
+        }
+        medical(app)
+    }
+
     func testLatestLearningMarketing() throws{
         continueAfterFailure=false
         guard let session=ProcessInfo.processInfo.environment["GUOXUE_QA_SESSION_B64"],!session.isEmpty else{XCTFail("The normal review session was not forwarded to this isolated test runner");return}

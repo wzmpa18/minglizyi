@@ -167,10 +167,9 @@ export default function BottomNav() {
             key={tab.key}
             href={tab.href}
             onClick={() => {
-              // P1-REOPEN: 仅在弹窗打开时标记跳过垫层清理（无弹窗时设置会残留，
-              // 污染下一个弹窗的正常关闭，导致幽灵历史条目）
-              if (typeof document !== "undefined" && document.body.classList.contains("modal-open")) {
-                (window as unknown as { __skipPopupCleanup?: boolean }).__skipPopupCleanup = true;
+              // Only the active popup entry owns a history cleanup.
+              if (window.history.state?.__popup === "1") {
+                window.__skipPopupCleanup = true;
               }
             }}
             style={{

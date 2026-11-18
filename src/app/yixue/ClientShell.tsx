@@ -62,30 +62,30 @@ export default function YixueClientShell({ children }: { children: React.ReactNo
     setPageTitle("言道易学");
   }, [pathname]);
 
-  // v25.0.44（20260820用户指令）：返回键统一按浏览顺序返回。
-  // 先广播 yixue-back 让工具页收起弹窗（弹窗打开时关闭弹窗）；
-  // 未被消费则：结果页直接返回工具列表（不再重开排盘表单，杜绝"排盘页↔表单弹窗"死循环），
-  // 列表页按历史栈返回（栈不足回主页）。
-  // 弹窗打开时跳离页需设置 __skipPopupCleanup，否则弹窗卸载清理的 history.back() 会撤销本次导航（BottomNav 同款守护）。
   const handleBack = () => {
-    // 弹窗自己持有一个历史垫层。先让浏览器退掉垫层，由弹窗的 popstate
-    // 回调决定“回原盘面”还是“继续退出首次排盘页”，避免页面与弹窗同时返回。
-    if (typeof document !== "undefined" && document.body.classList.contains("modal-open")) {
+    // Ignore a tap handled by a header from the previous route.
+    const currentPath = window.location.pathname.replace(/\/$/, "") || "/";
+    if (currentPath !== normPathname) return;
+
+    // A popup adds its own history entry. Traverse only that entry here.
+    if (window.history.state?.__popup === "1" && document.body.classList.contains("modal-open")) {
       window.history.back();
       return;
     }
+
     window.__yixueBackHandled = false;
     window.dispatchEvent(new CustomEvent("yixue-back"));
-    setTimeout(() => {
-      if (window.__yixueBackHandled) return;
-      if (isToolPage) {
-        leaveToolPage(router);
-      } else if (window.history.length > 1) {
-        router.back();
-      } else {
-        router.push("/");
-      }
-    }, 80);
+    if (window.__yixueBackHandled) return;
+
+    if (isToolPage) {
+      leaveToolPage(router);
+    } else if (currentPath === "/yixue") {
+      router.replace("/");
+    } else if (window.history.length > 1) {
+      router.back();
+    } else {
+      router.replace("/");
+    }
   };
 
   return (
