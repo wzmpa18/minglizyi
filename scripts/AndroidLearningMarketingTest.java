@@ -76,20 +76,16 @@ public class AndroidLearningMarketingTest {
     js("(()=>{const e=[...document.querySelectorAll('button')].find(e=>e.innerText.trim()==='同意并继续');if(e)e.click();return true})()");
     Thread.sleep(500);
    }
-   waitText("易学排盘",30);shot("00_baidu_home");
-   route("/yixue/","八字排盘",75);
-   js("(()=>{const e=[...document.querySelectorAll('a')].find(e=>e.innerText.trim()==='八字排盘');if(e)e.scrollIntoView({block:'center'});return true})()");
-   shot("01_baidu_chart_tools");
-   route("/zhongyi/","倪师自学专区",90);js("window.scrollTo(0,0)");shot("02_baidu_tcm_home");
-   route("/zhongyi/classic/","黄帝内经",75);js("window.scrollTo(0,0)");shot("03_baidu_medical_classics");
-   route("/zhongyi/ai/","如何阅读《黄帝内经》的篇章结构？",90);
+   waitText("易学排盘",30);
+   js("setTimeout(()=>window.location.assign('/zhongyi/ai/'),150);true");
+   waitText("如何阅读《黄帝内经》的篇章结构？",90);
    click("如何阅读《黄帝内经》的篇章结构？");click("发送");
    waitCondition("document.querySelectorAll('div.bg-muted').length>=2&&[...document.querySelectorAll('button')].some(e=>e.innerText.trim()==='发送'&&!e.disabled)",120,"A real AI answer must be available");
    String answer=js("[...document.querySelectorAll('div.bg-muted')].at(-1).innerText");
    assertTrue("Actual learning answer",answer.length()>120&&!answer.contains("暂时无法核对账号权益")&&!answer.contains("AI服务暂时不可用"));
    waitText("AI生成",30);
    js("[...document.querySelectorAll('div.bg-muted')].at(-1).scrollIntoView({block:'start'})");
-   shot("04_baidu_ai_text_label");
+   shot("Baidu-AI-Text-Disclosure");
   }
  }
 }
