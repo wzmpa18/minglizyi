@@ -31,7 +31,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 45
     env:
-      PINNED_APPLICATION_SOURCE: ${{ inputs.application_source || github.sha }}
+      PINNED_APPLICATION_SOURCE: ${{ inputs.application_source || (github.ref_name == 'codex/ios-store-25-0-124' && '7a3d0d6e8b4a2c76cb8ad7835cf6bd6a11fa6f4c') || github.sha }}
       QA_SOURCE: ${{ github.sha }}
       NEXT_PUBLIC_STORE_CHANNEL: ios-full-learning
       GEM_HOME: /tmp/guoxue-marketing-gems
@@ -44,7 +44,7 @@ jobs:
           path: qa-source
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.application_source || github.sha }}
+          ref: ${{ inputs.application_source || (github.ref_name == 'codex/ios-store-25-0-124' && '7a3d0d6e8b4a2c76cb8ad7835cf6bd6a11fa6f4c') || github.sha }}
           path: app-source
       - uses: actions/setup-node@v4
         with:

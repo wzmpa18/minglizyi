@@ -5,6 +5,7 @@ on:
       - codex/ios-store-25-0-124
     paths:
       - '.github/workflows/guoxue-store-25-0-124.yml'
+      - 'scripts/asc-guoxue-124-draft.cjs'
 permissions:
   contents: read
   actions: read

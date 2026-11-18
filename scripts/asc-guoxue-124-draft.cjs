@@ -100,10 +100,31 @@ async function save() {
         if (attempt === 12) throw Error('Apple has not completed image processing: ' + locale + ' ' + group.device);
         await new Promise(resolve => setTimeout(resolve, 5000));
       }
-      console.log(locale + ' ' + group.device + ': two real screenshots verified in App Store Connect');
+      const orderUrl = '/v1/appScreenshotSets/' + set.id + '/relationships/appScreenshots';
+      const currentOrder = await get(orderUrl + '?limit=50');
+      const first = selected.map(a => ({ type: 'appScreenshots', id: a.id }));
+      const ordered = [...first, ...currentOrder.filter(a => !first.some(s => s.id === a.id))];
+      if (ordered.length !== currentOrder.length) throw Error('Screenshot order omitted a selected asset');
+      if (first.some((a, i) => currentOrder[i]?.id !== a.id)) await api('PATCH', orderUrl, { data: ordered });
+      const actualOrder = await get(orderUrl + '?limit=50');
+      if (first.some((a, i) => actualOrder[i]?.id !== a.id) || ordered.length !== actualOrder.length) throw Error('Screenshot order readback mismatch');
+      console.log(locale + ' ' + group.device + ': two real screenshots verified at the front of the draft gallery');
     }
   }
-  console.log('Version ' + release + ': store copy and screenshots saved. Draft id ' + version.id);
+  const buildUrl = '/v1/builds?filter[app]=' + appId + '&filter[version]=' + build + '&include=preReleaseVersion&limit=20';
+  const result = await api('GET', buildUrl);
+  const matches = result.data.filter(row => row.attributes.version === build && !row.attributes.expired && result.included?.some(v =>
+    v.type === 'preReleaseVersions' && v.id === row.relationships.preReleaseVersion?.data?.id && v.attributes.platform === 'IOS' && v.attributes.version === release
+  ));
+  if (matches.length !== 1 || matches[0].attributes.processingState !== 'VALID') throw Error('Exact uploaded iOS build is not yet VALID');
+  const exact = matches[0];
+  const buildLink = '/v1/appStoreVersions/' + version.id + '/relationships/build';
+  const existing = await get(buildLink);
+  if (existing && existing.id !== exact.id) throw Error('Draft has a different build selected');
+  if (!existing) await api('PATCH', buildLink, relation('builds', exact.id));
+  const linked = await get(buildLink);
+  if (linked?.id !== exact.id) throw Error('Linked build verification failed');
+  console.log('Version ' + release + ': build ' + build + ', store copy and front-of-gallery screenshots verified. Draft id ' + version.id);
 }
 
 save().catch(error => {
