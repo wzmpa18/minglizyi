@@ -1,5 +1,10 @@
 name: Pinned actual Android learning marketing screenshots
 on:
+  push:
+    branches:
+      - codex/baidu-store-2161
+    paths:
+      - '.github/workflows/android-learning-marketing.yml'
   workflow_dispatch:
     inputs:
       application_source:
@@ -13,8 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      PINNED_APPLICATION_SOURCE: ${{ inputs.application_source || 'c4ff5272f7d8f727ae780dfcfb1b262ed07309c1' }}
-      NEXT_PUBLIC_STORE_CHANNEL: appchina
+      PINNED_APPLICATION_SOURCE: ${{ inputs.application_source || (github.event_name == 'push' && github.sha) || 'c4ff5272f7d8f727ae780dfcfb1b262ed07309c1' }}
+      NEXT_PUBLIC_STORE_CHANNEL: ${{ github.event_name == 'push' && 'baidu' || 'appchina' }}
     defaults:
       run:
         working-directory: app-source
@@ -24,7 +29,7 @@ jobs:
           path: qa-source
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.application_source || 'c4ff5272f7d8f727ae780dfcfb1b262ed07309c1' }}
+          ref: ${{ inputs.application_source || (github.event_name == 'push' && github.sha) || 'c4ff5272f7d8f727ae780dfcfb1b262ed07309c1' }}
           path: app-source
       - uses: actions/setup-node@v4
         with:

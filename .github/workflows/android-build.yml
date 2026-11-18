@@ -6,6 +6,11 @@ name: Android Build (APK + AAB)
 #   Secret 配置：base64 -w0 yandao-release.keystore 的输出 → ANDROID_KEYSTORE_B64
 #   签名口令见 android/app/build.gradle（构建配置必需，keystore 本体不入库）
 on:
+  push:
+    branches:
+      - codex/baidu-store-2161
+    paths:
+      - '.github/workflows/android-build.yml'
   workflow_dispatch:
     inputs:
       store_channel:
@@ -22,6 +27,7 @@ on:
           - honor
           - xiaomi
           - appchina
+          - baidu
           - internal
       challenge_base64:
         description: Optional official Tencent ownership challenge; sign only, no app rebuild
@@ -36,7 +42,7 @@ on:
 
 jobs:
   claim-proof:
-    if: ${{ inputs.challenge_base64 != '' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.challenge_base64 != '' }}
     uses: ./.github/workflows/tencent-claim-proof.yml
     with:
       challenge_base64: ${{ inputs.challenge_base64 }}
@@ -44,14 +50,14 @@ jobs:
     secrets:
       ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
   build:
-    if: ${{ inputs.challenge_base64 == '' }}
+    if: ${{ github.event_name == 'push' || inputs.challenge_base64 == '' }}
     name: Assemble Release
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
       APP_NAME: 言道国学
       BUNDLE_ID: com.yandao.guoxue
-      NEXT_PUBLIC_STORE_CHANNEL: ${{ inputs.store_channel || 'tencent' }}
+      NEXT_PUBLIC_STORE_CHANNEL: ${{ inputs.store_channel || (github.event_name == 'push' && 'baidu') || 'tencent' }}
 
     steps:
       - name: Checkout
