@@ -12,7 +12,7 @@ const context = {
   sameSourceChecksPassed: true,
   action: 'assemble'
 };
-if (process.env.GITHUB_ACTIONS !== 'true' || process.env.GITHUB_REF_NAME !== 'codex/social-filter-build72') throw Error('Expected the verified build 72 release branch');
+if (process.env.GITHUB_ACTIONS !== 'true' || process.env.GITHUB_REF_NAME !== 'codex/social-filter-build72') throw Error('Expected the verified Guoxue release branch');
 const { api } = createClient({ mutations: true, reviewContext: context });
 const relation = (type, id) => ({ data: { type, id } });
 const get = async url => (await api('GET', url)).data;

@@ -1,4 +1,4 @@
-name: Submit verified Guoxue build 72 to App Review
+name: Submit verified Guoxue build 73 to App Review
 on:
   workflow_dispatch:
   push:
@@ -16,15 +16,15 @@ jobs:
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
-      - name: Verify exact signed build 72 and TestFlight upload
+      - name: Verify exact signed build 73 and TestFlight upload
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh api "repos/$GITHUB_REPOSITORY/actions/runs/44459707861/jobs?per_page=50" | jq -e '
-            any(.jobs[]; .id == 135343222861 and .conclusion == "success" and
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/44466999073/jobs?per_page=50" | jq -e '
+            any(.jobs[]; .id == 135367091842 and .conclusion == "success" and
               any(.steps[]; .name == "Verify signed IPA identity and version" and .conclusion == "success") and
               any(.steps[]; .name == "Upload to TestFlight" and .conclusion == "success"))'
-      - name: Link build 72 and submit the existing review draft
+      - name: Link build 73 and submit the existing review draft
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}

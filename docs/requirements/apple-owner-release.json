@@ -5,13 +5,13 @@
   "appId": "6807592575",
   "bundleId": "com.yandaoguoxue.app",
   "version": "25.0.124",
-  "build": "72",
-  "candidateSource": "b20ccad7c92f6006e2f0c6c7768472f70a0c7ce1",
-  "authorizationBasis": "2026-11-19负责人明确要求完成苹果发布；使用已签名并成功上传的25.0.124 build72，保留原八项内购，取消社交发送前的第三方AI审核确认框并仅保留本地敏感词过滤；实际读回确认后才报告发布状态。",
+  "build": "73",
+  "candidateSource": "788e55baa7784a858316a9e54bb465156c46ec9a",
+  "authorizationBasis": "2026-11-19负责人明确要求完成苹果发布；使用已签名、成功上传且处理为VALID的25.0.124 build73，保留原八项内购，取消社交发送前的第三方AI审核确认框并仅保留本地敏感词过滤；实际读回确认后才报告发布状态。",
   "ci": {
-    "quality": 40997859674,
-    "native": 44459707861,
-    "upload": 44459707861,
+    "quality": 44466704942,
+    "native": 44466999073,
+    "upload": 44466999073,
     "screenshots": 40998027967
   },
   "previousPendingCandidate": {
