@@ -2,18 +2,17 @@
 const {test}=require('node:test'),assert=require('node:assert/strict'),express=require('express'),Database=require('better-sqlite3'),crypto=require('node:crypto');
 const {createGovernedGroupRouter}=require('../backend_deploy/governedGroupRoutes');
 const {createSelectedTextModerator}=require('../backend_deploy/socialModerationPolicy');
-const {VERSION}=require('../backend_deploy/studyModerationAutomation');
 async function fixture(run){
  const db=new Database(':memory:');db.exec(`CREATE TABLE groups(id INTEGER PRIMARY KEY,name TEXT,owner_id TEXT,owner_name TEXT,member_ids TEXT,announcement TEXT DEFAULT '',admins TEXT DEFAULT '[]',member_mutes TEXT DEFAULT '{}',member_nicknames TEXT DEFAULT '{}',mute_all INTEGER DEFAULT 0,status TEXT DEFAULT 'active',created_at TEXT DEFAULT CURRENT_TIMESTAMP);CREATE TABLE users(user_id TEXT PRIMARY KEY,status TEXT DEFAULT 'active',deleted_at TEXT);INSERT INTO users(user_id) VALUES('1'),('2'),('3'),('4');CREATE TABLE friendships(user_a TEXT,user_b TEXT);INSERT INTO friendships VALUES('1','2'),('1','3'),('2','3');CREATE TABLE blacklists(user_id TEXT,blocked_id TEXT);CREATE TABLE chat_messages(id INTEGER PRIMARY KEY,conversation_id TEXT,sender_id TEXT,sender_name TEXT,content TEXT,msg_type TEXT,client_msg_id TEXT,review_status TEXT,review_reason TEXT,created_at TEXT DEFAULT(datetime('now','localtime')),UNIQUE(conversation_id,client_msg_id));`);
  db.exec('CREATE TABLE reports(id INTEGER PRIMARY KEY,target_type TEXT,target_id TEXT,reporter_id TEXT,reporter_name TEXT,reason TEXT)');
- let review='active',muted=false,screenHook=()=>{};const delivered=[];
- const app=express();app.use(express.json());app.use('/groups',createGovernedGroupRouter({getDb:()=>db,getUserDb:()=>db,authRequired:(req,res,next)=>{if(!/^[1-4]$/.test(req.headers['x-test-account']||''))return res.status(401).json({success:false});req.user={userId:req.headers['x-test-account']};next();},userPublicInfo:id=>({nickname:'合成学友'+id}),checkPlatformMute:()=>muted,moderateResourceComment:createSelectedTextModerator({screen:async input=>{await screenHook(input);if(review==='offline')throw Error('offline');return {decision:review==='active'?'PASS':review==='rejected'?'BLOCK':'REVIEW',automatic:review==='active',flags:[],policyVersion:VERSION,fingerprint:crypto.createHash('sha256').update(input.content).digest('hex')};},audit:async()=>{}}),upsertUserConversation:(_db,member,conv)=>delivered.push([member,conv]),notify:()=>{}}));
+ let muted=false;const delivered=[];
+ const app=express();app.use(express.json());app.use('/groups',createGovernedGroupRouter({getDb:()=>db,getUserDb:()=>db,authRequired:(req,res,next)=>{if(!/^[1-4]$/.test(req.headers['x-test-account']||''))return res.status(401).json({success:false});req.user={userId:req.headers['x-test-account']};next();},userPublicInfo:id=>({nickname:'合成学友'+id}),checkPlatformMute:()=>muted,moderateResourceComment:createSelectedTextModerator({audit:async()=>{}}),upsertUserConversation:(_db,member,conv)=>delivered.push([member,conv]),notify:()=>{}}));
  const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));const base='http://127.0.0.1:'+server.address().port+'/groups';
- const call=async(user,path='',method='GET',body)=>{const response=await fetch(base+path,{method,headers:{'Content-Type':'application/json',...(user?{'x-test-account':String(user)}:{})},body:body===undefined?undefined:JSON.stringify({...body,moderationVersion:body?.moderationVersion===null?null:VERSION})});return {status:response.status,body:await response.json()};};
+ const call=async(user,path='',method='GET',body)=>{const response=await fetch(base+path,{method,headers:{'Content-Type':'application/json',...(user?{'x-test-account':String(user)}:{})},body:body===undefined?undefined:JSON.stringify(body)});return {status:response.status,body:await response.json()};};
  const create=async()=>{const input={name:'历法共读',topic:'calendar',adultConsent:true,requestId:crypto.randomUUID()};return {input,result:await call(1,'','POST',input)};};
  const invite=async(id,target='2')=>{assert.equal((await call(1,`/${id}/invite`,'POST',{userIds:[target]})).status,200);return (await call(target,'/invitations')).body.invitations[0].id;};
  const accept=async(user,id)=>call(user,`/invitations/${id}/accept`,'POST',{adultConsent:true,joinConsent:true});
- try{await run({db,call,create,invite,accept,review:value=>{review=value;},mute:value=>{muted=value;},delivered,screenHook:fn=>{screenHook=fn;}});}finally{await new Promise(resolve=>server.close(resolve));db.close();}
+ try{await run({db,call,create,invite,accept,mute:value=>{muted=value;},delivered});}finally{await new Promise(resolve=>server.close(resolve));db.close();}
 }
 test('group invitation does not add a member; explicit adult acceptance, friendship, expiry, rejection and current-member history floor are enforced',()=>fixture(async({db,call,create,invite,accept})=>{
  assert.equal((await call(null)).status,401);assert.equal((await call(1,'','POST',{name:'未同意'})).status,400);
@@ -25,18 +24,16 @@ test('group invitation does not add a member; explicit adult acceptance, friends
  const third=await invite(id,'3');db.prepare('UPDATE study_group_invitations SET expires_ms=0 WHERE id=?').run(third);assert.equal((await accept(3,third)).status,410);
  const fresh=await invite(id,'3');assert.equal((await call(3,`/invitations/${fresh}/reject`,'POST')).body.success,true);assert.equal((await accept(3,fresh)).status,410);
 }));
-test('group text uses 500 visible characters, immutable retry IDs and fail-closed review; pending/rejected text does not reach peers',()=>fixture(async({db,call,create,invite,accept,review,delivered,mute})=>{
+test('group text uses 500 visible characters, immutable retry IDs and local sensitive-word blocking',()=>fixture(async({call,create,invite,accept,delivered,mute})=>{
  const id=(await create()).result.body.group.id;await accept(2,await invite(id));
  const body={content:'🙂'.repeat(500),clientMsgId:crypto.randomUUID()};assert.equal((await call(1,`/${id}/messages`,'POST',body)).status,200);assert.equal((await call(1,`/${id}/messages`,'POST',body)).body.duplicated,true);assert.equal((await call(2,`/${id}/messages`,'POST',body)).status,409);assert.equal((await call(1,`/${id}/messages`,'POST',{...body,content:'改变内容'})).status,409);assert.equal((await call(1,`/${id}/messages`,'POST',{content:'🙂'.repeat(501),clientMsgId:crypto.randomUUID()})).status,400);assert.equal((await call(1,`/${id}/messages`,'POST',{content:'图片',type:'image',clientMsgId:crypto.randomUUID()})).status,400);
- const count=delivered.length;review('offline');const pending=await call(1,`/${id}/messages`,'POST',{content:'等待审核的学习内容',clientMsgId:crypto.randomUUID()});assert.equal(pending.body.pendingReview,true);assert.equal(delivered.length,count);assert.equal((await call(2,`/${id}/messages`)).body.messages.length,1);assert.equal((await call(1,`/${id}/messages`)).body.messages.length,2);
- db.prepare("UPDATE chat_messages SET review_status='active' WHERE id=?").run(pending.body.message.id);assert.equal((await call(2,`/${id}/messages`)).body.messages.length,2);
- review('rejected');assert.equal((await call(1,`/${id}/messages`,'POST',{content:'审核拒绝的合成内容',clientMsgId:crypto.randomUUID()})).body.message.reviewStatus,'rejected');assert.equal((await call(2,`/${id}/messages`)).body.messages.length,2);
+ const count=delivered.length;const blocked=await call(1,`/${id}/messages`,'POST',{content:'出售毒品',clientMsgId:crypto.randomUUID()});assert.equal(blocked.body.message.reviewStatus,'rejected');assert.equal(delivered.length,count);assert.equal((await call(2,`/${id}/messages`)).body.messages.length,1);
  mute(true);assert.equal((await call(1,`/${id}/messages`,'POST',{content:'平台禁言也约束群主',clientMsgId:crypto.randomUUID()})).status,403);
 }));
-test('unavailable review holds group creation and profile edits; closed groups, blocks and revoked management prevent access',()=>fixture(async({db,call,create,review,invite,accept})=>{
- review('offline');const pending=(await create()).result.body.group;assert.equal(pending.reviewStatus,'pending');assert.equal((await call(1,`/${pending.id}/invite`,'POST',{userIds:['2']})).status,403);
- review('active');const id=(await create()).result.body.group.id;const invitation=await invite(id);db.prepare('INSERT INTO blacklists VALUES (?,?)').run('1','2');assert.equal((await call(2,'/invitations')).body.invitations.length,0);assert.equal((await accept(2,invitation)).status,403);db.prepare('DELETE FROM blacklists').run();await accept(2,invitation);
- review('offline');assert.equal((await call(1,`/${id}/update`,'POST',{name:'修改后群名',announcement:'合成待审公告'})).body.pendingReview,true);assert.equal(db.prepare('SELECT name FROM groups WHERE id=?').get(id).name,'历法共读');assert.equal(db.prepare('SELECT name FROM study_group_edits WHERE group_id=?').get(id).name,'修改后群名');
+test('local filtering blocks sensitive group metadata; blocks and closed groups prevent access',()=>fixture(async({db,call,create,invite,accept})=>{
+ const rejected=(await call(1,'','POST',{name:'出售毒品学习群',topic:'classics',adultConsent:true,requestId:crypto.randomUUID()})).body.group;assert.equal(rejected.reviewStatus,'rejected');assert.equal((await call(1,`/${rejected.id}/invite`,'POST',{userIds:['2']})).status,403);
+ const id=(await create()).result.body.group.id;const invitation=await invite(id);db.prepare('INSERT INTO blacklists VALUES (?,?)').run('1','2');assert.equal((await call(2,'/invitations')).body.invitations.length,0);assert.equal((await accept(2,invitation)).status,403);db.prepare('DELETE FROM blacklists').run();await accept(2,invitation);
+ const edit=await call(1,`/${id}/update`,'POST',{name:'修改后群名',announcement:'博彩推广'});assert.equal(edit.body.rejected,true);assert.equal(db.prepare('SELECT name FROM groups WHERE id=?').get(id).name,'历法共读');assert.equal(db.prepare('SELECT status FROM study_group_edits WHERE group_id=?').get(id).status,'rejected');
  db.prepare("UPDATE groups SET status='closed' WHERE id=?").run(id);assert.equal((await call(2,`/${id}/messages`)).status,403);
 }));
 test('member cap is checked at acceptance; older own groups and messages remain reachable through keyset pages',()=>fixture(async({db,call,create,invite,accept})=>{
@@ -56,7 +53,7 @@ test('group chart cards bind a fixed recipient list and membership nonce; no new
  db.prepare("UPDATE groups SET status='closed' WHERE id=?").run(group);assert.equal((await call(1,`/${group}/cards/${id}/revoke`,'POST')).body.success,true);assert.equal(db.prepare('SELECT state FROM study_group_cards WHERE id=?').get(id).state,'revoked');
 }));
 
-test('an older unconsented client cannot auto-open a group or invite peers',()=>fixture(async({call})=>{const made=await call(1,'','POST',{name:'无授权合成学习群',topic:'classics',adultConsent:true,requestId:crypto.randomUUID(),moderationVersion:null});assert.equal(made.body.group.reviewStatus,'pending');assert.equal((await call(1,`/${made.body.group.id}/invite`,'POST',{userIds:['2']})).status,403);}));
+test('clients can create an active learning group without an extra send-time consent field',()=>fixture(async({call})=>{const made=await call(1,'','POST',{name:'合成学习群',topic:'classics',adultConsent:true,requestId:crypto.randomUUID()});assert.equal(made.body.group.reviewStatus,'active');assert.equal((await call(1,`/${made.body.group.id}/invite`,'POST',{userIds:['2']})).status,200);}));
 
 
 test('owner departure/rejoin never restores an old card grant, including idempotent retries; a new explicit share is required',()=>fixture(async({db,call,create,invite,accept})=>{
@@ -106,13 +103,13 @@ test('group references pin card/version/visible anchor; receivers without a gran
  const second=(await call(2,`/${group}/messages`)).body.messages[0];assert.deepEqual(second.chartRefs,[]);assert.equal(second.hasUnavailableReferences,true);
 }));
 
-test('a group card revoked during moderation cannot publish a usable reference or notify peers',()=>fixture(async({db,call,create,invite,accept,delivered,screenHook})=>{
+test('a revoked group card cannot publish a usable reference or notify peers',()=>fixture(async({call,create,invite,accept,delivered})=>{
  const group=(await create()).result.body.group.id;await accept(2,await invite(group));
  const made=await call(1,`/${group}/cards`,'POST',{requestId:crypto.randomUUID(),recipientIds:['2'],newMembersCanView:false,inferenceConsent:true,rightsConsent:true,charts:[{toolKey:'ziwei',result:{palaces:Array.from({length:12},(_,index)=>({index,name:'命宫'}))}}]});
  const id=made.body.id,version=(await call(1,`/${group}/cards/${id}`)).body.charts[0].version,count=delivered.length;
- screenHook(()=>{db.prepare("UPDATE study_group_cards SET state='revoked' WHERE id=?").run(id);});
- const result=await call(1,`/${group}/messages`,'POST',{content:'审核期间撤回的盘卡',clientMsgId:crypto.randomUUID(),chartRefs:[{cardId:id,version,anchor:''}]});
- assert.equal(result.body.message.reviewStatus,'rejected');assert.equal(delivered.length,count);assert.equal((await call(2,`/${group}/messages`)).body.messages.length,0);
+ await call(1,`/${group}/cards/revoke`,'POST',{ids:[id]});
+ const result=await call(1,`/${group}/messages`,'POST',{content:'引用已经撤回的盘卡',clientMsgId:crypto.randomUUID(),chartRefs:[{cardId:id,version,anchor:''}]});
+ assert.equal(result.status,404);assert.equal(delivered.length,count);assert.equal((await call(2,`/${group}/messages`)).body.messages.length,0);
 }));
 
 test('batch revoke is all-or-nothing, idempotent and owner-only; privacy actions work after departure or closure',()=>fixture(async({db,call,create,invite,accept})=>{

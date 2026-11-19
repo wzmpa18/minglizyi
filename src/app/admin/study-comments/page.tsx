@@ -26,7 +26,7 @@ export default function StudyCommentAdmin(){
     <p>纯文字、每条500字素。规则先筛查，机器逐项判定。服务失败、不确定、规则冲突或举报立即隔离；异常项目未复核前不公开。</p>
     {message&&<p role="status" style={{color:'#B45309'}}>{message}</p>}
     <AdminCard title="运营开关与审核依据">
-      <p>内容安全：{data?.safetyCapability?.automatic?`规则＋混元机器审核，每日最多${data.safetyCapability.dailyLimit}次；不扣用户点数`:"自动审核尚未配置，不会自动公开"}</p>
+      <p>内容安全：平台本地敏感词过滤（涉政违法、黄赌毒、诈骗暴恐、广告联系方式和危险医疗操作）；不调用第三方 AI，不设置发送确认或审核额度</p>
       <p>全局状态：{data?data.enabled?'已开放':'关闭':'读取中'}；超过24小时待审：{data?.overdue??'—'}条</p>
       <div className="my-3 rounded border p-3"><strong>10号研习域（新实例安全初值为关闭；线上状态以本次配置读回为准，使用同一待审队列）</strong>{(['symptom','life'] as const).map(d=><p key={d}>{d==='symptom'?'同证研习':'同辰人生'}：{data?.research?.[d]?.enabled?'已开放':'关闭'} <button disabled={busy||note.trim().length<8} onClick={()=>setResearchOpening(d)}>确认自动审核/披露后开放</button> <button disabled={busy} onClick={()=>void action(`/research/${d}`,{enabled:false,note})}>暂停</button></p>)}</div>
       <label style={styles.label}>审核/撤回/禁言依据<textarea value={note} onChange={e=>setNote(e.target.value)} style={styles.input}/></label>

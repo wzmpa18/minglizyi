@@ -62,7 +62,6 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [agreed, setAgreed] = useState(false);
 
   // v19.7_final: 注册唯一性实时校验
   const [phoneExistMsg, setPhoneExistMsg] = useState("");
@@ -356,16 +355,12 @@ export default function RegisterPage() {
 
   // 统一提交入口
   const handleSubmit = useCallback(() => {
-    if (!agreed) {
-      setError("请先阅读并同意《用户协议》和《隐私政策》");
-      return;
-    }
     if (registerMode === "phone") {
       handlePhoneRegister();
     } else {
       handleEmailRegister();
     }
-  }, [registerMode, handlePhoneRegister, handleEmailRegister, agreed]);
+  }, [registerMode, handlePhoneRegister, handleEmailRegister]);
 
   // 回车快捷提交
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -863,14 +858,12 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <label style={{ display: "flex", alignItems: "flex-start", gap: 7, fontSize: 12, color: "#666", lineHeight: 1.6, margin: "0 2px 14px", cursor: "pointer" }}>
-          <input type="checkbox" checked={agreed} onChange={(e) => { setAgreed(e.target.checked); setError(""); }} style={{ width: 16, height: 16, marginTop: 2, accentColor: BRAND, flexShrink: 0 }} />
-          <span>我已阅读并同意
-            <button type="button" onClick={(e) => { e.preventDefault(); router.push("/agreement"); }} style={{ border: 0, background: "transparent", padding: 0, color: BRAND }}>《用户协议》</button>
-            和
-            <button type="button" onClick={(e) => { e.preventDefault(); router.push("/privacy"); }} style={{ border: 0, background: "transparent", padding: 0, color: BRAND }}>《隐私政策》</button>
-          </span>
-        </label>
+        <p style={{ fontSize: 11, color: "#888", lineHeight: 1.6, margin: "0 2px 14px", textAlign: "center" }}>
+          注册即表示已阅读
+          <button type="button" onClick={() => router.push("/agreement")} style={{ border: 0, background: "transparent", padding: "0 2px", color: BRAND }}>《用户协议》</button>
+          和
+          <button type="button" onClick={() => router.push("/privacy")} style={{ border: 0, background: "transparent", padding: "0 2px", color: BRAND }}>《隐私政策》</button>
+        </p>
 
         {/* 注册按钮 */}
         <button

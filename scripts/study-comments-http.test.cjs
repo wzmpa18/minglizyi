@@ -52,7 +52,7 @@ async function worker(root){
     for(const headers of [{'X-Client-Platform':'ios','X-Store-Channel':'ios-full-learning'},{'X-Client-Platform':'android','X-Store-Channel':'google'}]){
       const overseasId=headers['X-Store-Channel']==='google'?'email-google':'email-only';
       const overseas=await request(target,'POST',token(overseasId),{content:'对照典籍原文学习术语',requestId:crypto.randomUUID()},undefined,headers);
-      assert.equal(overseas.status,200);assert.equal(overseas.body.pendingReview,true);
+      assert.equal(overseas.status,200);assert.equal(overseas.body.status,'APPROVED');
       const anonymous=await request(target,'POST','',{content:'对照原文',requestId:crypto.randomUUID()},undefined,headers);assert.equal(anonymous.status,401);
       const banned=await request(target,'POST',token('banned'),{content:'对照原文',requestId:crypto.randomUUID()},undefined,headers);assert.equal(banned.status,403);
       const filtered=await request(target,'POST',token(overseasId),{content:'加我13800000009包治保证治愈',requestId:crypto.randomUUID()},undefined,headers);
@@ -60,15 +60,12 @@ async function worker(root){
     }
 
     const submitted=await request(target,'POST',alice,submitBody,'capacitor://localhost');
-    assert.equal(submitted.status,200);assert.equal(submitted.body.pendingReview,true);
+    assert.equal(submitted.status,200);assert.equal(submitted.body.status,'APPROVED');
     const id=submitted.body.id;
     assert.equal((await request(target,'POST',alice,submitBody)).body.id,id);
-    assert.equal((await request(target,'GET',bob)).body.comments.length,0);
-    assert.equal((await request('/mine/standard%3ALU1','GET',alice)).body.items[0].status,'PENDING');
-    assert.equal((await request('/admin/comment/'+id,'PUT',finance,{status:'APPROVED',safetyConfirmed:true,note:'test'})).status,403);
-    assert.equal((await request('/admin/comment/'+id,'PUT',support,{status:'APPROVED',note:'未逐条确认不应公开'})).status,400);
-    assert.equal((await request('/admin/comment/'+id,'PUT',support,{status:'APPROVED',safetyConfirmed:true,note:'核对资料与文字后批准测试留言'})).status,200);
-    assert.equal((await request(target,'GET',bob)).body.comments[0].content,submitBody.content);
+    assert.ok((await request(target,'GET',bob)).body.comments.some(comment=>comment.content===submitBody.content));
+    assert.equal((await request('/mine/standard%3ALU1','GET',alice)).body.items[0].status,'APPROVED');
+    assert.ok((await request(target,'GET',bob)).body.comments.some(comment=>comment.content===submitBody.content));
     assert.equal((await request('/comment/'+id+'/report','POST',bob,{reason:'请复核引用资料的出处'})).status,200);
     assert.equal((await request('/blocks/alice','POST',bob)).status,200);
     assert.equal((await request(target,'GET',bob)).body.comments.length,0);
@@ -77,7 +74,7 @@ async function worker(root){
     assert.equal((await request('/comment/'+id,'DELETE',alice)).status,200);
     assert.equal((await request(target,'GET',bob)).body.comments.length,0);
     assert.equal((await request('/admin/comment/'+id,'PUT',admin,{status:'APPROVED',safetyConfirmed:true,note:'不得复活已删除评论'})).status,404);
-    console.log('PASS: real HTTP/JWT/account lookup, role scopes, 500 characters, origin/body limits, pending moderation, idempotency, report, block and own deletion. Isolated data only.');
+    console.log('PASS: real HTTP/JWT/account lookup, role scopes, 500 characters, origin/body limits, local filtering, idempotency, report, block and own deletion. Isolated data only.');
 
     // Real HTTP, two isolated synthetic identities; never create production people.
     const researchPolicy=require('../backend_deploy/studyResearchPolicy');
@@ -97,9 +94,7 @@ async function worker(root){
     const research={mode:'knowledge',fields:{question:'请查这一古籍术语的原始语境'},confirmedFields:['question'],archiveConsent:true,consentVersion:researchPolicy.topics.consentVersion};
     const payload={content:researchPolicy.prepareResearch('research:symptom:s001',research).content,research,requestId:crypto.randomUUID()};
     assert.equal((await request(researchTarget,'POST',alice,{...payload,privateVault:'10_PRIVATE_CANARY'})).status,400);
-    const posted=await request(researchTarget,'POST',alice,payload);assert.equal(posted.status,200);assert.equal(posted.body.status,'PENDING');
-    assert.equal((await request(researchTarget,'GET',bob)).body.comments.length,0);
-    assert.equal((await request('/admin/comment/'+posted.body.id,'PUT',support,{status:'APPROVED',safetyConfirmed:true,note:'隔离数据逐条核对，无隐私或诊疗建议'})).status,200);
+    const posted=await request(researchTarget,'POST',alice,payload);assert.equal(posted.status,200);assert.equal(posted.body.status,'APPROVED');
     const shown=(await request(researchTarget,'GET',bob)).body.comments[0];assert.ok(shown.authorId.startsWith('research-user-'));assert.equal(shown.authorName.includes('学习甲'),false);assert.equal(shown.research.archiveConsent,true);
     assert.equal((await request('/blocks/'+shown.authorId,'POST',bob)).status,200);
     assert.equal((await request(researchTarget,'GET',bob)).body.comments.length,0);
@@ -112,25 +107,17 @@ async function worker(root){
     assert.equal(researchDb.prepare('SELECT content FROM study_comments WHERE id=?').get(posted.body.id).content,'');
     assert.equal(JSON.stringify(researchDb.prepare('SELECT * FROM study_research_consents').all()).includes('1990-05-15'),false);
     assert.equal(JSON.stringify(researchDb.prepare('SELECT * FROM study_comments').all()).includes('10_PRIVATE_CANARY'),false);researchDb.close();
-    console.log('PASS: research real HTTP two-account consent, no guest/minor/email-only publishing, server opening prerequisites, pending moderation, stable pseudonyms, block/report, withdrawal and plaintext erasure. No production users or private-vault reads.');
+    console.log('PASS: research real HTTP two-account consent, no guest/minor/email-only publishing, server opening prerequisites, local filtering, stable pseudonyms, block/report, withdrawal and plaintext erasure. No production users or private-vault reads.');
 
-    // Mock only the fixed third-party transport; exercise real HTTP/auth/SQLite.
-    const originalFetch=global.fetch,auto=require('../backend_deploy/studyModerationAutomation');let providerCalls=0;
-    global.fetch=async(url,options)=>{if(String(url)==='https://tokenhub.tencentmaas.com/v1/chat/completions'){providerCalls++;const sent=JSON.parse(options.body);assert.deepEqual(Object.keys(JSON.parse(sent.messages[1].content)).sort(),['public_display_name','public_text']);return new Response(JSON.stringify({choices:[{finish_reason:'stop',message:{content:JSON.stringify({decision:'ALLOW',confidence:0.99,needs_context:false,topic_learning:true,categories:Object.fromEntries(auto.CATEGORIES.map(k=>[k,'CLEAR']))})}}]}));}return originalFetch(url,options);};
-    try{
-      await new Promise(resolve=>setTimeout(resolve,1100));
-      const approved=await request('/target/tool%3Aziwei','POST',alice,{content:'请问节气原文有哪几种解释？',requestId:crypto.randomUUID(),moderationConsentVersion:auto.VERSION});
-      assert.equal(approved.body.status,'APPROVED');assert.equal(approved.body.message,'已发布');assert.equal(providerCalls,1);
-      assert.equal((await request('/target/tool%3Aziwei','GET',bob)).body.comments.length,1);
-      assert.equal((await request('/comment/'+approved.body.id+'/report','POST',bob,{reason:'核对引文'})).status,200);
-      assert.equal((await request('/target/tool%3Aziwei','GET',bob)).body.comments.length,0);
-      assert.equal((await request('/comment/'+approved.body.id+'/recheck','POST',alice,{})).status,409);
-      assert.equal((await request('/comment/'+approved.body.id+'/recheck','POST',bob,{})).status,403);
-      assert.equal(providerCalls,1);
-      console.log('PASS: real HTTP opt-in automatic publication, minimal provider transport, immediate report quarantine and recheck permissions; synthetic provider only.');
-    }finally{global.fetch=originalFetch;}
-
-    delete process.env.HUNYUAN_API_KEY;delete process.env.STUDY_COMMENT_AUTOMATION;delete process.env.STUDY_AI_MODERATION_READY;
+    await new Promise(resolve=>setTimeout(resolve,1100));
+    const approved=await request('/target/tool%3Aziwei','POST',alice,{content:'请问节气原文有哪几种解释？',requestId:crypto.randomUUID()});
+    assert.equal(approved.body.status,'APPROVED');assert.equal(approved.body.message,'已发布');
+    assert.equal((await request('/target/tool%3Aziwei','GET',bob)).body.comments.length,1);
+    assert.equal((await request('/comment/'+approved.body.id+'/report','POST',bob,{reason:'核对引文'})).status,200);
+    assert.equal((await request('/target/tool%3Aziwei','GET',bob)).body.comments.length,0);
+    assert.equal((await request('/comment/'+approved.body.id+'/recheck','POST',alice,{})).status,409);
+    assert.equal((await request('/comment/'+approved.body.id+'/recheck','POST',bob,{})).status,403);
+    console.log('PASS: real HTTP local automatic publication, immediate report quarantine and recheck permissions; no outside content service.');
     process.env.FEEDBACK_DATA_DIR=path.join(root,'feedback');
     app.use('/api/feedback',require('../backend_deploy/feedbackRoutes'));
     async function feedback(route,method='GET',credential=alice,body){
@@ -196,72 +183,54 @@ async function worker(root){
       assert.equal((await social('/posts/visible/like','POST','invalid-jwt',{})).status,401);
       assert.equal((await social('/posts/visible/like','POST',bob,{})).status,200);
       assert.equal((await social('/posts/visible/comments','POST',bob,{content:'正文与版本应对应阅读'})).status,200);
-      const submitted=await social('/posts','POST',bob,{content:'学习交流投稿在审核前不可公开',circle:'TCM'});
-      assert.equal(submitted.status,200);assert.equal(submitted.body.pendingReview,true);assert.equal(submitted.body.post.status,'pending');
-      const pendingId=submitted.body.post.postId;
-      assert.equal((await social('/posts/'+pendingId)).status,404);
-      assert.ok((await social('/posts/mine')).body.posts.some(post=>post.postId===pendingId&&post.status==='pending'));
-      assert.ok(!(await social('/posts')).body.posts.some(post=>post.postId===pendingId));
-      assert.equal((await social('/posts/'+pendingId+'/like','POST',bob,{})).status,404);
-      assert.equal((await social('/posts/'+pendingId,'DELETE',alice)).status,403);
-      assert.equal((await social('/posts/'+pendingId,'DELETE',bob)).status,200);
-      console.log('PASS: social posts require manual review, stay absent from feed/detail/likes before approval, and only their owner can withdraw them.');
+      const submitted=await social('/posts','POST',bob,{content:'学习交流投稿通过本地规则后直接公开',circle:'TCM'});
+      assert.equal(submitted.status,200);assert.equal(submitted.body.pendingReview,false);assert.equal(submitted.body.post.status,'active');
+      const submittedId=submitted.body.post.postId;
+      assert.equal((await social('/posts/'+submittedId)).status,200);
+      assert.ok((await social('/posts/mine')).body.posts.some(post=>post.postId===submittedId&&post.status==='active'));
+      assert.ok((await social('/posts')).body.posts.some(post=>post.postId===submittedId));
+      assert.equal((await social('/posts/'+submittedId+'/like','POST',bob,{})).status,200);
+      assert.equal((await social('/posts/'+submittedId,'DELETE',alice)).status,403);
+      assert.equal((await social('/posts/'+submittedId,'DELETE',bob)).status,200);
+      console.log('PASS: ordinary social posts publish immediately after local filtering and only their owner can withdraw them.');
       accounts.exec("ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT ''; ALTER TABLE users ADD COLUMN bio TEXT DEFAULT '';");
-      // Legacy routes exercise the same strict adapter and per-send consent;
-      // only the provider transport is synthetic, never real users or model charges.
+      // All social text routes use the same local-only filter without an extra send step.
       process.env.PRIVATE_CHAT_ENABLED='true';
       const beforeCommentCount=socialDb.prepare("SELECT comment_count FROM posts WHERE post_id='visible'").get().comment_count;
-      const heldComment=await social('/posts/visible/comments','POST',bob,{content:'没有本次授权的评论应当隔离'});
-      assert.equal(heldComment.body.pendingReview,true);assert.equal((await social('/posts/visible/comments')).body.comments.some(c=>c.content==='没有本次授权的评论应当隔离'),false);
-      assert.equal(socialDb.prepare("SELECT comment_count FROM posts WHERE post_id='visible'").get().comment_count,beforeCommentCount);
-      const heldCommentId=socialDb.prepare("SELECT id FROM comments WHERE content='没有本次授权的评论应当隔离'").get().id;
-      assert.equal((await social('/posts/visible/comments','POST',alice,{content:'不能回复待审内容',parentId:heldCommentId})).status,404);
-      assert.equal((await social('/comments/'+heldCommentId,'DELETE',bob)).status,200);
-      assert.equal(socialDb.prepare("SELECT comment_count FROM posts WHERE post_id='visible'").get().comment_count,beforeCommentCount);
+      const directComment=await social('/posts/visible/comments','POST',bob,{content:'直接交流学习心得'});
+      assert.ok(directComment.body.comment);assert.ok((await social('/posts/visible/comments')).body.comments.some(c=>c.content==='直接交流学习心得'));
+      assert.equal(socialDb.prepare("SELECT comment_count FROM posts WHERE post_id='visible'").get().comment_count,beforeCommentCount+1);
       assert.equal((await social('/posts/visible/comments','POST',bob,{content:'🙂'.repeat(501)})).status,400);
       socialDb.prepare("INSERT INTO friendships(user_a,user_b,source) VALUES ('alice','bob','legacy')").run();
-      process.env.STUDY_COMMENT_AUTOMATION='true';process.env.STUDY_AI_MODERATION_READY='true';process.env.HUNYUAN_API_KEY='synthetic-test-only';
-      let legacyCalls=0,blockDuringReview=false,providerOffline=false;const legacyFetch=global.fetch;
+      let externalCalls=0;const legacyFetch=global.fetch;
       global.fetch=async(url,options)=>{
-        if(String(url)!=='https://tokenhub.tencentmaas.com/v1/chat/completions')return legacyFetch(url,options);
-        legacyCalls++;const sent=JSON.parse(options.body),selected=JSON.parse(sent.messages[1].content);
-        assert.deepEqual(Object.keys(selected).sort(),['public_display_name','public_text']);assert.equal(selected.public_display_name,'学习者');
-        assert.ok(!JSON.stringify(sent).includes('ACCOUNT_CANARY'));assert.ok(!JSON.stringify(sent).includes('data:image'));
-        if(blockDuringReview)socialDb.prepare("INSERT INTO blacklists VALUES ('bob','alice',datetime('now','localtime'))").run();
-        if(providerOffline)throw Error('synthetic provider outage');
-        return new Response(JSON.stringify({choices:[{finish_reason:'stop',message:{content:JSON.stringify({decision:'ALLOW',confidence:.99,needs_context:false,topic_learning:true,categories:Object.fromEntries(auto.CATEGORIES.map(k=>[k,'CLEAR']))})}}]}));
+        if(!String(url).startsWith('http://127.0.0.1:')){externalCalls++;throw Error('social moderation must remain local');}
+        return legacyFetch(url,options);
       };
       try{
-        const acceptedComment=await social('/posts/visible/comments','POST',alice,{content:'逐段核对历法原文',moderationVersion:auto.VERSION});assert.ok(acceptedComment.body.comment);
+        const acceptedComment=await social('/posts/visible/comments','POST',alice,{content:'逐段核对历法原文'});assert.ok(acceptedComment.body.comment);
         assert.ok((await social('/posts/visible/comments')).body.comments.some(c=>c.id===acceptedComment.body.comment.id));
-        const acceptedPost=await social('/posts','POST',alice,{content:'共同阅读历法经典',tags:['学习'],circle:'GuoXue',moderationVersion:auto.VERSION});assert.equal(acceptedPost.body.post.status,'active');
-        const beforeImages=legacyCalls;
-        assert.equal((await social('/posts','POST',alice,{content:'图片不能依靠文字通过',images:['synthetic.png'],circle:'GuoXue',moderationVersion:auto.VERSION})).body.pendingReview,true);assert.equal(legacyCalls,beforeImages);
-        const message={content:'只讨论节气学习方法',clientMsgId:crypto.randomUUID(),moderationVersion:auto.VERSION};
+        const acceptedPost=await social('/posts','POST',alice,{content:'共同阅读历法经典',tags:['学习'],circle:'GuoXue'});assert.equal(acceptedPost.body.post.status,'active');
+        assert.equal((await social('/posts','POST',alice,{content:'图片需要单独处理',images:['synthetic.png'],circle:'GuoXue'})).body.pendingReview,true);
+        const message={content:'只讨论节气学习方法',clientMsgId:crypto.randomUUID()};
         const delivered=await social('/messages/private/bob','POST',alice,message);assert.equal(delivered.body.message.reviewStatus,'active');
         assert.equal((await social('/messages/private/alice','GET',bob)).body.messages.length,1);
         assert.equal((await social('/messages/private/bob','POST',alice,message)).body.duplicated,true);
         assert.equal((await social('/messages/private/bob','POST',alice,{...message,content:'修改同一发送编号'})).status,409);
         assert.equal((await social('/messages/private/alice','POST',bob,message)).status,409);
-        const calls=legacyCalls,notices=socialDb.prepare("SELECT COUNT(*) n FROM notifications WHERE user_id='bob'").get().n;
-        const pending=await social('/messages/private/bob','POST',alice,{content:'没有单独审核授权的交流',clientMsgId:crypto.randomUUID()});assert.equal(pending.body.pendingReview,true);assert.equal(legacyCalls,calls);
-        assert.equal((await social('/messages/private/alice','GET',bob)).body.messages.length,1);assert.equal((await social('/messages/private/bob','GET',alice)).body.messages.length,2);
-        assert.equal(socialDb.prepare("SELECT COUNT(*) n FROM notifications WHERE user_id='bob'").get().n,notices);
-        const long='长'.repeat(501);const longMessage=await social('/messages/private/bob','POST',alice,{content:long,moderationVersion:auto.VERSION,clientMsgId:crypto.randomUUID()});assert.equal(longMessage.body.message.content,long);assert.equal(longMessage.body.pendingReview,true);assert.equal(legacyCalls,calls);
-        providerOffline=true;assert.equal((await social('/messages/private/bob','POST',alice,{content:'服务异常时不能直接送达',moderationVersion:auto.VERSION,clientMsgId:crypto.randomUUID()})).body.pendingReview,true);providerOffline=false;
-        blockDuringReview=true;assert.equal((await social('/messages/private/bob','POST',alice,{content:'期间屏蔽须重新校验权限',moderationVersion:auto.VERSION,clientMsgId:crypto.randomUUID()})).body.pendingReview,true);blockDuringReview=false;
-        assert.equal(socialDb.prepare("SELECT COUNT(*) n FROM notifications WHERE user_id='bob'").get().n,notices);
-        assert.equal((await social('/messages/private/alice','GET',bob)).status,403);socialDb.prepare("DELETE FROM blacklists WHERE user_id='bob' AND blocked_id='alice'").run();
-        const pendingId=pending.body.message.id;socialDb.prepare("UPDATE chat_messages SET review_status='active' WHERE id=?").run(pendingId);
-        assert.ok((await social('/messages/private/alice','GET',bob)).body.messages.some(m=>m.id===pendingId&&m.reviewStatus==='active'));
+        const direct=await social('/messages/private/bob','POST',alice,{content:'无需额外确认即可交流',clientMsgId:crypto.randomUUID()});assert.equal(direct.body.message.reviewStatus,'active');
+        assert.equal((await social('/messages/private/alice','GET',bob)).body.messages.length,2);
+        const long='长'.repeat(501);const longMessage=await social('/messages/private/bob','POST',alice,{content:long,clientMsgId:crypto.randomUUID()});assert.equal(longMessage.body.message.content,long);assert.equal(longMessage.body.message.reviewStatus,'active');
+        assert.equal((await social('/messages/private/bob','POST',alice,{content:'出售毒品',clientMsgId:crypto.randomUUID()})).status,400);
+        assert.equal(externalCalls,0);
         const reviewCommentId=acceptedComment.body.comment.id;
         assert.equal((await social('/comments/'+reviewCommentId+'/report','POST',bob,{reason:'请核对引文'})).status,200);
         assert.equal((await social('/posts/visible/comments')).body.comments.some(c=>c.id===reviewCommentId),false);
         assert.equal((await social('/posts/'+acceptedPost.body.post.postId+'/report','POST',bob,{reason:'需核对公开资料'})).status,200);
         assert.equal((await social('/posts/'+acceptedPost.body.post.postId)).status,404);
         socialDb.prepare("DELETE FROM friendships WHERE user_a='alice' AND user_b='bob'").run();
-      }finally{global.fetch=legacyFetch;delete process.env.HUNYUAN_API_KEY;delete process.env.STUDY_COMMENT_AUTOMATION;delete process.env.STUDY_AI_MODERATION_READY;delete process.env.PRIVATE_CHAT_ENABLED;}
-      console.log('PASS: legacy text routes require per-send consent and strict review; pending comments/counters/notifications stay private, immutable message retries, image/long-text quarantine, provider outage and block-during-review recheck.');
+      }finally{global.fetch=legacyFetch;delete process.env.PRIVATE_CHAT_ENABLED;}
+      console.log('PASS: social text uses local filtering with immediate delivery, immutable retries, sensitive-word blocking and no outside moderation call.');
 
       assert.equal((await social('/tongchen/mine','GET','')).status,401);
       assert.equal((await social('/tongchen/mine','PUT',token('deleted'),{})).status,403);
