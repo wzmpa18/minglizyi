@@ -68,11 +68,11 @@ async function worker(root){
     assert.ok((await request(target,'GET',bob)).body.comments.some(comment=>comment.content===submitBody.content));
     assert.equal((await request('/comment/'+id+'/report','POST',bob,{reason:'请复核引用资料的出处'})).status,200);
     assert.equal((await request('/blocks/alice','POST',bob)).status,200);
-    assert.equal((await request(target,'GET',bob)).body.comments.length,0);
+    assert.equal((await request(target,'GET',bob)).body.comments.length,2,'blocking the local author must not hide the two previously approved overseas comments');
     assert.equal((await request('/blocks/alice','DELETE',bob)).status,200);
     assert.equal((await request('/comment/'+id,'DELETE',bob)).status,403);
     assert.equal((await request('/comment/'+id,'DELETE',alice)).status,200);
-    assert.equal((await request(target,'GET',bob)).body.comments.length,0);
+    assert.equal((await request(target,'GET',bob)).body.comments.length,2,'deleting the local comment must leave the two previously approved overseas comments visible');
     assert.equal((await request('/admin/comment/'+id,'PUT',admin,{status:'APPROVED',safetyConfirmed:true,note:'不得复活已删除评论'})).status,404);
     console.log('PASS: real HTTP/JWT/account lookup, role scopes, 500 characters, origin/body limits, local filtering, idempotency, report, block and own deletion. Isolated data only.');
 
