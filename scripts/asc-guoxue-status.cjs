@@ -38,6 +38,7 @@ async function main() {
   const probes = {};
   const paths = [
     '/v1/apps/' + APP_ID + '/appAvailabilityV2',
+    '/v1/appIcpNumberDetails/' + APP_ID,
     '/v1/apps/' + APP_ID + '/appIcpNumberDetails',
     '/v1/apps/' + APP_ID + '/relationships/appIcpNumberDetails',
     '/v1/appIcpNumberDetails?filter[app]=' + APP_ID,
