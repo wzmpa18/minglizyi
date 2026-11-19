@@ -1,0 +1,21 @@
+name: Diagnose Guoxue ICP review gate
+on:
+  push:
+    branches: [codex/social-filter-build72]
+    paths:
+      - '.github/workflows/ios-guoxue-icp-probe.yml'
+      - 'scripts/asc-guoxue-icp-probe.cjs'
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read exact Apple ICP resource blocking the review draft
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+        run: node scripts/asc-guoxue-icp-probe.cjs
