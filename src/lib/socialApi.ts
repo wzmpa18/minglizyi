@@ -8,7 +8,6 @@ import type {GroupChartReference} from "./studyGroupCards";
 // ============================================================================
 
 import { getUserToken } from "./auth";
-import {consentForSocialText} from "./socialModerationConsent";
 import {clientPlatformHeaders} from "./platformGate";
 
 const API_BASE = typeof window !== "undefined" ? window.location.origin : "";
@@ -20,18 +19,6 @@ function tokenHeader(): Record<string, string> {
 
 async function api<T = any>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
-  const textPost=path==='/api/social/posts'||/^\/api\/social\/posts\/[^/]+\/comments$/.test(path);
-  const privateText=/^\/api\/social\/messages\/private\/[^/]+$/.test(path);
-  if(init?.method==='POST'&&typeof init.body==='string'&&(textPost||privateText||(/^\/api\/social\/resource\/[^/]+\/[^/]+\/comments$/.test(path)||/^\/api\/social\/groups(?:\/\d+\/(?:messages|update))?$/.test(path)))){
-    try{
-      const body=JSON.parse(init.body);
-      if(body.type!=='image'){
-        const text=[body.content,...(path==='/api/social/posts'&&Array.isArray(body.tags)?body.tags:[]),body.name,body.announcement].filter(v=>typeof v==='string'&&v.trim()).join('\n');
-        const scope=privateText||path.endsWith('/messages')?'定向学习交流':textPost||path.includes('/resource/')?'公开学习交流':'学习群资料';
-        const version=await consentForSocialText(text,scope);init={...init,body:JSON.stringify({...body,moderationVersion:version})};
-      }
-    }catch(error){return {success:false,error:error instanceof Error?error.message:'发送未确认'} as T;}
-  }
   try {
     res = await fetch(`${API_BASE}${path}`, {
       ...init,

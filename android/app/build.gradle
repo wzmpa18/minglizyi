@@ -11,8 +11,8 @@ android {
         applicationId "com.yandao.guoxue"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2161
-        versionName "25.0.123"
+        versionCode 2162
+        versionName "25.0.124"
         manifestPlaceholders = [wechatAppPayEnabled: withWechatAppPay.toString()]
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {

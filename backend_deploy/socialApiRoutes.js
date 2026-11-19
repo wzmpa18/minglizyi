@@ -372,7 +372,8 @@ function featureDisabled(res, label) {
 const SENSITIVE_WORDS = [
   '违法', '赌博', '毒品', '枪支', '色情', '裸聊', '约炮',
   '诈骗', '传销', '洗钱', '高利贷', '假币', '炸药',
-  '政治敏感', '邪教', '恐怖', '分裂',
+  '政治敏感', '邪教', '恐怖', '分裂', '台独', '港独', '藏独', '疆独',
+  '法轮功', '六四事件', '天安门事件', '博彩', '冰毒', '海洛因',
 ];
 
 function findSensitiveWords(text) {
@@ -380,15 +381,15 @@ function findSensitiveWords(text) {
   for (const w of SENSITIVE_WORDS) {
     if (text.includes(w)) hit.push(w);
   }
-  return hit;
+  const { localFlags } = require('./studyCommentSafety');
+  return Array.from(new Set([...hit, ...localFlags(text)]));
 }
 
 const moderateResourceComment=require('./socialModerationPolicy').createSelectedTextModerator({
- screen:input=>require('./studyCommentsRoutes').screenSelectedText(input),
  audit:row=>{const d=getDb();d.exec(`CREATE TABLE IF NOT EXISTS social_text_moderation(user_id TEXT NOT NULL,content_hash TEXT NOT NULL,consent_version TEXT NOT NULL,status TEXT NOT NULL,checked_ms INTEGER NOT NULL,PRIMARY KEY(user_id,content_hash,consent_version))`);d.prepare('INSERT OR REPLACE INTO social_text_moderation VALUES (?,?,?,?,?)').run(row.userId,row.contentHash,row.version,row.status,Date.now());},
 });
 
-function moderateLegacyText(text,context){return countStudyCharacters(text)>500?Promise.resolve({status:'pending',reason:'长文字保留完整副本待核验，未向机器拆分或截断发送'}):moderateResourceComment(text,context);}
+function moderateLegacyText(text,context){return moderateResourceComment(text,context);}
 
 function logSensitive(userId, scene, content, words) {
   try {
@@ -629,8 +630,8 @@ function createRouter() {
           JSON.stringify(Array.isArray(images) ? images.slice(0, 9) : []),
           JSON.stringify(Array.isArray(tags) ? tags.slice(0, 5) : []),
           String(toolType || '').slice(0, 40), ck);
-      // Images and longer historic posts are held for review; never send images or truncated chunks to the text model.
-      const review=images.length?{status:'pending',reason:'图片需另行内容核验，未公开'}:await moderateLegacyText([postText,...tags].join('\n'),{userId:req.user.userId,moderationVersion:req.body.moderationVersion});
+      // Images remain isolated for separate handling; ordinary text uses the local keyword rules.
+      const review=images.length?{status:'pending',reason:'图片需另行内容核验，未公开'}:await moderateLegacyText([postText,...tags].join('\n'),{userId:req.user.userId});
       if(featureEnabled('posts_enabled',req)&&!checkPlatformMute(req.user.userId)&&availableSocialUser(req.user.userId))getDb().prepare("UPDATE posts SET status=?,review_reason=? WHERE post_id=? AND status='pending'").run(review.status,review.reason,postId);
       const row = getDb().prepare('SELECT * FROM posts WHERE post_id = ?').get(postId);
       res.json({ success: true, pendingReview:row.status==='pending',rejected:row.status==='rejected',message:row.status==='active'?'已发布':row.status==='deleted'?'已撤回':'已提交，当前未公开',post:rowToPost(row,String(req.user.userId)) });
@@ -781,7 +782,7 @@ function createRouter() {
       const result = d.prepare(`INSERT INTO resource_comments
         (resource_type, resource_id, user_id, nickname, content, status) VALUES (?,?,?,?,?,'pending')`)
         .run(resourceType, resourceId, String(req.user.userId), info.nickname || '国学爱好者', content);
-      const review = await moderateResourceComment(content,{userId:req.user.userId,moderationVersion:req.body.moderationVersion});
+      const review = await moderateResourceComment(content,{userId:req.user.userId});
       d.prepare(`UPDATE resource_comments SET status = ?, review_reason = ?, moderation_model = ?,
         reviewed_at = datetime('now','localtime') WHERE id = ?`)
         .run(review.status, review.reason, review.model, result.lastInsertRowid);
@@ -919,7 +920,7 @@ function createRouter() {
 
       const info = userPublicInfo(req.user.userId) || { nickname: '国学爱好者' };
       const result = d.prepare("INSERT INTO comments (post_id,user_id,nickname,content,parent_id,review_status) VALUES (?,?,?,?,?,'pending')").run(req.params.postId,String(req.user.userId),info.nickname,cmText,storedParentId);
-      const review=await moderateResourceComment(cmText,{userId:req.user.userId,moderationVersion:req.body.moderationVersion});
+      const review=await moderateResourceComment(cmText,{userId:req.user.userId});
       const currentParent=storedParentId?listVisiblePostComments(d,req.params.postId,req.user.userId).find(c=>c.id===storedParentId&&!c.deleted):true;
       const stillAllowed=featureEnabled('comments_enabled',req)&&!checkPlatformMute(req.user.userId)&&availableSocialUser(req.user.userId)&&getVisiblePost(d,req.params.postId,req.user.userId)&&currentParent;
       const updated=d.prepare("UPDATE comments SET review_status=?,review_reason=? WHERE id=? AND review_status='pending' AND deleted=0").run(stillAllowed?review.status:'pending',stillAllowed?review.reason:'访问或回复条件已改变，保持隔离',result.lastInsertRowid);
@@ -1184,7 +1185,7 @@ function createRouter() {
       const info = userPublicInfo(me) || { nickname: '国学爱好者' };
       const convId = privateConvId(me, peer);
       const result=d.prepare("INSERT INTO chat_messages(conversation_id,sender_id,sender_name,content,msg_type,client_msg_id,review_status) VALUES (?,?,?,?,?,?,'pending')").run(convId,me,info.nickname,finalContent,msgType,cmi);
-      const review=msgType==='image'?{status:'pending',reason:'图片需另行内容核验，未向对方展示'}:await moderateLegacyText(finalContent,{userId:me,moderationVersion:req.body.moderationVersion});
+      const review=msgType==='image'?{status:'pending',reason:'图片需另行内容核验，未向对方展示'}:await moderateLegacyText(finalContent,{userId:me});
       const currentFriendship=d.prepare('SELECT source FROM friendships WHERE user_a=? AND user_b=?').get(...pair);
       const deliverable=currentFriendship&&currentFriendship.source!=='tongchen'&&!isBlockedBy(me,peer)&&!isBlockedBy(peer,me)&&!checkPlatformMute(me)&&availableSocialUser(me)&&availableSocialUser(peer)&&featureEnabled('private_chat_enabled',req);
       d.prepare("UPDATE chat_messages SET review_status=?,review_reason=? WHERE id=? AND review_status='pending'").run(deliverable?review.status:'pending',deliverable?review.reason:'交流权限已改变，未送达对方',result.lastInsertRowid);

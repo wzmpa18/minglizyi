@@ -26,6 +26,7 @@ function createStudyCommentStore(db, targets, now = () => Date.now(), options = 
   const fail = (message, status = 400) => { const error = new Error(message); error.status = status; throw error; };
   if(!db.prepare('PRAGMA table_info(study_comment_blocks)').all().some(r=>r.name==='display_id'))db.exec("ALTER TABLE study_comment_blocks ADD COLUMN display_id TEXT NOT NULL DEFAULT ''");
   if(!db.prepare('PRAGMA table_info(study_comments)').all().some(r=>r.name==='moderation_version'))db.exec("ALTER TABLE study_comments ADD COLUMN moderation_version TEXT NOT NULL DEFAULT ''");
+  db.prepare("UPDATE study_comments SET moderation_version=? WHERE moderation_version=''").run(VERSION);
   const moderator=createAutomaticModerator(db,{now,env:options.moderationEnv||process.env,request:options.moderationRequest});
   const research=createResearchDomain(db,{now,lifeEligible:options.lifeEligible,accountEligible:options.accountEligible,automationReady:()=>moderator.capability().configured});
   const target = id => { if (typeof id !== 'string' || !targets.has(id) && !domainFor(id)) fail('学习讨论对象不存在或编号不受支持', 404); return id; };
@@ -54,8 +55,7 @@ function createStudyCommentStore(db, targets, now = () => Date.now(), options = 
     const prepared=researchDomain?research.prepare(id,body?.research):null;
     if(prepared&&prepared.content!==body?.content)fail('分享预览已变更，请重新核对');
     if (!config(id).enabled) fail('学习讨论暂未开放，草稿可保留在本机',503);
-    if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(k=>!['content','parentId','requestId','moderationConsentVersion',...(researchDomain?['research','replaceId']:[])].includes(k))) fail('仅接受纯文字、回复编号和请求编号');
-    if(body.moderationConsentVersion!==undefined&&body.moderationConsentVersion!==VERSION)fail('机器审核告知已更新，请刷新后重新确认');
+    if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(k=>!['content','parentId','requestId',...(researchDomain?['research','replaceId']:[])].includes(k))) fail('仅接受纯文字、回复编号和请求编号');
     const validation=validateStudyText(body.content); if (!validation.ok) fail(validation.error);
     if (!/^[a-zA-Z0-9_-]{16,80}$/.test(body.requestId || '')) fail('请求编号无效');
     const parentId=body.parentId == null ? null : Number(body.parentId);
@@ -83,9 +83,9 @@ function createStudyCommentStore(db, targets, now = () => Date.now(), options = 
       }
       const result=db.prepare("INSERT INTO study_comments(target_id,user_id,nickname,content,parent_id,status,request_id,content_hash,created_ms) VALUES (?,?,?,?,?,'PENDING',?,?,?)").run(id,me,String(nickname||'学习者').slice(0,40),validation.text,parentId,body.requestId,hash,stamp);
       if(prepared)research.attach(result.lastInsertRowid,prepared.metadata);
-      if(body.moderationConsentVersion===VERSION)db.prepare('UPDATE study_comments SET moderation_version=? WHERE id=?').run(VERSION,result.lastInsertRowid);
+      db.prepare('UPDATE study_comments SET moderation_version=? WHERE id=?').run(VERSION,result.lastInsertRowid);
       if(replaced){db.prepare("UPDATE study_comments SET status='REMOVED',pinned=0 WHERE id=? OR parent_id=?").run(replaced.id,replaced.id);research.erase(replaced.id);audit(me,'REPLACE',replaced.id,String(result.lastInsertRowid));}
-      audit(me,'SUBMIT',result.lastInsertRowid,'先隔离，规则与机器审核通过后才公开');
+      audit(me,'SUBMIT',result.lastInsertRowid,'平台本地敏感词过滤');
       db.exec('COMMIT'); return { success:true,pendingReview:true,status:'PENDING',id:String(result.lastInsertRowid),message:'已提交，可在“我的”查看处理状态' };
     } catch(error) { db.exec('ROLLBACK'); throw error; }
   }
@@ -162,7 +162,7 @@ function createStudyCommentStore(db, targets, now = () => Date.now(), options = 
     researchLeave:(me,d)=>research.leave(me,d),
     mine:(id,me)=>{target(id);return db.prepare('SELECT id,status,created_ms FROM study_comments WHERE target_id=? AND user_id=? ORDER BY id DESC LIMIT 30').all(id,user(me));},
     blocks:me=>db.prepare("SELECT COALESCE(NULLIF(display_id,''),blocked_id) AS userId FROM study_comment_blocks WHERE user_id=?").all(user(me)),
-    screenSelectedText:input=>moderator.screen({content:input.content,displayName:'学习者',moderationVersion:input.moderationVersion}),
+    screenSelectedText:input=>moderator.screen({content:input.content,displayName:'学习者',moderationVersion:VERSION}),
     queue:()=>({research:{symptom:research.state('', 'symptom'),life:research.state('', 'life')},comments:db.prepare("SELECT * FROM study_comments WHERE status='PENDING' ORDER BY id LIMIT 200").all().map(row=>({...row,safety:safetyFor(row)})),safetyCapability:{...capability(),...moderator.capability()},blocked:db.prepare("SELECT c.* FROM study_comments c JOIN study_comment_safety s ON s.comment_id=c.id WHERE c.status='REJECTED' AND s.decision='BLOCK' ORDER BY c.id DESC LIMIT 100").all().map(row=>({...row,safety:safetyFor(row)})),recent:db.prepare("SELECT * FROM study_comments WHERE status='APPROVED' ORDER BY id DESC LIMIT 100").all(),reports:db.prepare("SELECT r.*,c.content,c.user_id author_id FROM study_comment_reports r JOIN study_comments c ON c.id=r.comment_id WHERE r.status='PENDING' ORDER BY r.id LIMIT 200").all(), overdue:db.prepare("SELECT COUNT(*) n FROM study_comments WHERE status='PENDING' AND created_ms<?").get(now()-86400000).n,audit:db.prepare('SELECT * FROM study_comment_audit ORDER BY id DESC LIMIT 50').all(),enabled:settings().enabled==='true',limits:limits()}),
     setConfig:(actor,body)=>{
       if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).some(k=>!['enabled','targetId','minIntervalSeconds','perDay','perTargetDay'].includes(k)))fail('配置字段无效');
