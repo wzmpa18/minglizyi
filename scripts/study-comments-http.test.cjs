@@ -260,9 +260,9 @@ async function worker(root){
       assert.equal((await social('/tongchen/peer/'+peer.id+'/messages','POST',alice,message)).body.duplicated,true);
       const visibleTongchen=(await social('/tongchen/peer/'+peer.id+'/messages','GET',alice)).body.items;
       assert.equal(visibleTongchen.length,1);assert.equal(visibleTongchen[0].content,message.content);
-      const ordinaryActive=socialDb.prepare("SELECT id,review_status FROM chat_messages WHERE content='没有单独审核授权的交流'").get();
-      assert.equal(ordinaryActive.review_status,'active');
-      assert.equal((await social('/tongchen/admin/message/'+ordinaryActive.id,'PUT',support,{status:'active',reason:'已即时送达的正常文字不能重复批准'})).body.success,false);
+      const deliveredTongchen=socialDb.prepare("SELECT id,review_status FROM chat_messages WHERE content=?").get(message.content);
+      assert.equal(deliveredTongchen.review_status,'active');
+      assert.equal((await social('/tongchen/admin/message/'+deliveredTongchen.id,'PUT',support,{status:'active',reason:'已即时送达的正常文字不能重复批准'})).body.success,false);
       const queued=(await social('/tongchen/admin/messages','GET',support)).body.items;
       assert.equal(queued.some(row=>row.content===message.content),false);
       const tcConversations=(await social('/conversations','GET',alice)).body.conversations;assert.equal(tcConversations.length,1);assert.equal(tcConversations[0].targetPath,'/discover/tongchen/?peer='+peer.id);assert.ok(!JSON.stringify(tcConversations).includes('只讨论节气学习方法'));
