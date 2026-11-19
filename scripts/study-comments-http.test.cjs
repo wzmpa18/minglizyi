@@ -202,9 +202,10 @@ async function worker(root){
       assert.equal(socialDb.prepare("SELECT comment_count FROM posts WHERE post_id='visible'").get().comment_count,beforeCommentCount+1);
       assert.equal((await social('/posts/visible/comments','POST',bob,{content:'🙂'.repeat(501)})).status,400);
       socialDb.prepare("INSERT INTO friendships(user_a,user_b,source) VALUES ('alice','bob','legacy')").run();
-      let externalCalls=0;const legacyFetch=global.fetch;
+      let externalCalls=0;const externalUrls=[];const legacyFetch=global.fetch;
       global.fetch=async(url,options)=>{
-        if(!String(url).startsWith('http://127.0.0.1:')){externalCalls++;throw Error('social moderation must remain local');}
+        const value=typeof url==='string'?url:(url&&typeof url.url==='string'?url.url:String(url));
+        if(!value.startsWith('http://127.0.0.1:')){externalCalls++;externalUrls.push(value);throw Error('social moderation must remain local');}
         return legacyFetch(url,options);
       };
       try{
@@ -222,7 +223,7 @@ async function worker(root){
         assert.equal((await social('/messages/private/alice','GET',bob)).body.messages.length,2);
         const long='长'.repeat(501);const longMessage=await social('/messages/private/bob','POST',alice,{content:long,clientMsgId:crypto.randomUUID()});assert.equal(longMessage.body.message.content,long);assert.equal(longMessage.body.message.reviewStatus,'active');
         assert.equal((await social('/messages/private/bob','POST',alice,{content:'出售毒品',clientMsgId:crypto.randomUUID()})).status,400);
-        assert.equal(externalCalls,0);
+        assert.equal(externalCalls,0,'unexpected external social calls: '+externalUrls.join(', '));
         const reviewCommentId=acceptedComment.body.comment.id;
         assert.equal((await social('/comments/'+reviewCommentId+'/report','POST',bob,{reason:'请核对引文'})).status,200);
         assert.equal((await social('/posts/visible/comments')).body.comments.some(c=>c.id===reviewCommentId),false);
