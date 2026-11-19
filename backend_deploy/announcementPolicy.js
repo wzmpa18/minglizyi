@@ -2,7 +2,7 @@
 // Shared by the server and the bundled client. Notices contain text only;
 // they never contain routes, payment actions, executable code or feature flags.
 const SCHEMA = 'yandao.notice.v1';
-const CHANNELS = ['default','internal','google','ios-full-learning','tencent','huawei','oppo','vivo','honor','xiaomi','samsung','lenovo'];
+const CHANNELS = ['default','internal','google','ios-full-learning','tencent','huawei','oppo','vivo','honor','xiaomi','baidu','samsung','lenovo'];
 const PLATFORMS = ['web','android','ios'];
 const KINDS = ['learning','service'];
 function version(value) { return /^\d{1,6}\.\d{1,6}\.\d{1,6}$/.test(String(value || '')) ? String(value).split('.').map(Number) : null; }

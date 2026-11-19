@@ -92,7 +92,7 @@ router.get('/', (req, res) => {
       },
     });
   }
-  const domesticStores = ['oppo','vivo','honor','huawei','tencent','xiaomi','samsung','lenovo'];
+  const domesticStores = ['oppo','vivo','honor','huawei','tencent','xiaomi','baidu','samsung','lenovo'];
   const storeChannel = [req.headers['x-store-channel'],req.headers['x-client-platform'],req.query.platform]
     .map(value=>String(value||'').toLowerCase()).find(value=>domesticStores.includes(value));
   if (storeChannel) {

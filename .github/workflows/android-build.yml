@@ -22,6 +22,7 @@ on:
           - honor
           - xiaomi
           - appchina
+          - baidu
           - internal
       challenge_base64:
         description: Optional official Tencent ownership challenge; sign only, no app rebuild
