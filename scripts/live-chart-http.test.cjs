@@ -37,7 +37,7 @@ db.prepare('INSERT INTO blacklists VALUES (?,?)').run('2','1');assert.equal((awa
   for(const item of owned)assert.equal((await call(2,'/'+item)).status,410);
   assert.equal((await call(1,'/revoke','POST',{ids:[owned[0],owned[0]]})).status,400);
   assert.equal((await call(2,'/'+foreign)).status,200);
-  await call(3,'/'+foreign+'/accept','POST');const direct=await call(2,'/'+foreign+'/messages','POST',{content:'直接发送学习交流',requestId:crypto.randomUUID()});assert.equal(direct.body.status,'active');assert.equal((await call(3,'/'+foreign+'/messages')).body.items.length,1);assert.equal((await call(2,'/'+foreign+'/archive-messages','POST',{ids:[direct.body.id]})).status,403);
+  await call(3,'/'+foreign+'/accept','POST');const direct=await call(2,'/'+foreign+'/messages','POST',{content:'直接发送学习交流',requestId:crypto.randomUUID()});assert.equal(direct.body.status,'active');assert.equal((await call(3,'/'+foreign+'/messages')).body.items.length,1);assert.equal((await call(3,'/'+foreign+'/archive-messages','POST',{ids:[direct.body.id]})).status,403);
 
 
  }finally{await new Promise(resolve=>server.close(resolve));db.close();}
