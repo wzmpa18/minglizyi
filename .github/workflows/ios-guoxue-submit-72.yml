@@ -1,6 +1,11 @@
 name: Submit verified Guoxue build 72 to App Review
 on:
   workflow_dispatch:
+  push:
+    branches: [codex/social-filter-build72]
+    paths:
+      - '.github/workflows/ios-guoxue-submit-72.yml'
+      - 'scripts/asc-submit-guoxue-124.cjs'
 permissions:
   contents: read
   actions: read
