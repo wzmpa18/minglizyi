@@ -1,0 +1,22 @@
+name: Read Guoxue App Store build 72 status
+on:
+  workflow_dispatch:
+  push:
+    branches: [codex/social-filter-build72]
+    paths:
+      - '.github/workflows/ios-guoxue-build72-status.yml'
+      - 'scripts/asc-guoxue-status.cjs'
+permissions:
+  contents: read
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read Apple version, build, review and ICP-related state
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
+        run: node scripts/asc-guoxue-status.cjs
