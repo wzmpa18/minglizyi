@@ -26,7 +26,8 @@ test('real HTTP: access identity, OTP binding, admin role, moderation and journa
  try{
   assert.equal((await req('/api/business')).status,401);
   assert.equal((await req('/api/business',token(100001))).status,200);
-  assert.equal((await req('/api/social/posts',token(100001),'POST',{content:'test'})).data.code,'PHONE_VERIFICATION_REQUIRED');
+  assert.equal((await req('/api/social/posts',token(100001),'POST',{content:'学习古籍，互相尊重'})).status,200);
+  assert.equal((await req('/api/social/posts',token(100001),'POST',{content:'煽\u200b动 颠覆国家政权'})).status,422);
   assert.equal((await req('/api/business',token(100002))).status,200);
   assert.equal((await req('/api/business',token(999999))).status,403);
   assert.equal((await req('/api/business',jwt.sign({userId:100000,type:'refresh'},process.env.JWT_SECRET))).status,401);

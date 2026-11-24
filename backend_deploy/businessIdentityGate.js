@@ -10,6 +10,8 @@ const SELF = new Set(['/api/auth/profile', '/api/auth/verify-phone', '/api/accou
 // without a second SMS enrolment step. Account reads do not enrol again;
 // publication and unknown mutations retain verified-identity enforcement.
 const PRIVATE_ACCOUNT_SERVICES = /^\/api\/(?:payment|apple-iap|ai|offline)(?:\/|$)/;
+// Social and study discussions use the existing account session and route-level permissions.
+const SOCIAL_SERVICES = /^\/api\/(?:social|study-comments)(?:\/|$)/;
 function clientIp(req) {
   const remote = req.socket?.remoteAddress || '';
   return ['127.0.0.1','::1','::ffff:127.0.0.1'].includes(remote) ? String(req.headers['x-forwarded-for'] || remote).split(',').at(-1).trim() : remote;
@@ -60,7 +62,7 @@ function createBusinessIdentityGate({ verifyToken, getUser, resolveAdminKey, jou
       if (!row || row.deleted_at || row.status === 'banned') return deny(403, 'ACCOUNT_UNAVAILABLE', '账号不存在或已停用');
       if (Number(user.authVersion || 0) !== Number(row.auth_version || 0)) return deny(401, 'SESSION_REVOKED', '密码已更新，请重新登录');
       req.user = user;
-      if (requiresDomesticPhoneVerification(req) && !SELF.has(route) && !PRIVATE_ACCOUNT_SERVICES.test(route) && req.method !== 'GET' && req.method !== 'HEAD' && (!/^1[3-9]\d{9}$/.test(row.phone || '') || !row.phone_verified_at)) return deny(403, 'PHONE_VERIFICATION_REQUIRED', '国内渠道交流服务需完成一次手机号验证；已验证账号无需重复验证');
+      if (requiresDomesticPhoneVerification(req) && !SELF.has(route) && !PRIVATE_ACCOUNT_SERVICES.test(route) && !SOCIAL_SERVICES.test(route) && req.method !== 'GET' && req.method !== 'HEAD' && (!/^1[3-9]\d{9}$/.test(row.phone || '') || !row.phone_verified_at)) return deny(403, 'PHONE_VERIFICATION_REQUIRED', '国内渠道交流服务需完成一次手机号验证；已验证账号无需重复验证');
       record('identity_accepted', 200, user.userId);
       next();
     } catch {

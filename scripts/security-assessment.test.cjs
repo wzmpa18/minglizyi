@@ -31,12 +31,19 @@ function fixture(){
  }
  return {invoke,events};
 }
-test('anonymous and unavailable accounts are rejected; account reads avoid repeated enrolment; publication retains verified identity',()=>{
+test('anonymous and unavailable accounts are rejected; account reads avoid repeated enrolment',()=>{
  const {invoke}=fixture();for(const route of ['/api/social/posts','/api/study-comments/target/test','/api/auth/records/list','/api/academy/starter-content','/api/new-future-feature']){
   assert.equal(invoke(route).res.statusCode,401);assert.equal(invoke(route,'missing').res.statusCode,403);
   assert.equal(invoke(route,'email').next,true);assert.equal(invoke(route,'stored').next,true);
-  assert.equal(invoke(route,'email','POST').res.body.code,'PHONE_VERIFICATION_REQUIRED');
   assert.equal(invoke(route,'banned').res.body.code,'ACCOUNT_UNAVAILABLE');assert.equal(invoke(route,'verified').next,true);
+ }
+});
+test('chat and comments use the existing login and preserve the session gate',()=>{
+ const {invoke}=fixture();
+ for(const route of ['/api/social/posts','/api/social/posts/1/comments','/api/social/messages/private/2','/api/social/groups/3/messages','/api/social/tongchen/peer/2/messages','/api/social/live/3/messages','/api/study-comments/target/test']){
+  assert.equal(invoke(route,'','POST').res.statusCode,401);
+  assert.equal(invoke(route,'banned','POST').res.body.code,'ACCOUNT_UNAVAILABLE');
+  for(const account of ['email','verified','stored'])assert.equal(invoke(route,account,'POST').next,true);
  }
 });
 test('private AI and own-account purchase/restore do not require a second phone enrolment, but still require a valid account',()=>{
@@ -47,7 +54,7 @@ test('private AI and own-account purchase/restore do not require a second phone 
   assert.equal(invoke(route,'email','POST').next,true);
   assert.equal(invoke(route,'stored','POST').next,true);
  }
- for(const route of ['/api/payment-public/posts','/api/ai-social/posts','/api/social/posts'])assert.equal(invoke(route,'email','POST').res.body.code,'PHONE_VERIFICATION_REQUIRED');
+ for(const route of ['/api/payment-public/posts','/api/ai-social/posts','/api/social-other/posts','/api/study-comments-other/posts','/api/new-future-feature'])assert.equal(invoke(route,'email','POST').res.body.code,'PHONE_VERIFICATION_REQUIRED');
 });
 test('admin identity is separate; nested admin paths cannot be used by users',()=>{
  const {invoke}=fixture();for(const route of ['/api/admin/security/events','/api/social/admin/review']){assert.equal(invoke(route,'verified').res.statusCode,401);assert.equal(invoke(route,'admin').next,true);}
