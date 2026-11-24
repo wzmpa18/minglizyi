@@ -22,6 +22,7 @@ export default function Page() {
             <Link className="rounded-xl bg-[#f7f2fb] p-3" href="/discover/"><strong>同证主题研习与社交</strong><br/>围绕资料主题交流，使用动态、好友聊天和学习群；不公开私人档案。</Link>
           </div>
           <p className="mt-3 text-[11px] leading-relaxed text-gray-500">资料可保存后离线阅读；三维人体继续按现有会员权益开放。{PUBLIC_PROMOTION_ENABLED&&<>分享码只记录邀请来源；官网来源经核验的合格直接订单按已确认规则计佣（本人直接15%，二级0），商店下载和商店订单不计佣。<Link className="font-semibold text-[#713aa1] underline" href="/invite/">查看邀请与推广规则</Link></>}</p>
+          <a className="mt-3 inline-block text-sm font-semibold text-[#713aa1] underline" href="/guide/app-manual/">查看使用说明书</a>
           <p className="mt-2 text-[10px] leading-relaxed text-gray-400">同辰与同证服务以自愿加入和当期服务开放状态为准；不作命运、婚恋或健康判断。中医内容用于古籍与传统文化学习，不提供医疗咨询、诊断、处方或售药。</p>
         </div>
       </section>

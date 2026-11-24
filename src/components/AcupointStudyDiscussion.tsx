@@ -70,7 +70,9 @@ function PointDiscussion({targetId,title,researchCitationId}:{targetId:string;ti
       <span aria-live="polite" style={{color:count>500?'#B71C1C':'#666'}}>{countSupported?`${count}/500`:'系统暂不支持文字计数'}</span>
       <InterfaceButton type="button" onClick={()=>void submit()} disabled={busy||!countSupported||count===0||count>500||!config?.enabled||(isResearch&&!researchPayload?.valid)} style={{padding:'8px 14px',border:0,borderRadius:20,background:'#7B2FBE',color:'white',opacity:busy||!config?.enabled||count>500 ? .5 : 1}}>{ui(busy?'处理中…':'提交')}</InterfaceButton>
     </div>
-    {!config?.enabled&&!loading&&<p style={{color:'#666'}}>学习讨论暂未开放。输入仅保存在本机，尚未发表。</p>}
+    {!config?.enabled&&!loading&&(getUserToken()
+      ? <p style={{color:'#666'}}>{config ? '本讨论区暂未开放，草稿仅保存在本机。' : '草稿尚未发表，可刷新留言后重试。'}</p>
+      : <p style={{color:'#666'}}><Link href="/login/">登录</Link>后查看并参加学习讨论。当前草稿尚未发表。</p>)}
     {message&&<p role="status" style={{color:'#8D3800'}}>{message}</p>}
     <div style={{display:'flex',gap:12,margin:'10px 0'}}><InterfaceButton onClick={()=>void load()} disabled={loading||busy}>{ui("刷新留言")}</InterfaceButton><Link href="/profile/feedback/">{ui("用户反馈")}</Link></div>
     {mine.filter(item=>item.status==='PENDING').map(item=><div key={item.id} style={{padding:8,background:'#FFF8E1'}}>我的留言 #{item.id} · 处理中 {config?.moderation?.configured&&<InterfaceButton disabled={busy} onClick={()=>void action(`/comment/${item.id}/recheck`,'POST',{})}>重新检测</InterfaceButton>} <InterfaceButton disabled={busy} onClick={()=>{setConfirmation({message:'撤回这条待审留言？',run:()=>{void action(`/comment/${item.id}`,'DELETE');}});}}>撤回</InterfaceButton></div>)}
