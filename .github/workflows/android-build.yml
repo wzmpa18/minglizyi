@@ -22,6 +22,10 @@ on:
           - honor
           - xiaomi
           - appchina
+          - qihoo360
+          - lenovo
+          - samsung
+          - meizu
           - internal
       challenge_base64:
         description: Optional official Tencent ownership challenge; sign only, no app rebuild
