@@ -60,30 +60,43 @@ public class AndroidChartMarketingTest {
   }
  }
 
+
  private void pressExact(String label)throws Exception{
-  String control="(()=>{const e=[...document.querySelectorAll('button')].find(b=>b.innerText.trim()==="+JSONObject.quote(label)+"&&!b.disabled&&b.getClientRects().length);if(!e)return false;e.scrollIntoView({block:'center'});e.click();return true})()";
-  waitCondition(control,40,"Visible control missing: "+label);
+  String control="(()=>{const e=[...document.querySelectorAll('button,input[type=submit],[role=button]')].find(b=>[b.textContent?.trim(),b.innerText?.trim(),b.getAttribute('aria-label'),b.value].includes("+JSONObject.quote(label)+")&&!b.disabled&&b.getClientRects().length);if(!e)return false;e.scrollIntoView({block:'center'});e.click();return true})()";
+  waitCondition(control,30,"Visible control missing: "+label);
  }
- private void openChart(String id)throws Exception{
-  String path="/yixue/"+id+"/";
-  js("setTimeout(()=>location.assign("+JSONObject.quote(path)+"),100);true");
-  waitCondition("location.pathname.replace(/\\/$/,'')==="+JSONObject.quote(path.substring(0,path.length()-1))+"&&document.body.innerText.length>100",70,"Chart route missing: "+id);
+ private void navigateLink(String path)throws Exception{
+  String target=JSONObject.quote(path);
+  String expression="(()=>{const normal=s=>s.endsWith('/')&&s!=='/'?s.slice(0,-1):s;const e=[...document.querySelectorAll('a[href]')].find(a=>normal(new URL(a.href,location.href).pathname)==="+target+"&&!a.closest('footer[data-seo-only]'));if(!e)return false;e.scrollIntoView({block:'center'});e.click();return true})()";
+  waitCondition(expression,20,"Public menu item missing: "+path);
+  waitCondition("location.pathname===("+target+"+'/')||location.pathname==="+target,30,"Route missing: "+path);
  }
- private void captureBoard(String name,String marker)throws Exception{
-  waitText(marker,45);
-  js("window.scrollTo(0,0);true");
-  shot(name);
+ private void capture(String id,String filename,String marker,String... buttons)throws Exception{
+  try{
+   if(!"/yixue".equals(js("location.pathname.replace(/\\/$/,'')")))navigateLink("/yixue");
+   waitText("八字排盘",30);
+   navigateLink("/yixue/"+id);
+   for(String button:buttons)pressExact(button);
+   waitText(marker,45);
+   js("window.scrollTo(0,0);true");
+   shot(filename);
+  }catch(Exception|AssertionError failure){
+   System.out.println("CHART_DIAG "+id+" "+js("JSON.stringify({path:location.pathname,lang:document.documentElement.lang,body:document.body.innerText.slice(0,420),buttons:[...document.querySelectorAll('button')].filter(x=>x.getClientRects().length).slice(0,22).map(x=>x.innerText.trim())})"));
+   shot("FAILED_"+id);
+   throw failure;
+  }
  }
  @Test public void captureFourRealCharts()throws Exception{
   try(ActivityScenario<MainActivity> activity=ActivityScenario.launch(MainActivity.class)){
    scenario=activity;
    waitCondition("!!document.body&&document.body.innerText.length>10",80,"Native application did not render");
+   js("localStorage.setItem('yandao_interface_locale','zh-CN');true");
    js("(()=>{const b=[...document.querySelectorAll('button')].find(x=>x.innerText.trim()==='同意并继续');if(b)b.click();return true})()");
    waitText("首页",70);
-   openChart("bazi");pressExact("排盘");captureBoard("01_八字四柱","四柱");
-   openChart("qimen");pressExact("排盘");captureBoard("02_奇门九宫","九宫盘 · 点击宫位阅读");
-   openChart("ziwei");pressExact("排盘");captureBoard("03_紫微十二宫","命宫");
-   openChart("liuyao");pressExact("报数起卦");pressExact("起卦");captureBoard("04_六爻本变卦","变卦");
+   capture("bazi","01_八字四柱","四柱","排盘");
+   capture("qimen","02_奇门九宫","九宫盘 · 点击宫位阅读","排盘");
+   capture("ziwei","03_紫微十二宫","命宫","排盘");
+   capture("liuyao","04_六爻本变卦","变卦","报数起卦","起卦");
   }
  }
 }
