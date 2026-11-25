@@ -1,4 +1,4 @@
-name: Pinned actual Android learning marketing screenshots
+name: Pinned native Android chart result screenshots
 on:
   workflow_dispatch:
     inputs:
@@ -13,8 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
-      PINNED_APPLICATION_SOURCE: ${{ inputs.application_source || 'c4ff5272f7d8f727ae780dfcfb1b262ed07309c1' }}
-      NEXT_PUBLIC_STORE_CHANNEL: appchina
+      PINNED_APPLICATION_SOURCE: ${{ inputs.application_source || '788e55baa7784a858316a9e54bb465156c46ec9a' }}
+      NEXT_PUBLIC_STORE_CHANNEL: tencent
     defaults:
       run:
         working-directory: app-source
@@ -24,7 +24,7 @@ jobs:
           path: qa-source
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.application_source || 'c4ff5272f7d8f727ae780dfcfb1b262ed07309c1' }}
+          ref: ${{ inputs.application_source || '788e55baa7784a858316a9e54bb465156c46ec9a' }}
           path: app-source
       - uses: actions/setup-node@v4
         with:
@@ -40,15 +40,14 @@ jobs:
           [[ "$PINNED_APPLICATION_SOURCE" =~ ^[a-f0-9]{40}$ ]]
           test "$(git rev-parse HEAD)" = "$PINNED_APPLICATION_SOURCE"
           mkdir -p android/app/src/androidTest/java/com/yandao/guoxue
-          cp ../qa-source/scripts/AndroidLearningMarketingTest.java android/app/src/androidTest/java/com/yandao/guoxue/
-          cp ../qa-source/scripts/android-marketing-session.cjs scripts/
+          cp ../qa-source/scripts/AndroidChartMarketingTest.java android/app/src/androidTest/java/com/yandao/guoxue/
           mkdir -p "$RUNNER_TEMP/actual-android-learning-marketing"
           python3 - <<'PY'
           import json,os,pathlib,subprocess,re
           source=os.environ['PINNED_APPLICATION_SOURCE']
-          assert json.loads(pathlib.Path('package.json').read_text())['version'].lstrip('v')=='25.0.122'
-          code=int(re.search(r'versionCode\s+(\d+)\b',pathlib.Path('android/app/build.gradle').read_text())[1]);assert code>=2155
-          data={'source':source,'version':'25.0.122','versionCode':code,'storeChannel':'appchina','nativeAndroid':True,'physicalDevice':False,'syntheticInterface':False,'authMethod':'ordinary backend login; no entitlement changes','srcTree':subprocess.check_output(['git','rev-parse',source+':src'],text=True).strip(),'publicTree':subprocess.check_output(['git','rev-parse',source+':public'],text=True).strip()}
+          assert json.loads(pathlib.Path('package.json').read_text())['version'].lstrip('v')=='25.0.124'
+          code=int(re.search(r'versionCode\s+(\d+)\b',pathlib.Path('android/app/build.gradle').read_text())[1]);assert code==2162
+          data={'source':source,'version':'25.0.124','versionCode':code,'storeChannel':'tencent','nativeAndroid':True,'physicalDevice':False,'syntheticInterface':False,'authMethod':'no account; synthetic default chart parameters','srcTree':subprocess.check_output(['git','rev-parse',source+':src'],text=True).strip(),'publicTree':subprocess.check_output(['git','rev-parse',source+':public'],text=True).strip()}
           pathlib.Path(os.environ['RUNNER_TEMP'],'actual-android-learning-marketing','source.json').write_text(json.dumps(data,indent=2))
           PY
       - run: npm ci --legacy-peer-deps
@@ -62,11 +61,6 @@ jobs:
           python3 scripts/prepare_life_ocr_models.py
           npx cap sync android
           chmod +x android/gradlew
-      - name: Prepare ordinary account without public credentials
-        env:
-          GUOXUE_REVIEW_ACCOUNT: ${{ secrets.GUOXUE_REVIEW_ACCOUNT }}
-          GUOXUE_REVIEW_PASSWORD: ${{ secrets.GUOXUE_REVIEW_PASSWORD }}
-        run: node scripts/android-marketing-session.cjs
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
@@ -81,7 +75,7 @@ jobs:
           heap-size: 1024M
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: bash "${{ github.workspace }}/qa-source/scripts/run_android_learning_marketing.sh"
+          script: bash "${{ github.workspace }}/qa-source/scripts/run_android_chart_marketing.sh"
       - name: Keep only public screenshot proof
         if: always()
         run: |
