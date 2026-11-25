@@ -71,19 +71,24 @@ public class AndroidChartMarketingTest {
   waitCondition(expression,20,"Public menu item missing: "+path);
   waitCondition("location.pathname===("+target+"+'/')||location.pathname==="+target,30,"Route missing: "+path);
  }
- private void capture(String id,String filename,String marker,String... buttons)throws Exception{
+ private boolean capture(String id,String filename,String marker,String... buttons)throws Exception{
   try{
-   if(!"/yixue".equals(js("location.pathname.replace(/\\/$/,'')")))navigateLink("/yixue");
+   if(!"/yixue".equals(js("location.pathname.replace(/\\/$/,'')"))){
+    if(!"/".equals(js("location.pathname")))navigateLink("/");
+    navigateLink("/yixue");
+   }
    waitText("八字排盘",30);
    navigateLink("/yixue/"+id);
+   if(id.equals("ziwei")&&"true".equals(js("!!document.querySelector('nav[aria-label=\"专业紫微盘快捷功能\"]')")))pressExact("快捷排盘");
    for(String button:buttons)pressExact(button);
    waitText(marker,45);
    js("window.scrollTo(0,0);true");
    shot(filename);
+   return true;
   }catch(Exception|AssertionError failure){
    System.out.println("CHART_DIAG "+id+" "+js("JSON.stringify({path:location.pathname,lang:document.documentElement.lang,body:document.body.innerText.slice(0,420),buttons:[...document.querySelectorAll('button')].filter(x=>x.getClientRects().length).slice(0,22).map(x=>x.innerText.trim())})"));
    shot("FAILED_"+id);
-   throw failure;
+   return false;
   }
  }
  @Test public void captureFourRealCharts()throws Exception{
@@ -93,10 +98,11 @@ public class AndroidChartMarketingTest {
    js("localStorage.setItem('yandao_interface_locale','zh-CN');true");
    js("(()=>{const b=[...document.querySelectorAll('button')].find(x=>x.innerText.trim()==='同意并继续');if(b)b.click();return true})()");
    waitText("首页",70);
-   capture("bazi","01_八字四柱","四柱","排盘");
-   capture("qimen","02_奇门九宫","九宫盘 · 点击宫位阅读","排盘");
-   capture("ziwei","03_紫微十二宫","命宫","排盘");
-   capture("liuyao","04_六爻本变卦","变卦","报数起卦","起卦");
+   boolean all=capture("bazi","01_八字四柱","四柱","排盘");
+   all &=capture("qimen","02_奇门九宫","九宫盘 · 点击宫位阅读","排盘");
+   all &=capture("ziwei","03_紫微十二宫","命宫","排盘");
+   all &=capture("liuyao","04_六爻本变卦","变卦","报数起卦","起卦");
+   assertTrue("All four charts must render",all);
   }
  }
 }
