@@ -1,4 +1,4 @@
-name: Read Guoxue App Store build 72 status
+name: Update live Guoxue App Store promotional text
 on:
   workflow_dispatch:
   push:
@@ -14,9 +14,9 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Read Apple version, build, review and ICP-related state
+      - name: Verify build 73 and update promotional text only
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_KEY: ${{ secrets.APP_STORE_CONNECT_KEY }}
-        run: node scripts/asc-guoxue-status.cjs
+        run: node scripts/asc-guoxue-live-promotion.cjs
